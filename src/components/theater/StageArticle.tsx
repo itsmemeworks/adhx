@@ -179,6 +179,7 @@ export function StageArticle({ item }: StageArticleProps) {
         ref={scrollRef}
         onScroll={handleScroll}
         className={cn('h-full w-full overflow-y-auto', STAGE_TEXT_SCROLL_PAD)}
+        data-theater-scroll
       >
         {/* Splash: cover + headline. Renders from `item` alone — looks
             complete even if the body fetch below never resolves. */}

@@ -154,7 +154,7 @@ Sentry metrics (existing `metrics.*` patterns): `theater.opened` (surface: home/
 
 **PR 1 — Theater shell + home (signed-out `/`)**
 Shell, Stage (video: twitter + tiktok; text; photo), Rail with Up-next + seen model + divider, muted-autoplay + unmute chip, keyboard nav, 12s poll, server-rendered crawlable list + JSON-LD, dark default on theater routes, `theater.*` metrics, `/api/activity/preview`. Browse link points at existing `/trending` (light, unchanged for now).
-_Acceptance_: signed-out `/` lands in the theater with a real post playing muted; ↓/↑ chains; refresh shows the divider correctly; `curl` of `/` contains the crawlable list + JSON-LD; Lighthouse SEO unchanged on preview pages; 943 existing tests green.
+_Acceptance_: signed-out `/` lands in the theater with a real post playing muted; →/← and J/K chain posts (↑/↓ scroll text); refresh shows the divider correctly; `curl` of `/` contains the crawlable list + JSON-LD; Lighthouse SEO unchanged on preview pages; 943 existing tests green.
 
 **PR 2 — Full stage matrix + mobile**
 Instagram probe/warm path, YouTube iframe stage, article reader stage, mobile reel + bottom sheet + swipe, Send file-prefetch flow, `/trending/play` redirect, prefetch-next.

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense, useRef, type FormEvent } from 'react'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import {
   CheckCircle,
   XCircle,
@@ -26,7 +26,6 @@ import {
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
-import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { useTheme } from '@/lib/theme/context'
 import { PlatformGlyph, ConnectWithX } from '@/components/matter'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
@@ -603,7 +602,6 @@ function SyncHistoryCard({ syncs, loading }: { syncs: SyncHistoryEntry[]; loadin
 
 function SettingsPage() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const { theme, setTheme } = useTheme()
 
   const [me, setMe] = useState<AuthMe | null>(null)
@@ -633,9 +631,6 @@ function SettingsPage() {
   const [dangerActionLoading, setDangerActionLoading] = useState(false)
   const [confirmText, setConfirmText] = useState('')
 
-  // Keyboard shortcuts modal
-  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
-
   // Reading preferences
   const { preferences, updatePreference } = usePreferences()
 
@@ -649,36 +644,6 @@ function SettingsPage() {
       setTimeout(() => clearDataInputRef.current?.focus(), 50)
     }
   }, [showClearDataModal])
-
-  // Global keyboard shortcuts for settings page
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in inputs
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return
-      }
-
-      // Don't trigger if any modal is open
-      if (showClearDataModal || showDeleteAccountModal || showSyncModal || showShortcutsModal) {
-        return
-      }
-
-      switch (e.key) {
-        case 'g':
-          e.preventDefault()
-          router.push('/')
-          break
-        case '?':
-          e.preventDefault()
-          setShowShortcutsModal(true)
-          break
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [router, showClearDataModal, showDeleteAccountModal, showSyncModal, showShortcutsModal])
 
   useEffect(() => {
     const success = searchParams.get('success')
@@ -1286,12 +1251,6 @@ function SettingsPage() {
           </div>
         </div>
       )}
-
-      {/* Keyboard Shortcuts Modal */}
-      <KeyboardShortcutsModal
-        isOpen={showShortcutsModal}
-        onClose={() => setShowShortcutsModal(false)}
-      />
     </div>
   )
 }

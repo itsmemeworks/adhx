@@ -87,6 +87,8 @@ export interface StageIconButtonProps {
   onClick?: (e: MouseEvent<HTMLElement>) => void
   onTouchEnd?: (e: TouchEvent<HTMLElement>) => void
   'aria-label': string
+  /** Lets theater hotkeys click the same control the pointer uses. */
+  'data-theater-action'?: string
   children: ReactNode
 }
 

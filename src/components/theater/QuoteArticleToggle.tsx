@@ -32,7 +32,13 @@ export function QuoteArticleToggle({
 
   if (iconOnly) {
     return (
-      <StageIconButton onClick={onToggle} aria-label={label} title={title} className={className}>
+      <StageIconButton
+        onClick={onToggle}
+        aria-label={label}
+        title={title}
+        className={className}
+        data-theater-action="read"
+      >
         <Icon size={16} />
       </StageIconButton>
     )
@@ -45,6 +51,7 @@ export function QuoteArticleToggle({
       onClick={onToggle}
       title={title}
       className={cn(GLASS, className)}
+      data-theater-action="read"
     >
       <Icon size={14} />
       <span>{label}</span>

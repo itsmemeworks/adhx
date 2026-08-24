@@ -15,12 +15,10 @@ import {
   type StreamedBookmark,
   streamedBookmarkToFeedItem,
 } from '@/components/feed'
-import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
 import { PasteToPreview } from '@/components/PasteToPreview'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
-import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
@@ -49,7 +47,6 @@ function FeedPageContent(): React.ReactElement {
   // "no query string left" case has to fall back to this pathname, not to a
   // hardcoded '/'. It used to be '/' and that silently navigated the grid home.
   const pathname = usePathname()
-  const { resolvedTheme, setTheme } = useTheme()
 
   const [items, setItems] = useState<FeedItem[]>([])
   /** Monotonic id of the newest feed request — older responses are dropped. */
@@ -118,7 +115,6 @@ function FeedPageContent(): React.ReactElement {
   // Ref to access current items without adding to useCallback deps
   const itemsRef = useRef(items)
   itemsRef.current = items
-  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
 
   // Feed layout (grid / list / bento), remembered per device.
   useEffect(() => {
@@ -209,7 +205,7 @@ function FeedPageContent(): React.ReactElement {
     [placeAddedItem],
   )
 
-  // One personal theater: a card tap / `F` leaves the grid for `/collection`.
+  // One personal theater: a card tap leaves the grid for `/collection`.
   // AuthedTheater fetches the full active queue (API cap 100) and starts on
   // this post — prepends it when it's archived or outside the first page.
   const goToCollectionFromItem = useCallback(
@@ -665,110 +661,6 @@ function FeedPageContent(): React.ReactElement {
     return () => window.removeEventListener('open-theater', handler)
   }, [router])
 
-  // Global keyboard shortcuts
-  useEffect(() => {
-    if (showShortcutsModal) return
-    // Skip if not authenticated
-    if (!isAuthenticated) return
-
-    // Filter key mapping (matches FILTER_OPTIONS order)
-    const filterKeyMap: Record<string, FilterType> = {
-      '1': 'all',
-      '2': 'photos',
-      '3': 'videos',
-      '4': 'text',
-      '5': 'articles',
-      '6': 'quoted',
-      '7': 'manual',
-    }
-
-    function handleGlobalKeyDown(e: KeyboardEvent): void {
-      // Don't trigger shortcuts when typing in input fields
-      const activeEl = document.activeElement
-      const isInputFocused = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA'
-
-      if (isInputFocused) {
-        // Escape unfocuses the input
-        if (e.key === 'Escape') {
-          ;(activeEl as HTMLElement).blur()
-          e.preventDefault()
-        }
-        return
-      }
-
-      // Don't capture shortcuts when modifier keys are pressed (allow Cmd+R, Ctrl+R, etc.)
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-
-      switch (e.key) {
-        case '/':
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('focus-search'))
-          break
-        case '?':
-          e.preventDefault()
-          setShowShortcutsModal(true)
-          break
-        case 'g':
-        case 'G':
-          e.preventDefault()
-          router.push('/')
-          break
-        case ',':
-          e.preventDefault()
-          router.push('/settings')
-          break
-        case 'b':
-        case 'B':
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('open-sync'))
-          break
-        case 'u':
-        case 'U':
-          e.preventDefault()
-          setHideArchived((prev) => !prev)
-          break
-        case 'f':
-        case 'F':
-          e.preventDefault()
-          if (items.length > 0) goToCollectionFromItem(0)
-          break
-        case 't':
-        case 'T':
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('toggle-tag-filter'))
-          break
-        case 'o':
-        case 'O':
-          e.preventDefault()
-          setSort((prev) => (prev === 'added' ? 'posted' : 'added'))
-          break
-        case 'd':
-        case 'D':
-          e.preventDefault()
-          setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-          break
-        default:
-          // Check for filter number keys (1-6)
-          if (filterKeyMap[e.key]) {
-            e.preventDefault()
-            setFilter(filterKeyMap[e.key])
-          }
-          break
-      }
-    }
-
-    window.addEventListener('keydown', handleGlobalKeyDown)
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [
-    isAuthenticated,
-    router,
-    showShortcutsModal,
-    items.length,
-    goToCollectionFromItem,
-    resolvedTheme,
-    setTheme,
-  ])
-
   function loadMore(): void {
     if (!loading && hasMore) {
       setPage((p) => p + 1)
@@ -1062,12 +954,6 @@ function FeedPageContent(): React.ReactElement {
           />
         </ErrorBoundary>
       </div>
-
-      <KeyboardShortcutsModal
-        isOpen={showShortcutsModal}
-        onClose={() => setShowShortcutsModal(false)}
-        inFocusMode={false}
-      />
     </div>
   )
 }

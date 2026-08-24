@@ -24,6 +24,7 @@ import { YtDebugOverlay } from './YtDebugOverlay'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { useTheaterKeyboard } from './useTheaterKeyboard'
+import { TheaterShortcutsHelp } from './TheaterShortcutsHelp'
 import { useTheaterPrefetch } from './useTheaterPrefetch'
 import { useTheaterDwell } from './useTheaterDwell'
 import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
@@ -1335,6 +1336,8 @@ export function TheaterShell({
 
   // Keyboard nav (extracted to useTheaterKeyboard.ts — see its doc comment
   // for the full ↓/→/j vs. collection-collection-tab keymap rationale).
+  const [helpOpen, setHelpOpen] = useState(false)
+  const onToggleHelp = useCallback(() => setHelpOpen((open) => !open), [])
   useTheaterKeyboard({
     isPersonal,
     personalTab,
@@ -1343,6 +1346,8 @@ export function TheaterShell({
     setMuted,
     undoLastAction,
     onClose,
+    helpOpen,
+    onToggleHelp,
     isPlaybackHidden,
   })
 
@@ -1988,6 +1993,7 @@ export function TheaterShell({
           onClose={() => setTagPickerItem(null)}
         />
       )}
+      <TheaterShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   )
 }

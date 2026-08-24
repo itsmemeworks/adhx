@@ -21,7 +21,11 @@ export function TheaterCollectionActions({
 }) {
   if (variant === 'mobile') {
     return (
-      <StageIconButton onClick={() => collection.onDone()} aria-label="Archive">
+      <StageIconButton
+        onClick={() => collection.onDone()}
+        aria-label="Archive"
+        data-theater-action="archive"
+      >
         <ArchiveIcon size={16} />
       </StageIconButton>
     )
@@ -32,6 +36,7 @@ export function TheaterCollectionActions({
       onClick={collection.onDone}
       title="Archive — take it out of your collection queue"
       className={DESKTOP_PRIMARY}
+      data-theater-action="archive"
     >
       <ArchiveIcon size={14} />
       <span>Archive</span>

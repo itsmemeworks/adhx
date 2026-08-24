@@ -48,6 +48,10 @@ function mockAuthMe(response: unknown) {
   )
 }
 
+function pressMenuKey(key: string) {
+  window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+}
+
 describe('TheaterAvatarMenu', () => {
   beforeEach(() => {
     // useAuthMe caches module-level state across renders/tests, so force a
@@ -255,6 +259,42 @@ describe('TheaterAvatarMenu', () => {
     fireEvent.mouseDown(document.body)
     expect(screen.queryByText('Library')).not.toBeInTheDocument()
   })
+
+  it('moves focus through items with arrows and activates the focused link with Enter', async () => {
+    mockAuthMe(AUTHED_ME)
+    render(<TheaterAvatarMenu />)
+    fireEvent.click(await screen.findByLabelText('Account menu'))
+
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus())
+
+    pressMenuKey('ArrowDown')
+    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
+
+    pressMenuKey('j')
+    expect(screen.getByRole('menuitem', { name: 'Tags' })).toHaveFocus()
+
+    pressMenuKey('k')
+    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
+
+    pressMenuKey('End')
+    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
+
+    pressMenuKey('ArrowDown')
+    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
+
+    pressMenuKey('Home')
+    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
+
+    pressMenuKey('ArrowDown')
+    pressMenuKey('ArrowDown')
+    pressMenuKey('ArrowDown')
+    const leaderboard = screen.getByRole('menuitem', { name: 'Leaderboard' })
+    expect(leaderboard).toHaveFocus()
+    const click = vi.fn((e: Event) => e.preventDefault())
+    leaderboard.addEventListener('click', click)
+    pressMenuKey('Enter')
+    expect(click).toHaveBeenCalled()
+  })
 })
 
 describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
@@ -375,15 +415,31 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     expect(await screen.findByLabelText('Account menu')).toBeInTheDocument()
     expect(screen.queryByLabelText('Menu')).not.toBeInTheDocument()
   })
+
+  it('arrows move through the burger and Enter activates the focused link', async () => {
+    mockAuthMe(SIGNED_OUT_ME)
+    render(<TheaterAvatarMenu allowSignedOut />)
+    fireEvent.click(await screen.findByLabelText('Menu'))
+
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus())
+
+    pressMenuKey('ArrowDown')
+    const leaderboard = screen.getByRole('menuitem', { name: 'Leaderboard' })
+    expect(leaderboard).toHaveFocus()
+
+    const click = vi.fn((e: Event) => e.preventDefault())
+    leaderboard.addEventListener('click', click)
+    pressMenuKey('Enter')
+    expect(click).toHaveBeenCalled()
+  })
 })
 
 /**
- * Mobile's home for the Live ⇄ My Collection switch (owner: a tab pill in the
- * top scrim "is going to definitely cause overlap with the logo, the play
- * stats, and the paste and burger menu… why not just put it in the burger menu
- * for mobile? Theater just has two sub options: live and collection and we can
- * just highlight which one is selected"). Desktop passes no `theaterTabs` and
- * keeps its top-bar pill, so the control never renders twice.
+ * Live ⇄ My Collection under Theater (owner: "Theater just has two sub
+ * options: live and collection and we can just highlight which one is
+ * selected"). Mobile has no room for a tab pill, so this is the only
+ * switcher there. Desktop keeps the top-bar pill and still passes
+ * `theaterTabs` so `.` + arrows can pick a tab.
  */
 describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
   beforeEach(() => {
@@ -456,7 +512,7 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     expect(screen.getByText('Theater').closest('[role="menuitem"]')).toBeNull()
   })
 
-  it('falls back to the plain Theater entry when no tabs are passed (desktop)', async () => {
+  it('falls back to the plain Theater entry when no tabs are passed', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu theaterActive />)
     fireEvent.click(await screen.findByLabelText('Account menu'))

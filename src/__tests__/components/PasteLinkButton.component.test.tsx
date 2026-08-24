@@ -180,14 +180,14 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    // The dialog is portalled to <body>, so its unmount lands in a later
-    // commit than the keydown. `act` flushes that deterministically — polling
-    // with waitFor passed in isolation but timed out under a loaded parallel
-    // suite, which is a flaky test rather than a real signal.
-    await act(async () => {
+    // Capture listener attaches in an effect after the overlay opens. Poll
+    // the keydown the same way the outside-click test polls mousedown — a
+    // single `act` can fire Escape before the listener exists on a loaded
+    // CI runner (failed on PR #405).
+    await waitFor(() => {
       fireEvent.keyDown(window, { key: 'Escape' })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('closes the overlay on the explicit close button', async () => {

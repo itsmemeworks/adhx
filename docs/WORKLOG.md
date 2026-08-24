@@ -6,6 +6,50 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Repeat is R; Read / Watch is F
+
+Repeat moved from `F` to `R`. Read / Watch took `F`. Follow-up: none.
+
+## 2026-08-24 — E expand, F repeat, arrows scroll text
+
+Theater keyboard: `E` toggles expand (hide/show chrome), `F` cycles repeat. `↓`/`↑` no longer change posts — they scroll the article/text stage so reading does not need the mouse. Next/previous are `→` `J` / `←` `K`. Follow-up: none.
+
+## 2026-08-24 — Archive sits below Read / Watch in shortcut help
+
+Actions cheatsheet order is now Read / Watch then Archive then Undo. Follow-up: none.
+
+## 2026-08-24 — Tag picker is fully keyboardable
+
+`T` focuses the new-tag input. Enter there creates, assigns, and closes. Arrows (and J/K off the input) move the existing tag rows; Space/Enter toggles the focused row. Follow-up: none.
+
+## 2026-08-24 — Desktop menu has Live / My Collection
+
+Desktop's avatar menu now gets the same Theater sub-rows as mobile (`theaterTabs`), so `.` + arrows can switch Live ⇄ My Collection. The top-bar pill stays for the mouse. Follow-up: none.
+
+## 2026-08-24 — Arrow through the theater menu
+
+`.` still opens the avatar/burger menu; arrows / J K / Home / End now move between `menuitem`s and Enter / Space activate the focused row (was swallowing those keys so the stage did not advance, without moving focus). Follow-up: none.
+
+## 2026-08-24 — W / P on the caught-up stage
+
+Waiting-stage **Re-watch all** is `W`, **Keep playing** is `P` (same click-the-chrome-button pattern; no-op when those buttons are not mounted). Collection All Clear also takes `P`. Follow-up: none.
+
+## 2026-08-24 — Shortcut help groups next vs previous
+
+Navigate help is two lines: next (`→` `↓` `J`) then previous (`←` `↑` `K`). J/K were listed as a pair the wrong way around. Follow-up: none.
+
+## 2026-08-24 — Shortcut help is two columns on desktop
+
+`TheaterShortcutsHelp` is `max-w-2xl` on `lg+` with Navigate/Playback/Also left and Actions right, so the overlay is wider and shorter. Phone stays a single column. Follow-up: none.
+
+## 2026-08-24 — R toggles Read / Watch
+
+Theater keyboard now has `R` for the Read/Watch switch (same control as the chrome button). No-op when the post has no overflow or quote. Follow-up: none.
+
+## 2026-08-23 — Theater is the only keyboard surface
+
+Library and Settings no longer bind keys (the old gallery/focus cheatsheet is gone). Theater gets a full desktop map: arrows/jk, Space, M, S/T/L/C/D/O/A, R Read/Watch, U undo, `.` menu, ⌘V/Ctrl+V paste (OS event), Shift+? help overlay. Action keys click `[data-theater-action]` on the visible chrome only. Covered by unit tests plus `e2e/theater-shortcuts.spec.ts` (help, menu, S/T/A/U/R, library no-ops). Follow-up: none.
+
 ## 2026-08-24 — Stage tap declutter onto Read/Watch
 
 Merged tap-to-declutter onto the Read/Watch theater: first tap hides chrome and starts playback, second tap restores overlays without pausing. Pause stays on the peek-bar / dock button and Space. E2E covers desktop + mobile video tap. Follow-up: none.

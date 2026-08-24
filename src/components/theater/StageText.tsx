@@ -191,6 +191,7 @@ export function StageText({
         underBand ? 'bg-transparent' : 'bg-[#08070a]',
         scrollPad && STAGE_TEXT_SCROLL_PAD,
       )}
+      data-theater-scroll
     >
       {/* min-h-full + justify-center: a couple of lines sit in the middle
           of the stage; once the column is taller than the viewport the

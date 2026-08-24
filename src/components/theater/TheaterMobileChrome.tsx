@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useSheetDrag } from './useSheetDrag'
 import {
   Loader2,
@@ -227,6 +228,8 @@ export function TheaterMobileChrome({
   // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
   const sendFile = useSendFile(current, { eager: mode === 'shared' })
   const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
+  const rootRef = useRef<HTMLDivElement>(null)
+  useTheaterActionHotkeys('mobile', rootRef)
   const { ref: captionRef, overflowing } = useClampExpand(currentKey)
 
   // `mediaKind` is the REAL content kind — drives the audio/pause buttons,
@@ -381,7 +384,7 @@ export function TheaterMobileChrome({
   const copyAction = textCopyAction(kind)
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 lg:hidden">
+    <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 lg:hidden">
       <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
 
       {/* Top scrim: brand (left) + flame/trend (right). De-clutter hides this
@@ -410,7 +413,7 @@ export function TheaterMobileChrome({
                 going to definitely cause overlap with the logo, the play
                 stats, and the paste and burger menu… why not just put it in
                 the burger menu for mobile?"). Desktop keeps its top-bar pill
-                and does NOT pass this — one control per surface, never both.
+                and also passes these rows so `.` + arrows can switch tabs.
                 It's what freed the peek bar's centre slot for the queue
                 position. */}
             <TheaterAvatarMenu
@@ -588,6 +591,7 @@ export function TheaterMobileChrome({
                         : fileAction.label
                   }
                   className={sendFile.primed ? ICON_SAVE : undefined}
+                  data-theater-action="download"
                 >
                   {sendFile.sending ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -600,6 +604,7 @@ export function TheaterMobileChrome({
                   onClick={() => void copyText()}
                   title={copyAction.title}
                   aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
+                  data-theater-action="copy"
                 >
                   {textCopied ? (
                     <Check size={16} className="text-done" />
@@ -631,6 +636,7 @@ export function TheaterMobileChrome({
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
                   aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'}
+                  data-theater-action="tag"
                 >
                   <TagIcon
                     size={16}
@@ -647,6 +653,7 @@ export function TheaterMobileChrome({
                     }}
                     onTouchEnd={(e) => e.stopPropagation()}
                     aria-label={tagCount > 0 ? `Tag · ${tagCount}` : 'Tag this post'}
+                    data-theater-action="tag"
                   >
                     <TagIcon
                       size={16}
@@ -681,11 +688,16 @@ export function TheaterMobileChrome({
                   onClick={() => onRequestSignIn?.()}
                   aria-label="Save"
                   className={ICON_SAVE}
+                  data-theater-action="save"
                 >
                   <Bookmark size={16} />
                 </StageIconButton>
               )}
-              <StageIconButton onClick={() => void handleShare()} aria-label="Share link">
+              <StageIconButton
+                onClick={() => void handleShare()}
+                aria-label="Share link"
+                data-theater-action="link"
+              >
                 {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
               </StageIconButton>
               {(() => {
@@ -702,6 +714,7 @@ export function TheaterMobileChrome({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open on ${platformLabel}`}
+                    data-theater-action="open"
                     onClick={() =>
                       pingAnalytic('post.open', {
                         platform: current.platform,
@@ -791,6 +804,7 @@ export function TheaterMobileChrome({
                 onTouchEnd={(e) => e.stopPropagation()}
                 aria-label={declutter ? 'Show controls' : 'Hide controls'}
                 className={PEEK_ICON_BTN}
+                data-theater-action="expand"
               >
                 {/* De-cluttering EXPANDS the stage — the enter action (declutter
                   false → true) reads outward (Maximize2); exiting reads
@@ -828,6 +842,7 @@ export function TheaterMobileChrome({
                   // inline style outranks whatever won the cascade against the
                   // bare `text-clay` class on the in-place-updated node.
                   style={repeatMode !== 'off' ? { color: 'var(--m-accent)' } : undefined}
+                  data-theater-action="repeat"
                 >
                   {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
                 </button>

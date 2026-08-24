@@ -364,7 +364,8 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
    * The Live ⇄ My Collection switch is NOT a control this chrome draws. A tab
    * pill in the top scrim overlapped the logo, trend/time chips and paste
    * button at phone widths (owner), so mobile hands the pair to the burger as
-   * Theater sub-options and desktop keeps its top-bar pill. What this chrome
+   * Theater sub-options. Desktop keeps its top-bar pill and now also passes
+   * the same rows so the keyboard menu can switch tabs. What this chrome
    * owes is the wiring; the rendering is TheaterAvatarMenu's test.
    */
   it('hands the Live/Collection switch to the burger instead of drawing tabs', () => {

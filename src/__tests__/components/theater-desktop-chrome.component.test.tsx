@@ -1516,3 +1516,60 @@ describe('DesktopStageChrome: theaterActive prop wiring', () => {
     )
   })
 })
+
+describe('DesktopStageChrome: theaterTabs prop wiring', () => {
+  const stageBase = {
+    mode: 'home' as const,
+    declutter: false,
+    onToggleDeclutter: vi.fn(),
+  }
+
+  const collection = {
+    tab: 'live' as const,
+    onTabChange: vi.fn(),
+    onDone: vi.fn(),
+    onTag: vi.fn(),
+    onSave: vi.fn(),
+    onLiveTag: vi.fn(),
+    savedKeys: new Set<string>(),
+    remaining: 0,
+    onClose: vi.fn(),
+  }
+
+  it('passes Live / My Collection into the avatar menu from the collection chrome', () => {
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="personal"
+        current={videoItem()}
+        collection={collection}
+      />,
+    )
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theaterTabs: { tab: 'live', onTabChange: collection.onTabChange },
+      }),
+    )
+    expect(screen.getByRole('button', { name: 'My Collection' })).toBeInTheDocument()
+  })
+
+  it('passes Live / My Collection into the avatar menu from signed-in shared tabs', () => {
+    const onTabChange = vi.fn()
+    render(
+      <DesktopStageChrome
+        {...stageBase}
+        mode="shared"
+        current={videoItem()}
+        accountTabs={{ tab: 'live', onTabChange, onClose: vi.fn() }}
+      />,
+    )
+    expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
+      expect.objectContaining({ theaterTabs: { tab: 'live', onTabChange } }),
+    )
+  })
+
+  it('omits theaterTabs when there is no Live / Collection switch', () => {
+    render(<DesktopStageChrome {...stageBase} mode="home" current={videoItem()} />)
+    expect(mockTheaterAvatarMenu.mock.calls[0][0].theaterTabs).toBeUndefined()
+  })
+})

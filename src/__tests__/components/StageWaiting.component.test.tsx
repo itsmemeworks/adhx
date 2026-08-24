@@ -40,4 +40,15 @@ describe('StageWaiting', () => {
     fireEvent.click(button)
     expect(onReplay).toHaveBeenCalledTimes(1)
   })
+
+  it('clicks Re-watch all and Keep playing from theater hotkey events', () => {
+    const onReplay = vi.fn()
+    const onKeepPlaying = vi.fn()
+    render(<StageWaiting onReplay={onReplay} replayCount={15} onKeepPlaying={onKeepPlaying} />)
+    expect(screen.getByText('Re-watch all 15')).toBeInTheDocument()
+    fireEvent(window, new Event('theater-replay'))
+    fireEvent(window, new Event('theater-keep-playing'))
+    expect(onReplay).toHaveBeenCalledTimes(1)
+    expect(onKeepPlaying).toHaveBeenCalledTimes(1)
+  })
 })

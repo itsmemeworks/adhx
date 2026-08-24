@@ -99,8 +99,8 @@ function seed(items: TheaterItem[]): TheaterFeedSeed {
   return { items, savedToday: 0, recentActivity: 0 }
 }
 
-function pressArrowDown() {
-  fireEvent.keyDown(window, { key: 'ArrowDown' })
+function pressNext() {
+  fireEvent.keyDown(window, { key: 'ArrowRight' })
 }
 
 /**
@@ -131,8 +131,8 @@ describe('TheaterShell: waiting-stage fixes', () => {
       render(<TheaterShell seed={seed(items)} />)
 
       // Advance past both items into the waiting stage.
-      await act(async () => pressArrowDown())
-      await act(async () => pressArrowDown())
+      await act(async () => pressNext())
+      await act(async () => pressNext())
 
       expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
       // The stage stays in the tree — never unmounted for the waiting overlay.
@@ -148,8 +148,8 @@ describe('TheaterShell: waiting-stage fixes', () => {
     markWatched(items)
     render(<TheaterShell seed={seed(items)} />)
 
-    await act(async () => pressArrowDown())
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
+    await act(async () => pressNext())
     expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
 
     const arrival = textItem('fresh-1')
@@ -232,8 +232,8 @@ describe('TheaterShell: resuming from a caught-up arrival starts on item 1', () 
 
     // Walk to the end: each press plays out an item, so the last one IS behind
     // us by the time the stage appears.
-    await act(async () => pressArrowDown())
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
+    await act(async () => pressNext())
     expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
     const before = queuePosition()
 
@@ -253,7 +253,7 @@ describe('TheaterShell: resuming from a caught-up arrival starts on item 1', () 
 
     // Browsing past item 1 means it is no longer the unplayed post we parked
     // on — the parked key self-clears by no longer matching.
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
     const browsed = queuePosition().index
     expect(browsed).toBe(1)
 
@@ -275,6 +275,38 @@ describe('TheaterShell: resuming from a caught-up arrival starts on item 1', () 
       fireEvent.click(btn)
     })
 
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+  })
+
+  it('P keep-plays from the caught-up stage via the theater keymap', async () => {
+    const items = [textItem('1'), textItem('2'), textItem('3')]
+    markWatched(items)
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'p' })
+    })
+
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+  })
+
+  it('W re-watches from the caught-up stage via the theater keymap', async () => {
+    const items = [textItem('1'), textItem('2'), textItem('3')]
+    markWatched(items)
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'w' })
+    })
+
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
     expect(queuePosition()).toEqual({ index: 0, length: 3 })
   })
 })

@@ -36,6 +36,10 @@ function mockFetchSequence(): void {
   }) as unknown as typeof fetch
 }
 
+function pressPickerKey(key: string) {
+  window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+}
+
 describe('TagQuickPicker Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -101,8 +105,9 @@ describe('TagQuickPicker Component', () => {
     )
   })
 
-  it('creates a new tag inline and POSTs it against the current post', async () => {
-    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+  it('creates a new tag inline, POSTs it, and closes', async () => {
+    const onClose = vi.fn()
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={onClose} />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeTruthy())
     const input = screen.getByPlaceholderText('New tag')
@@ -118,7 +123,7 @@ describe('TagQuickPicker Component', () => {
         }),
       ),
     )
-    await waitFor(() => expect(screen.getByText('#claude-code')).toBeTruthy())
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
   it('dispatches bookmark-tags-changed with the full updated tag list on toggle', async () => {
@@ -166,5 +171,55 @@ describe('TagQuickPicker Component', () => {
     await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy())
     fireEvent.mouseDown(screen.getByRole('dialog'))
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('autofocuses the new-tag input on open', async () => {
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByLabelText('New tag name')).toHaveFocus())
+  })
+
+  it('ArrowDown moves from the input onto the first tag; Space toggles it', async () => {
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('#work')).toBeTruthy())
+    expect(screen.getByLabelText('New tag name')).toHaveFocus()
+
+    pressPickerKey('ArrowDown')
+    const workRow = screen.getByText('#work').closest('button')!
+    expect(workRow).toHaveFocus()
+
+    pressPickerKey(' ')
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/bookmarks/tw1/tags?platform=twitter',
+        expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ tag: 'work' }) }),
+      ),
+    )
+  })
+
+  it('ArrowDown then ArrowDown reaches the next tag; Enter toggles it', async () => {
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('#reading')).toBeTruthy())
+
+    pressPickerKey('ArrowDown')
+    pressPickerKey('ArrowDown')
+    expect(screen.getByText('#reading').closest('button')).toHaveFocus()
+
+    pressPickerKey('Enter')
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/bookmarks/tw1/tags?platform=twitter',
+        expect.objectContaining({ method: 'POST', body: JSON.stringify({ tag: 'reading' }) }),
+      ),
+    )
+  })
+
+  it('ArrowUp from the first tag returns focus to the input', async () => {
+    render(<TagQuickPicker platform="twitter" bookmarkId="tw1" open={true} onClose={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('#work')).toBeTruthy())
+
+    pressPickerKey('ArrowDown')
+    expect(screen.getByText('#work').closest('button')).toHaveFocus()
+    pressPickerKey('ArrowUp')
+    expect(screen.getByLabelText('New tag name')).toHaveFocus()
   })
 })
