@@ -7,6 +7,7 @@ import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterPersonalChrome } from '@/components/theater/types'
 import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
+import { resetClampExpandPreference } from '@/components/theater/useClampExpand'
 
 /**
  * Save-is-always-primary / Download-is-secondary on the mobile bottom scrim —
@@ -94,6 +95,7 @@ const base = {
 }
 
 beforeEach(() => {
+  resetClampExpandPreference()
   mockUseSendFile.mockReturnValue({
     supported: false,
     ready: false,
@@ -119,6 +121,82 @@ function peekCentreText(): string {
 
 // Mobile action row is icon-only. Save keeps a clay border on the same
 // 44px glass circle as Share/Open; Download stays `border-white/25`.
+describe('TheaterMobileChrome: caption', () => {
+  it('shows a two-line caption and no more/less control', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const caption = screen.getByText('a caption for the video')
+    expect(caption.closest('p')).toHaveClass('line-clamp-2')
+    expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
+  })
+
+  it('puts Read on the left of the action row, under the caption', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem({
+          quote: { author: 'other', text: 'the quoted tweet' },
+        })}
+        onToggleArticleMode={vi.fn()}
+      />,
+    )
+    const caption = screen.getByText('a caption for the video')
+    const read = screen.getByRole('button', { name: 'Read' })
+    expect(caption.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(read.nextElementSibling?.className).toContain('justify-end')
+    expect(read).not.toHaveTextContent('Read')
+  })
+
+  it('hides the caption in article mode and keeps Watch on the left of the action row', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem({
+          quote: { author: 'other', text: 'the quoted tweet' },
+        })}
+        articleMode
+        onToggleArticleMode={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText('a caption for the video')).not.toBeInTheDocument()
+    const watch = screen.getByRole('button', { name: 'Watch' })
+    expect(watch.nextElementSibling?.className).toContain('justify-end')
+    expect(watch).not.toHaveTextContent('Watch')
+  })
+
+  it('shows tag chips in the action row, including on articles', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem({ contentType: 'article', text: 'Army title' })}
+        itemTags={['ai']}
+      />,
+    )
+    expect(screen.getByText('#ai')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+  })
+
+  it('lets article body scroll through the empty caption zone', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={textItem({ contentType: 'article', text: 'Army title' })}
+        itemTags={['ai']}
+      />,
+    )
+    const copy = screen.getByRole('button', { name: 'Copy' })
+    const icons = copy.parentElement
+    expect(icons?.className).toContain('justify-end')
+    const actionRow = icons?.parentElement
+    expect(actionRow?.className).toContain('pointer-events-auto')
+    expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
+    expect(copy.className).toContain('bg-white/10')
+    expect(copy.className).toContain('backdrop-blur-md')
+    const tag = screen.getByText('#ai')
+    expect(tag.className).toContain('bg-white/10')
+    expect(tag.className).toContain('backdrop-blur-md')
+  })
+})
+
 describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
   it('sign-in prompt Save is outlined with a clay border, never the old solid fill', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
@@ -218,6 +296,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tag' }).className).toContain('border-white/25')
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
     const archive = screen.getByRole('button', { name: 'Archive' })
     expect(archive).toBeInTheDocument()
@@ -227,13 +306,66 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('tagged collection Tag keeps the glass border — clay is on the icon only', () => {
+    const collection: TheaterPersonalChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 3,
+      onClose: vi.fn(),
+      tags: ['cats'],
+    }
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
+    const tag = screen.getByRole('button', { name: 'Tag · 1' })
+    expect(tag.className).toContain('border-white/25')
+    expect(tag.className).not.toContain('text-clay')
+    expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
+  })
+
+  it('shows paste on the personal Live tab too', () => {
+    const collection: TheaterPersonalChrome = {
+      tab: 'live',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      onClose: vi.fn(),
+    }
+    render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
+    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('pins the flame left of paste on media and text', () => {
+    const { rerender } = render(
+      <TheaterMobileChrome {...base} current={videoItem({ trendCount: 12 })} />,
+    )
+    let flame = screen.getByLabelText('12 trending')
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    expect(flame.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    rerender(<TheaterMobileChrome {...base} current={textItem({ trendCount: 12 })} />)
+    flame = screen.getByLabelText('12 trending')
+    expect(
+      flame.compareDocumentPosition(screen.getByRole('button', { name: 'Paste a link' })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   /**
    * The Live ⇄ My Collection switch is NOT a control this chrome draws. A tab
    * pill in the top scrim overlapped the logo, trend/time chips and paste
    * button at phone widths (owner), so mobile hands the pair to the burger as
-   * Theater sub-options and desktop keeps its top-bar pill. What this chrome
+   * Theater sub-options. Desktop keeps its top-bar pill and now also passes
+   * the same rows so the keyboard menu can switch tabs. What this chrome
    * owes is the wiring; the rendering is TheaterAvatarMenu's test.
    */
   it('hands the Live/Collection switch to the burger instead of drawing tabs', () => {
@@ -254,6 +386,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
       expect.objectContaining({ theaterTabs: { tab: 'live', onTabChange } }),
     )
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
     // No tab buttons of its own — in the scrim or the peek bar.
     expect(screen.queryByText('My Collection')).not.toBeInTheDocument()
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
@@ -344,39 +477,15 @@ describe('TheaterMobileChrome: text posts', () => {
   })
 })
 
-/**
- * Owner report: the collection theater rendered "56y" for a saved TikTok
- * whose `createdAt` fell back to an epoch sentinel. The chip renders
- * `addedAt` (when the post was first saved to ADHX — never the source
- * platform's own publish date), gated by `hasKnownTimestamp` — a
- * missing/unknown `addedAt` hides the relative-time span but the platform
- * glyph must still render either way.
- */
-describe('TheaterMobileChrome: hides the time text for an unknown addedAt', () => {
-  it('omits the relative-time span but keeps the platform glyph when addedAt is null', () => {
-    const { container } = render(
-      <TheaterMobileChrome {...base} current={videoItem({ addedAt: null })} />,
-    )
-    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
-    expect(chip).toBeInTheDocument()
-    expect(chip!.querySelector('svg')).toBeInTheDocument()
-    expect(chip!.querySelector('span')).not.toBeInTheDocument()
-  })
-
-  it('omits the relative-time span when addedAt is the epoch sentinel', () => {
-    const { container } = render(
-      <TheaterMobileChrome {...base} current={videoItem({ addedAt: new Date(0).toISOString() })} />,
-    )
-    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
-    expect(chip!.querySelector('span')).not.toBeInTheDocument()
-  })
-
-  it('shows the relative-time span for a real addedAt', () => {
-    const { container } = render(
+describe('TheaterMobileChrome: Open action uses the source platform glyph', () => {
+  it('is a platform-glyph link with no added-to-ADHX time', () => {
+    render(
       <TheaterMobileChrome {...base} current={videoItem({ addedAt: '2026-08-18T00:00:00Z' })} />,
     )
-    const chip = container.querySelector('a[href="https://x.com/alice/status/1"]')
-    expect(chip!.querySelector('span')).toBeInTheDocument()
+    const open = screen.getByRole('link', { name: 'Open on X' })
+    expect(open).toHaveAttribute('href', 'https://x.com/alice/status/1')
+    expect(open.querySelector('svg')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Added to ADHX/)).not.toBeInTheDocument()
   })
 })
 
@@ -394,6 +503,23 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
     const restored = screen.getByLabelText('Show controls')
     expect(restored.querySelector('.lucide-minimize-2')).toBeInTheDocument()
     expect(restored.querySelector('.lucide-maximize-2')).not.toBeInTheDocument()
+  })
+
+  it('a stage tap hides chrome and resumes; a second tap only restores overlays', () => {
+    const resumes: Event[] = []
+    const onResume = (e: Event) => resumes.push(e)
+    window.addEventListener('theater-resume', onResume)
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+
+    expect(screen.getByLabelText('Hide controls')).toBeInTheDocument()
+    fireEvent(window, new CustomEvent('theater-stage-tap'))
+    expect(screen.getByLabelText('Show controls')).toBeInTheDocument()
+    expect(resumes).toHaveLength(1)
+
+    fireEvent(window, new CustomEvent('theater-stage-tap'))
+    expect(screen.getByLabelText('Hide controls')).toBeInTheDocument()
+    expect(resumes).toHaveLength(1)
+    window.removeEventListener('theater-resume', onResume)
   })
 })
 
@@ -765,7 +891,7 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
     )
   })
 
-  it('signed-in shared preview wires Live ⇄ My Collection into the avatar menu and shows Close', () => {
+  it('signed-in shared preview wires Live ⇄ My Collection into the avatar menu and omits Close', () => {
     const onTabChange = vi.fn()
     const onClose = vi.fn()
     render(
@@ -782,8 +908,7 @@ describe('TheaterMobileChrome: theaterActive prop wiring', () => {
         theaterTabs: { tab: 'live', onTabChange },
       }),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    expect(onClose).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
   })
 })
 

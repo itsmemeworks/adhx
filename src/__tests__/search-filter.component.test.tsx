@@ -101,10 +101,19 @@ vi.mock('@/components/feed', async (importOriginal) => {
   return {
     ...actual,
     FeedGrid: () => null,
-    FilterBar: () => null,
+    FilterBar: ({
+      hideArchived,
+      onHideArchivedChange,
+    }: {
+      hideArchived: boolean
+      onHideArchivedChange: (next: boolean) => void
+    }) => (
+      <button type="button" onClick={() => onHideArchivedChange(!hideArchived)}>
+        Toggle archived
+      </button>
+    ),
   }
 })
-vi.mock('@/components/KeyboardShortcutsModal', () => ({ KeyboardShortcutsModal: () => null }))
 vi.mock('@/components/LandingPage', () => ({ LandingPage: () => null }))
 vi.mock('@/components/sync/SyncProgress', () => ({ SyncProgress: () => null }))
 
@@ -207,10 +216,11 @@ describe('Header search -> feed filtering (regression)', () => {
 
     replaceSpy.mockClear()
 
-    // 'u' toggles hideArchived — a state this component owns and writes to the
-    // URL via the same effect that used to also (incorrectly) rebuild `search`
-    // from local state.
-    fireEvent.keyDown(window, { key: 'u' })
+    // Flip hideArchived — a state this component owns and writes to the URL
+    // via the same effect that used to also (incorrectly) rebuild `search`
+    // from local state. Library keys are gone; the FilterBar stub exposes
+    // the same toggle as a click.
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle archived' }))
 
     await waitFor(() => expect(replaceSpy).toHaveBeenCalled())
     const lastReplaceUrl = replaceSpy.mock.calls[replaceSpy.mock.calls.length - 1][0] as string

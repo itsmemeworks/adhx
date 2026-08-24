@@ -111,8 +111,8 @@ function markWatched(items: TheaterItem[]) {
   window.localStorage.setItem('adhx-seen-v1', JSON.stringify(items.map(theaterItemKey)))
 }
 
-function pressArrowDown() {
-  fireEvent.keyDown(window, { key: 'ArrowDown' })
+function pressNext() {
+  fireEvent.keyDown(window, { key: 'ArrowRight' })
 }
 
 /** Latest props the shell handed the mobile chrome — items/currentKey/queueTotal all live here. */
@@ -361,7 +361,7 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
     })
   }
 
-  it('reaching the end via ArrowDown (user-initiated) shows caught-up, and "Keep playing" advances rather than replaying the last post', async () => {
+  it('reaching the end via ArrowRight (user-initiated) shows caught-up, and "Keep playing" advances rather than replaying the last post', async () => {
     const item1 = textItem('1')
     const item2 = textItem('2')
     const item3 = textItem('3')
@@ -369,15 +369,15 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
     expect(queuePosition()).toEqual({ index: 0, length: 3 })
 
     await letDwellSettle()
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
     expect(queuePosition().index).toBe(1)
 
     await letDwellSettle()
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
     expect(queuePosition().index).toBe(2)
 
     await letDwellSettle()
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
 
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
 
@@ -469,22 +469,22 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
    * was trigger-method-agnostic, so this pins both routes to the end of the
    * queue on the signed-in surface.
    */
-  it('reaching the end via ArrowDown shows caught-up on the signed-in Live tab', async () => {
+  it('reaching the end via ArrowRight shows caught-up on the signed-in Live tab', async () => {
     const item1 = textItem('1')
     const item2 = textItem('2')
     const item3 = textItem('3')
     await renderCollectionLive([item1, item2, item3])
 
     await letDwellSettle()
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
     expect(queuePosition().index).toBe(1)
 
     await letDwellSettle()
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
     expect(queuePosition().index).toBe(2)
 
     await letDwellSettle()
-    await act(async () => pressArrowDown())
+    await act(async () => pressNext())
 
     // Expected: caught-up. Actual: cursor reverts to item 1 — fails.
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()

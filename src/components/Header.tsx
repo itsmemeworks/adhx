@@ -90,9 +90,6 @@ export function Header() {
   })
   const [displayedCooldown, setDisplayedCooldown] = useState(0)
 
-  // Ref for keyboard shortcut focus
-  const searchInputRef = useRef<HTMLInputElement>(null)
-
   useEffect(() => {
     // Only fetch auth status on mount - stats/cooldown are fetched after auth is confirmed
     fetchAuthStatus()
@@ -114,15 +111,9 @@ export function Header() {
     }
     window.addEventListener('sync-complete', handleSyncComplete)
 
-    // Keyboard shortcut events
-    const handleFocusSearch = () => searchInputRef.current?.focus()
-
-    window.addEventListener('focus-search', handleFocusSearch)
-
     return () => {
       window.removeEventListener('stats-updated', handleStatsUpdate)
       window.removeEventListener('sync-complete', handleSyncComplete)
-      window.removeEventListener('focus-search', handleFocusSearch)
     }
   }, [authStatus?.authenticated])
 
@@ -460,7 +451,6 @@ export function Header() {
               <div className="relative flex items-center">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[17px] h-[17px] text-ink-3 pointer-events-none" />
                 <input
-                  ref={searchInputRef}
                   type="text"
                   value={searchValue}
                   onChange={(e) => handleSearchChange(e.target.value)}

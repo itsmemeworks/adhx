@@ -5,14 +5,14 @@
  * components needing to know anything about the richer `FeedItem` shape.
  *
  * `TheaterItem` (== `TrendingItem`) is deliberately narrower than `FeedItem` —
- * it has no `media[]`, `quotedTweet`, or `quoteContext`. The stage/rail for
- * the collection surface therefore keeps the ORIGINAL `FeedItem` alongside
- * the converted `TheaterItem` (see `theaterItemsFromFeed`) for anything that
- * needs that extra fidelity (video playback, quote cards).
+ * it has no `media[]`. Quote cards go through `TheaterItem.quote` (mapped from
+ * `quotedTweet` / `quoteContext`). The stage still keeps the original
+ * `FeedItem` for video playback fidelity.
  */
 
 import type { FeedItem, LinkItem } from '@/components/feed/types'
 import { feedItemType } from '@/components/feed/feedItemMeta'
+import { quoteRefFromSource, quoteRefFromStoredContext } from '@/lib/theater/quote-ref'
 import type { TextLinkRef, TheaterItem } from './types'
 import { theaterItemKey } from './types'
 
@@ -66,6 +66,7 @@ function heroThumbnail(item: FeedItem): string | null {
 export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
   const platform = item.platform ?? 'twitter'
   const contentType = inferCollectionContentType(item)
+  const quote = quoteFromFeedItem(item)
   return {
     action: 'save',
     platform,
@@ -94,7 +95,31 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     addedAt: item.processedAt || null,
     contentType,
     textLinks: toTextLinks(item.links),
+    ...(quote ? { quote } : {}),
   }
+}
+
+function quoteFromFeedItem(item: FeedItem): TheaterItem['quote'] {
+  const quoted = item.quotedTweet
+  if (quoted) {
+    const photos = (quoted.media ?? []).filter((m) => m.mediaType === 'photo')
+    return quoteRefFromSource({
+      id: quoted.id,
+      text: quoted.text,
+      author: {
+        screen_name: quoted.author,
+        name: quoted.authorName,
+        avatar_url: quoted.authorProfileImageUrl,
+      },
+      media: {
+        photos: photos.map((m) => ({ url: m.url || m.thumbnailUrl })),
+        videos: (quoted.media ?? [])
+          .filter((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif')
+          .map((m) => ({ thumbnailUrl: m.thumbnailUrl })),
+      },
+    })
+  }
+  return quoteRefFromStoredContext(item.quoteContext ?? undefined)
 }
 
 export interface TheaterQueue {

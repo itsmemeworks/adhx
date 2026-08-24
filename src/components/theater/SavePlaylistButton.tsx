@@ -11,6 +11,7 @@
 import { Bookmark, Check, Loader2 } from 'lucide-react'
 import type { SavePlaylistStatus } from './types'
 import { StageIconButton } from './stage-primitives'
+import { StageGlass } from './StageGlass'
 
 export interface SavePlaylistButtonProps {
   count: number
@@ -57,6 +58,7 @@ export function SavePlaylistButton({
               : `Save playlist · ${count}`
         }
         className={className}
+        data-theater-action="save"
       >
         {status === 'saving' ? (
           <Loader2 size={16} className="animate-spin" />
@@ -69,21 +71,28 @@ export function SavePlaylistButton({
 
   if (status === 'saved') {
     return (
-      <a href="/library" className={className}>
+      <StageGlass as="a" href="/library" className={className}>
         <Check size={14} />
         <span>Saved &middot; View in your library</span>
-      </a>
+      </StageGlass>
     )
   }
 
   return (
-    <button type="button" onClick={onSave} disabled={status === 'saving'} className={className}>
+    <StageGlass
+      as="button"
+      type="button"
+      onClick={onSave}
+      disabled={status === 'saving'}
+      className={className}
+      data-theater-action="save"
+    >
       {status === 'saving' ? (
         <Loader2 size={14} className="animate-spin" />
       ) : (
         <Bookmark size={14} />
       )}
       <span>{status === 'error' ? 'Try again' : `Save playlist · ${count}`}</span>
-    </button>
+    </StageGlass>
   )
 }

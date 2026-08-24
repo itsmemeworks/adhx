@@ -41,21 +41,36 @@ StageVideo.tsx           — <video> for twitter/tiktok/instagram; poster-first;
 StageYouTube.tsx         — official youtube-nocookie iframe in a CONCRETE-height container
                            (aspect box collapses around absolute iframes — known gotcha)
 StageArticle.tsx         — cover splash → in-stage reader (articleBlocksToMarkdown output);
-                           reading-progress bar replaces the time bar
+                           reading-progress bar replaces the time bar; `STAGE_TEXT_SCROLL_PAD`
+                           so the last lines sit above the overlay actions + mobile peek bar
 StageText.tsx            — tweet typeset large (Newsreader) on the stage; photos reuse it
-                           with the image full-bleed (StagePhoto trivial variant)
+                           with the image full-bleed. Video/photo + quote (or a caption
+                           over two lines) defaults to full-bleed parent media + a
+                           2-line caption; **Read** opens this as a stacked article.
+                           A playing parent video stays in a top band so it continues
+                           while you read. Never fade the clip — a stage-black
+                           gradient sits in the strip below it so the essay can
+                           tuck under. Typeset scroller uses the same action-row
+                           clearance pad
 TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top bar with brand + LIVE +
-                           paste-to-preview input + de-clutter; flame + platform/time chips pinned
-                           top-right; bottom-left meta overlay for video/photo; bottom-right actions)
-                           + `DesktopDock` (in-flow bottom dock: transport controls + horizontal
-                           filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
+                           paste button (expands into the preview field; ⌘V still
+                           works globally — signed-in Live / My Collection add in
+                           place and stay on the tab; playlist has no paste); flame chip left of paste
+                           on every post type); bottom-left meta overlay
+                           for video/photo; bottom-right actions — Open is the source platform glyph)
+                           + `DesktopDock` (in-flow bottom dock: two-row 3-col transport —
+                           prev / play-pause / next over expand / repeat / mute — +
+                           horizontal filmstrip queue auto-scrolled to keep current visible + "Show all" panel)
 TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio +
-                           de-clutter, swipe up/down navigation, 70dvh Up-next bottom sheet
+                           de-clutter, swipe up/down navigation, 70dvh Up-next bottom sheet.
+                           Read/Watch is icon-only on the left of the action row (book / TV).
+                           Tap video/photo hides chrome and starts playback; tap again restores
+                           overlays without pausing (Space / peek-bar own pause).
 UpNextList.tsx           — feed rows, seen divider, "next ↓" highlight
 useTheaterFeed.ts        — items + polling (see §4)
 useSeenSet.ts            — localStorage seen model (see §5)
 usePlaybackSource.ts     — per-platform src resolution + prefetch/warm (see §6)
-useClampExpand.ts        — text clamp + show-more expand for captions + article text (shared)
+useClampExpand.ts        — measures whether a 2-line caption overflows (Read appears)
 lib/theater/paste-preview.ts  — `resolvePastedLink(text)` for ⌘V → preview navigation
 types.ts                 — shared types incl. PLATFORM_LABEL
 ```
@@ -139,7 +154,7 @@ Sentry metrics (existing `metrics.*` patterns): `theater.opened` (surface: home/
 
 **PR 1 — Theater shell + home (signed-out `/`)**
 Shell, Stage (video: twitter + tiktok; text; photo), Rail with Up-next + seen model + divider, muted-autoplay + unmute chip, keyboard nav, 12s poll, server-rendered crawlable list + JSON-LD, dark default on theater routes, `theater.*` metrics, `/api/activity/preview`. Browse link points at existing `/trending` (light, unchanged for now).
-_Acceptance_: signed-out `/` lands in the theater with a real post playing muted; ↓/↑ chains; refresh shows the divider correctly; `curl` of `/` contains the crawlable list + JSON-LD; Lighthouse SEO unchanged on preview pages; 943 existing tests green.
+_Acceptance_: signed-out `/` lands in the theater with a real post playing muted; →/← and J/K chain posts (↑/↓ scroll text); refresh shows the divider correctly; `curl` of `/` contains the crawlable list + JSON-LD; Lighthouse SEO unchanged on preview pages; 943 existing tests green.
 
 **PR 2 — Full stage matrix + mobile**
 Instagram probe/warm path, YouTube iframe stage, article reader stage, mobile reel + bottom sheet + swipe, Send file-prefetch flow, `/trending/play` redirect, prefetch-next.

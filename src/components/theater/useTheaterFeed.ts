@@ -14,7 +14,7 @@
  * so it's unit-testable without a fetch/timer harness.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { TheaterFeedSeed, TheaterItem } from './types'
 import { theaterItemKey } from './types'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
@@ -28,6 +28,12 @@ export interface TheaterFeed {
   recentActivity: number
   /** Keys of items that arrived via polling after mount (accent treatment). */
   freshKeys: ReadonlySet<string>
+  /**
+   * Optimistic insert after a personal-theater paste-to-save. Moves an
+   * already-present post to the front. Does not change which post is current —
+   * the viewer stays where they are; the dock just shows the new save.
+   */
+  prependItem: (item: TheaterItem) => void
 }
 
 interface ActivityResponse {
@@ -142,5 +148,16 @@ export function useTheaterFeed(
     }
   }, [live])
 
-  return { items, savedToday, recentActivity, freshKeys }
+  const prependItem = useCallback((item: TheaterItem) => {
+    const key = theaterItemKey(item)
+    setItems((prev) => {
+      if (prev.some((existing) => theaterItemKey(existing) === key)) {
+        return [item, ...prev.filter((existing) => theaterItemKey(existing) !== key)]
+      }
+      return [item, ...prev]
+    })
+    setFreshKeys((prev) => new Set(prev).add(key))
+  }, [])
+
+  return { items, savedToday, recentActivity, freshKeys, prependItem }
 }

@@ -3,6 +3,9 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
+vi.mock('@/lib/theater/share-tweet', () => ({
+  fetchShareTweet: vi.fn().mockResolvedValue(null),
+}))
 import { Stage } from '@/components/theater/Stage'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -183,5 +186,71 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
   it('renders no retained video before any video has played', () => {
     const { container } = render(<Stage item={textItem()} muted onRequestUnmute={vi.fn()} />)
     expect(container.querySelector('video')).toBeNull()
+  })
+
+  it('renders a video+quote item as the full-bleed player by default', () => {
+    const item = {
+      ...videoItem('2091399015971864972'),
+      author: 'XRoboHub',
+      text: 'parent essay',
+      quote: {
+        author: 'XRoboHub',
+        text: 'quoted clip',
+        bookmarkId: '2091018327875518851',
+        hasVideo: true,
+      },
+    } as TheaterItem
+    const { container } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} />)
+    expect(container.querySelector('video')).toBeTruthy()
+    expect(container.querySelector('[data-testid="parent-inline-video"]')).toBeNull()
+    expect(container.querySelector('[data-testid="quote-inline-video"]')).toBeNull()
+    expect(container.querySelector('[data-testid="article-video-fade"]')).toBeNull()
+  })
+
+  it('keeps the parent video playing in article mode and shows the quote below', () => {
+    const item = {
+      ...videoItem('2091399015971864972'),
+      author: 'XRoboHub',
+      text: 'parent essay',
+      quote: {
+        author: 'XRoboHub',
+        text: 'quoted clip',
+        bookmarkId: '2091018327875518851',
+        hasVideo: true,
+      },
+    } as TheaterItem
+    const { container } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
+    expect(container.querySelector('video')).toBeTruthy()
+    expect(container.querySelector('[data-testid="parent-inline-video"]')).toBeNull()
+    expect(container.querySelector('[data-testid="quote-inline-video"]')).toBeTruthy()
+    expect(container.querySelector('[data-testid="article-video-fade"]')).toBeTruthy()
+    expect(container.firstElementChild?.className).toContain('isolate')
+    expect(container.textContent).toContain('parent essay')
+    expect(container.textContent).toContain('quoted clip')
+  })
+
+  it('keeps the same YouTube iframe when flipping into article mode', () => {
+    const item = youtubeItem()
+    item.text = 'a long short caption'
+    item.contentType = 'video'
+    const { container, rerender } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} />)
+    const first = container.querySelector('iframe')
+    expect(first).toBeTruthy()
+    rerender(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
+    expect(container.querySelector('iframe')).toBe(first)
+    expect(container.querySelector('[data-testid="article-video-fade"]')).toBeTruthy()
+    expect(container.textContent).toContain('a long short caption')
+  })
+
+  it('opens a photo as the typeset reader in article mode', () => {
+    const item = {
+      ...textItem(),
+      contentType: 'photo' as const,
+      text: 'a long photo caption',
+      thumbnailUrl: 'https://example.com/p.jpg',
+    } as TheaterItem
+    const { container } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
+    expect(container.textContent).toContain('a long photo caption')
+    expect(container.querySelector('img[alt=""]')).toBeTruthy()
   })
 })

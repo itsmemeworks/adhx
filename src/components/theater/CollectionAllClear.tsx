@@ -9,7 +9,9 @@
  */
 
 import { PartyPopper, Repeat } from 'lucide-react'
+import { useRef } from 'react'
 import { StageHeadline } from './stage-primitives'
+import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 
 export interface CollectionAllClearProps {
   total: number
@@ -19,8 +21,14 @@ export interface CollectionAllClearProps {
 }
 
 export function CollectionAllClear({ total, onClose, onKeepPlaying }: CollectionAllClearProps) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  useTheaterActionHotkeys('any', rootRef)
+
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center">
+    <div
+      ref={rootRef}
+      className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center"
+    >
       <PartyPopper className="h-10 w-10 text-clay" />
       <StageHeadline>{total > 0 ? 'All caught up' : 'Nothing to review'}</StageHeadline>
       {total > 0 ? (
@@ -35,6 +43,7 @@ export function CollectionAllClear({ total, onClose, onKeepPlaying }: Collection
           <button
             type="button"
             onClick={onKeepPlaying}
+            data-theater-action="keep-playing"
             className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
           >
             <Repeat size={15} />

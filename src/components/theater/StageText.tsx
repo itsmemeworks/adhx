@@ -8,17 +8,29 @@
  * Both variants render body text through `TheaterLinkedText` (linkifies URLs,
  * strips media t.co tails, decodes entities) so long-form X posts — which can
  * run to thousands of characters — never dead-end in unreadable overflow:
- * the typeset variant scrolls within a capped region once it outgrows the
- * stage, and the photo caption gets a "more" toggle into a scrollable panel.
+ * a short typeset tweet floats in the middle of the stage; a long one
+ * (or one with photos/video/a quote) starts below the chrome and scrolls.
+ * Overflowing photo captions use Read (article mode), not tap-to-expand.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { PlatformChip } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { fallbackToOriginal } from '@/components/feed/media-actions'
 import { proxiedPhotoSrc } from '@/lib/media/fxembed'
+import { TheaterCaption } from './TheaterCaption'
 import { TheaterLinkedText } from './TheaterText'
+import { dispatchTheaterStageTap } from './useTheaterStageEvents'
+import {
+  STAGE_ARTICLE_UNDER_BAND_PAD,
+  STAGE_TEXT_SCROLL_PAD,
+  STAGE_TEXT_TOP_PAD,
+  StageAuthorRow,
+} from './stage-primitives'
+import { StageInlineVideo } from './StageInlineVideo'
+import { StageQuoteCard } from './StageQuoteCard'
+import { useHydratedQuote } from './useHydratedQuote'
 import type { TheaterItem } from './types'
 
 /** Twitter photos go through `/api/media/image` — pbs.twimg.com often 403s off twitter.com. */
@@ -50,35 +62,28 @@ export interface StageTextProps {
    * their own, so a tweet link is the only path to that content.
    */
   hideTweetLinks?: boolean
-}
-
-/**
- * Compact quote card for the typeset stage, shown under the main text when
- * `item.quote` is present — same dark vocabulary as CollectionTheater's
- * `StageQuoteCard` (bordered rounded box, avatar-or-initial + name + @handle,
- * up-to-4-line clamped text), rebuilt locally since CollectionTheater isn't
- * shared code.
- */
-function StageQuoteCard({ quote }: { quote: NonNullable<TheaterItem['quote']> }) {
-  const name = quote.authorName || quote.author || 'unknown'
-  const handle = quote.author || ''
-  const text = (quote.text || '').trim()
-  if (!text && !handle) return null
-
-  return (
-    <div className="mt-4 w-full max-w-2xl rounded-xl border border-white/15 bg-white/[0.04] p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <AuthorAvatar src={quote.authorAvatarUrl ?? undefined} author={handle} size="sm" />
-        <span className="truncate text-[13px] font-semibold text-white">{name}</span>
-        {handle && <span className="truncate font-mono text-xs text-white/50">@{handle}</span>}
-      </div>
-      {text && (
-        <p className="line-clamp-4 text-[13.5px] leading-snug text-white/80">
-          <TheaterLinkedText text={text} platform="twitter" />
-        </p>
-      )}
-    </div>
-  )
+  /**
+   * Extra bottom padding so the last lines clear the overlay action row.
+   * Default true. Collection quote wraps StageText in its own scroller
+   * (quote card is a sibling) and turns this off to avoid a double gap.
+   */
+  scrollPad?: boolean
+  /**
+   * Parent video is already playing in the band above this reader — don't
+   * mount a second player.
+   */
+  omitParentVideo?: boolean
+  /**
+   * Sit under a live video band: skip the chrome-clearing top pad and
+   * don't vertically center a short tweet.
+   */
+  flushTop?: boolean
+  /**
+   * Full-bleed scroller under the keep-playing video. Transparent so the
+   * essay can tuck under the band, with extra top pad so the first line
+   * starts below the fade.
+   */
+  underBand?: boolean
 }
 
 /**
@@ -100,32 +105,23 @@ export function StageText({
   photo,
   photoCaption = true,
   hideTweetLinks = false,
+  scrollPad = true,
+  omitParentVideo = false,
+  flushTop = false,
+  underBand = false,
 }: StageTextProps) {
   const text = (item.text || '').trim()
   const authorName = item.authorName || (item.author ? `@${item.author}` : 'Saved post')
-
-  const [expanded, setExpanded] = useState(false)
-  const [overflowing, setOverflowing] = useState(false)
+  const { quote, parentPhotos, parentVideo } = useHydratedQuote(item)
   const captionRef = useRef<HTMLParagraphElement>(null)
-
-  // New item — collapse back to the clamped caption.
-  useEffect(() => {
-    setExpanded(false)
-  }, [text])
-
-  // Overflow detection only makes sense against the clamped (2-line) layout,
-  // so skip while expanded — the expand effect above will flip `expanded`
-  // back to false on the next item, re-triggering this via the dependency.
-  useEffect(() => {
-    if (expanded) return
-    const el = captionRef.current
-    setOverflowing(!!el && el.scrollHeight > el.clientHeight + 1)
-  }, [text, expanded])
 
   if (photo) {
     const src = stagePhotoSrc(item)
     return (
-      <div className="relative flex h-full w-full items-center justify-center bg-[#08070a]">
+      <div
+        className="relative flex h-full w-full items-center justify-center bg-[#08070a]"
+        onClick={() => dispatchTheaterStageTap()}
+      >
         {src ? (
           <img
             src={src}
@@ -146,23 +142,15 @@ export function StageText({
           </div>
         )}
 
-        {/* Bottom scrim: author + up-to-2-line caption. Padding on the
-            wrapper, line-clamp on a child with no vertical padding, so the
-            clamp doesn't let a clipped extra line peek through. Expanding
-            grows the caption into a scrollable panel over a stronger scrim.
-            Suppressed when `photoCaption` is false (TheaterShell) — its rail
-            (desktop) and mobile chrome already show the author + caption, so
-            the stage's own scrim would just duplicate them. */}
+        {/* Bottom scrim: author + 2-line caption. Overflow goes through
+            Read in the chrome, not tap-to-expand. Suppressed when
+            `photoCaption` is false (TheaterShell) — chrome already shows
+            the author + caption. */}
         {photoCaption && (
           <div
-            className={cn(
-              'absolute inset-x-0 bottom-0 px-6 pt-16 sm:px-10',
-              expanded ? 'pb-4 sm:pb-6' : 'pb-6 sm:pb-10',
-            )}
+            className="absolute inset-x-0 bottom-0 px-6 pb-6 pt-16 sm:px-10 sm:pb-10"
             style={{
-              background: expanded
-                ? 'linear-gradient(transparent, rgba(8,7,10,.94) 25%, rgba(8,7,10,.94))'
-                : 'linear-gradient(transparent, rgba(11,11,17,.84))',
+              background: 'linear-gradient(transparent, rgba(11,11,17,.84))',
             }}
           >
             <div className="mb-2 flex items-center gap-2.5">
@@ -175,38 +163,14 @@ export function StageText({
               <PlatformChip platform={item.platform} />
             </div>
             {text && (
-              <div>
-                <p
-                  ref={captionRef}
-                  className={cn(
-                    'text-[15px] leading-snug text-white/90',
-                    expanded
-                      ? 'max-h-[45vh] overflow-y-auto overscroll-contain pr-1'
-                      : 'line-clamp-2',
-                  )}
-                >
-                  <TheaterLinkedText
-                    platform={item.platform}
-                    text={text}
-                    hasMedia
-                    links={item.textLinks}
-                    hideTweetLinks={hideTweetLinks}
-                  />
-                </p>
-                {overflowing && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setExpanded((v) => !v)
-                    }}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    className="mt-1 flex min-h-[44px] items-center text-[13px] font-semibold text-clay"
-                  >
-                    {expanded ? 'less' : 'more'}
-                  </button>
-                )}
-              </div>
+              <TheaterCaption
+                captionRef={captionRef}
+                platform={item.platform}
+                text={text}
+                links={item.textLinks}
+                hideTweetLinks={hideTweetLinks}
+                className="text-[15px] leading-snug"
+              />
             )}
           </div>
         )}
@@ -218,31 +182,35 @@ export function StageText({
   // already renders the referenced tweet, so its trailing tweet-resolving
   // link in `item.text` is stripped too — OR'd with any caller-supplied
   // `hideTweetLinks` rather than replacing it.
-  const hideLinks = hideTweetLinks || !!item.quote
+  const hideLinks = hideTweetLinks || !!quote
 
   return (
-    <div className="flex h-full w-full items-center justify-center bg-[#08070a] px-6 sm:px-10">
-      <div className="max-h-full w-full max-w-2xl">
-        <div className="mb-6 flex items-center gap-3">
-          <AuthorAvatar src={item.authorAvatarUrl ?? undefined} author={item.author} size="md" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-base font-bold text-white">{authorName}</div>
-            {item.author && (
-              <div className="truncate font-mono text-sm text-white/50">@{item.author}</div>
-            )}
-          </div>
-          <PlatformChip platform={item.platform} />
-        </div>
-        {/* Capped + scrollable so a long-form post never overflows off-stage;
-            short posts (the common case) size to content and stay centered
-            by the outer flex, exactly as before. */}
-        <div className="max-h-[70vh] overflow-y-auto overscroll-contain pr-2 sm:pr-3">
+    <div
+      className={cn(
+        'h-full w-full overflow-y-auto overscroll-contain',
+        underBand ? 'bg-transparent' : 'bg-[#08070a]',
+        scrollPad && STAGE_TEXT_SCROLL_PAD,
+      )}
+      data-theater-scroll
+    >
+      {/* min-h-full + justify-center: a couple of lines sit in the middle
+          of the stage; once the column is taller than the viewport the
+          flex box grows with it and this becomes a no-op (top-aligned
+          scroll, with STAGE_TEXT_TOP_PAD clearing the chrome). */}
+      <div className={cn('flex min-h-full flex-col', !flushTop && !underBand && 'justify-center')}>
+        <div
+          className={cn(
+            'mx-auto w-full max-w-2xl px-6 sm:px-10',
+            underBand ? STAGE_ARTICLE_UNDER_BAND_PAD : flushTop ? 'pt-5' : STAGE_TEXT_TOP_PAD,
+          )}
+        >
+          <StageAuthorRow item={item} />
           <p className={cn('font-serif leading-tight text-white', textSizeClass(text || ''))}>
             {text ? (
               <TheaterLinkedText
                 platform={item.platform}
                 text={text}
-                hasMedia={false}
+                hasMedia={parentPhotos.length > 0 || !!parentVideo}
                 links={item.textLinks}
                 hideTweetLinks={hideLinks}
               />
@@ -250,7 +218,34 @@ export function StageText({
               'Saved post'
             )}
           </p>
-          {item.quote && <StageQuoteCard quote={item.quote} />}
+          {parentVideo && !omitParentVideo ? (
+            <StageInlineVideo
+              author={parentVideo.author}
+              bookmarkId={parentVideo.bookmarkId}
+              poster={parentVideo.poster}
+              testId="parent-inline-video"
+            />
+          ) : null}
+          {parentPhotos.length > 0 ? (
+            <div
+              className={cn(
+                'mt-5 grid gap-2',
+                parentPhotos.length > 1 ? 'grid-cols-2' : 'grid-cols-1',
+              )}
+            >
+              {parentPhotos.map((src) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  onError={fallbackToOriginal(item.thumbnailUrl)}
+                  className="max-h-[60vh] w-full rounded-xl object-contain"
+                />
+              ))}
+            </div>
+          ) : null}
+          {quote ? <StageQuoteCard quote={quote} /> : null}
         </div>
       </div>
     </div>

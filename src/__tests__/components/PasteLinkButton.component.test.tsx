@@ -180,14 +180,14 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
 
-    // The dialog is portalled to <body>, so its unmount lands in a later
-    // commit than the keydown. `act` flushes that deterministically — polling
-    // with waitFor passed in isolation but timed out under a loaded parallel
-    // suite, which is a flaky test rather than a real signal.
-    await act(async () => {
+    // Capture listener attaches in an effect after the overlay opens. Poll
+    // the keydown the same way the outside-click test polls mousedown — a
+    // single `act` can fire Escape before the listener exists on a loaded
+    // CI runner (failed on PR #405).
+    await waitFor(() => {
       fireEvent.keyDown(window, { key: 'Escape' })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('closes the overlay on the explicit close button', async () => {
@@ -408,5 +408,26 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
     // has to know about it explicitly or every tap in the field closes it.
     fireEvent.mouseDown(screen.getByPlaceholderText(/paste a link/i))
     expect(screen.queryByRole('dialog')).toBe(dialog)
+  })
+})
+
+describe('PasteLinkButton — onPastePost (add in place)', () => {
+  beforeEach(() => {
+    mockIos = false
+    pushSpy.mockClear()
+  })
+
+  it('calls onPastePost with the pasted url and does not navigate', async () => {
+    const readText = vi.fn().mockResolvedValue('https://x.com/naval/status/2064012969239859490')
+    Object.assign(navigator, { clipboard: { readText } })
+    const onPastePost = vi.fn().mockResolvedValue(true)
+
+    render(<PasteLinkButton iconOnly onPastePost={onPastePost} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+
+    await waitFor(() => {
+      expect(onPastePost).toHaveBeenCalledWith('https://x.com/naval/status/2064012969239859490')
+    })
+    expect(pushSpy).not.toHaveBeenCalled()
   })
 })

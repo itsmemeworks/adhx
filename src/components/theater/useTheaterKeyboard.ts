@@ -1,50 +1,38 @@
 'use client'
 
 /**
- * Global keydown handling for TheaterShell. One keymap: ↓/↑/j/k/←/→/space/m
- * for every theater surface (Live, collection, playlist, shared). Collection
- * adds U (undo Archive) via `personalKeyAction`. Escape closes the personal
- * overlay. `personalKeyAction` is re-exported from TheaterShell for tests.
+ * Global keydown handling for TheaterShell. One keymap for every theater
+ * surface (Live, collection, playlist, shared): →/←/j/k next-prev, ↑/↓
+ * scroll text, Space play/pause, M mute, E expand, R repeat, S/T/L/C/D/O/A/F/W/P
+ * action buttons, . menu, Shift+? help. Collection still has U (undo Archive)
+ * and Escape (close). `personalKeyAction` is re-exported from TheaterShell
+ * for tests.
  */
 
 import { useEffect } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { PersonalTab } from './types'
+import {
+  THEATER_ACTION_EVENTS,
+  isTheaterTypingTarget,
+  resolveTheaterShortcut,
+  scrollTheaterStage,
+  type TheaterKeyLike,
+} from './theater-shortcuts'
 
-export interface PersonalKeyLike {
-  key: string
-  metaKey?: boolean
-  ctrlKey?: boolean
-  altKey?: boolean
-  target?: EventTarget | null
-}
-
-function isPersonalTypingTarget(target: EventTarget | null | undefined): boolean {
-  if (!target || typeof HTMLElement === 'undefined') return false
-  if (!(target instanceof HTMLElement)) return false
-  if (target.isContentEditable) return true
-  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
-}
+export interface PersonalKeyLike extends TheaterKeyLike {}
 
 export type PersonalKeyAction = 'undo' | 'close'
 
 /**
  * Collection-tab extras on top of the Live keymap (arrows / space / m).
- * Archive is a button, not a key — same transport as Live. U still undoes
- * the last Archive; Escape closes the overlay.
+ * Archive is a button (A), not a dedicated collection-only key. U still
+ * undoes the last Archive; Escape closes the overlay (or the help sheet).
  */
 export function personalKeyAction(e: PersonalKeyLike): PersonalKeyAction | null {
-  if (e.metaKey || e.ctrlKey || e.altKey) return null
-  if (isPersonalTypingTarget(e.target)) return null
-  switch (e.key) {
-    case 'u':
-    case 'U':
-      return 'undo'
-    case 'Escape':
-      return 'close'
-    default:
-      return null
-  }
+  const action = resolveTheaterShortcut(e)
+  if (action === 'undo' || action === 'close') return action
+  return null
 }
 
 export interface UseTheaterKeyboardArgs {
@@ -55,6 +43,8 @@ export interface UseTheaterKeyboardArgs {
   setMuted: Dispatch<SetStateAction<boolean>>
   undoLastAction: () => void
   onClose?: () => void
+  helpOpen?: boolean
+  onToggleHelp?: () => void
   /**
    * Space guard for the end-of-feed waiting stage: the stage stays MOUNTED
    * (paused) behind the waiting overlay so the persistent <video> element —
@@ -67,12 +57,13 @@ export interface UseTheaterKeyboardArgs {
 }
 
 /**
- * Keyboard nav: ↓/→/j next, ↑/←/k prev — the arrows double up because the
- * desktop dock's filmstrip queue reads horizontally while mobile still
- * scrolls vertically. Space toggles play/pause (delegated to Stage via a
- * custom event, matching the repo's cross-component keyboard pattern), m
- * toggles mute. Ignored while typing in an input/textarea/contentEditable
- * element.
+ * Keyboard nav: →/j next, ←/k prev. ↑/↓ scroll a text/article stage so
+ * reading never needs the mouse (they do not change posts). Space toggles
+ * play/pause (delegated to Stage via a custom event), m toggles mute.
+ * Letter keys fire the matching action button through `theater-*` window
+ * events so only the visible chrome (desktop vs mobile) handles them.
+ * Ignored while typing in an input/textarea/contentEditable element.
+ * ⌘V / Ctrl+V is the OS paste event, not a keydown binding.
  */
 export function useTheaterKeyboard({
   isPersonal,
@@ -82,65 +73,87 @@ export function useTheaterKeyboard({
   setMuted,
   undoLastAction,
   onClose,
+  helpOpen,
+  onToggleHelp,
   isPlaybackHidden,
 }: UseTheaterKeyboardArgs): void {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      const target = e.target as HTMLElement | null
-      const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
-      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (isTheaterTypingTarget(e.target)) return
 
-      // Collection tab uses the same ↓/↑/←/→/space/m nav as Live. U undoes
-      // Archive; Escape closes the overlay (also handled for the Live tab
-      // just below).
-      if (isPersonal && personalTab === 'collection') {
-        const action = personalKeyAction(e)
-        if (action === 'undo') {
-          e.preventDefault()
-          undoLastAction()
-          return
-        }
-        if (action === 'close') {
-          e.preventDefault()
-          onClose?.()
-          return
-        }
-      }
+      const action = resolveTheaterShortcut(e)
+      if (!action) return
 
-      if (isPersonal && e.key === 'Escape') {
-        e.preventDefault()
-        onClose?.()
+      if (helpOpen) {
+        if (action === 'toggleHelp' || action === 'close') {
+          e.preventDefault()
+          onToggleHelp?.()
+        }
         return
       }
 
-      switch (e.key) {
-        case 'ArrowDown':
-        case 'ArrowRight':
-        case 'j':
-        case 'J':
+      if (action === 'toggleHelp') {
+        e.preventDefault()
+        onToggleHelp?.()
+        return
+      }
+
+      if (action === 'close') {
+        if (isPersonal) {
+          e.preventDefault()
+          onClose?.()
+        }
+        return
+      }
+
+      if (isPersonal && personalTab === 'collection' && action === 'undo') {
+        e.preventDefault()
+        undoLastAction()
+        return
+      }
+
+      switch (action) {
+        case 'next':
           e.preventDefault()
           goNext()
           break
-        case 'ArrowUp':
-        case 'ArrowLeft':
-        case 'k':
-        case 'K':
+        case 'prev':
           e.preventDefault()
           goPrev()
           break
-        case ' ':
+        case 'scrollDown':
           e.preventDefault()
-          // See `isPlaybackHidden` — never resume the paused stage hiding
-          // behind the waiting overlay.
+          scrollTheaterStage(1)
+          break
+        case 'scrollUp':
+          e.preventDefault()
+          scrollTheaterStage(-1)
+          break
+        case 'togglePlay':
+          e.preventDefault()
           if (!isPlaybackHidden?.()) {
             window.dispatchEvent(new CustomEvent('theater-toggle-play'))
           }
           break
-        case 'm':
-        case 'M':
+        case 'toggleMute':
           e.preventDefault()
           setMuted((m) => !m)
+          break
+        case 'save':
+        case 'tag':
+        case 'copyLink':
+        case 'copyText':
+        case 'sendFile':
+        case 'open':
+        case 'archive':
+        case 'toggleMenu':
+        case 'toggleArticle':
+        case 'replay':
+        case 'keepPlaying':
+        case 'toggleExpand':
+        case 'cycleRepeat':
+          e.preventDefault()
+          window.dispatchEvent(new CustomEvent(THEATER_ACTION_EVENTS[action]))
           break
         default:
           break
@@ -148,5 +161,16 @@ export function useTheaterKeyboard({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [goNext, goPrev, isPersonal, personalTab, undoLastAction, onClose, isPlaybackHidden])
+  }, [
+    goNext,
+    goPrev,
+    isPersonal,
+    personalTab,
+    undoLastAction,
+    onClose,
+    helpOpen,
+    onToggleHelp,
+    isPlaybackHidden,
+    setMuted,
+  ])
 }

@@ -59,7 +59,6 @@ vi.mock('@/components/feed', async (importOriginal) => {
     FilterBar: () => null,
   }
 })
-vi.mock('@/components/KeyboardShortcutsModal', () => ({ KeyboardShortcutsModal: () => null }))
 vi.mock('@/components/LandingPage', () => ({ LandingPage: () => null }))
 vi.mock('@/components/PasteToPreview', () => ({ PasteToPreview: () => null }))
 vi.mock('@/components/sync/SyncProgress', () => ({ SyncProgress: () => null }))

@@ -93,7 +93,21 @@ export const POST = {
     authorName: 'E2E Jay',
     text: 'E2E-JULIET',
   },
+  /** Video + quote — Read/Watch on the shared theater. Not in the collection. */
+  quoted: {
+    id: '9000000000000000401',
+    author: 'e2equote',
+    authorName: 'E2E Quote',
+    text: 'E2E-QUOTE-PARENT',
+  },
 } as const satisfies Record<string, E2ePost>
+
+export const QUOTED_INNER = {
+  id: '9000000000000000402',
+  author: 'e2equoted',
+  authorName: 'E2E Quoted',
+  text: 'E2E-QUOTED-INNER',
+} as const
 
 /** Posts the curator owns and the e2e user does not — clone must copy these. */
 export const CURATOR_POSTS: E2ePost[] = [POST.india, POST.juliet]

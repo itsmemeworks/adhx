@@ -5,6 +5,7 @@ import { Bookmark, Check, Loader2, Tag as TagIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { theaterItemKey, type TheaterItem, type TheaterPersonalChrome } from './types'
+import { StageGlass } from './StageGlass'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'tag' | 'error'
 
@@ -138,6 +139,8 @@ export function SavePostButton({
 
   const tagCount = tags?.length ?? 0
   const tagLabel = tagCount > 0 ? `Tag · ${tagCount}` : 'Tag'
+  const hotkeyAction =
+    status === 'tag' ? 'tag' : status === 'idle' || status === 'error' ? 'save' : undefined
   const visibleLabel =
     status === 'saved'
       ? 'Saved'
@@ -153,13 +156,18 @@ export function SavePostButton({
     ) : status === 'saved' ? (
       <Check size={iconSize} className="text-done" />
     ) : status === 'tag' ? (
-      <TagIcon size={iconSize} fill={tagCount > 0 ? 'currentColor' : 'none'} />
+      <TagIcon
+        size={iconSize}
+        className={tagCount > 0 ? 'text-clay' : undefined}
+        fill={tagCount > 0 ? 'currentColor' : 'none'}
+      />
     ) : (
       <Bookmark size={iconSize} />
     )
 
   return (
-    <button
+    <StageGlass
+      as="button"
       type="button"
       onClick={() => {
         if (status === 'tag') {
@@ -171,7 +179,10 @@ export function SavePostButton({
       disabled={status === 'saving' || status === 'saved'}
       className={cn(
         className,
-        status === 'tag' && (tagCount > 0 ? 'border-clay/50 text-clay' : 'border-white/25'),
+        // Tag is a glass action like Share — clay lives on the icon only.
+        // `border-clay/50` is a no-op (hex CSS vars drop Tailwind /NN) and
+        // tw-merge would steal the white glass border if we left it here.
+        status === 'tag' && 'border-white/25',
         status === 'saved' && 'animate-save-pop',
       )}
       aria-label={
@@ -187,6 +198,7 @@ export function SavePostButton({
               : tagLabel
             : undefined
       }
+      data-theater-action={hotkeyAction}
     >
       <span
         key={status}
@@ -200,7 +212,7 @@ export function SavePostButton({
           Saved to your collection
         </span>
       )}
-    </button>
+    </StageGlass>
   )
 }
 
@@ -239,7 +251,8 @@ export function PersonalLiveSaveButton({
 
   if (gone) return null
   return (
-    <button
+    <StageGlass
+      as="button"
       type="button"
       onClick={() => collection.onSave(current)}
       className={cn(
@@ -249,9 +262,10 @@ export function PersonalLiveSaveButton({
       )}
       aria-label={iconOnly ? 'Save' : undefined}
       tabIndex={exiting ? -1 : undefined}
+      data-theater-action={exiting ? undefined : 'save'}
     >
       <Bookmark size={iconSize} />
       {!iconOnly && <span>Save</span>}
-    </button>
+    </StageGlass>
   )
 }

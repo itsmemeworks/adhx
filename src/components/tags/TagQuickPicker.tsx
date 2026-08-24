@@ -5,6 +5,7 @@ import { notifyTagsChanged } from '@/lib/client-events'
 import { Check, Loader2, Plus, Tag as TagIcon, X } from 'lucide-react'
 import { kebabTagInput, sanitizeTag } from '@/lib/utils/tag'
 import type { TagItem } from '@/components/feed/types'
+import { THEATER_SHORTCUT_KEYS } from '@/components/theater/theater-shortcuts'
 
 export interface TagQuickPickerProps {
   platform: string
@@ -23,22 +24,6 @@ const PANEL = '#201b16'
 const BORDER = '#322b23'
 const ACCENT = '#d26b40'
 const ERROR = '#e08a6a'
-
-// Keys the theater's window-level keydown handler acts on — blocked from
-// bubbling past the popover while it's open, mirroring SignInModal.tsx.
-const THEATER_SHORTCUT_KEYS = new Set([
-  ' ',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-  'm',
-  'M',
-  'j',
-  'J',
-  'k',
-  'K',
-])
 
 /**
  * Shared dark popover for tagging a single post — used by the collection
@@ -60,6 +45,7 @@ export function TagQuickPicker({
   const [newTagValue, setNewTagValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -95,10 +81,29 @@ export function TagQuickPicker({
     }
   }, [open, bookmarkId, platform])
 
-  // Capture-phase Escape + theater-shortcut suppression (SignInModal pattern)
-  // so ↓/↑/space/m/j/k don't drive the background stage while this is open.
   useEffect(() => {
     if (!open) return
+    inputRef.current?.focus()
+  }, [open])
+
+  // Capture-phase Escape + list navigation so ↓/↑/space don't drive the
+  // background stage. The new-tag input stays a typing target (letters,
+  // Enter to create); arrows leave it for the tag rows.
+  useEffect(() => {
+    if (!open) return
+
+    function tagRows(): HTMLElement[] {
+      if (!dialogRef.current) return []
+      return [...dialogRef.current.querySelectorAll<HTMLElement>('[data-tag-option]')]
+    }
+
+    function focusAt(index: number, items: HTMLElement[]) {
+      if (items.length === 0) return
+      const el = items[(index + items.length) % items.length]
+      el?.focus()
+      if (typeof el?.scrollIntoView === 'function') el.scrollIntoView({ block: 'nearest' })
+    }
+
     function handleKeyDownCapture(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.stopPropagation()
@@ -106,20 +111,54 @@ export function TagQuickPicker({
         onClose()
         return
       }
-      const target = e.target as HTMLElement | null
-      const tagName = target?.tagName
-      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable) return
+
+      const active = document.activeElement as HTMLElement | null
+      const inInput =
+        active?.tagName === 'INPUT' ||
+        active?.tagName === 'TEXTAREA' ||
+        Boolean(active?.isContentEditable)
+      const rows = tagRows()
+      const current = rows.findIndex((el) => el === active)
+
+      if (e.key === 'ArrowDown' || (!inInput && (e.key === 'j' || e.key === 'J'))) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (inInput) focusAt(0, rows)
+        else focusAt(current >= 0 ? current + 1 : 0, rows)
+        return
+      }
+      if (e.key === 'ArrowUp' || (!inInput && (e.key === 'k' || e.key === 'K'))) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (inInput) focusAt(rows.length - 1, rows)
+        else if (current <= 0) inputRef.current?.focus()
+        else focusAt(current - 1, rows)
+        return
+      }
+
+      if (!inInput && (e.key === 'Enter' || e.key === ' ')) {
+        const item = current >= 0 ? rows[current] : rows[0]
+        if (item) {
+          e.preventDefault()
+          e.stopPropagation()
+          item.click()
+        }
+        return
+      }
+
+      if (inInput) return
       if (THEATER_SHORTCUT_KEYS.has(e.key)) {
         e.stopPropagation()
       }
     }
+
     window.addEventListener('keydown', handleKeyDownCapture, true)
     return () => window.removeEventListener('keydown', handleKeyDownCapture, true)
   }, [open, onClose])
 
   if (!open) return null
 
-  async function toggleTag(tag: string): Promise<void> {
+  async function toggleTag(tag: string): Promise<boolean> {
     const wasChecked = checked.has(tag)
     const nextChecked = new Set(checked)
     if (wasChecked) nextChecked.delete(tag)
@@ -149,6 +188,7 @@ export function TagQuickPicker({
       // §4/§B) so any open collection queue can patch its snapshot without a
       // refetch — see TheaterShell's `bookmark-tags-changed` listener.
       notifyTagsChanged({ platform, bookmarkId, tags: Array.from(nextChecked) })
+      return true
     } catch {
       // Revert on failure.
       setChecked((prev) => {
@@ -158,10 +198,11 @@ export function TagQuickPicker({
         return next
       })
       setError('Failed to update tag')
+      return false
     }
   }
 
-  function handleCreateTag(e: React.FormEvent): void {
+  async function handleCreateTag(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     const clean = sanitizeTag(newTagValue)
     if (!clean) {
@@ -169,7 +210,11 @@ export function TagQuickPicker({
       return
     }
     setNewTagValue('')
-    if (!checked.has(clean)) void toggleTag(clean)
+    if (!checked.has(clean)) {
+      const ok = await toggleTag(clean)
+      if (!ok) return
+    }
+    onClose()
   }
 
   const sanitizedPreview = sanitizeTag(newTagValue)
@@ -186,6 +231,7 @@ export function TagQuickPicker({
       role="presentation"
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Tag this post"
@@ -229,8 +275,10 @@ export function TagQuickPicker({
                 <button
                   key={t.tag}
                   type="button"
+                  data-tag-option
+                  aria-checked={isChecked}
                   onClick={() => void toggleTag(t.tag)}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/5"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/5 focus:bg-white/10 focus:outline-none"
                 >
                   <span
                     className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[5px] border-2"
@@ -264,6 +312,7 @@ export function TagQuickPicker({
             ref={inputRef}
             type="text"
             value={newTagValue}
+            autoFocus
             onChange={(e) => {
               setNewTagValue(kebabTagInput(e.target.value))
               setError(null)

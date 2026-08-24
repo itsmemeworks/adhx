@@ -2,8 +2,9 @@
 
 /**
  * <video> stage for twitter/tiktok MP4s (spec §6): poster-first, muted
- * autoplay, a whole-stage tap to unmute plus the rail/peek-bar audio button
- * as the sound affordance. Falls back to a big centered play button when
+ * autoplay. A whole-stage tap hides chrome and starts playback (Instagram);
+ * tapping again restores overlays without pausing. Sound is the rail/peek-bar
+ * audio button. Falls back to a big centered play button when
  * autoplay is rejected even muted (iOS low-power mode blocks even muted
  * autoplay — spec §11). There is NO end-of-video replay/next overlay anymore
  * (owner: legacy — it predated auto-advance and leaked over the next item
@@ -31,6 +32,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
+import { dispatchTheaterStageTap } from './useTheaterStageEvents'
 import type { TheaterItem } from './types'
 
 /**
@@ -45,6 +47,7 @@ export interface StageVideoProps {
   src: string
   poster: string | null
   muted: boolean
+  /** Shell unmute — used by the chrome audio button, not the stage tap. */
   onRequestUnmute: () => void
   onEnded?: () => void
   /**
@@ -74,7 +77,7 @@ export function StageVideo({
   src,
   poster,
   muted,
-  onRequestUnmute,
+  onRequestUnmute: _onRequestUnmute,
   onEnded,
   repeat,
   covered = false,
@@ -453,20 +456,7 @@ export function StageVideo({
     )
   }
 
-  // Tapping the sound affordance unmutes the ELEMENT directly (works without
-  // a fresh permission grant — it's the same element the tap gestured on),
-  // then tells the shell so its `muted` state (and the next item's initial
-  // signal) follows.
-  const handleUnmuteTap = () => {
-    const video = videoRef.current
-    if (video) {
-      video.muted = false
-      setEffectiveMuted(false)
-    }
-    onRequestUnmute()
-  }
-
-  // A <video> error event carries no HTTP status, so it can't tell "this
+  // A <video> error event carries no HTTP status, so it can't tell "this"
   // post is gone for good" (FxTwitter 410 — deleted/private/suspended,
   // src.ts routes it through /api/media/video) from a transient load
   // failure worth retrying. Follow up with a lightweight ranged fetch of
@@ -490,34 +480,20 @@ export function StageVideo({
   }
 
   const handleStageTap = () => {
-    // Ended-means-replay (no end overlay anymore) — checked before the
-    // unmute/pause branches; an ended video has nothing to unmute or pause.
+    // Ended / blocked-autoplay still start the player (same gesture that
+    // hides chrome). A playing or paused video never toggles pause here —
+    // the tap is declutter; peek-bar / Space own pause.
     if (ended) {
       handleReplay()
+      dispatchTheaterStageTap()
       return
     }
     if (needsGesture) {
       handleStartTap()
+      dispatchTheaterStageTap()
       return
     }
-    if (effectiveMuted) {
-      handleUnmuteTap()
-      return
-    }
-    const video = videoRef.current
-    if (!video) return
-    if (video.paused) {
-      video.play().then(
-        () => setPlaying(true),
-        () => setNeedsGesture(true),
-      )
-    } else {
-      // A deliberate pause — see the identical note on the transport
-      // handlers above.
-      catchUpPendingRef.current = false
-      video.pause()
-      setPlaying(false)
-    }
+    dispatchTheaterStageTap()
   }
 
   return (
