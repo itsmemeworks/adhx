@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.63.0](https://github.com/itsmemeworks/adhx/compare/v1.62.0...v1.63.0) (2026-08-24)
+
+
+### Features
+
+* android install, collection home, and x as a settings link ([#407](https://github.com/itsmemeworks/adhx/issues/407)) ([d9818cc](https://github.com/itsmemeworks/adhx/commit/d9818cc5c46f900efc8b10ca6d7b917ac7aa3792))
+
 ## [1.62.0](https://github.com/itsmemeworks/adhx/compare/v1.61.0...v1.62.0) (2026-08-24)
 
 
