@@ -8,7 +8,8 @@ authedTest.describe('settings account', () => {
     async ({ page }) => {
       await page.goto('/settings')
       await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-      await expect(page.getByText('Your email and public username')).toBeVisible()
+      await expect(page.getByText('Your email, public username, and avatar')).toBeVisible()
+      await expect(page.getByText('Generated from your username')).toBeVisible()
       await expect(page.getByText(`@${E2E_USERNAME}`)).toBeVisible()
       await expect(page.getByText(/connect your x account to sync your bookmarks/i)).toBeVisible()
 

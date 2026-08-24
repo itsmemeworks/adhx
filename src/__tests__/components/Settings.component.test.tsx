@@ -19,10 +19,31 @@ vi.mock('@/lib/theme/context', () => ({
   useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
 }))
 
+const { updatePreference } = vi.hoisted(() => ({ updatePreference: vi.fn() }))
+
+vi.mock('@/lib/preferences-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/preferences-context')>()
+  return {
+    ...actual,
+    usePreferences: () => ({
+      preferences: {
+        bionicReading: false,
+        bodyFont: 'ibm-plex',
+        avatarSource: 'x',
+      },
+      updatePreference,
+      loading: false,
+    }),
+  }
+})
+
 const ME_BOTH = {
   authenticated: true,
   user: { id: 'u1', username: 'tester', displayName: 'Tester', avatarUrl: '' },
-  identities: { x: { username: 'tester' }, email: { email: 'tester@example.com' } },
+  identities: {
+    x: { username: 'tester', avatarUrl: 'https://pbs.twimg.com/profile_images/1/me.jpg' },
+    email: { email: 'tester@example.com' },
+  },
   xConnected: true,
 }
 
@@ -76,7 +97,7 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
 
     await waitFor(() => expect(screen.getAllByText('@tester')[0]).toBeInTheDocument())
     expect(screen.getByText('Account')).toBeInTheDocument()
-    expect(screen.getByText('Your email and public username')).toBeInTheDocument()
+    expect(screen.getByText('Your email, public username, and avatar')).toBeInTheDocument()
     expect(screen.queryByText('Email')).not.toBeInTheDocument()
     expect(screen.queryByText('Username')).not.toBeInTheDocument()
     expect(screen.queryByText('Magic link')).not.toBeInTheDocument()
@@ -210,6 +231,38 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
     expect(screen.getByText(/50 in your collection/i)).toBeInTheDocument()
     expect(screen.getByText(/once per hour/i)).toBeInTheDocument()
     expect(screen.getByText('1 page')).toBeInTheDocument()
+  })
+
+  it('shows the X profile photo on the sync row and an avatar picker on Account', async () => {
+    mockFetch(ME_BOTH)
+    render(<SettingsClient />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /use x photo/i })).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: /use generated avatar/i })).toBeInTheDocument()
+    const xPhoto = 'https://pbs.twimg.com/profile_images/1/me.jpg'
+    const xBtn = screen.getByRole('button', { name: /use x photo/i })
+    expect(xBtn.querySelector('img')?.getAttribute('src')).toBe(xPhoto)
+    expect(document.querySelectorAll(`img[src="${xPhoto}"]`).length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('hides the X photo picker when X is not connected', async () => {
+    mockFetch(ME_EMAIL_ONLY)
+    render(<SettingsClient />)
+
+    await waitFor(() => expect(screen.getByText('tester@example.com')).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /use x photo/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /use generated avatar/i })).not.toBeInTheDocument()
+    expect(screen.getByText('Generated from your username')).toBeInTheDocument()
+  })
+
+  it('persists the generated avatar choice', async () => {
+    mockFetch(ME_BOTH)
+    render(<SettingsClient />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /use generated avatar/i }))
+    expect(updatePreference).toHaveBeenCalledWith('avatarSource', 'generated')
   })
 })
 

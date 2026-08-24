@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-24 — Signed-in `.` menu e2e is Theater-first
+
+The account menu opens on Theater, then Live / My Collection / Library. E2E still treated Library as the first focused row, which failed CI. Follow-up: none.
+
+## 2026-08-24 — Account avatar: X photo or generated
+
+Settings Account gained an avatar picker (X profile photo when connected, else the generated icon). Sync X bookmarks shows that X photo instead of the X glyph. Preference `avatarSource` (`x` | `generated`) is honored in the Header and theater menu. `/api/auth/me` identities.x now includes `avatarUrl`. Follow-up: none.
+
 ## 2026-08-24 — X-link lands on Settings, not a dropped firstLogin
 
 After linking X, the callback used to send `/?firstLogin=true`. Signed-in `/` now redirects to `/collection` and drops the query, so the library sync modal never ran. Default landing is `/settings` (returnUrl still wins). Follow-up: none.

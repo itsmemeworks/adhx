@@ -25,7 +25,8 @@ import {
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
 import { PERSONAL_TAB_ORDER, PERSONAL_TAB_LABEL, type PersonalTab } from './types'
-import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
+import { usePreferences } from '@/lib/preferences-context'
 import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
@@ -246,6 +247,7 @@ export function TheaterAvatarMenu({
   theaterTabs,
 }: TheaterAvatarMenuProps) {
   const { me, loading } = useAuthMe()
+  const { preferences } = usePreferences()
   const [open, setOpen] = useState(false)
   // A remote avatar that fails to load falls through to the generated icon,
   // same as having no avatarUrl at all.
@@ -420,11 +422,12 @@ export function TheaterAvatarMenu({
   }
 
   const { user, identities } = me
-  // `usableAvatarUrl` also rejects a platform's own "no photo" placeholder
-  // (X's grey silhouette) — it loads fine, so `onError` never fires for it.
-  const remoteAvatar = usableAvatarUrl(user.avatarUrl)
-  const showAvatarImage = Boolean(remoteAvatar) && !avatarBroken
-  const generatedAvatarUri = generateAvatarDataUri(user.username || user.displayName)
+  const avatarSrc = resolveAccountAvatarSrc({
+    avatarSource: preferences.avatarSource,
+    xAvatarUrl: identities?.x?.avatarUrl,
+    username: user.username || user.displayName,
+    broken: avatarBroken,
+  })
   const identityLabel = `@${user.username}`
   const identitySubtitle = identities?.x
     ? 'Connected'
@@ -458,7 +461,7 @@ export function TheaterAvatarMenu({
         className="flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/10 text-[13px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20"
       >
         <img
-          src={showAvatarImage ? remoteAvatar! : generatedAvatarUri}
+          src={avatarSrc}
           alt=""
           referrerPolicy="no-referrer"
           className="h-full w-full object-cover"
@@ -481,7 +484,7 @@ export function TheaterAvatarMenu({
               style={{ backgroundColor: BORDER }}
             >
               <img
-                src={showAvatarImage ? remoteAvatar! : generatedAvatarUri}
+                src={avatarSrc}
                 alt=""
                 referrerPolicy="no-referrer"
                 className="h-full w-full object-cover"

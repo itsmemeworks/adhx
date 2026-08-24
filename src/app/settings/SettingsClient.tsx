@@ -27,7 +27,12 @@ import {
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { useTheme } from '@/lib/theme/context'
-import { PlatformGlyph, ConnectWithX } from '@/components/matter'
+import { ConnectWithX } from '@/components/matter'
+import {
+  generateAvatarDataUri,
+  resolveAccountAvatarSrc,
+  usableAvatarUrl,
+} from '@/lib/avatar/generated-avatar'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
 import { IosShortcutSettingsCard } from '@/components/IosShortcutInstall'
 import { AndroidSettingsCard } from '@/components/AndroidInstall'
@@ -49,7 +54,7 @@ interface AuthMe {
     usernameChangeCount: number
   } | null
   identities: {
-    x: { username: string } | null
+    x: { username: string; avatarUrl?: string | null } | null
     email: { email: string } | null
   }
   xConnected: boolean
@@ -392,10 +397,84 @@ function EmailRow({ me }: { me: AuthMe }) {
 
 function AccountIdentityCard({ me, refresh }: { me: AuthMe; refresh: () => void }) {
   return (
-    <SCard icon={User} title="Account" sub="Your email and public username" bodyPadded={false}>
+    <SCard
+      icon={User}
+      title="Account"
+      sub="Your email, public username, and avatar"
+      bodyPadded={false}
+    >
+      <AvatarRow me={me} />
       <EmailRow me={me} />
       <UsernameRow me={me} refresh={refresh} />
     </SCard>
+  )
+}
+
+function AvatarRow({ me }: { me: AuthMe }) {
+  const { preferences, updatePreference } = usePreferences()
+  const [xBroken, setXBroken] = useState(false)
+  const username = me.user?.username || 'adhx'
+  const xPhoto = !xBroken ? usableAvatarUrl(me.identities.x?.avatarUrl) : null
+  const generated = generateAvatarDataUri(username)
+  const selected = preferences.avatarSource === 'generated' || !xPhoto ? 'generated' : 'x'
+  const currentSrc = resolveAccountAvatarSrc({
+    avatarSource: selected,
+    xAvatarUrl: xPhoto,
+    username,
+  })
+
+  return (
+    <div className="px-5 py-3 first:pt-4 last:pb-5">
+      <div className="flex items-center gap-3">
+        <img
+          src={currentSrc}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="h-[38px] w-[38px] flex-none rounded-full object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="mt-0.5 text-[12px] text-ink-3">
+            {xPhoto ? 'ADHX generate or X avatar' : 'Generated from your username'}
+          </p>
+        </div>
+        {xPhoto && (
+          <div className="flex flex-none items-center gap-2">
+            <button
+              type="button"
+              aria-pressed={selected === 'x'}
+              aria-label="Use X photo"
+              onClick={() => updatePreference('avatarSource', 'x')}
+              className={cn(
+                'h-10 w-10 overflow-hidden rounded-full ring-offset-2 ring-offset-surface',
+                selected === 'x' ? 'ring-2 ring-clay' : 'ring-1 ring-hairline hover:ring-ink-3',
+              )}
+            >
+              <img
+                src={xPhoto}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-cover"
+                onError={() => setXBroken(true)}
+              />
+            </button>
+            <button
+              type="button"
+              aria-pressed={selected === 'generated'}
+              aria-label="Use generated avatar"
+              onClick={() => updatePreference('avatarSource', 'generated')}
+              className={cn(
+                'h-10 w-10 overflow-hidden rounded-full ring-offset-2 ring-offset-surface',
+                selected === 'generated'
+                  ? 'ring-2 ring-clay'
+                  : 'ring-1 ring-hairline hover:ring-ink-3',
+              )}
+            >
+              <img src={generated} alt="" className="h-full w-full object-cover" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -415,7 +494,7 @@ function SyncBookmarksCard({
   getTimeSince,
 }: {
   xConnected: boolean
-  xIdentity: { username: string } | null
+  xIdentity: { username: string; avatarUrl?: string | null } | null
   refresh: () => void
   cooldown: CooldownStatus
   displayedCooldown: number
@@ -454,9 +533,16 @@ function SyncBookmarksCard({
       {xIdentity && (
         <div className="mb-4">
           <div className="flex items-center gap-[13px]">
-            <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-              <PlatformGlyph platform="twitter" size={18} className="text-white" />
-            </div>
+            <img
+              src={resolveAccountAvatarSrc({
+                avatarSource: 'x',
+                xAvatarUrl: xIdentity.avatarUrl,
+                username: xIdentity.username,
+              })}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="h-10 w-10 flex-none rounded-full object-cover"
+            />
             <div className="flex-1 min-w-0">
               <p className="font-mono font-bold text-[14.5px] text-ink truncate">
                 @{xIdentity.username}

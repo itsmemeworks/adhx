@@ -90,6 +90,20 @@ export function usableAvatarUrl(url: string | null | undefined): string | null {
   return url
 }
 
+/** Settings + chrome: X profile photo when chosen and usable, else the generated icon. */
+export type AvatarSource = 'x' | 'generated'
+
+export function resolveAccountAvatarSrc(opts: {
+  avatarSource: AvatarSource | string | null | undefined
+  xAvatarUrl: string | null | undefined
+  username: string
+  broken?: boolean
+}): string {
+  const generated = generateAvatarDataUri(opts.username)
+  if (opts.avatarSource === 'generated' || opts.broken) return generated
+  return usableAvatarUrl(opts.xAvatarUrl) ?? generated
+}
+
 /**
  * Renders a deterministic 80×80 SVG document for the given seed: a filled
  * circle (clipped) with three overlapping colored blobs whose position,

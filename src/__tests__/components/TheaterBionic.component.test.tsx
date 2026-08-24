@@ -10,7 +10,7 @@ import { StageText } from '@/components/theater/StageText'
 import { StageArticle } from '@/components/theater/StageArticle'
 import type { TheaterItem } from '@/components/theater/types'
 
-const prefs = { bionicReading: true, bodyFont: 'ibm-plex' as const }
+const prefs = { bionicReading: true, bodyFont: 'ibm-plex' as const, avatarSource: 'x' as const }
 
 vi.mock('@/lib/preferences-context', () => ({
   usePreferences: () => ({

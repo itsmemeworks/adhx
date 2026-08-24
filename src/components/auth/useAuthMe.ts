@@ -21,7 +21,7 @@ export interface AuthMe {
   authenticated: boolean
   user: AuthMeUser | null
   identities: {
-    x: { username: string } | null
+    x: { username: string; avatarUrl?: string | null } | null
     email: { email: string } | null
   }
   xConnected: boolean

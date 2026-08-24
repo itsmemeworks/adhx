@@ -14,7 +14,7 @@ const TOKEN_TTL_MS = 15 * 60 * 1000
 // ===========================================
 
 export interface AccountIdentities {
-  x: { providerId: string; username?: string } | null
+  x: { providerId: string; username?: string; avatarUrl?: string | null } | null
   email: { email: string } | null
 }
 
@@ -51,7 +51,7 @@ export async function getAccount(userId: string): Promise<Account | null> {
   const emailIdentity = identityRows.find((row) => row.provider === 'email') ?? null
 
   const [tokenRow] = await db
-    .select({ username: oauthTokens.username })
+    .select({ username: oauthTokens.username, profileImageUrl: oauthTokens.profileImageUrl })
     .from(oauthTokens)
     .where(eq(oauthTokens.userId, userId))
     .limit(1)
@@ -68,7 +68,11 @@ export async function getAccount(userId: string): Promise<Account | null> {
     },
     identities: {
       x: xIdentity
-        ? { providerId: xIdentity.providerId, username: tokenRow?.username ?? undefined }
+        ? {
+            providerId: xIdentity.providerId,
+            username: tokenRow?.username ?? undefined,
+            avatarUrl: tokenRow?.profileImageUrl ?? user.avatarUrl ?? null,
+          }
         : null,
       email: emailIdentity ? { email: emailIdentity.providerId } : null,
     },

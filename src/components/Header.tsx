@@ -18,7 +18,8 @@ import {
 } from 'lucide-react'
 import { useTheme } from '@/lib/theme/context'
 import { cn } from '@/lib/utils'
-import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
+import { usePreferences } from '@/lib/preferences-context'
 import { MatterLogo } from '@/components/matter'
 import { SyncProgress } from './sync/SyncProgress'
 import {
@@ -40,7 +41,7 @@ interface AuthStatus {
 // From /api/auth/me — lets the menu tell an X-connected identity apart from
 // an email-only one (which has no @handle to show).
 interface Identities {
-  x: { username: string } | null
+  x: { username: string; avatarUrl?: string | null } | null
   email: { email: string } | null
 }
 
@@ -62,6 +63,7 @@ export function Header() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
+  const { preferences } = usePreferences()
   // Search lives only on /library (collection) and /tags. On /tags it filters
   // the tag list via the same cross-component custom-event pattern documented
   // in CLAUDE.md ("Cross-Component Keyboard Feedback") — TagsClient owns the
@@ -372,16 +374,14 @@ export function Header() {
     return `${seconds}s`
   }
 
-  const profileImage = authStatus?.user?.profileImageUrl
-  // No avatar (or one that fails to load) gets a generated icon seeded off the
-  // username, so the same account always draws the same face — see
-  // `src/lib/avatar/generated-avatar.ts`. Replaces the old initial-letter tile.
+  // Settings "X photo vs generated" — same helper as the theater menu.
   const [avatarBroken, setAvatarBroken] = useState(false)
-  const remoteAvatar = usableAvatarUrl(profileImage)
-  const avatarSrc =
-    remoteAvatar && !avatarBroken
-      ? remoteAvatar
-      : generateAvatarDataUri(authStatus?.user?.username || 'adhx')
+  const avatarSrc = resolveAccountAvatarSrc({
+    avatarSource: preferences.avatarSource,
+    xAvatarUrl: identities?.x?.avatarUrl,
+    username: authStatus?.user?.username || 'adhx',
+    broken: avatarBroken,
+  })
 
   // Signed-out: the only signed-out page is the marketing landing, which has
   // its own nav — so the app top bar renders nothing (avoids a double header).
@@ -531,6 +531,7 @@ export function Header() {
                   <img
                     src={avatarSrc}
                     alt={authStatus?.user?.username || 'User'}
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
                     onError={() => setAvatarBroken(true)}
                   />
@@ -548,6 +549,7 @@ export function Header() {
                             <img
                               src={avatarSrc}
                               alt={authStatus.user.username}
+                              referrerPolicy="no-referrer"
                               className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                               onError={() => setAvatarBroken(true)}
                             />
