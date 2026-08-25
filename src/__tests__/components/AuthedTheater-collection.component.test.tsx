@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import AuthedTheater from '@/app/AuthedTheater'
 import { COLLECTION_QUEUE_LIMIT } from '@/lib/theater/collection-href'
-import { SAVED_PLAYING_STORAGE_KEY } from '@/lib/theater/saved-playing'
+import { SAVED_PLAYED_STORAGE_KEY, SAVED_PLAYING_STORAGE_KEY } from '@/lib/theater/saved-playing'
 
 const pushSpy = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -56,6 +56,7 @@ let feedImpl: (url: string) => ReturnType<typeof jsonResponse>
 
 beforeEach(() => {
   sessionStorage.clear()
+  localStorage.clear()
   pushSpy.mockClear()
   shellSpy.mockClear()
   feedRequests = []
@@ -103,11 +104,36 @@ describe('AuthedTheater collection load', () => {
     await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
   })
 
-  it('resumes the session Saved cursor after a Live ⇄ Saved remount', async () => {
+  it('does not resume past leftover Saved rows after a Live ⇄ Saved remount', async () => {
     sessionStorage.setItem(SAVED_PLAYING_STORAGE_KEY, 'twitter:b')
     render(<AuthedTheater seed={emptySeed} tab="collection" />)
     await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
+    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '0')
+  })
+
+  it('resumes the session Saved cursor when earlier rows were left this run', async () => {
+    sessionStorage.setItem(SAVED_PLAYING_STORAGE_KEY, 'twitter:b')
+    sessionStorage.setItem(SAVED_PLAYED_STORAGE_KEY, JSON.stringify(['twitter:a']))
+    render(<AuthedTheater seed={emptySeed} tab="collection" />)
+    await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
     expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '1')
+  })
+
+  it('Videos leftover starts at the first video, not the next after a text cursor', async () => {
+    const video = (id: string) => ({
+      id,
+      platform: 'twitter',
+      media: [{ id: `m${id}`, mediaType: 'video', url: 'x', thumbnailUrl: 'x', shareUrl: 'x' }],
+    })
+    feedImpl = () =>
+      jsonResponse({
+        items: [video('1'), video('2'), video('3'), { id: 't', platform: 'twitter' }, video('4')],
+      })
+    localStorage.setItem('adhx-theater-types', JSON.stringify(['video']))
+    sessionStorage.setItem(SAVED_PLAYING_STORAGE_KEY, 'twitter:t')
+    render(<AuthedTheater seed={emptySeed} tab="collection" />)
+    await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
+    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '0')
   })
 
   it('lets ?open= win over the session Saved cursor', async () => {

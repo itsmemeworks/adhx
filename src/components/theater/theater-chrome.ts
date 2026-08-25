@@ -70,7 +70,8 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
 
   // Saved one-pass is the 1-based now-playing index (`2 of 92`). Live
   // leftover is played of the pending run (`16 of 23`), not a playlist
-  // index. Repeat on is the pile (`23 on repeat`).
+  // index. Keep playing is the pile (`23 on repeat`). Repeat this post
+  // is `1 on repeat`.
   // Headings keep `wasSeenOnEntry`. Counts use the leftover-run snapshot
   // when it exists, unioned with entry so the first paint (empty run set)
   // still hides last-visit watches.

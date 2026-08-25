@@ -127,6 +127,7 @@ function chromeProps() {
     queuePlayed?: number
     queueToPlay?: number
     queueLooping?: boolean
+    pinnedKey?: string | null
     onCycleRepeat?: () => void
     repeatMode?: RepeatMode
   }
@@ -785,6 +786,27 @@ describe('TheaterShell: signed-in preview is leftover Live, not shared-post-repe
 
     expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe(theaterItemKey(unseen))
+    expect(chromeProps().pinnedKey).toBeNull()
+  })
+
+  it('drops This post and leftover 1 after the opened preview is finished', async () => {
+    const shared = textItem('shared')
+    const watched = textItem('3')
+    markWatched([watched])
+    authMeState.me = { authenticated: true, user: { username: 'owner' } }
+    await act(async () => {
+      render(
+        <TheaterShell seed={seed([shared, watched])} mode="shared" sharedItem={shared} authed />,
+      )
+    })
+    expect(chromeProps().pinnedKey).toBe(theaterItemKey(shared))
+    expect(chromeProps().queueToPlay).toBe(1)
+
+    await endCurrentItem()
+
+    expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
+    expect(chromeProps().pinnedKey).toBeNull()
+    expect(chromeProps().queueToPlay).toBe(0)
   })
 
   it('[signed out] still repeats the opened post until the visitor Nexts', async () => {

@@ -150,6 +150,10 @@ describe('TheaterShell: repeat is a remembered switch', () => {
     await cycleRepeat() // -> all: leftover is no longer a stop-count
     expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(3)
+
+    await cycleRepeat() // -> one: only the post on stage
+    expect(chromeProps().queueLooping).toBe(true)
+    expect(chromeProps().queueTotal).toBe(1)
   })
 
   it('counts a user Next as played of the leftover run', async () => {

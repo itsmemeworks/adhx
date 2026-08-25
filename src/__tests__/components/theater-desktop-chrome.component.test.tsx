@@ -557,6 +557,19 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
     expect(screen.getByLabelText('23 on repeat')).toHaveTextContent('23 on repeat')
+
+    rerender(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        queueTotal={1}
+        queueToPlay={1}
+        queueLooping
+      />,
+    )
+    expect(screen.getByLabelText('1 on repeat')).toHaveTextContent('1 on repeat')
   })
 
   it('keeps Queue labelled Queue when a type filter is on, with a clay filter cue', () => {
@@ -605,6 +618,9 @@ describe('DesktopDock: end cap restructure', () => {
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
         newCount={5}
+        queuePlayed={0}
+        queueToPlay={1}
+        queueTotal={1}
       />,
     )
     const neu = screen.getByLabelText('5 new')
@@ -636,6 +652,9 @@ describe('DesktopDock: end cap restructure', () => {
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
         newCount={5}
+        queuePlayed={0}
+        queueToPlay={1}
+        queueTotal={1}
         playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )

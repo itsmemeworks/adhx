@@ -6,6 +6,18 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Saved starts at leftover, not mid-list
+
+Live→Saved remounted on the last `adhx-saved-playing` cursor (or the next Videos row after it) and could All Clear while unchecked leftovers sat at the top. Resume only when earlier leftovers were left this run (`adhx-saved-played`); otherwise start at the first matching leftover. Live paste still keeps the same-shell Saved cursor. Tests: `savedStartIndex`, AuthedTheater remount, TheaterShell Videos start, chrome `1 on repeat`, `e2e/queue-count`. In-flight until the PR merges.
+
+## 2026-08-25 — Repeat this post is 1 on repeat
+
+Keep playing still names the pile (`18 on repeat`). Repeat this post was using the same length, so the dock said `18 on repeat` while Queue said Repeating this post. `one` is now `1 on repeat`. Tests: `computeQueueCounts`, `formatQueueCount`, theater-chrome, TheaterShell-repeat. In-flight until the PR merges.
+
+## 2026-08-25 — Preview "This post" drops after watch
+
+Opening a preview URL kept the lead in **This post** and leftover as `1 in queue` after caught-up (every filmstrip tile red). `liveQueueTreatAsUnseen` was wrapping live seen, and waiting still stayPut the last `currentKey`. Entry still treats the opened post as pending; once this session watches it, it joins Watched earlier and leftover copy hides on the waiting stage. Tests: `sharedThisPostKey`, theater-chrome waiting, UpNextList, TheaterShell caught-up preview. In-flight until the PR merges.
+
 ## 2026-08-25 — CI: Live ⇄ Saved `1` and leftover count flash
 
 `2` wrote `/saved` into the bar with `replaceState` before `router.push`, so Playwright treated Saved as landed while `/live` was still mounted. Pressing `1` then hit `next === tab` and never pushed `/live`. Cross-tab switches now push only; same-tab still rewrites a leftover preview path. Live→Saved no longer local-flips an empty Saved snapshot (that All Cleared until `/saved` fetched). Leftover chrome passes `played: 0` before the seen snapshot is ready, and `countPlayedThisRun` never counts the on-stage row. Cross-tab leftover e2e asserts the pile grew and the current post stayed (unit tests own `played === 0`). In-flight until the PR merges.

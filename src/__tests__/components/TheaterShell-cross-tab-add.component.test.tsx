@@ -504,6 +504,32 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().queueLooping).toBe(false)
   })
 
+  it('Saved remount does not start past leftover videos in this run', async () => {
+    window.localStorage.setItem('adhx-theater-types', JSON.stringify(['video']))
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          initialPersonalIndex={3}
+          personalItems={[
+            videoFeedItem('1'),
+            videoFeedItem('2'),
+            videoFeedItem('3'),
+            videoFeedItem('4'),
+            videoFeedItem('5'),
+          ]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(chromeProps().isSeen('twitter:1')).toBe(false)
+    expect(chromeProps().isSeen('twitter:2')).toBe(false)
+    expect(chromeProps().isSeen('twitter:3')).toBe(false)
+  })
+
   it('Live paste keeps the Saved cursor on the same post after flipping tabs', async () => {
     await act(async () => {
       render(

@@ -1289,7 +1289,7 @@ export function DesktopDock({
               ) : null}
               <UpNextList
                 items={items}
-                currentKey={currentKey}
+                currentKey={waiting ? null : currentKey}
                 isSeen={isSeen}
                 seenReady={seenReady}
                 freshKeys={freshKeys}

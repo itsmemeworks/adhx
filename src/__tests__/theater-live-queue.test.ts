@@ -3,6 +3,7 @@ import {
   orderLiveQueue,
   liveQueueGroupOf,
   liveQueueTreatAsUnseen,
+  sharedThisPostKey,
   unseenBlockLength,
   computeLiveNext,
   pendingBlockLength,
@@ -87,6 +88,22 @@ describe('liveQueueTreatAsUnseen', () => {
   it('treats the shared lead as pending even when already seen', () => {
     expect(liveQueueTreatAsUnseen('twitter:lead', 'twitter:lead', () => true)).toBe(false)
     expect(liveQueueTreatAsUnseen('twitter:old', 'twitter:lead', () => true)).toBe(true)
+  })
+})
+
+describe('sharedThisPostKey', () => {
+  const seen = (key: string) => key === 'twitter:lead'
+
+  it('keeps This post while the opened lead is still on stage', () => {
+    expect(sharedThisPostKey('twitter:lead', seen, 'twitter:lead')).toBe('twitter:lead')
+  })
+
+  it('drops This post once the opened lead has been watched and left', () => {
+    expect(sharedThisPostKey('twitter:lead', seen, 'twitter:next')).toBeNull()
+  })
+
+  it('drops This post on caught-up even though currentKey stays on the lead', () => {
+    expect(sharedThisPostKey('twitter:lead', seen, 'twitter:lead', true)).toBeNull()
   })
 })
 
@@ -237,9 +254,9 @@ describe('computeQueueTotal', () => {
     expect(computeQueueTotal({ ...base, repeatMode: 'off' })).toBe(7)
   })
 
-  it('counts out of the whole queue once repeat is on — the switch changes the number', () => {
+  it('counts out of the whole queue once Keep playing is on — the switch changes the number', () => {
     expect(computeQueueTotal({ ...base, repeatMode: 'all' })).toBe(26)
-    expect(computeQueueTotal({ ...base, repeatMode: 'one' })).toBe(26)
+    expect(computeQueueTotal({ ...base, repeatMode: 'one' })).toBe(1)
   })
 
   it('falls back to the whole queue when nothing is pending (caught up)', () => {
@@ -286,9 +303,17 @@ describe('computeQueueCounts', () => {
     ).toEqual({ looping: false, played: 5, toPlay: 7, length: 13 })
   })
 
-  it('names the pile when Live is repeating; caught-up without a run is just the pile', () => {
+  it('names the pile when Keep playing; Repeat this post is 1; caught-up without a run is empty leftover', () => {
     expect(computeQueueCounts({ index: 0, length: 13, unseenCount: 2, repeatMode: 'all' })).toEqual(
       { looping: true, played: 0, toPlay: 13, length: 13 },
+    )
+    expect(computeQueueCounts({ index: 0, length: 13, unseenCount: 2, repeatMode: 'one' })).toEqual(
+      {
+        looping: true,
+        played: 0,
+        toPlay: 1,
+        length: 1,
+      },
     )
     expect(computeQueueCounts({ index: 0, length: 13, unseenCount: 0, repeatMode: 'off' })).toEqual(
       { looping: false, played: 0, toPlay: 0, length: 13 },
@@ -439,10 +464,11 @@ describe('formatQueueCount', () => {
       text: '23 on repeat',
       ariaLabel: '23 on repeat',
     })
-    expect(formatQueueCount({ looping: false, played: 0, toPlay: 0, length: 13 })).toEqual({
-      text: '13 in queue',
-      ariaLabel: '13 in queue',
+    expect(formatQueueCount({ looping: true, played: 0, toPlay: 1, length: 1 })).toEqual({
+      text: '1 on repeat',
+      ariaLabel: '1 on repeat',
     })
+    expect(formatQueueCount({ looping: false, played: 0, toPlay: 0, length: 13 })).toBeNull()
     expect(formatQueueCount({ looping: true, played: 0, toPlay: 0, length: 0 })).toBeNull()
     expect(formatQueueCount({ looping: false, played: 23, toPlay: 23, length: 40 })).toEqual({
       text: '23 of 23',

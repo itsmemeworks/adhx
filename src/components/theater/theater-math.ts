@@ -330,8 +330,11 @@ export function liveQueueGroupOf(
 }
 
 /**
- * Shared-lead exemption used by Live ordering AND leftover counts.
- * The opened post is pending even if this viewer has seen it before.
+ * Shared-lead exemption for *entry* grouping only.
+ * The opened post starts pending even if this viewer has seen it before
+ * (a return visit still plays the link they followed). Do not wrap live
+ * `isSeenNow` with this — after this session watches it, leftover and
+ * Watched earlier must treat it as done.
  */
 export function liveQueueTreatAsUnseen(
   key: string,
@@ -340,6 +343,24 @@ export function liveQueueTreatAsUnseen(
 ): boolean {
   if (sharedItemKey && key === sharedItemKey) return false
   return wasSeen(key)
+}
+
+/**
+ * Preview-page "This post" carve-out. Keep it while the opened post is
+ * still why you're here; drop it once this session has watched it and
+ * it is no longer on stage (Next, or caught-up). Caught-up keeps the
+ * last `currentKey` for Back, so `waiting` is the signal there.
+ */
+export function sharedThisPostKey(
+  sharedItemKey: string | null | undefined,
+  isSeenNow: (key: string) => boolean,
+  currentKey: string | null,
+  waiting?: boolean,
+): string | null {
+  if (!sharedItemKey) return null
+  if (waiting) return null
+  if (isSeenNow(sharedItemKey) && currentKey !== sharedItemKey) return null
+  return sharedItemKey
 }
 
 /**
@@ -572,7 +593,8 @@ export function computeQueueTotal(opts: {
   repeatMode: RepeatMode
 }): number {
   const { index, length, unseenCount, repeatMode } = opts
-  if (repeatMode !== 'off') return length
+  if (repeatMode === 'one') return length > 0 ? 1 : 0
+  if (repeatMode === 'all') return length
   if (unseenCount <= 0 || index < 0 || index >= unseenCount) return length
   return unseenCount
 }
@@ -626,9 +648,10 @@ export function countPlayedThisRun<
  * Progress through the leftover run, or looping copy for the whole pile.
  *
  * Repeat off: `toPlay` is how many will actually play (23 new), `played`
- * is how many of those are done (16). Repeat on: `looping` and `length`
- * (23 on repeat). A list walk (Saved one-pass, Re-watch all) is the
- * 1-based now-playing index (`2 of 92` on the second post).
+ * is how many of those are done (16). Keep playing: `looping` and the
+ * pile (`23 on repeat`). Repeat this post: `1 on repeat`. A list walk
+ * (Saved one-pass, Re-watch all) is the 1-based now-playing index
+ * (`2 of 92` on the second post).
  */
 export function computeQueueCounts(opts: {
   index: number
@@ -640,7 +663,11 @@ export function computeQueueCounts(opts: {
   played?: number
 }): QueueCount {
   const { index, length, unseenCount, repeatMode, listWalk, played } = opts
-  if (repeatMode !== 'off') {
+  if (repeatMode === 'one') {
+    const n = length > 0 ? 1 : 0
+    return { looping: true, played: 0, toPlay: n, length: n }
+  }
+  if (repeatMode === 'all') {
     return { looping: true, played: 0, toPlay: length, length }
   }
   if (length <= 0) return { looping: false, played: 0, toPlay: 0, length: 0 }
@@ -667,7 +694,7 @@ export function computeQueueCounts(opts: {
   return { looping: false, played: done, toPlay: done + remaining, length }
 }
 
-/** Peek / dock copy. Off-repeat: "N in queue" until the first leave, then "16 of 23". Repeat on: "23 on repeat". */
+/** Peek / dock copy. Off-repeat: "N in queue" until the first leave, then "16 of 23". Keep playing: "23 on repeat". Repeat this post: "1 on repeat". */
 export function formatQueueCount(
   count: QueueCount | null | undefined,
 ): { text: string; ariaLabel: string } | null {
@@ -678,9 +705,11 @@ export function formatQueueCount(
     return { text: `${length} on repeat`, ariaLabel: `${length} on repeat` }
   }
   if (played <= 0) {
-    const n = toPlay > 0 ? toPlay : length
-    if (n <= 0) return null
-    return { text: `${n} in queue`, ariaLabel: `${n} in queue` }
+    // Caught-up (and first paint before leftover is known) is toPlay 0 —
+    // do not fall back to the pile size or the dock says "18 in queue"
+    // next to You're all caught up.
+    if (toPlay <= 0) return null
+    return { text: `${toPlay} in queue`, ariaLabel: `${toPlay} in queue` }
   }
   if (toPlay <= 0) {
     if (length <= 0) return null

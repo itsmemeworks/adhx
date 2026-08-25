@@ -32,7 +32,18 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, PersonalTab } from '@/components/theater/types'
 import { COLLECTION_QUEUE_LIMIT, SAVED_PATH, sameBookmark } from '@/lib/theater/collection-href'
-import { readSavedPlayingKey, savedPlayingIndex } from '@/lib/theater/saved-playing'
+import {
+  feedItemPlayingKey,
+  readPlayedSavedKeys,
+  readSavedPlayingKey,
+  savedPlayingIndex,
+  savedStartIndex,
+} from '@/lib/theater/saved-playing'
+import {
+  feedItemMatchesQueueTypes,
+  parseTheaterQueueTypes,
+} from '@/components/theater/theater-math'
+import { THEATER_QUEUE_TYPES_STORAGE_KEY } from '@/components/theater/theater-storage'
 import { theaterTabNavAction } from '@/components/theater/theater-math'
 
 /** Which route each side of the switch lives on. */
@@ -71,7 +82,22 @@ async function loadCollectionQueue(
   const data = await res.json()
   const queue: FeedItem[] = data.items ?? []
   if (!openId) {
-    return { items: queue, start: savedPlayingIndex(queue, readSavedPlayingKey()) }
+    const playingIndex = savedPlayingIndex(queue, readSavedPlayingKey())
+    const played = readPlayedSavedKeys()
+    let types: ReturnType<typeof parseTheaterQueueTypes> = []
+    try {
+      types = parseTheaterQueueTypes(localStorage.getItem(THEATER_QUEUE_TYPES_STORAGE_KEY))
+    } catch {
+      types = []
+    }
+    return {
+      items: queue,
+      start: savedStartIndex(queue.length, {
+        playingIndex,
+        isLeftover: (i) => !played.has(feedItemPlayingKey(queue[i]!)),
+        matches: (i) => feedItemMatchesQueueTypes(queue[i]!, types),
+      }),
+    }
   }
 
   const start = openPlatform

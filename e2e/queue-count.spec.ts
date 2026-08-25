@@ -31,6 +31,10 @@ test.describe('queue count — Live leftover run', () => {
     await page.getByRole('button', { name: 'Stop when caught up' }).click()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
     await expect(visibleQueueCount(page)).toHaveText(/\d+ on repeat/)
+
+    await page.getByRole('button', { name: 'Keep playing' }).click()
+    await expect(page.getByRole('button', { name: 'Repeat this post' })).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText('1 on repeat')
   })
 })
 
@@ -45,6 +49,8 @@ authedTest.describe('queue count — Saved one-pass vs loop', () => {
     await expect(visibleQueueCount(page)).toHaveText(/\d+ on repeat/)
 
     await page.getByRole('button', { name: 'Keep playing' }).click()
+    await expect(page.getByRole('button', { name: 'Repeat this post' })).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText('1 on repeat')
     await page.getByRole('button', { name: 'Repeat this post' }).click()
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
 

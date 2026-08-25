@@ -517,6 +517,19 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       />,
     )
     expect(peekCentreText()).toBe('23 on repeat')
+
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        current={items[0]}
+        items={items}
+        currentKey="twitter:1"
+        queueTotal={1}
+        queueToPlay={1}
+        queueLooping
+      />,
+    )
+    expect(peekCentreText()).toBe('1 on repeat')
   })
 
   /**
@@ -544,6 +557,9 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         items={items}
         currentKey="twitter:1"
         newCount={3}
+        queuePlayed={0}
+        queueToPlay={1}
+        queueTotal={1}
         collection={collection}
       />,
     )
@@ -557,6 +573,9 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         items={items}
         currentKey="twitter:1"
         newCount={3}
+        queuePlayed={0}
+        queueToPlay={1}
+        queueTotal={1}
         collection={{ ...collection, tab: 'live' }}
       />,
     )
@@ -946,6 +965,9 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         items={items}
         current={items[1]}
         currentKey={theaterItemKey(items[1])}
+        queuePlayed={0}
+        queueToPlay={5}
+        queueTotal={5}
       />,
     )
     expect(screen.getByText('5 in queue')).toBeInTheDocument()
@@ -961,6 +983,9 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         current={items[1]}
         currentKey={theaterItemKey(items[1])}
         newCount={3}
+        queuePlayed={0}
+        queueToPlay={5}
+        queueTotal={5}
       />,
     )
     expect(screen.getByText('5 in queue · 3 new')).toBeInTheDocument()
@@ -975,6 +1000,9 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         current={items[1]}
         currentKey={theaterItemKey(items[1])}
         newCount={0}
+        queuePlayed={0}
+        queueToPlay={5}
+        queueTotal={5}
       />,
     )
     expect(screen.getByText('5 in queue')).toBeInTheDocument()
@@ -1020,6 +1048,9 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         queueTypes={['video']}
         onToggleQueueType={vi.fn()}
         onClearQueueTypes={vi.fn()}
+        queuePlayed={0}
+        queueToPlay={5}
+        queueTotal={5}
       />,
     )
     const peek = screen.getByText('5 in queue').closest('button')!
@@ -1039,6 +1070,9 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         current={items[1]}
         currentKey={theaterItemKey(items[1])}
         playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
+        queuePlayed={0}
+        queueToPlay={5}
+        queueTotal={5}
       />,
     )
     expect(peekCentreText()).toBe('5 in queue')

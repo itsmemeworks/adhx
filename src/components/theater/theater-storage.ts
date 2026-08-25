@@ -9,7 +9,7 @@
 
 export { LIVE_REPEAT_STORAGE_KEY, SAVED_REPEAT_STORAGE_KEY } from './types'
 export { SEEN_STORAGE_KEY, LAST_VISIT_STORAGE_KEY } from './useSeenSet'
-export { SAVED_PLAYING_STORAGE_KEY } from '@/lib/theater/saved-playing'
+export { SAVED_PLAYING_STORAGE_KEY, SAVED_PLAYED_STORAGE_KEY } from '@/lib/theater/saved-playing'
 
 /** sessionStorage: 'on' | 'off'. Survives location.assign paste-to-preview. */
 export const THEATER_SOUND_STORAGE_KEY = 'adhx-theater-sound'

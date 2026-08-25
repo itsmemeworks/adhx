@@ -300,6 +300,36 @@ describe('resolveTheaterChrome', () => {
     expect(chrome.queueToPlay).toBe(1)
   })
 
+  it('caught-up leftover is empty so the dock does not say 1 in queue', () => {
+    const chrome = resolveTheaterChrome({
+      isCollectionTab: false,
+      personalFinished: false,
+      collectionStageTheaterItem: personal,
+      waiting: true,
+      current: live,
+      personalDisplayItems: [personal],
+      displayItems: [live, ...Array.from({ length: 17 }, (_, i) => item(`old-${i}`))],
+      currentKey: 'twitter:live-1',
+      personalIsSeen: () => false,
+      isSeen: () => true,
+      seenReady: true,
+      freshKeys: new Set(),
+      newCount: 0,
+      currentIndex: 0,
+      unseenCount: 0,
+      effectiveRepeatMode: 'off',
+      personalIndex: 0,
+      canPrev: true,
+      canNext: false,
+      sharedItemKey: 'twitter:live-1',
+      wasSeenOnEntry: () => true,
+    })
+    expect(chrome.queuePlayed).toBe(0)
+    expect(chrome.queueToPlay).toBe(0)
+    expect(chrome.queueTotal).toBe(18)
+    expect(chrome.queueLooping).toBe(false)
+  })
+
   it('Keep playing names the pile as looping', () => {
     const chrome = resolveTheaterChrome({
       isCollectionTab: false,
@@ -324,5 +354,32 @@ describe('resolveTheaterChrome', () => {
     })
     expect(chrome.queueLooping).toBe(true)
     expect(chrome.queueTotal).toBe(3)
+  })
+
+  it('Repeat this post names 1 on repeat, not the pile', () => {
+    const chrome = resolveTheaterChrome({
+      isCollectionTab: false,
+      personalFinished: false,
+      collectionStageTheaterItem: personal,
+      waiting: false,
+      current: live,
+      personalDisplayItems: [personal],
+      displayItems: [live, item('2'), item('3')],
+      currentKey: 'twitter:live-1',
+      personalIsSeen: () => false,
+      isSeen: () => false,
+      seenReady: true,
+      freshKeys: new Set(),
+      newCount: 0,
+      currentIndex: 0,
+      unseenCount: 3,
+      effectiveRepeatMode: 'one',
+      personalIndex: 0,
+      canPrev: false,
+      canNext: true,
+    })
+    expect(chrome.queueLooping).toBe(true)
+    expect(chrome.queueTotal).toBe(1)
+    expect(chrome.queueToPlay).toBe(1)
   })
 })
