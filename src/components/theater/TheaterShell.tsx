@@ -1112,6 +1112,13 @@ export function TheaterShell({
   // opt-in, handled via `loop`). Never set implicitly — that's the whole
   // point of the owner's "you would need to specifically click it".
   const [rewatching, setRewatching] = useState(false)
+  // Posts already seen when the current leftover run began. Session start
+  // is `seenOnEntry`; catching up snapshots live seen so the next arrival
+  // is a new run (`1 in queue`) instead of `played + 1 of played + 1`.
+  const [seenBeforeThisLeftoverRun, setSeenBeforeThisLeftoverRun] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const wasWaitingRef = useRef(false)
 
   // Does this surface order its queue unseen-first? The live feed does — home,
   // the authed Live tab, AND a shared preview page, whose queue below the
@@ -1849,6 +1856,20 @@ export function TheaterShell({
   // Prefetch at most one item ahead (extracted to useTheaterPrefetch.ts).
   useTheaterPrefetch(currentIndex, displayItems)
 
+  // Close the leftover run when Live hits caught-up so the next arrival
+  // does not keep counting this session's already-finished leftover posts.
+  useEffect(() => {
+    const entered = waiting && !wasWaitingRef.current
+    wasWaitingRef.current = waiting
+    if (!entered || !liveOrdering || isCollectionTab) return
+    const next = new Set<string>(seenOnEntry)
+    for (const item of displayItems) {
+      const key = theaterItemKey(item)
+      if (seenSet.isSeen(key)) next.add(key)
+    }
+    setSeenBeforeThisLeftoverRun(next)
+  }, [waiting, liveOrdering, isCollectionTab, displayItems, seenOnEntry, seenSet.isSeen])
+
   // Auto-play into the waiting stage: the moment a genuinely fresh item shows
   // up (present in `freshKeys` but not in the baseline snapshotted when
   // waiting began), stage it and clear waiting. Mid-feed arrivals never hit
@@ -2186,7 +2207,9 @@ export function TheaterShell({
     personalIndex: personalLensIndex >= 0 ? personalLensIndex : 0,
     canPrev,
     canNext,
-    wasSeenOnEntry: liveOrdering ? wasSeenOnEntry : undefined,
+    wasSeenOnEntry: liveOrdering
+      ? (key) => wasSeenOnEntry(key) || seenBeforeThisLeftoverRun.has(key)
+      : undefined,
     rewatching,
     sharedItemKey,
   })
