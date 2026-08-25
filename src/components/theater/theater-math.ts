@@ -576,9 +576,11 @@ export interface QueueCount {
 /**
  * How many leftover-run posts are already done. Live always stages the head
  * of the leftover stack, so this is not a playlist index. A post counts if
- * it was unseen at session start (or arrived mid-session) and has been
- * marked seen — except the current leftover row, which stays put until you
- * leave it.
+ * it was unseen when this leftover run began (session start, or the last
+ * caught-up) or arrived mid-run, and has been marked seen — except the
+ * current leftover row, which stays put until you leave it. After caught-up,
+ * pass the posts already seen then as `wasSeenOnEntry` so a later arrival
+ * starts at `1 in queue`, not `2 of 3` from the finished run.
  */
 export function countPlayedThisRun<
   T extends { platform: string; bookmarkId?: string | null; url: string },

@@ -208,6 +208,40 @@ describe('resolveTheaterChrome', () => {
     expect(chrome.queueLooping).toBe(false)
   })
 
+  it('Live leftover after caught-up is just the new arrival, not the finished run', () => {
+    const arrival = item('fresh')
+    const done1 = item('done-1')
+    const done2 = item('done-2')
+    const watched = Array.from({ length: 8 }, (_, i) => item(`old-${i}`))
+    const chrome = resolveTheaterChrome({
+      isCollectionTab: false,
+      personalFinished: false,
+      collectionStageTheaterItem: personal,
+      waiting: false,
+      current: arrival,
+      personalDisplayItems: [personal],
+      displayItems: [arrival, done1, done2, ...watched],
+      currentKey: 'twitter:fresh',
+      personalIsSeen: () => false,
+      isSeen: (key) => key !== 'twitter:fresh',
+      seenReady: true,
+      freshKeys: new Set(['twitter:fresh']),
+      newCount: 1,
+      currentIndex: 0,
+      unseenCount: 1,
+      effectiveRepeatMode: 'off',
+      personalIndex: 0,
+      canPrev: false,
+      canNext: true,
+      wasSeenOnEntry: (key) =>
+        key.startsWith('twitter:old-') || key === 'twitter:done-1' || key === 'twitter:done-2',
+    })
+    expect(chrome.queuePlayed).toBe(0)
+    expect(chrome.queueToPlay).toBe(1)
+    expect(chrome.queueTotal).toBe(11)
+    expect(chrome.queueLooping).toBe(false)
+  })
+
   it('Keep playing names the pile as looping', () => {
     const chrome = resolveTheaterChrome({
       isCollectionTab: false,

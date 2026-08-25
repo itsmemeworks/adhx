@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Live leftover run resets at caught-up
+
+Caught-up plus a second-window save correctly staged the arrival, but Queue still counted the leftover posts finished this session (`2 of 3` with one New-since-opened). Catching up now snapshots seen keys as the start of the next leftover run. Tests: `countPlayedThisRun`, `theater-chrome`, TheaterShell caught-up matrix. In-flight until the PR merges.
+
 ## 2026-08-25 — Live caught-up survives a Saved tab flip
 
 Caught-up Live used to `setWaiting(false)` when flipping to Saved so the shared `<video>` could resume. Coming back to Live then kept playing that Saved clip at the same timecode. Saved still gets `theater-resume`; waiting stays true so the overlay returns. In-flight until the PR merges.

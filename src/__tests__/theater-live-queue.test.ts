@@ -332,6 +332,29 @@ describe('countPlayedThisRun', () => {
       }),
     ).toBe(1)
   })
+
+  it('ignores a leftover run that already finished at caught-up', () => {
+    // Owner screenshot: watched leftover this session, caught up, then one
+    // new arrival. Those finished leftover keys are folded into
+    // wasSeenOnEntry so the new run is just the arrival (1 in queue), not
+    // "2 of 3".
+    const items = [post('now'), post('done-1'), post('done-2'), post('old')]
+    expect(
+      countPlayedThisRun(items, {
+        currentKey: 'twitter:now',
+        remaining: 1,
+        currentIndex: 0,
+        wasSeenOnEntry: (key) =>
+          key === 'twitter:old' || key === 'twitter:done-1' || key === 'twitter:done-2',
+        isFresh: (key) => key === 'twitter:now',
+        isSeen: (key) =>
+          key === 'twitter:now' ||
+          key === 'twitter:done-1' ||
+          key === 'twitter:done-2' ||
+          key === 'twitter:old',
+      }),
+    ).toBe(0)
+  })
 })
 
 describe('PINNED_POST_HEADING', () => {

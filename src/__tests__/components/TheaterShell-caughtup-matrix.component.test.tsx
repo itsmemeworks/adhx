@@ -578,6 +578,26 @@ describe('TheaterShell caught-up matrix: arrivals', () => {
     expect(chromeProps().queueTotal).toBe(3)
   })
 
+  it('[signed out] an arrival after watching leftover THIS session is 1 in queue, not 2 of 3', async () => {
+    const item1 = textItem('1')
+    const item2 = textItem('2')
+    await renderHome([item1, item2])
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(2)
+
+    await act(async () => pressNext())
+    await act(async () => pressNext())
+    expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
+
+    const arrival = textItem('fresh')
+    await act(async () => pushArrival?.(arrival))
+
+    expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe(theaterItemKey(arrival))
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+  })
+
   /** Equivalence: this mechanism (the waiting-stage auto-arrival effect) is
    * NOT gated on `isPersonal` — unlike dwell (section D), it must behave
    * identically signed in. */
@@ -593,6 +613,28 @@ describe('TheaterShell caught-up matrix: arrivals', () => {
 
     expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe(theaterItemKey(arrival))
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+  })
+
+  it('[signed in, live tab] an arrival after watching leftover THIS session is 1 in queue', async () => {
+    const item1 = textItem('1')
+    const item2 = textItem('2')
+    await renderCollectionLive([item1, item2])
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(2)
+
+    await act(async () => pressNext())
+    await act(async () => pressNext())
+    expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
+
+    const arrival = textItem('fresh')
+    await act(async () => pushArrival?.(arrival))
+
+    expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe(theaterItemKey(arrival))
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
   })
 
   /** An arrival mid-play (nowhere near the end) must not interrupt playback
