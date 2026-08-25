@@ -58,7 +58,7 @@ import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import { useSendFile } from './useSendFile'
 import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
-import { useTheaterStageEvents } from './useTheaterStageEvents'
+import { useTheaterTransport } from './useTheaterTransport'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
 import { FlameChip } from './TheaterMetaChips'
 import { TheaterTagCount } from './TheaterTagCount'
@@ -83,12 +83,7 @@ import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import {
-  formatQueueCount,
-  isTheaterQueueFilterActive,
-  theaterQueueFilterLabel,
-} from './theater-math'
-import { logAV } from './YtDebugOverlay'
+import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
 import type {
   RepeatMode,
   SavePlaylistStatus,
@@ -889,16 +884,19 @@ export function DesktopDock({
   useTheaterQueueOverlay({ open: showAll, onClose: closeShowAll, containerRef: rootRef })
 
   const kind = progressKindFor(current, articleMode)
-  const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
-    useTheaterStageEvents()
-
-  useEffect(() => {
-    setTimedPaused(false)
-    // Same reason as the mobile chrome: `liveMuted` is a report about the
-    // element that WAS on stage, so carrying it across items shows the
-    // previous post's mute state on the new one (state review, 2026-08-22).
-    setLiveMuted(null)
-  }, [currentKey])
+  const { paused, displayMuted, soundPulse, queueCount, handleAudioTap, handleTogglePause } =
+    useTheaterTransport({
+      currentKey,
+      kind,
+      muted,
+      onSetMuted,
+      queue: {
+        looping: queueLooping ?? false,
+        played: queuePlayed ?? 0,
+        toPlay: queueToPlay ?? 0,
+        length: queueTotal ?? items.length,
+      },
+    })
 
   useEffect(() => {
     if (!currentKey) return
@@ -906,48 +904,11 @@ export function DesktopDock({
     el?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
   }, [currentKey])
 
-  const paused = kind === 'video' ? !videoPlaying : timedPaused
-  const displayMuted = liveMuted ?? muted
-  const soundPulse = kind === 'video' && displayMuted && videoPlaying
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
   const repeatCopy = repeatMode
     ? repeatModeLabel(repeatMode, { saved: _collection?.tab === 'collection' })
     : null
-  const queueCount = formatQueueCount({
-    looping: queueLooping ?? false,
-    played: queuePlayed ?? 0,
-    toPlay: queueToPlay ?? 0,
-    length: queueTotal ?? items.length,
-  })
-
-  // Computed from the DISPLAYED state (not the shell's possibly-stale
-  // `muted` prop) so the button always moves the direction the icon shows —
-  // then dispatches synchronously (gesture-context fast path for
-  // StageVideo/StageYouTube) alongside the shell setter (persistence, one
-  // render later). See `onSetMuted`'s doc comment above. Mirrors
-  // TheaterMobileChrome's identical handler.
-  const handleAudioTap = () => {
-    const next = !displayMuted
-    logAV(
-      `audio tap: displayed=${displayMuted ? 'muted' : 'unmuted'} -> requesting ${next ? 'muted' : 'unmuted'}`,
-    )
-    window.dispatchEvent(new CustomEvent('theater-set-muted', { detail: { muted: next } }))
-    onSetMuted(next)
-  }
-
-  const handleTogglePause = () => {
-    if (kind === 'video') {
-      window.dispatchEvent(new CustomEvent(videoPlaying ? 'theater-pause' : 'theater-resume'))
-      return
-    }
-    if (kind === 'timed') {
-      setTimedPaused((was) => {
-        window.dispatchEvent(new CustomEvent(was ? 'theater-resume' : 'theater-pause'))
-        return !was
-      })
-    }
-  }
 
   const handlePanelSelect = (key: string) => {
     onSelect(key)

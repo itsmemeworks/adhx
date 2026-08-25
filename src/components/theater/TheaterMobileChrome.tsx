@@ -45,7 +45,8 @@ import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
 import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
-import { useTheaterStageEvents, useTheaterStageTapDeclutter } from './useTheaterStageEvents'
+import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
+import { useTheaterTransport } from './useTheaterTransport'
 import { useClampExpand } from './useClampExpand'
 import {
   theaterItemKey,
@@ -66,13 +67,8 @@ import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import {
-  formatQueueCount,
-  isTheaterQueueFilterActive,
-  theaterQueueFilterLabel,
-} from './theater-math'
+import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
 import { StageIconButton } from './stage-primitives'
-import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
   SavePlaylistStatus,
@@ -273,8 +269,20 @@ export function TheaterMobileChrome({
   // button honest); `'timed'`-kind items have no underlying element to ask,
   // so the button owns that state itself, reset to playing whenever the
   // current post changes (a paused state must never leak to the next post).
-  const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
-    useTheaterStageEvents()
+  const { paused, displayMuted, soundPulse, queueCount, handleAudioTap, handleTogglePause } =
+    useTheaterTransport({
+      currentKey,
+      kind: mediaKind,
+      muted,
+      onSetMuted,
+      audioOnlyOnVideo: true,
+      queue: {
+        looping: queueLooping ?? false,
+        played: queuePlayed ?? 0,
+        toPlay: queueToPlay ?? 0,
+        length: queueTotal ?? items.length,
+      },
+    })
   // De-clutter: hides the top and bottom scrims (brand + caption/actions) for
   // an unobstructed view of the stage. The peek bar (nav/pause/audio + the
   // up-next sheet) deliberately stays visible and functional — the point is
@@ -290,59 +298,6 @@ export function TheaterMobileChrome({
     },
     [],
   )
-
-  // Reset per-post playback chrome when the stage advances. Do not close
-  // the up-next sheet — the owner keeps it open to watch the queue while
-  // the next post plays (Escape / tap-away / the handle still collapse it).
-  // 'video' items don't need the pause reset: StageVideo always (re)plays
-  // a fresh src.
-  useEffect(() => {
-    setTimedPaused(false)
-    // `liveMuted` describes the ELEMENT that was on stage, so it must not
-    // outlive the item — the sibling `timedPaused` was reset here and this
-    // wasn't (state review, 2026-08-22). Carried over, the audio icon showed
-    // the previous post's real mute state until the new stage happened to
-    // re-broadcast, which is the intermittent "mute flicks on and off while
-    // watching" the owner reported. Null falls back to the shell's `muted`,
-    // the intended state for a post that hasn't reported yet.
-    setLiveMuted(null)
-  }, [currentKey])
-
-  const paused = mediaKind === 'video' ? !videoPlaying : timedPaused
-  const displayMuted = liveMuted ?? muted
-  // Sound affordance moved onto the peek-bar audio button on mobile
-  // (StageVideo's centered "Tap for sound" pill is desktop-only now): pulse
-  // while the current video is effectively muted AND actually playing, so a
-  // paused or already-unmuted video never pulses.
-  const soundPulse = mediaKind === 'video' && displayMuted && videoPlaying
-
-  // Computed from the DISPLAYED state (not the shell's possibly-stale
-  // `muted` prop) so the button always moves the direction the icon shows —
-  // then dispatches synchronously (gesture-context fast path for
-  // StageVideo/StageYouTube) alongside the shell setter (persistence, one
-  // render later). See `onSetMuted`'s doc comment above.
-  const handleAudioTap = () => {
-    if (mediaKind !== 'video') return
-    const next = !displayMuted
-    logAV(
-      `audio tap: displayed=${displayMuted ? 'muted' : 'unmuted'} -> requesting ${next ? 'muted' : 'unmuted'}`,
-    )
-    window.dispatchEvent(new CustomEvent('theater-set-muted', { detail: { muted: next } }))
-    onSetMuted(next)
-  }
-
-  const handleTogglePause = () => {
-    if (mediaKind === 'video') {
-      window.dispatchEvent(new CustomEvent(videoPlaying ? 'theater-pause' : 'theater-resume'))
-      return
-    }
-    if (mediaKind === 'timed') {
-      setTimedPaused((was) => {
-        window.dispatchEvent(new CustomEvent(was ? 'theater-resume' : 'theater-pause'))
-        return !was
-      })
-    }
-  }
 
   const handleSelect = (key: string) => {
     onSelect(key)
@@ -390,12 +345,6 @@ export function TheaterMobileChrome({
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
   const peekNew = newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
-  const queueCount = formatQueueCount({
-    looping: queueLooping ?? false,
-    played: queuePlayed ?? 0,
-    toPlay: queueToPlay ?? 0,
-    length: queueTotal ?? items.length,
-  })
   const peekPosition =
     queueIndex !== -1 && queueCount
       ? `${queueCount.text}${peekNew}`

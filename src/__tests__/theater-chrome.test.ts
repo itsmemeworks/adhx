@@ -242,6 +242,36 @@ describe('resolveTheaterChrome', () => {
     expect(chrome.queueLooping).toBe(false)
   })
 
+  it('leftover-run snapshot, not session-entry, resets the count after caught-up', () => {
+    const arrival = item('fresh')
+    const done = item('done-1')
+    const chrome = resolveTheaterChrome({
+      isCollectionTab: false,
+      personalFinished: false,
+      collectionStageTheaterItem: personal,
+      waiting: false,
+      current: arrival,
+      personalDisplayItems: [personal],
+      displayItems: [arrival, done],
+      currentKey: 'twitter:fresh',
+      personalIsSeen: () => false,
+      isSeen: (key) => key === 'twitter:done-1',
+      seenReady: true,
+      freshKeys: new Set(['twitter:fresh']),
+      newCount: 1,
+      currentIndex: 0,
+      unseenCount: 1,
+      effectiveRepeatMode: 'off',
+      personalIndex: 0,
+      canPrev: false,
+      canNext: true,
+      wasSeenOnEntry: () => false,
+      wasSeenBeforeLeftoverRun: (key) => key === 'twitter:done-1',
+    })
+    expect(chrome.queuePlayed).toBe(0)
+    expect(chrome.queueToPlay).toBe(1)
+  })
+
   it('Keep playing names the pile as looping', () => {
     const chrome = resolveTheaterChrome({
       isCollectionTab: false,

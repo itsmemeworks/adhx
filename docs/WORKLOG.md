@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Theater review cleanup
+
+Fixed All Clear cross-tab prepend, `theater-resume` under a covered video, auto-advance `markSeen`, Live Save prepend + `idPlatform`, All Clear keeping `<Stage/>` mounted, Read reset on Saved cursor, and Live poll-on-enable. Extracted repeat/queue-type prefs, membership lookup, transport hook, storage catalog, and `liveQueueTreatAsUnseen`. UpNextList imports math from `theater-math`. In-flight until the PR merges.
+
 ## 2026-08-25 — Live leftover run resets at caught-up
 
 Caught-up plus a second-window save correctly staged the arrival, but Queue still counted the leftover posts finished this session (`2 of 3` with one New-since-opened). Catching up now snapshots seen keys as the start of the next leftover run. Tests: `countPlayedThisRun`, `theater-chrome`, TheaterShell caught-up matrix. In-flight until the PR merges.

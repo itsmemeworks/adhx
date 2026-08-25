@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   orderLiveQueue,
   liveQueueGroupOf,
+  liveQueueTreatAsUnseen,
   unseenBlockLength,
   computeLiveNext,
   pendingBlockLength,
@@ -79,6 +80,13 @@ describe('liveQueueGroupOf', () => {
     expect(LIVE_QUEUE_GROUP_LABEL.arrived).toBeTruthy()
     expect(LIVE_QUEUE_GROUP_LABEL.unwatched).toBeTruthy()
     expect(LIVE_QUEUE_GROUP_LABEL.watched).toBeTruthy()
+  })
+})
+
+describe('liveQueueTreatAsUnseen', () => {
+  it('treats the shared lead as pending even when already seen', () => {
+    expect(liveQueueTreatAsUnseen('twitter:lead', 'twitter:lead', () => true)).toBe(false)
+    expect(liveQueueTreatAsUnseen('twitter:old', 'twitter:lead', () => true)).toBe(true)
   })
 })
 

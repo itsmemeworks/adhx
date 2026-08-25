@@ -125,6 +125,7 @@ type ChromeProps = {
   onNext: () => void
   onSelect: (key: string) => void
   onToggleQueueType?: (type: ContentType) => void
+  onCycleRepeat?: () => void
   collection?: { tab: string; onTabChange: (tab: string) => void }
 }
 
@@ -503,5 +504,32 @@ describe('TheaterShell: cross-tab add + filters', () => {
     await act(async () => collection.onTabChange('collection'))
     expect(chromeProps().currentKey).toBe('twitter:2')
     expect(queueIds()).toEqual(['99', '1', '2', '3'])
+  })
+
+  it('Saved: tweet-added after All Clear plays the new save', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await act(async () => chromeProps().collection?.onTabChange?.('collection'))
+    const cycle = chromeProps().onCycleRepeat
+    if (!cycle) throw new Error('repeat control missing')
+    await act(async () => cycle())
+    await act(async () => cycle())
+    await act(async () => chromeProps().onNext())
+    expect(screen.getByText('All caught up')).toBeInTheDocument()
+
+    await act(async () => fireAdded(feedItem('99')))
+
+    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe('twitter:99')
+    expect(queueIds()[0]).toBe('99')
   })
 })

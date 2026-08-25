@@ -330,6 +330,19 @@ export function liveQueueGroupOf(
 }
 
 /**
+ * Shared-lead exemption used by Live ordering AND leftover counts.
+ * The opened post is pending even if this viewer has seen it before.
+ */
+export function liveQueueTreatAsUnseen(
+  key: string,
+  sharedItemKey: string | null | undefined,
+  wasSeen: (key: string) => boolean,
+): boolean {
+  if (sharedItemKey && key === sharedItemKey) return false
+  return wasSeen(key)
+}
+
+/**
  * Pure: the timestamp the live queue SORTS by — deliberately the same value
  * the row chips DISPLAY (`addedAt`, when the post first hit ADHX).
  *
@@ -549,6 +562,8 @@ export function computeLiveNext(opts: {
  * describe the viewer's position: nothing pending (caught up — the whole queue
  * is what a re-watch would play), and having browsed back into already-watched
  * posts, where the index sits outside the run.
+ *
+ * @deprecated Use computeQueueCounts. Kept for tests that still import it.
  */
 export function computeQueueTotal(opts: {
   index: number

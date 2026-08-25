@@ -185,6 +185,34 @@ describe('StageVideo transport start-path parity (owner: bottom play button did 
     // Still shows the tap-to-play overlay — pause didn't fabricate a playing state.
     expect(container.querySelector('[aria-label="Play video"]')).not.toBeNull()
   })
+
+  it('ignores theater-resume while covered so a Saved flip does not play the Live MP4', async () => {
+    const playMock = vi.fn().mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+    HTMLMediaElement.prototype.pause = vi.fn()
+
+    render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+        covered
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    playMock.mockClear()
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('theater-resume'))
+      await Promise.resolve()
+    })
+    expect(playMock).not.toHaveBeenCalled()
+  })
 })
 
 /**

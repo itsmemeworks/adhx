@@ -10,8 +10,7 @@ import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
 import { theaterRowCaption } from './TheaterText'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
-// Grouping comes from the shell so the headings below can never disagree with
-// the order the queue was built in.
+// Same predicates the shell uses to build the leftover order.
 import {
   liveQueueGroupOf,
   orderLiveQueue,
@@ -19,7 +18,7 @@ import {
   LIVE_QUEUE_GROUP_LABEL,
   PINNED_POST_HEADING,
   type LiveQueueGroup,
-} from './TheaterShell'
+} from './theater-math'
 import { THEATER_QUEUE_SCROLL_ATTR } from './useTheaterQueueOverlay'
 
 /** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
