@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.65.2](https://github.com/itsmemeworks/adhx/compare/v1.65.1...v1.65.2) (2026-08-25)
+
+
+### Bug Fixes
+
+* keep live caught-up when flipping back from saved ([#419](https://github.com/itsmemeworks/adhx/issues/419)) ([03a0ac8](https://github.com/itsmemeworks/adhx/commit/03a0ac83ab24c9fc18d6df44bb345236cd50b061))
+
 ## [1.65.1](https://github.com/itsmemeworks/adhx/compare/v1.65.0...v1.65.1) (2026-08-25)
 
 
