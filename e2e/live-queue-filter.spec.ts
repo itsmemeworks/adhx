@@ -23,6 +23,10 @@ test.describe('Live type filter vs preview pulses', () => {
     // Do not reload — Live replaceStates the bar onto a preview path, and a
     // reload would remount shared mode (which keeps a text lead under Videos).
     await page.getByRole('button', { name: 'Queue', exact: true }).click()
+    // Mobile UpNextList stays mounted (lg:hidden). getByText matches that
+    // hidden copy first — always assert queue rows inside this dialog.
+    const queue = page.getByRole('dialog', { name: 'Playlist' })
+    await expect(queue).toBeVisible()
     await page.getByRole('button', { name: 'Videos', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Videos', exact: true })).toHaveAttribute(
       'aria-pressed',
@@ -52,15 +56,15 @@ test.describe('Live type filter vs preview pulses', () => {
     })
 
     // Server trending cache is 12s; the theater poll is another 12s.
-    await expect(page.getByText('E2E-PULSE-VIDEO').first()).toBeVisible({ timeout: 40_000 })
+    await expect(queue.getByText('E2E-PULSE-VIDEO')).toBeVisible({ timeout: 40_000 })
     await expect(page.getByText('No videos in Live right now')).toHaveCount(0)
-    await expect(page.getByText('E2E-PULSE-TEXT')).toHaveCount(0)
+    await expect(queue.getByText('E2E-PULSE-TEXT')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'All', exact: true }).click()
     await expect(page.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
-    await expect(page.getByText('E2E-PULSE-TEXT').first()).toBeVisible()
+    await expect(queue.getByText('E2E-PULSE-TEXT')).toBeVisible()
   })
 })

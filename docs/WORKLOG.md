@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Hotfix: Live queue-filter e2e hit a hidden mobile list
+
+`e2e/live-queue-filter.spec.ts` failed on main after #414: `E2E-PULSE-TEXT` was in the DOM (`hidden`) because mobile `UpNextList` stays mounted under `lg:hidden`. `getByText().first()` pinned that copy. Queue-row asserts now go through the desktop Playlist dialog. In-flight until the hotfix PR merges.
+
 ## 2026-08-25 — Album review: hydrate photoCount, pin the grant, send clip 1
 
 Shared Read ignored a later `photoCount` on the same post. The hydrate effect now re-seeds, and tests cover album wrap, last-clip `ended`, `<video>` identity, `?index=` on info/download, and Send staying on clip 1. In-flight until the PR merges.
