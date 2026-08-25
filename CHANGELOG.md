@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.65.0](https://github.com/itsmemeworks/adhx/compare/v1.64.0...v1.65.0) (2026-08-25)
+
+
+### Features
+
+* theater albums, queue types, and live/saved chrome ([#414](https://github.com/itsmemeworks/adhx/issues/414)) ([3f2ce4a](https://github.com/itsmemeworks/adhx/commit/3f2ce4a47f2d75ea2fbb1e860377b3a238928be3))
+
 ## [1.64.0](https://github.com/itsmemeworks/adhx/compare/v1.63.0...v1.64.0) (2026-08-24)
 
 
