@@ -119,8 +119,8 @@ export function FeedBentoTile({
     )
   }
 
-  // text / quote
-  const isQuote = type === 'quote'
+  // text
+  const isQuote = !!item.isQuote
   return (
     <button
       type="button"

@@ -127,7 +127,7 @@ describe('resolveTheaterShortcut', () => {
     expect(theater?.rows).toEqual([
       { keys: ['1'], label: 'Live' },
       { keys: ['2'], label: 'Saved' },
-      { keys: ['Q'], label: 'Show all' },
+      { keys: ['Q'], label: 'Queue' },
     ])
   })
 

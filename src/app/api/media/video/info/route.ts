@@ -7,6 +7,7 @@ import {
   isValidTweetAuthor,
   isValidTweetId,
   markTweetGone,
+  parseTweetMediaIndex,
 } from '@/lib/media/proxy'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
+  const index = parseTweetMediaIndex(searchParams.get('index'))
   // withSizes=true triggers HEAD requests to measure actual file sizes.
   // Only the download-gate flow needs this; playback decisions use bitrate estimation.
   const withSizes = searchParams.get('withSizes') === 'true'
@@ -61,7 +63,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid author or tweetId' }, { status: 400 })
   }
 
-  const cacheKey = `${author}/${tweetId}`
+  const goneKey = `${author}/${tweetId}`
+  const cacheKey = `${goneKey}/${index}`
   const cache = withSizes ? videoInfoCacheWithSizes : videoInfoCache
 
   try {
@@ -71,7 +74,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cached.data)
     }
 
-    if (isTweetGoneCached(cacheKey)) {
+    if (isTweetGoneCached(goneKey)) {
       return goneResponse()
     }
 
@@ -87,7 +90,7 @@ export async function GET(request: NextRequest) {
         // Deleted/private/suspended — not a proxy error, and it won't come
         // back on a retry. Cache it so repeat plays/HLS-threshold checks for
         // this tweet don't keep re-hitting FxTwitter.
-        markTweetGone(cacheKey)
+        markTweetGone(goneKey)
         metrics.mediaUnavailable('video-info', response.status)
         return goneResponse()
       }
@@ -95,7 +98,8 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    const video = data.tweet?.media?.videos?.[0]
+    const videos = data.tweet?.media?.videos
+    const video = Array.isArray(videos) ? videos[index - 1] : undefined
 
     if (!video) {
       return NextResponse.json({ error: 'No video found' }, { status: 404 })

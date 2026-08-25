@@ -143,7 +143,7 @@ export interface FeedItem {
   summary?: string | null // AI-generated summary
 }
 
-export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
+export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'
 
 export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
@@ -177,9 +177,14 @@ export const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
   { value: 'videos', label: 'Videos' },
   { value: 'text', label: 'Text' },
   { value: 'articles', label: 'Articles' },
-  { value: 'quoted', label: 'Quoted' },
-  { value: 'manual', label: 'Manual' },
 ]
+
+const FILTER_VALUES = new Set<string>(FILTER_OPTIONS.map((o) => o.value))
+
+/** Coerce a URL/search param. Unknown values (old `quoted` / `manual`) → All. */
+export function parseFilterType(raw: string | null | undefined): FilterType {
+  return raw && FILTER_VALUES.has(raw) ? (raw as FilterType) : 'all'
+}
 
 /**
  * Bookmark data streamed during sync (lighter than full FeedItem)

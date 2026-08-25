@@ -180,6 +180,64 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     }
   })
 
+  it('drops a post archived in another window without moving the current one', async () => {
+    await act_(() => {
+      renderCollection(['1', '2', '3'])
+    })
+    expect(queueState().currentKey).toBe('twitter:1')
+
+    await act_(() => {
+      window.dispatchEvent(
+        new CustomEvent('tweet-added', {
+          detail: { removed: { platform: 'twitter', id: '2' } },
+        }),
+      )
+    })
+
+    expect(queueState().ids).toEqual(['1', '3'])
+    expect(queueState().currentKey).toBe('twitter:1')
+  })
+
+  it('slides the cursor back when another window archives an earlier post', async () => {
+    await act_(() => {
+      renderCollection(['1', '2', '3'])
+    })
+    const onNext = collectionProps().onNext as () => void
+    await act_(() => onNext())
+    expect(queueState().currentKey).toBe('twitter:2')
+
+    await act_(() => {
+      window.dispatchEvent(
+        new CustomEvent('tweet-added', {
+          detail: { removed: { platform: 'twitter', id: '1' } },
+        }),
+      )
+    })
+
+    expect(queueState().ids).toEqual(['2', '3'])
+    expect(queueState().currentKey).toBe('twitter:2')
+  })
+
+  it('prepends a post added in another window without leaving the current one', async () => {
+    await act_(() => {
+      renderCollection(['1', '2', '3'])
+    })
+    const onNext = collectionProps().onNext as () => void
+    await act_(() => onNext())
+    expect(queueState().currentKey).toBe('twitter:2')
+
+    await act_(() => {
+      window.dispatchEvent(
+        new CustomEvent('tweet-added', {
+          detail: { added: feedItem('99') },
+        }),
+      )
+    })
+
+    expect(queueState().ids).toEqual(['99', '1', '2', '3'])
+    expect(queueState().currentKey).toBe('twitter:2')
+  })
+
   it('skip (next) keeps the post and does not notify', async () => {
     const stats = vi.fn()
     window.addEventListener('stats-updated', stats)

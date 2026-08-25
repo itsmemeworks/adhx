@@ -16,6 +16,7 @@ import { TrendingRankedRow, trendingItemKey } from '@/components/trending/Trendi
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import type { ContentType } from '@/components/matter'
+import { inferType } from '@/lib/trending/filter'
 
 /**
  * /trending/archive/[week] — a permanent snapshot of what the community
@@ -42,14 +43,13 @@ const TYPE_COUNT_LABEL: Record<ContentType, string> = {
   video: 'video',
   photo: 'photo',
   text: 'text post',
-  quote: 'quote',
   article: 'article',
 }
 
 function countsByType(items: TrendingItem[]): Partial<Record<ContentType, number>> {
   const counts: Partial<Record<ContentType, number>> = {}
   for (const item of items) {
-    const type = (item.contentType ?? 'text') as ContentType
+    const type = inferType(item)
     counts[type] = (counts[type] ?? 0) + 1
   }
   return counts

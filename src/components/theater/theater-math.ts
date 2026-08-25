@@ -11,6 +11,7 @@ import { previewPath } from '@/lib/activity/preview-path'
 import { hasKnownTimestamp } from '@/lib/utils/format'
 import type { RepeatMode, TheaterItem, TheaterMode } from './types'
 import { inferType } from '@/lib/trending/filter'
+import { inferCollectionContentType } from './collection-item'
 import { SAVED_PATH, isSavedPath } from '@/lib/theater/collection-href'
 
 export interface PersonalUndoAction {
@@ -68,6 +69,45 @@ export function personalStepBackIndex(index: number): number {
   return Math.max(0, index - 1)
 }
 
+/** Next Saved-queue index that `allowAt` accepts, or `length` (All Clear). */
+export function personalAdvanceMatching(
+  index: number,
+  length: number,
+  allowAt: (i: number) => boolean,
+): number {
+  for (let i = index + 1; i < length; i++) {
+    if (allowAt(i)) return i
+  }
+  return length
+}
+
+/** Previous matching Saved-queue index, or `index` when none remain behind. */
+export function personalStepBackMatching(index: number, allowAt: (i: number) => boolean): number {
+  for (let i = index - 1; i >= 0; i--) {
+    if (allowAt(i)) return i
+  }
+  return index
+}
+
+/** Ended-advance that skips filtered-out Saved items. Same wrap as unfiltered. */
+export function personalAdvanceOnEndedMatching(
+  index: number,
+  length: number,
+  repeatMode: RepeatMode,
+  allowAt: (i: number) => boolean,
+): number {
+  if (repeatMode === 'one' || length <= 0) return index
+  const next = personalAdvanceMatching(index, length, allowAt)
+  if (next < length) return next
+  if (repeatMode === 'all') {
+    for (let i = 0; i < length; i++) {
+      if (allowAt(i)) return i
+    }
+    return index
+  }
+  return next
+}
+
 /**
  * Pure: move the item matching `pinnedKey` to the front of `items`, order
  * otherwise preserved. A missing key (not found, or already at index 0)
@@ -88,15 +128,14 @@ export function pinKeyFirst<
   return copy
 }
 
-/** Live-queue type pills, in the order they render. Empty selection = all types. */
-export const THEATER_QUEUE_TYPES: ContentType[] = ['video', 'photo', 'text', 'article', 'quote']
+/** Theater type pills, in the order they render. Empty selection = all types. */
+export const THEATER_QUEUE_TYPES: ContentType[] = ['video', 'photo', 'text', 'article']
 
 export const THEATER_QUEUE_TYPE_PILLS: { id: ContentType; label: string }[] = [
   { id: 'video', label: 'Videos' },
   { id: 'photo', label: 'Photos' },
   { id: 'text', label: 'Text' },
   { id: 'article', label: 'Articles' },
-  { id: 'quote', label: 'Quotes' },
 ]
 
 const QUEUE_TYPE_SET = new Set<string>(THEATER_QUEUE_TYPES)
@@ -149,7 +188,7 @@ export function toggleTheaterQueueType(
 }
 
 /**
- * Keep only the selected Live types. `keepKey` (the shared-preview lead)
+ * Keep only the selected types. `keepKey` (the shared-preview lead)
  * stays even when its type is filtered out, so a pasted tweet isn't yanked
  * from under the visitor. Home lead-picks are not kept — changing the
  * filter should skip a post you happened to land on.
@@ -168,26 +207,52 @@ export function applyTheaterTypeLens<T extends TheaterItem>(
   return next.length === items.length ? items : next
 }
 
+/** Saved FeedItem counterpart to {@link applyTheaterTypeLens}. All = keep. */
+export function feedItemMatchesQueueTypes(
+  item: FeedItem,
+  selected: readonly ContentType[],
+): boolean {
+  const allow = orderedQueueTypes(selected)
+  if (allow.length === 0) return true
+  return allow.includes(inferCollectionContentType(item))
+}
+
+/**
+ * After a paste-to-add: keep the filter when the new post is already in
+ * it, otherwise reset to All so the save isn't invisible behind Text /
+ * Videos / …
+ */
+export function queueTypesForAddedItem(
+  selected: readonly ContentType[],
+  item: FeedItem,
+): ContentType[] {
+  if (feedItemMatchesQueueTypes(item, selected)) return orderedQueueTypes(selected)
+  return []
+}
+
 function selectedQueueTypeLabels(selected: readonly ContentType[]): string[] {
   const allow = new Set(orderedQueueTypes(selected))
   return THEATER_QUEUE_TYPE_PILLS.filter((p) => allow.has(p.id)).map((p) => p.label)
 }
 
-/** Tooltip / empty-state copy for an active Live type filter. */
+/** Tooltip / empty-state copy for an active type filter. */
 export function theaterQueueFilterLabel(selected: readonly ContentType[]): string {
   const labels = selectedQueueTypeLabels(selected)
-  if (labels.length === 0) return 'Show all'
+  if (labels.length === 0) return 'Queue'
   if (labels.length <= 2) return labels.join(' · ')
   return `${labels.length} types`
 }
 
-export function theaterQueueEmptyHeadline(selected: readonly ContentType[]): string {
+export function theaterQueueEmptyHeadline(
+  selected: readonly ContentType[],
+  surface: 'Live' | 'Saved' = 'Live',
+): string {
   const labels = selectedQueueTypeLabels(selected).map((label) => label.toLowerCase())
-  if (labels.length === 0) return 'Nothing in Live right now'
-  if (labels.length === 1) return `No ${labels[0]} in Live right now`
-  if (labels.length === 2) return `No ${labels[0]} or ${labels[1]} in Live right now`
+  if (labels.length === 0) return `Nothing in ${surface} right now`
+  if (labels.length === 1) return `No ${labels[0]} in ${surface} right now`
+  if (labels.length === 2) return `No ${labels[0]} or ${labels[1]} in ${surface} right now`
   const head = labels.slice(0, -1).join(', ')
-  return `No ${head}, or ${labels[labels.length - 1]} in Live right now`
+  return `No ${head}, or ${labels[labels.length - 1]} in ${surface} right now`
 }
 
 /**

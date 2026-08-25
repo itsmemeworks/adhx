@@ -183,6 +183,31 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
     expect(container.querySelector('video')).toBe(first)
   })
 
+  it('keeps the same video element when the album clip changes', () => {
+    const item = {
+      ...videoItem('1'),
+      videoCount: 2,
+      videoPosters: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+    }
+    const { container, getByRole } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} />)
+    const first = container.querySelector('video')
+    fireEvent.click(getByRole('button', { name: 'Next video, 1 of 2' }))
+    expect(container.querySelector('video')).toBe(first)
+  })
+
+  it('keeps the same video element when Read opens on a video album', () => {
+    const item = {
+      ...videoItem('1'),
+      videoCount: 2,
+      videoPosters: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+    }
+    const props = { muted: true, onRequestUnmute: vi.fn() }
+    const { container, rerender } = render(<Stage item={item} {...props} />)
+    const first = container.querySelector('video')
+    rerender(<Stage item={item} {...props} articleMode />)
+    expect(container.querySelector('video')).toBe(first)
+  })
+
   it('renders no retained video before any video has played', () => {
     const { container } = render(<Stage item={textItem()} muted onRequestUnmute={vi.fn()} />)
     expect(container.querySelector('video')).toBeNull()
@@ -252,5 +277,38 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
     const { container } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
     expect(container.textContent).toContain('a long photo caption')
     expect(container.querySelector('img[alt=""]')).toBeTruthy()
+  })
+
+  it('stacks every photo in Read, not just the first', () => {
+    const item = {
+      ...textItem(),
+      author: 'StreetFashion01',
+      bookmarkId: '2091475617438957808',
+      contentType: 'photo' as const,
+      text: 'the loafers',
+      thumbnailUrl: 'https://pbs.twimg.com/one.jpg',
+      photoCount: 3,
+    } as TheaterItem
+    const { container } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
+    const srcs = [...container.querySelectorAll('img')].map((el) => el.getAttribute('src') ?? '')
+    expect(srcs.some((s) => s.includes('index=1'))).toBe(true)
+    expect(srcs.some((s) => s.includes('index=2'))).toBe(true)
+    expect(srcs.some((s) => s.includes('index=3'))).toBe(true)
+    expect(container.querySelector('[aria-label="Photos, 3"]')).toBeNull()
+  })
+
+  it('keeps video-album snap chrome in Read', () => {
+    const item = {
+      ...videoItem('2091920006829199772'),
+      videoCount: 2,
+      videoPosters: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+    } as TheaterItem
+    const { container } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
+    expect(container.querySelector('[aria-label="Videos, 2"]')).toBeTruthy()
+    expect(container.querySelector('[data-testid="article-video-fade"]')).toBeTruthy()
+    const dots = container.querySelector('[aria-label="Next video, 1 of 2"]')
+    expect(dots).toBeTruthy()
+    expect(dots?.parentElement?.style.bottom).toBe('12px')
+    expect(dots?.parentElement?.className).not.toContain('4.25rem')
   })
 })

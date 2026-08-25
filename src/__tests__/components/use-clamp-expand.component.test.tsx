@@ -73,4 +73,45 @@ describe('useClampExpand — overflow measurement', () => {
     rerender(<Probe itemKey="item-b" />)
     expect(screen.getByTestId('cap').dataset.overflow).toBe('true')
   })
+
+  it('keeps overflowing after the caption unmounts so Watch can toggle back to Read', () => {
+    let notify: ResizeObserverCallback = () => undefined
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: ResizeObserverCallback) {
+          notify = cb
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    )
+
+    function Probe({ show }: { show: boolean }) {
+      const { ref, overflowing } = useClampExpand('same-post')
+      return (
+        <div>
+          <span data-testid="flag">{String(overflowing)}</span>
+          {show ? <p ref={ref} data-testid="cap" /> : null}
+        </div>
+      )
+    }
+
+    const { rerender } = render(<Probe show />)
+    const el = screen.getByTestId('cap')
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => 200 })
+    Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => 40 })
+    act(() => notify([] as unknown as ResizeObserverEntry[], {} as ResizeObserver))
+    expect(screen.getByTestId('flag')).toHaveTextContent('true')
+
+    rerender(<Probe show={false} />)
+    Object.defineProperty(el, 'scrollHeight', { configurable: true, get: () => 0 })
+    Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => 0 })
+    act(() => notify([] as unknown as ResizeObserverEntry[], {} as ResizeObserver))
+    expect(screen.getByTestId('flag')).toHaveTextContent('true')
+
+    rerender(<Probe show />)
+    expect(screen.getByTestId('flag')).toHaveTextContent('true')
+  })
 })

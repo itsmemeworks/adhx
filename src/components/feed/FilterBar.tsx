@@ -599,14 +599,12 @@ export function FilterBar({
 
         {/* The archive view switch — hidden while a tag is selected: a tag is
             a deliberately curated set, so this doesn't apply there (the feed
-            fetch ignores `hideArchived` for tag views too).
+            fetch ignores archive state for tag views too).
 
-            Two things the owner asked for here. The LABEL names what you will
-            see after pressing it, because there are only two views and neither
-            is a "mode" you enable: "you're either viewing your collection with
-            archive or without". And it is NOT an orange CTA — a view switch is
-            not a call to action, so both states use the same quiet surface and
-            only the label and count change.
+            Two views: active collection, or archived posts only. The LABEL
+            names what you will see after pressing it. It is NOT an orange
+            CTA — a view switch is not a call to action, so both states use
+            the same quiet surface and only the label and count change.
 
             Vocabulary note: the flag is still `hideArchived` and the column is
             still archived_posts. Renaming a shipped API and a DB column is a
@@ -615,17 +613,13 @@ export function FilterBar({
           <button
             onClick={() => onHideArchivedChange(!hideArchived)}
             aria-pressed={!hideArchived}
-            title={
-              hideArchived
-                ? 'Show archived posts as well'
-                : 'Hide archived posts — show only your active collection'
-            }
+            title={hideArchived ? 'Show only archived posts' : 'Show only your active collection'}
             className="flex flex-shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-3.5 py-[7px] text-[13.5px] font-semibold whitespace-nowrap text-ink-2 transition-colors duration-150 hover:text-ink"
           >
             {hideArchived ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
             <span>{hideArchived ? 'Show archived' : 'Hide archived'}</span>
             <span className="rounded-full bg-inset px-[7px] py-px text-[11.5px] text-ink-2">
-              {hideArchived ? stats.active : stats.total}
+              {hideArchived ? stats.active : Math.max(0, stats.total - stats.active)}
             </span>
           </button>
         )}

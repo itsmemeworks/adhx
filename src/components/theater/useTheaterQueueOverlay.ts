@@ -11,11 +11,20 @@ import { useEffect, type RefObject } from 'react'
 import { THEATER_SHORTCUT_KEYS, isTheaterTypingTarget } from './theater-shortcuts'
 
 export const THEATER_QUEUE_ITEM_ATTR = 'data-theater-queue-item'
+export const THEATER_QUEUE_SCROLL_ATTR = 'data-theater-queue-scroll'
 
 export interface UseTheaterQueueOverlayArgs {
   open: boolean
   onClose: () => void
   containerRef: RefObject<HTMLElement | null>
+  /**
+   * Focus the current row when the playlist opens. Desktop Show all wants
+   * this. The mobile bottom sheet must not: focusing a row that is still
+   * mid-translate (or below the visual viewport) pans iOS so the sheet
+   * jumps to the top of the screen — filters vanish, the stage reads as a
+   * black void, and the open animation fights the scroll.
+   */
+  autoFocus?: boolean
 }
 
 function queueRows(root: HTMLElement | null): HTMLElement[] {
@@ -25,8 +34,15 @@ function queueRows(root: HTMLElement | null): HTMLElement[] {
 
 function focusRow(el: HTMLElement | undefined): void {
   if (!el) return
-  el.focus()
-  el.scrollIntoView?.({ block: 'nearest' })
+  // Never scrollIntoView — that walks ancestors and pans the visual
+  // viewport. Keep keyboard focus; only nudge the list scroller itself.
+  el.focus({ preventScroll: true })
+  const scroller = el.closest<HTMLElement>(`[${THEATER_QUEUE_SCROLL_ATTR}]`)
+  if (!scroller) return
+  const row = el.getBoundingClientRect()
+  const box = scroller.getBoundingClientRect()
+  if (row.top < box.top) scroller.scrollTop -= box.top - row.top
+  else if (row.bottom > box.bottom) scroller.scrollTop += row.bottom - box.bottom
 }
 
 function inQueueFilter(target: EventTarget | null): boolean {
@@ -37,6 +53,7 @@ export function useTheaterQueueOverlay({
   open,
   onClose,
   containerRef,
+  autoFocus = true,
 }: UseTheaterQueueOverlayArgs): void {
   useEffect(() => {
     if (!open) return
@@ -46,9 +63,11 @@ export function useTheaterQueueOverlay({
     )
     const restore =
       trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
-    const rows = queueRows(containerRef.current)
-    const current = rows.find((el) => el.getAttribute('aria-current') === 'true') ?? rows[0]
-    focusRow(current)
+    if (autoFocus) {
+      const rows = queueRows(containerRef.current)
+      const current = rows.find((el) => el.getAttribute('aria-current') === 'true') ?? rows[0]
+      focusRow(current)
+    }
 
     function handlePointerDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -132,7 +151,7 @@ export function useTheaterQueueOverlay({
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       window.removeEventListener('keydown', handleKeyDownCapture, true)
-      if (restore?.isConnected) restore.focus()
+      if (restore?.isConnected) restore.focus({ preventScroll: true })
     }
-  }, [open, onClose, containerRef])
+  }, [open, onClose, containerRef, autoFocus])
 }

@@ -101,6 +101,55 @@ describe('API: /api/media/video', () => {
       )
     })
 
+    it('selects the Nth video when index is set (multi-video tweets)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            tweet: {
+              media: {
+                videos: [
+                  {
+                    url: 'https://video.twimg.com/first.mp4',
+                    formats: [
+                      {
+                        url: 'https://video.twimg.com/first-hd.mp4',
+                        bitrate: 2176000,
+                        container: 'mp4',
+                      },
+                    ],
+                  },
+                  {
+                    url: 'https://video.twimg.com/second.mp4',
+                    formats: [
+                      {
+                        url: 'https://video.twimg.com/second-hd.mp4',
+                        bitrate: 2176000,
+                        container: 'mp4',
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        body: new ReadableStream(),
+        headers: new Headers({ 'content-type': 'video/mp4' }),
+      })
+
+      const { GET } = await import('@/app/api/media/video/route')
+      await GET(createRequest({ author: 'user', tweetId: '123', index: '2' }))
+
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        'https://video.twimg.com/second-hd.mp4',
+        expect.any(Object),
+      )
+    })
+
     it('returns 404 when no video found', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

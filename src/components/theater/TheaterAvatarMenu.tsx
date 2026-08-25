@@ -17,7 +17,6 @@ import {
   Menu,
   Radio,
   Settings,
-  Shield,
   Tag,
   Trophy,
   type LucideIcon,
@@ -202,7 +201,7 @@ export interface TheaterAvatarMenuProps {
    */
   onRequestSignIn?: () => void
   /**
-   * Renders a burger-menu fallback (Theater / Leaderboard / Privacy / Sign in) for
+   * Renders a burger-menu fallback (Theater / Leaderboard / Sign in) for
    * signed-out visitors in this exact slot, instead of this component's
    * default "render nothing" behavior — one menu implementation covering
    * both auth states rather than a second component. Callers opt in per
@@ -235,7 +234,7 @@ export interface TheaterAvatarMenuProps {
  * menu — Your collection / Theater / Tags / Leaderboard / Settings (the same
  * nav set as the authed Header's own avatar menu, so signed-in visitors
  * aren't stranded on a preview page) plus Sign out. Signed out with
- * `allowSignedOut`: a burger menu (Theater/Leaderboard/Privacy/Sign in) in the same
+ * `allowSignedOut`: a burger menu (Theater/Leaderboard/Sign in) in the same
  * slot, so new mobile visitors have SOME way to reach the public surfaces.
  * Signed out without `allowSignedOut` (or while auth is still loading):
  * renders nothing.
@@ -362,7 +361,6 @@ export function TheaterAvatarMenu({
   const isLeaderboard = pathname === '/leaderboard' || pathname?.startsWith('/leaderboard/')
   const isTags = pathname === '/tags' || pathname?.startsWith('/tags/')
   const isSettings = pathname === '/settings' || pathname?.startsWith('/settings/')
-  const isPrivacy = pathname === '/privacy'
   const close = () => setOpen(false)
 
   if (!me?.authenticated || !me.user) {
@@ -396,10 +394,6 @@ export function TheaterAvatarMenu({
             <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
               <Trophy size={15} />
               <span>Leaderboard</span>
-            </MenuLink>
-            <MenuLink href="/privacy" onClick={close} current={isPrivacy}>
-              <Shield size={15} />
-              <span>Privacy</span>
             </MenuLink>
             <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
             <button

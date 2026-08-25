@@ -1,15 +1,6 @@
 'use client'
 
-import {
-  Play,
-  Check,
-  ChevronRight,
-  Image as ImageIcon,
-  FileText,
-  Video,
-  Quote,
-  Link2,
-} from 'lucide-react'
+import { Play, Check, ChevronRight, Image as ImageIcon, FileText, Video, Link2 } from 'lucide-react'
 import type { FeedItem } from './types'
 import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import { formatCompactRelativeTime, formatDurationMs } from '@/lib/utils/format'
@@ -21,7 +12,6 @@ const TYPE_ICON: Record<ContentType, typeof Video> = {
   photo: ImageIcon,
   text: FileText,
   article: Link2,
-  quote: Quote,
 }
 
 const DOT: Record<ContentType, string> = {
@@ -29,7 +19,6 @@ const DOT: Record<ContentType, string> = {
   photo: 'bg-type-photo',
   text: 'bg-type-text',
   article: 'bg-type-article',
-  quote: 'bg-type-quote',
 }
 
 /**

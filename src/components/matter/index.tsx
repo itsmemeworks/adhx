@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
  * Tokens live in globals.css (--m-*) / tailwind.config.ts (paper/surface/ink/clay…).
  */
 
-export type ContentType = 'video' | 'photo' | 'text' | 'article' | 'quote'
+export type ContentType = 'video' | 'photo' | 'text' | 'article'
 export type PlatformId = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
 
 /** content-type label + dot color (the dot is the only color in the label). */
@@ -14,7 +14,6 @@ export const TYPE_META: Record<ContentType, { label: string; dot: string }> = {
   photo: { label: 'Photo', dot: 'bg-type-photo' },
   text: { label: 'Text', dot: 'bg-type-text' },
   article: { label: 'Article', dot: 'bg-type-article' },
-  quote: { label: 'Quote', dot: 'bg-type-quote' },
 }
 
 /** ADHX wordmark — cloud mark + Indie Flower "ADHX". */

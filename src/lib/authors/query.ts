@@ -102,7 +102,6 @@ interface MergedItem {
   url: string
   createdAt: string
   saveCount: number
-  isQuote: boolean
   category: string | null
   /** Server-resolved type recorded at preview time, for posts never saved. */
   previewContentType: ContentType | undefined
@@ -148,7 +147,6 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
       authorAvatarUrl: sql<string | null>`max(${bookmarks.authorProfileImageUrl})`,
       text: sql<string>`max(${bookmarks.text})`,
       processedAt: sql<string>`max(${bookmarks.processedAt})`,
-      isQuote: sql<number>`max(${bookmarks.isQuote})`,
       category: sql<string | null>`max(${bookmarks.category})`,
       saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
     })
@@ -175,7 +173,6 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
       url: previewPath('twitter', b.author, b.id),
       createdAt: b.processedAt,
       saveCount: Number(b.saveCount) || 0,
-      isQuote: !!Number(b.isQuote),
       category: b.category,
       previewContentType: undefined,
       isSaved: true,
@@ -203,7 +200,6 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
         url: a.url || previewPath('twitter', a.author, a.bookmarkId),
         createdAt: a.createdAt,
         saveCount: 0,
-        isQuote: false,
         category: null,
         previewContentType: asContentType(a.contentType),
         isSaved: false,
@@ -258,7 +254,6 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
     const m = mediaKinds.get(item.bookmarkId)
     return inferContentType({
       category: item.category,
-      isQuote: item.isQuote,
       hasVideo: m?.video,
       hasPhoto: m?.photo,
     })

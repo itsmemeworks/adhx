@@ -73,7 +73,7 @@ export function FeedCard({
   const type = feedItemType(item)
   const isVideo = type === 'video'
   const isArticle = type === 'article'
-  const isQuote = type === 'quote'
+  const isQuote = !!(item.isQuote && item.quoteContext)
   const isNew = lastSyncAt && item.processedAt >= lastSyncAt
 
   const articleLink = isArticle ? item.links?.[0] : null

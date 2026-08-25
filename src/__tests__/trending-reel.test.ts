@@ -73,4 +73,12 @@ describe('reelVideoSrc — per-platform stream URL in the reel', () => {
       '/api/media/video?author=jack&tweetId=99&quality=hd',
     )
   })
+
+  it('X album clip 2 adds a 1-based index (clip 1 stays the bare URL)', () => {
+    const twitter = item({ platform: 'twitter', author: 'jack', bookmarkId: '99' })
+    expect(reelVideoSrc(twitter, 1)).toBe('/api/media/video?author=jack&tweetId=99&quality=hd')
+    expect(reelVideoSrc(twitter, 2)).toBe(
+      '/api/media/video?author=jack&tweetId=99&quality=hd&index=2',
+    )
+  })
 })

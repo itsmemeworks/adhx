@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   pinKeyFirst,
   applyTheaterTypeLens,
+  feedItemMatchesQueueTypes,
+  queueTypesForAddedItem,
   parseTheaterQueueTypes,
   serializeTheaterQueueTypes,
   toggleTheaterQueueType,
@@ -21,6 +23,7 @@ import {
 import { mergeFeedItems } from '@/components/theater/useTheaterFeed'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem } from '@/components/theater/types'
+import type { FeedItem } from '@/components/feed/types'
 
 /**
  * Pure list-reorder helper backing TheaterShell's lead-pick/shared-item
@@ -87,7 +90,7 @@ describe('toggleTheaterQueueType', () => {
 
   it('returns All when the last type is turned off, or when every type is on', () => {
     expect(toggleTheaterQueueType(['text'], 'text')).toEqual([])
-    expect(toggleTheaterQueueType(['video', 'photo', 'text', 'article'], 'quote')).toEqual([])
+    expect(toggleTheaterQueueType(['video', 'photo', 'text'], 'article')).toEqual([])
   })
 })
 
@@ -103,10 +106,10 @@ describe('parseTheaterQueueTypes / serializeTheaterQueueTypes', () => {
 
 describe('theaterQueueFilterLabel', () => {
   it('names the selection for the dock toggle', () => {
-    expect(theaterQueueFilterLabel([])).toBe('Show all')
+    expect(theaterQueueFilterLabel([])).toBe('Queue')
     expect(theaterQueueFilterLabel(['video'])).toBe('Videos')
     expect(theaterQueueFilterLabel(['video', 'photo'])).toBe('Videos · Photos')
-    expect(theaterQueueFilterLabel(['video', 'text', 'quote'])).toBe('3 types')
+    expect(theaterQueueFilterLabel(['video', 'text', 'article'])).toBe('3 types')
   })
 })
 
@@ -116,9 +119,10 @@ describe('theaterQueueEmptyHeadline', () => {
     expect(theaterQueueEmptyHeadline(['video', 'photo'])).toBe(
       'No videos or photos in Live right now',
     )
-    expect(theaterQueueEmptyHeadline(['video', 'text', 'quote'])).toBe(
-      'No videos, text, or quotes in Live right now',
+    expect(theaterQueueEmptyHeadline(['video', 'text', 'article'])).toBe(
+      'No videos, text, or articles in Live right now',
     )
+    expect(theaterQueueEmptyHeadline(['video'], 'Saved')).toBe('No videos in Saved right now')
   })
 })
 
@@ -174,6 +178,56 @@ describe('applyTheaterTypeLens', () => {
     expect(
       applyTheaterTypeLens(afterPhoto.items, ['video', 'photo']).map((it) => it.bookmarkId),
     ).toEqual(['p', 'v'])
+  })
+})
+
+describe('feedItemMatchesQueueTypes', () => {
+  const text = {
+    id: '1',
+    platform: 'twitter',
+    media: [],
+  } as unknown as FeedItem
+  const video = {
+    id: '2',
+    platform: 'twitter',
+    media: [{ mediaType: 'video' }],
+  } as unknown as FeedItem
+
+  it('keeps every item when All is selected', () => {
+    expect(feedItemMatchesQueueTypes(text, [])).toBe(true)
+    expect(feedItemMatchesQueueTypes(video, [])).toBe(true)
+  })
+
+  it('keeps only the selected Saved types', () => {
+    expect(feedItemMatchesQueueTypes(text, ['video'])).toBe(false)
+    expect(feedItemMatchesQueueTypes(video, ['video'])).toBe(true)
+  })
+})
+
+describe('queueTypesForAddedItem', () => {
+  const text = {
+    id: '1',
+    platform: 'twitter',
+    media: [],
+  } as unknown as FeedItem
+  const video = {
+    id: '2',
+    platform: 'twitter',
+    media: [{ mediaType: 'video' }],
+  } as unknown as FeedItem
+
+  it('keeps All when All is selected', () => {
+    expect(queueTypesForAddedItem([], video)).toEqual([])
+  })
+
+  it('keeps the filter when the new post already matches', () => {
+    expect(queueTypesForAddedItem(['video'], video)).toEqual(['video'])
+    expect(queueTypesForAddedItem(['video', 'photo'], video)).toEqual(['video', 'photo'])
+  })
+
+  it('resets to All when the new post is a different type', () => {
+    expect(queueTypesForAddedItem(['text'], video)).toEqual([])
+    expect(queueTypesForAddedItem(['video'], text)).toEqual([])
   })
 })
 

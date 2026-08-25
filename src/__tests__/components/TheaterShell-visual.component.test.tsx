@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Live queue type multi-select. Saved / playlists never offer the control.
+ * Live / Saved queue type multi-select. Playlists never offer the control.
  * The shared-preview lead stays even when its type is filtered out.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -11,6 +11,7 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import type { ContentType } from '@/components/matter'
+import type { FeedItem } from '@/components/feed/types'
 
 vi.mock('@/components/theater/Stage', () => ({
   Stage: () => <div data-testid="stage" />,
@@ -67,6 +68,30 @@ function item(bookmarkId: string, extra: Partial<TheaterItem> = {}): TheaterItem
 
 function seed(items: TheaterItem[]): TheaterFeedSeed {
   return { items, savedToday: 0, recentActivity: 0 }
+}
+
+function savedPost(id: string, extra: Partial<FeedItem> = {}): FeedItem {
+  return {
+    id,
+    platform: 'twitter',
+    author: `author${id}`,
+    authorName: `Author ${id}`,
+    text: `post ${id}`,
+    tweetUrl: `https://x.com/author${id}/status/${id}`,
+    createdAt: '2026-08-18T00:00:00Z',
+    processedAt: '2026-08-18T00:00:00Z',
+    isArchived: false,
+    tags: [],
+    media: [],
+    links: [],
+    ...extra,
+  } as FeedItem
+}
+
+function savedVideo(id: string): FeedItem {
+  return savedPost(id, {
+    media: [{ id: `m${id}`, mediaType: 'video', url: 'x', thumbnailUrl: 'x', shareUrl: 'x' }],
+  })
 }
 
 function chromeProps() {
@@ -186,16 +211,24 @@ describe('TheaterShell: live queue type filter', () => {
     expect(chromeProps().onToggleQueueType).toBeUndefined()
   })
 
-  it('does not offer the type filter on Saved', () => {
+  it('offers the type filter on Saved and filters the personal queue', async () => {
     render(
       <TheaterShell
         mode="personal"
         initialPersonalTab="collection"
-        personalItems={[]}
+        personalItems={[savedPost('1'), savedVideo('2'), savedPost('3')]}
         seed={seed([item('1', { contentType: 'video' })])}
       />,
     )
-    expect(chromeProps().onToggleQueueType).toBeUndefined()
+    expect(chromeProps().onToggleQueueType).toBeDefined()
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual([
+      '1',
+      '2',
+      '3',
+    ])
+    await tapType('video')
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2'])
+    expect(chromeProps().currentKey).toBe('twitter:2')
   })
 
   it('1 and 2 flip Live ⇄ Saved on the personal theater', async () => {
@@ -204,7 +237,7 @@ describe('TheaterShell: live queue type filter', () => {
       <TheaterShell
         mode="personal"
         initialPersonalTab="live"
-        personalItems={[]}
+        personalItems={[savedVideo('1')]}
         seed={seed([item('1', { contentType: 'video' })])}
         onPersonalTabChange={onPersonalTabChange}
       />,
@@ -214,7 +247,7 @@ describe('TheaterShell: live queue type filter', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
     })
     expect(onPersonalTabChange).toHaveBeenCalledWith('collection')
-    expect(chromeProps().onToggleQueueType).toBeUndefined()
+    expect(chromeProps().onToggleQueueType).toBeDefined()
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
     })
@@ -246,6 +279,20 @@ describe('TheaterShell: live queue type filter', () => {
     })
     expect(chromeProps().queueTypes).toEqual([])
     expect(screen.queryByText('No videos in Live right now')).not.toBeInTheDocument()
+  })
+
+  it('shows the empty overlay when Saved has none of the selected types', async () => {
+    render(
+      <TheaterShell
+        mode="personal"
+        initialPersonalTab="collection"
+        personalItems={[savedPost('1')]}
+        seed={seed([])}
+      />,
+    )
+    await tapType('video')
+    expect(screen.getByText('No videos in Saved right now')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show every post' })).toBeInTheDocument()
   })
 
   it('jumps off a text post onto the next matching type', async () => {

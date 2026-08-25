@@ -77,7 +77,6 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
       createdAt: bookmarks.createdAt,
       processedAt: bookmarks.processedAt,
       category: bookmarks.category,
-      isQuote: bookmarks.isQuote,
     })
     .from(tagShares)
     .innerJoin(
@@ -139,7 +138,6 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
     const contentType = inferContentType({
       platform: row.platform,
       category: row.category,
-      isQuote: row.isQuote,
       hasVideo: media?.isVideo,
       hasPhoto: !!media && !media.isVideo,
     })

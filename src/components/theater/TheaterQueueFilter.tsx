@@ -1,9 +1,9 @@
 'use client'
 
 /**
- * Live-queue type multi-select. Lives in the playlist (Show all / up-next
- * sheet), not the top bar. Empty selection is All — tap any mix of videos,
- * photos, text, articles, quotes. Saved / playlists do not mount this.
+ * Live and Saved type multi-select. Lives in the playlist (Queue /
+ * up-next sheet), not the top bar. Empty selection is All — tap any mix
+ * of videos, photos, text, articles. Playlists do not mount this.
  * Persists as `adhx-theater-types`.
  */
 

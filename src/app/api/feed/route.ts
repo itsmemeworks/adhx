@@ -14,7 +14,7 @@ import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { buildFeedItem, type FeedItemResponse } from '@/lib/feed/build-item'
 
-export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles' | 'quoted' | 'manual'
+export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'
 export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
 
 /**
@@ -40,8 +40,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   const rawLimit = parseInt(searchParams.get('limit') || '50', 10)
   const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 100) : 50
   const filter = (searchParams.get('filter') || 'all') as FilterType
-  // Default true: your collection means your ACTIVE collection.
-  const hideArchived = searchParams.get('hideArchived') !== 'false'
+  // Library "Show archived" is archived-only. `hideArchived=false` still
+  // means include everything (tag views, save lookups, `?id=`). Archived-only
+  // wins when both are set.
+  const archivedOnly = searchParams.get('archivedOnly') === 'true'
+  const hideArchived = !archivedOnly && searchParams.get('hideArchived') !== 'false'
   const search = searchParams.get('search')
   const tags = searchParams.getAll('tag') // Multiple tags via ?tag=foo&tag=bar
   const sort = searchParams.get('sort') || 'added' // 'added' or 'posted'
@@ -170,29 +173,21 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
           sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleSubquery}`,
         )!,
       )
-    } else if (filter === 'quoted') {
-      // Quote relations are Twitter-only — quotedTweetId always references a tweet
-      const quotedSubquery = sql`(
-        SELECT DISTINCT ${bookmarks.quotedTweetId}
-        FROM ${bookmarks}
-        WHERE ${bookmarks.userId} = ${userId}
-        AND ${bookmarks.quotedTweetId} IS NOT NULL
-      )`
-      conditions.push(sql`${bookmarks.id} IN ${quotedSubquery}`)
-      conditions.push(eq(bookmarks.platform, 'twitter'))
-    } else if (filter === 'manual') {
-      conditions.push(or(eq(bookmarks.source, 'manual'), eq(bookmarks.source, 'url_prefix'))!)
     }
 
-    // Unread filter — composite key (bookmarkId, platform) matches archived_posts PK.
+    // Archive filter — composite key (bookmarkId, platform) matches archived_posts PK.
     // Skipped for direct id lookups so an already-read tweet still resolves.
-    if (hideArchived && ids.length === 0) {
+    if (ids.length === 0 && (hideArchived || archivedOnly)) {
       const readSubquery = sql`(
         SELECT ${archivedPosts.bookmarkId}, ${archivedPosts.platform}
         FROM ${archivedPosts}
         WHERE ${archivedPosts.userId} = ${userId}
       )`
-      conditions.push(sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN ${readSubquery}`)
+      conditions.push(
+        archivedOnly
+          ? sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${readSubquery}`
+          : sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN ${readSubquery}`,
+      )
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined

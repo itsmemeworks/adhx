@@ -516,6 +516,29 @@ describe('API: /api/feed', () => {
 
       expect(data.items).toHaveLength(3)
     })
+
+    it('returns only archived items when archivedOnly is true', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ archivedOnly: 'true' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.items).toHaveLength(1)
+      expect(data.items[0].id).toBe('tweet-1')
+      expect(data.items[0].isArchived).toBe(true)
+    })
+
+    it('archivedOnly wins over the default hide-archived filter', async () => {
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ archivedOnly: 'true', hideArchived: 'true' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+
+      expect(data.items).toHaveLength(1)
+      expect(data.items[0].id).toBe('tweet-1')
+    })
   })
 
   describe('Stats', () => {
@@ -690,7 +713,7 @@ describe('API: /api/feed', () => {
     })
   })
 
-  describe('Manual filter', () => {
+  describe('Unknown filter param', () => {
     beforeEach(async () => {
       await testInstance.db
         .insert(schema.bookmarks)
@@ -701,28 +724,14 @@ describe('API: /api/feed', () => {
         ])
     })
 
-    it('filters by manual source', async () => {
+    it('treats retired filters (manual, quoted) as All', async () => {
       const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ filter: 'manual', hideArchived: 'false' }))
-
-      expect(response.status).toBe(200)
-      const data = await response.json()
-
-      expect(data.items).toHaveLength(2)
-      const ids = data.items.map((i: { id: string }) => i.id)
-      expect(ids).toContain('tweet-manual')
-      expect(ids).toContain('tweet-url-prefix')
-      expect(ids).not.toContain('tweet-synced')
-    })
-
-    it('does not include synced bookmarks in manual filter', async () => {
-      const { GET } = await import('@/app/api/feed/route')
-      const response = await GET(createRequest({ filter: 'manual', hideArchived: 'false' }))
-
-      expect(response.status).toBe(200)
-      const data = await response.json()
-
-      expect(data.items.every((i: { id: string }) => i.id !== 'tweet-synced')).toBe(true)
+      for (const filter of ['manual', 'quoted'] as const) {
+        const response = await GET(createRequest({ filter, hideArchived: 'false' }))
+        expect(response.status).toBe(200)
+        const data = await response.json()
+        expect(data.items).toHaveLength(3)
+      }
     })
   })
 })

@@ -14,6 +14,7 @@ import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
 
 let capturedOnPastePost: ((url: string) => boolean | Promise<boolean>) | undefined
+const mockMobileChrome = vi.fn((_props: Record<string, unknown>) => null)
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
   DesktopStageChrome: (props: { onPastePost?: (url: string) => boolean | Promise<boolean> }) => {
     capturedOnPastePost = props.onPastePost
@@ -22,7 +23,10 @@ vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
   DesktopDock: () => null,
 }))
 vi.mock('@/components/theater/TheaterMobileChrome', () => ({
-  TheaterMobileChrome: () => null,
+  TheaterMobileChrome: (props: Record<string, unknown>) => {
+    mockMobileChrome(props)
+    return null
+  },
 }))
 vi.mock('@/components/tags', () => ({ TagQuickPicker: () => null }))
 vi.mock('@/components/theater/useTheaterFeed', () => ({
@@ -61,7 +65,7 @@ function textItem(bookmarkId: string): TheaterItem {
   } as TheaterItem
 }
 
-function feedItem(id: string): FeedItem {
+function feedItem(id: string, extra: Partial<FeedItem> = {}): FeedItem {
   return {
     id,
     platform: 'twitter',
@@ -75,7 +79,20 @@ function feedItem(id: string): FeedItem {
     tags: [],
     media: [],
     links: [],
+    ...extra,
   } as unknown as FeedItem
+}
+
+function videoFeedItem(id: string): FeedItem {
+  return feedItem(id, {
+    media: [{ id: `m${id}`, mediaType: 'video', url: 'x', thumbnailUrl: 'x', shareUrl: 'x' }],
+  } as Partial<FeedItem>)
+}
+
+function chromeProps() {
+  const call = mockMobileChrome.mock.calls.at(-1)
+  if (!call) throw new Error('chrome never rendered')
+  return call[0]
 }
 
 const seed = (items: TheaterItem[]): TheaterFeedSeed => ({
@@ -87,6 +104,7 @@ const seed = (items: TheaterItem[]): TheaterFeedSeed => ({
 describe('TheaterShell: personal paste adds in place', () => {
   beforeEach(() => {
     capturedOnPastePost = undefined
+    mockMobileChrome.mockClear()
     window.localStorage.clear()
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -169,6 +187,80 @@ describe('TheaterShell: personal paste adds in place', () => {
       ).toBe(true)
     })
     expect(assignSpy).not.toHaveBeenCalled()
+  })
+
+  it('resets a type filter to All when the pasted post is a different type', async () => {
+    window.localStorage.setItem('adhx-theater-types', JSON.stringify(['text']))
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/bookmarks/add')) {
+        return {
+          ok: true,
+          json: async () => ({ platform: 'twitter', bookmark: { id: '99' } }),
+        }
+      }
+      if (url.includes('/api/feed')) {
+        return { ok: true, json: async () => ({ items: [videoFeedItem('99')] }) }
+      }
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().queueTypes).toEqual(['text'])
+
+    await act(async () => {
+      await capturedOnPastePost!('https://x.com/alice/status/99')
+    })
+
+    expect(chromeProps().queueTypes).toEqual([])
+    const items = (chromeProps().items ?? []) as { bookmarkId?: string; id?: string }[]
+    expect(items.map((i) => i.bookmarkId ?? i.id)[0]).toBe('99')
+  })
+
+  it('keeps a Videos filter when the pasted post is a video', async () => {
+    window.localStorage.setItem('adhx-theater-types', JSON.stringify(['video']))
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/bookmarks/add')) {
+        return {
+          ok: true,
+          json: async () => ({ platform: 'twitter', bookmark: { id: '99' } }),
+        }
+      }
+      if (url.includes('/api/feed')) {
+        return { ok: true, json: async () => ({ items: [videoFeedItem('99')] }) }
+      }
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[videoFeedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().queueTypes).toEqual(['video'])
+
+    await act(async () => {
+      await capturedOnPastePost!('https://x.com/alice/status/99')
+    })
+
+    expect(chromeProps().queueTypes).toEqual(['video'])
   })
 
   it('does not pass onPastePost in shared mode (preview still navigates)', async () => {

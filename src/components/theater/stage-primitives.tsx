@@ -21,8 +21,9 @@ import { StageGlass } from './StageGlass'
  * sit above the overlay action row. Mobile also clears the peek bar
  * (`PEEK_H` 4.25rem in TheaterMobileChrome) + the 0.75rem scrim gap +
  * the 44px action pills + a little air. Desktop only needs the action
- * pills (`absolute bottom-6`). Compact notes need a bit more so the last
- * lines clear the action row.
+ * pills (`absolute bottom-6`). The mobile action cluster must not be a
+ * full-width hit target or a long note cannot be panned from the thumb
+ * zone. Compact notes need a bit more so the last lines clear the row.
  */
 export const STAGE_TEXT_SCROLL_PAD = 'pb-[calc(4.25rem+0.75rem+44px+1.25rem)] lg:pb-32'
 
@@ -48,6 +49,11 @@ export const STAGE_ARTICLE_ROOT = 'relative isolate h-full w-full'
 export const STAGE_ARTICLE_VIDEO_BAND =
   'absolute inset-x-0 top-0 z-20 h-[38dvh] overflow-hidden lg:h-[42vh]'
 export const STAGE_ARTICLE_TEXT_PANE = 'absolute inset-0 z-10'
+/**
+ * Album frost-dot pill: horizontally centered, vertically `style.bottom`
+ * from the painted object-contain box (`objectContainBottomPx`).
+ */
+export const STAGE_ALBUM_DOTS = 'pointer-events-none absolute left-1/2 z-20 -translate-x-1/2'
 /** First line sits below the fade so Read opens at full contrast. */
 export const STAGE_ARTICLE_UNDER_BAND_PAD = 'pt-[calc(38dvh+3.25rem)] lg:pt-[calc(42vh+3.25rem)]'
 

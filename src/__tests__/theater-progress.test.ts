@@ -47,10 +47,9 @@ describe('progressKindFor', () => {
     expect(progressKindFor(make({ platform: 'twitter', contentType: 'video' }))).toBe('video')
   })
 
-  it('returns timed for text, photo, quote, and article content types', () => {
+  it('returns timed for text, photo, and article content types', () => {
     expect(progressKindFor(make({ platform: 'twitter', contentType: 'text' }))).toBe('timed')
     expect(progressKindFor(make({ platform: 'twitter', contentType: 'photo' }))).toBe('timed')
-    expect(progressKindFor(make({ platform: 'twitter', contentType: 'quote' }))).toBe('timed')
     expect(progressKindFor(make({ platform: 'twitter', contentType: 'article' }))).toBe('timed')
   })
 

@@ -89,7 +89,7 @@ export function isTheaterTypingTarget(target: EventTarget | null | undefined): b
 
 /**
  * Keys the window-level theater handler acts on. Overlays (sign-in, tag
- * picker, avatar menu, Show all, help) stop these from reaching the stage.
+ * picker, avatar menu, Queue, help) stop these from reaching the stage.
  */
 export const THEATER_SHORTCUT_KEYS = new Set([
   ' ',
@@ -262,7 +262,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
     rows: [
       { keys: ['1'], label: 'Live' },
       { keys: ['2'], label: 'Saved' },
-      { keys: ['Q'], label: 'Show all' },
+      { keys: ['Q'], label: 'Queue' },
     ],
   },
   {

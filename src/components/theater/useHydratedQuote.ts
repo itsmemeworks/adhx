@@ -66,7 +66,15 @@ export function useHydratedQuote(item: TheaterItem): {
     return () => {
       cancelled = true
     }
-  }, [item.platform, item.author, item.bookmarkId, item.quote?.bookmarkId, item.quote?.text])
+  }, [
+    item.platform,
+    item.author,
+    item.bookmarkId,
+    item.quote?.bookmarkId,
+    item.quote?.text,
+    item.photoCount,
+    item.thumbnailUrl,
+  ])
 
   return { quote, parentPhotos, parentVideo }
 }
@@ -77,13 +85,21 @@ export function useHydratedQuote(item: TheaterItem): {
  * them as photos duplicated the card cover on the stage.
  */
 export function seedParentPhotos(item: TheaterItem): string[] {
-  if (item.contentType === 'video') return []
+  const albumCount = item.photoCount && item.photoCount > 1 ? item.photoCount : 0
   // OG cover lives on the link card. Don't also render it as a tweet photo
   // (the proxy 404s, then fallbackToOriginal paints the same Substack image).
-  if (item.linkPreview && item.contentType !== 'photo') return []
-  if (item.platform === 'twitter' && item.author && item.bookmarkId && item.thumbnailUrl) {
-    return [proxiedPhotoSrc(item.author, item.bookmarkId)]
+  if (item.linkPreview && item.contentType !== 'photo' && !albumCount) return []
+  if (item.platform === 'twitter' && item.author && item.bookmarkId) {
+    const author = item.author
+    const id = item.bookmarkId
+    if (albumCount) {
+      return Array.from({ length: albumCount }, (_, i) => proxiedPhotoSrc(author, id, i + 1))
+    }
+    if (item.contentType === 'video') return []
+    if (item.thumbnailUrl) return [proxiedPhotoSrc(author, id, 1)]
+    return []
   }
+  if (item.contentType === 'video') return []
   return item.thumbnailUrl ? [item.thumbnailUrl] : []
 }
 

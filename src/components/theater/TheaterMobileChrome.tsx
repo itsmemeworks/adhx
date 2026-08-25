@@ -145,7 +145,7 @@ export interface TheaterMobileChromeProps {
    */
   repeatMode?: RepeatMode
   onCycleRepeat?: () => void
-  /** Collection mode: burger carries Live↔Collection; Collection tab adds Archive to the Live action row (Download/Share/Tag/Open). */
+  /** Collection mode: burger carries Live↔Collection; Collection tab adds Archive left of Download in the Live action row. */
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
@@ -161,7 +161,7 @@ export interface TheaterMobileChromeProps {
   /** Video/photo + quote: stacked article reader instead of full-bleed media. */
   articleMode?: boolean
   onToggleArticleMode?: () => void
-  /** Live queue only — omit on Saved / playlists. Empty `queueTypes` is All. */
+  /** Live and Saved — omit on playlists. Empty `queueTypes` is All. */
   queueTypes?: ContentType[]
   onToggleQueueType?: (type: ContentType) => void
   onClearQueueTypes?: () => void
@@ -234,7 +234,12 @@ export function TheaterMobileChrome({
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
   // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
-  useTheaterQueueOverlay({ open: sheetOpen, onClose: closeSheet, containerRef: sheetRef })
+  useTheaterQueueOverlay({
+    open: sheetOpen,
+    onClose: closeSheet,
+    containerRef: sheetRef,
+    autoFocus: false,
+  })
   const sendFile = useSendFile(current, { eager: mode === 'shared' })
   const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
   const rootRef = useRef<HTMLDivElement>(null)
@@ -391,7 +396,7 @@ export function TheaterMobileChrome({
   // stage. Those posts get a compact scrim: chip + actions only.
   const kind = current ? inferType(current) : null
   const textLike =
-    (kind !== null && ['text', 'quote', 'article'].includes(kind)) || isQuoteReader(current, false)
+    (kind !== null && ['text', 'article'].includes(kind)) || isQuoteReader(current, false)
   const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
   const caption = textLike || articleMode ? '' : (current?.text || '').trim()
   const fileAction = fileSendCopy(kind)
@@ -484,7 +489,7 @@ export function TheaterMobileChrome({
             <PasteLinkButton iconOnly onPastePost={onPastePost} />
             {/* Signed-out visitors here (the home theater + shared preview
                 pages) get a burger fallback in this same slot — Theater /
-                Leaderboard / Privacy / Sign in — instead of no navigation at all.
+                Leaderboard / Sign in — instead of no navigation at all.
                 Collection above never passes this (always reached authed);
                 playlist mode's top scrim doesn't mount this component at
                 all — its plain home logo plus the bottom scrim's
@@ -506,10 +511,10 @@ export function TheaterMobileChrome({
 
       {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
-          under it. The scrim itself is pointer-events-none so text-like
-          posts (article/tweet) stay scrollable in the empty caption zone —
-          that's where a thumb naturally drags. Only the caption (media) and
-          the action row capture taps. */}
+          under it. The scrim is pointer-events-none so a typeset tweet /
+          article stays scrollable — the thumb lands in the lower third,
+          which used to be a full-width action row and swallowed the pan.
+          Only the media caption and the icon cluster capture taps. */}
       {current && (
         <div
           className={cn(
@@ -518,8 +523,9 @@ export function TheaterMobileChrome({
           )}
           style={{
             paddingBottom: `calc(${PEEK_H} + 0.75rem)`,
-            background:
-              'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
+            background: textLike
+              ? 'linear-gradient(to top, rgba(11,11,17,.55) 0%, transparent 42%)'
+              : 'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
           }}
         >
           <div className={cn((!textLike || caption) && 'pointer-events-auto')}>
@@ -571,15 +577,19 @@ export function TheaterMobileChrome({
             )}
           </div>
 
-          <div className="pointer-events-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             {showArticleToggle && onToggleArticleMode ? (
               <QuoteArticleToggle
                 articleMode={articleMode}
                 onToggle={onToggleArticleMode}
                 iconOnly
+                className="pointer-events-auto"
               />
             ) : null}
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+            <div className="pointer-events-auto ml-auto flex items-center justify-end gap-2">
+              {collection?.tab === 'collection' && (
+                <TheaterCollectionActions collection={collection} variant="mobile" />
+              )}
               {sendFile.supported ? (
                 <StageIconButton
                   onClick={() => {
@@ -740,9 +750,6 @@ export function TheaterMobileChrome({
                   </StageIconButton>
                 )
               })()}
-              {collection?.tab === 'collection' && (
-                <TheaterCollectionActions collection={collection} variant="mobile" />
-              )}
             </div>
           </div>
         </div>
@@ -760,9 +767,13 @@ export function TheaterMobileChrome({
       )}
 
       {/* Up-next sheet: a peek bar pinned to the bottom, dragged/tapped open
-          to ~70dvh. Transform-only (no layout thrash), theme-following
-          surface — translucent so the stage reads through while collapsed,
-          more opaque once open so the list stays comfortably readable.
+          to ~70% of the theater. Height is % of the fixed stage, not `dvh`,
+          so iOS visual-viewport jumps (URL bar, focus) don't resize the
+          sheet mid-animation. overflow-hidden clips the list to the sheet
+          so a translating open never paints a full-screen black void.
+          Transform-only (no layout thrash), theme-following surface —
+          translucent so the stage reads through while collapsed, more
+          opaque once open so the list stays comfortably readable.
           Unlike the scrims, de-clutter does NOT fade this out — the
           reviewer wants the nav/pause/audio controls and the sheet available
           at all times, even while immersed, so only the top/bottom scrims
@@ -771,7 +782,7 @@ export function TheaterMobileChrome({
         ref={sheetRef}
         style={sheetDrag.style}
         className={cn(
-          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
+          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-hidden overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
           sheetOpen ? 'bg-surface' : 'bg-surface/70',
           !sheetDrag.dragging && (sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.25rem)]'),
         )}

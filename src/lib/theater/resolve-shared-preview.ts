@@ -142,13 +142,11 @@ export async function resolveTweetShared(
     ? 'article'
     : tweet.media?.videos?.length
       ? 'video'
-      : quote
-        ? 'quote'
-        : tweet.media?.photos?.length
-          ? 'photo'
-          : linkPreview
-            ? 'article'
-            : 'text'
+      : tweet.media?.photos?.length
+        ? 'photo'
+        : linkPreview
+          ? 'article'
+          : 'text'
 
   const previewThumbnailUrl =
     articleCover ||
@@ -184,6 +182,9 @@ export async function resolveTweetShared(
     })
   }
 
+  const videos = tweet.media?.videos ?? []
+  const photos = tweet.media?.photos ?? []
+  const videoPosters = videos.map((v) => v.thumbnail_url).filter((url): url is string => !!url)
   const item = tweetToTheaterItem({
     id,
     author: previewAuthor,
@@ -196,6 +197,8 @@ export async function resolveTweetShared(
     textLinks: textLinks.length > 0 ? textLinks : undefined,
     quote,
     linkPreview,
+    ...(videos.length > 1 ? { videoCount: videos.length, videoPosters } : {}),
+    ...(photos.length > 1 ? { photoCount: photos.length } : {}),
   })
 
   return {

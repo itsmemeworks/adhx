@@ -260,3 +260,12 @@ export function goneResponse(reason: string = 'This post is no longer available 
     headers: { 'Content-Type': 'application/json' },
   })
 }
+
+/**
+ * 1-based album index for tweet photos/videos (`?index=`). Twitter caps a
+ * post at 4 media; anything else is treated as the first item.
+ */
+export function parseTweetMediaIndex(raw: string | null): number {
+  const n = parseInt(raw || '1', 10)
+  return Number.isFinite(n) && n >= 1 && n <= 4 ? n : 1
+}

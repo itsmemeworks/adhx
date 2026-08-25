@@ -1,16 +1,19 @@
 'use client'
 
 import { Archive as ArchiveIcon } from 'lucide-react'
+import { StageGlass } from './StageGlass'
 import { StageIconButton } from './stage-primitives'
 import type { TheaterPersonalChrome } from './types'
 
-const DESKTOP_PRIMARY =
-  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-clay-grad px-5 text-[12.5px] font-semibold text-white shadow-glow transition-opacity hover:opacity-90 disabled:opacity-60'
+/** Same glass as Download / Link, distinguished by a clay border — not a filled CTA. */
+const DESKTOP_OUTLINE =
+  'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-60'
 
 /**
  * Collection-tab Archive — the one extra action vs Live (Download / Link /
- * Tag / Open live in the shared chrome row). Mobile matches Tag/Share/Open
- * (44px glass circle). Desktop keeps the labelled clay pill.
+ * Tag / Open live in the shared chrome row). Sits left of Download.
+ * Mobile is the 44px glass circle with a clay border; desktop is the
+ * labelled outline pill.
  */
 export function TheaterCollectionActions({
   collection,
@@ -24,6 +27,7 @@ export function TheaterCollectionActions({
       <StageIconButton
         onClick={() => collection.onDone()}
         aria-label="Archive"
+        className="border-clay"
         data-theater-action="archive"
       >
         <ArchiveIcon size={16} />
@@ -31,15 +35,16 @@ export function TheaterCollectionActions({
     )
   }
   return (
-    <button
+    <StageGlass
+      as="button"
       type="button"
       onClick={collection.onDone}
       title="Archive — take it out of Saved"
-      className={DESKTOP_PRIMARY}
+      className={DESKTOP_OUTLINE}
       data-theater-action="archive"
     >
       <ArchiveIcon size={14} />
       <span>Archive</span>
-    </button>
+    </StageGlass>
   )
 }

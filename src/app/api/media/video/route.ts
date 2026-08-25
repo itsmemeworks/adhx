@@ -8,6 +8,7 @@ import {
   isValidTweetAuthor,
   isValidTweetId,
   markTweetGone,
+  parseTweetMediaIndex,
   streamingResponse,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
   const quality = searchParams.get('quality') || 'hd' // Default to 720p
+  const index = parseTweetMediaIndex(searchParams.get('index'))
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
@@ -51,7 +53,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid author or tweetId' }, { status: 400 })
   }
 
-  const cacheKey = `${author}/${tweetId}/${quality}`
+  const cacheKey = `${author}/${tweetId}/${quality}/${index}`
 
   try {
     // Check cache for resolved URL
@@ -91,7 +93,8 @@ export async function GET(request: NextRequest) {
       }
 
       const data = await response.json()
-      const video = data.tweet?.media?.videos?.[0]
+      const videos = data.tweet?.media?.videos
+      const video = Array.isArray(videos) ? videos[index - 1] : undefined
 
       if (!video) {
         return NextResponse.json({ error: 'No video found for this tweet' }, { status: 404 })

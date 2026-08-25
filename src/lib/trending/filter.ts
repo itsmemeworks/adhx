@@ -63,7 +63,6 @@ export function inferType(item: TrendingItem): ContentType {
   return inferContentType({
     platform: item.platform,
     contentType: item.contentType,
-    isQuote: !!item.quote,
     thumbnailUrl: item.thumbnailUrl,
   })
 }
@@ -90,8 +89,7 @@ export function isReelPlayable(item: TrendingItem): boolean {
  * (the API already returns newest-first) and shows EVERY recent item regardless
  * of how it entered the pulse (saved / synced / added / previewed). "Popular"
  * surfaces posts with 2+ interactions (saves + previews), ranked by that score
- * (newest as tiebreaker). Photos/Videos/Text/Articles filter by type (Text
- * includes quotes).
+ * (newest as tiebreaker). Photos/Videos/Text/Articles filter by type.
  */
 export function applyFilter(items: TrendingItem[], filter: FilterId): TrendingItem[] {
   if (filter === 'popular') {
@@ -106,8 +104,7 @@ export function applyFilter(items: TrendingItem[], filter: FilterId): TrendingIt
 
   if (filter === 'photos') return items.filter((it) => inferType(it) === 'photo')
   if (filter === 'videos') return items.filter((it) => inferType(it) === 'video')
-  if (filter === 'text')
-    return items.filter((it) => inferType(it) === 'text' || inferType(it) === 'quote')
+  if (filter === 'text') return items.filter((it) => inferType(it) === 'text')
   if (filter === 'articles') return items.filter((it) => inferType(it) === 'article')
 
   // latest: every recent item, newest-first, no matter how it entered the

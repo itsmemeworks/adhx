@@ -10,7 +10,9 @@ import { useRef } from 'react'
 import { PlatformGlyph } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
 import { previewPath } from '@/lib/activity/preview-path'
+import { reelVideoSrc } from '@/components/feed/video-src'
 import { usePlaybackSource } from './usePlaybackSource'
+import { useTwitterVideoAlbum } from './useTwitterVideoAlbum'
 import {
   STAGE_ARTICLE_ROOT,
   STAGE_ARTICLE_TEXT_PANE,
@@ -70,6 +72,7 @@ export function Stage({
   articleMode = false,
 }: StageProps) {
   const playback = usePlaybackSource(item)
+  const videoAlbum = useTwitterVideoAlbum(item)
 
   // Instagram's mirror MP4 has to be Range-probed before a <video src> is
   // attached (cold-cache 404s). The probe lives in a hook rather than inside
@@ -88,8 +91,18 @@ export function Stage({
     !isQuoteReader(item, false) &&
     item.platform !== 'youtube' &&
     (isInstagram ? instagram.status === 'ready' : playback.kind === 'video' && !!playback.src)
-  const videoSrc = isInstagram ? instagram.src : playback.src
-  const videoPoster = isInstagram ? instagram.poster : playback.poster
+  const twitterAlbum =
+    !!item && item.platform === 'twitter' && item.contentType === 'video' && videoAlbum.count > 1
+  const videoSrc = isInstagram
+    ? instagram.src
+    : twitterAlbum && item
+      ? reelVideoSrc(item, videoAlbum.index + 1)
+      : playback.src
+  const videoPoster = isInstagram
+    ? instagram.poster
+    : twitterAlbum
+      ? (videoAlbum.posters[videoAlbum.index] ?? playback.poster)
+      : playback.poster
 
   // Remember the last item that DID, so every other kind of item can keep that
   // element alive underneath itself instead of unmounting it. iOS grants
@@ -136,12 +149,7 @@ export function Stage({
       overlay = <StageArticle item={item} />
     } else if (type === 'photo' && !isArticleReader(item, articleMode)) {
       overlay = <StageText item={item} photo photoCaption={photoCaption} />
-    } else if (
-      type === 'text' ||
-      type === 'quote' ||
-      type === 'article' ||
-      isArticleReader(item, articleMode)
-    ) {
+    } else if (type === 'text' || type === 'article' || isArticleReader(item, articleMode)) {
       overlay = <StageText item={item} />
     } else {
       // Anything unresolvable: a graceful poster fallback — never a dead stage.
@@ -168,6 +176,10 @@ export function Stage({
             onRequestUnmute={onRequestUnmute}
             onEnded={onEnded}
             repeat={repeat}
+            albumCount={twitterAlbum ? videoAlbum.count : 1}
+            albumIndex={videoAlbum.index}
+            albumPosters={videoAlbum.posters}
+            onAlbumIndexChange={twitterAlbum ? videoAlbum.setIndex : undefined}
           />
         </div>
       ) : isYouTube ? (

@@ -32,7 +32,11 @@ import { useTheaterDwell } from './useTheaterDwell'
 import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
 import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
 import { feedItemToTheaterItem } from './collection-item'
-import { notifyCollectionChanged } from '@/lib/client-events'
+import {
+  CLIENT_EVENTS,
+  notifyCollectionChanged,
+  type CollectionFeedChangedDetail,
+} from '@/lib/client-events'
 import { theaterItemKey } from './types'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import {
@@ -44,11 +48,13 @@ import {
 import {
   shouldCommitDelete,
   shouldDismissUndo,
-  personalAdvance,
-  personalAdvanceOnEndedIndex,
-  personalStepBackIndex,
+  personalAdvanceMatching,
+  personalAdvanceOnEndedMatching,
+  personalStepBackMatching,
   pinKeyFirst,
   applyTheaterTypeLens,
+  feedItemMatchesQueueTypes,
+  queueTypesForAddedItem,
   isTheaterQueueFilterActive,
   parseTheaterQueueTypes,
   serializeTheaterQueueTypes,
@@ -105,6 +111,11 @@ export {
   personalStepBackIndex,
   pinKeyFirst,
   applyTheaterTypeLens,
+  personalAdvanceMatching,
+  personalAdvanceOnEndedMatching,
+  personalStepBackMatching,
+  feedItemMatchesQueueTypes,
+  queueTypesForAddedItem,
   parseTheaterQueueTypes,
   serializeTheaterQueueTypes,
   toggleTheaterQueueType,
@@ -255,7 +266,7 @@ export function TheaterShell({
     },
     [isPersonal, changePersonalTab, mode, signedIn, router],
   )
-  const queueFilterAvailable = !loop && !isCollectionTab
+  const queueFilterAvailable = !loop
   const feed = useTheaterFeed(seed, { live: !loop && !isCollectionTab })
   const feedPrepend = feed.prependItem
   const seenSet = useSeenSet()
@@ -285,7 +296,20 @@ export function TheaterShell({
   // the collection queue below is a wholly separate, non-live, non-looping list.
   // Archive splices the current post out of this snapshot; skip/next only
   // advances `personalIndex`.
+  // Snapshot at mount — `/saved` fetches before painting the shell, and we
+  // do not re-sync from props (that would jump the cursor on a parent refresh).
+  // Other windows drop / prepend via `tweet-added` `{ removed }` / `{ added }`.
   const [personalQueue, setPersonalQueue] = useState<FeedItem[]>(() => personalItems ?? [])
+  const personalQueueRef = useRef(personalQueue)
+  personalQueueRef.current = personalQueue
+  const queueTypesRef = useRef<ContentType[]>([])
+  const typeFilterActiveRef = useRef(false)
+  const allowPersonalIndex = useCallback((i: number) => {
+    const queue = personalQueueRef.current
+    const item = queue[i]
+    if (!item) return false
+    return feedItemMatchesQueueTypes(item, typeFilterActiveRef.current ? queueTypesRef.current : [])
+  }, [])
   const [personalIndex, setPersonalIndex] = useState(() => Math.max(0, initialPersonalIndex ?? 0))
   const [personalUndo, setPersonalUndo] = useState<PersonalUndoAction | null>(null)
   // Ref-backed so `handlePersonalLiveSave` (registered once) always sees the
@@ -371,7 +395,9 @@ export function TheaterShell({
           method: 'DELETE',
         }).catch(() => {})
         onPostResolved?.(u.item, 'delete')
-        notifyCollectionChanged()
+        notifyCollectionChanged({
+          removed: { platform: u.item.platform ?? 'twitter', id: u.item.id },
+        })
       }
       return null
     })
@@ -403,10 +429,55 @@ export function TheaterShell({
     // not polyfill prototype methods, so on iOS 16.0-16.3 it is `undefined`
     // and pressing Archive would throw into the error boundary. This project
     // targets ES2017 for exactly that reason.
-    setPersonalQueue((prev) =>
-      prev.filter((f) => !(f.id === item.id && (f.platform ?? 'twitter') === platform)),
+    //
+    // If the dropped row sat *before* the cursor (another window archived an
+    // earlier post), slide the index back so we stay on the same post.
+    const removedAt = personalQueueRef.current.findIndex(
+      (f) => f.id === item.id && (f.platform ?? 'twitter') === platform,
     )
+    if (removedAt === -1) return
+    // Keep the ref in lockstep so a same-tick second call (local Archive
+    // also fires `tweet-added` with `removed`) is a no-op, not a second splice.
+    personalQueueRef.current = personalQueueRef.current.filter(
+      (f) => !(f.id === item.id && (f.platform ?? 'twitter') === platform),
+    )
+    setPersonalQueue(personalQueueRef.current)
+    setPersonalIndex((i) => (removedAt < i ? i - 1 : i))
   }, [])
+
+  const prependToPersonalQueue = useCallback((item: FeedItem) => {
+    const platform = item.platform ?? 'twitter'
+    const exists = personalQueueRef.current.some(
+      (f) => f.id === item.id && (f.platform ?? 'twitter') === platform,
+    )
+    if (exists) return
+    const wasEmpty = personalQueueRef.current.length === 0
+    personalQueueRef.current = [item, ...personalQueueRef.current]
+    setPersonalQueue(personalQueueRef.current)
+    // Stay on the post that was playing — a remote add must not steal focus.
+    setPersonalIndex((i) => (wasEmpty ? 0 : i + 1))
+  }, [])
+
+  useEffect(() => {
+    const onFeedChanged = (event: Event) => {
+      const detail = (event as CustomEvent<CollectionFeedChangedDetail>).detail
+      if (detail?.removed) {
+        const item = personalQueueRef.current.find(
+          (f) =>
+            f.id === detail.removed!.id &&
+            (f.platform ?? 'twitter') === (detail.removed!.platform || 'twitter'),
+        )
+        if (item) removeFromPersonalQueue(item)
+        return
+      }
+      const added = detail?.added
+      if (!added || typeof added.id !== 'string') return
+      prependToPersonalQueue(added)
+      feedPrepend?.(feedItemToTheaterItem(added))
+    }
+    window.addEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
+    return () => window.removeEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
+  }, [removeFromPersonalQueue, prependToPersonalQueue, feedPrepend])
 
   const archiveCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
@@ -416,7 +487,9 @@ export function TheaterShell({
       method: 'POST',
     }).catch(() => {})
     onPostResolved?.(item, 'archive')
-    notifyCollectionChanged()
+    notifyCollectionChanged({
+      removed: { platform: item.platform ?? 'twitter', id: item.id },
+    })
     commitPendingDelete()
     const action: PersonalUndoAction = { type: 'archive', item, index: idx }
     setPersonalUndo(action)
@@ -435,8 +508,10 @@ export function TheaterShell({
   // Transport / keyboard next on the collection tab (same as Live arrows).
   const skipCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
-    setPersonalIndex(personalAdvance)
-  }, [personalCurrentFeedItem])
+    setPersonalIndex((i) =>
+      personalAdvanceMatching(i, personalQueueRef.current.length, allowPersonalIndex),
+    )
+  }, [personalCurrentFeedItem, allowPersonalIndex])
 
   const undoLastAction = useCallback(() => {
     if (!personalUndo) return
@@ -476,8 +551,8 @@ export function TheaterShell({
   // ArrowUp "Back": pure navigation only — never touches read/delete state,
   // unlike `U` (which reverses the last action).
   const personalStepBack = useCallback(() => {
-    setPersonalIndex(personalStepBackIndex)
-  }, [])
+    setPersonalIndex((i) => personalStepBackMatching(i, allowPersonalIndex))
+  }, [allowPersonalIndex])
 
   // A video ended, or a photo/text/article's 10s dwell finished, in My
   // Collection. Pure navigation — same as skip/next — not Archive.
@@ -491,9 +566,14 @@ export function TheaterShell({
 
   const personalAdvanceOnEnded = useCallback(() => {
     setPersonalIndex((i) =>
-      personalAdvanceOnEndedIndex(i, personalQueueLengthRef.current, repeatModeRef.current),
+      personalAdvanceOnEndedMatching(
+        i,
+        personalQueueLengthRef.current,
+        repeatModeRef.current,
+        allowPersonalIndex,
+      ),
     )
-  }, [])
+  }, [allowPersonalIndex])
 
   const keepPlayingCollection = useCallback(() => {
     setRepeatMode('all')
@@ -584,6 +664,7 @@ export function TheaterShell({
         // still has to learn about the post somehow, so fall back to the
         // refetch below rather than leaving it invisible until a reload.
         let placedInGrid = false
+        let saved: FeedItem | undefined
         // Pull the freshly saved bookmark into the OPEN collection queue too, so
         // switching to the Collection tab shows it without a page reload
         // (the queue is a snapshot taken when the overlay opened).
@@ -594,26 +675,32 @@ export function TheaterShell({
             const fres = await fetch(`/api/feed?${q}`)
             if (fres.ok) {
               const data = await fres.json()
-              const saved = (data.items ?? []).find(
+              saved = (data.items ?? []).find(
                 (f: FeedItem) =>
                   (f.platform ?? 'twitter') === item.platform && f.id === item.bookmarkId,
               )
               if (saved) {
-                setPersonalQueue((prev) =>
-                  prev.some(
-                    (f) =>
-                      f.id === saved.id &&
-                      (f.platform ?? 'twitter') === (saved.platform ?? 'twitter'),
-                  )
-                    ? prev
-                    : [...prev, saved],
-                )
+                const row = saved
+                setPersonalQueue((prev) => {
+                  if (
+                    prev.some(
+                      (f) =>
+                        f.id === row.id &&
+                        (f.platform ?? 'twitter') === (row.platform ?? 'twitter'),
+                    )
+                  ) {
+                    return prev
+                  }
+                  const next = [...prev, row]
+                  personalQueueRef.current = next
+                  return next
+                })
                 // Hand the same row to the grid behind the overlay. It used to
                 // fire `tweet-added`, whose only listener refetches the WHOLE
                 // feed — resetting the grid to page 1 and losing however far
                 // the viewer had scrolled, for one added post (state review).
                 if (onCollectionAddedRef.current) {
-                  onCollectionAddedRef.current(saved)
+                  onCollectionAddedRef.current(row)
                   placedInGrid = true
                 }
               }
@@ -624,7 +711,9 @@ export function TheaterShell({
         }
         // Either way the Header's counts must move — this path only ever told
         // the local Save button.
-        notifyCollectionChanged({ refetchFeed: !placedInGrid })
+        notifyCollectionChanged(
+          saved ? { refetchFeed: false, added: saved } : { refetchFeed: !placedInGrid },
+        )
       }
       return res.ok
     } catch {
@@ -668,27 +757,30 @@ export function TheaterShell({
           return true
         }
 
-        const theaterItem = feedItemToTheaterItem(saved)
+        const row = saved
+        const theaterItem = feedItemToTheaterItem(row)
         const key = theaterItemKey(theaterItem)
         setPersonalSavedKeys((prev) => new Set(prev).add(key))
         setPersonalQueue((prev) => {
           const rest = prev.filter(
-            (f) =>
-              !(f.id === saved.id && (f.platform ?? 'twitter') === (saved.platform ?? 'twitter')),
+            (f) => !(f.id === row.id && (f.platform ?? 'twitter') === (row.platform ?? 'twitter')),
           )
-          return [saved, ...rest]
+          const next = [row, ...rest]
+          personalQueueRef.current = next
+          return next
         })
         // Saved: jump to the new save. Live: stay on the current post;
         // the dock just gains a fresh card. Never leave `/live` or `/saved`.
         if (personalTab === 'collection') setPersonalIndex(0)
         feedPrepend(theaterItem)
+        setQueueTypes((cur) => queueTypesForAddedItem(cur, row))
 
-        let placedInGrid = false
         if (onCollectionAddedRef.current) {
-          onCollectionAddedRef.current(saved)
-          placedInGrid = true
+          onCollectionAddedRef.current(row)
         }
-        notifyCollectionChanged({ refetchFeed: !placedInGrid })
+        // Same-tab tweet-added would re-prepend and bump the index. Other
+        // windows still hear `{ added }` over BroadcastChannel.
+        notifyCollectionChanged({ refetchFeed: false, added: row })
         return true
       } catch {
         return false
@@ -752,7 +844,7 @@ export function TheaterShell({
   //
   // Saved (`/saved`) uses the same off → all → one control as
   // Live. Default stays 'off' (All Clear at the end of the backlog). 'all'
-  // and 'one' wrap or loop through `personalAdvanceOnEndedIndex`.
+  // and 'one' wrap or loop through `personalAdvanceOnEndedMatching`.
   const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
   const effectiveRepeatMode: RepeatMode = repeatMode
   const repeatModeRef = useRef(effectiveRepeatMode)
@@ -809,6 +901,8 @@ export function TheaterShell({
     }
   }, [queueTypes, queuePrefReady, queueFilterAvailable])
   const typeFilterActive = queueFilterAvailable && isTheaterQueueFilterActive(queueTypes)
+  queueTypesRef.current = queueTypes
+  typeFilterActiveRef.current = typeFilterActive
   const toggleQueueType = useCallback(
     (type: ContentType) => {
       if (!queueFilterAvailable) return
@@ -820,6 +914,40 @@ export function TheaterShell({
     if (!queueFilterAvailable) return
     setQueueTypes([])
   }, [queueFilterAvailable])
+
+  const personalLensItems = useMemo(
+    () => applyTheaterTypeLens(personalDisplayItems, typeFilterActive ? queueTypes : []),
+    [personalDisplayItems, typeFilterActive, queueTypes],
+  )
+  const personalLensIndex = useMemo(() => {
+    if (!personalCurrentFeedItem) return personalLensItems.length
+    const key = theaterItemKey(feedItemToTheaterItem(personalCurrentFeedItem))
+    const idx = personalLensItems.findIndex((it) => theaterItemKey(it) === key)
+    return idx
+  }, [personalCurrentFeedItem, personalLensItems])
+
+  useEffect(() => {
+    if (!isCollectionTab || !typeFilterActive || personalFinished) return
+    if (personalLensItems.length === 0) return
+    const queue = personalQueue
+    if (feedItemMatchesQueueTypes(queue[personalIndex], queueTypes)) return
+    let next = -1
+    for (let i = personalIndex; i < queue.length; i++) {
+      if (feedItemMatchesQueueTypes(queue[i], queueTypes)) {
+        next = i
+        break
+      }
+    }
+    setPersonalIndex(next === -1 ? queue.length : next)
+  }, [
+    isCollectionTab,
+    typeFilterActive,
+    queueTypes,
+    personalQueue,
+    personalIndex,
+    personalFinished,
+    personalLensItems.length,
+  ])
 
   const isDesktop = useIsDesktopViewport()
   // Desktop de-clutter: collapses the dock for a full-bleed stage.
@@ -1150,7 +1278,7 @@ export function TheaterShell({
    * and repeat-all over a one-post queue alike.
    */
   const loopingSingleItem =
-    (isCollectionTab ? personalQueue.length : displayItems.length) === 1 &&
+    (isCollectionTab ? personalLensItems.length : displayItems.length) === 1 &&
     (loop || effectiveRepeatMode === 'all')
   const repeatCurrentActive =
     isSharedPinnedOnCurrent || effectiveRepeatMode === 'one' || loopingSingleItem
@@ -1845,7 +1973,7 @@ export function TheaterShell({
     collectionStageTheaterItem,
     waiting,
     current,
-    personalDisplayItems,
+    personalDisplayItems: personalLensItems,
     displayItems,
     currentKey,
     personalIsSeen,
@@ -1856,7 +1984,7 @@ export function TheaterShell({
     currentIndex,
     unseenCount,
     effectiveRepeatMode,
-    personalIndex,
+    personalIndex: personalLensIndex >= 0 ? personalLensIndex : 0,
     canPrev,
     canNext,
   })
@@ -1889,7 +2017,11 @@ export function TheaterShell({
         onLiveTag: handlePersonalLiveTag,
         tags: isCollectionTab ? personalCurrentFeedItem?.tags : liveTagsByKey[currentKey ?? ''],
         savedKeys: personalSavedKeys,
-        remaining: personalRemaining,
+        remaining: typeFilterActive
+          ? personalQueue
+              .slice(personalIndex)
+              .filter((fi) => feedItemMatchesQueueTypes(fi, queueTypes)).length
+          : personalRemaining,
         onClose: () => onClose?.(),
       }
     : undefined
@@ -1918,7 +2050,12 @@ export function TheaterShell({
             a stacking context here that z-20 paints over sibling chrome (z-10
             paste / flame / avatar) and steals those clicks. */}
         <div className="absolute inset-0 isolate z-0" data-testid="theater-stage">
-          {isCollectionTab && personalFinished ? (
+          {isCollectionTab && typeFilterActive && personalLensItems.length === 0 ? (
+            <StageVisualEmpty
+              headline={theaterQueueEmptyHeadline(queueTypes, 'Saved')}
+              onShowAll={clearQueueTypes}
+            />
+          ) : isCollectionTab && personalFinished ? (
             <CollectionAllClear
               total={personalTotal}
               onClose={() => onClose?.()}
@@ -1951,10 +2088,14 @@ export function TheaterShell({
                 repeat={repeatCurrentActive}
                 articleMode={articleMode}
               />
-              {typeFilterActive && displayItems.length === 0 ? (
+              {typeFilterActive &&
+              (isCollectionTab ? personalLensItems : displayItems).length === 0 ? (
                 <div className="absolute inset-0 z-10">
                   <StageVisualEmpty
-                    headline={theaterQueueEmptyHeadline(queueTypes)}
+                    headline={theaterQueueEmptyHeadline(
+                      queueTypes,
+                      isCollectionTab ? 'Saved' : 'Live',
+                    )}
                     onShowAll={clearQueueTypes}
                   />
                 </div>

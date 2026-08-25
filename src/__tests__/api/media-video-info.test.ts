@@ -272,6 +272,50 @@ describe('API: /api/media/video/info', () => {
       expect(data.error).toContain('No video found')
     })
 
+    it('selects the Nth video when index is set (multi-video tweets)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            tweet: {
+              media: {
+                videos: [
+                  {
+                    duration: 30,
+                    url: 'https://video.twimg.com/first.mp4',
+                    formats: [
+                      {
+                        url: 'https://video.twimg.com/first-hd.mp4',
+                        bitrate: 2176000,
+                        container: 'mp4',
+                      },
+                    ],
+                  },
+                  {
+                    duration: 90,
+                    url: 'https://video.twimg.com/second.mp4',
+                    formats: [
+                      {
+                        url: 'https://video.twimg.com/second-hd.mp4',
+                        bitrate: 2176000,
+                        container: 'mp4',
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          }),
+      })
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '123', index: '2' }))
+
+      expect(response.status).toBe(200)
+      const data = await response.json()
+      expect(data.duration).toBe(90)
+    })
+
     it('returns 500 when FxTwitter API fails', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,

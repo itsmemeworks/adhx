@@ -100,7 +100,7 @@ export function insertLivePulse(opts: {
   author: string
   authorName: string
   text: string
-  contentType: 'video' | 'photo' | 'text' | 'quote' | 'article'
+  contentType: 'video' | 'photo' | 'text' | 'article'
   platform?: string
   url?: string
 }): void {

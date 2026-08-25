@@ -1,5 +1,6 @@
 import type { TheaterItem } from './types'
-import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
+import { PlatformGlyph, TypeBadge } from '@/components/matter'
+import { inferType } from '@/lib/trending/filter'
 import { previewPath } from '@/lib/activity/preview-path'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
@@ -80,7 +81,7 @@ export function TheaterStaticList({
         <ol>
           {items.map((item) => {
             const href = itemHref(item)
-            const type = (item.contentType ?? 'text') as ContentType
+            const type = inferType(item)
             const name = item.authorName || (item.author ? `@${item.author}` : 'Saved post')
             const platform = PLATFORM_LABEL[item.platform] ?? item.platform
             return (

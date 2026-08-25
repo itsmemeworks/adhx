@@ -14,14 +14,14 @@
  *    and the action buttons — Open is the source platform glyph).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
  *    (two-row transport + de-clutter + horizontal filmstrip + end cap), plus the
- *    "Show all" overlay panel reusing `UpNextList`.
+ *    "Queue" overlay panel reusing `UpNextList`.
  *
  * Both are CSS-hidden below `lg` (the mobile chrome owns those viewports)
  * and carry no timers, so — unlike the mobile chrome — they need no
  * viewport gating beyond CSS.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import Link from 'next/link'
@@ -113,7 +113,7 @@ export interface DesktopStageChromeProps {
   onRequestSignIn?: () => void
   /** Playlist mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
   onRequestMakeYourOwn?: () => void
-  /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive to the Live action row. */
+  /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive left of Download. */
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
@@ -169,9 +169,8 @@ export interface DesktopDockProps {
   declutter: boolean
   /** Hide chrome — lives in the dock so the top-right avatar never moves. */
   onToggleDeclutter?: () => void
-  /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
+  /** Playlist mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only new-count line in the end cap. */
   playlist?: TheaterPlaylistMeta
-  /** Collection mode: end cap shows "{remaining} left" instead of savedToday/newCount. */
   collection?: TheaterPersonalChrome
   /**
    * shared-post-repeat (desktop parity with TheaterMobileChrome): the shared
@@ -196,8 +195,8 @@ export interface DesktopDockProps {
   /** Video/photo + quote in article mode — dock pause/audio follow the reader. */
   articleMode?: boolean
   /**
-   * Live queue only: multi-select of post types. Saved / playlists omit
-   * the handlers so the pills never mount. Shown in the Show all playlist
+   * Live and Saved: multi-select of post types. Playlists omit the
+   * handlers so the pills never mount. Shown in the Queue playlist
    * panel. Empty `queueTypes` is All.
    */
   queueTypes?: ContentType[]
@@ -214,7 +213,7 @@ const GLASS =
  * The Save buttons: a Bookmark glyph on the same frosted glass as GLASS,
  * distinguished by a clay border. Covers SavePostButton,
  * PersonalLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton.
- * Archive's solid fill lives on TheaterCollectionActions.
+ * Archive's clay outline lives on TheaterCollectionActions.
  */
 const SAVE_OUTLINE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-60'
@@ -349,7 +348,7 @@ export function DesktopStageChrome({
 
   const kind = current ? inferType(current) : null
   const quoteReader = isQuoteReader(current, false)
-  const textLike = (kind !== null && ['text', 'quote', 'article'].includes(kind)) || quoteReader
+  const textLike = (kind !== null && ['text', 'article'].includes(kind)) || quoteReader
   const isMedia = (kind === 'video' || kind === 'photo') && !quoteReader
   const showMediaCaption = isMedia && !articleMode
   const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
@@ -658,6 +657,9 @@ export function DesktopStageChrome({
           )}
         >
           <div className="flex items-center gap-2">
+            {collection?.tab === 'collection' && (
+              <TheaterCollectionActions collection={collection} variant="desktop" />
+            )}
             {sendFile.supported ? (
               <StageGlass
                 as="button"
@@ -819,9 +821,6 @@ export function DesktopStageChrome({
                 <PlatformGlyph platform={current.platform} size={14} />
               </StageGlass>
             )}
-            {collection?.tab === 'collection' && (
-              <TheaterCollectionActions collection={collection} variant="desktop" />
-            )}
           </div>
         </div>
       ) : null}
@@ -835,29 +834,6 @@ export function DesktopStageChrome({
 const TRANSPORT_BTN =
   'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-white/15 hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-ink-3'
 
-function DockStat({
-  label,
-  accent,
-  children,
-}: {
-  label: string
-  accent?: boolean
-  children: ReactNode
-}) {
-  return (
-    <span
-      title={label}
-      aria-label={label}
-      className={cn(
-        'inline-flex h-[18px] items-center rounded-full px-1.5 text-[10px] font-medium tabular-nums',
-        accent ? 'bg-clay/15 text-clay' : 'bg-white/[0.08] text-ink-3',
-      )}
-    >
-      {children}
-    </span>
-  )
-}
-
 export function DesktopDock({
   mode: _mode,
   items,
@@ -870,9 +846,9 @@ export function DesktopDock({
   wasSeenOnEntry,
   pinnedKey,
   queueTotal,
-  savedToday,
+  savedToday: _savedToday,
   onSelect,
-  waiting,
+  waiting: _waiting,
   muted,
   onSetMuted,
   canPrev,
@@ -882,7 +858,7 @@ export function DesktopDock({
   declutter,
   onToggleDeclutter,
   playlist,
-  collection,
+  collection: _collection,
   repeatCurrent = false,
   repeatMode,
   onCycleRepeat,
@@ -1231,9 +1207,9 @@ export function DesktopDock({
           )}
         </div>
 
-        {/* End cap — fades in over the strip. "Show all" stays "Show all"; a
-          filter-on ListFilter is the only closed-panel cue (types live in
-          the overlay). Counts are pills, not stacked grey lines. */}
+        {/* End cap — fades in over the strip. Queue / position / new, stacked.
+          A filter-on ListFilter is the only closed-panel cue (types live in
+          the overlay). */}
         <div
           ref={queueRootRef}
           data-theater-dock-cap
@@ -1243,10 +1219,10 @@ export function DesktopDock({
               'linear-gradient(to right, transparent 0%, var(--m-card) 3.25rem, var(--m-card) 100%)',
           }}
         >
-          <div className="pointer-events-auto flex flex-col items-end gap-1.5">
+          <div className="pointer-events-auto flex flex-col items-end gap-0.5">
             <button
               type="button"
-              aria-label="Show all"
+              aria-label="Queue"
               aria-expanded={showAll}
               title={filterOn ? theaterQueueFilterLabel(queueTypes) : undefined}
               data-theater-action="show-all"
@@ -1262,31 +1238,25 @@ export function DesktopDock({
               ) : (
                 <ChevronUp size={13} className="flex-none" />
               )}
-              <span>Show all</span>
+              <span>Queue</span>
               {filterOn ? <ListFilter size={12} className="flex-none" aria-hidden /> : null}
             </button>
-            <div className="flex flex-wrap items-center justify-end gap-1">
-              {/* What will actually PLAY from here (`computeQueueTotal`). */}
-              <DockStat label={`${queueTotal ?? items.length} posts`}>
-                {queueTotal ?? items.length}
-              </DockStat>
-              {!playlist && newCount > 0 ? (
-                <DockStat accent label={`${newCount} new`}>
-                  {newCount} new
-                </DockStat>
-              ) : null}
-              {collection && collection.tab === 'collection' ? (
-                <DockStat label={`${collection.remaining} left`}>
-                  {collection.remaining} left
-                </DockStat>
-              ) : !playlist ? (
-                waiting ? (
-                  <DockStat label="Waiting for new sends">waiting</DockStat>
-                ) : savedToday > 0 ? (
-                  <DockStat label={`${savedToday} saved today`}>{savedToday} today</DockStat>
-                ) : null
-              ) : null}
-            </div>
+            {currentIndex >= 0 ? (
+              <span
+                className="text-[11px] tabular-nums text-ink-3"
+                aria-label={`${currentIndex + 1} of ${queueTotal ?? items.length}`}
+              >
+                {currentIndex + 1}/{queueTotal ?? items.length}
+              </span>
+            ) : null}
+            {!playlist && newCount > 0 ? (
+              <span
+                className="text-[11px] font-medium tabular-nums text-clay"
+                aria-label={`${newCount} new`}
+              >
+                {newCount} new
+              </span>
+            ) : null}
           </div>
 
           {showAll && (

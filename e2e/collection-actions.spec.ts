@@ -86,7 +86,7 @@ authedTest.describe('collection actions (mobile)', () => {
   authedTest.use({ viewport: { width: 390, height: 844 } })
 
   authedTest(
-    'mobile row is Share / Tag / Open / Archive — no Later or Delete',
+    'mobile row is Archive / Share / Tag / Open — no Later or Delete',
     async ({ page }) => {
       await page.goto(`/saved?open=${POST.hotel.id}&platform=twitter`)
       await expectTheaterReady(page)

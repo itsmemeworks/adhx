@@ -221,7 +221,7 @@ describe('DesktopDock', () => {
     expect(onSelect).toHaveBeenCalledWith(theaterItemKey(items[1]))
   })
 
-  it('"Show all" opens the panel showing UpNextList rows, Escape closes it', () => {
+  it('"Queue" opens the panel showing UpNextList rows, Escape closes it', () => {
     const items = [videoItem({ bookmarkId: '1', text: 'unique caption text' })]
     render(
       <DesktopDock
@@ -233,14 +233,14 @@ describe('DesktopDock', () => {
     )
 
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByText(/Show all/))
+    fireEvent.click(screen.getByText('Queue'))
     expect(screen.getByText('Up next')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
   })
 
-  it('clicking away from Show all closes the playlist', () => {
+  it('clicking away from Queue closes the playlist', () => {
     const items = [videoItem({ bookmarkId: '1', text: 'unique caption text' })]
     render(
       <DesktopDock
@@ -250,13 +250,13 @@ describe('DesktopDock', () => {
         currentKey={theaterItemKey(items[0])}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Show all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
     expect(screen.getByText('Up next')).toBeInTheDocument()
     fireEvent.mouseDown(document.body)
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
   })
 
-  it('↑/↓ move through Show all rows', async () => {
+  it('↑/↓ move through Queue rows', async () => {
     const items = [
       videoItem({ bookmarkId: '1', text: 'first playlist row' }),
       videoItem({ bookmarkId: '2', text: 'second playlist row' }),
@@ -269,14 +269,14 @@ describe('DesktopDock', () => {
         currentKey={theaterItemKey(items[0])}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Show all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
     const rows = () => document.querySelectorAll<HTMLElement>('[data-theater-queue-item]')
     await waitFor(() => expect(rows()[0]).toHaveFocus())
     fireEvent.keyDown(window, { key: 'ArrowDown' })
     expect(rows()[1]).toHaveFocus()
   })
 
-  it('Q toggles Show all via the theater action event', () => {
+  it('Q toggles Queue via the theater action event', () => {
     const items = [videoItem({ bookmarkId: '1', text: 'unique caption text' })]
     render(
       <DesktopDock
@@ -292,7 +292,7 @@ describe('DesktopDock', () => {
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
   })
 
-  it('puts type pills in Show all, not the filmstrip', () => {
+  it('puts type pills in Queue, not the filmstrip', () => {
     const onToggleQueueType = vi.fn()
     const onClearQueueTypes = vi.fn()
     const items = [videoItem({ bookmarkId: '1', text: 'unique caption text' })]
@@ -309,7 +309,7 @@ describe('DesktopDock', () => {
     )
     expect(screen.queryByRole('button', { name: 'Videos' })).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByText(/Show all/))
+    fireEvent.click(screen.getByText('Queue'))
     const all = screen.getByRole('button', { name: 'All' })
     const videos = screen.getByRole('button', { name: 'Videos' })
     const photos = screen.getByRole('button', { name: 'Photos' })
@@ -318,7 +318,7 @@ describe('DesktopDock', () => {
     expect(photos).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Articles' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Quotes' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Quotes' })).not.toBeInTheDocument()
     fireEvent.click(videos)
     expect(onToggleQueueType).toHaveBeenCalledWith('video')
 
@@ -345,6 +345,9 @@ describe('DesktopDock', () => {
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
+        queueTypes={['video', 'photo']}
+        onToggleQueueType={onToggleQueueType}
+        onClearQueueTypes={onClearQueueTypes}
         collection={{
           tab: 'collection',
           onTabChange: vi.fn(),
@@ -358,47 +361,59 @@ describe('DesktopDock', () => {
         }}
       />,
     )
-    expect(screen.queryByRole('button', { name: 'Videos' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Videos' })).toBeInTheDocument()
   })
 })
 
 /**
- * Owner follow-up: the end cap's button text stays "Show all" (counts are
- * pills, an active Live type filter is a clay ListFilter cue). The cap
- * overlays the filmstrip with a left fade so cards pass behind it.
+ * End cap: Queue / current position / new count, stacked. An active type
+ * filter is a clay ListFilter cue. The cap overlays the filmstrip with a
+ * left fade so cards pass behind it.
  */
 describe('DesktopDock: end cap restructure', () => {
-  it('the toggle button reads "Show all" alone, without the item count', () => {
+  it('the toggle button reads "Queue"', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
-    render(<DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} />)
-    const toggle = screen.getByRole('button', { name: 'Show all' })
-    expect(toggle.textContent).toBe('Show all')
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    const toggle = screen.getByRole('button', { name: 'Queue' })
+    expect(toggle).toHaveTextContent('Queue')
   })
 
-  it('shows the item count as a quiet badge next to Show all', () => {
+  it('shows the queue position as current/total under Queue', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
-    render(<DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} />)
-    const posts = screen.getByLabelText('2 posts')
-    expect(posts).toBeInTheDocument()
-    expect(posts).toHaveTextContent('2')
-    expect(posts.className).toContain('rounded-full')
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        queueTotal={2}
+      />,
+    )
+    expect(screen.getByLabelText('2 of 2')).toHaveTextContent('2/2')
   })
 
-  it('keeps Show all labelled Show all when a type filter is on, with a clay filter cue', () => {
+  it('keeps Queue labelled Queue when a type filter is on, with a clay filter cue', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
         {...dockBase}
         items={items}
         current={items[0]}
-        currentKey={null}
+        currentKey={theaterItemKey(items[0])}
         queueTypes={['video']}
         onToggleQueueType={vi.fn()}
         onClearQueueTypes={vi.fn()}
       />,
     )
-    const toggle = screen.getByRole('button', { name: 'Show all' })
-    expect(toggle).toHaveTextContent('Show all')
+    const toggle = screen.getByRole('button', { name: 'Queue' })
+    expect(toggle).toHaveTextContent('Queue')
     expect(toggle).toHaveAttribute('data-theater-queue-filter')
     expect(toggle).toHaveAttribute('title', 'Videos')
     expect(toggle.className).toContain('text-clay')
@@ -406,71 +421,92 @@ describe('DesktopDock: end cap restructure', () => {
     expect(screen.queryByText('Videos')).not.toBeInTheDocument()
   })
 
-  it('keeps "Show all" on Saved even if leftover Live types are still in state', () => {
+  it('keeps "Queue" on Saved even if leftover Live types are still in state', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
         {...dockBase}
         items={items}
         current={items[0]}
-        currentKey={null}
+        currentKey={theaterItemKey(items[0])}
         queueTypes={['video']}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Show all' })).toHaveTextContent('Show all')
+    expect(screen.getByRole('button', { name: 'Queue' })).toHaveTextContent('Queue')
     expect(screen.queryByText('Videos')).not.toBeInTheDocument()
   })
 
-  it('puts the clay new-count in a badge when newCount > 0 and not collection mode', () => {
+  it('puts the new-count on its own row when newCount > 0', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
-      <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={5} />,
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        newCount={5}
+      />,
     )
-    const newBadge = screen.getByLabelText('5 new')
-    expect(newBadge).toHaveTextContent('5 new')
-    expect(newBadge.className).toContain('text-clay')
-    expect(screen.getByLabelText('1 posts')).toHaveTextContent('1')
+    const neu = screen.getByLabelText('5 new')
+    expect(neu).toHaveTextContent('5 new')
+    expect(neu.className).toContain('text-clay')
+    expect(screen.getByLabelText('1 of 1')).toHaveTextContent('1/1')
   })
 
-  it('omits the new-count suffix when newCount is 0', () => {
+  it('omits the new-count row when newCount is 0', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
-      <DesktopDock {...dockBase} items={items} current={items[0]} currentKey={null} newCount={0} />,
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        newCount={0}
+      />,
     )
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
   })
 
-  it('never shows the new-count suffix in collection mode, even with newCount > 0', () => {
+  it('never shows the new-count row in playlist mode, even with newCount > 0', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
         {...dockBase}
         items={items}
         current={items[0]}
-        currentKey={null}
+        currentKey={theaterItemKey(items[0])}
         newCount={5}
         playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('1 posts')).toBeInTheDocument()
+    expect(screen.getByLabelText('1 of 1')).toBeInTheDocument()
   })
 
-  it('shows saved-today as a badge, not a stacked grey line', () => {
+  it('does not show saved-today or remaining-left leftovers', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
         {...dockBase}
         items={items}
         current={items[0]}
-        currentKey={null}
+        currentKey={theaterItemKey(items[0])}
         savedToday={63}
+        collection={{
+          tab: 'collection',
+          onTabChange: vi.fn(),
+          onDone: vi.fn(),
+          onTag: vi.fn(),
+          onSave: vi.fn(),
+          onLiveTag: vi.fn(),
+          savedKeys: new Set<string>(),
+          remaining: 4,
+          onClose: vi.fn(),
+        }}
       />,
     )
-    const today = screen.getByLabelText('63 saved today')
-    expect(today).toHaveTextContent('63 today')
-    expect(today.className).toContain('rounded-full')
-    expect(screen.queryByText('63 saved today')).not.toBeInTheDocument()
+    expect(screen.queryByText(/today/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/left/)).not.toBeInTheDocument()
   })
 
   it('fades the end cap over the filmstrip instead of a hard vertical seam', () => {
@@ -1306,11 +1342,16 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       onClose: vi.fn(),
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
-    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    const archive = screen.getByRole('button', { name: 'Archive' })
+    const download = screen.getByRole('button', { name: 'Download' })
+    expect(
+      archive.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(archive.className).toContain('border-clay')
+    expect(archive.className).not.toContain('bg-clay-grad')
     expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()

@@ -63,9 +63,39 @@ describe('useTheaterQueueOverlay', () => {
   })
 
   it('focuses the current row when the playlist opens', async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus')
     render(<Probe items={ITEMS} />)
     fireEvent.click(screen.getByText('Show all'))
     await waitFor(() => expect(screen.getByRole('button', { name: 'first' })).toHaveFocus())
+    expect(focus.mock.calls.some((call) => call[0]?.preventScroll === true)).toBe(true)
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
+    focus.mockRestore()
+  })
+
+  it('can skip auto-focus so a bottom sheet does not pan the viewport', () => {
+    function NoFocusProbe() {
+      const [open, setOpen] = useState(false)
+      const ref = useRef<HTMLDivElement>(null)
+      const close = useCallback(() => setOpen(false), [])
+      useTheaterQueueOverlay({ open, onClose: close, containerRef: ref, autoFocus: false })
+      return (
+        <div ref={ref}>
+          <button type="button" data-theater-action="show-all" onClick={() => setOpen(true)}>
+            Show all
+          </button>
+          {open ? (
+            <button type="button" data-theater-queue-item="" aria-current="true">
+              first
+            </button>
+          ) : null}
+        </div>
+      )
+    }
+    render(<NoFocusProbe />)
+    fireEvent.click(screen.getByText('Show all'))
+    expect(screen.getByRole('button', { name: 'first' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'first' })).not.toHaveFocus()
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
   })
 
   it('restores focus to Show all when the playlist closes', async () => {

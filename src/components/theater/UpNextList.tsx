@@ -1,15 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  Check,
-  Play,
-  Image as ImageIcon,
-  Type as TypeIcon,
-  FileText,
-  Quote,
-  Repeat,
-} from 'lucide-react'
+import { Check, Play, Image as ImageIcon, Type as TypeIcon, FileText, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
 import { PlatformGlyph, type ContentType } from '@/components/matter'
@@ -21,6 +13,7 @@ import { theaterItemKey } from './types'
 // Grouping comes from the shell so the headings below can never disagree with
 // the order the queue was built in.
 import { liveQueueGroupOf, LIVE_QUEUE_GROUP_LABEL, type LiveQueueGroup } from './TheaterShell'
+import { THEATER_QUEUE_SCROLL_ATTR } from './useTheaterQueueOverlay'
 
 /** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
 const warmedRows = new Set<string>()
@@ -101,7 +94,6 @@ export const TYPE_TILE: Record<
   photo: { bg: 'bg-type-photo/15 text-type-photo', icon: ImageIcon },
   text: { bg: 'bg-type-text/15 text-type-text', icon: TypeIcon },
   article: { bg: 'bg-type-article/15 text-type-article', icon: FileText },
-  quote: { bg: 'bg-type-quote/15 text-type-quote', icon: Quote },
 }
 
 function Thumb({ item, fresh, seen }: { item: TheaterItem; fresh: boolean; seen: boolean }) {
@@ -304,7 +296,10 @@ export function UpNextList({
   const hiddenCount = items.length - cutoff
 
   return (
-    <div className={cn(ownScroll && 'overflow-y-auto', className)}>
+    <div
+      className={cn(ownScroll && 'overflow-y-auto', className)}
+      {...(ownScroll ? { [THEATER_QUEUE_SCROLL_ATTR]: '' } : {})}
+    >
       {/* No summary line above the rows. The group headings ARE the summary —
           a list whose only sections are "Watched earlier 19" (and, on a
           preview page, "Shared post") already says there is nothing left to

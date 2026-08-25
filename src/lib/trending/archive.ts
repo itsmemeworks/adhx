@@ -324,7 +324,7 @@ export async function getArchiveItems(slug: string): Promise<ArchiveWeekResult |
   const ids = [...new Set(deduped.map((i) => i.bookmarkId).filter(Boolean))]
 
   const counts = new Map<string, number>()
-  const flags = new Map<string, { isQuote: boolean; category: string | null }>()
+  const flags = new Map<string, { category: string | null }>()
   const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
   const articleCovers = new Map<string, string>()
   const articleTitles = new Map<string, string>()
@@ -336,7 +336,6 @@ export async function getArchiveItems(slug: string): Promise<ArchiveWeekResult |
         platform: bookmarks.platform,
         id: bookmarks.id,
         saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
-        isQuote: sql<number>`max(${bookmarks.isQuote})`,
         category: sql<string | null>`max(${bookmarks.category})`,
         avatar: sql<string | null>`max(${bookmarks.authorProfileImageUrl})`,
       })
@@ -347,7 +346,7 @@ export async function getArchiveItems(slug: string): Promise<ArchiveWeekResult |
     for (const r of aggRows) {
       const k = `${r.platform}:${r.id}`
       counts.set(k, Number(r.saveCount) || 0)
-      flags.set(k, { isQuote: !!Number(r.isQuote), category: r.category ?? null })
+      flags.set(k, { category: r.category ?? null })
       if (r.avatar) avatars.set(k, r.avatar)
     }
 
@@ -398,7 +397,6 @@ export async function getArchiveItems(slug: string): Promise<ArchiveWeekResult |
     return inferContentType({
       platform,
       category: flags.get(key)?.category,
-      isQuote: flags.get(key)?.isQuote,
       hasVideo: m?.video,
       hasPhoto: m?.photo,
     })

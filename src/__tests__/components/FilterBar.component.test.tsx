@@ -62,7 +62,7 @@ describe('FilterBar Component', () => {
   })
 
   describe('Type Filter Pills', () => {
-    it('renders all 7 filter options', () => {
+    it('renders All / Photos / Videos / Text / Articles', () => {
       render(<FilterBar {...defaultProps} />)
 
       expect(screen.getByRole('button', { name: 'All' })).toBeTruthy()
@@ -70,8 +70,8 @@ describe('FilterBar Component', () => {
       expect(screen.getByRole('button', { name: 'Videos' })).toBeTruthy()
       expect(screen.getByRole('button', { name: 'Text' })).toBeTruthy()
       expect(screen.getByRole('button', { name: 'Articles' })).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'Quoted' })).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'Manual' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Quoted' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Manual' })).toBeNull()
     })
 
     it('does NOT include needsTranscript filter', () => {
@@ -81,9 +81,11 @@ describe('FilterBar Component', () => {
       expect(screen.queryByRole('button', { name: /transcript/i })).toBeNull()
     })
 
-    it('FILTER_OPTIONS constant has exactly 7 items', () => {
-      expect(FILTER_OPTIONS).toHaveLength(7)
+    it('FILTER_OPTIONS constant has exactly 5 items', () => {
+      expect(FILTER_OPTIONS).toHaveLength(5)
       expect(FILTER_OPTIONS.map((o) => o.value)).not.toContain('needsTranscript')
+      expect(FILTER_OPTIONS.map((o) => o.value)).not.toContain('quoted')
+      expect(FILTER_OPTIONS.map((o) => o.value)).not.toContain('manual')
     })
 
     it('applies active gradient styling to selected filter', () => {
@@ -227,12 +229,15 @@ describe('FilterBar Component', () => {
       expect(toggleButton?.textContent).toContain('50')
     })
 
-    it('shows the total count when hideArchived is false', () => {
-      render(<FilterBar {...defaultProps} hideArchived={false} />)
+    it('shows the archived count when hideArchived is false', () => {
+      render(
+        <FilterBar {...defaultProps} hideArchived={false} stats={{ total: 100, active: 70 }} />,
+      )
 
       const buttons = screen.getAllByRole('button')
       const toggleButton = buttons.find((b) => b.textContent?.includes('Hide archived'))
-      expect(toggleButton?.textContent).toContain('100')
+      expect(toggleButton?.textContent).toContain('30')
+      expect(toggleButton?.textContent).not.toContain('100')
     })
 
     // Owner: "there's no need for it to have an orange CTA. You're either
@@ -255,7 +260,7 @@ describe('FilterBar Component', () => {
       const { rerender } = render(<FilterBar {...defaultProps} hideArchived={true} />)
       const btn = () =>
         screen.getAllByRole('button').find((b) => /archived/.test(b.textContent ?? ''))
-      // Pressed = showing everything, including archived.
+      // Pressed = viewing archived posts only.
       expect(btn()?.getAttribute('aria-pressed')).toBe('false')
       rerender(<FilterBar {...defaultProps} hideArchived={false} />)
       expect(btn()?.getAttribute('aria-pressed')).toBe('true')

@@ -39,6 +39,11 @@ describe('offerArticleMode', () => {
     expect(offerArticleMode(video, false, true)).toBe(true)
   })
 
+  it('stays on after Watch if the caption still overflows', () => {
+    const video = item({ contentType: 'video', text: 'a long caption' })
+    expect(offerArticleMode(video, true, false)).toBe(true)
+  })
+
   it('is off for text-only posts', () => {
     expect(offerArticleMode(item({ contentType: 'text', text: 'hello' }), true)).toBe(false)
   })
@@ -64,7 +69,7 @@ describe('offerArticleMode', () => {
 
 describe('isArticleReader vs isQuoteReader', () => {
   it('text-only quotes always use the stacked reader', () => {
-    const quote = item({ contentType: 'quote', quote: { author: 'bob', text: 'q' } })
+    const quote = item({ contentType: 'text', quote: { author: 'bob', text: 'q' } })
     expect(isQuoteReader(quote, false)).toBe(true)
     expect(isArticleReader(quote, false)).toBe(true)
   })

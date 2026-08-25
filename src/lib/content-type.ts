@@ -12,15 +12,16 @@ import type { ContentType } from '@/components/matter'
  *      link-preview with no first-class media)
  *   4. video / animated_gif
  *   5. photo
- *   6. quote
- *   7. thumbnail heuristics (preview-only pulse items)
- *   8. text
+ *   6. thumbnail heuristics (preview-only pulse items)
+ *   7. text
  *
- * Library `FeedItem` and theater `TrendingItem` stay different shapes —
- * convert at the edges with `feedItemToTheaterItem`, do not merge the types.
+ * Quote tweets are not a type — they classify as text/photo/video/article
+ * from their own media. Stored `content_type = 'quote'` is ignored so old
+ * pulse rows re-infer. Library `FeedItem` and theater `TrendingItem` stay
+ * different shapes — convert at the edges with `feedItemToTheaterItem`.
  */
 
-export const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
+export const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'article'])
 
 const SINGLE_FORMAT = new Set(['tiktok', 'youtube', 'instagram'])
 
@@ -31,7 +32,6 @@ export interface ContentSignals {
   /** Already-resolved type — wins when it is a known ContentType. */
   contentType?: string | null
   category?: string | null
-  isQuote?: boolean | null
   isXArticle?: boolean | null
   hasArticleBlocks?: boolean | null
   /** Link preview with a title or description. */
@@ -69,7 +69,6 @@ export function inferContentType(signals: ContentSignals): ContentType {
     return 'video'
   }
   if (signals.hasPhoto || signals.primaryMediaType === 'photo') return 'photo'
-  if (signals.isQuote) return 'quote'
 
   const thumb = signals.thumbnailUrl
   if (thumb && /profile_images/.test(thumb)) return 'text'

@@ -32,6 +32,7 @@ import {
 import { StageInlineVideo } from './StageInlineVideo'
 import { StageQuoteCard } from './StageQuoteCard'
 import { StageLinkCard } from './StageLinkCard'
+import { nextAlbumIndex, StageAlbumDots, StageAlbumScroller } from './StageAlbumChrome'
 import { useHydratedQuote } from './useHydratedQuote'
 import { stripPreviewUrls, visibleTextForSizing } from '@/lib/theater/link-preview'
 import type { TheaterItem } from './types'
@@ -200,7 +201,7 @@ export function StageText({
     <div className="relative h-full w-full">
       <div
         className={cn(
-          'h-full w-full overflow-y-auto overscroll-contain',
+          'h-full min-h-0 w-full touch-pan-y overflow-y-auto overscroll-contain',
           underBand ? 'bg-transparent' : 'bg-[#08070a]',
           scrollPad && STAGE_TEXT_SCROLL_PAD,
         )}
@@ -249,12 +250,7 @@ export function StageText({
               />
             ) : null}
             {parentPhotos.length > 0 ? (
-              <div
-                className={cn(
-                  'mt-5 grid gap-2',
-                  parentPhotos.length > 1 ? 'grid-cols-2' : 'grid-cols-1',
-                )}
-              >
+              <div className="mt-5 flex flex-col gap-3">
                 {parentPhotos.map((src) => (
                   <img
                     key={src}
@@ -262,7 +258,7 @@ export function StageText({
                     alt=""
                     referrerPolicy="no-referrer"
                     onError={fallbackToOriginal(item.thumbnailUrl)}
-                    className="max-h-[60vh] w-full rounded-xl object-contain"
+                    className="max-h-[70vh] w-full rounded-xl object-contain"
                   />
                 ))}
               </div>
@@ -290,8 +286,7 @@ function StagePhotoBleed({
   fallbackThumb: string | null
 }) {
   const [index, setIndex] = useState(0)
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const scrolledRef = useRef(false)
+  const imgRef = useRef<HTMLImageElement>(null)
 
   if (photos.length === 1) {
     return (
@@ -305,52 +300,19 @@ function StagePhotoBleed({
     )
   }
 
-  function goTo(i: number) {
-    const el = scrollerRef.current
-    const next = Math.max(0, Math.min(photos.length - 1, i))
-    // Instant: a smooth scroll fires `onScroll` at 0 first and snaps back.
-    if (el?.scrollTo) el.scrollTo({ left: next * el.clientWidth, behavior: 'auto' })
-    setIndex(next)
-  }
-
-  function goNextPhoto() {
-    goTo(index >= photos.length - 1 ? 0 : index + 1)
-  }
-
   return (
-    <>
-      <div
-        ref={scrollerRef}
-        role="region"
-        aria-roledescription="carousel"
-        aria-label={`Photos, ${photos.length}`}
-        onPointerDown={() => {
-          scrolledRef.current = false
-        }}
-        onScroll={(e) => {
-          const el = e.currentTarget
-          scrolledRef.current = true
-          if (!el.clientWidth) return
-          const next = Math.round(el.scrollLeft / el.clientWidth)
-          setIndex(Math.max(0, Math.min(photos.length - 1, next)))
-        }}
-        onClick={(e) => {
-          // Don't also toggle chrome (parent onClick). A swipe's leftover
-          // click is ignored so it doesn't jump a photo or hide overlays.
-          e.stopPropagation()
-          if (scrolledRef.current) return
-          const rect = e.currentTarget.getBoundingClientRect()
-          const x = (e.clientX - rect.left) / rect.width
-          if (x > 0.66) goTo(index + 1)
-          else if (x < 0.33) goTo(index - 1)
-          else dispatchTheaterStageTap()
-        }}
-        className="flex h-full w-full snap-x snap-mandatory touch-pan-x overflow-x-auto overflow-y-hidden overscroll-x-contain [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+    <div className="relative h-full w-full">
+      <StageAlbumScroller
+        count={photos.length}
+        index={index}
+        onIndexChange={setIndex}
+        onCenterTap={dispatchTheaterStageTap}
+        label={`Photos, ${photos.length}`}
       >
-        {photos.map((src) => (
+        {photos.map((src, i) => (
           <div key={src} className="h-full w-full min-w-full shrink-0 snap-center">
             <img
+              ref={i === index ? imgRef : undefined}
               src={src}
               alt=""
               draggable={false}
@@ -360,32 +322,15 @@ function StagePhotoBleed({
             />
           </div>
         ))}
-      </div>
-      {/* Below the mobile top scrim so the control isn't under the header.
-          One button — tap advances — with a subtle plate on mobile and a
-          stronger frost on desktop (dots vanish on a dark photo otherwise). */}
-      <div className="pointer-events-none absolute inset-x-0 top-[max(6.75rem,calc(env(safe-area-inset-top)+5.75rem))] z-10 flex justify-center lg:top-auto lg:bottom-8">
-        <button
-          type="button"
-          aria-label={`Next photo, ${index + 1} of ${photos.length}`}
-          onClick={(e) => {
-            e.stopPropagation()
-            goNextPhoto()
-          }}
-          className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/20 bg-black/40 px-2.5 py-1.5 backdrop-blur-md lg:border-white/30 lg:bg-black/80"
-        >
-          {photos.map((_, i) => (
-            <span
-              key={i}
-              aria-hidden
-              className={cn(
-                'rounded-full',
-                i === index ? 'h-1.5 w-1.5 bg-white' : 'h-1.5 w-1.5 bg-white/40',
-              )}
-            />
-          ))}
-        </button>
-      </div>
-    </>
+      </StageAlbumScroller>
+      <StageAlbumDots
+        count={photos.length}
+        index={index}
+        noun="photo"
+        mediaRef={imgRef}
+        revision={photos[index] ?? index}
+        onNext={() => setIndex(nextAlbumIndex(index, photos.length))}
+      />
+    </div>
   )
 }

@@ -15,7 +15,7 @@ import { asContentType } from '@/lib/content-type'
  * rather than querying `activity` directly for that part.
  */
 
-type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
+type ContentType = 'video' | 'photo' | 'text' | 'article'
 
 export interface RelatedItem {
   platform: string

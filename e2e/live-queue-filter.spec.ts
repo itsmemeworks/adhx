@@ -22,14 +22,14 @@ test.describe('Live type filter vs preview pulses', () => {
     })
     // Do not reload — Live replaceStates the bar onto a preview path, and a
     // reload would remount shared mode (which keeps a text lead under Videos).
-    await page.getByRole('button', { name: 'Show all', exact: true }).click()
+    await page.getByRole('button', { name: 'Queue', exact: true }).click()
     await page.getByRole('button', { name: 'Videos', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Videos', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
-    await expect(page.getByRole('button', { name: 'Show all', exact: true })).toHaveText('Show all')
-    await expect(page.getByRole('button', { name: 'Show all', exact: true })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: 'Queue', exact: true })).toHaveText('Queue')
+    await expect(page.getByRole('button', { name: 'Queue', exact: true })).toHaveAttribute(
       'data-theater-queue-filter',
     )
     await expect(page.getByText('No videos in Live right now')).toBeVisible()

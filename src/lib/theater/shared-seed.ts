@@ -98,6 +98,11 @@ export interface TweetSharedInput {
   quote?: TheaterQuoteRef
   /** Off-site OG card (Substack, Medium, …). Not an X Article. */
   linkPreview?: TheaterLinkPreview
+  /** Twitter video album — same snap chrome as multi-photo tweets. */
+  videoCount?: number
+  videoPosters?: string[]
+  /** Twitter photo album — Read stacks every still from this count. */
+  photoCount?: number
 }
 
 /** URL-only stub so a preview page can paint the theater before FxTwitter returns. */
@@ -128,6 +133,9 @@ export function tweetToTheaterItem(input: TweetSharedInput): TheaterItem {
     textLinks: input.textLinks,
     ...(input.quote ? { quote: input.quote } : {}),
     ...(input.linkPreview ? { linkPreview: input.linkPreview } : {}),
+    ...(input.videoCount && input.videoCount > 1 ? { videoCount: input.videoCount } : {}),
+    ...(input.videoPosters?.length ? { videoPosters: input.videoPosters } : {}),
+    ...(input.photoCount && input.photoCount > 1 ? { photoCount: input.photoCount } : {}),
   }
 }
 

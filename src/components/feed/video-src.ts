@@ -44,7 +44,7 @@ export function feedHoverSrc(item: FeedItem): string | null {
  * MP4 (see the module note above); resolved from `bookmarkId`+`author`
  * because trending items don't carry a pre-built media row like `FeedItem`.
  */
-export function reelVideoSrc(item: TrendingItem): string {
+export function reelVideoSrc(item: TrendingItem, videoIndex = 1): string {
   const id = encodeURIComponent(item.bookmarkId ?? '')
   const author = encodeURIComponent(item.author ?? '')
   if (item.platform === 'tiktok') {
@@ -53,5 +53,6 @@ export function reelVideoSrc(item: TrendingItem): string {
   if (item.platform === 'instagram') {
     return `/api/media/instagram/video?id=${id}`
   }
-  return `/api/media/video?author=${author}&tweetId=${id}&quality=hd`
+  const index = videoIndex > 1 ? `&index=${videoIndex}` : ''
+  return `/api/media/video?author=${author}&tweetId=${id}&quality=hd${index}`
 }
