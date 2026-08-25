@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Unplayed leftover is “N in queue”
+
+`0 of 1` read as a zero-based index. Off-repeat now says `N in queue` until the first leave, then `16 of 23`. Repeat on is still `N on repeat`. In-flight until the PR merges.
+
 ## 2026-08-25 — CI: prettier table + BroadcastChannel wait
 
 format:check failed on the theater-first surface table after the “This post” cell grew. Cross-tab Archive test waited one tick and flaked empty on CI; it now waits until the channel delivers. In-flight until the PR merges.

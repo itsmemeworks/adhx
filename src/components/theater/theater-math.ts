@@ -606,7 +606,7 @@ export function computeQueueCounts(opts: {
   return { looping: false, played: done, toPlay: done + remaining, length }
 }
 
-/** Peek / dock copy. Playlist-style: "16 of 23" off-repeat, "23 on repeat" on. */
+/** Peek / dock copy. Off-repeat: "N in queue" until the first leave, then "16 of 23". Repeat on: "23 on repeat". */
 export function formatQueueCount(
   count: QueueCount | null | undefined,
 ): { text: string; ariaLabel: string } | null {
@@ -616,9 +616,14 @@ export function formatQueueCount(
     if (length <= 0) return null
     return { text: `${length} on repeat`, ariaLabel: `${length} on repeat` }
   }
+  if (played <= 0) {
+    const n = toPlay > 0 ? toPlay : length
+    if (n <= 0) return null
+    return { text: `${n} in queue`, ariaLabel: `${n} in queue` }
+  }
   if (toPlay <= 0) {
     if (length <= 0) return null
-    return { text: String(length), ariaLabel: `${length} in queue` }
+    return { text: `${length} in queue`, ariaLabel: `${length} in queue` }
   }
   return {
     text: `${played} of ${toPlay}`,

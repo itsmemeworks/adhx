@@ -544,7 +544,7 @@ describe('DesktopDock: end cap restructure', () => {
         queueToPlay={23}
       />,
     )
-    expect(screen.getByLabelText('0 watched of 23')).toHaveTextContent('0 of 23')
+    expect(screen.getByLabelText('23 in queue')).toHaveTextContent('23 in queue')
 
     rerender(
       <DesktopDock
@@ -610,7 +610,7 @@ describe('DesktopDock: end cap restructure', () => {
     const neu = screen.getByLabelText('5 new')
     expect(neu).toHaveTextContent('5 new')
     expect(neu.className).toContain('text-clay')
-    expect(screen.getByLabelText('1 in queue')).toHaveTextContent('1')
+    expect(screen.getByLabelText('1 in queue')).toHaveTextContent('1 in queue')
   })
 
   it('omits the new-count row when newCount is 0', () => {

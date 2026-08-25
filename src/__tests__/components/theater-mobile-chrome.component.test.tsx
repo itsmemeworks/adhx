@@ -504,7 +504,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         queueToPlay={23}
       />,
     )
-    expect(peekCentreText()).toBe('0 of 23')
+    expect(peekCentreText()).toBe('23 in queue')
 
     rerender(
       <TheaterMobileChrome
@@ -547,7 +547,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         collection={collection}
       />,
     )
-    expect(peekCentreText()).toBe('1')
+    expect(peekCentreText()).toBe('1 in queue')
 
     // The live tab, where "new" does mean something, keeps it.
     rerender(
@@ -560,7 +560,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         collection={{ ...collection, tab: 'live' }}
       />,
     )
-    expect(peekCentreText()).toBe('1 · 3 new')
+    expect(peekCentreText()).toBe('1 in queue · 3 new')
   })
 })
 
@@ -948,7 +948,7 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         currentKey={theaterItemKey(items[1])}
       />,
     )
-    expect(screen.getByText('5')).toBeInTheDocument()
+    expect(screen.getByText('5 in queue')).toBeInTheDocument()
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
   })
 
@@ -963,7 +963,7 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         newCount={3}
       />,
     )
-    expect(screen.getByText('5 · 3 new')).toBeInTheDocument()
+    expect(screen.getByText('5 in queue · 3 new')).toBeInTheDocument()
   })
 
   it('omits the new-count suffix when newCount is 0', () => {
@@ -977,7 +977,7 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         newCount={0}
       />,
     )
-    expect(screen.getByText('5')).toBeInTheDocument()
+    expect(screen.getByText('5 in queue')).toBeInTheDocument()
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
   })
 
@@ -1022,7 +1022,7 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         onClearQueueTypes={vi.fn()}
       />,
     )
-    const peek = screen.getByText('5').closest('button')!
+    const peek = screen.getByText('5 in queue').closest('button')!
     expect(peek).toHaveAttribute('data-theater-queue-filter')
     expect(peek).toHaveAttribute('title', 'Videos')
     expect(peek.className).toContain('text-clay')
@@ -1041,7 +1041,7 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
-    expect(peekCentreText()).toBe('5')
+    expect(peekCentreText()).toBe('5 in queue')
     expect(screen.queryByText('#claude-code · 12')).not.toBeInTheDocument()
     expect(screen.getAllByText('#claude-code').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('12 posts · @weedauwl')).toBeInTheDocument()

@@ -240,7 +240,9 @@ export function visibleQueueCount(page: Page) {
 
 export async function readQueueProgress(page: Page): Promise<{ played: number; toPlay: number }> {
   const text = (await visibleQueueCount(page).innerText()).replace(/\s+/g, ' ').trim()
-  const match = text.match(/^(\d+) of (\d+)/)
-  if (!match) throw new Error(`expected "N of M" queue count, got "${text}"`)
-  return { played: Number(match[1]), toPlay: Number(match[2]) }
+  const ofMatch = text.match(/^(\d+) of (\d+)/)
+  if (ofMatch) return { played: Number(ofMatch[1]), toPlay: Number(ofMatch[2]) }
+  const queueMatch = text.match(/^(\d+) in queue/)
+  if (queueMatch) return { played: 0, toPlay: Number(queueMatch[1]) }
+  throw new Error(`expected "N in queue" or "N of M" queue count, got "${text}"`)
 }

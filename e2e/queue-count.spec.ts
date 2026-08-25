@@ -9,7 +9,7 @@ import {
 } from './helpers'
 
 test.describe('queue count — Live leftover run', () => {
-  test('starts at 0 of N, Next is 1 of N, Keep playing is N on repeat', async ({ page }) => {
+  test('starts at N in queue, Next is 1 of N, Keep playing is N on repeat', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.removeItem('adhx-theater-repeat')
       localStorage.removeItem('adhx-seen-v1')

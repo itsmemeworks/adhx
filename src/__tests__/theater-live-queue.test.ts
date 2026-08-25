@@ -330,15 +330,19 @@ describe('formatQueueCount', () => {
       ariaLabel: '16 watched of 23',
     })
     expect(formatQueueCount({ looping: false, played: 0, toPlay: 23, length: 40 })).toEqual({
-      text: '0 of 23',
-      ariaLabel: '0 watched of 23',
+      text: '23 in queue',
+      ariaLabel: '23 in queue',
+    })
+    expect(formatQueueCount({ looping: false, played: 0, toPlay: 1, length: 1 })).toEqual({
+      text: '1 in queue',
+      ariaLabel: '1 in queue',
     })
     expect(formatQueueCount({ looping: true, played: 0, toPlay: 23, length: 23 })).toEqual({
       text: '23 on repeat',
       ariaLabel: '23 on repeat',
     })
     expect(formatQueueCount({ looping: false, played: 0, toPlay: 0, length: 13 })).toEqual({
-      text: '13',
+      text: '13 in queue',
       ariaLabel: '13 in queue',
     })
     expect(formatQueueCount({ looping: true, played: 0, toPlay: 0, length: 0 })).toBeNull()
