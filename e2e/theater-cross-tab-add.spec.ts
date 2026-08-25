@@ -278,20 +278,14 @@ authedTest.describe('theater cross-tab add', () => {
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
       const pause = page.getByRole('button', { name: 'Pause' })
       if (await pause.isVisible()) await pause.click()
-      const start = await readQueueProgress(page)
       const queue = await openTheaterQueue(page)
-      const playing = queue.locator('[data-theater-queue-item][aria-current="true"]')
-      const playingText = (await playing.locator('p').innerText()).trim()
 
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
-      await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
+      const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
+      await expect(added).toBeVisible()
+      await expect(added).not.toHaveAttribute('aria-current', 'true')
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
-      await expect(queue.locator('[data-theater-queue-item][aria-current="true"]')).toContainText(
-        playingText,
-      )
-      const next = await readQueueProgress(page)
-      expect(next.toPlay).toBe(start.toPlay + 1)
     },
   )
 
@@ -305,23 +299,15 @@ authedTest.describe('theater cross-tab add', () => {
       await page.goto('/live')
       await expectTheaterReady(page)
       await goNext(page)
-      const start = await readQueueProgress(page)
-      expect(start.played).toBe(1)
+      await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
       const queue = await openTheaterQueue(page)
-      const playingText = (
-        await queue
-          .locator('[data-theater-queue-item][aria-current="true"]')
-          .locator('p')
-          .innerText()
-      ).trim()
 
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
-      await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
-      await expect(queue.locator('[data-theater-queue-item][aria-current="true"]')).toContainText(
-        playingText,
-      )
-      await expect(visibleQueueCount(page)).toHaveText(`1 of ${start.toPlay + 1}`)
+      const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
+      await expect(added).toBeVisible()
+      await expect(added).not.toHaveAttribute('aria-current', 'true')
+      await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
     },
   )

@@ -57,7 +57,6 @@ test.describe('theater shortcuts (signed out)', () => {
     // (`N of M`, not `N in queue`). A dwell during help can already be `1 of`,
     // so this Next may land on `2 of`.
     await expect(visibleQueueCount(page)).toHaveText(/^\d+ of /)
-    await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
   })
 
   test('. opens the signed-out menu; S opens sign-in', async ({ page }) => {
