@@ -530,6 +530,56 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().isSeen('twitter:3')).toBe(false)
   })
 
+  it('Saved ?open= keeps the mid-queue start when prefs hydrate', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          initialPersonalIndex={3}
+          preserveSavedStart
+          personalItems={[
+            videoFeedItem('1'),
+            videoFeedItem('2'),
+            videoFeedItem('3'),
+            videoFeedItem('4'),
+            videoFeedItem('5'),
+          ]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await waitFor(() => expect(chromeProps().currentKey).toBe('twitter:4'))
+    expect(chromeProps().isSeen('twitter:1')).toBe(false)
+  })
+
+  it('Saved Queue type change still snaps to the first leftover match', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          initialPersonalIndex={3}
+          preserveSavedStart
+          personalItems={[
+            videoFeedItem('1'),
+            videoFeedItem('2'),
+            feedItem('t'),
+            videoFeedItem('4'),
+            videoFeedItem('5'),
+          ]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await waitFor(() => expect(chromeProps().currentKey).toBe('twitter:4'))
+    await tapType('video')
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(chromeProps().isSeen('twitter:1')).toBe(false)
+  })
+
   it('Live paste keeps the Saved cursor on the same post after flipping tabs', async () => {
     await act(async () => {
       render(

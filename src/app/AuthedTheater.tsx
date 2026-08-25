@@ -208,6 +208,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
         authed
         personalItems={collectionItems}
         initialPersonalIndex={initialPersonalIndex}
+        preserveSavedStart={Boolean(openId)}
         initialPersonalTab={tab}
         onPersonalTabChange={onPersonalTabChange}
         onClose={onClose}

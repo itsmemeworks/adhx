@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — `?open=` must survive leftover start
+
+TheaterShell leftover-clamped again when queue prefs hydrated, so `/saved?open=` (library tap, Tag, All Clear from last) snapped to the first unread. `preserveSavedStart` skips that hydrate clamp; remount leftover start stays AuthedTheater. Tests: TheaterShell mid-queue start, AuthedTheater `preserveSavedStart`, filter snap. In-flight until the PR merges.
+
 ## 2026-08-25 — Saved starts at leftover, not mid-list
 
 Live→Saved remounted on the last `adhx-saved-playing` cursor (or the next Videos row after it) and could All Clear while unchecked leftovers sat at the top. Resume only when earlier leftovers were left this run (`adhx-saved-played`); otherwise start at the first matching leftover. Live paste still keeps the same-shell Saved cursor. Tests: `savedStartIndex`, AuthedTheater remount, TheaterShell Videos start, chrome `1 on repeat`, `e2e/queue-count`. In-flight until the PR merges.

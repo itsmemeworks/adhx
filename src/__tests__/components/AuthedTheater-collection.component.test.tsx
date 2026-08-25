@@ -21,6 +21,7 @@ vi.mock('@/components/theater/TheaterShell', () => ({
   TheaterShell: (props: {
     personalItems?: unknown[]
     initialPersonalIndex?: number
+    preserveSavedStart?: boolean
     onPersonalTabChange?: (tab: 'live' | 'collection') => void
   }) => {
     shellSpy(props)
@@ -141,6 +142,7 @@ describe('AuthedTheater collection load', () => {
     render(<AuthedTheater seed={emptySeed} tab="collection" openId="b" openPlatform="twitter" />)
     await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
     expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '1')
+    expect(shellSpy.mock.calls.at(-1)?.[0]).toMatchObject({ preserveSavedStart: true })
   })
 
   it('starts on the open item when it is already in the active queue', async () => {

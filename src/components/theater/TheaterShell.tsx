@@ -204,6 +204,11 @@ export interface TheaterShellProps {
   personalItems?: FeedItem[]
   /** Where to start in the collection queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
   initialPersonalIndex?: number
+  /**
+   * `/saved?open=` already picked the start. Do not leftover-clamp when
+   * queue prefs hydrate — that snapped every mid-queue open to the first unread.
+   */
+  preserveSavedStart?: boolean
   /** Which collection sub-tab to open on (`/live` is Live, `/saved` is Saved). */
   initialPersonalTab?: PersonalTab
   /**
@@ -241,6 +246,7 @@ export function TheaterShell({
   playlist,
   personalItems,
   initialPersonalIndex,
+  preserveSavedStart = false,
   initialPersonalTab,
   onPersonalTabChange,
   onPostResolved,
@@ -341,8 +347,9 @@ export function TheaterShell({
   const personalTabRef = useRef(personalTab)
   personalTabRef.current = personalTab
   // Adds may reset Videos → All. That is not a user filter tap — keep the
-  // current post instead of clamping to the leftover prepend.
-  const skipSavedClampRef = useRef(false)
+  // current post instead of clamping to the leftover prepend. `?open=`
+  // skips the first hydrate clamp for the same reason.
+  const skipSavedClampRef = useRef(preserveSavedStart)
   const [personalUndo, setPersonalUndo] = useState<PersonalUndoAction | null>(null)
   // Ref-backed so `handlePersonalLiveSave` (registered once) always sees the
   // current handler without re-creating itself on every grid render.
@@ -976,8 +983,10 @@ export function TheaterShell({
       },
     })
     if (next !== personalIndexRef.current) setPersonalIndex(next)
-    // Tab flips are not a clamp — Live paste keeps the Saved cursor.
-    // Remount `/saved` clamps in AuthedTheater + this effect on first ready.
+    // Tab flips are not a clamp — Live paste keeps the Saved cursor
+    // (`isCollectionTab` is not a dep). Remount leftover start is
+    // AuthedTheater; `?open=` sets preserveSavedStart so hydrate does
+    // not snap a library tap back to the first unread.
   }, [queuePrefReady, typeFilterActive, queueTypes])
 
   const isDesktop = useIsDesktopViewport()
