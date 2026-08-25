@@ -37,7 +37,7 @@ import {
   notifyCollectionChanged,
   type CollectionFeedChangedDetail,
 } from '@/lib/client-events'
-import { theaterItemKey } from './types'
+import { theaterItemKey, LIVE_REPEAT_STORAGE_KEY, SAVED_REPEAT_STORAGE_KEY } from './types'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import {
   claimSharedAutoSave,
@@ -48,8 +48,8 @@ import {
 import {
   shouldCommitDelete,
   shouldDismissUndo,
-  personalAdvanceMatching,
   personalAdvanceOnEndedMatching,
+  personalSkipMatching,
   personalStepBackMatching,
   pinKeyFirst,
   applyTheaterTypeLens,
@@ -114,6 +114,7 @@ export {
   applyTheaterTypeLens,
   personalAdvanceMatching,
   personalAdvanceOnEndedMatching,
+  personalSkipMatching,
   personalStepBackMatching,
   feedItemMatchesQueueTypes,
   queueTypesForAddedItem,
@@ -127,6 +128,9 @@ export {
   pendingBlockLength,
   computeLiveNext,
   computeQueueTotal,
+  computeQueueCounts,
+  countPlayedThisRun,
+  formatQueueCount,
   theaterUrlSyncPath,
   theaterTabNavRestore,
   isFeedEnd,
@@ -141,6 +145,7 @@ export {
   isSharedItemUnavailable,
   LIVE_QUEUE_GROUP_ORDER,
   LIVE_QUEUE_GROUP_LABEL,
+  PINNED_POST_HEADING,
 } from './theater-math'
 export type { PersonalUndoAction, LiveQueueGroup, RepeatMode } from './theater-math'
 
@@ -237,10 +242,9 @@ export function TheaterShell({
   const router = useRouter()
   const authMe = useAuthMe()
   const isPersonal = mode === 'personal'
-  // Playlist mode (`/t/{username}/{tag}`) is a fixed curated queue that loops.
-  // Saved (`/saved`) is also a playlist, but its default is still
-  // a finite backlog ("All caught up") — wrap only when the viewer turns
-  // repeat on.
+  // Playlist mode (`/t/{username}/{tag}`) is a fixed curated queue that loops
+  // (wrapOnly all⇄one). Saved (`/saved`) defaults to looping the list too,
+  // with off = one run then All Clear. Live defaults to stop-when-caught-up.
   const loop = mode === 'playlist'
   // The personal theater's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
@@ -255,6 +259,60 @@ export function TheaterShell({
     [onPersonalTabChange],
   )
   const isCollectionTab = isPersonal && personalTab === 'collection'
+
+  // Live and Saved keep independent repeat prefs. Live defaults to stop-
+  // when-caught-up (unseen only). Saved defaults to looping the list —
+  // everything there was saved on purpose. Playlist is wrapOnly all⇄one.
+  const [liveRepeatMode, setLiveRepeatMode] = useState<RepeatMode>('off')
+  const [savedRepeatMode, setSavedRepeatMode] = useState<RepeatMode>('all')
+  const [playlistRepeatMode, setPlaylistRepeatMode] = useState<RepeatMode>('all')
+  const [repeatPrefsReady, setRepeatPrefsReady] = useState(false)
+  const effectiveRepeatMode: RepeatMode = loop
+    ? playlistRepeatMode
+    : isCollectionTab
+      ? savedRepeatMode
+      : liveRepeatMode
+  const repeatModeRef = useRef(effectiveRepeatMode)
+  repeatModeRef.current = effectiveRepeatMode
+  const setRepeatMode = useCallback(
+    (next: RepeatMode) => {
+      if (loop) setPlaylistRepeatMode(next)
+      else if (isCollectionTab) setSavedRepeatMode(next)
+      else setLiveRepeatMode(next)
+    },
+    [loop, isCollectionTab],
+  )
+  useEffect(() => {
+    if (loop) {
+      setRepeatPrefsReady(true)
+      return
+    }
+    try {
+      if (localStorage.getItem(LIVE_REPEAT_STORAGE_KEY) === 'all') setLiveRepeatMode('all')
+      const saved = localStorage.getItem(SAVED_REPEAT_STORAGE_KEY)
+      if (saved === 'off') setSavedRepeatMode('off')
+      else if (saved === 'all') setSavedRepeatMode('all')
+    } catch {
+      // Storage unavailable — keep defaults (Live off, Saved all).
+    }
+    setRepeatPrefsReady(true)
+  }, [loop])
+  useEffect(() => {
+    if (!repeatPrefsReady || loop || isCollectionTab || liveRepeatMode === 'one') return
+    try {
+      localStorage.setItem(LIVE_REPEAT_STORAGE_KEY, liveRepeatMode)
+    } catch {
+      // Never let a storage failure break playback.
+    }
+  }, [repeatPrefsReady, loop, isCollectionTab, liveRepeatMode])
+  useEffect(() => {
+    if (!repeatPrefsReady || loop || !isCollectionTab || savedRepeatMode === 'one') return
+    try {
+      localStorage.setItem(SAVED_REPEAT_STORAGE_KEY, savedRepeatMode)
+    } catch {
+      // Never let a storage failure break playback.
+    }
+  }, [repeatPrefsReady, loop, isCollectionTab, savedRepeatMode])
   const signedIn = authed || !!authMe.me?.authenticated
   const goTheaterTab = useCallback(
     (tab: PersonalTab) => {
@@ -511,7 +569,12 @@ export function TheaterShell({
   const skipCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
     setPersonalIndex((i) =>
-      personalAdvanceMatching(i, personalQueueRef.current.length, allowPersonalIndex),
+      personalSkipMatching(
+        i,
+        personalQueueRef.current.length,
+        repeatModeRef.current,
+        allowPersonalIndex,
+      ),
     )
   }, [personalCurrentFeedItem, allowPersonalIndex])
 
@@ -578,7 +641,7 @@ export function TheaterShell({
   }, [allowPersonalIndex])
 
   const keepPlayingCollection = useCallback(() => {
-    setRepeatMode('all')
+    setSavedRepeatMode('all')
     setPersonalIndex(0)
   }, [])
 
@@ -837,44 +900,6 @@ export function TheaterShell({
       // Same — never let a storage failure break playback.
     }
   }, [muted])
-
-  // Repeat mode (round 8): persisted like the sound preference — read on
-  // mount (not the initializer, for the same SSR-hydration reason), written
-  // on change. Playlist mode (`/t/...`) opens on 'all' and toggles all ⇄ one
-  // (`nextRepeatMode`'s wrapOnly); it skips the localStorage read/write so a
-  // playlist toggle never bleeds into the home/collection preference.
-  //
-  // Saved (`/saved`) uses the same off → all → one control as
-  // Live. Default stays 'off' (All Clear at the end of the backlog). 'all'
-  // and 'one' wrap or loop through `personalAdvanceOnEndedMatching`.
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>(loop ? 'all' : 'off')
-  const effectiveRepeatMode: RepeatMode = repeatMode
-  const repeatModeRef = useRef(effectiveRepeatMode)
-  repeatModeRef.current = effectiveRepeatMode
-  // Persisted ACROSS visits (localStorage), not per-session: "keep playing" is
-  // a standing preference about how the theater behaves when you run out of
-  // unwatched posts, and a viewer who wants continuous play shouldn't have to
-  // re-set it every visit — which is what made the control feel like a missing
-  // setting rather than a switch. Deliberately NOT persisting 'one': that one
-  // is about the post in front of you, and inheriting it next visit would
-  // strand you looping something at random. So a session where you flip to
-  // 'one' leaves your last durable off/all choice untouched.
-  useEffect(() => {
-    if (loop) return
-    try {
-      if (localStorage.getItem('adhx-theater-repeat') === 'all') setRepeatMode('all')
-    } catch {
-      // Storage unavailable — keep 'off'.
-    }
-  }, [loop])
-  useEffect(() => {
-    if (loop || repeatMode === 'one') return
-    try {
-      localStorage.setItem('adhx-theater-repeat', repeatMode)
-    } catch {
-      // Never let a storage failure break playback.
-    }
-  }, [loop, repeatMode])
 
   const [queueTypes, setQueueTypes] = useState<ContentType[]>([])
   const [queuePrefReady, setQueuePrefReady] = useState(false)
@@ -1479,6 +1504,8 @@ export function TheaterShell({
   // `onEnded`, the 'timed' `theater-advance` listener, the waiting-stage
   // auto-arrival effect) calls them directly and must NEVER clear the pin.
   const goNextUser = useCallback(() => {
+    const leaving = currentKeyRef.current
+    if (leaving) seenSet.markSeen(leaving)
     clearSharedPin()
     // Deliberate navigation releases the fresh-arrival hold (round 8) — the
     // viewer choosing to continue past the arrival means "browse the queue",
@@ -1488,7 +1515,7 @@ export function TheaterShell({
     // already-watched posts is always allowed, it's only AUTO-advance that
     // stops at the boundary.
     goNext(true)
-  }, [clearSharedPin, goNext])
+  }, [clearSharedPin, goNext, seenSet.markSeen])
 
   const goPrevUser = useCallback(() => {
     clearSharedPin()
@@ -1740,7 +1767,7 @@ export function TheaterShell({
     // EXCEPT in shared mode, where `pinnedKey` is not a lead-pick but the
     // shared post itself — the one invariant of a preview page. Re-pointing it
     // at an arrival bumps the post the visitor followed a link to out of slot
-    // 1, and leaves the "Shared post" heading (which tracks `sharedItemKey`)
+    // 1, and leaves the "This post" heading (which tracks `sharedItemKey`)
     // labelling a row in the middle of the list (review finding).
     if (mode !== 'shared') setPinnedKey(arrived)
     setCurrentKey(arrived)
@@ -2009,6 +2036,9 @@ export function TheaterShell({
     chromeFreshKeys,
     chromeNewCount,
     queueTotal,
+    queuePlayed,
+    queueToPlay,
+    queueLooping,
     chromeCanPrev,
     chromeCanNext,
   } = resolveTheaterChrome({
@@ -2031,6 +2061,9 @@ export function TheaterShell({
     personalIndex: personalLensIndex >= 0 ? personalLensIndex : 0,
     canPrev,
     canNext,
+    wasSeenOnEntry: liveOrdering ? wasSeenOnEntry : undefined,
+    rewatching,
+    sharedItemKey,
   })
   // Collection transport matches Live: next/prev skip without changing
   // archive state. Archive is a button, not a chevron.
@@ -2199,8 +2232,11 @@ export function TheaterShell({
           seenReady={chromeSeenReady}
           freshKeys={chromeFreshKeys}
           newCount={chromeNewCount}
-          wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
-          queueTotal={liveOrdering ? queueTotal : undefined}
+          wasSeenOnEntry={!isCollectionTab && liveOrdering ? wasSeenOnEntry : undefined}
+          queueTotal={queueTotal}
+          queuePlayed={queuePlayed}
+          queueToPlay={queueToPlay}
+          queueLooping={queueLooping}
           pinnedKey={sharedItemKey}
           onSelect={chromeOnSelect}
           onPrev={chromeOnPrev}
@@ -2276,8 +2312,11 @@ export function TheaterShell({
         seenReady={chromeSeenReady}
         freshKeys={chromeFreshKeys}
         newCount={chromeNewCount}
-        wasSeenOnEntry={liveOrdering ? wasSeenOnEntry : undefined}
-        queueTotal={liveOrdering ? queueTotal : undefined}
+        wasSeenOnEntry={!isCollectionTab && liveOrdering ? wasSeenOnEntry : undefined}
+        queueTotal={queueTotal}
+        queuePlayed={queuePlayed}
+        queueToPlay={queueToPlay}
+        queueLooping={queueLooping}
         pinnedKey={sharedItemKey}
         savedToday={feed.savedToday}
         onSelect={chromeOnSelect}

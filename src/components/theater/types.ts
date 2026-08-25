@@ -138,6 +138,26 @@ export const REPEAT_MODE_LABEL: Record<
   },
 }
 
+/** Live persist key. Saved uses {@link SAVED_REPEAT_STORAGE_KEY} so the
+ * two surfaces keep independent defaults (Live: off, Saved: all). */
+export const LIVE_REPEAT_STORAGE_KEY = 'adhx-theater-repeat'
+export const SAVED_REPEAT_STORAGE_KEY = 'adhx-theater-repeat-saved'
+
+/** Live off = unseen then wait. Saved off = one run through the list. */
+export function repeatModeLabel(
+  mode: RepeatMode,
+  opts?: { saved?: boolean },
+): { action: string; state: string; queue: string } {
+  if (opts?.saved && mode === 'off') {
+    return {
+      action: 'Play once',
+      state: 'Plays the list once',
+      queue: 'Plays once',
+    }
+  }
+  return REPEAT_MODE_LABEL[mode]
+}
+
 /** Left-to-right render order for the Live/Saved tab switcher —
  * Live first, matching the default in TheaterShell's `useState`. */
 export const PERSONAL_TAB_ORDER: readonly PersonalTab[] = ['live', 'collection']

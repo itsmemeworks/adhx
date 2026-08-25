@@ -207,9 +207,9 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
     const headings = screen
       .getAllByRole('separator')
       .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
-    // "Shared post" carries no count — it's one post, and the number would
+    // "This post" carries no count — it's one post, and the number would
     // read as a queue length. The live groups below keep theirs.
-    expect(headings).toEqual(['Shared post', 'Up next2', 'Watched earlier1'])
+    expect(headings).toEqual(['This post', 'Up next2', 'Watched earlier1'])
   })
 
   it('excludes the shared post from the group counts', () => {
@@ -235,7 +235,7 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
       />,
     )
     expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual([
-      'Shared post',
+      'This post',
       'Watched earlier1',
     ])
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
@@ -248,7 +248,7 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
       .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
     // No carve-out: 'shared' is just another unwatched post, so 3 are pending.
     expect(headings).toEqual(['Up next3', 'Watched earlier1'])
-    expect(screen.queryByText('Shared post')).not.toBeInTheDocument()
+    expect(screen.queryByText('This post')).not.toBeInTheDocument()
   })
 
   it('renders no headings at all in playlist mode (no wasSeenOnEntry)', () => {

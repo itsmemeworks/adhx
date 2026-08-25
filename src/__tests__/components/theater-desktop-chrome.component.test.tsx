@@ -350,6 +350,78 @@ describe('DesktopDock', () => {
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
   })
 
+  it('keeps Queue open when the stage advances to the next post', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'first playlist row' }),
+      videoItem({ bookmarkId: '2', text: 'second playlist row' }),
+    ]
+    const { rerender } = render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+
+    rerender(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+      />,
+    )
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+  })
+
+  it('keeps Queue open when Next is pressed on the dock', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'first playlist row' }),
+      videoItem({ bookmarkId: '2', text: 'second playlist row' }),
+    ]
+    const onNext = vi.fn()
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        onNext={onNext}
+        canNext
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Next post' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next post' }))
+    expect(onNext).toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+  })
+
+  it('keeps Queue open after picking a row', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'first playlist row' }),
+      videoItem({ bookmarkId: '2', text: 'second playlist row' }),
+    ]
+    const onSelect = vi.fn()
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        onSelect={onSelect}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
+    const rows = document.querySelectorAll<HTMLElement>('[data-theater-queue-item]')
+    fireEvent.click(rows[1]!)
+    expect(onSelect).toHaveBeenCalledWith(theaterItemKey(items[1]))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+  })
+
   it('puts type pills in Queue, not the filmstrip', () => {
     const onToggleQueueType = vi.fn()
     const onClearQueueTypes = vi.fn()
@@ -443,7 +515,7 @@ describe('DesktopDock: end cap restructure', () => {
     expect(toggle).toHaveTextContent('Queue')
   })
 
-  it('shows the queue position as current/total under Queue', () => {
+  it('shows how many of this leftover run have played', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
     render(
       <DesktopDock
@@ -452,9 +524,39 @@ describe('DesktopDock: end cap restructure', () => {
         current={items[1]}
         currentKey={theaterItemKey(items[1])}
         queueTotal={2}
+        queuePlayed={1}
+        queueToPlay={2}
       />,
     )
-    expect(screen.getByLabelText('2 of 2')).toHaveTextContent('2/2')
+    expect(screen.getByLabelText('1 watched of 2')).toHaveTextContent('1 of 2')
+  })
+
+  it('names the leftover run when nothing has played yet, and the pile when looping', () => {
+    const items = Array.from({ length: 23 }, (_, i) => videoItem({ bookmarkId: `${i + 1}` }))
+    const { rerender } = render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        queueTotal={40}
+        queuePlayed={0}
+        queueToPlay={23}
+      />,
+    )
+    expect(screen.getByLabelText('0 watched of 23')).toHaveTextContent('0 of 23')
+
+    rerender(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        queueTotal={23}
+        queueLooping
+      />,
+    )
+    expect(screen.getByLabelText('23 on repeat')).toHaveTextContent('23 on repeat')
   })
 
   it('keeps Queue labelled Queue when a type filter is on, with a clay filter cue', () => {
@@ -508,7 +610,7 @@ describe('DesktopDock: end cap restructure', () => {
     const neu = screen.getByLabelText('5 new')
     expect(neu).toHaveTextContent('5 new')
     expect(neu.className).toContain('text-clay')
-    expect(screen.getByLabelText('1 of 1')).toHaveTextContent('1/1')
+    expect(screen.getByLabelText('1 in queue')).toHaveTextContent('1')
   })
 
   it('omits the new-count row when newCount is 0', () => {
@@ -538,7 +640,7 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('1 of 1')).toBeInTheDocument()
+    expect(screen.getByLabelText('1 in queue')).toBeInTheDocument()
   })
 
   it('does not show saved-today or remaining-left leftovers', () => {

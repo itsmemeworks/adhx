@@ -6,6 +6,30 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Queue-count e2e + Saved Play-once persist
+
+e2e covers Live `0 of N` → `1 of N` → `N on repeat`, Saved loop vs Play once, playlist `3 on repeat`, and preview Queue **This post**. User Next now marks the leftover post seen so the count moves without waiting on the 2s dwell. Saved repeat prefs no longer overwrite `localStorage` on the first paint. In-flight until the PR merges.
+
+## 2026-08-25 — Playlist-style queue count; “This post” not “Shared post”
+
+Off-repeat is YouTube/Spotify progress through what will play (`16 of 23`, including `0 of 23` at the start). Repeat on is just the pile (`23 on repeat`). The preview-page Queue heading is **This post** — it is the post the visitor opened, not a share. In-flight until the PR merges.
+
+## 2026-08-25 — Queue count is run progress, or “on repeat”
+
+Repeat off is how many of this leftover run have played (`16 of 23`; just `23` before the first leave). Repeat on is the pile (`24 on repeat`). Live still stages the leftover head, so this is not a playlist index and not leftover-vs-pile (`2 left · 20`). In-flight until the PR merges.
+
+## 2026-08-25 — Queue count is leftover + pile, not position
+
+The dock/peek `n / N` read as a playlist index, but Live always stages the next leftover post (the head of the stack). The two numbers that matter are leftover to play and how many posts are in the queue. Repeat-off leftover is `2 left · 20`; looping or caught-up is just `20`. Saved one-pass leftover shrinks (`8 left · 13`). In-flight until the PR merges.
+
+## 2026-08-25 — Queue stays open when the stage advances
+
+Expanding Queue (desktop panel / mobile up-next sheet) used to collapse as soon as the next post staged — the mobile sheet reset on `currentKey`, and both chromes closed after a row pick. The list now stays up while playback continues; Escape, click-away, and the Queue toggle still close it. In-flight until the PR merges.
+
+## 2026-08-25 — Live vs Saved repeat and queue counters
+
+Live no-repeat is leftover unseen (`1 / 2`, then wait). Re-watch all zeros that run so the counter is `1 / N` of the full list. Saved defaults to looping the list (everything there was saved on purpose); no-repeat is one pass then All Clear. The two prefs persist separately so flipping tabs does not clobber the other. Peek/dock use `computeQueuePosition` so a leftover Live run is never `8 / 13`. In-flight until the PR merges.
+
 ## 2026-08-25 — Live stop-when-caught-up does not replay the run
 
 Repeat-off auto-advance finished the unseen run, jumped back to a mid-play arrival, then walked the frozen "unseen on entry" block again (the two just watched). It now prefers still-unwatched ahead, then arrivals behind, then waits. The Queue moves a finished post into Watched earlier (the playing row stays put). Filmstrip watched thumbs use the same grey as Queue; caught-up hides NOW/NEXT. In-flight until the PR merges.

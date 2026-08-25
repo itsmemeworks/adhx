@@ -17,6 +17,7 @@ import {
   orderLiveQueue,
   pinKeyFirst,
   LIVE_QUEUE_GROUP_LABEL,
+  PINNED_POST_HEADING,
   type LiveQueueGroup,
 } from './TheaterShell'
 import { THEATER_QUEUE_SCROLL_ATTR } from './useTheaterQueueOverlay'
@@ -86,7 +87,7 @@ export interface UpNextListProps {
   /**
    * The shared post on a preview page: always the lead row, and deliberately
    * OUTSIDE the arrived/unwatched/watched grouping — it isn't part of "what's
-   * new", it's the thing you followed a link to. It gets its own "Shared post"
+   * new", it's the thing you opened. It gets its own "This post"
    * heading, is excluded from every group count, and never counts toward
    * caught-up (which is about the live queue below it).
    */
@@ -305,7 +306,7 @@ export function UpNextList({
   })
   if (pinnedKey && seenReady && wasSeenOnEntry) {
     const pinnedIndex = items.findIndex((item) => theaterItemKey(item) === pinnedKey)
-    if (pinnedIndex !== -1) headingAt.set(pinnedIndex, { label: 'Shared post' })
+    if (pinnedIndex !== -1) headingAt.set(pinnedIndex, { label: PINNED_POST_HEADING })
   }
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
@@ -325,7 +326,7 @@ export function UpNextList({
     >
       {/* No summary line above the rows. The group headings ARE the summary —
           a list whose only sections are "Watched earlier 19" (and, on a
-          preview page, "Shared post") already says there is nothing left to
+          preview page, "This post") already says there is nothing left to
           watch, so a "You're all caught up" line above it was the same fact
           twice (owner: "I don't think there's any point"). The end-of-queue
           STAGE still says it, where it's the whole message rather than a

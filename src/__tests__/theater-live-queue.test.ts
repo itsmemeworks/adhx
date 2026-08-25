@@ -5,9 +5,13 @@ import {
   unseenBlockLength,
   computeLiveNext,
   computeQueueTotal,
+  computeQueueCounts,
+  countPlayedThisRun,
+  formatQueueCount,
+  PINNED_POST_HEADING,
   LIVE_QUEUE_GROUP_LABEL,
 } from '@/components/theater/TheaterShell'
-import { REPEAT_MODE_LABEL } from '@/components/theater/types'
+import { REPEAT_MODE_LABEL, repeatModeLabel } from '@/components/theater/types'
 
 /**
  * Live mode is "the last 24 hours of community activity", and what plays is
@@ -244,6 +248,107 @@ describe('computeQueueTotal', () => {
   })
 })
 
+describe('computeQueueCounts', () => {
+  it('Live leftover is played of the pending run, not a playlist position', () => {
+    expect(
+      computeQueueCounts({ index: 0, length: 13, unseenCount: 2, repeatMode: 'off', played: 0 }),
+    ).toEqual({ looping: false, played: 0, toPlay: 2, length: 13 })
+    expect(
+      computeQueueCounts({ index: 0, length: 13, unseenCount: 7, repeatMode: 'off', played: 16 }),
+    ).toEqual({ looping: false, played: 16, toPlay: 23, length: 13 })
+  })
+
+  it('keeps leftover while browsing the watched suffix', () => {
+    expect(
+      computeQueueCounts({ index: 7, length: 13, unseenCount: 2, repeatMode: 'off', played: 5 }),
+    ).toEqual({ looping: false, played: 5, toPlay: 7, length: 13 })
+  })
+
+  it('names the pile when Live is repeating; caught-up without a run is just the pile', () => {
+    expect(computeQueueCounts({ index: 0, length: 13, unseenCount: 2, repeatMode: 'all' })).toEqual(
+      { looping: true, played: 0, toPlay: 13, length: 13 },
+    )
+    expect(computeQueueCounts({ index: 0, length: 13, unseenCount: 0, repeatMode: 'off' })).toEqual(
+      { looping: false, played: 0, toPlay: 0, length: 13 },
+    )
+  })
+
+  it('Saved one-pass is index of the list; a loop just shows the pile', () => {
+    expect(
+      computeQueueCounts({ index: 5, length: 13, unseenCount: 13, repeatMode: 'off' }),
+    ).toEqual({ looping: false, played: 5, toPlay: 13, length: 13 })
+    expect(
+      computeQueueCounts({ index: 5, length: 13, unseenCount: 13, repeatMode: 'all' }),
+    ).toEqual({ looping: true, played: 0, toPlay: 13, length: 13 })
+  })
+})
+
+describe('countPlayedThisRun', () => {
+  function post(id: string) {
+    return { platform: 'twitter', bookmarkId: id, url: `/${id}` }
+  }
+
+  it('skips the leftover row still on stage and ignores watched-on-entry posts', () => {
+    const items = [post('now'), post('next'), post('done'), post('old')]
+    expect(
+      countPlayedThisRun(items, {
+        currentKey: 'twitter:now',
+        remaining: 2,
+        currentIndex: 0,
+        wasSeenOnEntry: (key) => key === 'twitter:old',
+        isFresh: () => false,
+        isSeen: (key) => key === 'twitter:now' || key === 'twitter:done' || key === 'twitter:old',
+      }),
+    ).toBe(1)
+  })
+
+  it('counts a mid-session arrival that has already been watched', () => {
+    const items = [post('now'), post('fresh'), post('old')]
+    expect(
+      countPlayedThisRun(items, {
+        currentKey: 'twitter:now',
+        remaining: 1,
+        currentIndex: 0,
+        wasSeenOnEntry: (key) => key === 'twitter:old',
+        isFresh: (key) => key === 'twitter:fresh',
+        isSeen: (key) => key === 'twitter:now' || key === 'twitter:fresh' || key === 'twitter:old',
+      }),
+    ).toBe(1)
+  })
+})
+
+describe('PINNED_POST_HEADING', () => {
+  it('names the opened post, not a share', () => {
+    expect(PINNED_POST_HEADING).toBe('This post')
+  })
+})
+
+describe('formatQueueCount', () => {
+  it('shows run progress off-repeat and the pile on-repeat', () => {
+    expect(formatQueueCount({ looping: false, played: 16, toPlay: 23, length: 40 })).toEqual({
+      text: '16 of 23',
+      ariaLabel: '16 watched of 23',
+    })
+    expect(formatQueueCount({ looping: false, played: 0, toPlay: 23, length: 40 })).toEqual({
+      text: '0 of 23',
+      ariaLabel: '0 watched of 23',
+    })
+    expect(formatQueueCount({ looping: true, played: 0, toPlay: 23, length: 23 })).toEqual({
+      text: '23 on repeat',
+      ariaLabel: '23 on repeat',
+    })
+    expect(formatQueueCount({ looping: false, played: 0, toPlay: 0, length: 13 })).toEqual({
+      text: '13',
+      ariaLabel: '13 in queue',
+    })
+    expect(formatQueueCount({ looping: true, played: 0, toPlay: 0, length: 0 })).toBeNull()
+    expect(formatQueueCount({ looping: false, played: 23, toPlay: 23, length: 40 })).toEqual({
+      text: '23 of 23',
+      ariaLabel: '23 watched of 23',
+    })
+  })
+})
+
 describe('REPEAT_MODE_LABEL', () => {
   it('names what each state DOES at the boundary, not just "repeat on/off"', () => {
     // The old labels ("Repeat: off") said nothing about stopping when caught
@@ -254,6 +359,12 @@ describe('REPEAT_MODE_LABEL', () => {
     for (const mode of ['off', 'all', 'one'] as const) {
       expect(REPEAT_MODE_LABEL[mode].state).toBeTruthy()
     }
+  })
+
+  it('Saved off is one run through the list, not Live caught-up copy', () => {
+    expect(repeatModeLabel('off', { saved: true }).action).toBe('Play once')
+    expect(repeatModeLabel('all', { saved: true }).action).toBe('Keep playing')
+    expect(repeatModeLabel('off').action).toBe('Stop when caught up')
   })
 })
 

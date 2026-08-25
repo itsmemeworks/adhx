@@ -124,6 +124,9 @@ function chromeProps() {
     currentKey: string | null
     current: TheaterItem | null
     queueTotal?: number
+    queuePlayed?: number
+    queueToPlay?: number
+    queueLooping?: boolean
     onCycleRepeat?: () => void
     repeatMode?: RepeatMode
   }
@@ -292,7 +295,10 @@ describe('TheaterShell caught-up matrix: mount-time seen-state', () => {
     const props = chromeProps()
     expect(props.items.map((i) => i.bookmarkId)).toEqual(['1', '3', '2'])
     expect(props.currentKey).toBe(theaterItemKey(item1))
-    expect(props.queueTotal).toBe(2)
+    expect(props.queuePlayed).toBe(0)
+    expect(props.queueToPlay).toBe(2)
+    expect(props.queueLooping).toBe(false)
+    expect(props.queueTotal).toBe(3)
   })
 })
 
@@ -503,6 +509,7 @@ describe('TheaterShell caught-up matrix: repeat mode', () => {
     const cycle = chromeProps().onCycleRepeat as () => void
     await act(async () => cycle())
     expect(chromeProps().repeatMode).toBe('all')
+    expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(2)
 
     await endCurrentItem() // item1 -> item2
@@ -522,17 +529,24 @@ describe('TheaterShell caught-up matrix: repeat mode', () => {
     const item3 = textItem('3')
     markWatched([item2, item3])
     await renderHome([item1, item2, item3])
-    // One pending post (item1) — "1 / 1", not "1 / 3".
-    expect(chromeProps().queueTotal).toBe(1)
+    // One pending post (item1) — leftover 1 of a 3-long pile.
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
 
     const cycle = () => chromeProps().onCycleRepeat as () => void
     await act(async () => cycle()()) // off -> all
+    expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(3)
 
     await act(async () => cycle()()) // all -> one
     await act(async () => cycle()()) // one -> off
     expect(chromeProps().repeatMode).toBe('off')
-    expect(chromeProps().queueTotal).toBe(1)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
   })
 })
 
@@ -558,7 +572,10 @@ describe('TheaterShell caught-up matrix: arrivals', () => {
 
     expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe(theaterItemKey(arrival))
-    expect(chromeProps().queueTotal).toBe(1)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
   })
 
   /** Equivalence: this mechanism (the waiting-stage auto-arrival effect) is

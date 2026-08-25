@@ -98,7 +98,7 @@ describe('TheaterShell: collection tab has the repeat control', () => {
         />,
       )
     })
-    expect(chromeProps().repeatMode).toBe('off')
+    expect(chromeProps().repeatMode).toBe('all')
     expect(typeof chromeProps().onCycleRepeat).toBe('function')
   })
 
@@ -114,7 +114,6 @@ describe('TheaterShell: collection tab has the repeat control', () => {
         />,
       )
     })
-    await cycleRepeat() // off -> all
     expect(chromeProps().repeatMode).toBe('all')
     expect(chromeProps().currentKey).toBe('twitter:1')
 
@@ -138,6 +137,9 @@ describe('TheaterShell: collection tab has the repeat control', () => {
         />,
       )
     })
+    await cycleRepeat() // all -> one
+    await cycleRepeat() // one -> off
+    expect(chromeProps().repeatMode).toBe('off')
     const onNext = chromeProps().onNext as () => void
     await act(async () => onNext())
     expect(screen.getByText('All caught up')).toBeInTheDocument()
@@ -160,7 +162,7 @@ describe('TheaterShell: collection tab has the repeat control', () => {
         />,
       )
     })
-    await cycleRepeat() // off -> all
+    expect(chromeProps().repeatMode).toBe('all')
     expect(chromeProps().currentKey).toBe('twitter:1')
 
     await act(async () => {
@@ -173,6 +175,71 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     })
     expect(chromeProps().currentKey).toBe('twitter:1')
     expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+  })
+
+  it('Next wraps the Saved list while repeat is all, and one run when off', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    const onNext = () => (chromeProps().onNext as () => void)()
+    await act(async () => onNext())
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    await act(async () => onNext())
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+
+    await cycleRepeat() // all -> one
+    await cycleRepeat() // one -> off
+    await act(async () => onNext())
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    await act(async () => onNext())
+    expect(screen.getByText('All caught up')).toBeInTheDocument()
+  })
+
+  it('does not share its repeat preference with Live', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await cycleRepeat() // all -> one
+    await cycleRepeat() // one -> off
+    expect(window.localStorage.getItem('adhx-theater-repeat-saved')).toBe('off')
+    expect(window.localStorage.getItem('adhx-theater-repeat')).toBeNull()
+  })
+
+  it('keeps Live on stop-when-caught-up when Saved is looping', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={{ items: [liveText('live1')], savedToday: 0, recentActivity: 0 }}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().repeatMode).toBe('all')
+    const tabs = chromeProps().collection as { onTabChange: (tab: 'live' | 'collection') => void }
+    await act(async () => tabs.onTabChange('live'))
+    expect(chromeProps().repeatMode).toBe('off')
+    await act(async () => tabs.onTabChange('collection'))
+    expect(chromeProps().repeatMode).toBe('all')
   })
 })
 

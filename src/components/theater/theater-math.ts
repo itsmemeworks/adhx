@@ -109,6 +109,29 @@ export function personalAdvanceOnEndedMatching(
 }
 
 /**
+ * User Next on Saved. Unlike ended-advance, 'one' still moves — the viewer
+ * asked to leave this post. Repeat 'all' wraps the list; 'off' walks off
+ * the end so All Clear can render (one run).
+ */
+export function personalSkipMatching(
+  index: number,
+  length: number,
+  repeatMode: RepeatMode,
+  allowAt: (i: number) => boolean,
+): number {
+  if (length <= 0) return index
+  const next = personalAdvanceMatching(index, length, allowAt)
+  if (next < length) return next
+  if (repeatMode === 'all') {
+    for (let i = 0; i < length; i++) {
+      if (allowAt(i)) return i
+    }
+    return index
+  }
+  return next
+}
+
+/**
  * Pure: move the item matching `pinnedKey` to the front of `items`, order
  * otherwise preserved. A missing key (not found, or already at index 0)
  * returns `items` unchanged (same reference) — cheap to call on every render.
@@ -282,6 +305,9 @@ export const LIVE_QUEUE_GROUP_LABEL: Record<LiveQueueGroup, string> = {
   unwatched: 'Up next',
   watched: 'Watched earlier',
 }
+
+/** Preview-page lead: the post the visitor opened, not a "share". */
+export const PINNED_POST_HEADING = 'This post'
 
 /**
  * Pure: an item's group.
@@ -503,6 +529,101 @@ export function computeQueueTotal(opts: {
   if (repeatMode !== 'off') return length
   if (unseenCount <= 0 || index < 0 || index >= unseenCount) return length
   return unseenCount
+}
+
+export interface QueueCount {
+  /** Keep playing / Repeat this post — leftover is not a finite run. */
+  looping: boolean
+  /** Finished posts from this leftover run (not the one still on stage). */
+  played: number
+  /** How many posts this run will play (played + still pending, arrivals included). */
+  toPlay: number
+  /** Whole queue size — what looping copy uses. */
+  length: number
+}
+
+/**
+ * How many leftover-run posts are already done. Live always stages the head
+ * of the leftover stack, so this is not a playlist index. A post counts if
+ * it was unseen at session start (or arrived mid-session) and has been
+ * marked seen — except the current leftover row, which stays put until you
+ * leave it.
+ */
+export function countPlayedThisRun<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(
+  items: T[],
+  opts: {
+    currentKey: string | null
+    remaining: number
+    currentIndex: number
+    wasSeenOnEntry: (key: string) => boolean
+    isFresh: (key: string) => boolean
+    isSeen: (key: string) => boolean
+  },
+): number {
+  const currentStillPending =
+    opts.currentKey !== null && opts.currentIndex >= 0 && opts.currentIndex < opts.remaining
+  let n = 0
+  for (const item of items) {
+    const key = theaterItemKey(item)
+    if (currentStillPending && key === opts.currentKey) continue
+    const fromRun = !opts.wasSeenOnEntry(key) || opts.isFresh(key)
+    if (fromRun && opts.isSeen(key)) n++
+  }
+  return n
+}
+
+/**
+ * Progress through the leftover run, or looping copy for the whole pile.
+ *
+ * Repeat off: `toPlay` is how many will actually play (23 new), `played`
+ * is how many of those are done (16). Repeat on: `looping` and `length`
+ * (23 on repeat). A list walk (Saved one-pass, Re-watch all) uses index
+ * as played and length as toPlay.
+ */
+export function computeQueueCounts(opts: {
+  index: number
+  length: number
+  unseenCount: number
+  repeatMode: RepeatMode
+  /** Walk the displayed list (Saved, or Live Re-watch all). */
+  listWalk?: boolean
+  played?: number
+}): QueueCount {
+  const { index, length, unseenCount, repeatMode, listWalk, played } = opts
+  if (repeatMode !== 'off') {
+    return { looping: true, played: 0, toPlay: length, length }
+  }
+  if (length <= 0) return { looping: false, played: 0, toPlay: 0, length: 0 }
+  if (listWalk || unseenCount >= length) {
+    const finished = index < 0 || index >= length
+    const done = finished ? length : Math.max(0, index)
+    return { looping: false, played: done, toPlay: length, length }
+  }
+  const remaining = Math.max(0, unseenCount)
+  const done = Math.max(0, played ?? 0)
+  return { looping: false, played: done, toPlay: done + remaining, length }
+}
+
+/** Peek / dock copy. Playlist-style: "16 of 23" off-repeat, "23 on repeat" on. */
+export function formatQueueCount(
+  count: QueueCount | null | undefined,
+): { text: string; ariaLabel: string } | null {
+  if (!count) return null
+  const { looping, played, toPlay, length } = count
+  if (looping) {
+    if (length <= 0) return null
+    return { text: `${length} on repeat`, ariaLabel: `${length} on repeat` }
+  }
+  if (toPlay <= 0) {
+    if (length <= 0) return null
+    return { text: String(length), ariaLabel: `${length} in queue` }
+  }
+  return {
+    text: `${played} of ${toPlay}`,
+    ariaLabel: `${played} watched of ${toPlay}`,
+  }
 }
 
 /**

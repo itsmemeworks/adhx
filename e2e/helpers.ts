@@ -232,3 +232,15 @@ export const authedTest = base.extend({
     await use(page)
   },
 })
+
+/** Desktop dock count — mobile peek stays mounted (`lg:hidden`) with the same hook. */
+export function visibleQueueCount(page: Page) {
+  return page.locator('[data-theater-queue-count]').locator('visible=true')
+}
+
+export async function readQueueProgress(page: Page): Promise<{ played: number; toPlay: number }> {
+  const text = (await visibleQueueCount(page).innerText()).replace(/\s+/g, ' ').trim()
+  const match = text.match(/^(\d+) of (\d+)/)
+  if (!match) throw new Error(`expected "N of M" queue count, got "${text}"`)
+  return { played: Number(match[1]), toPlay: Number(match[2]) }
+}

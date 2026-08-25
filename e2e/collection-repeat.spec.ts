@@ -3,23 +3,22 @@ import { POST, TIKTOK_TWIN } from './constants'
 import { authedTest, caption, expectTheaterReady, goNext } from './helpers'
 
 authedTest.describe('collection repeat', () => {
-  authedTest('Saved offers the same off → all → one switch as Live', async ({ page }) => {
+  authedTest('Saved offers the same all → one → off switch as Live', async ({ page }) => {
     await page.goto('/saved')
     await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
-
-    await page.getByRole('button', { name: 'Stop when caught up' }).click()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
+
     await page.getByRole('button', { name: 'Keep playing' }).click()
     await expect(page.getByRole('button', { name: 'Repeat this post' })).toBeVisible()
     await page.getByRole('button', { name: 'Repeat this post' }).click()
-    await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
+    await page.getByRole('button', { name: 'Play once' }).click()
+    await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
   })
 
   authedTest('Keep playing persists across a /saved reload', async ({ page }) => {
     await page.goto('/saved')
     await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Stop when caught up' }).click()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
     await page.goto('/saved')
     await expectTheaterReady(page)
@@ -32,8 +31,8 @@ authedTest.describe('collection repeat', () => {
     await expect(page.getByText('waiting for new sends')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
 
-    const pause = page.getByRole('button', { name: 'Pause' })
-    const play = page.getByRole('button', { name: 'Play' })
+    const pause = page.getByRole('button', { name: 'Pause', exact: true })
+    const play = page.getByRole('button', { name: 'Play', exact: true })
     await expect(pause.or(play)).toBeVisible()
     const wasPaused = await play.isVisible()
     await page.keyboard.press(' ')
@@ -45,6 +44,9 @@ authedTest.describe('collection repeat', () => {
   })
 
   authedTest('Next past the last post shows All Clear; Keep playing restarts', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('adhx-theater-repeat-saved', 'off')
+    })
     await page.goto(`/saved?open=${TIKTOK_TWIN.id}&platform=tiktok`)
     await expectTheaterReady(page)
     await expect(caption(page, TIKTOK_TWIN.text)).toBeVisible()
