@@ -164,3 +164,25 @@ export const LIVE_POSTS: E2ePost[] = [
   POST.golf,
   POST.hotel,
 ]
+
+/** Posts added during cross-tab theater e2e — not in the seed collection. */
+export const ADD_TEXT: E2ePost = {
+  id: '9000000000000000801',
+  author: 'e2eadd',
+  authorName: 'E2E Add',
+  text: 'E2E-ADD-TEXT',
+}
+
+export const ADD_VIDEO: E2ePost = {
+  id: '9000000000000000802',
+  author: 'e2eaddvid',
+  authorName: 'E2E Add Vid',
+  text: 'E2E-ADD-VIDEO',
+}
+
+export const ADD_VIDEO_B: E2ePost = {
+  id: '9000000000000000803',
+  author: 'e2eaddvidb',
+  authorName: 'E2E Add Vid B',
+  text: 'E2E-ADD-VIDEO-B',
+}

@@ -10,7 +10,7 @@ their Collection, the Live pulse, and their tags.
 - Tabs are **Library · Theater · Tags · Leaderboard** (Trending removed from the authed nav; the public
   `/trending` + `/trending/[filter]` routes and all their SEO stay untouched — they're just no
   longer surfaced to signed-in users).
-- **Theater** is a pair of routes, not an overlay: `/live` is Live, `/saved` is Saved (signed-in `/` redirects here).
+- **Theater** is a pair of routes, not an overlay: `/live` is Live (signed-in `/` redirects here), `/saved` is Saved.
   The library grid at `/library` navigates to `/saved` (card tap / leftover deep links) —
   it does not mount a second TheaterShell.
 - The **`+` Add button and its modal trigger are removed**. Adding by URL is paste-first: a

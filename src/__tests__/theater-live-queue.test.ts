@@ -4,10 +4,16 @@ import {
   liveQueueGroupOf,
   unseenBlockLength,
   computeLiveNext,
+  pendingBlockLength,
+  firstPendingLiveKey,
   computeQueueTotal,
+  computeQueueCounts,
+  countPlayedThisRun,
+  formatQueueCount,
+  PINNED_POST_HEADING,
   LIVE_QUEUE_GROUP_LABEL,
 } from '@/components/theater/TheaterShell'
-import { REPEAT_MODE_LABEL } from '@/components/theater/types'
+import { REPEAT_MODE_LABEL, repeatModeLabel } from '@/components/theater/types'
 
 /**
  * Live mode is "the last 24 hours of community activity", and what plays is
@@ -54,9 +60,19 @@ describe('liveQueueGroupOf', () => {
     expect(liveQueueGroupOf(key('c'), none, setOf('c'))).toBe('arrived')
   })
 
-  it('calls a fresh arrival "arrived" even if it was watched before', () => {
+  it('calls a fresh arrival "arrived" even if it was watched before this session', () => {
     // A resurfacing post the viewer saw days ago still just landed.
     expect(liveQueueGroupOf(key('d'), setOf('d'), setOf('d'))).toBe('arrived')
+  })
+
+  it('moves a post watched this session into watched once it is no longer current', () => {
+    expect(liveQueueGroupOf(key('d'), none, setOf('d'), setOf('d'))).toBe('watched')
+    expect(liveQueueGroupOf(key('todo'), none, none, setOf('todo'))).toBe('watched')
+  })
+
+  it('keeps the playing row in its group so dwell does not yank it', () => {
+    expect(liveQueueGroupOf(key('d'), none, setOf('d'), setOf('d'), key('d'))).toBe('arrived')
+    expect(liveQueueGroupOf(key('todo'), none, none, setOf('todo'), key('todo'))).toBe('unwatched')
   })
 
   it('has a label for every group', () => {
@@ -110,6 +126,23 @@ describe('orderLiveQueue', () => {
   it('handles an empty queue', () => {
     expect(orderLiveQueue([], setOf('a'), none)).toEqual([])
   })
+
+  it('slides a watched-this-session post into watched, except the row on stage', () => {
+    const items = [item('fresh', 1), item('todo', 2), item('old', 5)]
+    const wasSeen = setOf('old')
+    const isFresh = setOf('fresh')
+    const isSeenNow = setOf('todo', 'old')
+    // Playing the arrival: todo has been watched and leaves Up next.
+    expect(ids(orderLiveQueue(items, wasSeen, isFresh, isSeenNow, key('fresh')))).toEqual([
+      'fresh',
+      'todo',
+      'old',
+    ])
+    // After leaving fresh, it joins Watched too.
+    expect(
+      ids(orderLiveQueue(items, wasSeen, isFresh, setOf('fresh', 'todo', 'old'), key('todo'))),
+    ).toEqual(['todo', 'fresh', 'old'])
+  })
 })
 
 describe('unseenBlockLength', () => {
@@ -140,8 +173,14 @@ describe('computeLiveNext', () => {
     expect(computeLiveNext({ ...base, index: 1 })).toBe('waiting')
   })
 
-  it('lets the user browse straight past the boundary', () => {
-    expect(computeLiveNext({ ...base, index: 1, userInitiated: true })).toBe(2)
+  it('waits on Next from the last pending post instead of walking into Watched', () => {
+    // After regroup the last new post sits at a low index with just-watched
+    // rows behind it. Next there is caught-up, not a replay of that run.
+    expect(computeLiveNext({ ...base, index: 1, userInitiated: true })).toBe('waiting')
+  })
+
+  it('lets the user browse once they are already in the watched suffix', () => {
+    expect(computeLiveNext({ ...base, index: 2, userInitiated: true })).toBe(3)
   })
 
   it('lets repeat "all" (loop) past the boundary and wrap', () => {
@@ -149,9 +188,13 @@ describe('computeLiveNext', () => {
     expect(computeLiveNext({ ...base, index: 4, loop: true })).toBe(0)
   })
 
-  it('applies no boundary once nothing is unwatched (a re-watch, or all watched)', () => {
-    expect(computeLiveNext({ ...base, index: 1, unseenCount: 0 })).toBe(2)
-    expect(computeLiveNext({ ...base, index: 3, unseenCount: 0 })).toBe(4)
+  it('applies no boundary on an explicit re-watch', () => {
+    expect(computeLiveNext({ ...base, index: 1, unseenCount: 0, rewatch: true })).toBe(2)
+    expect(computeLiveNext({ ...base, index: 3, unseenCount: 0, rewatch: true })).toBe(4)
+  })
+
+  it('waits when nothing is still unwatched and this is not a re-watch', () => {
+    expect(computeLiveNext({ ...base, index: 1, unseenCount: 0 })).toBe('waiting')
   })
 
   it('still waits at the true end of the queue', () => {
@@ -207,6 +250,126 @@ describe('computeQueueTotal', () => {
   })
 })
 
+describe('computeQueueCounts', () => {
+  it('Live leftover is played of the pending run, not a playlist position', () => {
+    expect(
+      computeQueueCounts({ index: 0, length: 13, unseenCount: 2, repeatMode: 'off', played: 0 }),
+    ).toEqual({ looping: false, played: 0, toPlay: 2, length: 13 })
+    expect(
+      computeQueueCounts({ index: 0, length: 13, unseenCount: 7, repeatMode: 'off', played: 16 }),
+    ).toEqual({ looping: false, played: 16, toPlay: 23, length: 13 })
+  })
+
+  it('keeps leftover while browsing the watched suffix', () => {
+    expect(
+      computeQueueCounts({ index: 7, length: 13, unseenCount: 2, repeatMode: 'off', played: 5 }),
+    ).toEqual({ looping: false, played: 5, toPlay: 7, length: 13 })
+  })
+
+  it('names the pile when Live is repeating; caught-up without a run is just the pile', () => {
+    expect(computeQueueCounts({ index: 0, length: 13, unseenCount: 2, repeatMode: 'all' })).toEqual(
+      { looping: true, played: 0, toPlay: 13, length: 13 },
+    )
+    expect(computeQueueCounts({ index: 0, length: 13, unseenCount: 0, repeatMode: 'off' })).toEqual(
+      { looping: false, played: 0, toPlay: 0, length: 13 },
+    )
+  })
+
+  it('Saved one-pass is the 1-based now-playing index; a loop just shows the pile', () => {
+    expect(
+      computeQueueCounts({
+        index: 0,
+        length: 92,
+        unseenCount: 92,
+        repeatMode: 'off',
+        listWalk: true,
+      }),
+    ).toEqual({ looping: false, played: 1, toPlay: 92, length: 92 })
+    expect(
+      computeQueueCounts({
+        index: 1,
+        length: 92,
+        unseenCount: 92,
+        repeatMode: 'off',
+        listWalk: true,
+      }),
+    ).toEqual({ looping: false, played: 2, toPlay: 92, length: 92 })
+    expect(
+      computeQueueCounts({ index: 5, length: 13, unseenCount: 13, repeatMode: 'all' }),
+    ).toEqual({ looping: true, played: 0, toPlay: 13, length: 13 })
+  })
+})
+
+describe('countPlayedThisRun', () => {
+  function post(id: string) {
+    return { platform: 'twitter', bookmarkId: id, url: `/${id}` }
+  }
+
+  it('skips the leftover row still on stage and ignores watched-on-entry posts', () => {
+    const items = [post('now'), post('next'), post('done'), post('old')]
+    expect(
+      countPlayedThisRun(items, {
+        currentKey: 'twitter:now',
+        remaining: 2,
+        currentIndex: 0,
+        wasSeenOnEntry: (key) => key === 'twitter:old',
+        isFresh: () => false,
+        isSeen: (key) => key === 'twitter:now' || key === 'twitter:done' || key === 'twitter:old',
+      }),
+    ).toBe(1)
+  })
+
+  it('counts a mid-session arrival that has already been watched', () => {
+    const items = [post('now'), post('fresh'), post('old')]
+    expect(
+      countPlayedThisRun(items, {
+        currentKey: 'twitter:now',
+        remaining: 1,
+        currentIndex: 0,
+        wasSeenOnEntry: (key) => key === 'twitter:old',
+        isFresh: (key) => key === 'twitter:fresh',
+        isSeen: (key) => key === 'twitter:now' || key === 'twitter:fresh' || key === 'twitter:old',
+      }),
+    ).toBe(1)
+  })
+})
+
+describe('PINNED_POST_HEADING', () => {
+  it('names the opened post, not a share', () => {
+    expect(PINNED_POST_HEADING).toBe('This post')
+  })
+})
+
+describe('formatQueueCount', () => {
+  it('shows run progress off-repeat and the pile on-repeat', () => {
+    expect(formatQueueCount({ looping: false, played: 16, toPlay: 23, length: 40 })).toEqual({
+      text: '16 of 23',
+      ariaLabel: '16 watched of 23',
+    })
+    expect(formatQueueCount({ looping: false, played: 0, toPlay: 23, length: 40 })).toEqual({
+      text: '23 in queue',
+      ariaLabel: '23 in queue',
+    })
+    expect(formatQueueCount({ looping: false, played: 0, toPlay: 1, length: 1 })).toEqual({
+      text: '1 in queue',
+      ariaLabel: '1 in queue',
+    })
+    expect(formatQueueCount({ looping: true, played: 0, toPlay: 23, length: 23 })).toEqual({
+      text: '23 on repeat',
+      ariaLabel: '23 on repeat',
+    })
+    expect(formatQueueCount({ looping: false, played: 0, toPlay: 0, length: 13 })).toEqual({
+      text: '13 in queue',
+      ariaLabel: '13 in queue',
+    })
+    expect(formatQueueCount({ looping: true, played: 0, toPlay: 0, length: 0 })).toBeNull()
+    expect(formatQueueCount({ looping: false, played: 23, toPlay: 23, length: 40 })).toEqual({
+      text: '23 of 23',
+      ariaLabel: '23 watched of 23',
+    })
+  })
+})
+
 describe('REPEAT_MODE_LABEL', () => {
   it('names what each state DOES at the boundary, not just "repeat on/off"', () => {
     // The old labels ("Repeat: off") said nothing about stopping when caught
@@ -217,6 +380,12 @@ describe('REPEAT_MODE_LABEL', () => {
     for (const mode of ['off', 'all', 'one'] as const) {
       expect(REPEAT_MODE_LABEL[mode].state).toBeTruthy()
     }
+  })
+
+  it('Saved off is one run through the list, not Live caught-up copy', () => {
+    expect(repeatModeLabel('off', { saved: true }).action).toBe('Play once')
+    expect(repeatModeLabel('all', { saved: true }).action).toBe('Keep playing')
+    expect(repeatModeLabel('off').action).toBe('Stop when caught up')
   })
 })
 
@@ -249,15 +418,101 @@ describe('computeLiveNext — nothing unwatched anywhere', () => {
     )
   })
 
-  it('never diverts a normal in-run advance', () => {
-    // Plenty of run left: go to the next item, not to the pending index.
-    expect(computeLiveNext({ ...base, index: 0, nextUnwatchedIndex: 4 })).toBe(1)
+  it('finishes the unwatched run before jumping back to an arrival', () => {
+    expect(
+      computeLiveNext({
+        ...base,
+        index: 1,
+        nextUnwatchedAhead: 2,
+        nextUnwatchedIndex: 0,
+      }),
+    ).toBe(2)
   })
 
-  it('leaves repeat and user navigation alone', () => {
+  it('after the run, plays the arrival and then waits — does not replay the run', () => {
+    // Two unseen (1, 2) + a mid-play arrival prepended at 0. After 1 and 2
+    // finish, jump to 0; after 0 there is nothing still unwatched.
+    expect(
+      computeLiveNext({
+        ...base,
+        unseenCount: 3,
+        index: 2,
+        nextUnwatchedAhead: null,
+        nextUnwatchedIndex: 0,
+      }),
+    ).toBe(0)
+    expect(
+      computeLiveNext({
+        ...base,
+        unseenCount: 3,
+        index: 0,
+        nextUnwatchedAhead: null,
+        nextUnwatchedIndex: null,
+      }),
+    ).toBe('waiting')
+  })
+
+  it('prefers the next still-unwatched ahead over a pending index behind', () => {
+    expect(
+      computeLiveNext({
+        ...base,
+        index: 0,
+        nextUnwatchedAhead: 1,
+        nextUnwatchedIndex: 4,
+      }),
+    ).toBe(1)
+  })
+
+  it('leaves repeat alone, and Next from the pending prefix plays an unwatched arrival', () => {
     expect(computeLiveNext({ ...base, index: 4, loop: true, nextUnwatchedIndex: 1 })).toBe(0)
     expect(computeLiveNext({ ...base, index: 1, userInitiated: true, nextUnwatchedIndex: 0 })).toBe(
-      2,
+      0,
     )
+  })
+
+  it('plays still-unwatched arrivals before caught-up even from the watched suffix', () => {
+    // Owner screenshot: leftover run done, 2 New-since-opened still unseen,
+    // Next / auto-advance said caught-up because unseenCount was 0 (pinned
+    // watched lead zeroed the prefix) while nextUnwatchedIndex pointed at them.
+    expect(
+      computeLiveNext({
+        length: 14,
+        index: 13,
+        unseenCount: 0,
+        loop: false,
+        userInitiated: true,
+        nextUnwatchedIndex: 0,
+      }),
+    ).toBe(0)
+    expect(
+      computeLiveNext({
+        length: 14,
+        index: 13,
+        unseenCount: 0,
+        loop: false,
+        userInitiated: false,
+        nextUnwatchedIndex: 1,
+      }),
+    ).toBe(1)
+  })
+})
+
+describe('pendingBlockLength', () => {
+  it('skips a leading watched row so a pinned lead does not zero the run', () => {
+    const items = [item('pin', 1), item('new', 2), item('todo', 3), item('old', 4)]
+    const groupOf = (k: string) => {
+      if (k === key('pin') || k === key('old')) return 'watched' as const
+      if (k === key('new')) return 'arrived' as const
+      return 'unwatched' as const
+    }
+    expect(pendingBlockLength(items, groupOf)).toBe(2)
+  })
+})
+
+describe('firstPendingLiveKey', () => {
+  it('returns the first unseen key, skipping the row being left', () => {
+    const items = [item('a', 1), item('b', 2), item('c', 3)]
+    expect(firstPendingLiveKey(items, setOf('a'), key('a'))).toBe(key('b'))
+    expect(firstPendingLiveKey(items, setOf('a', 'b', 'c'), key('c'))).toBeNull()
   })
 })

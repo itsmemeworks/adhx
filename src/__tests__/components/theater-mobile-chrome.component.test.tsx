@@ -462,7 +462,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
    * position in the collection theater too (owner asked the count to be boundary-aware, and
    * collection was the one mode with nowhere to put it).
    */
-  it('spends the freed peek-bar centre on the queue position', () => {
+  it('spends the freed peek-bar centre on leftover-run progress', () => {
     const collection: TheaterPersonalChrome = {
       tab: 'collection',
       onTabChange: vi.fn(),
@@ -482,11 +482,41 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         items={items}
         currentKey="twitter:2"
         queueTotal={2}
+        queuePlayed={1}
+        queueToPlay={2}
         collection={collection}
       />,
     )
 
-    expect(peekCentreText()).toBe('2 / 2')
+    expect(peekCentreText()).toBe('1 of 2')
+  })
+
+  it('names the leftover run when nothing has played yet, and the pile when looping', () => {
+    const items = Array.from({ length: 23 }, (_, i) => videoItem({ bookmarkId: `${i + 1}` }))
+    const { rerender } = render(
+      <TheaterMobileChrome
+        {...base}
+        current={items[0]}
+        items={items}
+        currentKey="twitter:1"
+        queueTotal={40}
+        queuePlayed={0}
+        queueToPlay={23}
+      />,
+    )
+    expect(peekCentreText()).toBe('23 in queue')
+
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        current={items[0]}
+        items={items}
+        currentKey="twitter:1"
+        queueTotal={23}
+        queueLooping
+      />,
+    )
+    expect(peekCentreText()).toBe('23 on repeat')
   })
 
   /**
@@ -517,7 +547,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         collection={collection}
       />,
     )
-    expect(peekCentreText()).toBe('1 / 1')
+    expect(peekCentreText()).toBe('1 in queue')
 
     // The live tab, where "new" does mean something, keeps it.
     rerender(
@@ -530,7 +560,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         collection={{ ...collection, tab: 'live' }}
       />,
     )
-    expect(peekCentreText()).toBe('1 / 1 · 3 new')
+    expect(peekCentreText()).toBe('1 in queue · 3 new')
   })
 })
 
@@ -662,6 +692,37 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
     expect(label()).toHaveAttribute('aria-label', 'Collapse up next')
     fireEvent(window, new CustomEvent('theater-toggle-show-all'))
     expect(label()).toHaveAttribute('aria-label', 'Expand up next')
+  })
+
+  it('keeps the up-next sheet open when the stage advances to the next post', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'first playlist row' }),
+      videoItem({ bookmarkId: '2', text: 'second playlist row' }),
+    ]
+    const { rerender } = render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    const label = () =>
+      screen
+        .getAllByLabelText(/(Expand|Collapse) up next/)
+        .find((el) => (el.textContent ?? '').trim().length > 0)!
+    fireEvent.click(label())
+    expect(label()).toHaveAttribute('aria-label', 'Collapse up next')
+
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+      />,
+    )
+    expect(label()).toHaveAttribute('aria-label', 'Collapse up next')
   })
 
   // Owner report: the collapsed peek bar floated a few px too short, letting
@@ -872,12 +933,12 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
  * ("On repeat") still takes priority. Falls back to the old "N new"/"Up
  * next" copy only when the current key doesn't resolve into `items`.
  */
-describe('TheaterMobileChrome: queue position label', () => {
+describe('TheaterMobileChrome: queue leftover label', () => {
   function buildItems(count: number): TheaterItem[] {
     return Array.from({ length: count }, (_, i) => videoItem({ bookmarkId: String(i + 1) }))
   }
 
-  it('renders the 1-based queue position (e.g. "2 / 5") for the current item', () => {
+  it('renders the pile size when leftover is not a finite stop-count', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -887,7 +948,7 @@ describe('TheaterMobileChrome: queue position label', () => {
         currentKey={theaterItemKey(items[1])}
       />,
     )
-    expect(screen.getByText('2 / 5')).toBeInTheDocument()
+    expect(screen.getByText('5 in queue')).toBeInTheDocument()
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
   })
 
@@ -902,7 +963,7 @@ describe('TheaterMobileChrome: queue position label', () => {
         newCount={3}
       />,
     )
-    expect(screen.getByText('2 / 5 · 3 new')).toBeInTheDocument()
+    expect(screen.getByText('5 in queue · 3 new')).toBeInTheDocument()
   })
 
   it('omits the new-count suffix when newCount is 0', () => {
@@ -916,7 +977,7 @@ describe('TheaterMobileChrome: queue position label', () => {
         newCount={0}
       />,
     )
-    expect(screen.getByText('2 / 5')).toBeInTheDocument()
+    expect(screen.getByText('5 in queue')).toBeInTheDocument()
     expect(screen.queryByText(/new/)).not.toBeInTheDocument()
   })
 
@@ -961,15 +1022,15 @@ describe('TheaterMobileChrome: queue position label', () => {
         onClearQueueTypes={vi.fn()}
       />,
     )
-    const peek = screen.getByText('2 / 5').closest('button')!
+    const peek = screen.getByText('5 in queue').closest('button')!
     expect(peek).toHaveAttribute('data-theater-queue-filter')
     expect(peek).toHaveAttribute('title', 'Videos')
     expect(peek.className).toContain('text-clay')
     expect(peek.querySelector('.lucide-list-filter')).toBeInTheDocument()
-    expect(screen.queryByText('Videos · 2 / 5')).not.toBeInTheDocument()
+    expect(screen.queryByText('Videos · 5')).not.toBeInTheDocument()
   })
 
-  it('playlist mode keeps the queue position in the peek bar; the tag lives in the expanded sheet', () => {
+  it('playlist mode keeps the pile size in the peek bar; the tag lives in the expanded sheet', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -980,7 +1041,7 @@ describe('TheaterMobileChrome: queue position label', () => {
         playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
-    expect(peekCentreText()).toBe('2 / 5')
+    expect(peekCentreText()).toBe('5 in queue')
     expect(screen.queryByText('#claude-code · 12')).not.toBeInTheDocument()
     expect(screen.getAllByText('#claude-code').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('12 posts · @weedauwl')).toBeInTheDocument()
@@ -998,7 +1059,7 @@ describe('TheaterMobileChrome: queue position label', () => {
       />,
     )
     expect(screen.getByText('On repeat')).toBeInTheDocument()
-    expect(screen.queryByText('2 / 5')).not.toBeInTheDocument()
+    expect(screen.queryByText('5')).not.toBeInTheDocument()
   })
 })
 

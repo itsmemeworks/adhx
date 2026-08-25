@@ -52,7 +52,7 @@ import {
   isQuoteReader,
   offerArticleMode,
   PLATFORM_LABEL,
-  REPEAT_MODE_LABEL,
+  repeatModeLabel,
 } from './types'
 import { QuoteArticleToggle } from './QuoteArticleToggle'
 import { TheaterCaption } from './TheaterCaption'
@@ -66,7 +66,11 @@ import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
+import {
+  formatQueueCount,
+  isTheaterQueueFilterActive,
+  theaterQueueFilterLabel,
+} from './theater-math'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
@@ -92,8 +96,14 @@ export interface TheaterMobileChromeProps {
   wasSeenOnEntry?: (key: string) => boolean
   /** The shared post on a preview page — pinned as the lead row and excluded from the section grouping (it isn't "what's new", it's the link the visitor followed). Passed straight to `UpNextList`. */
   pinnedKey?: string | null
-  /** How many posts the position counter is out of — what will actually play from here (see `computeQueueTotal`). Falls back to `items.length`. */
+  /** Whole queue size — looping copy uses this. Falls back to `items.length`. */
   queueTotal?: number
+  /** Finished posts from this leftover run. */
+  queuePlayed?: number
+  /** How many posts this leftover run will play. */
+  queueToPlay?: number
+  /** Keep playing / Repeat this post. */
+  queueLooping?: boolean
   onSelect: (key: string) => void
   /** Prev/next navigation for the peek bar's chevrons — the only mobile nav besides keyboard and video-ended auto-advance. */
   onPrev: () => void
@@ -196,6 +206,9 @@ export function TheaterMobileChrome({
   wasSeenOnEntry,
   pinnedKey,
   queueTotal,
+  queuePlayed,
+  queueToPlay,
+  queueLooping,
   onSelect,
   onPrev,
   onNext,
@@ -278,11 +291,12 @@ export function TheaterMobileChrome({
     [],
   )
 
-  // Never let the sheet linger open over the next post (keyboard/swipe nav),
-  // and never let a paused 'timed' item leak its pause into the next one —
-  // 'video' items don't need this: StageVideo always (re)plays a fresh src.
+  // Reset per-post playback chrome when the stage advances. Do not close
+  // the up-next sheet — the owner keeps it open to watch the queue while
+  // the next post plays (Escape / tap-away / the handle still collapse it).
+  // 'video' items don't need the pause reset: StageVideo always (re)plays
+  // a fresh src.
   useEffect(() => {
-    setSheetOpen(false)
     setTimedPaused(false)
     // `liveMuted` describes the ELEMENT that was on stage, so it must not
     // outlive the item — the sibling `timedPaused` was reset here and this
@@ -331,7 +345,6 @@ export function TheaterMobileChrome({
   }
 
   const handleSelect = (key: string) => {
-    setSheetOpen(false)
     onSelect(key)
   }
 
@@ -371,15 +384,21 @@ export function TheaterMobileChrome({
     }
   }
 
-  // Queue position for the peek bar's center label (owner: "Up next" wasn't
-  // useful — show where you are in the queue instead). -1 (no current item /
-  // empty list) falls back to the old label.
+  // Peek-bar centre: run progress (`16 of 23`) or looping pile (`24 on
+  // repeat`). Live always stages the leftover head, so `3 / 7` was just
+  // "you're on next".
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
   const peekNew = newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
+  const queueCount = formatQueueCount({
+    looping: queueLooping ?? false,
+    played: queuePlayed ?? 0,
+    toPlay: queueToPlay ?? 0,
+    length: queueTotal ?? items.length,
+  })
   const peekPosition =
-    queueIndex !== -1
-      ? `${queueIndex + 1} / ${queueTotal ?? items.length}${peekNew}`
+    queueIndex !== -1 && queueCount
+      ? `${queueCount.text}${peekNew}`
       : newCount > 0 && collection?.tab !== 'collection'
         ? `${newCount} new`
         : 'Up next'
@@ -856,7 +875,9 @@ export function TheaterMobileChrome({
                     onCycleRepeat()
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label={REPEAT_MODE_LABEL[repeatMode].action}
+                  aria-label={
+                    repeatModeLabel(repeatMode, { saved: collection?.tab === 'collection' }).action
+                  }
                   className={cn(
                     'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full hover:bg-inset active:bg-inset',
                     repeatMode !== 'off'
@@ -892,10 +913,9 @@ export function TheaterMobileChrome({
               </button>
             </div>
 
-            {/* Centre slot: where you are in the queue. Collection used to spend
-                this on the Live/Collection tabs — they're in the top scrim
-                now (see above), so every mode gets the position, which is
-                what the owner asked the count to be aware of. */}
+            {/* Centre slot: leftover to play + pile size. Collection used to
+                spend this on the Live/Collection tabs — they're in the top
+                scrim now, so every mode gets the count. */}
             <div className="pointer-events-none absolute inset-x-0 flex justify-center">
               <button
                 type="button"
@@ -918,7 +938,12 @@ export function TheaterMobileChrome({
                 ) : (
                   <>
                     {filterOn ? <ListFilter size={11} className="flex-none" aria-hidden /> : null}
-                    <span className="truncate">{peekLabel}</span>
+                    <span
+                      className="truncate"
+                      data-theater-queue-count={queueCount ? '' : undefined}
+                    >
+                      {peekLabel}
+                    </span>
                   </>
                 )}
               </button>

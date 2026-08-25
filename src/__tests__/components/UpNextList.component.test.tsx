@@ -136,51 +136,92 @@ describe('UpNextList grouping headings', () => {
 })
 
 /**
- * Owner report (mobile, 2/26): a row sat under "NOT WATCHED YET" carrying a
- * green ✓ — "it's categorizing a video that I've not watched yet but when I
- * watch it, it stays in that section". The grouping is deliberately frozen at
- * arrival so positions (and the position counter) stay put while you watch, so
- * the fix is that the heading must not CLAIM the row is unwatched, and must
- * show progress some other way: the label is "Up next" and its count is what's
- * still pending, live.
+ * Owner: a watched row should leave Up next / New and land in Watched
+ * earlier. The playing row stays put so dwell does not yank it mid-watch.
  */
-describe('UpNextList — watching a row updates the heading, not the layout', () => {
+describe('UpNextList — watching a row moves it to Watched earlier', () => {
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString()
   const post = (id: string, addedHoursAgo: number) =>
     item({ bookmarkId: id, url: `/alice/status/${id}`, addedAt: hoursAgo(addedHoursAgo) })
   const items = [post('a', 1), post('b', 2)]
   const wasSeenOnEntry = () => false
 
-  it('keeps a just-watched row in place and drops the pending count', () => {
+  it('keeps the playing row in Up next, and moves a finished row to Watched', () => {
     const { rerender } = render(
-      <UpNextList {...base} items={items} wasSeenOnEntry={wasSeenOnEntry} />,
+      <UpNextList {...base} items={items} currentKey="twitter:a" wasSeenOnEntry={wasSeenOnEntry} />,
     )
     const order = () => screen.getAllByRole('separator').map((el) => el.textContent)
     expect(order()).toEqual(['Up next2'])
 
-    // Now 'a' has been watched THIS session: still grouped under Up next (its
-    // arrival group), but the heading's pending count drops to 1.
     rerender(
       <UpNextList
         {...base}
         items={items}
+        currentKey="twitter:b"
         isSeen={(k) => k === 'twitter:a'}
         wasSeenOnEntry={wasSeenOnEntry}
       />,
     )
-    expect(order()).toEqual(['Up next1'])
-    // The row did NOT move out of the group, and no second heading appeared.
-    expect(screen.queryByText('Watched earlier')).not.toBeInTheDocument()
+    expect(order()).toEqual(['Up next1', 'Watched earlier1'])
+    expect(screen.queryByText('next ↓')).not.toBeInTheDocument()
   })
 
-  it('drops the heading count to nothing once every row is watched, without regrouping', () => {
+  it('puts a second-screen arrival under New since you opened while the playing row stays put', () => {
+    const watched = post('seen', 4)
+    const playing = item({
+      bookmarkId: 'now',
+      url: '/alice/status/now',
+      addedAt: hoursAgo(2),
+      text: 'playing-now',
+    })
+    const arrival = item({
+      bookmarkId: 'fresh',
+      url: '/alice/status/fresh',
+      addedAt: hoursAgo(0),
+      text: 'fresh-arrival',
+    })
+    const { rerender } = render(
+      <UpNextList
+        {...base}
+        items={[playing, watched]}
+        currentKey="twitter:now"
+        isSeen={(k) => k === 'twitter:now' || k === 'twitter:seen'}
+        wasSeenOnEntry={(k) => k === 'twitter:seen'}
+      />,
+    )
+    expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual([
+      'Up next',
+      'Watched earlier1',
+    ])
+
+    rerender(
+      <UpNextList
+        {...base}
+        items={[arrival, playing, watched]}
+        currentKey="twitter:now"
+        freshKeys={new Set(['twitter:fresh'])}
+        isSeen={(k) => k === 'twitter:now' || k === 'twitter:seen'}
+        wasSeenOnEntry={(k) => k === 'twitter:seen'}
+      />,
+    )
+    const headings = screen
+      .getAllByRole('separator')
+      .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
+    expect(headings).toEqual(['New since you opened1', 'Up next', 'Watched earlier1'])
+    expect(screen.getByText('fresh-arrival').closest('button')).not.toHaveAttribute('aria-current')
+    expect(screen.getByText('playing-now').closest('button')).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+  })
+
+  it('puts every finished row under Watched earlier once nothing is current', () => {
     render(
       <UpNextList {...base} items={items} isSeen={() => true} wasSeenOnEntry={wasSeenOnEntry} />,
     )
-    // Rows stay put under their arrival grouping; the heading just loses its
-    // count entirely rather than showing a bare 0. No caught-up line — the
-    // absent count is the signal (owner: the line was "just additional text").
-    expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual(['Up next'])
+    expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual([
+      'Watched earlier2',
+    ])
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
   })
 })
@@ -215,9 +256,9 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
     const headings = screen
       .getAllByRole('separator')
       .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
-    // "Shared post" carries no count — it's one post, and the number would
+    // "This post" carries no count — it's one post, and the number would
     // read as a queue length. The live groups below keep theirs.
-    expect(headings).toEqual(['Shared post', 'Up next2', 'Watched earlier1'])
+    expect(headings).toEqual(['This post', 'Up next2', 'Watched earlier1'])
   })
 
   it('excludes the shared post from the group counts', () => {
@@ -243,7 +284,7 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
       />,
     )
     expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual([
-      'Shared post',
+      'This post',
       'Watched earlier1',
     ])
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
@@ -256,7 +297,7 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
       .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
     // No carve-out: 'shared' is just another unwatched post, so 3 are pending.
     expect(headings).toEqual(['Up next3', 'Watched earlier1'])
-    expect(screen.queryByText('Shared post')).not.toBeInTheDocument()
+    expect(screen.queryByText('This post')).not.toBeInTheDocument()
   })
 
   it('renders no headings at all in playlist mode (no wasSeenOnEntry)', () => {

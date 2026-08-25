@@ -8,6 +8,7 @@ import {
   clearArchives,
   expectSignInModal,
   expectTheaterReady,
+  visibleQueueCount,
 } from './helpers'
 
 test.describe('theater shortcuts (signed out)', () => {
@@ -48,7 +49,10 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help).toHaveCount(0)
 
     await first.click()
-    await expect(page.getByRole('button', { name: 'Previous post' })).toBeEnabled()
+    // Live leftover always stages the next unseen at index 0, so Previous
+    // stays disabled. The dock count is the signal that Next actually moved.
+    await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
+    await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
   })
 
   test('. opens the signed-out menu; S opens sign-in', async ({ page }) => {
@@ -103,8 +107,10 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
 
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('button', { name: 'Previous post' })).toBeEnabled()
+    await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
+    await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
     await page.keyboard.press('ArrowLeft')
+    await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
     await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
 
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()

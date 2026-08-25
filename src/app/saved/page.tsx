@@ -7,8 +7,8 @@ import AuthedTheater from '../AuthedTheater'
 
 /**
  * `/saved` — the Saved side of the theater's Live ⇄ Saved switch (the Live
- * side is `/live`). Signed-in `/` redirects here — next unread is the default
- * landing. The grid with filters and search is `/library`.
+ * side is `/live`). Signed-in `/` is Live; this route is the unread pile
+ * (library card taps, `?open=`). The grid with filters and search is `/library`.
  *
  * Signed-out visitors have no saves to play, so they land on the public
  * theater instead.

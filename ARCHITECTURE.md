@@ -10,15 +10,15 @@ routes _are_ the backend, and they talk to SQLite via Drizzle ORM.
 
 ## Product surfaces
 
-| Route                                                                       | What it is                                                              |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `/`                                                                         | Signed-out public live theater. Signed-in: redirects to `/saved`.       |
-| `/live`                                                                     | Signed-in **Live** tab — community pulse. Signed-out: redirects to `/`. |
-| `/saved`                                                                    | **Saved** — unread queue. Signed-in default landing.                    |
-| `/collection`                                                               | 308 → `/saved` (legacy URL).                                            |
-| `/library`                                                                  | The **library** grid over your saves (search, tags, filters).           |
-| `/t/{user}/{tag}`                                                           | A **playlist** — one public tag, looping theater.                       |
-| `/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}` | Preview pages. They **are** the theater (shared mode), plus SEO.        |
+| Route                                                                       | What it is                                                          |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `/`                                                                         | Signed-out public live theater. Signed-in: redirects to `/live`.    |
+| `/live`                                                                     | Signed-in **Live** tab — leftover community pulse. Signed-out: `/`. |
+| `/saved`                                                                    | **Saved** — unread queue (library taps / `?open=`).                 |
+| `/collection`                                                               | 308 → `/saved` (legacy URL).                                        |
+| `/library`                                                                  | The **library** grid over your saves (search, tags, filters).       |
+| `/t/{user}/{tag}`                                                           | A **playlist** — one public tag, looping theater.                   |
+| `/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}` | Preview pages. They **are** the theater (shared mode), plus SEO.    |
 
 A **playlist** is one shared tag. A user's pile of saves is **Saved**.
 The grid that browses it is the **library**. Archive is private — it does not

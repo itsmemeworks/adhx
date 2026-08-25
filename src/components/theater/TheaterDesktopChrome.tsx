@@ -74,7 +74,7 @@ import {
   PLATFORM_LABEL,
   PERSONAL_TAB_ORDER,
   PERSONAL_TAB_LABEL,
-  REPEAT_MODE_LABEL,
+  repeatModeLabel,
 } from './types'
 import { TheaterCaption } from './TheaterCaption'
 import { theaterRowCaption } from './TheaterText'
@@ -83,7 +83,11 @@ import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
+import {
+  formatQueueCount,
+  isTheaterQueueFilterActive,
+  theaterQueueFilterLabel,
+} from './theater-math'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
@@ -146,8 +150,14 @@ export interface DesktopDockProps {
   wasSeenOnEntry?: (key: string) => boolean
   /** The shared post on a preview page — pinned as the lead row and excluded from the section grouping (it isn't "what's new", it's the link the visitor followed). Passed straight to `UpNextList`. */
   pinnedKey?: string | null
-  /** How many posts the end cap's count is out of — what will actually play from here (see `computeQueueTotal`). Falls back to `items.length`. */
+  /** Whole queue size — looping copy uses this. Falls back to `items.length`. */
   queueTotal?: number
+  /** Finished posts from this leftover run. */
+  queuePlayed?: number
+  /** How many posts this leftover run will play. */
+  queueToPlay?: number
+  /** Keep playing / Repeat this post. */
+  queueLooping?: boolean
   savedToday: number
   onSelect: (key: string) => void
   waiting?: boolean
@@ -846,9 +856,12 @@ export function DesktopDock({
   wasSeenOnEntry,
   pinnedKey,
   queueTotal,
+  queuePlayed,
+  queueToPlay,
+  queueLooping,
   savedToday: _savedToday,
   onSelect,
-  waiting: _waiting,
+  waiting = false,
   muted,
   onSetMuted,
   canPrev,
@@ -873,7 +886,7 @@ export function DesktopDock({
   const queueRootRef = useRef<HTMLDivElement>(null)
   const closeShowAll = useCallback(() => setShowAll(false), [])
   useTheaterActionHotkeys('desktop', rootRef)
-  useTheaterQueueOverlay({ open: showAll, onClose: closeShowAll, containerRef: queueRootRef })
+  useTheaterQueueOverlay({ open: showAll, onClose: closeShowAll, containerRef: rootRef })
 
   const kind = progressKindFor(current, articleMode)
   const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
@@ -897,6 +910,16 @@ export function DesktopDock({
   const displayMuted = liveMuted ?? muted
   const soundPulse = kind === 'video' && displayMuted && videoPlaying
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+  const repeatCopy = repeatMode
+    ? repeatModeLabel(repeatMode, { saved: _collection?.tab === 'collection' })
+    : null
+  const queueCount = formatQueueCount({
+    looping: queueLooping ?? false,
+    played: queuePlayed ?? 0,
+    toPlay: queueToPlay ?? 0,
+    length: queueTotal ?? items.length,
+  })
 
   // Computed from the DISPLAYED state (not the shell's possibly-stale
   // `muted` prop) so the button always moves the direction the icon shows —
@@ -926,11 +949,8 @@ export function DesktopDock({
     }
   }
 
-  const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
-
   const handlePanelSelect = (key: string) => {
     onSelect(key)
-    setShowAll(false)
   }
 
   return (
@@ -1001,8 +1021,8 @@ export function DesktopDock({
             <button
               type="button"
               onClick={onCycleRepeat}
-              aria-label={REPEAT_MODE_LABEL[repeatMode].action}
-              title={REPEAT_MODE_LABEL[repeatMode].state}
+              aria-label={repeatCopy?.action}
+              title={repeatCopy?.state}
               className={cn(TRANSPORT_BTN, repeatMode !== 'off' && 'text-clay hover:text-clay')}
               data-theater-action="repeat"
             >
@@ -1037,8 +1057,16 @@ export function DesktopDock({
           {items.map((item, i) => {
             const key = theaterItemKey(item)
             const isCurrent = key === currentKey
-            const isNext = currentIndex >= 0 && i === currentIndex + 1
             const seen = seenReady && isSeen(key)
+            // Same as Queue: after regroup, index+1 is often a watched card.
+            // Repeat-off will not auto-play it, so do not label NEXT →.
+            const isNext =
+              !waiting && currentIndex >= 0 && i === currentIndex + 1 && !(wasSeenOnEntry && seen)
+            // Queue rows grey watched thumbs; the strip must match. While the
+            // caught-up overlay is up the parked "NOW" card is already watched
+            // — dim it too, and do not label a sequential NEXT that will not
+            // auto-play.
+            const dimWatched = seen && (!isCurrent || waiting)
             const fresh = freshKeys.has(key)
             const type = inferType(item)
             const tile = TYPE_TILE[type]
@@ -1059,14 +1087,19 @@ export function DesktopDock({
                 aria-current={isCurrent ? 'true' : undefined}
                 className={cn(
                   'flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 p-2 text-left transition-colors',
-                  isCurrent
+                  isCurrent && !waiting
                     ? 'border-clay bg-inset'
                     : 'border-transparent bg-black/15 hover:bg-inset/60',
-                  !isCurrent && seen && 'opacity-55',
+                  dimWatched && 'opacity-45',
                   !isCurrent && fresh && 'bg-clay/[0.07]',
                 )}
               >
-                <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
+                <div
+                  className={cn(
+                    'relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset',
+                    dimWatched && 'grayscale',
+                  )}
+                >
                   {item.thumbnailUrl ? (
                     <img
                       src={item.thumbnailUrl}
@@ -1109,12 +1142,12 @@ export function DesktopDock({
                       as garbled "MOWN") — while pinned, the current card's
                       tag IS the repeat state: one cohesive icon+label tag,
                       never NOW alongside a second indicator. */}
-                    {isCurrent && repeatCurrent ? (
+                    {isCurrent && !waiting && repeatCurrent ? (
                       <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
                         <Repeat size={10} aria-hidden />
                         <span>Repeat</span>
                       </span>
-                    ) : isCurrent ? (
+                    ) : isCurrent && !waiting ? (
                       <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
                         NOW
                       </span>
@@ -1207,7 +1240,7 @@ export function DesktopDock({
           )}
         </div>
 
-        {/* End cap — fades in over the strip. Queue / position / new, stacked.
+        {/* End cap — fades in over the strip. Queue / leftover · total / new.
           A filter-on ListFilter is the only closed-panel cue (types live in
           the overlay). */}
         <div
@@ -1241,12 +1274,13 @@ export function DesktopDock({
               <span>Queue</span>
               {filterOn ? <ListFilter size={12} className="flex-none" aria-hidden /> : null}
             </button>
-            {currentIndex >= 0 ? (
+            {queueCount ? (
               <span
+                data-theater-queue-count
                 className="text-[11px] tabular-nums text-ink-3"
-                aria-label={`${currentIndex + 1} of ${queueTotal ?? items.length}`}
+                aria-label={queueCount.ariaLabel}
               >
-                {currentIndex + 1}/{queueTotal ?? items.length}
+                {queueCount.text}
               </span>
             ) : null}
             {!playlist && newCount > 0 ? (
@@ -1274,7 +1308,7 @@ export function DesktopDock({
                   directly below it. Falls back to "Up next" where repeat isn't
                   offered (the personal theater's Collection tab). */}
                 <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
-                  {repeatMode ? REPEAT_MODE_LABEL[repeatMode].queue : 'Up next'}
+                  {repeatCopy ? repeatCopy.queue : 'Up next'}
                 </span>
                 <button
                   type="button"

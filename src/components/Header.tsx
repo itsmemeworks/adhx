@@ -415,7 +415,7 @@ export function Header() {
 
             {/* Primary nav — every entry is a real route now that the theater
                 has its own: signed-in `/` (and this Theater link) lands on
-                `/saved` (next unread); `/live` is Live; the grid is
+                `/live`; `/saved` is the unread pile; the grid is
                 `/library`. "Theater" names the surface rather than one tab.
                 Only when authenticated, hidden on mobile (mobile uses the menu). */}
             {authStatus?.authenticated && (

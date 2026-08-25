@@ -88,6 +88,24 @@ describe('notifyCollectionChanged', () => {
 
 const canBroadcast = typeof BroadcastChannel !== 'undefined'
 
+function waitUntil(predicate: () => boolean, timeoutMs = 500): Promise<void> {
+  const started = Date.now()
+  return new Promise((resolve, reject) => {
+    const tick = () => {
+      if (predicate()) {
+        resolve()
+        return
+      }
+      if (Date.now() - started > timeoutMs) {
+        reject(new Error('timed out waiting for BroadcastChannel'))
+        return
+      }
+      setTimeout(tick, 5)
+    }
+    tick()
+  })
+}
+
 describe.skipIf(!canBroadcast)('notifyCollectionChanged cross-tab', () => {
   beforeEach(() => {
     resetClientEventBridgeForTests()
@@ -99,7 +117,7 @@ describe.skipIf(!canBroadcast)('notifyCollectionChanged cross-tab', () => {
     other.onmessage = (event) => received.push(event.data)
     try {
       notifyCollectionChanged({ removed: { platform: 'twitter', id: '7' } })
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await waitUntil(() => received.length > 0)
       expect(received).toContainEqual({
         name: 'tweet-added',
         detail: { removed: { platform: 'twitter', id: '7' } },
@@ -118,7 +136,7 @@ describe.skipIf(!canBroadcast)('notifyCollectionChanged cross-tab', () => {
         refetchFeed: false,
         added: { platform: 'twitter', id: '88' } as FeedItem,
       })
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await waitUntil(() => received.length > 0)
       expect(received).toContainEqual({
         name: 'tweet-added',
         detail: { added: { platform: 'twitter', id: '88' } },
@@ -137,7 +155,7 @@ describe.skipIf(!canBroadcast)('notifyCollectionChanged cross-tab', () => {
         name: 'tweet-added',
         detail: { removed: { platform: 'twitter', id: '9' } },
       })
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await waitUntil(() => feed.length > 0)
       expect(feed).toHaveLength(1)
       expect((feed[0] as CustomEvent).detail).toEqual({
         removed: { platform: 'twitter', id: '9' },

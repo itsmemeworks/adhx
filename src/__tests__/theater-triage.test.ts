@@ -17,6 +17,7 @@ import {
   personalAdvanceMatching,
   personalAdvanceOnEndedIndex,
   personalAdvanceOnEndedMatching,
+  personalSkipMatching,
   personalStepBackIndex,
   personalStepBackMatching,
   type PersonalUndoAction,
@@ -157,5 +158,21 @@ describe('personalAdvanceOnEndedMatching', () => {
 
   it('stays on the current post when repeat is one', () => {
     expect(personalAdvanceOnEndedMatching(1, 5, 'one', odds)).toBe(1)
+  })
+})
+
+describe('personalSkipMatching', () => {
+  const odds = (i: number) => i % 2 === 1
+
+  it('wraps the Saved list when repeat is all', () => {
+    expect(personalSkipMatching(3, 5, 'all', odds)).toBe(1)
+  })
+
+  it('walks off the end when repeat is off so All Clear can render', () => {
+    expect(personalSkipMatching(3, 5, 'off', odds)).toBe(5)
+  })
+
+  it('still advances when repeat is one — Next means leave this post', () => {
+    expect(personalSkipMatching(1, 5, 'one', odds)).toBe(3)
   })
 })

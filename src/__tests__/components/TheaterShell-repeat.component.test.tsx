@@ -9,8 +9,8 @@
  *     wants continuous play doesn't re-set it every time. 'one' deliberately
  *     does NOT persist — it's about the post in front of you, and inheriting it
  *     next visit would strand you looping something at random.
- *  2. The mobile position counter is out of what will actually play, so
- *     flipping the control visibly changes the denominator.
+ *  2. The leftover count is what will actually play, so flipping the
+ *     control visibly changes leftover vs the full pile.
  *
  * Harness copied from TheaterShell-waiting.component.test.tsx: the chromes are
  * capturing stubs, so the test drives `onCycleRepeat` and reads back the props
@@ -139,13 +139,31 @@ describe('TheaterShell: repeat is a remembered switch', () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('off')
   })
 
-  it('counts the position out of the unwatched run, and out of everything once repeat is on', async () => {
-    // Nothing seen, so all three are pending: the run IS the whole queue here.
+  it('counts leftover while stopping, and the full pile once repeat is on', async () => {
+    // Nothing seen, so all three are pending: leftover IS the pile here.
     render(<TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} />)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(3)
+    expect(chromeProps().queueLooping).toBe(false)
     expect(chromeProps().queueTotal).toBe(3)
 
-    await cycleRepeat() // -> all: everything plays either way
+    await cycleRepeat() // -> all: leftover is no longer a stop-count
+    expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(3)
+  })
+
+  it('counts a user Next as played of the leftover run', async () => {
+    render(<TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} />)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(3)
+
+    const onNext = chromeProps().onNext as (() => void) | undefined
+    if (!onNext) throw new Error('next control not offered')
+    await act(async () => onNext())
+
+    expect(chromeProps().queuePlayed).toBe(1)
+    expect(chromeProps().queueToPlay).toBe(3)
+    expect(chromeProps().queueLooping).toBe(false)
   })
 
   it('shrinks the denominator to the unwatched run when most posts were already watched', async () => {
@@ -158,10 +176,14 @@ describe('TheaterShell: repeat is a remembered switch', () => {
       render(<TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} />)
     })
 
-    // One pending post, so "1 / 1" rather than a misleading "1 / 3".
-    expect(chromeProps().queueTotal).toBe(1)
+    // One pending post of three — leftover, not a playlist position.
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
 
     await cycleRepeat() // -> all: the watched ones are back in play
+    expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(3)
   })
 })
@@ -236,7 +258,10 @@ describe('TheaterShell: a shared preview page groups its queue like home', () =>
       )
     })
     // shared (exempt) + '2' = a 2-long pending run, not 0 and not all 3.
-    expect(chromeProps().queueTotal).toBe(2)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(2)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
   })
 
   it('leaves a curated playlist ungrouped', async () => {

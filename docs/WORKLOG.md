@@ -6,6 +6,58 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Saved Play once is 2 of 92, not 1 of 92
+
+Saved one-pass reused Live leftover math (`played = index` of posts already left), so the second filmstrip post read **1 of 92**. List walks now use the 1-based now-playing index (`listWalk: true` on Saved). Live leftover is unchanged (`N in queue` then `1 of N` after Next). Signed-out shortcut e2e no longer treats Previous-enabled as “Next worked” — leftover Next stays at index 0. Tests: `computeQueueCounts`, `theater-chrome`, `e2e/queue-count`, `e2e/theater-shortcuts`. In-flight until the PR merges.
+
+## 2026-08-25 — Saved Queue Watched on prepend / filter skip
+
+A second-window save at the front of Saved was labelled Watched because “everything before the cursor” counted as played. Saved now tracks posts actually left this session, so prepends and Videos-skipped rows stay unmarked; landing on a prepend then leaving it still marks Watched. Session prepends keep the clay fresh accent. `/live` ⇄ `/saved` remounts resume the playing Saved identity from sessionStorage (`?open=` still wins). Tests: `TheaterShell-cross-tab-add`, `saved-playing`, AuthedTheater cursor restore, more `e2e/theater-cross-tab-add` cases. In-flight until the PR merges.
+
+## 2026-08-25 — Cross-tab add + Queue filters
+
+A second-window save now resets a hiding type filter the same way same-tab paste does, so a text add is not invisible behind Videos. Live paste keeps the Saved cursor (compute the new index on the prepended array, not after a stale setState). Videos while a text post is current snaps to a matching row or caught-up instead of “Nothing playing”. Saved Videos walks backward to a matching prepend. Tests: `TheaterShell-cross-tab-add`, UpNextList arrival heading, `e2e/theater-cross-tab-add.spec.ts`. In-flight until the PR merges.
+
+## 2026-08-25 — Live home; play New-since-opened before caught-up
+
+Signed-in `/` redirects to `/live`. A signed-in preview keeps the opened post first in leftover Live (autosave unchanged) and does not shared-post-repeat, so it auto-advances into unseen. Live Next / auto-advance now plays still-unseen arrivals (including ones already in the waiting baseline) before “You’re all caught up”. In-flight until the PR merges.
+
+## 2026-08-25 — Unplayed leftover is “N in queue”
+
+`0 of 1` read as a zero-based index. Off-repeat now says `N in queue` until the first leave, then `16 of 23`. Repeat on is still `N on repeat`. In-flight until the PR merges.
+
+## 2026-08-25 — CI: prettier table + BroadcastChannel wait
+
+format:check failed on the theater-first surface table after the “This post” cell grew. Cross-tab Archive test waited one tick and flaked empty on CI; it now waits until the channel delivers. In-flight until the PR merges.
+
+## 2026-08-25 — Queue-count e2e + Saved Play-once persist
+
+e2e covers Live `0 of N` → `1 of N` → `N on repeat`, Saved loop vs Play once, playlist `3 on repeat`, and preview Queue **This post**. User Next now marks the leftover post seen so the count moves without waiting on the 2s dwell. Saved repeat prefs no longer overwrite `localStorage` on the first paint. In-flight until the PR merges.
+
+## 2026-08-25 — Playlist-style queue count; “This post” not “Shared post”
+
+Off-repeat is YouTube/Spotify progress through what will play (`16 of 23`, including `0 of 23` at the start). Repeat on is just the pile (`23 on repeat`). The preview-page Queue heading is **This post** — it is the post the visitor opened, not a share. In-flight until the PR merges.
+
+## 2026-08-25 — Queue count is run progress, or “on repeat”
+
+Repeat off is how many of this leftover run have played (`16 of 23`; just `23` before the first leave). Repeat on is the pile (`24 on repeat`). Live still stages the leftover head, so this is not a playlist index and not leftover-vs-pile (`2 left · 20`). In-flight until the PR merges.
+
+## 2026-08-25 — Queue count is leftover + pile, not position
+
+The dock/peek `n / N` read as a playlist index, but Live always stages the next leftover post (the head of the stack). The two numbers that matter are leftover to play and how many posts are in the queue. Repeat-off leftover is `2 left · 20`; looping or caught-up is just `20`. Saved one-pass leftover shrinks (`8 left · 13`). In-flight until the PR merges.
+
+## 2026-08-25 — Queue stays open when the stage advances
+
+Expanding Queue (desktop panel / mobile up-next sheet) used to collapse as soon as the next post staged — the mobile sheet reset on `currentKey`, and both chromes closed after a row pick. The list now stays up while playback continues; Escape, click-away, and the Queue toggle still close it. In-flight until the PR merges.
+
+## 2026-08-25 — Live vs Saved repeat and queue counters
+
+Live no-repeat is leftover unseen (`1 / 2`, then wait). Re-watch all zeros that run so the counter is `1 / N` of the full list. Saved defaults to looping the list (everything there was saved on purpose); no-repeat is one pass then All Clear. The two prefs persist separately so flipping tabs does not clobber the other. Peek/dock use `computeQueuePosition` so a leftover Live run is never `8 / 13`. In-flight until the PR merges.
+
+## 2026-08-25 — Live stop-when-caught-up does not replay the run
+
+Repeat-off auto-advance finished the unseen run, jumped back to a mid-play arrival, then walked the frozen "unseen on entry" block again (the two just watched). It now prefers still-unwatched ahead, then arrivals behind, then waits. The Queue moves a finished post into Watched earlier (the playing row stays put). Filmstrip watched thumbs use the same grey as Queue; caught-up hides NOW/NEXT. In-flight until the PR merges.
+
 ## 2026-08-25 — Hotfix: Live queue-filter e2e hit a hidden mobile list
 
 `e2e/live-queue-filter.spec.ts` failed on main after #414: `E2E-PULSE-TEXT` was in the DOM (`hidden`) because mobile `UpNextList` stays mounted under `lg:hidden`. `getByText().first()` pinned that copy. Queue-row asserts now go through the desktop Playlist dialog. In-flight until the hotfix PR merges.

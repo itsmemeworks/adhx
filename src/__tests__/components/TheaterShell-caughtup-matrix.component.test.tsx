@@ -21,8 +21,8 @@
  * `seed`, `textItem`) with one addition: a controllable `useAuthMe` stub so
  * the SAME matrix can be driven for both the signed-out public theater
  * (`mode="home"`, the default) and the signed-in Live tab
- * (`mode="personal" initialPersonalTab="live"`, how AuthedHome mounts the shell
- * for `/`). The owner hits this signed in; the public site hits it signed
+ * (`mode="personal" initialPersonalTab="live"`, how AuthedTheater mounts the
+ * shell for `/live`). The owner hits this signed in; the public site hits it signed
  * out — the state machine is supposed to behave identically either way, and
  * several tests below assert that equivalence explicitly rather than assume
  * it.
@@ -124,6 +124,9 @@ function chromeProps() {
     currentKey: string | null
     current: TheaterItem | null
     queueTotal?: number
+    queuePlayed?: number
+    queueToPlay?: number
+    queueLooping?: boolean
     onCycleRepeat?: () => void
     repeatMode?: RepeatMode
   }
@@ -172,9 +175,9 @@ async function renderHome(items: TheaterItem[]) {
 }
 
 /**
- * Signed-in Live tab — how `AuthedHome` mounts the shell for authed `/`
+ * Signed-in Live tab — how `AuthedTheater` mounts the shell for `/live`
  * (`mode="personal"`, `initialPersonalTab="live"`, empty `personalItems` since the
- * Live tab never reads that prop — see AuthedHome.tsx's `PERSONAL_LIVE_SEED`).
+ * Live tab never reads that prop).
  * `global.fetch` must be stubbed before this: once the live queue renders it
  * fires a bulk `/api/feed` membership lookup — a harmless no-op against a
  * generic `{ ok: false }`.
@@ -292,7 +295,10 @@ describe('TheaterShell caught-up matrix: mount-time seen-state', () => {
     const props = chromeProps()
     expect(props.items.map((i) => i.bookmarkId)).toEqual(['1', '3', '2'])
     expect(props.currentKey).toBe(theaterItemKey(item1))
-    expect(props.queueTotal).toBe(2)
+    expect(props.queuePlayed).toBe(0)
+    expect(props.queueToPlay).toBe(2)
+    expect(props.queueLooping).toBe(false)
+    expect(props.queueTotal).toBe(3)
   })
 })
 
@@ -370,11 +376,11 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await act(async () => pressNext())
@@ -383,7 +389,7 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await keepPlaying()
     // Wraps to item 1 — does NOT replay item 3, the post just finished.
-    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item1))
   })
 
   /** Same walk, but reached via the OTHER trigger a real session actually
@@ -397,11 +403,11 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await endCurrentItem()
@@ -450,17 +456,15 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await endCurrentItem()
 
-    // Expected: caught-up. Actual: still on the stage, cursor bounced back
-    // to item 1 (see comment above) — this assertion fails.
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
   })
 
@@ -477,16 +481,15 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await act(async () => pressNext())
 
-    // Expected: caught-up. Actual: cursor reverts to item 1 — fails.
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
   })
 })
@@ -506,6 +509,7 @@ describe('TheaterShell caught-up matrix: repeat mode', () => {
     const cycle = chromeProps().onCycleRepeat as () => void
     await act(async () => cycle())
     expect(chromeProps().repeatMode).toBe('all')
+    expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(2)
 
     await endCurrentItem() // item1 -> item2
@@ -525,17 +529,24 @@ describe('TheaterShell caught-up matrix: repeat mode', () => {
     const item3 = textItem('3')
     markWatched([item2, item3])
     await renderHome([item1, item2, item3])
-    // One pending post (item1) — "1 / 1", not "1 / 3".
-    expect(chromeProps().queueTotal).toBe(1)
+    // One pending post (item1) — leftover 1 of a 3-long pile.
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
 
     const cycle = () => chromeProps().onCycleRepeat as () => void
     await act(async () => cycle()()) // off -> all
+    expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(3)
 
     await act(async () => cycle()()) // all -> one
     await act(async () => cycle()()) // one -> off
     expect(chromeProps().repeatMode).toBe('off')
-    expect(chromeProps().queueTotal).toBe(1)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
   })
 })
 
@@ -561,7 +572,10 @@ describe('TheaterShell caught-up matrix: arrivals', () => {
 
     expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe(theaterItemKey(arrival))
-    expect(chromeProps().queueTotal).toBe(1)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(3)
   })
 
   /** Equivalence: this mechanism (the waiting-stage auto-arrival effect) is
@@ -677,5 +691,68 @@ describe('TheaterShell caught-up matrix: caught-up never lies about a post behin
 
     expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe(theaterItemKey(arrival))
+  })
+
+  it('[signed out] Next after the leftover run plays New-since-opened before caught-up', async () => {
+    const item1 = textItem('1')
+    const item2 = textItem('2')
+    const watched = textItem('w')
+    markWatched([watched])
+    await renderHome([item1, item2, watched])
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item1))
+
+    const freshB = textItem('fresh-b')
+    const freshA = textItem('fresh-a')
+    await act(async () => pushArrival?.(freshA))
+    await act(async () => pushArrival?.(freshB))
+
+    await act(async () => pressNext())
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
+    await act(async () => pressNext())
+    expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe(theaterItemKey(freshB))
+    await act(async () => pressNext())
+    expect(chromeProps().currentKey).toBe(theaterItemKey(freshA))
+    await act(async () => pressNext())
+    expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
+  })
+})
+
+describe('TheaterShell: signed-in preview is leftover Live, not shared-post-repeat', () => {
+  it('auto-advances the opened post into still-unseen Live', async () => {
+    const shared = textItem('shared')
+    const unseen = textItem('2')
+    const watched = textItem('3')
+    markWatched([watched])
+    authMeState.me = { authenticated: true, user: { username: 'owner' } }
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([shared, unseen, watched])}
+          mode="shared"
+          sharedItem={shared}
+          authed
+        />,
+      )
+    })
+    expect((mockStage.mock.calls.at(-1)![0] as { repeat?: boolean }).repeat).toBe(false)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
+    expect(chromeProps().items.map((i) => i.bookmarkId)[0]).toBe('shared')
+
+    await endCurrentItem()
+
+    expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe(theaterItemKey(unseen))
+  })
+
+  it('[signed out] still repeats the opened post until the visitor Nexts', async () => {
+    const shared = textItem('shared')
+    const unseen = textItem('2')
+    await act(async () => {
+      render(<TheaterShell seed={seed([shared, unseen])} mode="shared" sharedItem={shared} />)
+    })
+    // Native video loop swallows `ended`; the pin is what Stage receives.
+    expect((mockStage.mock.calls.at(-1)![0] as { repeat?: boolean }).repeat).toBe(true)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
   })
 })
