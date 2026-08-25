@@ -9,12 +9,12 @@
  *
  * Two components, one file:
  *  - `DesktopStageChrome` — absolutely-positioned overlays INSIDE the stage
- *    wrapper (brand + LIVE, paste-a-link input, flame chip,
+ *    wrapper (brand + LIVE, flame chip, paste-a-link input,
  *    the media post's author/caption overlay (Read opens the stacked article),
  *    and the action buttons — Open is the source platform glyph).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
  *    (two-row transport + de-clutter + horizontal filmstrip + end cap), plus the
- *    "Show all" overlay panel reusing `UpNextList`.
+ *    "Queue" overlay panel reusing `UpNextList`.
  *
  * Both are CSS-hidden below `lg` (the mobile chrome owns those viewports)
  * and carry no timers, so — unlike the mobile chrome — they need no
@@ -23,6 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
+import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import Link from 'next/link'
 import {
   Bookmark,
@@ -37,6 +38,7 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
+  ListFilter,
   Maximize2,
   Pause,
   Play,
@@ -46,7 +48,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo, PlatformGlyph, type ContentType } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { authorProfileUrl, sourceUrl } from '@/lib/activity/preview-path'
 import { pingAnalytic } from '@/lib/analytics/client'
@@ -80,6 +82,8 @@ import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { TheaterQueueFilter } from './TheaterQueueFilter'
+import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
 import { logAV } from './YtDebugOverlay'
 import type {
   RepeatMode,
@@ -109,7 +113,7 @@ export interface DesktopStageChromeProps {
   onRequestSignIn?: () => void
   /** Playlist mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
   onRequestMakeYourOwn?: () => void
-  /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive to the Live action row. */
+  /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive left of Download. */
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
@@ -165,9 +169,8 @@ export interface DesktopDockProps {
   declutter: boolean
   /** Hide chrome — lives in the dock so the top-right avatar never moves. */
   onToggleDeclutter?: () => void
-  /** Collection mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only savedToday/newCount lines in the end cap. */
+  /** Playlist mode: appends a "loops" divider + a ghosted copy of the first card after the filmstrip, and hides the live-pulse-only new-count line in the end cap. */
   playlist?: TheaterPlaylistMeta
-  /** Collection mode: end cap shows "{remaining} left" instead of savedToday/newCount. */
   collection?: TheaterPersonalChrome
   /**
    * shared-post-repeat (desktop parity with TheaterMobileChrome): the shared
@@ -191,6 +194,14 @@ export interface DesktopDockProps {
   onCycleRepeat?: () => void
   /** Video/photo + quote in article mode — dock pause/audio follow the reader. */
   articleMode?: boolean
+  /**
+   * Live and Saved: multi-select of post types. Playlists omit the
+   * handlers so the pills never mount. Shown in the Queue playlist
+   * panel. Empty `queueTypes` is All.
+   */
+  queueTypes?: ContentType[]
+  onToggleQueueType?: (type: ContentType) => void
+  onClearQueueTypes?: () => void
 }
 
 export { navigateToAppPath } from '@/lib/theater/navigate-app-path'
@@ -202,7 +213,7 @@ const GLASS =
  * The Save buttons: a Bookmark glyph on the same frosted glass as GLASS,
  * distinguished by a clay border. Covers SavePostButton,
  * PersonalLiveSaveButton, the signed-out Save prompt, AND SavePlaylistButton.
- * Archive's solid fill lives on TheaterCollectionActions.
+ * Archive's clay outline lives on TheaterCollectionActions.
  */
 const SAVE_OUTLINE =
   'inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-clay px-5 text-[12.5px] font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-60'
@@ -337,7 +348,7 @@ export function DesktopStageChrome({
 
   const kind = current ? inferType(current) : null
   const quoteReader = isQuoteReader(current, false)
-  const textLike = (kind !== null && ['text', 'quote', 'article'].includes(kind)) || quoteReader
+  const textLike = (kind !== null && ['text', 'article'].includes(kind)) || quoteReader
   const isMedia = (kind === 'video' || kind === 'photo') && !quoteReader
   const showMediaCaption = isMedia && !articleMode
   const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
@@ -476,8 +487,7 @@ export function DesktopStageChrome({
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
-          {/* One slot: left of paste (or the playlist CTA). Never next to
-              the author/caption — every post type uses this same corner. */}
+          {/* Stats left of paste. Never next to the author/caption. */}
           {current ? <FlameChip trendCount={trendCount} /> : null}
           {playlist && !collection ? (
             !isPlaylistOwner && (
@@ -647,6 +657,9 @@ export function DesktopStageChrome({
           )}
         >
           <div className="flex items-center gap-2">
+            {collection?.tab === 'collection' && (
+              <TheaterCollectionActions collection={collection} variant="desktop" />
+            )}
             {sendFile.supported ? (
               <StageGlass
                 as="button"
@@ -808,9 +821,6 @@ export function DesktopStageChrome({
                 <PlatformGlyph platform={current.platform} size={14} />
               </StageGlass>
             )}
-            {collection?.tab === 'collection' && (
-              <TheaterCollectionActions collection={collection} variant="desktop" />
-            )}
           </div>
         </div>
       ) : null}
@@ -836,9 +846,9 @@ export function DesktopDock({
   wasSeenOnEntry,
   pinnedKey,
   queueTotal,
-  savedToday,
+  savedToday: _savedToday,
   onSelect,
-  waiting,
+  waiting: _waiting,
   muted,
   onSetMuted,
   canPrev,
@@ -848,16 +858,22 @@ export function DesktopDock({
   declutter,
   onToggleDeclutter,
   playlist,
-  collection,
+  collection: _collection,
   repeatCurrent = false,
   repeatMode,
   onCycleRepeat,
   articleMode = false,
+  queueTypes = [],
+  onToggleQueueType,
+  onClearQueueTypes,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const rootRef = useRef<HTMLDivElement>(null)
+  const queueRootRef = useRef<HTMLDivElement>(null)
+  const closeShowAll = useCallback(() => setShowAll(false), [])
   useTheaterActionHotkeys('desktop', rootRef)
+  useTheaterQueueOverlay({ open: showAll, onClose: closeShowAll, containerRef: queueRootRef })
 
   const kind = progressKindFor(current, articleMode)
   const { videoPlaying, timedPaused, setTimedPaused, liveMuted, setLiveMuted } =
@@ -877,17 +893,10 @@ export function DesktopDock({
     el?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
   }, [currentKey])
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowAll(false)
-    }
-    if (showAll) window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [showAll])
-
   const paused = kind === 'video' ? !videoPlaying : timedPaused
   const displayMuted = liveMuted ?? muted
   const soundPulse = kind === 'video' && displayMuted && videoPlaying
+  const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
 
   // Computed from the DISPLAYED state (not the shell's possibly-stale
   // `muted` prop) so the button always moves the direction the icon shows —
@@ -1018,271 +1027,286 @@ export function DesktopDock({
         <span className="mx-1 h-16 w-px flex-none bg-hairline" />
       </div>
 
-      {/* Filmstrip */}
-      <div
-        className="flex flex-1 items-stretch gap-2.5 overflow-x-auto py-3 [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {items.map((item, i) => {
-          const key = theaterItemKey(item)
-          const isCurrent = key === currentKey
-          const isNext = currentIndex >= 0 && i === currentIndex + 1
-          const seen = seenReady && isSeen(key)
-          const fresh = freshKeys.has(key)
-          const type = inferType(item)
-          const tile = TYPE_TILE[type]
-          const Icon = tile.icon
-          const handle = item.author ? item.author.replace(/^@+/, '') : ''
-          const caption = theaterRowCaption(item)
+      {/* Filmstrip + end cap. The cap overlays the strip's right edge so
+          cards fade under it instead of hitting a hard seam. */}
+      <div className="relative min-w-0 flex-1 self-stretch">
+        <div
+          className="flex h-full items-stretch gap-2.5 overflow-x-auto py-3 pr-28 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {items.map((item, i) => {
+            const key = theaterItemKey(item)
+            const isCurrent = key === currentKey
+            const isNext = currentIndex >= 0 && i === currentIndex + 1
+            const seen = seenReady && isSeen(key)
+            const fresh = freshKeys.has(key)
+            const type = inferType(item)
+            const tile = TYPE_TILE[type]
+            const Icon = tile.icon
+            const handle = item.author ? item.author.replace(/^@+/, '') : ''
+            const caption = theaterRowCaption(item)
 
-          return (
-            <button
-              key={key}
-              type="button"
-              ref={(el) => {
-                if (el) cardRefs.current.set(key, el)
-                else cardRefs.current.delete(key)
-              }}
-              onClick={() => onSelect(key)}
-              onMouseEnter={() => warmOnHover(item)}
-              aria-current={isCurrent ? 'true' : undefined}
-              className={cn(
-                'flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 p-2 text-left transition-colors',
-                isCurrent
-                  ? 'border-clay bg-inset'
-                  : 'border-transparent bg-black/15 hover:bg-inset/60',
-                !isCurrent && seen && 'opacity-55',
-                !isCurrent && fresh && 'bg-clay/[0.07]',
-              )}
-            >
-              <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
-                {item.thumbnailUrl ? (
-                  <img
-                    src={item.thumbnailUrl}
-                    alt=""
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className={cn('flex h-full w-full items-center justify-center', tile.bg)}>
-                    <Icon size={14} />
-                  </div>
+            return (
+              <button
+                key={key}
+                type="button"
+                ref={(el) => {
+                  if (el) cardRefs.current.set(key, el)
+                  else cardRefs.current.delete(key)
+                }}
+                onClick={() => onSelect(key)}
+                onMouseEnter={() => warmOnHover(item)}
+                aria-current={isCurrent ? 'true' : undefined}
+                className={cn(
+                  'flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 p-2 text-left transition-colors',
+                  isCurrent
+                    ? 'border-clay bg-inset'
+                    : 'border-transparent bg-black/15 hover:bg-inset/60',
+                  !isCurrent && seen && 'opacity-55',
+                  !isCurrent && fresh && 'bg-clay/[0.07]',
                 )}
-                {fresh && !isCurrent && (
-                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-clay ring-2 ring-surface" />
-                )}
-              </div>
-              {/* Fixed-height meta row: NOW / NEXT → / Repeat used to
+              >
+                <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
+                  {item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className={cn('flex h-full w-full items-center justify-center', tile.bg)}>
+                      <Icon size={14} />
+                    </div>
+                  )}
+                  {fresh && !isCurrent && (
+                    <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-clay ring-2 ring-surface" />
+                  )}
+                </div>
+                {/* Fixed-height meta row: NOW / NEXT → / Repeat used to
                   inherit body line-height (and NEXT could wrap), so those
                   cards grew taller than the rest of the strip. */}
-              <div className="flex h-4 min-w-0 items-center gap-1.5">
-                <PlatformGlyph
-                  platform={item.platform}
-                  size={10}
-                  className="flex-none text-ink-3"
-                />
-                {hasKnownTimestamp(item.addedAt) && (
-                  <span
-                    className="font-mono text-[10px] leading-none text-ink-3"
-                    title={addedToAdhxLabel(item.addedAt as string)}
-                    aria-label={addedToAdhxLabel(item.addedAt as string)}
-                    suppressHydrationWarning
-                  >
-                    {formatCompactRelativeTime(item.addedAt as string)}
-                  </span>
-                )}
-                <span className="ml-auto flex h-4 flex-none items-center leading-none">
-                  {/* shared-post-repeat (owner: the desktop filmstrip's NOW
+                <div className="flex h-4 min-w-0 items-center gap-1.5">
+                  <PlatformGlyph
+                    platform={item.platform}
+                    size={10}
+                    className="flex-none text-ink-3"
+                  />
+                  {hasKnownTimestamp(item.addedAt) && (
+                    <span
+                      className="font-mono text-[10px] leading-none text-ink-3"
+                      title={addedToAdhxLabel(item.addedAt as string)}
+                      aria-label={addedToAdhxLabel(item.addedAt as string)}
+                      suppressHydrationWarning
+                    >
+                      {formatCompactRelativeTime(item.addedAt as string)}
+                    </span>
+                  )}
+                  <span className="ml-auto flex h-4 flex-none items-center leading-none">
+                    {/* shared-post-repeat (owner: the desktop filmstrip's NOW
                       tag sitting near a separate repeat glyph elsewhere read
                       as garbled "MOWN") — while pinned, the current card's
                       tag IS the repeat state: one cohesive icon+label tag,
                       never NOW alongside a second indicator. */}
-                  {isCurrent && repeatCurrent ? (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
-                      <Repeat size={10} aria-hidden />
-                      <span>Repeat</span>
-                    </span>
-                  ) : isCurrent ? (
-                    <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
-                      NOW
-                    </span>
-                  ) : isNext ? (
-                    <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
-                      NEXT →
-                    </span>
-                  ) : seen ? (
-                    <Check size={10} className="text-done" />
-                  ) : null}
-                </span>
-              </div>
-              <p className="truncate text-[11.5px] leading-tight text-ink">
-                {caption || (handle ? `@${handle}` : 'Saved post')}
-              </p>
-            </button>
-          )
-        })}
+                    {isCurrent && repeatCurrent ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
+                        <Repeat size={10} aria-hidden />
+                        <span>Repeat</span>
+                      </span>
+                    ) : isCurrent ? (
+                      <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
+                        NOW
+                      </span>
+                    ) : isNext ? (
+                      <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
+                        NEXT →
+                      </span>
+                    ) : seen ? (
+                      <Check size={10} className="text-done" />
+                    ) : null}
+                  </span>
+                </div>
+                <p className="truncate text-[11.5px] leading-tight text-ink">
+                  {caption || (handle ? `@${handle}` : 'Saved post')}
+                </p>
+              </button>
+            )
+          })}
 
-        {/* Collection mode loops: a dashed divider announces the wrap, then a
+          {/* Collection mode loops: a dashed divider announces the wrap, then a
             ghosted (opacity-45) copy of the first card previews where "next"
             after the last item goes — matching goNext's actual wrap target.
             Hidden while the repeat button is on 'one' — the queue isn't
             wrapping then, the current post is looping. */}
-        {playlist && items.length > 0 && repeatMode !== 'one' && (
-          <>
-            <div
-              aria-hidden
-              className="flex w-[72px] flex-none flex-col items-center justify-center gap-1 rounded-[10px] border-2 border-dashed border-hairline text-ink-3"
-            >
-              <Repeat size={16} />
-              <span className="text-[9px] font-bold uppercase tracking-wide">Loops</span>
-            </div>
-            {(() => {
-              const first = items[0]
-              const key = theaterItemKey(first)
-              const type = inferType(first)
-              const tile = TYPE_TILE[type]
-              const Icon = tile.icon
-              const handle = first.author ? first.author.replace(/^@+/, '') : ''
-              const caption = theaterRowCaption(first)
-              return (
-                <button
-                  type="button"
-                  onClick={() => onSelect(key)}
-                  aria-label="Back to the first post"
-                  className="flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 border-transparent bg-black/15 p-2 text-left opacity-45 transition-opacity hover:opacity-70"
-                >
-                  <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
-                    {first.thumbnailUrl ? (
-                      <img
-                        src={first.thumbnailUrl}
-                        alt=""
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                        className="h-full w-full object-cover"
+          {playlist && items.length > 0 && repeatMode !== 'one' && (
+            <>
+              <div
+                aria-hidden
+                className="flex w-[72px] flex-none flex-col items-center justify-center gap-1 rounded-[10px] border-2 border-dashed border-hairline text-ink-3"
+              >
+                <Repeat size={16} />
+                <span className="text-[9px] font-bold uppercase tracking-wide">Loops</span>
+              </div>
+              {(() => {
+                const first = items[0]
+                const key = theaterItemKey(first)
+                const type = inferType(first)
+                const tile = TYPE_TILE[type]
+                const Icon = tile.icon
+                const handle = first.author ? first.author.replace(/^@+/, '') : ''
+                const caption = theaterRowCaption(first)
+                return (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(key)}
+                    aria-label="Back to the first post"
+                    className="flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 border-transparent bg-black/15 p-2 text-left opacity-45 transition-opacity hover:opacity-70"
+                  >
+                    <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
+                      {first.thumbnailUrl ? (
+                        <img
+                          src={first.thumbnailUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className={cn('flex h-full w-full items-center justify-center', tile.bg)}
+                        >
+                          <Icon size={14} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex h-4 min-w-0 items-center gap-1.5">
+                      <PlatformGlyph
+                        platform={first.platform}
+                        size={10}
+                        className="flex-none text-ink-3"
                       />
-                    ) : (
-                      <div
-                        className={cn('flex h-full w-full items-center justify-center', tile.bg)}
-                      >
-                        <Icon size={14} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex h-4 min-w-0 items-center gap-1.5">
-                    <PlatformGlyph
-                      platform={first.platform}
-                      size={10}
-                      className="flex-none text-ink-3"
-                    />
-                    {hasKnownTimestamp(first.addedAt) && (
-                      <span
-                        className="font-mono text-[10px] text-ink-3"
-                        title={addedToAdhxLabel(first.addedAt as string)}
-                        aria-label={addedToAdhxLabel(first.addedAt as string)}
-                        suppressHydrationWarning
-                      >
-                        {formatCompactRelativeTime(first.addedAt as string)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="truncate text-[11.5px] leading-tight text-ink">
-                    {caption || (handle ? `@${handle}` : 'Saved post')}
-                  </p>
-                </button>
-              )
-            })()}
-          </>
-        )}
-      </div>
-
-      {/* End cap */}
-      <div className="relative flex flex-none flex-col items-end justify-center gap-1 pl-1">
-        {/* Vertical stack (owner: the count and new-count sit BELOW the
-            "Show all" text so the end cap doesn't eat filmstrip width). */}
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-2 hover:text-ink"
-        >
-          {showAll ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
-          <span>Show all</span>
-        </button>
-        {/* "N posts" counts what will actually PLAY from here — the unwatched
-            run while repeat is off, the whole queue once it isn't (see
-            `computeQueueTotal`). Saying 26 when auto-advance will only play the
-            5 pending ones is the desktop version of the misleading "3 / 26"
-            the mobile peek bar used to show. */}
-        <span className="font-mono text-[10.5px] text-ink-3">
-          {queueTotal ?? items.length} posts
-        </span>
-        {!playlist && newCount > 0 && (
-          <span className="text-[10.5px] font-semibold text-clay">{newCount} new</span>
-        )}
-        {/* savedToday/newCount are live-pulse concepts — collection mode is a
-            static curated queue, and the personal theater's Collection tab is the user's
-            own backlog, so neither line is meaningful for either. Collection
-            shows "{remaining} left" instead. */}
-        {collection && collection.tab === 'collection' ? (
-          <span className="flex items-center gap-1.5 text-[10.5px] text-ink-3">
-            <span className="font-mono">{collection.remaining} left</span>
-          </span>
-        ) : (
-          <>
-            {/* shared-post-repeat: NO end-cap chip here (removed after owner
-                feedback — a third indicator alongside the filmstrip's own
-                Repeat tag and the accented next chevron was one too many;
-                "facts shown once"). The current card IS the state cue on
-                desktop, same as the mobile peek bar's relabeled center
-                button; the chevron accent is the "way out" cue. */}
-            {/* newCount now rides the count line under "Show all" above —
-                only the ambient savedToday/waiting line remains here. */}
-            {!playlist &&
-              (waiting ? (
-                <span className="text-[10.5px] text-ink-3">Waiting for new sends…</span>
-              ) : (
-                savedToday > 0 && (
-                  <span className="text-[10.5px] text-ink-3">{savedToday} saved today</span>
+                      {hasKnownTimestamp(first.addedAt) && (
+                        <span
+                          className="font-mono text-[10px] text-ink-3"
+                          title={addedToAdhxLabel(first.addedAt as string)}
+                          aria-label={addedToAdhxLabel(first.addedAt as string)}
+                          suppressHydrationWarning
+                        >
+                          {formatCompactRelativeTime(first.addedAt as string)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-[11.5px] leading-tight text-ink">
+                      {caption || (handle ? `@${handle}` : 'Saved post')}
+                    </p>
+                  </button>
                 )
-              ))}
-          </>
-        )}
+              })()}
+            </>
+          )}
+        </div>
 
-        {showAll && (
-          <div className="absolute bottom-full right-4 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg">
-            <div className="flex items-center justify-between px-4 pb-1 pt-3">
-              {/* The panel's title states what happens when the queue runs out
+        {/* End cap — fades in over the strip. Queue / position / new, stacked.
+          A filter-on ListFilter is the only closed-panel cue (types live in
+          the overlay). */}
+        <div
+          ref={queueRootRef}
+          data-theater-dock-cap
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 flex flex-col items-end justify-center pl-14"
+          style={{
+            background:
+              'linear-gradient(to right, transparent 0%, var(--m-card) 3.25rem, var(--m-card) 100%)',
+          }}
+        >
+          <div className="pointer-events-auto flex flex-col items-end gap-0.5">
+            <button
+              type="button"
+              aria-label="Queue"
+              aria-expanded={showAll}
+              title={filterOn ? theaterQueueFilterLabel(queueTypes) : undefined}
+              data-theater-action="show-all"
+              data-theater-queue-filter={filterOn ? '' : undefined}
+              onClick={() => setShowAll((v) => !v)}
+              className={cn(
+                'inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors',
+                filterOn ? 'text-clay hover:text-clay' : 'text-ink-2 hover:text-ink',
+              )}
+            >
+              {showAll ? (
+                <ChevronDown size={13} className="flex-none" />
+              ) : (
+                <ChevronUp size={13} className="flex-none" />
+              )}
+              <span>Queue</span>
+              {filterOn ? <ListFilter size={12} className="flex-none" aria-hidden /> : null}
+            </button>
+            {currentIndex >= 0 ? (
+              <span
+                className="text-[11px] tabular-nums text-ink-3"
+                aria-label={`${currentIndex + 1} of ${queueTotal ?? items.length}`}
+              >
+                {currentIndex + 1}/{queueTotal ?? items.length}
+              </span>
+            ) : null}
+            {!playlist && newCount > 0 ? (
+              <span
+                className="text-[11px] font-medium tabular-nums text-clay"
+                aria-label={`${newCount} new`}
+              >
+                {newCount} new
+              </span>
+            ) : null}
+          </div>
+
+          {showAll && (
+            <div
+              data-theater-queue-panel
+              role="dialog"
+              aria-label="Playlist"
+              className="pointer-events-auto absolute bottom-full right-0 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg"
+            >
+              <div className="flex items-center justify-between px-4 pb-1 pt-3">
+                {/* The panel's title states what happens when the queue runs out
                   — the one thing the list itself can't show (owner: "shouldn't
                   the title of Show all be relevant to the selection?"). It also
                   stops the header repeating the "Up next" group heading
                   directly below it. Falls back to "Up next" where repeat isn't
                   offered (the personal theater's Collection tab). */}
-              <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
-                {repeatMode ? REPEAT_MODE_LABEL[repeatMode].queue : 'Up next'}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAll(false)}
-                aria-label="Close"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-inset"
-              >
-                <X size={14} />
-              </button>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
+                  {repeatMode ? REPEAT_MODE_LABEL[repeatMode].queue : 'Up next'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAll(false)}
+                  aria-label="Close"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-inset"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              {onToggleQueueType && onClearQueueTypes ? (
+                <TheaterQueueFilter
+                  selected={queueTypes}
+                  onToggle={onToggleQueueType}
+                  onClear={onClearQueueTypes}
+                />
+              ) : null}
+              <UpNextList
+                items={items}
+                currentKey={currentKey}
+                isSeen={isSeen}
+                seenReady={seenReady}
+                freshKeys={freshKeys}
+                wasSeenOnEntry={wasSeenOnEntry}
+                pinnedKey={pinnedKey}
+                onSelect={handlePanelSelect}
+                repeatCurrent={repeatCurrent}
+                className="min-h-0 flex-1 pb-2"
+              />
             </div>
-            <UpNextList
-              items={items}
-              currentKey={currentKey}
-              isSeen={isSeen}
-              seenReady={seenReady}
-              freshKeys={freshKeys}
-              wasSeenOnEntry={wasSeenOnEntry}
-              pinnedKey={pinnedKey}
-              onSelect={handlePanelSelect}
-              repeatCurrent={repeatCurrent}
-              className="min-h-0 flex-1 pb-2"
-            />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

@@ -66,7 +66,6 @@ export function resolveContentType(
       .select({
         platform: bookmarks.platform,
         category: bookmarks.category,
-        isQuote: bookmarks.isQuote,
       })
       .from(bookmarks)
       .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
@@ -81,7 +80,6 @@ export function resolveContentType(
       const inferred = inferContentType({
         platform: bookmark.platform,
         category: bookmark.category,
-        isQuote: bookmark.isQuote,
         hasVideo: media.some((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif'),
         hasPhoto: media.some((m) => m.mediaType === 'photo'),
       })

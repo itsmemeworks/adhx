@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { theaterItemKey, type TheaterItem, type TheaterMode } from './types'
 
 /**
@@ -15,6 +15,9 @@ export function useSharedPin(
   sharedUnavailable?: boolean,
 ) {
   const [sharedPinned, setSharedPinned] = useState(mode === 'shared' && !sharedUnavailable)
+  useEffect(() => {
+    if (sharedUnavailable) setSharedPinned(false)
+  }, [sharedUnavailable])
   const clearSharedPin = useCallback(() => setSharedPinned(false), [])
   const sharedItemKey = mode === 'shared' && sharedItem ? theaterItemKey(sharedItem) : null
   return { sharedPinned, clearSharedPin, sharedItemKey }

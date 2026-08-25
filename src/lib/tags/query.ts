@@ -20,7 +20,7 @@ import { isUserBanned } from '@/lib/admin/moderation'
  * API route) so review both together if the sharing rule ever changes.
  */
 
-export type ContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
+export type ContentType = 'video' | 'photo' | 'text' | 'article'
 
 export interface TagItem {
   bookmarkId: string
@@ -244,7 +244,6 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
     const contentType = inferContentType({
       platform: b.platform,
       category: b.category,
-      isQuote: b.isQuote,
       hasVideo,
       hasPhoto,
     })

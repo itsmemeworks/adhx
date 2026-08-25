@@ -309,17 +309,17 @@ function EmptyState({ hideArchived, stats, onShowAll }: EmptyStateProps): React.
         <Image className="w-10 h-10 text-ink-3" />
       </div>
       <h3 className="font-serif text-xl font-semibold text-ink mb-2">
-        {hideArchived ? 'All caught up!' : 'No items found'}
+        {hideArchived ? 'All caught up!' : 'No archived posts'}
       </h3>
       <p className="text-ink-2">
         {hideArchived ? 'You have no unread bookmarks' : 'Try adjusting your filters'}
       </p>
-      {hideArchived && stats.total > 0 && (
+      {hideArchived && stats.total > stats.active && (
         <button
           onClick={onShowAll}
           className="mt-4 px-6 py-2 rounded-full font-medium bg-clay-grad text-white shadow-glow transition-opacity hover:opacity-90"
         >
-          Show all {stats.total} bookmarks
+          Show {Math.max(0, stats.total - stats.active)} archived
         </button>
       )}
     </div>

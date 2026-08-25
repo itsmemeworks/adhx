@@ -26,7 +26,12 @@ export type {
   StreamedBookmark,
   SyncProgress,
 } from './types'
-export { FILTER_OPTIONS, PLATFORM_OPTIONS, streamedBookmarkToFeedItem } from './types'
+export {
+  FILTER_OPTIONS,
+  PLATFORM_OPTIONS,
+  parseFilterType,
+  streamedBookmarkToFeedItem,
+} from './types'
 
 // Utils
 export {

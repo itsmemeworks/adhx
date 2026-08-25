@@ -11,7 +11,7 @@ import type { FeedItem } from '@/components/feed/types'
  * `feedItemToTheaterItem` / `inferCollectionContentType` matrix — mirrors the
  * priority order `getTrendingItems()`'s `typeOf()` uses for saved bookmarks
  * (single-format platforms are always video; otherwise
- * article > video > photo > quote > text), so the Collection theater's stage
+ * article > video > photo > text), so the Collection theater's stage
  * dispatch agrees with the public theater's.
  */
 
@@ -148,22 +148,112 @@ describe('feedItemToTheaterItem', () => {
       expect(inferCollectionContentType(t)).toBe('photo')
     })
 
-    it('a quote tweet with no first-class media is "quote"', () => {
+    it('a quote tweet with no first-class media is "text" (quote is not a type)', () => {
       const t = item({
         isQuote: true,
         quoteContext: { tweetId: '9', author: 'bob', text: 'quoted text' },
       })
-      expect(inferCollectionContentType(t)).toBe('quote')
+      expect(inferCollectionContentType(t)).toBe('text')
     })
 
-    it('a quote tweet resolved via a full quotedTweet FeedItem is also "quote"', () => {
-      const t = item({ isQuote: true, quotedTweet: item({ id: '9', author: 'bob' }) })
-      expect(inferCollectionContentType(t)).toBe('quote')
+    it('a photo tweet that quotes another post is "photo"', () => {
+      const t = item({
+        isQuote: true,
+        quoteContext: { tweetId: '9', author: 'bob', text: 'quoted text' },
+        media: [{ id: 'm1', mediaType: 'photo', url: 'x', thumbnailUrl: 'x', shareUrl: 'x' }],
+      })
+      expect(inferCollectionContentType(t)).toBe('photo')
     })
 
     it('plain text (no media, no quote, no article signals) is "text"', () => {
       expect(inferCollectionContentType(item({}))).toBe('text')
     })
+  })
+})
+
+describe('feedItemToTheaterItem video album', () => {
+  it('maps a Twitter video album onto videoCount + posters', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        media: [
+          {
+            id: 'm1',
+            mediaType: 'video',
+            url: 'a',
+            thumbnailUrl: 'https://example.com/a.jpg',
+            shareUrl: 'a',
+          },
+          {
+            id: 'm2',
+            mediaType: 'video',
+            url: 'b',
+            thumbnailUrl: 'https://example.com/b.jpg',
+            shareUrl: 'b',
+          },
+        ],
+      }),
+    )
+    expect(t.videoCount).toBe(2)
+    expect(t.videoPosters).toEqual(['https://example.com/a.jpg', 'https://example.com/b.jpg'])
+  })
+
+  it('maps a Twitter photo album onto photoCount', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        media: [
+          {
+            id: 'm1',
+            mediaType: 'photo',
+            url: 'a',
+            thumbnailUrl: 'https://example.com/a.jpg',
+            shareUrl: 'a',
+          },
+          {
+            id: 'm2',
+            mediaType: 'photo',
+            url: 'b',
+            thumbnailUrl: 'https://example.com/b.jpg',
+            shareUrl: 'b',
+          },
+        ],
+      }),
+    )
+    expect(t.photoCount).toBe(2)
+    expect(t.videoCount).toBeUndefined()
+  })
+
+  it('omits photoCount for a single Twitter photo', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        media: [
+          {
+            id: 'm1',
+            mediaType: 'photo',
+            url: 'a',
+            thumbnailUrl: 'https://example.com/a.jpg',
+            shareUrl: 'a',
+          },
+        ],
+      }),
+    )
+    expect(t.photoCount).toBeUndefined()
+  })
+
+  it('omits videoCount for a single Twitter video', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        media: [
+          {
+            id: 'm1',
+            mediaType: 'video',
+            url: 'a',
+            thumbnailUrl: 'https://example.com/a.jpg',
+            shareUrl: 'a',
+          },
+        ],
+      }),
+    )
+    expect(t.videoCount).toBeUndefined()
   })
 })
 

@@ -9,7 +9,6 @@ export function feedItemSignals(item: FeedItem): ContentSignals {
   return {
     platform: item.platform,
     category: item.category,
-    isQuote: !!item.isQuote,
     isXArticle: !!item.isXArticle,
     hasArticleBlocks: !!(item.articleContent?.blocks && item.articleContent.blocks.length > 0),
     hasArticlePreview: !!(
@@ -24,7 +23,7 @@ export function feedItemSignals(item: FeedItem): ContentSignals {
   }
 }
 
-/** Map a FeedItem to one of the five Matter content types. */
+/** Map a FeedItem to one of the four Matter content types. */
 export function feedItemType(item: FeedItem): ContentType {
   return inferContentType(feedItemSignals(item))
 }

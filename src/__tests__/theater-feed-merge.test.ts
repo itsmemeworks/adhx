@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeFeedItems } from '@/components/theater/useTheaterFeed'
+import { mergeFeedItems, replaceFeedItem } from '@/components/theater/useTheaterFeed'
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**
@@ -98,5 +98,30 @@ describe('mergeFeedItems', () => {
     const { items, freshKeys } = mergeFeedItems([], [a])
     expect(items).toEqual([a])
     expect(freshKeys).toEqual(['twitter:1'])
+  })
+})
+
+describe('replaceFeedItem', () => {
+  it('swaps the matching key in place and keeps neighbors', () => {
+    const a = make('1')
+    const b = make('2')
+    const upgraded = { ...a, text: 'resolved' }
+    const prev = [a, b]
+    const next = replaceFeedItem(prev, upgraded)
+    expect(next).not.toBe(prev)
+    expect(next[0]).toBe(upgraded)
+    expect(next[1]).toBe(b)
+  })
+
+  it('prepends when the key is new', () => {
+    const a = make('1')
+    const b = make('9')
+    expect(replaceFeedItem([a], b).map((i) => i.bookmarkId)).toEqual(['9', '1'])
+  })
+
+  it('returns prev when the object is already at that key', () => {
+    const a = make('1')
+    const prev = [a]
+    expect(replaceFeedItem(prev, a)).toBe(prev)
   })
 })

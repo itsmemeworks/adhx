@@ -94,6 +94,44 @@ function withDb<T>(fn: (sqlite: InstanceType<typeof Database>) => T): T {
   }
 }
 
+/** Insert a pulse row the Live theater will pick up on the next /api/activity poll. */
+export function insertLivePulse(opts: {
+  id: string
+  author: string
+  authorName: string
+  text: string
+  contentType: 'video' | 'photo' | 'text' | 'article'
+  platform?: string
+  url?: string
+}): void {
+  withDb((sqlite) => {
+    sqlite
+      .prepare(
+        `INSERT INTO activity (
+          action, platform, bookmark_id, author, author_name, text, url, content_type, created_at, hidden
+        ) VALUES ('preview', ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      )
+      .run(
+        opts.platform ?? 'twitter',
+        opts.id,
+        opts.author,
+        opts.authorName,
+        opts.text,
+        opts.url ?? `/${opts.author}/status/${opts.id}`,
+        opts.contentType,
+        new Date(Date.now() + 15_000).toISOString(),
+      )
+  })
+}
+
+export function deleteLivePulse(ids: string[]): void {
+  if (ids.length === 0) return
+  withDb((sqlite) => {
+    const placeholders = ids.map(() => '?').join(',')
+    sqlite.prepare(`DELETE FROM activity WHERE bookmark_id IN (${placeholders})`).run(...ids)
+  })
+}
+
 /** Same-process assertions — a second sqlite connection can miss WAL writes. */
 export async function feedHasId(page: Page, id: string, platform = 'twitter'): Promise<boolean> {
   const res = await page.request.get(`/api/feed?id=${id}&idPlatform=${platform}&hideArchived=false`)

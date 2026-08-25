@@ -17,7 +17,7 @@ import { formatCount, formatRelativeTime } from '@/lib/utils/format'
  * fetched server-side for `recordActivity()` / `generateMetadata()`.
  */
 
-interface TweetProps {
+export interface SharedTweetStatic {
   kind: 'tweet'
   username: string
   tweetId: string
@@ -34,7 +34,7 @@ interface TweetProps {
   sourceUrl: string
 }
 
-interface SimplePostProps {
+export interface SharedSimplePostStatic {
   kind: 'instagram-reel' | 'tiktok-video' | 'youtube-short'
   authorName?: string | null
   handle?: string | null
@@ -44,7 +44,9 @@ interface SimplePostProps {
   label: string
 }
 
-export type SharedPostStaticProps = (TweetProps | SimplePostProps) & { below?: ReactNode }
+export type SharedStaticPost = SharedTweetStatic | SharedSimplePostStatic
+
+export type SharedPostStaticProps = SharedStaticPost & { below?: ReactNode }
 
 export function SharedPostStatic(props: SharedPostStaticProps) {
   return (
@@ -67,7 +69,7 @@ function TweetStatic({
   likes,
   views,
   sourceUrl,
-}: TweetProps) {
+}: SharedTweetStatic) {
   return (
     <article data-content="tweet">
       <header>
@@ -93,7 +95,14 @@ function TweetStatic({
   )
 }
 
-function SimplePostStatic({ kind, authorName, handle, text, sourceUrl, label }: SimplePostProps) {
+function SimplePostStatic({
+  kind,
+  authorName,
+  handle,
+  text,
+  sourceUrl,
+  label,
+}: SharedSimplePostStatic) {
   return (
     <article data-content={kind}>
       <header>

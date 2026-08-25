@@ -33,6 +33,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import { dispatchTheaterStageTap } from './useTheaterStageEvents'
+import { nextAlbumIndex, StageAlbumDots, StageAlbumScroller } from './StageAlbumChrome'
 import type { TheaterItem } from './types'
 
 /**
@@ -70,6 +71,14 @@ export interface StageVideoProps {
    * to a video. It's actually muted for me again."
    */
   covered?: boolean
+  /**
+   * Twitter video album (same snap chrome as multi-photo). One <video>
+   * element — src swaps with the index so the iOS unmute grant survives.
+   */
+  albumCount?: number
+  albumIndex?: number
+  albumPosters?: string[]
+  onAlbumIndexChange?: (index: number) => void
 }
 
 export function StageVideo({
@@ -81,6 +90,10 @@ export function StageVideo({
   onEnded,
   repeat,
   covered = false,
+  albumCount = 1,
+  albumIndex = 0,
+  albumPosters = [],
+  onAlbumIndexChange,
 }: StageVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [ended, setEnded] = useState(false)
@@ -372,11 +385,17 @@ export function StageVideo({
     // Some browsers fire `pause` immediately before `ended` as part of
     // reaching the end of the media — never a catch-up rejection.
     catchUpPendingRef.current = false
+    if (!repeat && albumCount > 1 && albumIndex < albumCount - 1 && onAlbumIndexChange) {
+      onAlbumIndexChange(albumIndex + 1)
+      return
+    }
     setEnded(true)
     setPlaying(false)
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 1 } }))
     onEnded?.()
   }
+
+  const showAlbum = !covered && albumCount > 1 && !!onAlbumIndexChange
 
   // A confirmed rejection of the automatic catch-up unmute (see
   // `handleVideoPlaying` below): the platform accepted playback continuing
@@ -479,7 +498,7 @@ export function StageVideo({
       })
   }
 
-  const handleStageTap = () => {
+  const handleStageTap = (_e?: React.MouseEvent) => {
     // Ended / blocked-autoplay still start the player (same gesture that
     // hides chrome). A playing or paused video never toggles pause here —
     // the tap is declutter; peek-bar / Space own pause.
@@ -497,7 +516,10 @@ export function StageVideo({
   }
 
   return (
-    <div className="relative h-full w-full bg-[#08070a]" onClick={handleStageTap}>
+    <div
+      className="relative h-full w-full bg-[#08070a]"
+      onClick={showAlbum ? undefined : handleStageTap}
+    >
       <video
         ref={videoRef}
         poster={poster ?? undefined}
@@ -525,7 +547,7 @@ export function StageVideo({
 
       {/* Tap-to-play fallback (autoplay rejected even muted). */}
       {needsGesture && !ended && !errored && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 z-20 flex items-center justify-center">
           <button
             type="button"
             onClick={(e) => {
@@ -548,14 +570,14 @@ export function StageVideo({
           badly as a failed load does. In collection (no `onEnded`) Delete is still
           the way past it. */}
       {errored && unavailableReason && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#08070a]/70 px-6 text-center">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-[#08070a]/70 px-6 text-center">
           <p className="max-w-xs text-sm text-white/70">{unavailableReason}</p>
         </div>
       )}
 
       {/* Generic playback error fallback: poster stays visible, offer a retry. */}
       {errored && !unavailableReason && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#08070a]/70 text-center">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#08070a]/70 text-center">
           <p className="max-w-xs text-sm text-white/70">This video couldn&apos;t load.</p>
           <button
             type="button"
@@ -570,6 +592,46 @@ export function StageVideo({
           </button>
         </div>
       )}
+
+      {showAlbum ? (
+        <>
+          <StageAlbumScroller
+            overlay
+            count={albumCount}
+            index={albumIndex}
+            onIndexChange={onAlbumIndexChange}
+            onCenterTap={handleStageTap}
+            label={`Videos, ${albumCount}`}
+          >
+            {Array.from({ length: albumCount }, (_, i) => {
+              const slidePoster = albumPosters[i] || (i === albumIndex ? poster : null)
+              return (
+                <div key={i} className="h-full w-full min-w-full shrink-0 snap-center">
+                  {i === albumIndex ? null : slidePoster ? (
+                    <img
+                      src={slidePoster}
+                      alt=""
+                      draggable={false}
+                      referrerPolicy="no-referrer"
+                      className="pointer-events-none h-full w-full object-contain"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-[#08070a]" />
+                  )}
+                </div>
+              )
+            })}
+          </StageAlbumScroller>
+          <StageAlbumDots
+            count={albumCount}
+            index={albumIndex}
+            noun="video"
+            mediaRef={videoRef}
+            revision={`${src}:${albumIndex}`}
+            onNext={() => onAlbumIndexChange(nextAlbumIndex(albumIndex, albumCount))}
+          />
+        </>
+      ) : null}
 
       {/* No internal progress bar: BOTH viewports now show the shared
           top-of-screen TheaterProgressLine, fed by the

@@ -184,10 +184,12 @@ describe('TheaterMobileChrome: caption', () => {
       />,
     )
     const copy = screen.getByRole('button', { name: 'Copy' })
-    const icons = copy.parentElement
-    expect(icons?.className).toContain('justify-end')
-    const actionRow = icons?.parentElement
-    expect(actionRow?.className).toContain('pointer-events-auto')
+    const cluster = copy.parentElement
+    expect(cluster?.className).toContain('pointer-events-auto')
+    expect(cluster?.className).toContain('ml-auto')
+    expect(cluster?.className).not.toContain('flex-1')
+    const actionRow = cluster?.parentElement
+    expect(actionRow?.className).not.toContain('pointer-events-auto')
     expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
     expect(copy.className).toContain('bg-white/10')
     expect(copy.className).toContain('backdrop-blur-md')
@@ -290,16 +292,20 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       onClose: vi.fn(),
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
-    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    const archive = screen.getByRole('button', { name: 'Archive' })
+    const download = screen.getByRole('button', { name: 'Download' })
+    expect(
+      archive.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' }).className).toContain('border-white/25')
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
-    const archive = screen.getByRole('button', { name: 'Archive' })
-    expect(archive).toBeInTheDocument()
     expect(archive.className).toContain('rounded-full')
+    expect(archive.className).toContain('border-clay')
     expect(archive.className).not.toContain('flex-col')
     expect(archive.className).not.toContain('bg-done')
+    expect(archive.className).not.toContain('bg-clay-grad')
     expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
@@ -339,6 +345,67 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
+  it('puts type pills in the up-next sheet, not the top bar', () => {
+    const onToggleQueueType = vi.fn()
+    const onClearQueueTypes = vi.fn()
+    const { rerender } = render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem({ trendCount: 12 })}
+        queueTypes={[]}
+        onToggleQueueType={onToggleQueueType}
+        onClearQueueTypes={onClearQueueTypes}
+      />,
+    )
+    const videos = screen.getByRole('button', { name: 'Videos' })
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    expect(videos).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Photos' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Articles' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Quotes' })).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Playlist filter' }).contains(paste)).toBe(false)
+    fireEvent.click(videos)
+    expect(onToggleQueueType).toHaveBeenCalledWith('video')
+
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        queueTypes={['video', 'photo']}
+        onToggleQueueType={onToggleQueueType}
+        onClearQueueTypes={onClearQueueTypes}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Videos' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Photos' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false')
+
+    const saved: TheaterPersonalChrome = {
+      tab: 'collection',
+      onTabChange: vi.fn(),
+      onDone: vi.fn(),
+      onTag: vi.fn(),
+      onSave: vi.fn(),
+      onLiveTag: vi.fn(),
+      savedKeys: new Set<string>(),
+      remaining: 0,
+      onClose: vi.fn(),
+    }
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        collection={saved}
+        queueTypes={['video', 'photo']}
+        onToggleQueueType={onToggleQueueType}
+        onClearQueueTypes={onClearQueueTypes}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Videos' })).toBeInTheDocument()
   })
 
   it('pins the flame left of paste on media and text', () => {
@@ -548,6 +615,55 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
     expect(findHandle()).toHaveAttribute('aria-label', 'Expand up next')
   })
 
+  it('Escape and a click away close the up-next sheet; arrows move rows', async () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'first playlist row' }),
+      videoItem({ bookmarkId: '2', text: 'second playlist row' }),
+    ]
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+      />,
+    )
+    const label = screen
+      .getAllByLabelText('Expand up next')
+      .find((el) => (el.textContent ?? '').trim().length > 0)!
+    fireEvent.click(label)
+    expect(label).toHaveAttribute('aria-label', 'Collapse up next')
+
+    const rows = () => document.querySelectorAll<HTMLElement>('[data-theater-queue-item]')
+    // Do not auto-focus a row on open — that pans the visual viewport and
+    // yanks the sheet to the top of the screen (filters + peek disappear).
+    expect(rows()[0]).not.toHaveFocus()
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    expect(rows()[0]).toHaveFocus()
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    expect(rows()[1]).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(label).toHaveAttribute('aria-label', 'Expand up next')
+
+    fireEvent.click(label)
+    fireEvent.mouseDown(document.body)
+    expect(label).toHaveAttribute('aria-label', 'Expand up next')
+  })
+
+  it('Q toggles the up-next sheet via the theater action event', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const label = () =>
+      screen
+        .getAllByLabelText(/(Expand|Collapse) up next/)
+        .find((el) => (el.textContent ?? '').trim().length > 0)!
+    expect(label()).toHaveAttribute('aria-label', 'Expand up next')
+    fireEvent(window, new CustomEvent('theater-toggle-show-all'))
+    expect(label()).toHaveAttribute('aria-label', 'Collapse up next')
+    fireEvent(window, new CustomEvent('theater-toggle-show-all'))
+    expect(label()).toHaveAttribute('aria-label', 'Expand up next')
+  })
+
   // Owner report: the collapsed peek bar floated a few px too short, letting
   // the top of the Up-next list peek through underneath it. The wrapper is
   // now pinned to exactly PEEK_H (4.25rem) so the collapse transform's
@@ -561,6 +677,29 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
     expect(wrapper.className).toContain('h-[4.25rem]')
     expect(wrapper.className).toContain('flex-none')
     expect(wrapper.className).toContain('overflow-hidden')
+  })
+
+  it('the sheet is 70% of the theater, clipped, and does not steal focus on expand', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        queueTypes={[]}
+        onToggleQueueType={vi.fn()}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+    const handle = screen
+      .getAllByLabelText(/(Expand|Collapse) up next/)
+      .find((el) => el.querySelector('span[aria-hidden]'))!
+    const sheet = handle.closest('.rounded-t-2xl')!
+    expect(sheet.className).toContain('h-[70%]')
+    expect(sheet.className).toContain('overflow-hidden')
+
+    fireEvent.click(handle)
+    expect(document.activeElement).not.toHaveAttribute('data-theater-queue-item')
+    expect(screen.getByRole('group', { name: 'Playlist filter' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Videos' })).toBeVisible()
   })
 })
 
@@ -807,6 +946,27 @@ describe('TheaterMobileChrome: queue position label', () => {
       />,
     )
     expect(screen.getByText('Up next')).toBeInTheDocument()
+  })
+
+  it('tints the peek clay and shows a filter icon when a type filter is on, without naming the types', () => {
+    const items = buildItems(5)
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+        queueTypes={['video']}
+        onToggleQueueType={vi.fn()}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+    const peek = screen.getByText('2 / 5').closest('button')!
+    expect(peek).toHaveAttribute('data-theater-queue-filter')
+    expect(peek).toHaveAttribute('title', 'Videos')
+    expect(peek.className).toContain('text-clay')
+    expect(peek.querySelector('.lucide-list-filter')).toBeInTheDocument()
+    expect(screen.queryByText('Videos · 2 / 5')).not.toBeInTheDocument()
   })
 
   it('playlist mode keeps the queue position in the peek bar; the tag lives in the expanded sheet', () => {

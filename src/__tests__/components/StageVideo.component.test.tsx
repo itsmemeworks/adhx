@@ -562,3 +562,49 @@ describe('StageVideo stage tap is declutter, not play/pause', () => {
     expect(onRequestUnmute).not.toHaveBeenCalled()
   })
 })
+
+describe('StageVideo twitter album', () => {
+  it('shows the same snap chrome as multi-photo when there are 2+ clips', () => {
+    const onAlbumIndexChange = vi.fn()
+    const { getByLabelText, getByRole } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?author=jpschroeder&tweetId=1&quality=hd"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+        albumCount={2}
+        albumIndex={0}
+        albumPosters={['https://example.com/a.jpg', 'https://example.com/b.jpg']}
+        onAlbumIndexChange={onAlbumIndexChange}
+      />,
+    )
+    expect(getByLabelText('Videos, 2')).toBeInTheDocument()
+    fireEvent.click(getByRole('button', { name: 'Next video, 1 of 2' }))
+    expect(onAlbumIndexChange).toHaveBeenCalledWith(1)
+  })
+
+  it('advances the album on ended until the last clip, then calls onEnded', () => {
+    const onAlbumIndexChange = vi.fn()
+    const onEnded = vi.fn()
+    const props = {
+      item: makeItem(),
+      src: '/api/media/video?author=jpschroeder&tweetId=1&quality=hd',
+      poster: null as string | null,
+      muted: true,
+      onRequestUnmute: vi.fn(),
+      albumCount: 2,
+      albumPosters: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+      onAlbumIndexChange,
+      onEnded,
+    }
+    const { container, rerender } = render(<StageVideo {...props} albumIndex={0} />)
+    fireEvent.ended(container.querySelector('video') as HTMLVideoElement)
+    expect(onAlbumIndexChange).toHaveBeenCalledWith(1)
+    expect(onEnded).not.toHaveBeenCalled()
+
+    rerender(<StageVideo {...props} albumIndex={1} />)
+    fireEvent.ended(container.querySelector('video') as HTMLVideoElement)
+    expect(onEnded).toHaveBeenCalledTimes(1)
+  })
+})

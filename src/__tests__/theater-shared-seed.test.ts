@@ -233,6 +233,52 @@ describe('per-platform mappers', () => {
     })
   })
 
+  it('tweetToTheaterItem passes a video album through when there are 2+ clips', () => {
+    const out = tweetToTheaterItem({
+      id: '2091920006829199772',
+      author: 'jpschroeder',
+      contentType: 'video',
+      createdAt: '2026-08-24T00:00:00.000Z',
+      videoCount: 2,
+      videoPosters: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+    })
+    expect(out.videoCount).toBe(2)
+    expect(out.videoPosters).toEqual(['https://example.com/a.jpg', 'https://example.com/b.jpg'])
+  })
+
+  it('tweetToTheaterItem passes a photo album through when there are 2+ stills', () => {
+    const out = tweetToTheaterItem({
+      id: '2091475617438957808',
+      author: 'StreetFashion01',
+      contentType: 'photo',
+      createdAt: '2026-08-24T00:00:00.000Z',
+      photoCount: 3,
+    })
+    expect(out.photoCount).toBe(3)
+  })
+
+  it('tweetToTheaterItem omits photoCount for a single still', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'photo',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      photoCount: 1,
+    })
+    expect(out).not.toHaveProperty('photoCount')
+  })
+
+  it('tweetToTheaterItem omits videoCount for a single clip', () => {
+    const out = tweetToTheaterItem({
+      id: '123',
+      author: 'testauthor',
+      contentType: 'video',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      videoCount: 1,
+    })
+    expect(out).not.toHaveProperty('videoCount')
+  })
+
   it('tweetToTheaterItem leaves quote absent (not an empty object) when not provided', () => {
     const out = tweetToTheaterItem({
       id: '123',

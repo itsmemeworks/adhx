@@ -3,21 +3,27 @@ import {
   streamedBookmarkToFeedItem,
   type StreamedBookmark,
   FILTER_OPTIONS,
+  parseFilterType,
 } from '@/components/feed/types'
 
 describe('Feed Types', () => {
   describe('FILTER_OPTIONS', () => {
     it('should have all expected filter options', () => {
-      expect(FILTER_OPTIONS).toHaveLength(7)
+      expect(FILTER_OPTIONS).toHaveLength(5)
       expect(FILTER_OPTIONS.map((o) => o.value)).toEqual([
         'all',
         'photos',
         'videos',
         'text',
         'articles',
-        'quoted',
-        'manual',
       ])
+    })
+
+    it('maps unknown URL params (quoted, manual) to All', () => {
+      expect(parseFilterType('photos')).toBe('photos')
+      expect(parseFilterType('quoted')).toBe('all')
+      expect(parseFilterType('manual')).toBe('all')
+      expect(parseFilterType(null)).toBe('all')
     })
 
     it('should have labels for all options', () => {

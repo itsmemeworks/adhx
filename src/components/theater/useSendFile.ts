@@ -131,8 +131,8 @@ export interface SendSource {
  * (`reelVideoSrc`), never an inline per-platform URL (the regression that
  * made Instagram fall through to the Twitter proxy repeatedly). Twitter
  * photo posts go through the `/api/media/image` proxy's `download=1`
- * variant, downloading the FIRST/primary photo only (multi-photo posts keep
- * it simple — no photo picker in the Send button).
+ * variant. Multi-photo and multi-video tweets send the FIRST clip only
+ * (no picker in the Send button).
  */
 export function resolveSendSource(item: SendableItem | null): SendSource | null {
   if (!item || !item.bookmarkId) return null

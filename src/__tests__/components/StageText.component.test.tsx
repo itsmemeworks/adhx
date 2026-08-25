@@ -73,6 +73,19 @@ describe('StageText author row', () => {
     expect(column?.className).toContain(STAGE_TEXT_TOP_PAD)
   })
 
+  it('typesets a numbered list as a compact top-aligned document', () => {
+    const text = Array.from({ length: 20 }, (_, i) => `${i + 1}. Place (DR ${90 - i})`).join('\n')
+    render(<StageText item={textItem({ text })} />)
+    const scroller = document.querySelector('.overflow-y-auto')
+    const frame = scroller?.firstElementChild
+    expect(frame?.className).not.toContain('justify-center')
+    const body = scroller?.querySelector('p')
+    expect(body?.className).toContain('text-[15px]')
+    expect(body?.className).toContain('sm:text-base')
+    expect(body?.className).toContain('leading-[1.45]')
+    expect(body?.querySelectorAll('br').length).toBe(19)
+  })
+
   it('sits flush under a live video band without the chrome pad or vertical center', () => {
     render(<StageText item={textItem()} flushTop />)
     const scroller = document.querySelector('.overflow-y-auto')
@@ -103,7 +116,7 @@ describe('StageText author row', () => {
           author: 'elonmusk',
           authorName: 'Elon Musk',
           text: 'As foretold in the prophecy',
-          contentType: 'quote',
+          contentType: 'text',
           quote: {
             author: 'mark_k',
             authorName: 'Mark Kretschmann',
@@ -123,7 +136,7 @@ describe('StageText author row', () => {
     render(
       <StageText
         item={textItem({
-          contentType: 'quote',
+          contentType: 'text',
           quote: {
             author: 'mark_k',
             text: 'with a photo',
@@ -244,9 +257,35 @@ describe('StageText photo album', () => {
     expect(slides).toHaveLength(2)
     expect(slides[0]?.className).toContain('min-w-full')
     const pager = screen.getByRole('button', { name: 'Next photo, 1 of 2' })
+    expect(pager.parentElement?.style.bottom).toBe('12px')
+    expect(pager.parentElement?.className).not.toContain('4.25rem')
     expect(pager.className).toContain('bg-black/40')
-    expect(pager.className).toContain('lg:bg-black/80')
+    expect(pager.className).not.toContain('lg:bg-black/80')
     fireEvent.click(pager)
     expect(screen.getByRole('button', { name: 'Next photo, 2 of 2' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Next photo, 2 of 2' }))
+    expect(screen.getByRole('button', { name: 'Next photo, 1 of 2' })).toBeInTheDocument()
+  })
+
+  it('stacks every photo in the typeset reader from photoCount', () => {
+    render(
+      <StageText
+        item={textItem({
+          author: 'StreetFashion01',
+          bookmarkId: '2091475617438957808',
+          contentType: 'photo',
+          text: 'the loafers',
+          thumbnailUrl: 'https://pbs.twimg.com/one.jpg',
+          photoCount: 3,
+        })}
+      />,
+    )
+    const srcs = [...document.querySelectorAll('img')].map((el) => el.getAttribute('src') ?? '')
+    expect(srcs.filter((s) => s.includes('index=')).sort()).toEqual([
+      '/api/media/image?author=StreetFashion01&tweetId=2091475617438957808&index=1',
+      '/api/media/image?author=StreetFashion01&tweetId=2091475617438957808&index=2',
+      '/api/media/image?author=StreetFashion01&tweetId=2091475617438957808&index=3',
+    ])
+    expect(screen.queryByLabelText('Photos, 3')).not.toBeInTheDocument()
   })
 })

@@ -120,6 +120,39 @@ describe('useHydratedQuote', () => {
     )
     expect(result.current.parentPhotos).toEqual(['/api/media/image?author=alice&tweetId=1&index=1'])
   })
+
+  it('re-seeds the album when photoCount arrives on the same post', () => {
+    fetchShareTweetMock.mockResolvedValue({ text: 'full' })
+    const stub = videoItem({
+      contentType: 'photo',
+      thumbnailUrl: 'https://pbs.twimg.com/media/one.jpg',
+    })
+    const { result, rerender } = renderHook(({ item }) => useHydratedQuote(item), {
+      initialProps: { item: stub },
+    })
+    expect(result.current.parentPhotos).toEqual(['/api/media/image?author=alice&tweetId=1&index=1'])
+    rerender({ item: { ...stub, photoCount: 3 } })
+    expect(result.current.parentPhotos).toEqual([
+      '/api/media/image?author=alice&tweetId=1&index=1',
+      '/api/media/image?author=alice&tweetId=1&index=2',
+      '/api/media/image?author=alice&tweetId=1&index=3',
+    ])
+  })
+
+  it('keeps photoCount stills when the share payload has no photos', async () => {
+    fetchShareTweetMock.mockResolvedValue({ text: 'full', media: { photos: [] } })
+    const { result } = renderHook(() =>
+      useHydratedQuote(
+        videoItem({
+          contentType: 'photo',
+          thumbnailUrl: 'https://pbs.twimg.com/media/one.jpg',
+          photoCount: 3,
+        }),
+      ),
+    )
+    await waitFor(() => expect(fetchShareTweetMock).toHaveBeenCalled())
+    expect(result.current.parentPhotos).toHaveLength(3)
+  })
 })
 
 describe('seedParentPhotos', () => {
@@ -151,5 +184,36 @@ describe('seedParentPhotos', () => {
         }),
       ),
     ).toEqual(['/api/media/image?author=alice&tweetId=1&index=1'])
+  })
+
+  it('seeds every still on a photo album without waiting on the share API', () => {
+    expect(
+      seedParentPhotos(
+        videoItem({
+          contentType: 'photo',
+          thumbnailUrl: 'https://pbs.twimg.com/media/one.jpg',
+          photoCount: 3,
+        }),
+      ),
+    ).toEqual([
+      '/api/media/image?author=alice&tweetId=1&index=1',
+      '/api/media/image?author=alice&tweetId=1&index=2',
+      '/api/media/image?author=alice&tweetId=1&index=3',
+    ])
+  })
+
+  it('seeds stills on a video tweet that also carries photos', () => {
+    expect(
+      seedParentPhotos(
+        videoItem({
+          contentType: 'video',
+          thumbnailUrl: 'https://example.com/poster.jpg',
+          photoCount: 2,
+        }),
+      ),
+    ).toEqual([
+      '/api/media/image?author=alice&tweetId=1&index=1',
+      '/api/media/image?author=alice&tweetId=1&index=2',
+    ])
   })
 })

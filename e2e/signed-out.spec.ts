@@ -50,8 +50,11 @@ test.describe('signed out', () => {
   })
 
   test('X OAuth is a Settings link, not a sign-in', async ({ page }) => {
-    await page.goto('/api/auth/twitter')
-    await expect(page).toHaveURL(/auth_error=x_link_only/)
+    const res = await page.request.get('/api/auth/twitter', { maxRedirects: 0 })
+    expect(res.status()).toBeGreaterThanOrEqual(300)
+    expect(res.status()).toBeLessThan(400)
+    expect(res.headers()['location'] ?? '').toMatch(/auth_error=x_link_only/)
+    await page.goto('/?auth_error=x_link_only')
     await expectTheaterReady(page)
   })
 })

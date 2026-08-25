@@ -20,7 +20,7 @@ import { quoteRefFromStoredContext, type StoredQuoteContext } from '@/lib/theate
  *   - `saveCount` — DISTINCT users who saved the post (anonymous count).
  *   - `trendCount` — savers + preview events + send events → powers the "Trending" ranking +
  *     flame badge, so a heavily-previewed or widely-sent post trends before anyone saves it.
- *   - `contentType` — the post's real type (video/photo/text/quote/article),
+ *   - `contentType` — the post's real type (video/photo/text/article),
  *     derived from the saved bookmark's media so the badge is accurate (a text
  *     tweet isn't mislabelled "photo", a video tweet isn't "photo", etc.). Left
  *     undefined for preview-only posts that were never saved; the client then
@@ -143,6 +143,19 @@ export interface TrendingItem {
   quote?: TheaterQuoteRef
   /** External-link OG card (not an X Article). See TheaterLinkPreview. */
   linkPreview?: TheaterLinkPreview
+  /**
+   * Twitter video album (2–4 clips). Stage snaps between them like
+   * multi-photo tweets. Absent / 1 = a single video.
+   */
+  videoCount?: number
+  /** Per-clip posters for a Twitter video album, same order as `index`. */
+  videoPosters?: string[]
+  /**
+   * Twitter photo album (2–4 stills). Read seeds every `/api/media/image?index=`
+   * URL from this so the essay does not wait on `/api/share/tweet`. Absent / 1
+   * = a single photo (or unknown until hydrate).
+   */
+  photoCount?: number
 }
 
 const FETCH = 80
@@ -341,7 +354,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
   // Per-post save count + the flags we need to type it (anonymous — counts and
   // shape only, never any user identity).
   const counts = new Map<string, number>()
-  const flags = new Map<string, { isQuote: boolean; category: string | null }>()
+  const flags = new Map<string, { category: string | null }>()
   const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
   const articleCovers = new Map<string, string>()
   const articleTitles = new Map<string, string>()
@@ -360,7 +373,6 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
         platform: bookmarks.platform,
         id: bookmarks.id,
         saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
-        isQuote: sql<number>`max(${bookmarks.isQuote})`,
         category: sql<string | null>`max(${bookmarks.category})`,
         avatar: sql<string | null>`max(${bookmarks.authorProfileImageUrl})`,
         // All rows for a post share the same text (it's the same source
@@ -382,7 +394,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     for (const r of aggRows) {
       const k = `${r.platform}:${r.id}`
       counts.set(k, Number(r.saveCount) || 0)
-      flags.set(k, { isQuote: !!Number(r.isQuote), category: r.category ?? null })
+      flags.set(k, { category: r.category ?? null })
       if (r.avatar) avatars.set(k, r.avatar)
       if (r.fullText) fullTexts.set(k, r.fullText)
       if (r.quoteContext) quoteContexts.set(k, r.quoteContext)
@@ -528,7 +540,6 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     return inferContentType({
       platform,
       category: flags.get(key)?.category,
-      isQuote: flags.get(key)?.isQuote,
       hasVideo: m?.video,
       hasPhoto: m?.photo,
     })

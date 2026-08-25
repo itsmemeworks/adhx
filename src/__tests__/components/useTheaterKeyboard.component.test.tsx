@@ -122,18 +122,21 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     window.addEventListener('theater-tag', heard)
     window.addEventListener('theater-copy-link', heard)
     window.addEventListener('theater-toggle-menu', heard)
+    window.addEventListener('theater-toggle-show-all', heard)
     try {
       renderHook(() => useTheaterKeyboard(baseArgs()))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 't' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '.' })))
-      expect(heard).toHaveBeenCalledTimes(4)
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'q' })))
+      expect(heard).toHaveBeenCalledTimes(5)
     } finally {
       window.removeEventListener('theater-save', heard)
       window.removeEventListener('theater-tag', heard)
       window.removeEventListener('theater-copy-link', heard)
       window.removeEventListener('theater-toggle-menu', heard)
+      window.removeEventListener('theater-toggle-show-all', heard)
     }
   })
 
@@ -201,6 +204,20 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     renderHook(() => useTheaterKeyboard(live))
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
     expect(live.onClose).not.toHaveBeenCalled()
+  })
+
+  it('1 and 2 call onTabChange when provided, and no-op when omitted', () => {
+    const onTabChange = vi.fn()
+    renderHook(() => useTheaterKeyboard(baseArgs({ onTabChange })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' })))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' })))
+    expect(onTabChange).toHaveBeenNthCalledWith(1, 'live')
+    expect(onTabChange).toHaveBeenNthCalledWith(2, 'collection')
+
+    const silent = baseArgs()
+    renderHook(() => useTheaterKeyboard(silent))
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' })))
+    expect(silent.goNext).not.toHaveBeenCalled()
   })
 
   it('ignores keys while typing and ⌘S / Ctrl+S', () => {

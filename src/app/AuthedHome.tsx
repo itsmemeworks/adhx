@@ -14,6 +14,7 @@ import {
   type TagItem,
   type StreamedBookmark,
   streamedBookmarkToFeedItem,
+  parseFilterType,
 } from '@/components/feed'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
@@ -24,6 +25,7 @@ import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 import { useSyncListener } from './useSyncListener'
 import { collectionPath } from '@/lib/theater/collection-href'
+import { notifyCollectionChanged } from '@/lib/client-events'
 
 export default function AuthedHome(): React.ReactElement {
   return (
@@ -65,9 +67,7 @@ function FeedPageContent(): React.ReactElement {
   } | null>(null)
   /** `platform:id` of the just-pasted post, held long enough to be noticed. */
   const [justAddedKey, setJustAddedKey] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterType>(
-    (searchParams.get('filter') as FilterType) || 'all',
-  )
+  const [filter, setFilter] = useState<FilterType>(parseFilterType(searchParams.get('filter')))
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(
     (searchParams.get('platform') as PlatformFilter) || 'all',
   )
@@ -176,6 +176,7 @@ function FeedPageContent(): React.ReactElement {
         const platform: string = data?.platform ?? 'twitter'
         const id: string | undefined = data?.bookmark?.id
 
+        let added: FeedItem | undefined
         if (id) {
           const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
           q.append('id', id)
@@ -183,7 +184,7 @@ function FeedPageContent(): React.ReactElement {
           const fres = await fetch(`/api/feed?${q}`)
           if (fres.ok) {
             const feed = await fres.json()
-            const added: FeedItem | undefined = (feed.items ?? []).find(
+            added = (feed.items ?? []).find(
               (f: FeedItem) => (f.platform ?? 'twitter') === platform && f.id === id,
             )
             if (added) placeAddedItem(added)
@@ -193,11 +194,10 @@ function FeedPageContent(): React.ReactElement {
         // No success text: the glowing card at the top IS the confirmation —
         // for a fresh add, and for a re-paste that moved an existing card up.
         setPasteAdd(null)
-        // Refresh the header's counts only. Deliberately NOT `tweet-added`,
-        // which `useSyncListener` turns into a full `fetchFeed(true)` — that
-        // would throw away the prepend above and, with a filter or search
-        // active, drop the just-added post out of view entirely.
-        window.dispatchEvent(new CustomEvent('stats-updated'))
+        // Same-tab tweet-added would make useSyncListener refetch and undo
+        // the prepend. Other Saved windows still hear `{ added }` over
+        // BroadcastChannel.
+        notifyCollectionChanged(added ? { refetchFeed: false, added } : {})
       } catch {
         setPasteAdd({ status: 'error', message: "Couldn't add that link" })
       }
@@ -413,20 +413,26 @@ function FeedPageContent(): React.ReactElement {
         setLoading(true)
         // Add-posts mode browses the WHOLE collection: drop the tag filter
         // (else the grid only shows posts already carrying the tag — nothing
-        // left to add) and the hide-archived gate (archived posts are prime
+        // left to add) and the archive gate (archived posts are prime
         // tagging candidates). The FilterBar's selected-tag UI state is
         // untouched. VIEWING a tag also ignores archive state: a tag is a deliberate
         // collection the user curated — read state is irrelevant there, and
         // the default hide-archived filter otherwise greets a fully-archived tag
         // with a misleading "All caught up" empty state.
+        // Library "Show archived" is archived-only (`archivedOnly`), not
+        // `hideArchived=false` (that still means include everything).
         const addingToTag = tagSelectTag !== null
         const tagActive = addingToTag || selectedTags.length > 0
         const params = new URLSearchParams({
           page: currentPage.toString(),
           limit: '50',
           filter,
-          hideArchived: (tagActive ? false : hideArchived).toString(),
         })
+        if (tagActive) {
+          params.set('hideArchived', 'false')
+        } else if (!hideArchived) {
+          params.set('archivedOnly', 'true')
+        }
         if (platformFilter !== 'all') params.set('platform', platformFilter)
         if (sort !== 'added') params.set('sort', sort)
         if (sortDirection !== 'desc') params.set('sortDir', sortDirection)
@@ -479,7 +485,7 @@ function FeedPageContent(): React.ReactElement {
   )
 
   useEffect(() => {
-    const urlFilter = (searchParams.get('filter') as FilterType) || 'all'
+    const urlFilter = parseFilterType(searchParams.get('filter'))
     const urlSort = (searchParams.get('sort') as SortType) || 'added'
     const urlSortDir = (searchParams.get('sortDir') as SortDirection) || 'desc'
     const urlHideArchived = searchParams.get('hideArchived') !== 'false'

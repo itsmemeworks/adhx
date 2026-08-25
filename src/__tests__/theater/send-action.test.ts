@@ -24,8 +24,6 @@ describe('textCopyAction', () => {
     expect(action.copiedLabel).toBe('Copied')
     expect(action.title).toBe("Copy the post's text")
     expect(action.Icon.displayName).toBe('Copy')
-    expect(textCopyAction('quote').idleLabel).toBe('Copy')
-    expect(textCopyAction('quote').title).toBe("Copy the post's text")
   })
 
   it('labels an article Copy and uses a file-text icon', () => {

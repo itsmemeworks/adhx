@@ -87,7 +87,7 @@ describe('theater Bionic Reading', () => {
     const { container } = render(
       <StageText
         item={textItem({
-          contentType: 'quote',
+          contentType: 'text',
           quote: {
             author: 'mark_k',
             authorName: 'Mark',

@@ -8,8 +8,15 @@
  * tests pin down the exact dispatch contract so a future refactor of the
  * helpers can't silently drop an event a listener depends on.
  */
-import { describe, it, expect } from 'vitest'
-import { CLIENT_EVENTS, notifyCollectionChanged, notifyTagsChanged } from '@/lib/client-events'
+import { describe, it, expect, beforeEach } from 'vitest'
+import {
+  CLIENT_EVENTS,
+  notifyCollectionChanged,
+  notifyTagsChanged,
+  resetClientEventBridgeForTests,
+  startClientEventBridge,
+} from '@/lib/client-events'
+import type { FeedItem } from '@/components/feed/types'
 
 function spyOn(eventName: string) {
   const calls: Event[] = []
@@ -18,6 +25,10 @@ function spyOn(eventName: string) {
 }
 
 describe('notifyCollectionChanged', () => {
+  beforeEach(() => {
+    resetClientEventBridgeForTests()
+  })
+
   it('with no args, fires both stats-updated and tweet-added — the common case of adding/removing a post the caller has not rendered itself', () => {
     const stats = spyOn('stats-updated')
     const feed = spyOn('tweet-added')
@@ -46,6 +57,94 @@ describe('notifyCollectionChanged', () => {
 
     notifyCollectionChanged({ tagsChanged: false })
     expect(tags).toHaveLength(1)
+  })
+
+  it('removed puts { removed } on tweet-added so Saved theaters can splice that identity', () => {
+    const feed = spyOn('tweet-added')
+    notifyCollectionChanged({ removed: { platform: 'twitter', id: '99' } })
+    expect(feed).toHaveLength(1)
+    expect((feed[0] as CustomEvent).detail).toEqual({
+      removed: { platform: 'twitter', id: '99' },
+    })
+  })
+
+  it('added + refetchFeed true puts { added } on tweet-added', () => {
+    const feed = spyOn('tweet-added')
+    const added = { platform: 'twitter', id: '88', text: 'hi' } as FeedItem
+    notifyCollectionChanged({ added })
+    expect(feed).toHaveLength(1)
+    expect((feed[0] as CustomEvent).detail).toEqual({ added })
+  })
+
+  it('added + refetchFeed false does not fire tweet-added locally — the caller already placed the row', () => {
+    const feed = spyOn('tweet-added')
+    notifyCollectionChanged({
+      refetchFeed: false,
+      added: { platform: 'twitter', id: '88' } as FeedItem,
+    })
+    expect(feed).toHaveLength(0)
+  })
+})
+
+const canBroadcast = typeof BroadcastChannel !== 'undefined'
+
+describe.skipIf(!canBroadcast)('notifyCollectionChanged cross-tab', () => {
+  beforeEach(() => {
+    resetClientEventBridgeForTests()
+  })
+
+  it('posts the same payload on BroadcastChannel so other windows hear Archive', async () => {
+    const other = new BroadcastChannel('adhx-client-events')
+    const received: unknown[] = []
+    other.onmessage = (event) => received.push(event.data)
+    try {
+      notifyCollectionChanged({ removed: { platform: 'twitter', id: '7' } })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(received).toContainEqual({
+        name: 'tweet-added',
+        detail: { removed: { platform: 'twitter', id: '7' } },
+      })
+    } finally {
+      other.close()
+    }
+  })
+
+  it('broadcasts added even when refetchFeed is false so other windows hear the paste', async () => {
+    const other = new BroadcastChannel('adhx-client-events')
+    const received: unknown[] = []
+    other.onmessage = (event) => received.push(event.data)
+    try {
+      notifyCollectionChanged({
+        refetchFeed: false,
+        added: { platform: 'twitter', id: '88' } as FeedItem,
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(received).toContainEqual({
+        name: 'tweet-added',
+        detail: { added: { platform: 'twitter', id: '88' } },
+      })
+    } finally {
+      other.close()
+    }
+  })
+
+  it('turns an inbound BroadcastChannel message into a local tweet-added', async () => {
+    startClientEventBridge()
+    const feed = spyOn('tweet-added')
+    const other = new BroadcastChannel('adhx-client-events')
+    try {
+      other.postMessage({
+        name: 'tweet-added',
+        detail: { removed: { platform: 'twitter', id: '9' } },
+      })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(feed).toHaveLength(1)
+      expect((feed[0] as CustomEvent).detail).toEqual({
+        removed: { platform: 'twitter', id: '9' },
+      })
+    } finally {
+      other.close()
+    }
   })
 })
 

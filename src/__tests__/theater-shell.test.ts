@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import {
   pinKeyFirst,
+  applyTheaterTypeLens,
+  feedItemMatchesQueueTypes,
+  queueTypesForAddedItem,
+  parseTheaterQueueTypes,
+  serializeTheaterQueueTypes,
+  toggleTheaterQueueType,
+  theaterQueueEmptyHeadline,
+  theaterQueueFilterLabel,
   theaterUrlSyncPath,
   theaterTabNavRestore,
   isFeedEnd,
@@ -12,7 +20,10 @@ import {
   nextRepeatMode,
   shouldRewaitAfterArrival,
 } from '@/components/theater/TheaterShell'
+import { mergeFeedItems } from '@/components/theater/useTheaterFeed'
 import { theaterItemKey } from '@/components/theater/types'
+import type { TheaterItem } from '@/components/theater/types'
+import type { FeedItem } from '@/components/feed/types'
 
 /**
  * Pure list-reorder helper backing TheaterShell's lead-pick/shared-item
@@ -50,6 +61,173 @@ describe('pinKeyFirst', () => {
   it('returns the list unchanged when pinnedKey is null', () => {
     const result = pinKeyFirst(items, null)
     expect(result).toBe(items)
+  })
+})
+
+function visualItem(bookmarkId: string, extra: Partial<TheaterItem> = {}): TheaterItem {
+  return {
+    action: 'save',
+    platform: 'twitter',
+    bookmarkId,
+    author: 'alice',
+    url: `/alice/status/${bookmarkId}`,
+    createdAt: '2026-08-18T00:00:00Z',
+    saveCount: 1,
+    trendCount: 1,
+    ...extra,
+  } as TheaterItem
+}
+
+describe('toggleTheaterQueueType', () => {
+  it('starts from All by selecting one type', () => {
+    expect(toggleTheaterQueueType([], 'article')).toEqual(['article'])
+  })
+
+  it('adds and removes types independently', () => {
+    expect(toggleTheaterQueueType(['video'], 'photo')).toEqual(['video', 'photo'])
+    expect(toggleTheaterQueueType(['video', 'photo'], 'photo')).toEqual(['video'])
+  })
+
+  it('returns All when the last type is turned off, or when every type is on', () => {
+    expect(toggleTheaterQueueType(['text'], 'text')).toEqual([])
+    expect(toggleTheaterQueueType(['video', 'photo', 'text'], 'article')).toEqual([])
+  })
+})
+
+describe('parseTheaterQueueTypes / serializeTheaterQueueTypes', () => {
+  it('round-trips a subset and treats all/empty/junk as All', () => {
+    expect(serializeTheaterQueueTypes(['photo', 'video'])).toBe('["video","photo"]')
+    expect(parseTheaterQueueTypes('["photo","video"]')).toEqual(['video', 'photo'])
+    expect(parseTheaterQueueTypes('["video","photo","text","article","quote"]')).toEqual([])
+    expect(parseTheaterQueueTypes('[]')).toEqual([])
+    expect(parseTheaterQueueTypes('nope')).toEqual([])
+  })
+})
+
+describe('theaterQueueFilterLabel', () => {
+  it('names the selection for the dock toggle', () => {
+    expect(theaterQueueFilterLabel([])).toBe('Queue')
+    expect(theaterQueueFilterLabel(['video'])).toBe('Videos')
+    expect(theaterQueueFilterLabel(['video', 'photo'])).toBe('Videos · Photos')
+    expect(theaterQueueFilterLabel(['video', 'text', 'article'])).toBe('3 types')
+  })
+})
+
+describe('theaterQueueEmptyHeadline', () => {
+  it('names the selected types', () => {
+    expect(theaterQueueEmptyHeadline(['article'])).toBe('No articles in Live right now')
+    expect(theaterQueueEmptyHeadline(['video', 'photo'])).toBe(
+      'No videos or photos in Live right now',
+    )
+    expect(theaterQueueEmptyHeadline(['video', 'text', 'article'])).toBe(
+      'No videos, text, or articles in Live right now',
+    )
+    expect(theaterQueueEmptyHeadline(['video'], 'Saved')).toBe('No videos in Saved right now')
+  })
+})
+
+describe('applyTheaterTypeLens', () => {
+  const video = visualItem('v', { contentType: 'video' })
+  const photo = visualItem('p', { contentType: 'photo' })
+  const text = visualItem('t', { contentType: 'text' })
+  const article = visualItem('a', { contentType: 'article' })
+
+  it('returns the same reference when All types are showing', () => {
+    const items = [video, text]
+    expect(applyTheaterTypeLens(items, [])).toBe(items)
+  })
+
+  it('keeps only the selected types', () => {
+    const items = [text, video, photo, article]
+    expect(applyTheaterTypeLens(items, ['video', 'photo']).map((it) => it.bookmarkId)).toEqual([
+      'v',
+      'p',
+    ])
+    expect(applyTheaterTypeLens(items, ['article']).map((it) => it.bookmarkId)).toEqual(['a'])
+  })
+
+  it('keeps a shared lead whose type is filtered out', () => {
+    const items = [text, video]
+    const kept = applyTheaterTypeLens(items, ['video'], theaterItemKey(text))
+    expect(kept.map((it) => it.bookmarkId)).toEqual(['t', 'v'])
+  })
+
+  it('returns the same reference when every item already matches', () => {
+    const items = [video, photo]
+    expect(applyTheaterTypeLens(items, ['video', 'photo'])).toBe(items)
+  })
+
+  it('treats TikTok without contentType as video', () => {
+    const tiktok = visualItem('tk', { platform: 'tiktok', contentType: undefined })
+    expect(applyTheaterTypeLens([tiktok, text], ['video']).map((it) => it.bookmarkId)).toEqual([
+      'tk',
+    ])
+  })
+
+  it('keeps a matching preview pulse and drops a filtered-out one', () => {
+    const video = visualItem('v', { contentType: 'video', createdAt: '2026-08-18T00:00:00Z' })
+    const textPulse = visualItem('t', { contentType: 'text', createdAt: '2026-08-19T00:00:00Z' })
+    const photoPulse = visualItem('p', { contentType: 'photo', createdAt: '2026-08-19T01:00:00Z' })
+    const afterText = mergeFeedItems([video], [textPulse, video])
+    expect(afterText.freshKeys).toEqual(['twitter:t'])
+    expect(applyTheaterTypeLens(afterText.items, ['video']).map((it) => it.bookmarkId)).toEqual([
+      'v',
+    ])
+    const afterPhoto = mergeFeedItems(afterText.items, [photoPulse, textPulse, video])
+    expect(afterPhoto.freshKeys).toEqual(['twitter:p'])
+    expect(
+      applyTheaterTypeLens(afterPhoto.items, ['video', 'photo']).map((it) => it.bookmarkId),
+    ).toEqual(['p', 'v'])
+  })
+})
+
+describe('feedItemMatchesQueueTypes', () => {
+  const text = {
+    id: '1',
+    platform: 'twitter',
+    media: [],
+  } as unknown as FeedItem
+  const video = {
+    id: '2',
+    platform: 'twitter',
+    media: [{ mediaType: 'video' }],
+  } as unknown as FeedItem
+
+  it('keeps every item when All is selected', () => {
+    expect(feedItemMatchesQueueTypes(text, [])).toBe(true)
+    expect(feedItemMatchesQueueTypes(video, [])).toBe(true)
+  })
+
+  it('keeps only the selected Saved types', () => {
+    expect(feedItemMatchesQueueTypes(text, ['video'])).toBe(false)
+    expect(feedItemMatchesQueueTypes(video, ['video'])).toBe(true)
+  })
+})
+
+describe('queueTypesForAddedItem', () => {
+  const text = {
+    id: '1',
+    platform: 'twitter',
+    media: [],
+  } as unknown as FeedItem
+  const video = {
+    id: '2',
+    platform: 'twitter',
+    media: [{ mediaType: 'video' }],
+  } as unknown as FeedItem
+
+  it('keeps All when All is selected', () => {
+    expect(queueTypesForAddedItem([], video)).toEqual([])
+  })
+
+  it('keeps the filter when the new post already matches', () => {
+    expect(queueTypesForAddedItem(['video'], video)).toEqual(['video'])
+    expect(queueTypesForAddedItem(['video', 'photo'], video)).toEqual(['video', 'photo'])
+  })
+
+  it('resets to All when the new post is a different type', () => {
+    expect(queueTypesForAddedItem(['text'], video)).toEqual([])
+    expect(queueTypesForAddedItem(['video'], text)).toEqual([])
   })
 })
 
@@ -267,6 +445,15 @@ describe('findFreshArrival', () => {
 
   it('returns null against an empty freshKeys set', () => {
     expect(findFreshArrival(new Set(), new Set())).toBe(null)
+  })
+
+  it('skips arrivals the Live type filter would hide, then takes the next allowed', () => {
+    const baseline = new Set(['twitter:1'])
+    const freshKeys = new Set(['twitter:1', 'twitter:text', 'twitter:video'])
+    expect(findFreshArrival(freshKeys, baseline, (key) => key === 'twitter:video')).toBe(
+      'twitter:video',
+    )
+    expect(findFreshArrival(freshKeys, baseline, () => false)).toBe(null)
   })
 })
 

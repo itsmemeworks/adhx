@@ -42,7 +42,7 @@ function toTextLinks(links: LinkItem[] | null | undefined): TextLinkRef[] | unde
   return refs.length > 0 ? refs : undefined
 }
 
-export type CollectionContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
+export type CollectionContentType = 'video' | 'photo' | 'text' | 'article'
 
 /**
  * Real content type for a saved item. Same function as `feedItemType` —
@@ -101,6 +101,25 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     textLinks: toTextLinks(item.links),
     ...(quote ? { quote } : {}),
     ...(linkPreview ? { linkPreview } : {}),
+    ...twitterAlbum(item),
+  }
+}
+
+function twitterAlbum(
+  item: FeedItem,
+): Pick<TheaterItem, 'videoCount' | 'videoPosters' | 'photoCount'> {
+  if ((item.platform ?? 'twitter') !== 'twitter') return {}
+  const media = item.media ?? []
+  const videos = media.filter((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif')
+  const photos = media.filter((m) => m.mediaType === 'photo')
+  return {
+    ...(videos.length > 1
+      ? {
+          videoCount: videos.length,
+          videoPosters: videos.map((m) => m.thumbnailUrl).filter((url): url is string => !!url),
+        }
+      : {}),
+    ...(photos.length > 1 ? { photoCount: photos.length } : {}),
   }
 }
 

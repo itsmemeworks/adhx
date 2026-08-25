@@ -34,6 +34,8 @@ export interface TheaterFeed {
    * the viewer stays where they are; the dock just shows the new save.
    */
   prependItem: (item: TheaterItem) => void
+  /** Replace an existing key in place (shared-preview stub → resolved post). */
+  replaceItem: (item: TheaterItem) => void
 }
 
 interface ActivityResponse {
@@ -75,6 +77,21 @@ export function mergeFeedItems(
 
   if (fresh.length === 0 && older.length === 0) return { items: prev, freshKeys }
   return { items: [...fresh, ...prev, ...older], freshKeys }
+}
+
+/**
+ * Swap the object at `key` (same position, same neighbors). Used when a
+ * shared-preview stub is replaced by the resolved FxTwitter / mirror item
+ * so the lead keeps its pin without looking like a fresh arrival.
+ */
+export function replaceFeedItem(prev: TheaterItem[], item: TheaterItem): TheaterItem[] {
+  const key = theaterItemKey(item)
+  const idx = prev.findIndex((existing) => theaterItemKey(existing) === key)
+  if (idx === -1) return [item, ...prev]
+  if (prev[idx] === item) return prev
+  const next = prev.slice()
+  next[idx] = item
+  return next
 }
 
 export interface UseTheaterFeedOptions {
@@ -159,5 +176,9 @@ export function useTheaterFeed(
     setFreshKeys((prev) => new Set(prev).add(key))
   }, [])
 
-  return { items, savedToday, recentActivity, freshKeys, prependItem }
+  const replaceItem = useCallback((item: TheaterItem) => {
+    setItems((prev) => replaceFeedItem(prev, item))
+  }, [])
+
+  return { items, savedToday, recentActivity, freshKeys, prependItem, replaceItem }
 }

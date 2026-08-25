@@ -1,10 +1,126 @@
 # WORKLOG
 
-Append-only context log for agents and contributors. **Newest entries first.** After any substantive piece of work, add a dated entry (≤10 lines): what was done, why, current state, follow-ups. Never rewrite or delete old entries — this file is how a fresh session inherits context that isn't in the code. See `AGENTS.md` for the full protocol.
+Append-only context log for agents and contributors. **Newest entries first.** After any substantive piece of work, add a dated entry (≤10 lines): what was done, why, current state (shipped/in-flight/reverted), and follow-ups. Never rewrite or delete old entries — this file is how a fresh session inherits context that isn't in the code. See `AGENTS.md` for the full protocol.
 
 **Voice:** new entries must not name operator GitHub logins, personal handles, or Fly bypasses. Put those in gitignored `CLAUDE.local.md`. Older entries below were written as an internal ops diary and may still contain them — they are historical, not a public contract.
 
 ---
+
+## 2026-08-25 — Album review: hydrate photoCount, pin the grant, send clip 1
+
+Shared Read ignored a later `photoCount` on the same post. The hydrate effect now re-seeds, and tests cover album wrap, last-clip `ended`, `<video>` identity, `?index=` on info/download, and Send staying on clip 1. In-flight until the PR merges.
+
+## 2026-08-25 — Album pill no longer jumps, hides, or goes too dark
+
+Cycling a clip set `videoWidth` to 0 for a frame, so the frost pill snapped to the stage bottom (under the mobile peek bar — “vanished”) then jumped back. It now keeps the last inset until the next clip has a real size, and Watch uses the same `bg-black/40` frost as Read. In-flight until the PR merges.
+
+## 2026-08-25 — Album dots hug the painted clip, not the stage
+
+Pinning the frost-dot pill to the stage/band bottom put it in the letterbox (and under the mobile peek bar) on cinematic Watch clips. It now measures the `object-contain` box and overlays the picture with a 12px inset — Watch and Read, desktop and mobile, photos and videos. In-flight until the PR merges.
+
+## 2026-08-25 — Album dots sit on the bottom of the clip
+
+Read had the frost-dot pill in the gap under the keep-playing band. It now overlays the bottom of the clip with a little inset (`bottom-3`), desktop and mobile. Watch on a phone used to pin the pill under the top scrim — it now uses the same bottom-of-clip inset (clears the peek bar). Desktop Watch stays bottom-inset too. In-flight until the PR merges.
+
+## 2026-08-25 — Read album dots sit under the clip, not on it
+
+The frost-dot pill on a video album in Read was overlaid on the keep-playing band (same slot as Watch). It now sits in the gap under the band, above the author row, so the clip stays clean. Watch is unchanged. In-flight until the PR merges.
+
+## 2026-08-25 — Read shows the full album, not just the first still
+
+Read on a multi-photo tweet only seeded `/api/media/image?index=1`, and Read on a multi-video tweet hid the snap chrome (`hideAlbum`) so later clips were unreachable. Saved / shared preview now carry `photoCount`; the typeset reader stacks every still immediately (X Articles already did this via markdown). Video albums keep the frost-dot pill in the keep-playing band. Pulse rows without a count still hydrate from `/api/share/tweet`. In-flight until the PR merges.
+
+## 2026-08-25 — Paste clears a hiding filter; other windows see the add
+
+Pasting a video while the theater is on Text (or any type that wouldn't show it) reset the queue filter to All so the save is visible. A second `/saved` or `/live` window now prepends `{ added }` from `notifyCollectionChanged` (BroadcastChannel; same-tab `tweet-added` is skipped so the library grid does not refetch). The receiving window stays on its current post and shifts the index. Library paste uses the same helper. In-flight until the PR merges.
+
+## 2026-08-25 — Archive in one Saved window drops it in the others
+
+`notifyCollectionChanged` only fired same-tab CustomEvents, and TheaterShell snapshots `personalItems` at mount, so a second `/saved` window kept the archived post. The client-event bus now mirrors over `BroadcastChannel('adhx-client-events')` (`AppShell` opens the channel). Archive/delete pass `{ removed: { platform, id } }` on `tweet-added`; TheaterShell splices that row and slides the index back when the dropped post sat before the cursor. `DockStat is not defined` on those windows was stale Fast Refresh after the Queue end-cap change — refresh, do not restore `DockStat`. In-flight until the PR merges.
+
+## 2026-08-25 — Read / Watch keeps toggling on long captions
+
+Read unmounted the 2-line caption, ResizeObserver reported 0×0, and `overflowing` flipped false — Watch then had no Read to come back to. Overflow now latches for the current post and remasures when the caption remounts. Quote-on-media was already always-on. In-flight until the PR merges.
+
+## 2026-08-25 — Dock end cap is Queue / position / new
+
+"Show all" is now "Queue". Under it: current/total (`2/83`), then `N new` when anything is new since last visit. Saved-today / remaining / waiting pills are gone. Playlist still hides the new row. `Q` and the shortcut help say Queue. In-flight until the PR merges.
+
+## 2026-08-25 — Saved Archive is an outline, left of Download
+
+On `/saved` Archive sat at the end of the action row as a filled clay pill. It now sits left of Download (or Copy) and uses the same glass + clay border as Save — no `bg-clay-grad` fill. Mobile is the 44px circle with the same border. In-flight until the PR merges.
+
+## 2026-08-25 — Twitter multi-video albums snap like photos
+
+Tweets with 2–4 videos (e.g. two side-by-side demos) used to play only `videos[0]`. The theater now uses the same snap scroller + frost-dot pill as multi-photo: `/api/media/video?index=`, shared preview / Saved seed `videoCount`, pulse rows hydrate from `/api/share/tweet`. Ended on an earlier clip goes to the next clip; the last clip advances the queue. In-flight until the PR merges.
+
+## 2026-08-25 — Library Show archived is archived-only
+
+The FilterBar toggle used to mean “include archived” (`hideArchived=false` → active + archived). It now lists archived posts only via `GET /api/feed?archivedOnly=true`. `hideArchived=false` still means include everything (tag views, add-to-tag, save/`?id=` lookups). Count on the pill is the archived count. Empty active collection with archives offers “Show N archived”. In-flight until the PR merges.
+
+## 2026-08-25 — Long theater notes can scroll on mobile
+
+A 127-line list (e.g. the backlinks note) typeset fine on desktop but looked cut off on a phone: the mobile action row was `pointer-events-auto` + `flex-1`, so the thumb zone swallowed pans and the media-weight scrim faded the last visible lines to black. The icon cluster now hugs the pills; text/article scrims use a short fade. In-flight until the PR merges.
+
+## 2026-08-24 — Saved Show all has the same type pills as Live
+
+Live and Saved already share `TheaterQueueFilter` in both chromes; TheaterShell was omitting the callbacks on the Saved tab (`queueFilterAvailable = !loop && !isCollectionTab`). Saved now gets All / Videos / Photos / Text / Articles, persisted as `adhx-theater-types`, and the filter actually walks the Saved queue (skip / back / ended / overlay). Empty filter: "No videos in Saved right now". Playlists still omit the pills. In-flight until the PR merges.
+
+## 2026-08-24 — Quote is not a content type; Manual filter gone
+
+Photo tweets (and anything with `isQuote`) were typed as `quote` because `inferContentType` treated the flag as a type and shared-preview set `previewType` to quote before checking photos. Quote tweets now classify from their own media (photo → photo, text+quote → text). Stored `content_type = 'quote'` is ignored. Library drops Quoted and Manual pills; Live drops Quotes. Quote cards / Read-on-quote still render via `item.quote`. In-flight until the PR merges.
+
+## 2026-08-24 — Signed-out burger drops Privacy
+
+The unauthenticated theater/leaderboard menu is Theater / Leaderboard / Sign in. `/privacy` still exists (landing footer, Settings, sitemap). In-flight until the PR merges.
+
+## 2026-08-24 — Mobile up-next expand no longer pans the viewport
+
+Opening the mobile playlist focused a queue row (`scrollIntoView` + default focus), which panned iOS so the sheet jumped to the top of the screen: Live type pills vanished, the peek bar went off-screen, and the rest of the stage read as a black void. Mobile now skips auto-focus on open (↑/↓ still move rows); focus uses `preventScroll` and only nudges the list scroller. The sheet is `h-[70%]` of the theater with `overflow-hidden` so `dvh` / visual-viewport jumps don't fight the open animation. Filters remain Live-only (Saved / playlists omit them). In-flight until the PR merges.
+
+## 2026-08-24 — Dock end cap fades; filter is a cue not a label
+
+Show all stays "Show all". An active Live type filter is a clay ListFilter glyph (hover still names the types). Queue length / new / saved-today are compact pills. The cap overlays the filmstrip with a left gradient so cards fade under it instead of hitting a hard vertical seam. In-flight until the PR merges.
+
+## 2026-08-24 — Q toggles Show all
+
+`Q` expands/collapses the theater playlist (desktop Show all / mobile up-next). While open, ↑/↓ move through the rows, Enter plays the focused post, Esc or a click outside closes. Same overlay contract as the account menu so stage keys don't leak through. In-flight until the PR merges.
+
+## 2026-08-24 — Preview pages paint ADHX before the proxy
+
+External preview links used to wait on FxTwitter / a scrape / oEmbed (and sometimes a 10s OG fetch) before any HTML. Pages now return a URL-stub theater immediately; `sharedResolve` fills the post (or `StageUnavailable`) without blocking chrome. Tweets show `StageResolving` until the kind is known; Reels/TikTok/Shorts play as video stubs. `generateMetadata` still awaits for crawlers. In-flight until the PR merges.
+
+## 2026-08-24 — Dock filter chip + one typeface
+
+Show all / peek-bar meta dropped mono + mixed weights; counts share 11px sans. An active Live type filter turns the toggle into a clay chip named for the selection (Videos, Videos · Photos, 3 types) so it is visible with the panel closed. Same clay tint on the mobile peek label. In-flight until the PR merges.
+
+## 2026-08-24 — Live filter ignores non-matching preview pulses
+
+Videos (etc.) stays on while `/api/activity` prepends new previews: matching types join the queue, others don't, and a filtered-out arrival does not auto-play the caught-up stage. Unit + e2e cover it. In-flight until the PR merges.
+
+## 2026-08-24 — Long notes typeset as a compact document
+
+X notes / numbered lists were sized like a long slogan (`text-xl` + relaxed leading), so a 127-line tweet looked truncated and wrapped mid-item. Compact type kicks in past 12 lines or 1500 chars; the stage starts at the top with a bottom fade so scroll is obvious. Line breaks were already in the data. In-flight until the PR merges.
+
+## 2026-08-24 — Live queue is a type multi-select
+
+Live Show all / the up-next sheet now has All plus Videos, Photos, Text, Articles, Quotes — tap any mix. Empty selection is All. Persists as `adhx-theater-types`; the old `adhx-theater-visual` flag migrates to videos+photos once. `I` is no longer a shortcut (one key can't drive five pills). Saved and playlists omit it. In-flight until the PR merges.
+
+## 2026-08-24 — Visual is a playlist filter
+
+All / Videos & photos pills live in Show all (desktop) and the up-next sheet (mobile), not as a top-bar icon. `I` still toggles; `adhx-theater-visual` still persists. Saved and playlists omit it. In-flight until the PR merges.
+
+## 2026-08-24 — Visual sits left of paste
+
+Moved the Live Visual (media-only) toggle from next to LIVE / left of the flame to immediately left of paste. Flame stats stay to its left. In-flight until the PR merges.
+
+## 2026-08-24 — Theater keys: Visual + Live/Saved
+
+`I` already toggled Visual. `1` / `2` now switch Live ⇄ Saved when signed in (personal theater + shared preview `2` → `/saved`). Signed-out and playlists no-op. Help overlay has a Theater section. In-flight until the PR merges.
+
+## 2026-08-24 — Live theater Visual lens
+
+Live (signed-out `/`, `/live`, Live tab, shared "more being sent") can show videos and photos only. Images frost toggle next to LIVE (desktop) / left of flame (mobile); `I` in the keymap; persists as `adhx-theater-visual`. Saved and playlists omit it. A shared lead stays even if it's text. Empty pulse: "No videos or photos in Live right now" + Show every post. In-flight until the PR merges.
 
 ## 2026-08-24 — CI: Saved tab is not Save; Tag count is not a chip
 

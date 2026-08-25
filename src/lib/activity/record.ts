@@ -25,8 +25,8 @@ export type ActivityAction = 'preview' | 'save' | 'read' | 'share'
 const PULSE_PLATFORMS = new Set(['twitter', 'instagram', 'tiktok', 'youtube'])
 
 /** Post types the pulse understands. Used to type preview-only cards. */
-export type ActivityContentType = 'video' | 'photo' | 'text' | 'quote' | 'article'
-const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'quote', 'article'])
+export type ActivityContentType = 'video' | 'photo' | 'text' | 'article'
+const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'article'])
 
 /**
  * Canonical on-ADHX preview path for a piece of content. Used as the pulse

@@ -22,12 +22,15 @@ export type TheaterShortcut =
   | 'undo'
   | 'close'
   | 'toggleMenu'
+  | 'toggleShowAll'
   | 'toggleHelp'
   | 'toggleArticle'
   | 'replay'
   | 'keepPlaying'
   | 'toggleExpand'
   | 'cycleRepeat'
+  | 'tabLive'
+  | 'tabSaved'
   | 'scrollDown'
   | 'scrollUp'
 
@@ -40,6 +43,7 @@ export const THEATER_ACTION_EVENTS = {
   open: 'theater-open',
   archive: 'theater-archive',
   toggleMenu: 'theater-toggle-menu',
+  toggleShowAll: 'theater-toggle-show-all',
   toggleArticle: 'theater-toggle-article',
   replay: 'theater-replay',
   keepPlaying: 'theater-keep-playing',
@@ -59,6 +63,7 @@ export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
   open: 'open',
   archive: 'archive',
   toggleMenu: 'menu',
+  toggleShowAll: 'show-all',
   toggleArticle: 'read',
   replay: 'replay',
   keepPlaying: 'keep-playing',
@@ -84,7 +89,7 @@ export function isTheaterTypingTarget(target: EventTarget | null | undefined): b
 
 /**
  * Keys the window-level theater handler acts on. Overlays (sign-in, tag
- * picker, avatar menu, help) stop these from reaching the stage.
+ * picker, avatar menu, Queue, help) stop these from reaching the stage.
  */
 export const THEATER_SHORTCUT_KEYS = new Set([
   ' ',
@@ -118,12 +123,16 @@ export const THEATER_SHORTCUT_KEYS = new Set([
   'A',
   'r',
   'R',
+  '1',
+  '2',
   'u',
   'U',
   'w',
   'W',
   'p',
   'P',
+  'q',
+  'Q',
   '.',
   '?',
   '/',
@@ -182,6 +191,10 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'r':
     case 'R':
       return 'cycleRepeat'
+    case '1':
+      return 'tabLive'
+    case '2':
+      return 'tabSaved'
     case 'u':
     case 'U':
       return 'undo'
@@ -191,6 +204,9 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'p':
     case 'P':
       return 'keepPlaying'
+    case 'q':
+    case 'Q':
+      return 'toggleShowAll'
     case '.':
       return 'toggleMenu'
     case '?':
@@ -239,6 +255,14 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
       { keys: ['→', 'J'], label: 'Next post' },
       { keys: ['←', 'K'], label: 'Previous post' },
       { keys: ['↓', '↑'], label: 'Scroll text' },
+    ],
+  },
+  {
+    title: 'Theater',
+    rows: [
+      { keys: ['1'], label: 'Live' },
+      { keys: ['2'], label: 'Saved' },
+      { keys: ['Q'], label: 'Queue' },
     ],
   },
   {

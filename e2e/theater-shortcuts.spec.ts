@@ -35,6 +35,10 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help.getByText('Paste a link')).toBeVisible()
     await expect(help.getByText('Expand')).toBeVisible()
     await expect(help.getByText('Repeat')).toBeVisible()
+    await expect(help.getByText('Theater')).toBeVisible()
+    await expect(help.getByText('Live', { exact: true })).toBeVisible()
+    await expect(help.getByText('Saved', { exact: true })).toBeVisible()
+    await expect(help.getByText('Queue', { exact: true })).toBeVisible()
     await expect(help.getByText('Scroll text')).toBeVisible()
 
     await page.keyboard.press('ArrowRight')
@@ -118,6 +122,62 @@ test.describe('theater shortcuts (signed out)', () => {
     await page.keyboard.press('r')
     await expect(repeat).toHaveAttribute('aria-label', 'Stop when caught up')
   })
+
+  test('Queue type pills are a multi-select', async ({ page }) => {
+    await page.goto('/')
+    await expectTheaterReady(page)
+    await page.evaluate(() => {
+      localStorage.removeItem('adhx-theater-types')
+      localStorage.removeItem('adhx-theater-visual')
+    })
+    await page.goto('/')
+    await expectTheaterReady(page)
+
+    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Videos', exact: true })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Queue', exact: true }).click()
+    const all = page.getByRole('button', { name: 'All', exact: true })
+    const videos = page.getByRole('button', { name: 'Videos', exact: true })
+    const photos = page.getByRole('button', { name: 'Photos', exact: true })
+    await expect(all).toHaveAttribute('aria-pressed', 'true')
+    await expect(videos).toHaveAttribute('aria-pressed', 'false')
+    await videos.click()
+    await expect(videos).toHaveAttribute('aria-pressed', 'true')
+    await expect(all).toHaveAttribute('aria-pressed', 'false')
+    await photos.click()
+    await expect(photos).toHaveAttribute('aria-pressed', 'true')
+    await expect(videos).toHaveAttribute('aria-pressed', 'true')
+    await all.click()
+    await expect(all).toHaveAttribute('aria-pressed', 'true')
+    await expect(videos).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('Q toggles Queue; arrows move; Escape and click away close', async ({ page }) => {
+    await page.goto('/')
+    await expectTheaterReady(page)
+
+    const toggle = page.getByRole('button', { name: 'Queue', exact: true })
+    await page.keyboard.press('q')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const current = page.locator(
+      '[data-theater-queue-panel] [data-theater-queue-item][aria-current="true"]',
+    )
+    await expect(current).toBeFocused()
+    const rows = page.locator('[data-theater-queue-panel] [data-theater-queue-item]')
+    if ((await rows.count()) > 1) {
+      await page.keyboard.press('ArrowDown')
+      await expect(current).not.toBeFocused()
+    }
+
+    await page.keyboard.press('Escape')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    await page.keyboard.press('q')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await page.mouse.click(720, 360)
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
 })
 
 authedTest.describe('theater shortcuts (signed in)', () => {
@@ -146,6 +206,19 @@ authedTest.describe('theater shortcuts (signed in)', () => {
 
     await page.keyboard.press('u')
     await expect(caption(page, POST.alpha.text)).toBeVisible()
+  })
+
+  authedTest('Q then Escape on Saved closes Queue, not the theater', async ({ page }) => {
+    await apiUnarchive(page, POST.alpha.id)
+    await page.goto('/saved')
+    await expectTheaterReady(page)
+    const toggle = page.getByRole('button', { name: 'Queue', exact: true })
+    await page.keyboard.press('q')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await page.keyboard.press('Escape')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(page).toHaveURL(/\/saved/)
+    await expect(page.getByRole('button', { name: 'Next post' })).toBeVisible()
   })
 
   authedTest('T then type then Enter creates a tag and closes; arrows toggle', async ({ page }) => {
@@ -218,6 +291,26 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('menuitem', { name: 'Leaderboard' })).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(page).toHaveURL(/\/leaderboard/)
+  })
+
+  authedTest('1 and 2 switch Live ⇄ Saved', async ({ page }) => {
+    await page.goto('/live')
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+
+    await page.keyboard.press('2')
+    await expect(page).toHaveURL(/\/saved/)
+    await expectTheaterReady(page)
+
+    await page.keyboard.press('1')
+    await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    await expect(page).not.toHaveURL(/\/saved/)
   })
 })
 

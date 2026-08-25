@@ -140,6 +140,30 @@ describe('TheaterShell shared-preview account tabs', () => {
     expect(pushSpy).toHaveBeenCalledWith('/library')
   })
 
+  it('2 pushes /saved from the keyboard; 1 is a no-op', async () => {
+    const item = textItem('123')
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={{ items: [item], savedToday: 0, recentActivity: 0 }}
+          mode="shared"
+          sharedItem={item}
+          authed
+        />,
+      )
+    })
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
+    })
+    expect(pushSpy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+    })
+    expect(pushSpy).toHaveBeenCalledWith('/saved')
+  })
+
   it('signed-out shared preview does not mount the account tabs', async () => {
     authMe = { me: { authenticated: false }, loading: false, refresh: vi.fn() }
     const item = textItem('123')
@@ -154,6 +178,11 @@ describe('TheaterShell shared-preview account tabs', () => {
     })
     expect(screen.queryByRole('button', { name: 'Saved' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    expect(pushSpy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+    })
     expect(pushSpy).not.toHaveBeenCalled()
   })
 })

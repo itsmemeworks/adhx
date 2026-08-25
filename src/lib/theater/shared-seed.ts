@@ -98,6 +98,21 @@ export interface TweetSharedInput {
   quote?: TheaterQuoteRef
   /** Off-site OG card (Substack, Medium, …). Not an X Article. */
   linkPreview?: TheaterLinkPreview
+  /** Twitter video album — same snap chrome as multi-photo tweets. */
+  videoCount?: number
+  videoPosters?: string[]
+  /** Twitter photo album — Read stacks every still from this count. */
+  photoCount?: number
+}
+
+/** URL-only stub so a preview page can paint the theater before FxTwitter returns. */
+export function stubTweetTheaterItem(username: string, id: string): TheaterItem {
+  return tweetToTheaterItem({
+    id,
+    author: username,
+    contentType: 'text',
+    createdAt: new Date().toISOString(),
+  })
 }
 
 /** Map the already-fetched FxTwitter tweet fields (as computed by the status page) into a TheaterItem. */
@@ -118,6 +133,9 @@ export function tweetToTheaterItem(input: TweetSharedInput): TheaterItem {
     textLinks: input.textLinks,
     ...(input.quote ? { quote: input.quote } : {}),
     ...(input.linkPreview ? { linkPreview: input.linkPreview } : {}),
+    ...(input.videoCount && input.videoCount > 1 ? { videoCount: input.videoCount } : {}),
+    ...(input.videoPosters?.length ? { videoPosters: input.videoPosters } : {}),
+    ...(input.photoCount && input.photoCount > 1 ? { photoCount: input.photoCount } : {}),
   }
 }
 
@@ -127,6 +145,11 @@ export interface ReelSharedInput {
   authorName?: string | null
   text?: string | null
   thumbnailUrl?: string | null
+}
+
+/** URL-only stub — Reels are always video; the scrape only fills caption/author. */
+export function stubReelTheaterItem(id: string): TheaterItem {
+  return reelToTheaterItem({ id, author: 'instagram' })
 }
 
 /** Map instafix/saved-reel fields (as computed by the reel preview page) into a TheaterItem. */
@@ -157,6 +180,11 @@ export interface TikTokSharedInput {
   text?: string | null
 }
 
+/** URL-only stub — handle+id is enough for the thumbnail proxy and MP4. */
+export function stubTikTokTheaterItem(handle: string, id: string): TheaterItem {
+  return tiktokToTheaterItem({ id, handle })
+}
+
 /** Map tnktok/saved-TikTok fields (as computed by the TikTok preview page) into a TheaterItem. */
 export function tiktokToTheaterItem(input: TikTokSharedInput): TheaterItem {
   const author = stripAt(input.author || input.handle)
@@ -182,6 +210,11 @@ export interface YouTubeSharedInput {
   author: string
   authorName?: string | null
   text?: string | null
+}
+
+/** URL-only stub — the iframe and poster are id-only; oEmbed fills title/channel. */
+export function stubYouTubeTheaterItem(id: string): TheaterItem {
+  return youtubeToTheaterItem({ id, author: 'youtube' })
 }
 
 /** Map oEmbed/saved-Short fields (as computed by the Shorts preview page) into a TheaterItem. */

@@ -1,10 +1,11 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Header } from './Header'
 import { PWAInstallPrompt } from './PWAInstallPrompt'
 import { isSavedPath } from '@/lib/theater/collection-href'
+import { startClientEventBridge } from '@/lib/client-events'
 
 // Header loading skeleton
 function HeaderSkeleton() {
@@ -20,6 +21,9 @@ function HeaderSkeleton() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  useEffect(() => {
+    startClientEventBridge()
+  }, [])
 
   // Full-width pages without header (public share pages, URL prefix quick-add pages,
   // the full-screen trending reel)

@@ -14,8 +14,11 @@ import {
   shouldCommitDelete,
   shouldDismissUndo,
   personalAdvance,
+  personalAdvanceMatching,
   personalAdvanceOnEndedIndex,
+  personalAdvanceOnEndedMatching,
   personalStepBackIndex,
+  personalStepBackMatching,
   type PersonalUndoAction,
 } from '@/components/theater/TheaterShell'
 
@@ -122,5 +125,37 @@ describe('personalAdvanceOnEndedIndex', () => {
 
   it('stays on the current post when repeat is one', () => {
     expect(personalAdvanceOnEndedIndex(1, 3, 'one')).toBe(1)
+  })
+})
+
+describe('personalAdvanceMatching / personalStepBackMatching', () => {
+  const odds = (i: number) => i % 2 === 1
+
+  it('skips indices the filter rejects and lands on All Clear past the last match', () => {
+    expect(personalAdvanceMatching(0, 5, odds)).toBe(1)
+    expect(personalAdvanceMatching(1, 5, odds)).toBe(3)
+    expect(personalAdvanceMatching(3, 5, odds)).toBe(5)
+  })
+
+  it('steps back to the previous match and stays put when none remain', () => {
+    expect(personalStepBackMatching(3, odds)).toBe(1)
+    expect(personalStepBackMatching(1, odds)).toBe(1)
+    expect(personalStepBackMatching(0, odds)).toBe(0)
+  })
+})
+
+describe('personalAdvanceOnEndedMatching', () => {
+  const odds = (i: number) => i % 2 === 1
+
+  it('walks past the last match when repeat is off so All Clear can render', () => {
+    expect(personalAdvanceOnEndedMatching(3, 5, 'off', odds)).toBe(5)
+  })
+
+  it('wraps to the first match when repeat is the whole queue', () => {
+    expect(personalAdvanceOnEndedMatching(3, 5, 'all', odds)).toBe(1)
+  })
+
+  it('stays on the current post when repeat is one', () => {
+    expect(personalAdvanceOnEndedMatching(1, 5, 'one', odds)).toBe(1)
   })
 })

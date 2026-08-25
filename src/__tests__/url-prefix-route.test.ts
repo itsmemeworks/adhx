@@ -43,6 +43,22 @@ vi.mock('@/lib/utils/og-fetch', () => ({
   fetchOgMetadata: vi.fn().mockResolvedValue(null),
 }))
 
+vi.mock('@/lib/analytics/record', () => ({
+  recordAnalytic: vi.fn(),
+}))
+
+vi.mock('@/lib/activity/record', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/activity/record')>()
+  return {
+    ...actual,
+    recordActivity: vi.fn(),
+  }
+})
+
+vi.mock('@/lib/admin/moderation', () => ({
+  isPostModerated: vi.fn(() => false),
+}))
+
 // The page now renders the theater instead of TweetPreviewLanding (Phase 3,
 // docs/specs/theater-first.md §3) — mock its replacements instead. TASK 3:
 // the legacy `QuickAddLanding` "Connect with X to save" fallback (for an
@@ -285,7 +301,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
     // lead flagged `sharedUnavailable` so TheaterShell shows the graceful
     // "no longer available" stage and auto-advances into the live pulse —
     // never a bespoke landing page.
-    it('renders the shared theater with sharedUnavailable when FxTwitter cannot resolve the tweet', async () => {
+    it('starts the shared theater on a URL stub and resolves unavailable when FxTwitter misses', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
       vi.mocked(fetchTweetData).mockResolvedValue(null)
 
@@ -297,12 +313,12 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const element = result as React.ReactElement<any>
-      expect((element.type as { name?: string })?.name).toBe('TheaterShell')
-      expect(element.props.mode).toBe('shared')
-      expect(element.props.sharedUnavailable).toBe(true)
+      expect((element.type as { name?: string })?.name).toBe('SharedPreviewPage')
       expect(element.props.sharedItem.author).toBe('deleteduser')
       expect(element.props.sharedItem.bookmarkId).toBe('2090044905120751760')
       expect(element.props.sharedItem.contentType).toBe('text')
+      expect(element.props.sharedResolve).toBeInstanceOf(Promise)
+      await expect(element.props.sharedResolve).resolves.toEqual({ ok: false })
     })
 
     // Regression coverage carried over from the pre-theater version of this
@@ -315,7 +331,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
     // page never forwards the raw tweet object to a client component at all —
     // `tweetToTheaterItem()` extracts plain primitive fields into a brand new
     // `TheaterItem`, which is what actually crosses the boundary.
-    it('passes a plain derived TheaterItem to TheaterShell, never the raw tweet reference', async () => {
+    it('passes a URL stub immediately; the resolve Promise carries a plain TheaterItem, never the raw tweet', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
 
       const originalTweet = {
@@ -347,18 +363,18 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'testuser', id: '999888777' }),
       })
 
-      // Walk the React element tree to find TheaterShell's sharedItem prop
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fragment = result as React.ReactElement<any>
-      const children = React.Children.toArray(fragment.props.children)
-      const shellElement = children.find(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (child): child is React.ReactElement<any> =>
-          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TheaterShell',
-      )
+      const page = result as React.ReactElement<any>
+      expect((page.type as { name?: string })?.name).toBe('SharedPreviewPage')
+      const stub = page.props.sharedItem
+      expect(stub).not.toBe(originalTweet)
+      expect(stub.bookmarkId).toBe('999888777')
+      expect(stub.author).toBe('testuser')
+      expect(stub.text).toBeNull()
 
-      expect(shellElement).toBeTruthy()
-      const sharedItem = shellElement!.props.sharedItem
+      const resolved = await page.props.sharedResolve
+      expect(resolved.ok).toBe(true)
+      const sharedItem = resolved.item
 
       // Never the raw tweet object (nor its nested author object) — a plain
       // derived shape built field-by-field in tweetToTheaterItem().
@@ -423,24 +439,15 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'testuser', id: '111222333' }),
       })
 
-      // Walk the React element tree to find TheaterShell's sharedItem prop.
-      // The facet enrichment mutates `tweet.external` in place before this
-      // point (see getTweetData's caller) — this just confirms that mutation
-      // never breaks the (unrelated) mapping into a TheaterItem downstream.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fragment = result as React.ReactElement<any>
-      const children = React.Children.toArray(fragment.props.children)
-      const shellElement = children.find(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (child): child is React.ReactElement<any> =>
-          React.isValidElement(child) && (child.type as { name?: string })?.name === 'TheaterShell',
-      )
-
-      expect(shellElement).toBeTruthy()
-      const sharedItem = shellElement!.props.sharedItem
+      const page = result as React.ReactElement<any>
+      const resolved = await page.props.sharedResolve
+      expect(resolved.ok).toBe(true)
+      const sharedItem = resolved.item
       expect(sharedItem).not.toBe(tweetWithFacets)
       expect(sharedItem.text).toBe(tweetWithFacets.text)
       expect(sharedItem.bookmarkId).toBe('111222333')
+      expect(sharedItem.linkPreview?.title).toBe('Example Article')
     })
   })
 })

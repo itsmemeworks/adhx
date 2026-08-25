@@ -3,10 +3,10 @@
 /**
  * Global keydown handling for TheaterShell. One keymap for every theater
  * surface (Live, collection, playlist, shared): →/←/j/k next-prev, ↑/↓
- * scroll text, Space play/pause, M mute, E expand, R repeat, S/T/L/C/D/O/A/F/W/P
- * action buttons, . menu, Shift+? help. Collection still has U (undo Archive)
- * and Escape (close). `personalKeyAction` is re-exported from TheaterShell
- * for tests.
+ * scroll text, 1/2 Live⇄Saved (signed-in), Space play/pause, M mute,
+ * E expand, R repeat, Q Queue, S/T/L/C/D/O/A/F/W/P action buttons, . menu, Shift+? help.
+ * Collection still has U (undo Archive) and Escape (close). `personalKeyAction`
+ * is re-exported from TheaterShell for tests.
  */
 
 import { useEffect } from 'react'
@@ -43,6 +43,12 @@ export interface UseTheaterKeyboardArgs {
   setMuted: Dispatch<SetStateAction<boolean>>
   undoLastAction: () => void
   onClose?: () => void
+  /**
+   * Live ⇄ Saved (signed-in). Omitted where those controls don't exist —
+   * 1/2 no-op. Shared+authed uses the same callback the tab pill does
+   * (`2` → `/saved`).
+   */
+  onTabChange?: (tab: PersonalTab) => void
   helpOpen?: boolean
   onToggleHelp?: () => void
   /**
@@ -74,6 +80,7 @@ export function useTheaterKeyboard({
   setMuted,
   undoLastAction,
   onClose,
+  onTabChange,
   helpOpen,
   onToggleHelp,
   isPlaybackHidden,
@@ -113,6 +120,13 @@ export function useTheaterKeyboard({
         return
       }
 
+      if (action === 'tabLive' || action === 'tabSaved') {
+        if (!onTabChange) return
+        e.preventDefault()
+        onTabChange(action === 'tabLive' ? 'live' : 'collection')
+        return
+      }
+
       switch (action) {
         case 'next':
           e.preventDefault()
@@ -148,6 +162,7 @@ export function useTheaterKeyboard({
         case 'open':
         case 'archive':
         case 'toggleMenu':
+        case 'toggleShowAll':
         case 'toggleArticle':
         case 'replay':
         case 'keepPlaying':
@@ -169,6 +184,7 @@ export function useTheaterKeyboard({
     personalTab,
     undoLastAction,
     onClose,
+    onTabChange,
     helpOpen,
     onToggleHelp,
     isPlaybackHidden,

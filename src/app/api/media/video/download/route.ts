@@ -9,6 +9,7 @@ import {
   isValidTweetAuthor,
   isValidTweetId,
   markTweetGone,
+  parseTweetMediaIndex,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
   const quality = searchParams.get('quality') || 'hd'
+  const index = parseTweetMediaIndex(searchParams.get('index'))
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
@@ -68,7 +70,8 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await infoResponse.json()
-    const video = data.tweet?.media?.videos?.[0]
+    const videos = data.tweet?.media?.videos
+    const video = Array.isArray(videos) ? videos[index - 1] : undefined
 
     if (!video) {
       return NextResponse.json({ error: 'No video found' }, { status: 404 })

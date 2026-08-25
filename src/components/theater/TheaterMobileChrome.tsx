@@ -13,8 +13,9 @@
  * instead of, the desktop `<Rail/>`).
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
+import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import { useSheetDrag } from './useSheetDrag'
 import {
   Loader2,
@@ -32,9 +33,10 @@ import {
   VolumeX,
   Minimize2,
   Maximize2,
+  ListFilter,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MatterLogo, PlatformGlyph } from '@/components/matter'
+import { MatterLogo, PlatformGlyph, type ContentType } from '@/components/matter'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
 import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -63,6 +65,8 @@ import { TheaterTagCount } from './TheaterTagCount'
 import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { TheaterQueueFilter } from './TheaterQueueFilter'
+import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
 import { StageIconButton } from './stage-primitives'
 import { logAV } from './YtDebugOverlay'
 import type {
@@ -141,7 +145,7 @@ export interface TheaterMobileChromeProps {
    */
   repeatMode?: RepeatMode
   onCycleRepeat?: () => void
-  /** Collection mode: burger carries Live↔Collection; Collection tab adds Archive to the Live action row (Download/Share/Tag/Open). */
+  /** Collection mode: burger carries Live↔Collection; Collection tab adds Archive left of Download in the Live action row. */
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
@@ -157,6 +161,10 @@ export interface TheaterMobileChromeProps {
   /** Video/photo + quote: stacked article reader instead of full-bleed media. */
   articleMode?: boolean
   onToggleArticleMode?: () => void
+  /** Live and Saved — omit on playlists. Empty `queueTypes` is All. */
+  queueTypes?: ContentType[]
+  onToggleQueueType?: (type: ContentType) => void
+  onClearQueueTypes?: () => void
 }
 
 /** Height of the collapsed sheet's peek bar — kept in sync with the transform below. Two rows now (drag handle + the nav/pause/audio/de-clutter controls), taller than the old label-only bar. */
@@ -211,8 +219,12 @@ export function TheaterMobileChrome({
   onPastePost,
   articleMode = false,
   onToggleArticleMode,
+  queueTypes = [],
+  onToggleQueueType,
+  onClearQueueTypes,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const closeSheet = useCallback(() => setSheetOpen(false), [])
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -222,6 +234,12 @@ export function TheaterMobileChrome({
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
   // inside the tap's own user activation. Elsewhere the 2s skim guard stands.
+  useTheaterQueueOverlay({
+    open: sheetOpen,
+    onClose: closeSheet,
+    containerRef: sheetRef,
+    autoFocus: false,
+  })
   const sendFile = useSendFile(current, { eager: mode === 'shared' })
   const { textCopied, copyText } = useTheaterCopy(current, (current?.text || '').trim())
   const rootRef = useRef<HTMLDivElement>(null)
@@ -357,6 +375,15 @@ export function TheaterMobileChrome({
   // useful — show where you are in the queue instead). -1 (no current item /
   // empty list) falls back to the old label.
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+  const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const peekNew = newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
+  const peekPosition =
+    queueIndex !== -1
+      ? `${queueIndex + 1} / ${queueTotal ?? items.length}${peekNew}`
+      : newCount > 0 && collection?.tab !== 'collection'
+        ? `${newCount} new`
+        : 'Up next'
+  const peekLabel = peekPosition
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
@@ -369,7 +396,7 @@ export function TheaterMobileChrome({
   // stage. Those posts get a compact scrim: chip + actions only.
   const kind = current ? inferType(current) : null
   const textLike =
-    (kind !== null && ['text', 'quote', 'article'].includes(kind)) || isQuoteReader(current, false)
+    (kind !== null && ['text', 'article'].includes(kind)) || isQuoteReader(current, false)
   const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
   const caption = textLike || articleMode ? '' : (current?.text || '').trim()
   const fileAction = fileSendCopy(kind)
@@ -462,7 +489,7 @@ export function TheaterMobileChrome({
             <PasteLinkButton iconOnly onPastePost={onPastePost} />
             {/* Signed-out visitors here (the home theater + shared preview
                 pages) get a burger fallback in this same slot — Theater /
-                Leaderboard / Privacy / Sign in — instead of no navigation at all.
+                Leaderboard / Sign in — instead of no navigation at all.
                 Collection above never passes this (always reached authed);
                 playlist mode's top scrim doesn't mount this component at
                 all — its plain home logo plus the bottom scrim's
@@ -484,10 +511,10 @@ export function TheaterMobileChrome({
 
       {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
-          under it. The scrim itself is pointer-events-none so text-like
-          posts (article/tweet) stay scrollable in the empty caption zone —
-          that's where a thumb naturally drags. Only the caption (media) and
-          the action row capture taps. */}
+          under it. The scrim is pointer-events-none so a typeset tweet /
+          article stays scrollable — the thumb lands in the lower third,
+          which used to be a full-width action row and swallowed the pan.
+          Only the media caption and the icon cluster capture taps. */}
       {current && (
         <div
           className={cn(
@@ -496,8 +523,9 @@ export function TheaterMobileChrome({
           )}
           style={{
             paddingBottom: `calc(${PEEK_H} + 0.75rem)`,
-            background:
-              'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
+            background: textLike
+              ? 'linear-gradient(to top, rgba(11,11,17,.55) 0%, transparent 42%)'
+              : 'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
           }}
         >
           <div className={cn((!textLike || caption) && 'pointer-events-auto')}>
@@ -549,15 +577,19 @@ export function TheaterMobileChrome({
             )}
           </div>
 
-          <div className="pointer-events-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             {showArticleToggle && onToggleArticleMode ? (
               <QuoteArticleToggle
                 articleMode={articleMode}
                 onToggle={onToggleArticleMode}
                 iconOnly
+                className="pointer-events-auto"
               />
             ) : null}
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+            <div className="pointer-events-auto ml-auto flex items-center justify-end gap-2">
+              {collection?.tab === 'collection' && (
+                <TheaterCollectionActions collection={collection} variant="mobile" />
+              )}
               {sendFile.supported ? (
                 <StageIconButton
                   onClick={() => {
@@ -718,9 +750,6 @@ export function TheaterMobileChrome({
                   </StageIconButton>
                 )
               })()}
-              {collection?.tab === 'collection' && (
-                <TheaterCollectionActions collection={collection} variant="mobile" />
-              )}
             </div>
           </div>
         </div>
@@ -738,9 +767,13 @@ export function TheaterMobileChrome({
       )}
 
       {/* Up-next sheet: a peek bar pinned to the bottom, dragged/tapped open
-          to ~70dvh. Transform-only (no layout thrash), theme-following
-          surface — translucent so the stage reads through while collapsed,
-          more opaque once open so the list stays comfortably readable.
+          to ~70% of the theater. Height is % of the fixed stage, not `dvh`,
+          so iOS visual-viewport jumps (URL bar, focus) don't resize the
+          sheet mid-animation. overflow-hidden clips the list to the sheet
+          so a translating open never paints a full-screen black void.
+          Transform-only (no layout thrash), theme-following surface —
+          translucent so the stage reads through while collapsed, more
+          opaque once open so the list stays comfortably readable.
           Unlike the scrims, de-clutter does NOT fade this out — the
           reviewer wants the nav/pause/audio controls and the sheet available
           at all times, even while immersed, so only the top/bottom scrims
@@ -749,7 +782,7 @@ export function TheaterMobileChrome({
         ref={sheetRef}
         style={sheetDrag.style}
         className={cn(
-          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70dvh] flex-col overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
+          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-hidden overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
           sheetOpen ? 'bg-surface' : 'bg-surface/70',
           !sheetDrag.dragging && (sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.25rem)]'),
         )}
@@ -869,9 +902,12 @@ export function TheaterMobileChrome({
                 onClick={() => setSheetOpen((v) => !v)}
                 aria-expanded={sheetOpen}
                 aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                title={filterOn ? theaterQueueFilterLabel(queueTypes) : undefined}
+                data-theater-action="show-all"
+                data-theater-queue-filter={filterOn ? '' : undefined}
                 className={cn(
                   'pointer-events-auto flex max-w-[45%] items-center justify-center gap-1 truncate px-1 text-center text-[12px] font-semibold',
-                  repeatCurrent ? 'text-clay' : 'text-ink-2',
+                  repeatCurrent || filterOn ? 'text-clay' : 'text-ink-2',
                 )}
               >
                 {repeatCurrent ? (
@@ -879,20 +915,11 @@ export function TheaterMobileChrome({
                     <Repeat size={11} className="flex-none" aria-hidden />
                     <span className="truncate">On repeat</span>
                   </>
-                ) : queueIndex !== -1 ? (
-                  // Queue position ("3 / 7"), out of what will actually PLAY
-                  // from here — the unwatched run while repeat is off, the
-                  // whole queue once it isn't (see `computeQueueTotal`). The
-                  // fresh-arrival count folds in when there is one, but only
-                  // where "new" means anything: the Collection tab is a finite
-                  // backlog, not the live pulse.
-                  `${queueIndex + 1} / ${queueTotal ?? items.length}${
-                    newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
-                  }`
-                ) : newCount > 0 && collection?.tab !== 'collection' ? (
-                  `${newCount} new`
                 ) : (
-                  'Up next'
+                  <>
+                    {filterOn ? <ListFilter size={11} className="flex-none" aria-hidden /> : null}
+                    <span className="truncate">{peekLabel}</span>
+                  </>
                 )}
               </button>
             </div>
@@ -969,6 +996,13 @@ export function TheaterMobileChrome({
             </p>
           </div>
         )}
+        {onToggleQueueType && onClearQueueTypes ? (
+          <TheaterQueueFilter
+            selected={queueTypes}
+            onToggle={onToggleQueueType}
+            onClear={onClearQueueTypes}
+          />
+        ) : null}
         <UpNextList
           items={items}
           currentKey={currentKey}

@@ -6,7 +6,7 @@ import type { TrendingItem } from '@/lib/trending/query'
  * `resolveSendSource` matrix (Send-the-file flow, spec §2/§8). Twitter photo
  * → the `/api/media/image` proxy's download variant; Twitter/TikTok/Instagram
  * video → the video-src SSOT (`reelVideoSrc`); YouTube → null (no MP4 mirror
- * exists — official iframe only); text/article/quote → null (nothing
+ * exists — official iframe only); text/article → null (nothing
  * sendable). The Instagram case is a deliberate regression test: Instagram
  * must resolve its own mirror, never fall through to the Twitter FxTwitter
  * proxy (a bug that's bitten this repo before).
@@ -41,6 +41,14 @@ describe('resolveSendSource', () => {
       filename: 'adhx-twitter-123.mp4',
       kind: 'video',
     })
+  })
+
+  it('twitter video albums still send the first clip (no picker)', () => {
+    const result = resolveSendSource(
+      item({ platform: 'twitter', contentType: 'video', videoCount: 3 }),
+    )
+    expect(result?.src).toBe('/api/media/video?author=jack&tweetId=123&quality=hd')
+    expect(result?.src).not.toContain('index=')
   })
 
   it('twitter photo → the image proxy download variant, first/primary photo', () => {
