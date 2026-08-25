@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Live stop-when-caught-up does not replay the run
+
+Repeat-off auto-advance finished the unseen run, jumped back to a mid-play arrival, then walked the frozen "unseen on entry" block again (the two just watched). It now prefers still-unwatched ahead, then arrivals behind, then waits. The Queue moves a finished post into Watched earlier (the playing row stays put). Filmstrip watched thumbs use the same grey as Queue; caught-up hides NOW/NEXT. In-flight until the PR merges.
+
 ## 2026-08-25 — Hotfix: Live queue-filter e2e hit a hidden mobile list
 
 `e2e/live-queue-filter.spec.ts` failed on main after #414: `E2E-PULSE-TEXT` was in the DOM (`hidden`) because mobile `UpNextList` stays mounted under `lg:hidden`. `getByText().first()` pinned that copy. Queue-row asserts now go through the desktop Playlist dialog. In-flight until the hotfix PR merges.

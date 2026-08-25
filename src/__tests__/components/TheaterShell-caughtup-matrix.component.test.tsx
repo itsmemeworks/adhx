@@ -370,11 +370,11 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await act(async () => pressNext())
@@ -383,7 +383,7 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await keepPlaying()
     // Wraps to item 1 — does NOT replay item 3, the post just finished.
-    expect(queuePosition()).toEqual({ index: 0, length: 3 })
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item1))
   })
 
   /** Same walk, but reached via the OTHER trigger a real session actually
@@ -397,11 +397,11 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await endCurrentItem()
@@ -450,17 +450,15 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await endCurrentItem()
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await endCurrentItem()
 
-    // Expected: caught-up. Actual: still on the stage, cursor bounced back
-    // to item 1 (see comment above) — this assertion fails.
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
   })
 
@@ -477,16 +475,15 @@ describe('TheaterShell caught-up matrix: walking an unwatched run to the end (si
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(1)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
 
     await letDwellSettle()
     await act(async () => pressNext())
-    expect(queuePosition().index).toBe(2)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item3))
 
     await letDwellSettle()
     await act(async () => pressNext())
 
-    // Expected: caught-up. Actual: cursor reverts to item 1 — fails.
     expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
   })
 })

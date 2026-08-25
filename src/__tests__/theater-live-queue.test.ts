@@ -54,9 +54,19 @@ describe('liveQueueGroupOf', () => {
     expect(liveQueueGroupOf(key('c'), none, setOf('c'))).toBe('arrived')
   })
 
-  it('calls a fresh arrival "arrived" even if it was watched before', () => {
+  it('calls a fresh arrival "arrived" even if it was watched before this session', () => {
     // A resurfacing post the viewer saw days ago still just landed.
     expect(liveQueueGroupOf(key('d'), setOf('d'), setOf('d'))).toBe('arrived')
+  })
+
+  it('moves a post watched this session into watched once it is no longer current', () => {
+    expect(liveQueueGroupOf(key('d'), none, setOf('d'), setOf('d'))).toBe('watched')
+    expect(liveQueueGroupOf(key('todo'), none, none, setOf('todo'))).toBe('watched')
+  })
+
+  it('keeps the playing row in its group so dwell does not yank it', () => {
+    expect(liveQueueGroupOf(key('d'), none, setOf('d'), setOf('d'), key('d'))).toBe('arrived')
+    expect(liveQueueGroupOf(key('todo'), none, none, setOf('todo'), key('todo'))).toBe('unwatched')
   })
 
   it('has a label for every group', () => {
@@ -110,6 +120,23 @@ describe('orderLiveQueue', () => {
   it('handles an empty queue', () => {
     expect(orderLiveQueue([], setOf('a'), none)).toEqual([])
   })
+
+  it('slides a watched-this-session post into watched, except the row on stage', () => {
+    const items = [item('fresh', 1), item('todo', 2), item('old', 5)]
+    const wasSeen = setOf('old')
+    const isFresh = setOf('fresh')
+    const isSeenNow = setOf('todo', 'old')
+    // Playing the arrival: todo has been watched and leaves Up next.
+    expect(ids(orderLiveQueue(items, wasSeen, isFresh, isSeenNow, key('fresh')))).toEqual([
+      'fresh',
+      'todo',
+      'old',
+    ])
+    // After leaving fresh, it joins Watched too.
+    expect(
+      ids(orderLiveQueue(items, wasSeen, isFresh, setOf('fresh', 'todo', 'old'), key('todo'))),
+    ).toEqual(['todo', 'fresh', 'old'])
+  })
 })
 
 describe('unseenBlockLength', () => {
@@ -140,8 +167,14 @@ describe('computeLiveNext', () => {
     expect(computeLiveNext({ ...base, index: 1 })).toBe('waiting')
   })
 
-  it('lets the user browse straight past the boundary', () => {
-    expect(computeLiveNext({ ...base, index: 1, userInitiated: true })).toBe(2)
+  it('waits on Next from the last pending post instead of walking into Watched', () => {
+    // After regroup the last new post sits at a low index with just-watched
+    // rows behind it. Next there is caught-up, not a replay of that run.
+    expect(computeLiveNext({ ...base, index: 1, userInitiated: true })).toBe('waiting')
+  })
+
+  it('lets the user browse once they are already in the watched suffix', () => {
+    expect(computeLiveNext({ ...base, index: 2, userInitiated: true })).toBe(3)
   })
 
   it('lets repeat "all" (loop) past the boundary and wrap', () => {
@@ -149,9 +182,13 @@ describe('computeLiveNext', () => {
     expect(computeLiveNext({ ...base, index: 4, loop: true })).toBe(0)
   })
 
-  it('applies no boundary once nothing is unwatched (a re-watch, or all watched)', () => {
-    expect(computeLiveNext({ ...base, index: 1, unseenCount: 0 })).toBe(2)
-    expect(computeLiveNext({ ...base, index: 3, unseenCount: 0 })).toBe(4)
+  it('applies no boundary on an explicit re-watch', () => {
+    expect(computeLiveNext({ ...base, index: 1, unseenCount: 0, rewatch: true })).toBe(2)
+    expect(computeLiveNext({ ...base, index: 3, unseenCount: 0, rewatch: true })).toBe(4)
+  })
+
+  it('waits when nothing is still unwatched and this is not a re-watch', () => {
+    expect(computeLiveNext({ ...base, index: 1, unseenCount: 0 })).toBe('waiting')
   })
 
   it('still waits at the true end of the queue', () => {
@@ -249,15 +286,55 @@ describe('computeLiveNext — nothing unwatched anywhere', () => {
     )
   })
 
-  it('never diverts a normal in-run advance', () => {
-    // Plenty of run left: go to the next item, not to the pending index.
-    expect(computeLiveNext({ ...base, index: 0, nextUnwatchedIndex: 4 })).toBe(1)
+  it('finishes the unwatched run before jumping back to an arrival', () => {
+    expect(
+      computeLiveNext({
+        ...base,
+        index: 1,
+        nextUnwatchedAhead: 2,
+        nextUnwatchedIndex: 0,
+      }),
+    ).toBe(2)
   })
 
-  it('leaves repeat and user navigation alone', () => {
+  it('after the run, plays the arrival and then waits — does not replay the run', () => {
+    // Two unseen (1, 2) + a mid-play arrival prepended at 0. After 1 and 2
+    // finish, jump to 0; after 0 there is nothing still unwatched.
+    expect(
+      computeLiveNext({
+        ...base,
+        unseenCount: 3,
+        index: 2,
+        nextUnwatchedAhead: null,
+        nextUnwatchedIndex: 0,
+      }),
+    ).toBe(0)
+    expect(
+      computeLiveNext({
+        ...base,
+        unseenCount: 3,
+        index: 0,
+        nextUnwatchedAhead: null,
+        nextUnwatchedIndex: null,
+      }),
+    ).toBe('waiting')
+  })
+
+  it('prefers the next still-unwatched ahead over a pending index behind', () => {
+    expect(
+      computeLiveNext({
+        ...base,
+        index: 0,
+        nextUnwatchedAhead: 1,
+        nextUnwatchedIndex: 4,
+      }),
+    ).toBe(1)
+  })
+
+  it('leaves repeat alone, and Next from the pending prefix plays an unwatched arrival', () => {
     expect(computeLiveNext({ ...base, index: 4, loop: true, nextUnwatchedIndex: 1 })).toBe(0)
     expect(computeLiveNext({ ...base, index: 1, userInitiated: true, nextUnwatchedIndex: 0 })).toBe(
-      2,
+      0,
     )
   })
 })

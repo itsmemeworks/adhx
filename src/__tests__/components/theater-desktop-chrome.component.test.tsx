@@ -204,6 +204,45 @@ describe('DesktopDock', () => {
     expect(screen.getByText('NEXT →').className).toContain('whitespace-nowrap')
   })
 
+  it('greys watched filmstrip thumbs like the queue, and hides NOW/NEXT while caught up', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'playing-now' }),
+      videoItem({ bookmarkId: '2', text: 'watched-a' }),
+      videoItem({ bookmarkId: '3', text: 'watched-b' }),
+    ]
+    const seen = new Set([theaterItemKey(items[1]), theaterItemKey(items[2])])
+    const { rerender } = render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        isSeen={(key) => seen.has(key)}
+      />,
+    )
+    const watched = screen.getByText('watched-a').closest('button')!
+    expect(watched.className).toContain('opacity-45')
+    expect(watched.querySelector('.grayscale')).toBeInTheDocument()
+    const current = screen.getByText('NOW').closest('button')!
+    expect(current.className).not.toContain('opacity-45')
+
+    rerender(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[2]}
+        currentKey={theaterItemKey(items[2])}
+        isSeen={(key) => seen.has(key)}
+        waiting
+      />,
+    )
+    expect(screen.queryByText('NOW')).not.toBeInTheDocument()
+    expect(screen.queryByText('NEXT →')).not.toBeInTheDocument()
+    const parked = screen.getByText('watched-b').closest('button')!
+    expect(parked.className).toContain('opacity-45')
+    expect(parked.querySelector('.grayscale')).toBeInTheDocument()
+  })
+
   it('clicking a card calls onSelect with its key', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
     const onSelect = vi.fn()

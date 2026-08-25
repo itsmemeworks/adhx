@@ -848,7 +848,7 @@ export function DesktopDock({
   queueTotal,
   savedToday: _savedToday,
   onSelect,
-  waiting: _waiting,
+  waiting = false,
   muted,
   onSetMuted,
   canPrev,
@@ -1037,8 +1037,13 @@ export function DesktopDock({
           {items.map((item, i) => {
             const key = theaterItemKey(item)
             const isCurrent = key === currentKey
-            const isNext = currentIndex >= 0 && i === currentIndex + 1
+            const isNext = !waiting && currentIndex >= 0 && i === currentIndex + 1
             const seen = seenReady && isSeen(key)
+            // Queue rows grey watched thumbs; the strip must match. While the
+            // caught-up overlay is up the parked "NOW" card is already watched
+            // — dim it too, and do not label a sequential NEXT that will not
+            // auto-play.
+            const dimWatched = seen && (!isCurrent || waiting)
             const fresh = freshKeys.has(key)
             const type = inferType(item)
             const tile = TYPE_TILE[type]
@@ -1059,14 +1064,19 @@ export function DesktopDock({
                 aria-current={isCurrent ? 'true' : undefined}
                 className={cn(
                   'flex w-[168px] flex-none flex-col gap-1.5 rounded-[10px] border-2 p-2 text-left transition-colors',
-                  isCurrent
+                  isCurrent && !waiting
                     ? 'border-clay bg-inset'
                     : 'border-transparent bg-black/15 hover:bg-inset/60',
-                  !isCurrent && seen && 'opacity-55',
+                  dimWatched && 'opacity-45',
                   !isCurrent && fresh && 'bg-clay/[0.07]',
                 )}
               >
-                <div className="relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset">
+                <div
+                  className={cn(
+                    'relative h-14 w-full flex-none overflow-hidden rounded-md bg-inset',
+                    dimWatched && 'grayscale',
+                  )}
+                >
                   {item.thumbnailUrl ? (
                     <img
                       src={item.thumbnailUrl}
@@ -1109,12 +1119,12 @@ export function DesktopDock({
                       as garbled "MOWN") — while pinned, the current card's
                       tag IS the repeat state: one cohesive icon+label tag,
                       never NOW alongside a second indicator. */}
-                    {isCurrent && repeatCurrent ? (
+                    {isCurrent && !waiting && repeatCurrent ? (
                       <span className="inline-flex items-center gap-1 whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
                         <Repeat size={10} aria-hidden />
                         <span>Repeat</span>
                       </span>
-                    ) : isCurrent ? (
+                    ) : isCurrent && !waiting ? (
                       <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
                         NOW
                       </span>

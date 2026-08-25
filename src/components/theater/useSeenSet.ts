@@ -31,11 +31,11 @@ export interface SeenSet {
   /**
    * The seen list as it was the moment this session read storage — what the
    * viewer had ALREADY watched when they arrived. Unlike `isSeen`, it does not
-   * grow as they watch, which is exactly what queue ORDERING needs: the live
-   * queue is sorted unseen-first once, on arrival, so the post you're watching
-   * doesn't jump to the back of the queue the instant its dwell timer marks it
-   * seen. Use `isSeen` for "is it seen NOW" (the ✓ on a card), this for "was it
-   * already seen when we built the queue".
+   * grow as they watch. Queue ORDERING uses this plus live `isSeen`: the
+   * playing row stays in New / Up next so dwell does not yank it, then it
+   * slides into Watched once it is no longer current. Use `isSeen` for "is
+   * it seen NOW" (the ✓ and that slide), this for "was it already seen when
+   * the session started".
    */
   seenOnEntry: readonly string[]
 }

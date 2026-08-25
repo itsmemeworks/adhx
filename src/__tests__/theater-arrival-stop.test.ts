@@ -122,12 +122,13 @@ describe('Q2 — computeLiveNext for each "returns 20" combo, arrival finishing 
     expect(computeLiveNext({ ...finishing, length: 20, unseenCount: 1 })).toBe('waiting')
   })
 
-  it('unseenCount=0 (repeatMode "off") does NOT stop — "no boundary once nothing is unwatched" lets it continue to index 1', () => {
-    expect(computeLiveNext({ ...finishing, length: 20, unseenCount: 0 })).toBe(1)
+  it('unseenCount=0 without rewatch waits — only an explicit re-watch walks the list', () => {
+    expect(computeLiveNext({ ...finishing, length: 20, unseenCount: 0 })).toBe('waiting')
+    expect(computeLiveNext({ ...finishing, length: 20, unseenCount: 0, rewatch: true })).toBe(1)
   })
 
-  it('unseenCount=-1 (defensively malformed) also does not stop — unseenCount > 0 guards the boundary', () => {
-    expect(computeLiveNext({ ...finishing, length: 20, unseenCount: -1 })).toBe(1)
+  it('unseenCount=-1 (defensively malformed) waits — only a positive run walks without live indices', () => {
+    expect(computeLiveNext({ ...finishing, length: 20, unseenCount: -1 })).toBe('waiting')
   })
 
   it('none of the "returns 20" combos alone reproduce a null (do-nothing) result at a valid index', () => {

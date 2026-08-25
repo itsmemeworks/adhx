@@ -61,7 +61,8 @@ import {
   theaterQueueEmptyHeadline,
   toggleTheaterQueueType,
   orderLiveQueue,
-  unseenBlockLength,
+  liveQueueGroupOf,
+  pendingBlockLength,
   computeLiveNext,
   theaterUrlSyncPath,
   computeCanPrev,
@@ -123,6 +124,7 @@ export {
   liveQueueGroupOf,
   orderLiveQueue,
   unseenBlockLength,
+  pendingBlockLength,
   computeLiveNext,
   computeQueueTotal,
   theaterUrlSyncPath,
@@ -1017,11 +1019,12 @@ export function TheaterShell({
   // excluded from the grouping by the lists. Only a curated tag playlist opts
   // out: it has one authored order and no notion of "what's new".
   const liveOrdering = !loop
-  // ORDERING uses the arrival snapshot, never the live seen state — see
-  // `orderLiveQueue`. Identity is stable per snapshot so the memos below
-  // don't recompute as the viewer marks things seen.
+  // Grouping uses the arrival snapshot PLUS live seen: a post watched this
+  // session slides into Watched once it is no longer on stage. The playing
+  // row stays put (see `orderLiveQueue`).
   const seenOnEntry = seenSet.seenOnEntry
   const wasSeenOnEntry = useCallback((key: string) => seenOnEntry.includes(key), [seenOnEntry])
+  const isSeenNow = useCallback((key: string) => seenSet.isSeen(key), [seenSet.isSeen])
 
   // The list every index/nav computation below operates on: the live queue
   // ordered unseen-first, then the pinned key (if any) moved to the front.
@@ -1043,9 +1046,24 @@ export function TheaterShell({
   const orderedItems = useMemo(
     () =>
       liveOrdering && seenSet.ready
-        ? orderLiveQueue(lensItems, wasSeenOnEntry, isFreshKey)
+        ? orderLiveQueue(
+            lensItems,
+            (key) => (key === sharedItemKey ? false : wasSeenOnEntry(key)),
+            isFreshKey,
+            (key) => (key === sharedItemKey ? false : isSeenNow(key)),
+            currentKey,
+          )
         : lensItems,
-    [lensItems, liveOrdering, seenSet.ready, wasSeenOnEntry, isFreshKey],
+    [
+      lensItems,
+      liveOrdering,
+      seenSet.ready,
+      wasSeenOnEntry,
+      isFreshKey,
+      isSeenNow,
+      currentKey,
+      sharedItemKey,
+    ],
   )
   const displayItems = useMemo(
     () => pinKeyFirst(orderedItems, pinnedKey),
@@ -1059,16 +1077,30 @@ export function TheaterShell({
   // re-visited shared link would otherwise start the queue with a WATCHED row
   // and zero the run — killing the boundary for the whole live queue behind
   // it. Count the lead as pending: it's the post they followed a link to.
-  const wasSeenForRun = useCallback(
-    (key: string) => (key === sharedItemKey ? false : wasSeenOnEntry(key)),
-    [sharedItemKey, wasSeenOnEntry],
-  )
   const unseenCount = useMemo(
     () =>
       liveOrdering && seenSet.ready && !rewatching
-        ? unseenBlockLength(displayItems, wasSeenForRun)
+        ? pendingBlockLength(displayItems, (key) =>
+            liveQueueGroupOf(
+              key,
+              (k) => (k === sharedItemKey ? false : wasSeenOnEntry(k)),
+              isFreshKey,
+              (k) => (k === sharedItemKey ? false : isSeenNow(k)),
+              currentKey,
+            ),
+          )
         : 0,
-    [displayItems, liveOrdering, seenSet.ready, rewatching, wasSeenForRun],
+    [
+      displayItems,
+      liveOrdering,
+      seenSet.ready,
+      rewatching,
+      wasSeenOnEntry,
+      isFreshKey,
+      isSeenNow,
+      currentKey,
+      sharedItemKey,
+    ],
   )
 
   // Seed savedKeys with EXISTING collection membership: a live-tab post the
@@ -1326,6 +1358,8 @@ export function TheaterShell({
   // Same trick for the unseen boundary — goNext is an empty-deps callback.
   const unseenCountRef = useRef(unseenCount)
   unseenCountRef.current = unseenCount
+  const rewatchingRef = useRef(rewatching)
+  rewatchingRef.current = rewatching
   const currentKeyRef = useRef(currentKey)
   currentKeyRef.current = currentKey
   // First still-unwatched index (LIVE seen state, not the arrival snapshot),
@@ -1336,6 +1370,14 @@ export function TheaterShell({
     if (!liveOrdering || !seenSet.ready) return null
     const found = displayItems.findIndex(
       (it, i) => i !== currentIndex && !seenSet.isSeen(theaterItemKey(it)),
+    )
+    return found === -1 ? null : found
+  })()
+  const nextUnwatchedAheadRef = useRef<number | null>(null)
+  nextUnwatchedAheadRef.current = (() => {
+    if (!liveOrdering || !seenSet.ready) return null
+    const found = displayItems.findIndex(
+      (it, i) => i > currentIndex && !seenSet.isSeen(theaterItemKey(it)),
     )
     return found === -1 ? null : found
   })()
@@ -1375,6 +1417,8 @@ export function TheaterShell({
           loop: loop || repeatModeRef.current === 'all',
           userInitiated,
           nextUnwatchedIndex: nextUnwatchedIndexRef.current,
+          nextUnwatchedAhead: nextUnwatchedAheadRef.current,
+          rewatch: rewatchingRef.current,
         })
         if (next === null) return key
         if (next === 'waiting') {

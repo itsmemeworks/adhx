@@ -12,7 +12,13 @@ import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
 // Grouping comes from the shell so the headings below can never disagree with
 // the order the queue was built in.
-import { liveQueueGroupOf, LIVE_QUEUE_GROUP_LABEL, type LiveQueueGroup } from './TheaterShell'
+import {
+  liveQueueGroupOf,
+  orderLiveQueue,
+  pinKeyFirst,
+  LIVE_QUEUE_GROUP_LABEL,
+  type LiveQueueGroup,
+} from './TheaterShell'
 import { THEATER_QUEUE_SCROLL_ATTR } from './useTheaterQueueOverlay'
 
 /** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
@@ -28,10 +34,11 @@ export function warmOnHover(item: TheaterItem) {
 }
 
 /**
- * Rail feed rows + the seen spine (spec §5). Ordering is whatever `items`
- * already is (recency) — never re-sorted here. Seen state is computed per
- * row via `isSeen`, but only once `seenReady` (SSR parity: everything renders
- * unseen until hydration settles).
+ * Rail feed rows + the seen spine (spec §5). Live mode re-groups here the
+ * same way the shell does, so a finished post slides into Watched earlier
+ * even if the caller passed the raw arrival order. Playlist mode leaves
+ * `items` as-is. Seen state is computed per row via `isSeen`, but only once
+ * `seenReady` (SSR parity: everything renders unseen until hydration settles).
  */
 
 export interface UpNextListProps {
@@ -45,11 +52,11 @@ export interface UpNextListProps {
   /**
    * Was this key already watched when the session STARTED
    * (`SeenSet.seenOnEntry`)? Drives the section headings, and must be the same
-   * snapshot `orderLiveQueue` grouped by — grouping off live seen state would
-   * move rows under the viewer as their dwell timers fire. Absent in playlist
-   * mode, whose one curated order has no groups; SHARED mode does pass it
-   * (owner: a preview page's queue showed no sections at all while the same
-   * queue on `/` did — "we just need to be always consistent here"), with the
+   * snapshot `orderLiveQueue` grouped by. Live seen-state moves a finished
+   * row into Watched once it is no longer current. Absent in playlist mode,
+   * whose one curated order has no groups; SHARED mode does pass it (owner:
+   * a preview page's queue showed no sections at all while the same queue
+   * on `/` did — "we just need to be always consistent here"), with the
    * shared post itself pinned out of the grouping via `pinnedKey`.
    */
   wasSeenOnEntry?: (key: string) => boolean
@@ -218,7 +225,7 @@ function Row({
 }
 
 export function UpNextList({
-  items,
+  items: incoming,
   currentKey,
   isSeen,
   seenReady,
@@ -233,6 +240,18 @@ export function UpNextList({
 }: UpNextListProps) {
   const [expanded, setExpanded] = useState(false)
 
+  // Same grouping as TheaterShell: finished posts slide into Watched earlier.
+  // The shell already orders `displayItems` this way; doing it here too means
+  // a raw arrival-order list (tests, or a missed caller) still reads New /
+  // Up next / Watched. Playlist mode has no `wasSeenOnEntry` and stays put.
+  const items =
+    seenReady && wasSeenOnEntry
+      ? pinKeyFirst(
+          orderLiveQueue(incoming, wasSeenOnEntry, (k) => freshKeys.has(k), isSeen, currentKey),
+          pinnedKey ?? null,
+        )
+      : incoming
+
   // Per-row seen flags (SSR-safe: everything false until seenReady).
   const seenFlags = items.map((item) => seenReady && isSeen(theaterItemKey(item)))
 
@@ -245,7 +264,13 @@ export function UpNextList({
   // absent means playlist/shared, which has one curated order and no groups.
   const groups: (LiveQueueGroup | null)[] = items.map((item) =>
     seenReady && wasSeenOnEntry && theaterItemKey(item) !== pinnedKey
-      ? liveQueueGroupOf(theaterItemKey(item), wasSeenOnEntry, (k) => freshKeys.has(k))
+      ? liveQueueGroupOf(
+          theaterItemKey(item),
+          wasSeenOnEntry,
+          (k) => freshKeys.has(k),
+          isSeen,
+          currentKey,
+        )
       : null,
   )
   const groupCounts = groups.reduce<Partial<Record<LiveQueueGroup, number>>>((acc, g) => {
@@ -253,11 +278,9 @@ export function UpNextList({
     return acc
   }, {})
   /**
-   * How many rows in each group are STILL unwatched, live. The group itself is
-   * frozen at arrival (so nothing moves while you watch), so this is what
-   * shows progress: finish a row and the heading's number drops even though
-   * the row stays put with its ✓. For "Watched earlier" the total is the
-   * useful number — none of it is pending.
+   * How many rows in each group are STILL unwatched, live. Finished rows
+   * move into Watched; the heading count is the leftover in New / Up next.
+   * For "Watched earlier" the total is the useful number.
    */
   const groupRemaining = groups.reduce<Partial<Record<LiveQueueGroup, number>>>((acc, g, i) => {
     if (g && g !== 'watched' && !seenFlags[i]) acc[g] = (acc[g] ?? 0) + 1

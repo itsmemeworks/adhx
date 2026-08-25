@@ -262,12 +262,13 @@ export function theaterQueueEmptyHeadline(
  * to be clear about what's been seen, what hasn't been seen yet, and then new
  * things that have come in as we've been watching?").
  *
- * - `arrived` — showed up from a poll while this session was open. Genuinely
- *   new, so it leads regardless of when it was added to ADHX.
- * - `unwatched` — was already in the feed and the viewer hasn't seen it.
- * - `watched` — seen BEFORE this session started. An item watched during the
- *   session keeps its group (see `wasSeen`), so nothing jumps under the
- *   viewer mid-watch.
+ * - `arrived` — showed up from a poll while this session was open and has
+ *   not been watched yet.
+ * - `unwatched` — already in the feed and still unseen.
+ * - `watched` — seen on entry, or watched this session and no longer on
+ *   stage. The playing row stays put so it does not jump mid-watch; once
+ *   you leave it, it slides into this group (owner: the queue should update
+ *   as a video is watched).
  */
 export type LiveQueueGroup = 'arrived' | 'unwatched' | 'watched'
 
@@ -275,15 +276,6 @@ export const LIVE_QUEUE_GROUP_ORDER: readonly LiveQueueGroup[] = ['arrived', 'un
 
 /**
  * Human labels for the section headings, kept next to the order they follow.
- *
- * These name the queue as it was WHEN YOU ARRIVED, because that's what the
- * grouping is (see `wasSeen` below) — positions stay put while you watch, so
- * the position counter means something and nothing slides out from under you.
- * The labels have to say that, though: "Not watched yet" over a row you just
- * finished (and which now carries a ✓) reads as a bug — owner report, "it's
- * categorizing a video that I've not watched yet but when I watch it, it stays
- * in that section". "Up next" is true either way, and the ✓ plus the live
- * remaining-count in the heading are what show progress within it.
  */
 export const LIVE_QUEUE_GROUP_LABEL: Record<LiveQueueGroup, string> = {
   arrived: 'New since you opened',
@@ -294,15 +286,19 @@ export const LIVE_QUEUE_GROUP_LABEL: Record<LiveQueueGroup, string> = {
 /**
  * Pure: an item's group.
  *
- * `wasSeen` MUST be the arrival snapshot (`SeenSet.seenOnEntry`), not the live
- * seen state — grouping off the live state would yank the post you're watching
- * to the back of the queue the moment its dwell timer marks it seen.
+ * Live `isSeenNow` moves a finished post into `watched`. The row still on
+ * stage (`currentKey`) keeps its arrival/unwatched group so dwell-marking
+ * it seen does not yank it to the back while it is playing.
  */
 export function liveQueueGroupOf(
   key: string,
   wasSeen: (key: string) => boolean,
   isFresh: (key: string) => boolean,
+  isSeenNow?: (key: string) => boolean,
+  currentKey?: string | null,
 ): LiveQueueGroup {
+  const stayPut = currentKey != null && key === currentKey
+  if (!stayPut && isSeenNow?.(key)) return 'watched'
   if (isFresh(key)) return 'arrived'
   return wasSeen(key) ? 'watched' : 'unwatched'
 }
@@ -348,10 +344,18 @@ export function orderLiveQueue<
     addedAt?: string | null
     createdAt: string
   },
->(items: T[], wasSeen: (key: string) => boolean, isFresh: (key: string) => boolean): T[] {
+>(
+  items: T[],
+  wasSeen: (key: string) => boolean,
+  isFresh: (key: string) => boolean,
+  isSeenNow?: (key: string) => boolean,
+  currentKey?: string | null,
+): T[] {
   const groups: Record<LiveQueueGroup, T[]> = { arrived: [], unwatched: [], watched: [] }
   for (const item of items) {
-    groups[liveQueueGroupOf(theaterItemKey(item), wasSeen, isFresh)].push(item)
+    groups[liveQueueGroupOf(theaterItemKey(item), wasSeen, isFresh, isSeenNow, currentKey)].push(
+      item,
+    )
   }
   // Newest-added first within the two settled groups; arrivals keep the order
   // the merge gave them. Array.prototype.sort is stable, so equal stamps hold
@@ -378,18 +382,35 @@ export function unseenBlockLength<
 }
 
 /**
+ * How many leading rows are still New / Up next after live regrouping.
+ * Stops at the first `watched` row. The playing row can be seen and still
+ * sit in this prefix (it stays put until you leave it).
+ */
+export function pendingBlockLength<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(items: T[], groupOf: (key: string) => LiveQueueGroup): number {
+  let n = 0
+  while (n < items.length && groupOf(theaterItemKey(items[n])) !== 'watched') n++
+  return n
+}
+
+/**
  * Pure: where a `goNext` lands, folding in the unseen boundary on top of
  * `computeLoopedNext`.
  *
- * An AUTO advance (a video ending, the timed dwell) stops at the end of the
- * unseen block and hands over to the waiting stage rather than rolling into
- * posts the viewer already watched — "you would need to specifically click
- * the re-watch button or hit repeat" (owner). Three things deliberately
- * bypass the boundary: user-initiated navigation (browsing on is always
- * allowed), `loop` (collection mode, or repeat 'all' — an explicit opt-in to
- * going round again), and `unseenCount === 0` (nothing unseen to protect, so
- * end-of-feed behaviour applies as before; the caught-up stage is entered up
- * front in that case instead).
+ * An AUTO advance (a video ending, the timed dwell) only lands on a post
+ * that is still unwatched. It finishes whatever is still ahead, then plays
+ * arrivals that prepended behind the cursor, then waits — it does not replay
+ * posts the viewer just finished just because they still sit inside the
+ * frozen "unseen on entry" block. Owner: two unseen + one arrival mid-play
+ * should play those three and stop, never the two again.
+ *
+ * Three things deliberately bypass the auto-advance stop: user-initiated
+ * navigation once the viewer is already in the watched suffix (click a
+ * watched row, then browse), `loop` (collection mode, or repeat 'all'), and
+ * `rewatch` (the waiting-stage button — play the list). Next from the last
+ * pending post waits — it does not walk into Watched earlier, or the just-
+ * watched run would replay after regrouping.
  */
 export function computeLiveNext(opts: {
   length: number
@@ -397,49 +418,61 @@ export function computeLiveNext(opts: {
   unseenCount: number
   loop: boolean
   userInitiated: boolean
+  /** Explicit Re-watch all — walk the whole list. Not the same as unseenCount 0. */
+  rewatch?: boolean
   /**
    * First index that is STILL unwatched (live seen state), excluding the
    * current one — or null when nothing is left.
    *
-   * This is what stops "caught up" from lying. Auto-advance only moves
-   * forward, but a fresh arrival PREPENDS to index 0, so a viewer who is
-   * already at index 13 never reaches it: the run ahead of them ends, the
-   * boundary fires, and the stage claims they're caught up while unwatched
-   * posts — including the one that just landed — sit behind the cursor. Owner
-   * report: "a new video came in but it's not automatically playing that…
-   * I shouldn't have to click re-watch because I haven't seen the new video
-   * yet." So the boundary means "nothing unwatched anywhere", not "nothing
-   * ahead of me".
+   * Auto-advance only moves forward, but a fresh arrival PREPENDS to index
+   * 0, so a viewer who is already at index 13 never reaches it unless we
+   * jump back after the run ahead finishes. Owner: "a new video came in but
+   * it's not automatically playing… I shouldn't have to click re-watch
+   * because I haven't seen the new video yet."
    */
   nextUnwatchedIndex?: number | null
+  /**
+   * First still-unwatched index strictly AFTER `index`. Preferred over
+   * `nextUnwatchedIndex` so a prepended arrival waits until the current
+   * unseen run is done, instead of yanking playback back to 0 mid-run.
+   */
+  nextUnwatchedAhead?: number | null
 }): number | 'waiting' | null {
-  const { length, index, unseenCount, loop, userInitiated, nextUnwatchedIndex } = opts
+  const {
+    length,
+    index,
+    unseenCount,
+    loop,
+    userInitiated,
+    nextUnwatchedIndex,
+    nextUnwatchedAhead,
+    rewatch = false,
+  } = opts
   const next = computeLoopedNext(length, index, loop)
   if (next === null) return null
-  const wouldStop =
-    next === 'waiting' || (!loop && !userInitiated && unseenCount > 0 && next >= unseenCount)
-  if (!wouldStop) return next
-  // About to stop — but only actually stop if there's nothing left unwatched.
-  //
-  // The index must be USABLE, not merely present. It comes from a ref computed
-  // during an earlier render, so after a fresh arrival prepends and reorders
-  // the queue it can be stale in two ways, and both used to be returned
-  // verbatim:
-  //
-  //  - equal to `index`: the caller then sets the key it already has, React
-  //    bails on the identical state, no re-render happens, the finished video
-  //    never gets a new src — and the waiting stage never appears either. That
-  //    is the owner's "it played the new video and then just stopped, without
-  //    showing the final screen".
-  //  - beyond the end: `items[next]` is undefined downstream.
-  //
-  // Either way the honest answer is the caught-up stage.
-  const rescuable =
-    typeof nextUnwatchedIndex === 'number' &&
-    nextUnwatchedIndex >= 0 &&
-    nextUnwatchedIndex < length &&
-    nextUnwatchedIndex !== index
-  if (rescuable) return nextUnwatchedIndex
+  if (loop || rewatch) return next
+
+  const usable = (n: number | null | undefined): n is number =>
+    typeof n === 'number' && n >= 0 && n < length && n !== index
+
+  // Already in the watched suffix (or no pending run): browsing stays free.
+  if (userInitiated && (unseenCount === 0 || index >= unseenCount)) return next
+
+  // Repeat off, or Next from the pending prefix: only play what's still
+  // unwatched. Ahead first, then behind, then wait — never into Watched.
+  if (usable(nextUnwatchedAhead)) return nextUnwatchedAhead
+  if (usable(nextUnwatchedIndex)) return nextUnwatchedIndex
+  // Tests that omit live indices keep the frozen-run walk (auto only).
+  if (
+    !userInitiated &&
+    nextUnwatchedAhead === undefined &&
+    nextUnwatchedIndex === undefined &&
+    next !== 'waiting' &&
+    unseenCount > 0 &&
+    next < unseenCount
+  ) {
+    return next
+  }
   return 'waiting'
 }
 
