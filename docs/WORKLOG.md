@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Live leftover count after a mid-play prepend
+
+A second-window save while leftover still had every row unseen bumped `currentIndex` (same post, one slot down). `computeQueueCounts` then treated playlist index as `played` because `unseenCount >= length`, so the dock flipped from `N in queue` to `1 of N`. Leftover math now prefers an explicit `played` from `countPlayedThisRun`. Queue row relative time paints after mount so Next's hydration overlay cannot sit on Up-next. Tests: `computeQueueCounts`, TheaterShell cross-tab add, `e2e/archive`, `e2e/theater-cross-tab-add`, `e2e/live-url` flip. In-flight until the PR merges.
+
 ## 2026-08-25 — Theater review cleanup
 
 Fixed All Clear cross-tab prepend, `theater-resume` under a covered video, auto-advance `markSeen`, Live Save prepend + `idPlatform`, All Clear keeping `<Stage/>` mounted, Read reset on Saved cursor, and Live poll-on-enable. Extracted repeat/queue-type prefs, membership lookup, transport hook, storage catalog, and `liveQueueTreatAsUnseen`. UpNextList imports math from `theater-math`. In-flight until the PR merges.

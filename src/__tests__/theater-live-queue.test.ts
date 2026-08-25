@@ -259,6 +259,18 @@ describe('computeQueueTotal', () => {
 })
 
 describe('computeQueueCounts', () => {
+  it('Live leftover ignores a prepend-bumped index when nothing has been left', () => {
+    expect(
+      computeQueueCounts({
+        index: 1,
+        length: 3,
+        unseenCount: 3,
+        repeatMode: 'off',
+        played: 0,
+      }),
+    ).toEqual({ looping: false, played: 0, toPlay: 3, length: 3 })
+  })
+
   it('Live leftover is played of the pending run, not a playlist position', () => {
     expect(
       computeQueueCounts({ index: 0, length: 13, unseenCount: 2, repeatMode: 'off', played: 0 }),
@@ -305,6 +317,30 @@ describe('computeQueueCounts', () => {
     expect(
       computeQueueCounts({ index: 5, length: 13, unseenCount: 13, repeatMode: 'all' }),
     ).toEqual({ looping: true, played: 0, toPlay: 13, length: 13 })
+  })
+
+  it('Saved one-pass stays on the same post after a prepend (index + 1 of length + 1)', () => {
+    expect(
+      computeQueueCounts({
+        index: 1,
+        length: 93,
+        unseenCount: 93,
+        repeatMode: 'off',
+        listWalk: true,
+      }),
+    ).toEqual({ looping: false, played: 2, toPlay: 93, length: 93 })
+  })
+
+  it('Saved one-pass archive of the current row keeps the 1-based position on a shorter list', () => {
+    expect(
+      computeQueueCounts({
+        index: 1,
+        length: 91,
+        unseenCount: 91,
+        repeatMode: 'off',
+        listWalk: true,
+      }),
+    ).toEqual({ looping: false, played: 2, toPlay: 91, length: 91 })
   })
 })
 

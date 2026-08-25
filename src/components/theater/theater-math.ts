@@ -649,6 +649,14 @@ export function computeQueueCounts(opts: {
     const position = finished ? length : index + 1
     return { looping: false, played: position, toPlay: length, length }
   }
+  // Live leftover always stages the head. A prepend keeps the same post
+  // but bumps `index`, so playlist-index-as-played would flip "3 in queue"
+  // to "1 of 3" even though nothing has been left.
+  if (played !== undefined) {
+    const remaining = Math.max(0, unseenCount)
+    const done = Math.max(0, played)
+    return { looping: false, played: done, toPlay: done + remaining, length }
+  }
   if (unseenCount >= length) {
     const finished = index < 0 || index >= length
     const done = finished ? length : Math.max(0, index)

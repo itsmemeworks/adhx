@@ -47,10 +47,9 @@ export function useTheaterTransport(opts: {
       return
     }
     if (opts.kind === 'timed') {
-      setTimedPaused((was) => {
-        window.dispatchEvent(new CustomEvent(was ? 'theater-resume' : 'theater-pause'))
-        return !was
-      })
+      const next = !timedPaused
+      setTimedPaused(next)
+      window.dispatchEvent(new CustomEvent(next ? 'theater-pause' : 'theater-resume'))
     }
   }
 

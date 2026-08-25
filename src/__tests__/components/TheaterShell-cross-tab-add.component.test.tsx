@@ -126,6 +126,9 @@ type ChromeProps = {
   onSelect: (key: string) => void
   onToggleQueueType?: (type: ContentType) => void
   onCycleRepeat?: () => void
+  queuePlayed?: number
+  queueToPlay?: number
+  queueLooping?: boolean
   collection?: { tab: string; onTabChange: (tab: string) => void }
 }
 
@@ -167,6 +170,30 @@ describe('TheaterShell: cross-tab add + filters', () => {
       }
       return { ok: true, json: async () => ({ items: [] }) }
     }) as never
+  })
+
+  it('Live: a mid-play add grows leftover without moving the current post', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(2)
+    expect(chromeProps().currentKey).toBe('twitter:1')
+
+    await act(async () => fireAdded(feedItem('99')))
+
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(3)
+    expect(chromeProps().queueLooping).toBe(false)
   })
 
   it('Live: Videos while a text post is current snaps to a video, not Nothing playing', async () => {
@@ -471,6 +498,10 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().repeatMode).toBe('off')
     expect(chromeProps().currentKey).toBe('twitter:1')
     expect(queueIds()[0]).toBe('99')
+    // Same post, now second in the list — Play once is 2 of 3, not 1 of 3.
+    expect(chromeProps().queuePlayed).toBe(2)
+    expect(chromeProps().queueToPlay).toBe(3)
+    expect(chromeProps().queueLooping).toBe(false)
   })
 
   it('Live paste keeps the Saved cursor on the same post after flipping tabs', async () => {
@@ -531,5 +562,8 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe('twitter:99')
     expect(queueIds()[0]).toBe('99')
+    expect(chromeProps().repeatMode).toBe('off')
+    expect(chromeProps().queuePlayed).toBe(1)
+    expect(chromeProps().queueToPlay).toBe(2)
   })
 })

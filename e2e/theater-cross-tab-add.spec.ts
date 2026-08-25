@@ -4,13 +4,16 @@ import {
   apiAddByUrl,
   authedTest,
   broadcastAdded,
+  deleteLivePulse,
   deleteUserBookmark,
   expectTheaterReady,
   fetchFeedItem,
   goNext,
   openTheaterQueue,
   pasteTheaterLink,
+  readQueueProgress,
   visibleCaption,
+  visibleQueueCount,
 } from './helpers'
 
 const ADD_IDS = [ADD_TEXT.id, ADD_VIDEO.id, ADD_VIDEO_B.id]
@@ -44,6 +47,7 @@ async function playUntilCaughtUp(page: Page): Promise<void> {
 
 authedTest.describe('theater cross-tab add', () => {
   authedTest.afterEach(() => {
+    deleteLivePulse(ADD_IDS)
     for (const id of ADD_IDS) {
       deleteUserBookmark(id, 'twitter')
       deleteUserBookmark(id, 'tiktok')
@@ -252,12 +256,74 @@ authedTest.describe('theater cross-tab add', () => {
     await page.getByRole('button', { name: 'Keep playing' }).click()
     await page.getByRole('button', { name: 'Repeat this post' }).click()
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
+    const start = await readQueueProgress(page)
+    expect(start.played).toBe(1)
 
     await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
     await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText(`2 of ${start.toPlay + 1}`)
   })
+
+  authedTest(
+    'Live: a second-window add grows leftover without leaving the current post',
+    async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.removeItem('adhx-theater-repeat')
+        localStorage.removeItem('adhx-seen-v1')
+      })
+      await page.goto('/live')
+      await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
+      const start = await readQueueProgress(page)
+      const queue = await openTheaterQueue(page)
+      const playing = queue.locator('[data-theater-queue-item][aria-current="true"]')
+      const playingText = (await playing.locator('p').innerText()).trim()
+
+      await addAndBroadcast(page, tweetUrl(ADD_TEXT))
+
+      await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
+      await expect(queue.locator('[data-theater-queue-item][aria-current="true"]')).toContainText(
+        playingText,
+      )
+      const next = await readQueueProgress(page)
+      expect(next.played).toBe(start.played)
+      expect(next.toPlay).toBe(start.toPlay + 1)
+    },
+  )
+
+  authedTest(
+    'Live leftover after Next: a remote add stays 1 of N+1 on the current post',
+    async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.removeItem('adhx-theater-repeat')
+        localStorage.removeItem('adhx-seen-v1')
+      })
+      await page.goto('/live')
+      await expectTheaterReady(page)
+      await goNext(page)
+      const start = await readQueueProgress(page)
+      expect(start.played).toBe(1)
+      const queue = await openTheaterQueue(page)
+      const playingText = (
+        await queue
+          .locator('[data-theater-queue-item][aria-current="true"]')
+          .locator('p')
+          .innerText()
+      ).trim()
+
+      await addAndBroadcast(page, tweetUrl(ADD_TEXT))
+
+      await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
+      await expect(queue.locator('[data-theater-queue-item][aria-current="true"]')).toContainText(
+        playingText,
+      )
+      await expect(visibleQueueCount(page)).toHaveText(`1 of ${start.toPlay + 1}`)
+      await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
+    },
+  )
 
   authedTest('Live paste in a second window keeps the Saved cursor', async ({ page, context }) => {
     await page.goto('/saved')
