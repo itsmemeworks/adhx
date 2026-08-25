@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.65.1](https://github.com/itsmemeworks/adhx/compare/v1.65.0...v1.65.1) (2026-08-25)
+
+
+### Bug Fixes
+
+* move watched live rows into the queue's watched section ([#418](https://github.com/itsmemeworks/adhx/issues/418)) ([b0be1df](https://github.com/itsmemeworks/adhx/commit/b0be1dfe87db4bfb709bc19bad1a885e79a01cda))
+* scope live queue-filter e2e to the playlist dialog ([#416](https://github.com/itsmemeworks/adhx/issues/416)) ([1d62714](https://github.com/itsmemeworks/adhx/commit/1d62714a5eb83a8b7aba57c334c1ef67c6dd21f3))
+
 ## [1.65.0](https://github.com/itsmemeworks/adhx/compare/v1.64.0...v1.65.0) (2026-08-25)
 
 
