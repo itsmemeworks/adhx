@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.65.3](https://github.com/itsmemeworks/adhx/compare/v1.65.2...v1.65.3) (2026-08-25)
+
+
+### Bug Fixes
+
+* reset live leftover count when a new arrival follows caught-up ([#421](https://github.com/itsmemeworks/adhx/issues/421)) ([85429f7](https://github.com/itsmemeworks/adhx/commit/85429f7a25f54db9ca1ed6877d404ff58c25615b))
+
 ## [1.65.2](https://github.com/itsmemeworks/adhx/compare/v1.65.1...v1.65.2) (2026-08-25)
 
 
