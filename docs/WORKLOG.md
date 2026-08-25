@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — CI: prettier table + BroadcastChannel wait
+
+format:check failed on the theater-first surface table after the “This post” cell grew. Cross-tab Archive test waited one tick and flaked empty on CI; it now waits until the channel delivers. In-flight until the PR merges.
+
 ## 2026-08-25 — Queue-count e2e + Saved Play-once persist
 
 e2e covers Live `0 of N` → `1 of N` → `N on repeat`, Saved loop vs Play once, playlist `3 on repeat`, and preview Queue **This post**. User Next now marks the leftover post seen so the count moves without waiting on the 2s dwell. Saved repeat prefs no longer overwrite `localStorage` on the first paint. In-flight until the PR merges.
