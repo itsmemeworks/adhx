@@ -180,6 +180,8 @@ authedTest.describe('theater cross-tab add', () => {
       const queue = await openTheaterQueue(page)
       const playing = queue.locator('[data-theater-queue-item][aria-current="true"]')
       const playingText = (await playing.locator('p').innerText()).trim()
+      const pause = page.getByRole('button', { name: 'Pause' })
+      if (await pause.isVisible()) await pause.click()
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
       await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()

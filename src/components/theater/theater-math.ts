@@ -610,8 +610,8 @@ export function countPlayedThisRun<
  *
  * Repeat off: `toPlay` is how many will actually play (23 new), `played`
  * is how many of those are done (16). Repeat on: `looping` and `length`
- * (23 on repeat). A list walk (Saved one-pass, Re-watch all) uses index
- * as played and length as toPlay.
+ * (23 on repeat). A list walk (Saved one-pass, Re-watch all) is the
+ * 1-based now-playing index (`2 of 92` on the second post).
  */
 export function computeQueueCounts(opts: {
   index: number
@@ -627,7 +627,12 @@ export function computeQueueCounts(opts: {
     return { looping: true, played: 0, toPlay: length, length }
   }
   if (length <= 0) return { looping: false, played: 0, toPlay: 0, length: 0 }
-  if (listWalk || unseenCount >= length) {
+  if (listWalk) {
+    const finished = index < 0 || index >= length
+    const position = finished ? length : index + 1
+    return { looping: false, played: position, toPlay: length, length }
+  }
+  if (unseenCount >= length) {
     const finished = index < 0 || index >= length
     const done = finished ? length : Math.max(0, index)
     return { looping: false, played: done, toPlay: length, length }

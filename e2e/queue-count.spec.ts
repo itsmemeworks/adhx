@@ -46,11 +46,12 @@ authedTest.describe('queue count — Saved one-pass vs loop', () => {
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
 
     const start = await readQueueProgress(page)
-    expect(start.played).toBe(0)
+    expect(start.played).toBe(1)
     expect(start.toPlay).toBeGreaterThan(1)
+    await expect(visibleQueueCount(page)).toHaveText(`1 of ${start.toPlay}`)
 
     await goNext(page)
-    await expect(visibleQueueCount(page)).toHaveText(`${1} of ${start.toPlay}`)
+    await expect(visibleQueueCount(page)).toHaveText(`2 of ${start.toPlay}`)
   })
 })
 

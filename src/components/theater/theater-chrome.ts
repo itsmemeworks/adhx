@@ -66,9 +66,9 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
       : null
     : input.currentKey
 
-  // Saved one-pass walks the list (`5 of 13`). Live leftover is played of
-  // the pending run (`16 of 23`), not a playlist index. Repeat on is the
-  // pile (`23 on repeat`).
+  // Saved one-pass is the 1-based now-playing index (`2 of 92`). Live
+  // leftover is played of the pending run (`16 of 23`), not a playlist
+  // index. Repeat on is the pile (`23 on repeat`).
   const livePlayed =
     !input.isCollectionTab &&
     !input.rewatching &&
@@ -90,6 +90,7 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
         length: input.personalDisplayItems.length,
         unseenCount: input.personalDisplayItems.length,
         repeatMode: input.effectiveRepeatMode,
+        listWalk: true,
       })
     : computeQueueCounts({
         index: input.currentIndex,

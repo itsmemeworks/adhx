@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Saved Play once is 2 of 92, not 1 of 92
+
+Saved one-pass reused Live leftover math (`played = index` of posts already left), so the second filmstrip post read **1 of 92**. List walks now use the 1-based now-playing index (`listWalk: true` on Saved). Live leftover is unchanged (`N in queue` then `1 of N` after Next). Signed-out shortcut e2e no longer treats Previous-enabled as “Next worked” — leftover Next stays at index 0. Tests: `computeQueueCounts`, `theater-chrome`, `e2e/queue-count`, `e2e/theater-shortcuts`. In-flight until the PR merges.
+
 ## 2026-08-25 — Saved Queue Watched on prepend / filter skip
 
 A second-window save at the front of Saved was labelled Watched because “everything before the cursor” counted as played. Saved now tracks posts actually left this session, so prepends and Videos-skipped rows stay unmarked; landing on a prepend then leaving it still marks Watched. Session prepends keep the clay fresh accent. `/live` ⇄ `/saved` remounts resume the playing Saved identity from sessionStorage (`?open=` still wins). Tests: `TheaterShell-cross-tab-add`, `saved-playing`, AuthedTheater cursor restore, more `e2e/theater-cross-tab-add` cases. In-flight until the PR merges.

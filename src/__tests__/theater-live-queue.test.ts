@@ -275,10 +275,25 @@ describe('computeQueueCounts', () => {
     )
   })
 
-  it('Saved one-pass is index of the list; a loop just shows the pile', () => {
+  it('Saved one-pass is the 1-based now-playing index; a loop just shows the pile', () => {
     expect(
-      computeQueueCounts({ index: 5, length: 13, unseenCount: 13, repeatMode: 'off' }),
-    ).toEqual({ looping: false, played: 5, toPlay: 13, length: 13 })
+      computeQueueCounts({
+        index: 0,
+        length: 92,
+        unseenCount: 92,
+        repeatMode: 'off',
+        listWalk: true,
+      }),
+    ).toEqual({ looping: false, played: 1, toPlay: 92, length: 92 })
+    expect(
+      computeQueueCounts({
+        index: 1,
+        length: 92,
+        unseenCount: 92,
+        repeatMode: 'off',
+        listWalk: true,
+      }),
+    ).toEqual({ looping: false, played: 2, toPlay: 92, length: 92 })
     expect(
       computeQueueCounts({ index: 5, length: 13, unseenCount: 13, repeatMode: 'all' }),
     ).toEqual({ looping: true, played: 0, toPlay: 13, length: 13 })

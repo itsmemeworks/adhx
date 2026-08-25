@@ -142,9 +142,9 @@ describe('resolveTheaterChrome', () => {
     expect(chrome.chromeNewCount).toBe(0)
   })
 
-  it('Saved one-pass is played of the list, not leftover of the pile', () => {
+  it('Saved one-pass is the 1-based now-playing index, not leftover of the pile', () => {
     const saved = Array.from({ length: 13 }, (_, i) => item(`mine-${i}`))
-    const chrome = resolveTheaterChrome({
+    const input = {
       isCollectionTab: true,
       personalFinished: false,
       collectionStageTheaterItem: saved[5],
@@ -156,19 +156,22 @@ describe('resolveTheaterChrome', () => {
       personalIsSeen: () => false,
       isSeen: () => true,
       seenReady: true,
-      freshKeys: new Set(),
+      freshKeys: new Set<string>(),
       newCount: 0,
       currentIndex: 0,
       unseenCount: 1,
-      effectiveRepeatMode: 'off',
+      effectiveRepeatMode: 'off' as const,
       personalIndex: 5,
       canPrev: true,
       canNext: true,
-    })
-    expect(chrome.queuePlayed).toBe(5)
+    }
+    const chrome = resolveTheaterChrome(input)
+    expect(chrome.queuePlayed).toBe(6)
     expect(chrome.queueToPlay).toBe(13)
     expect(chrome.queueTotal).toBe(13)
     expect(chrome.queueLooping).toBe(false)
+    expect(resolveTheaterChrome({ ...input, personalIndex: 0 }).queuePlayed).toBe(1)
+    expect(resolveTheaterChrome({ ...input, personalIndex: 1 }).queuePlayed).toBe(2)
   })
 
   it('Live leftover run counts already-watched posts from this run', () => {
