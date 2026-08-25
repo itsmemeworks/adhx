@@ -208,6 +208,34 @@ describe('resolveTheaterChrome', () => {
     expect(chrome.queueLooping).toBe(false)
   })
 
+  it('Live leftover first paint does not treat a bumped playlist index as played', () => {
+    const leftover = item('new-1')
+    const next = item('new-2')
+    const chrome = resolveTheaterChrome({
+      isCollectionTab: false,
+      personalFinished: false,
+      collectionStageTheaterItem: personal,
+      waiting: false,
+      current: leftover,
+      personalDisplayItems: [personal],
+      displayItems: [leftover, next],
+      currentKey: 'twitter:new-1',
+      personalIsSeen: () => false,
+      isSeen: () => false,
+      seenReady: false,
+      freshKeys: new Set(),
+      newCount: 0,
+      currentIndex: 1,
+      unseenCount: 2,
+      effectiveRepeatMode: 'off',
+      personalIndex: 0,
+      canPrev: false,
+      canNext: true,
+    })
+    expect(chrome.queuePlayed).toBe(0)
+    expect(chrome.queueToPlay).toBe(2)
+  })
+
   it('Live leftover after caught-up is just the new arrival, not the finished run', () => {
     const arrival = item('fresh')
     const done1 = item('done-1')

@@ -18,6 +18,9 @@ test.describe('queue count — Live leftover run', () => {
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
 
+    // First paint can flash playlist-index "1 of N" before leftover `played`
+    // lands. Wait for the leftover copy, then read.
+    await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
     const start = await readQueueProgress(page)
     expect(start.played).toBe(0)
     expect(start.toPlay).toBeGreaterThan(1)

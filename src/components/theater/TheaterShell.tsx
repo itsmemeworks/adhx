@@ -132,6 +132,7 @@ export {
   formatQueueCount,
   theaterUrlSyncPath,
   theaterTabNavRestore,
+  theaterTabNavAction,
   isFeedEnd,
   computeCanPrev,
   computeCanNext,
@@ -201,8 +202,9 @@ export interface TheaterShellProps {
    * Called when the viewer flips the Live ⇄ Saved switch. The switch
    * is a ROUTE on the signed-in theater (`/live` is Live, `/saved` is My
    * Collection — owner: "a specific route that they select"), so the page
-   * passes a `router.push` here. The tab still flips locally first, so the
-   * switch responds instantly and doesn't wait on navigation.
+   * passes a `router.push` here. The tab flips locally first when that
+   * side already has items. Live never fetches Saved, so `2` only
+   * navigates — a local flip would All Clear an empty mount snapshot.
    */
   onPersonalTabChange?: (tab: PersonalTab) => void
   /** Notify a caller an archive/delete landed. Identity is the full item — same numeric id exists across platforms. */
@@ -248,14 +250,16 @@ export function TheaterShell({
   // The personal theater's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
   const [personalTab, setPersonalTab] = useState<PersonalTab>(initialPersonalTab ?? 'live')
-  // Flip locally first (instant switch), then let the page navigate to that
-  // tab's route — see `onPersonalTabChange`.
+  // Flip locally first (instant switch), then let the page navigate — except
+  // Live→Saved when this mount has no Saved snapshot (AuthedTheater only
+  // fetches the queue on `/saved`). Local-flipping that empty list is All Clear.
   const changePersonalTab = useCallback(
-    (tab: PersonalTab) => {
-      setPersonalTab(tab)
-      onPersonalTabChange?.(tab)
+    (next: PersonalTab) => {
+      const savedSnapshotMissing = next === 'collection' && (personalItems?.length ?? 0) === 0
+      if (!savedSnapshotMissing) setPersonalTab(next)
+      onPersonalTabChange?.(next)
     },
-    [onPersonalTabChange],
+    [onPersonalTabChange, personalItems],
   )
   // `collection` is the Saved tab (`/saved`). Public APIs still say collection.
   const isCollectionTab = isPersonal && personalTab === 'collection'

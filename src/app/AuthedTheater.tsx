@@ -33,7 +33,7 @@ import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, PersonalTab } from '@/components/theater/types'
 import { COLLECTION_QUEUE_LIMIT, SAVED_PATH, sameBookmark } from '@/lib/theater/collection-href'
 import { readSavedPlayingKey, savedPlayingIndex } from '@/lib/theater/saved-playing'
-import { theaterTabNavRestore } from '@/components/theater/theater-math'
+import { theaterTabNavAction } from '@/components/theater/theater-math'
 
 /** Which route each side of the switch lives on. */
 export const TAB_ROUTES: Record<PersonalTab, '/live' | typeof SAVED_PATH> = {
@@ -125,22 +125,19 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
 
   const onPersonalTabChange = useCallback(
     (next: PersonalTab) => {
-      const dest = TAB_ROUTES[next]
-      // Live replaceState can leave `/{user}/status/{id}` in the bar while
-      // this page is still `/saved`. Restore dest even when the route tab
-      // did not change — otherwise Saved keeps the last Live post URL.
-      if (typeof window !== 'undefined') {
-        const restore = theaterTabNavRestore(window.location.pathname, dest)
-        if (restore) {
-          try {
-            window.history.replaceState(null, '', restore)
-          } catch {
-            // Sandboxed / embedded contexts can block history writes.
-          }
+      const path = typeof window !== 'undefined' ? window.location.pathname : TAB_ROUTES[next]
+      const { replace, push } = theaterTabNavAction(tab, next, path)
+      // Same-tab only: Live may have replaceState'd onto a preview path.
+      // Do not rewrite the bar before a cross-tab push — that made `1`/`2`
+      // look landed while this page was still mounted, so the next key no-op'd.
+      if (replace) {
+        try {
+          window.history.replaceState(null, '', replace)
+        } catch {
+          // Sandboxed / embedded contexts can block history writes.
         }
       }
-      if (next === tab) return
-      router.push(dest)
+      if (push) router.push(push)
     },
     [router, tab],
   )

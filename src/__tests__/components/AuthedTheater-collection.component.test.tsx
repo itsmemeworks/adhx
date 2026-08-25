@@ -30,6 +30,9 @@ vi.mock('@/components/theater/TheaterShell', () => ({
         data-index={props.initialPersonalIndex}
         data-count={(props.personalItems ?? []).length}
       >
+        <button type="button" onClick={() => props.onPersonalTabChange?.('live')}>
+          Live
+        </button>
         <button type="button" onClick={() => props.onPersonalTabChange?.('collection')}>
           Saved
         </button>
@@ -154,6 +157,16 @@ describe('AuthedTheater collection load', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
     expect(replaceSpy).toHaveBeenCalledWith(null, '', '/saved')
     expect(pushSpy).not.toHaveBeenCalled()
+    replaceSpy.mockRestore()
+  })
+
+  it('pushes /saved from Live without rewriting the bar first', async () => {
+    window.history.replaceState(null, '', '/author99/status/99')
+    const replaceSpy = vi.spyOn(window.history, 'replaceState')
+    render(<AuthedTheater seed={emptySeed} tab="live" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
+    expect(replaceSpy).not.toHaveBeenCalled()
+    expect(pushSpy).toHaveBeenCalledWith('/saved')
     replaceSpy.mockRestore()
   })
 })

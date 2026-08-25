@@ -83,18 +83,17 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
     ? (key: string) => liveQueueTreatAsUnseen(key, input.sharedItemKey, leftoverSeenBase)
     : undefined
   const livePlayed =
-    !input.isCollectionTab &&
-    !input.rewatching &&
-    input.effectiveRepeatMode === 'off' &&
-    leftoverSeen
-      ? countPlayedThisRun(input.displayItems, {
-          currentKey: input.currentKey,
-          remaining: input.unseenCount,
-          currentIndex: input.currentIndex,
-          wasSeenOnEntry: leftoverSeen,
-          isFresh: (key) => input.freshKeys.has(key),
-          isSeen: input.isSeen,
-        })
+    !input.isCollectionTab && !input.rewatching && input.effectiveRepeatMode === 'off'
+      ? leftoverSeen
+        ? countPlayedThisRun(input.displayItems, {
+            currentKey: input.currentKey,
+            remaining: input.unseenCount,
+            currentIndex: input.currentIndex,
+            wasSeenOnEntry: leftoverSeen,
+            isFresh: (key) => input.freshKeys.has(key),
+            isSeen: input.isSeen,
+          })
+        : 0
       : undefined
   const queueCount = input.isCollectionTab
     ? computeQueueCounts({

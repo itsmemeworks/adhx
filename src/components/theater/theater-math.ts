@@ -9,7 +9,7 @@ import type { ContentType } from '@/components/matter'
 import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
 import { hasKnownTimestamp } from '@/lib/utils/format'
-import type { RepeatMode, TheaterItem, TheaterMode } from './types'
+import type { PersonalTab, RepeatMode, TheaterItem, TheaterMode } from './types'
 import { inferType } from '@/lib/trending/filter'
 import { inferCollectionContentType } from './collection-item'
 import { SAVED_PATH, isSavedPath } from '@/lib/theater/collection-href'
@@ -722,6 +722,29 @@ export function theaterTabNavRestore(
   if (browserPath === dest) return null
   if (browserPath === '/live' || isSavedPath(browserPath)) return null
   return dest
+}
+
+/**
+ * Live `replaceState`s the bar onto a preview path. Putting `dest` in the
+ * bar *before* `router.push` made Playwright (and a following `1`/`2`)
+ * treat the other tab as already landed while this page was still mounted
+ * — `next === pageTab` then no-op'd the real navigation.
+ *
+ * Cross-tab: only push. Same-tab: rewrite a leftover preview path.
+ */
+export function theaterTabNavAction(
+  pageTab: PersonalTab,
+  next: PersonalTab,
+  browserPath: string,
+): {
+  replace: '/live' | typeof SAVED_PATH | null
+  push: '/live' | typeof SAVED_PATH | null
+} {
+  const dest = next === 'live' ? '/live' : SAVED_PATH
+  if (next === pageTab) {
+    return { replace: theaterTabNavRestore(browserPath, dest), push: null }
+  }
+  return { replace: null, push: dest }
 }
 
 /**

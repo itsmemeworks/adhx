@@ -302,20 +302,19 @@ authedTest.describe('theater shortcuts (signed in)', () => {
   authedTest('1 and 2 switch Live ⇄ Saved', async ({ page }) => {
     await page.goto('/live')
     await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(
-      'aria-current',
-      'true',
-    )
+    const liveTab = page.getByRole('button', { name: 'Live', exact: true })
+    const savedTab = page.getByRole('button', { name: 'Saved', exact: true })
+    await expect(liveTab).toHaveAttribute('aria-current', 'true')
 
     await page.keyboard.press('2')
     await expect(page).toHaveURL(/\/saved/)
     await expectTheaterReady(page)
+    await expect(savedTab).toHaveAttribute('aria-current', 'true')
 
+    // Focus the tab chrome so a stage iframe cannot eat Digit1.
+    await savedTab.click()
     await page.keyboard.press('1')
-    await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(
-      'aria-current',
-      'true',
-    )
+    await expect(liveTab).toHaveAttribute('aria-current', 'true')
     await expect(page).not.toHaveURL(/\/saved/)
   })
 })

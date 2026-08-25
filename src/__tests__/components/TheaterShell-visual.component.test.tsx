@@ -231,6 +231,25 @@ describe('TheaterShell: live queue type filter', () => {
     expect(chromeProps().currentKey).toBe('twitter:2')
   })
 
+  it('2 does not All Clear Live when the Saved snapshot is empty', async () => {
+    const onPersonalTabChange = vi.fn()
+    render(
+      <TheaterShell
+        mode="personal"
+        initialPersonalTab="live"
+        personalItems={[]}
+        seed={seed([item('1', { contentType: 'video' })])}
+        onPersonalTabChange={onPersonalTabChange}
+      />,
+    )
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+    })
+    expect(onPersonalTabChange).toHaveBeenCalledWith('collection')
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(screen.queryByText('Nothing to review')).not.toBeInTheDocument()
+  })
+
   it('1 and 2 flip Live ⇄ Saved on the personal theater', async () => {
     const onPersonalTabChange = vi.fn()
     render(
