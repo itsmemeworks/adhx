@@ -163,6 +163,7 @@ describe('UpNextList — watching a row moves it to Watched earlier', () => {
       />,
     )
     expect(order()).toEqual(['Up next1', 'Watched earlier1'])
+    expect(screen.queryByText('next ↓')).not.toBeInTheDocument()
   })
 
   it('puts every finished row under Watched earlier once nothing is current', () => {

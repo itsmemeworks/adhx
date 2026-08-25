@@ -334,7 +334,9 @@ export function UpNextList({
         {visibleItems.map((item, i) => {
           const key = theaterItemKey(item)
           const isCurrent = i === currentIndex
-          const isNext = currentIndex >= 0 && i === currentIndex + 1
+          // After live regroup the row after current is often Watched earlier.
+          // Next from the last pending post waits — do not paint next ↓ there.
+          const isNext = currentIndex >= 0 && i === currentIndex + 1 && groups[i] !== 'watched'
           const heading = headingAt.get(i)
           const row = (
             <Row

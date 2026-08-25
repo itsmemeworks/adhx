@@ -1037,8 +1037,11 @@ export function DesktopDock({
           {items.map((item, i) => {
             const key = theaterItemKey(item)
             const isCurrent = key === currentKey
-            const isNext = !waiting && currentIndex >= 0 && i === currentIndex + 1
             const seen = seenReady && isSeen(key)
+            // Same as Queue: after regroup, index+1 is often a watched card.
+            // Repeat-off will not auto-play it, so do not label NEXT →.
+            const isNext =
+              !waiting && currentIndex >= 0 && i === currentIndex + 1 && !(wasSeenOnEntry && seen)
             // Queue rows grey watched thumbs; the strip must match. While the
             // caught-up overlay is up the parked "NOW" card is already watched
             // — dim it too, and do not label a sequential NEXT that will not

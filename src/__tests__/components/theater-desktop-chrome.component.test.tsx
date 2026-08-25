@@ -243,6 +243,25 @@ describe('DesktopDock', () => {
     expect(parked.querySelector('.grayscale')).toBeInTheDocument()
   })
 
+  it('does not label NEXT on a watched card after live regroup', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'playing-now' }),
+      videoItem({ bookmarkId: '2', text: 'already-watched' }),
+    ]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        isSeen={(key) => key === theaterItemKey(items[1])}
+        wasSeenOnEntry={() => false}
+      />,
+    )
+    expect(screen.getByText('NOW')).toBeInTheDocument()
+    expect(screen.queryByText('NEXT →')).not.toBeInTheDocument()
+  })
+
   it('clicking a card calls onSelect with its key', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
     const onSelect = vi.fn()
