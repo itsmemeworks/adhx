@@ -53,8 +53,10 @@ test.describe('theater shortcuts (signed out)', () => {
 
     await first.click()
     // Live leftover always stages the next unseen at index 0, so Previous
-    // stays disabled. The dock count is the signal that Next actually moved.
-    await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
+    // stays disabled. The dock count is the signal that Next actually moved
+    // (`N of M`, not `N in queue`). A dwell during help can already be `1 of`,
+    // so this Next may land on `2 of`.
+    await expect(visibleQueueCount(page)).toHaveText(/^\d+ of /)
     await expect(page.getByRole('button', { name: 'Previous post' })).toBeDisabled()
   })
 

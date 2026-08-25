@@ -8,7 +8,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ## 2026-08-25 — CI: Live ⇄ Saved `1` and leftover count flash
 
-`2` wrote `/saved` into the bar with `replaceState` before `router.push`, so Playwright treated Saved as landed while `/live` was still mounted. Pressing `1` then hit `next === tab` and never pushed `/live`. Cross-tab switches now push only; same-tab still rewrites a leftover preview path. Live→Saved no longer local-flips an empty Saved snapshot (that All Cleared until `/saved` fetched). Leftover chrome passes `played: 0` before the seen snapshot is ready, and `countPlayedThisRun` never counts the on-stage row (dwell-seen + prepend used to flip `N in queue` → `1 of N`). Tests: `theaterTabNavAction`, AuthedTheater Live→Saved push, chrome first-paint, e2e shortcuts + queue-count wait. In-flight until the PR merges.
+`2` wrote `/saved` into the bar with `replaceState` before `router.push`, so Playwright treated Saved as landed while `/live` was still mounted. Pressing `1` then hit `next === tab` and never pushed `/live`. Cross-tab switches now push only; same-tab still rewrites a leftover preview path. Live→Saved no longer local-flips an empty Saved snapshot (that All Cleared until `/saved` fetched). Leftover chrome passes `played: 0` before the seen snapshot is ready, and `countPlayedThisRun` never counts the on-stage row. Cross-tab leftover e2e asserts the pile grew and the current post stayed (unit tests own `played === 0`). In-flight until the PR merges.
 
 ## 2026-08-25 — Live leftover count after a mid-play prepend
 

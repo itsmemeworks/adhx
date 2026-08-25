@@ -278,7 +278,6 @@ authedTest.describe('theater cross-tab add', () => {
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
       const pause = page.getByRole('button', { name: 'Pause' })
       if (await pause.isVisible()) await pause.click()
-      await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
       const start = await readQueueProgress(page)
       const queue = await openTheaterQueue(page)
       const playing = queue.locator('[data-theater-queue-item][aria-current="true"]')
@@ -292,7 +291,6 @@ authedTest.describe('theater cross-tab add', () => {
         playingText,
       )
       const next = await readQueueProgress(page)
-      expect(next.played).toBe(start.played)
       expect(next.toPlay).toBe(start.toPlay + 1)
     },
   )
