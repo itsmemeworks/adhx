@@ -21,8 +21,8 @@
  * `seed`, `textItem`) with one addition: a controllable `useAuthMe` stub so
  * the SAME matrix can be driven for both the signed-out public theater
  * (`mode="home"`, the default) and the signed-in Live tab
- * (`mode="personal" initialPersonalTab="live"`, how AuthedHome mounts the shell
- * for `/`). The owner hits this signed in; the public site hits it signed
+ * (`mode="personal" initialPersonalTab="live"`, how AuthedTheater mounts the
+ * shell for `/live`). The owner hits this signed in; the public site hits it signed
  * out — the state machine is supposed to behave identically either way, and
  * several tests below assert that equivalence explicitly rather than assume
  * it.
@@ -175,9 +175,9 @@ async function renderHome(items: TheaterItem[]) {
 }
 
 /**
- * Signed-in Live tab — how `AuthedHome` mounts the shell for authed `/`
+ * Signed-in Live tab — how `AuthedTheater` mounts the shell for `/live`
  * (`mode="personal"`, `initialPersonalTab="live"`, empty `personalItems` since the
- * Live tab never reads that prop — see AuthedHome.tsx's `PERSONAL_LIVE_SEED`).
+ * Live tab never reads that prop).
  * `global.fetch` must be stubbed before this: once the live queue renders it
  * fires a bulk `/api/feed` membership lookup — a harmless no-op against a
  * generic `{ ok: false }`.
@@ -691,5 +691,68 @@ describe('TheaterShell caught-up matrix: caught-up never lies about a post behin
 
     expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe(theaterItemKey(arrival))
+  })
+
+  it('[signed out] Next after the leftover run plays New-since-opened before caught-up', async () => {
+    const item1 = textItem('1')
+    const item2 = textItem('2')
+    const watched = textItem('w')
+    markWatched([watched])
+    await renderHome([item1, item2, watched])
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item1))
+
+    const freshB = textItem('fresh-b')
+    const freshA = textItem('fresh-a')
+    await act(async () => pushArrival?.(freshA))
+    await act(async () => pushArrival?.(freshB))
+
+    await act(async () => pressNext())
+    expect(chromeProps().currentKey).toBe(theaterItemKey(item2))
+    await act(async () => pressNext())
+    expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe(theaterItemKey(freshB))
+    await act(async () => pressNext())
+    expect(chromeProps().currentKey).toBe(theaterItemKey(freshA))
+    await act(async () => pressNext())
+    expect(screen.getByText(CAUGHT_UP_TEXT)).toBeInTheDocument()
+  })
+})
+
+describe('TheaterShell: signed-in preview is leftover Live, not shared-post-repeat', () => {
+  it('auto-advances the opened post into still-unseen Live', async () => {
+    const shared = textItem('shared')
+    const unseen = textItem('2')
+    const watched = textItem('3')
+    markWatched([watched])
+    authMeState.me = { authenticated: true, user: { username: 'owner' } }
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([shared, unseen, watched])}
+          mode="shared"
+          sharedItem={shared}
+          authed
+        />,
+      )
+    })
+    expect((mockStage.mock.calls.at(-1)![0] as { repeat?: boolean }).repeat).toBe(false)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
+    expect(chromeProps().items.map((i) => i.bookmarkId)[0]).toBe('shared')
+
+    await endCurrentItem()
+
+    expect(screen.queryByText(CAUGHT_UP_TEXT)).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe(theaterItemKey(unseen))
+  })
+
+  it('[signed out] still repeats the opened post until the visitor Nexts', async () => {
+    const shared = textItem('shared')
+    const unseen = textItem('2')
+    await act(async () => {
+      render(<TheaterShell seed={seed([shared, unseen])} mode="shared" sharedItem={shared} />)
+    })
+    // Native video loop swallows `ended`; the pin is what Stage receives.
+    expect((mockStage.mock.calls.at(-1)![0] as { repeat?: boolean }).repeat).toBe(true)
+    expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
   })
 })

@@ -166,6 +166,55 @@ describe('UpNextList — watching a row moves it to Watched earlier', () => {
     expect(screen.queryByText('next ↓')).not.toBeInTheDocument()
   })
 
+  it('puts a second-screen arrival under New since you opened while the playing row stays put', () => {
+    const watched = post('seen', 4)
+    const playing = item({
+      bookmarkId: 'now',
+      url: '/alice/status/now',
+      addedAt: hoursAgo(2),
+      text: 'playing-now',
+    })
+    const arrival = item({
+      bookmarkId: 'fresh',
+      url: '/alice/status/fresh',
+      addedAt: hoursAgo(0),
+      text: 'fresh-arrival',
+    })
+    const { rerender } = render(
+      <UpNextList
+        {...base}
+        items={[playing, watched]}
+        currentKey="twitter:now"
+        isSeen={(k) => k === 'twitter:now' || k === 'twitter:seen'}
+        wasSeenOnEntry={(k) => k === 'twitter:seen'}
+      />,
+    )
+    expect(screen.getAllByRole('separator').map((el) => el.textContent)).toEqual([
+      'Up next',
+      'Watched earlier1',
+    ])
+
+    rerender(
+      <UpNextList
+        {...base}
+        items={[arrival, playing, watched]}
+        currentKey="twitter:now"
+        freshKeys={new Set(['twitter:fresh'])}
+        isSeen={(k) => k === 'twitter:now' || k === 'twitter:seen'}
+        wasSeenOnEntry={(k) => k === 'twitter:seen'}
+      />,
+    )
+    const headings = screen
+      .getAllByRole('separator')
+      .map((el) => el.textContent?.replace(/\s+/g, ' ').trim())
+    expect(headings).toEqual(['New since you opened1', 'Up next', 'Watched earlier1'])
+    expect(screen.getByText('fresh-arrival').closest('button')).not.toHaveAttribute('aria-current')
+    expect(screen.getByText('playing-now').closest('button')).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+  })
+
   it('puts every finished row under Watched earlier once nothing is current', () => {
     render(
       <UpNextList {...base} items={items} isSeen={() => true} wasSeenOnEntry={wasSeenOnEntry} />,

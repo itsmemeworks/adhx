@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import AuthedTheater from '@/app/AuthedTheater'
 import { COLLECTION_QUEUE_LIMIT } from '@/lib/theater/collection-href'
+import { SAVED_PLAYING_STORAGE_KEY } from '@/lib/theater/saved-playing'
 
 const pushSpy = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -51,6 +52,7 @@ let feedRequests: string[] = []
 let feedImpl: (url: string) => ReturnType<typeof jsonResponse>
 
 beforeEach(() => {
+  sessionStorage.clear()
   pushSpy.mockClear()
   shellSpy.mockClear()
   feedRequests = []
@@ -96,6 +98,20 @@ describe('AuthedTheater collection load', () => {
     feedImpl = () => jsonResponse({ items: [{ id: 'a', platform: 'twitter' }] })
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))
     await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
+  })
+
+  it('resumes the session Saved cursor after a Live ⇄ Saved remount', async () => {
+    sessionStorage.setItem(SAVED_PLAYING_STORAGE_KEY, 'twitter:b')
+    render(<AuthedTheater seed={emptySeed} tab="collection" />)
+    await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
+    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '1')
+  })
+
+  it('lets ?open= win over the session Saved cursor', async () => {
+    sessionStorage.setItem(SAVED_PLAYING_STORAGE_KEY, 'twitter:a')
+    render(<AuthedTheater seed={emptySeed} tab="collection" openId="b" openPlatform="twitter" />)
+    await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
+    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '1')
   })
 
   it('starts on the open item when it is already in the active queue', async () => {

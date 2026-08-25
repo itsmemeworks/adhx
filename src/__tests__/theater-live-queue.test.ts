@@ -4,6 +4,8 @@ import {
   liveQueueGroupOf,
   unseenBlockLength,
   computeLiveNext,
+  pendingBlockLength,
+  firstPendingLiveKey,
   computeQueueTotal,
   computeQueueCounts,
   countPlayedThisRun,
@@ -451,5 +453,51 @@ describe('computeLiveNext — nothing unwatched anywhere', () => {
     expect(computeLiveNext({ ...base, index: 1, userInitiated: true, nextUnwatchedIndex: 0 })).toBe(
       0,
     )
+  })
+
+  it('plays still-unwatched arrivals before caught-up even from the watched suffix', () => {
+    // Owner screenshot: leftover run done, 2 New-since-opened still unseen,
+    // Next / auto-advance said caught-up because unseenCount was 0 (pinned
+    // watched lead zeroed the prefix) while nextUnwatchedIndex pointed at them.
+    expect(
+      computeLiveNext({
+        length: 14,
+        index: 13,
+        unseenCount: 0,
+        loop: false,
+        userInitiated: true,
+        nextUnwatchedIndex: 0,
+      }),
+    ).toBe(0)
+    expect(
+      computeLiveNext({
+        length: 14,
+        index: 13,
+        unseenCount: 0,
+        loop: false,
+        userInitiated: false,
+        nextUnwatchedIndex: 1,
+      }),
+    ).toBe(1)
+  })
+})
+
+describe('pendingBlockLength', () => {
+  it('skips a leading watched row so a pinned lead does not zero the run', () => {
+    const items = [item('pin', 1), item('new', 2), item('todo', 3), item('old', 4)]
+    const groupOf = (k: string) => {
+      if (k === key('pin') || k === key('old')) return 'watched' as const
+      if (k === key('new')) return 'arrived' as const
+      return 'unwatched' as const
+    }
+    expect(pendingBlockLength(items, groupOf)).toBe(2)
+  })
+})
+
+describe('firstPendingLiveKey', () => {
+  it('returns the first unseen key, skipping the row being left', () => {
+    const items = [item('a', 1), item('b', 2), item('c', 3)]
+    expect(firstPendingLiveKey(items, setOf('a'), key('a'))).toBe(key('b'))
+    expect(firstPendingLiveKey(items, setOf('a', 'b', 'c'), key('c'))).toBeNull()
   })
 })

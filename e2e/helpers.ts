@@ -60,6 +60,11 @@ export function caption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).first()
 }
 
+/** Same copy as {@link caption}, but skip the CSS-hidden mobile queue. */
+export function visibleCaption(page: Page, text: string) {
+  return page.getByText(text, { exact: true }).locator('visible=true').first()
+}
+
 export async function expectSignInModal(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Email me a magic link' })).toBeVisible()
@@ -236,6 +241,58 @@ export const authedTest = base.extend({
 /** Desktop dock count — mobile peek stays mounted (`lg:hidden`) with the same hook. */
 export function visibleQueueCount(page: Page) {
   return page.locator('[data-theater-queue-count]').locator('visible=true')
+}
+
+export async function apiAddByUrl(
+  page: Page,
+  url: string,
+): Promise<{ id: string; platform: string }> {
+  const res = await page.request.post('/api/bookmarks/add', {
+    data: { url, source: 'manual' },
+  })
+  if (!res.ok()) throw new Error(`add failed ${res.status()}`)
+  const body = (await res.json()) as { bookmark?: { id?: string }; platform?: string }
+  const id = body.bookmark?.id
+  if (!id) throw new Error('add returned no bookmark id')
+  return { id, platform: body.platform ?? 'twitter' }
+}
+
+export async function fetchFeedItem(
+  page: Page,
+  id: string,
+  platform = 'twitter',
+): Promise<Record<string, unknown>> {
+  const res = await page.request.get(`/api/feed?id=${id}&idPlatform=${platform}&hideArchived=false`)
+  if (!res.ok()) throw new Error(`feed lookup failed ${res.status()}`)
+  const body = (await res.json()) as { items?: Array<Record<string, unknown>> }
+  const item = (body.items ?? []).find((row) => row.id === id)
+  if (!item) throw new Error(`feed missing ${platform}:${id}`)
+  return item
+}
+
+/** Other-window path: BroadcastChannel → local tweet-added (AppShell bridge). */
+export async function broadcastAdded(page: Page, added: Record<string, unknown>): Promise<void> {
+  await page.evaluate((item) => {
+    new BroadcastChannel('adhx-client-events').postMessage({
+      name: 'tweet-added',
+      detail: { added: item },
+    })
+  }, added)
+}
+
+export async function openTheaterQueue(page: Page) {
+  const queueBtn = page.getByRole('button', { name: 'Queue', exact: true })
+  if ((await queueBtn.getAttribute('aria-expanded')) !== 'true') {
+    await queueBtn.click()
+  }
+  return page.getByRole('dialog', { name: 'Playlist' })
+}
+
+export async function pasteTheaterLink(page: Page, url: string): Promise<void> {
+  await page.getByRole('button', { name: 'Paste a link' }).click()
+  const field = page.getByRole('textbox', { name: /Paste a link/i })
+  await field.fill(url)
+  await field.press('Enter')
 }
 
 export async function readQueueProgress(page: Page): Promise<{ played: number; toPlay: number }> {

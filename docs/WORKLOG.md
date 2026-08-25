@@ -6,6 +6,18 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — Saved Queue Watched on prepend / filter skip
+
+A second-window save at the front of Saved was labelled Watched because “everything before the cursor” counted as played. Saved now tracks posts actually left this session, so prepends and Videos-skipped rows stay unmarked; landing on a prepend then leaving it still marks Watched. Session prepends keep the clay fresh accent. `/live` ⇄ `/saved` remounts resume the playing Saved identity from sessionStorage (`?open=` still wins). Tests: `TheaterShell-cross-tab-add`, `saved-playing`, AuthedTheater cursor restore, more `e2e/theater-cross-tab-add` cases. In-flight until the PR merges.
+
+## 2026-08-25 — Cross-tab add + Queue filters
+
+A second-window save now resets a hiding type filter the same way same-tab paste does, so a text add is not invisible behind Videos. Live paste keeps the Saved cursor (compute the new index on the prepended array, not after a stale setState). Videos while a text post is current snaps to a matching row or caught-up instead of “Nothing playing”. Saved Videos walks backward to a matching prepend. Tests: `TheaterShell-cross-tab-add`, UpNextList arrival heading, `e2e/theater-cross-tab-add.spec.ts`. In-flight until the PR merges.
+
+## 2026-08-25 — Live home; play New-since-opened before caught-up
+
+Signed-in `/` redirects to `/live`. A signed-in preview keeps the opened post first in leftover Live (autosave unchanged) and does not shared-post-repeat, so it auto-advances into unseen. Live Next / auto-advance now plays still-unseen arrivals (including ones already in the waiting baseline) before “You’re all caught up”. In-flight until the PR merges.
+
 ## 2026-08-25 — Unplayed leftover is “N in queue”
 
 `0 of 1` read as a zero-based index. Off-repeat now says `N in queue` until the first leave, then `16 of 23`. Repeat on is still `N on repeat`. In-flight until the PR merges.

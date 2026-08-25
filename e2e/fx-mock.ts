@@ -1,8 +1,17 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import { POST, PREVIEW_IG, PREVIEW_TT, PREVIEW_YT, QUOTED_INNER } from './constants'
+import {
+  ADD_TEXT,
+  ADD_VIDEO,
+  ADD_VIDEO_B,
+  POST,
+  PREVIEW_IG,
+  PREVIEW_TT,
+  PREVIEW_YT,
+  QUOTED_INNER,
+} from './constants'
 
 function tweetPayload(author: string, id: string) {
-  const known = Object.values(POST).find((p) => p.id === id)
+  const known = [...Object.values(POST), ADD_TEXT, ADD_VIDEO, ADD_VIDEO_B].find((p) => p.id === id)
   const text = known?.text ?? `E2E tweet ${id}`
   const name = known?.authorName ?? author
   const tweet: Record<string, unknown> = {
@@ -19,6 +28,26 @@ function tweetPayload(author: string, id: string) {
     replies: 0,
     retweets: 0,
     likes: 0,
+  }
+  if (id === ADD_VIDEO.id || id === ADD_VIDEO_B.id) {
+    tweet.media = {
+      videos: [
+        {
+          url: 'https://video.twimg.com/e2e.mp4',
+          thumbnail_url:
+            'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+          width: 720,
+          height: 1280,
+        },
+      ],
+      all: [
+        {
+          url: 'https://video.twimg.com/e2e.mp4',
+          thumbnail_url:
+            'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+        },
+      ],
+    }
   }
   if (id === POST.quoted.id) {
     tweet.media = {
@@ -79,7 +108,14 @@ function instagramOg(id: string): string {
 }
 
 function tiktokOg(username: string, id: string): string {
-  const text = id === PREVIEW_TT.id ? PREVIEW_TT.text : `E2E tiktok ${id}`
+  const text =
+    id === PREVIEW_TT.id
+      ? PREVIEW_TT.text
+      : id === ADD_VIDEO.id
+        ? ADD_VIDEO.text
+        : id === ADD_VIDEO_B.id
+          ? ADD_VIDEO_B.text
+          : `E2E tiktok ${id}`
   const handle = username.replace(/^@/, '')
   return `<!doctype html><html><head>
 <meta property="og:video" content="https://tnktok.com/generate/video/${id}.mp4" />

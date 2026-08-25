@@ -106,11 +106,40 @@ describe('resolveTheaterChrome', () => {
     expect(chrome.chromeCurrent?.bookmarkId).toBe('mine-1')
     expect(chrome.chromeItems[0]?.bookmarkId).toBe('mine-1')
     expect(chrome.chromeNewCount).toBe(0)
+    expect(chrome.chromeFreshKeys.size).toBe(0)
     expect(chrome.queueTotal).toBe(1)
     expect(chrome.queuePlayed).toBe(1)
     expect(chrome.queueToPlay).toBe(1)
     expect(chrome.queueLooping).toBe(false)
     expect(chrome.chromeCanPrev).toBe(true)
+  })
+
+  it('Saved Queue accents session prepends without Live grouping keys', () => {
+    const chrome = resolveTheaterChrome({
+      isCollectionTab: true,
+      personalFinished: false,
+      collectionStageTheaterItem: personal,
+      waiting: false,
+      current: live,
+      personalDisplayItems: [personal],
+      displayItems: [live],
+      currentKey: 'twitter:live-1',
+      personalIsSeen: () => false,
+      isSeen: () => true,
+      seenReady: true,
+      freshKeys: new Set(['twitter:live-1']),
+      personalFreshKeys: new Set(['twitter:mine-1']),
+      newCount: 2,
+      currentIndex: 0,
+      unseenCount: 1,
+      effectiveRepeatMode: 'all',
+      personalIndex: 0,
+      canPrev: false,
+      canNext: true,
+    })
+    expect(chrome.chromeFreshKeys.has('twitter:mine-1')).toBe(true)
+    expect(chrome.chromeFreshKeys.has('twitter:live-1')).toBe(false)
+    expect(chrome.chromeNewCount).toBe(0)
   })
 
   it('Saved one-pass is played of the list, not leftover of the pile', () => {

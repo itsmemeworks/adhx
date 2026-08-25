@@ -16,6 +16,8 @@ export interface TheaterChromeInput {
   isSeen: (key: string) => boolean
   seenReady: boolean
   freshKeys: ReadonlySet<string>
+  /** Session prepends on Saved — clay accent, not Live grouping. */
+  personalFreshKeys?: ReadonlySet<string>
   newCount: number
   currentIndex: number
   unseenCount: number
@@ -104,7 +106,9 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
     chromeCurrentKey,
     chromeIsSeen: input.isCollectionTab ? input.personalIsSeen : input.isSeen,
     chromeSeenReady: input.isCollectionTab ? true : input.seenReady,
-    chromeFreshKeys: input.isCollectionTab ? EMPTY_KEY_SET : input.freshKeys,
+    chromeFreshKeys: input.isCollectionTab
+      ? (input.personalFreshKeys ?? EMPTY_KEY_SET)
+      : input.freshKeys,
     chromeNewCount: input.isCollectionTab ? 0 : input.newCount,
     queueTotal: queueCount.length,
     queuePlayed: queueCount.played,

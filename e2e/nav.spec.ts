@@ -30,11 +30,12 @@ authedTest.describe('signed-in navigation', () => {
     },
   )
 
-  authedTest('signed-in / continues the unread queue', async ({ page }) => {
+  authedTest('signed-in / continues Live leftover', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveURL(/\/saved/)
+    await expect(page).toHaveURL(/\/live/)
     await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Live', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
   })
 
   authedTest('Saved ↔ Live is a pair of routes', async ({ page }) => {

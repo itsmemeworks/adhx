@@ -1,13 +1,13 @@
 'use client'
 
 /**
- * The signed-in theater. Default landing is Saved (`/saved`) — continue /
- * next unread. Live is `/live`.
+ * The signed-in theater. Default landing is Live (`/live`) — leftover
+ * community posts. Saved (`/saved`) is the unread pile you come back to.
  *
  * The Live ⇄ Saved switch is a pair of ROUTES rather than local state:
  *
- *   `/live`     Live — the community's last 24 hours
- *   `/saved`    Saved — your own active queue (signed-in home)
+ *   `/live`     Live — the community's last 24 hours (signed-in home)
+ *   `/saved`    Saved — your own active queue
  *   `/library`  the grid (filters, search, views) — `AuthedHome`
  *
  * Making each side a real URL means it's linkable, back/forward works, and a
@@ -32,6 +32,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, PersonalTab } from '@/components/theater/types'
 import { COLLECTION_QUEUE_LIMIT, SAVED_PATH, sameBookmark } from '@/lib/theater/collection-href'
+import { readSavedPlayingKey, savedPlayingIndex } from '@/lib/theater/saved-playing'
 import { theaterTabNavRestore } from '@/components/theater/theater-math'
 
 /** Which route each side of the switch lives on. */
@@ -69,7 +70,9 @@ async function loadCollectionQueue(
   if (!res.ok) throw new Error('feed failed')
   const data = await res.json()
   const queue: FeedItem[] = data.items ?? []
-  if (!openId) return { items: queue, start: 0 }
+  if (!openId) {
+    return { items: queue, start: savedPlayingIndex(queue, readSavedPlayingKey()) }
+  }
 
   const start = openPlatform
     ? queue.findIndex((i) => sameBookmark(i, openId, openPlatform))

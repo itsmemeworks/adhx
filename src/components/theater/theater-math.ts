@@ -416,8 +416,36 @@ export function pendingBlockLength<
   T extends { platform: string; bookmarkId?: string | null; url: string },
 >(items: T[], groupOf: (key: string) => LiveQueueGroup): number {
   let n = 0
-  while (n < items.length && groupOf(theaterItemKey(items[n])) !== 'watched') n++
+  let started = false
+  for (const item of items) {
+    const group = groupOf(theaterItemKey(item))
+    if (group === 'watched') {
+      // A pinned watched lead (shared post, or a waiting-stage arrival)
+      // can sit in front of still-pending rows. Skip it; stop at the
+      // first watched row AFTER the pending run has started.
+      if (started) break
+      continue
+    }
+    started = true
+    n++
+  }
   return n
+}
+
+/**
+ * First live-queue row that still needs to play. Fresh arrivals count
+ * even when they landed before the caught-up stage started — "caught up"
+ * means nothing unwatched remains, including New since you opened.
+ */
+export function firstPendingLiveKey<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(items: T[], isSeen: (key: string) => boolean, exceptKey?: string | null): string | null {
+  for (const item of items) {
+    const key = theaterItemKey(item)
+    if (exceptKey && key === exceptKey) continue
+    if (!isSeen(key)) return key
+  }
+  return null
 }
 
 /**
@@ -481,13 +509,16 @@ export function computeLiveNext(opts: {
   const usable = (n: number | null | undefined): n is number =>
     typeof n === 'number' && n >= 0 && n < length && n !== index
 
+  // Still-unwatched rows (including New-since-opened arrivals) always
+  // play before caught-up — even Next from the watched suffix, and even
+  // when a pinned watched lead zeros the pending *prefix*. Owner: two
+  // new items sitting in the queue while the stage said caught-up.
+  if (usable(nextUnwatchedAhead)) return nextUnwatchedAhead
+  if (usable(nextUnwatchedIndex)) return nextUnwatchedIndex
+
   // Already in the watched suffix (or no pending run): browsing stays free.
   if (userInitiated && (unseenCount === 0 || index >= unseenCount)) return next
 
-  // Repeat off, or Next from the pending prefix: only play what's still
-  // unwatched. Ahead first, then behind, then wait — never into Watched.
-  if (usable(nextUnwatchedAhead)) return nextUnwatchedAhead
-  if (usable(nextUnwatchedIndex)) return nextUnwatchedIndex
   // Tests that omit live indices keep the frozen-run walk (auto only).
   if (
     !userInitiated &&
