@@ -377,6 +377,20 @@ describe('countPlayedThisRun', () => {
     ).toBe(1)
   })
 
+  it('does not count the on-stage row after a dwell-seen prepend bumps its index', () => {
+    const items = [post('arrival'), post('now'), post('next')]
+    expect(
+      countPlayedThisRun(items, {
+        currentKey: 'twitter:now',
+        remaining: 2,
+        currentIndex: 1,
+        wasSeenOnEntry: () => false,
+        isFresh: (key) => key === 'twitter:arrival',
+        isSeen: (key) => key === 'twitter:now',
+      }),
+    ).toBe(0)
+  })
+
   it('ignores a leftover run that already finished at caught-up', () => {
     // Owner screenshot: watched leftover this session, caught up, then one
     // new arrival. Those finished leftover keys are folded into

@@ -15,6 +15,9 @@ test.describe('theater shortcuts (signed out)', () => {
   test('Shift+? opens help, Escape closes it, arrows still advance after', async ({ page }) => {
     await page.goto('/')
     await expectTheaterReady(page)
+    const pause = page.getByRole('button', { name: 'Pause' })
+    if (await pause.isVisible()) await pause.click()
+    await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
     const first = page.getByRole('button', { name: 'Next post' })
 
     await page.keyboard.press('?')

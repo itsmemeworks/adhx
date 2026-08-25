@@ -610,12 +610,12 @@ export function countPlayedThisRun<
     isSeen: (key: string) => boolean
   },
 ): number {
-  const currentStillPending =
-    opts.currentKey !== null && opts.currentIndex >= 0 && opts.currentIndex < opts.remaining
   let n = 0
   for (const item of items) {
     const key = theaterItemKey(item)
-    if (currentStillPending && key === opts.currentKey) continue
+    // Still on stage: dwell may have marked it seen, and a prepend bumps
+    // `currentIndex` past `remaining`. Do not count it until we leave.
+    if (opts.currentKey !== null && key === opts.currentKey) continue
     const fromRun = !opts.wasSeenOnEntry(key) || opts.isFresh(key)
     if (fromRun && opts.isSeen(key)) n++
   }
