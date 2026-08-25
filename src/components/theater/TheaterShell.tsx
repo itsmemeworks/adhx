@@ -1906,13 +1906,14 @@ export function TheaterShell({
     if (waiting && !isCollectionTab) window.dispatchEvent(new CustomEvent('theater-pause'))
   }, [waiting, isCollectionTab])
 
-  // Live ⇄ Collection flips local tab state before the route changes. A Live
+  // Live ⇄ Saved flips local tab state before the route changes. A Live
   // caught-up `theater-pause` would otherwise leave the shared <video>
-  // paused on Collection. Clear waiting and resume as soon as Collection is
-  // the on-stage tab.
+  // paused on Saved. Resume for Saved, but keep `waiting` — the overlay is
+  // already hidden by `!isCollectionTab`. Forgetting caught-up meant coming
+  // back to Live kept playing the Saved video at the same timecode (same
+  // persistent <video>, often the same src).
   useEffect(() => {
     if (!isCollectionTab || !waiting) return
-    setWaiting(false)
     window.dispatchEvent(new CustomEvent('theater-resume'))
   }, [isCollectionTab, waiting])
 

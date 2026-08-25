@@ -354,13 +354,13 @@ describe('TheaterShell: finishing a fresh arrival lands on the caught-up stage',
   })
 })
 
-describe('TheaterShell: Live caught-up does not pause Collection on the tab flip', () => {
+describe('TheaterShell: Live caught-up resumes Saved but stays caught up', () => {
   beforeEach(() => {
     mockMobileChrome.mockClear()
     window.localStorage.clear()
   })
 
-  it('clears waiting and resumes when flipping Live → Saved', async () => {
+  it('resumes Saved without forgetting Live was caught up', async () => {
     const items = [textItem('1'), textItem('2')]
     markWatched(items)
     const resumeHeard = vi.fn()
@@ -401,6 +401,9 @@ describe('TheaterShell: Live caught-up does not pause Collection on the tab flip
 
       expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
       expect(resumeHeard).toHaveBeenCalled()
+
+      await act(async () => props.collection.onTabChange('live'))
+      expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
     } finally {
       window.removeEventListener('theater-resume', resumeHeard)
     }
