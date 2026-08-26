@@ -109,16 +109,14 @@ describe('POST /api/bookmarks/add — YouTube', () => {
     expect(media.previewUrl).toBe('https://i.ytimg.com/vi/Y9aytLYBajw/hqdefault.jpg')
   })
 
-  it('also accepts youtu.be and watch?v= forms', async () => {
-    mockOembed()
-    const a = await (await POST(createRequest({ url: 'https://youtu.be/Y9aytLYBajw' }))).json()
-    expect(a.success).toBe(true)
+  it('rejects youtu.be and watch?v= forms — those are regular videos', async () => {
+    const a = await POST(createRequest({ url: 'https://youtu.be/Y9aytLYBajw' }))
+    expect(a.status).toBe(400)
+    expect(await a.json()).toMatchObject({ error: expect.stringContaining('Unsupported URL') })
 
-    const b = await (
-      await POST(createRequest({ url: 'https://www.youtube.com/watch?v=Y9aytLYBajw' }))
-    ).json()
-    // same id → duplicate on the second insert
-    expect(b.isDuplicate).toBe(true)
+    const b = await POST(createRequest({ url: 'https://www.youtube.com/watch?v=Y9aytLYBajw' }))
+    expect(b.status).toBe(400)
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it('records an anonymous activity-pulse save event', async () => {

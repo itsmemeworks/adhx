@@ -15,8 +15,8 @@
  *   - Instagram accepts `reel`, `reels`, and `p`
  *   - Twitter usernames are `\w{1,15}`; TikTok handles `[A-Za-z0-9._]{1,30}`
  *   - TikTok video ids are `\d{6,25}`; tweet ids are `\d+`
- *   - YouTube is resolved via `extractYouTubeId` (shorts / youtu.be / watch?v= /
- *     embed), so the 11-char id rules live there
+ *   - YouTube is resolved via `extractYouTubeId` (Shorts URLs only), so the
+ *     11-char id rules live there
  *   - TikTok `@handle` may arrive URL-encoded as `%40handle` (Next.js params),
  *     so we decode a leading `%40` before matching
  */
@@ -36,8 +36,8 @@ export interface PlatformPost {
 }
 
 /**
- * Canonical per-platform URL patterns. YouTube intentionally has no regex
- * here — its many id forms are owned by `extractYouTubeId`.
+ * Canonical per-platform URL patterns. YouTube host matching is Shorts-only;
+ * the 11-char id is owned by `extractYouTubeId`.
  */
 export const PLATFORM_PATTERNS = {
   twitter:
@@ -45,7 +45,7 @@ export const PLATFORM_PATTERNS = {
   instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i,
   tiktok:
     /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i,
-  youtube: /(?:youtube\.com|youtu\.be)/i,
+  youtube: /(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/shorts\//i,
 } as const
 
 /**

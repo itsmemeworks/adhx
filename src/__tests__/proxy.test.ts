@@ -354,18 +354,18 @@ describe('Proxy: URL Normalization', () => {
       expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
     })
 
-    it('redirects youtu.be/{id} short links to /shorts/{id}', () => {
-      const response = proxy(createRequest('/https:/youtu.be/Y9aytLYBajw'))
-      expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
-    })
-
-    it('redirects watch?v={id} (id lives in the query string)', () => {
-      const response = proxy(
-        createRequest('/https:/www.youtube.com/watch?v=Y9aytLYBajw&feature=share'),
-      )
-      expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
+    it('does not rewrite youtu.be or watch?v= — those are regular videos', () => {
+      expect(
+        proxy(createRequest('/https:/youtu.be/Y9aytLYBajw')).headers.get('location'),
+      ).toBeNull()
+      expect(
+        proxy(
+          createRequest('/https:/www.youtube.com/watch?v=Y9aytLYBajw&feature=share'),
+        ).headers.get('location'),
+      ).toBeNull()
+      expect(
+        proxy(createRequest('/https:/www.youtube.com/embed/Y9aytLYBajw')).headers.get('location'),
+      ).toBeNull()
     })
 
     it('passes through the clean /shorts/{id} path (no loop)', () => {

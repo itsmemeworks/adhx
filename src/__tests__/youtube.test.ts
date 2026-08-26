@@ -9,27 +9,28 @@ import {
 } from '@/lib/media/youtube'
 
 describe('youtube — extractYouTubeId', () => {
-  it('pulls the id from every URL form', () => {
+  it('pulls the id from a Shorts URL (www/m, no protocol, tracking param, trailing slash)', () => {
     expect(extractYouTubeId('https://youtube.com/shorts/Y9aytLYBajw')).toBe('Y9aytLYBajw')
     expect(extractYouTubeId('https://www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC')).toBe(
       'Y9aytLYBajw',
     )
     expect(extractYouTubeId('https://m.youtube.com/shorts/Y9aytLYBajw')).toBe('Y9aytLYBajw')
-    expect(extractYouTubeId('https://youtu.be/Y9aytLYBajw')).toBe('Y9aytLYBajw')
-    expect(extractYouTubeId('https://www.youtube.com/watch?v=Y9aytLYBajw&t=10s')).toBe(
-      'Y9aytLYBajw',
-    )
-    expect(extractYouTubeId('https://www.youtube.com/embed/Y9aytLYBajw')).toBe('Y9aytLYBajw')
-    expect(extractYouTubeId('youtube.com/shorts/Y9aytLYBajw')).toBe('Y9aytLYBajw') // no protocol
+    expect(extractYouTubeId('youtube.com/shorts/Y9aytLYBajw')).toBe('Y9aytLYBajw')
+    expect(extractYouTubeId('https://www.youtube.com/shorts/Y9aytLYBajw/')).toBe('Y9aytLYBajw')
   })
 
-  it('accepts a bare 11-char id', () => {
-    expect(extractYouTubeId('Y9aytLYBajw')).toBe('Y9aytLYBajw')
+  it('rejects watch, youtu.be, embed, live, and bare ids — those are regular videos', () => {
+    expect(extractYouTubeId('https://youtu.be/Y9aytLYBajw')).toBeNull()
+    expect(extractYouTubeId('https://www.youtube.com/watch?v=Y9aytLYBajw&t=10s')).toBeNull()
+    expect(extractYouTubeId('https://www.youtube.com/embed/Y9aytLYBajw')).toBeNull()
+    expect(extractYouTubeId('https://www.youtube.com/live/Y9aytLYBajw')).toBeNull()
+    expect(extractYouTubeId('https://www.youtube-nocookie.com/embed/Y9aytLYBajw')).toBeNull()
+    expect(extractYouTubeId('Y9aytLYBajw')).toBeNull()
   })
 
   it('returns null for non-YouTube or malformed input', () => {
     expect(extractYouTubeId('https://www.tiktok.com/@u/video/123')).toBeNull()
-    expect(extractYouTubeId('https://youtube.com/watch?v=tooShort')).toBeNull()
+    expect(extractYouTubeId('https://youtube.com/shorts/tooShort')).toBeNull()
     expect(extractYouTubeId('https://youtube.com/feed/subscriptions')).toBeNull()
     expect(extractYouTubeId('not a url')).toBeNull()
     expect(extractYouTubeId('')).toBeNull()

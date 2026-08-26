@@ -36,9 +36,11 @@ describe('resolvePastedLink', () => {
     )
   })
 
-  it('returns null for plain text and unsupported links', () => {
+  it('returns null for plain text, unsupported links, and regular YouTube videos', () => {
     expect(resolvePastedLink('the modern struggle')).toBeNull()
     expect(resolvePastedLink('https://example.com/watch?v=abc')).toBeNull()
+    expect(resolvePastedLink('https://youtu.be/Y9aytLYBajw')).toBeNull()
+    expect(resolvePastedLink('https://www.youtube.com/watch?v=Y9aytLYBajw')).toBeNull()
     expect(resolvePastedLink('')).toBeNull()
   })
 })

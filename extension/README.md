@@ -95,7 +95,7 @@ Supported URLs (same set `/share` already routes):
 - X / Twitter status (`x.com/…/status/…`, `twitter.com`, vx/fx mirrors)
 - Instagram Reels / posts (`instagram.com/reel/`, `/reels/`, `/p/`)
 - TikTok videos and short links (`vm.` / `vt.` / `tiktok.com/t/`)
-- YouTube Shorts, `youtu.be`, `watch?v=`
+- YouTube Shorts (`youtube.com/shorts/…` only — not `youtu.be` or `watch?v=`)
 
 **Signed in** on that ADHX origin: a new open of the preview autosaves the lead (Save pill → Saved → Tag). Refresh / back / in-app hops do not.
 
