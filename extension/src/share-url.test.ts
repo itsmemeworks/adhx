@@ -14,7 +14,8 @@ describe('isSupportedShareUrl', () => {
       isSupportedShareUrl('https://www.tiktok.com/@sophieraiin/video/7619017281691045134'),
     ).toBe(true)
     expect(isSupportedShareUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(true)
-    expect(isSupportedShareUrl('https://youtu.be/dQw4w9WgXcQ')).toBe(true)
+    expect(isSupportedShareUrl('https://youtu.be/dQw4w9WgXcQ')).toBe(false)
+    expect(isSupportedShareUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe(false)
     expect(isSupportedShareUrl('https://vm.tiktok.com/ZMABcd123')).toBe(true)
   })
 

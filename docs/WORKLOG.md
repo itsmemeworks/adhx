@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — YouTube: Shorts URLs only
+
+Paste, share, URL-prefix, the add API, and the desktop extension now reject `youtu.be`, `/watch?v=`, `/embed/`, and `/live/` — those forms are regular videos. `extractYouTubeId` (and the proxy) accept `youtube.com/shorts/{id}` only. Existing saved YouTube rows still play. Follow-up: a crafted `adhx.com/shorts/{regularId}` still embeds, because the id space is shared.
+
+
 ## 2026-08-26 — CI: one PR, Read + Live Next locators
 
 PR 427 is the only open branch for this work (`fix/theater-paste-saved-start`). e2e Read locators now pick the visible pill (desktop + mobile chrome both mount `data-theater-action="read"`). A Live mid-play add of a previously watched id is unmarked so it sits as Next. In-flight until the PR merges.

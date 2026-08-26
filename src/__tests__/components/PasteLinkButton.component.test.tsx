@@ -102,7 +102,7 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     const readText = vi
       .fn()
       .mockResolvedValueOnce('')
-      .mockResolvedValueOnce('https://youtu.be/Y9aytLYBajw')
+      .mockResolvedValueOnce('https://youtube.com/shorts/Y9aytLYBajw')
     Object.assign(navigator, { clipboard: { readText } })
 
     render(<PasteLinkButton />)
@@ -137,7 +137,7 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const input = await screen.findByPlaceholderText('Paste a link…')
-    fireEvent.change(input, { target: { value: 'https://youtu.be/Y9aytLYBajw' } })
+    fireEvent.change(input, { target: { value: 'https://youtube.com/shorts/Y9aytLYBajw' } })
 
     await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/shorts/Y9aytLYBajw'))
   })
@@ -271,7 +271,7 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
     const input = await screen.findByPlaceholderText('Paste a link…')
 
     fireEvent.paste(input, {
-      clipboardData: { getData: () => 'https://youtu.be/Y9aytLYBajw' },
+      clipboardData: { getData: () => 'https://youtube.com/shorts/Y9aytLYBajw' },
     })
 
     expect(pushSpy).toHaveBeenCalledWith('/shorts/Y9aytLYBajw')

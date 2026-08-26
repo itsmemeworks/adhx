@@ -67,8 +67,7 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
       )
     }
 
-    // YouTube (Shorts + regular videos) — the detector matches the host and
-    // pulls the id from any of /shorts, /watch?v=, youtu.be, /embed.
+    // YouTube Shorts only — watch / youtu.be / embed are regular videos.
     if (detected?.platform === 'youtube') {
       return await addYouTubeShort(userId, detected.id, source)
     }
@@ -90,7 +89,7 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
     return NextResponse.json(
       {
         error:
-          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/reels, tiktok.com/@user/video.',
+          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/reels, tiktok.com/@user/video, youtube.com/shorts.',
       },
       { status: 400 },
     )

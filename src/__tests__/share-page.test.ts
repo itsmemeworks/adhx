@@ -111,14 +111,15 @@ describe('extractSharedUrl — picks the link out of the share payload', () => {
 })
 
 describe('parseShareUrl — YouTube', () => {
-  it('maps shorts / youtu.be / watch to /shorts/{id}', () => {
+  it('maps a Shorts URL to /shorts/{id}', () => {
     expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toEqual({
       path: '/shorts/Y9aytLYBajw',
     })
-    expect(parseShareUrl('https://youtu.be/Y9aytLYBajw')).toEqual({ path: '/shorts/Y9aytLYBajw' })
-    expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toEqual({
-      path: '/shorts/Y9aytLYBajw',
-    })
+  })
+
+  it('rejects watch / youtu.be — those are regular videos', () => {
+    expect(parseShareUrl('https://youtu.be/Y9aytLYBajw')).toBeNull()
+    expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toBeNull()
   })
 })
 
@@ -202,8 +203,15 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
 
   it('navigates a YouTube Short URL via the router', () => {
     const router = makeRouter()
-    expect(navigateToPastedLink(router, 'https://youtu.be/Y9aytLYBajw')).toBe(true)
+    expect(navigateToPastedLink(router, 'https://youtube.com/shorts/Y9aytLYBajw')).toBe(true)
     expect(router.push).toHaveBeenCalledWith('/shorts/Y9aytLYBajw')
+  })
+
+  it('does not navigate a watch or youtu.be URL', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'https://youtu.be/Y9aytLYBajw')).toBe(false)
+    expect(navigateToPastedLink(router, 'https://www.youtube.com/watch?v=Y9aytLYBajw')).toBe(false)
+    expect(router.push).not.toHaveBeenCalled()
   })
 
   it('rebuilds a TikTok short link into a hard navigation instead of router.push', () => {

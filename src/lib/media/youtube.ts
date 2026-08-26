@@ -47,17 +47,16 @@ export function youtubeShortUrl(videoId: string): string {
 }
 
 /**
- * Extract the 11-char video id from any YouTube URL form:
- *   youtube.com/shorts/{id}   youtu.be/{id}   youtube.com/watch?v={id}
- *   youtube.com/embed/{id}    m.youtube.com/...   (with or without protocol,
- *   trailing query like ?si=…, www./m. subdomains)
+ * Extract the 11-char video id from a YouTube Shorts URL only:
+ *   youtube.com/shorts/{id}   www./m. subdomains
+ *   with or without protocol, trailing slash, ?si= tracking params.
+ *
+ * Watch, youtu.be, embed, live, and bare ids are rejected — those forms
+ * cover regular (non-Short) videos.
  */
 export function extractYouTubeId(input: string): string | null {
   if (!input) return null
   const trimmed = input.trim()
-
-  // Bare id (already extracted).
-  if (ID_PATTERN.test(trimmed)) return trimmed
 
   let url: URL
   try {
@@ -67,19 +66,10 @@ export function extractYouTubeId(input: string): string | null {
   }
 
   const host = url.hostname.replace(/^www\.|^m\./, '')
-  if (host === 'youtu.be') {
-    const id = url.pathname.slice(1).split('/')[0]
-    return isValidVideoId(id) ? id : null
-  }
-  if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
-    // /watch?v=ID
-    const v = url.searchParams.get('v')
-    if (v && isValidVideoId(v)) return v
-    // /shorts/ID  /embed/ID  /v/ID  /live/ID
-    const m = url.pathname.match(/\/(?:shorts|embed|v|live)\/([A-Za-z0-9_-]{11})/)
-    if (m) return m[1]
-  }
-  return null
+  if (host !== 'youtube.com') return null
+
+  const m = url.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{11})(?:\/|$)/)
+  return m && isValidVideoId(m[1]) ? m[1] : null
 }
 
 /** Parse `@handle` out of an oEmbed author_url (`.../@BassForge_us`). */

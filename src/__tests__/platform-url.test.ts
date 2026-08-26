@@ -124,28 +124,28 @@ describe('detectPlatformPost — TikTok', () => {
 })
 
 describe('detectPlatformPost — YouTube', () => {
-  it('maps shorts / youtu.be / watch / embed to /shorts/{id}', () => {
+  it('maps a Shorts URL to /shorts/{id}', () => {
     expect(detectPlatformPost('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toEqual({
       platform: 'youtube',
       id: 'Y9aytLYBajw',
       previewPath: '/shorts/Y9aytLYBajw',
     })
-    expect(detectPlatformPost('https://youtu.be/Y9aytLYBajw')?.previewPath).toBe(
+    expect(detectPlatformPost('https://m.youtube.com/shorts/Y9aytLYBajw')?.previewPath).toBe(
       '/shorts/Y9aytLYBajw',
     )
-    expect(
-      detectPlatformPost('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')?.previewPath,
-    ).toBe('/shorts/Y9aytLYBajw')
-    expect(detectPlatformPost('https://www.youtube.com/embed/Y9aytLYBajw')?.previewPath).toBe(
-      '/shorts/Y9aytLYBajw',
-    )
+  })
+
+  it('rejects watch / youtu.be / embed — those are regular videos', () => {
+    expect(detectPlatformPost('https://youtu.be/Y9aytLYBajw')).toBeNull()
+    expect(detectPlatformPost('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toBeNull()
+    expect(detectPlatformPost('https://www.youtube.com/embed/Y9aytLYBajw')).toBeNull()
   })
 
   it('has no author for YouTube', () => {
-    expect(detectPlatformPost('https://youtu.be/Y9aytLYBajw')?.author).toBeUndefined()
+    expect(detectPlatformPost('https://youtube.com/shorts/Y9aytLYBajw')?.author).toBeUndefined()
   })
 
-  it('returns null for a YouTube host with no extractable id', () => {
+  it('returns null for a YouTube host with no Shorts id', () => {
     expect(detectPlatformPost('https://youtube.com/feed/subscriptions')).toBeNull()
   })
 })
@@ -165,6 +165,7 @@ describe('PLATFORM_PATTERNS', () => {
     expect(PLATFORM_PATTERNS.twitter.test('https://x.com/u/status/1')).toBe(true)
     expect(PLATFORM_PATTERNS.instagram.test('https://instagram.com/reel/abc')).toBe(true)
     expect(PLATFORM_PATTERNS.tiktok.test('https://www.tiktok.com/@u/video/123456')).toBe(true)
-    expect(PLATFORM_PATTERNS.youtube.test('https://youtu.be/abc')).toBe(true)
+    expect(PLATFORM_PATTERNS.youtube.test('https://youtube.com/shorts/abc')).toBe(true)
+    expect(PLATFORM_PATTERNS.youtube.test('https://youtu.be/abc')).toBe(false)
   })
 })

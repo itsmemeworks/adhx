@@ -13,7 +13,6 @@ const TIKTOK =
   /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@[A-Za-z0-9._]{1,30}\/video\/\d{6,25}/i
 const TIKTOK_SHORT =
   /https?:\/\/(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|(?:www\.)?tiktok\.com\/t\/[A-Za-z0-9]+)/i
-const YOUTUBE_HOST = /(?:youtube\.com|youtube-nocookie\.com|youtu\.be)/i
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/
 
 export const DEFAULT_APP_ORIGIN = 'https://adhx.com'
@@ -67,13 +66,7 @@ function extractYouTubeId(input: string): string | null {
     return null
   }
   const host = parsed.hostname.replace(/^www\.|^m\./, '')
-  if (!YOUTUBE_HOST.test(host)) return null
-  if (host === 'youtu.be') {
-    const id = parsed.pathname.slice(1).split('/')[0]
-    return YOUTUBE_ID.test(id) ? id : null
-  }
-  const v = parsed.searchParams.get('v')
-  if (v && YOUTUBE_ID.test(v)) return v
-  const path = parsed.pathname.match(/\/(?:shorts|embed|v|live)\/([A-Za-z0-9_-]{11})/)
-  return path ? path[1] : null
+  if (host !== 'youtube.com') return null
+  const path = parsed.pathname.match(/^\/shorts\/([A-Za-z0-9_-]{11})(?:\/|$)/)
+  return path && YOUTUBE_ID.test(path[1]) ? path[1] : null
 }
