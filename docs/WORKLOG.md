@@ -8,7 +8,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ## 2026-08-26 — Truncated caption opens Read
 
-Tapping the two-line theater caption opens Read when that control is offered (overflow or quote). Links inside the caption still navigate. Watch stays on the pill. Tests: TheaterCaption, desktop/mobile chrome. In-flight until the PR merges.
+Tapping the two-line theater caption opens Read when that control is offered (overflow or quote). Links inside the caption still navigate. Watch stays on the pill. e2e Read locators target the pill (`data-theater-action="read"`), not the caption. In-flight until the PR merges.
 
 ## 2026-08-26 — Theater paste plays now
 

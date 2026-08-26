@@ -73,6 +73,11 @@ export function visibleCaption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).locator('visible=true').first()
 }
 
+/** Read / Watch pill — not the tappable caption (`Read the full post`). */
+export function readToggle(page: Page) {
+  return page.locator('[data-theater-action="read"]')
+}
+
 export async function expectSignInModal(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Email me a magic link' })).toBeVisible()

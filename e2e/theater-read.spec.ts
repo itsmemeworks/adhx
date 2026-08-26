@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { POST, QUOTED_INNER } from './constants'
-import { addSessionCookie, caption, expectTheaterReady } from './helpers'
+import { addSessionCookie, caption, expectTheaterReady, readToggle } from './helpers'
 
 const quotedPath = `/${POST.quoted.author}/status/${POST.quoted.id}`
 
@@ -10,14 +10,14 @@ test.describe('Read / Watch on a video+quote preview', () => {
     await page.goto(quotedPath)
     await expectTheaterReady(page)
     await expect(caption(page, POST.quoted.text)).toBeVisible()
-    const read = page.getByRole('button', { name: 'Read' })
+    const read = readToggle(page)
     await expect(read).toBeVisible()
     await expect(read).toHaveText(/Read/)
     await read.click()
     await expect(page.getByRole('button', { name: 'Watch' })).toBeVisible()
     await expect(page.getByText(QUOTED_INNER.text).first()).toBeVisible()
     await page.getByRole('button', { name: 'Watch' }).click()
-    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
     await expect(caption(page, POST.quoted.text)).toBeVisible()
   })
 
@@ -28,12 +28,12 @@ test.describe('Read / Watch on a video+quote preview', () => {
     await addSessionCookie(page)
     await page.goto(quotedPath)
     await expectTheaterReady(page)
-    const read = page.getByRole('button', { name: 'Read' })
+    const read = readToggle(page)
     await expect(read).toBeVisible()
     await read.click()
     await expect(page.getByRole('button', { name: 'Watch' })).toBeVisible()
     await page.getByRole('button', { name: 'Watch' }).click()
-    await expect(read).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
   })
 })
 
@@ -45,7 +45,7 @@ test.describe('Read / Watch on a phone', () => {
     await page.goto(quotedPath)
     await expectTheaterReady(page)
     await expect(caption(page, POST.quoted.text)).toBeVisible()
-    const read = page.getByRole('button', { name: 'Read' })
+    const read = readToggle(page)
     await expect(read).toBeVisible()
     await expect(read).not.toHaveText('Read')
     await read.click()
