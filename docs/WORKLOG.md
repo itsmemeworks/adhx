@@ -6,6 +6,38 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — CI e2e: Archive undo count + Live Next pin
+
+Play once Archive then Undo dropped `N in queue` by one: any `personalCurrentKey` change marked the previous row Watched, so the hopped-to post left Repeat-off playable. Mark Watched only on Next / ended / queue tap. Live Repeat-off pin no longer waits on seen hydration; tweet-added prepends stamp `addedAt` now so LIFO puts the arrival as Next. Live URL e2e accepts any preview path after Next (TikTok `/video/` is valid). In-flight until the PR merges.
+
+## 2026-08-26 — Repeat-all Next walked only two posts
+
+`pinCurrent` (so a Repeat-off arrival is Next) stayed on during Repeat all. After each Next the playing row was re-pinned at index 0, so the next index was always the newest other post — a two-item loop after Live ⇄ Saved. Pin only when Repeat is off. Repeat all walks newest-first and wraps. Tests: TheaterShell-lifo walk, `orderLifoQueue` unpinned. In-flight until the PR merges.
+
+## 2026-08-26 — Theater leftover cleanup, LIFO stays
+
+Deleted leftover Live next/rewait math; Live `goNext` is loop + first-pending. Saved paste no longer jumps to the new save mid-play (same pin as a second-window add). All → empty type lens keeps the current post under the empty overlay; All restores it instead of "Nothing playing". Counts unchanged: Repeat off = Now playing + Next; Repeat all = the pile. Browser-checked Live + Saved adds and All → Text. In-flight until the PR merges.
+
+## 2026-08-26 — LIFO e2e matches Queue Now / Next / Seen
+
+e2e no longer expects leftover headings (`This post`, `New since you opened`) or `N of M`. Caught-up + second-window add plays immediately; mid-play add is Next; Repeat-off Queue shows Seen after Next. In-flight until the PR merges.
+
+## 2026-08-26 — Re-watch all resets seen and plays
+
+Caught-up **Re-watch all** unmarks the current playlist, leaves Repeat off, and starts the newest post immediately (Now playing; the rest Next). When that post ends it moves to Seen. Dwell is paused while caught-up so the overlay does not re-mark the parked row. Tests: `removeSeenKeys`, TheaterShell-lifo Re-watch. In-flight until the PR merges.
+
+## 2026-08-26 — Repeat-off Queue adds Seen
+
+Repeat off still plays only unseen (Now playing + Next). Watched rows sit in a third **Seen** section. Repeat stays Now playing + Next. Counts unchanged. Tests: `queueSectionHeading`, `orderLifoQueue` appendSeen, UpNextList, TheaterShell-lifo. In-flight until the PR merges.
+
+## 2026-08-26 — Theater playlist is a LIFO queue
+
+Live and Saved are the same playlist: newest ADHX `addedAt` first. Repeat off plays unseen only; a new post goes to the top (play now if caught up, else Next). Counts: unseen remaining / playlist total / 1 for Repeat this post. Queue UI is Now playing + Next — leftover sections, leave-order rotate, and `1 of N` are gone. Tests: `orderLifoQueue`, `TheaterShell-lifo`, chrome/e2e counts. Browser-verify two Live windows + add. In-flight until the PR merges.
+
+## 2026-08-26 — Live queue: now playing at top, finished to the bottom
+
+Caught-up + a second-window add showed `1 of 2` then `2 of 3` because leftover-run `played` kept counting the finished pile. Live leftover is remaining only (`N in queue`). The playlist pins now playing at the top; a left post appends at the bottom. Tests: `orderLiveQueue` leave-order, caught-up second arrival, chrome remaining, `e2e/queue-count`. In-flight until the PR merges.
+
 ## 2026-08-25 — `?open=` must survive leftover start
 
 TheaterShell leftover-clamped again when queue prefs hydrated, so `/saved?open=` (library tap, Tag, All Clear from last) snapped to the first unread. `preserveSavedStart` skips that hydrate clamp; remount leftover start stays AuthedTheater. Tests: TheaterShell mid-queue start, AuthedTheater `preserveSavedStart`, filter snap. In-flight until the PR merges.

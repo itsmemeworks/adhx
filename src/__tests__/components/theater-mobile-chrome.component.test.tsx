@@ -462,7 +462,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
    * position in the collection theater too (owner asked the count to be boundary-aware, and
    * collection was the one mode with nowhere to put it).
    */
-  it('spends the freed peek-bar centre on leftover-run progress', () => {
+  it('spends the freed peek-bar centre on unseen remaining', () => {
     const collection: TheaterPersonalChrome = {
       tab: 'collection',
       onTabChange: vi.fn(),
@@ -482,16 +482,16 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         items={items}
         currentKey="twitter:2"
         queueTotal={2}
-        queuePlayed={1}
+        queuePlayed={0}
         queueToPlay={2}
         collection={collection}
       />,
     )
 
-    expect(peekCentreText()).toBe('1 of 2')
+    expect(peekCentreText()).toBe('2 in queue')
   })
 
-  it('names the leftover run when nothing has played yet, and the pile when looping', () => {
+  it('names Now playing + Next off-repeat, and the pile when looping', () => {
     const items = Array.from({ length: 23 }, (_, i) => videoItem({ bookmarkId: `${i + 1}` }))
     const { rerender } = render(
       <TheaterMobileChrome
@@ -913,9 +913,9 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
     expect(screen.queryByText('Up next')).not.toBeInTheDocument()
   })
 
-  it('reverts to "Up next" once unpinned', () => {
+  it('reverts to Queue once unpinned', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.getByText('Queue')).toBeInTheDocument()
     expect(screen.queryByText('On repeat')).not.toBeInTheDocument()
   })
 
@@ -952,12 +952,12 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
  * ("On repeat") still takes priority. Falls back to the old "N new"/"Up
  * next" copy only when the current key doesn't resolve into `items`.
  */
-describe('TheaterMobileChrome: queue leftover label', () => {
+describe('TheaterMobileChrome: queue count label', () => {
   function buildItems(count: number): TheaterItem[] {
     return Array.from({ length: count }, (_, i) => videoItem({ bookmarkId: String(i + 1) }))
   }
 
-  it('renders the pile size when leftover is not a finite stop-count', () => {
+  it('renders Now playing + Next when Repeat is off', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -1024,7 +1024,7 @@ describe('TheaterMobileChrome: queue leftover label', () => {
     expect(screen.queryByText(/\d+ \/ \d+/)).not.toBeInTheDocument()
   })
 
-  it('falls back to "Up next" when the current key does not resolve and there is no new count', () => {
+  it('falls back to Queue when the current key does not resolve and there is no new count', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -1034,7 +1034,7 @@ describe('TheaterMobileChrome: queue leftover label', () => {
         currentKey="twitter:does-not-exist"
       />,
     )
-    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.getByText('Queue')).toBeInTheDocument()
   })
 
   it('tints the peek clay and shows a filter icon when a type filter is on, without naming the types', () => {

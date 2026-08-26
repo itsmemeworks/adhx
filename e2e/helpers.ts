@@ -57,6 +57,12 @@ export async function goNext(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Next post' }).click()
 }
 
+/** Stop auto-advance so a mid-test add does not race the 10s dwell. */
+export async function pauseTheater(page: Page): Promise<void> {
+  const pause = page.getByRole('button', { name: 'Pause' })
+  if (await pause.isVisible()) await pause.click()
+}
+
 /** Caption text is also in the dock / SEO list — never assert it as a singleton. */
 export function caption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).first()

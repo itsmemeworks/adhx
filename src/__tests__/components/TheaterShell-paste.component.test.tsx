@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
-import { render, act, waitFor } from '@testing-library/react'
+import { render, act, waitFor, screen } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
@@ -92,7 +92,13 @@ function videoFeedItem(id: string): FeedItem {
 function chromeProps() {
   const call = mockMobileChrome.mock.calls.at(-1)
   if (!call) throw new Error('chrome never rendered')
-  return call[0]
+  return call[0] as {
+    currentKey?: string | null
+    items?: { bookmarkId?: string; id?: string }[]
+    queueTypes?: unknown
+    onCycleRepeat?: () => void
+    onNext?: () => void
+  }
 }
 
 const seed = (items: TheaterItem[]): TheaterFeedSeed => ({
@@ -224,7 +230,60 @@ describe('TheaterShell: personal paste adds in place', () => {
 
     expect(chromeProps().queueTypes).toEqual([])
     const items = (chromeProps().items ?? []) as { bookmarkId?: string; id?: string }[]
-    expect(items.map((i) => i.bookmarkId ?? i.id)[0]).toBe('99')
+    const ids = items.map((i) => i.bookmarkId ?? i.id)
+    expect(ids).toContain('99')
+    expect(chromeProps().currentKey).toBe('twitter:1')
+  })
+
+  it('Saved paste mid-play keeps the current post; the new save is Next', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().currentKey).toBe('twitter:1')
+
+    await act(async () => {
+      await capturedOnPastePost!('https://x.com/alice/status/99')
+    })
+
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    const items = (chromeProps().items ?? []) as { bookmarkId?: string; id?: string }[]
+    expect(items.map((i) => i.bookmarkId ?? i.id)).toEqual(['99', '1', '2', '3'])
+  })
+
+  it('Saved paste on All Clear plays the new save immediately', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([])}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    const cycle = chromeProps().onCycleRepeat
+    const onNext = chromeProps().onNext
+    if (!cycle || !onNext) throw new Error('repeat/next control missing')
+    await act(async () => cycle())
+    await act(async () => cycle())
+    await act(async () => onNext())
+    expect(screen.getByText('All caught up')).toBeInTheDocument()
+
+    await act(async () => {
+      await capturedOnPastePost!('https://x.com/alice/status/99')
+    })
+
+    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe('twitter:99')
   })
 
   it('keeps a Videos filter when the pasted post is a video', async () => {

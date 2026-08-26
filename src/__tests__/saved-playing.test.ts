@@ -43,42 +43,24 @@ describe('parseSavedPlayingKey', () => {
 })
 
 describe('savedStartIndex', () => {
-  it('does not resume past leftover rows', () => {
-    expect(
-      savedStartIndex(4, {
-        playingIndex: 3,
-        isLeftover: () => true,
-      }),
-    ).toBe(0)
+  it('keeps an explicit ?open= cursor', () => {
+    expect(savedStartIndex(4, { playingIndex: 3 })).toBe(3)
   })
 
-  it('resumes when every earlier leftover has been left', () => {
-    expect(
-      savedStartIndex(4, {
-        playingIndex: 3,
-        isLeftover: (i) => i >= 3,
-      }),
-    ).toBe(3)
-  })
-
-  it('picks the first leftover matching the type filter, not the next after the cursor', () => {
-    // Videos at 0,1,2,4 — cursor on a text row at 3. Walk-forward used to
-    // start on 4 and All Clear while 0–2 sat unchecked.
+  it('starts at the first matching row when the cursor is filtered out', () => {
     expect(
       savedStartIndex(5, {
         playingIndex: 3,
-        isLeftover: () => true,
         matches: (i) => i !== 3,
       }),
     ).toBe(0)
   })
 
-  it('All Clears when nothing matching is leftover', () => {
+  it('All Clears when nothing matches the filter', () => {
     expect(
       savedStartIndex(3, {
-        playingIndex: 3,
-        isLeftover: () => false,
-        matches: () => true,
+        playingIndex: 0,
+        matches: () => false,
       }),
     ).toBe(3)
   })

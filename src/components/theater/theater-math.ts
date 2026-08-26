@@ -135,9 +135,7 @@ export function personalSkipMatching(
  * Pure: move the item matching `pinnedKey` to the front of `items`, order
  * otherwise preserved. A missing key (not found, or already at index 0)
  * returns `items` unchanged (same reference) — cheap to call on every render.
- * Used so the rail's visual order and the keyboard-nav order are always the
- * same list: shared mode pins the shared post, home mode pins the lead pick,
- * once either is chosen.
+ * Now playing stays at the top so a newer arrival sits as Next.
  */
 export function pinKeyFirst<
   T extends { platform: string; bookmarkId?: string | null; url: string },
@@ -278,198 +276,114 @@ export function theaterQueueEmptyHeadline(
   return `No ${head}, or ${labels[labels.length - 1]} in ${surface} right now`
 }
 
-/**
- * Which of the three groups a live-queue item belongs to. The queue is built,
- * ordered and LABELLED off this one function so the section headings in
- * `UpNextList` can never disagree with the playback order (owner: "do we need
- * to be clear about what's been seen, what hasn't been seen yet, and then new
- * things that have come in as we've been watching?").
- *
- * - `arrived` — showed up from a poll while this session was open and has
- *   not been watched yet.
- * - `unwatched` — already in the feed and still unseen.
- * - `watched` — seen on entry, or watched this session and no longer on
- *   stage. The playing row stays put so it does not jump mid-watch; once
- *   you leave it, it slides into this group (owner: the queue should update
- *   as a video is watched).
- */
-export type LiveQueueGroup = 'arrived' | 'unwatched' | 'watched'
-
-export const LIVE_QUEUE_GROUP_ORDER: readonly LiveQueueGroup[] = ['arrived', 'unwatched', 'watched']
+/** Queue overlay: the row on stage, then everything that will play after it. */
+export const QUEUE_NOW_PLAYING = 'Now playing'
+export const QUEUE_NEXT = 'Next'
+/** Repeat off only: already-watched rows after Now / Next. */
+export const QUEUE_SEEN = 'Seen'
 
 /**
- * Human labels for the section headings, kept next to the order they follow.
+ * The timestamp the LIFO queue sorts by — the same value the row chips
+ * display. Live uses when the post first hit ADHX (`addedAt`); Saved maps
+ * the user's own save time onto `addedAt`.
  */
-export const LIVE_QUEUE_GROUP_LABEL: Record<LiveQueueGroup, string> = {
-  arrived: 'New since you opened',
-  unwatched: 'Up next',
-  watched: 'Watched earlier',
-}
-
-/** Preview-page lead: the post the visitor opened, not a "share". */
-export const PINNED_POST_HEADING = 'This post'
-
-/**
- * Pure: an item's group.
- *
- * Live `isSeenNow` moves a finished post into `watched`. The row still on
- * stage (`currentKey`) keeps its arrival/unwatched group so dwell-marking
- * it seen does not yank it to the back while it is playing.
- */
-export function liveQueueGroupOf(
-  key: string,
-  wasSeen: (key: string) => boolean,
-  isFresh: (key: string) => boolean,
-  isSeenNow?: (key: string) => boolean,
-  currentKey?: string | null,
-): LiveQueueGroup {
-  const stayPut = currentKey != null && key === currentKey
-  if (!stayPut && isSeenNow?.(key)) return 'watched'
-  if (isFresh(key)) return 'arrived'
-  return wasSeen(key) ? 'watched' : 'unwatched'
-}
-
-/**
- * Shared-lead exemption for *entry* grouping only.
- * The opened post starts pending even if this viewer has seen it before
- * (a return visit still plays the link they followed). Do not wrap live
- * `isSeenNow` with this — after this session watches it, leftover and
- * Watched earlier must treat it as done.
- */
-export function liveQueueTreatAsUnseen(
-  key: string,
-  sharedItemKey: string | null | undefined,
-  wasSeen: (key: string) => boolean,
-): boolean {
-  if (sharedItemKey && key === sharedItemKey) return false
-  return wasSeen(key)
-}
-
-/**
- * Preview-page "This post" carve-out. Keep it while the opened post is
- * still why you're here; drop it once this session has watched it and
- * it is no longer on stage (Next, or caught-up). Caught-up keeps the
- * last `currentKey` for Back, so `waiting` is the signal there.
- */
-export function sharedThisPostKey(
-  sharedItemKey: string | null | undefined,
-  isSeenNow: (key: string) => boolean,
-  currentKey: string | null,
-  waiting?: boolean,
-): string | null {
-  if (!sharedItemKey) return null
-  if (waiting) return null
-  if (isSeenNow(sharedItemKey) && currentKey !== sharedItemKey) return null
-  return sharedItemKey
-}
-
-/**
- * Pure: the timestamp the live queue SORTS by — deliberately the same value
- * the row chips DISPLAY (`addedAt`, when the post first hit ADHX).
- *
- * They used to differ: the queue was ordered by `createdAt` (the moving pulse
- * event time) while the chips rendered `addedAt`, so the list read "14h, 2h,
- * 4h, 1d, 1w" — owner report, "these time stamps are not right, they're out of
- * order". Sorting by the displayed value makes the list monotonic by
- * construction. `createdAt` is still what decides whether a polled item is a
- * fresh arrival; it's just no longer what orders the queue.
- */
-function queueSortMs(item: { addedAt?: string | null; createdAt: string }): number {
+export function queueAddedMs(item: { addedAt?: string | null; createdAt: string }): number {
   const added = hasKnownTimestamp(item.addedAt) ? Date.parse(item.addedAt as string) : NaN
   if (Number.isFinite(added)) return added
   const created = Date.parse(item.createdAt)
   return Number.isFinite(created) ? created : 0
 }
 
+/** Newest-added first. Same reference when already sorted. */
+export function sortNewestFirst<T extends { addedAt?: string | null; createdAt: string }>(
+  items: T[],
+): T[] {
+  if (items.length < 2) return items
+  const sorted = items.slice().sort((a, b) => queueAddedMs(b) - queueAddedMs(a))
+  return sorted.every((item, i) => item === items[i]) ? items : sorted
+}
+
+/** Saved unread pile: newest save first (`processedAt`). */
+export function sortFeedNewestFirst(items: FeedItem[]): FeedItem[] {
+  if (items.length < 2) return items
+  const sorted = items.slice().sort((a, b) => {
+    const ta = Date.parse(a.processedAt || a.createdAt || '')
+    const tb = Date.parse(b.processedAt || b.createdAt || '')
+    return (Number.isFinite(tb) ? tb : 0) - (Number.isFinite(ta) ? ta : 0)
+  })
+  return sorted.every((item, i) => item === items[i]) ? items : sorted
+}
+
 /**
- * Pure: the live queue's playback order — new arrivals, then unwatched, then
- * watched; newest-added first inside each group.
- *
- * Live mode is "what the community previewed, saved and sent in the last 24
- * hours" (owner), and the point of opening it is to watch what you haven't
- * seen: index 0 is always the next thing to play, so a refresh resumes there
- * with nothing persisted. Watched posts stay in the queue — reachable by
- * browsing, or wholesale via the waiting stage's re-watch button / repeat —
- * but nothing auto-plays them.
- *
- * Arrivals keep their incoming order (the poll merge already prepends newest
- * first) rather than being re-sorted by `addedAt`: a resurfacing post can be
- * weeks old and still be the thing that just landed.
- *
- * Playlist and shared modes never call this — a curated playlist has its own
- * order, and a shared post always leads.
+ * Heading above a Queue row.
+ * Repeat off: Now playing, Next (what's left to play), then Seen.
+ * Repeat: Now playing and Next only.
  */
-export function orderLiveQueue<
+export function queueSectionHeading(
+  index: number,
+  currentIndex: number,
+  seenStartIndex = -1,
+): { label: string } | null {
+  const hasSeen = seenStartIndex >= 0
+  if (hasSeen && index === seenStartIndex) return { label: QUEUE_SEEN }
+  if (currentIndex < 0) {
+    if (hasSeen) return null
+    return index === 0 ? { label: QUEUE_NEXT } : null
+  }
+  if (index === currentIndex) return { label: QUEUE_NOW_PLAYING }
+  if (index === currentIndex + 1 && (!hasSeen || index < seenStartIndex)) {
+    return { label: QUEUE_NEXT }
+  }
+  return null
+}
+
+export interface OrderLifoQueueOpts {
+  currentKey?: string | null
+  /** Repeat off: drop seen rows (except the one still on stage / keepKey). */
+  onlyUnseen?: boolean
+  isSeen?: (key: string) => boolean
+  /** Opened preview stays even if this viewer has seen it before. */
+  keepKey?: string | null
+  /** Repeat off only: pin now playing so a newer arrival is Next. Never on Repeat all. */
+  pinCurrent?: boolean
+  /** Repeat off Queue: keep seen rows after Now / Next. Playback omits this. */
+  appendSeen?: boolean
+}
+
+/**
+ * Live / Saved playback order: newest first. Repeat off keeps only unseen
+ * posts (plus the row on stage). A mid-play arrival sorts to the top, then
+ * now playing is pinned so it plays next when the current post ends.
+ * Repeat all must not pin — Next walks the full newest-first list.
+ */
+export function orderLifoQueue<
   T extends { platform: string; bookmarkId?: string | null; url: string } & {
     addedAt?: string | null
     createdAt: string
   },
->(
-  items: T[],
-  wasSeen: (key: string) => boolean,
-  isFresh: (key: string) => boolean,
-  isSeenNow?: (key: string) => boolean,
-  currentKey?: string | null,
-): T[] {
-  const groups: Record<LiveQueueGroup, T[]> = { arrived: [], unwatched: [], watched: [] }
-  for (const item of items) {
-    groups[liveQueueGroupOf(theaterItemKey(item), wasSeen, isFresh, isSeenNow, currentKey)].push(
-      item,
-    )
-  }
-  // Newest-added first within the two settled groups; arrivals keep the order
-  // the merge gave them. Array.prototype.sort is stable, so equal stamps hold
-  // their relative position.
-  for (const g of ['unwatched', 'watched'] as const) {
-    groups[g].sort((a, b) => queueSortMs(b) - queueSortMs(a))
-  }
-  const ordered = LIVE_QUEUE_GROUP_ORDER.flatMap((g) => groups[g])
-  // Same reference back when nothing actually moved — cheap re-renders.
-  return ordered.every((item, i) => item === items[i]) ? items : ordered
-}
-
-/**
- * Pure: how many items at the front of an `orderLiveQueue` queue are unwatched
- * — i.e. the index where the already-watched block starts. `0` means the
- * viewer has watched everything in the window (the caught-up case).
- */
-export function unseenBlockLength<
-  T extends { platform: string; bookmarkId?: string | null; url: string },
->(items: T[], wasSeen: (key: string) => boolean): number {
-  let n = 0
-  while (n < items.length && !wasSeen(theaterItemKey(items[n]))) n++
-  return n
-}
-
-/**
- * How many leading rows are still New / Up next after live regrouping.
- * Stops at the first `watched` row. The playing row can be seen and still
- * sit in this prefix (it stays put until you leave it).
- */
-export function pendingBlockLength<
-  T extends { platform: string; bookmarkId?: string | null; url: string },
->(items: T[], groupOf: (key: string) => LiveQueueGroup): number {
-  let n = 0
-  let started = false
-  for (const item of items) {
-    const group = groupOf(theaterItemKey(item))
-    if (group === 'watched') {
-      // A pinned watched lead (shared post, or a waiting-stage arrival)
-      // can sit in front of still-pending rows. Skip it; stop at the
-      // first watched row AFTER the pending run has started.
-      if (started) break
-      continue
-    }
-    started = true
-    n++
-  }
-  return n
+>(items: T[], opts: OrderLifoQueueOpts = {}): T[] {
+  const newest = sortNewestFirst(items)
+  const isSeen = opts.isSeen ?? (() => false)
+  const playable = opts.onlyUnseen
+    ? newest.filter((it) => {
+        const key = theaterItemKey(it)
+        if (opts.keepKey && key === opts.keepKey) return true
+        if (opts.pinCurrent && opts.currentKey && key === opts.currentKey) return true
+        return !isSeen(key)
+      })
+    : newest
+  const ordered =
+    opts.pinCurrent && opts.currentKey ? pinKeyFirst(playable, opts.currentKey) : playable
+  if (!opts.onlyUnseen || !opts.appendSeen) return ordered
+  const playableKeys = new Set(ordered.map((it) => theaterItemKey(it)))
+  const seen = newest.filter((it) => !playableKeys.has(theaterItemKey(it)))
+  return seen.length === 0 ? ordered : [...ordered, ...seen]
 }
 
 /**
  * First live-queue row that still needs to play. Fresh arrivals count
  * even when they landed before the caught-up stage started — "caught up"
- * means nothing unwatched remains, including New since you opened.
+ * means nothing unwatched remains.
  */
 export function firstPendingLiveKey<
   T extends { platform: string; bookmarkId?: string | null; url: string },
@@ -482,187 +396,25 @@ export function firstPendingLiveKey<
   return null
 }
 
-/**
- * Pure: where a `goNext` lands, folding in the unseen boundary on top of
- * `computeLoopedNext`.
- *
- * An AUTO advance (a video ending, the timed dwell) only lands on a post
- * that is still unwatched. It finishes whatever is still ahead, then plays
- * arrivals that prepended behind the cursor, then waits — it does not replay
- * posts the viewer just finished just because they still sit inside the
- * frozen "unseen on entry" block. Owner: two unseen + one arrival mid-play
- * should play those three and stop, never the two again.
- *
- * Three things deliberately bypass the auto-advance stop: user-initiated
- * navigation once the viewer is already in the watched suffix (click a
- * watched row, then browse), `loop` (collection mode, or repeat 'all'), and
- * `rewatch` (the waiting-stage button — play the list). Next from the last
- * pending post waits — it does not walk into Watched earlier, or the just-
- * watched run would replay after regrouping.
- */
-export function computeLiveNext(opts: {
-  length: number
-  index: number
-  unseenCount: number
-  loop: boolean
-  userInitiated: boolean
-  /** Explicit Re-watch all — walk the whole list. Not the same as unseenCount 0. */
-  rewatch?: boolean
-  /**
-   * First index that is STILL unwatched (live seen state), excluding the
-   * current one — or null when nothing is left.
-   *
-   * Auto-advance only moves forward, but a fresh arrival PREPENDS to index
-   * 0, so a viewer who is already at index 13 never reaches it unless we
-   * jump back after the run ahead finishes. Owner: "a new video came in but
-   * it's not automatically playing… I shouldn't have to click re-watch
-   * because I haven't seen the new video yet."
-   */
-  nextUnwatchedIndex?: number | null
-  /**
-   * First still-unwatched index strictly AFTER `index`. Preferred over
-   * `nextUnwatchedIndex` so a prepended arrival waits until the current
-   * unseen run is done, instead of yanking playback back to 0 mid-run.
-   */
-  nextUnwatchedAhead?: number | null
-}): number | 'waiting' | null {
-  const {
-    length,
-    index,
-    unseenCount,
-    loop,
-    userInitiated,
-    nextUnwatchedIndex,
-    nextUnwatchedAhead,
-    rewatch = false,
-  } = opts
-  const next = computeLoopedNext(length, index, loop)
-  if (next === null) return null
-  if (loop || rewatch) return next
-
-  const usable = (n: number | null | undefined): n is number =>
-    typeof n === 'number' && n >= 0 && n < length && n !== index
-
-  // Still-unwatched rows (including New-since-opened arrivals) always
-  // play before caught-up — even Next from the watched suffix, and even
-  // when a pinned watched lead zeros the pending *prefix*. Owner: two
-  // new items sitting in the queue while the stage said caught-up.
-  if (usable(nextUnwatchedAhead)) return nextUnwatchedAhead
-  if (usable(nextUnwatchedIndex)) return nextUnwatchedIndex
-
-  // Already in the watched suffix (or no pending run): browsing stays free.
-  if (userInitiated && (unseenCount === 0 || index >= unseenCount)) return next
-
-  // Tests that omit live indices keep the frozen-run walk (auto only).
-  if (
-    !userInitiated &&
-    nextUnwatchedAhead === undefined &&
-    nextUnwatchedIndex === undefined &&
-    next !== 'waiting' &&
-    unseenCount > 0 &&
-    next < unseenCount
-  ) {
-    return next
-  }
-  return 'waiting'
-}
-
-/**
- * Pure: how many posts the counter should be OUT OF — i.e. how many will
- * actually play from here.
- *
- * Auto-advance stops at the end of the unwatched run unless repeat says
- * otherwise, so "2 / 26" was misleading whenever only a handful were pending.
- * With repeat off the denominator is that run; with repeat on it's the whole
- * queue. Flipping the control therefore visibly changes the number, which is
- * the clearest feedback available that the switch did something (owner: "maybe
- * for mobile where it shows the count and position in that count, it should be
- * aware of that too").
- *
- * Falls back to the full length in the two cases where the run doesn't
- * describe the viewer's position: nothing pending (caught up — the whole queue
- * is what a re-watch would play), and having browsed back into already-watched
- * posts, where the index sits outside the run.
- *
- * @deprecated Use computeQueueCounts. Kept for tests that still import it.
- */
-export function computeQueueTotal(opts: {
-  index: number
-  length: number
-  unseenCount: number
-  repeatMode: RepeatMode
-}): number {
-  const { index, length, unseenCount, repeatMode } = opts
-  if (repeatMode === 'one') return length > 0 ? 1 : 0
-  if (repeatMode === 'all') return length
-  if (unseenCount <= 0 || index < 0 || index >= unseenCount) return length
-  return unseenCount
-}
-
 export interface QueueCount {
-  /** Keep playing / Repeat this post — leftover is not a finite run. */
   looping: boolean
-  /** Finished posts from this leftover run (not the one still on stage). */
   played: number
-  /** How many posts this run will play (played + still pending, arrivals included). */
   toPlay: number
-  /** Whole queue size — what looping copy uses. */
   length: number
 }
 
 /**
- * How many leftover-run posts are already done. Live always stages the head
- * of the leftover stack, so this is not a playlist index. A post counts if
- * it was unseen when this leftover run began (session start, or the last
- * caught-up) or arrived mid-run, and has been marked seen — except the
- * current leftover row, which stays put until you leave it. After caught-up,
- * pass the posts already seen then as `wasSeenOnEntry` so a later arrival
- * starts at `1 in queue`, not `2 of 3` from the finished run.
- */
-export function countPlayedThisRun<
-  T extends { platform: string; bookmarkId?: string | null; url: string },
->(
-  items: T[],
-  opts: {
-    currentKey: string | null
-    remaining: number
-    currentIndex: number
-    wasSeenOnEntry: (key: string) => boolean
-    isFresh: (key: string) => boolean
-    isSeen: (key: string) => boolean
-  },
-): number {
-  let n = 0
-  for (const item of items) {
-    const key = theaterItemKey(item)
-    // Still on stage: dwell may have marked it seen, and a prepend bumps
-    // `currentIndex` past `remaining`. Do not count it until we leave.
-    if (opts.currentKey !== null && key === opts.currentKey) continue
-    const fromRun = !opts.wasSeenOnEntry(key) || opts.isFresh(key)
-    if (fromRun && opts.isSeen(key)) n++
-  }
-  return n
-}
-
-/**
- * Progress through the leftover run, or looping copy for the whole pile.
- *
- * Repeat off: `toPlay` is how many will actually play (23 new), `played`
- * is how many of those are done (16). Keep playing: `looping` and the
- * pile (`23 on repeat`). Repeat this post: `1 on repeat`. A list walk
- * (Saved one-pass, Re-watch all) is the 1-based now-playing index
- * (`2 of 92` on the second post).
+ * Dock / peek count.
+ * Repeat off: Now playing + Next (`N in queue`). Seen is not counted.
+ * Repeat all: every post in the queue (`N on repeat`).
+ * Repeat this post: `1 on repeat`.
  */
 export function computeQueueCounts(opts: {
-  index: number
   length: number
   unseenCount: number
   repeatMode: RepeatMode
-  /** Walk the displayed list (Saved, or Live Re-watch all). */
-  listWalk?: boolean
-  played?: number
 }): QueueCount {
-  const { index, length, unseenCount, repeatMode, listWalk, played } = opts
+  const { length, unseenCount, repeatMode } = opts
   if (repeatMode === 'one') {
     const n = length > 0 ? 1 : 0
     return { looping: true, played: 0, toPlay: n, length: n }
@@ -670,55 +422,22 @@ export function computeQueueCounts(opts: {
   if (repeatMode === 'all') {
     return { looping: true, played: 0, toPlay: length, length }
   }
-  if (length <= 0) return { looping: false, played: 0, toPlay: 0, length: 0 }
-  if (listWalk) {
-    const finished = index < 0 || index >= length
-    const position = finished ? length : index + 1
-    return { looping: false, played: position, toPlay: length, length }
-  }
-  // Live leftover always stages the head. A prepend keeps the same post
-  // but bumps `index`, so playlist-index-as-played would flip "3 in queue"
-  // to "1 of 3" even though nothing has been left.
-  if (played !== undefined) {
-    const remaining = Math.max(0, unseenCount)
-    const done = Math.max(0, played)
-    return { looping: false, played: done, toPlay: done + remaining, length }
-  }
-  if (unseenCount >= length) {
-    const finished = index < 0 || index >= length
-    const done = finished ? length : Math.max(0, index)
-    return { looping: false, played: done, toPlay: length, length }
-  }
   const remaining = Math.max(0, unseenCount)
-  const done = Math.max(0, played ?? 0)
-  return { looping: false, played: done, toPlay: done + remaining, length }
+  return { looping: false, played: 0, toPlay: remaining, length }
 }
 
-/** Peek / dock copy. Off-repeat: "N in queue" until the first leave, then "16 of 23". Keep playing: "23 on repeat". Repeat this post: "1 on repeat". */
+/** Peek / dock copy. Unseen remaining is `N in queue`. Repeat is `N on repeat`. */
 export function formatQueueCount(
   count: QueueCount | null | undefined,
 ): { text: string; ariaLabel: string } | null {
   if (!count) return null
-  const { looping, played, toPlay, length } = count
+  const { looping, toPlay, length } = count
   if (looping) {
     if (length <= 0) return null
     return { text: `${length} on repeat`, ariaLabel: `${length} on repeat` }
   }
-  if (played <= 0) {
-    // Caught-up (and first paint before leftover is known) is toPlay 0 —
-    // do not fall back to the pile size or the dock says "18 in queue"
-    // next to You're all caught up.
-    if (toPlay <= 0) return null
-    return { text: `${toPlay} in queue`, ariaLabel: `${toPlay} in queue` }
-  }
-  if (toPlay <= 0) {
-    if (length <= 0) return null
-    return { text: `${length} in queue`, ariaLabel: `${length} in queue` }
-  }
-  return {
-    text: `${played} of ${toPlay}`,
-    ariaLabel: `${played} watched of ${toPlay}`,
-  }
+  if (toPlay <= 0) return null
+  return { text: `${toPlay} in queue`, ariaLabel: `${toPlay} in queue` }
 }
 
 /**
@@ -846,23 +565,6 @@ export type { RepeatMode } from './types'
 export function nextRepeatMode(mode: RepeatMode, wrapOnly = false): RepeatMode {
   if (wrapOnly) return mode === 'all' ? 'one' : 'all'
   return mode === 'off' ? 'all' : mode === 'all' ? 'one' : 'off'
-}
-
-/**
- * Pure: should a *non-user* advance off `currentKey` re-enter the waiting
- * stage instead of stepping into the rest of the queue? True exactly when the
- * item that just finished is the fresh arrival the waiting stage auto-played
- * (owner report: finishing that one new video dumped them back into the old
- * playlist — they expected to wait for the next new send) and no repeat mode
- * overrides it. User-initiated navigation clears `stagedKey` before ever
- * reaching this, so deliberately browsing onward still works.
- */
-export function shouldRewaitAfterArrival(
-  stagedKey: string | null,
-  currentKey: string | null,
-  repeatMode: RepeatMode,
-): boolean {
-  return stagedKey !== null && currentKey === stagedKey && repeatMode === 'off'
 }
 
 /**

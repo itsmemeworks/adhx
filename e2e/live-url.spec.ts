@@ -11,7 +11,9 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     })
     await goNext(page)
     await expect(page).not.toHaveURL(new RegExp(`/status/${POST.preview.id}`))
-    await expect(page).toHaveURL(/\/status\//)
+    // LIFO newest-first: the next pulse row may be TikTok / Reels / Shorts,
+    // not another tweet. Any preview path is a Live rewrite.
+    await expect(page).toHaveURL(/\/(status\/|reels\/|reel\/|shorts\/|video\/)/)
   })
 
   authedTest('Saved keeps /saved while advancing', async ({ page }) => {
@@ -55,7 +57,7 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await goNext(page)
     await expect(caption(page, POST.bravo.text)).toBeVisible()
     const before = await visibleQueueCount(page).innerText()
-    expect(before).toMatch(/^2 of /)
+    expect(before).toMatch(/\d+ in queue/)
 
     await page.getByRole('button', { name: 'Live', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(

@@ -11,6 +11,7 @@ import {
   goNext,
   openTheaterQueue,
   pasteTheaterLink,
+  pauseTheater,
   readQueueProgress,
   visibleCaption,
   visibleQueueCount,
@@ -118,23 +119,24 @@ authedTest.describe('theater cross-tab add', () => {
     },
   )
 
-  authedTest(
-    'Live: caught-up + a second-window add plays New since you opened',
-    async ({ page }) => {
-      await page.goto('/live')
-      await expectTheaterReady(page)
-      await playUntilCaughtUp(page)
-      const queue = await openTheaterQueue(page)
-      await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
+  authedTest('Live: caught-up + a second-window add plays immediately', async ({ page }) => {
+    await page.goto('/live')
+    await expectTheaterReady(page)
+    await playUntilCaughtUp(page)
+    const queue = await openTheaterQueue(page)
+    await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
 
-      await addAndBroadcast(page, tweetUrl(ADD_TEXT))
+    await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
-      await expect(page.getByText(/all caught up/i)).toHaveCount(0)
-      await expect(queue.getByText('New since you opened')).toBeVisible()
-      await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
-    },
-  )
+    await expect(page.getByText(/all caught up/i)).toHaveCount(0)
+    await expect(visibleCaption(page, ADD_TEXT.text)).toBeVisible()
+    await expect(queue.getByText('Now playing', { exact: true })).toBeVisible()
+    await expect(
+      queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text }),
+    ).toHaveAttribute('aria-current', 'true')
+    await expect(queue.getByText('New since you opened')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
+  })
 
   authedTest('Live: Videos + a text add from another window resets to All', async ({ page }) => {
     await page.goto('/live')
@@ -156,7 +158,7 @@ authedTest.describe('theater cross-tab add', () => {
   })
 
   authedTest(
-    'Live: Videos + a matching video add keeps Videos and groups the arrival',
+    'Live: Videos + a matching video add keeps Videos and plays immediately if caught up',
     async ({ page }) => {
       await page.goto('/live')
       await expectTheaterReady(page)
@@ -170,26 +172,31 @@ authedTest.describe('theater cross-tab add', () => {
         'aria-pressed',
         'true',
       )
-      await expect(queue.getByText(ADD_VIDEO.text)).toBeVisible()
-      await expect(queue.getByText('New since you opened')).toBeVisible()
+      await expect(visibleCaption(page, ADD_VIDEO.text)).toBeVisible()
+      await expect(
+        queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_VIDEO.text }),
+      ).toHaveAttribute('aria-current', 'true')
+      await expect(queue.getByText('New since you opened')).toHaveCount(0)
       await expect(page.getByText(/all caught up/i)).toHaveCount(0)
     },
   )
 
   authedTest(
-    'Live: mid-play matching add stays on the current post and groups under New',
+    'Live: mid-play matching add stays on the current post and is Next',
     async ({ page }) => {
       await page.goto('/live')
       await expectTheaterReady(page)
-      const pause = page.getByRole('button', { name: 'Pause' })
-      if (await pause.isVisible()) await pause.click()
+      await pauseTheater(page)
       const queue = await openTheaterQueue(page)
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
       await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
-      await expect(queue.getByText('New since you opened')).toBeVisible()
+      await expect(queue.getByText('Now playing', { exact: true })).toBeVisible()
+      await expect(queue.getByText('Next', { exact: true })).toBeVisible()
       const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
       await expect(added).not.toHaveAttribute('aria-current', 'true')
+      await expect(added.getByText('next ↓')).toBeVisible()
+      await expect(queue.getByText('New since you opened')).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
     },
   )
@@ -252,17 +259,17 @@ authedTest.describe('theater cross-tab add', () => {
     await page.getByRole('button', { name: 'Repeat this post' }).click()
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
     const start = await readQueueProgress(page)
-    expect(start.played).toBe(1)
+    expect(start.played).toBe(0)
 
     await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
     await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
-    await expect(visibleQueueCount(page)).toHaveText(`2 of ${start.toPlay + 1}`)
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay + 1} in queue`)
   })
 
   authedTest(
-    'Live: a second-window add grows leftover without leaving the current post',
+    'Live: a second-window add grows the queue without leaving the current post',
     async ({ page }) => {
       await page.addInitScript(() => {
         localStorage.removeItem('adhx-theater-repeat')
@@ -271,8 +278,7 @@ authedTest.describe('theater cross-tab add', () => {
       await page.goto('/live')
       await expectTheaterReady(page)
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
-      const pause = page.getByRole('button', { name: 'Pause' })
-      if (await pause.isVisible()) await pause.click()
+      await pauseTheater(page)
       const queue = await openTheaterQueue(page)
 
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
@@ -285,7 +291,7 @@ authedTest.describe('theater cross-tab add', () => {
   )
 
   authedTest(
-    'Live leftover after Next: a remote add stays 1 of N+1 on the current post',
+    'Live after Next: a remote add grows remaining and stays on the current post',
     async ({ page }) => {
       await page.addInitScript(() => {
         localStorage.removeItem('adhx-theater-repeat')
@@ -293,8 +299,13 @@ authedTest.describe('theater cross-tab add', () => {
       })
       await page.goto('/live')
       await expectTheaterReady(page)
+      await pauseTheater(page)
       await goNext(page)
-      await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
+      await pauseTheater(page)
+      await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
+      const afterNext = await visibleQueueCount(page).innerText()
+      const remaining = Number(afterNext.match(/(\d+) in queue/)?.[1])
+      expect(remaining).toBeGreaterThan(0)
       const queue = await openTheaterQueue(page)
 
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
@@ -302,7 +313,8 @@ authedTest.describe('theater cross-tab add', () => {
       const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
       await expect(added).toBeVisible()
       await expect(added).not.toHaveAttribute('aria-current', 'true')
-      await expect(visibleQueueCount(page)).toHaveText(/^1 of /)
+      await expect(added.getByText('next ↓')).toBeVisible()
+      await expect(visibleQueueCount(page)).toHaveText(`${remaining + 1} in queue`)
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
     },
   )

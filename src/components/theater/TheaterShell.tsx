@@ -44,7 +44,6 @@ import { useTheaterQueueTypes } from './useTheaterQueueTypes'
 import { fetchBookmarkMembership } from './fetch-bookmark-membership'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import {
-  feedItemPlayingKey,
   readPlayedSavedKeys,
   savedStartIndex,
   writePlayedSavedKeys,
@@ -62,24 +61,20 @@ import {
   personalAdvanceOnEndedMatching,
   personalSkipMatching,
   personalStepBackMatching,
-  pinKeyFirst,
   applyTheaterTypeLens,
   feedItemMatchesQueueTypes,
   queueTypesForAddedItem,
   theaterQueueEmptyHeadline,
-  orderLiveQueue,
-  liveQueueGroupOf,
-  liveQueueTreatAsUnseen,
-  sharedThisPostKey,
-  pendingBlockLength,
+  orderLifoQueue,
+  sortNewestFirst,
+  sortFeedNewestFirst,
   firstPendingLiveKey,
-  computeLiveNext,
   theaterUrlSyncPath,
   computeCanPrev,
   computeCanNext,
   findFreshArrival,
   nextRepeatMode,
-  shouldRewaitAfterArrival,
+  computeLoopedNext,
   computeLoopedPrev,
   isSharedPostPinned,
   isSharedItemUnavailable,
@@ -126,17 +121,15 @@ export {
   serializeTheaterQueueTypes,
   toggleTheaterQueueType,
   theaterQueueEmptyHeadline,
-  liveQueueGroupOf,
-  liveQueueTreatAsUnseen,
-  sharedThisPostKey,
-  orderLiveQueue,
-  unseenBlockLength,
-  pendingBlockLength,
+  orderLifoQueue,
+  sortNewestFirst,
+  sortFeedNewestFirst,
+  queueSectionHeading,
+  QUEUE_NOW_PLAYING,
+  QUEUE_NEXT,
+  QUEUE_SEEN,
   firstPendingLiveKey,
-  computeLiveNext,
-  computeQueueTotal,
   computeQueueCounts,
-  countPlayedThisRun,
   formatQueueCount,
   theaterUrlSyncPath,
   theaterTabNavRestore,
@@ -146,16 +139,12 @@ export {
   computeCanNext,
   findFreshArrival,
   nextRepeatMode,
-  shouldRewaitAfterArrival,
   computeLoopedNext,
   computeLoopedPrev,
   isSharedPostPinned,
   isSharedItemUnavailable,
-  LIVE_QUEUE_GROUP_ORDER,
-  LIVE_QUEUE_GROUP_LABEL,
-  PINNED_POST_HEADING,
 } from './theater-math'
-export type { PersonalUndoAction, LiveQueueGroup, RepeatMode } from './theater-math'
+export type { PersonalUndoAction, RepeatMode } from './theater-math'
 
 export interface TheaterShellProps {
   seed: TheaterFeedSeed
@@ -205,8 +194,8 @@ export interface TheaterShellProps {
   /** Where to start in the collection queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
   initialPersonalIndex?: number
   /**
-   * `/saved?open=` already picked the start. Do not leftover-clamp when
-   * queue prefs hydrate — that snapped every mid-queue open to the first unread.
+   * `/saved?open=` already picked the start. Do not clamp to newest-unread
+   * when queue prefs hydrate — that snapped every mid-queue open.
    */
   preserveSavedStart?: boolean
   /** Which collection sub-tab to open on (`/live` is Live, `/saved` is Saved). */
@@ -330,7 +319,9 @@ export function TheaterShell({
   // Snapshot at mount — `/saved` fetches before painting the shell, and we
   // do not re-sync from props (that would jump the cursor on a parent refresh).
   // Other windows drop / prepend via `tweet-added` `{ removed }` / `{ added }`.
-  const [personalQueue, setPersonalQueue] = useState<FeedItem[]>(() => personalItems ?? [])
+  const [personalQueue, setPersonalQueue] = useState<FeedItem[]>(() =>
+    sortFeedNewestFirst(personalItems ?? []),
+  )
   const personalQueueRef = useRef(personalQueue)
   personalQueueRef.current = personalQueue
   const queueTypesRef = useRef<ContentType[]>([])
@@ -347,7 +338,7 @@ export function TheaterShell({
   const personalTabRef = useRef(personalTab)
   personalTabRef.current = personalTab
   // Adds may reset Videos → All. That is not a user filter tap — keep the
-  // current post instead of clamping to the leftover prepend. `?open=`
+  // current post instead of jumping to the newest prepend. `?open=`
   // skips the first hydrate clamp for the same reason.
   const skipSavedClampRef = useRef(preserveSavedStart)
   const [personalUndo, setPersonalUndo] = useState<PersonalUndoAction | null>(null)
@@ -403,9 +394,13 @@ export function TheaterShell({
     ? theaterItemKey(feedItemToTheaterItem(personalCurrentFeedItem))
     : null
   const prevSavedKeyRef = useRef<string | null>(null)
+  // Next / ended / queue tap left the post. Archive, undo, and a splice
+  // also change `personalCurrentKey` — those must not mark Watched, or
+  // Undo drops the hopped-to row from Repeat-off `N in queue`.
+  const savedWatchLeaveRef = useRef(false)
   useEffect(() => {
     const prev = prevSavedKeyRef.current
-    if (prev && prev !== personalCurrentKey) {
+    if (prev && prev !== personalCurrentKey && savedWatchLeaveRef.current) {
       setPlayedSavedKeys((s) => {
         if (s.has(prev)) return s
         const next = new Set(s)
@@ -413,6 +408,7 @@ export function TheaterShell({
         return next
       })
     }
+    savedWatchLeaveRef.current = false
     prevSavedKeyRef.current = personalCurrentKey
   }, [personalCurrentKey])
   const personalIsSeen = useCallback((key: string) => playedSavedKeys.has(key), [playedSavedKeys])
@@ -560,7 +556,9 @@ export function TheaterShell({
       const added = detail?.added
       if (!added || typeof added.id !== 'string') return
       prependToPersonalQueue(added)
-      feedPrepend?.(feedItemToTheaterItem(added))
+      // Arrival time is now — LIFO must put it Next (or play it if
+      // caught up). The source tweet's createdAt must not bury it.
+      feedPrepend?.({ ...feedItemToTheaterItem(added), addedAt: new Date().toISOString() })
       // Same rule as same-tab paste: a Videos queue must not hide a
       // text save (or vice versa). Reset even when Saved already had
       // the row — Live still prepends it, and a shared type filter
@@ -601,6 +599,7 @@ export function TheaterShell({
   // Transport / keyboard next on the collection tab (same as Live arrows).
   const skipCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
+    savedWatchLeaveRef.current = true
     setPersonalIndex((i) =>
       personalSkipMatching(
         i,
@@ -631,16 +630,19 @@ export function TheaterShell({
     // server-side while leaving it missing from the list.
     if (personalUndo.type === 'archive' || personalUndo.type === 'delete') {
       const { item, index } = personalUndo
-      setPersonalQueue((prev) =>
-        prev.some(
-          (f) => f.id === item.id && (f.platform ?? 'twitter') === (item.platform ?? 'twitter'),
-        )
-          ? prev
-          : (() => {
-              const at = Math.min(Math.max(index, 0), prev.length)
-              return [...prev.slice(0, at), item, ...prev.slice(at)]
-            })(),
-      )
+      setPersonalQueue((prev) => {
+        if (
+          prev.some(
+            (f) => f.id === item.id && (f.platform ?? 'twitter') === (item.platform ?? 'twitter'),
+          )
+        ) {
+          return prev
+        }
+        const at = Math.min(Math.max(index, 0), prev.length)
+        const next = [...prev.slice(0, at), item, ...prev.slice(at)]
+        personalQueueRef.current = next
+        return next
+      })
     }
     setPersonalIndex(personalUndo.index)
     setPersonalUndo(null)
@@ -649,6 +651,7 @@ export function TheaterShell({
   // ArrowUp "Back": pure navigation only — never touches read/delete state,
   // unlike `U` (which reverses the last action).
   const personalStepBack = useCallback(() => {
+    savedWatchLeaveRef.current = true
     setPersonalIndex((i) => personalStepBackMatching(i, allowPersonalIndex))
   }, [allowPersonalIndex])
 
@@ -663,6 +666,7 @@ export function TheaterShell({
   personalFinishedRef.current = personalFinished
 
   const personalAdvanceOnEnded = useCallback(() => {
+    savedWatchLeaveRef.current = true
     setPersonalIndex((i) =>
       personalAdvanceOnEndedMatching(
         i,
@@ -847,33 +851,36 @@ export function TheaterShell({
         }
 
         const row = saved
-        const theaterItem = feedItemToTheaterItem(row)
+        const theaterItem = {
+          ...feedItemToTheaterItem(row),
+          addedAt: new Date().toISOString(),
+        }
         const key = theaterItemKey(theaterItem)
         setPersonalSavedKeys((prev) => new Set(prev).add(key))
         markFreshSaved(key)
-        // Remember which Saved post was playing so a Live paste can
-        // prepend without stealing that cursor (index-only +1 is wrong
-        // when the save was already in the list and gets moved to front).
-        const onSaved = personalTabRef.current === 'collection'
-        const playingSaved = onSaved ? null : personalQueueRef.current[personalIndexRef.current]
+        // Same LIFO rule as prependToPersonalQueue / a second-window add:
+        // newest goes to the top. Play it now only when caught up; otherwise
+        // keep the playing post and the arrival is Next.
+        const playingSaved = personalQueueRef.current[personalIndexRef.current]
+        const wasFinished = personalFinishedRef.current || personalQueueRef.current.length === 0
         const rest = personalQueueRef.current.filter(
           (f) => !(f.id === row.id && (f.platform ?? 'twitter') === (row.platform ?? 'twitter')),
         )
         const nextQueue = [row, ...rest]
         personalQueueRef.current = nextQueue
         setPersonalQueue(nextQueue)
-        // Saved: jump to the new save. Live: stay on the current Saved
-        // post so flipping tabs does not land on a neighbour.
-        if (onSaved) {
+        if (wasFinished || !playingSaved) {
           setPersonalIndex(0)
-        } else if (playingSaved) {
+        } else {
           const idx = nextQueue.findIndex(
             (f) =>
               f.id === playingSaved.id &&
               (f.platform ?? 'twitter') === (playingSaved.platform ?? 'twitter'),
           )
           setPersonalIndex(idx === -1 ? 0 : idx)
-          writeSavedPlayingKey(theaterItemKey(feedItemToTheaterItem(playingSaved)))
+          if (personalTabRef.current !== 'collection') {
+            writeSavedPlayingKey(theaterItemKey(feedItemToTheaterItem(playingSaved)))
+          }
         }
         feedPrepend(theaterItem)
         skipSavedClampRef.current = true
@@ -970,13 +977,8 @@ export function TheaterShell({
     }
     const queue = personalQueueRef.current
     const types = typeFilterActive ? queueTypes : []
-    const played = playedSavedKeysRef.current
     const next = savedStartIndex(queue.length, {
-      playingIndex: personalIndexRef.current,
-      isLeftover: (i) => {
-        const item = queue[i]
-        return !!item && !played.has(feedItemPlayingKey(item))
-      },
+      playingIndex: skipSavedClampRef.current ? personalIndexRef.current : 0,
       matches: (i) => {
         const item = queue[i]
         return !!item && feedItemMatchesQueueTypes(item, types)
@@ -984,7 +986,7 @@ export function TheaterShell({
     })
     if (next !== personalIndexRef.current) setPersonalIndex(next)
     // Tab flips are not a clamp — Live paste keeps the Saved cursor
-    // (`isCollectionTab` is not a dep). Remount leftover start is
+    // (`isCollectionTab` is not a dep). Remount newest-first start is
     // AuthedTheater; `?open=` sets preserveSavedStart so hydrate does
     // not snap a library tap back to the first unread.
   }, [queuePrefReady, typeFilterActive, queueTypes])
@@ -997,7 +999,9 @@ export function TheaterShell({
   const [desktopDeclutter, setDesktopDeclutter] = useState(false)
   const onToggleDesktopDeclutter = useCallback(() => setDesktopDeclutter((v) => !v), [])
   useTheaterStageTapDeclutter(desktopDeclutter, setDesktopDeclutter)
-  const [currentKey, setCurrentKey] = useState<string | null>(null)
+  const [currentKey, setCurrentKey] = useState<string | null>(() =>
+    sharedItem ? theaterItemKey(sharedItem) : null,
+  )
   useEffect(() => {
     setArticleMode(false)
   }, [isCollectionTab ? personalCurrentKey : currentKey])
@@ -1027,10 +1031,6 @@ export function TheaterShell({
    */
   const parkedUnplayedKeyRef = useRef<string | null>(null)
 
-  const [pinnedKey, setPinnedKey] = useState<string | null>(() =>
-    sharedItem ? theaterItemKey(sharedItem) : null,
-  )
-
   const { sharedPinned, clearSharedPin, sharedItemKey } = useSharedPin(
     mode,
     sharedItem,
@@ -1048,51 +1048,16 @@ export function TheaterShell({
   // stops applying for the rest of the session (repeat 'all' is the other
   // opt-in, handled via `loop`). Never set implicitly — that's the whole
   // point of the owner's "you would need to specifically click it".
-  const [rewatching, setRewatching] = useState(false)
-  // Posts already seen when the current leftover run began. Session start
-  // is `seenOnEntry`; catching up snapshots live seen so the next arrival
-  // is a new run (`1 in queue`) instead of `played + 1 of played + 1`.
-  const [seenBeforeThisLeftoverRun, setSeenBeforeThisLeftoverRun] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  )
-  const wasWaitingRef = useRef(false)
-
-  // Does this surface order its queue unseen-first? The live feed does — home,
-  // the authed Live tab, AND a shared preview page, whose queue below the
-  // shared post IS that same live feed (owner: a preview page showed no
-  // sections while `/` showed them — "we just need to be always consistent
-  // here"). The shared post itself still leads, via `pinnedKey`, while it
-  // is the reason you're here; once this session watches it, it joins
-  // Watched earlier like any other post. Only a curated tag playlist opts
-  // out: it has one authored order and no notion of "what's new".
+  // Live / Saved / shared preview: newest-first LIFO. Curated tag playlists
+  // keep their authored order.
   const liveOrdering = !loop
-  // Grouping uses the arrival snapshot PLUS live seen: a post watched this
-  // session slides into Watched once it is no longer on stage. The playing
-  // row stays put (see `orderLiveQueue`).
-  const seenOnEntry = seenSet.seenOnEntry
-  useEffect(() => {
-    if (!seenSet.ready) return
-    setSeenBeforeThisLeftoverRun((prev) => {
-      if (prev.size > 0 || seenOnEntry.length === 0) return prev
-      return new Set(seenOnEntry)
-    })
-  }, [seenSet.ready, seenOnEntry])
-  const wasSeenOnEntry = useCallback((key: string) => seenOnEntry.includes(key), [seenOnEntry])
   const isSeenNow = useCallback((key: string) => seenSet.isSeen(key), [seenSet.isSeen])
-
-  // The list every index/nav computation below operates on: the live queue
-  // ordered unseen-first, then the pinned key (if any) moved to the front.
-  // Keep this as THE list used everywhere so the rail/mobile-chrome render
-  // order matches keyboard order.
-  // Fresh arrivals (polled in while this session was open) lead the queue —
-  // read through a ref-free callback so the memo below re-runs when a poll
-  // lands, which is exactly when the grouping changes.
-  const isFreshKey = useCallback((key: string) => feed.freshKeys.has(key), [feed.freshKeys])
-  // Caught-up keeps `currentKey` on the last post so Back works. Grouping
-  // must not stayPut that row — it has been watched.
-  const groupingCurrentKey = waiting ? null : currentKey
-  const thisPostKey = sharedThisPostKey(sharedItemKey, isSeenNow, currentKey, waiting)
-  const displayPinKey = thisPostKey ?? (mode === 'shared' ? null : pinnedKey)
+  const onlyUnseen = liveOrdering && seenSet.ready && effectiveRepeatMode === 'off'
+  // Pin now-playing on Repeat off even before seen hydrates. A newer
+  // arrival must sit as Next. Repeat all walks newest-first and wraps —
+  // pinning there keeps current at index 0, so Next is always the newest
+  // other post (a two-item loop).
+  const pinLiveCurrent = liveOrdering && effectiveRepeatMode === 'off' && !waiting
   const lensItems = useMemo(
     () =>
       applyTheaterTypeLens(
@@ -1102,66 +1067,43 @@ export function TheaterShell({
       ),
     [items, typeFilterActive, queueTypes, sharedItem, sharedItemKey],
   )
-  const orderedItems = useMemo(
-    () =>
-      liveOrdering && seenSet.ready
-        ? orderLiveQueue(
-            lensItems,
-            (key) => liveQueueTreatAsUnseen(key, sharedItemKey, wasSeenOnEntry),
-            isFreshKey,
-            isSeenNow,
-            groupingCurrentKey,
-          )
-        : lensItems,
-    [
-      lensItems,
-      liveOrdering,
-      seenSet.ready,
-      wasSeenOnEntry,
-      isFreshKey,
-      isSeenNow,
-      groupingCurrentKey,
-      sharedItemKey,
-    ],
-  )
   const displayItems = useMemo(
-    () => pinKeyFirst(orderedItems, displayPinKey),
-    [orderedItems, displayPinKey],
-  )
-
-  // Where the already-watched block starts. 0 disables the boundary entirely
-  // (nothing unseen, or the viewer opted into a re-watch / repeat 'all'), which
-  // is exactly what `computeLiveNext` treats as "no boundary".
-  // The shared post leads whether or not this viewer has seen it before, so a
-  // re-visited shared link would otherwise start the queue with a WATCHED row
-  // and zero the run — killing the boundary for the whole live queue behind
-  // it. Count the lead as pending until THIS session watches it; live seen
-  // then moves it into Watched and out of leftover.
-  const unseenCount = useMemo(
     () =>
-      liveOrdering && seenSet.ready && !rewatching
-        ? pendingBlockLength(displayItems, (key) =>
-            liveQueueGroupOf(
-              key,
-              (k) => liveQueueTreatAsUnseen(k, sharedItemKey, wasSeenOnEntry),
-              isFreshKey,
-              isSeenNow,
-              groupingCurrentKey,
-            ),
-          )
-        : 0,
+      liveOrdering
+        ? orderLifoQueue(lensItems, {
+            currentKey,
+            onlyUnseen,
+            isSeen: isSeenNow,
+            keepKey: sharedItemKey,
+            pinCurrent: pinLiveCurrent,
+          })
+        : lensItems,
+    [liveOrdering, lensItems, currentKey, onlyUnseen, isSeenNow, sharedItemKey, pinLiveCurrent],
+  )
+  const queueItems = useMemo(
+    () =>
+      liveOrdering && onlyUnseen
+        ? orderLifoQueue(lensItems, {
+            currentKey,
+            onlyUnseen,
+            isSeen: isSeenNow,
+            keepKey: sharedItemKey,
+            pinCurrent: pinLiveCurrent,
+            appendSeen: true,
+          })
+        : displayItems,
     [
-      displayItems,
       liveOrdering,
-      seenSet.ready,
-      rewatching,
-      wasSeenOnEntry,
-      isFreshKey,
+      onlyUnseen,
+      lensItems,
+      currentKey,
       isSeenNow,
-      groupingCurrentKey,
       sharedItemKey,
+      pinLiveCurrent,
+      displayItems,
     ],
   )
+  const unseenCount = displayItems.length
 
   // Seed savedKeys with EXISTING collection membership: a live-tab post the
   // viewer already saved (this session or any other) must show "Saved", not
@@ -1213,6 +1155,10 @@ export function TheaterShell({
   // every unrelated re-render (polling, seen-state updates, etc.).
   const itemsRef = useRef(displayItems)
   itemsRef.current = displayItems
+  const lensItemsRef = useRef(lensItems)
+  lensItemsRef.current = lensItems
+  const fullQueue = () =>
+    itemsRef.current.length > 0 ? itemsRef.current : sortNewestFirst(lensItemsRef.current)
   // Read fresh inside goNext/goPrev (empty-deps callbacks) without
   // re-registering them on every waiting/feed change.
   const waitingRef = useRef(waiting)
@@ -1228,13 +1174,6 @@ export function TheaterShell({
   // second item that arrived while the first played is still "new" when the
   // first one finishes and waiting resumes.
   const waitingBaselineFreshKeysRef = useRef<Set<string>>(new Set())
-  // The fresh arrival the waiting stage auto-played into, if that's what's
-  // on stage right now. While set, a NON-user advance off it (video ended /
-  // timed dwell) re-enters the waiting stage instead of continuing into the
-  // already-browsed queue (see `shouldRewaitAfterArrival`). Cleared by every
-  // user-initiated navigation — deliberately browsing onward from the
-  // arrival behaves exactly like browsing from anywhere else.
-  const stagedFromWaitingKeyRef = useRef<string | null>(null)
 
   // Land on the first item immediately (no flash of an empty stage); a
   // moment later, once localStorage seen-state has hydrated, the queue
@@ -1250,7 +1189,28 @@ export function TheaterShell({
   useEffect(() => {
     if (!typeFilterActive) return
     if (displayItems.length === 0) {
-      if (currentKey !== null) setCurrentKey(null)
+      // Seen-only lens (Videos + every video already watched): park on
+      // the newest matching post and wait. Do not clear currentKey —
+      // that painted "Nothing playing" / "No videos" over caught-up.
+      if (
+        lensItems.length > 0 &&
+        liveOrdering &&
+        !loop &&
+        !isCollectionTab &&
+        effectiveRepeatMode === 'off'
+      ) {
+        const park = theaterItemKey(sortNewestFirst(lensItems)[0])
+        if (currentKey !== park) setCurrentKey(park)
+        if (!waiting) {
+          waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
+          parkedUnplayedKeyRef.current = park
+          setWaiting(true)
+        }
+        return
+      }
+      // Empty lens (no posts of this type). Keep currentKey under the
+      // empty overlay so All / Show every post restores the same post
+      // instead of a blank "Nothing playing" stage.
       return
     }
     if (currentKey && displayItems.some((it) => theaterItemKey(it) === currentKey)) return
@@ -1263,7 +1223,6 @@ export function TheaterShell({
     if (
       !pending &&
       liveOrdering &&
-      !rewatching &&
       !loop &&
       !isCollectionTab &&
       effectiveRepeatMode === 'off' &&
@@ -1275,15 +1234,26 @@ export function TheaterShell({
   }, [
     typeFilterActive,
     displayItems,
+    lensItems,
     currentKey,
     seenSet.isSeen,
     liveOrdering,
-    rewatching,
     loop,
     isCollectionTab,
     effectiveRepeatMode,
     waiting,
   ])
+
+  // All / Show every post after an empty type lens: if we parked on
+  // waiting because the lens had nothing left to play, resume the first
+  // unseen row instead of keeping a blank caught-up overlay.
+  useEffect(() => {
+    if (typeFilterActive || isCollectionTab || loop || !waiting) return
+    const pending = firstPendingLiveKey(lensItems, seenSet.isSeen)
+    if (!pending) return
+    if (currentKey !== pending) setCurrentKey(pending)
+    setWaiting(false)
+  }, [typeFilterActive, isCollectionTab, loop, waiting, lensItems, currentKey, seenSet.isSeen])
 
   useEffect(() => {
     // Shared mode never re-picks — the shared post is ALWAYS the initial
@@ -1300,35 +1270,44 @@ export function TheaterShell({
     if (!seenSet.ready || !queuePrefReady || leadAppliedRef.current || hasNavigatedRef.current)
       return
     leadAppliedRef.current = true
-    if (displayItems.length === 0) return
-    // `displayItems` is already ordered unseen-first by the time seen-state is
-    // ready, so its head IS "the next post you haven't watched" — which is
-    // also what makes a refresh resume where the viewer left off (owner), with
-    // no session bookkeeping to persist. This replaced a "highest trendCount
-    // among unseen" lead pick: the queue's own recency order is what the
-    // viewer can predict, and playback now walks the whole unseen block rather
-    // than one hand-picked post.
-    const head = displayItems[0]
-    if (!head) return
-    if (unseenCount === 0 && !firstPendingLiveKey(displayItems, seenSet.isSeen)) {
-      // Everything in the live window has already been watched: park on the
-      // caught-up stage rather than silently replaying. Getting out of it is
-      // the explicit re-watch button (or repeat), never an auto-advance.
-      // Mid-session arrivals that are still unseen are not "caught up".
+    const pending = firstPendingLiveKey(lensItems, seenSet.isSeen)
+    const head =
+      displayItems[0] ?? (pending ? lensItems.find((it) => theaterItemKey(it) === pending) : null)
+    if (!pending) {
+      const parked = sortNewestFirst(lensItems)[0]
+      if (!parked) return
       waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
-      // Parked, not finished: this item has not played, so a resume belongs on
-      // it rather than after it.
-      parkedUnplayedKeyRef.current = theaterItemKey(head)
+      parkedUnplayedKeyRef.current = theaterItemKey(parked)
       setWaiting(true)
+      setCurrentKey(theaterItemKey(parked))
+      return
     }
+    if (!head) return
     setCurrentKey(theaterItemKey(head))
-  }, [seenSet.ready, queuePrefReady, displayItems, unseenCount, sharedItem, loop, isCollectionTab])
+  }, [
+    seenSet.ready,
+    queuePrefReady,
+    displayItems,
+    lensItems,
+    sharedItem,
+    loop,
+    isCollectionTab,
+    seenSet.isSeen,
+  ])
 
   const currentIndex = useMemo(
     () => displayItems.findIndex((it) => theaterItemKey(it) === currentKey),
     [displayItems, currentKey],
   )
-  const current: TheaterItem | null = currentIndex === -1 ? null : displayItems[currentIndex]
+  const current: TheaterItem | null = useMemo(() => {
+    if (currentIndex !== -1) return displayItems[currentIndex] ?? null
+    if (!currentKey) return null
+    return (
+      lensItems.find((it) => theaterItemKey(it) === currentKey) ??
+      items.find((it) => theaterItemKey(it) === currentKey) ??
+      null
+    )
+  }, [currentIndex, displayItems, currentKey, lensItems, items])
   // shared-post-repeat: is the shared post BOTH pinned AND actually on stage
   // right now? Gates the player-level repeat (Stage's `repeat` prop) and the
   // 'timed' auto-advance suppression below — see `isSharedPostPinned`'s doc
@@ -1399,104 +1378,35 @@ export function TheaterShell({
   const currentRef = useRef(current)
   currentRef.current = current
   // Same trick for the unseen boundary — goNext is an empty-deps callback.
-  const unseenCountRef = useRef(unseenCount)
-  unseenCountRef.current = unseenCount
-  const rewatchingRef = useRef(rewatching)
-  rewatchingRef.current = rewatching
   const currentKeyRef = useRef(currentKey)
   currentKeyRef.current = currentKey
-  // First still-unwatched index (LIVE seen state, not the arrival snapshot),
-  // excluding the current item — see `computeLiveNext`'s `nextUnwatchedIndex`.
-  // Kept in a ref because goNext is an empty-deps callback.
-  const nextUnwatchedIndexRef = useRef<number | null>(null)
-  nextUnwatchedIndexRef.current = (() => {
-    if (!liveOrdering || !seenSet.ready) return null
-    const found = displayItems.findIndex(
-      (it, i) => i !== currentIndex && !seenSet.isSeen(theaterItemKey(it)),
-    )
-    return found === -1 ? null : found
-  })()
-  const nextUnwatchedAheadRef = useRef<number | null>(null)
-  nextUnwatchedAheadRef.current = (() => {
-    if (!liveOrdering || !seenSet.ready) return null
-    const found = displayItems.findIndex(
-      (it, i) => i > currentIndex && !seenSet.isSeen(theaterItemKey(it)),
-    )
-    return found === -1 ? null : found
-  })()
-
-  // `userInitiated` is passed as an ARGUMENT (not read from a ref) because the
-  // updater below runs in React's render phase, long after the call returned —
-  // a ref would already have been reset. Only `goNextUser` passes true; every
-  // auto-advance path (video ended, timed dwell, arrival staging) leaves it
-  // false, which is what makes the unseen boundary a boundary.
-  const goNext = useCallback(
-    (userInitiated = false) => {
-      setCurrentKey((key) => {
-        // Round 8: an auto-advance off the waiting stage's auto-played fresh
-        // arrival goes back to waiting for the NEXT new send, never onward
-        // into the queue the viewer already sat through. The accumulated
-        // baseline already contains this arrival's key (added when it was
-        // staged), so anything that arrived in the meantime is picked up by
-        // the arrival effect immediately. User navigation never lands here —
-        // `goNextUser` clears the staged key first.
-        // Round 8's re-wait assumed everything behind the arrival was already
-        // watched ("don't dump me back into the old playlist"). That holds only
-        // while nothing is pending — otherwise re-waiting hides genuinely
-        // unwatched posts, which is the same lie the boundary used to tell.
-        if (
-          shouldRewaitAfterArrival(stagedFromWaitingKeyRef.current, key, repeatModeRef.current) &&
-          nextUnwatchedIndexRef.current === null
-        ) {
-          stagedFromWaitingKeyRef.current = null
+  const goNext = useCallback(() => {
+    setCurrentKey((key) => {
+      const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
+      const next = computeLoopedNext(
+        itemsRef.current.length,
+        idx,
+        loop || repeatModeRef.current === 'all',
+      )
+      if (next === null) return key
+      if (next === 'waiting') {
+        const pending = firstPendingLiveKey(itemsRef.current, isSeenRef.current, key)
+        if (pending) {
+          hasNavigatedRef.current = true
+          if (waitingRef.current) setWaiting(false)
+          return pending
+        }
+        if (!waitingRef.current) {
+          parkedUnplayedKeyRef.current = null
+          waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
           setWaiting(true)
-          return key
         }
-        const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-        const next = computeLiveNext({
-          length: itemsRef.current.length,
-          index: idx,
-          unseenCount: unseenCountRef.current,
-          loop: loop || repeatModeRef.current === 'all',
-          userInitiated,
-          nextUnwatchedIndex: nextUnwatchedIndexRef.current,
-          nextUnwatchedAhead: nextUnwatchedAheadRef.current,
-          rewatch: rewatchingRef.current,
-        })
-        if (next === null) return key
-        if (next === 'waiting') {
-          // Last line of defence: if something is still unseen (a New-since-
-          // opened arrival already in the baseline, a leftover the prefix
-          // count missed), play it. Caught-up means the leftover run is
-          // empty — not "we reached the last row we were walking".
-          const pending = firstPendingLiveKey(itemsRef.current, isSeenRef.current, key)
-          if (pending) {
-            hasNavigatedRef.current = true
-            if (waitingRef.current) setWaiting(false)
-            return pending
-          }
-          // Either the last post in the queue, or (auto-advance only) the end
-          // of the unseen block — both hand over to the waiting stage instead
-          // of clamping silently or replaying watched posts. Idempotent: a
-          // repeat advance (e.g. another keypress) while already waiting must
-          // not reset the baseline — that would make an item that arrived a
-          // moment ago look "not new" and get missed by the fresh-arrival
-          // effect below. Collection mode never reaches this branch
-          // (computeLiveNext never returns 'waiting' when `loop` is true).
-          if (!waitingRef.current) {
-            // Got here by finishing the current item, so a resume advances.
-            parkedUnplayedKeyRef.current = null
-            waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
-            setWaiting(true)
-          }
-          return key
-        }
-        hasNavigatedRef.current = true
-        return theaterItemKey(itemsRef.current[next])
-      })
-    },
-    [loop],
-  )
+        return key
+      }
+      hasNavigatedRef.current = true
+      return theaterItemKey(itemsRef.current[next])
+    })
+  }, [loop])
 
   const goPrev = useCallback(() => {
     // While waiting, "back" just returns to the last post it's already
@@ -1533,28 +1443,26 @@ export function TheaterShell({
   // auto-arrival effect) calls them directly and must NEVER clear the pin.
   const goNextUser = useCallback(() => {
     const leaving = currentKeyRef.current
-    if (leaving) seenSet.markSeen(leaving)
+    if (leaving) {
+      seenSet.markSeen(leaving)
+    }
+    // Browsing leaves the "parked, never played" case even if a full
+    // walk later lands back on the same key.
+    parkedUnplayedKeyRef.current = null
     clearSharedPin()
-    // Deliberate navigation releases the fresh-arrival hold (round 8) — the
-    // viewer choosing to continue past the arrival means "browse the queue",
-    // not "wait again after this one".
-    stagedFromWaitingKeyRef.current = null
-    // `true` = user-initiated: browsing on past the unseen block into
-    // already-watched posts is always allowed, it's only AUTO-advance that
-    // stops at the boundary.
-    goNext(true)
+    goNext()
   }, [clearSharedPin, goNext, seenSet.markSeen])
 
   const goPrevUser = useCallback(() => {
+    parkedUnplayedKeyRef.current = null
     clearSharedPin()
-    stagedFromWaitingKeyRef.current = null
     goPrev()
   }, [clearSharedPin, goPrev])
 
   const onSelectUser = useCallback(
     (key: string) => {
+      parkedUnplayedKeyRef.current = null
       clearSharedPin()
-      stagedFromWaitingKeyRef.current = null
       onSelect(key)
     },
     [clearSharedPin, onSelect],
@@ -1579,9 +1487,8 @@ export function TheaterShell({
     // React may re-invoke (StrictMode double-render safety).
     const next = nextRepeatMode(repeatModeRef.current, loop)
     if (next === 'all' && waitingRef.current) {
-      stagedFromWaitingKeyRef.current = null
       setWaiting(false)
-      const first = itemsRef.current[0]
+      const first = fullQueue()[0]
       if (first) setCurrentKey(theaterItemKey(first))
       // Same reason as `replayFromStart` — the key may not change, so the
       // paused stage needs telling explicitly.
@@ -1598,19 +1505,16 @@ export function TheaterShell({
     setRepeatMode(next)
   }, [clearSharedPin, loop, isCollectionTab])
 
-  // The waiting stage's re-watch button — a deliberate navigation back to the
-  // top of the queue. This is the explicit opt-in the owner asked for: it also
-  // lifts the unseen boundary for the rest of the session (`rewatching`), so
-  // auto-advance carries on through posts already watched instead of bouncing
-  // straight back to the caught-up stage after one post.
+  // Re-watch all: mark the current playlist unseen and play newest-first
+  // as a fresh Repeat-off run. Finished posts go to Seen again.
   const replayFromStart = useCallback(() => {
-    const first = itemsRef.current[0]
+    const list = sortNewestFirst(lensItemsRef.current)
+    const first = list[0]
     if (!first) return
+    seenSet.unmarkSeen(list.map((it) => theaterItemKey(it)))
     hasNavigatedRef.current = true
     clearSharedPin()
-    stagedFromWaitingKeyRef.current = null
     parkedUnplayedKeyRef.current = null
-    setRewatching(true)
     setWaiting(false)
     setCurrentKey(theaterItemKey(first))
     // Resume explicitly. Entering the waiting stage fired `theater-pause` at a
@@ -1621,7 +1525,7 @@ export function TheaterShell({
     // re-runs, and nothing ever calls play() again. Owner report: "I click
     // rewatch all… it wasn't auto-playing for me."
     window.dispatchEvent(new CustomEvent('theater-resume'))
-  }, [clearSharedPin])
+  }, [clearSharedPin, seenSet.unmarkSeen])
 
   /**
    * "Keep playing" on the caught-up stage: the standing choice, taken at the
@@ -1637,7 +1541,6 @@ export function TheaterShell({
   const keepPlaying = useCallback(() => {
     hasNavigatedRef.current = true
     clearSharedPin()
-    stagedFromWaitingKeyRef.current = null
     setRepeatMode('all')
     setWaiting(false)
     // Parked on an unplayed item (the caught-up-on-arrival case)? Start THERE.
@@ -1645,7 +1548,7 @@ export function TheaterShell({
     // 19-post queue where nothing had played yet.
     const resumeOnCurrent = parkedUnplayedKeyRef.current === currentKeyRef.current
     parkedUnplayedKeyRef.current = null
-    const list = itemsRef.current
+    const list = fullQueue()
     if (!resumeOnCurrent && list.length > 0) {
       const idx = list.findIndex((it) => theaterItemKey(it) === currentKeyRef.current)
       const next = list[(idx + 1 + list.length) % list.length]
@@ -1721,7 +1624,7 @@ export function TheaterShell({
     loop,
     itemsRef,
     seenSet,
-    paused: resolvingSharedLead,
+    paused: resolvingSharedLead || waiting,
   })
 
   useTheaterLiveUrl({ mode, isCollectionTab, currentKey, itemsRef })
@@ -1749,7 +1652,7 @@ export function TheaterShell({
         // Saved: same 10s dwell event as Live; videos still advance
         // via Stage `onEnded` → `personalAdvanceOnEnded`. Check the
         // collection item (not the live `currentRef`) so we never step the
-        // unread queue from a leftover live-feed timer.
+        // unread queue from a Live-tab timer that is no longer on stage.
         const item = personalCurrentRef.current
           ? feedItemToTheaterItem(personalCurrentRef.current)
           : null
@@ -1759,7 +1662,9 @@ export function TheaterShell({
       }
       if (progressKindFor(currentRef.current, articleMode) !== 'timed') return
       const leaving = currentKeyRef.current
-      if (leaving) seenSet.markSeen(leaving)
+      if (leaving) {
+        seenSet.markSeen(leaving)
+      }
       goNext()
     }
     window.addEventListener('theater-advance', handleAdvance)
@@ -1768,20 +1673,6 @@ export function TheaterShell({
 
   // Prefetch at most one item ahead (extracted to useTheaterPrefetch.ts).
   useTheaterPrefetch(currentIndex, displayItems)
-
-  // Close the leftover run when Live hits caught-up so the next arrival
-  // does not keep counting this session's already-finished leftover posts.
-  useEffect(() => {
-    const entered = waiting && !wasWaitingRef.current
-    wasWaitingRef.current = waiting
-    if (!entered || !liveOrdering || isCollectionTab) return
-    const next = new Set<string>(seenOnEntry)
-    for (const item of displayItems) {
-      const key = theaterItemKey(item)
-      if (seenSet.isSeen(key)) next.add(key)
-    }
-    setSeenBeforeThisLeftoverRun(next)
-  }, [waiting, liveOrdering, isCollectionTab, displayItems, seenOnEntry, seenSet.isSeen])
 
   // Auto-play into the waiting stage: the moment a genuinely fresh item shows
   // up (present in `freshKeys` but not in the baseline snapshotted when
@@ -1796,9 +1687,9 @@ export function TheaterShell({
       waitingBaselineFreshKeysRef.current,
       typeFilterActive ? (key) => displayItems.some((it) => theaterItemKey(it) === key) : undefined,
     )
-    // Arrivals that landed during the leftover run are already in the
-    // waiting baseline, so findFreshArrival misses them. They are still
-    // unseen — play those before claiming caught-up.
+    // Arrivals that landed while unseen posts were still playing are
+    // already in the waiting baseline, so findFreshArrival misses them.
+    // They are still unseen — play those before claiming caught-up.
     const pending = arrived ?? firstPendingLiveKey(displayItems, seenSet.isSeen, currentKey)
     if (!pending) return
     // Fold the staged key into the baseline (never resnapshot — an item that
@@ -1806,19 +1697,6 @@ export function TheaterShell({
     // resumes), and remember it so a non-user advance off it re-waits
     // instead of continuing into the already-browsed queue (round 8).
     waitingBaselineFreshKeysRef.current.add(pending)
-    stagedFromWaitingKeyRef.current = pending
-    // Pin the arrival to the FRONT of the display order (owner: the fresh
-    // video read as "2 / 21" — the session's original lead-pick was still
-    // occupying slot 1). The viewer has been through the whole queue by now,
-    // so newest-first is the honest order.
-    //
-    // EXCEPT in shared mode, where `pinnedKey` is not a lead-pick but the
-    // shared post itself — the one invariant of a preview page while it is
-    // still This post. Re-pointing it at an arrival bumps the opened post
-    // out of slot 1, and can leave a stale "This post" heading on a row
-    // in the middle of the list (review finding). After this session
-    // watches the lead, This post is already gone.
-    if (mode !== 'shared') setPinnedKey(pending)
     setCurrentKey(pending)
     setWaiting(false)
   }, [
@@ -2108,14 +1986,28 @@ export function TheaterShell({
     queueLooping,
     chromeCanPrev,
     chromeCanNext,
+    seenStartIndex,
   } = resolveTheaterChrome({
     isCollectionTab,
     personalFinished,
     collectionStageTheaterItem,
     waiting,
     current,
-    personalDisplayItems: personalLensItems,
+    personalDisplayItems: orderLifoQueue(personalLensItems, {
+      currentKey: personalCurrentKey,
+      onlyUnseen: effectiveRepeatMode === 'off',
+      isSeen: personalIsSeen,
+      pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
+    }),
+    personalQueueItems: orderLifoQueue(personalLensItems, {
+      currentKey: personalCurrentKey,
+      onlyUnseen: effectiveRepeatMode === 'off',
+      isSeen: personalIsSeen,
+      pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
+      appendSeen: effectiveRepeatMode === 'off',
+    }),
     displayItems,
+    queueItems,
     currentKey,
     personalIsSeen,
     isSeen: seenSet.isSeen,
@@ -2123,18 +2015,11 @@ export function TheaterShell({
     freshKeys: feed.freshKeys,
     personalFreshKeys: freshSavedKeys,
     newCount,
-    currentIndex,
     unseenCount,
     effectiveRepeatMode,
     personalIndex: personalLensIndex >= 0 ? personalLensIndex : 0,
     canPrev,
     canNext,
-    wasSeenOnEntry: liveOrdering ? wasSeenOnEntry : undefined,
-    wasSeenBeforeLeftoverRun: liveOrdering
-      ? (key) => seenBeforeThisLeftoverRun.has(key)
-      : undefined,
-    rewatching,
-    sharedItemKey,
   })
   // Collection transport matches Live: next/prev skip without changing
   // archive state. Archive is a button, not a chevron.
@@ -2145,7 +2030,10 @@ export function TheaterShell({
         const idx = personalQueue.findIndex(
           (fi) => theaterItemKey(feedItemToTheaterItem(fi)) === key,
         )
-        if (idx !== -1) setPersonalIndex(idx)
+        if (idx !== -1) {
+          savedWatchLeaveRef.current = true
+          setPersonalIndex(idx)
+        }
       }
     : onSelectUser
 
@@ -2222,7 +2110,9 @@ export function TheaterShell({
                     return
                   }
                   const leaving = currentKeyRef.current
-                  if (leaving) seenSet.markSeen(leaving)
+                  if (leaving) {
+                    seenSet.markSeen(leaving)
+                  }
                   goNext()
                 }}
                 photoCaption={false}
@@ -2231,7 +2121,7 @@ export function TheaterShell({
                 covered={(waiting && !isCollectionTab) || (isCollectionTab && personalFinished)}
               />
               {typeFilterActive &&
-              (isCollectionTab ? personalLensItems : displayItems).length === 0 ? (
+              (isCollectionTab ? personalLensItems : lensItems).length === 0 ? (
                 <div className="absolute inset-0 z-10">
                   <StageVisualEmpty
                     headline={theaterQueueEmptyHeadline(
@@ -2253,9 +2143,9 @@ export function TheaterShell({
                 <div className="absolute inset-0 z-10">
                   <StageWaiting
                     savedToday={feed.savedToday}
-                    onReplay={displayItems.length > 0 ? replayFromStart : undefined}
-                    replayCount={displayItems.length}
-                    onKeepPlaying={displayItems.length > 0 ? keepPlaying : undefined}
+                    onReplay={lensItems.length > 0 ? replayFromStart : undefined}
+                    replayCount={lensItems.length}
+                    onKeepPlaying={lensItems.length > 0 ? keepPlaying : undefined}
                   />
                 </div>
               ) : null}
@@ -2305,12 +2195,11 @@ export function TheaterShell({
           seenReady={chromeSeenReady}
           freshKeys={chromeFreshKeys}
           newCount={chromeNewCount}
-          wasSeenOnEntry={!isCollectionTab && liveOrdering ? wasSeenOnEntry : undefined}
           queueTotal={queueTotal}
           queuePlayed={queuePlayed}
           queueToPlay={queueToPlay}
           queueLooping={queueLooping}
-          pinnedKey={thisPostKey}
+          seenStartIndex={seenStartIndex}
           waiting={isCollectionTab ? false : waiting}
           onSelect={chromeOnSelect}
           onPrev={chromeOnPrev}
@@ -2386,12 +2275,11 @@ export function TheaterShell({
         seenReady={chromeSeenReady}
         freshKeys={chromeFreshKeys}
         newCount={chromeNewCount}
-        wasSeenOnEntry={!isCollectionTab && liveOrdering ? wasSeenOnEntry : undefined}
         queueTotal={queueTotal}
         queuePlayed={queuePlayed}
         queueToPlay={queueToPlay}
         queueLooping={queueLooping}
-        pinnedKey={thisPostKey}
+        seenStartIndex={seenStartIndex}
         savedToday={feed.savedToday}
         onSelect={chromeOnSelect}
         waiting={isCollectionTab ? false : waiting}

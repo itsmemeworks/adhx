@@ -26,6 +26,8 @@ export interface SeenSet {
   isSeen(key: string): boolean
   /** Idempotent; persists to localStorage. */
   markSeen(key: string): void
+  /** Re-watch all: drop these keys so the playlist plays as unseen again. */
+  unmarkSeen(keys: readonly string[]): void
   /** Previous visit timestamp (ms epoch), null on first ever visit. */
   lastVisitAt: number | null
   /**
@@ -63,6 +65,14 @@ export function isSeenKey(list: readonly string[], key: string): boolean {
  * calling it repeatedly with the same key converges to the same final state,
  * which is what makes `markSeen` idempotent.
  */
+/** Drop `keys` from the seen list. Pure. */
+export function removeSeenKeys(list: readonly string[], keys: readonly string[]): string[] {
+  if (keys.length === 0) return list as string[]
+  const drop = new Set(keys)
+  const next = list.filter((k) => !drop.has(k))
+  return next.length === list.length ? (list as string[]) : next
+}
+
 export function appendSeenKey(list: readonly string[], key: string, cap = SEEN_CAP): string[] {
   const withoutKey = list.filter((k) => k !== key)
   const next = [...withoutKey, key]
@@ -123,20 +133,38 @@ export function useSeenSet(): SeenSet {
 
   const isSeen = useCallback((key: string) => isSeenKey(seen, key), [seen])
 
-  const markSeen = useCallback((key: string) => {
-    setSeen((prev) => {
-      if (isSeenKey(prev, key)) return prev
-      const next = appendSeenKey(prev, key)
-      if (typeof window !== 'undefined') {
-        try {
-          window.localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(next))
-        } catch {
-          // ignore — a failed write just means this item re-shows next visit
-        }
-      }
-      return next
-    })
+  const persistSeen = useCallback((next: string[]) => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(next))
+    } catch {
+      // ignore — a failed write just means this item re-shows next visit
+    }
   }, [])
 
-  return { ready, isSeen, markSeen, lastVisitAt, seenOnEntry }
+  const markSeen = useCallback(
+    (key: string) => {
+      setSeen((prev) => {
+        if (isSeenKey(prev, key)) return prev
+        const next = appendSeenKey(prev, key)
+        persistSeen(next)
+        return next
+      })
+    },
+    [persistSeen],
+  )
+
+  const unmarkSeen = useCallback(
+    (keys: readonly string[]) => {
+      setSeen((prev) => {
+        const next = removeSeenKeys(prev, keys)
+        if (next === prev) return prev
+        persistSeen(next)
+        return next
+      })
+    },
+    [persistSeen],
+  )
+
+  return { ready, isSeen, markSeen, unmarkSeen, lastVisitAt, seenOnEntry }
 }

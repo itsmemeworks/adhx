@@ -3,8 +3,8 @@
  *
  * Cross-window / tweet-added adds vs Live + Saved queues, type filters,
  * and repeat. A second screen's save must: stay on the playing post,
- * land under New since you opened on Live, reset a hiding filter, and
- * never leave the stage on "Nothing playing".
+ * land as Next on Live (or play immediately if caught up), reset a
+ * hiding filter, and never leave the stage on "Nothing playing".
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
@@ -172,7 +172,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     }) as never
   })
 
-  it('Live: a mid-play add grows leftover without moving the current post', async () => {
+  it('Live: a mid-play add grows the queue without moving the current post', async () => {
     await act(async () => {
       render(
         <TheaterShell
@@ -219,6 +219,35 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(screen.getByTestId('stage')).toHaveAttribute('data-item-key', theaterItemKey(video))
   })
 
+  it('Live: All → Text with no text keeps the current post, and All restores it', async () => {
+    const video = videoItem('v1')
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([video, videoItem('v2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[videoFeedItem('v1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().currentKey).toBe(theaterItemKey(video))
+
+    await tapType('text')
+    expect(chromeProps().queueTypes).toEqual(['text'])
+    expect(chromeProps().currentKey).toBe(theaterItemKey(video))
+    expect(screen.queryByText('Nothing playing')).not.toBeInTheDocument()
+    expect(screen.getByText('No text in Live right now')).toBeInTheDocument()
+
+    await tapType('text')
+    expect(chromeProps().queueTypes).toEqual([])
+    expect(chromeProps().currentKey).toBe(theaterItemKey(video))
+    expect(screen.queryByText('Nothing playing')).not.toBeInTheDocument()
+    expect(screen.queryByText('No text in Live right now')).not.toBeInTheDocument()
+    expect(screen.getByTestId('stage')).toHaveAttribute('data-item-key', theaterItemKey(video))
+  })
+
   it('Live: Videos while every video is watched goes to caught-up, not a blank stage', async () => {
     const videos = [videoItem('v1'), videoItem('v2')]
     window.localStorage.setItem('adhx-seen-v1', JSON.stringify(videos.map(theaterItemKey)))
@@ -260,7 +289,8 @@ describe('TheaterShell: cross-tab add + filters', () => {
 
     expect(chromeProps().queueTypes).toEqual([])
     expect(chromeProps().currentKey).toBe(current)
-    expect(queueIds()[0]).toBe('99')
+    expect(queueIds()[0]).toBe('v1')
+    expect(queueIds()[1]).toBe('99')
     expect(chromeProps().freshKeys.has('twitter:99')).toBe(true)
   })
 
@@ -283,7 +313,8 @@ describe('TheaterShell: cross-tab add + filters', () => {
 
     expect(chromeProps().queueTypes).toEqual(['video'])
     expect(chromeProps().currentKey).toBe(theaterItemKey(video))
-    expect(queueIds()[0]).toBe('77')
+    expect(queueIds()[0]).toBe('v1')
+    expect(queueIds()[1]).toBe('77')
   })
 
   it('Live: tweet-added matching video leaves caught-up and stages the arrival', async () => {
@@ -404,6 +435,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
 
     expect(chromeProps().queueTypes).toEqual([])
     expect(queueIds()[0]).toBe('99')
+    expect(queueIds()[1]).toBe('1')
     expect(chromeProps().currentKey).toBe('twitter:1')
   })
 
@@ -497,9 +529,9 @@ describe('TheaterShell: cross-tab add + filters', () => {
 
     expect(chromeProps().repeatMode).toBe('off')
     expect(chromeProps().currentKey).toBe('twitter:1')
-    expect(queueIds()[0]).toBe('99')
-    // Same post, now second in the list — Play once is 2 of 3, not 1 of 3.
-    expect(chromeProps().queuePlayed).toBe(2)
+    expect(queueIds()[0]).toBe('1')
+    expect(queueIds()[1]).toBe('99')
+    expect(chromeProps().queuePlayed).toBe(0)
     expect(chromeProps().queueToPlay).toBe(3)
     expect(chromeProps().queueLooping).toBe(false)
   })
@@ -639,7 +671,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().currentKey).toBe('twitter:99')
     expect(queueIds()[0]).toBe('99')
     expect(chromeProps().repeatMode).toBe('off')
-    expect(chromeProps().queuePlayed).toBe(1)
-    expect(chromeProps().queueToPlay).toBe(2)
+    expect(chromeProps().queuePlayed).toBe(0)
+    expect(chromeProps().queueToPlay).toBe(1)
   })
 })

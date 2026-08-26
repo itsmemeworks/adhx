@@ -8,7 +8,7 @@ import { theaterItemKey, type TheaterItem, type TheaterMode } from './types'
  * one decides whether the shared post REPEATS instead of auto-advancing
  * into the live pulse. Starts on in shared mode for signed-out visitors
  * (unless the lead is unavailable). Signed-in previews skip the pin —
- * the opened post leads a leftover Live run of everything still unseen.
+ * the opened post leads the unseen Live run.
  * Only a deliberate next/prev/select clears it when it is on.
  */
 export function useSharedPin(
