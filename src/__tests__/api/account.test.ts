@@ -267,6 +267,22 @@ describe('API: /api/account', () => {
         createdAt: new Date().toISOString(),
       },
     ])
+    await testInstance.db.insert(schema.collectionAggregates).values([
+      {
+        ownerUserId: USER_A,
+        tag: 'owned-by-a',
+        viewCount: 1,
+        cloneCount: 0,
+        lastEventAt: new Date().toISOString(),
+      },
+      {
+        ownerUserId: USER_B,
+        tag: 'viewed-by-a',
+        viewCount: 1,
+        cloneCount: 0,
+        lastEventAt: new Date().toISOString(),
+      },
+    ])
     await testInstance.db.insert(schema.userBans).values({
       userId: USER_A,
       createdBy: USER_B,
@@ -362,6 +378,18 @@ describe('API: /api/account', () => {
         .from(schema.collectionEvents)
         .where(eq(schema.collectionEvents.ownerUserId, USER_A)),
     ).toHaveLength(0)
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.collectionAggregates)
+        .where(eq(schema.collectionAggregates.ownerUserId, USER_A)),
+    ).toHaveLength(0)
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.collectionAggregates)
+        .where(eq(schema.collectionAggregates.ownerUserId, USER_B)),
+    ).toHaveLength(1)
     expect(
       await testInstance.db
         .select()

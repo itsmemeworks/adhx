@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  fetchWithAllowlistedRedirects,
   isAllowedHlsUrl,
   isAllowedTwitterMediaUrl,
   makeHostAllowlist,
@@ -124,5 +125,53 @@ describe('buildAllowlistedUrl', () => {
     expect(buildAllowlistedUrl('https://a.b.twimg.com/foo.mp4', ['.twimg.com'])).toBe(
       'https://a.b.twimg.com/foo.mp4',
     )
+  })
+})
+
+describe('fetchWithAllowlistedRedirects', () => {
+  it('caps redirect hops without fetching beyond the allowlist', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(null, { status: 302, headers: { location: '/next/video.mp4' } }),
+      )
+
+    try {
+      await expect(
+        fetchWithAllowlistedRedirects('https://video.twimg.com/start/video.mp4', {
+          hosts: ['video.twimg.com'],
+          timeoutMs: 1_000,
+          maxRedirects: 2,
+        }),
+      ).rejects.toThrow(/hop limit/i)
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+      expect(
+        fetchSpy.mock.calls.every(([url]) => new URL(String(url)).hostname === 'video.twimg.com'),
+      ).toBe(true)
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('rejects and cancels an unexpected off-allowlist final response URL', async () => {
+    const cancel = vi.fn()
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      status: 200,
+      url: 'https://evil.example/video.mp4',
+      headers: new Headers(),
+      body: { cancel },
+    } as unknown as Response)
+
+    try {
+      await expect(
+        fetchWithAllowlistedRedirects('https://video.twimg.com/start/video.mp4', {
+          hosts: ['video.twimg.com'],
+          timeoutMs: 1_000,
+        }),
+      ).rejects.toThrow(/final media response URL/i)
+      expect(cancel).toHaveBeenCalledOnce()
+    } finally {
+      fetchSpy.mockRestore()
+    }
   })
 })

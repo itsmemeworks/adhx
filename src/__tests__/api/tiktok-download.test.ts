@@ -9,6 +9,7 @@ import { NextRequest } from 'next/server'
  */
 
 const mockFetchTikTokMetadata = vi.fn()
+const mockDownloadRateLimit = vi.fn()
 
 vi.mock('@/lib/media/tnktok', async () => {
   const actual = await vi.importActual<typeof import('@/lib/media/tnktok')>('@/lib/media/tnktok')
@@ -16,6 +17,11 @@ vi.mock('@/lib/media/tnktok', async () => {
     ...actual,
     fetchTikTokMetadata: mockFetchTikTokMetadata,
   }
+})
+
+vi.mock('@/lib/rate-limit', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/rate-limit')>('@/lib/rate-limit')
+  return { ...actual, downloadRateLimit: mockDownloadRateLimit }
 })
 
 const mockFetch = vi.fn()
@@ -35,6 +41,8 @@ describe('API: /api/media/tiktok/video/download', () => {
   beforeEach(() => {
     mockFetchTikTokMetadata.mockReset()
     mockFetch.mockReset()
+    mockDownloadRateLimit.mockReset()
+    mockDownloadRateLimit.mockReturnValue(null)
     vi.resetModules()
   })
 
@@ -65,6 +73,16 @@ describe('API: /api/media/tiktok/video/download', () => {
   })
 
   describe('Metadata resolution', () => {
+    it('rate-limits before resolving metadata', async () => {
+      mockDownloadRateLimit.mockReturnValueOnce(new Response(null, { status: 429 }))
+      const { GET } = await import('@/app/api/media/tiktok/video/download/route')
+      const response = await GET(createRequest({ username: HANDLE, id: VIDEO_ID }))
+
+      expect(response.status).toBe(429)
+      expect(mockFetchTikTokMetadata).not.toHaveBeenCalled()
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
     it('returns 404 when the TikTok cannot be resolved', async () => {
       mockFetchTikTokMetadata.mockResolvedValueOnce(null)
       const { GET } = await import('@/app/api/media/tiktok/video/download/route')
@@ -129,6 +147,22 @@ describe('API: /api/media/tiktok/video/download', () => {
       const { GET } = await import('@/app/api/media/tiktok/video/download/route')
       const response = await GET(createRequest({ username: HANDLE, id: VIDEO_ID }))
       expect(response.status).toBe(502)
+    })
+
+    it('rejects a redirect from the trusted mirror to an untrusted host', async () => {
+      mockFetchTikTokMetadata.mockResolvedValueOnce({ videoUrl: VIDEO_URL })
+      mockFetch.mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://evil.example/video.mp4' },
+        }),
+      )
+
+      const { GET } = await import('@/app/api/media/tiktok/video/download/route')
+      const response = await GET(createRequest({ username: HANDLE, id: VIDEO_ID }))
+
+      expect(response.status).toBe(502)
+      expect(mockFetch).toHaveBeenCalledOnce()
     })
   })
 })

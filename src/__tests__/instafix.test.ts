@@ -1,10 +1,32 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-// `fetchReelMetadata` is wrapped in Next's `unstable_cache`, which throws
-// "incrementalCache missing" outside a Next request context. In unit tests we
-// want the bare implementation, so make `unstable_cache` a pass-through.
+// Model unstable_cache closely enough to exercise negative caching: fulfilled
+// values (including null) are serialized and reused, while rejected callbacks
+// leave no entry and must execute again.
+const cacheHarness = vi.hoisted(() => {
+  const entries = new Map<string, string>()
+
+  return {
+    clear: () => entries.clear(),
+    unstableCache:
+      <A extends unknown[], R>(
+        fn: (...args: A) => Promise<R>,
+        keyParts: string[] = [],
+      ): ((...args: A) => Promise<R>) =>
+      async (...args: A): Promise<R> => {
+        const key = JSON.stringify([keyParts, args])
+        const cached = entries.get(key)
+        if (cached !== undefined) return JSON.parse(cached) as R
+
+        const value = await fn(...args)
+        entries.set(key, JSON.stringify(value))
+        return value
+      },
+  }
+})
+
 vi.mock('next/cache', () => ({
-  unstable_cache: <A extends unknown[], R>(fn: (...args: A) => R) => fn,
+  unstable_cache: cacheHarness.unstableCache,
 }))
 
 import { fetchReelMetadata, isAllowedImageUrl, isValidReelId } from '@/lib/media/instafix'
@@ -36,6 +58,15 @@ function notFoundResponse() {
   return {
     ok: false,
     status: 404,
+    headers: new Headers({ 'content-type': 'text/html' }),
+    body: null,
+  }
+}
+
+function errorResponse(status: number) {
+  return {
+    ok: false,
+    status,
     headers: new Headers({ 'content-type': 'text/html' }),
     body: null,
   }
@@ -90,7 +121,10 @@ describe('isValidReelId', () => {
 })
 
 describe('fetchReelMetadata (Instagram-direct, no video)', () => {
-  beforeEach(() => mockFetch.mockReset())
+  beforeEach(() => {
+    mockFetch.mockReset()
+    cacheHarness.clear()
+  })
 
   it('returns null for invalid ids without hitting the network', async () => {
     expect(await fetchReelMetadata('../etc')).toBeNull()
@@ -109,6 +143,7 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
       author: '@pennylaneisthename',
       authorName: 'Penny Lane',
     })
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toEqual(result)
     // Hits instagram.com directly on the /reel/ path first.
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(mockFetch.mock.calls[0][0]).toBe('https://www.instagram.com/reel/Cwnj8o6pKbn/')
@@ -152,11 +187,58 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
   })
 
   it('survives network errors and returns null', async () => {
-    // Both paths (/reel/ then /p/) reject; each is caught and yields null.
+    // Both paths (/reel/ then /p/) reject; the public wrapper preserves null.
     mockFetch
       .mockRejectedValueOnce(new Error('ECONNREFUSED'))
       .mockRejectedValueOnce(new Error('ECONNREFUSED'))
     expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
+  })
+
+  it('does not cache a 503 and refetches successfully', async () => {
+    mockFetch
+      .mockResolvedValueOnce(errorResponse(503))
+      .mockResolvedValueOnce(notFoundResponse())
+      .mockResolvedValueOnce(htmlResponse(validHtml))
+
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toEqual(
+      expect.objectContaining({ imageUrl: CDN_IMAGE }),
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not cache a timeout and refetches successfully', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'))
+      .mockResolvedValueOnce(notFoundResponse())
+      .mockResolvedValueOnce(htmlResponse(validHtml))
+
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toEqual(
+      expect.objectContaining({ imageUrl: CDN_IMAGE }),
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not cache an unparseable 200 response', async () => {
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse('<html><head></head></html>'))
+      .mockResolvedValueOnce(notFoundResponse())
+      .mockResolvedValueOnce(htmlResponse(validHtml))
+
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toEqual(
+      expect.objectContaining({ imageUrl: CDN_IMAGE }),
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('caches a confirmed miss after both Instagram paths return 404', async () => {
+    mockFetch.mockResolvedValueOnce(notFoundResponse()).mockResolvedValueOnce(notFoundResponse())
+
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
+    expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
+    expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
   it('decodes HTML entities in the caption', async () => {

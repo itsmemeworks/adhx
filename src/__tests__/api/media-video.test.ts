@@ -359,6 +359,26 @@ describe('API: /api/media/video', () => {
 
       expect(response.status).toBe(500)
     })
+
+    it('refuses an off-allowlist redirect from the Twitter video CDN', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockVideoResponse),
+        })
+        .mockResolvedValueOnce(
+          new Response(null, {
+            status: 302,
+            headers: { location: 'https://evil.example/video.mp4' },
+          }),
+        )
+
+      const { GET } = await import('@/app/api/media/video/route')
+      const response = await GET(createRequest({ author: 'redirectuser', tweetId: '987654321' }))
+
+      expect(response.status).toBe(502)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('Gone tweet (deleted/private/suspended)', () => {

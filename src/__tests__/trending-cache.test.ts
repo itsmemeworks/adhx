@@ -76,7 +76,7 @@ describe('getTrendingItems cache', () => {
     expect(fromSecondDb.items[0].bookmarkId).toBe('b')
   })
 
-  it('respects a distinct cache key per (platform, limit, minTrend) combination', async () => {
+  it('keeps platform-filtered canonical windows distinct', async () => {
     seedActivity({ bookmarkId: 'tw', platform: 'twitter', createdAt: '2026-06-06T10:00:00Z' })
     seedActivity({
       bookmarkId: 'tk',
@@ -92,5 +92,38 @@ describe('getTrendingItems cache', () => {
     expect(all.items.length).toBe(2)
     expect(twitterOnly.items.length).toBe(1)
     expect(twitterOnly.items[0].platform).toBe('twitter')
+  })
+
+  it('applies minTrend to the canonical window before pagination', async () => {
+    seedActivity({
+      bookmarkId: 'hot',
+      action: 'preview',
+      createdAt: '2026-06-06T10:00:00Z',
+    })
+    seedActivity({
+      bookmarkId: 'cold',
+      action: 'save',
+      createdAt: '2026-06-06T11:00:00Z',
+    })
+
+    const result = await getTrendingItems({ minTrend: 1, limit: 1 })
+
+    expect(result.items.map((item) => item.bookmarkId)).toEqual(['hot'])
+    expect(result.hasMore).toBe(false)
+  })
+
+  it('reuses one canonical cache window across limit and offset combinations', async () => {
+    seedActivity({ bookmarkId: 'old', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'new', createdAt: '2026-06-06T11:00:00Z' })
+
+    expect((await getTrendingItems({ limit: 1 })).items[0].bookmarkId).toBe('new')
+
+    // A separately-keyed offset query would see this newly inserted row and
+    // return "new" at offset 1. The canonical cached window remains
+    // ["new", "old"], so offset 1 deterministically returns "old".
+    seedActivity({ bookmarkId: 'newest', createdAt: '2026-06-06T12:00:00Z' })
+    const secondPage = await getTrendingItems({ limit: 1, offset: 1 })
+
+    expect(secondPage.items.map((item) => item.bookmarkId)).toEqual(['old'])
   })
 })

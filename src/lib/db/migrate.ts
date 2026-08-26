@@ -445,7 +445,7 @@ try {
   console.log('[migrate] Warning: failed to create username_aliases table', error)
 }
 
-// collection_events — append-only event log behind Discovery leaderboards
+// collection_events — retained raw detail behind Discovery leaderboards
 // (docs/specs/discovery-leaderboards.md §3). Guarded CREATE TABLE IF NOT
 // EXISTS, same pattern as the accounts tables above.
 try {
@@ -465,6 +465,72 @@ try {
   console.log('[migrate] Ensured collection_events table')
 } catch (error) {
   console.log('[migrate] Warning: failed to create collection_events table', error)
+}
+
+// collection_aggregates is the durable all-time rollup for playlist events.
+// The first migration transaction recomputes it from the complete legacy log,
+// marks the backfill settled, and only then prunes raw detail. A crash rolls
+// back all three operations, so restart can safely recompute without double
+// counting or losing history. Later boots retain 90 days of raw detail for
+// finite windows/dedupe while all-time reads use this table.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS collection_aggregates (
+      owner_user_id TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      view_count INTEGER NOT NULL DEFAULT 0,
+      clone_count INTEGER NOT NULL DEFAULT 0,
+      last_event_at TEXT,
+      hidden INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (owner_user_id, tag)
+    );
+    CREATE INDEX IF NOT EXISTS collection_aggregates_visibility_recency_idx
+      ON collection_aggregates(hidden, last_event_at);
+  `)
+
+  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const backfillKey = 'collection_aggregates_backfilled_v1'
+  let pruned = 0
+
+  if (!isSettled(backfillKey)) {
+    db.transaction(() => {
+      db.exec('DELETE FROM collection_aggregates')
+      db.exec(`
+        INSERT INTO collection_aggregates (
+          owner_user_id,
+          tag,
+          view_count,
+          clone_count,
+          last_event_at,
+          hidden
+        )
+        SELECT
+          owner_user_id,
+          tag,
+          SUM(CASE WHEN action = 'view' THEN 1 ELSE 0 END),
+          SUM(CASE WHEN action = 'clone' THEN 1 ELSE 0 END),
+          MAX(created_at),
+          MAX(hidden)
+        FROM collection_events
+        WHERE action IN ('view', 'clone')
+        GROUP BY owner_user_id, tag
+      `)
+      markSettled(backfillKey)
+      pruned = db.prepare('DELETE FROM collection_events WHERE created_at < ?').run(cutoff).changes
+    })()
+    console.log('[migrate] Backfilled collection_aggregates from collection_events')
+  } else {
+    pruned = db.prepare('DELETE FROM collection_events WHERE created_at < ?').run(cutoff).changes
+  }
+
+  if (pruned > 0) {
+    console.log(`[migrate] Pruned ${pruned} collection_events rows older than 90 days`)
+  }
+  console.log('[migrate] Ensured collection_aggregates table')
+} catch (error) {
+  console.log('[migrate] FAILED collection aggregate backfill/pruning', error)
+  db.close()
+  process.exit(1)
 }
 
 // analytics_events — private growth log (see src/lib/analytics/record.ts).

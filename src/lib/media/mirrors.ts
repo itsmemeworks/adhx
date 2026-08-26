@@ -10,7 +10,6 @@
  */
 
 import { makeHostAllowlist } from '@/lib/media/proxy'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 export interface VideoMirror {
   /** Identifier, for logs. */
@@ -150,6 +149,150 @@ export function isRetryableStatus(status: number, mirror: VideoMirror): boolean 
 }
 
 const STREAM_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+const INSTAGRAM_RESOLVE_TIMEOUT_MS = 50_000
+const MIRROR_ATTEMPT_TIMEOUT_MS = 30_000
+const MAX_MIRROR_REDIRECTS = 5
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+
+class UnsafeMirrorRedirectError extends Error {}
+
+function cancelResponseBody(response: Response): void {
+  try {
+    const cancellation = response.body?.cancel()
+    if (cancellation) void cancellation.catch(() => undefined)
+  } catch {
+    // The stream may already be locked/cancelled; there is nothing else to release.
+  }
+}
+
+function abortReason(signal: AbortSignal): unknown {
+  return signal.reason ?? new DOMException('The operation was aborted', 'AbortError')
+}
+
+/** Abortable backoff with listener/timer cleanup on every settlement path. */
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(abortReason(signal))
+
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', onAbort)
+      reject(abortReason(signal))
+    }
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
+function retainTimeoutThroughBody(response: Response, cleanup: () => void): Response {
+  if (!response.body) {
+    cleanup()
+    return response
+  }
+
+  const reader = response.body.getReader()
+  let finalized = false
+  const finalize = () => {
+    if (finalized) return
+    finalized = true
+    reader.releaseLock()
+    cleanup()
+  }
+
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read()
+        if (done) {
+          finalize()
+          controller.close()
+        } else {
+          controller.enqueue(value)
+        }
+      } catch (error) {
+        finalize()
+        controller.error(error)
+      }
+    },
+    async cancel(reason) {
+      try {
+        await reader.cancel(reason)
+      } finally {
+        finalize()
+      }
+    },
+  })
+
+  return new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  })
+}
+
+async function fetchMirrorAttempt(
+  initialUrl: string,
+  timeoutMs: number,
+  signal: AbortSignal,
+  range?: string | null,
+): Promise<Response> {
+  const timeoutController = new AbortController()
+  const timeoutId = setTimeout(
+    () =>
+      timeoutController.abort(
+        new DOMException(`Mirror attempt timed out after ${timeoutMs}ms`, 'TimeoutError'),
+      ),
+    timeoutMs,
+  )
+  const attemptSignal = AbortSignal.any([signal, timeoutController.signal])
+  let timeoutHandedToBody = false
+
+  try {
+    let currentUrl = initialUrl
+
+    for (let redirects = 0; ; redirects++) {
+      if (!isAllowedInstagramMirrorUrl(currentUrl)) {
+        throw new UnsafeMirrorRedirectError(`Disallowed Instagram mirror URL: ${currentUrl}`)
+      }
+
+      const response = await fetch(currentUrl, {
+        redirect: 'manual',
+        headers: {
+          'User-Agent': STREAM_UA,
+          ...(range ? { Range: range } : {}),
+        },
+        signal: attemptSignal,
+      })
+
+      if (!REDIRECT_STATUSES.has(response.status)) {
+        timeoutHandedToBody = true
+        return retainTimeoutThroughBody(response, () => clearTimeout(timeoutId))
+      }
+
+      const location = response.headers.get('location')
+      if (!location) {
+        timeoutHandedToBody = true
+        return retainTimeoutThroughBody(response, () => clearTimeout(timeoutId))
+      }
+
+      cancelResponseBody(response)
+      if (redirects >= MAX_MIRROR_REDIRECTS) {
+        throw new UnsafeMirrorRedirectError('Instagram mirror exceeded redirect limit')
+      }
+
+      const nextUrl = new URL(location, currentUrl).toString()
+      if (!isAllowedInstagramMirrorUrl(nextUrl)) {
+        throw new UnsafeMirrorRedirectError(`Disallowed Instagram mirror redirect: ${nextUrl}`)
+      }
+      currentUrl = nextUrl
+    }
+  } finally {
+    if (!timeoutHandedToBody) clearTimeout(timeoutId)
+  }
+}
 
 /**
  * Resolve a streamable Instagram video upstream `Response`, trying each mirror
@@ -168,37 +311,86 @@ const STREAM_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/5
  */
 export async function resolveInstagramVideo(
   id: string,
-  opts?: { range?: string | null; attemptsPerMirror?: number },
+  opts?: {
+    range?: string | null
+    attemptsPerMirror?: number
+    signal?: AbortSignal
+    totalTimeoutMs?: number
+    attemptTimeoutMs?: number
+  },
 ): Promise<Response | null> {
-  for (const mirror of INSTAGRAM_MIRRORS) {
-    const attempts = opts?.attemptsPerMirror ?? mirror.attempts ?? 3
-    const backoffMs = mirror.backoffMs ?? 400
-    const url = mirror.videoUrl({ id })
+  const totalTimeoutMs = opts?.totalTimeoutMs ?? INSTAGRAM_RESOLVE_TIMEOUT_MS
+  if (totalTimeoutMs <= 0) return null
+  if (opts?.signal?.aborted) throw abortReason(opts.signal)
 
-    for (let i = 0; i < attempts; i++) {
-      let retryable = true
-      try {
-        const res = await fetchWithTimeout(url, 30_000, {
-          redirect: 'follow',
-          headers: {
-            'User-Agent': STREAM_UA,
-            ...(opts?.range ? { Range: opts.range } : {}),
-          },
-        })
-        if ((res.ok || res.status === 206) && res.body) return res
-        await res.body?.cancel()
-        retryable = isRetryableStatus(res.status, mirror)
-      } catch {
-        // Network/timeout — always worth retrying.
-      }
-      // A status this mirror can't recover from won't improve with time.
-      if (!retryable) break
-      if (i < attempts - 1) {
-        await new Promise((r) => setTimeout(r, backoffMs * (i + 1)))
+  // One timer bounds redirects, attempts, and backoff together. It is cleared
+  // when resolution settles, while a caller signal remains attached to a
+  // successful response body so downstream cancellation still works.
+  const deadline = Date.now() + totalTimeoutMs
+  const deadlineController = new AbortController()
+  const deadlineId = setTimeout(
+    () =>
+      deadlineController.abort(
+        new DOMException(
+          `Instagram video resolution timed out after ${totalTimeoutMs}ms`,
+          'TimeoutError',
+        ),
+      ),
+    totalTimeoutMs,
+  )
+  const operationSignal = opts?.signal
+    ? AbortSignal.any([opts.signal, deadlineController.signal])
+    : deadlineController.signal
+
+  try {
+    for (const mirror of INSTAGRAM_MIRRORS) {
+      const attempts = opts?.attemptsPerMirror ?? mirror.attempts ?? 3
+      const backoffMs = mirror.backoffMs ?? 400
+      const url = mirror.videoUrl({ id })
+
+      for (let i = 0; i < attempts; i++) {
+        const remainingMs = deadline - Date.now()
+        if (remainingMs <= 0 || deadlineController.signal.aborted) return null
+
+        let retryable = true
+        try {
+          const attemptTimeoutMs = Math.min(
+            opts?.attemptTimeoutMs ?? MIRROR_ATTEMPT_TIMEOUT_MS,
+            remainingMs,
+          )
+          const res = await fetchMirrorAttempt(url, attemptTimeoutMs, operationSignal, opts?.range)
+          if ((res.ok || res.status === 206) && res.body) return res
+          cancelResponseBody(res)
+          retryable = isRetryableStatus(res.status, mirror)
+        } catch (error) {
+          if (opts?.signal?.aborted) throw abortReason(opts.signal)
+          if (deadlineController.signal.aborted) return null
+          // Network/per-attempt timeout is retryable. An unsafe or excessive
+          // redirect is a configuration/policy failure and must not be retried.
+          retryable = !(error instanceof UnsafeMirrorRedirectError)
+        }
+
+        // A status this mirror can't recover from won't improve with time.
+        if (!retryable) break
+        if (i < attempts - 1) {
+          const delayMs = backoffMs * (i + 1)
+          const remainingAfterAttemptMs = deadline - Date.now()
+          // A partial sleep that consumes the rest of the budget cannot lead to
+          // another attempt, so stop instead of scheduling beyond the deadline.
+          if (delayMs >= remainingAfterAttemptMs) return null
+          try {
+            await sleep(delayMs, operationSignal)
+          } catch {
+            if (opts?.signal?.aborted) throw abortReason(opts.signal)
+            return null
+          }
+        }
       }
     }
+    return null
+  } finally {
+    clearTimeout(deadlineId)
   }
-  return null
 }
 
 /** SSRF allowlist covering every configured Instagram-mirror host (+ subdomains). */

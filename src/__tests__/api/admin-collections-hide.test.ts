@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { createTestDb, USER_A, USER_B, type TestDbInstance } from './setup'
-import { collectionEvents, users, type NewCollectionEvent } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import {
+  collectionAggregates,
+  collectionEvents,
+  users,
+  type NewCollectionEvent,
+} from '@/lib/db/schema'
+import { eq, sql } from 'drizzle-orm'
 
 /**
  * POST /api/admin/collections/hide — content-level moderation lever for the
@@ -25,6 +30,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 vi.mock('@/lib/auth/session', () => ({
@@ -40,6 +48,26 @@ function seed(overrides: Partial<NewCollectionEvent> & { createdAt: string; tag:
     ...overrides,
   }
   testInstance.db.insert(collectionEvents).values(row).run()
+  testInstance.db
+    .insert(collectionAggregates)
+    .values({
+      ownerUserId: row.ownerUserId,
+      tag: row.tag,
+      viewCount: row.action === 'view' ? 1 : 0,
+      cloneCount: row.action === 'clone' ? 1 : 0,
+      lastEventAt: row.createdAt,
+      hidden: row.hidden ?? 0,
+    })
+    .onConflictDoUpdate({
+      target: [collectionAggregates.ownerUserId, collectionAggregates.tag],
+      set: {
+        viewCount: sql`${collectionAggregates.viewCount} + excluded.view_count`,
+        cloneCount: sql`${collectionAggregates.cloneCount} + excluded.clone_count`,
+        lastEventAt: sql`max(${collectionAggregates.lastEventAt}, excluded.last_event_at)`,
+        hidden: sql`max(${collectionAggregates.hidden}, excluded.hidden)`,
+      },
+    })
+    .run()
 }
 
 function createRequest(body?: object): NextRequest {
@@ -145,6 +173,9 @@ describe('POST /api/admin/collections/hide', () => {
     const otherRows = rows.filter((r) => r.tag === 'other-tag')
     expect(spamRows.every((r) => r.hidden === 1)).toBe(true)
     expect(otherRows.every((r) => r.hidden === 0)).toBe(true)
+    const aggregates = testInstance.db.select().from(collectionAggregates).all()
+    expect(aggregates.find((row) => row.tag === 'spam-tag')?.hidden).toBe(1)
+    expect(aggregates.find((row) => row.tag === 'other-tag')?.hidden).toBe(0)
   })
 
   it('defaults hidden to true when omitted from the body', async () => {
@@ -163,6 +194,31 @@ describe('POST /api/admin/collections/hide', () => {
       .where(eq(collectionEvents.tag, 'spam-2'))
       .all()
     expect(row.hidden).toBe(1)
+  })
+
+  it('persists aggregate moderation before a playlist has any events', async () => {
+    process.env.ADMIN_USERNAMES = 'admin-user'
+    mockUserId = USER_A
+
+    const res = await POST(createRequest({ username: 'curator-user', tag: 'quiet-playlist' }))
+    expect(res.status).toBe(200)
+    expect(testInstance.db.select().from(collectionEvents).all()).toHaveLength(0)
+    expect(
+      testInstance.db
+        .select()
+        .from(collectionAggregates)
+        .where(eq(collectionAggregates.tag, 'quiet-playlist'))
+        .all()[0],
+    ).toEqual(
+      expect.objectContaining({
+        ownerUserId: USER_B,
+        tag: 'quiet-playlist',
+        viewCount: 0,
+        cloneCount: 0,
+        lastEventAt: null,
+        hidden: 1,
+      }),
+    )
   })
 
   it('unhides a previously hidden collection via hidden: false', async () => {
@@ -184,6 +240,42 @@ describe('POST /api/admin/collections/hide', () => {
       .where(eq(collectionEvents.tag, 'reinstated'))
       .all()
     expect(row.hidden).toBe(0)
+    const [aggregate] = testInstance.db
+      .select()
+      .from(collectionAggregates)
+      .where(eq(collectionAggregates.tag, 'reinstated'))
+      .all()
+    expect(aggregate.hidden).toBe(0)
+  })
+
+  it('rolls raw and aggregate visibility back when the audit write fails', async () => {
+    process.env.ADMIN_USERNAMES = 'admin-user'
+    mockUserId = USER_A
+    seed({ tag: 'atomic-hide', createdAt: '2026-06-06T10:00:00Z' })
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_playlist_audit
+      BEFORE INSERT ON admin_audit
+      BEGIN
+        SELECT RAISE(ABORT, 'injected audit failure');
+      END;
+    `)
+
+    const res = await POST(createRequest({ username: 'curator-user', tag: 'atomic-hide' }))
+    expect(res.status).toBe(500)
+    expect(
+      testInstance.db
+        .select()
+        .from(collectionEvents)
+        .where(eq(collectionEvents.tag, 'atomic-hide'))
+        .all()[0].hidden,
+    ).toBe(0)
+    expect(
+      testInstance.db
+        .select()
+        .from(collectionAggregates)
+        .where(eq(collectionAggregates.tag, 'atomic-hide'))
+        .all()[0].hidden,
+    ).toBe(0)
   })
 
   it('does not affect the same tag owned by a different user', async () => {

@@ -16,6 +16,7 @@ import {
   loginTokens,
   activity,
   analyticsEvents,
+  collectionAggregates,
   collectionEvents,
   userBans,
 } from '@/lib/db/schema'
@@ -35,9 +36,9 @@ import { clearSessionCookie } from '@/lib/auth/session'
  * used as a live account or auth identity.
  *
  * Historical activity/analytics rows survive, but their nullable private
- * user/viewer IDs are anonymized. Playlist events owned by this account and a
- * ban targeting it are removed because those records cannot outlive the
- * account they describe.
+ * user/viewer IDs are anonymized. Playlist events and durable aggregates owned
+ * by this account, plus a ban targeting it, are removed because those records
+ * cannot outlive the account they describe.
  *
  * This is a destructive, irreversible operation.
  */
@@ -113,6 +114,7 @@ export const DELETE = withAuth(async (_req, userId) => {
       // 17. Owner-keyed playlist events and a ban targeting this account have
       // no valid meaning once the account itself is gone.
       db.delete(collectionEvents).where(eq(collectionEvents.ownerUserId, userId)).run()
+      db.delete(collectionAggregates).where(eq(collectionAggregates.ownerUserId, userId)).run()
       db.delete(userBans).where(eq(userBans.userId, userId)).run()
 
       // 18. Delete the account itself. Database triggers installed by

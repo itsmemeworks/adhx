@@ -183,6 +183,18 @@ export const FULL_SCHEMA_SQL = `
   CREATE INDEX collection_events_collection_idx ON collection_events(owner_user_id, tag, created_at);
   CREATE INDEX collection_events_created_at_idx ON collection_events(created_at);
 
+  CREATE TABLE collection_aggregates (
+    owner_user_id TEXT NOT NULL,
+    tag TEXT NOT NULL,
+    view_count INTEGER NOT NULL DEFAULT 0,
+    clone_count INTEGER NOT NULL DEFAULT 0,
+    last_event_at TEXT,
+    hidden INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (owner_user_id, tag)
+  );
+  CREATE INDEX collection_aggregates_visibility_recency_idx
+    ON collection_aggregates(hidden, last_event_at);
+
   CREATE TABLE analytics_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,

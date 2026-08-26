@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — Public resource use bounded
+
+Public media now validates every redirect hop, bounds playlist/metadata reads, byte-limits chunked HLS streams, keeps body deadlines active, and separates preview/download/read rate budgets. Mirror retries have one 50s deadline; transient IG/TikTok metadata failures no longer become one-hour misses. Public query caches are hard-capped TTL/LRU windows with bounded trending pagination. Playlist events roll into durable viewer-free all-time aggregates atomically, retain 90 days of raw detail, and remain consistent through moderation/account deletion. Full tests, typecheck, formatting, and three integrated review passes are green.
+
 ## 2026-08-26 — Deterministic containers and atomic migrations
 
 Docker now uses Corepack-pinned pnpm 9.15.9, the frozen lockfile, pruned production dependencies, and project-local `tsx`; CI builds and boots the real non-root runner, exercises native SQLite/migrations, and probes health. Drizzle SQL plus its journal row now commit atomically with foreign-key restoration. The legacy 0003 rebuild detects partial damage, safely replays its earliest crash point, and adopts a strict completed-but-unjournaled schema fingerprint without data replay. Focused tests/typecheck/review are green; the real image smoke runs in CI because local Docker is unavailable.

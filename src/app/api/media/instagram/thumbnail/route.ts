@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
 import { fetchReelMetadata, isAllowedImageUrl, isValidReelId } from '@/lib/media/instafix'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import { fetchWithAllowlistedRedirects, isUntrustedMediaRedirectError } from '@/lib/media/proxy'
+
+const INSTAGRAM_THUMBNAIL_HOSTS = [
+  'cdninstagram.com',
+  '.cdninstagram.com',
+  'fbcdn.net',
+  '.fbcdn.net',
+]
 
 /**
  * Instagram Reel thumbnail proxy.
@@ -56,15 +63,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Untrusted thumbnail source' }, { status: 403 })
     }
 
-    const imageResponse = await fetchWithTimeout(cdnUrl, 10_000, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        Referer: 'https://www.instagram.com/',
+    const imageResponse = await fetchWithAllowlistedRedirects(cdnUrl, {
+      hosts: INSTAGRAM_THUMBNAIL_HOSTS,
+      timeoutMs: 10_000,
+      init: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          Referer: 'https://www.instagram.com/',
+        },
       },
     })
 
     if (!imageResponse.ok || !imageResponse.body) {
+      await imageResponse.body?.cancel()
       // The signed URL may have expired between resolve and fetch — drop the
       // cache entry so the next request re-resolves.
       thumbnailUrlCache.delete(id)
@@ -78,6 +89,10 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    if (isUntrustedMediaRedirectError(error)) {
+      thumbnailUrlCache.delete(id)
+      return NextResponse.json({ error: 'Untrusted thumbnail redirect' }, { status: 502 })
+    }
     console.error('Instagram thumbnail proxy error:', error)
     captureException(error, { endpoint: '/api/media/instagram/thumbnail', id })
     return NextResponse.json({ error: 'Thumbnail proxy failed' }, { status: 500 })

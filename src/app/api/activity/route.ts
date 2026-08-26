@@ -1,5 +1,6 @@
 import { ok } from '@/lib/api/response'
 import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
+import { publicReadRateLimit } from '@/lib/rate-limit'
 
 /**
  * GET /api/activity — the public, anonymous pulse for the landing + Discover.
@@ -21,16 +22,20 @@ import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request?: Request) {
+  if (request) {
+    const limited = publicReadRateLimit(request)
+    if (limited) return limited
+  }
+
   try {
     const offsetParam = request ? new URL(request.url).searchParams.get('offset') : null
     const parsedOffset = offsetParam ? parseInt(offsetParam, 10) : 0
     const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0
 
-    // FETCH 80 → dedup → LIMIT 30, no platform filter, and only the last
-    // LIVE_WINDOW_HOURS: this endpoint IS the theater's live feed, which is
-    // defined as the last 24 hours of community activity. The window must
-    // match the server seed (`getTheaterFeed`) or the first poll would append
-    // out-of-window posts the seed deliberately left out.
+    // Slice the bounded canonical trending window at LIMIT 30, with no platform
+    // filter and only the last LIVE_WINDOW_HOURS. This endpoint IS the
+    // theater's live feed, whose window must match `getTheaterFeed` or the
+    // first poll would append out-of-window posts the seed deliberately omitted.
     const { items, savedToday, recentActivity, hasMore } = await getTrendingItems({
       offset,
       withinHours: LIVE_WINDOW_HOURS,

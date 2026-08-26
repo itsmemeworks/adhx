@@ -67,6 +67,19 @@ describe('getPublicProfile', () => {
     expect(result.status).toBe('not_found')
   })
 
+  it('does not cache not-found profiles', async () => {
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('not_found')
+    await seedOwnerViaUsersTable()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'just-published',
+      shareCode: 'code-new',
+      isPublic: true,
+    })
+
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('ok')
+  })
+
   it('returns not_found when the user exists but has zero public collections', async () => {
     await seedOwnerViaUsersTable()
     await testInstance.db.insert(tagShares).values({

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   getVideoUrl,
   getPhotoUrl,
@@ -20,6 +20,10 @@ describe('fetchTweetData', () => {
   beforeEach(() => {
     mockFetch.mockReset()
     global.fetch = mockFetch as unknown as typeof fetch
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   /**
@@ -75,6 +79,46 @@ describe('fetchTweetData', () => {
     expect(calledUrl).toBe('http://127.0.0.1:3998/testuser/status/1234567890')
     if (prev === undefined) delete process.env.FXTWITTER_API_BASE
     else process.env.FXTWITTER_API_BASE = prev
+  })
+
+  it('aborts a slow JSON body within the whole-operation timeout', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    mockFetch.mockImplementationOnce(async (_url: string, init?: RequestInit) => {
+      const signal = init?.signal
+      if (!signal) throw new Error('expected request signal')
+
+      return {
+        ok: true,
+        json: () =>
+          new Promise((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+          }),
+      }
+    })
+
+    const pending = fetchTweetData('testuser', '123', { timeoutMs: 50 })
+    await vi.advanceTimersByTimeAsync(49)
+    expect(vi.getTimerCount()).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(1)
+    await expect(pending).resolves.toBeNull()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('cleans up its timeout after successful body parsing', async () => {
+    vi.useFakeTimers()
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ code: 200, message: 'ok' }),
+    })
+
+    await expect(fetchTweetData('testuser', '123', { timeoutMs: 5000 })).resolves.toEqual({
+      code: 200,
+      message: 'ok',
+    })
+    expect(vi.getTimerCount()).toBe(0)
   })
 })
 

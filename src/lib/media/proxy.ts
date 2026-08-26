@@ -95,6 +95,207 @@ export function buildAllowlistedUrl(input: string, hosts: string[]): string | nu
   return null
 }
 
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+
+export class UntrustedMediaRedirectError extends Error {
+  constructor(message = 'Media redirect left the trusted host allowlist') {
+    super(message)
+    this.name = 'UntrustedMediaRedirectError'
+  }
+}
+
+export class MediaResponseTooLargeError extends Error {
+  readonly maxBytes: number
+
+  constructor(maxBytes: number) {
+    super(`Media response exceeded ${maxBytes} bytes`)
+    this.name = 'MediaResponseTooLargeError'
+    this.maxBytes = maxBytes
+  }
+}
+
+export function isUntrustedMediaRedirectError(
+  error: unknown,
+): error is UntrustedMediaRedirectError {
+  return error instanceof UntrustedMediaRedirectError
+}
+
+export function isMediaResponseTooLargeError(error: unknown): error is MediaResponseTooLargeError {
+  return error instanceof MediaResponseTooLargeError
+}
+
+/**
+ * Fetch an allowlisted media URL while handling redirects manually.
+ *
+ * Native `redirect: 'follow'` validates only the first request and can follow a
+ * trusted CDN response to an arbitrary host. This helper rebuilds and validates
+ * every hop against the caller's route-specific host list, caps the redirect
+ * chain, and uses one timeout signal for the complete operation.
+ */
+export async function fetchWithAllowlistedRedirects(
+  input: string,
+  options: {
+    hosts: string[]
+    timeoutMs: number
+    maxRedirects?: number
+    init?: RequestInit
+  },
+): Promise<Response> {
+  const maxRedirects = options.maxRedirects ?? 4
+  const timeoutSignal = AbortSignal.timeout(options.timeoutMs)
+  const signal = options.init?.signal
+    ? AbortSignal.any([options.init.signal, timeoutSignal])
+    : timeoutSignal
+  let currentUrl = buildAllowlistedUrl(input, options.hosts)
+
+  if (!currentUrl) {
+    throw new UntrustedMediaRedirectError('Initial media URL is not allowlisted')
+  }
+
+  for (let hop = 0; ; hop += 1) {
+    const response = await fetch(currentUrl, {
+      ...options.init,
+      redirect: 'manual',
+      signal,
+    })
+
+    if (!REDIRECT_STATUSES.has(response.status)) {
+      if (response.url && !buildAllowlistedUrl(response.url, options.hosts)) {
+        await response.body?.cancel()
+        throw new UntrustedMediaRedirectError('Final media response URL is not allowlisted')
+      }
+      return response
+    }
+
+    const location = response.headers.get('location')
+    if (!location || hop >= maxRedirects) {
+      await response.body?.cancel()
+      throw new UntrustedMediaRedirectError(
+        location ? 'Media redirect hop limit exceeded' : 'Media redirect omitted Location',
+      )
+    }
+
+    let resolved: string
+    try {
+      resolved = new URL(location, currentUrl).toString()
+    } catch {
+      await response.body?.cancel()
+      throw new UntrustedMediaRedirectError('Media redirect Location is invalid')
+    }
+
+    const nextUrl = buildAllowlistedUrl(resolved, options.hosts)
+    await response.body?.cancel()
+    if (!nextUrl) {
+      throw new UntrustedMediaRedirectError()
+    }
+    currentUrl = nextUrl
+  }
+}
+
+function declaredContentLength(response: Response): number | null {
+  const raw = response.headers?.get('content-length')
+  if (!raw || !/^\d+$/.test(raw)) return null
+  const value = Number(raw)
+  return Number.isSafeInteger(value) ? value : null
+}
+
+/**
+ * Read a response body without allowing a malicious upstream to buffer an
+ * unbounded payload. Both declared and streamed sizes are enforced.
+ */
+export async function readResponseBodyWithLimit(
+  response: Response,
+  maxBytes: number,
+): Promise<Uint8Array> {
+  const declared = declaredContentLength(response)
+  if (declared !== null && declared > maxBytes) {
+    await response.body?.cancel()
+    throw new MediaResponseTooLargeError(maxBytes)
+  }
+
+  if (!response.body) return new Uint8Array()
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > maxBytes) {
+        await reader.cancel()
+        throw new MediaResponseTooLargeError(maxBytes)
+      }
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  const body = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    body.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return body
+}
+
+/**
+ * Stream a response through a hard byte ceiling, including chunked bodies
+ * without Content-Length. The upstream reader is cancelled as soon as the
+ * limit is crossed or the downstream client cancels.
+ */
+export function limitResponseBody(
+  response: Response,
+  maxBytes: number,
+): ReadableStream<Uint8Array> | null {
+  if (!response.body) return null
+
+  const reader = response.body.getReader()
+  let total = 0
+  let released = false
+  const release = () => {
+    if (released) return
+    released = true
+    reader.releaseLock()
+  }
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read()
+        if (done) {
+          release()
+          controller.close()
+          return
+        }
+
+        total += value.byteLength
+        if (total > maxBytes) {
+          await reader.cancel(new MediaResponseTooLargeError(maxBytes))
+          release()
+          controller.error(new MediaResponseTooLargeError(maxBytes))
+          return
+        }
+        controller.enqueue(value)
+      } catch (error) {
+        release()
+        controller.error(error)
+      }
+    },
+    async cancel(reason) {
+      try {
+        await reader.cancel(reason)
+      } finally {
+        release()
+      }
+    },
+  })
+}
+
 /**
  * Twitter media CDN hosts (video + image). Each base host is listed in both its
  * exact and dot-prefixed-subdomain form, matching the `host === d || host

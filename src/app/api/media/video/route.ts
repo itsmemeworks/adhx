@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { captureException, metrics } from '@/lib/sentry'
 import {
   goneResponse,
+  fetchWithAllowlistedRedirects,
   isAllowedTwitterMediaUrl,
   isFxTwitterGoneStatus,
   isTweetGoneCached,
+  isUntrustedMediaRedirectError,
   isValidTweetAuthor,
   isValidTweetId,
   markTweetGone,
   parseTweetMediaIndex,
   streamingResponse,
+  TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
@@ -81,6 +84,7 @@ export async function GET(request: NextRequest) {
       )
 
       if (!response.ok) {
+        await response.body?.cancel()
         if (isFxTwitterGoneStatus(response.status)) {
           // Deleted/private/suspended — not a proxy error, and it won't come
           // back on a retry. Cache it so the theater's video stage doesn't
@@ -164,20 +168,28 @@ export async function GET(request: NextRequest) {
     // This avoids 403 errors from direct browser requests to video.twimg.com
     const rangeHeader = request.headers.get('range')
     // Large file download — if the upstream CDN hangs, don't tie up the proxy forever
-    const videoResponse = await fetchWithTimeout(videoUrl, 30_000, {
-      headers: {
-        'User-Agent': 'ADHX/1.0',
-        ...(rangeHeader && { Range: rangeHeader }),
+    const videoResponse = await fetchWithAllowlistedRedirects(videoUrl, {
+      hosts: TWITTER_MEDIA_HOSTS,
+      timeoutMs: 30_000,
+      init: {
+        headers: {
+          'User-Agent': 'ADHX/1.0',
+          ...(rangeHeader && { Range: rangeHeader }),
+        },
       },
     })
 
     if (!videoResponse.ok && videoResponse.status !== 206) {
+      await videoResponse.body?.cancel()
       throw new Error(`Video fetch failed with status ${videoResponse.status}`)
     }
 
     // Stream the upstream response through with range-aware headers
     return streamingResponse(videoResponse)
   } catch (error) {
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted video redirect' }, { status: 502 })
+    }
     console.error('Error fetching video:', error)
     captureException(error, { endpoint: '/api/media/video', author, tweetId })
     return NextResponse.json({ error: 'Failed to fetch video' }, { status: 500 })

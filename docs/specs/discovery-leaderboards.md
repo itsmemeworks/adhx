@@ -1,6 +1,6 @@
 # Discovery: collection view stats + leaderboards (and rank-mode plumbing)
 
-**Status: spec (2026-08-21), not yet building.** Public tagged collections become discoverable
+**Status: shipped; bounded all-time aggregation added 2026-08-26.** Public tagged collections become discoverable
 and competitive: we track views on collections, rank them on leaderboards by day / week /
 month / all-time, and give curators a reason to make collections public and share them. This
 also lays the plumbing for future Reddit-style theater sorts (hot / rising / new) — the ranking
@@ -61,7 +61,8 @@ export const collectionEvents = sqliteTable(
 
 Invariants carried over from `activity` (all four are load-bearing — see CLAUDE.md):
 
-1. **Append-only event log** — exempt from the composite-PK user-owned-data convention.
+1. **Append-only while retained** — accepted events are never rewritten or deleted except for
+   lifecycle pruning after aggregate backfill; exempt from the composite-PK convention.
 2. **`viewerId` is stored but never exposed.** Every read path goes through the single query
    module (§5); no route ever `select()`s the whole row. The _curator_ (owner username) IS
    public — it's already on every `/t` page and it's the whole point of the leaderboard.
@@ -72,6 +73,20 @@ Invariants carried over from `activity` (all four are load-bearing — see CLAUD
 
 Migration: guarded `CREATE TABLE IF NOT EXISTS` in `migrate.ts` **and** the same DDL added to
 the in-memory test DB (`src/__tests__/api/setup.ts`) — the documented gotcha.
+
+### Durable all-time aggregates and raw retention
+
+`collection_events` keeps 90 days of timestamped raw detail. That comfortably covers the
+largest finite leaderboard window (30 days) and both dedupe windows, while bounding database
+growth. All-time history is preserved in `collection_aggregates`, keyed by
+`(owner_user_id, tag)`, with raw `view_count` / `clone_count`, `last_event_at`, and `hidden`.
+It intentionally has no viewer identifier.
+
+The startup migration creates the aggregate table, then performs one transaction that
+recomputes/replaces aggregates from the complete legacy event log, records a migration-state
+marker, and prunes old raw rows. A crash rolls back the entire transaction, so restart cannot
+double count or lose history. Later boots only prune expired detail. Every accepted event
+inserts its raw row and increments the aggregate in one transaction.
 
 ## 4. Recording (`src/lib/discovery/record.ts`)
 
@@ -123,16 +138,17 @@ export function getCollectionLeaderboard(opts: {
 }): LeaderboardEntry[]
 ```
 
-- **Score (`top`)** = `views + 5 × clones` within the window, computed by a single GROUP BY
-  over `collection_events` (`createdAt >= windowStart`, `hidden = 0`), **inner-joined to
-  `tag_shares` on `isPublic = 1`** — a collection made private drops off every board
-  instantly, full history intact if it returns — and to `users` for the username. Ties break
-  by most-recent event.
+- **Score (`top`)** = `views + 5 × clones` within the window. Day/week/month use a bounded
+  GROUP BY over retained `collection_events`; all-time reads `collection_aggregates`, so it
+  remains truly all-time after raw pruning without scanning event history. Both paths are
+  **inner-joined to `tag_shares` on `isPublic = 1`** — a playlist made private drops off every
+  board instantly, full history intact if it returns — and resolve the public username.
+  Ties break by most-recent event.
 - Enrichment (item counts, poster thumbs) reuses the same bookmark joins the `/t/{username}`
   profile and `CollectionPosterCard` already use.
-- Cheap by construction: indexed range scan + GROUP BY on local SQLite, zero external calls,
-  zero per-user marginal cost. If all-time ever gets slow (millions of rows), add a rollup
-  table then — explicitly deferred, don't pre-build it.
+- Cheap by construction: finite windows use an indexed, retention-bounded range scan; all-time
+  is proportional to playlist count via the aggregate table. Zero external calls and zero
+  per-user marginal cost.
 - 60s in-process cache per `(window, mode)`, same pattern as the trending cache.
 
 ## 6. Surfaces (MVP)
@@ -201,10 +217,10 @@ The ask: theater sort modes like Reddit's. What must exist _now_ so that's a sma
 
 ## 8. Moderation & abuse
 
-- `collection_events.hidden` + extending `POST /api/admin/activity/hide` (or a sibling
+- `collection_events.hidden` + `collection_aggregates.hidden` + extending `POST /api/admin/activity/hide` (or a sibling
   `/api/admin/collections/hide`) to take `{ username, tag }` — gated by the existing
-  `ADMIN_USERNAMES`. Hiding removes a collection from leaderboards without touching the
-  curator's data.
+  persisted admin role. Hiding updates raw rows, aggregate visibility, and the audit row in one
+  transaction, removing a playlist from leaderboards without touching the curator's data.
 - Recording routes sit behind the existing IP rate limiter; self-view exclusion + signed-in
   dedupe (§4) blunt casual inflation. Accept that a determined anon can pad views — the clone
   weight (×5) keeps the top of the board anchored to the harder-to-fake signal.
@@ -213,8 +229,9 @@ The ask: theater sort modes like Reddit's. What must exist _now_ so that's a sma
 
 - Recorder: self-view no-op, private-tag no-op, dedupe windows (signed-in 30min / anon 60s),
   bot filter, errors swallowed.
-- Rank: window boundaries (day/week/month/all), clone weighting, public-only join (private tag
-  vanishes), `hidden` exclusion, tie-break, anonymity (no `viewerId` in any returned shape —
+- Rank: window boundaries (day/week/month/all), aggregate-backed all-time history after raw
+  prune, clone weighting, public-only join (private tag vanishes), `hidden` exclusion,
+  tie-break, anonymity (no `viewerId` in any returned shape —
   a `discovery-anonymity.test.ts` mirroring `trending-anonymity.test.ts`).
 - API: rate limit, cache headers, invalid window/mode → 400.
 - Multi-user isolation: user A's events never affect user B's private collections.

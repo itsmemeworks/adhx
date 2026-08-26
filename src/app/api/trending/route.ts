@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, handleRouteError } from '@/lib/api/response'
 import { getTrendingItems } from '@/lib/trending/query'
-import { mediaRateLimit } from '@/lib/rate-limit'
+import { publicReadRateLimit } from '@/lib/rate-limit'
 import type { PlatformId } from '@/lib/platform/url'
 
 /**
@@ -32,7 +32,7 @@ function parsePlatform(value: string | null): PlatformId | undefined {
 }
 
 export async function GET(request: NextRequest) {
-  const limited = mediaRateLimit(request, { windowMs: 60_000, max: 120 })
+  const limited = publicReadRateLimit(request)
   if (limited) return limited
 
   try {

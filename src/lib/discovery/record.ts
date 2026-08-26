@@ -1,6 +1,6 @@
-import { db } from '@/lib/db'
-import { collectionEvents, tagShares } from '@/lib/db/schema'
-import { and, eq, gt } from 'drizzle-orm'
+import { db, runInTransaction } from '@/lib/db'
+import { collectionAggregates, collectionEvents, tagShares } from '@/lib/db/schema'
+import { and, eq, gt, sql } from 'drizzle-orm'
 import { recordAnalytic } from '@/lib/analytics/record'
 
 /**
@@ -99,15 +99,53 @@ export function recordCollectionEvent(opts: {
       if (recent.length > 0) return
     }
 
-    db.insert(collectionEvents)
-      .values({
-        action,
-        ownerUserId,
-        tag,
-        viewerId,
-        createdAt: new Date().toISOString(),
-      })
-      .run()
+    const createdAt = new Date().toISOString()
+    runInTransaction(() => {
+      const aggregate = db
+        .select({ hidden: collectionAggregates.hidden })
+        .from(collectionAggregates)
+        .where(
+          and(eq(collectionAggregates.ownerUserId, ownerUserId), eq(collectionAggregates.tag, tag)),
+        )
+        .limit(1)
+        .all()[0]
+      const hidden = aggregate?.hidden ?? 0
+
+      db.insert(collectionEvents)
+        .values({
+          action,
+          ownerUserId,
+          tag,
+          viewerId,
+          createdAt,
+          hidden,
+        })
+        .run()
+
+      db.insert(collectionAggregates)
+        .values({
+          ownerUserId,
+          tag,
+          viewCount: action === 'view' ? 1 : 0,
+          cloneCount: action === 'clone' ? 1 : 0,
+          lastEventAt: createdAt,
+          hidden,
+        })
+        .onConflictDoUpdate({
+          target: [collectionAggregates.ownerUserId, collectionAggregates.tag],
+          set: {
+            viewCount: sql`${collectionAggregates.viewCount} + excluded.view_count`,
+            cloneCount: sql`${collectionAggregates.cloneCount} + excluded.clone_count`,
+            lastEventAt: sql`case
+              when ${collectionAggregates.lastEventAt} is null
+                or ${collectionAggregates.lastEventAt} < excluded.last_event_at
+              then excluded.last_event_at
+              else ${collectionAggregates.lastEventAt}
+            end`,
+          },
+        })
+        .run()
+    })
     recordAnalytic({
       name: action === 'clone' ? 'playlist.clone' : 'playlist.view',
       userId: viewerId,

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import {
+  collectionAggregates,
   collectionEvents,
   tagShares,
   bookmarkTags,
@@ -34,10 +35,10 @@ import { listBannedUserIds } from '@/lib/admin/moderation'
  * keep `viewerId` out. Leaderboard entries expose only the owning curator's
  * public `username` (never a raw `userId`).
  *
- * Score = views + 5×clones, computed within the selected rolling window over
- * events where `hidden = 0`. An INNER JOIN against `tag_shares` (`isPublic =
- * 1`) means a playlist made private drops off the board on its next read —
- * there is no separate "unpublish" step to remember.
+ * Score = views + 5×clones. Finite windows aggregate the retained raw log;
+ * all-time reads use the durable, viewer-free collection_aggregates rollup.
+ * An INNER JOIN against `tag_shares` (`isPublic = 1`) means a playlist made
+ * private drops off the board on its next read.
  */
 
 export type RankWindow = 'day' | 'week' | 'month' | 'all'
@@ -333,33 +334,59 @@ function computeLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEntr
     throw new Error('not implemented')
   }
 
-  const windowStart = windowStartIso(window)
-  const whereClauses = [eq(collectionEvents.hidden, 0), eq(tagShares.isPublic, true)]
-  if (windowStart) whereClauses.push(gte(collectionEvents.createdAt, windowStart))
-
-  // ANONYMITY CHOKE POINT: only owner/tag/aggregate columns are selected —
-  // `viewerId` is intentionally absent and must stay that way.
-  const rows = db
-    .select({
-      ownerUserId: collectionEvents.ownerUserId,
-      tag: collectionEvents.tag,
-      viewCount: sql<number>`sum(case when ${collectionEvents.action} = 'view' then 1 else 0 end)`,
-      cloneCount: sql<number>`sum(case when ${collectionEvents.action} = 'clone' then 1 else 0 end)`,
-      lastEventAt: sql<string>`max(${collectionEvents.createdAt})`,
-    })
-    .from(collectionEvents)
-    // A playlist made private drops off the board immediately — there is
-    // no separate "unpublish" bookkeeping, this join is the enforcement.
-    .innerJoin(
-      tagShares,
-      and(
-        eq(tagShares.userId, collectionEvents.ownerUserId),
-        eq(tagShares.tag, collectionEvents.tag),
-      ),
-    )
-    .where(and(...whereClauses))
-    .groupBy(collectionEvents.ownerUserId, collectionEvents.tag)
-    .all() as unknown as RawLeaderboardRow[]
+  let rows: RawLeaderboardRow[]
+  if (window === 'all') {
+    // ANONYMITY CHOKE POINT: this table contains no viewer identifier at all.
+    // All-time work is proportional to playlist count, not retained history.
+    rows = db
+      .select({
+        ownerUserId: collectionAggregates.ownerUserId,
+        tag: collectionAggregates.tag,
+        viewCount: collectionAggregates.viewCount,
+        cloneCount: collectionAggregates.cloneCount,
+        lastEventAt: collectionAggregates.lastEventAt,
+      })
+      .from(collectionAggregates)
+      .innerJoin(
+        tagShares,
+        and(
+          eq(tagShares.userId, collectionAggregates.ownerUserId),
+          eq(tagShares.tag, collectionAggregates.tag),
+        ),
+      )
+      .where(and(eq(collectionAggregates.hidden, 0), eq(tagShares.isPublic, true)))
+      .all()
+      .filter((row): row is typeof row & { lastEventAt: string } => row.lastEventAt != null)
+  } else {
+    const windowStart = windowStartIso(window) as string
+    // Finite windows remain bounded by raw retention. Only aggregate columns
+    // are selected; collectionEvents.viewerId is intentionally absent.
+    rows = db
+      .select({
+        ownerUserId: collectionEvents.ownerUserId,
+        tag: collectionEvents.tag,
+        viewCount: sql<number>`sum(case when ${collectionEvents.action} = 'view' then 1 else 0 end)`,
+        cloneCount: sql<number>`sum(case when ${collectionEvents.action} = 'clone' then 1 else 0 end)`,
+        lastEventAt: sql<string>`max(${collectionEvents.createdAt})`,
+      })
+      .from(collectionEvents)
+      .innerJoin(
+        tagShares,
+        and(
+          eq(tagShares.userId, collectionEvents.ownerUserId),
+          eq(tagShares.tag, collectionEvents.tag),
+        ),
+      )
+      .where(
+        and(
+          eq(collectionEvents.hidden, 0),
+          eq(tagShares.isPublic, true),
+          gte(collectionEvents.createdAt, windowStart),
+        ),
+      )
+      .groupBy(collectionEvents.ownerUserId, collectionEvents.tag)
+      .all() as unknown as RawLeaderboardRow[]
+  }
 
   if (rows.length === 0) return []
 

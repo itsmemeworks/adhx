@@ -1,14 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, type TestDbInstance } from './setup'
 import {
+  collectionAggregates,
   collectionEvents,
   tagShares,
   users,
   bookmarks,
   bookmarkTags,
   bookmarkMedia,
+  userBans,
   type NewCollectionEvent,
 } from '@/lib/db/schema'
+import { sql } from 'drizzle-orm'
 
 /**
  * Coverage for `src/lib/discovery/rank.ts` — the single audited read choke
@@ -58,6 +61,26 @@ function seedEvent(
     ...overrides,
   }
   testInstance.db.insert(collectionEvents).values(row).run()
+  testInstance.db
+    .insert(collectionAggregates)
+    .values({
+      ownerUserId: row.ownerUserId,
+      tag: row.tag,
+      viewCount: row.action === 'view' ? 1 : 0,
+      cloneCount: row.action === 'clone' ? 1 : 0,
+      lastEventAt: row.createdAt,
+      hidden: row.hidden ?? 0,
+    })
+    .onConflictDoUpdate({
+      target: [collectionAggregates.ownerUserId, collectionAggregates.tag],
+      set: {
+        viewCount: sql`${collectionAggregates.viewCount} + excluded.view_count`,
+        cloneCount: sql`${collectionAggregates.cloneCount} + excluded.clone_count`,
+        lastEventAt: sql`max(${collectionAggregates.lastEventAt}, excluded.last_event_at)`,
+        hidden: sql`max(${collectionAggregates.hidden}, excluded.hidden)`,
+      },
+    })
+    .run()
 }
 
 describe('getCollectionLeaderboard', () => {
@@ -114,6 +137,63 @@ describe('getCollectionLeaderboard', () => {
     expect(items.map((i) => i.tag)).toContain('ancient')
   })
 
+  it('preserves old all-time history after raw events are pruned', () => {
+    seedUser('u1', 'alice')
+    seedShare('u1', 'pruned-history')
+    testInstance.db
+      .insert(collectionAggregates)
+      .values({
+        ownerUserId: 'u1',
+        tag: 'pruned-history',
+        viewCount: 12,
+        cloneCount: 3,
+        lastEventAt: iso(365 * DAY),
+      })
+      .run()
+
+    expect(testInstance.db.select().from(collectionEvents).all()).toHaveLength(0)
+    expect(getCollectionLeaderboard({ window: 'all' })[0]).toEqual(
+      expect.objectContaining({
+        tag: 'pruned-history',
+        viewCount: 12,
+        cloneCount: 3,
+        score: 27,
+      }),
+    )
+  })
+
+  it('ranks all-time totals from aggregates using clone weight and recency tie-breaks', () => {
+    seedUser('u1', 'alice')
+    seedUser('u2', 'bob')
+    seedShare('u1', 'views')
+    seedShare('u2', 'clones')
+    testInstance.db
+      .insert(collectionAggregates)
+      .values([
+        {
+          ownerUserId: 'u1',
+          tag: 'views',
+          viewCount: 9,
+          cloneCount: 0,
+          lastEventAt: iso(HOUR),
+        },
+        {
+          ownerUserId: 'u2',
+          tag: 'clones',
+          viewCount: 0,
+          cloneCount: 2,
+          lastEventAt: iso(2 * HOUR),
+        },
+      ])
+      .run()
+
+    const items = getCollectionLeaderboard({ window: 'all' })
+    expect(items.map(({ tag, score, rank }) => ({ tag, score, rank }))).toEqual([
+      { tag: 'clones', score: 10, rank: 1 },
+      { tag: 'views', score: 9, rank: 2 },
+    ])
+  })
+
   it('weighs a clone as 5x a view in the score', () => {
     seedUser('u1', 'alice')
     seedShare('u1', 'clones')
@@ -165,6 +245,30 @@ describe('getCollectionLeaderboard', () => {
     const tags = items.map((i) => i.tag)
     expect(tags).toContain('ok')
     expect(tags).not.toContain('spammy')
+  })
+
+  it('keeps all-time aggregates subject to public, hidden, and ban filters', () => {
+    seedUser('u1', 'visible-owner')
+    seedUser('u2', 'hidden-owner')
+    seedUser('u3', 'banned-owner')
+    seedShare('u1', 'visible')
+    seedShare('u1', 'private', false)
+    seedShare('u2', 'hidden')
+    seedShare('u3', 'banned')
+    seedEvent({ ownerUserId: 'u1', tag: 'visible', createdAt: iso(200 * DAY) })
+    seedEvent({ ownerUserId: 'u1', tag: 'private', createdAt: iso(200 * DAY) })
+    seedEvent({ ownerUserId: 'u2', tag: 'hidden', createdAt: iso(200 * DAY), hidden: 1 })
+    seedEvent({ ownerUserId: 'u3', tag: 'banned', createdAt: iso(200 * DAY) })
+    testInstance.db
+      .insert(userBans)
+      .values({
+        userId: 'u3',
+        createdAt: iso(HOUR),
+        createdBy: 'u1',
+      })
+      .run()
+
+    expect(getCollectionLeaderboard({ window: 'all' }).map((item) => item.tag)).toEqual(['visible'])
   })
 
   it('breaks ties by most recent event', () => {

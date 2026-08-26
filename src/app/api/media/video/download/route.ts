@@ -2,16 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { captureException, metrics } from '@/lib/sentry'
 import {
   downloadResponse,
+  fetchWithAllowlistedRedirects,
   goneResponse,
   isAllowedTwitterMediaUrl,
   isFxTwitterGoneStatus,
   isTweetGoneCached,
+  isUntrustedMediaRedirectError,
   isValidTweetAuthor,
   isValidTweetId,
   markTweetGone,
   parseTweetMediaIndex,
+  TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
-import { mediaRateLimit } from '@/lib/rate-limit'
+import { downloadRateLimit } from '@/lib/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 /**
@@ -25,7 +28,7 @@ import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
  * GET /api/media/video/download?author=xxx&tweetId=xxx&quality=full
  */
 export async function GET(request: NextRequest) {
-  const rateLimited = mediaRateLimit(request)
+  const rateLimited = downloadRateLimit(request)
   if (rateLimited) return rateLimited
 
   const searchParams = request.nextUrl.searchParams
@@ -58,6 +61,7 @@ export async function GET(request: NextRequest) {
     )
 
     if (!infoResponse.ok) {
+      await infoResponse.body?.cancel()
       if (isFxTwitterGoneStatus(infoResponse.status)) {
         // Deleted/private/suspended — not a proxy error, and it won't come
         // back on a retry. Cache it so repeat download attempts for this
@@ -106,20 +110,28 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch the video with streaming (30s timeout for large files)
-    const videoResponse = await fetchWithTimeout(videoUrl, 30_000, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        Referer: 'https://twitter.com/',
+    const videoResponse = await fetchWithAllowlistedRedirects(videoUrl, {
+      hosts: TWITTER_MEDIA_HOSTS,
+      timeoutMs: 30_000,
+      init: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          Referer: 'https://twitter.com/',
+        },
       },
     })
 
     if (!videoResponse.ok || !videoResponse.body) {
+      await videoResponse.body?.cancel()
       return NextResponse.json({ error: 'Failed to fetch video' }, { status: 502 })
     }
 
     // Stream the video to the client as an attachment download
     return downloadResponse(videoResponse, `${author}-${tweetId}.mp4`)
   } catch (error) {
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted video redirect' }, { status: 502 })
+    }
     console.error('Video download error:', error)
     captureException(error, { endpoint: '/api/media/video/download', author, tweetId })
     return NextResponse.json({ error: 'Download failed' }, { status: 500 })

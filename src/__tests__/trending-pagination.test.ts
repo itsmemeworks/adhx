@@ -159,4 +159,32 @@ describe('trending offset pagination', () => {
     const body = await res.json()
     expect(body.items.map((i: { bookmarkId: string }) => i.bookmarkId)).toEqual(['3', '2', '1'])
   })
+
+  it('returns a deterministic empty terminal page for offsets beyond the 600-row window', async () => {
+    for (let i = 1; i <= 3; i++) {
+      seedActivity({
+        bookmarkId: String(i),
+        createdAt: `2026-06-06T10:0${i}:00Z`,
+      })
+    }
+
+    const page = await getTrendingItems({ limit: 30, offset: Number.MAX_SAFE_INTEGER })
+
+    expect(page.items).toEqual([])
+    expect(page.hasMore).toBe(false)
+  })
+
+  it('clamps oversized limits to 100 items while preserving hasMore', async () => {
+    for (let i = 0; i < 105; i++) {
+      seedActivity({
+        bookmarkId: String(i),
+        createdAt: new Date(Date.UTC(2026, 5, 6, 10, i)).toISOString(),
+      })
+    }
+
+    const page = await getTrendingItems({ limit: Number.MAX_SAFE_INTEGER })
+
+    expect(page.items).toHaveLength(100)
+    expect(page.hasMore).toBe(true)
+  })
 })

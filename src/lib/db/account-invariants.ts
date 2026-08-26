@@ -29,6 +29,7 @@ const ACCOUNT_GUARDS: AccountGuard[] = [
     table: 'collection_events',
     references: [{ column: 'owner_user_id' }, { column: 'viewer_id', nullable: true }],
   },
+  { table: 'collection_aggregates', references: [{ column: 'owner_user_id' }] },
   { table: 'moderated_posts', references: [{ column: 'created_by' }] },
   {
     table: 'user_bans',

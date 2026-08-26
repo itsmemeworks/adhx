@@ -52,6 +52,15 @@ describe('account-reference write guards', () => {
         )
         .run(new Date().toISOString()),
     ).toThrow(/account reference does not exist/)
+    expect(() =>
+      sqlite
+        .prepare(
+          `INSERT INTO collection_aggregates
+            (owner_user_id, tag, view_count, clone_count, hidden)
+           VALUES ('deleted', 'late-playlist', 1, 0, 0)`,
+        )
+        .run(),
+    ).toThrow(/account reference does not exist/)
 
     expect(() =>
       sqlite
@@ -82,7 +91,7 @@ describe('account-reference write guards', () => {
          WHERE type = 'trigger' AND name LIKE 'guard_%_account_%'`,
       )
       .get() as { count: number }
-    expect(row.count).toBe(36)
+    expect(row.count).toBe(38)
   })
 
   it('enforces the persisted trigger from a separate database connection', () => {

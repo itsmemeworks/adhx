@@ -25,7 +25,7 @@ function mirrorHtml(ogImageUrl: string) {
 }
 
 function htmlResponse(html: string) {
-  return { ok: true, text: async () => html }
+  return new Response(html, { headers: { 'content-type': 'text/html' } })
 }
 
 function imageResponse() {
@@ -78,6 +78,20 @@ describe('GET /api/media/tiktok/thumbnail', () => {
 
     expect(res.status).toBe(502)
     expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects an off-allowlist redirect from the thumbnail mirror', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: 'https://evil.example/thumb.jpg' },
+      }),
+    )
+
+    const res = await GET(createRequest({ username: 'redirect_user', id: '7619017281691045138' }))
+
+    expect(res.status).toBe(502)
+    expect(mockFetch).toHaveBeenCalledOnce()
   })
 
   it('reuses a cached, already-validated CDN URL without re-hitting the mirror', async () => {

@@ -288,11 +288,12 @@ export const activity = sqliteTable(
   }),
 )
 
-// Collection events — the append-only event log behind Discovery leaderboards
+// Collection events — timestamped raw detail behind Discovery leaderboards
 // (docs/specs/discovery-leaderboards.md §3). Collections are keyed by
 // (ownerUserId, tag), not (platform, bookmarkId), so they get their own log
 // rather than nullable columns on `activity`. Same invariants as `activity`:
-// append-only (exempt from the composite-PK user-owned-data convention),
+// append-only while retained, with lifecycle-only pruning after 90 days
+// (exempt from the composite-PK user-owned-data convention),
 // `viewerId` stored for dedupe/moderation but NEVER exposed by any read path
 // (every read goes through src/lib/discovery/rank.ts), recording is
 // fire-and-forget, and `hidden` is the content-level moderation lever.
@@ -314,6 +315,28 @@ export const collectionEvents = sqliteTable(
       table.createdAt,
     ),
     createdAtIdx: index('collection_events_created_at_idx').on(table.createdAt),
+  }),
+)
+
+// Durable all-time playlist totals. Raw collection_events are retained only
+// long enough for finite-window ranking and dedupe; this table preserves the
+// complete history without viewer identifiers or an unbounded event scan.
+export const collectionAggregates = sqliteTable(
+  'collection_aggregates',
+  {
+    ownerUserId: text('owner_user_id').notNull(),
+    tag: text('tag').notNull(),
+    viewCount: integer('view_count').notNull().default(0),
+    cloneCount: integer('clone_count').notNull().default(0),
+    lastEventAt: text('last_event_at'),
+    hidden: integer('hidden').notNull().default(0),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.ownerUserId, table.tag] }),
+    visibilityRecencyIdx: index('collection_aggregates_visibility_recency_idx').on(
+      table.hidden,
+      table.lastEventAt,
+    ),
   }),
 )
 
@@ -533,6 +556,8 @@ export type Activity = typeof activity.$inferSelect
 export type NewActivity = typeof activity.$inferInsert
 export type CollectionEvent = typeof collectionEvents.$inferSelect
 export type NewCollectionEvent = typeof collectionEvents.$inferInsert
+export type CollectionAggregate = typeof collectionAggregates.$inferSelect
+export type NewCollectionAggregate = typeof collectionAggregates.$inferInsert
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect
 export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert
 export type ModeratedPost = typeof moderatedPosts.$inferSelect

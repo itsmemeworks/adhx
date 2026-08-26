@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { ok, fail, handleRouteError } from '@/lib/api/response'
 import { getCollectionLeaderboard, slugToWindow, type RankWindow } from '@/lib/discovery/rank'
-import { mediaRateLimit } from '@/lib/rate-limit'
+import { publicReadRateLimit } from '@/lib/rate-limit'
 
 /**
  * GET /api/collections/trending — public, anonymous Discovery leaderboard JSON.
@@ -29,7 +29,7 @@ const MAX_LIMIT = 50
 const DEFAULT_LIMIT = 24
 
 export async function GET(request: NextRequest) {
-  const limited = mediaRateLimit(request, { windowMs: 60_000, max: 120 })
+  const limited = publicReadRateLimit(request)
   if (limited) return limited
 
   try {

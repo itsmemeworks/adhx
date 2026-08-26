@@ -116,6 +116,24 @@ describe('getPublicTagCollection', () => {
     expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('ok')
   })
 
+  it('invalidates only the targeted username and tag cache entry', async () => {
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values([
+      { userId: OWNER_ID, tag: 'first', shareCode: 'code-first', isPublic: true },
+      { userId: OWNER_ID, tag: 'second', shareCode: 'code-second', isPublic: true },
+    ])
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'first')).status).toBe('ok')
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'second')).status).toBe('ok')
+
+    await testInstance.db.update(tagShares).set({ isPublic: false })
+    invalidateTagCollectionCache(OWNER_USERNAME, 'first')
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'first')).status).toBe('private')
+    // The non-targeted entry remains the cached public snapshot.
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'second')).status).toBe('ok')
+  })
+
   it('returns items for a public tag, ordered newest-first, with on-ADHX preview links', async () => {
     await seedOwner()
     await testInstance.db.insert(tagShares).values({

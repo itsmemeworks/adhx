@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   __resetRateLimitState,
   checkRateLimit,
+  downloadRateLimit,
   getClientIp,
   mediaRateLimit,
   activityWriteLimit,
+  publicReadRateLimit,
 } from '@/lib/rate-limit'
 
 describe('checkRateLimit', () => {
@@ -126,5 +128,43 @@ describe('activityWriteLimit', () => {
 
     for (let i = 0; i < 3; i++) mediaRateLimit(mediaReq(), { max: 2, windowMs: 10_000 })
     expect(activityWriteLimit(actReq())).toBeNull()
+  })
+})
+
+describe('downloadRateLimit', () => {
+  beforeEach(() => {
+    __resetRateLimitState()
+  })
+
+  it('uses a tighter bucket independent from inline media playback', () => {
+    const headers = { 'x-forwarded-for': '10.0.0.12' }
+    const request = new Request('https://example.com/api/media/video/download', {
+      headers,
+    }) as unknown as Parameters<typeof downloadRateLimit>[0]
+
+    expect(downloadRateLimit(request, { max: 1, windowMs: 10_000 })).toBeNull()
+    expect(downloadRateLimit(request, { max: 1, windowMs: 10_000 })?.status).toBe(429)
+    expect(mediaRateLimit(request, { max: 1, windowMs: 10_000 })).toBeNull()
+  })
+})
+
+describe('publicReadRateLimit', () => {
+  beforeEach(() => {
+    __resetRateLimitState()
+  })
+
+  it('limits aggregate reads without consuming the media bucket', () => {
+    const request = new Request('https://example.com/api/activity', {
+      headers: { 'x-forwarded-for': '10.0.0.13' },
+    })
+
+    expect(publicReadRateLimit(request, { max: 1, windowMs: 10_000 })).toBeNull()
+    expect(publicReadRateLimit(request, { max: 1, windowMs: 10_000 })?.status).toBe(429)
+    expect(
+      mediaRateLimit(request as unknown as Parameters<typeof mediaRateLimit>[0], {
+        max: 1,
+        windowMs: 10_000,
+      }),
+    ).toBeNull()
   })
 })

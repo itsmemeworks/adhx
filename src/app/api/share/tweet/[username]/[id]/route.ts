@@ -5,7 +5,7 @@ import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkTags, tagShares, users } from '@/lib/db/schema'
 import { eq, and, sql } from 'drizzle-orm'
-import { mediaRateLimit } from '@/lib/rate-limit'
+import { publicReadRateLimit } from '@/lib/rate-limit'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
@@ -207,7 +207,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ username: string; id: string }> },
 ) {
-  const limited = mediaRateLimit(request, { windowMs: 60_000, max: 120 })
+  const limited = publicReadRateLimit(request)
   if (limited) return limited
 
   const { username, id } = await params

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, USER_A, USER_B, type TestDbInstance } from './setup'
-import { collectionEvents, tagShares } from '@/lib/db/schema'
+import { collectionAggregates, collectionEvents, tagShares } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 
 /**
@@ -17,6 +17,9 @@ let testInstance: TestDbInstance
 vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
+  },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
   },
 }))
 
@@ -56,6 +59,15 @@ describe('recordCollectionEvent', () => {
     expect(rows[0].action).toBe('view')
     expect(rows[0].viewerId).toBe(USER_A)
     expect(rows[0].hidden).toBe(0)
+    expect(testInstance.db.select().from(collectionAggregates).all()).toEqual([
+      expect.objectContaining({
+        ownerUserId: USER_B,
+        tag: 'memes',
+        viewCount: 1,
+        cloneCount: 0,
+        hidden: 0,
+      }),
+    ])
   })
 
   it('records a clone event on a public collection', () => {
@@ -66,6 +78,9 @@ describe('recordCollectionEvent', () => {
     const rows = eventsFor(USER_B, 'memes')
     expect(rows).toHaveLength(1)
     expect(rows[0].action).toBe('clone')
+    expect(testInstance.db.select().from(collectionAggregates).all()[0]).toEqual(
+      expect.objectContaining({ viewCount: 0, cloneCount: 1 }),
+    )
   })
 
   it('records an anonymous event with a null viewerId', () => {
@@ -208,6 +223,29 @@ describe('recordCollectionEvent', () => {
         viewerId: USER_A,
       }),
     ).not.toThrow()
+  })
+
+  it('rolls back the raw event when the aggregate upsert fails', () => {
+    makePublic(USER_B, 'memes')
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_collection_aggregate
+      BEFORE INSERT ON collection_aggregates
+      BEGIN
+        SELECT RAISE(ABORT, 'injected aggregate failure');
+      END;
+    `)
+
+    expect(() =>
+      recordCollectionEvent({
+        action: 'view',
+        ownerUserId: USER_B,
+        tag: 'memes',
+        viewerId: USER_A,
+      }),
+    ).not.toThrow()
+
+    expect(eventsFor(USER_B, 'memes')).toHaveLength(0)
+    expect(testInstance.db.select().from(collectionAggregates).all()).toHaveLength(0)
   })
 
   it('is a no-op when ownerUserId or tag is missing', () => {

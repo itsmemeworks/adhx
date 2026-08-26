@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
 import { isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
-import { buildAllowlistedUrl } from '@/lib/media/proxy'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import {
+  buildAllowlistedUrl,
+  fetchWithAllowlistedRedirects,
+  isMediaResponseTooLargeError,
+  isUntrustedMediaRedirectError,
+  readResponseBodyWithLimit,
+} from '@/lib/media/proxy'
 
 /**
  * TikTok thumbnail proxy.
@@ -23,6 +28,7 @@ import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 // for every gallery view of the same TikTok.
 const thumbnailUrlCache = new Map<string, { url: string; ts: number }>()
 const CACHE_TTL = 60 * 60 * 1000
+const MAX_MIRROR_HTML_BYTES = 256 * 1024
 
 const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
 
@@ -38,6 +44,7 @@ const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+
 const TIKTOK_IMAGE_CDN_HOSTS = ['tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com'].flatMap(
   (host) => [host, `.${host}`],
 )
+const TIKTOK_THUMBNAIL_MIRROR_HOSTS = ['tiktxk.com', '.tiktxk.com']
 
 // HTML entities that appear in og:image URLs (mostly `&amp;` between query
 // params, occasionally an escaped apostrophe).
@@ -82,20 +89,25 @@ export async function GET(request: NextRequest) {
     }
 
     if (!cdnUrl) {
-      const mirrorResponse = await fetchWithTimeout(
+      const mirrorResponse = await fetchWithAllowlistedRedirects(
         `https://tiktxk.com/@${handle}/video/${videoId}`,
-        8_000,
         {
-          headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
-          redirect: 'follow',
+          hosts: TIKTOK_THUMBNAIL_MIRROR_HOSTS,
+          timeoutMs: 8_000,
+          init: {
+            headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
+          },
         },
       )
 
       if (!mirrorResponse.ok) {
+        await mirrorResponse.body?.cancel()
         return NextResponse.json({ error: 'Mirror unavailable' }, { status: 502 })
       }
 
-      const html = await mirrorResponse.text()
+      const html = new TextDecoder().decode(
+        await readResponseBodyWithLimit(mirrorResponse, MAX_MIRROR_HTML_BYTES),
+      )
       const match = html.match(OG_IMAGE_RE)
       if (!match) {
         return NextResponse.json({ error: 'No thumbnail in mirror response' }, { status: 404 })
@@ -123,15 +135,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 2 — fetch the JPEG with browser-grade headers
-    const imageResponse = await fetchWithTimeout(cdnUrl, 10_000, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        Referer: 'https://www.tiktok.com/',
+    const imageResponse = await fetchWithAllowlistedRedirects(cdnUrl, {
+      hosts: TIKTOK_IMAGE_CDN_HOSTS,
+      timeoutMs: 10_000,
+      init: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          Referer: 'https://www.tiktok.com/',
+        },
       },
     })
 
     if (!imageResponse.ok || !imageResponse.body) {
+      await imageResponse.body?.cancel()
       return NextResponse.json({ error: 'Failed to fetch thumbnail' }, { status: 502 })
     }
 
@@ -142,6 +158,12 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    if (isMediaResponseTooLargeError(error)) {
+      return NextResponse.json({ error: 'Mirror response exceeds maximum size' }, { status: 502 })
+    }
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted thumbnail redirect' }, { status: 502 })
+    }
     console.error('TikTok thumbnail proxy error:', error)
     captureException(error, { endpoint: '/api/media/tiktok/thumbnail', username, videoId })
     return NextResponse.json({ error: 'Thumbnail proxy failed' }, { status: 500 })

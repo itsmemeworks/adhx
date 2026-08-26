@@ -13,6 +13,7 @@ import { getUserIdForUsername } from '@/lib/users/lookup'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
 import { isUserBanned } from '@/lib/admin/moderation'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 
 /**
  * Public curator-profile query — the data layer for `/t/{username}`.
@@ -86,13 +87,14 @@ const TILES_PER_COLLECTION = 4
 const TEXT_FALLBACK_LENGTH = 40
 
 const CACHE_TTL_MS = 30_000
-type ProfileCache = Map<string, { value: PublicProfileResult; expiresAt: number }>
+const CACHE_MAX_ENTRIES = 128
+type ProfileCache = TtlLruCache<string, PublicProfileResult>
 const cachesByDb = new WeakMap<object, ProfileCache>()
 
 function getCache(): ProfileCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
-    c = new Map()
+    c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
   }
   return c
@@ -105,12 +107,13 @@ function getCache(): ProfileCache {
 export async function getPublicProfile(username: string): Promise<PublicProfileResult> {
   const cache = getCache()
   const key = username.toLowerCase()
-  const now = Date.now()
   const hit = cache.get(key)
-  if (hit && hit.expiresAt > now) return hit.value
+  if (hit) return hit
 
   const value = await fetchPublicProfile(username)
-  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  // Do not retain username misses: they are cheap, attacker-controlled, and a
+  // newly-published profile should become visible without waiting for the TTL.
+  if (value.status === 'ok') cache.set(key, value)
   return value
 }
 

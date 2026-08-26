@@ -163,6 +163,18 @@ export function isValidVideoId(id: string): boolean {
   return ID_PATTERN.test(id)
 }
 
+type MirrorResult =
+  | { kind: 'resolved'; metadata: TikTokMetadata }
+  | { kind: 'permanent-miss' }
+  | { kind: 'transient-failure'; cause?: unknown }
+
+class TransientTikTokMetadataError extends Error {
+  constructor(cause?: unknown) {
+    super('TikTok metadata mirror failed transiently', { cause })
+    this.name = 'TransientTikTokMetadataError'
+  }
+}
+
 /**
  * Resolve a TikTok video's direct MP4 URL + metadata via a TnkTok mirror.
  *
@@ -172,14 +184,25 @@ export function isValidVideoId(id: string): boolean {
  * can't cache, so we cache the resolved metadata instead. Repeat crawler hits to
  * the same id reuse it.
  */
-export const fetchTikTokMetadata = unstable_cache(
+const fetchCachedTikTokMetadata = unstable_cache(
   async (username: string, videoId: string): Promise<TikTokMetadata | null> => {
-    if (!isValidUsername(username) || !isValidVideoId(videoId)) return null
     const handle = username.startsWith('@') ? username.slice(1) : username
+    let sawTransientFailure = false
+    let transientCause: unknown
 
     for (const mirror of MIRRORS) {
-      const meta = await tryMirror(`${mirror}/@${handle}/video/${videoId}`)
-      if (meta) return meta
+      const result = await tryMirror(`${mirror}/@${handle}/video/${videoId}`)
+      if (result.kind === 'resolved') return result.metadata
+      if (result.kind === 'transient-failure') {
+        sawTransientFailure = true
+        transientCause = result.cause
+      }
+    }
+
+    // Throw from inside the cache callback so a temporary mirror failure is
+    // never persisted as the one-hour negative result.
+    if (sawTransientFailure) {
+      throw new TransientTikTokMetadataError(transientCause)
     }
     return null
   },
@@ -187,34 +210,65 @@ export const fetchTikTokMetadata = unstable_cache(
   { revalidate: 3600 },
 )
 
-async function tryMirror(url: string): Promise<TikTokMetadata | null> {
+/**
+ * Public compatibility wrapper: callers still receive Metadata|null. Invalid
+ * input bypasses both the cache and network; transient failures are caught only
+ * after they have escaped the cache callback.
+ */
+export async function fetchTikTokMetadata(
+  username: string,
+  videoId: string,
+): Promise<TikTokMetadata | null> {
+  if (!isValidUsername(username) || !isValidVideoId(videoId)) return null
+
+  try {
+    return await fetchCachedTikTokMetadata(username, videoId)
+  } catch {
+    return null
+  }
+}
+
+async function tryMirror(url: string): Promise<MirrorResult> {
   try {
     const response = await fetchWithTimeout(url, 8_000, {
       headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
       redirect: 'follow',
     })
 
-    if (!response.ok) return null
+    if (response.status === 404 || response.status === 410) {
+      return { kind: 'permanent-miss' }
+    }
+    if (!response.ok) return { kind: 'transient-failure' }
     const contentType = response.headers.get('content-type') || ''
-    if (!contentType.includes('text/html')) return null
+    if (!contentType.includes('text/html')) return { kind: 'transient-failure' }
 
     const reader = response.body?.getReader()
-    if (!reader) return null
+    if (!reader) return { kind: 'transient-failure' }
 
     let html = ''
     const decoder = new TextDecoder()
     const maxBytes = 256 * 1024
-    while (html.length < maxBytes) {
+    let bytesRead = 0
+    while (bytesRead < maxBytes) {
       const { done, value } = await reader.read()
       if (done) break
-      html += decoder.decode(value, { stream: true })
+      const remaining = maxBytes - bytesRead
+      const chunk = value.byteLength > remaining ? value.subarray(0, remaining) : value
+      bytesRead += chunk.byteLength
+      html += decoder.decode(chunk, { stream: true })
       if (html.includes('</head>')) break
+      if (value.byteLength > remaining) break
     }
     reader.cancel().catch(() => {})
 
-    return parseTikTokOg(html)
-  } catch {
-    return null
+    const metadata = parseTikTokOg(html)
+    return metadata
+      ? { kind: 'resolved', metadata }
+      : // A 200 without usable OG data can be a truncated/challenge response
+        // or a changed mirror template, so it is not proof of permanent absence.
+        { kind: 'transient-failure' }
+  } catch (cause) {
+    return { kind: 'transient-failure', cause }
   }
 }
 

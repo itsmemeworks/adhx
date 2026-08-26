@@ -5,6 +5,7 @@ import { previewPath } from '@/lib/activity/preview-path'
 import { isReservedTopLevelSegment } from '@/lib/routes/reserved'
 import { asContentType, inferContentType } from '@/lib/content-type'
 import type { ContentType } from '@/components/matter'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 
 /**
  * Author hub query — the anonymity-safe data layer for the public `/{username}`
@@ -60,13 +61,14 @@ const ITEM_LIMIT = 30
 const ACTIVITY_FETCH_CAP = 500
 
 const CACHE_TTL_MS = 30_000
-type AuthorCache = Map<string, { value: AuthorProfile | null; expiresAt: number }>
+const CACHE_MAX_ENTRIES = 128
+type AuthorCache = TtlLruCache<string, AuthorProfile>
 const cachesByDb = new WeakMap<object, AuthorCache>()
 
 function getCache(): AuthorCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
-    c = new Map()
+    c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
   }
   return c
@@ -83,12 +85,13 @@ export async function getAuthorProfile(handleParam: string): Promise<AuthorProfi
 
   const cache = getCache()
   const key = handle.toLowerCase()
-  const now = Date.now()
   const hit = cache.get(key)
-  if (hit && hit.expiresAt > now) return hit.value
+  if (hit) return hit
 
   const value = await fetchAuthorProfile(handle)
-  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  // Misses are cheap and attacker-controlled handles have a huge key space.
+  // Avoid retaining 404s so newly-observed authors are visible immediately.
+  if (value) cache.set(key, value)
   return value
 }
 

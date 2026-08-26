@@ -1,10 +1,32 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-// `fetchTikTokMetadata` is wrapped in Next's `unstable_cache`, which throws
-// "incrementalCache missing" outside a Next request context. In unit tests we
-// want the bare implementation, so make `unstable_cache` a pass-through.
+// A small fulfilled-result cache models the important unstable_cache behavior:
+// resolved values (including null) are serialized and reused; thrown callbacks
+// are not stored and therefore run again on the next invocation.
+const cacheHarness = vi.hoisted(() => {
+  const entries = new Map<string, string>()
+
+  return {
+    clear: () => entries.clear(),
+    unstableCache:
+      <A extends unknown[], R>(
+        fn: (...args: A) => Promise<R>,
+        keyParts: string[] = [],
+      ): ((...args: A) => Promise<R>) =>
+      async (...args: A): Promise<R> => {
+        const key = JSON.stringify([keyParts, args])
+        const cached = entries.get(key)
+        if (cached !== undefined) return JSON.parse(cached) as R
+
+        const value = await fn(...args)
+        entries.set(key, JSON.stringify(value))
+        return value
+      },
+  }
+})
+
 vi.mock('next/cache', () => ({
-  unstable_cache: <A extends unknown[], R>(fn: (...args: A) => R) => fn,
+  unstable_cache: cacheHarness.unstableCache,
 }))
 
 import {
@@ -43,6 +65,15 @@ function notFoundResponse() {
   return {
     ok: false,
     status: 404,
+    headers: new Headers({ 'content-type': 'text/html' }),
+    body: null,
+  }
+}
+
+function errorResponse(status: number) {
+  return {
+    ok: false,
+    status,
     headers: new Headers({ 'content-type': 'text/html' }),
     body: null,
   }
@@ -165,7 +196,10 @@ describe('isValidUsername / isValidVideoId', () => {
 })
 
 describe('fetchTikTokMetadata', () => {
-  beforeEach(() => mockFetch.mockReset())
+  beforeEach(() => {
+    mockFetch.mockReset()
+    cacheHarness.clear()
+  })
 
   it('returns null for invalid input without hitting the network', async () => {
     const result = await fetchTikTokMetadata('../etc', '123')
@@ -185,6 +219,7 @@ describe('fetchTikTokMetadata', () => {
       authorName: 'Sophie Rain',
       author: '@sophieraiin',
     })
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toEqual(result)
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(mockFetch.mock.calls[0][0]).toContain('/@sophieraiin/video/' + VIDEO_ID)
   })
@@ -225,10 +260,48 @@ describe('fetchTikTokMetadata', () => {
     expect(result).toBeNull()
   })
 
-  it('returns null on 404 from the mirror', async () => {
+  it('does not cache a 503 and refetches successfully', async () => {
+    mockFetch
+      .mockResolvedValueOnce(errorResponse(503))
+      .mockResolvedValueOnce(htmlResponse(validHtml))
+
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toEqual(
+      expect.objectContaining({ videoUrl: VIDEO_URL }),
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not cache a timeout and refetches successfully', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'))
+      .mockResolvedValueOnce(htmlResponse(validHtml))
+
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toEqual(
+      expect.objectContaining({ videoUrl: VIDEO_URL }),
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not cache an unparseable 200 response', async () => {
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse('<html><head></head></html>'))
+      .mockResolvedValueOnce(htmlResponse(validHtml))
+
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toEqual(
+      expect.objectContaining({ videoUrl: VIDEO_URL }),
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('caches a confirmed 404 miss', async () => {
     mockFetch.mockResolvedValueOnce(notFoundResponse())
-    const result = await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)
-    expect(result).toBeNull()
+
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
+    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to twitter:player:stream when og:video is missing', async () => {

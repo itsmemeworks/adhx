@@ -1,5 +1,12 @@
-import { db } from '@/lib/db'
-import { activity, adminAudit, collectionEvents, moderatedPosts, userBans } from '@/lib/db/schema'
+import { db, runInTransaction } from '@/lib/db'
+import {
+  activity,
+  adminAudit,
+  collectionAggregates,
+  collectionEvents,
+  moderatedPosts,
+  userBans,
+} from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { isAdminUserId } from './guard'
 import { getUserIdForUsername, getUsernameForUserId } from '@/lib/users/lookup'
@@ -187,18 +194,31 @@ export function hidePlaylistEvents(opts: {
   actorUserId: string
   username: string
 }): { updated: number } {
-  const result = db
-    .update(collectionEvents)
-    .set({ hidden: opts.hidden ? 1 : 0 })
-    .where(
-      and(eq(collectionEvents.ownerUserId, opts.ownerUserId), eq(collectionEvents.tag, opts.tag)),
-    )
-    .run()
-  writeAudit(opts.actorUserId, opts.hidden ? 'hide_playlist' : 'unhide_playlist', {
-    username: opts.username,
-    tag: opts.tag,
+  return runInTransaction(() => {
+    const result = db
+      .update(collectionEvents)
+      .set({ hidden: opts.hidden ? 1 : 0 })
+      .where(
+        and(eq(collectionEvents.ownerUserId, opts.ownerUserId), eq(collectionEvents.tag, opts.tag)),
+      )
+      .run()
+    db.insert(collectionAggregates)
+      .values({
+        ownerUserId: opts.ownerUserId,
+        tag: opts.tag,
+        hidden: opts.hidden ? 1 : 0,
+      })
+      .onConflictDoUpdate({
+        target: [collectionAggregates.ownerUserId, collectionAggregates.tag],
+        set: { hidden: opts.hidden ? 1 : 0 },
+      })
+      .run()
+    writeAudit(opts.actorUserId, opts.hidden ? 'hide_playlist' : 'unhide_playlist', {
+      username: opts.username,
+      tag: opts.tag,
+    })
+    return { updated: result.changes ?? 0 }
   })
-  return { updated: result.changes ?? 0 }
 }
 
 export function previewPathFor(platform: string, author: string | null, id: string): string {

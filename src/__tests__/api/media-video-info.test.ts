@@ -207,6 +207,72 @@ describe('API: /api/media/video/info', () => {
       expect(headCalls[0][1].headers).toHaveProperty('User-Agent')
       expect(headCalls[0][1].headers).toHaveProperty('Referer', 'https://twitter.com/')
     })
+
+    it('does not HEAD or expose untrusted FxTwitter media targets', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            tweet: {
+              media: {
+                videos: [
+                  {
+                    duration: 120,
+                    formats: [
+                      { url: 'https://evil.example/master.m3u8', bitrate: null },
+                      { url: 'https://evil.example/video.mp4', bitrate: 832000 },
+                    ],
+                  },
+                ],
+              },
+            },
+          }),
+      })
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      const response = await GET(
+        createRequest({ author: 'untrusted', tweetId: '987', withSizes: 'true' }),
+      )
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.hlsUrl).toBeNull()
+      expect(data.formats).toEqual([])
+      expect(mockFetch).toHaveBeenCalledOnce()
+    })
+
+    it('does not follow a trusted HEAD target redirect to an untrusted host', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            tweet: {
+              media: {
+                videos: [
+                  {
+                    duration: 120,
+                    formats: [{ url: 'https://video.twimg.com/video.mp4', bitrate: 832000 }],
+                  },
+                ],
+              },
+            },
+          }),
+      })
+      mockFetch.mockResolvedValue(
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://evil.example/video.mp4' },
+        }),
+      )
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      const response = await GET(
+        createRequest({ author: 'redirected', tweetId: '988', withSizes: 'true' }),
+      )
+
+      expect(response.status).toBe(200)
+      expect(mockFetch.mock.calls.some(([url]) => String(url).includes('evil.example'))).toBe(false)
+    })
   })
 
   describe('Long video response', () => {
@@ -258,6 +324,27 @@ describe('API: /api/media/video/info', () => {
   })
 
   describe('Error handling', () => {
+    it('rejects an oversized FxTwitter response body', async () => {
+      const cancel = vi.fn()
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1]))
+        },
+        cancel,
+      })
+      mockFetch.mockResolvedValueOnce(
+        new Response(body, {
+          headers: { 'content-length': String(2 * 1024 * 1024 + 1) },
+        }),
+      )
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      const response = await GET(createRequest({ author: 'oversized', tweetId: '989' }))
+
+      expect(response.status).toBe(502)
+      expect(cancel).toHaveBeenCalledOnce()
+    })
+
     it('returns 404 when no video found', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

@@ -123,6 +123,52 @@ export function mediaRateLimit(request: NextRequest, opts?: RateLimitOptions): N
 }
 
 /**
+ * Tighter, independent bucket for attachment downloads. Downloads are much
+ * more expensive than range-based inline playback and must not consume (or be
+ * hidden inside) the normal media-preview allowance.
+ */
+export function downloadRateLimit(
+  request: NextRequest,
+  opts: RateLimitOptions = { windowMs: 60_000, max: 10 },
+): NextResponse | null {
+  const ip = getClientIp(request)
+  const result = checkRateLimit(`download:${ip}`, opts)
+
+  if (result.limited) {
+    return NextResponse.json(
+      { error: 'Too many download requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': Math.ceil(result.resetMs / 1000).toString() },
+      },
+    )
+  }
+
+  return null
+}
+
+/** Generous, independent backstop for expensive anonymous aggregate reads. */
+export function publicReadRateLimit(
+  request: NextRequest | Request,
+  opts: RateLimitOptions = { windowMs: 60_000, max: 120 },
+): NextResponse | null {
+  const ip = getClientIp(request)
+  const result = checkRateLimit(`public-read:${ip}`, opts)
+
+  if (result.limited) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      {
+        status: 429,
+        headers: { 'Retry-After': Math.ceil(result.resetMs / 1000).toString() },
+      },
+    )
+  }
+
+  return null
+}
+
+/**
  * Dedicated limiter for unauthenticated pulse writes. Separate from the
  * media bucket so a gallery hover session cannot starve share/preview,
  * and so we can keep the write cap tighter (15 / minute / IP).

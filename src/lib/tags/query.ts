@@ -6,6 +6,7 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { inferContentType } from '@/lib/content-type'
 import { isUserBanned } from '@/lib/admin/moderation'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 
 /**
  * Public tag-collection query — the data layer for `/t/{username}/{tag}`.
@@ -55,13 +56,14 @@ export type TagCollectionResult =
 const ITEM_LIMIT = 60
 
 const CACHE_TTL_MS = 30_000
-type TagCache = Map<string, { value: TagCollectionResult; expiresAt: number }>
+const CACHE_MAX_ENTRIES = 128
+type TagCache = TtlLruCache<string, TagCollectionResult>
 const cachesByDb = new WeakMap<object, TagCache>()
 
 function getCache(): TagCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
-    c = new Map()
+    c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
   }
   return c
@@ -88,15 +90,14 @@ export async function getPublicTagCollection(
 ): Promise<TagCollectionResult> {
   const cache = getCache()
   const key = `${username.toLowerCase()}:${tagName}`
-  const now = Date.now()
   const hit = cache.get(key)
-  if (hit && hit.expiresAt > now) return hit.value
+  if (hit) return hit
 
   const value = await fetchTagCollection(username, tagName)
   // Never cache private/not_found — a visibility PATCH must be visible on the
   // next request, and those misses are a cheap local read.
   if (value.status === 'ok') {
-    cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+    cache.set(key, value)
   }
   return value
 }

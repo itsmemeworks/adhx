@@ -5,6 +5,7 @@ import type { PlatformId } from '@/lib/platform/url'
 import { asContentType, inferContentType } from '@/lib/content-type'
 import type { ContentType } from '@/components/matter'
 import { quoteRefFromStoredContext, type StoredQuoteContext } from '@/lib/theater/quote-ref'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 
 /**
  * Anonymity-safe trending query — the SINGLE audited choke point for the
@@ -158,8 +159,15 @@ export interface TrendingItem {
   photoCount?: number
 }
 
-const FETCH = 80
 const LIMIT = 30
+/** Largest caller-requested page size; current internal consumers need at most 80. */
+const MAX_LIMIT = 100
+/**
+ * One fixed raw-event window backs every cached page. Offsets at or beyond the
+ * window cannot address a deduped item and deterministically return no more.
+ */
+const RAW_WINDOW_SIZE = 600
+const MAX_OFFSET = RAW_WINDOW_SIZE
 /** Max short-link expansions attached per post (spec §6b) — keeps the payload bounded. */
 const MAX_TEXT_LINKS = 8
 /**
@@ -174,14 +182,15 @@ const MAX_SERVED_TEXT = 2000
 export interface GetTrendingOptions {
   /** Restrict to a single platform's recent events. */
   platform?: PlatformId
-  /** Max items to return after dedup. Defaults to 30. */
+  /** Max items to return after dedup. Defaults to 30 and is clamped to 100. */
   limit?: number
   /** Drop items with `trendCount` below this. Defaults to none. */
   minTrend?: number
   /**
    * How many deduped posts to skip before taking `limit` (offset pagination
    * over the deduped, newest-first sequence — NOT a raw-row offset). Defaults
-   * to 0. Used by `/api/activity` to fetch older pages for infinite scroll.
+   * to 0 and is clamped to the 600-row canonical window. Used by
+   * `/api/activity` to fetch older pages for infinite scroll.
    */
   offset?: number
   /**
@@ -204,16 +213,14 @@ export interface TrendingResult {
   recentActivity: number
   /**
    * Whether another page exists past this one (more deduped posts beyond
-   * `offset + items.length`). Best-effort: pagination reads a bounded window
-   * of raw events (see `rawFetchSize` below), so an extremely deep offset on a
-   * high-volume pulse could under-report — acceptable for a public, anonymous
-   * "keep scrolling" feed with no hard pagination guarantee.
+   * `offset + items.length`). Pagination is limited to the canonical 600-row
+   * raw-event window; offsets at or beyond that boundary return `false`.
    */
   hasMore: boolean
 }
 
 /**
- * Short-lived in-memory cache around `fetchTrendingItems`. This module is the
+ * Short-lived in-memory cache around `fetchTrendingWindow`. This module is the
  * single choke point for the PUBLIC, anonymous, force-dynamic `/trending`
  * pages + `/api/activity` + `/api/trending` — each request runs ~5 aggregate
  * scans against the single synchronous better-sqlite3 connection, so a burst
@@ -221,10 +228,9 @@ export interface TrendingResult {
  * bursts without meaningfully staling the "live" feel (the client already
  * polls every 12s).
  *
- * Cached by the same args callers already pass (`platform`/`limit`/`minTrend`)
- * — the cached value is exactly `fetchTrendingItems`'s return shape, so the
- * anonymity invariant (no `userId`, ever) holds automatically: we never touch
- * or re-shape the value, just store and replay it.
+ * Each cache entry is an offset-independent canonical window. Caller-provided
+ * `limit`, `offset`, and `minTrend` are applied in memory, so arbitrary offsets
+ * cannot mint cache keys or trigger uniquely-shaped database scans.
  *
  * Keyed per-`db`-instance via a WeakMap (not a single flat Map): in production
  * there's only ever one `db`, so this behaves like a normal module-level
@@ -235,13 +241,15 @@ export interface TrendingResult {
  * isolated instead.
  */
 const CACHE_TTL_MS = 12_000
-type TrendingCache = Map<string, { value: TrendingResult; expiresAt: number }>
+const CACHE_MAX_ENTRIES = 16
+type TrendingWindow = Omit<TrendingResult, 'hasMore'>
+type TrendingCache = TtlLruCache<string, TrendingWindow>
 const cachesByDb = new WeakMap<object, TrendingCache>()
 
 function getCache(): TrendingCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
-    c = new Map()
+    c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
   }
   return c
@@ -252,46 +260,65 @@ function cacheKey(opts: GetTrendingOptions): string {
   // unbounded /trending board otherwise share a cache entry and one serves
   // the other's rows. The key carries the hours, not the derived cutoff
   // timestamp, so the entry stays hittable for its whole TTL.
-  return [
-    opts.platform ?? '*',
-    opts.limit ?? LIMIT,
-    opts.minTrend ?? '*',
-    opts.offset ?? 0,
-    opts.withinHours ?? '*',
-  ].join(':')
+  return [opts.platform ?? '*', normalizedWithinHours(opts.withinHours) ?? '*'].join(':')
+}
+
+function normalizedWithinHours(value: number | undefined): number | undefined {
+  return value != null && Number.isFinite(value) && value > 0 ? value : undefined
+}
+
+function normalizedLimit(value: number | undefined): number {
+  if (value == null || !Number.isFinite(value)) return LIMIT
+  return Math.min(MAX_LIMIT, Math.max(0, Math.trunc(value)))
+}
+
+function normalizedOffset(value: number | undefined): number {
+  if (value == null || !Number.isFinite(value)) return 0
+  return Math.min(MAX_OFFSET, Math.max(0, Math.trunc(value)))
 }
 
 /**
- * Fetch + enrich the most recent community actions into display-ready items,
- * cached for `CACHE_TTL_MS` per distinct `(platform, limit, minTrend)` combo.
+ * Fetch + enrich the most recent community actions into display-ready items.
+ * The bounded canonical window is cached per `(platform, withinHours)` and
+ * pagination/thresholding is pure in-memory work.
  *
- * Defaults reproduce today's `/api/activity` behaviour exactly: FETCH 80 recent
- * events → dedup by `action:platform:url` → LIMIT 30, no platform filter, no
- * minTrend threshold.
+ * Defaults return the newest 30 deduped items, with no platform filter or
+ * minimum trend threshold.
  */
 export async function getTrendingItems(opts: GetTrendingOptions = {}): Promise<TrendingResult> {
   const cache = getCache()
   const key = cacheKey(opts)
-  const now = Date.now()
-  const hit = cache.get(key)
-  if (hit && hit.expiresAt > now) return hit.value
+  let window = cache.get(key)
+  if (!window) {
+    window = await fetchTrendingWindow({
+      platform: opts.platform,
+      withinHours: normalizedWithinHours(opts.withinHours),
+    })
+    cache.set(key, window)
+  }
 
-  const value = await fetchTrendingItems(opts)
-  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
-  return value
+  const offset = normalizedOffset(opts.offset)
+  const limit = normalizedLimit(opts.limit)
+  const minTrend = opts.minTrend
+  const eligible =
+    minTrend == null
+      ? window.items
+      : window.items.filter((item) => (item.trendCount ?? 0) >= minTrend)
+  const items = eligible.slice(offset, offset + limit)
+  const hasMore = offset + items.length < eligible.length
+
+  return {
+    items,
+    savedToday: window.savedToday,
+    recentActivity: window.recentActivity,
+    hasMore,
+  }
 }
 
-async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<TrendingResult> {
-  const limit = opts.limit ?? LIMIT
+async function fetchTrendingWindow(
+  opts: Pick<GetTrendingOptions, 'platform' | 'withinHours'>,
+): Promise<TrendingWindow> {
   const platformFilter = opts.platform
-  const offset = Math.max(0, opts.offset ?? 0)
-
-  // Raw-row fetch window: must be deep enough that, after collapsing to one
-  // row per post, we still have `offset + limit` deduped posts to slice from.
-  // The dedup ratio isn't known up front, so over-fetch by 3x and cap it — a
-  // few hundred rows is a cheap local scan. See `hasMore`'s caveat above for
-  // what happens if a very deep offset outruns this window.
-  const rawFetchSize = Math.min(600, Math.max(FETCH, (offset + limit) * 3))
 
   // Live window (opt-in, see `withinHours`). ISO strings compare lexically,
   // which is what every other date filter in this file relies on.
@@ -327,7 +354,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
       ),
     )
     .orderBy(desc(activity.createdAt))
-    .limit(rawFetchSize)
+    .limit(RAW_WINDOW_SIZE)
     .all()
 
   // Collapse to ONE row per post (platform + source id), keeping the newest
@@ -344,10 +371,9 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     deduped.push(row)
   }
 
-  // Page over the deduped, newest-first sequence (not the raw rows — an
-  // offset there would slice mid-post-group and reintroduce duplicates).
-  const items = deduped.slice(offset, offset + limit)
-  const hasMore = deduped.length > offset + items.length
+  // Enrich the whole canonical deduped window. Pagination happens only after
+  // this value is cached, so every offset sees one stable newest-first list.
+  const items = deduped
 
   const ids = [...new Set(items.map((i) => i.bookmarkId).filter(Boolean))]
 
@@ -563,7 +589,7 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     return i.thumbnailUrl ?? null
   }
 
-  let enriched: TrendingItem[] = items.map((i) => {
+  const enriched: TrendingItem[] = items.map((i) => {
     const key = `${i.platform}:${i.bookmarkId}`
     // Bookmark-derived type is authoritative (saved items); otherwise fall back
     // to the type recorded at preview time so preview-only items (esp. articles)
@@ -616,11 +642,6 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     }
   })
 
-  if (opts.minTrend != null) {
-    const threshold = opts.minTrend
-    enriched = enriched.filter((i) => (i.trendCount ?? 0) >= threshold)
-  }
-
   // "saved today" headline count — save events since UTC midnight.
   const midnight = new Date()
   midnight.setUTCHours(0, 0, 0, 0)
@@ -644,5 +665,5 @@ async function fetchTrendingItems(opts: GetTrendingOptions = {}): Promise<Trendi
     .get()
   const recentActivity = Number(recentActivityRow?.c) || 0
 
-  return { items: enriched, savedToday, recentActivity, hasMore }
+  return { items: enriched, savedToday, recentActivity }
 }

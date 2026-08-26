@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isValidReelId } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
 import { downloadResponse } from '@/lib/media/proxy'
+import { downloadRateLimit } from '@/lib/rate-limit'
 
 /**
  * Instagram Reel download — streams the MP4 with `Content-Disposition:
@@ -15,6 +16,9 @@ export async function GET(request: NextRequest) {
   if (!id || !isValidReelId(id)) {
     return NextResponse.json({ error: 'Missing or invalid id' }, { status: 400 })
   }
+
+  const rateLimited = downloadRateLimit(request)
+  if (rateLimited) return rateLimited
 
   const upstream = await resolveInstagramVideo(id)
   if (!upstream) {

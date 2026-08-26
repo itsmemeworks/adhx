@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, type TestDbInstance } from './setup'
-import { collectionEvents, tagShares, users, type NewCollectionEvent } from '@/lib/db/schema'
+import {
+  collectionAggregates,
+  collectionEvents,
+  tagShares,
+  users,
+  type NewCollectionEvent,
+} from '@/lib/db/schema'
+import { sql } from 'drizzle-orm'
 
 /**
  * ANONYMITY INVARIANT regression test for the Discovery leaderboard, mirroring
@@ -43,6 +50,25 @@ function seedEvent(
 ) {
   const row: NewCollectionEvent = { action: 'view', hidden: 0, ...overrides }
   testInstance.db.insert(collectionEvents).values(row).run()
+  testInstance.db
+    .insert(collectionAggregates)
+    .values({
+      ownerUserId: row.ownerUserId,
+      tag: row.tag,
+      viewCount: row.action === 'view' ? 1 : 0,
+      cloneCount: row.action === 'clone' ? 1 : 0,
+      lastEventAt: row.createdAt,
+      hidden: row.hidden ?? 0,
+    })
+    .onConflictDoUpdate({
+      target: [collectionAggregates.ownerUserId, collectionAggregates.tag],
+      set: {
+        viewCount: sql`${collectionAggregates.viewCount} + excluded.view_count`,
+        cloneCount: sql`${collectionAggregates.cloneCount} + excluded.clone_count`,
+        lastEventAt: sql`max(${collectionAggregates.lastEventAt}, excluded.last_event_at)`,
+      },
+    })
+    .run()
 }
 
 /** Recursively checks that no key at any depth of `value` is a viewer/user-id-shaped key. */
@@ -138,5 +164,19 @@ describe('discovery leaderboard anonymity invariant', () => {
     expect(entry.username).toBe('publicowner')
     expect(JSON.stringify(items)).not.toContain(OWNER_ID)
     expect(JSON.stringify(items)).not.toContain(SECRET_VIEWER)
+  })
+
+  it('stores no viewer identifier in the all-time aggregate schema', () => {
+    const columns = testInstance.sqlite
+      .prepare('PRAGMA table_info(collection_aggregates)')
+      .all() as Array<{ name: string }>
+    expect(columns.map((column) => column.name)).toEqual([
+      'owner_user_id',
+      'tag',
+      'view_count',
+      'clone_count',
+      'last_event_at',
+      'hidden',
+    ])
   })
 })
