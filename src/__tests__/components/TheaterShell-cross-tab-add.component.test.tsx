@@ -23,13 +23,9 @@ vi.mock('@/components/theater/Stage', () => ({
   ),
 }))
 
-let capturedOnPastePost: ((url: string) => boolean | Promise<boolean>) | undefined
 const mockMobileChrome = vi.fn((_props: Record<string, unknown>) => null)
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
-  DesktopStageChrome: (props: { onPastePost?: (url: string) => boolean | Promise<boolean> }) => {
-    capturedOnPastePost = props.onPastePost
-    return null
-  },
+  DesktopStageChrome: () => null,
   DesktopDock: () => null,
 }))
 vi.mock('@/components/theater/TheaterMobileChrome', () => ({
@@ -156,7 +152,6 @@ function fireAdded(item: FeedItem) {
 
 describe('TheaterShell: cross-tab add + filters', () => {
   beforeEach(() => {
-    capturedOnPastePost = undefined
     mockMobileChrome.mockClear()
     window.localStorage.clear()
     window.sessionStorage.clear()
@@ -612,7 +607,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().isSeen('twitter:1')).toBe(false)
   })
 
-  it('Live paste keeps the Saved cursor on the same post after flipping tabs', async () => {
+  it('Live adds then Saved starts on the newest post', async () => {
     await act(async () => {
       render(
         <TheaterShell
@@ -629,20 +624,14 @@ describe('TheaterShell: cross-tab add + filters', () => {
     if (!collection) throw new Error('collection chrome missing')
     expect(collection.tab).toBe('live')
 
-    await act(async () => {
-      await capturedOnPastePost!('https://x.com/alice/status/99')
-    })
-    await waitFor(() =>
-      expect(
-        (global.fetch as ReturnType<typeof vi.fn>).mock.calls.some(([url]) =>
-          String(url).includes('/api/bookmarks/add'),
-        ),
-      ).toBe(true),
-    )
+    await act(async () => fireAdded(feedItem('a')))
+    await act(async () => fireAdded(feedItem('b')))
+    await act(async () => fireAdded(feedItem('c')))
+    await act(async () => fireAdded(feedItem('d')))
 
     await act(async () => collection.onTabChange('collection'))
-    expect(chromeProps().currentKey).toBe('twitter:2')
-    expect(queueIds()).toEqual(['99', '1', '2', '3'])
+    expect(chromeProps().currentKey).toBe('twitter:d')
+    expect(queueIds()).toEqual(['d', 'c', 'b', 'a', '1', '2', '3'])
   })
 
   it('Saved: tweet-added after All Clear plays the new save', async () => {

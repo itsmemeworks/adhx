@@ -104,6 +104,18 @@ describe('orderLifoQueue', () => {
     ).toEqual(['a', 'b', 'c'])
   })
 
+  it('paste interrupt sits as Next under the new lead', () => {
+    const items = [item('watching', 5), item('paste', 0), item('older', 8)]
+    expect(
+      ids(
+        orderLifoQueue(items, {
+          currentKey: key('paste'),
+          pinNextKey: key('watching'),
+        }),
+      ),
+    ).toEqual(['paste', 'watching', 'older'])
+  })
+
   it('pins now playing so a newer arrival is Next, not a steal', () => {
     const items = [item('current', 5), item('arrival', 0)]
     expect(

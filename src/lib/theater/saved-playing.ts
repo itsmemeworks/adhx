@@ -1,7 +1,7 @@
-/** Session cursor for Saved so `/live` ⇄ `/saved` remounts land on the
- * same post (Live paste prepends without stealing focus). `?open=` wins.
- * Resume never skips leftover rows from this run — those survive remount
- * in `SAVED_PLAYED_STORAGE_KEY`. */
+/** Session cursor for Saved. Opening Saved (remount or Live → Saved)
+ * starts newest-first; `?open=` wins. Live adds still pin the cursor
+ * while you stay on Live so they land as Next. `SAVED_PLAYED_STORAGE_KEY`
+ * is the Watched set for Repeat-off Queue. */
 
 export const SAVED_PLAYING_STORAGE_KEY = 'adhx-saved-playing'
 export const SAVED_PLAYED_STORAGE_KEY = 'adhx-saved-played'

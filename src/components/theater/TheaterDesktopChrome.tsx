@@ -643,6 +643,9 @@ export function DesktopStageChrome({
               links={current.textLinks}
               hideTweetLinks={!!current.quote}
               className="text-[15px] leading-snug"
+              onOpenRead={
+                showArticleToggle && onToggleArticleMode ? onToggleArticleMode : undefined
+              }
             />
           )}
           {showArticleToggle && onToggleArticleMode ? (

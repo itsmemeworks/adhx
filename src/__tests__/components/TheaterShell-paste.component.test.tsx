@@ -160,6 +160,7 @@ describe('TheaterShell: personal paste adds in place', () => {
       source: 'manual',
     })
     expect(assignSpy).not.toHaveBeenCalled()
+    await waitFor(() => expect(chromeProps().currentKey).toBe('twitter:99'))
   })
 
   it('POSTs add and does not navigate away from Saved', async () => {
@@ -232,10 +233,10 @@ describe('TheaterShell: personal paste adds in place', () => {
     const items = (chromeProps().items ?? []) as { bookmarkId?: string; id?: string }[]
     const ids = items.map((i) => i.bookmarkId ?? i.id)
     expect(ids).toContain('99')
-    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(chromeProps().currentKey).toBe('twitter:99')
   })
 
-  it('Saved paste mid-play keeps the current post; the new save is Next', async () => {
+  it('Saved paste mid-play takes the stage; the interrupted post is Next', async () => {
     await act(async () => {
       render(
         <TheaterShell
@@ -253,7 +254,7 @@ describe('TheaterShell: personal paste adds in place', () => {
       await capturedOnPastePost!('https://x.com/alice/status/99')
     })
 
-    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(chromeProps().currentKey).toBe('twitter:99')
     const items = (chromeProps().items ?? []) as { bookmarkId?: string; id?: string }[]
     expect(items.map((i) => i.bookmarkId ?? i.id)).toEqual(['99', '1', '2', '3'])
   })

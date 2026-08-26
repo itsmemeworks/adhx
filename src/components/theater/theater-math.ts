@@ -149,6 +149,21 @@ export function pinKeyFirst<
   return copy
 }
 
+/** Same-tab paste: keep the interrupted post as Next under the new lead. */
+export function pinKeySecond<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(items: T[], secondKey: string | null, firstKey?: string | null): T[] {
+  if (!secondKey || secondKey === firstKey) return items
+  const from = items.findIndex((it) => theaterItemKey(it) === secondKey)
+  if (from === -1) return items
+  const dest = firstKey && items[0] && theaterItemKey(items[0]) === firstKey ? 1 : 0
+  if (from === dest) return items
+  const copy = items.slice()
+  const [item] = copy.splice(from, 1)
+  copy.splice(Math.min(dest, copy.length), 0, item)
+  return copy
+}
+
 /** Theater type pills, in the order they render. Empty selection = all types. */
 export const THEATER_QUEUE_TYPES: ContentType[] = ['video', 'photo', 'text', 'article']
 
@@ -346,6 +361,8 @@ export interface OrderLifoQueueOpts {
   keepKey?: string | null
   /** Repeat off only: pin now playing so a newer arrival is Next. Never on Repeat all. */
   pinCurrent?: boolean
+  /** Same-tab paste: the interrupted post sits as Next under the new lead. */
+  pinNextKey?: string | null
   /** Repeat off Queue: keep seen rows after Now / Next. Playback omits this. */
   appendSeen?: boolean
 }
@@ -372,8 +389,9 @@ export function orderLifoQueue<
         return !isSeen(key)
       })
     : newest
-  const ordered =
+  const pinned =
     opts.pinCurrent && opts.currentKey ? pinKeyFirst(playable, opts.currentKey) : playable
+  const ordered = opts.pinNextKey ? pinKeySecond(pinned, opts.pinNextKey, opts.currentKey) : pinned
   if (!opts.onlyUnseen || !opts.appendSeen) return ordered
   const playableKeys = new Set(ordered.map((it) => theaterItemKey(it)))
   const seen = newest.filter((it) => !playableKeys.has(theaterItemKey(it)))
