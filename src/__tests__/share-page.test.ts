@@ -77,6 +77,15 @@ describe('parseShareUrl — TikTok', () => {
     expect(parseShareUrl('https://www.tiktok.com/t/ZTRkAbc/')).toEqual({
       path: '/api/tiktok/resolve?url=https%3A%2F%2Fwww.tiktok.com%2Ft%2FZTRkAbc&go=1',
     })
+    expect(parseShareUrl('https://vm.tiktok.com/ZMABcd123/?is_from_webapp=1')).toEqual({
+      path: '/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2FZMABcd123&go=1',
+    })
+  })
+
+  it('routes encoded canonical handles to the preview path', () => {
+    expect(parseShareUrl('https://m.tiktok.com/%40sophieraiin/video/7619017281691045134')).toEqual({
+      path: '/@sophieraiin/video/7619017281691045134',
+    })
   })
 })
 
@@ -108,6 +117,16 @@ describe('extractSharedUrl — picks the link out of the share payload', () => {
       path: '/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2FZMABcd123&go=1',
     })
   })
+
+  it('requires caption text to be extracted before parsing', () => {
+    const caption = 'omg watch https://vt.tiktok.com/ZSxyz789/'
+    expect(parseShareUrl(caption)).toBeNull()
+
+    const extracted = extractSharedUrl(null, caption, null)
+    expect(parseShareUrl(extracted!)).toEqual({
+      path: '/api/tiktok/resolve?url=https%3A%2F%2Fvt.tiktok.com%2FZSxyz789&go=1',
+    })
+  })
 })
 
 describe('parseShareUrl — YouTube', () => {
@@ -131,6 +150,36 @@ describe('parseShareUrl — rejections', () => {
     expect(parseShareUrl('https://youtube.com/feed/subscriptions')).toBeNull()
     expect(parseShareUrl('not a url at all')).toBeNull()
     expect(parseShareUrl('')).toBeNull()
+  })
+
+  it('rejects platform-looking content on an unrelated or deceptive host', () => {
+    expect(parseShareUrl('https://evil.example/x.com/user/status/111')).toBeNull()
+    expect(
+      parseShareUrl('https://evil.example/@user/video/123456?next=https://tiktok.com'),
+    ).toBeNull()
+    expect(
+      parseShareUrl('https://evil.example/?next=https://youtube.com/shorts/Y9aytLYBajw'),
+    ).toBeNull()
+    expect(parseShareUrl('https://x.com.evil.example/user/status/111')).toBeNull()
+    expect(parseShareUrl('https://x.com@evil.example/user/status/111')).toBeNull()
+  })
+
+  it('rejects nested TikTok short links on unrelated top-level URLs', () => {
+    expect(parseShareUrl('https://evil.example/?next=https://vm.tiktok.com/ZMABcd123/')).toBeNull()
+    expect(parseShareUrl('https://evil.example/https://vt.tiktok.com/ZSxyz789')).toBeNull()
+    expect(parseShareUrl('https://evil.example/?next=https://www.tiktok.com/t/ZTRkAbc')).toBeNull()
+  })
+
+  it('rejects unsafe schemes while preserving valid mobile hosts', () => {
+    expect(parseShareUrl('javascript://x.com/user/status/111')).toBeNull()
+    expect(parseShareUrl('ftp://instagram.com/reel/DXVsqQ7CSXw')).toBeNull()
+    expect(parseShareUrl('//x.com/user/status/111')).toBeNull()
+    expect(parseShareUrl('https://mobile.twitter.com/user/status/111')).toEqual({
+      path: '/user/status/111',
+    })
+    expect(parseShareUrl('https://m.youtube.com/shorts/Y9aytLYBajw')).toEqual({
+      path: '/shorts/Y9aytLYBajw',
+    })
   })
 })
 
@@ -224,9 +273,45 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
     expect(peekPreviewOpenIntent()).toBe('paste')
   })
 
+  it.each([
+    [
+      'watch this https://vm.tiktok.com/ZMABcd123/',
+      '/api/tiktok/resolve?url=https%3A%2F%2Fvm.tiktok.com%2FZMABcd123&go=1',
+    ],
+    [
+      'TikTok caption 😂 https://vt.tiktok.com/ZSxyz789/',
+      '/api/tiktok/resolve?url=https%3A%2F%2Fvt.tiktok.com%2FZSxyz789&go=1',
+    ],
+  ])('extracts a caption-wrapped TikTok short link', (caption, expectedPath) => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, caption)).toBe(true)
+    expect(router.push).not.toHaveBeenCalled()
+    expect(window.location.href).toBe(expectedPath)
+    expect(peekPreviewOpenIntent()).toBe('paste')
+  })
+
   it('returns false and navigates nowhere for unsupported text', () => {
     const router = makeRouter()
     expect(navigateToPastedLink(router, 'just some ordinary text, no link here')).toBe(false)
+    expect(router.push).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('')
+    expect(peekPreviewOpenIntent()).toBeNull()
+  })
+
+  it('does not navigate a platform-looking path on an unrelated host', () => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'https://evil.example/x.com/user/status/111')).toBe(false)
+    expect(router.push).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('')
+    expect(peekPreviewOpenIntent()).toBeNull()
+  })
+
+  it.each([
+    'https://evil.example/?next=https://vm.tiktok.com/ZMABcd123/',
+    'https://evil.example/https://vt.tiktok.com/ZSxyz789/',
+  ])('does not hard-navigate a nested TikTok short link: %s', (url) => {
+    const router = makeRouter()
+    expect(navigateToPastedLink(router, url)).toBe(false)
     expect(router.push).not.toHaveBeenCalled()
     expect(window.location.href).toBe('')
     expect(peekPreviewOpenIntent()).toBeNull()

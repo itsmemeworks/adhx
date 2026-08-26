@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — Phase 6 public surfaces and data integrity verified
+
+Non-X previews now distinguish permanent misses from transient mirror failures without caching false noindex pages. Public analytics require trusted post identities, moderation/ban checks, actor-correct dedupe, and indexed lookups; uncaught Next server failures reach privacy-bounded Sentry instrumentation. URL parsing is host-anchored, non-X bookmark/media writes and tag/ban mutations are atomic, cards and stacked sign-in modals are keyboard/focus safe, and Firefox ships validated MV3 output with accurate AMO browsing-activity disclosure. CI now validates both extension artifacts. All 3,345 tests, typecheck, build, formatting, lint (warnings only), extension builds, diff checks, and integrated review are green.
+
 ## 2026-08-26 — Phase 5 theater state stabilized
 
 Persistent video playback now rejects superseded play promises and queued media events without remounting the iOS-granted element. Shared preview leads release after every departure, including waiting/unavailable paths, while live auth and cross-tab save/tag/delete membership stay current. Seen state uses bounded revisioned local operations (500 marks + 500 tombstones), atomic bulk unmarks, cross-tab convergence, and one-time legacy-array migration; pre-V2 tabs must reload. All 3,217 tests, typecheck, build, formatting, lint (warnings only), and focused review passes are green.

@@ -426,6 +426,61 @@ describe('Phase 4 startup migration', () => {
     migrated.close()
   })
 
+  it('installs trusted analytics lookup indexes idempotently', () => {
+    const { databasePath, migrationsPath, sqlite } = createMigrationFixture()
+    sqlite.exec(`
+      DROP INDEX bookmarks_platform_id_idx;
+      DROP INDEX activity_platform_bookmark_hidden_idx;
+    `)
+    sqlite.close()
+
+    const first = runMigration(databasePath, migrationsPath)
+    expect(first.status, `${first.stdout}\n${first.stderr}`).toBe(0)
+    const second = runMigration(databasePath, migrationsPath)
+    expect(second.status, `${second.stdout}\n${second.stderr}`).toBe(0)
+
+    const migrated = new Database(databasePath)
+    const indexes = migrated
+      .prepare(
+        `SELECT name FROM sqlite_master
+         WHERE type = 'index'
+           AND name IN ('bookmarks_platform_id_idx', 'activity_platform_bookmark_hidden_idx')
+         ORDER BY name`,
+      )
+      .all()
+    expect(indexes).toEqual([
+      { name: 'activity_platform_bookmark_hidden_idx' },
+      { name: 'bookmarks_platform_id_idx' },
+    ])
+
+    const bookmarkPlan = migrated
+      .prepare(
+        `EXPLAIN QUERY PLAN
+         SELECT platform, category
+         FROM bookmarks
+         WHERE platform = ? AND id = ?
+         LIMIT 1`,
+      )
+      .all('twitter', 'post-1') as Array<{ detail: string }>
+    expect(bookmarkPlan.map(({ detail }) => detail).join('\n')).toContain(
+      'bookmarks_platform_id_idx',
+    )
+
+    const activityPlan = migrated
+      .prepare(
+        `EXPLAIN QUERY PLAN
+         SELECT content_type
+         FROM activity
+         WHERE platform = ? AND bookmark_id = ? AND hidden = 0
+         LIMIT 1`,
+      )
+      .all('twitter', 'post-1') as Array<{ detail: string }>
+    expect(activityPlan.map(({ detail }) => detail).join('\n')).toContain(
+      'activity_platform_bookmark_hidden_idx',
+    )
+    migrated.close()
+  })
+
   it('terminates startup when moderation tables are unreadable', () => {
     const { databasePath, migrationsPath, sqlite } = createMigrationFixture()
     sqlite.exec(`

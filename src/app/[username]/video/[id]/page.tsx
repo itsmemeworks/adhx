@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
-import { fetchTikTokMetadata, isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
+import { getTikTokMetadataStatus, isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
 import { getCurrentUserId } from '@/lib/auth/session'
 import {
   buildContentTitle,
@@ -23,16 +23,21 @@ interface Props {
   params: Promise<{ username: string; id: string }>
 }
 
-function normalizeHandle(raw: string): string {
-  const decoded = decodeURIComponent(raw)
-  return decoded.startsWith('@') ? decoded.slice(1) : decoded
+function normalizeHandle(raw: string): string | null {
+  try {
+    const decoded = decodeURIComponent(raw)
+    const handle = decoded.startsWith('@') ? decoded.slice(1) : decoded
+    return handle.startsWith('@') ? null : handle
+  } catch {
+    return null
+  }
 }
 
 export default async function TikTokPreviewPage({ params }: Props) {
   const { username, id } = await params
   const handle = normalizeHandle(username)
 
-  if (!isValidUsername(handle) || !isValidVideoId(id)) {
+  if (!handle || !isValidUsername(handle) || !isValidVideoId(id)) {
     redirect('/')
   }
 
@@ -57,7 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username, id } = await params
   const handle = normalizeHandle(username)
 
-  if (!isValidUsername(handle) || !isValidVideoId(id)) {
+  if (!handle || !isValidUsername(handle) || !isValidVideoId(id)) {
     return { title: 'ADHX - Save now. Read never. Find always.' }
   }
 
@@ -67,7 +72,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/@${handle}/video/${id}`
   const saved = getSavedPreviewDisplay('tiktok', id)
-  const meta = saved ? null : await fetchTikTokMetadata(handle, id)
+  const metadataStatus = saved ? null : await getTikTokMetadataStatus(handle, id)
+
+  // TnkTok is a third-party mirror, so any valid-id miss remains unresolved
+  // rather than becoming an authoritative noindex tombstone.
+  if (!saved && metadataStatus?.kind !== 'resolved') {
+    return {
+      title: `@${handle} on TikTok`,
+      description: 'Preview this TikTok video on ADHX.',
+      alternates: { canonical: canonicalUrl },
+    }
+  }
+
+  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const who = saved?.authorName || saved?.author || meta?.authorName || meta?.author || `@${handle}`
   const caption = saved?.text || meta?.title || meta?.description || ''

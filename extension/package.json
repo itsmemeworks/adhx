@@ -16,6 +16,8 @@
     "build": "extension build",
     "preview": "extension preview",
     "build:chrome": "extension build --browser chrome",
-    "build:firefox": "extension build --browser firefox"
+    "build:firefox": "extension build --browser firefox",
+    "typecheck": "tsc --noEmit",
+    "validate:manifests": "node scripts/validate-manifests.mjs"
   }
 }

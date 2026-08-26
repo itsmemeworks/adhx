@@ -99,6 +99,38 @@ jobs:
       - name: Build
         run: pnpm build
 
+  extension:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+    steps:
+      - uses: actions/checkout@v7
+
+      # Version is read from the root "packageManager" field in package.json
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: extension/pnpm-lock.yaml
+
+      - name: Install extension dependencies
+        run: pnpm --dir extension install --frozen-lockfile
+
+      - name: Type check extension
+        run: pnpm --dir extension typecheck
+
+      - name: Build Chromium extension
+        run: pnpm --dir extension build:chrome
+
+      - name: Build Firefox extension
+        run: pnpm --dir extension build:firefox
+
+      - name: Validate emitted manifests
+        run: pnpm --dir extension validate:manifests
+
   container-smoke:
     if: |
       github.event_name != 'workflow_run' &&

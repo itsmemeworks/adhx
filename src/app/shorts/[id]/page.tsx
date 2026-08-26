@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
-import { fetchYouTubeMetadata, isValidVideoId, youtubeThumbnail } from '@/lib/media/youtube'
+import { getYouTubeMetadataStatus, isValidVideoId, youtubeThumbnail } from '@/lib/media/youtube'
 import { getCurrentUserId } from '@/lib/auth/session'
 import {
   buildContentTitle,
@@ -60,7 +60,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/shorts/${id}`
   const saved = getSavedPreviewDisplay('youtube', id)
-  const meta = saved ? null : await fetchYouTubeMetadata(id)
+  const metadataStatus = saved ? null : await getYouTubeMetadataStatus(id)
+
+  if (!saved && metadataStatus?.kind === 'permanent-miss') {
+    return {
+      title: 'YouTube Short unavailable - ADHX',
+      description: 'This YouTube Short is no longer available.',
+      robots: { index: false },
+      alternates: { canonical: canonicalUrl },
+    }
+  }
+  if (!saved && metadataStatus?.kind === 'transient-failure') {
+    return {
+      title: 'YouTube Short',
+      description: 'Preview this YouTube Short on ADHX.',
+      alternates: { canonical: canonicalUrl },
+    }
+  }
+
+  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const who = saved?.authorName || saved?.author || meta?.authorName || meta?.author
   const titleText = saved?.text || meta?.title

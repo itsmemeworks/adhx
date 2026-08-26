@@ -56,6 +56,7 @@ export const bookmarks = sqliteTable(
     ),
     userIdCategoryIdx: index('bookmarks_user_category_idx').on(table.userId, table.category),
     userIdPlatformIdx: index('bookmarks_user_platform_idx').on(table.userId, table.platform),
+    platformIdIdx: index('bookmarks_platform_id_idx').on(table.platform, table.id),
     userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(
       table.userId,
       table.quotedTweetId,
@@ -302,6 +303,11 @@ export const activity = sqliteTable(
       table.platform,
       table.bookmarkId,
       table.createdAt,
+    ),
+    platformBookmarkHiddenIdx: index('activity_platform_bookmark_hidden_idx').on(
+      table.platform,
+      table.bookmarkId,
+      table.hidden,
     ),
   }),
 )

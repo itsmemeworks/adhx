@@ -18,6 +18,7 @@
  * (`/api/media/instagram/thumbnail?id=`), which re-resolves it fresh.
  */
 
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { makeHostAllowlist } from '@/lib/media/proxy'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
@@ -39,6 +40,11 @@ export interface ReelMetadata {
   /** Display name, e.g. "Penny Lane". */
   authorName?: string
 }
+
+export type ReelMetadataStatus =
+  | { kind: 'resolved'; metadata: ReelMetadata }
+  | { kind: 'permanent-miss' }
+  | { kind: 'transient-failure' }
 
 /**
  * Whether a URL points at a trusted Instagram image host. Exact-match or
@@ -99,18 +105,29 @@ const fetchCachedReelMetadata = unstable_cache(
   { revalidate: 3600 },
 )
 
+export async function fetchReelMetadataStatus(id: string): Promise<ReelMetadataStatus> {
+  if (!isValidReelId(id)) return { kind: 'permanent-miss' }
+  try {
+    const metadata = await fetchCachedReelMetadata(id)
+    return metadata ? { kind: 'resolved', metadata } : { kind: 'permanent-miss' }
+  } catch {
+    return { kind: 'transient-failure' }
+  }
+}
+
+/**
+ * Request-scoped memoization shared by generateMetadata and the preview RSC.
+ * Cross-request result caching remains owned by fetchCachedReelMetadata.
+ */
+export const getReelMetadataStatus = cache(fetchReelMetadataStatus)
+
 /**
  * Preserve the public Metadata|null contract. Invalid input avoids the cache
  * and network; transient errors are caught only after escaping the callback.
  */
 export async function fetchReelMetadata(id: string): Promise<ReelMetadata | null> {
-  if (!isValidReelId(id)) return null
-
-  try {
-    return await fetchCachedReelMetadata(id)
-  } catch {
-    return null
-  }
+  const result = await fetchReelMetadataStatus(id)
+  return result.kind === 'resolved' ? result.metadata : null
 }
 
 async function fetchFromInstagram(path: string): Promise<InstagramResult> {

@@ -31,6 +31,7 @@ vi.mock('next/cache', () => ({
 
 import {
   fetchTikTokMetadata,
+  fetchTikTokMetadataStatus,
   isAllowedVideoUrl,
   isValidUsername,
   isValidVideoId,
@@ -61,10 +62,10 @@ function htmlResponse(html: string) {
   }
 }
 
-function notFoundResponse() {
+function notFoundResponse(status = 404) {
   return {
     ok: false,
-    status: 404,
+    status,
     headers: new Headers({ 'content-type': 'text/html' }),
     body: null,
   }
@@ -260,6 +261,20 @@ describe('fetchTikTokMetadata', () => {
     expect(result).toBeNull()
   })
 
+  it('reserves permanent misses for locally invalid input', async () => {
+    await expect(fetchTikTokMetadataStatus('../etc', '123')).resolves.toEqual({
+      kind: 'permanent-miss',
+    })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it.each([404, 410])('treats a mirror-only %i as transient', async (status) => {
+    mockFetch.mockResolvedValueOnce(notFoundResponse(status))
+    await expect(fetchTikTokMetadataStatus('@sophieraiin', VIDEO_ID)).resolves.toEqual({
+      kind: 'transient-failure',
+    })
+  })
+
   it('does not cache a 503 and refetches successfully', async () => {
     mockFetch
       .mockResolvedValueOnce(errorResponse(503))
@@ -296,13 +311,20 @@ describe('fetchTikTokMetadata', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
-  it('caches a confirmed 404 miss', async () => {
-    mockFetch.mockResolvedValueOnce(notFoundResponse())
+  it.each([404, 410])(
+    'does not cache a mirror-only %i and refetches successfully',
+    async (status) => {
+      mockFetch
+        .mockResolvedValueOnce(notFoundResponse(status))
+        .mockResolvedValueOnce(htmlResponse(validHtml))
 
-    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
-    expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-  })
+      expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toBeNull()
+      expect(await fetchTikTokMetadata('@sophieraiin', VIDEO_ID)).toEqual(
+        expect.objectContaining({ videoUrl: VIDEO_URL }),
+      )
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it('falls back to twitter:player:stream when og:video is missing', async () => {
     const html = `

@@ -216,24 +216,28 @@ export async function setUserBanned(opts: {
     return { ok: false, error: 'Cannot ban an admin', status: 400 }
   }
 
-  if (opts.banned) {
-    db.insert(userBans)
-      .values({
-        userId: targetUserId,
-        reason: cleanReason(opts.reason),
-        createdAt: nowIso(),
-        createdBy: opts.actorUserId,
-      })
-      .onConflictDoUpdate({
-        target: userBans.userId,
-        set: { reason: cleanReason(opts.reason), createdAt: nowIso(), createdBy: opts.actorUserId },
-      })
-      .run()
-    writeAudit(opts.actorUserId, 'ban_user', { username: targetUsername })
-  } else {
-    db.delete(userBans).where(eq(userBans.userId, targetUserId)).run()
-    writeAudit(opts.actorUserId, 'unban_user', { username: targetUsername })
-  }
+  const reason = cleanReason(opts.reason)
+  const createdAt = nowIso()
+  runInTransaction(() => {
+    if (opts.banned) {
+      db.insert(userBans)
+        .values({
+          userId: targetUserId,
+          reason,
+          createdAt,
+          createdBy: opts.actorUserId,
+        })
+        .onConflictDoUpdate({
+          target: userBans.userId,
+          set: { reason, createdAt, createdBy: opts.actorUserId },
+        })
+        .run()
+      writeAudit(opts.actorUserId, 'ban_user', { username: targetUsername })
+    } else {
+      db.delete(userBans).where(eq(userBans.userId, targetUserId)).run()
+      writeAudit(opts.actorUserId, 'unban_user', { username: targetUsername })
+    }
+  })
 
   return { ok: true, username: targetUsername, banned: opts.banned }
 }

@@ -1,23 +1,30 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const sentrySdk = vi.hoisted(() => ({
-  captureException: vi.fn(),
-  captureMessage: vi.fn(),
-  init: vi.fn(),
-  metricCount: vi.fn(),
-  setExtra: vi.fn(),
-}))
+const sentrySdk = vi.hoisted(() => {
+  const state = { initialized: false }
+  return {
+    captureException: vi.fn(),
+    captureMessage: vi.fn(),
+    init: vi.fn((_options: unknown) => {
+      state.initialized = true
+    }),
+    isInitialized: vi.fn(() => state.initialized),
+    metricCount: vi.fn(),
+    setExtra: vi.fn(),
+    state,
+  }
+})
 
 vi.mock('@sentry/node', () => ({
   captureException: sentrySdk.captureException,
   captureMessage: sentrySdk.captureMessage,
   init: sentrySdk.init,
+  isInitialized: sentrySdk.isInitialized,
   metrics: {
     count: sentrySdk.metricCount,
     distribution: vi.fn(),
     gauge: vi.fn(),
   },
-  onUnhandledRejectionIntegration: vi.fn(() => ({ name: 'unhandled-rejection' })),
   withScope: vi.fn((callback: (scope: { setExtra: typeof sentrySdk.setExtra }) => void) =>
     callback({ setExtra: sentrySdk.setExtra }),
   ),
@@ -32,6 +39,7 @@ function capturedExtras(): Record<string, unknown> {
 }
 
 interface CapturedSentryOptions {
+  integrations: (defaultIntegrations: Array<{ name: string }>) => Array<{ name: string }>
   beforeSend: (event: Record<string, unknown>) => Record<string, unknown>
   beforeBreadcrumb: (breadcrumb: Record<string, unknown>) => Record<string, unknown>
   beforeSendTransaction: (event: Record<string, unknown>) => Record<string, unknown>
@@ -40,6 +48,7 @@ interface CapturedSentryOptions {
 
 beforeAll(async () => {
   vi.stubEnv('SENTRY_DSN', 'https://public@example.invalid/1')
+  sentrySdk.state.initialized = false
   sentry = await import('@/lib/sentry')
 })
 
@@ -52,7 +61,7 @@ beforeEach(() => {
 })
 
 describe('Sentry capture privacy boundary', () => {
-  it('sanitizes automatic SDK events, breadcrumbs, transactions, and spans', () => {
+  it('preserves non-HTTP defaults, initializes once across chunks, and sanitizes payloads', async () => {
     sentry.initSentry()
 
     expect(sentrySdk.init).toHaveBeenCalledOnce()
@@ -61,6 +70,27 @@ describe('Sentry capture privacy boundary', () => {
     expect(options.beforeBreadcrumb).toBeTypeOf('function')
     expect(options.beforeSendTransaction).toBeTypeOf('function')
     expect(options.beforeSendSpan).toBeTypeOf('function')
+    expect(
+      options.integrations([
+        { name: 'InboundFilters' },
+        { name: 'OnUncaughtException' },
+        { name: 'OnUnhandledRejection' },
+        { name: 'ContextLines' },
+        { name: 'Http' },
+        { name: 'NodeFetch' },
+      ]),
+    ).toEqual([
+      { name: 'InboundFilters' },
+      { name: 'OnUncaughtException' },
+      { name: 'OnUnhandledRejection' },
+      { name: 'ContextLines' },
+      { name: 'NodeFetch' },
+    ])
+
+    vi.resetModules()
+    const isolatedSentry = await import('@/lib/sentry')
+    isolatedSentry.initSentry()
+    expect(sentrySdk.init).toHaveBeenCalledOnce()
 
     const rawUserId = 'u_automatic_private'
     const rawEmail = 'automatic@example.com'

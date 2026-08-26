@@ -1,4 +1,29 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+const cacheHarness = vi.hoisted(() => {
+  const entries = new Map<string, string>()
+  return {
+    clear: () => entries.clear(),
+    unstableCache:
+      <A extends unknown[], R>(
+        fn: (...args: A) => Promise<R>,
+        keyParts: string[] = [],
+      ): ((...args: A) => Promise<R>) =>
+      async (...args: A): Promise<R> => {
+        const key = JSON.stringify([keyParts, args])
+        const cached = entries.get(key)
+        if (cached !== undefined) return JSON.parse(cached) as R
+        const value = await fn(...args)
+        entries.set(key, JSON.stringify(value))
+        return value
+      },
+  }
+})
+
+vi.mock('next/cache', () => ({
+  unstable_cache: cacheHarness.unstableCache,
+}))
+
 import {
   extractYouTubeId,
   isValidVideoId,
@@ -6,6 +31,7 @@ import {
   youtubeEmbedUrl,
   youtubeShortUrl,
   fetchYouTubeMetadata,
+  fetchYouTubeMetadataStatus,
 } from '@/lib/media/youtube'
 
 describe('youtube — extractYouTubeId', () => {
@@ -59,6 +85,7 @@ describe('youtube — fetchYouTubeMetadata (oEmbed)', () => {
   const mockFetch = vi.fn()
   beforeEach(() => {
     mockFetch.mockReset()
+    cacheHarness.clear()
     global.fetch = mockFetch as unknown as typeof fetch
   })
 
@@ -93,6 +120,58 @@ describe('youtube — fetchYouTubeMetadata (oEmbed)', () => {
   it('returns null when oEmbed 404s (private/removed video)', async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
     expect(await fetchYouTubeMetadata('Y9aytLYBajw')).toBeNull()
+  })
+
+  it.each([400, 404, 410])('classifies and caches a confirmed %i miss', async (status) => {
+    mockFetch.mockResolvedValue({ ok: false, status, json: async () => ({}) })
+
+    await expect(fetchYouTubeMetadataStatus('Y9aytLYBajw')).resolves.toEqual({
+      kind: 'permanent-miss',
+    })
+    await expect(fetchYouTubeMetadataStatus('Y9aytLYBajw')).resolves.toEqual({
+      kind: 'permanent-miss',
+    })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([429, 500, 503])(
+    'keeps HTTP %i transient and refetches instead of negative-caching it',
+    async (status) => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status, json: async () => ({}) })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ title: 'Recovered' }),
+        })
+
+      await expect(fetchYouTubeMetadataStatus('Y9aytLYBajw')).resolves.toEqual({
+        kind: 'transient-failure',
+      })
+      await expect(fetchYouTubeMetadataStatus('Y9aytLYBajw')).resolves.toMatchObject({
+        kind: 'resolved',
+        metadata: { title: 'Recovered' },
+      })
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it('keeps timeouts transient and refetches successfully', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new DOMException('timed out', 'TimeoutError'))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ title: 'Recovered' }),
+      })
+
+    await expect(fetchYouTubeMetadataStatus('Y9aytLYBajw')).resolves.toEqual({
+      kind: 'transient-failure',
+    })
+    await expect(fetchYouTubeMetadataStatus('Y9aytLYBajw')).resolves.toMatchObject({
+      kind: 'resolved',
+    })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
   it('returns null (never throws) when the network fails', async () => {

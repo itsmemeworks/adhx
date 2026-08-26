@@ -497,6 +497,18 @@ try {
   // Column already exists — nothing to do.
 }
 
+// Public analytics validates post existence across all bookmark owners and
+// against visible activity. The bookmarks PK begins with user_id and the
+// activity dedupe index begins with action, so neither can serve these exact
+// predicates. Install after the guarded activity.hidden migration so legacy
+// databases have every indexed column before index creation.
+db.exec(`
+  CREATE INDEX IF NOT EXISTS bookmarks_platform_id_idx
+    ON bookmarks(platform, id);
+  CREATE INDEX IF NOT EXISTS activity_platform_bookmark_hidden_idx
+    ON activity(platform, bookmark_id, hidden);
+`)
+
 // Tiny settle-guard table for the one-time backfills below. Both backfills
 // scan/rewrite a full table (bookmarks / bookmark_media) with no usable index
 // for their WHERE clause (a leading-wildcard NOT LIKE, and platform+type

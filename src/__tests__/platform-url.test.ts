@@ -65,6 +65,9 @@ describe('detectPlatformPost — X / Twitter', () => {
     expect(detectPlatformPost('https://fxtwitter.com/user/status/222')?.previewPath).toBe(
       '/user/status/222',
     )
+    expect(detectPlatformPost('https://news.x.com/user/status/333')?.previewPath).toBe(
+      '/user/status/333',
+    )
   })
 })
 
@@ -85,6 +88,12 @@ describe('detectPlatformPost — Instagram', () => {
 
   it('has no author for Instagram', () => {
     expect(detectPlatformPost('https://instagram.com/reels/DXVsqQ7CSXw')?.author).toBeUndefined()
+  })
+
+  it('accepts a genuine Instagram subdomain', () => {
+    expect(detectPlatformPost('https://m.instagram.com/reel/DXVsqQ7CSXw')?.previewPath).toBe(
+      '/reels/DXVsqQ7CSXw',
+    )
   })
 })
 
@@ -120,6 +129,16 @@ describe('detectPlatformPost — TikTok', () => {
 
   it('rejects video ids shorter than 6 digits', () => {
     expect(detectPlatformPost('https://www.tiktok.com/@user/video/12345')).toBeNull()
+  })
+
+  it('returns null for malformed handle percent-encoding', () => {
+    expect(detectPlatformPost('https://www.tiktok.com/%/video/123456')).toBeNull()
+    expect(detectPlatformPost('https://www.tiktok.com/%ZZ/video/123456')).toBeNull()
+  })
+
+  it('rejects raw and encoded double-at handles', () => {
+    expect(detectPlatformPost('https://www.tiktok.com/@@user/video/123456')).toBeNull()
+    expect(detectPlatformPost('https://www.tiktok.com/%40%40user/video/123456')).toBeNull()
   })
 })
 
@@ -158,14 +177,45 @@ describe('detectPlatformPost — rejections', () => {
     expect(detectPlatformPost('not a url at all')).toBeNull()
     expect(detectPlatformPost('')).toBeNull()
   })
+
+  it('rejects platform-looking paths and queries on unrelated hosts', () => {
+    expect(detectPlatformPost('https://evil.example/x.com/user/status/111')).toBeNull()
+    expect(
+      detectPlatformPost('https://evil.example/@user/video/123456?next=https://tiktok.com'),
+    ).toBeNull()
+    expect(
+      detectPlatformPost('https://evil.example/?next=https://instagram.com/reel/DXVsqQ7CSXw'),
+    ).toBeNull()
+    expect(
+      detectPlatformPost('https://evil.example/shorts/Y9aytLYBajw?host=youtube.com'),
+    ).toBeNull()
+  })
+
+  it('rejects deceptive hostname suffixes and userinfo', () => {
+    expect(detectPlatformPost('https://x.com.evil.example/user/status/111')).toBeNull()
+    expect(detectPlatformPost('https://notx.com/user/status/111')).toBeNull()
+    expect(detectPlatformPost('https://tiktok.com.evil.example/@user/video/123456')).toBeNull()
+    expect(detectPlatformPost('https://x.com@evil.example/user/status/111')).toBeNull()
+    expect(detectPlatformPost('https://youtube.com@evil.example/shorts/Y9aytLYBajw')).toBeNull()
+  })
+
+  it('rejects unsafe schemes, credentials, and bare ids', () => {
+    expect(detectPlatformPost('javascript://x.com/user/status/111')).toBeNull()
+    expect(detectPlatformPost('ftp://instagram.com/reel/DXVsqQ7CSXw')).toBeNull()
+    expect(detectPlatformPost('//x.com/user/status/111')).toBeNull()
+    expect(detectPlatformPost('https://user:pass@x.com/user/status/111')).toBeNull()
+    expect(detectPlatformPost('1234567890')).toBeNull()
+    expect(detectPlatformPost('Y9aytLYBajw')).toBeNull()
+  })
 })
 
 describe('PLATFORM_PATTERNS', () => {
-  it('exposes the canonical regexes', () => {
-    expect(PLATFORM_PATTERNS.twitter.test('https://x.com/u/status/1')).toBe(true)
-    expect(PLATFORM_PATTERNS.instagram.test('https://instagram.com/reel/abc')).toBe(true)
-    expect(PLATFORM_PATTERNS.tiktok.test('https://www.tiktok.com/@u/video/123456')).toBe(true)
-    expect(PLATFORM_PATTERNS.youtube.test('https://youtube.com/shorts/abc')).toBe(true)
-    expect(PLATFORM_PATTERNS.youtube.test('https://youtu.be/abc')).toBe(false)
+  it('matches canonical pathnames only', () => {
+    expect(PLATFORM_PATTERNS.twitter.test('/u/status/1')).toBe(true)
+    expect(PLATFORM_PATTERNS.instagram.test('/reel/abc')).toBe(true)
+    expect(PLATFORM_PATTERNS.tiktok.test('/@u/video/123456')).toBe(true)
+    expect(PLATFORM_PATTERNS.youtube.test('/shorts/Y9aytLYBajw')).toBe(true)
+    expect(PLATFORM_PATTERNS.twitter.test('/x.com/u/status/1')).toBe(false)
+    expect(PLATFORM_PATTERNS.youtube.test('/watch/Y9aytLYBajw')).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
-import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
+import { getReelMetadataStatus, isValidReelId } from '@/lib/media/instafix'
 import { getCurrentUserId } from '@/lib/auth/session'
 import {
   buildContentTitle,
@@ -62,7 +62,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/reels/${id}`
   const saved = getSavedPreviewDisplay('instagram', id)
-  const meta = saved ? null : await fetchReelMetadata(id)
+  const metadataStatus = saved ? null : await getReelMetadataStatus(id)
+
+  if (!saved && metadataStatus?.kind === 'permanent-miss') {
+    return {
+      title: 'Instagram Reel unavailable - ADHX',
+      description: 'This Instagram Reel is no longer available.',
+      robots: { index: false },
+      alternates: { canonical: canonicalUrl },
+    }
+  }
+  if (!saved && metadataStatus?.kind === 'transient-failure') {
+    return {
+      title: 'Instagram Reel',
+      description: 'Preview this Instagram Reel on ADHX.',
+      alternates: { canonical: canonicalUrl },
+    }
+  }
+
+  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const who = saved?.authorName || saved?.author || meta?.authorName || meta?.author
   const caption = saved?.text || meta?.caption || meta?.description || ''

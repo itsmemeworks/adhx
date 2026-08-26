@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { getCurrentUserId, getSession } from '@/lib/auth/session'
 import { isAllowedActivityOrigin } from '@/lib/activity/origin'
 import { analyticsWriteLimit } from '@/lib/rate-limit'
 import { recordPostAnalytic, recordAnalytic } from '@/lib/analytics/record'
+import { resolveTrustedAnalyticsPost } from '@/lib/analytics/existence'
 import { getAnalyticsSummary, parseAnalyticsWindow } from '@/lib/analytics/query'
 import {
   isClientAnalyticEventName,
@@ -41,12 +42,6 @@ export async function POST(request: NextRequest) {
   if (!isClientAnalyticEventName(name)) {
     return NextResponse.json({ error: 'Unknown event' }, { status: 400 })
   }
-  if (platform !== undefined && !isAnalyticPlatform(platform)) {
-    return NextResponse.json({ error: 'Invalid platform' }, { status: 400 })
-  }
-  if (id !== undefined && (typeof id !== 'string' || !id || id.length > ID_MAX)) {
-    return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
-  }
   if (surface !== undefined && !isAnalyticSurface(surface)) {
     return NextResponse.json({ error: 'Invalid surface' }, { status: 400 })
   }
@@ -56,13 +51,39 @@ export async function POST(request: NextRequest) {
   if (tag !== undefined && (typeof tag !== 'string' || tag.length > TAG_MAX)) {
     return NextResponse.json({ error: 'Invalid tag' }, { status: 400 })
   }
-
-  const userId = await getCurrentUserId()
   if (name.startsWith('post.')) {
+    if (!isAnalyticPlatform(platform)) {
+      return NextResponse.json({ error: 'Invalid platform' }, { status: 400 })
+    }
+    if (typeof id !== 'string' || !id.trim() || id.trim().length > ID_MAX) {
+      return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+    }
+  }
+
+  const [session, userId] = await Promise.all([getSession(), getCurrentUserId()])
+  // A verifiable session that authentication refuses (banned/deleted actor
+  // or unavailable account/moderation state) is not an anonymous visitor.
+  if (session?.userId && !userId) {
+    return new NextResponse(null, { status: 204 })
+  }
+
+  if (name.startsWith('post.')) {
+    // The validation above narrows these at runtime. Keep the canonical
+    // identity local so all persistence and dedupe use the trimmed id.
+    if (!isAnalyticPlatform(platform) || typeof id !== 'string') {
+      return NextResponse.json({ error: 'Invalid post identity' }, { status: 400 })
+    }
+    const bookmarkId = id.trim()
+    const trustedPost = resolveTrustedAnalyticsPost(platform, bookmarkId, session?.userId ?? userId)
+    if (!trustedPost) {
+      return new NextResponse(null, { status: 204 })
+    }
+
     recordPostAnalytic(name as 'post.send' | 'post.copy' | 'post.open', {
       userId,
-      platform: typeof platform === 'string' ? platform : null,
-      bookmarkId: typeof id === 'string' ? id : null,
+      platform,
+      bookmarkId,
+      contentType: trustedPost.contentType,
       surface: typeof surface === 'string' ? surface : null,
       source: typeof source === 'string' ? source : null,
       tag: typeof tag === 'string' ? tag : null,
@@ -71,10 +92,8 @@ export async function POST(request: NextRequest) {
     recordAnalytic({
       name,
       userId,
-      platform: typeof platform === 'string' ? platform : null,
       surface: typeof surface === 'string' ? surface : null,
       source: typeof source === 'string' ? source : null,
-      tag: typeof tag === 'string' ? tag : null,
     })
   }
 

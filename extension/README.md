@@ -2,6 +2,10 @@
 
 Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on an **X, Instagram, TikTok, or YouTube** post opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
 
+When you invoke it, the extension transmits the selected or active source post URL to the
+configured ADHX origin by navigating the tab. Firefox therefore declares the required
+`browsingActivity` data collection category. There is no passive browsing collection.
+
 Not on the Chrome Web Store yet. Load it unpacked. The bookmarklet in the main app stays the no-install fallback.
 
 | Permission     | Why                                              |
@@ -16,7 +20,7 @@ No `tabs`, no `<all_urls>`, no content scripts.
 ## Prerequisites
 
 - [pnpm](https://pnpm.io) 9 (same as the app — see the repo root `packageManager`)
-- Chromium-based browser (Chrome, Edge, Brave, Arc) or Firefox
+- Chromium-based browser (Chrome, Edge, Brave, Arc) or Firefox 140+
 - For **local** saves: ADHX running at [http://localhost:3001](http://localhost:3001) (`pnpm dev` from the repo root; do not use port 3000)
 
 The extension is a **separate package**. Root `pnpm install` does not install it. Root `pnpm typecheck` / `next build` also ignore this folder on purpose (`tsconfig.json` excludes `extension` — `@types/chrome` only exists after you install here).
@@ -77,6 +81,11 @@ pnpm --dir extension build:firefox
 
 Then `about:debugging` → **This Firefox** → **Load Temporary Add-on…** → pick `manifest.json` inside the Firefox output folder the build printed (typically `extension/dist/firefox`). Temporary add-ons vanish when Firefox quits.
 
+The Firefox build uses the stable Gecko add-on ID `save-to-adhx@adhx.com`. This is the
+project-owned release identity under the ADHX domain; do not change it between releases.
+Its minimum supported Firefox version is 140.0, where the declared data-collection consent
+contract is available.
+
 ---
 
 ## Use it
@@ -126,16 +135,25 @@ This opens a **new Chrome profile** with the extension loaded. It does **not** s
 
 ## Tests
 
-URL detection is covered by the **root** Vitest suite (`extension/src/**/*.test.ts`):
+URL detection and the source Manifest V3/action contract are covered by the **root** Vitest suite
+(`extension/src/**/*.test.ts`):
 
 ```bash
-pnpm test extension/src/share-url.test.ts
+pnpm test extension/src
 ```
 
 Typecheck this package (after `pnpm --dir extension install`):
 
 ```bash
-pnpm --dir extension exec tsc --noEmit
+pnpm --dir extension typecheck
+```
+
+To verify both emitted browser manifests after building them:
+
+```bash
+pnpm --dir extension build:chrome
+pnpm --dir extension build:firefox
+pnpm --dir extension validate:manifests
 ```
 
 ---

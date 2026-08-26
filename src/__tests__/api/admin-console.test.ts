@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import { createTestDb, USER_A, USER_B, createTestBookmark, type TestDbInstance } from './setup'
 import {
   activity,
+  adminAudit,
   analyticsEvents,
   bookmarks,
   moderatedPosts,
@@ -217,5 +218,58 @@ describe('admin console APIs', () => {
     )
     expect(unban.status).toBe(200)
     expect(testInstance.db.select().from(userBans).all()).toHaveLength(0)
+  })
+
+  it('rolls back a ban when its audit write fails', async () => {
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_ban_audit
+      BEFORE INSERT ON admin_audit
+      WHEN NEW.action = 'ban_user'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected audit failure');
+      END;
+    `)
+
+    const response = await postUser(
+      new NextRequest('http://localhost/api/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'regular-user', banned: true, reason: 'spam' }),
+      }),
+    )
+
+    expect(response.status).toBe(500)
+    expect(testInstance.db.select().from(userBans).all()).toHaveLength(0)
+    expect(testInstance.db.select().from(adminAudit).all()).toHaveLength(0)
+  })
+
+  it('rolls back an unban when its audit write fails', async () => {
+    testInstance.db
+      .insert(userBans)
+      .values({
+        userId: USER_B,
+        reason: 'spam',
+        createdAt: new Date().toISOString(),
+        createdBy: USER_A,
+      })
+      .run()
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_unban_audit
+      BEFORE INSERT ON admin_audit
+      WHEN NEW.action = 'unban_user'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected audit failure');
+      END;
+    `)
+
+    const response = await postUser(
+      new NextRequest('http://localhost/api/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'regular-user', banned: false }),
+      }),
+    )
+
+    expect(response.status).toBe(500)
+    expect(testInstance.db.select().from(userBans).all()).toHaveLength(1)
+    expect(testInstance.db.select().from(adminAudit).all()).toHaveLength(0)
   })
 })

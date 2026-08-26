@@ -29,7 +29,12 @@ vi.mock('next/cache', () => ({
   unstable_cache: cacheHarness.unstableCache,
 }))
 
-import { fetchReelMetadata, isAllowedImageUrl, isValidReelId } from '@/lib/media/instafix'
+import {
+  fetchReelMetadata,
+  fetchReelMetadataStatus,
+  isAllowedImageUrl,
+  isValidReelId,
+} from '@/lib/media/instafix'
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch as unknown as typeof fetch
@@ -192,6 +197,19 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
       .mockRejectedValueOnce(new Error('ECONNREFUSED'))
       .mockRejectedValueOnce(new Error('ECONNREFUSED'))
     expect(await fetchReelMetadata('Cwnj8o6pKbn')).toBeNull()
+  })
+
+  it('exposes confirmed permanent misses separately from transient failures', async () => {
+    mockFetch.mockResolvedValueOnce(notFoundResponse()).mockResolvedValueOnce(notFoundResponse())
+    await expect(fetchReelMetadataStatus('Cwnj8o6pKbn')).resolves.toEqual({
+      kind: 'permanent-miss',
+    })
+
+    cacheHarness.clear()
+    mockFetch.mockResolvedValueOnce(errorResponse(503)).mockResolvedValueOnce(notFoundResponse())
+    await expect(fetchReelMetadataStatus('Cwnj8o6pKbn')).resolves.toEqual({
+      kind: 'transient-failure',
+    })
   })
 
   it('does not cache a 503 and refetches successfully', async () => {

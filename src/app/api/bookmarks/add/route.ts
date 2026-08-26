@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, runInTransaction } from '@/lib/db'
 import { bookmarks, bookmarkMedia } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
@@ -100,7 +100,6 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
 })
 
 async function addInstagramReel(userId: string, reelId: string, source: string) {
-  // Check duplicate (composite key: userId + platform + id)
   const [existing] = await db
     .select()
     .from(bookmarks)
@@ -113,30 +112,31 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
     )
     .limit(1)
 
-  if (existing) {
-    // Already saved — but the user still *acted* on it (re-added), so surface it
-    // in the Latest pulse. Without this, re-adding a saved item is invisible to
-    // Trending/Latest (the "missed loop"). recordActivity de-dupes within 60s.
-    recordActivity({
-      action: 'save',
-      platform: 'instagram',
-      bookmarkId: reelId,
-      author: existing.author,
-      authorName: existing.authorName,
-      text: existing.text || null,
-      thumbnailUrl: `/api/media/instagram/thumbnail?id=${encodeURIComponent(reelId)}`,
-      url: previewPath('instagram', existing.author, reelId),
-      userId,
-      source: source as 'manual' | 'url_prefix' | 'pwa_share',
-    })
-    return NextResponse.json(
-      { success: false, isDuplicate: true, platform: 'instagram', bookmark: existing },
-      { status: 200 },
-    )
-  }
-
   const meta = await fetchReelMetadata(reelId)
   if (!meta) {
+    if (existing) {
+      const current = runInTransaction(
+        () =>
+          db
+            .select()
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, userId),
+                eq(bookmarks.platform, 'instagram'),
+                eq(bookmarks.id, reelId),
+              ),
+            )
+            .limit(1)
+            .all()[0],
+      )
+      if (current) {
+        return NextResponse.json(
+          { success: false, isDuplicate: true, platform: 'instagram', bookmark: current },
+          { status: 200 },
+        )
+      }
+    }
     return NextResponse.json({ error: 'Reel not available' }, { status: 404 })
   }
 
@@ -144,39 +144,73 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
   const handle = (meta.author || '').replace(/^@/, '') || 'instagram'
   const reelUrl = `https://www.instagram.com/reel/${reelId}/`
 
-  await db.insert(bookmarks).values({
-    id: reelId,
-    userId,
-    platform: 'instagram',
-    author: handle,
-    authorName: meta.authorName || meta.author || null,
-    authorProfileImageUrl: null,
-    text: meta.caption || meta.description || '',
-    tweetUrl: reelUrl,
-    processedAt: now,
-    category: 'video',
-    source,
-  })
-
-  // Store a 'video' media row: the Reel plays inline via the IG video proxy
-  // (resolved from the reel id through the mirror registry), with `meta.imageUrl`
-  // as the poster — served fresh via the thumbnail proxy (the stored CDN URL is
-  // signed/expiring). Falls back to the poster if the mirror is unavailable. The
-  // id keeps the historical `_photo_0` suffix so it dedupes (onConflictDoNothing)
-  // against rows the photo→video backfill (migrate.ts) already flipped.
-  if (meta.imageUrl) {
-    await db
-      .insert(bookmarkMedia)
+  const result = runInTransaction(() => {
+    const bookmarkInsert = db
+      .insert(bookmarks)
       .values({
-        id: `${reelId}_photo_0`,
+        id: reelId,
         userId,
         platform: 'instagram',
-        bookmarkId: reelId,
-        mediaType: 'video',
-        originalUrl: meta.imageUrl,
-        previewUrl: meta.imageUrl,
+        author: handle,
+        authorName: meta.authorName || meta.author || null,
+        authorProfileImageUrl: null,
+        text: meta.caption || meta.description || '',
+        tweetUrl: reelUrl,
+        processedAt: now,
+        category: 'video',
+        source,
       })
       .onConflictDoNothing()
+      .run()
+
+    // Store a 'video' media row: the Reel plays inline via the IG video proxy.
+    // Keep the historical `_photo_0` suffix so retries reconcile rows created by
+    // the photo→video backfill as well as crash-created parents missing media.
+    if (meta.imageUrl) {
+      db.insert(bookmarkMedia)
+        .values({
+          id: `${reelId}_photo_0`,
+          userId,
+          platform: 'instagram',
+          bookmarkId: reelId,
+          mediaType: 'video',
+          originalUrl: meta.imageUrl,
+          previewUrl: meta.imageUrl,
+        })
+        .onConflictDoUpdate({
+          target: [bookmarkMedia.userId, bookmarkMedia.platform, bookmarkMedia.id],
+          set: {
+            bookmarkId: reelId,
+            mediaType: 'video',
+            originalUrl: meta.imageUrl,
+            previewUrl: meta.imageUrl,
+          },
+        })
+        .run()
+    }
+
+    return {
+      inserted: bookmarkInsert.changes > 0,
+      bookmark: db
+        .select()
+        .from(bookmarks)
+        .where(
+          and(
+            eq(bookmarks.userId, userId),
+            eq(bookmarks.platform, 'instagram'),
+            eq(bookmarks.id, reelId),
+          ),
+        )
+        .limit(1)
+        .all()[0],
+    }
+  })
+
+  if (!result.inserted) {
+    return NextResponse.json(
+      { success: false, isDuplicate: true, platform: 'instagram', bookmark: result.bookmark },
+      { status: 200 },
+    )
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
@@ -196,23 +230,11 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
     source: source as 'manual' | 'url_prefix' | 'pwa_share',
   })
 
-  const [newBookmark] = await db
-    .select()
-    .from(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.userId, userId),
-        eq(bookmarks.platform, 'instagram'),
-        eq(bookmarks.id, reelId),
-      ),
-    )
-    .limit(1)
-
   return NextResponse.json({
     success: true,
     isDuplicate: false,
     platform: 'instagram',
-    bookmark: newBookmark,
+    bookmark: result.bookmark,
     message: 'Reel added to Saved.',
   })
 }
@@ -230,67 +252,101 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     )
     .limit(1)
 
-  if (existing) {
-    // Already saved — still record the re-add so it surfaces in Latest/Trending
-    // (see addInstagramReel for the rationale). De-duped within 60s.
-    recordActivity({
-      action: 'save',
-      platform: 'tiktok',
-      bookmarkId: videoId,
-      author: existing.author,
-      authorName: existing.authorName,
-      text: existing.text || null,
-      thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
-      url: previewPath('tiktok', existing.author, videoId),
-      userId,
-      source: source as 'manual' | 'url_prefix' | 'pwa_share',
-    })
-    return NextResponse.json(
-      { success: false, isDuplicate: true, platform: 'tiktok', bookmark: existing },
-      { status: 200 },
-    )
-  }
-
   const meta = await fetchTikTokMetadata(handle, videoId)
   if (!meta) {
+    if (existing) {
+      const current = runInTransaction(
+        () =>
+          db
+            .select()
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, userId),
+                eq(bookmarks.platform, 'tiktok'),
+                eq(bookmarks.id, videoId),
+              ),
+            )
+            .limit(1)
+            .all()[0],
+      )
+      if (current) {
+        return NextResponse.json(
+          { success: false, isDuplicate: true, platform: 'tiktok', bookmark: current },
+          { status: 200 },
+        )
+      }
+    }
     return NextResponse.json({ error: 'TikTok not available' }, { status: 404 })
   }
 
   const now = new Date().toISOString()
   const tiktokUrl = `https://www.tiktok.com/@${handle}/video/${videoId}`
 
-  await db.insert(bookmarks).values({
-    id: videoId,
-    userId,
-    platform: 'tiktok',
-    author: handle,
-    authorName: meta.authorName || null,
-    authorProfileImageUrl: null,
-    text: meta.description || meta.title || '',
-    tweetUrl: tiktokUrl,
-    // tnktok metadata carries no date, but TikTok ids are Snowflake-style —
-    // the real post time is encoded in the id itself. Data enrichment only:
-    // the theater's displayed time is deliberately `addedAt` (when the post
-    // first hit ADHX, owner decision), so this column is metadata for future
-    // use, not what the chips render.
-    createdAt: tiktokCreatedAtFromId(videoId),
-    processedAt: now,
-    category: 'video',
-    source,
-  })
-
-  if (meta.videoUrl) {
-    await db
-      .insert(bookmarkMedia)
+  const result = runInTransaction(() => {
+    const bookmarkInsert = db
+      .insert(bookmarks)
       .values({
-        id: `${videoId}_video_0`,
+        id: videoId,
         userId,
         platform: 'tiktok',
-        bookmarkId: videoId,
-        mediaType: 'video',
-        originalUrl: meta.videoUrl,
+        author: handle,
+        authorName: meta.authorName || null,
+        authorProfileImageUrl: null,
+        text: meta.description || meta.title || '',
+        tweetUrl: tiktokUrl,
+        // tnktok metadata carries no date, but TikTok ids are Snowflake-style.
+        createdAt: tiktokCreatedAtFromId(videoId),
+        processedAt: now,
+        category: 'video',
+        source,
       })
       .onConflictDoNothing()
+      .run()
+
+    if (meta.videoUrl) {
+      db.insert(bookmarkMedia)
+        .values({
+          id: `${videoId}_video_0`,
+          userId,
+          platform: 'tiktok',
+          bookmarkId: videoId,
+          mediaType: 'video',
+          originalUrl: meta.videoUrl,
+        })
+        .onConflictDoUpdate({
+          target: [bookmarkMedia.userId, bookmarkMedia.platform, bookmarkMedia.id],
+          set: {
+            bookmarkId: videoId,
+            mediaType: 'video',
+            originalUrl: meta.videoUrl,
+          },
+        })
+        .run()
+    }
+
+    return {
+      inserted: bookmarkInsert.changes > 0,
+      bookmark: db
+        .select()
+        .from(bookmarks)
+        .where(
+          and(
+            eq(bookmarks.userId, userId),
+            eq(bookmarks.platform, 'tiktok'),
+            eq(bookmarks.id, videoId),
+          ),
+        )
+        .limit(1)
+        .all()[0],
+    }
+  })
+
+  if (!result.inserted) {
+    return NextResponse.json(
+      { success: false, isDuplicate: true, platform: 'tiktok', bookmark: result.bookmark },
+      { status: 200 },
+    )
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
@@ -308,23 +364,11 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     source: source as 'manual' | 'url_prefix' | 'pwa_share',
   })
 
-  const [newBookmark] = await db
-    .select()
-    .from(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.userId, userId),
-        eq(bookmarks.platform, 'tiktok'),
-        eq(bookmarks.id, videoId),
-      ),
-    )
-    .limit(1)
-
   return NextResponse.json({
     success: true,
     isDuplicate: false,
     platform: 'tiktok',
-    bookmark: newBookmark,
+    bookmark: result.bookmark,
     message: 'TikTok added to Saved.',
   })
 }
@@ -342,63 +386,80 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
     )
     .limit(1)
 
+  const now = new Date().toISOString()
+  let bookmarkValues: typeof bookmarks.$inferInsert
   if (existing) {
-    // Already saved — still record the re-add so it surfaces in Latest/Trending
-    // (see addInstagramReel for the rationale). De-duped within 60s.
-    recordActivity({
-      action: 'save',
-      platform: 'youtube',
-      bookmarkId: videoId,
-      author: existing.author,
-      authorName: existing.authorName,
-      text: existing.text || null,
-      thumbnailUrl: youtubeThumbnail(videoId),
-      url: previewPath('youtube', existing.author, videoId),
+    bookmarkValues = { ...existing, processedAt: now, source }
+  } else {
+    const meta = await fetchYouTubeMetadata(videoId)
+    if (!meta) {
+      return NextResponse.json({ error: 'YouTube video not available' }, { status: 404 })
+    }
+    const handle = (meta.author || '').replace(/^@/, '') || meta.authorName || 'youtube'
+    bookmarkValues = {
+      id: videoId,
       userId,
-      source: source as 'manual' | 'url_prefix' | 'pwa_share',
-    })
+      platform: 'youtube',
+      author: handle,
+      authorName: meta.authorName || null,
+      authorProfileImageUrl: null,
+      text: meta.title || '',
+      tweetUrl: youtubeShortUrl(videoId),
+      processedAt: now,
+      category: 'video',
+      source,
+    }
+  }
+
+  const result = runInTransaction(() => {
+    const bookmarkInsert = db.insert(bookmarks).values(bookmarkValues).onConflictDoNothing().run()
+
+    // Playback is the official iframe embed, so this deterministic media row
+    // stores the poster and is reconciled on every retry.
+    db.insert(bookmarkMedia)
+      .values({
+        id: `${videoId}_video_0`,
+        userId,
+        platform: 'youtube',
+        bookmarkId: videoId,
+        mediaType: 'video',
+        originalUrl: youtubeShortUrl(videoId),
+        previewUrl: youtubeThumbnail(videoId),
+      })
+      .onConflictDoUpdate({
+        target: [bookmarkMedia.userId, bookmarkMedia.platform, bookmarkMedia.id],
+        set: {
+          bookmarkId: videoId,
+          mediaType: 'video',
+          originalUrl: youtubeShortUrl(videoId),
+          previewUrl: youtubeThumbnail(videoId),
+        },
+      })
+      .run()
+
+    return {
+      inserted: bookmarkInsert.changes > 0,
+      bookmark: db
+        .select()
+        .from(bookmarks)
+        .where(
+          and(
+            eq(bookmarks.userId, userId),
+            eq(bookmarks.platform, 'youtube'),
+            eq(bookmarks.id, videoId),
+          ),
+        )
+        .limit(1)
+        .all()[0],
+    }
+  })
+
+  if (!result.inserted) {
     return NextResponse.json(
-      { success: false, isDuplicate: true, platform: 'youtube', bookmark: existing },
+      { success: false, isDuplicate: true, platform: 'youtube', bookmark: result.bookmark },
       { status: 200 },
     )
   }
-
-  const meta = await fetchYouTubeMetadata(videoId)
-  if (!meta) {
-    return NextResponse.json({ error: 'YouTube video not available' }, { status: 404 })
-  }
-
-  const now = new Date().toISOString()
-  const handle = (meta.author || '').replace(/^@/, '') || meta.authorName || 'youtube'
-
-  await db.insert(bookmarks).values({
-    id: videoId,
-    userId,
-    platform: 'youtube',
-    author: handle,
-    authorName: meta.authorName || null,
-    authorProfileImageUrl: null,
-    text: meta.title || '',
-    tweetUrl: youtubeShortUrl(videoId),
-    processedAt: now,
-    category: 'video',
-    source,
-  })
-
-  // Store the poster as a 'video' media row. Playback is the official iframe
-  // embed (resolved in StageYouTube from platform+id), so there's no MP4 to store.
-  await db
-    .insert(bookmarkMedia)
-    .values({
-      id: `${videoId}_video_0`,
-      userId,
-      platform: 'youtube',
-      bookmarkId: videoId,
-      mediaType: 'video',
-      originalUrl: youtubeShortUrl(videoId),
-      previewUrl: youtubeThumbnail(videoId),
-    })
-    .onConflictDoNothing()
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
 
@@ -406,32 +467,20 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
     action: 'save',
     platform: 'youtube',
     bookmarkId: videoId,
-    author: handle,
-    authorName: meta.authorName || null,
-    text: meta.title || null,
+    author: bookmarkValues.author,
+    authorName: bookmarkValues.authorName || null,
+    text: bookmarkValues.text || null,
     thumbnailUrl: youtubeThumbnail(videoId),
-    url: previewPath('youtube', handle, videoId),
+    url: previewPath('youtube', bookmarkValues.author, videoId),
     userId,
     source: source as 'manual' | 'url_prefix' | 'pwa_share',
   })
-
-  const [newBookmark] = await db
-    .select()
-    .from(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.userId, userId),
-        eq(bookmarks.platform, 'youtube'),
-        eq(bookmarks.id, videoId),
-      ),
-    )
-    .limit(1)
 
   return NextResponse.json({
     success: true,
     isDuplicate: false,
     platform: 'youtube',
-    bookmark: newBookmark,
+    bookmark: result.bookmark,
     message: 'YouTube Short added to Saved.',
   })
 }

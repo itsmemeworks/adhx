@@ -11,6 +11,7 @@
  * GET (unlike Instagram's 403-gated CDN), so we can stream straight through.
  */
 
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { makeHostAllowlist, buildAllowlistedUrl } from '@/lib/media/proxy'
 import { decodeHtmlEntities } from '@/lib/utils/html-entities'
@@ -41,6 +42,12 @@ export interface TikTokMetadata {
   /** Handle from `twitter:creator` (e.g. "@sophieraiin"). */
   author?: string
 }
+
+export type TikTokMetadataStatus =
+  | { kind: 'resolved'; metadata: TikTokMetadata }
+  /** Reserved for locally invalid input; mirror-only absence is transient. */
+  | { kind: 'permanent-miss' }
+  | { kind: 'transient-failure' }
 
 /**
  * SSRF allowlist for the streaming proxy. Exact-match or dot-prefixed subdomain
@@ -164,9 +171,7 @@ export function isValidVideoId(id: string): boolean {
 }
 
 type MirrorResult =
-  | { kind: 'resolved'; metadata: TikTokMetadata }
-  | { kind: 'permanent-miss' }
-  | { kind: 'transient-failure'; cause?: unknown }
+  { kind: 'resolved'; metadata: TikTokMetadata } | { kind: 'transient-failure'; cause?: unknown }
 
 class TransientTikTokMetadataError extends Error {
   constructor(cause?: unknown) {
@@ -185,30 +190,45 @@ class TransientTikTokMetadataError extends Error {
  * the same id reuse it.
  */
 const fetchCachedTikTokMetadata = unstable_cache(
-  async (username: string, videoId: string): Promise<TikTokMetadata | null> => {
+  async (username: string, videoId: string): Promise<TikTokMetadata> => {
     const handle = username.startsWith('@') ? username.slice(1) : username
-    let sawTransientFailure = false
     let transientCause: unknown
 
     for (const mirror of MIRRORS) {
       const result = await tryMirror(`${mirror}/@${handle}/video/${videoId}`)
       if (result.kind === 'resolved') return result.metadata
-      if (result.kind === 'transient-failure') {
-        sawTransientFailure = true
-        transientCause = result.cause
-      }
+      transientCause = result.cause
     }
 
-    // Throw from inside the cache callback so a temporary mirror failure is
-    // never persisted as the one-hour negative result.
-    if (sawTransientFailure) {
-      throw new TransientTikTokMetadataError(transientCause)
-    }
-    return null
+    // TnkTok is an untrusted third-party mirror. Even its explicit 404/410 is
+    // not authoritative evidence that the source TikTok was removed, so every
+    // unresolved mirror result escapes the cache as transient.
+    throw new TransientTikTokMetadataError(transientCause)
   },
   ['tiktok-video-metadata'],
   { revalidate: 3600 },
 )
+
+export async function fetchTikTokMetadataStatus(
+  username: string,
+  videoId: string,
+): Promise<TikTokMetadataStatus> {
+  if (!isValidUsername(username) || !isValidVideoId(videoId)) {
+    return { kind: 'permanent-miss' }
+  }
+  try {
+    const metadata = await fetchCachedTikTokMetadata(username, videoId)
+    return { kind: 'resolved', metadata }
+  } catch {
+    return { kind: 'transient-failure' }
+  }
+}
+
+/**
+ * Request-scoped memoization shared by generateMetadata and the preview RSC.
+ * Cross-request result caching remains owned by fetchCachedTikTokMetadata.
+ */
+export const getTikTokMetadataStatus = cache(fetchTikTokMetadataStatus)
 
 /**
  * Public compatibility wrapper: callers still receive Metadata|null. Invalid
@@ -219,13 +239,8 @@ export async function fetchTikTokMetadata(
   username: string,
   videoId: string,
 ): Promise<TikTokMetadata | null> {
-  if (!isValidUsername(username) || !isValidVideoId(videoId)) return null
-
-  try {
-    return await fetchCachedTikTokMetadata(username, videoId)
-  } catch {
-    return null
-  }
+  const result = await fetchTikTokMetadataStatus(username, videoId)
+  return result.kind === 'resolved' ? result.metadata : null
 }
 
 async function tryMirror(url: string): Promise<MirrorResult> {
@@ -235,9 +250,8 @@ async function tryMirror(url: string): Promise<MirrorResult> {
       redirect: 'follow',
     })
 
-    if (response.status === 404 || response.status === 410) {
-      return { kind: 'permanent-miss' }
-    }
+    // A mirror miss says nothing authoritative about the source TikTok.
+    if (response.status === 404 || response.status === 410) return { kind: 'transient-failure' }
     if (!response.ok) return { kind: 'transient-failure' }
     const contentType = response.headers.get('content-type') || ''
     if (!contentType.includes('text/html')) return { kind: 'transient-failure' }

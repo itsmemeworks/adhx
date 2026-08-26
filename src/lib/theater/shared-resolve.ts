@@ -17,8 +17,15 @@ export type SharedResolveResult =
   | {
       ok: true
       item: TheaterItem
+      seoEligible: true
       jsonLd: unknown
       staticPost: SharedStaticPost
       related: SharedRelatedRef | null
+    }
+  | {
+      ok: true
+      item: TheaterItem
+      seoEligible: false
+      related: null
     }
   | { ok: false }

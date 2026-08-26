@@ -49,20 +49,32 @@ describe('recordAnalytic', () => {
     })
   })
 
-  it('drops unknown event names and unknown dimensions', () => {
+  it('drops unknown dimensions from non-post events', () => {
     recordAnalytic({
-      name: 'post.save',
+      name: 'theater.open',
       platform: 'myspace',
       contentType: 'slideshow',
       source: 'telepathy',
-      bookmarkId: 'x',
     })
     expect(rows()[0]).toMatchObject({
-      name: 'post.save',
+      name: 'theater.open',
       platform: null,
       contentType: null,
       source: null,
     })
+  })
+
+  it('does not persist identity-free or invalid post events', () => {
+    recordAnalytic({ name: 'post.copy' })
+    recordAnalytic({ name: 'post.copy', platform: 'twitter' })
+    recordAnalytic({ name: 'post.copy', platform: 'myspace', bookmarkId: '1' })
+    recordAnalytic({
+      name: 'post.copy',
+      platform: 'twitter',
+      bookmarkId: 'x'.repeat(81),
+    })
+
+    expect(rows()).toHaveLength(0)
   })
 
   it('dedupes the same user+post+name inside 60s', () => {
@@ -81,6 +93,44 @@ describe('recordAnalytic', () => {
     expect(rows()).toHaveLength(1)
   })
 
+  it('dedupes anonymous post events using platform and id', () => {
+    recordPostAnalytic('post.open', {
+      platform: 'twitter',
+      bookmarkId: 'anonymous-post',
+    })
+    recordPostAnalytic('post.open', {
+      platform: 'twitter',
+      bookmarkId: 'anonymous-post',
+    })
+    expect(rows()).toHaveLength(1)
+  })
+
+  it('does not let an authenticated event suppress a later anonymous event', () => {
+    recordPostAnalytic('post.open', {
+      userId: 'user-1',
+      platform: 'twitter',
+      bookmarkId: 'mixed-auth-first',
+    })
+    recordPostAnalytic('post.open', {
+      platform: 'twitter',
+      bookmarkId: 'mixed-auth-first',
+    })
+    expect(rows()).toHaveLength(2)
+  })
+
+  it('does not let an anonymous event suppress a later authenticated event', () => {
+    recordPostAnalytic('post.open', {
+      platform: 'twitter',
+      bookmarkId: 'mixed-anonymous-first',
+    })
+    recordPostAnalytic('post.open', {
+      userId: 'user-1',
+      platform: 'twitter',
+      bookmarkId: 'mixed-anonymous-first',
+    })
+    expect(rows()).toHaveLength(2)
+  })
+
   it('does not collapse anonymous theater opens', () => {
     recordAnalytic({ name: 'theater.open', surface: 'live' })
     recordAnalytic({ name: 'theater.open', surface: 'live' })
@@ -89,7 +139,7 @@ describe('recordAnalytic', () => {
 
   it('never throws on a failed write', () => {
     testInstance.close()
-    expect(() => recordAnalytic({ name: 'post.copy' })).not.toThrow()
+    expect(() => recordAnalytic({ name: 'theater.open' })).not.toThrow()
     testInstance = createTestDb()
   })
 })

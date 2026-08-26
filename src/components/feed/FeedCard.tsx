@@ -15,7 +15,7 @@ import { TypeBadge, PlatformChip, type ContentType, type PlatformId } from '@/co
 import { cn } from '@/lib/utils'
 import type { FeedItem } from './types'
 import { feedHoverSrc } from './video-src'
-import { feedItemType } from './feedItemMeta'
+import { feedItemAccessibleDescription, feedItemSelectionLabel, feedItemType } from './feedItemMeta'
 
 interface FeedCardProps {
   item: FeedItem
@@ -27,6 +27,8 @@ interface FeedCardProps {
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  /** Tag name used to describe the selection action to assistive technology. */
+  selectionName?: string
   /** Briefly glow: this is the post the viewer just pasted in. */
   justAdded?: boolean
 }
@@ -53,6 +55,7 @@ export function FeedCard({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  selectionName,
   justAdded = false,
 }: FeedCardProps): React.ReactElement {
   const [error, setError] = useState(false)
@@ -95,19 +98,29 @@ export function FeedCard({
 
   // Platform glyph: twitter renders X; others render their own glyph.
   const platform = (item.platform || 'twitter') as PlatformId
+  const primaryActionLabel = selectionMode
+    ? feedItemSelectionLabel(item, selected, selectionName)
+    : `Open ${feedItemAccessibleDescription(item)}`
 
   return (
     <div className="mb-4 break-inside-avoid transition-all duration-300">
       <div
         className={cn(
-          'group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer',
+          'group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1]',
           selectionMode && selected ? 'border-clay ring-2 ring-clay' : 'border-hairline',
           newGlowClass,
         )}
-        onClick={selectionMode ? onToggleSelect : onExpand}
         onMouseEnter={canHover ? () => setIsHovered(true) : undefined}
         onMouseLeave={canHover ? () => setIsHovered(false) : undefined}
       >
+        <button
+          type="button"
+          className="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+          aria-label={primaryActionLabel}
+          aria-pressed={selectionMode ? selected : undefined}
+          onClick={selectionMode ? onToggleSelect : onExpand}
+        />
+
         {/* Add-posts selection affordance: ring (above) + a check badge that
             floats over every card type. z-10 keeps it above media/article
             overlays which are themselves absolutely positioned. */}

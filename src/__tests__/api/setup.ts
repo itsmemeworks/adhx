@@ -39,6 +39,7 @@ export const FULL_SCHEMA_SQL = `
   CREATE INDEX bookmarks_user_processed_at_idx ON bookmarks(user_id, processed_at);
   CREATE INDEX bookmarks_user_category_idx ON bookmarks(user_id, category);
   CREATE INDEX bookmarks_user_platform_idx ON bookmarks(user_id, platform);
+  CREATE INDEX bookmarks_platform_id_idx ON bookmarks(platform, id);
   CREATE INDEX bookmarks_user_quoted_tweet_idx ON bookmarks(user_id, quoted_tweet_id);
 
   CREATE TABLE bookmark_links (
@@ -180,6 +181,8 @@ export const FULL_SCHEMA_SQL = `
   );
   CREATE INDEX activity_created_at_idx ON activity(created_at);
   CREATE INDEX activity_dedupe_idx ON activity(action, platform, bookmark_id, created_at);
+  CREATE INDEX activity_platform_bookmark_hidden_idx
+    ON activity(platform, bookmark_id, hidden);
 
   CREATE TABLE collection_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

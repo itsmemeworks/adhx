@@ -16,8 +16,8 @@
  * observer attaches the moment the sentinel exists — regardless of what the
  * component was rendering before that.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { FeedGrid } from '@/components/feed/FeedGrid'
 import { fixtures } from '../fixtures/tweets'
 import { fxTwitterToFeedItem } from '../fixtures/tweets/helpers'
@@ -78,6 +78,10 @@ describe('FeedGrid infinite scroll', () => {
     vi.stubGlobal('IntersectionObserver', FakeIntersectionObserver)
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('does not observe anything while the initial loading skeleton is shown (no sentinel in the DOM)', () => {
     const onLoadMore = vi.fn()
     render(<FeedGrid {...baseProps} items={[]} loading hasMore={true} onLoadMore={onLoadMore} />)
@@ -134,4 +138,57 @@ describe('FeedGrid infinite scroll', () => {
     )
     expect(anyObserverObserved()).toBe(false)
   })
+
+  it.each(['grid', 'list', 'bento'] as const)(
+    'wires %s selection state and tag name into its native primary action',
+    (view) => {
+      const onExpand = vi.fn()
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+      vi.stubGlobal('fetch', fetchMock)
+      render(
+        <FeedGrid
+          {...baseProps}
+          items={items}
+          loading={false}
+          hasMore={false}
+          onLoadMore={vi.fn()}
+          onExpand={onExpand}
+          tagSelectTag="research"
+          view={view}
+        />,
+      )
+
+      const selectionAction = screen.getByRole('button', {
+        name: /add text by .*: .* to #research/i,
+      })
+      expect(selectionAction).toHaveAttribute('aria-pressed', 'false')
+      fireEvent.click(selectionAction)
+
+      expect(onExpand).not.toHaveBeenCalled()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(selectionAction).toHaveAttribute('aria-pressed', 'true')
+      expect(selectionAction).toHaveAccessibleName(/remove text by .*: .* from #research/i)
+    },
+  )
+
+  it.each(['list', 'bento'] as const)(
+    'leaves the existing implicit accessible name unchanged in normal %s mode',
+    (view) => {
+      const { container } = render(
+        <FeedGrid
+          {...baseProps}
+          items={items}
+          loading={false}
+          hasMore={false}
+          onLoadMore={vi.fn()}
+          view={view}
+        />,
+      )
+
+      const primaryAction = container.querySelector('button')
+      expect(primaryAction).not.toBeNull()
+      expect(primaryAction).not.toHaveAttribute('aria-label')
+      expect(primaryAction).not.toHaveAttribute('aria-pressed')
+    },
+  )
 })

@@ -283,6 +283,7 @@ describe('TheaterShell shared-lead autosave', () => {
       settle({
         ok: true,
         item,
+        seoEligible: true,
         jsonLd: {},
         staticPost: {
           kind: 'tweet',

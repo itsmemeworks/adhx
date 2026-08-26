@@ -14,7 +14,7 @@
 
 import { db } from '@/lib/db'
 import { activity, analyticsEvents, bookmarkMedia, bookmarks } from '@/lib/db/schema'
-import { and, eq, gt } from 'drizzle-orm'
+import { and, eq, gt, isNull } from 'drizzle-orm'
 import { metricCount } from '@/lib/sentry'
 import {
   isAnalyticContentType,
@@ -50,6 +50,13 @@ function cleanDim(value: string | null | undefined, cap: number): string | null 
   const trimmed = value.replace(/\s+/g, ' ').trim()
   if (!trimmed) return null
   return trimmed.length > cap ? trimmed.slice(0, cap) : trimmed
+}
+
+function cleanPostId(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.length > ID_CAP) return null
+  return trimmed
 }
 
 /**
@@ -106,9 +113,15 @@ export function recordAnalytic(input: AnalyticInput): void {
     const contentType = isAnalyticContentType(input.contentType) ? input.contentType : null
     const surface = isAnalyticSurface(input.surface) ? input.surface : null
     const source = isAnalyticSource(input.source) ? input.source : null
-    const bookmarkId = cleanDim(input.bookmarkId, ID_CAP)
+    const bookmarkId = input.name.startsWith('post.')
+      ? cleanPostId(input.bookmarkId)
+      : cleanDim(input.bookmarkId, ID_CAP)
     const tag = cleanDim(input.tag, TAG_CAP)
     const userId = cleanDim(input.userId, ID_CAP)
+
+    // Every post event needs the complete canonical identity. Never collapse
+    // an invalid client dimension to null and persist an identity-free row.
+    if (input.name.startsWith('post.') && (!platform || !bookmarkId)) return
 
     // Dedupe only when we have an identity (user, post, or tag). A bare
     // `theater.open` from signed-out `/` must NOT collapse every visitor
@@ -119,7 +132,7 @@ export function recordAnalytic(input: AnalyticInput): void {
       if (platform) dedupe.push(eq(analyticsEvents.platform, platform))
       if (bookmarkId) dedupe.push(eq(analyticsEvents.bookmarkId, bookmarkId))
       if (tag) dedupe.push(eq(analyticsEvents.tag, tag))
-      if (userId) dedupe.push(eq(analyticsEvents.userId, userId))
+      dedupe.push(userId ? eq(analyticsEvents.userId, userId) : isNull(analyticsEvents.userId))
       const recent = db
         .select({ id: analyticsEvents.id })
         .from(analyticsEvents)

@@ -186,6 +186,7 @@ export function FeedGrid({
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                selectionName={tagSelectTag || undefined}
                 justAdded={cardKey(item) === justAddedKey}
               />
             )
@@ -208,6 +209,7 @@ export function FeedGrid({
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                selectionName={tagSelectTag || undefined}
                 justAdded={cardKey(item) === justAddedKey}
               />
             )
@@ -233,6 +235,7 @@ export function FeedGrid({
                 selectionMode={!!tagSelectTag}
                 selected={selected}
                 onToggleSelect={() => toggleTagMembership(item)}
+                selectionName={tagSelectTag || undefined}
                 justAdded={cardKey(item) === justAddedKey}
               />
             )

@@ -95,8 +95,6 @@ const IDENTIFIER_ASSIGNMENT =
   /\b(account[_-]?id|email(?:[_-]?address)?|identity[_-]?id|owner[_-]?id|provider[_-]?id|subject[_-]?id|twitter(?:[_-]?user)?[_-]?id|user[_-]?id|viewer[_-]?id|x(?:[_-]?user)?[_-]?id|username|ip[_-]?address)\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi
 const EMAIL_ADDRESS = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi
 
-let initialized = false
-
 function normalizeKey(key: string): string {
   return key.replace(/[^a-z0-9]/gi, '').toLowerCase()
 }
@@ -497,7 +495,7 @@ function sanitizeException(error: Error | unknown, sensitiveValues: Set<string>)
 }
 
 export function initSentry() {
-  if (initialized || !SENTRY_DSN) {
+  if (Sentry.isInitialized() || !SENTRY_DSN) {
     return
   }
 
@@ -510,16 +508,17 @@ export function initSentry() {
     tracesSampleRate: 0.2,
     // Only send errors in production
     enabled: process.env.NODE_ENV === 'production',
-    // Automatically capture unhandled promise rejections
-    integrations: [Sentry.onUnhandledRejectionIntegration({ mode: 'warn' })],
+    // Preserve crash capture and error enrichment defaults, but exclude the
+    // installed SDK's composite `Http` integration. It wraps
+    // http.Server.emit, which recurses when duplicated across Next chunks.
+    integrations: (defaultIntegrations) =>
+      defaultIntegrations.filter((integration) => integration.name !== 'Http'),
     sendDefaultPii: false,
     beforeSend: (event) => sanitizeSdkPayload(event),
     beforeBreadcrumb: (breadcrumb) => sanitizeSdkPayload(breadcrumb),
     beforeSendTransaction: (event) => sanitizeSdkPayload(event),
     beforeSendSpan: (span) => sanitizeSdkPayload(span),
   })
-
-  initialized = true
 }
 
 /**
