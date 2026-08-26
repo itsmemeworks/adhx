@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — CI e2e: Archive undo count + Live Next pin
+
+Play once Archive then Undo dropped `N in queue` by one: any `personalCurrentKey` change marked the previous row Watched, so the hopped-to post left Repeat-off playable. Mark Watched only on Next / ended / queue tap. Live Repeat-off pin no longer waits on seen hydration; tweet-added prepends stamp `addedAt` now so LIFO puts the arrival as Next. Live URL e2e accepts any preview path after Next (TikTok `/video/` is valid). In-flight until the PR merges.
+
 ## 2026-08-26 — Repeat-all Next walked only two posts
 
 `pinCurrent` (so a Repeat-off arrival is Next) stayed on during Repeat all. After each Next the playing row was re-pinned at index 0, so the next index was always the newest other post — a two-item loop after Live ⇄ Saved. Pin only when Repeat is off. Repeat all walks newest-first and wraps. Tests: TheaterShell-lifo walk, `orderLifoQueue` unpinned. In-flight until the PR merges.

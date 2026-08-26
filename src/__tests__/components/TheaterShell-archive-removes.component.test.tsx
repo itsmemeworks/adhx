@@ -253,7 +253,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(collectionProps().queuePlayed).toBe(0)
   })
 
-  it('Play once keeps the 1-based position after archiving the current row', async () => {
+  it('Play once shrinks unseen remaining after archiving the current row', async () => {
     await act_(() => {
       renderCollection(['1', '2', '3'])
     })
@@ -274,6 +274,33 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(collectionProps().queuePlayed).toBe(0)
     expect(collectionProps().queueToPlay).toBe(1)
     expect(collectionProps().queueLooping).toBe(false)
+
+    await act_(() => fireEvent.click(screen.getByRole('button', { name: /undo/i })))
+    expect(collectionProps().currentKey).toBe('twitter:2')
+    expect(collectionProps().queueToPlay).toBe(2)
+    expect(collectionProps().queueLooping).toBe(false)
+  })
+
+  it('Play once Archive then Undo does not mark the hopped-to post Watched', async () => {
+    await act_(() => {
+      renderCollection(['1', '2', '3'])
+    })
+    const cycle = collectionProps().onCycleRepeat as () => void
+    await act_(() => cycle())
+    await act_(() => cycle())
+    expect(collectionProps().repeatMode).toBe('off')
+    expect(collectionProps().queueToPlay).toBe(3)
+
+    const onDone = collectionProps().collection as { onDone: () => void }
+    await act_(() => onDone.onDone())
+    expect(collectionProps().currentKey).toBe('twitter:2')
+    expect(collectionProps().queueToPlay).toBe(2)
+
+    await act_(() => fireEvent.click(screen.getByRole('button', { name: /undo/i })))
+    expect(collectionProps().currentKey).toBe('twitter:1')
+    expect(collectionProps().queueToPlay).toBe(3)
+    const isSeen = collectionProps().isSeen as ((key: string) => boolean) | undefined
+    expect(isSeen?.('twitter:2')).toBeFalsy()
   })
 
   it('skip (next) keeps the post and does not notify', async () => {

@@ -55,30 +55,27 @@ authedTest.describe('archive', () => {
     },
   )
 
-  authedTest(
-    'Play once keeps the 1-based position when Archive shortens the list',
-    async ({ page }) => {
-      await page.addInitScript(() => {
-        localStorage.setItem('adhx-theater-repeat-saved', 'off')
-      })
-      await page.goto('/saved')
-      await expectTheaterReady(page)
-      await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
-      await expect(caption(page, POST.alpha.text)).toBeVisible()
+  authedTest('Play once Archive then Undo restores unseen remaining', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('adhx-theater-repeat-saved', 'off')
+    })
+    await page.goto('/saved')
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
+    await expect(caption(page, POST.alpha.text)).toBeVisible()
 
-      const start = await readQueueProgress(page)
-      expect(start.played).toBe(0)
-      expect(start.toPlay).toBeGreaterThan(1)
+    const start = await readQueueProgress(page)
+    expect(start.played).toBe(0)
+    expect(start.toPlay).toBeGreaterThan(1)
 
-      await page.getByRole('button', { name: 'Archive' }).click()
-      await expect(caption(page, POST.bravo.text)).toBeVisible()
-      await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay - 1} in queue`)
+    await page.getByRole('button', { name: 'Archive' }).click()
+    await expect(caption(page, POST.bravo.text)).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay - 1} in queue`)
 
-      await page.getByRole('button', { name: 'Undo', exact: true }).click()
-      await expect(caption(page, POST.alpha.text)).toBeVisible()
-      await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay} in queue`)
-    },
-  )
+    await page.getByRole('button', { name: 'Undo', exact: true }).click()
+    await expect(caption(page, POST.alpha.text)).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay} in queue`)
+  })
 
   authedTest('Play once Archive mid-list shrinks unseen remaining', async ({ page }) => {
     await page.addInitScript(() => {

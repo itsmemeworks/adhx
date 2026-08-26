@@ -394,9 +394,13 @@ export function TheaterShell({
     ? theaterItemKey(feedItemToTheaterItem(personalCurrentFeedItem))
     : null
   const prevSavedKeyRef = useRef<string | null>(null)
+  // Next / ended / queue tap left the post. Archive, undo, and a splice
+  // also change `personalCurrentKey` — those must not mark Watched, or
+  // Undo drops the hopped-to row from Repeat-off `N in queue`.
+  const savedWatchLeaveRef = useRef(false)
   useEffect(() => {
     const prev = prevSavedKeyRef.current
-    if (prev && prev !== personalCurrentKey) {
+    if (prev && prev !== personalCurrentKey && savedWatchLeaveRef.current) {
       setPlayedSavedKeys((s) => {
         if (s.has(prev)) return s
         const next = new Set(s)
@@ -404,6 +408,7 @@ export function TheaterShell({
         return next
       })
     }
+    savedWatchLeaveRef.current = false
     prevSavedKeyRef.current = personalCurrentKey
   }, [personalCurrentKey])
   const personalIsSeen = useCallback((key: string) => playedSavedKeys.has(key), [playedSavedKeys])
@@ -551,7 +556,9 @@ export function TheaterShell({
       const added = detail?.added
       if (!added || typeof added.id !== 'string') return
       prependToPersonalQueue(added)
-      feedPrepend?.(feedItemToTheaterItem(added))
+      // Arrival time is now — LIFO must put it Next (or play it if
+      // caught up). The source tweet's createdAt must not bury it.
+      feedPrepend?.({ ...feedItemToTheaterItem(added), addedAt: new Date().toISOString() })
       // Same rule as same-tab paste: a Videos queue must not hide a
       // text save (or vice versa). Reset even when Saved already had
       // the row — Live still prepends it, and a shared type filter
@@ -592,6 +599,7 @@ export function TheaterShell({
   // Transport / keyboard next on the collection tab (same as Live arrows).
   const skipCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
+    savedWatchLeaveRef.current = true
     setPersonalIndex((i) =>
       personalSkipMatching(
         i,
@@ -622,16 +630,19 @@ export function TheaterShell({
     // server-side while leaving it missing from the list.
     if (personalUndo.type === 'archive' || personalUndo.type === 'delete') {
       const { item, index } = personalUndo
-      setPersonalQueue((prev) =>
-        prev.some(
-          (f) => f.id === item.id && (f.platform ?? 'twitter') === (item.platform ?? 'twitter'),
-        )
-          ? prev
-          : (() => {
-              const at = Math.min(Math.max(index, 0), prev.length)
-              return [...prev.slice(0, at), item, ...prev.slice(at)]
-            })(),
-      )
+      setPersonalQueue((prev) => {
+        if (
+          prev.some(
+            (f) => f.id === item.id && (f.platform ?? 'twitter') === (item.platform ?? 'twitter'),
+          )
+        ) {
+          return prev
+        }
+        const at = Math.min(Math.max(index, 0), prev.length)
+        const next = [...prev.slice(0, at), item, ...prev.slice(at)]
+        personalQueueRef.current = next
+        return next
+      })
     }
     setPersonalIndex(personalUndo.index)
     setPersonalUndo(null)
@@ -640,6 +651,7 @@ export function TheaterShell({
   // ArrowUp "Back": pure navigation only — never touches read/delete state,
   // unlike `U` (which reverses the last action).
   const personalStepBack = useCallback(() => {
+    savedWatchLeaveRef.current = true
     setPersonalIndex((i) => personalStepBackMatching(i, allowPersonalIndex))
   }, [allowPersonalIndex])
 
@@ -654,6 +666,7 @@ export function TheaterShell({
   personalFinishedRef.current = personalFinished
 
   const personalAdvanceOnEnded = useCallback(() => {
+    savedWatchLeaveRef.current = true
     setPersonalIndex((i) =>
       personalAdvanceOnEndedMatching(
         i,
@@ -838,7 +851,10 @@ export function TheaterShell({
         }
 
         const row = saved
-        const theaterItem = feedItemToTheaterItem(row)
+        const theaterItem = {
+          ...feedItemToTheaterItem(row),
+          addedAt: new Date().toISOString(),
+        }
         const key = theaterItemKey(theaterItem)
         setPersonalSavedKeys((prev) => new Set(prev).add(key))
         markFreshSaved(key)
@@ -1037,10 +1053,11 @@ export function TheaterShell({
   const liveOrdering = !loop
   const isSeenNow = useCallback((key: string) => seenSet.isSeen(key), [seenSet.isSeen])
   const onlyUnseen = liveOrdering && seenSet.ready && effectiveRepeatMode === 'off'
-  // Pin now-playing only on Repeat off: a newer arrival must sit as Next.
-  // Repeat all walks newest-first and wraps. Pinning there keeps current at
-  // index 0, so Next is always the newest other post — a two-item loop.
-  const pinLiveCurrent = onlyUnseen && !waiting
+  // Pin now-playing on Repeat off even before seen hydrates. A newer
+  // arrival must sit as Next. Repeat all walks newest-first and wraps —
+  // pinning there keeps current at index 0, so Next is always the newest
+  // other post (a two-item loop).
+  const pinLiveCurrent = liveOrdering && effectiveRepeatMode === 'off' && !waiting
   const lensItems = useMemo(
     () =>
       applyTheaterTypeLens(
@@ -2013,7 +2030,10 @@ export function TheaterShell({
         const idx = personalQueue.findIndex(
           (fi) => theaterItemKey(feedItemToTheaterItem(fi)) === key,
         )
-        if (idx !== -1) setPersonalIndex(idx)
+        if (idx !== -1) {
+          savedWatchLeaveRef.current = true
+          setPersonalIndex(idx)
+        }
       }
     : onSelectUser
 
