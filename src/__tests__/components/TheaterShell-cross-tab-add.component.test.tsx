@@ -191,6 +191,28 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().queueLooping).toBe(false)
   })
 
+  it('Live: a mid-play add of a previously watched id is Next, not Seen', async () => {
+    window.localStorage.setItem('adhx-seen-v1', JSON.stringify(['twitter:99']))
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().currentKey).toBe('twitter:1')
+
+    await act(async () => fireAdded(feedItem('99')))
+
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(chromeProps().items.map((i) => i.bookmarkId)).toEqual(['1', '99', '2'])
+    expect(chromeProps().isSeen('twitter:99')).toBe(false)
+  })
+
   it('Live: Videos while a text post is current snaps to a video, not Nothing playing', async () => {
     const video = videoItem('v1')
     await act(async () => {

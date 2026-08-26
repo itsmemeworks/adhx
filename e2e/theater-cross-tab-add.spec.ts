@@ -184,8 +184,13 @@ authedTest.describe('theater cross-tab add', () => {
   authedTest(
     'Live: mid-play matching add stays on the current post and is Next',
     async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.removeItem('adhx-theater-repeat')
+        localStorage.removeItem('adhx-seen-v1')
+      })
       await page.goto('/live')
       await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
       await pauseTheater(page)
       const queue = await openTheaterQueue(page)
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))

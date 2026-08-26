@@ -577,7 +577,15 @@ export function TheaterShell({
       prependToPersonalQueue(added)
       // Arrival time is now — LIFO must put it Next (or play it if
       // caught up). The source tweet's createdAt must not bury it.
-      feedPrepend?.({ ...feedItemToTheaterItem(added), addedAt: new Date().toISOString() })
+      const theaterItem = {
+        ...feedItemToTheaterItem(added),
+        addedAt: new Date().toISOString(),
+      }
+      feedPrepend?.(theaterItem)
+      // A re-save of a post this viewer already watched must still be
+      // Next. Seen is keyed by platform+id and survives deleting the
+      // bookmark (e2e reuses fixture ids across tests).
+      seenSet.unmarkSeen([theaterItemKey(theaterItem)])
       // Same rule as same-tab paste: a Videos queue must not hide a
       // text save (or vice versa). Reset even when Saved already had
       // the row — Live still prepends it, and a shared type filter
@@ -587,7 +595,7 @@ export function TheaterShell({
     }
     window.addEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
     return () => window.removeEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
-  }, [removeFromPersonalQueue, prependToPersonalQueue, feedPrepend])
+  }, [removeFromPersonalQueue, prependToPersonalQueue, feedPrepend, seenSet.unmarkSeen])
 
   const archiveCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
@@ -883,6 +891,7 @@ export function TheaterShell({
         const key = theaterItemKey(theaterItem)
         setPersonalSavedKeys((prev) => new Set(prev).add(key))
         markFreshSaved(key)
+        seenSet.unmarkSeen([key])
         // Same-tab paste takes the stage now. The clip that was playing
         // becomes Next. tweet-added / a second window still prepends
         // without stealing (prependToPersonalQueue).
@@ -927,7 +936,7 @@ export function TheaterShell({
         return false
       }
     },
-    [feedPrepend, markFreshSaved],
+    [feedPrepend, markFreshSaved, seenSet.unmarkSeen],
   )
 
   const handleSharedTag = useCallback((item: TheaterItem) => {

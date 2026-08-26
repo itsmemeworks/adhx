@@ -73,9 +73,9 @@ export function visibleCaption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).locator('visible=true').first()
 }
 
-/** Read / Watch pill — not the tappable caption (`Read the full post`). */
+/** Visible Read / Watch pill — not the tappable caption, not the CSS-hidden chrome copy. */
 export function readToggle(page: Page) {
-  return page.locator('[data-theater-action="read"]')
+  return page.locator('[data-theater-action="read"]').locator('visible=true').first()
 }
 
 export async function expectSignInModal(page: Page): Promise<void> {
@@ -294,11 +294,11 @@ export async function broadcastAdded(page: Page, added: Record<string, unknown>)
 }
 
 export async function openTheaterQueue(page: Page) {
-  const queueBtn = page.getByRole('button', { name: 'Queue', exact: true })
+  const queueBtn = page.getByRole('button', { name: 'Queue', exact: true }).locator('visible=true')
   if ((await queueBtn.getAttribute('aria-expanded')) !== 'true') {
     await queueBtn.click()
   }
-  return page.getByRole('dialog', { name: 'Playlist' })
+  return page.getByRole('dialog', { name: 'Playlist' }).locator('visible=true')
 }
 
 export async function pasteTheaterLink(page: Page, url: string): Promise<void> {

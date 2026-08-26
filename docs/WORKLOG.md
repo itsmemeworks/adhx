@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — CI: one PR, Read + Live Next locators
+
+PR 427 is the only open branch for this work (`fix/theater-paste-saved-start`). e2e Read locators now pick the visible pill (desktop + mobile chrome both mount `data-theater-action="read"`). A Live mid-play add of a previously watched id is unmarked so it sits as Next. In-flight until the PR merges.
+
 ## 2026-08-26 — Truncated caption opens Read
 
 Tapping the two-line theater caption opens Read when that control is offered (overflow or quote). Links inside the caption still navigate. Watch stays on the pill. e2e Read locators target the pill (`data-theater-action="read"`), not the caption. In-flight until the PR merges.
