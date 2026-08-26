@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.65.4](https://github.com/itsmemeworks/adhx/compare/v1.65.3...v1.65.4) (2026-08-26)
+
+
+### Bug Fixes
+
+* clean up leftover theater bugs and extract shared hooks ([#423](https://github.com/itsmemeworks/adhx/issues/423)) ([2df981b](https://github.com/itsmemeworks/adhx/commit/2df981b3e2ad273702a01cfff2471fdc9626798a))
+
 ## [1.65.3](https://github.com/itsmemeworks/adhx/compare/v1.65.2...v1.65.3) (2026-08-25)
 
 
