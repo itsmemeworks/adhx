@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.65.6](https://github.com/itsmemeworks/adhx/compare/v1.65.5...v1.65.6) (2026-08-26)
+
+
+### Bug Fixes
+
+* play pasted posts now and start saved on the newest ([#427](https://github.com/itsmemeworks/adhx/issues/427)) ([9816223](https://github.com/itsmemeworks/adhx/commit/9816223c58e462a7243de56d9c5ae963f2d716fe))
+
 ## [1.65.5](https://github.com/itsmemeworks/adhx/compare/v1.65.4...v1.65.5) (2026-08-26)
 
 
