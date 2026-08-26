@@ -6,6 +6,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — CI: one PR, Read + Live Next locators
+
+PR 427 is the only open branch for this work (`fix/theater-paste-saved-start`). e2e Read locators now pick the visible pill (desktop + mobile chrome both mount `data-theater-action="read"`). A Live mid-play add of a previously watched id is unmarked so it sits as Next. In-flight until the PR merges.
+
+## 2026-08-26 — Truncated caption opens Read
+
+Tapping the two-line theater caption opens Read when that control is offered (overflow or quote). Links inside the caption still navigate. Watch stays on the pill. e2e Read locators target the pill (`data-theater-action="read"`), not the caption. In-flight until the PR merges.
+
+## 2026-08-26 — Theater paste plays now
+
+Same-tab paste (⌘V / paste field) takes the stage immediately; the interrupted post is Next. Second-window tweet-added still prepends without stealing. Tests: TheaterShell-paste, orderLifoQueue pinNext. In-flight until the PR merges.
+
+## 2026-08-26 — Saved starts newest after Live adds
+
+Live adds pinned the Saved cursor so flipping Live → Saved opened mid-queue (new saves sat to the left of NOW). Opening Saved now starts newest-first, same as a `/saved` remount. Mid-play adds on Saved / a second window still stay Next. Tests: TheaterShell-cross-tab-add. In-flight until the PR merges.
+
 ## 2026-08-26 — CI e2e: Archive undo count + Live Next pin
 
 Play once Archive then Undo dropped `N in queue` by one: any `personalCurrentKey` change marked the previous row Watched, so the hopped-to post left Repeat-off playable. Mark Watched only on Next / ended / queue tap. Live Repeat-off pin no longer waits on seen hydration; tweet-added prepends stamp `addedAt` now so LIFO puts the arrival as Next. Live URL e2e accepts any preview path after Next (TikTok `/video/` is valid). In-flight until the PR merges.

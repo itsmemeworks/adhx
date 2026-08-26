@@ -539,6 +539,9 @@ export function TheaterMobileChrome({
                 links={current?.textLinks}
                 hideTweetLinks={!!current?.quote}
                 className="mt-1.5 text-[13.5px] leading-snug"
+                onOpenRead={
+                  showArticleToggle && onToggleArticleMode ? onToggleArticleMode : undefined
+                }
               />
             )}
           </div>

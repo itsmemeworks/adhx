@@ -130,20 +130,23 @@ describe('TheaterMobileChrome: caption', () => {
   })
 
   it('puts Read on the left of the action row, under the caption', () => {
+    const onToggle = vi.fn()
     render(
       <TheaterMobileChrome
         {...base}
         current={videoItem({
           quote: { author: 'other', text: 'the quoted tweet' },
         })}
-        onToggleArticleMode={vi.fn()}
+        onToggleArticleMode={onToggle}
       />,
     )
     const caption = screen.getByText('a caption for the video')
-    const read = screen.getByRole('button', { name: 'Read' })
+    const read = screen.getByRole('button', { name: /^Read$/ })
     expect(caption.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(read.nextElementSibling?.className).toContain('justify-end')
     expect(read).not.toHaveTextContent('Read')
+    fireEvent.click(caption)
+    expect(onToggle).toHaveBeenCalledTimes(1)
   })
 
   it('hides the caption in article mode and keeps Watch on the left of the action row', () => {

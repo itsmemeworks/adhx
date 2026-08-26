@@ -30,8 +30,8 @@ export interface TheaterFeed {
   freshKeys: ReadonlySet<string>
   /**
    * Optimistic insert after a personal-theater paste-to-save. Moves an
-   * already-present post to the front. Does not change which post is current —
-   * the viewer stays where they are; the dock just shows the new save.
+   * already-present post to the front. Same-tab paste then jumps current
+   * onto that post; a second-window prepend does not.
    */
   prependItem: (item: TheaterItem) => void
   /** Replace an existing key in place (shared-preview stub → resolved post). */

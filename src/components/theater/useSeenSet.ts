@@ -156,11 +156,18 @@ export function useSeenSet(): SeenSet {
 
   const unmarkSeen = useCallback(
     (keys: readonly string[]) => {
+      // Persist first so a hydrate that has not run yet cannot revive the key.
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = parseSeenList(window.localStorage.getItem(SEEN_STORAGE_KEY))
+          persistSeen(removeSeenKeys(stored, keys))
+        } catch {
+          // Storage unavailable — still drop the key from in-memory state.
+        }
+      }
       setSeen((prev) => {
         const next = removeSeenKeys(prev, keys)
-        if (next === prev) return prev
-        persistSeen(next)
-        return next
+        return next === prev ? prev : next
       })
     },
     [persistSeen],

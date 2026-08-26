@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { POST } from './constants'
-import { expectTheaterReady } from './helpers'
+import { expectTheaterReady, readToggle } from './helpers'
 
 const quotedPath = `/${POST.quoted.author}/status/${POST.quoted.id}`
 
@@ -17,7 +17,7 @@ test.describe('tap video to declutter, not pause', () => {
     await expectTheaterReady(page)
 
     await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
 
     await tapStageVideo(page)
@@ -30,7 +30,7 @@ test.describe('tap video to declutter, not pause', () => {
     await tapStageVideo(page)
 
     await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Show controls' })).toHaveCount(0)
   })
 })
@@ -44,7 +44,7 @@ test.describe('tap video to declutter on a phone', () => {
     await expectTheaterReady(page)
 
     await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
 
     await tapStageVideo(page)
@@ -56,7 +56,7 @@ test.describe('tap video to declutter on a phone', () => {
     await tapStageVideo(page)
 
     await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
   })
 })

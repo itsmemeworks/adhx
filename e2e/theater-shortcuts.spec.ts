@@ -8,6 +8,7 @@ import {
   clearArchives,
   expectSignInModal,
   expectTheaterReady,
+  readToggle,
   visibleQueueCount,
 } from './helpers'
 
@@ -89,13 +90,13 @@ test.describe('theater shortcuts (signed out)', () => {
     test.setTimeout(90_000)
     await page.goto(`/${POST.quoted.author}/status/${POST.quoted.id}`)
     await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
 
     await page.keyboard.press('f')
     await expect(page.getByRole('button', { name: 'Watch' })).toBeVisible()
 
     await page.keyboard.press('f')
-    await expect(page.getByRole('button', { name: 'Read' })).toBeVisible()
+    await expect(readToggle(page)).toBeVisible()
   })
 
   test('ArrowDown does not advance; ArrowRight does; E expands; R cycles repeat', async ({

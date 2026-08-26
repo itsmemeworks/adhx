@@ -337,6 +337,25 @@ export function TheaterShell({
   personalIndexRef.current = personalIndex
   const personalTabRef = useRef(personalTab)
   personalTabRef.current = personalTab
+  // Live adds pin the Saved cursor so they stay Next while you remain on
+  // Live. Opening Saved is a fresh LIFO run — newest first, same as a
+  // `/saved` remount. `?open=` never takes this path (collection mount).
+  const previousPersonalTabRef = useRef(personalTab)
+  useEffect(() => {
+    const prev = previousPersonalTabRef.current
+    previousPersonalTabRef.current = personalTab
+    if (prev !== 'live' || personalTab !== 'collection') return
+    const queue = personalQueueRef.current
+    const types = typeFilterActiveRef.current ? queueTypesRef.current : []
+    const next = savedStartIndex(queue.length, {
+      playingIndex: 0,
+      matches: (i) => {
+        const item = queue[i]
+        return !!item && feedItemMatchesQueueTypes(item, types)
+      },
+    })
+    if (next !== personalIndexRef.current) setPersonalIndex(next)
+  }, [personalTab])
   // Adds may reset Videos → All. That is not a user filter tap — keep the
   // current post instead of jumping to the newest prepend. `?open=`
   // skips the first hydrate clamp for the same reason.
@@ -558,7 +577,15 @@ export function TheaterShell({
       prependToPersonalQueue(added)
       // Arrival time is now — LIFO must put it Next (or play it if
       // caught up). The source tweet's createdAt must not bury it.
-      feedPrepend?.({ ...feedItemToTheaterItem(added), addedAt: new Date().toISOString() })
+      const theaterItem = {
+        ...feedItemToTheaterItem(added),
+        addedAt: new Date().toISOString(),
+      }
+      feedPrepend?.(theaterItem)
+      // A re-save of a post this viewer already watched must still be
+      // Next. Seen is keyed by platform+id and survives deleting the
+      // bookmark (e2e reuses fixture ids across tests).
+      seenSet.unmarkSeen([theaterItemKey(theaterItem)])
       // Same rule as same-tab paste: a Videos queue must not hide a
       // text save (or vice versa). Reset even when Saved already had
       // the row — Live still prepends it, and a shared type filter
@@ -568,7 +595,7 @@ export function TheaterShell({
     }
     window.addEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
     return () => window.removeEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
-  }, [removeFromPersonalQueue, prependToPersonalQueue, feedPrepend])
+  }, [removeFromPersonalQueue, prependToPersonalQueue, feedPrepend, seenSet.unmarkSeen])
 
   const archiveCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
@@ -748,6 +775,12 @@ export function TheaterShell({
     platform: TheaterItem['platform']
     bookmarkId: string
   } | null>(null)
+  // Same-tab paste plays now; the interrupted post is Next. A second
+  // window's tweet-added still prepends without stealing.
+  const [pasteInterruptKey, setPasteInterruptKey] = useState<string | null>(null)
+  const [livePasteKey, setLivePasteKey] = useState<string | null>(null)
+  const pastePlayKeyRef = useRef<string | null>(null)
+  const liveNowKeyRef = useRef<string | null>(null)
 
   const handlePersonalLiveSave = useCallback(
     async (item: TheaterItem): Promise<boolean> => {
@@ -858,30 +891,36 @@ export function TheaterShell({
         const key = theaterItemKey(theaterItem)
         setPersonalSavedKeys((prev) => new Set(prev).add(key))
         markFreshSaved(key)
-        // Same LIFO rule as prependToPersonalQueue / a second-window add:
-        // newest goes to the top. Play it now only when caught up; otherwise
-        // keep the playing post and the arrival is Next.
+        seenSet.unmarkSeen([key])
+        // Same-tab paste takes the stage now. The clip that was playing
+        // becomes Next. tweet-added / a second window still prepends
+        // without stealing (prependToPersonalQueue).
+        const sameRow = (a: FeedItem, b: FeedItem) =>
+          a.id === b.id && (a.platform ?? 'twitter') === (b.platform ?? 'twitter')
         const playingSaved = personalQueueRef.current[personalIndexRef.current]
         const wasFinished = personalFinishedRef.current || personalQueueRef.current.length === 0
-        const rest = personalQueueRef.current.filter(
-          (f) => !(f.id === row.id && (f.platform ?? 'twitter') === (row.platform ?? 'twitter')),
+        const interrupted =
+          !wasFinished && playingSaved && !sameRow(playingSaved, row) ? playingSaved : null
+        const rest = sortFeedNewestFirst(
+          personalQueueRef.current.filter(
+            (f) => !sameRow(f, row) && !(interrupted && sameRow(f, interrupted)),
+          ),
         )
-        const nextQueue = [row, ...rest]
+        const nextQueue = interrupted ? [row, interrupted, ...rest] : [row, ...rest]
         personalQueueRef.current = nextQueue
         setPersonalQueue(nextQueue)
-        if (wasFinished || !playingSaved) {
-          setPersonalIndex(0)
-        } else {
-          const idx = nextQueue.findIndex(
-            (f) =>
-              f.id === playingSaved.id &&
-              (f.platform ?? 'twitter') === (playingSaved.platform ?? 'twitter'),
-          )
-          setPersonalIndex(idx === -1 ? 0 : idx)
-          if (personalTabRef.current !== 'collection') {
-            writeSavedPlayingKey(theaterItemKey(feedItemToTheaterItem(playingSaved)))
-          }
-        }
+        setPersonalIndex(0)
+        const interruptedKey =
+          personalTabRef.current === 'collection'
+            ? interrupted
+              ? theaterItemKey(feedItemToTheaterItem(interrupted))
+              : null
+            : liveNowKeyRef.current && liveNowKeyRef.current !== key
+              ? liveNowKeyRef.current
+              : null
+        pastePlayKeyRef.current = interruptedKey ? key : null
+        setPasteInterruptKey(interruptedKey)
+        if (personalTabRef.current !== 'collection') setLivePasteKey(key)
         feedPrepend(theaterItem)
         skipSavedClampRef.current = true
         setQueueTypes((cur) => queueTypesForAddedItem(cur, row))
@@ -897,7 +936,7 @@ export function TheaterShell({
         return false
       }
     },
-    [feedPrepend, markFreshSaved],
+    [feedPrepend, markFreshSaved, seenSet.unmarkSeen],
   )
 
   const handleSharedTag = useCallback((item: TheaterItem) => {
@@ -985,10 +1024,10 @@ export function TheaterShell({
       },
     })
     if (next !== personalIndexRef.current) setPersonalIndex(next)
-    // Tab flips are not a clamp — Live paste keeps the Saved cursor
-    // (`isCollectionTab` is not a dep). Remount newest-first start is
-    // AuthedTheater; `?open=` sets preserveSavedStart so hydrate does
-    // not snap a library tap back to the first unread.
+    // Tab flips are not a clamp — Live → Saved newest-first is the
+    // `previousPersonalTabRef` effect. Remount start is AuthedTheater;
+    // `?open=` sets preserveSavedStart so hydrate does not snap a
+    // library tap back to the first unread.
   }, [queuePrefReady, typeFilterActive, queueTypes])
 
   const isDesktop = useIsDesktopViewport()
@@ -1002,6 +1041,22 @@ export function TheaterShell({
   const [currentKey, setCurrentKey] = useState<string | null>(() =>
     sharedItem ? theaterItemKey(sharedItem) : null,
   )
+  liveNowKeyRef.current = currentKey
+  useEffect(() => {
+    if (!livePasteKey) return
+    setCurrentKey(livePasteKey)
+    setWaiting(false)
+    setLivePasteKey(null)
+  }, [livePasteKey])
+  useEffect(() => {
+    if (livePasteKey) return
+    const playing = isCollectionTab ? personalCurrentKey : currentKey
+    if (!pasteInterruptKey || !pastePlayKeyRef.current) return
+    if (playing !== pastePlayKeyRef.current) {
+      setPasteInterruptKey(null)
+      pastePlayKeyRef.current = null
+    }
+  }, [isCollectionTab, personalCurrentKey, currentKey, pasteInterruptKey, livePasteKey])
   useEffect(() => {
     setArticleMode(false)
   }, [isCollectionTab ? personalCurrentKey : currentKey])
@@ -1076,9 +1131,19 @@ export function TheaterShell({
             isSeen: isSeenNow,
             keepKey: sharedItemKey,
             pinCurrent: pinLiveCurrent,
+            pinNextKey: pasteInterruptKey,
           })
         : lensItems,
-    [liveOrdering, lensItems, currentKey, onlyUnseen, isSeenNow, sharedItemKey, pinLiveCurrent],
+    [
+      liveOrdering,
+      lensItems,
+      currentKey,
+      onlyUnseen,
+      isSeenNow,
+      sharedItemKey,
+      pinLiveCurrent,
+      pasteInterruptKey,
+    ],
   )
   const queueItems = useMemo(
     () =>
@@ -1089,6 +1154,7 @@ export function TheaterShell({
             isSeen: isSeenNow,
             keepKey: sharedItemKey,
             pinCurrent: pinLiveCurrent,
+            pinNextKey: pasteInterruptKey,
             appendSeen: true,
           })
         : displayItems,
@@ -1100,6 +1166,7 @@ export function TheaterShell({
       isSeenNow,
       sharedItemKey,
       pinLiveCurrent,
+      pasteInterruptKey,
       displayItems,
     ],
   )
@@ -1998,12 +2065,14 @@ export function TheaterShell({
       onlyUnseen: effectiveRepeatMode === 'off',
       isSeen: personalIsSeen,
       pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
+      pinNextKey: pasteInterruptKey,
     }),
     personalQueueItems: orderLifoQueue(personalLensItems, {
       currentKey: personalCurrentKey,
       onlyUnseen: effectiveRepeatMode === 'off',
       isSeen: personalIsSeen,
       pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
+      pinNextKey: pasteInterruptKey,
       appendSeen: effectiveRepeatMode === 'off',
     }),
     displayItems,

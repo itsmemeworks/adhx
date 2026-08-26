@@ -986,10 +986,12 @@ describe('DesktopStageChrome', () => {
       />,
     )
     const caption = screen.getByText('a caption for the video')
-    const read = screen.getByRole('button', { name: 'Read' })
+    const read = screen.getByRole('button', { name: /^Read$/ })
     expect(caption.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    fireEvent.click(caption)
+    expect(onToggleArticleMode).toHaveBeenCalledTimes(1)
     fireEvent.click(read)
-    expect(onToggleArticleMode).toHaveBeenCalled()
+    expect(onToggleArticleMode).toHaveBeenCalledTimes(2)
   })
 
   it('hides the media caption in article mode, offers Watch, and keeps Download', () => {

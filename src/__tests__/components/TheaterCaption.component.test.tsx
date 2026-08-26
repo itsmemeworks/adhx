@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { createRef } from 'react'
 import { TheaterCaption } from '@/components/theater/TheaterCaption'
@@ -33,5 +33,33 @@ describe('TheaterCaption', () => {
       />,
     )
     expect(screen.getByRole('link')).toHaveAttribute('href', 'https://example.com/post')
+  })
+
+  it('opens Read when the truncated caption is clicked', () => {
+    const onOpenRead = vi.fn()
+    render(
+      <TheaterCaption
+        captionRef={createRef<HTMLParagraphElement>()}
+        platform="twitter"
+        text="two lines of caption that might clamp"
+        onOpenRead={onOpenRead}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Read the full post' }))
+    expect(onOpenRead).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not open Read when a link inside the caption is clicked', () => {
+    const onOpenRead = vi.fn()
+    render(
+      <TheaterCaption
+        captionRef={createRef<HTMLParagraphElement>()}
+        platform="twitter"
+        text="see https://example.com/post for more"
+        onOpenRead={onOpenRead}
+      />,
+    )
+    fireEvent.click(screen.getByRole('link'))
+    expect(onOpenRead).not.toHaveBeenCalled()
   })
 })
