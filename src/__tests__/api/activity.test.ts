@@ -108,10 +108,21 @@ describe('GET /api/activity', () => {
     expect(items.length).toBe(30)
   })
 
-  it('sends a short cache header for liveliness', async () => {
+  it('prevents intermediary caching so moderation runs every request', async () => {
     seed({ bookmarkId: '1', createdAt: minsAgo(5) })
     const res = await GET()
-    expect(res.headers.get('Cache-Control')).toContain('max-age=5')
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+  })
+
+  it('keeps fail-closed moderation errors non-cacheable', async () => {
+    seed({ bookmarkId: '1', createdAt: minsAgo(5) })
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    const res = await GET()
+    const body = await res.json()
+
+    expect(body.items).toEqual([])
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
 
   it('excludes rows moderated via activity.hidden', async () => {

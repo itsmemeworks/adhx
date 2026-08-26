@@ -147,6 +147,57 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     })
   })
 
+  describe('Moderation', () => {
+    it('returns not found for a moderated tweet without fetching upstream', async () => {
+      testInstance.db
+        .insert(schema.moderatedPosts)
+        .values({
+          platform: 'twitter',
+          bookmarkId: '123',
+          hidden: 1,
+          createdAt: new Date().toISOString(),
+          createdBy: USER_A,
+        })
+        .run()
+
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
+
+      expect(response.status).toBe(404)
+      expect(await response.json()).toEqual({ error: 'Post not available' })
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+      expect(mockFetchTweetData).not.toHaveBeenCalled()
+    })
+
+    it('returns 503 without fetching upstream when moderation storage is unreadable', async () => {
+      testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
+
+      expect(response.status).toBe(503)
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+      expect(mockFetchTweetData).not.toHaveBeenCalled()
+    })
+
+    it('returns 503 when ban storage is unreadable', async () => {
+      testInstance.sqlite.exec('DROP TABLE user_bans')
+
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(createRequest('testuser', '123'), {
+        params: Promise.resolve({ username: 'testuser', id: '123' }),
+      })
+
+      expect(response.status).toBe(503)
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+      expect(mockFetchTweetData).not.toHaveBeenCalled()
+    })
+  })
+
   describe('Response shape', () => {
     it('returns correct JSON for a regular tweet', async () => {
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
@@ -313,24 +364,27 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
   })
 
   describe('Cache headers', () => {
-    it('returns Cache-Control header for successful responses', async () => {
+    it('prevents caching successful responses so moderation runs every request', async () => {
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
       const response = await GET(createRequest('testuser', '123'), {
         params: Promise.resolve({ username: 'testuser', id: '123' }),
       })
-      expect(response.headers.get('Cache-Control')).toBe(
-        'public, max-age=300, stale-while-revalidate=600',
-      )
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
     })
 
-    it('does not return Cache-Control header for error responses', async () => {
+    it('prevents caching upstream not-found responses', async () => {
       mockFetchTweetData.mockResolvedValue(null)
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
       const response = await GET(createRequest('testuser', '123'), {
         params: Promise.resolve({ username: 'testuser', id: '123' }),
       })
-      expect(response.headers.get('Cache-Control')).toBeNull()
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+    })
+
+    it('forces request-time route execution', async () => {
+      const { dynamic } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      expect(dynamic).toBe('force-dynamic')
     })
   })
 
@@ -578,6 +632,47 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
       })
       const data = await response.json()
       expect(data.adhxContext.savedByCount).toBe(3)
+    })
+
+    it('excludes banned users from public curation context', async () => {
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          {
+            id: '123456789',
+            userId: USER_A,
+            author: 'testuser',
+            text: 'Tweet',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          },
+          {
+            id: '123456789',
+            userId: USER_B,
+            author: 'testuser',
+            text: 'Tweet',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          },
+        ])
+        .run()
+      testInstance.db
+        .insert(schema.userBans)
+        .values({
+          userId: USER_B,
+          createdAt: new Date().toISOString(),
+          createdBy: USER_A,
+        })
+        .run()
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
+      const data = await response.json()
+
+      expect(data.adhxContext.savedByCount).toBe(1)
     })
   })
 

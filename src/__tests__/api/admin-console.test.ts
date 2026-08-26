@@ -18,6 +18,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 vi.mock('@/lib/auth/session', () => ({

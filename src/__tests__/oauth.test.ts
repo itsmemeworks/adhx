@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, type TestDbInstance } from './api/setup'
+import * as schema from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * OAuth Utilities Tests
@@ -14,11 +16,18 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 describe('OAuth Utilities', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     testInstance = createTestDb()
+    await testInstance.db.insert(schema.users).values([
+      { id: 'user-a', username: 'usera' },
+      { id: 'user-b', username: 'userb' },
+    ])
     vi.clearAllMocks()
   })
 
@@ -138,39 +147,89 @@ describe('OAuth Utilities', () => {
   })
 
   describe('OAuth State Management', () => {
-    it('saves and retrieves OAuth state', async () => {
+    it('saves and retrieves OAuth state for its initiating user', async () => {
       const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
 
       const state = 'test-state-123'
       const verifier = 'test-verifier-456'
 
-      await saveOAuthState(state, verifier)
-      const retrieved = await consumeOAuthState(state)
+      await testInstance.db
+        .update(schema.users)
+        .set({ xLinkVersion: 4 })
+        .where(eq(schema.users.id, 'user-a'))
+      await saveOAuthState(state, verifier, 'user-a')
+      const retrieved = await consumeOAuthState(state, 'user-a')
 
-      expect(retrieved).toBe(verifier)
+      expect(retrieved).toEqual({ codeVerifier: verifier, xLinkVersion: 4 })
     })
 
-    it('consumes state only once (one-time use)', async () => {
+    it('allows only one of two parallel consumers to use a state', async () => {
       const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
 
       const state = 'one-time-state'
       const verifier = 'one-time-verifier'
 
-      await saveOAuthState(state, verifier)
+      await saveOAuthState(state, verifier, 'user-a')
 
-      // First consumption should succeed
-      const first = await consumeOAuthState(state)
-      expect(first).toBe(verifier)
+      const results = await Promise.all([
+        consumeOAuthState(state, 'user-a'),
+        consumeOAuthState(state, 'user-a'),
+      ])
 
-      // Second consumption should return null
-      const second = await consumeOAuthState(state)
-      expect(second).toBeNull()
+      expect(results.filter((result) => result?.codeVerifier === verifier)).toHaveLength(1)
+      expect(results.filter((result) => result === null)).toHaveLength(1)
+      expect(await testInstance.db.select().from(schema.oauthState)).toHaveLength(0)
+    })
+
+    it('rejects a different session without consuming the initiating user state', async () => {
+      const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('bound-state', 'bound-verifier', 'user-a')
+
+      expect(await consumeOAuthState('bound-state', 'user-b')).toBeNull()
+      expect(await consumeOAuthState('bound-state', 'user-a')).toEqual({
+        codeVerifier: 'bound-verifier',
+        xLinkVersion: 0,
+      })
+    })
+
+    it('rejects expiry in the atomic consume statement', async () => {
+      const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('expired-state', 'expired-verifier', 'user-a')
+      await testInstance.db
+        .update(schema.oauthState)
+        .set({ createdAt: new Date(Date.now() - 11 * 60 * 1000).toISOString() })
+
+      expect(await consumeOAuthState('expired-state', 'user-a')).toBeNull()
+    })
+
+    it('cleans up expired states when starting a new flow', async () => {
+      const { saveOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('expired-state', 'expired-verifier', 'user-a')
+      await testInstance.db
+        .update(schema.oauthState)
+        .set({ createdAt: new Date(Date.now() - 11 * 60 * 1000).toISOString() })
+      await saveOAuthState('fresh-state', 'fresh-verifier', 'user-b')
+
+      const states = await testInstance.db.select().from(schema.oauthState)
+      expect(states).toEqual([expect.objectContaining({ state: 'fresh-state', userId: 'user-b' })])
+    })
+
+    it('deletes pending states when their initiating account is deleted', async () => {
+      const { saveOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('owned-state', 'owned-verifier', 'user-a')
+      await testInstance.db.delete(schema.users).where(eq(schema.users.id, 'user-a'))
+
+      expect(await testInstance.db.select().from(schema.oauthState)).toHaveLength(0)
     })
 
     it('returns null for non-existent state', async () => {
       const { consumeOAuthState } = await import('@/lib/auth/oauth')
 
-      const result = await consumeOAuthState('nonexistent-state')
+      const result = await consumeOAuthState('nonexistent-state', 'user-a')
       expect(result).toBeNull()
     })
   })
@@ -227,16 +286,6 @@ describe('OAuth Utilities', () => {
       const { getStoredTokens } = await import('@/lib/auth/oauth')
 
       const tokens = await getStoredTokens('nonexistent-user')
-      expect(tokens).toBeNull()
-    })
-
-    it('deletes tokens for user', async () => {
-      const { saveTokens, getStoredTokens, deleteTokens } = await import('@/lib/auth/oauth')
-
-      await saveTokens('user-to-delete', 'user', null, 'access', 'refresh', 3600, 'scopes')
-      await deleteTokens('user-to-delete')
-
-      const tokens = await getStoredTokens('user-to-delete')
       expect(tokens).toBeNull()
     })
 

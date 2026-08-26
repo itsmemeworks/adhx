@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { createTestDb, USER_A, USER_B, type TestDbInstance } from './setup'
-import { activity, users, type NewActivity } from '@/lib/db/schema'
+import { activity, moderatedPosts, users, type NewActivity } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
 /**
@@ -24,6 +24,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 vi.mock('@/lib/auth/session', () => ({
@@ -31,6 +34,7 @@ vi.mock('@/lib/auth/session', () => ({
 }))
 
 import { POST } from '@/app/api/admin/activity/hide/route'
+import { hidePost } from '@/lib/admin/moderation'
 
 function seed(overrides: Partial<NewActivity> & { createdAt: string; bookmarkId: string }) {
   const row: NewActivity = {
@@ -188,6 +192,26 @@ describe('POST /api/admin/activity/hide', () => {
     const tiktokRow = rows.find((r) => r.platform === 'tiktok')
     expect(twitterRow?.hidden).toBe(1)
     expect(tiktokRow?.hidden).toBe(0)
+  })
+
+  it('rolls back the source-of-truth row when the activity update fails', () => {
+    testInstance.sqlite.exec('DROP TABLE activity')
+
+    expect(() =>
+      hidePost({
+        platform: 'twitter',
+        bookmarkId: 'atomic-post',
+        hidden: true,
+        actorUserId: USER_A,
+      }),
+    ).toThrow()
+
+    const rows = testInstance.db
+      .select()
+      .from(moderatedPosts)
+      .where(eq(moderatedPosts.bookmarkId, 'atomic-post'))
+      .all()
+    expect(rows).toEqual([])
   })
 
   it('400s when platform or id is missing', async () => {

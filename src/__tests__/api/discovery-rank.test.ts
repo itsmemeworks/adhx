@@ -9,9 +9,10 @@ import {
   bookmarkTags,
   bookmarkMedia,
   userBans,
+  moderatedPosts,
   type NewCollectionEvent,
 } from '@/lib/db/schema'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 /**
  * Coverage for `src/lib/discovery/rank.ts` — the single audited read choke
@@ -80,6 +81,28 @@ function seedEvent(
         hidden: sql`max(${collectionAggregates.hidden}, excluded.hidden)`,
       },
     })
+    .run()
+}
+
+function seedRankedPlaylistWithPost() {
+  seedUser('u1', 'alice')
+  seedShare('u1', 'mytag')
+  seedEvent({ ownerUserId: 'u1', tag: 'mytag', createdAt: iso(HOUR) })
+  testInstance.db
+    .insert(bookmarks)
+    .values({
+      userId: 'u1',
+      platform: 'twitter',
+      id: 'warm-post',
+      author: 'author',
+      text: 'warm cached content',
+      tweetUrl: 'https://x.com/author/status/warm-post',
+      processedAt: iso(HOUR),
+    })
+    .run()
+  testInstance.db
+    .insert(bookmarkTags)
+    .values({ userId: 'u1', platform: 'twitter', bookmarkId: 'warm-post', tag: 'mytag' })
     .run()
 }
 
@@ -271,6 +294,24 @@ describe('getCollectionLeaderboard', () => {
     expect(getCollectionLeaderboard({ window: 'all' }).map((item) => item.tag)).toEqual(['visible'])
   })
 
+  it('returns an empty board when ban state cannot be loaded', () => {
+    seedUser('u1', 'uncertain-owner')
+    seedShare('u1', 'must-not-leak')
+    seedEvent({ ownerUserId: 'u1', tag: 'must-not-leak', createdAt: iso(HOUR) })
+    testInstance.sqlite.exec('DROP TABLE user_bans')
+
+    expect(getCollectionLeaderboard({ window: 'week' })).toEqual([])
+  })
+
+  it('returns an empty board when post moderation state cannot be loaded', () => {
+    seedUser('u1', 'uncertain-owner')
+    seedShare('u1', 'must-not-leak')
+    seedEvent({ ownerUserId: 'u1', tag: 'must-not-leak', createdAt: iso(HOUR) })
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    expect(getCollectionLeaderboard({ window: 'week' })).toEqual([])
+  })
+
   it('breaks ties by most recent event', () => {
     seedUser('u1', 'alice')
     seedUser('u2', 'bob')
@@ -360,6 +401,98 @@ describe('getCollectionLeaderboard', () => {
     expect(entry.itemCount).toBe(1)
     expect(entry.tiles.length).toBe(1)
     expect(entry.tiles[0].text).toContain('a saved post')
+  })
+
+  it('omits moderated posts from leaderboard item counts and tiles', () => {
+    seedUser('u1', 'alice')
+    seedShare('u1', 'mytag')
+    seedEvent({ ownerUserId: 'u1', tag: 'mytag', createdAt: iso(HOUR) })
+    testInstance.db
+      .insert(bookmarks)
+      .values({
+        userId: 'u1',
+        platform: 'twitter',
+        id: 'hidden-post',
+        author: 'author',
+        text: 'must not appear',
+        tweetUrl: 'https://x.com/author/status/hidden-post',
+        processedAt: iso(HOUR),
+      })
+      .run()
+    testInstance.db
+      .insert(bookmarkTags)
+      .values({ userId: 'u1', platform: 'twitter', bookmarkId: 'hidden-post', tag: 'mytag' })
+      .run()
+    testInstance.db
+      .insert(moderatedPosts)
+      .values({
+        platform: 'twitter',
+        bookmarkId: 'hidden-post',
+        hidden: 1,
+        createdAt: iso(HOUR),
+        createdBy: 'admin',
+      })
+      .run()
+
+    const entry = getCollectionLeaderboard({ window: 'week' }).find((item) => item.tag === 'mytag')!
+    expect(entry.itemCount).toBe(0)
+    expect(entry.tiles).toEqual([])
+  })
+
+  it('rechecks hidden posts on a warm leaderboard cache hit', () => {
+    seedRankedPlaylistWithPost()
+    expect(getCollectionLeaderboard({ window: 'week' })[0].itemCount).toBe(1)
+    testInstance.db
+      .insert(moderatedPosts)
+      .values({
+        platform: 'twitter',
+        bookmarkId: 'warm-post',
+        hidden: 1,
+        createdAt: iso(HOUR),
+        createdBy: 'admin',
+      })
+      .run()
+
+    const entry = getCollectionLeaderboard({ window: 'week' })[0]
+
+    expect(entry.itemCount).toBe(0)
+    expect(entry.tiles).toEqual([])
+  })
+
+  it('rechecks owner bans on a warm leaderboard cache hit', () => {
+    seedRankedPlaylistWithPost()
+    expect(getCollectionLeaderboard({ window: 'week' })).toHaveLength(1)
+    testInstance.db
+      .insert(userBans)
+      .values({ userId: 'u1', createdAt: iso(HOUR), createdBy: 'admin' })
+      .run()
+
+    expect(getCollectionLeaderboard({ window: 'week' })).toEqual([])
+  })
+
+  it('rechecks hidden playlist visibility on a warm leaderboard cache hit', () => {
+    seedRankedPlaylistWithPost()
+    expect(getCollectionLeaderboard({ window: 'week' })).toHaveLength(1)
+    testInstance.db
+      .update(collectionEvents)
+      .set({ hidden: 1 })
+      .where(eq(collectionEvents.tag, 'mytag'))
+      .run()
+    testInstance.db
+      .update(collectionAggregates)
+      .set({ hidden: 1 })
+      .where(eq(collectionAggregates.tag, 'mytag'))
+      .run()
+
+    expect(getCollectionLeaderboard({ window: 'week' })).toEqual([])
+  })
+
+  it('fails closed when moderation storage fails after warming the leaderboard cache', () => {
+    seedRankedPlaylistWithPost()
+    expect(getCollectionLeaderboard({ window: 'week' })).toHaveLength(1)
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    expect(getCollectionLeaderboard({ window: 'week' })).toEqual([])
   })
 
   it('respects the limit parameter', () => {

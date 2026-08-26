@@ -14,6 +14,37 @@ import { previewPath } from '@/lib/activity/preview-path'
 
 const REASON_CAP = 200
 
+export class ModerationStoreUnavailableError extends Error {
+  constructor(operation: string, options?: { cause?: unknown }) {
+    super(`Moderation store unavailable while ${operation}`, options)
+    this.name = 'ModerationStoreUnavailableError'
+  }
+}
+
+export type ModerationReadResult<T> =
+  { ok: true; value: T } | { ok: false; error: ModerationStoreUnavailableError }
+
+/** Stable internal cache key for one or more moderation sets. */
+export function moderationStateFingerprint(...sets: ReadonlySet<string>[]): string {
+  return sets.map((set) => [...set].sort().join('\u0000')).join('\u0001')
+}
+
+function moderationRead<T>(operation: string, read: () => T): ModerationReadResult<T> {
+  try {
+    return { ok: true, value: read() }
+  } catch (cause) {
+    return {
+      ok: false,
+      error: new ModerationStoreUnavailableError(operation, { cause }),
+    }
+  }
+}
+
+function requireModerationRead<T>(result: ModerationReadResult<T>): T {
+  if (!result.ok) throw result.error
+  return result.value
+}
+
 export type AdminAuditAction =
   'hide_post' | 'unhide_post' | 'hide_playlist' | 'unhide_playlist' | 'ban_user' | 'unban_user'
 
@@ -43,8 +74,11 @@ export function writeAudit(
     .run()
 }
 
-export function isPostModerated(platform: string, bookmarkId: string): boolean {
-  try {
+export function readPostModeration(
+  platform: string,
+  bookmarkId: string,
+): ModerationReadResult<boolean> {
+  return moderationRead('reading post moderation', () => {
     const [row] = db
       .select({ hidden: moderatedPosts.hidden })
       .from(moderatedPosts)
@@ -52,22 +86,31 @@ export function isPostModerated(platform: string, bookmarkId: string): boolean {
       .limit(1)
       .all()
     return row?.hidden === 1
-  } catch {
-    return false
-  }
+  })
 }
 
-export function listModeratedPostKeys(): Set<string> {
-  try {
+/**
+ * Compatibility helper for call sites where storage failure should abort the
+ * request. `false` now means the store was read successfully and the post is
+ * definitely visible; an unreadable store throws instead of becoming visible.
+ */
+export function isPostModerated(platform: string, bookmarkId: string): boolean {
+  return requireModerationRead(readPostModeration(platform, bookmarkId))
+}
+
+export function readModeratedPostKeys(): ModerationReadResult<Set<string>> {
+  return moderationRead('listing moderated posts', () => {
     const rows = db
       .select({ platform: moderatedPosts.platform, bookmarkId: moderatedPosts.bookmarkId })
       .from(moderatedPosts)
       .where(eq(moderatedPosts.hidden, 1))
       .all()
     return new Set(rows.map((r) => `${r.platform}:${r.bookmarkId}`))
-  } catch {
-    return new Set()
-  }
+  })
+}
+
+export function listModeratedPostKeys(): Set<string> {
+  return requireModerationRead(readModeratedPostKeys())
 }
 
 export function hidePost(opts: {
@@ -81,45 +124,49 @@ export function hidePost(opts: {
   const reason = cleanReason(opts.reason)
   const createdAt = nowIso()
 
-  if (hidden) {
-    db.insert(moderatedPosts)
-      .values({
-        platform,
-        bookmarkId,
-        hidden: 1,
-        reason,
-        createdAt,
-        createdBy: actorUserId,
-      })
-      .onConflictDoUpdate({
-        target: [moderatedPosts.platform, moderatedPosts.bookmarkId],
-        set: { hidden: 1, reason, createdAt, createdBy: actorUserId },
-      })
-      .run()
-  } else {
-    db.delete(moderatedPosts)
-      .where(and(eq(moderatedPosts.platform, platform), eq(moderatedPosts.bookmarkId, bookmarkId)))
-      .run()
-  }
+  return runInTransaction(() => {
+    if (hidden) {
+      db.insert(moderatedPosts)
+        .values({
+          platform,
+          bookmarkId,
+          hidden: 1,
+          reason,
+          createdAt,
+          createdBy: actorUserId,
+        })
+        .onConflictDoUpdate({
+          target: [moderatedPosts.platform, moderatedPosts.bookmarkId],
+          set: { hidden: 1, reason, createdAt, createdBy: actorUserId },
+        })
+        .run()
+    } else {
+      db.delete(moderatedPosts)
+        .where(
+          and(eq(moderatedPosts.platform, platform), eq(moderatedPosts.bookmarkId, bookmarkId)),
+        )
+        .run()
+    }
 
-  const result = db
-    .update(activity)
-    .set({ hidden: hidden ? 1 : 0 })
-    .where(and(eq(activity.platform, platform), eq(activity.bookmarkId, bookmarkId)))
-    .run()
+    const result = db
+      .update(activity)
+      .set({ hidden: hidden ? 1 : 0 })
+      .where(and(eq(activity.platform, platform), eq(activity.bookmarkId, bookmarkId)))
+      .run()
 
-  writeAudit(actorUserId, hidden ? 'hide_post' : 'unhide_post', {
-    platform,
-    id: bookmarkId,
-    reason,
+    writeAudit(actorUserId, hidden ? 'hide_post' : 'unhide_post', {
+      platform,
+      id: bookmarkId,
+      reason,
+    })
+
+    return { updated: result.changes ?? 0, hidden }
   })
-
-  return { updated: result.changes ?? 0, hidden }
 }
 
-export function isUserBanned(userId: string | null | undefined): boolean {
-  if (!userId) return false
-  try {
+export function readUserBan(userId: string | null | undefined): ModerationReadResult<boolean> {
+  if (!userId) return { ok: true, value: false }
+  return moderationRead('reading user ban', () => {
     const [row] = db
       .select({ userId: userBans.userId })
       .from(userBans)
@@ -127,18 +174,22 @@ export function isUserBanned(userId: string | null | undefined): boolean {
       .limit(1)
       .all()
     return !!row
-  } catch {
-    return false
-  }
+  })
+}
+
+export function isUserBanned(userId: string | null | undefined): boolean {
+  return requireModerationRead(readUserBan(userId))
+}
+
+export function readBannedUserIds(): ModerationReadResult<Set<string>> {
+  return moderationRead('listing banned users', () => {
+    const rows = db.select({ userId: userBans.userId }).from(userBans).all()
+    return new Set(rows.map((r) => r.userId))
+  })
 }
 
 export function listBannedUserIds(): Set<string> {
-  try {
-    const rows = db.select({ userId: userBans.userId }).from(userBans).all()
-    return new Set(rows.map((r) => r.userId))
-  } catch {
-    return new Set()
-  }
+  return requireModerationRead(readBannedUserIds())
 }
 
 export type BanResult =

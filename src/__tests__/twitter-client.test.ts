@@ -14,6 +14,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 // Mock TwitterApi class
@@ -42,10 +45,16 @@ vi.stubEnv('TWITTER_CLIENT_ID', 'test-client-id')
 vi.stubEnv('TWITTER_CLIENT_SECRET', 'test-client-secret')
 
 describe('Twitter Client', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     testInstance = createTestDb()
     vi.clearAllMocks()
     vi.resetModules()
+    await testInstance.db.insert(schema.users).values({ id: 'user-123', username: 'testuser' })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'x',
+      providerId: 'x-user-123',
+      userId: 'user-123',
+    })
   })
 
   afterEach(() => {
@@ -116,6 +125,12 @@ describe('Twitter Client', () => {
     it('updates database with refreshed tokens', async () => {
       // Insert expired tokens
       const expiresAt = Math.floor(Date.now() / 1000) - 3600
+      await testInstance.db.insert(schema.users).values({ id: 'user-456', username: 'testuser456' })
+      await testInstance.db.insert(schema.userIdentities).values({
+        provider: 'x',
+        providerId: 'x-user-456',
+        userId: 'user-456',
+      })
       await testInstance.db.insert(schema.oauthTokens).values({
         userId: 'user-456',
         username: 'testuser',

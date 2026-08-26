@@ -66,8 +66,11 @@ export async function getCurrentUserId(): Promise<string | null> {
   const session = await getSession()
   if (!session?.userId) return null
   if (!(await hasLiveAccount(session.userId))) return null
-  const { isUserBanned } = await import('@/lib/admin/moderation')
-  if (isUserBanned(session.userId)) return null
+  const { readUserBan } = await import('@/lib/admin/moderation')
+  const ban = readUserBan(session.userId)
+  // Authentication fails closed: a valid JWT is not enough to authorize a
+  // request unless the moderation store confirms this account is not banned.
+  if (!ban.ok || ban.value) return null
   return session.userId
 }
 

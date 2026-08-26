@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { relations, sql } from 'drizzle-orm'
 
 // ===========================================
@@ -86,6 +86,12 @@ export const bookmarkLinks = sqliteTable(
       table.platform,
       table.bookmarkId,
     ),
+    identityIdx: uniqueIndex('bookmark_links_identity_idx').on(
+      table.userId,
+      table.platform,
+      table.bookmarkId,
+      table.expandedUrl,
+    ),
   }),
 )
 
@@ -160,12 +166,20 @@ export const oauthTokens = sqliteTable('oauth_tokens', {
   scopes: text('scopes'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at'),
+  refreshLeaseId: text('refresh_lease_id'),
+  refreshLeaseStartedAt: text('refresh_lease_started_at'),
 })
 
-// OAuth state (for PKCE flow) - temporary, no userId needed
+// OAuth state (for PKCE flow) — bound to the ADHX account that initiated it.
+// The callback must present the same signed-in user before it can atomically
+// consume the verifier, preventing a session switch from linking X elsewhere.
 export const oauthState = sqliteTable('oauth_state', {
   state: text('state').primaryKey(),
   codeVerifier: text('code_verifier').notNull(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  xLinkVersion: integer('x_link_version').notNull().default(0),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
@@ -224,6 +238,7 @@ export const syncLogs = sqliteTable(
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(),
     startedAt: text('started_at').notNull(),
+    heartbeatAt: text('heartbeat_at'),
     completedAt: text('completed_at'),
     status: text('status').notNull(),
     totalFetched: integer('total_fetched').default(0),
@@ -235,6 +250,9 @@ export const syncLogs = sqliteTable(
   },
   (table) => ({
     userIdIdx: index('sync_logs_user_id_idx').on(table.userId),
+    oneRunningPerUserIdx: uniqueIndex('sync_logs_one_running_per_user_idx')
+      .on(table.userId)
+      .where(sql`${table.status} = 'running'`),
   }),
 )
 
@@ -445,12 +463,18 @@ export const users = sqliteTable('users', {
   // records the old name in `username_aliases` so old `/t/{username}/...`
   // links keep redirecting instead of 404ing.
   usernameChangeCount: integer('username_change_count').notNull().default(0),
+  // Monotonic revocation generation for X-link flows. OAuth state captures
+  // this value at start; disconnect increments it so callbacks already in
+  // flight cannot recreate an identity or token row afterward.
+  xLinkVersion: integer('x_link_version').notNull().default(0),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
 // Linked sign-in identities for a user — X OAuth and/or email magic link.
-// PK (provider, providerId) so the same X account or email can't be linked
-// to two different users at once.
+// PK (provider, providerId) means one provider identity cannot belong to two
+// ADHX users. The partial unique index also limits each ADHX user to one X
+// identity, matching oauth_tokens' one-row-per-user model; email identities
+// remain unconstrained by user_id during atomic email changes.
 export const userIdentities = sqliteTable(
   'user_identities',
   {
@@ -462,6 +486,9 @@ export const userIdentities = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.provider, table.providerId] }),
     userIdIdx: index('user_identities_user_id_idx').on(table.userId),
+    oneXPerUserIdx: uniqueIndex('user_identities_one_x_per_user_idx')
+      .on(table.userId)
+      .where(sql`${table.provider} = 'x'`),
   }),
 )
 

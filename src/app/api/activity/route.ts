@@ -1,6 +1,7 @@
 import { ok } from '@/lib/api/response'
 import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 import { publicReadRateLimit } from '@/lib/rate-limit'
+import type { NextResponse } from 'next/server'
 
 /**
  * GET /api/activity — the public, anonymous pulse for the landing + Discover.
@@ -8,8 +9,9 @@ import { publicReadRateLimit } from '@/lib/rate-limit'
  * Thin wrapper over `getTrendingItems()` (the single audited choke point for
  * the anonymity invariant — `userId` is never selected there). Returns the
  * most recent community actions, enriched with save/trend counts, content type,
- * and resolved thumbnails. Short cache + SWR keeps it lively without hammering
- * the DB.
+ * and resolved thumbnails. Responses are never stored by intermediaries so
+ * each request revalidates current moderation; the data layer retains only a
+ * moderation-gated burst cache.
  *
  * Accepts an optional `?offset=` for `DiscoverFeed`'s infinite scroll — it
  * pages over the deduped, newest-first sequence (see `getTrendingItems`),
@@ -21,10 +23,15 @@ import { publicReadRateLimit } from '@/lib/rate-limit'
  */
 export const dynamic = 'force-dynamic'
 
+function noStore(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'no-store')
+  return response
+}
+
 export async function GET(request?: Request) {
   if (request) {
     const limited = publicReadRateLimit(request)
-    if (limited) return limited
+    if (limited) return noStore(limited)
   }
 
   try {
@@ -40,11 +47,8 @@ export async function GET(request?: Request) {
       offset,
       withinHours: LIVE_WINDOW_HOURS,
     })
-    return ok(
-      { items, savedToday, recentActivity, hasMore },
-      { headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=15' } },
-    )
+    return noStore(ok({ items, savedToday, recentActivity, hasMore }))
   } catch {
-    return ok({ items: [], savedToday: 0, recentActivity: 0, hasMore: false })
+    return noStore(ok({ items: [], savedToday: 0, recentActivity: 0, hasMore: false }))
   }
 }

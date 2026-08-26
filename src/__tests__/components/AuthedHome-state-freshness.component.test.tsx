@@ -13,13 +13,37 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
-import { render, waitFor, act } from '@testing-library/react'
+import { render, waitFor, act, screen } from '@testing-library/react'
 import FeedPage from '@/app/AuthedHome'
 import type { FeedItem } from '@/components/feed/types'
+import { SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
 
 let currentQuery = ''
 let currentParamsObj = new URLSearchParams(currentQuery)
 const urlListeners = new Set<() => void>()
+
+type EventListener = (event: Event) => void
+
+class MockEventSource {
+  static instances: MockEventSource[] = []
+  listeners: Record<string, EventListener[]> = {}
+  onerror: ((event: Event) => void) | null = null
+
+  constructor(public url: string) {
+    MockEventSource.instances.push(this)
+  }
+
+  addEventListener(type: string, listener: EventListener) {
+    ;(this.listeners[type] ||= []).push(listener)
+  }
+
+  close() {}
+
+  emit(type: string, data: unknown) {
+    const event = new MessageEvent(type, { data: JSON.stringify(data) })
+    this.listeners[type]?.forEach((listener) => listener(event))
+  }
+}
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
@@ -126,6 +150,9 @@ beforeEach(() => {
     if (url.startsWith('/api/tags')) {
       tagsRequests += 1
       return jsonResponse({ tags: [] })
+    }
+    if (url.startsWith('/api/sync/cooldown')) {
+      return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
     }
     if (url.startsWith('/api/bookmarks/add')) {
       // The id the add endpoint reports must match the row the follow-up
@@ -293,5 +320,33 @@ describe('AuthedHome: pasting a link adds the post in place', () => {
     paste('https://adhx.com/t/weedauwl/investments')
 
     await waitFor(() => expect(renderedItems.map((i) => i.id)).toEqual(before))
+  })
+})
+
+describe('AuthedHome: sync error UX', () => {
+  it('preserves the in-progress SSE message instead of showing connection loss', async () => {
+    MockEventSource.instances = []
+    vi.stubGlobal('EventSource', MockEventSource)
+    currentQuery = 'firstLogin=true'
+    currentParamsObj = new URLSearchParams(currentQuery)
+
+    try {
+      render(<FeedPage />)
+      await waitFor(() => expect(MockEventSource.instances).toHaveLength(1), { timeout: 2000 })
+
+      act(() => {
+        const eventSource = MockEventSource.instances[0]
+        eventSource.emit('error', {
+          message: SYNC_IN_PROGRESS_MESSAGE,
+          code: 'in_progress',
+        })
+        eventSource.onerror?.(new Event('error'))
+      })
+
+      expect(await screen.findByText(SYNC_IN_PROGRESS_MESSAGE)).toBeInTheDocument()
+      expect(screen.queryByText(/Connection lost/)).not.toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

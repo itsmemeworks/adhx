@@ -248,6 +248,53 @@ describe('API: /api/auth/email/*', () => {
       expect(second.headers.get('location')).toContain('auth_error=invalid_link')
     })
 
+    it('allows only one of two concurrent callbacks to consume a sign-in token', async () => {
+      const token = await requestToken('parallel@example.com')
+      const { GET } = await import('@/app/api/auth/email/callback/route')
+
+      const responses = await Promise.all([
+        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
+        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
+      ])
+      const locations = responses.map((response) => response.headers.get('location'))
+
+      expect(locations.filter((location) => location?.includes('/welcome?'))).toHaveLength(1)
+      expect(
+        locations.filter((location) => location?.includes('auth_error=invalid_link')),
+      ).toHaveLength(1)
+      expect(await testInstance.db.select().from(schema.users)).toHaveLength(1)
+      expect(await testInstance.db.select().from(schema.userIdentities)).toHaveLength(1)
+    })
+
+    it('resolves two distinct concurrent sign-in links for one email to one account', async () => {
+      const { createLoginToken } = await import('@/lib/auth/account')
+      const [firstToken, secondToken] = await Promise.all([
+        createLoginToken({ email: 'distinct@example.com', intent: 'signin' }),
+        createLoginToken({ email: 'distinct@example.com', intent: 'signin' }),
+      ])
+      const { GET } = await import('@/app/api/auth/email/callback/route')
+
+      const responses = await Promise.all([
+        GET(getRequest(`/api/auth/email/callback?token=${firstToken}`)),
+        GET(getRequest(`/api/auth/email/callback?token=${secondToken}`)),
+      ])
+      expect(
+        responses.every((response) => !response.headers.get('location')?.includes('auth_error')),
+      ).toBe(true)
+      expect(
+        responses.every((response) =>
+          response.headers.getSetCookie().some((cookie) => cookie.includes('adhx_session')),
+        ),
+      ).toBe(true)
+      expect(await testInstance.db.select().from(schema.users)).toHaveLength(1)
+      expect(await testInstance.db.select().from(schema.userIdentities)).toEqual([
+        expect.objectContaining({
+          provider: 'email',
+          providerId: 'distinct@example.com',
+        }),
+      ])
+    })
+
     it('rejects an expired token', async () => {
       const token = await requestToken('expired@example.com')
       await testInstance.db.update(schema.loginTokens).set({ expiresAt: Date.now() - 1_000 })
@@ -293,6 +340,36 @@ describe('API: /api/auth/email/*', () => {
         .from(schema.users)
         .where(eq(schema.users.id, 'user-1'))
       expect(user.email).toBe('new@example.com')
+    })
+
+    it('allows only one of two concurrent callbacks to consume an email-change token', async () => {
+      await testInstance.db.insert(schema.users).values({ id: 'user-1', username: 'user1' })
+      mockUserId = 'user-1'
+
+      const { POST } = await import('@/app/api/auth/email/change/route')
+      await POST(postRequest('/api/auth/email/change', { email: 'parallel-change@example.com' }))
+      const call = mockSendMagicLinkEmail.mock.calls.at(-1)![0] as { url: string }
+      const token = new URL(call.url).searchParams.get('token')!
+      const { GET } = await import('@/app/api/auth/email/callback/route')
+
+      const responses = await Promise.all([
+        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
+        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
+      ])
+      const locations = responses.map((response) => response.headers.get('location'))
+
+      expect(
+        locations.filter((location) => location?.includes('/settings?email_changed=1')),
+      ).toHaveLength(1)
+      expect(
+        locations.filter((location) => location?.includes('auth_error=invalid_link')),
+      ).toHaveLength(1)
+      const [user] = await testInstance.db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, 'user-1'))
+      expect(user.email).toBe('parallel-change@example.com')
+      expect(await testInstance.db.select().from(schema.userIdentities)).toHaveLength(1)
     })
 
     it('409s immediately when the email is already on another account', async () => {

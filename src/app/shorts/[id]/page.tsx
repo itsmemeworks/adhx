@@ -15,7 +15,7 @@ import {
   SharedPreviewPage,
   sharedPreviewSeed,
 } from '@/lib/theater/shared-preview'
-import { isPostModerated } from '@/lib/admin/moderation'
+import { readPostModeration } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
@@ -30,10 +30,11 @@ export default async function ShortPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const userId = await getCurrentUserId()
+  const moderation = readPostModeration('youtube', id)
+  const moderated = !moderation.ok || moderation.value
+  const userId = moderated ? null : await getCurrentUserId()
   const stub = stubYouTubeTheaterItem(id)
   const seed = await sharedPreviewSeed(stub)
-  const moderated = isPostModerated('youtube', id)
 
   return (
     <SharedPreviewPage
@@ -53,7 +54,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'ADHX - Save now. Read never. Find always.' }
   }
 
-  if (isPostModerated('youtube', id)) return MODERATED_PAGE_METADATA
+  const moderation = readPostModeration('youtube', id)
+  if (!moderation.ok || moderation.value) return MODERATED_PAGE_METADATA
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/shorts/${id}`

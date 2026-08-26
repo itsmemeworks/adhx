@@ -1,10 +1,18 @@
 import { db } from '@/lib/db'
-import { tagShares, bookmarkTags, bookmarks, bookmarkMedia } from '@/lib/db/schema'
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import {
+  tagShares,
+  bookmarkTags,
+  bookmarks,
+  bookmarkMedia,
+  moderatedPosts,
+  userBans,
+} from '@/lib/db/schema'
+import { and, desc, eq, isNull, or } from 'drizzle-orm'
 import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import { inferContentType } from '@/lib/content-type'
+import { readBannedUserIds, readModeratedPostKeys } from '@/lib/admin/moderation'
 
 /**
  * Server-side feed assembly for the theater (docs/specs/theater-first.md §4).
@@ -29,10 +37,21 @@ export async function getTheaterFeed(): Promise<TheaterFeedSeed> {
   // window `/api/activity` polls with, so the poll never surfaces a post the
   // seed excluded. When that window is thin the public-tag backfill below
   // still keeps the stage from opening empty.
-  const { items, savedToday, recentActivity } = await getTrendingItems({
-    limit: THEATER_MAX_ITEMS,
-    withinHours: LIVE_WINDOW_HOURS,
-  })
+  let seed: Awaited<ReturnType<typeof getTrendingItems>>
+  try {
+    seed = await getTrendingItems({
+      limit: THEATER_MAX_ITEMS,
+      withinHours: LIVE_WINDOW_HOURS,
+    })
+  } catch (error) {
+    // Moderation is part of the visibility decision for every live item. If
+    // that read (or the underlying pulse query) is unavailable, an empty but
+    // usable theater is safer than either leaking cached content or crashing
+    // the public page.
+    console.error('Theater: failed to load verified trending items:', error)
+    return { items: [], savedToday: 0, recentActivity: 0 }
+  }
+  const { items, savedToday, recentActivity } = seed
 
   let combined: TheaterItem[] = items
 
@@ -63,10 +82,18 @@ export async function getTheaterFeed(): Promise<TheaterFeedSeed> {
 function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): TheaterItem[] {
   if (needed <= 0) return []
 
+  // The public-tag join is a separate read path from the activity pulse, so
+  // activity.hidden cannot protect it. Never treat an unreadable moderation
+  // store as "nothing hidden": omit the entire unverified backfill instead.
+  const moderation = readModeratedPostKeys()
+  const bannedOwners = readBannedUserIds()
+  if (!moderation.ok || !bannedOwners.ok) return []
+
   // Over-fetch: some rows collapse via dedup (the same post shared across
   // multiple public tags, or already present in `existing`).
   const rows = db
     .select({
+      ownerUserId: bookmarks.userId,
       platform: bookmarks.platform,
       id: bookmarks.id,
       author: bookmarks.author,
@@ -91,19 +118,46 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
         eq(bookmarks.id, bookmarkTags.bookmarkId),
       ),
     )
-    .where(eq(tagShares.isPublic, true))
+    .leftJoin(
+      moderatedPosts,
+      and(
+        eq(moderatedPosts.platform, bookmarks.platform),
+        eq(moderatedPosts.bookmarkId, bookmarks.id),
+      ),
+    )
+    .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
+    .where(
+      and(
+        eq(tagShares.isPublic, true),
+        isNull(userBans.userId),
+        or(isNull(moderatedPosts.hidden), eq(moderatedPosts.hidden, 0)),
+      ),
+    )
     .orderBy(desc(bookmarks.processedAt))
     .limit(Math.max(needed * 3, 30))
     .all()
-
-  const ids = [...new Set(rows.map((r) => r.id))]
+    .filter((row) => !moderation.value.has(`${row.platform}:${row.id}`))
+    .filter((row) => !bannedOwners.value.has(row.ownerUserId))
 
   // First media thumbnail per bookmark, if any — kept deliberately simple
   // (no article-cover / quote-context resolution like the live pulse does).
   const mediaByBookmark = new Map<string, { url: string; isVideo: boolean }>()
-  if (ids.length > 0) {
+  const allowedTuples = [
+    ...new Map(
+      rows.map((row) => [
+        `${row.ownerUserId}:${row.platform}:${row.id}`,
+        {
+          ownerUserId: row.ownerUserId,
+          platform: row.platform,
+          bookmarkId: row.id,
+        },
+      ]),
+    ).values(),
+  ]
+  if (allowedTuples.length > 0) {
     const mediaRows = db
       .select({
+        ownerUserId: bookmarkMedia.userId,
         platform: bookmarkMedia.platform,
         bookmarkId: bookmarkMedia.bookmarkId,
         previewUrl: bookmarkMedia.previewUrl,
@@ -111,10 +165,20 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
         mediaType: bookmarkMedia.mediaType,
       })
       .from(bookmarkMedia)
-      .where(inArray(bookmarkMedia.bookmarkId, ids))
+      .where(
+        or(
+          ...allowedTuples.map((tuple) =>
+            and(
+              eq(bookmarkMedia.userId, tuple.ownerUserId),
+              eq(bookmarkMedia.platform, tuple.platform),
+              eq(bookmarkMedia.bookmarkId, tuple.bookmarkId),
+            ),
+          ),
+        ),
+      )
       .all()
     for (const m of mediaRows) {
-      const key = `${m.platform}:${m.bookmarkId}`
+      const key = `${m.ownerUserId}:${m.platform}:${m.bookmarkId}`
       if (mediaByBookmark.has(key)) continue
       const url = m.previewUrl || m.originalUrl
       if (!url) continue
@@ -130,11 +194,11 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
   for (const row of rows) {
     if (out.length >= needed) break
     if (!row.id || !row.author) continue
-    const key = `${row.platform}:${row.id}`
-    if (seen.has(key)) continue
-    seen.add(key)
+    const publicKey = `${row.platform}:${row.id}`
+    if (seen.has(publicKey)) continue
+    seen.add(publicKey)
 
-    const media = mediaByBookmark.get(key)
+    const media = mediaByBookmark.get(`${row.ownerUserId}:${publicKey}`)
     const contentType = inferContentType({
       platform: row.platform,
       category: row.category,

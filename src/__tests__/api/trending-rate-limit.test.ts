@@ -38,6 +38,16 @@ describe('GET /api/trending — rate limiting', () => {
   it('allows a normal request through', async () => {
     const res = await GET(requestFrom('1.1.1.1'))
     expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+  })
+
+  it('keeps moderation-store failures non-cacheable', async () => {
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    const res = await GET(requestFrom('1.1.1.9'))
+
+    expect(res.status).toBe(500)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
 
   it('returns 429 with Retry-After once an IP exceeds the per-minute limit', async () => {
@@ -48,6 +58,7 @@ describe('GET /api/trending — rate limiting', () => {
     }
     expect(last!.status).toBe(429)
     expect(last!.headers.get('Retry-After')).toBeTruthy()
+    expect(last!.headers.get('Cache-Control')).toBe('no-store')
     const body = await last!.json()
     expect(body.error).toBe('Too many requests')
   })

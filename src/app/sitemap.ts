@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/lib/db'
-import { tagShares, bookmarks, users, activity } from '@/lib/db/schema'
-import { and, eq, desc, sql } from 'drizzle-orm'
+import { tagShares, bookmarks, users, activity, userBans } from '@/lib/db/schema'
+import { and, eq, desc, isNull, sql } from 'drizzle-orm'
 import { previewPath } from '@/lib/activity/record'
 import type { PlatformId } from '@/lib/platform/url'
 import { FILTER_SLUGS } from '@/lib/trending/filter'
@@ -12,7 +12,7 @@ import {
   completedWeekSlugs,
 } from '@/lib/sitemap/queries'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
-import { listModeratedPostKeys } from '@/lib/admin/moderation'
+import { readBannedUserIds, readModeratedPostKeys } from '@/lib/admin/moderation'
 
 /**
  * Single sitemap served at /sitemap.xml (where robots.txt points).
@@ -27,8 +27,8 @@ import { listModeratedPostKeys } from '@/lib/admin/moderation'
  * URL. At this scale a single sitemap is well under the 50k-URL / 50MB limits;
  * the URL_CAP backstop guards against unbounded growth.)
  *
- * ANONYMITY: the activity read selects ONLY public columns — `userId` is never
- * touched here.
+ * ANONYMITY: activity actor IDs are used only in a private anti-join against
+ * `user_bans`; they are never selected into or exposed through sitemap data.
  *
  * Widened inventory (on top of hubs + public tags + saved/previewed content):
  *  - Author hubs (`/{username}`) for every X handle behind a sitemap-eligible post.
@@ -116,18 +116,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })
   }
 
+  // All database-derived URLs depend on moderation. If either moderation
+  // table is unreadable, emit only the unconditional static hubs rather than
+  // guessing that no posts/users are moderated.
+  const moderatedRead = readModeratedPostKeys()
+  const bannedRead = readBannedUserIds()
+  if (!moderatedRead.ok || !bannedRead.ok) {
+    console.error('Sitemap: moderation store unavailable; omitting database-derived URLs')
+    return entries
+  }
+  const moderated = moderatedRead.value
+  const banned = bannedRead.value
+
   // Public tag-collection pages (`/t/{user}/{tag}`) plus the bare curator
   // profile (`/t/{user}`) for every distinct username behind at least one
   // public tag. Private tags are excluded.
   try {
     const publicShares = db
-      .select({ tag: tagShares.tag, username: users.username })
+      .select({ tag: tagShares.tag, username: users.username, userId: users.id })
       .from(tagShares)
       .innerJoin(users, eq(tagShares.userId, users.id))
       .where(eq(tagShares.isPublic, true))
       .all()
     const curators = new Set<string>()
     for (const share of publicShares) {
+      if (banned.has(share.userId)) continue
       if (!share.username) continue
       entries.push({
         url: `${baseUrl}/t/${share.username}/${share.tag}`,
@@ -153,7 +166,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // collected into `twitterAuthors` for the author-hub section below.
   const seen = new Set<string>()
   const twitterAuthors = new Map<string, string>() // handle -> most-recent ISO timestamp seen
-  const moderated = listModeratedPostKeys()
   for (const platform of PLATFORMS) {
     try {
       // Saved content: distinct (platform, id) across all users — one preview
@@ -167,7 +179,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
           createdAt: bookmarks.createdAt,
         })
         .from(bookmarks)
-        .where(eq(bookmarks.platform, platform))
+        .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
+        .where(and(eq(bookmarks.platform, platform), isNull(userBans.userId)))
         .orderBy(desc(bookmarks.processedAt))
         .limit(SOURCE_CAP)
         .all()
@@ -204,7 +217,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
           contentType: activity.contentType,
         })
         .from(activity)
-        .where(and(eq(activity.hidden, 0), eq(activity.platform, platform)))
+        .leftJoin(userBans, eq(userBans.userId, activity.userId))
+        .where(
+          and(eq(activity.hidden, 0), eq(activity.platform, platform), isNull(userBans.userId)),
+        )
         .orderBy(desc(activity.createdAt))
         .limit(SOURCE_CAP)
         .all()
@@ -264,7 +280,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const days = db
       .selectDistinct({ day: sql<string>`date(${activity.createdAt})` })
       .from(activity)
-      .where(eq(activity.hidden, 0))
+      .leftJoin(userBans, eq(userBans.userId, activity.userId))
+      .where(and(eq(activity.hidden, 0), isNull(userBans.userId)))
       .all()
     const weeks = completedWeekSlugs(
       days.map((d) => d.day).filter((d): d is string => !!d),

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { createTestDb, type TestDbInstance } from './setup'
+import * as schema from '@/lib/db/schema'
 
 /**
  * API Route Tests: GET /api/auth/twitter
@@ -66,6 +67,9 @@ describe('API: GET /api/auth/twitter', () => {
 
   it('starts OAuth when a session is present', async () => {
     mockUserId = 'u_email'
+    await testInstance.db
+      .insert(schema.users)
+      .values({ id: 'u_email', username: 'emailer', xLinkVersion: 3 })
     const { GET } = await import('@/app/api/auth/twitter/route')
     const response = await GET(new NextRequest('http://localhost:3000/api/auth/twitter'))
 
@@ -73,5 +77,9 @@ describe('API: GET /api/auth/twitter', () => {
     const location = response.headers.get('location')
     expect(location).toMatch(/twitter\.com|x\.com/)
     expect(location).toContain('client_id=test-client-id')
+
+    const [state] = await testInstance.db.select().from(schema.oauthState)
+    expect(state.userId).toBe('u_email')
+    expect(state.xLinkVersion).toBe(3)
   })
 })

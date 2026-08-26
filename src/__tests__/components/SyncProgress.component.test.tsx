@@ -4,7 +4,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
-import { REAUTH_MESSAGE, X_UNAVAILABLE_MESSAGE } from '@/lib/sync/messages'
+import {
+  REAUTH_MESSAGE,
+  SYNC_IN_PROGRESS_MESSAGE,
+  X_UNAVAILABLE_MESSAGE,
+} from '@/lib/sync/messages'
 
 type Listener = (event: Event) => void
 
@@ -90,6 +94,22 @@ describe('SyncProgress error UX', () => {
     expect(screen.getByText("Couldn't sync bookmarks")).toBeInTheDocument()
     expect(screen.getByText('Retry')).toBeInTheDocument()
     expect(screen.queryByText(/Connect with/)).not.toBeInTheDocument()
+  })
+
+  it('preserves the meaningful in-progress SSE error when EventSource closes', async () => {
+    render(<SyncProgress isOpen onClose={() => {}} />)
+
+    await act(async () => {
+      const eventSource = MockEventSource.instances[0]
+      eventSource.emit('error', {
+        message: SYNC_IN_PROGRESS_MESSAGE,
+        code: 'in_progress',
+      })
+      eventSource.onerror?.(new Event('error'))
+    })
+
+    expect(screen.getByText(SYNC_IN_PROGRESS_MESSAGE)).toBeInTheDocument()
+    expect(screen.queryByText(/Connection lost/)).not.toBeInTheDocument()
   })
 
   it('stays invisible while a silent sync is in progress', async () => {

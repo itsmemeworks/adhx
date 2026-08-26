@@ -13,6 +13,36 @@ import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-mi
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
+// Keep explicit for this standalone startup script; matches sync/claim.ts.
+const STALE_RUNNING_SYNC_MS = 30 * 60 * 1000
+const LINK_METADATA_COLUMNS = [
+  'original_url',
+  'link_type',
+  'domain',
+  'content_json',
+  'preview_title',
+  'preview_description',
+  'preview_image_url',
+] as const
+
+function richestBookmarkLinkAssignments(): string {
+  return LINK_METADATA_COLUMNS.map(
+    (column) => `${column} = (
+      SELECT candidate.${column}
+      FROM bookmark_links AS candidate
+      WHERE candidate.user_id = survivor.user_id
+        AND candidate.platform = survivor.platform
+        AND candidate.bookmark_id = survivor.bookmark_id
+        AND candidate.expanded_url = survivor.expanded_url
+        AND candidate.${column} IS NOT NULL
+      ORDER BY
+        length(candidate.${column}) DESC,
+        candidate.${column} COLLATE BINARY ASC,
+        candidate.id ASC
+      LIMIT 1
+    )`,
+  ).join(',\n')
+}
 
 // Ensure data directory exists
 const dbDir = path.dirname(DB_PATH)
@@ -62,6 +92,280 @@ if (fs.existsSync(journalPath)) {
 }
 
 console.log('[migrate] SQL migrations complete')
+
+// Accounts foundation must exist before oauth_state can install its owner FK
+// and X-link generation snapshot. Drizzle's historical SQL creates OAuth
+// tables but not these first-class account tables.
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL DEFAULT 'user',
+      display_name TEXT,
+      avatar_url TEXT,
+      email TEXT,
+      x_link_version INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS user_identities (
+      provider TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (provider, provider_id)
+    );
+    CREATE INDEX IF NOT EXISTS user_identities_user_id_idx ON user_identities(user_id);
+    CREATE TABLE IF NOT EXISTS login_tokens (
+      token_hash TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      intent TEXT NOT NULL,
+      user_id TEXT,
+      return_to TEXT,
+      expires_at INTEGER NOT NULL,
+      used_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
+  console.log('[migrate] Ensured users/user_identities/login_tokens tables')
+} catch (error) {
+  console.log('[migrate] FAILED creating account tables', error)
+  db.close()
+  process.exit(1)
+}
+
+// OAuth PKCE state is bound to both the initiating account and its monotonic
+// X-link generation. Disconnect increments users.x_link_version; callbacks
+// that already consumed an older state can then be rejected before identity
+// or token persistence. Install the account column and rebuild oauth_state in
+// one transaction so startup never exposes a partially upgraded boundary.
+try {
+  const userColumns = db.prepare('PRAGMA table_info(users)').all() as Array<{
+    name: string
+    notnull: number
+  }>
+  if (userColumns.length === 0) {
+    throw new Error('users table is required before OAuth generation migration')
+  }
+
+  const stateColumns = db.prepare('PRAGMA table_info(oauth_state)').all() as Array<{
+    name: string
+    notnull: number
+  }>
+  const userIdColumn = stateColumns.find((column) => column.name === 'user_id')
+  const stateVersionColumn = stateColumns.find((column) => column.name === 'x_link_version')
+  const foreignKeys = db.prepare('PRAGMA foreign_key_list(oauth_state)').all() as Array<{
+    table: string
+    from: string
+    to: string
+    on_delete: string
+  }>
+  const hasOwnerForeignKey = foreignKeys.some(
+    (foreignKey) =>
+      foreignKey.table === 'users' &&
+      foreignKey.from === 'user_id' &&
+      foreignKey.to === 'id' &&
+      foreignKey.on_delete.toUpperCase() === 'CASCADE',
+  )
+  const needsUserVersion = !userColumns.some(
+    (column) => column.name === 'x_link_version' && column.notnull === 1,
+  )
+  const needsStateRebuild =
+    !userIdColumn ||
+    userIdColumn.notnull !== 1 ||
+    !stateVersionColumn ||
+    stateVersionColumn.notnull !== 1 ||
+    !hasOwnerForeignKey
+
+  if (needsUserVersion || needsStateRebuild) {
+    db.transaction(() => {
+      if (needsUserVersion) {
+        db.exec('ALTER TABLE users ADD COLUMN x_link_version INTEGER NOT NULL DEFAULT 0')
+      }
+
+      if (!needsStateRebuild) return
+
+      db.exec(`
+        DROP TABLE IF EXISTS oauth_state_bound;
+        CREATE TABLE oauth_state_bound (
+          state TEXT PRIMARY KEY NOT NULL,
+          code_verifier TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          x_link_version INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `)
+
+      if (userIdColumn) {
+        if (stateVersionColumn) {
+          db.exec(`
+            INSERT INTO oauth_state_bound
+              (state, code_verifier, user_id, x_link_version, created_at)
+            SELECT s.state, s.code_verifier, s.user_id,
+                   COALESCE(s.x_link_version, u.x_link_version, 0), s.created_at
+            FROM oauth_state s
+            INNER JOIN users u ON u.id = s.user_id
+            WHERE s.user_id IS NOT NULL;
+          `)
+        } else {
+          db.exec(`
+            INSERT INTO oauth_state_bound
+              (state, code_verifier, user_id, x_link_version, created_at)
+            SELECT s.state, s.code_verifier, s.user_id,
+                   u.x_link_version, s.created_at
+            FROM oauth_state s
+            INNER JOIN users u ON u.id = s.user_id
+            WHERE s.user_id IS NOT NULL;
+          `)
+        }
+      }
+
+      db.exec(`
+        DROP TABLE IF EXISTS oauth_state;
+        ALTER TABLE oauth_state_bound RENAME TO oauth_state;
+      `)
+    })()
+    console.log('[migrate] Installed OAuth X-link generation boundary')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED installing OAuth X-link generation boundary', error)
+  db.close()
+  process.exit(1)
+}
+
+// A token refresh lease is the cross-process counterpart to the in-memory
+// coalescing map. It must be claimed before spending X's single-use rotating
+// refresh token, and every completion path is conditional on lease ownership.
+try {
+  const tokenColumns = db.prepare('PRAGMA table_info(oauth_tokens)').all() as Array<{
+    name: string
+  }>
+  const hasLeaseId = tokenColumns.some((column) => column.name === 'refresh_lease_id')
+  const hasLeaseStartedAt = tokenColumns.some(
+    (column) => column.name === 'refresh_lease_started_at',
+  )
+  if (!hasLeaseId || !hasLeaseStartedAt) {
+    db.transaction(() => {
+      if (!hasLeaseId) {
+        db.exec('ALTER TABLE oauth_tokens ADD COLUMN refresh_lease_id TEXT')
+      }
+      if (!hasLeaseStartedAt) {
+        db.exec('ALTER TABLE oauth_tokens ADD COLUMN refresh_lease_started_at TEXT')
+      }
+    })()
+    console.log('[migrate] Added durable OAuth refresh lease columns')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED installing durable OAuth refresh lease', error)
+  db.close()
+  process.exit(1)
+}
+
+// Long-running syncs renew this durable lease every 10 seconds. Add it
+// idempotently for legacy databases, then seed old rows from started_at so the
+// stale reaper can use one COALESCE expression across old and new data.
+try {
+  const syncLogColumns = db.prepare('PRAGMA table_info(sync_logs)').all() as Array<{
+    name: string
+  }>
+  if (!syncLogColumns.some((column) => column.name === 'heartbeat_at')) {
+    db.exec('ALTER TABLE sync_logs ADD COLUMN heartbeat_at text')
+    console.log('[migrate] Added sync_logs.heartbeat_at')
+  }
+  const backfilledHeartbeats = db
+    .prepare('UPDATE sync_logs SET heartbeat_at = started_at WHERE heartbeat_at IS NULL')
+    .run()
+  if (backfilledHeartbeats.changes > 0) {
+    console.log(`[migrate] Backfilled ${backfilledHeartbeats.changes} sync heartbeats`)
+  }
+} catch (error) {
+  console.log('[migrate] FAILED installing sync heartbeat lease', error)
+  db.close()
+  process.exit(1)
+}
+
+// A sync claim is the durable `running` log row. Clear rows left behind by a
+// terminated process, collapse historical duplicate link enrichment, then
+// install the uniqueness boundaries that make both writes race-safe.
+try {
+  const staleRunningSyncCutoff = new Date(Date.now() - STALE_RUNNING_SYNC_MS).toISOString()
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE sync_logs
+       SET status = 'failed',
+           completed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           error_message = COALESCE(error_message, 'Sync interrupted before completion')
+       WHERE status = 'running'
+         AND COALESCE(heartbeat_at, started_at) < ?`,
+    ).run(staleRunningSyncCutoff)
+
+    db.exec(`
+      WITH ranked_running AS (
+        SELECT
+          id,
+          ROW_NUMBER() OVER (
+            PARTITION BY user_id
+            ORDER BY
+              COALESCE(heartbeat_at, started_at) DESC,
+              started_at DESC,
+              id ASC
+          ) AS lease_rank
+        FROM sync_logs
+        WHERE status = 'running'
+      )
+      UPDATE sync_logs
+      SET status = 'failed',
+          completed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+          error_message = 'Legacy duplicate running sync superseded during startup'
+      WHERE id IN (
+        SELECT id
+        FROM ranked_running
+        WHERE lease_rank > 1
+      );
+
+      UPDATE bookmark_links AS survivor
+      SET ${richestBookmarkLinkAssignments()}
+      WHERE survivor.id IN (
+        SELECT MIN(id)
+        FROM bookmark_links
+        GROUP BY user_id, platform, bookmark_id, expanded_url
+        HAVING COUNT(*) > 1
+      );
+
+      DELETE FROM bookmark_links
+      WHERE id IN (
+        SELECT id
+        FROM (
+          SELECT
+            id,
+            ROW_NUMBER() OVER (
+              PARTITION BY user_id, platform, bookmark_id, expanded_url
+              ORDER BY
+                (content_json IS NOT NULL) DESC,
+                (preview_title IS NOT NULL) DESC,
+                (preview_image_url IS NOT NULL) DESC,
+                id ASC
+            ) AS duplicate_rank
+          FROM bookmark_links
+        )
+        WHERE duplicate_rank > 1
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS sync_logs_one_running_per_user_idx
+      ON sync_logs(user_id)
+      WHERE status = 'running';
+
+      CREATE UNIQUE INDEX IF NOT EXISTS bookmark_links_identity_idx
+      ON bookmark_links(user_id, platform, bookmark_id, expanded_url);
+    `)
+  })()
+  console.log('[migrate] Ensured sync claim and bookmark link uniqueness')
+} catch (error) {
+  console.log('[migrate] FAILED installing sync/link uniqueness boundaries', error)
+  db.close()
+  process.exit(1)
+}
 
 // bookmarks_fts (FTS5) + its ai/ad/au triggers used to mirror every bookmark
 // write into a full-text index, but nothing ever queries it — feed/search
@@ -291,44 +595,6 @@ try {
   console.log('[migrate] Warning: activity pruning failed', error)
 }
 
-// Accounts foundation: users + user_identities + login_tokens (magic link).
-// Guarded CREATE TABLE IF NOT EXISTS — safe on every boot, no Drizzle
-// migration file needed for a table-recreate.
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT NOT NULL UNIQUE,
-      role TEXT NOT NULL DEFAULT 'user',
-      display_name TEXT,
-      avatar_url TEXT,
-      email TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS user_identities (
-      provider TEXT NOT NULL,
-      provider_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (provider, provider_id)
-    );
-    CREATE INDEX IF NOT EXISTS user_identities_user_id_idx ON user_identities(user_id);
-    CREATE TABLE IF NOT EXISTS login_tokens (
-      token_hash TEXT PRIMARY KEY,
-      email TEXT NOT NULL,
-      intent TEXT NOT NULL,
-      user_id TEXT,
-      return_to TEXT,
-      expires_at INTEGER NOT NULL,
-      used_at TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-  `)
-  console.log('[migrate] Ensured users/user_identities/login_tokens tables')
-} catch (error) {
-  console.log('[migrate] Warning: failed to create account tables', error)
-}
-
 // users.role — authorization belongs to the immutable account id. Existing
 // installs get a safe non-admin default; configured legacy admin usernames
 // are promoted once, below, after the account backfill has run.
@@ -359,12 +625,89 @@ try {
     WHERE u.id IS NULL;
 
     INSERT OR IGNORE INTO user_identities (provider, provider_id, user_id)
-    SELECT 'x', user_id, user_id
-    FROM oauth_tokens;
+    SELECT 'x', ot.user_id, ot.user_id
+    FROM oauth_tokens ot
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM user_identities ui
+      WHERE ui.provider = 'x' AND ui.user_id = ot.user_id
+    );
   `)
   console.log('[migrate] Backfilled users/user_identities from oauth_tokens + bookmarks')
 } catch (error) {
   console.log('[migrate] Warning: users/user_identities backfill failed', error)
+}
+
+// oauth_tokens is one row per ADHX user, so user_identities must also allow
+// exactly one provider='x' row per user. Legacy races may have left multiple
+// X identities on an account. Keep the most recently linked row by created_at,
+// with rowid as a deterministic tie-breaker. oauth_tokens does not store the X
+// provider id, so callback completion order cannot be proven after the fact;
+// clear tokens only for deduplicated users rather than risk retaining another
+// X account's credentials. They reconnect once. Dedupe + token cleanup + index
+// DDL are one transaction; startup fails if durable enforcement cannot install.
+try {
+  let removedDuplicates = 0
+  let clearedTokens = 0
+  db.transaction(() => {
+    db.exec(`
+      DROP TABLE IF EXISTS temp_duplicate_x_identity_users;
+      CREATE TEMP TABLE temp_duplicate_x_identity_users (
+        user_id TEXT PRIMARY KEY
+      );
+      INSERT INTO temp_duplicate_x_identity_users (user_id)
+      SELECT user_id
+      FROM user_identities
+      WHERE provider = 'x'
+      GROUP BY user_id
+      HAVING COUNT(*) > 1;
+    `)
+    removedDuplicates = db
+      .prepare(
+        `DELETE FROM user_identities
+         WHERE rowid IN (
+           SELECT rowid
+           FROM (
+             SELECT
+               rowid,
+               ROW_NUMBER() OVER (
+                 PARTITION BY user_id
+                 ORDER BY COALESCE(created_at, '') DESC, rowid DESC
+               ) AS link_rank
+             FROM user_identities
+             WHERE provider = 'x'
+           )
+           WHERE link_rank > 1
+         )`,
+      )
+      .run().changes
+    clearedTokens = db
+      .prepare(
+        `DELETE FROM oauth_tokens
+         WHERE user_id IN (SELECT user_id FROM temp_duplicate_x_identity_users)`,
+      )
+      .run().changes
+    db.exec(`
+      DROP INDEX IF EXISTS user_identities_one_x_per_user_idx;
+      CREATE UNIQUE INDEX user_identities_one_x_per_user_idx
+        ON user_identities(user_id)
+        WHERE provider = 'x';
+      DROP TABLE temp_duplicate_x_identity_users;
+    `)
+  })()
+  if (removedDuplicates > 0) {
+    console.log(
+      `[migrate] Removed ${removedDuplicates} duplicate X identity row(s), keeping newest link`,
+    )
+  }
+  if (clearedTokens > 0) {
+    console.log(`[migrate] Cleared ${clearedTokens} ambiguous X token row(s); reconnect required`)
+  }
+  console.log('[migrate] Enforced one X identity per user')
+} catch (error) {
+  console.log('[migrate] FAILED enforcing one X identity per user', error)
+  db.close()
+  process.exit(1)
 }
 
 // Convert the legacy mutable-username allowlist only when every configured
@@ -584,9 +927,13 @@ try {
     );
     CREATE INDEX IF NOT EXISTS admin_audit_created_at_idx ON admin_audit(created_at);
   `)
+  db.prepare('SELECT platform, bookmark_id, hidden FROM moderated_posts LIMIT 0').all()
+  db.prepare('SELECT user_id FROM user_bans LIMIT 0').all()
   console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
 } catch (error) {
-  console.log('[migrate] Warning: failed to create admin moderation tables', error)
+  console.error('[migrate] FAILED ensuring admin moderation tables', error)
+  db.close()
+  process.exit(1)
 }
 
 // Durable account-deletion boundary. These triggers are installed only after

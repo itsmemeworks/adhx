@@ -15,7 +15,7 @@ import {
   SharedPreviewPage,
   sharedPreviewSeed,
 } from '@/lib/theater/shared-preview'
-import { isPostModerated } from '@/lib/admin/moderation'
+import { readPostModeration } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
@@ -30,10 +30,11 @@ export default async function ReelPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const userId = await getCurrentUserId()
+  const moderation = readPostModeration('instagram', id)
+  const moderated = !moderation.ok || moderation.value
+  const userId = moderated ? null : await getCurrentUserId()
   const stub = stubReelTheaterItem(id)
   const seed = await sharedPreviewSeed(stub)
-  const moderated = isPostModerated('instagram', id)
 
   return (
     <SharedPreviewPage
@@ -55,7 +56,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
-  if (isPostModerated('instagram', id)) return MODERATED_PAGE_METADATA
+  const moderation = readPostModeration('instagram', id)
+  if (!moderation.ok || moderation.value) return MODERATED_PAGE_METADATA
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/reels/${id}`

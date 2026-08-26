@@ -4,9 +4,14 @@ import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { articleBlocksToMarkdown, normalizeEntityMap } from '@/lib/utils/article-text'
 import { db } from '@/lib/db'
 import { bookmarks, bookmarkTags, tagShares, users } from '@/lib/db/schema'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { publicReadRateLimit } from '@/lib/rate-limit'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { readBannedUserIds, readPostModeration } from '@/lib/admin/moderation'
+
+export const dynamic = 'force-dynamic'
+
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' } as const
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 
@@ -133,18 +138,18 @@ function buildTweetResponse(tweet: FxTweet) {
  * Build ADHX curation context for a tweet.
  * Only exposes aggregate counts and public tag info — no user IDs.
  */
-function buildAdhxContext(tweetId: string) {
+function buildAdhxContext(tweetId: string, bannedUserIds: Set<string>) {
   try {
     // Count distinct users who bookmarked this tweet.
     // Scope to platform='twitter' — this is the tweet share endpoint, and a
     // numeric TikTok id could otherwise collide with a tweet id.
-    const [countResult] = db
-      .select({ count: sql<number>`COUNT(DISTINCT ${bookmarks.userId})` })
+    const saveOwners = db
+      .selectDistinct({ userId: bookmarks.userId })
       .from(bookmarks)
       .where(and(eq(bookmarks.id, tweetId), eq(bookmarks.platform, 'twitter')))
       .all()
 
-    const savedByCount = countResult?.count ?? 0
+    const savedByCount = saveOwners.filter((row) => !bannedUserIds.has(row.userId)).length
     if (savedByCount === 0) return null
 
     // Find public tags containing this tweet
@@ -152,6 +157,7 @@ function buildAdhxContext(tweetId: string) {
       .select({
         tag: tagShares.tag,
         username: users.username,
+        userId: users.id,
       })
       .from(bookmarkTags)
       .innerJoin(
@@ -170,6 +176,7 @@ function buildAdhxContext(tweetId: string) {
     const seen = new Set<string>()
     const publicTags = publicTagResults
       .filter((r) => {
+        if (bannedUserIds.has(r.userId)) return false
         if (!r.username) return false
         const key = `${r.username}/${r.tag}`
         if (seen.has(key)) return false
@@ -201,32 +208,66 @@ function buildAdhxContext(tweetId: string) {
  * Rate-limited generously (120 req/min/IP) — this is the public tweet JSON
  * API advertised to AI agents in llms.txt, so it's the surface most likely
  * to get scraped hard. The limit is a backstop against hammering, not a
- * throttle on legitimate crawler/agent traffic; responses are cached 5 min.
+ * throttle on legitimate crawler/agent traffic. Responses are never cached
+ * so every request rechecks current moderation state.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ username: string; id: string }> },
 ) {
   const limited = publicReadRateLimit(request)
-  if (limited) return limited
+  if (limited) {
+    limited.headers.set('Cache-Control', 'no-store')
+    return limited
+  }
 
   const { username, id } = await params
 
   // Validate username (Twitter handles: 1-15 alphanumeric + underscore)
   if (!/^\w{1,15}$/.test(username)) {
-    return NextResponse.json({ error: 'Invalid username' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid username' },
+      { status: 400, headers: NO_STORE_HEADERS },
+    )
   }
 
   // Validate tweet ID (numeric only)
   if (!/^\d+$/.test(id)) {
-    return NextResponse.json({ error: 'Invalid tweet ID' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid tweet ID' },
+      { status: 400, headers: NO_STORE_HEADERS },
+    )
+  }
+
+  const moderation = readPostModeration('twitter', id)
+  if (!moderation.ok) {
+    return NextResponse.json(
+      { error: 'Moderation service unavailable' },
+      { status: 503, headers: NO_STORE_HEADERS },
+    )
+  }
+  if (moderation.value) {
+    return NextResponse.json(
+      { error: 'Post not available' },
+      { status: 404, headers: NO_STORE_HEADERS },
+    )
+  }
+  const bannedUsers = readBannedUserIds()
+  if (!bannedUsers.ok) {
+    return NextResponse.json(
+      { error: 'Moderation service unavailable' },
+      { status: 503, headers: NO_STORE_HEADERS },
+    )
   }
 
   try {
     const data = await fetchTweetData(username, id)
 
     if (!data?.tweet) {
-      return NextResponse.json({ error: 'Tweet not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Tweet not found' },
+        { status: 404, headers: NO_STORE_HEADERS },
+      )
     }
 
     const tweet = data.tweet
@@ -252,7 +293,7 @@ export async function GET(
     const response = buildTweetResponse(tweet)
 
     // Enrich with ADHX curation context
-    const adhxContext = buildAdhxContext(id)
+    const adhxContext = buildAdhxContext(id, bannedUsers.value)
     if (adhxContext) {
       response.adhxContext = {
         ...adhxContext,
@@ -261,12 +302,13 @@ export async function GET(
     }
 
     return NextResponse.json(response, {
-      headers: {
-        'Cache-Control': 'public, max-age=300, stale-while-revalidate=600',
-      },
+      headers: NO_STORE_HEADERS,
     })
   } catch (error) {
     console.error('Error fetching tweet:', error)
-    return NextResponse.json({ error: 'Failed to fetch tweet' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch tweet' },
+      { status: 500, headers: NO_STORE_HEADERS },
+    )
   }
 }

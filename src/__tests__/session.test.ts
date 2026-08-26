@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const liveUserIds = new Set<string>()
 const bannedUserIds = new Set<string>()
+let moderationReadable = true
 
 // Mock jose module
 vi.mock('jose', () => ({
@@ -25,7 +26,10 @@ vi.mock('next/headers', () => ({
 }))
 
 vi.mock('@/lib/admin/moderation', () => ({
-  isUserBanned: (userId: string) => bannedUserIds.has(userId),
+  readUserBan: (userId: string) =>
+    moderationReadable
+      ? { ok: true as const, value: bannedUserIds.has(userId) }
+      : { ok: false as const, error: new Error('moderation unavailable') },
 }))
 
 vi.mock('@/lib/auth/account-state', () => ({
@@ -37,6 +41,7 @@ describe('Session Module', () => {
     vi.clearAllMocks()
     liveUserIds.clear()
     bannedUserIds.clear()
+    moderationReadable = true
     liveUserIds.add('user-456')
     liveUserIds.add('user-789')
   })
@@ -158,6 +163,19 @@ describe('Session Module', () => {
       mockCookieStore.get.mockReturnValue({ value: 'banned-jwt' })
       mockJwtVerify.mockResolvedValue({
         payload: { userId: 'banned-user', username: 'spammer' },
+      })
+
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      expect(await getCurrentUserId()).toBeNull()
+    })
+
+    it('rejects a valid session when the moderation store is unreadable', async () => {
+      const { jwtVerify } = await import('jose')
+      const mockJwtVerify = jwtVerify as ReturnType<typeof vi.fn>
+      moderationReadable = false
+      mockCookieStore.get.mockReturnValue({ value: 'valid-jwt' })
+      mockJwtVerify.mockResolvedValue({
+        payload: { userId: 'user-456', username: 'anotheruser' },
       })
 
       const { getCurrentUserId } = await import('@/lib/auth/session')

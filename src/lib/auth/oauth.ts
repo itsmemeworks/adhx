@@ -1,7 +1,7 @@
 import crypto from 'crypto'
-import { db } from '@/lib/db'
-import { oauthState, oauthTokens } from '@/lib/db/schema'
-import { eq, lt } from 'drizzle-orm'
+import { db, runInTransaction } from '@/lib/db'
+import { oauthState, oauthTokens, userIdentities, users } from '@/lib/db/schema'
+import { and, eq, exists, gt, isNull, lte, or } from 'drizzle-orm'
 import { encryptToken, safeDecryptToken } from './token-encryption'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
@@ -45,6 +45,8 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<Respon
 const TWITTER_AUTH_URL = 'https://x.com/i/oauth2/authorize'
 const TWITTER_TOKEN_URL = 'https://api.twitter.com/2/oauth2/token'
 const SCOPES = ['tweet.read', 'users.read', 'bookmark.read', 'offline.access']
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000
+const REFRESH_LEASE_STALE_MS = 30_000
 
 // PKCE helpers
 function base64URLEncode(buffer: Buffer): string {
@@ -114,27 +116,64 @@ export function buildAuthorizationUrl(
   return `${TWITTER_AUTH_URL}?${params.toString()}`
 }
 
-// Save OAuth state for callback verification
-export async function saveOAuthState(state: string, codeVerifier: string): Promise<void> {
-  await db.insert(oauthState).values({
-    state,
-    codeVerifier,
-    createdAt: new Date().toISOString(),
+// Save OAuth state for callback verification, durably bound to the ADHX account
+// that initiated the X-link flow.
+export async function saveOAuthState(
+  state: string,
+  codeVerifier: string,
+  userId: string,
+): Promise<void> {
+  await cleanupExpiredStates()
+  runInTransaction(() => {
+    const account = db
+      .select({ xLinkVersion: users.xLinkVersion })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .get()
+    if (!account) throw new Error('Cannot start X OAuth for a missing account')
+
+    db.insert(oauthState)
+      .values({
+        state,
+        codeVerifier,
+        userId,
+        xLinkVersion: account.xLinkVersion,
+        createdAt: new Date().toISOString(),
+      })
+      .run()
   })
 }
 
-// Get and delete OAuth state (one-time use)
-export async function consumeOAuthState(state: string): Promise<string | null> {
-  const result = await db.select().from(oauthState).where(eq(oauthState.state, state)).limit(1)
+/**
+ * Atomically consume an unexpired OAuth state owned by `userId`.
+ *
+ * The ownership, expiry, and single-use checks live in the DELETE predicate,
+ * so parallel callbacks cannot both obtain the PKCE verifier. A mismatched
+ * session does not consume the row, allowing the initiating account to finish
+ * its own callback.
+ */
+export async function consumeOAuthState(
+  state: string,
+  userId: string,
+): Promise<{ codeVerifier: string; xLinkVersion: number } | null> {
+  const cutoff = new Date(Date.now() - OAUTH_STATE_TTL_MS).toISOString()
+  const [row] = db
+    .delete(oauthState)
+    .where(
+      and(
+        eq(oauthState.state, state),
+        eq(oauthState.userId, userId),
+        gt(oauthState.createdAt, cutoff),
+      ),
+    )
+    .returning({
+      codeVerifier: oauthState.codeVerifier,
+      xLinkVersion: oauthState.xLinkVersion,
+    })
+    .all()
 
-  if (result.length === 0) {
-    return null
-  }
-
-  // Delete the state (one-time use)
-  await db.delete(oauthState).where(eq(oauthState.state, state))
-
-  return result[0].codeVerifier
+  return row ?? null
 }
 
 // Exchange authorization code for tokens
@@ -318,27 +357,91 @@ export async function saveTokens(
         expiresAt,
         scopes,
         updatedAt: now,
+        refreshLeaseId: null,
+        refreshLeaseStartedAt: null,
       },
     })
 }
 
-// Get stored tokens for a specific user (decrypted)
-export async function getStoredTokens(userId: string): Promise<{
-  userId: string
-  username: string | null
-  profileImageUrl: string | null
-  accessToken: string
-  refreshToken: string
-  expiresAt: number
-} | null> {
-  const result = await db.select().from(oauthTokens).where(eq(oauthTokens.userId, userId)).limit(1)
+/**
+ * Persist callback tokens only while the expected X identity is still linked
+ * to this ADHX user. The identity check and token upsert share one SQLite
+ * transaction: if disconnect removed the identity after resolution, no token
+ * row can be recreated; if this commits first, disconnect removes both.
+ */
+export async function saveLinkedXTokens(
+  userId: string,
+  xUserId: string,
+  username: string,
+  profileImageUrl: string | null,
+  accessToken: string,
+  refreshToken: string,
+  expiresIn: number,
+  scopes: string,
+  expectedXLinkVersion: number,
+): Promise<boolean> {
+  const expiresAt = Math.floor(Date.now() / 1000) + expiresIn
+  const now = new Date().toISOString()
+  const encryptedAccessToken = encryptToken(accessToken)
+  const encryptedRefreshToken = encryptToken(refreshToken)
 
-  if (result.length === 0) {
-    return null
-  }
+  return runInTransaction(() => {
+    const account = db
+      .select({ xLinkVersion: users.xLinkVersion })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .get()
+    if (!account || account.xLinkVersion !== expectedXLinkVersion) return false
 
-  const stored = result[0]
-  // Decrypt tokens (safeDecryptToken handles legacy plaintext tokens gracefully)
+    const linkedIdentity = db
+      .select({ providerId: userIdentities.providerId })
+      .from(userIdentities)
+      .where(
+        and(
+          eq(userIdentities.provider, 'x'),
+          eq(userIdentities.providerId, xUserId),
+          eq(userIdentities.userId, userId),
+        ),
+      )
+      .limit(1)
+      .get()
+
+    if (!linkedIdentity) return false
+
+    db.insert(oauthTokens)
+      .values({
+        userId,
+        username,
+        profileImageUrl,
+        accessToken: encryptedAccessToken,
+        refreshToken: encryptedRefreshToken,
+        expiresAt,
+        scopes,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: oauthTokens.userId,
+        set: {
+          username,
+          profileImageUrl,
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          expiresAt,
+          scopes,
+          updatedAt: now,
+          refreshLeaseId: null,
+          refreshLeaseStartedAt: null,
+        },
+      })
+      .run()
+
+    return true
+  })
+}
+
+function decryptStoredTokenRow(stored: typeof oauthTokens.$inferSelect) {
   return {
     ...stored,
     accessToken: safeDecryptToken(stored.accessToken),
@@ -346,8 +449,225 @@ export async function getStoredTokens(userId: string): Promise<{
   }
 }
 
+/**
+ * Read the decrypted token payload together with the exact encrypted columns
+ * that identify this stored row version. The encrypted strings themselves are
+ * stable until a writer replaces them; re-encrypting plaintext would not be,
+ * because AES-GCM uses a fresh random IV every time.
+ */
+async function getStoredTokenSnapshot(userId: string) {
+  const [stored] = await db
+    .select()
+    .from(oauthTokens)
+    .where(eq(oauthTokens.userId, userId))
+    .limit(1)
+  if (!stored) return null
+
+  return storedTokenSnapshot(stored)
+}
+
+function storedTokenSnapshot(stored: typeof oauthTokens.$inferSelect) {
+  return {
+    tokens: decryptStoredTokenRow(stored),
+    expectedEncryptedAccessToken: stored.accessToken,
+    expectedEncryptedRefreshToken: stored.refreshToken,
+  }
+}
+
+// Get stored tokens for a specific user (decrypted)
+export async function getStoredTokens(userId: string) {
+  return (await getStoredTokenSnapshot(userId))?.tokens ?? null
+}
+
 /** Decrypted stored tokens for a user (the non-null shape of getStoredTokens). */
 export type StoredTokens = NonNullable<Awaited<ReturnType<typeof getStoredTokens>>>
+type StoredTokenSnapshot = NonNullable<Awaited<ReturnType<typeof getStoredTokenSnapshot>>>
+
+function getCurrentLinkedTokenContext(userId: string): {
+  snapshot: StoredTokenSnapshot
+  providerId: string
+  xLinkVersion: number
+} | null {
+  return runInTransaction(() => {
+    const account = db
+      .select({ xLinkVersion: users.xLinkVersion })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .get()
+    if (!account) return null
+
+    const linkedIdentity = db
+      .select({ providerId: userIdentities.providerId })
+      .from(userIdentities)
+      .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.userId, userId)))
+      .limit(1)
+      .get()
+    if (!linkedIdentity) return null
+
+    const stored = db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.userId, userId))
+      .limit(1)
+      .get()
+    if (!stored) return null
+    return {
+      snapshot: storedTokenSnapshot(stored),
+      providerId: linkedIdentity.providerId,
+      xLinkVersion: account.xLinkVersion,
+    }
+  })
+}
+
+function getCurrentLinkedTokenSnapshot(userId: string): StoredTokenSnapshot | null {
+  return getCurrentLinkedTokenContext(userId)?.snapshot ?? null
+}
+
+function isSameStoredTokenRow(current: StoredTokenSnapshot, expected: StoredTokenSnapshot) {
+  return (
+    current.expectedEncryptedAccessToken === expected.expectedEncryptedAccessToken &&
+    current.expectedEncryptedRefreshToken === expected.expectedEncryptedRefreshToken
+  )
+}
+
+function nonFatalStaleRefreshError() {
+  return new TokenRefreshError('Token refresh result is no longer current', 409)
+}
+
+/**
+ * Fetch and persist a missing X avatar without letting a slow response from a
+ * disconnected/relinked identity overwrite the replacement connection.
+ * Returns the currently authoritative token row; callers must not display the
+ * fetched avatar when the conditional update loses.
+ */
+export async function refreshMissingXProfileImage(userId: string): Promise<StoredTokens | null> {
+  const context = getCurrentLinkedTokenContext(userId)
+  if (!context) return null
+  if (context.snapshot.tokens.profileImageUrl) return context.snapshot.tokens
+
+  const xUser = await getCurrentUser(context.snapshot.tokens.accessToken)
+  if (xUser.id !== context.providerId) {
+    return getCurrentLinkedTokenSnapshot(userId)?.tokens ?? null
+  }
+  if (!xUser.profileImageUrl) {
+    return getCurrentLinkedTokenSnapshot(userId)?.tokens ?? null
+  }
+
+  const identityStillCurrent = db
+    .select({ providerId: userIdentities.providerId })
+    .from(userIdentities)
+    .where(
+      and(
+        eq(userIdentities.provider, 'x'),
+        eq(userIdentities.providerId, context.providerId),
+        eq(userIdentities.userId, userId),
+      ),
+    )
+  const generationStillCurrent = db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.id, userId), eq(users.xLinkVersion, context.xLinkVersion)))
+  const updatedAt = new Date().toISOString()
+  const persisted = runInTransaction(
+    () =>
+      db
+        .update(oauthTokens)
+        .set({ profileImageUrl: xUser.profileImageUrl, updatedAt })
+        .where(
+          and(
+            eq(oauthTokens.userId, userId),
+            eq(oauthTokens.accessToken, context.snapshot.expectedEncryptedAccessToken),
+            eq(oauthTokens.refreshToken, context.snapshot.expectedEncryptedRefreshToken),
+            exists(identityStillCurrent),
+            exists(generationStillCurrent),
+          ),
+        )
+        .run().changes,
+  )
+
+  if (persisted === 1) {
+    return {
+      ...context.snapshot.tokens,
+      profileImageUrl: xUser.profileImageUrl,
+      updatedAt,
+    }
+  }
+  return getCurrentLinkedTokenSnapshot(userId)?.tokens ?? null
+}
+
+function claimRefreshLease(snapshot: StoredTokenSnapshot, leaseId: string): boolean {
+  const staleBefore = new Date(Date.now() - REFRESH_LEASE_STALE_MS).toISOString()
+  const linkedIdentity = db
+    .select({ providerId: userIdentities.providerId })
+    .from(userIdentities)
+    .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.userId, snapshot.tokens.userId)))
+
+  return (
+    runInTransaction(
+      () =>
+        db
+          .update(oauthTokens)
+          .set({
+            refreshLeaseId: leaseId,
+            refreshLeaseStartedAt: new Date().toISOString(),
+          })
+          .where(
+            and(
+              eq(oauthTokens.userId, snapshot.tokens.userId),
+              eq(oauthTokens.accessToken, snapshot.expectedEncryptedAccessToken),
+              eq(oauthTokens.refreshToken, snapshot.expectedEncryptedRefreshToken),
+              exists(linkedIdentity),
+              or(
+                isNull(oauthTokens.refreshLeaseId),
+                isNull(oauthTokens.refreshLeaseStartedAt),
+                lte(oauthTokens.refreshLeaseStartedAt, staleBefore),
+              ),
+            ),
+          )
+          .run().changes,
+    ) === 1
+  )
+}
+
+function releaseRefreshLease(snapshot: StoredTokenSnapshot, leaseId: string): boolean {
+  return (
+    runInTransaction(
+      () =>
+        db
+          .update(oauthTokens)
+          .set({ refreshLeaseId: null, refreshLeaseStartedAt: null })
+          .where(
+            and(
+              eq(oauthTokens.userId, snapshot.tokens.userId),
+              eq(oauthTokens.accessToken, snapshot.expectedEncryptedAccessToken),
+              eq(oauthTokens.refreshToken, snapshot.expectedEncryptedRefreshToken),
+              eq(oauthTokens.refreshLeaseId, leaseId),
+            ),
+          )
+          .run().changes,
+    ) === 1
+  )
+}
+
+function deleteLeasedTokenSnapshot(snapshot: StoredTokenSnapshot, leaseId: string): boolean {
+  return (
+    runInTransaction(
+      () =>
+        db
+          .delete(oauthTokens)
+          .where(
+            and(
+              eq(oauthTokens.userId, snapshot.tokens.userId),
+              eq(oauthTokens.accessToken, snapshot.expectedEncryptedAccessToken),
+              eq(oauthTokens.refreshToken, snapshot.expectedEncryptedRefreshToken),
+              eq(oauthTokens.refreshLeaseId, leaseId),
+            ),
+          )
+          .run().changes,
+    ) === 1
+  )
+}
 
 /**
  * In-process per-user dedupe of refreshes.
@@ -359,33 +679,124 @@ export type StoredTokens = NonNullable<Awaited<ReturnType<typeof getStoredTokens
  * chain and forces a re-auth. Coalescing concurrent refreshes for a user onto
  * a single in-flight promise keeps the chain intact.
  *
- * In-memory is sufficient: the app runs as a single Node process per machine,
- * and the worst case across machines is one extra refresh (rare), not the
- * every-page-load race this removes.
+ * The in-memory map removes duplicate work within one process; the durable
+ * oauth_tokens lease below is authoritative across workers and machines.
  */
 const inFlightRefreshes = new Map<string, Promise<StoredTokens>>()
 
-async function performRefresh(tokens: StoredTokens): Promise<StoredTokens> {
+async function performRefresh(snapshot: StoredTokenSnapshot): Promise<StoredTokens> {
+  const { tokens, expectedEncryptedAccessToken, expectedEncryptedRefreshToken } = snapshot
+  const leaseId = crypto.randomUUID()
+  if (!claimRefreshLease(snapshot, leaseId)) {
+    const current = getCurrentLinkedTokenSnapshot(tokens.userId)
+    if (
+      current &&
+      !isSameStoredTokenRow(current, snapshot) &&
+      !isTokenExpired(current.tokens.expiresAt)
+    ) {
+      return current.tokens
+    }
+    throw new TokenRefreshError('Token refresh is already in progress', 423)
+  }
+
   const clientId = process.env.TWITTER_CLIENT_ID!
   const clientSecret = process.env.TWITTER_CLIENT_SECRET!
-  const refreshed = await refreshAccessToken(tokens.refreshToken, clientId, clientSecret)
-  // Persist the rotated tokens BEFORE returning so the next caller reads the
-  // new refresh token, never the spent one.
-  await saveTokens(
-    tokens.userId,
-    tokens.username || '',
-    tokens.profileImageUrl || null,
-    refreshed.accessToken,
-    refreshed.refreshToken,
-    refreshed.expiresIn,
-    '', // scopes don't change
-  )
-  return {
-    ...tokens,
-    accessToken: refreshed.accessToken,
-    refreshToken: refreshed.refreshToken,
-    expiresAt: Math.floor(Date.now() / 1000) + refreshed.expiresIn,
+  let refreshed: Awaited<ReturnType<typeof refreshAccessToken>>
+  try {
+    refreshed = await refreshAccessToken(tokens.refreshToken, clientId, clientSecret)
+  } catch (error) {
+    if (error instanceof TokenRefreshError && error.fatal) {
+      // Invalidate only the exact encrypted row whose refresh token X
+      // rejected. A callback or another refresh that replaced it wins the CAS
+      // and must not be deleted or reported as fatally broken.
+      if (deleteLeasedTokenSnapshot(snapshot, leaseId)) throw error
+
+      const current = getCurrentLinkedTokenSnapshot(tokens.userId)
+      if (
+        current &&
+        !isSameStoredTokenRow(current, snapshot) &&
+        !isTokenExpired(current.tokens.expiresAt)
+      ) {
+        return current.tokens
+      }
+      throw nonFatalStaleRefreshError()
+    }
+
+    releaseRefreshLease(snapshot, leaseId)
+    const current = getCurrentLinkedTokenSnapshot(tokens.userId)
+    if (!current) throw nonFatalStaleRefreshError()
+    if (!isSameStoredTokenRow(current, snapshot)) {
+      if (!isTokenExpired(current.tokens.expiresAt)) return current.tokens
+      throw nonFatalStaleRefreshError()
+    }
+
+    // The initiating row is still current, so preserve the token endpoint's
+    // original fatal (400/401) versus transient classification.
+    throw error
   }
+  const expiresAt = Math.floor(Date.now() / 1000) + refreshed.expiresIn
+  const updatedAt = new Date().toISOString()
+  const encryptedAccessToken = encryptToken(refreshed.accessToken)
+  const encryptedRefreshToken = encryptToken(refreshed.refreshToken)
+
+  // Compare-and-swap the exact encrypted row version captured before network
+  // I/O. The EXISTS predicate prevents a refresh response from recreating
+  // credentials after disconnect, while the token predicates prevent stale
+  // refreshes from overwriting a newer callback or refresh.
+  const persisted = runInTransaction(() => {
+    const linkedIdentity = db
+      .select({ providerId: userIdentities.providerId })
+      .from(userIdentities)
+      .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.userId, tokens.userId)))
+
+    return (
+      db
+        .update(oauthTokens)
+        .set({
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
+          expiresAt,
+          updatedAt,
+          refreshLeaseId: null,
+          refreshLeaseStartedAt: null,
+        })
+        .where(
+          and(
+            eq(oauthTokens.userId, tokens.userId),
+            eq(oauthTokens.accessToken, expectedEncryptedAccessToken),
+            eq(oauthTokens.refreshToken, expectedEncryptedRefreshToken),
+            eq(oauthTokens.refreshLeaseId, leaseId),
+            exists(linkedIdentity),
+          ),
+        )
+        .run().changes === 1
+    )
+  })
+
+  if (persisted) {
+    return {
+      ...tokens,
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken,
+      expiresAt,
+      updatedAt,
+    }
+  }
+
+  // A newer callback/refresh legitimately won while the network request was
+  // in flight. Return that valid row instead of the stale refresh result.
+  const current = getCurrentLinkedTokenSnapshot(tokens.userId)
+  if (
+    current &&
+    !isSameStoredTokenRow(current, snapshot) &&
+    !isTokenExpired(current.tokens.expiresAt)
+  ) {
+    return current.tokens
+  }
+
+  // Disconnect (or deletion) won, or the competing row is not usable. This is
+  // non-fatal: never clear/recreate credentials based on the spent old token.
+  throw nonFatalStaleRefreshError()
 }
 
 /**
@@ -400,8 +811,9 @@ export async function getValidTokens(
   userId: string,
   opts: { forceRefresh?: boolean } = {},
 ): Promise<StoredTokens | null> {
-  const tokens = await getStoredTokens(userId)
-  if (!tokens) return null
+  const snapshot = await getStoredTokenSnapshot(userId)
+  if (!snapshot) return null
+  const { tokens } = snapshot
   if (!opts.forceRefresh && !isTokenExpired(tokens.expiresAt)) return tokens
 
   // A refresh is needed. Join an in-flight one for this user if present;
@@ -409,7 +821,7 @@ export async function getValidTokens(
   const existing = inFlightRefreshes.get(userId)
   if (existing) return existing
 
-  const refreshPromise = performRefresh(tokens).finally(() => {
+  const refreshPromise = performRefresh(snapshot).finally(() => {
     inFlightRefreshes.delete(userId)
   })
   inFlightRefreshes.set(userId, refreshPromise)
@@ -433,13 +845,8 @@ export function isTokenExpired(expiresAt: number): boolean {
   return expiresAt < now + 300 // 5 minute buffer
 }
 
-// Delete tokens for a specific user (logout)
-export async function deleteTokens(userId: string): Promise<void> {
-  await db.delete(oauthTokens).where(eq(oauthTokens.userId, userId))
-}
-
 // Clean up expired OAuth states (older than 10 minutes)
 export async function cleanupExpiredStates(): Promise<void> {
-  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
-  await db.delete(oauthState).where(lt(oauthState.createdAt, tenMinutesAgo))
+  const tenMinutesAgo = new Date(Date.now() - OAUTH_STATE_TTL_MS).toISOString()
+  await db.delete(oauthState).where(lte(oauthState.createdAt, tenMinutesAgo))
 }

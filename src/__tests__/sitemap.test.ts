@@ -27,6 +27,14 @@ vi.mock('@/lib/db', () => ({
 // + /privacy
 const HUB_COUNT = 13
 
+function seedBannedUser(userId: string, username: string) {
+  testInstance.db.insert(schema.users).values({ id: userId, username }).run()
+  testInstance.db
+    .insert(schema.userBans)
+    .values({ userId, createdAt: new Date().toISOString(), createdBy: 'admin' })
+    .run()
+}
+
 describe('Dynamic Sitemap', () => {
   beforeEach(() => {
     testInstance = createTestDb()
@@ -158,6 +166,141 @@ describe('Dynamic Sitemap', () => {
     const entries = sitemap()
 
     expect(entries.filter((e) => e.url.includes('/author1/status/tweet-1'))).toHaveLength(1)
+  })
+
+  it('excludes saved posts contributed only by banned users', async () => {
+    seedBannedUser(USER_A, 'banned-saver')
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values({
+        id: 'banned-save',
+        userId: USER_A,
+        author: 'bannedauthor',
+        text: 'must not be indexed',
+        tweetUrl: 'https://x.com/bannedauthor/status/banned-save',
+        processedAt: new Date().toISOString(),
+      })
+      .run()
+
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    expect(entries.some((entry) => entry.url.includes('/bannedauthor/status/banned-save'))).toBe(
+      false,
+    )
+    expect(entries.some((entry) => entry.url === 'https://adhx.com/bannedauthor')).toBe(false)
+  })
+
+  it('excludes preview activity contributed only by banned users', async () => {
+    seedBannedUser(USER_A, 'banned-viewer')
+    testInstance.db
+      .insert(schema.activity)
+      .values({
+        action: 'preview',
+        platform: 'twitter',
+        bookmarkId: 'banned-preview',
+        author: 'previewauthor',
+        thumbnailUrl: 'https://pbs.twimg.com/media/banned.jpg',
+        url: 'https://x.com/previewauthor/status/banned-preview',
+        userId: USER_A,
+        createdAt: new Date().toISOString(),
+      })
+      .run()
+
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    expect(
+      entries.some((entry) => entry.url.includes('/previewauthor/status/banned-preview')),
+    ).toBe(false)
+    expect(entries.some((entry) => entry.url === 'https://adhx.com/previewauthor')).toBe(false)
+  })
+
+  it('retains posts with at least one unbanned saved or activity contributor', async () => {
+    seedBannedUser(USER_A, 'banned-contributor')
+    testInstance.db
+      .insert(schema.users)
+      .values({ id: USER_B, username: 'allowed-contributor' })
+      .run()
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        {
+          id: 'mixed-save',
+          userId: USER_A,
+          author: 'mixedsaveauthor',
+          text: 'same public post',
+          tweetUrl: 'https://x.com/mixedsaveauthor/status/mixed-save',
+          processedAt: new Date().toISOString(),
+        },
+        {
+          id: 'mixed-save',
+          userId: USER_B,
+          author: 'mixedsaveauthor',
+          text: 'same public post',
+          tweetUrl: 'https://x.com/mixedsaveauthor/status/mixed-save',
+          processedAt: new Date().toISOString(),
+        },
+      ])
+      .run()
+    testInstance.db
+      .insert(schema.activity)
+      .values([
+        {
+          action: 'preview',
+          platform: 'twitter',
+          bookmarkId: 'mixed-preview',
+          author: 'mixedpreviewauthor',
+          thumbnailUrl: 'https://pbs.twimg.com/media/mixed.jpg',
+          url: 'https://x.com/mixedpreviewauthor/status/mixed-preview',
+          userId: USER_A,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          action: 'preview',
+          platform: 'twitter',
+          bookmarkId: 'mixed-preview',
+          author: 'mixedpreviewauthor',
+          thumbnailUrl: 'https://pbs.twimg.com/media/mixed.jpg',
+          url: 'https://x.com/mixedpreviewauthor/status/mixed-preview',
+          userId: USER_B,
+          createdAt: new Date().toISOString(),
+        },
+      ])
+      .run()
+
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    expect(entries.some((entry) => entry.url.includes('/mixedsaveauthor/status/mixed-save'))).toBe(
+      true,
+    )
+    expect(
+      entries.some((entry) => entry.url.includes('/mixedpreviewauthor/status/mixed-preview')),
+    ).toBe(true)
+  })
+
+  it('retains otherwise-eligible anonymous activity with a null actor', async () => {
+    testInstance.db
+      .insert(schema.activity)
+      .values({
+        action: 'preview',
+        platform: 'twitter',
+        bookmarkId: 'anonymous-preview',
+        author: 'anonymousauthor',
+        thumbnailUrl: 'https://pbs.twimg.com/media/anonymous.jpg',
+        url: 'https://x.com/anonymousauthor/status/anonymous-preview',
+        userId: null,
+        createdAt: new Date().toISOString(),
+      })
+      .run()
+
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    expect(
+      entries.some((entry) => entry.url.includes('/anonymousauthor/status/anonymous-preview')),
+    ).toBe(true)
   })
 
   it('excludes private tag pages', async () => {
@@ -587,6 +730,48 @@ describe('Dynamic Sitemap', () => {
     const entries = sitemap()
 
     expect(entries).toHaveLength(HUB_COUNT)
+  })
+
+  it('omits all database-derived URLs when moderation state is unavailable', async () => {
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values({
+        id: 'must-not-leak',
+        userId: USER_A,
+        author: 'hiddenmaybe',
+        text: 'uncertain moderation state',
+        tweetUrl: 'https://x.com/hiddenmaybe/status/must-not-leak',
+        processedAt: new Date().toISOString(),
+      })
+      .run()
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    expect(entries).toHaveLength(HUB_COUNT)
+    expect(entries.some((entry) => entry.url.includes('must-not-leak'))).toBe(false)
+  })
+
+  it('omits all database-derived URLs when ban state is unavailable', async () => {
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values({
+        id: 'ban-unknown',
+        userId: USER_A,
+        author: 'unknownowner',
+        text: 'uncertain ban state',
+        tweetUrl: 'https://x.com/unknownowner/status/ban-unknown',
+        processedAt: new Date().toISOString(),
+      })
+      .run()
+    testInstance.sqlite.exec('DROP TABLE user_bans')
+
+    const { default: sitemap } = await import('@/app/sitemap')
+    const entries = sitemap()
+
+    expect(entries).toHaveLength(HUB_COUNT)
+    expect(entries.some((entry) => entry.url.includes('ban-unknown'))).toBe(false)
   })
 
   it('never exposes a userId — entries are built from previewPath, not user ids', async () => {

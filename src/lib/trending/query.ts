@@ -1,11 +1,23 @@
 import { db } from '@/lib/db'
-import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
+import {
+  activity,
+  bookmarks,
+  bookmarkMedia,
+  bookmarkLinks,
+  moderatedPosts,
+  userBans,
+} from '@/lib/db/schema'
+import { and, desc, eq, gte, inArray, isNull, or, sql } from 'drizzle-orm'
 import type { PlatformId } from '@/lib/platform/url'
 import { asContentType, inferContentType } from '@/lib/content-type'
 import type { ContentType } from '@/components/matter'
 import { quoteRefFromStoredContext, type StoredQuoteContext } from '@/lib/theater/quote-ref'
 import { TtlLruCache } from '@/lib/cache/ttl-lru'
+import {
+  moderationStateFingerprint,
+  readBannedUserIds,
+  readModeratedPostKeys,
+} from '@/lib/admin/moderation'
 
 /**
  * Anonymity-safe trending query — the SINGLE audited choke point for the
@@ -243,7 +255,11 @@ export interface TrendingResult {
 const CACHE_TTL_MS = 12_000
 const CACHE_MAX_ENTRIES = 16
 type TrendingWindow = Omit<TrendingResult, 'hasMore'>
-type TrendingCache = TtlLruCache<string, TrendingWindow>
+interface TrendingCacheEntry {
+  window: TrendingWindow
+  moderationKey: string
+}
+type TrendingCache = TtlLruCache<string, TrendingCacheEntry>
 const cachesByDb = new WeakMap<object, TrendingCache>()
 
 function getCache(): TrendingCache {
@@ -286,15 +302,25 @@ function normalizedOffset(value: number | undefined): number {
  * minimum trend threshold.
  */
 export async function getTrendingItems(opts: GetTrendingOptions = {}): Promise<TrendingResult> {
+  // Cache hits are public publication decisions, so they must be gated by a
+  // fresh, successful moderation read. A changed ban/hidden set gets a new
+  // fingerprint and forces the canonical window to be rebuilt immediately.
+  const bannedUsers = readBannedUserIds()
+  if (!bannedUsers.ok) throw bannedUsers.error
+  const moderatedPosts = readModeratedPostKeys()
+  if (!moderatedPosts.ok) throw moderatedPosts.error
+  const moderationKey = moderationStateFingerprint(bannedUsers.value, moderatedPosts.value)
+
   const cache = getCache()
   const key = cacheKey(opts)
-  let window = cache.get(key)
+  const hit = cache.get(key)
+  let window = hit?.moderationKey === moderationKey ? hit.window : undefined
   if (!window) {
     window = await fetchTrendingWindow({
       platform: opts.platform,
       withinHours: normalizedWithinHours(opts.withinHours),
     })
-    cache.set(key, window)
+    cache.set(key, { window, moderationKey })
   }
 
   const offset = normalizedOffset(opts.offset)
@@ -346,9 +372,19 @@ async function fetchTrendingWindow(
       createdAt: activity.createdAt,
     })
     .from(activity)
+    .leftJoin(userBans, eq(userBans.userId, activity.userId))
+    .leftJoin(
+      moderatedPosts,
+      and(
+        eq(moderatedPosts.platform, activity.platform),
+        eq(moderatedPosts.bookmarkId, activity.bookmarkId),
+      ),
+    )
     .where(
       and(
         eq(activity.hidden, 0),
+        isNull(userBans.userId),
+        or(isNull(moderatedPosts.hidden), eq(moderatedPosts.hidden, 0)),
         ...(platformFilter ? [eq(activity.platform, platformFilter)] : []),
         ...(since ? [gte(activity.createdAt, since)] : []),
       ),
@@ -414,7 +450,8 @@ async function fetchTrendingWindow(
         earliestSavedAt: sql<string | null>`min(${bookmarks.processedAt})`,
       })
       .from(bookmarks)
-      .where(inArray(bookmarks.id, ids))
+      .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
+      .where(and(inArray(bookmarks.id, ids), isNull(userBans.userId)))
       .groupBy(bookmarks.platform, bookmarks.id)
       .all()
     for (const r of aggRows) {
@@ -437,7 +474,15 @@ async function fetchTrendingWindow(
         n: sql<number>`count(*)`,
       })
       .from(activity)
-      .where(and(eq(activity.action, 'preview'), inArray(activity.bookmarkId, ids)))
+      .leftJoin(userBans, eq(userBans.userId, activity.userId))
+      .where(
+        and(
+          eq(activity.action, 'preview'),
+          eq(activity.hidden, 0),
+          isNull(userBans.userId),
+          inArray(activity.bookmarkId, ids),
+        ),
+      )
       .groupBy(activity.platform, activity.bookmarkId)
       .all()
     for (const r of previewRows) {
@@ -451,7 +496,15 @@ async function fetchTrendingWindow(
         n: sql<number>`count(*)`,
       })
       .from(activity)
-      .where(and(eq(activity.action, 'share'), inArray(activity.bookmarkId, ids)))
+      .leftJoin(userBans, eq(userBans.userId, activity.userId))
+      .where(
+        and(
+          eq(activity.action, 'share'),
+          eq(activity.hidden, 0),
+          isNull(userBans.userId),
+          inArray(activity.bookmarkId, ids),
+        ),
+      )
       .groupBy(activity.platform, activity.bookmarkId)
       .all()
     for (const r of shareRows) {
@@ -468,7 +521,10 @@ async function fetchTrendingWindow(
         firstSeen: sql<string | null>`min(${activity.createdAt})`,
       })
       .from(activity)
-      .where(inArray(activity.bookmarkId, ids))
+      .leftJoin(userBans, eq(userBans.userId, activity.userId))
+      .where(
+        and(eq(activity.hidden, 0), isNull(userBans.userId), inArray(activity.bookmarkId, ids)),
+      )
       .groupBy(activity.platform, activity.bookmarkId)
       .all()
     for (const r of firstSeenRows) {
@@ -648,7 +704,23 @@ async function fetchTrendingWindow(
   const savedTodayRow = db
     .select({ c: sql<number>`count(*)` })
     .from(activity)
-    .where(and(eq(activity.action, 'save'), gte(activity.createdAt, midnight.toISOString())))
+    .leftJoin(userBans, eq(userBans.userId, activity.userId))
+    .leftJoin(
+      moderatedPosts,
+      and(
+        eq(moderatedPosts.platform, activity.platform),
+        eq(moderatedPosts.bookmarkId, activity.bookmarkId),
+      ),
+    )
+    .where(
+      and(
+        eq(activity.action, 'save'),
+        eq(activity.hidden, 0),
+        isNull(userBans.userId),
+        or(isNull(moderatedPosts.hidden), eq(moderatedPosts.hidden, 0)),
+        gte(activity.createdAt, midnight.toISOString()),
+      ),
+    )
     .get()
   const savedToday = Number(savedTodayRow?.c) || 0
 
@@ -659,8 +731,22 @@ async function fetchTrendingWindow(
   const recentActivityRow = db
     .select({ c: sql<number>`count(*)` })
     .from(activity)
+    .leftJoin(userBans, eq(userBans.userId, activity.userId))
+    .leftJoin(
+      moderatedPosts,
+      and(
+        eq(moderatedPosts.platform, activity.platform),
+        eq(moderatedPosts.bookmarkId, activity.bookmarkId),
+      ),
+    )
     .where(
-      and(inArray(activity.action, ['save', 'preview', 'share']), gte(activity.createdAt, dayAgo)),
+      and(
+        inArray(activity.action, ['save', 'preview', 'share']),
+        eq(activity.hidden, 0),
+        isNull(userBans.userId),
+        or(isNull(moderatedPosts.hidden), eq(moderatedPosts.hidden, 0)),
+        gte(activity.createdAt, dayAgo),
+      ),
     )
     .get()
   const recentActivity = Number(recentActivityRow?.c) || 0

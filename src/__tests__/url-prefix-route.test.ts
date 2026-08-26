@@ -1,6 +1,11 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const moderationMocks = vi.hoisted(() => ({
+  readPostModeration: vi.fn(),
+  readUserBan: vi.fn(),
+}))
+
 /**
  * URL Prefix Route Tests
  *
@@ -56,7 +61,8 @@ vi.mock('@/lib/activity/record', async (importOriginal) => {
 })
 
 vi.mock('@/lib/admin/moderation', () => ({
-  isPostModerated: vi.fn(() => false),
+  readPostModeration: moderationMocks.readPostModeration,
+  readUserBan: moderationMocks.readUserBan,
 }))
 
 // The page now renders the theater instead of TweetPreviewLanding (Phase 3,
@@ -75,6 +81,8 @@ vi.mock('@/components/theater/TheaterShell', () => ({
 describe('URL Prefix Route: /[username]/status/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    moderationMocks.readPostModeration.mockReturnValue({ ok: true, value: false })
+    moderationMocks.readUserBan.mockReturnValue({ ok: true, value: false })
   })
 
   describe('Username validation', () => {
@@ -176,6 +184,23 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       expect(metadata.robots).toEqual({ index: false })
       // No fabricated OG image/video for content we don't have.
       expect(metadata.openGraph).toBeUndefined()
+    })
+
+    it('returns a noindex tombstone without resolving upstream when moderation is unavailable', async () => {
+      const { fetchTweetData } = await import('@/lib/media/fxembed')
+      moderationMocks.readPostModeration.mockReturnValueOnce({
+        ok: false,
+        error: new Error('moderation unavailable'),
+      })
+
+      const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
+
+      expect(metadata.robots).toEqual({ index: false })
+      expect(metadata.title).toBe('Post removed - ADHX')
+      expect(fetchTweetData).not.toHaveBeenCalled()
     })
 
     it('generates rich metadata when tweet data is available', async () => {
@@ -292,6 +317,25 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       })
 
       expect(result).not.toBeNull()
+    })
+
+    it('renders the tombstone theater without starting upstream resolution when moderation is unavailable', async () => {
+      const { fetchTweetData } = await import('@/lib/media/fxembed')
+      moderationMocks.readPostModeration.mockReturnValueOnce({
+        ok: false,
+        error: new Error('moderation unavailable'),
+      })
+      const QuickAddPage = (await import('@/app/[username]/status/[id]/page')).default
+
+      const result = await QuickAddPage({
+        params: Promise.resolve({ username: 'validuser', id: '123456789' }),
+      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const element = result as React.ReactElement<any>
+
+      expect(element.props.sharedUnavailable).toBe(true)
+      expect(element.props.sharedResolve).toBeUndefined()
+      expect(fetchTweetData).not.toHaveBeenCalled()
     })
 
     // TASK 3 (owner screenshot report): a tweet FxTwitter can't resolve

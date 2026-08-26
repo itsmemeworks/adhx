@@ -56,6 +56,8 @@ export const FULL_SCHEMA_SQL = `
     preview_image_url TEXT
   );
   CREATE INDEX bookmark_links_user_bookmark_idx ON bookmark_links(user_id, platform, bookmark_id);
+  CREATE UNIQUE INDEX bookmark_links_identity_idx
+    ON bookmark_links(user_id, platform, bookmark_id, expanded_url);
 
   CREATE TABLE bookmark_tags (
     user_id TEXT NOT NULL,
@@ -115,19 +117,25 @@ export const FULL_SCHEMA_SQL = `
     expires_at INTEGER NOT NULL,
     scopes TEXT,
     created_at TEXT,
-    updated_at TEXT
+    updated_at TEXT,
+    refresh_lease_id TEXT,
+    refresh_lease_started_at TEXT
   );
 
   CREATE TABLE oauth_state (
     state TEXT PRIMARY KEY,
     code_verifier TEXT NOT NULL,
-    created_at TEXT
+    user_id TEXT NOT NULL,
+    x_link_version INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
   CREATE TABLE sync_logs (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     started_at TEXT NOT NULL,
+    heartbeat_at TEXT,
     completed_at TEXT,
     status TEXT NOT NULL,
     total_fetched INTEGER DEFAULT 0,
@@ -138,6 +146,8 @@ export const FULL_SCHEMA_SQL = `
     trigger_type TEXT
   );
   CREATE INDEX sync_logs_user_id_idx ON sync_logs(user_id);
+  CREATE UNIQUE INDEX sync_logs_one_running_per_user_idx
+    ON sync_logs(user_id) WHERE status = 'running';
 
   CREATE TABLE tag_shares (
     user_id TEXT NOT NULL,
@@ -246,6 +256,7 @@ export const FULL_SCHEMA_SQL = `
     email TEXT,
     username_chosen INTEGER NOT NULL DEFAULT 0,
     username_change_count INTEGER NOT NULL DEFAULT 0,
+    x_link_version INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -263,6 +274,8 @@ export const FULL_SCHEMA_SQL = `
     PRIMARY KEY (provider, provider_id)
   );
   CREATE INDEX user_identities_user_id_idx ON user_identities(user_id);
+  CREATE UNIQUE INDEX user_identities_one_x_per_user_idx
+    ON user_identities(user_id) WHERE provider = 'x';
 
   CREATE TABLE login_tokens (
     token_hash TEXT PRIMARY KEY,

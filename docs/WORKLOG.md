@@ -6,6 +6,26 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — Phase 4 concurrency remediation verified
+
+Auth now uses atomic magic-link/OAuth state claims, one X identity per account, disconnect generations, cross-worker refresh leases, CAS token/profile writes, and transactional email claims. Moderation fails closed across cached and uncached public surfaces, with no-store APIs and banned-source sitemap/theater filtering. Sync uses durable heartbeat leases and ownership-checked terminal writes; manual/sync bookmark links merge without race-driven metadata loss. Startup migrations repair legacy duplicates before enforcing indexes. All 3,170 tests, typecheck, build, formatting, lint (warnings only), diff checks, and the final publication review are green. Ready for stacked PR review.
+
+## 2026-08-26 — Manual saves survive late insert races
+
+Manual tweet add now treats its transactional bookmark insert as the ownership boundary: a late loser returns duplicate without media/quote children, metrics, or pulse, while still field-wise upserting complementary links. Startup migration first reaps stale leases, then deterministically retains the newest fresh running lease per user and fails legacy duplicates before creating the unique index. Deterministic route and migration race regressions are green with focused tests, typecheck, lint, formatting, and diff checks.
+
+## 2026-08-26 — Link enrichment survives lost insert races
+
+Bookmark-link writes now use a shared field-wise upsert at the unique identity, including when sync loses the main bookmark insert; `inserted=false` still protects stats and pulses while complementary article/OG data is retained. Quoted-article conflicts use the same merge path. Startup now reaps only running syncs whose heartbeat/started timestamp is over 30 minutes old, preserving healthy cross-process leases. Focused race/migration tests, typecheck, lint, formatting, and diff checks are green.
+
+## 2026-08-26 — Bookmark link enrichment merges before dedupe
+
+Manual and synced tweet saves now consolidate repeated link identities before insert, merging each field independently so sparse duplicates cannot erase article or preview data. Startup migration cleanup updates a deterministic survivor with the richest non-null value from every duplicate row before deletion and unique-index creation. Regressions cover repeated manual URLs, article/direct overlap, complementary legacy metadata, and idempotent migration startup. Focused tests, typecheck, lint, and formatting are green.
+
+## 2026-08-26 — Auth, moderation, and sync races closed
+
+Magic links and OAuth state are now atomically single-use; X linking is durably bound to the initiating ADHX account and rejects session switching. Moderation reads distinguish visible content from an unavailable store and fail closed across auth, previews, pulse, sitemap, profiles, playlists, leaderboards, and the public tweet API; moderation schema failure stops startup. Sync claims one durable running row per user before opening SSE, stale rows recover on boot/claim, and insert-aware counting prevents duplicate stats and pulses. Link enrichment is uniqueness-protected after a richer-row-preserving cleanup. Full tests, typecheck, lint, formatting, migration regressions, and integrated review are required before publication.
+
 ## 2026-08-26 — Public resource use bounded
 
 Public media now validates every redirect hop, bounds playlist/metadata reads, byte-limits chunked HLS streams, keeps body deadlines active, and separates preview/download/read rate budgets. Mirror retries have one 50s deadline; transient IG/TikTok metadata failures no longer become one-hour misses. Public query caches are hard-capped TTL/LRU windows with bounded trending pagination. Playlist events roll into durable viewer-free all-time aggregates atomically, retain 90 days of raw detail, and remain consistent through moderation/account deletion. Full tests, typecheck, formatting, and three integrated review passes are green.

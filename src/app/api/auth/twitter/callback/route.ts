@@ -4,7 +4,7 @@ import {
   exchangeCodeForTokens,
   getCurrentUser,
   getOAuthRedirectUri,
-  saveTokens,
+  saveLinkedXTokens,
   hasExistingTokens,
 } from '@/lib/auth/oauth'
 import { getCurrentUserId, setSessionCookie } from '@/lib/auth/session'
@@ -71,16 +71,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
     }
 
-    // Verify state and get code verifier
-    const codeVerifier = await consumeOAuthState(state)
-    if (!codeVerifier) {
+    // Atomically verify ownership + expiry and consume the one-time verifier.
+    // A session switched after OAuth started cannot retarget the X link.
+    const consumedState = await consumeOAuthState(state, existingUserId)
+    if (!consumedState) {
       return NextResponse.redirect(new URL('/?error=Invalid%20or%20expired%20state', BASE_URL))
     }
 
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(
       code,
-      codeVerifier,
+      consumedState.codeVerifier,
       CLIENT_ID,
       CLIENT_SECRET,
       REDIRECT_URI,
@@ -97,9 +98,10 @@ export async function GET(request: NextRequest) {
         profileImageUrl: user.profileImageUrl,
       },
       existingUserId,
+      consumedState.xLinkVersion,
     )
 
-    if (linkResult.conflict === 'linked_elsewhere') {
+    if (linkResult.conflict === 'linked_elsewhere' || linkResult.conflict === 'stale_link') {
       // This X account is already linked to a different account than the one
       // currently signed in — don't touch the session, bounce back to
       // Settings with an error instead.
@@ -123,15 +125,22 @@ export async function GET(request: NextRequest) {
 
     // Save tokens to database, keyed by the APP userId (equal to the X id
     // for X-first signups; distinct from it when linking X to an email user).
-    await saveTokens(
+    const tokensSaved = await saveLinkedXTokens(
       appUserId,
+      user.id,
       user.username,
       user.profileImageUrl,
       tokens.accessToken,
       tokens.refreshToken,
       tokens.expiresIn,
       tokens.scope,
+      consumedState.xLinkVersion,
     )
+    if (!tokensSaved) {
+      // Disconnect (or another account-link change) won after identity
+      // resolution. Do not recreate a token-only X connection.
+      return NextResponse.redirect(new URL('/settings?auth_error=x_already_linked', BASE_URL))
+    }
 
     // Successfully authenticated - metrics are tracked below
 

@@ -2,14 +2,10 @@ import { NextResponse } from 'next/server'
 import {
   getStoredTokens,
   isTokenExpired,
-  getCurrentUser,
   getValidTokens,
+  refreshMissingXProfileImage,
   TokenRefreshError,
-  deleteTokens,
 } from '@/lib/auth/oauth'
-import { db } from '@/lib/db'
-import { oauthTokens } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { captureException } from '@/lib/sentry'
@@ -51,9 +47,8 @@ export async function GET() {
       })
     }
 
-    let expired = isTokenExpired(tokens.expiresAt)
-    let accessToken = tokens.accessToken
-    let newExpiresAt = tokens.expiresAt
+    let authoritativeTokens = tokens
+    let expired = isTokenExpired(authoritativeTokens.expiresAt)
 
     // Refresh if needed. getValidTokens serializes concurrent refreshes per
     // user (this endpoint runs on every page load and could otherwise race the
@@ -61,17 +56,15 @@ export async function GET() {
     try {
       const valid = await getValidTokens(userId)
       if (valid) {
-        accessToken = valid.accessToken
-        newExpiresAt = valid.expiresAt
+        authoritativeTokens = valid
         expired = isTokenExpired(valid.expiresAt)
       }
     } catch (error) {
       if (error instanceof TokenRefreshError && error.fatal) {
         // The X refresh token itself was rejected — the chain is dead and
-        // only a fresh re-auth on X recovers it. The ACCOUNT survives this
-        // (it's no longer 1:1 with the X connection), so drop the X tokens
-        // but keep the session — flag it for the UI to prompt a reconnect.
-        await deleteTokens(tokens.userId)
+        // only a fresh re-auth on X recovers it. getValidTokens has already
+        // CAS-deleted the exact rejected row; never delete by userId here,
+        // because a newer callback may have replaced those credentials.
         return NextResponse.json({
           authenticated: true,
           user: {
@@ -90,19 +83,25 @@ export async function GET() {
     }
 
     // If profile image is missing and token is not expired, fetch it from Twitter
-    let profileImageUrl = tokens.profileImageUrl
+    let profileImageUrl = authoritativeTokens.profileImageUrl
     if (!profileImageUrl && !expired) {
       try {
-        const user = await getCurrentUser(accessToken)
-        profileImageUrl = user.profileImageUrl
-
-        // Update the database with the profile image
-        if (profileImageUrl) {
-          await db
-            .update(oauthTokens)
-            .set({ profileImageUrl, updatedAt: new Date().toISOString() })
-            .where(eq(oauthTokens.userId, tokens.userId))
+        const current = await refreshMissingXProfileImage(userId)
+        if (!current) {
+          return NextResponse.json({
+            authenticated: true,
+            user: {
+              id: account.user.id,
+              username: account.user.username,
+              profileImageUrl: account.user.avatarUrl,
+            },
+            xConnected: false,
+            needsReconnect: false,
+          })
         }
+        authoritativeTokens = current
+        profileImageUrl = current.profileImageUrl
+        expired = isTokenExpired(current.expiresAt)
       } catch (error) {
         console.error('Failed to fetch profile image:', error)
         // Continue without profile image — but this is a distinct failure from
@@ -110,20 +109,37 @@ export async function GET() {
         // failures are intentionally not sent to Sentry to avoid noise), so it
         // still deserves visibility if it's happening a lot.
         captureException(error, { endpoint: '/api/auth/twitter/status', userId: tokens.userId })
+        const current = await getStoredTokens(userId)
+        if (current) {
+          authoritativeTokens = current
+          profileImageUrl = current.profileImageUrl
+          expired = isTokenExpired(current.expiresAt)
+        } else {
+          return NextResponse.json({
+            authenticated: true,
+            user: {
+              id: account.user.id,
+              username: account.user.username,
+              profileImageUrl: account.user.avatarUrl,
+            },
+            xConnected: false,
+            needsReconnect: false,
+          })
+        }
       }
     }
 
     return NextResponse.json({
       authenticated: true,
       user: {
-        id: tokens.userId,
-        username: tokens.username,
+        id: authoritativeTokens.userId,
+        username: authoritativeTokens.username,
         profileImageUrl,
       },
       xConnected: true,
       needsReconnect: false,
       tokenExpired: expired,
-      expiresAt: newExpiresAt,
+      expiresAt: authoritativeTokens.expiresAt,
     })
   } catch (error) {
     return handleRouteError(error, {
