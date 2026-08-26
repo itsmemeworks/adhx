@@ -90,19 +90,41 @@ describe('non-X preview metadata status', () => {
         robots: { index: false },
         alternates: { canonical: `https://adhx.com/reels/${REEL_ID}` },
       })
-      expect(metadata.openGraph).toBeUndefined()
-      expect(metadata.twitter).toBeUndefined()
+      expect(metadata.openGraph).toBeNull()
+      expect(metadata.twitter).toBeNull()
     })
 
-    it('keeps transient failures indexable without claiming unresolved media', async () => {
+    it('noindexes a transient failure without claiming unresolved media', async () => {
       mocks.getReelMetadataStatus.mockResolvedValue({ kind: 'transient-failure' })
       const { generateMetadata } = await import('@/app/reels/[id]/page')
 
       const metadata = await generateMetadata({ params: Promise.resolve({ id: REEL_ID }) })
 
-      expect(metadata.robots).toBeUndefined()
-      expect(metadata.openGraph).toBeUndefined()
+      expect(metadata.robots).toEqual({ index: false })
+      expect(metadata.openGraph).toBeNull()
+      expect(metadata.twitter).toBeNull()
       expect(metadata.alternates).toEqual({ canonical: `https://adhx.com/reels/${REEL_ID}` })
+    })
+
+    it('indexes resolved Instagram metadata with rich preview claims', async () => {
+      mocks.getReelMetadataStatus.mockResolvedValue({
+        kind: 'resolved',
+        metadata: {
+          imageUrl: 'https://scontent.cdninstagram.com/thumb.jpg',
+          caption: 'Resolved Reel',
+          author: '@creator',
+        },
+      })
+      const { generateMetadata } = await import('@/app/reels/[id]/page')
+
+      const metadata = await generateMetadata({ params: Promise.resolve({ id: REEL_ID }) })
+
+      expect(metadata.robots).toBeUndefined()
+      expect(metadata.openGraph).toMatchObject({
+        type: 'video.other',
+        images: [{ url: expect.stringContaining('/api/media/instagram/thumbnail') }],
+        videos: [{ url: expect.stringContaining('/api/media/instagram/video') }],
+      })
     })
 
     it('uses saved content as a rich fallback without calling Instagram', async () => {
@@ -128,16 +150,49 @@ describe('non-X preview metadata status', () => {
   describe('TikTok video', () => {
     const params = Promise.resolve({ username: '@creator', id: TIKTOK_ID })
 
-    it('keeps mirror-only absence indexable without claiming unresolved media', async () => {
+    it('noindexes a transient mirror miss without claiming unresolved media', async () => {
       mocks.getTikTokMetadataStatus.mockResolvedValue({ kind: 'transient-failure' })
       const { generateMetadata } = await import('@/app/[username]/video/[id]/page')
 
       const metadata = await generateMetadata({ params })
 
-      expect(metadata.robots).toBeUndefined()
-      expect(metadata.openGraph).toBeUndefined()
+      expect(metadata.robots).toEqual({ index: false })
+      expect(metadata.openGraph).toBeNull()
+      expect(metadata.twitter).toBeNull()
       expect(metadata.alternates).toEqual({
         canonical: `https://adhx.com/@creator/video/${TIKTOK_ID}`,
+      })
+    })
+
+    it('noindexes a permanent TikTok miss without fabricated media claims', async () => {
+      mocks.getTikTokMetadataStatus.mockResolvedValue({ kind: 'permanent-miss' })
+      const { generateMetadata } = await import('@/app/[username]/video/[id]/page')
+
+      const metadata = await generateMetadata({ params })
+
+      expect(metadata.robots).toEqual({ index: false })
+      expect(metadata.openGraph).toBeNull()
+      expect(metadata.twitter).toBeNull()
+    })
+
+    it('indexes resolved TikTok metadata with rich preview claims', async () => {
+      mocks.getTikTokMetadataStatus.mockResolvedValue({
+        kind: 'resolved',
+        metadata: {
+          videoUrl: `https://tnktok.com/generate/video/${TIKTOK_ID}.mp4`,
+          title: 'Resolved TikTok',
+          author: '@creator',
+        },
+      })
+      const { generateMetadata } = await import('@/app/[username]/video/[id]/page')
+
+      const metadata = await generateMetadata({ params })
+
+      expect(metadata.robots).toBeUndefined()
+      expect(metadata.openGraph).toMatchObject({
+        type: 'video.other',
+        images: [{ url: expect.stringContaining('/api/media/tiktok/thumbnail') }],
+        videos: [{ url: expect.stringContaining('/api/media/tiktok/video') }],
       })
     })
 
@@ -173,20 +228,42 @@ describe('non-X preview metadata status', () => {
         robots: { index: false },
         alternates: { canonical: `https://adhx.com/shorts/${YOUTUBE_ID}` },
       })
-      expect(metadata.openGraph).toBeUndefined()
-      expect(metadata.twitter).toBeUndefined()
+      expect(metadata.openGraph).toBeNull()
+      expect(metadata.twitter).toBeNull()
     })
 
-    it('keeps transient failures indexable without claiming unresolved media', async () => {
+    it('noindexes a transient failure without claiming unresolved media', async () => {
       mocks.getYouTubeMetadataStatus.mockResolvedValue({ kind: 'transient-failure' })
       const { generateMetadata } = await import('@/app/shorts/[id]/page')
 
       const metadata = await generateMetadata({ params: Promise.resolve({ id: YOUTUBE_ID }) })
 
-      expect(metadata.robots).toBeUndefined()
-      expect(metadata.openGraph).toBeUndefined()
+      expect(metadata.robots).toEqual({ index: false })
+      expect(metadata.openGraph).toBeNull()
+      expect(metadata.twitter).toBeNull()
       expect(metadata.alternates).toEqual({
         canonical: `https://adhx.com/shorts/${YOUTUBE_ID}`,
+      })
+    })
+
+    it('indexes resolved YouTube metadata with rich preview claims', async () => {
+      mocks.getYouTubeMetadataStatus.mockResolvedValue({
+        kind: 'resolved',
+        metadata: {
+          videoId: YOUTUBE_ID,
+          title: 'Resolved Short',
+          author: '@creator',
+          thumbnailUrl: `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg`,
+        },
+      })
+      const { generateMetadata } = await import('@/app/shorts/[id]/page')
+
+      const metadata = await generateMetadata({ params: Promise.resolve({ id: YOUTUBE_ID }) })
+
+      expect(metadata.robots).toBeUndefined()
+      expect(metadata.openGraph).toMatchObject({
+        type: 'video.other',
+        images: [{ url: `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg` }],
       })
     })
 

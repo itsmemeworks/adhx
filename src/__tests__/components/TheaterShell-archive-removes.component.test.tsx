@@ -17,6 +17,11 @@ import { render, act, screen, fireEvent } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import type { FeedItem } from '@/components/feed/types'
+import {
+  notifyCollectionChanged,
+  resetClientEventBridgeForTests,
+  setClientEventAccount,
+} from '@/lib/client-events'
 
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
@@ -25,7 +30,11 @@ vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
 }))
 vi.mock('@/components/auth', () => ({
   SignInModal: () => null,
-  useAuthMe: () => ({ me: null, loading: false, refresh: vi.fn() }),
+  useAuthMe: () => ({
+    me: { authenticated: true, user: { id: 'account-a', username: 'owner' } },
+    loading: false,
+    refresh: vi.fn(),
+  }),
 }))
 vi.mock('@/components/tags', () => ({ TagQuickPicker: () => null }))
 vi.mock('@/components/theater/useTheaterFeed', () => ({
@@ -103,6 +112,8 @@ async function act_(fn: () => void) {
 describe('TheaterShell: Archive removes the post from the collection queue', () => {
   beforeEach(() => {
     mockMobileChrome.mockClear()
+    resetClientEventBridgeForTests()
+    setClientEventAccount('account-a')
     window.localStorage.clear()
     global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({}) })) as never
   })
@@ -187,11 +198,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(queueState().currentKey).toBe('twitter:1')
 
     await act_(() => {
-      window.dispatchEvent(
-        new CustomEvent('tweet-added', {
-          detail: { removed: { platform: 'twitter', id: '2' } },
-        }),
-      )
+      notifyCollectionChanged({ removed: { platform: 'twitter', id: '2' } })
     })
 
     expect(queueState().ids).toEqual(['1', '3'])
@@ -207,11 +214,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(queueState().currentKey).toBe('twitter:2')
 
     await act_(() => {
-      window.dispatchEvent(
-        new CustomEvent('tweet-added', {
-          detail: { removed: { platform: 'twitter', id: '1' } },
-        }),
-      )
+      notifyCollectionChanged({ removed: { platform: 'twitter', id: '1' } })
     })
 
     expect(queueState().ids).toEqual(['2', '3'])
@@ -227,11 +230,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(queueState().currentKey).toBe('twitter:2')
 
     await act_(() => {
-      window.dispatchEvent(
-        new CustomEvent('tweet-added', {
-          detail: { added: feedItem('99') },
-        }),
-      )
+      notifyCollectionChanged({ added: feedItem('99') })
     })
 
     expect(queueState().ids).toEqual(['99', '1', '2', '3'])

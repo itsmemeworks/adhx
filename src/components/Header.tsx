@@ -29,6 +29,7 @@ import {
   claimResumeSync,
 } from '@/lib/sync/resume'
 import { isSavedPath } from '@/lib/theater/collection-href'
+import { clientEventMatchesCurrentAccount, setClientEventAccount } from '@/lib/client-events'
 
 interface AuthStatus {
   authenticated: boolean
@@ -103,8 +104,8 @@ export function Header() {
     fetchAuthStatus()
 
     // Listen for stats updates from other components (only fires when authenticated)
-    const handleStatsUpdate = () => {
-      if (authStatus?.authenticated) {
+    const handleStatsUpdate = (event: Event) => {
+      if (clientEventMatchesCurrentAccount(event) && authStatus?.authenticated) {
         fetchStats()
       }
     }
@@ -285,7 +286,8 @@ export function Header() {
   async function handleSignOut() {
     setShowUserMenu(false)
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      const response = await fetch('/api/auth/logout', { method: 'POST' })
+      if (response.ok) setClientEventAccount(null)
     } finally {
       window.location.href = '/'
     }

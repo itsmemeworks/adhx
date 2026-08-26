@@ -28,6 +28,7 @@ import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
+import { notifyStatsUpdated } from '@/lib/client-events'
 import {
   generateAvatarDataUri,
   resolveAccountAvatarSrc,
@@ -850,7 +851,7 @@ function SettingsPage() {
     fetchCooldown()
     setMessage({ type: 'success', text: 'Bookmarks synced successfully!' })
     // Notify Header to refresh stats and cooldown
-    window.dispatchEvent(new CustomEvent('stats-updated'))
+    notifyStatsUpdated()
     window.dispatchEvent(new CustomEvent('sync-complete'))
   }
 
@@ -878,7 +879,7 @@ function SettingsPage() {
         setConfirmText('')
         setSyncHistory({ syncs: [], lastSyncAt: null, totalBookmarks: 0, xOnAdhx: 0, xSynced: 0 })
         // Notify Header to refresh stats
-        window.dispatchEvent(new CustomEvent('stats-updated'))
+        notifyStatsUpdated()
       } else {
         throw new Error('Failed to clear data')
       }

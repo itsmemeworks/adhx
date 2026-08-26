@@ -14,10 +14,7 @@ vi.mock('@/lib/db', () => ({
 
 import {
   ModerationStoreUnavailableError,
-  isPostModerated,
   isUserBanned,
-  listBannedUserIds,
-  listModeratedPostKeys,
   readBannedUserIds,
   readModeratedPostKeys,
   readPostModeration,
@@ -42,7 +39,6 @@ describe('moderation reads fail closed', () => {
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('expected unavailable result')
     expect(result.error).toBeInstanceOf(ModerationStoreUnavailableError)
-    expect(() => isPostModerated('twitter', 'uncertain')).toThrow(ModerationStoreUnavailableError)
   })
 
   it('never converts an unreadable ban store into not-banned or an empty set', () => {
@@ -51,13 +47,11 @@ describe('moderation reads fail closed', () => {
     expect(readUserBan('user-1').ok).toBe(false)
     expect(readBannedUserIds().ok).toBe(false)
     expect(() => isUserBanned('user-1')).toThrow(ModerationStoreUnavailableError)
-    expect(() => listBannedUserIds()).toThrow(ModerationStoreUnavailableError)
   })
 
   it('never converts an unreadable post store into an empty key set', () => {
     testInstance.sqlite.exec('DROP TABLE moderated_posts')
 
     expect(readModeratedPostKeys().ok).toBe(false)
-    expect(() => listModeratedPostKeys()).toThrow(ModerationStoreUnavailableError)
   })
 })

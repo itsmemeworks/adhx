@@ -697,5 +697,3 @@ export const metrics = {
     metricCount('users.daily_active', 1, { user_hash: stableUserHash(userId) })
   },
 }
-
-export { Sentry }

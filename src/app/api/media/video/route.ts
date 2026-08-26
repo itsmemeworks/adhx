@@ -1,32 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 import { captureException, metrics } from '@/lib/sentry'
 import {
   goneResponse,
   fetchWithAllowlistedRedirects,
   isAllowedTwitterMediaUrl,
   isFxTwitterGoneStatus,
+  isMediaResponseTooLargeError,
   isTweetGoneCached,
   isUntrustedMediaRedirectError,
   isValidTweetAuthor,
   isValidTweetId,
   markTweetGone,
   parseTweetMediaIndex,
+  readResponseBodyWithLimit,
   streamingResponse,
   TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
-// Simple in-memory cache for video URLs (survives for 1 hour)
-// Cache key includes quality for different variants
-const videoUrlCache = new Map<string, { url: string; timestamp: number }>()
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+const MAX_FXTWITTER_VIDEO_BYTES = 2 * 1024 * 1024
+const videoUrlCache = new TtlLruCache<string, string>({ maxSize: 1_000, ttlMs: CACHE_TTL })
 
 interface VideoFormat {
   url: string
   bitrate?: number
   container?: string
   codec?: string
+}
+
+interface FxTwitterVideoResponse {
+  tweet?: {
+    media?: {
+      videos?: Array<{
+        url?: string
+        formats?: VideoFormat[]
+      }>
+    }
+  }
 }
 
 // GET /api/media/video?author=xxx&tweetId=xxx&quality=preview|hd|full
@@ -60,11 +73,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check cache for resolved URL
-    let videoUrl: string | undefined
-    const cached = videoUrlCache.get(cacheKey)
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      videoUrl = cached.url
-    }
+    let videoUrl = videoUrlCache.get(cacheKey)
 
     // If not cached, resolve from FxTwitter API
     if (!videoUrl) {
@@ -96,7 +105,11 @@ export async function GET(request: NextRequest) {
         throw new Error(`fxtwitter API returned ${response.status}`)
       }
 
-      const data = await response.json()
+      const data = JSON.parse(
+        new TextDecoder().decode(
+          await readResponseBodyWithLimit(response, MAX_FXTWITTER_VIDEO_BYTES),
+        ),
+      ) as FxTwitterVideoResponse
       const videos = data.tweet?.media?.videos
       const video = Array.isArray(videos) ? videos[index - 1] : undefined
 
@@ -105,7 +118,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Select video URL based on quality preference
-      videoUrl = video.url as string // Default to highest quality
+      videoUrl = video.url // Default to highest quality
 
       if (video.formats && Array.isArray(video.formats)) {
         const formats = video.formats.filter(
@@ -145,17 +158,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Cache the URL
-      videoUrlCache.set(cacheKey, { url: videoUrl, timestamp: Date.now() })
-
-      // Clean old cache entries periodically
-      if (videoUrlCache.size > 1000) {
-        const now = Date.now()
-        for (const [key, value] of videoUrlCache.entries()) {
-          if (now - value.timestamp > CACHE_TTL) {
-            videoUrlCache.delete(key)
-          }
-        }
-      }
+      videoUrlCache.set(cacheKey, videoUrl)
     }
 
     // SSRF Protection: Validate video URL is from trusted domain before fetching
@@ -187,6 +190,12 @@ export async function GET(request: NextRequest) {
     // Stream the upstream response through with range-aware headers
     return streamingResponse(videoResponse)
   } catch (error) {
+    if (isMediaResponseTooLargeError(error)) {
+      return NextResponse.json(
+        { error: 'FxTwitter response exceeds maximum size' },
+        { status: 502 },
+      )
+    }
     if (isUntrustedMediaRedirectError(error)) {
       return NextResponse.json({ error: 'Untrusted video redirect' }, { status: 502 })
     }

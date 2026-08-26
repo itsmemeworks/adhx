@@ -183,8 +183,8 @@ describe('Session Module', () => {
     })
   })
 
-  describe('requireAuth', () => {
-    it('should return userId when authenticated', async () => {
+  describe('withAuth integration', () => {
+    it('passes a validated live userId to an authenticated route', async () => {
       const { jwtVerify } = await import('jose')
       const mockJwtVerify = jwtVerify as ReturnType<typeof vi.fn>
 
@@ -193,18 +193,26 @@ describe('Session Module', () => {
         payload: { userId: 'user-789', username: 'authuser' },
       })
 
-      const { requireAuth } = await import('@/lib/auth/session')
-      const userId = await requireAuth()
+      const { withAuth } = await import('@/lib/api/with-auth')
+      const handler = vi.fn((_request: unknown, userId: string) =>
+        Response.json({ userId }, { status: 200 }),
+      )
+      const response = await withAuth(handler)()
 
-      expect(userId).toBe('user-789')
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ userId: 'user-789' })
+      expect(handler).toHaveBeenCalledOnce()
     })
 
-    it('should throw when not authenticated', async () => {
+    it('returns 401 without invoking the route when unauthenticated', async () => {
       mockCookieStore.get.mockReturnValue(undefined)
 
-      const { requireAuth } = await import('@/lib/auth/session')
+      const { withAuth } = await import('@/lib/api/with-auth')
+      const handler = vi.fn(() => new Response(null, { status: 204 }))
+      const response = await withAuth(handler)()
 
-      await expect(requireAuth()).rejects.toThrow('Unauthorized')
+      expect(response.status).toBe(401)
+      expect(handler).not.toHaveBeenCalled()
     })
 
     it('prevents a stale deleted-account session from reaching an authenticated route', async () => {

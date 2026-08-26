@@ -115,7 +115,9 @@ test.describe('preview Queue heading', () => {
     await expect(queue.getByText('Now playing', { exact: true })).toBeVisible()
     await expect(queue.getByText('Next', { exact: true })).toBeVisible()
     await expect(
-      queue.locator('[data-theater-queue-item]').filter({ hasText: POST.preview.text }),
+      queue.locator(
+        `[data-theater-queue-item][data-theater-item-key="twitter:${POST.preview.id}"]`,
+      ),
     ).toHaveAttribute('aria-current', 'true')
     await expect(queue.getByText('This post', { exact: true })).toHaveCount(0)
     await expect(queue.getByText('Shared post', { exact: true })).toHaveCount(0)

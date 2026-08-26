@@ -24,7 +24,7 @@ import { GET } from '@/app/api/trending/route'
 
 function requestFrom(ip: string): NextRequest {
   return new NextRequest('http://localhost/api/trending', {
-    headers: { 'x-forwarded-for': ip },
+    headers: { 'fly-client-ip': ip },
   })
 }
 

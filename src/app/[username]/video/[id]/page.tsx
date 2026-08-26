@@ -7,6 +7,7 @@ import {
   buildSnippetDescription,
   attributionFact,
   previewPageMetadata,
+  unavailablePreviewMetadata,
 } from '@/lib/utils/content-metadata'
 import { stubTikTokTheaterItem } from '@/lib/theater/shared-seed'
 import { resolveTikTokShared } from '@/lib/theater/resolve-shared-preview'
@@ -22,6 +23,8 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 interface Props {
   params: Promise<{ username: string; id: string }>
 }
+
+export const dynamic = 'force-dynamic'
 
 function normalizeHandle(raw: string): string | null {
   try {
@@ -74,14 +77,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const saved = getSavedPreviewDisplay('tiktok', id)
   const metadataStatus = saved ? null : await getTikTokMetadataStatus(handle, id)
 
-  // TnkTok is a third-party mirror, so any valid-id miss remains unresolved
-  // rather than becoming an authoritative noindex tombstone.
   if (!saved && metadataStatus?.kind !== 'resolved') {
-    return {
-      title: `@${handle} on TikTok`,
-      description: 'Preview this TikTok video on ADHX.',
-      alternates: { canonical: canonicalUrl },
-    }
+    const permanent = metadataStatus?.kind === 'permanent-miss'
+    return unavailablePreviewMetadata({
+      title: permanent ? `@${handle} on TikTok unavailable - ADHX` : `@${handle} on TikTok`,
+      description: permanent
+        ? 'This TikTok video is no longer available.'
+        : 'This TikTok video preview is temporarily unavailable.',
+      canonicalUrl,
+    })
   }
 
   const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null

@@ -40,14 +40,122 @@ const FEED_CHANGED = 'tweet-added'
 const TAGS_CHANGED = 'bookmark-tags-changed'
 
 const CROSS_TAB_CHANNEL = 'adhx-client-events'
+const AUTH_SCOPE_CHANNEL = 'adhx-auth-scope'
 
-type BridgePayload = { name: string; detail?: unknown }
+type BridgePayload = { name: string; detail?: unknown; accountId: string }
+type AuthScopePayload = { type: 'auth-scope-changed'; accountId: string | null }
 
 let channel: BroadcastChannel | null = null
+let authScopeChannel: BroadcastChannel | null = null
+// `undefined` means the auth request has not settled (or is being refreshed);
+// `null` is a settled signed-out state. Collection events are only eligible
+// for cross-tab delivery when both documents know the same immutable account.
+let clientEventAccountId: string | null | undefined
+let lastSettledClientEventAccountId: string | null | undefined
+let pendingAuthScopeAccountId: string | null | undefined
+const eventAccounts = new WeakMap<Event, string | null>()
+const authScopeListeners = new Set<(accountId: string | null) => void>()
 
-function fireLocal(name: string, detail?: unknown): void {
+function fireLocal(name: string, detail: unknown, accountId: string | null): void {
   if (typeof window === 'undefined') return
-  window.dispatchEvent(detail === undefined ? new Event(name) : new CustomEvent(name, { detail }))
+  const event = detail === undefined ? new Event(name) : new CustomEvent(name, { detail })
+  eventAccounts.set(event, accountId)
+  window.dispatchEvent(event)
+}
+
+/**
+ * Keep the bridge aligned with `/api/auth/me`.
+ *
+ * Pass `undefined` while auth is unresolved, `null` for a settled signed-out
+ * document, and the immutable users.id for a signed-in account. No value is
+ * persisted: this identity exists only in memory and local BroadcastChannel
+ * envelopes.
+ */
+export function setClientEventAccount(
+  accountId: string | null | undefined,
+  options: { broadcast?: boolean } = {},
+): void {
+  clientEventAccountId = accountId
+  if (accountId === undefined) return
+
+  pendingAuthScopeAccountId = undefined
+  const previous = lastSettledClientEventAccountId
+  lastSettledClientEventAccountId = accountId
+  // Initial discovery announces too: a login callback may have opened/reloaded
+  // this tab after changing the shared cookie, so it has no in-memory "before"
+  // value. Same-account receivers ignore the signal; receiver-driven refetches
+  // pass `broadcast: false` to avoid echo loops.
+  if (previous === accountId || options.broadcast === false) return
+  try {
+    getAuthScopeChannel()?.postMessage({
+      type: 'auth-scope-changed',
+      accountId,
+    } satisfies AuthScopePayload)
+  } catch {
+    // The local account scope is still authoritative for this document.
+  }
+}
+
+/**
+ * Receiver-side defense for account-owned state. Events created by this
+ * module carry an in-memory scope; scoped events only match a settled copy of
+ * the same account. Unmarked/legacy events are rejected, especially while
+ * auth is unresolved; signed-out helper events carry an explicit null scope.
+ */
+export function clientEventMatchesAccount(
+  event: Event,
+  accountId: string | null | undefined,
+): boolean {
+  if (accountId === undefined || !eventAccounts.has(event)) return false
+  return eventAccounts.get(event) === accountId
+}
+
+/** Account gate for listeners that do not otherwise consume `useAuthMe()`. */
+export function clientEventMatchesCurrentAccount(event: Event): boolean {
+  return clientEventMatchesAccount(event, clientEventAccountId)
+}
+
+export function subscribeClientEventAuthScopeChange(
+  listener: (accountId: string | null) => void,
+): () => void {
+  authScopeListeners.add(listener)
+  return () => authScopeListeners.delete(listener)
+}
+
+function getAuthScopeChannel(): BroadcastChannel | null {
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return null
+  if (authScopeChannel) return authScopeChannel
+  try {
+    authScopeChannel = new BroadcastChannel(AUTH_SCOPE_CHANNEL)
+    authScopeChannel.onmessage = (event: MessageEvent<AuthScopePayload>) => {
+      const data = event.data
+      if (
+        !data ||
+        data.type !== 'auth-scope-changed' ||
+        (typeof data.accountId !== 'string' && data.accountId !== null)
+      ) {
+        return
+      }
+      // A duplicate same-account announcement is harmless and should not
+      // churn `/api/auth/me`. A real transition invalidates collection event
+      // delivery before any listener can begin its refetch.
+      if (
+        clientEventAccountId === data.accountId &&
+        lastSettledClientEventAccountId === data.accountId
+      ) {
+        return
+      }
+      if (clientEventAccountId === undefined && pendingAuthScopeAccountId === data.accountId) {
+        return
+      }
+      pendingAuthScopeAccountId = data.accountId
+      clientEventAccountId = undefined
+      authScopeListeners.forEach((listener) => listener(data.accountId))
+    }
+  } catch {
+    return null
+  }
+  return authScopeChannel
 }
 
 function getChannel(): BroadcastChannel | null {
@@ -57,8 +165,16 @@ function getChannel(): BroadcastChannel | null {
     channel = new BroadcastChannel(CROSS_TAB_CHANNEL)
     channel.onmessage = (event: MessageEvent<BridgePayload>) => {
       const data = event.data
-      if (!data || typeof data.name !== 'string') return
-      fireLocal(data.name, data.detail)
+      if (
+        !data ||
+        typeof data.name !== 'string' ||
+        typeof data.accountId !== 'string' ||
+        typeof clientEventAccountId !== 'string' ||
+        data.accountId !== clientEventAccountId
+      ) {
+        return
+      }
+      fireLocal(data.name, data.detail, data.accountId)
     }
   } catch {
     return null
@@ -69,6 +185,7 @@ function getChannel(): BroadcastChannel | null {
 /** Open the cross-tab bridge so this document can receive events it never sent. */
 export function startClientEventBridge(): void {
   getChannel()
+  getAuthScopeChannel()
 }
 
 /** Test-only: drop the cached channel so the next notify rebinds. */
@@ -78,14 +195,30 @@ export function resetClientEventBridgeForTests(): void {
   } catch {
     // jsdom stubs may not implement close.
   }
+  try {
+    authScopeChannel?.close()
+  } catch {
+    // jsdom stubs may not implement close.
+  }
   channel = null
+  authScopeChannel = null
+  clientEventAccountId = undefined
+  lastSettledClientEventAccountId = undefined
+  pendingAuthScopeAccountId = undefined
 }
 
 function fire(name: string, detail?: unknown, opts?: { local?: boolean }): void {
   if (typeof window === 'undefined') return
-  if (opts?.local !== false) fireLocal(name, detail)
+  const accountId = clientEventAccountId
+  // While auth is unresolved, mutation-derived events are unsafe even in this
+  // document: the request may have used a cookie switched by another tab.
+  if (accountId === undefined) return
+  if (opts?.local !== false) fireLocal(name, detail, accountId)
+  // A settled signed-out document may still use explicit same-tab events, but
+  // never puts collection data on the origin-wide channel.
+  if (accountId === null) return
   try {
-    getChannel()?.postMessage({ name, detail } satisfies BridgePayload)
+    getChannel()?.postMessage({ name, detail, accountId } satisfies BridgePayload)
   } catch {
     // Closed channel / restricted context — same-tab listeners already ran.
   }
@@ -147,6 +280,11 @@ export function notifyTagsChanged(detail: {
   tags: string[]
 }): void {
   fire(TAGS_CHANGED, detail)
+}
+
+/** Refresh account-local count displays without carrying collection data. */
+export function notifyStatsUpdated(): void {
+  fire(STATS_UPDATED)
 }
 
 /** Event names, for listeners (and tests) that need to subscribe. */

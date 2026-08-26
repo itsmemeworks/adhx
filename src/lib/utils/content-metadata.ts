@@ -110,6 +110,33 @@ export interface SnippetDescriptionInput {
 }
 
 /**
+ * Metadata for a valid preview URL whose trusted content could not be resolved.
+ *
+ * Both confirmed removals and transient upstream failures use this shape:
+ * crawlers must not index a thin generic page, while the canonical remains
+ * stable so a later dynamic request can become indexable after recovery.
+ * Deliberately omits Open Graph and Twitter media claims.
+ */
+export function unavailablePreviewMetadata({
+  title,
+  description,
+  canonicalUrl,
+}: {
+  title: string
+  description: string
+  canonicalUrl: string
+}): Metadata {
+  return {
+    title,
+    description,
+    robots: { index: false },
+    alternates: { canonical: canonicalUrl },
+    openGraph: null,
+    twitter: null,
+  }
+}
+
+/**
  * Meta description for the SERP snippet: `<content the title didn't show> ·
  * <facts> · <closer>`, capped at `maxLength` so Google shows the whole thing
  * rather than cutting the closer off.

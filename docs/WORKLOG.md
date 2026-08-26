@@ -6,6 +6,52 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Completion audit and isolated browser suite green
+
+The post-remediation audit closed the remaining auth-scope, cross-tab, moderation-cache,
+retention, rate-limit identity, media-bound, and non-X SEO gaps without waivers. RSC payloads
+are now bound to the same immutable account confirmed by the client; mismatches fail closed,
+retry safely, and remount account providers only after trust. Public media uses trusted client
+identity, shared deadlines, bounded streams/caches, and regression coverage. Final gates pass:
+3,428 Vitest tests, 97 Playwright tests, typecheck, build, formatting, lint (warnings only),
+zero-advisory audit, and Chromium/Firefox extension validation. Owner-server browser walkthrough
+remains pending because port 3001 is not running.
+
+## 2026-08-26 — Full review closed and product docs refreshed
+
+All 36 review findings now have regression fixes and focused sign-off. Unresolved non-X pages
+noindex transient and permanent misses, explicitly clear inherited social cards, and stay dynamic
+for recovery; the unused resolve-reason field was removed. README is now a light product guide,
+while ARCHITECTURE explains current routing, theater, trust, data, media, privacy, and delivery
+boundaries without duplicating the runbook. All 3,387 tests, typecheck, build, formatting, lint
+(warnings only), dependency audit, and Chromium/Firefox extension gates pass. Local browser
+verification remains pending because the owner-managed server on port 3001 is not running.
+
+## 2026-08-26 — Superseded auth and moderation bypasses removed
+
+OAuth token tests now use encrypted DB fixtures instead of a production unconditional token
+upsert; callback persistence remains identity- and generation-guarded. Welcome validates a live,
+unbanned account, Sentry no longer exports its raw SDK namespace, and test-only auth/moderation
+compatibility helpers are gone. Focused tests, typecheck, lint, formatting, and diff checks pass.
+
+## 2026-08-26 — Non-X thin previews noindex consistently
+
+Instagram, TikTok, and YouTube preview metadata now returns noindex whenever trusted content is
+unresolved, including transient upstream failures, and dynamic rendering lets later recovery
+become indexable. Streamed JSON-LD/static bodies remain suppressed for both permanent and
+transient misses, with the reason encoded in the shared resolve result. Saved local metadata
+remains an indexable fallback. Focused SEO/cache tests, typecheck, lint, formatting, and diff
+checks passed before concurrent out-of-scope edits later blocked the global typecheck and format
+check; the SEO files remain clean.
+
+## 2026-08-26 — Playlist event retention no longer needs restarts
+
+Accepted playlist events now trigger an independently committed, hourly-throttled prune of raw
+detail older than 90 days. Event insertion and viewer-free aggregate increments remain atomic;
+retention failures cannot roll them back or separate their counts, and all-time aggregates are
+never pruned. Deterministic regressions cover no-restart expiry, aggregate survival, and retry
+after an injected delete failure. Focused discovery tests are green.
+
 ## 2026-08-26 — Phase 6 public surfaces and data integrity verified
 
 Non-X previews now distinguish permanent misses from transient mirror failures without caching false noindex pages. Public analytics require trusted post identities, moderation/ban checks, actor-correct dedupe, and indexed lookups; uncaught Next server failures reach privacy-bounded Sentry instrumentation. URL parsing is host-anchored, non-X bookmark/media writes and tag/ban mutations are atomic, cards and stacked sign-in modals are keyboard/focus safe, and Firefox ships validated MV3 output with accurate AMO browsing-activity disclosure. CI now validates both extension artifacts. All 3,345 tests, typecheck, build, formatting, lint (warnings only), extension builds, diff checks, and integrated review are green.

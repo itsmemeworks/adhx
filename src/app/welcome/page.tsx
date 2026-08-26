@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { WelcomeClient } from './WelcomeClient'
@@ -19,12 +19,12 @@ export default async function WelcomePage({
 }: {
   searchParams: Promise<{ returnTo?: string }>
 }) {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     redirect('/')
   }
 
-  const account = await getAccount(session.userId)
+  const account = await getAccount(userId)
   if (!account || account.user.usernameChosen) {
     redirect('/')
   }

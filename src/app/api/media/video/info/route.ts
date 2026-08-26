@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 import { captureException, metrics } from '@/lib/sentry'
 import {
   buildAllowlistedUrl,
@@ -15,12 +16,11 @@ import {
   TWITTER_HLS_HOSTS,
   TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // Cache video info for 1 hour. Separate caches for with/without HEAD-measured sizes
 // so the fast playback path never pays for the slow size-measurement path.
-const videoInfoCache = new Map<string, { data: VideoInfo; timestamp: number }>()
-const videoInfoCacheWithSizes = new Map<string, { data: VideoInfo; timestamp: number }>()
 const CACHE_TTL = 60 * 60 * 1000
 const MAX_FXTWITTER_INFO_BYTES = 2 * 1024 * 1024
 
@@ -63,9 +63,21 @@ interface VideoInfo {
   requiresHls: boolean // true if video is long (>5 min) and needs HLS
 }
 
+const videoInfoCache = new TtlLruCache<string, VideoInfo>({
+  maxSize: 500,
+  ttlMs: CACHE_TTL,
+})
+const videoInfoCacheWithSizes = new TtlLruCache<string, VideoInfo>({
+  maxSize: 500,
+  ttlMs: CACHE_TTL,
+})
+
 // GET /api/media/video/info?author=xxx&tweetId=xxx
 // Returns video metadata to help the client decide how to play
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const searchParams = request.nextUrl.searchParams
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
@@ -91,9 +103,7 @@ export async function GET(request: NextRequest) {
   try {
     // Check cache
     const cached = cache.get(cacheKey)
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data)
-    }
+    if (cached) return NextResponse.json(cached)
 
     if (isTweetGoneCached(goneKey)) {
       return goneResponse()
@@ -243,17 +253,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache the result
-    cache.set(cacheKey, { data: videoInfo, timestamp: Date.now() })
-
-    // Cleanup old cache entries
-    if (cache.size > 500) {
-      const now = Date.now()
-      for (const [key, value] of cache.entries()) {
-        if (now - value.timestamp > CACHE_TTL) {
-          cache.delete(key)
-        }
-      }
-    }
+    cache.set(cacheKey, videoInfo)
 
     return NextResponse.json(videoInfo)
   } catch (error) {
@@ -270,9 +270,6 @@ export async function GET(request: NextRequest) {
 }
 
 async function readFxTwitterJson(response: Response): Promise<FxTwitterVideoInfoResponse> {
-  // Route tests use minimal Response stubs without a body. Real fetch responses
-  // always have one, and therefore always take the bounded reader path.
-  if (!response.body) return (await response.json()) as FxTwitterVideoInfoResponse
   const bytes = await readResponseBodyWithLimit(response, MAX_FXTWITTER_INFO_BYTES)
   return JSON.parse(new TextDecoder().decode(bytes)) as FxTwitterVideoInfoResponse
 }

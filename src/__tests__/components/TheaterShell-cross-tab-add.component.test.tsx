@@ -14,6 +14,11 @@ import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 import type { FeedItem } from '@/components/feed/types'
 import type { ContentType } from '@/components/matter'
+import {
+  notifyCollectionChanged,
+  resetClientEventBridgeForTests,
+  setClientEventAccount,
+} from '@/lib/client-events'
 
 vi.mock('@/components/theater/Stage', () => ({
   Stage: (props: { item: TheaterItem | null }) => (
@@ -57,7 +62,7 @@ vi.mock('@/components/theater/useTheaterFeed', () => ({
 vi.mock('@/components/auth', () => ({
   SignInModal: () => null,
   useAuthMe: () => ({
-    me: { authenticated: true, user: { username: 'owner' } },
+    me: { authenticated: true, user: { id: 'account-a', username: 'owner' } },
     loading: false,
     refresh: vi.fn(),
   }),
@@ -153,7 +158,7 @@ async function tapType(type: ContentType) {
 }
 
 function fireAdded(item: FeedItem) {
-  window.dispatchEvent(new CustomEvent('tweet-added', { detail: { added: item } }))
+  notifyCollectionChanged({ added: item })
 }
 
 function deferred<T>() {
@@ -167,6 +172,8 @@ function deferred<T>() {
 describe('TheaterShell: cross-tab add + filters', () => {
   beforeEach(() => {
     mockMobileChrome.mockClear()
+    resetClientEventBridgeForTests()
+    setClientEventAccount('account-a')
     window.localStorage.clear()
     window.sessionStorage.clear()
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -251,11 +258,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
       String(input).includes('/api/feed'),
     ).length
     await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent('tweet-added', {
-          detail: { removed: { platform: 'twitter', id: '1' } },
-        }),
-      )
+      notifyCollectionChanged({ removed: { platform: 'twitter', id: '1' } })
     })
     expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(false)
     expect(chromeProps().collection?.tags).toBeUndefined()
@@ -286,17 +289,13 @@ describe('TheaterShell: cross-tab add + filters', () => {
     const lookupsBeforeArchive = fetchSpy.mock.calls.length
 
     await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent('tweet-added', {
-          detail: {
-            removed: {
-              platform: 'twitter',
-              id: '1',
-              preserveMembership: true,
-            },
-          },
-        }),
-      )
+      notifyCollectionChanged({
+        removed: {
+          platform: 'twitter',
+          id: '1',
+          preserveMembership: true,
+        } as { platform: string; id: string },
+      })
     })
 
     expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(true)
@@ -327,11 +326,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     await act(async () => fireAdded(feedItem('1', { tags: ['authoritative'] })))
     expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(true)
     await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent('tweet-added', {
-          detail: { removed: { platform: 'twitter', id: '1' } },
-        }),
-      )
+      notifyCollectionChanged({ removed: { platform: 'twitter', id: '1' } })
     })
     expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(false)
 

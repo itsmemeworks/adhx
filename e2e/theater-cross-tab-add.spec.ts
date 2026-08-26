@@ -263,6 +263,9 @@ authedTest.describe('theater cross-tab add', () => {
     await page.getByRole('button', { name: 'Keep playing' }).click()
     await page.getByRole('button', { name: 'Repeat this post' }).click()
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
+    // Cycling all → one → off restarts the timed dwell, so pause only after
+    // Play once is active.
+    await pauseTheater(page)
     const start = await readQueueProgress(page)
     expect(start.played).toBe(0)
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/media/tiktok/thumbnail/route'
 
@@ -10,6 +10,14 @@ import { GET } from '@/app/api/media/tiktok/thumbnail/route'
  * is on the TikTok CDN allowlist (SSRF guard), same pattern as every sibling
  * media proxy.
  */
+
+const mocks = vi.hoisted(() => ({
+  mediaRateLimit: vi.fn(),
+}))
+
+vi.mock('@/lib/rate-limit', () => ({
+  mediaRateLimit: mocks.mediaRateLimit,
+}))
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch as unknown as typeof fetch
@@ -37,7 +45,25 @@ function imageResponse() {
 }
 
 describe('GET /api/media/tiktok/thumbnail', () => {
-  beforeEach(() => mockFetch.mockReset())
+  beforeEach(() => {
+    mockFetch.mockReset()
+    mocks.mediaRateLimit.mockReset()
+    mocks.mediaRateLimit.mockReturnValue(null)
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('enforces the public media IP limiter before resolving the mirror', async () => {
+    mocks.mediaRateLimit.mockReturnValueOnce(
+      new Response(JSON.stringify({ error: 'Too many requests' }), { status: 429 }),
+    )
+    const request = createRequest({ username: 'limited_user', id: '7619017281691045100' })
+
+    const res = await GET(request)
+
+    expect(res.status).toBe(429)
+    expect(mocks.mediaRateLimit).toHaveBeenCalledWith(request)
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
 
   it('rejects invalid username/id without fetching anything', async () => {
     const res = await GET(createRequest({ username: 'bad user!', id: '123' }))
@@ -112,5 +138,187 @@ describe('GET /api/media/tiktok/thumbnail', () => {
     expect(mockFetch).toHaveBeenCalledTimes(3)
     const [secondImageCallUrl] = mockFetch.mock.calls[2]
     expect(secondImageCallUrl).toBe(cdnUrl)
+  })
+
+  it('evicts a failed cached signed URL and resolves the mirror once more', async () => {
+    const staleUrl = 'https://p16-sign-va.tiktokcdn-us.com/stale.jpeg?x-signature=expired'
+    const freshUrl = 'https://p16-sign-va.tiktokcdn-us.com/fresh.jpeg?x-signature=current'
+    const params = { username: 'stale_user', id: '7619017281691045180' }
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(staleUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    expect((await GET(createRequest(params))).status).toBe(200)
+    mockFetch.mockReset()
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(freshUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    const retried = await GET(createRequest(params))
+
+    expect(retried.status).toBe(200)
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(mockFetch.mock.calls.map(([url]) => String(url))).toEqual([
+      staleUrl,
+      `https://tiktxk.com/@stale_user/video/${params.id}`,
+      freshUrl,
+    ])
+  })
+
+  it('evicts a cached URL after an untrusted redirect and safely re-resolves once', async () => {
+    const staleUrl = 'https://p16-sign-va.tiktokcdn-us.com/redirect-stale.jpeg'
+    const freshUrl = 'https://p16-sign-va.tiktokcdn-eu.com/redirect-fresh.jpeg'
+    const params = { username: 'redirect_cache_user', id: '7619017281691045181' }
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(staleUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    expect((await GET(createRequest(params))).status).toBe(200)
+    mockFetch.mockReset()
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://evil.example/stolen.jpeg' },
+        }),
+      )
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(freshUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    const retried = await GET(createRequest(params))
+
+    expect(retried.status).toBe(200)
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+    expect(mockFetch.mock.calls.some(([url]) => String(url).includes('evil.example'))).toBe(false)
+    expect(mockFetch.mock.calls.map(([url]) => String(url))).toEqual([
+      staleUrl,
+      `https://tiktxk.com/@redirect_cache_user/video/${params.id}`,
+      freshUrl,
+    ])
+  })
+
+  it('stops after one cached-URL re-resolution attempt', async () => {
+    const staleUrl = 'https://p16-sign-va.tiktokcdn-us.com/once-stale.jpeg'
+    const replacementUrl = 'https://p16-sign-va.tiktokcdn-eu.com/once-replacement.jpeg'
+    const params = { username: 'once_user', id: '7619017281691045182' }
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(staleUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    expect((await GET(createRequest(params))).status).toBe(200)
+    mockFetch.mockReset()
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(replacementUrl)))
+      .mockResolvedValueOnce(new Response(null, { status: 403 }))
+
+    const failed = await GET(createRequest(params))
+
+    expect(failed.status).toBe(502)
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('shares one deadline across cached fetch, mirror re-resolution, and retry', async () => {
+    vi.useFakeTimers()
+    const startedAt = new Date('2026-08-26T12:00:00Z')
+    vi.setSystemTime(startedAt)
+    const staleUrl = 'https://p16-sign-va.tiktokcdn-us.com/deadline-stale.jpeg'
+    const freshUrl = 'https://p16-sign-va.tiktokcdn-eu.com/deadline-fresh.jpeg'
+    const params = { username: 'deadline_user', id: '7619017281691045183' }
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(staleUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    expect((await GET(createRequest(params))).status).toBe(200)
+    mockFetch.mockReset()
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout')
+    mockFetch
+      .mockImplementationOnce(() => {
+        vi.setSystemTime(startedAt.getTime() + 4_000)
+        return Promise.resolve(new Response(null, { status: 403 }))
+      })
+      .mockImplementationOnce(() => {
+        vi.setSystemTime(startedAt.getTime() + 8_000)
+        return Promise.resolve(htmlResponse(mirrorHtml(freshUrl)))
+      })
+      .mockResolvedValueOnce(imageResponse())
+
+    const retried = await GET(createRequest(params))
+
+    expect(retried.status).toBe(200)
+    expect(timeoutSpy.mock.calls.map(([timeout]) => timeout)).toEqual([10_000, 6_000, 2_000])
+    timeoutSpy.mockRestore()
+  })
+
+  it('does not start mirror re-resolution after the request deadline expires', async () => {
+    vi.useFakeTimers()
+    const startedAt = new Date('2026-08-26T12:10:00Z')
+    vi.setSystemTime(startedAt)
+    const staleUrl = 'https://p16-sign-va.tiktokcdn-us.com/deadline-expired.jpeg'
+    const params = { username: 'expired_deadline_user', id: '7619017281691045184' }
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(staleUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    expect((await GET(createRequest(params))).status).toBe(200)
+    mockFetch.mockReset()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mockFetch.mockImplementationOnce(() => {
+      vi.setSystemTime(startedAt.getTime() + 10_000)
+      return Promise.resolve(new Response(null, { status: 403 }))
+    })
+
+    const failed = await GET(createRequest(params))
+
+    expect(failed.status).toBe(500)
+    expect(mockFetch).toHaveBeenCalledOnce()
+    consoleError.mockRestore()
+  })
+
+  it('expires a resolved thumbnail URL after one hour', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T12:00:00Z'))
+    const cdnUrl = 'https://p16-sign-va.tiktokcdn-us.com/expiry.jpeg'
+    mockFetch.mockImplementation((input) =>
+      Promise.resolve(
+        String(input).startsWith('https://tiktxk.com/')
+          ? htmlResponse(mirrorHtml(cdnUrl))
+          : imageResponse(),
+      ),
+    )
+    const params = { username: 'expiry_user', id: '7619017281691045199' }
+
+    await GET(createRequest(params))
+    mockFetch.mockClear()
+    vi.advanceTimersByTime(60 * 60 * 1_000)
+    await GET(createRequest(params))
+
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('evicts the least-recently-used thumbnail URL after 1,000 live keys', async () => {
+    const cdnUrl = 'https://p16-sign-va.tiktokcdn-us.com/bounds.jpeg'
+    mockFetch.mockImplementation((input) =>
+      Promise.resolve(
+        String(input).startsWith('https://tiktxk.com/')
+          ? htmlResponse(mirrorHtml(cdnUrl))
+          : imageResponse(),
+      ),
+    )
+
+    for (let i = 0; i <= 1_000; i++) {
+      await GET(
+        createRequest({
+          username: 'bounds_user',
+          id: `7619017281692${String(i).padStart(6, '0')}`,
+        }),
+      )
+    }
+    mockFetch.mockClear()
+
+    await GET(createRequest({ username: 'bounds_user', id: '7619017281692000000' }))
+
+    expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 })

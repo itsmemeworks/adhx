@@ -7,6 +7,7 @@ import {
   buildSnippetDescription,
   attributionFact,
   previewPageMetadata,
+  unavailablePreviewMetadata,
 } from '@/lib/utils/content-metadata'
 import { stubYouTubeTheaterItem } from '@/lib/theater/shared-seed'
 import { resolveYouTubeShared } from '@/lib/theater/resolve-shared-preview'
@@ -22,6 +23,8 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 interface Props {
   params: Promise<{ id: string }>
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function ShortPreviewPage({ params }: Props) {
   const { id } = await params
@@ -62,20 +65,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const saved = getSavedPreviewDisplay('youtube', id)
   const metadataStatus = saved ? null : await getYouTubeMetadataStatus(id)
 
-  if (!saved && metadataStatus?.kind === 'permanent-miss') {
-    return {
-      title: 'YouTube Short unavailable - ADHX',
-      description: 'This YouTube Short is no longer available.',
-      robots: { index: false },
-      alternates: { canonical: canonicalUrl },
-    }
-  }
-  if (!saved && metadataStatus?.kind === 'transient-failure') {
-    return {
-      title: 'YouTube Short',
-      description: 'Preview this YouTube Short on ADHX.',
-      alternates: { canonical: canonicalUrl },
-    }
+  if (!saved && metadataStatus?.kind !== 'resolved') {
+    const permanent = metadataStatus?.kind === 'permanent-miss'
+    return unavailablePreviewMetadata({
+      title: permanent ? 'YouTube Short unavailable - ADHX' : 'YouTube Short - ADHX',
+      description: permanent
+        ? 'This YouTube Short is no longer available.'
+        : 'This YouTube Short preview is temporarily unavailable.',
+      canonicalUrl,
+    })
   }
 
   const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null

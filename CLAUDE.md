@@ -1030,7 +1030,9 @@ point — `viewerId` is never selected; the 60s in-process cache revalidates ban
 and hidden-playlist state on every hit; `RankMode` plumbing is reserved for
 hot/rising/new). Recording writes detail + aggregate atomically via
 `recordCollectionEvent()` in `src/lib/discovery/record.ts` (fire-and-forget, deduped
-30min/signed-in + 60s/anon). Curator surfaces: `/api/tags` GET includes per-tag
+30min/signed-in + 60s/anon), then independently prunes detail older than 90 days through an
+hourly process-local throttle; prune failure cannot roll back the accepted pair, and aggregates
+are never pruned. Curator surfaces: `/api/tags` GET includes per-tag
 `viewCount/cloneCount/rank` + totals; `/tags` shows a This-week summary + leaderboard promo
 band; the public profile `/t/{username}` shows a stat strip + per-card stats (public-tag
 aggregates only — a since-privated tag's history never leaks). The leaderboard pages are
@@ -1057,6 +1059,7 @@ SENTRY_ENVIRONMENT=       # 'staging' or 'production' (set in fly.toml/fly.produ
 ADMIN_USER_IDS=           # Immutable account IDs to persist as admins on startup
 ADMIN_USERNAMES=          # Strict all-match legacy bootstrap; rejected lists fail startup
 TWITTER_OAUTH_REDIRECT_URI= # Overrides the OAuth callback URL (see "OAuth callback host" below). Prod only.
+TRUST_PROXY_IP_HEADERS=   # Set true only behind a proxy that overwrites X-Forwarded-For/X-Real-IP; Fly uses Fly-Client-IP.
 ```
 
 ### OAuth callback host (the `adhx.com` → `adhtwitter.com` bug)

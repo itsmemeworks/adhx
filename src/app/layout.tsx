@@ -10,11 +10,10 @@ import {
 } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/lib/theme/context'
-import { PreferencesProvider } from '@/lib/preferences-context'
 import { AppShell } from '@/components/AppShell'
-import { FontProvider } from '@/components/FontProvider'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { getCurrentUserId } from '@/lib/auth/session'
 
 // Body fonts - user can choose in settings
 const ibmPlex = IBM_Plex_Sans({
@@ -179,7 +178,11 @@ const websiteJsonLd = {
   },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // This immutable, ban-aware server identity binds the RSC payload to the
+  // account that was authorized to render it. AppShell does not trust a
+  // refreshed payload until /api/auth/me settles to this exact same ID.
+  const serverAccountId = await getCurrentUserId()
   // Browser translation stays ENABLED on purpose (owner decision): reading a
   // Spanish tweet in English is a feature, not a hazard to be switched off.
   // What it costs us is that Chrome/Safari replace the text nodes React owns
@@ -242,11 +245,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable}`}
       >
         <ThemeProvider>
-          <PreferencesProvider>
-            <FontProvider>
-              <AppShell>{children}</AppShell>
-            </FontProvider>
-          </PreferencesProvider>
+          <AppShell serverAccountId={serverAccountId}>{children}</AppShell>
         </ThemeProvider>
       </body>
     </html>

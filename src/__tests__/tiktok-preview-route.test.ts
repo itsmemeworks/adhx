@@ -30,6 +30,7 @@ vi.mock('@/lib/utils/content-metadata', () => ({
   buildSnippetDescription: () => 'TikTok preview',
   attributionFact: () => 'TikTok video',
   previewPageMetadata: (value: unknown) => value,
+  unavailablePreviewMetadata: (value: unknown) => value,
 }))
 
 vi.mock('@/lib/theater/shared-seed', () => ({

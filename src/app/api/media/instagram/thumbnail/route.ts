@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 import { captureException } from '@/lib/sentry'
 import { fetchReelMetadata, isAllowedImageUrl, isValidReelId } from '@/lib/media/instafix'
 import { fetchWithAllowlistedRedirects, isUntrustedMediaRedirectError } from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 const INSTAGRAM_THUMBNAIL_HOSTS = [
   'cdninstagram.com',
@@ -25,10 +27,16 @@ const INSTAGRAM_THUMBNAIL_HOSTS = [
  * for every gallery view of the same Reel.
  */
 
-const thumbnailUrlCache = new Map<string, { url: string; ts: number }>()
 const CACHE_TTL = 30 * 60 * 1000 // 30 min — under the signed-URL expiry window
+const thumbnailUrlCache = new TtlLruCache<string, string>({
+  maxSize: 1_000,
+  ttlMs: CACHE_TTL,
+})
 
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const id = request.nextUrl.searchParams.get('id')
 
   if (!id || !isValidReelId(id)) {
@@ -36,11 +44,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let cdnUrl: string | undefined
-    const cached = thumbnailUrlCache.get(id)
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      cdnUrl = cached.url
-    }
+    let cdnUrl = thumbnailUrlCache.get(id)
 
     if (!cdnUrl) {
       const meta = await fetchReelMetadata(id)
@@ -48,14 +52,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'No thumbnail available' }, { status: 404 })
       }
       cdnUrl = meta.imageUrl
-      thumbnailUrlCache.set(id, { url: cdnUrl, ts: Date.now() })
-
-      if (thumbnailUrlCache.size > 1000) {
-        const now = Date.now()
-        for (const [k, v] of thumbnailUrlCache.entries()) {
-          if (now - v.ts > CACHE_TTL) thumbnailUrlCache.delete(k)
-        }
-      }
+      thumbnailUrlCache.set(id, cdnUrl)
     }
 
     // Defense-in-depth: never fetch a URL that isn't an allowlisted IG CDN host.

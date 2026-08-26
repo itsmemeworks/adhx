@@ -34,6 +34,7 @@ import { TheaterProgressLine, progressKindFor, progressKindForPin } from './Thea
 import { feedItemToTheaterItem } from './collection-item'
 import {
   CLIENT_EVENTS,
+  clientEventMatchesAccount,
   notifyCollectionChanged,
   type CollectionFeedChangedDetail,
 } from '@/lib/client-events'
@@ -87,6 +88,7 @@ import { useTheaterLiveUrl } from './useTheaterLiveUrl'
 import { resolveTheaterChrome } from './theater-chrome'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 import { SignInModal, useAuthMe } from '@/components/auth'
+import { useAppAccountScope } from '@/components/AppShell'
 import { TagQuickPicker } from '@/components/tags'
 import type {
   RepeatMode,
@@ -245,6 +247,13 @@ export function TheaterShell({
 }: TheaterShellProps) {
   const router = useRouter()
   const authMe = useAuthMe()
+  const appAccountScope = useAppAccountScope()
+  // Isolated component renders have no AppShell. In the real app, account
+  // actions stay disabled until the live client identity exactly matches the
+  // immutable account ID bound into the current RSC payload.
+  const accountScopeTrusted = appAccountScope?.trusted ?? true
+  const scopedAuthMe = accountScopeTrusted ? authMe.me : null
+  const authScopeLoading = authMe.loading || !accountScopeTrusted
   const isPersonal = mode === 'personal'
   // Playlist mode (`/t/{username}/{tag}`) is a fixed curated queue that loops
   // (wrapOnly all⇄one). Saved (`/saved`) defaults to looping the list too,
@@ -273,9 +282,18 @@ export function TheaterShell({
   })
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode
-  // SSR auth is only a hydration hint. Once the client account request has
-  // produced a signed-in OR signed-out shape, that settled result wins.
-  const signedIn = authMe.me ? !!authMe.me.authenticated : authed
+  // The SSR hint cannot authorize controls by itself. Both the live auth read
+  // and AppShell's server-bound scope must have settled and matched.
+  const signedIn = appAccountScope
+    ? !authScopeLoading && !!scopedAuthMe?.authenticated
+    : authMe.me
+      ? !!authMe.me.authenticated
+      : authed
+  const clientEventAccountId = authScopeLoading
+    ? undefined
+    : scopedAuthMe?.authenticated && typeof scopedAuthMe.user?.id === 'string'
+      ? scopedAuthMe.user.id
+      : null
   const goTheaterTab = useCallback(
     (tab: PersonalTab) => {
       if (isPersonal) {
@@ -639,6 +657,7 @@ export function TheaterShell({
 
   useEffect(() => {
     const onFeedChanged = (event: Event) => {
+      if (!clientEventMatchesAccount(event, clientEventAccountId)) return
       const detail = (event as CustomEvent<CollectionFeedChangedDetail>).detail
       if (detail?.removed) {
         const removed = detail.removed as CollectionFeedChangedDetail['removed'] & {
@@ -686,6 +705,7 @@ export function TheaterShell({
     seenSet.unmarkSeen,
     patchAuthoritativeMembership,
     clearAuthoritativeMembership,
+    clientEventAccountId,
   ])
 
   const archiveCurrent = useCallback(() => {
@@ -825,6 +845,7 @@ export function TheaterShell({
   // in place. Shared/live chips read `liveTagsByKey`.
   useEffect(() => {
     function handleTagsChanged(e: Event) {
+      if (!clientEventMatchesAccount(e, clientEventAccountId)) return
       const detail = (e as CustomEvent<{ platform?: string; bookmarkId?: string; tags?: string[] }>)
         .detail
       if (!detail?.bookmarkId) return
@@ -845,7 +866,7 @@ export function TheaterShell({
     }
     window.addEventListener('bookmark-tags-changed', handleTagsChanged)
     return () => window.removeEventListener('bookmark-tags-changed', handleTagsChanged)
-  }, [isPersonal, advanceMembershipRevision])
+  }, [isPersonal, advanceMembershipRevision, clientEventAccountId])
 
   // Dialog a11y: move focus into the overlay on mount, restore on unmount.
   useEffect(() => {
@@ -1308,9 +1329,9 @@ export function TheaterShell({
   // so a reload of an already-tagged save shows Tag N. The
   // tags-changed listener above covers in-session adds.
   useEffect(() => {
-    if (mode !== 'shared' || !authMe.me?.authenticated) return
+    if (mode !== 'shared' || !scopedAuthMe?.authenticated) return
     lookupMembership(displayItems)
-  }, [mode, authMe.me?.authenticated, displayItems, lookupMembership])
+  }, [mode, scopedAuthMe?.authenticated, displayItems, lookupMembership])
 
   // Kept in a ref (rather than effect deps) so goNext/goPrev/the dwell timer
   // (useTheaterDwell) only reset when `currentKey` itself changes, not on
@@ -1806,8 +1827,11 @@ export function TheaterShell({
   // Keyboard nav (extracted to useTheaterKeyboard.ts — see its doc comment
   // for the full ↓/→/j vs. collection-collection-tab keymap rationale).
   const [helpOpen, setHelpOpen] = useState(false)
+  const [keyboardReady, setKeyboardReady] = useState(false)
   const onToggleHelp = useCallback(() => setHelpOpen((open) => !open), [])
   useTheaterKeyboard({
+    disabled: !accountScopeTrusted,
+    onReadyChange: setKeyboardReady,
     isPersonal,
     personalTab,
     goNext: isCollectionTab ? skipCurrent : goNextUser,
@@ -1952,16 +1976,14 @@ export function TheaterShell({
     }).length
   }, [displayItems, seenSet])
 
-  // Save-collection CTA (collection mode only): clones the shared tag to the
-  // signed-in visitor's own account via the existing clone endpoint. Auth
-  // state is `useAuthMe()`'s live client read rather than the `authed` SSR
-  // prop, so a sign-in completed inside the modal (no full reload) is picked
-  // up immediately via `refresh()` below.
-  const isPlaylistAuthed = loop ? !!authMe.me?.authenticated : authed
+  // Save-playlist CTA: clones the shared tag to the signed-in visitor's own
+  // account. `useAuthMe()` must also match AppShell's server-bound RSC scope;
+  // an in-modal sign-in therefore waits for that refreshed payload.
+  const isPlaylistAuthed = signedIn
   // Viewing your OWN public playlist: cloning it (or being told to "make
   // your own") is nonsense — the chromes swap those CTAs for a Manage link.
   const isPlaylistOwner =
-    !!playlist && !!authMe.me?.user?.username && authMe.me.user.username === playlist.curator
+    !!playlist && !!scopedAuthMe?.user?.username && scopedAuthMe.user.username === playlist.curator
   // Signed-in preview: same Live ⇄ Saved cluster as `/`. Live is
   // current (this page is the live pulse with a pinned lead); Saved
   // and Close are the personal-theater routes. Do not pass `personalChrome`
@@ -2030,9 +2052,9 @@ export function TheaterShell({
   useEffect(() => {
     if (mode !== 'shared' || !sharedItem) return
     if (awaitingSharedResolve) return
-    if (authMe.loading) return
+    if (authScopeLoading) return
     if (sharedAutoSaveRef.current) return
-    const authenticated = !!authMe.me?.authenticated
+    const authenticated = !!scopedAuthMe?.authenticated
     const ctx = readSharedOpenContext()
     const reason = sharedAutoSaveReason({
       mode,
@@ -2108,8 +2130,8 @@ export function TheaterShell({
     sharedItem,
     leadUnavailable,
     awaitingSharedResolve,
-    authMe.loading,
-    authMe.me,
+    authScopeLoading,
+    scopedAuthMe,
     patchAuthoritativeMembership,
   ])
 
@@ -2184,7 +2206,7 @@ export function TheaterShell({
   // re-triggers it.
   useEffect(() => {
     if (!playlist || typeof window === 'undefined' || autoSaveTriggeredRef.current) return
-    if (authMe.loading) return
+    if (authScopeLoading) return
     const params = new URLSearchParams(window.location.search)
     if (params.get('save') !== '1') return
     autoSaveTriggeredRef.current = true
@@ -2192,7 +2214,7 @@ export function TheaterShell({
     const qs = params.toString()
     window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''))
     if (isPlaylistAuthed) void performClone()
-  }, [playlist, authMe.loading, isPlaylistAuthed, performClone])
+  }, [playlist, authScopeLoading, isPlaylistAuthed, performClone])
 
   // --- Effective render inputs: the personal theater's Collection tab is a wholly
   // separate list from the general `current`/`displayItems` (which always
@@ -2309,6 +2331,7 @@ export function TheaterShell({
       aria-modal={isPersonal ? true : undefined}
       aria-label={isPersonal ? 'Saved' : undefined}
       tabIndex={isPersonal ? -1 : undefined}
+      data-theater-keyboard-ready={keyboardReady ? 'true' : undefined}
       className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
     >
       {sharedResolve ? (

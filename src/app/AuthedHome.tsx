@@ -25,7 +25,7 @@ import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 import { useSyncListener } from './useSyncListener'
 import { collectionPath } from '@/lib/theater/collection-href'
-import { notifyCollectionChanged } from '@/lib/client-events'
+import { clientEventMatchesCurrentAccount, notifyCollectionChanged } from '@/lib/client-events'
 
 export default function AuthedHome(): React.ReactElement {
   return (
@@ -533,6 +533,7 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     if (!isAuthenticated) return
     const handler = (e: Event) => {
+      if (!clientEventMatchesCurrentAccount(e)) return
       void fetchTags()
       const detail = (e as CustomEvent).detail as
         { platform?: string; bookmarkId?: string; tags?: string[] } | undefined

@@ -37,7 +37,7 @@ vi.mock('@/lib/db', () => ({
 
 function createRequest(username: string, id: string, ip = '127.0.0.1'): NextRequest {
   return new NextRequest(`http://localhost:3000/api/share/tweet/${username}/${id}`, {
-    headers: { 'x-forwarded-for': ip },
+    headers: { 'fly-client-ip': ip },
   })
 }
 

@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "adhx-save",
-  "description": "Save an X, Instagram, TikTok, or YouTube post to ADHX in one click.",
+  "description": "Save an X, Instagram, TikTok, or YouTube Short to ADHX in one click.",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",

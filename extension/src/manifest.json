@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "version": "0.1.0",
   "name": "Save to ADHX",
-  "description": "Save an X, Instagram, TikTok, or YouTube post to ADHX in one click.",
+  "description": "Save an X, Instagram, TikTok, or YouTube Short to ADHX in one click.",
   "icons": {
     "16": "images/icon-16.png",
     "32": "images/icon-32.png",

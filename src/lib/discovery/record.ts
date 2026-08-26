@@ -1,6 +1,6 @@
 import { db, runInTransaction } from '@/lib/db'
 import { collectionAggregates, collectionEvents, tagShares } from '@/lib/db/schema'
-import { and, eq, gt, sql } from 'drizzle-orm'
+import { and, eq, gt, lt, sql } from 'drizzle-orm'
 import { recordAnalytic } from '@/lib/analytics/record'
 
 /**
@@ -21,6 +21,33 @@ export type CollectionEventAction = 'view' | 'clone'
 
 const SIGNED_IN_DEDUPE_WINDOW_MS = 30 * 60 * 1000 // 30 minutes
 const ANON_DEDUPE_WINDOW_MS = 60_000 // 60 seconds
+const RAW_EVENT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000
+const RETENTION_PRUNE_INTERVAL_MS = 60 * 60 * 1000
+
+// Runtime pruning is deliberately outside the event+aggregate transaction:
+// an unavailable/busy retention delete must never roll back an accepted event
+// or leave its durable all-time aggregate out of sync. The database identity is
+// tracked so isolated test databases (and a replaced runtime handle) get an
+// immediate first pass; in a normal process this reduces the indexed DELETE to
+// at most once per hour. Startup pruning remains the correctness backstop.
+let retentionDatabase: unknown
+let nextRetentionPruneAt = 0
+
+function maybePruneExpiredEvents(nowMs: number): void {
+  const database = db
+  if (retentionDatabase === database && nowMs < nextRetentionPruneAt) return
+
+  retentionDatabase = database
+  nextRetentionPruneAt = nowMs + RETENTION_PRUNE_INTERVAL_MS
+
+  try {
+    const cutoff = new Date(nowMs - RAW_EVENT_RETENTION_MS).toISOString()
+    database.delete(collectionEvents).where(lt(collectionEvents.createdAt, cutoff)).run()
+  } catch {
+    // Best-effort and separately committed. Retry after the bounded throttle;
+    // accepted event+aggregate writes above remain atomic and authoritative.
+  }
+}
 
 /** Whether `(ownerUserId, tag)` is currently a publicly shared playlist. */
 function isPublicCollection(ownerUserId: string, tag: string): boolean {
@@ -146,6 +173,7 @@ export function recordCollectionEvent(opts: {
         })
         .run()
     })
+    maybePruneExpiredEvents(Date.now())
     recordAnalytic({
       name: action === 'clone' ? 'playlist.clone' : 'playlist.view',
       userId: viewerId,

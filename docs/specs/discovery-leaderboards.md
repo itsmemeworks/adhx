@@ -19,19 +19,17 @@ layer is built mode-aware from day one even though MVP ships only "top".
 
 ## 2. What already exists (don't rebuild)
 
-Post-level view stats are DONE — the `activity` event log already records `preview` (preview
-pages server-side + 2s theater dwell via `POST /api/activity/preview`), `save`, `read`,
-`share`, and `getTrendingItems()` derives `saveCount`/`trendCount` from it. Nothing in this
-spec touches that pipeline.
+Post-level activity is separate: the `activity` log records `preview`, `save`, and `share`,
+and `getTrendingItems()` derives `saveCount`/`trendCount` from it. Archive is private and never
+writes a public pulse. Playlist views and clones belong to the discovery tables below, not
+`activity`.
 
-What does NOT exist, verified 2026-08-21:
+This feature added the missing playlist-level signal:
 
-- The collection theater (`TheaterShell mode="collection"`) deliberately records **no** events
-  (see the comment in `TheaterShell.tsx` — collection mode marks seen locally only).
-- The `/t/{username}/{tag}` page server component records nothing.
-- The clone endpoint (`/api/share/tag/by-name/[username]/[tag]/clone`) records nothing.
-
-So a collection can be shared, viewed, and cloned a thousand times and we have zero signal.
+- The `/t/{username}/{tag}` server component records eligible, bot-filtered public views.
+- The clone endpoint records accepted clones.
+- `collection_events` retains bounded detail for finite windows, while
+  `collection_aggregates` preserves viewer-free all-time totals.
 
 ## 3. Data model: `collection_events` (new append-only table)
 
@@ -85,8 +83,12 @@ It intentionally has no viewer identifier.
 The startup migration creates the aggregate table, then performs one transaction that
 recomputes/replaces aggregates from the complete legacy event log, records a migration-state
 marker, and prunes old raw rows. A crash rolls back the entire transaction, so restart cannot
-double count or lose history. Later boots only prune expired detail. Every accepted event
-inserts its raw row and increments the aggregate in one transaction.
+double count or lose history. Later boots also prune expired detail. Every accepted event
+inserts its raw row and increments the aggregate in one transaction, then the recorder runs an
+independently committed, indexed retention delete at most once per process-hour. The throttle is
+only a write-overhead optimization: a new process prunes on its first accepted event, and a
+long-lived process keeps pruning while traffic continues. Delete failures are swallowed and
+retried after the throttle without rolling back or separating the accepted event and aggregate.
 
 ## 4. Recording (`src/lib/discovery/record.ts`)
 
@@ -107,6 +109,9 @@ Rules, enforced inside the recorder so call sites stay dumb:
   Sybil-proof — doesn't need to be at this scale; `hidden` + admin route (§8) is the backstop.
 - **Public-only**: recording checks `tag_shares.isPublic` — private collections accrue nothing
   (and a private collection's historical events are excluded at read time anyway, §5).
+- **Continuous bounded retention**: after an accepted event commits, an hourly process-local
+  throttle allows one best-effort deletion of detail older than 90 days. Aggregates are never
+  touched by retention, so all-time counts survive raw expiry.
 - `item_view` (per-post dwell _inside_ a collection theater) is deliberately **not** in MVP.
   The theater's "collection mode records nothing to the public pulse" rule stays; if we later
   want per-item stats for curators, they land in `collection_events` (never `activity`) so the
@@ -228,7 +233,8 @@ The ask: theater sort modes like Reddit's. What must exist _now_ so that's a sma
 ## 9. Tests
 
 - Recorder: self-view no-op, private-tag no-op, dedupe windows (signed-in 30min / anon 60s),
-  bot filter, errors swallowed.
+  bot filter, errors swallowed, no-restart raw expiry, aggregate survival, and prune-failure
+  isolation from the accepted event transaction.
 - Rank: window boundaries (day/week/month/all), aggregate-backed all-time history after raw
   prune, clone weighting, public-only join (private tag vanishes), `hidden` exclusion,
   tie-break, anonymity (no `viewerId` in any returned shape —
@@ -238,12 +244,13 @@ The ask: theater sort modes like Reddit's. What must exist _now_ so that's a sma
 
 ## 10. MVP cut-line
 
-**In**: `collection_events` table + migration + test DDL, recorder with view/clone hooks,
-`rank.ts` with `top` × 4 windows, `/leaderboard/{window}` page (podium direction A) + JSON-LD
+**In**: `collection_events` + `collection_aggregates` tables, migration + test DDL, recorder
+with view/clone hooks, `rank.ts` with `top` × 4 windows, `/leaderboard/{window}` page
+(podium direction A) + JSON-LD
 
 - sitemap, `/api/collections/trending`, the /tags owner upgrade + profile stat strip (§6),
   moderation hide, tests.
 
 **Out (explicitly)**: hot/rising/new implementations (plumbing only), per-item `item_view`
-events, curator rank ladder in Settings, rank-change notifications/digest, rollup tables,
-per-category leaderboards.
+events, curator rank ladder in Settings, rank-change notifications/digest, and per-category
+leaderboards.

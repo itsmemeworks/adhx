@@ -11,9 +11,17 @@ import { NextRequest } from 'next/server'
 const mockFetch = vi.fn()
 global.fetch = mockFetch
 
+const mocks = vi.hoisted(() => ({
+  mediaRateLimit: vi.fn(),
+}))
+
 vi.mock('@/lib/sentry', () => ({
   metrics: { mediaUnavailable: vi.fn() },
   captureException: vi.fn(),
+}))
+
+vi.mock('@/lib/rate-limit', () => ({
+  mediaRateLimit: mocks.mediaRateLimit,
 }))
 
 function createRequest(params: Record<string, string>): NextRequest {
@@ -63,17 +71,46 @@ const mockLongVideoResponse = {
   },
 }
 
+function jsonResponse(data: unknown): Response {
+  return new Response(JSON.stringify(data), {
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
 describe('API: /api/media/video/info', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
+    mocks.mediaRateLimit.mockReturnValue(null)
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   describe('Input validation', () => {
+    it.each([undefined, 'true'])(
+      'enforces the public media IP limiter before resolving (withSizes=%s)',
+      async (withSizes) => {
+        mocks.mediaRateLimit.mockReturnValueOnce(
+          new Response(JSON.stringify({ error: 'Too many requests' }), { status: 429 }),
+        )
+        const request = createRequest({
+          author: 'limited',
+          tweetId: '100',
+          ...(withSizes ? { withSizes } : {}),
+        })
+        const { GET } = await import('@/app/api/media/video/info/route')
+
+        const response = await GET(request)
+
+        expect(response.status).toBe(429)
+        expect(mocks.mediaRateLimit).toHaveBeenCalledWith(request)
+        expect(mockFetch).not.toHaveBeenCalled()
+      },
+    )
+
     it('returns 400 when author is missing', async () => {
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(createRequest({ tweetId: '123' }))
@@ -115,10 +152,7 @@ describe('API: /api/media/video/info', () => {
     }
 
     it('returns requiresHls: false for videos under the HLS threshold', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(veryShortVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(veryShortVideoResponse))
 
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
@@ -131,10 +165,7 @@ describe('API: /api/media/video/info', () => {
     })
 
     it('does not make HEAD requests by default (bitrate estimation)', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(veryShortVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(veryShortVideoResponse))
 
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
@@ -150,10 +181,7 @@ describe('API: /api/media/video/info', () => {
 
     it('fetches actual file sizes via HEAD requests when withSizes=true', async () => {
       // Mock FxTwitter API
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockShortVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockShortVideoResponse))
       // Mock HEAD requests - actual file sizes
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -188,10 +216,7 @@ describe('API: /api/media/video/info', () => {
     })
 
     it('makes HEAD requests with proper headers when withSizes=true', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockShortVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockShortVideoResponse))
       // Mock HEAD requests
       mockFetch.mockResolvedValue({
         ok: true,
@@ -209,25 +234,23 @@ describe('API: /api/media/video/info', () => {
     })
 
     it('does not HEAD or expose untrusted FxTwitter media targets', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            tweet: {
-              media: {
-                videos: [
-                  {
-                    duration: 120,
-                    formats: [
-                      { url: 'https://evil.example/master.m3u8', bitrate: null },
-                      { url: 'https://evil.example/video.mp4', bitrate: 832000 },
-                    ],
-                  },
-                ],
-              },
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          tweet: {
+            media: {
+              videos: [
+                {
+                  duration: 120,
+                  formats: [
+                    { url: 'https://evil.example/master.m3u8', bitrate: null },
+                    { url: 'https://evil.example/video.mp4', bitrate: 832000 },
+                  ],
+                },
+              ],
             },
-          }),
-      })
+          },
+        }),
+      )
 
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(
@@ -242,22 +265,20 @@ describe('API: /api/media/video/info', () => {
     })
 
     it('does not follow a trusted HEAD target redirect to an untrusted host', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            tweet: {
-              media: {
-                videos: [
-                  {
-                    duration: 120,
-                    formats: [{ url: 'https://video.twimg.com/video.mp4', bitrate: 832000 }],
-                  },
-                ],
-              },
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          tweet: {
+            media: {
+              videos: [
+                {
+                  duration: 120,
+                  formats: [{ url: 'https://video.twimg.com/video.mp4', bitrate: 832000 }],
+                },
+              ],
             },
-          }),
-      })
+          },
+        }),
+      )
       mockFetch.mockResolvedValue(
         new Response(null, {
           status: 302,
@@ -277,10 +298,7 @@ describe('API: /api/media/video/info', () => {
 
   describe('Long video response', () => {
     it('returns requiresHls: true for long videos with m3u8 URL', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockLongVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockLongVideoResponse))
 
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
@@ -293,10 +311,7 @@ describe('API: /api/media/video/info', () => {
     })
 
     it('returns actual file sizes for long videos when withSizes=true', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockLongVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockLongVideoResponse))
       // Mock HEAD requests with large file sizes
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -328,15 +343,13 @@ describe('API: /api/media/video/info', () => {
       const cancel = vi.fn()
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
-          controller.enqueue(new Uint8Array([1]))
+          for (let i = 0; i < 33; i += 1) {
+            controller.enqueue(new Uint8Array(64 * 1024))
+          }
         },
         cancel,
       })
-      mockFetch.mockResolvedValueOnce(
-        new Response(body, {
-          headers: { 'content-length': String(2 * 1024 * 1024 + 1) },
-        }),
-      )
+      mockFetch.mockResolvedValueOnce(new Response(body))
 
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(createRequest({ author: 'oversized', tweetId: '989' }))
@@ -346,10 +359,7 @@ describe('API: /api/media/video/info', () => {
     })
 
     it('returns 404 when no video found', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ tweet: { media: {} } }),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse({ tweet: { media: {} } }))
 
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
@@ -360,40 +370,38 @@ describe('API: /api/media/video/info', () => {
     })
 
     it('selects the Nth video when index is set (multi-video tweets)', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            tweet: {
-              media: {
-                videos: [
-                  {
-                    duration: 30,
-                    url: 'https://video.twimg.com/first.mp4',
-                    formats: [
-                      {
-                        url: 'https://video.twimg.com/first-hd.mp4',
-                        bitrate: 2176000,
-                        container: 'mp4',
-                      },
-                    ],
-                  },
-                  {
-                    duration: 90,
-                    url: 'https://video.twimg.com/second.mp4',
-                    formats: [
-                      {
-                        url: 'https://video.twimg.com/second-hd.mp4',
-                        bitrate: 2176000,
-                        container: 'mp4',
-                      },
-                    ],
-                  },
-                ],
-              },
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          tweet: {
+            media: {
+              videos: [
+                {
+                  duration: 30,
+                  url: 'https://video.twimg.com/first.mp4',
+                  formats: [
+                    {
+                      url: 'https://video.twimg.com/first-hd.mp4',
+                      bitrate: 2176000,
+                      container: 'mp4',
+                    },
+                  ],
+                },
+                {
+                  duration: 90,
+                  url: 'https://video.twimg.com/second.mp4',
+                  formats: [
+                    {
+                      url: 'https://video.twimg.com/second-hd.mp4',
+                      bitrate: 2176000,
+                      container: 'mp4',
+                    },
+                  ],
+                },
+              ],
             },
-          }),
-      })
+          },
+        }),
+      )
 
       const { GET } = await import('@/app/api/media/video/info/route')
       const response = await GET(createRequest({ author: 'user', tweetId: '123', index: '2' }))
@@ -475,6 +483,49 @@ describe('API: /api/media/video/info', () => {
       expect(response.status).toBe(500)
       const data = await response.json()
       expect(data.error).toContain('Failed to fetch video info')
+    })
+  })
+
+  describe('Caching', () => {
+    it('reuses cached video info without re-fetching FxTwitter', async () => {
+      mockFetch.mockImplementation(() => Promise.resolve(jsonResponse(mockShortVideoResponse)))
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      const request = createRequest({ author: 'cacheuser', tweetId: '800000' })
+      await GET(request)
+      await GET(request)
+
+      expect(mockFetch).toHaveBeenCalledOnce()
+    })
+
+    it('expires video info after one hour', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-08-26T12:00:00Z'))
+      mockFetch.mockImplementation(() => Promise.resolve(jsonResponse(mockShortVideoResponse)))
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      const request = createRequest({ author: 'expiryuser', tweetId: '800001' })
+      await GET(request)
+      mockFetch.mockClear()
+
+      vi.advanceTimersByTime(60 * 60 * 1_000)
+      await GET(request)
+
+      expect(mockFetch).toHaveBeenCalledOnce()
+    })
+
+    it('evicts the least-recently-used info after 500 live keys', async () => {
+      mockFetch.mockImplementation(() => Promise.resolve(jsonResponse(mockShortVideoResponse)))
+
+      const { GET } = await import('@/app/api/media/video/info/route')
+      for (let i = 0; i <= 500; i++) {
+        await GET(createRequest({ author: 'boundsuser', tweetId: String(2_000_000 + i) }))
+      }
+      mockFetch.mockClear()
+
+      await GET(createRequest({ author: 'boundsuser', tweetId: '2000000' }))
+
+      expect(mockFetch).toHaveBeenCalledOnce()
     })
   })
 })

@@ -43,6 +43,15 @@ export async function addSessionCookie(
 /** Theater chrome is desktop-only at lg+. Do not press Escape — on the
  * personal theater it means Close and dumps you on `/library`. */
 export async function expectTheaterReady(page: Page): Promise<void> {
+  // AppShell deliberately keeps account-owned controls inert until the live
+  // client identity matches the immutable account scope in the RSC payload.
+  // Visible theater chrome can paint before that auth handshake completes.
+  await expect(page.locator('[data-app-account-scope="trusted"]')).toHaveCount(1, {
+    timeout: 30_000,
+  })
+  await expect(page.locator('[data-theater-keyboard-ready="true"]')).toHaveCount(1, {
+    timeout: 30_000,
+  })
   const next = page.getByRole('button', { name: 'Next post' })
   await expect(next).toBeVisible({ timeout: 30_000 })
   // All Clear keeps Next mounted (disabled). A Live→Saved local flip uses
@@ -285,12 +294,49 @@ export async function fetchFeedItem(
 
 /** Other-window path: BroadcastChannel → local tweet-added (AppShell bridge). */
 export async function broadcastAdded(page: Page, added: Record<string, unknown>): Promise<void> {
-  await page.evaluate((item) => {
-    new BroadcastChannel('adhx-client-events').postMessage({
-      name: 'tweet-added',
-      detail: { added: item },
-    })
-  }, added)
+  const authResponse = await page.request.get('/api/auth/me')
+  if (!authResponse.ok()) throw new Error(`auth lookup failed ${authResponse.status()}`)
+  const auth = (await authResponse.json()) as { user?: { id?: unknown } }
+  const accountId = auth.user?.id
+  if (typeof accountId !== 'string') throw new Error('auth lookup missing account id')
+
+  await page.evaluate(
+    ({ item, eventAccountId }) => {
+      return new Promise<void>((resolve, reject) => {
+        const expected = item as { id?: unknown; platform?: unknown }
+        const channel = new BroadcastChannel('adhx-client-events')
+        const timeout = window.setTimeout(() => {
+          cleanup()
+          reject(new Error('timed out waiting for local tweet-added delivery'))
+        }, 5_000)
+        const onAdded = (event: Event) => {
+          const delivered = (event as CustomEvent<{ added?: { id?: unknown; platform?: unknown } }>)
+            .detail?.added
+          if (
+            delivered?.id !== expected.id ||
+            (delivered.platform ?? 'twitter') !== (expected.platform ?? 'twitter')
+          ) {
+            return
+          }
+          cleanup()
+          resolve()
+        }
+        const cleanup = () => {
+          window.clearTimeout(timeout)
+          window.removeEventListener('tweet-added', onAdded)
+          channel.close()
+        }
+
+        window.addEventListener('tweet-added', onAdded)
+        channel.postMessage({
+          name: 'tweet-added',
+          detail: { added: item },
+          accountId: eventAccountId,
+        })
+      })
+    },
+    { item: added, eventAccountId: accountId },
+  )
 }
 
 export async function openTheaterQueue(page: Page) {

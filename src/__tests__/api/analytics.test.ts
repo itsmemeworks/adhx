@@ -305,10 +305,52 @@ describe('GET /api/analytics', () => {
     await post({ name: 'post.send', platform: 'tiktok', id: 'v1', source: 'share' })
     const res = await GET(new NextRequest('http://localhost:3000/api/analytics?window=week'))
     expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
     const body = await res.json()
     expect(body.window).toBe('week')
     expect(body.totals['post.send']).toBe(1)
     expect(JSON.stringify(body)).not.toContain('hidden')
+    expect(JSON.stringify(body)).not.toContain('userId')
+  })
+
+  it('removes a post from topPosts when it is hidden after analytics were recorded', async () => {
+    seedActivity('hide-after-record')
+    seedActivity('still-visible')
+    await post({ name: 'post.send', platform: 'twitter', id: 'hide-after-record' })
+    await post({ name: 'post.send', platform: 'twitter', id: 'still-visible' })
+    testInstance.db
+      .insert(moderatedPosts)
+      .values({
+        platform: 'twitter',
+        bookmarkId: 'hide-after-record',
+        hidden: 1,
+        createdAt: new Date().toISOString(),
+        createdBy: 'admin',
+      })
+      .run()
+
+    const res = await GET(new NextRequest('http://localhost:3000/api/analytics?window=week'))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.totals['post.send']).toBe(2)
+    expect(body.topPosts).toEqual([
+      expect.objectContaining({ platform: 'twitter', bookmarkId: 'still-visible', shares: 1 }),
+    ])
+    expect(JSON.stringify(body.topPosts)).not.toContain('hide-after-record')
+  })
+
+  it('withholds topPosts when the moderation store is unavailable', async () => {
+    seedActivity('withheld-identity')
+    await post({ name: 'post.copy', platform: 'twitter', id: 'withheld-identity' })
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    const res = await GET(new NextRequest('http://localhost:3000/api/analytics?window=week'))
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    const body = await res.json()
+    expect(body.totals['post.copy']).toBe(1)
+    expect(body.topPosts).toEqual([])
+    expect(JSON.stringify(body)).not.toContain('withheld-identity')
     expect(JSON.stringify(body)).not.toContain('userId')
   })
 })

@@ -109,15 +109,3 @@ export function clearSessionCookie(response: NextResponse): void {
     path: '/',
   })
 }
-
-/**
- * Require authentication - returns userId or throws/redirects
- * Use in API routes that require auth
- */
-export async function requireAuth(): Promise<string> {
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    throw new Error('Unauthorized')
-  }
-  return userId
-}

@@ -317,52 +317,6 @@ export async function getCurrentUser(accessToken: string): Promise<{
   }
 }
 
-// Save tokens to database (encrypted at rest)
-export async function saveTokens(
-  userId: string,
-  username: string,
-  profileImageUrl: string | null,
-  accessToken: string,
-  refreshToken: string,
-  expiresIn: number,
-  scopes: string,
-): Promise<void> {
-  const expiresAt = Math.floor(Date.now() / 1000) + expiresIn
-  const now = new Date().toISOString()
-
-  // Encrypt tokens before storage
-  const encryptedAccessToken = encryptToken(accessToken)
-  const encryptedRefreshToken = encryptToken(refreshToken)
-
-  await db
-    .insert(oauthTokens)
-    .values({
-      userId,
-      username,
-      profileImageUrl,
-      accessToken: encryptedAccessToken,
-      refreshToken: encryptedRefreshToken,
-      expiresAt,
-      scopes,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: oauthTokens.userId,
-      set: {
-        username,
-        profileImageUrl,
-        accessToken: encryptedAccessToken,
-        refreshToken: encryptedRefreshToken,
-        expiresAt,
-        scopes,
-        updatedAt: now,
-        refreshLeaseId: null,
-        refreshLeaseStartedAt: null,
-      },
-    })
-}
-
 /**
  * Persist callback tokens only while the expected X identity is still linked
  * to this ADHX user. The identity check and token upsert share one SQLite

@@ -178,10 +178,6 @@ export function setupApiMocks(options: { userId?: string | null } = {}) {
   vi.doMock('@/lib/auth/session', () => ({
     getCurrentUserId: vi.fn().mockResolvedValue(userId),
     getSession: vi.fn().mockResolvedValue(userId ? { userId, username: 'testuser' } : null),
-    requireAuth: vi.fn().mockImplementation(async () => {
-      if (!userId) throw new Error('Unauthorized')
-      return userId
-    }),
   }))
 
   // Mock the sentry metrics (no-op)

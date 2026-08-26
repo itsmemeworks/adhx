@@ -7,6 +7,7 @@
 import { db } from '@/lib/db'
 import { analyticsEvents } from '@/lib/db/schema'
 import { and, eq, gt, sql } from 'drizzle-orm'
+import { readModeratedPostKeys } from '@/lib/admin/moderation'
 import type { AnalyticEventName } from './events'
 
 export type AnalyticsWindow = 'today' | 'week' | 'month' | 'all'
@@ -110,17 +111,24 @@ export function getAnalyticsSummary(window: AnalyticsWindow = 'week'): Analytics
       )
     : sql`${analyticsEvents.name} in ('post.view','post.save','post.share','post.send','post.copy')`
 
-  const topRows = db
-    .select({
-      platform: analyticsEvents.platform,
-      bookmarkId: analyticsEvents.bookmarkId,
-      name: analyticsEvents.name,
-      count: sql<number>`count(*)`.as('count'),
-    })
-    .from(analyticsEvents)
-    .where(topWhere)
-    .groupBy(analyticsEvents.platform, analyticsEvents.bookmarkId, analyticsEvents.name)
-    .all()
+  // Analytics rows outlive publication decisions. Re-read the complete hidden
+  // set before exposing ranked post identities so a hide takes effect
+  // immediately without one moderation lookup per result. Aggregate totals
+  // remain identity-free and keep their existing semantics.
+  const moderatedPostKeys = readModeratedPostKeys()
+  const topRows = moderatedPostKeys.ok
+    ? db
+        .select({
+          platform: analyticsEvents.platform,
+          bookmarkId: analyticsEvents.bookmarkId,
+          name: analyticsEvents.name,
+          count: sql<number>`count(*)`.as('count'),
+        })
+        .from(analyticsEvents)
+        .where(topWhere)
+        .groupBy(analyticsEvents.platform, analyticsEvents.bookmarkId, analyticsEvents.name)
+        .all()
+    : []
 
   const scored = new Map<
     string,
@@ -130,6 +138,7 @@ export function getAnalyticsSummary(window: AnalyticsWindow = 'week'): Analytics
     if (!row.platform || !row.bookmarkId) continue
     if (!POST_SCORE_EVENTS.includes(row.name as AnalyticEventName)) continue
     const key = `${row.platform}:${row.bookmarkId}`
+    if (moderatedPostKeys.ok && moderatedPostKeys.value.has(key)) continue
     const entry = scored.get(key) ?? {
       platform: row.platform,
       bookmarkId: row.bookmarkId,

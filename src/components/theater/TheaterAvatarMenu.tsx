@@ -28,6 +28,7 @@ import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
 import { usePreferences } from '@/lib/preferences-context'
 import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 import { isSavedPath } from '@/lib/theater/collection-href'
+import { setClientEventAccount } from '@/lib/client-events'
 
 // The theater is ALWAYS dark regardless of the site's light/dark theme, so
 // the dropdown panel uses a hardcoded palette rather than the Matter theme
@@ -433,7 +434,8 @@ export function TheaterAvatarMenu({
     e.stopPropagation()
     setOpen(false)
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
+      const response = await fetch('/api/auth/logout', { method: 'POST' })
+      if (response.ok) setClientEventAccount(null)
     } finally {
       window.location.href = '/'
     }

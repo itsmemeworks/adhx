@@ -16,12 +16,12 @@ vi.mock('@/lib/sentry', () => ({
   captureException: vi.fn(),
 }))
 
-function createRequest(params: Record<string, string>): NextRequest {
+function createRequest(params: Record<string, string>, ip?: string): NextRequest {
   const url = new URL('http://localhost:3000/api/media/video')
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.set(key, value)
   })
-  return new NextRequest(url)
+  return new NextRequest(url, ip ? { headers: { 'fly-client-ip': ip } } : undefined)
 }
 
 // Mock video data from FxTwitter
@@ -42,6 +42,12 @@ const mockVideoResponse = {
   },
 }
 
+function jsonResponse(data: unknown): Response {
+  return new Response(JSON.stringify(data), {
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
 describe('API: /api/media/video', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -51,6 +57,7 @@ describe('API: /api/media/video', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   describe('Input validation', () => {
@@ -76,10 +83,7 @@ describe('API: /api/media/video', () => {
   describe('Video resolution', () => {
     it('fetches video from FxTwitter API', async () => {
       // Mock FxTwitter API response
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       // Mock video stream response
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -102,38 +106,36 @@ describe('API: /api/media/video', () => {
     })
 
     it('selects the Nth video when index is set (multi-video tweets)', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            tweet: {
-              media: {
-                videos: [
-                  {
-                    url: 'https://video.twimg.com/first.mp4',
-                    formats: [
-                      {
-                        url: 'https://video.twimg.com/first-hd.mp4',
-                        bitrate: 2176000,
-                        container: 'mp4',
-                      },
-                    ],
-                  },
-                  {
-                    url: 'https://video.twimg.com/second.mp4',
-                    formats: [
-                      {
-                        url: 'https://video.twimg.com/second-hd.mp4',
-                        bitrate: 2176000,
-                        container: 'mp4',
-                      },
-                    ],
-                  },
-                ],
-              },
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          tweet: {
+            media: {
+              videos: [
+                {
+                  url: 'https://video.twimg.com/first.mp4',
+                  formats: [
+                    {
+                      url: 'https://video.twimg.com/first-hd.mp4',
+                      bitrate: 2176000,
+                      container: 'mp4',
+                    },
+                  ],
+                },
+                {
+                  url: 'https://video.twimg.com/second.mp4',
+                  formats: [
+                    {
+                      url: 'https://video.twimg.com/second-hd.mp4',
+                      bitrate: 2176000,
+                      container: 'mp4',
+                    },
+                  ],
+                },
+              ],
             },
-          }),
-      })
+          },
+        }),
+      )
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -151,10 +153,7 @@ describe('API: /api/media/video', () => {
     })
 
     it('returns 404 when no video found', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ tweet: { media: {} } }),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse({ tweet: { media: {} } }))
 
       const { GET } = await import('@/app/api/media/video/route')
       const response = await GET(createRequest({ author: 'user', tweetId: '123' }))
@@ -167,10 +166,7 @@ describe('API: /api/media/video', () => {
 
   describe('Quality selection', () => {
     it('selects preview quality (360p) when requested', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -189,10 +185,7 @@ describe('API: /api/media/video', () => {
     })
 
     it('selects HD quality (720p) by default', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -211,10 +204,7 @@ describe('API: /api/media/video', () => {
     })
 
     it('selects full quality (1080p) when requested', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -235,10 +225,7 @@ describe('API: /api/media/video', () => {
 
   describe('Response headers', () => {
     it('sets correct content-type header', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -256,10 +243,7 @@ describe('API: /api/media/video', () => {
     })
 
     it('includes cache-control header', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -274,10 +258,7 @@ describe('API: /api/media/video', () => {
     })
 
     it('includes accept-ranges header for seeking', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -294,10 +275,7 @@ describe('API: /api/media/video', () => {
 
   describe('Range requests (video seeking)', () => {
     it('forwards range header to video server', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 206,
@@ -321,6 +299,29 @@ describe('API: /api/media/video', () => {
   })
 
   describe('Error handling', () => {
+    it('rejects and cancels an oversized FxTwitter JSON response', async () => {
+      const cancel = vi.fn()
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let i = 0; i < 33; i += 1) {
+            controller.enqueue(new Uint8Array(64 * 1024))
+          }
+        },
+        cancel,
+      })
+      mockFetch.mockResolvedValueOnce(new Response(body))
+
+      const { GET } = await import('@/app/api/media/video/route')
+      const response = await GET(createRequest({ author: 'oversized', tweetId: '991' }))
+
+      expect(response.status).toBe(502)
+      await expect(response.json()).resolves.toEqual({
+        error: 'FxTwitter response exceeds maximum size',
+      })
+      expect(cancel).toHaveBeenCalledOnce()
+      expect(mockFetch).toHaveBeenCalledOnce()
+    })
+
     it('handles FxTwitter API errors', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -336,10 +337,7 @@ describe('API: /api/media/video', () => {
     })
 
     it('handles video fetch errors', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 403,
@@ -361,17 +359,12 @@ describe('API: /api/media/video', () => {
     })
 
     it('refuses an off-allowlist redirect from the Twitter video CDN', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockVideoResponse),
-        })
-        .mockResolvedValueOnce(
-          new Response(null, {
-            status: 302,
-            headers: { location: 'https://evil.example/video.mp4' },
-          }),
-        )
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse)).mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://evil.example/video.mp4' },
+        }),
+      )
 
       const { GET } = await import('@/app/api/media/video/route')
       const response = await GET(createRequest({ author: 'redirectuser', tweetId: '987654321' }))
@@ -446,10 +439,7 @@ describe('API: /api/media/video', () => {
   describe('Caching', () => {
     it('caches resolved video URLs', async () => {
       // First request - hits API
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockVideoResponse),
-      })
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockVideoResponse))
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -477,6 +467,71 @@ describe('API: /api/media/video', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1)
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('video.twimg.com'),
+        expect.any(Object),
+      )
+    })
+
+    it('expires a resolved URL after one hour', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-08-26T12:00:00Z'))
+      mockFetch.mockImplementation((input) =>
+        Promise.resolve(
+          String(input).startsWith('https://api.fxtwitter.com/')
+            ? jsonResponse(mockVideoResponse)
+            : {
+                ok: true,
+                status: 200,
+                body: new ReadableStream(),
+                headers: new Headers({ 'content-type': 'video/mp4' }),
+              },
+        ),
+      )
+
+      const { GET } = await import('@/app/api/media/video/route')
+      const params = { author: 'expiryuser', tweetId: '900001' }
+      await GET(createRequest(params, '10.1.0.1'))
+      mockFetch.mockClear()
+
+      vi.advanceTimersByTime(60 * 60 * 1_000)
+      await GET(createRequest(params, '10.1.0.1'))
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.fxtwitter.com/expiryuser/status/900001',
+        expect.any(Object),
+      )
+    })
+
+    it('evicts the least-recently-used URL after 1,000 live keys', async () => {
+      mockFetch.mockImplementation((input) =>
+        Promise.resolve(
+          String(input).startsWith('https://api.fxtwitter.com/')
+            ? jsonResponse(mockVideoResponse)
+            : {
+                ok: true,
+                status: 200,
+                body: new ReadableStream(),
+                headers: new Headers({ 'content-type': 'video/mp4' }),
+              },
+        ),
+      )
+
+      const { GET } = await import('@/app/api/media/video/route')
+      for (let i = 0; i <= 1_000; i++) {
+        await GET(
+          createRequest(
+            { author: 'boundsuser', tweetId: String(1_000_000 + i) },
+            `10.2.${Math.floor(i / 256)}.${i % 256}`,
+          ),
+        )
+      }
+      mockFetch.mockClear()
+
+      await GET(createRequest({ author: 'boundsuser', tweetId: '1000000' }, '10.3.0.1'))
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.fxtwitter.com/boundsuser/status/1000000',
         expect.any(Object),
       )
     })

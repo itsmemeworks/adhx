@@ -7,6 +7,7 @@ import {
   buildSnippetDescription,
   attributionFact,
   previewPageMetadata,
+  unavailablePreviewMetadata,
 } from '@/lib/utils/content-metadata'
 import { stubReelTheaterItem } from '@/lib/theater/shared-seed'
 import { resolveReelShared } from '@/lib/theater/resolve-shared-preview'
@@ -22,6 +23,8 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 interface Props {
   params: Promise<{ id: string }>
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function ReelPreviewPage({ params }: Props) {
   const { id } = await params
@@ -64,20 +67,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const saved = getSavedPreviewDisplay('instagram', id)
   const metadataStatus = saved ? null : await getReelMetadataStatus(id)
 
-  if (!saved && metadataStatus?.kind === 'permanent-miss') {
-    return {
-      title: 'Instagram Reel unavailable - ADHX',
-      description: 'This Instagram Reel is no longer available.',
-      robots: { index: false },
-      alternates: { canonical: canonicalUrl },
-    }
-  }
-  if (!saved && metadataStatus?.kind === 'transient-failure') {
-    return {
-      title: 'Instagram Reel',
-      description: 'Preview this Instagram Reel on ADHX.',
-      alternates: { canonical: canonicalUrl },
-    }
+  if (!saved && metadataStatus?.kind !== 'resolved') {
+    const permanent = metadataStatus?.kind === 'permanent-miss'
+    return unavailablePreviewMetadata({
+      title: permanent ? 'Instagram Reel unavailable - ADHX' : 'Instagram Reel - ADHX',
+      description: permanent
+        ? 'This Instagram Reel is no longer available.'
+        : 'This Instagram Reel preview is temporarily unavailable.',
+      canonicalUrl,
+    })
   }
 
   const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null

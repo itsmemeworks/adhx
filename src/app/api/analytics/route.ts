@@ -109,6 +109,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const window = parseAnalyticsWindow(request.nextUrl.searchParams.get('window'))
   return NextResponse.json(getAnalyticsSummary(window), {
-    headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+    // topPosts is moderation-sensitive. Shared or stale caching could keep a
+    // newly hidden identity public after the query has started withholding it.
+    headers: { 'Cache-Control': 'no-store' },
   })
 }

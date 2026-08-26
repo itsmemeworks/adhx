@@ -1,12 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchWithAllowlistedRedirects,
   isAllowedHlsUrl,
   isAllowedTwitterMediaUrl,
+  isTweetGoneCached,
   makeHostAllowlist,
+  markTweetGone,
   buildAllowlistedUrl,
   TWITTER_HLS_HOSTS,
 } from '@/lib/media/proxy'
+
+afterEach(() => vi.useRealTimers())
 
 describe('makeHostAllowlist', () => {
   it('allows an exact host match', () => {
@@ -173,5 +177,25 @@ describe('fetchWithAllowlistedRedirects', () => {
     } finally {
       fetchSpy.mockRestore()
     }
+  })
+})
+
+describe('gone tweet cache', () => {
+  it('expires negative results after ten minutes', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T12:00:00Z'))
+    markTweetGone('expiry-user/1')
+    expect(isTweetGoneCached('expiry-user/1')).toBe(true)
+
+    vi.advanceTimersByTime(10 * 60 * 1_000)
+
+    expect(isTweetGoneCached('expiry-user/1')).toBe(false)
+  })
+
+  it('hard-caps many simultaneously live tweet keys', () => {
+    for (let i = 0; i <= 1_000; i++) markTweetGone(`bounds-user/${i}`)
+
+    expect(isTweetGoneCached('bounds-user/0')).toBe(false)
+    expect(isTweetGoneCached('bounds-user/1000')).toBe(true)
   })
 })

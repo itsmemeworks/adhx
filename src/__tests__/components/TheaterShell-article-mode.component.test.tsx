@@ -8,14 +8,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
 import { act, render } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
-import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import type { PersonalTab, TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
+import {
+  notifyCollectionChanged,
+  resetClientEventBridgeForTests,
+  setClientEventAccount,
+} from '@/lib/client-events'
 
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
+
+const authState = vi.hoisted(() => ({
+  current: {
+    me: { authenticated: false } as {
+      authenticated: boolean
+      user?: { id: string }
+    },
+    loading: false,
+    refresh: vi.fn(),
+  },
+}))
 
 let captured: {
   articleMode?: boolean
   onToggleArticleMode?: () => void
   onNext?: () => void
+  onTabChange?: (tab: PersonalTab) => void
+  itemKeys?: string[]
 } = {}
 
 vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
@@ -23,16 +41,22 @@ vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
     articleMode?: boolean
     onToggleArticleMode?: () => void
     onNext?: () => void
+    collection?: { onTabChange: (tab: PersonalTab) => void }
   }) => {
     captured = {
       articleMode: props.articleMode,
       onToggleArticleMode: props.onToggleArticleMode,
       onNext: props.onNext,
+      onTabChange: props.collection?.onTabChange,
+      itemKeys: captured.itemKeys,
     }
     return null
   },
-  DesktopDock: (props: { onNext?: () => void }) => {
+  DesktopDock: (props: { onNext?: () => void; items?: TheaterItem[] }) => {
     captured.onNext = props.onNext ?? captured.onNext
+    captured.itemKeys = props.items?.map(
+      (item) => `${item.platform ?? 'twitter'}:${item.bookmarkId}`,
+    )
     return null
   },
 }))
@@ -54,7 +78,7 @@ vi.mock('@/components/theater/useTheaterFeed', () => ({
 }))
 vi.mock('@/components/auth', () => ({
   SignInModal: () => null,
-  useAuthMe: () => ({ me: { authenticated: false }, loading: false, refresh: vi.fn() }),
+  useAuthMe: () => authState.current,
 }))
 
 function videoItem(bookmarkId: string): TheaterItem {
@@ -82,6 +106,12 @@ describe('TheaterShell: articleMode reset', () => {
   beforeEach(() => {
     captured = {}
     window.localStorage.clear()
+    resetClientEventBridgeForTests()
+    authState.current = {
+      me: { authenticated: false },
+      loading: false,
+      refresh: vi.fn(),
+    }
   })
 
   it('clears article mode when advancing to the next post', async () => {
@@ -104,6 +134,12 @@ describe('TheaterShell: articleMode reset', () => {
   })
 
   it('does not clear Read when a Saved prepend bumps personalIndex on Live', async () => {
+    authState.current = {
+      me: { authenticated: true, user: { id: 'user-a' } },
+      loading: false,
+      refresh: vi.fn(),
+    }
+    setClientEventAccount('user-a', { broadcast: false })
     await act(async () => {
       render(
         <TheaterShell
@@ -136,28 +172,29 @@ describe('TheaterShell: articleMode reset', () => {
     expect(captured.articleMode).toBe(true)
 
     await act(async () => {
-      window.dispatchEvent(
-        new CustomEvent('tweet-added', {
-          detail: {
-            added: {
-              id: 's0',
-              platform: 'twitter',
-              author: 'b',
-              authorName: 'B',
-              text: 'new',
-              tweetUrl: 'https://x.com/b/status/s0',
-              createdAt: '2026-08-18T00:00:00Z',
-              processedAt: '2026-08-18T00:00:00Z',
-              isArchived: false,
-              tags: [],
-              media: [],
-              links: [],
-            },
-          },
-        }),
-      )
+      notifyCollectionChanged({
+        added: {
+          id: 's0',
+          platform: 'twitter',
+          author: 'b',
+          authorName: 'B',
+          text: 'new',
+          tweetUrl: 'https://x.com/b/status/s0',
+          createdAt: '2026-08-18T00:00:00Z',
+          processedAt: '2026-08-18T00:00:00Z',
+          isArchived: false,
+          tags: [],
+          media: [],
+          links: [],
+        } as never,
+      })
     })
     expect(captured.articleMode).toBe(true)
+
+    await act(async () => {
+      captured.onTabChange?.('collection')
+    })
+    expect(captured.itemKeys).toContain('twitter:s0')
   })
 
   it('isolates the stage so Read video stays under chrome', async () => {

@@ -169,8 +169,7 @@ const platforms = [
       title: 'Resolved TikTok',
       author: '@creator',
     },
-    // A third-party mirror cannot authoritatively produce a permanent miss.
-    unresolvedKinds: ['transient-failure'],
+    unresolvedKinds: ['permanent-miss', 'transient-failure'],
   },
   {
     name: 'YouTube',

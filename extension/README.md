@@ -1,6 +1,6 @@
 # Save to ADHX (desktop extension)
 
-Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on an **X, Instagram, TikTok, or YouTube** post opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
+Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on an **X, Instagram, TikTok, or YouTube Short** opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
 
 When you invoke it, the extension transmits the selected or active source post URL to the
 configured ADHX origin by navigating the tab. Firefox therefore declares the required

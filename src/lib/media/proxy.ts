@@ -8,6 +8,8 @@
  * captures that rule once so it can't drift across the proxies that use it.
  */
 
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
+
 /**
  * Build an SSRF allowlist predicate from a list of trusted hosts.
  *
@@ -418,7 +420,10 @@ export function imageDownloadResponse(
  * a suspended account or a mistaken removal can be reversed.
  */
 const GONE_TWEET_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
-const goneTweetCache = new Map<string, number>()
+const goneTweetCache = new TtlLruCache<string, true>({
+  maxSize: 1_000,
+  ttlMs: GONE_TWEET_CACHE_TTL,
+})
 
 /** FxTwitter's "this content is gone" statuses. */
 export function isFxTwitterGoneStatus(status: number): boolean {
@@ -427,27 +432,12 @@ export function isFxTwitterGoneStatus(status: number): boolean {
 
 /** Has `key` (`${author}/${tweetId}`) been recently marked gone? */
 export function isTweetGoneCached(key: string): boolean {
-  const ts = goneTweetCache.get(key)
-  if (ts === undefined) return false
-  if (Date.now() - ts > GONE_TWEET_CACHE_TTL) {
-    goneTweetCache.delete(key)
-    return false
-  }
-  return true
+  return goneTweetCache.get(key) === true
 }
 
 /** Record that FxTwitter reported `key` (`${author}/${tweetId}`) as gone. */
 export function markTweetGone(key: string): void {
-  goneTweetCache.set(key, Date.now())
-
-  if (goneTweetCache.size > 1000) {
-    const now = Date.now()
-    for (const [k, ts] of goneTweetCache.entries()) {
-      if (now - ts > GONE_TWEET_CACHE_TTL) {
-        goneTweetCache.delete(k)
-      }
-    }
-  }
+  goneTweetCache.set(key, true)
 }
 
 /**

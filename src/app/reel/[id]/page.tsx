@@ -3,3 +3,5 @@
 // URL, so we serve both from the same page component.
 export { default } from '@/app/reels/[id]/page'
 export { generateMetadata } from '@/app/reels/[id]/page'
+
+export const dynamic = 'force-dynamic'

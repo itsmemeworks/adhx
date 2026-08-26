@@ -17,6 +17,12 @@ import { render, waitFor, act, screen } from '@testing-library/react'
 import FeedPage from '@/app/AuthedHome'
 import type { FeedItem } from '@/components/feed/types'
 import { SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
+import {
+  notifyCollectionChanged,
+  notifyTagsChanged,
+  resetClientEventBridgeForTests,
+  setClientEventAccount,
+} from '@/lib/client-events'
 
 let currentQuery = ''
 let currentParamsObj = new URLSearchParams(currentQuery)
@@ -118,6 +124,8 @@ let tagsRequests = 0
 let feedPages: FeedItem[][] = []
 
 beforeEach(() => {
+  resetClientEventBridgeForTests()
+  setClientEventAccount('1')
   currentQuery = ''
   currentParamsObj = new URLSearchParams(currentQuery)
   urlListeners.clear()
@@ -176,9 +184,7 @@ async function mountGrid() {
 /** Fire the event `TagQuickPicker`/the grid's tag toggles dispatch. */
 function dispatchTagsChanged(bookmarkId: string, tags: string[], platform = 'twitter') {
   act(() => {
-    window.dispatchEvent(
-      new CustomEvent('bookmark-tags-changed', { detail: { platform, bookmarkId, tags } }),
-    )
+    notifyTagsChanged({ platform, bookmarkId, tags })
   })
 }
 
@@ -238,7 +244,7 @@ describe('AuthedHome: a tag added elsewhere lands on the card', () => {
     await mountGrid()
 
     act(() => {
-      window.dispatchEvent(new CustomEvent('bookmark-tags-changed'))
+      notifyCollectionChanged({ refetchFeed: false, tagsChanged: true })
     })
 
     // A dispatch without detail (a "just refresh the counts" ping) must not be

@@ -89,15 +89,6 @@ export function readPostModeration(
   })
 }
 
-/**
- * Compatibility helper for call sites where storage failure should abort the
- * request. `false` now means the store was read successfully and the post is
- * definitely visible; an unreadable store throws instead of becoming visible.
- */
-export function isPostModerated(platform: string, bookmarkId: string): boolean {
-  return requireModerationRead(readPostModeration(platform, bookmarkId))
-}
-
 export function readModeratedPostKeys(): ModerationReadResult<Set<string>> {
   return moderationRead('listing moderated posts', () => {
     const rows = db
@@ -107,10 +98,6 @@ export function readModeratedPostKeys(): ModerationReadResult<Set<string>> {
       .all()
     return new Set(rows.map((r) => `${r.platform}:${r.bookmarkId}`))
   })
-}
-
-export function listModeratedPostKeys(): Set<string> {
-  return requireModerationRead(readModeratedPostKeys())
 }
 
 export function hidePost(opts: {
@@ -186,10 +173,6 @@ export function readBannedUserIds(): ModerationReadResult<Set<string>> {
     const rows = db.select({ userId: userBans.userId }).from(userBans).all()
     return new Set(rows.map((r) => r.userId))
   })
-}
-
-export function listBannedUserIds(): Set<string> {
-  return requireModerationRead(readBannedUserIds())
 }
 
 export type BanResult =

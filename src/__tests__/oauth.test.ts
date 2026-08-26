@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, type TestDbInstance } from './api/setup'
 import * as schema from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { encryptToken } from '@/lib/auth/token-encryption'
 
 /**
  * OAuth Utilities Tests
@@ -11,6 +12,37 @@ import { eq } from 'drizzle-orm'
  */
 
 let testInstance: TestDbInstance
+
+async function seedTokenFixture({
+  userId,
+  username,
+  profileImageUrl = null,
+  accessToken,
+  refreshToken,
+  expiresIn = 3600,
+  scopes = 'tweet.read',
+}: {
+  userId: string
+  username: string
+  profileImageUrl?: string | null
+  accessToken: string
+  refreshToken: string
+  expiresIn?: number
+  scopes?: string
+}) {
+  const now = new Date().toISOString()
+  await testInstance.db.insert(schema.oauthTokens).values({
+    userId,
+    username,
+    profileImageUrl,
+    accessToken: encryptToken(accessToken),
+    refreshToken: encryptToken(refreshToken),
+    expiresAt: Math.floor(Date.now() / 1000) + expiresIn,
+    scopes,
+    createdAt: now,
+    updatedAt: now,
+  })
+}
 
 vi.mock('@/lib/db', () => ({
   get db() {
@@ -234,48 +266,52 @@ describe('OAuth Utilities', () => {
     })
   })
 
-  describe('Token Storage', () => {
-    it('saves tokens for new user', async () => {
-      const { saveTokens, getStoredTokens } = await import('@/lib/auth/oauth')
+  describe('Token Storage Reads', () => {
+    it('loads encrypted tokens from a database fixture', async () => {
+      const { getStoredTokens } = await import('@/lib/auth/oauth')
 
-      await saveTokens(
-        'user-123',
-        'testuser',
-        'https://example.com/avatar.jpg',
-        'access-token-abc',
-        'refresh-token-xyz',
-        7200, // 2 hours
-        'tweet.read users.read',
-      )
+      await seedTokenFixture({
+        userId: 'user-a',
+        username: 'testuser',
+        profileImageUrl: 'https://example.com/avatar.jpg',
+        accessToken: 'access-token-abc',
+        refreshToken: 'refresh-token-xyz',
+        expiresIn: 7200,
+        scopes: 'tweet.read users.read',
+      })
 
-      const tokens = await getStoredTokens('user-123')
+      const tokens = await getStoredTokens('user-a')
 
       expect(tokens).not.toBeNull()
-      expect(tokens?.userId).toBe('user-123')
+      expect(tokens?.userId).toBe('user-a')
       expect(tokens?.username).toBe('testuser')
       expect(tokens?.profileImageUrl).toBe('https://example.com/avatar.jpg')
       expect(tokens?.accessToken).toBe('access-token-abc')
       expect(tokens?.refreshToken).toBe('refresh-token-xyz')
     })
 
-    it('updates tokens for existing user (upsert)', async () => {
-      const { saveTokens, getStoredTokens } = await import('@/lib/auth/oauth')
+    it('loads an updated encrypted token fixture', async () => {
+      const { getStoredTokens } = await import('@/lib/auth/oauth')
 
-      // Save initial tokens
-      await saveTokens('user-123', 'olduser', null, 'old-access', 'old-refresh', 3600, 'scope1')
+      await seedTokenFixture({
+        userId: 'user-a',
+        username: 'olduser',
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+        scopes: 'scope1',
+      })
+      await testInstance.db
+        .update(schema.oauthTokens)
+        .set({
+          username: 'newuser',
+          profileImageUrl: 'new-avatar',
+          accessToken: encryptToken('new-access'),
+          refreshToken: encryptToken('new-refresh'),
+          scopes: 'scope2',
+        })
+        .where(eq(schema.oauthTokens.userId, 'user-a'))
 
-      // Update tokens
-      await saveTokens(
-        'user-123',
-        'newuser',
-        'new-avatar',
-        'new-access',
-        'new-refresh',
-        7200,
-        'scope2',
-      )
-
-      const tokens = await getStoredTokens('user-123')
+      const tokens = await getStoredTokens('user-a')
 
       expect(tokens?.username).toBe('newuser')
       expect(tokens?.accessToken).toBe('new-access')
@@ -290,15 +326,20 @@ describe('OAuth Utilities', () => {
     })
 
     it('checks if user has existing tokens', async () => {
-      const { saveTokens, hasExistingTokens } = await import('@/lib/auth/oauth')
+      const { hasExistingTokens } = await import('@/lib/auth/oauth')
 
       // No tokens initially
-      const hasBefore = await hasExistingTokens('check-user')
+      const hasBefore = await hasExistingTokens('user-b')
       expect(hasBefore).toBe(false)
 
-      // After saving
-      await saveTokens('check-user', 'user', null, 'access', 'refresh', 3600, 'scopes')
-      const hasAfter = await hasExistingTokens('check-user')
+      await seedTokenFixture({
+        userId: 'user-b',
+        username: 'user',
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        scopes: 'scopes',
+      })
+      const hasAfter = await hasExistingTokens('user-b')
       expect(hasAfter).toBe(true)
     })
   })
