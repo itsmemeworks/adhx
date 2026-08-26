@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.65.5](https://github.com/itsmemeworks/adhx/compare/v1.65.4...v1.65.5) (2026-08-26)
+
+
+### Bug Fixes
+
+* live and saved playlists are lifo; repeat-all walks every post ([#425](https://github.com/itsmemeworks/adhx/issues/425)) ([dd18b5e](https://github.com/itsmemeworks/adhx/commit/dd18b5e1dee6998a131eca8ec6bb87557fd1830a))
+
 ## [1.65.4](https://github.com/itsmemeworks/adhx/compare/v1.65.3...v1.65.4) (2026-08-26)
 
 
