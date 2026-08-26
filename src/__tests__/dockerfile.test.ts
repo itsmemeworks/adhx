@@ -28,7 +28,7 @@ describe('production container dependencies', () => {
   it('uses production dependencies and the project-local tsx at runtime', () => {
     expect(packageJson.dependencies?.tsx).toBeDefined()
     expect(packageJson.devDependencies?.tsx).toBeUndefined()
-    expect(dockerfile).toContain('pnpm prune --prod')
+    expect(dockerfile).toContain('pnpm prune --prod --ignore-scripts')
     expect(dockerfile).toContain('cp -a /app/node_modules ./node_modules')
     expect(dockerfile).toContain('./node_modules/.bin/tsx src/lib/db/migrate.ts')
   })

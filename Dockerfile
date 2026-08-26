@@ -30,7 +30,9 @@ RUN pnpm run build
 # Retain only runtime dependencies. tsx is a production dependency because
 # migrations and deployed maintenance scripts execute TypeScript at runtime.
 FROM deps AS prod-deps
-RUN pnpm prune --prod
+# The prepare hook is Husky (a devDependency); pruning removes it before pnpm
+# would rerun lifecycle scripts, so production pruning must not run hooks.
+RUN pnpm prune --prod --ignore-scripts
 
 # Assemble runtime files once so the final image does not duplicate the
 # standalone dependency subset and the complete production node_modules tree.
