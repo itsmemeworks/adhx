@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test'
 import { POST } from './constants'
-import { authedTest, expectTheaterReady, goNext } from './helpers'
+import { authedTest, caption, expectTheaterReady, goNext, visibleQueueCount } from './helpers'
 
 authedTest.describe('signed-in Live vs Saved URLs', () => {
   authedTest('Live rewrites the address bar to the current post', async ({ page }) => {
@@ -44,5 +44,28 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await page.goto('/live')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
+  })
+
+  authedTest('Saved Play once cursor and count survive a Live flip', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('adhx-theater-repeat-saved', 'off')
+    })
+    await page.goto('/saved')
+    await expectTheaterReady(page)
+    await goNext(page)
+    await expect(caption(page, POST.bravo.text)).toBeVisible()
+    const before = await visibleQueueCount(page).innerText()
+    expect(before).toMatch(/^2 of /)
+
+    await page.getByRole('button', { name: 'Live', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    await page.getByRole('button', { name: 'Saved', exact: true }).click()
+    await expect(page).toHaveURL(/\/saved/)
+    await expect(caption(page, POST.bravo.text)).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText(before)
+    await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
   })
 })

@@ -1,5 +1,5 @@
 import { theaterItemKey, type RepeatMode, type TheaterItem } from './types'
-import { computeQueueCounts, countPlayedThisRun } from './theater-math'
+import { computeQueueCounts, countPlayedThisRun, liveQueueTreatAsUnseen } from './theater-math'
 
 const EMPTY_KEY_SET: ReadonlySet<string> = new Set()
 
@@ -25,8 +25,10 @@ export interface TheaterChromeInput {
   personalIndex: number
   canPrev: boolean
   canNext: boolean
-  /** Live leftover-run played count — absent in Saved / playlist. */
+  /** Arrival snapshot — headings / grouping. Not leftover-run math. */
   wasSeenOnEntry?: (key: string) => boolean
+  /** Keys already seen when this leftover run began (last caught-up). */
+  wasSeenBeforeLeftoverRun?: (key: string) => boolean
   rewatching?: boolean
   sharedItemKey?: string | null
 }
@@ -68,21 +70,31 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
 
   // Saved one-pass is the 1-based now-playing index (`2 of 92`). Live
   // leftover is played of the pending run (`16 of 23`), not a playlist
-  // index. Repeat on is the pile (`23 on repeat`).
+  // index. Keep playing is the pile (`23 on repeat`). Repeat this post
+  // is `1 on repeat`.
+  // Headings keep `wasSeenOnEntry`. Counts use the leftover-run snapshot
+  // when it exists, unioned with entry so the first paint (empty run set)
+  // still hides last-visit watches.
+  const leftoverSeenBase =
+    input.wasSeenOnEntry || input.wasSeenBeforeLeftoverRun
+      ? (key: string) =>
+          Boolean(input.wasSeenOnEntry?.(key) || input.wasSeenBeforeLeftoverRun?.(key))
+      : undefined
+  const leftoverSeen = leftoverSeenBase
+    ? (key: string) => liveQueueTreatAsUnseen(key, input.sharedItemKey, leftoverSeenBase)
+    : undefined
   const livePlayed =
-    !input.isCollectionTab &&
-    !input.rewatching &&
-    input.effectiveRepeatMode === 'off' &&
-    input.wasSeenOnEntry
-      ? countPlayedThisRun(input.displayItems, {
-          currentKey: input.currentKey,
-          remaining: input.unseenCount,
-          currentIndex: input.currentIndex,
-          wasSeenOnEntry: (key) =>
-            key === input.sharedItemKey ? false : Boolean(input.wasSeenOnEntry?.(key)),
-          isFresh: (key) => input.freshKeys.has(key),
-          isSeen: input.isSeen,
-        })
+    !input.isCollectionTab && !input.rewatching && input.effectiveRepeatMode === 'off'
+      ? leftoverSeen
+        ? countPlayedThisRun(input.displayItems, {
+            currentKey: input.currentKey,
+            remaining: input.unseenCount,
+            currentIndex: input.currentIndex,
+            wasSeenOnEntry: leftoverSeen,
+            isFresh: (key) => input.freshKeys.has(key),
+            isSeen: input.isSeen,
+          })
+        : 0
       : undefined
   const queueCount = input.isCollectionTab
     ? computeQueueCounts({

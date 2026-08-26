@@ -352,6 +352,16 @@ describe('TheaterShell: finishing a fresh arrival lands on the caught-up stage',
 
     expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
   })
+
+  it('marks the leaving post seen on video-ended auto-advance', async () => {
+    const items = [textItem('1'), textItem('2')]
+    await act(async () => {
+      render(<TheaterShell seed={seed(items)} />)
+    })
+    await endCurrentItem()
+    const stored = JSON.parse(window.localStorage.getItem('adhx-seen-v1') ?? '[]') as string[]
+    expect(stored).toContain('twitter:1')
+  })
 })
 
 describe('TheaterShell: Live caught-up resumes Saved but stays caught up', () => {

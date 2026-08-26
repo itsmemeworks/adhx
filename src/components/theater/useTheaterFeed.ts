@@ -151,12 +151,9 @@ export function useTheaterFeed(
       }
     }
 
-    // A feed seeded with zero items (e.g. collection mode's Live sub-tab, which
-    // has no server-rendered seed of its own) would otherwise sit blank for
-    // a full POLL_MS before its first paint — poll right away in that case.
-    // Feeds seeded from the server render (home/shared) already have
-    // something to show, so this never changes their existing behavior.
-    if (itemsRef.current.length === 0) void poll()
+    // Poll as soon as Live is enabled — empty seed (Saved→Live) and a
+    // return from Saved both need arrivals now, not after 12s.
+    void poll()
 
     const id = window.setInterval(poll, POLL_MS)
     return () => {

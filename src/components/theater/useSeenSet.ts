@@ -16,8 +16,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-const SEEN_KEY = 'adhx-seen-v1'
-const LAST_VISIT_KEY = 'adhx-last-visit'
+export const SEEN_STORAGE_KEY = 'adhx-seen-v1'
+export const LAST_VISIT_STORAGE_KEY = 'adhx-last-visit'
 const SEEN_CAP = 500
 
 export interface SeenSet {
@@ -90,8 +90,8 @@ export function useSeenSet(): SeenSet {
     if (typeof window === 'undefined') return
 
     try {
-      setLastVisitAt(parseLastVisit(window.localStorage.getItem(LAST_VISIT_KEY)))
-      const stored = parseSeenList(window.localStorage.getItem(SEEN_KEY))
+      setLastVisitAt(parseLastVisit(window.localStorage.getItem(LAST_VISIT_STORAGE_KEY)))
+      const stored = parseSeenList(window.localStorage.getItem(SEEN_STORAGE_KEY))
       setSeen(stored)
       setSeenOnEntry(stored)
     } catch {
@@ -104,7 +104,7 @@ export function useSeenSet(): SeenSet {
       if (visitRecordedRef.current) return
       visitRecordedRef.current = true
       try {
-        window.localStorage.setItem(LAST_VISIT_KEY, String(Date.now()))
+        window.localStorage.setItem(LAST_VISIT_STORAGE_KEY, String(Date.now()))
       } catch {
         // ignore — a failed write just means next visit's divider is off
       }
@@ -129,7 +129,7 @@ export function useSeenSet(): SeenSet {
       const next = appendSeenKey(prev, key)
       if (typeof window !== 'undefined') {
         try {
-          window.localStorage.setItem(SEEN_KEY, JSON.stringify(next))
+          window.localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(next))
         } catch {
           // ignore — a failed write just means this item re-shows next visit
         }

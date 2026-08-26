@@ -1,6 +1,6 @@
 /**
- * Converts the authed Collection's `FeedItem`s into `TheaterItem`s so
- * `CollectionTheater` can reuse the read-only theater stage components
+ * Converts Saved (`FeedItem`) rows into `TheaterItem`s so TheaterShell
+ * can reuse the read-only theater stage components
  * (`StageText`/`StageArticle`/`StageInstagram`/`StageYouTube`) without those
  * components needing to know anything about the richer `FeedItem` shape.
  *

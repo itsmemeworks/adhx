@@ -43,9 +43,11 @@ export async function addSessionCookie(
 /** Theater chrome is desktop-only at lg+. Do not press Escape — on the
  * personal theater it means Close and dumps you on `/library`. */
 export async function expectTheaterReady(page: Page): Promise<void> {
-  await expect(page.getByRole('button', { name: 'Next post' })).toBeVisible({
-    timeout: 30_000,
-  })
+  const next = page.getByRole('button', { name: 'Next post' })
+  await expect(next).toBeVisible({ timeout: 30_000 })
+  // All Clear keeps Next mounted (disabled). A Live→Saved local flip uses
+  // an empty mount snapshot, so "visible Next" alone is not a playing stage.
+  await expect(next).toBeEnabled({ timeout: 30_000 })
   // First paint is currentKey=null ("Nothing playing") until the land-on-first
   // effect runs. If that never happens, hydration failed (or the queue is empty).
   await expect(page.getByText('Nothing playing')).toHaveCount(0, { timeout: 15_000 })

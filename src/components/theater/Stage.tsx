@@ -60,6 +60,11 @@ export interface StageProps {
    * mounted in a top band so you can read while it continues.
    */
   articleMode?: boolean
+  /**
+   * Pause the persistent <video> without unmounting it (Live waiting,
+   * Saved All Clear). Same cover as a text/photo overlay.
+   */
+  covered?: boolean
 }
 
 export function Stage({
@@ -70,6 +75,7 @@ export function Stage({
   photoCaption,
   repeat,
   articleMode = false,
+  covered = false,
 }: StageProps) {
   const playback = usePlaybackSource(item)
   const videoAlbum = useTwitterVideoAlbum(item)
@@ -180,6 +186,7 @@ export function Stage({
             albumIndex={videoAlbum.index}
             albumPosters={videoAlbum.posters}
             onAlbumIndexChange={twitterAlbum ? videoAlbum.setIndex : undefined}
+            covered={covered}
           />
         </div>
       ) : isYouTube ? (

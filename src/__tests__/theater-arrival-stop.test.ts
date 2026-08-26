@@ -75,13 +75,14 @@ describe('Q1 — the reported 20-item queue (19 watched-on-entry + 1 fresh arriv
 
   it('enumerates EVERY (unseenCount, repeatMode) combination that makes computeQueueTotal return 20 at index 0, length 20', () => {
     // computeQueueTotal's body:
-    //   if (repeatMode !== 'off') return length
+    //   if (repeatMode === 'one') return length > 0 ? 1 : 0
+    //   if (repeatMode === 'all') return length
     //   if (unseenCount <= 0 || index < 0 || index >= unseenCount) return length
     //   return unseenCount
     // At index === 0, `index < 0` is impossible and `index >= unseenCount`
     // collapses to `unseenCount <= 0` (0 >= unseenCount only when unseenCount
-    // <= 0). So there are exactly two independent families of input that
-    // yield 20 at index 0:
+    // <= 0). Keep playing (`all`) still names the pile; Repeat this post
+    // (`one`) is 1, not 20.
     const repeatModes: RepeatMode[] = ['off', 'all', 'one']
     const unseenCounts = [-1, 0, 1, 5, 19, 20]
     const yieldsTwenty: Array<{ unseenCount: number; repeatMode: RepeatMode }> = []
@@ -91,13 +92,14 @@ describe('Q1 — the reported 20-item queue (19 watched-on-entry + 1 fresh arriv
         if (total === 20) yieldsTwenty.push({ unseenCount, repeatMode })
       }
     }
-    // Family A: repeatMode is 'all' or 'one' — ANY unseenCount, by design
+    // Family A: repeatMode is 'all' — ANY unseenCount, by design
     // (this is the existing, intended "the switch changes the number"
     // behaviour, already guarded by theater-live-queue.test.ts).
     for (const unseenCount of unseenCounts) {
       expect(yieldsTwenty).toContainEqual({ unseenCount, repeatMode: 'all' })
-      expect(yieldsTwenty).toContainEqual({ unseenCount, repeatMode: 'one' })
+      expect(yieldsTwenty).not.toContainEqual({ unseenCount, repeatMode: 'one' })
     }
+    expect(computeQueueTotal({ index: 0, length: 20, unseenCount: 1, repeatMode: 'one' })).toBe(1)
     // Family B: repeatMode 'off' AND unseenCount <= 0 (i.e. the unwatched
     // run was computed as EMPTY, despite a real unwatched arrival existing).
     expect(yieldsTwenty).toContainEqual({ unseenCount: 0, repeatMode: 'off' })

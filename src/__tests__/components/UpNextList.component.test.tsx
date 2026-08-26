@@ -290,6 +290,23 @@ describe('UpNextList — the pinned shared post sits outside the groups', () => 
     expect(screen.queryByText(/all caught up/i)).not.toBeInTheDocument()
   })
 
+  it('drops This post once the opened lead is watched and the list is caught up', () => {
+    render(
+      <UpNextList
+        {...base}
+        items={[post('shared', 2), post('seen', 4)]}
+        currentKey={null}
+        isSeen={() => true}
+        pinnedKey={null}
+        wasSeenOnEntry={(k) => k === 'twitter:seen'}
+      />,
+    )
+    expect(screen.queryByText('This post')).not.toBeInTheDocument()
+    expect(
+      screen.getAllByRole('separator').map((el) => el.textContent?.replace(/\s+/g, ' ').trim()),
+    ).toEqual(['Watched earlier2'])
+  })
+
   it('groups normally when there is no pinned post (home)', () => {
     render(<UpNextList {...base} items={sharedQueue} wasSeenOnEntry={sharedProps.wasSeenOnEntry} />)
     const headings = screen

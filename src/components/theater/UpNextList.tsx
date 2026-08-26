@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Play, Image as ImageIcon, Type as TypeIcon, FileText, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
@@ -10,8 +10,7 @@ import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
 import { theaterRowCaption } from './TheaterText'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
-// Grouping comes from the shell so the headings below can never disagree with
-// the order the queue was built in.
+// Same predicates the shell uses to build the leftover order.
 import {
   liveQueueGroupOf,
   orderLiveQueue,
@@ -19,7 +18,7 @@ import {
   LIVE_QUEUE_GROUP_LABEL,
   PINNED_POST_HEADING,
   type LiveQueueGroup,
-} from './TheaterShell'
+} from './theater-math'
 import { THEATER_QUEUE_SCROLL_ATTR } from './useTheaterQueueOverlay'
 
 /** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
@@ -140,6 +139,23 @@ function Thumb({ item, fresh, seen }: { item: TheaterItem; fresh: boolean; seen:
   )
 }
 
+/** `Date.now()` relative time — fill after mount so SSR and the client cannot disagree. */
+function AddedStamp({ addedAt }: { addedAt: string }) {
+  const [rel, setRel] = useState('')
+  useEffect(() => {
+    setRel(formatCompactRelativeTime(addedAt))
+  }, [addedAt])
+  return (
+    <span
+      className="font-mono text-[10.5px] text-ink-3"
+      title={addedToAdhxLabel(addedAt)}
+      aria-label={addedToAdhxLabel(addedAt)}
+    >
+      {rel ? <span>added {rel}</span> : null}
+    </span>
+  )
+}
+
 function Row({
   item,
   isCurrent,
@@ -183,16 +199,7 @@ function Row({
               a bare relative time beside a post reads as the POST's age
               everywhere else on the internet. The stage chip and dock cards
               carry the same meaning via `title`/`aria-label` instead. */}
-          {hasKnownTimestamp(item.addedAt) && (
-            <span
-              className="font-mono text-[10.5px] text-ink-3"
-              title={addedToAdhxLabel(item.addedAt as string)}
-              aria-label={addedToAdhxLabel(item.addedAt as string)}
-              suppressHydrationWarning
-            >
-              added {formatCompactRelativeTime(item.addedAt as string)}
-            </span>
-          )}
+          {hasKnownTimestamp(item.addedAt) && <AddedStamp addedAt={item.addedAt as string} />}
           <div className="ml-auto flex flex-none items-center gap-1.5">
             {isCurrent && repeatCurrent ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-clay">
@@ -218,7 +225,7 @@ function Row({
           </div>
         </div>
         <p className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-ink">
-          {caption || (handle ? `@${handle}` : 'Saved post')}
+          <span>{caption || (handle ? `@${handle}` : 'Saved post')}</span>
         </p>
       </div>
     </button>

@@ -6,6 +6,34 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-25 — `?open=` must survive leftover start
+
+TheaterShell leftover-clamped again when queue prefs hydrated, so `/saved?open=` (library tap, Tag, All Clear from last) snapped to the first unread. `preserveSavedStart` skips that hydrate clamp; remount leftover start stays AuthedTheater. Tests: TheaterShell mid-queue start, AuthedTheater `preserveSavedStart`, filter snap. In-flight until the PR merges.
+
+## 2026-08-25 — Saved starts at leftover, not mid-list
+
+Live→Saved remounted on the last `adhx-saved-playing` cursor (or the next Videos row after it) and could All Clear while unchecked leftovers sat at the top. Resume only when earlier leftovers were left this run (`adhx-saved-played`); otherwise start at the first matching leftover. Live paste still keeps the same-shell Saved cursor. Tests: `savedStartIndex`, AuthedTheater remount, TheaterShell Videos start, chrome `1 on repeat`, `e2e/queue-count`. In-flight until the PR merges.
+
+## 2026-08-25 — Repeat this post is 1 on repeat
+
+Keep playing still names the pile (`18 on repeat`). Repeat this post was using the same length, so the dock said `18 on repeat` while Queue said Repeating this post. `one` is now `1 on repeat`. Tests: `computeQueueCounts`, `formatQueueCount`, theater-chrome, TheaterShell-repeat. In-flight until the PR merges.
+
+## 2026-08-25 — Preview "This post" drops after watch
+
+Opening a preview URL kept the lead in **This post** and leftover as `1 in queue` after caught-up (every filmstrip tile red). `liveQueueTreatAsUnseen` was wrapping live seen, and waiting still stayPut the last `currentKey`. Entry still treats the opened post as pending; once this session watches it, it joins Watched earlier and leftover copy hides on the waiting stage. Tests: `sharedThisPostKey`, theater-chrome waiting, UpNextList, TheaterShell caught-up preview. In-flight until the PR merges.
+
+## 2026-08-25 — CI: Live ⇄ Saved `1` and leftover count flash
+
+`2` wrote `/saved` into the bar with `replaceState` before `router.push`, so Playwright treated Saved as landed while `/live` was still mounted. Pressing `1` then hit `next === tab` and never pushed `/live`. Cross-tab switches now push only; same-tab still rewrites a leftover preview path. Live→Saved no longer local-flips an empty Saved snapshot (that All Cleared until `/saved` fetched). Leftover chrome passes `played: 0` before the seen snapshot is ready, and `countPlayedThisRun` never counts the on-stage row. Cross-tab leftover e2e asserts the pile grew and the current post stayed (unit tests own `played === 0`). In-flight until the PR merges.
+
+## 2026-08-25 — Live leftover count after a mid-play prepend
+
+A second-window save while leftover still had every row unseen bumped `currentIndex` (same post, one slot down). `computeQueueCounts` then treated playlist index as `played` because `unseenCount >= length`, so the dock flipped from `N in queue` to `1 of N`. Leftover math now prefers an explicit `played` from `countPlayedThisRun`. Queue row relative time paints after mount so Next's hydration overlay cannot sit on Up-next. Tests: `computeQueueCounts`, TheaterShell cross-tab add, `e2e/archive`, `e2e/theater-cross-tab-add`, `e2e/live-url` flip. In-flight until the PR merges.
+
+## 2026-08-25 — Theater review cleanup
+
+Fixed All Clear cross-tab prepend, `theater-resume` under a covered video, auto-advance `markSeen`, Live Save prepend + `idPlatform`, All Clear keeping `<Stage/>` mounted, Read reset on Saved cursor, and Live poll-on-enable. Extracted repeat/queue-type prefs, membership lookup, transport hook, storage catalog, and `liveQueueTreatAsUnseen`. UpNextList imports math from `theater-math`. In-flight until the PR merges.
+
 ## 2026-08-25 — Live leftover run resets at caught-up
 
 Caught-up plus a second-window save correctly staged the arrival, but Queue still counted the leftover posts finished this session (`2 of 3` with one New-since-opened). Catching up now snapshots seen keys as the start of the next leftover run. Tests: `countPlayedThisRun`, `theater-chrome`, TheaterShell caught-up matrix. In-flight until the PR merges.

@@ -37,9 +37,19 @@ import {
   notifyCollectionChanged,
   type CollectionFeedChangedDetail,
 } from '@/lib/client-events'
-import { theaterItemKey, LIVE_REPEAT_STORAGE_KEY, SAVED_REPEAT_STORAGE_KEY } from './types'
+import { theaterItemKey } from './types'
+import { THEATER_SOUND_STORAGE_KEY } from './theater-storage'
+import { useTheaterRepeatPrefs } from './useTheaterRepeatPrefs'
+import { useTheaterQueueTypes } from './useTheaterQueueTypes'
+import { fetchBookmarkMembership } from './fetch-bookmark-membership'
 import { sourceUrl } from '@/lib/activity/preview-path'
-import { writeSavedPlayingKey } from '@/lib/theater/saved-playing'
+import {
+  feedItemPlayingKey,
+  readPlayedSavedKeys,
+  savedStartIndex,
+  writePlayedSavedKeys,
+  writeSavedPlayingKey,
+} from '@/lib/theater/saved-playing'
 import {
   claimSharedAutoSave,
   consumePreviewOpenIntent,
@@ -56,13 +66,11 @@ import {
   applyTheaterTypeLens,
   feedItemMatchesQueueTypes,
   queueTypesForAddedItem,
-  isTheaterQueueFilterActive,
-  parseTheaterQueueTypes,
-  serializeTheaterQueueTypes,
   theaterQueueEmptyHeadline,
-  toggleTheaterQueueType,
   orderLiveQueue,
   liveQueueGroupOf,
+  liveQueueTreatAsUnseen,
+  sharedThisPostKey,
   pendingBlockLength,
   firstPendingLiveKey,
   computeLiveNext,
@@ -83,13 +91,7 @@ import { SharedResolveBridge } from './SharedResolveBridge'
 import { useTheaterLiveUrl } from './useTheaterLiveUrl'
 import { resolveTheaterChrome } from './theater-chrome'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
-// SignInModal + useAuthMe are built by a parallel agent under the same
-// accounts/magic-link PR — imported per the shared contract even though the
-// module may not exist yet at review time; see the "Save playlist" CTA
-// below (collection mode only).
 import { SignInModal, useAuthMe } from '@/components/auth'
-// TagQuickPicker is built by a parallel agent (unified-theater-collection.md §4)
-// — imported per the shared contract for the collection "Tag" action.
 import { TagQuickPicker } from '@/components/tags'
 import type {
   RepeatMode,
@@ -125,6 +127,8 @@ export {
   toggleTheaterQueueType,
   theaterQueueEmptyHeadline,
   liveQueueGroupOf,
+  liveQueueTreatAsUnseen,
+  sharedThisPostKey,
   orderLiveQueue,
   unseenBlockLength,
   pendingBlockLength,
@@ -136,6 +140,7 @@ export {
   formatQueueCount,
   theaterUrlSyncPath,
   theaterTabNavRestore,
+  theaterTabNavAction,
   isFeedEnd,
   computeCanPrev,
   computeCanNext,
@@ -199,14 +204,20 @@ export interface TheaterShellProps {
   personalItems?: FeedItem[]
   /** Where to start in the collection queue — a gallery click jumps to the clicked item (same contract as the deleted `CollectionTheater`'s `startIndex`). */
   initialPersonalIndex?: number
+  /**
+   * `/saved?open=` already picked the start. Do not leftover-clamp when
+   * queue prefs hydrate — that snapped every mid-queue open to the first unread.
+   */
+  preserveSavedStart?: boolean
   /** Which collection sub-tab to open on (`/live` is Live, `/saved` is Saved). */
   initialPersonalTab?: PersonalTab
   /**
    * Called when the viewer flips the Live ⇄ Saved switch. The switch
    * is a ROUTE on the signed-in theater (`/live` is Live, `/saved` is My
    * Collection — owner: "a specific route that they select"), so the page
-   * passes a `router.push` here. The tab still flips locally first, so the
-   * switch responds instantly and doesn't wait on navigation.
+   * passes a `router.push` here. The tab flips locally first when that
+   * side already has items. Live never fetches Saved, so `2` only
+   * navigates — a local flip would All Clear an empty mount snapshot.
    */
   onPersonalTabChange?: (tab: PersonalTab) => void
   /** Notify a caller an archive/delete landed. Identity is the full item — same numeric id exists across platforms. */
@@ -235,6 +246,7 @@ export function TheaterShell({
   playlist,
   personalItems,
   initialPersonalIndex,
+  preserveSavedStart = false,
   initialPersonalTab,
   onPersonalTabChange,
   onPostResolved,
@@ -252,70 +264,26 @@ export function TheaterShell({
   // The personal theater's Collection tab never blends the live pulse in; its Live tab
   // reuses the exact same live feed home/shared mode does.
   const [personalTab, setPersonalTab] = useState<PersonalTab>(initialPersonalTab ?? 'live')
-  // Flip locally first (instant switch), then let the page navigate to that
-  // tab's route — see `onPersonalTabChange`.
+  // Flip locally first (instant switch), then let the page navigate — except
+  // Live→Saved when this mount has no Saved snapshot (AuthedTheater only
+  // fetches the queue on `/saved`). Local-flipping that empty list is All Clear.
   const changePersonalTab = useCallback(
-    (tab: PersonalTab) => {
-      setPersonalTab(tab)
-      onPersonalTabChange?.(tab)
+    (next: PersonalTab) => {
+      const savedSnapshotMissing = next === 'collection' && (personalItems?.length ?? 0) === 0
+      if (!savedSnapshotMissing) setPersonalTab(next)
+      onPersonalTabChange?.(next)
     },
-    [onPersonalTabChange],
+    [onPersonalTabChange, personalItems],
   )
+  // `collection` is the Saved tab (`/saved`). Public APIs still say collection.
   const isCollectionTab = isPersonal && personalTab === 'collection'
 
-  // Live and Saved keep independent repeat prefs. Live defaults to stop-
-  // when-caught-up (unseen only). Saved defaults to looping the list —
-  // everything there was saved on purpose. Playlist is wrapOnly all⇄one.
-  const [liveRepeatMode, setLiveRepeatMode] = useState<RepeatMode>('off')
-  const [savedRepeatMode, setSavedRepeatMode] = useState<RepeatMode>('all')
-  const [playlistRepeatMode, setPlaylistRepeatMode] = useState<RepeatMode>('all')
-  const [repeatPrefsReady, setRepeatPrefsReady] = useState(false)
-  const effectiveRepeatMode: RepeatMode = loop
-    ? playlistRepeatMode
-    : isCollectionTab
-      ? savedRepeatMode
-      : liveRepeatMode
+  const { effectiveRepeatMode, setRepeatMode, setSavedRepeatMode } = useTheaterRepeatPrefs({
+    loop,
+    isCollectionTab,
+  })
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode
-  const setRepeatMode = useCallback(
-    (next: RepeatMode) => {
-      if (loop) setPlaylistRepeatMode(next)
-      else if (isCollectionTab) setSavedRepeatMode(next)
-      else setLiveRepeatMode(next)
-    },
-    [loop, isCollectionTab],
-  )
-  useEffect(() => {
-    if (loop) {
-      setRepeatPrefsReady(true)
-      return
-    }
-    try {
-      if (localStorage.getItem(LIVE_REPEAT_STORAGE_KEY) === 'all') setLiveRepeatMode('all')
-      const saved = localStorage.getItem(SAVED_REPEAT_STORAGE_KEY)
-      if (saved === 'off') setSavedRepeatMode('off')
-      else if (saved === 'all') setSavedRepeatMode('all')
-    } catch {
-      // Storage unavailable — keep defaults (Live off, Saved all).
-    }
-    setRepeatPrefsReady(true)
-  }, [loop])
-  useEffect(() => {
-    if (!repeatPrefsReady || loop || isCollectionTab || liveRepeatMode === 'one') return
-    try {
-      localStorage.setItem(LIVE_REPEAT_STORAGE_KEY, liveRepeatMode)
-    } catch {
-      // Never let a storage failure break playback.
-    }
-  }, [repeatPrefsReady, loop, isCollectionTab, liveRepeatMode])
-  useEffect(() => {
-    if (!repeatPrefsReady || loop || !isCollectionTab || savedRepeatMode === 'one') return
-    try {
-      localStorage.setItem(SAVED_REPEAT_STORAGE_KEY, savedRepeatMode)
-    } catch {
-      // Never let a storage failure break playback.
-    }
-  }, [repeatPrefsReady, loop, isCollectionTab, savedRepeatMode])
   const signedIn = authed || !!authMe.me?.authenticated
   const goTheaterTab = useCallback(
     (tab: PersonalTab) => {
@@ -378,6 +346,10 @@ export function TheaterShell({
   personalIndexRef.current = personalIndex
   const personalTabRef = useRef(personalTab)
   personalTabRef.current = personalTab
+  // Adds may reset Videos → All. That is not a user filter tap — keep the
+  // current post instead of clamping to the leftover prepend. `?open=`
+  // skips the first hydrate clamp for the same reason.
+  const skipSavedClampRef = useRef(preserveSavedStart)
   const [personalUndo, setPersonalUndo] = useState<PersonalUndoAction | null>(null)
   // Ref-backed so `handlePersonalLiveSave` (registered once) always sees the
   // current handler without re-creating itself on every grid render.
@@ -424,7 +396,9 @@ export function TheaterShell({
     () => personalQueue.map(feedItemToTheaterItem),
     [personalQueue],
   )
-  const [playedSavedKeys, setPlayedSavedKeys] = useState<Set<string>>(() => new Set())
+  const [playedSavedKeys, setPlayedSavedKeys] = useState<Set<string>>(() => readPlayedSavedKeys())
+  const playedSavedKeysRef = useRef(playedSavedKeys)
+  playedSavedKeysRef.current = playedSavedKeys
   const personalCurrentKey = personalCurrentFeedItem
     ? theaterItemKey(feedItemToTheaterItem(personalCurrentFeedItem))
     : null
@@ -442,6 +416,9 @@ export function TheaterShell({
     prevSavedKeyRef.current = personalCurrentKey
   }, [personalCurrentKey])
   const personalIsSeen = useCallback((key: string) => playedSavedKeys.has(key), [playedSavedKeys])
+  useEffect(() => {
+    writePlayedSavedKeys(playedSavedKeys)
+  }, [playedSavedKeys])
 
   useEffect(() => {
     if (!personalCurrentKey) return
@@ -554,12 +531,15 @@ export function TheaterShell({
         (f) => f.id === item.id && (f.platform ?? 'twitter') === platform,
       )
       if (exists) return false
-      const wasEmpty = personalQueueRef.current.length === 0
+      const oldLength = personalQueueRef.current.length
+      const wasEmpty = oldLength === 0
+      const wasFinished = personalIndexRef.current >= oldLength
       personalQueueRef.current = [item, ...personalQueueRef.current]
       setPersonalQueue(personalQueueRef.current)
       markFreshSaved(theaterItemKey(feedItemToTheaterItem(item)))
-      // Stay on the post that was playing — a remote add must not steal focus.
-      setPersonalIndex((i) => (wasEmpty ? 0 : i + 1))
+      // Stay on the playing post. All Clear (or an empty queue) jumps to
+      // the new head — +1 past the end would keep CollectionAllClear up.
+      setPersonalIndex((i) => (wasEmpty || wasFinished ? 0 : i + 1))
       return true
     },
     [markFreshSaved],
@@ -585,6 +565,7 @@ export function TheaterShell({
       // text save (or vice versa). Reset even when Saved already had
       // the row — Live still prepends it, and a shared type filter
       // would otherwise leave the arrival invisible.
+      skipSavedClampRef.current = true
       setQueueTypes((cur) => queueTypesForAddedItem(cur, added))
     }
     window.addEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
@@ -764,80 +745,71 @@ export function TheaterShell({
     bookmarkId: string
   } | null>(null)
 
-  const handlePersonalLiveSave = useCallback(async (item: TheaterItem): Promise<boolean> => {
-    const key = theaterItemKey(item)
-    const url = sourceUrl(item.platform, item.author, item.bookmarkId || '')
-    if (!url) return false
-    try {
-      const res = await fetch('/api/bookmarks/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, source: 'manual' }),
-      })
-      if (res.ok) {
-        setPersonalSavedKeys((prev) => new Set(prev).add(key))
-        // Did we manage to hand the grid a ready-made row? If not (no
-        // bookmarkId, a failed lookup, a row the feed didn't return) the grid
-        // still has to learn about the post somehow, so fall back to the
-        // refetch below rather than leaving it invisible until a reload.
-        let placedInGrid = false
-        let saved: FeedItem | undefined
-        // Pull the freshly saved bookmark into the OPEN collection queue too, so
-        // switching to the Collection tab shows it without a page reload
-        // (the queue is a snapshot taken when the overlay opened).
-        if (item.bookmarkId) {
-          try {
-            const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
-            q.append('id', item.bookmarkId)
-            const fres = await fetch(`/api/feed?${q}`)
-            if (fres.ok) {
-              const data = await fres.json()
-              saved = (data.items ?? []).find(
-                (f: FeedItem) =>
-                  (f.platform ?? 'twitter') === item.platform && f.id === item.bookmarkId,
-              )
-              if (saved) {
-                const row = saved
-                setPersonalQueue((prev) => {
-                  if (
-                    prev.some(
-                      (f) =>
-                        f.id === row.id &&
-                        (f.platform ?? 'twitter') === (row.platform ?? 'twitter'),
-                    )
-                  ) {
-                    return prev
+  const handlePersonalLiveSave = useCallback(
+    async (item: TheaterItem): Promise<boolean> => {
+      const key = theaterItemKey(item)
+      const url = sourceUrl(item.platform, item.author, item.bookmarkId || '')
+      if (!url) return false
+      try {
+        const res = await fetch('/api/bookmarks/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, source: 'manual' }),
+        })
+        if (res.ok) {
+          setPersonalSavedKeys((prev) => new Set(prev).add(key))
+          // Did we manage to hand the grid a ready-made row? If not (no
+          // bookmarkId, a failed lookup, a row the feed didn't return) the grid
+          // still has to learn about the post somehow, so fall back to the
+          // refetch below rather than leaving it invisible until a reload.
+          let placedInGrid = false
+          let saved: FeedItem | undefined
+          // Pull the freshly saved bookmark into the OPEN collection queue too, so
+          // switching to the Collection tab shows it without a page reload
+          // (the queue is a snapshot taken when the overlay opened).
+          if (item.bookmarkId) {
+            try {
+              const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
+              q.append('id', item.bookmarkId)
+              q.append('idPlatform', item.platform ?? 'twitter')
+              const fres = await fetch(`/api/feed?${q}`)
+              if (fres.ok) {
+                const data = await fres.json()
+                saved = (data.items ?? []).find(
+                  (f: FeedItem) =>
+                    (f.platform ?? 'twitter') === item.platform && f.id === item.bookmarkId,
+                )
+                if (saved) {
+                  const row = saved
+                  prependToPersonalQueue(row)
+                  // Hand the same row to the grid behind the overlay. It used to
+                  // fire `tweet-added`, whose only listener refetches the WHOLE
+                  // feed — resetting the grid to page 1 and losing however far
+                  // the viewer had scrolled, for one added post (state review).
+                  if (onCollectionAddedRef.current) {
+                    onCollectionAddedRef.current(row)
+                    placedInGrid = true
                   }
-                  const next = [...prev, row]
-                  personalQueueRef.current = next
-                  return next
-                })
-                // Hand the same row to the grid behind the overlay. It used to
-                // fire `tweet-added`, whose only listener refetches the WHOLE
-                // feed — resetting the grid to page 1 and losing however far
-                // the viewer had scrolled, for one added post (state review).
-                if (onCollectionAddedRef.current) {
-                  onCollectionAddedRef.current(row)
-                  placedInGrid = true
                 }
               }
+            } catch {
+              // Queue/grid update is best-effort; the save itself succeeded.
             }
-          } catch {
-            // Queue/grid update is best-effort; the save itself succeeded.
           }
+          // Either way the Header's counts must move — this path only ever told
+          // the local Save button.
+          notifyCollectionChanged(
+            saved ? { refetchFeed: false, added: saved } : { refetchFeed: !placedInGrid },
+          )
         }
-        // Either way the Header's counts must move — this path only ever told
-        // the local Save button.
-        notifyCollectionChanged(
-          saved ? { refetchFeed: false, added: saved } : { refetchFeed: !placedInGrid },
-        )
+        return res.ok
+      } catch {
+        // Best effort — the button simply won't flip to "Saved".
       }
-      return res.ok
-    } catch {
-      // Best effort — the button simply won't flip to "Saved".
-    }
-    return false
-  }, [])
+      return false
+    },
+    [prependToPersonalQueue],
+  )
 
   const handlePastePost = useCallback(
     async (url: string): Promise<boolean> => {
@@ -904,6 +876,7 @@ export function TheaterShell({
           writeSavedPlayingKey(theaterItemKey(feedItemToTheaterItem(playingSaved)))
         }
         feedPrepend(theaterItem)
+        skipSavedClampRef.current = true
         setQueueTypes((cur) => queueTypesForAddedItem(cur, row))
 
         if (onCollectionAddedRef.current) {
@@ -954,59 +927,29 @@ export function TheaterShell({
   // rejected-play fallback then re-mutes gracefully, exactly as before.
   useEffect(() => {
     try {
-      if (sessionStorage.getItem('adhx-theater-sound') === 'on') setMuted(false)
+      if (sessionStorage.getItem(THEATER_SOUND_STORAGE_KEY) === 'on') setMuted(false)
     } catch {
       // Storage can be unavailable (private mode) — keep the muted default.
     }
   }, [])
   useEffect(() => {
     try {
-      sessionStorage.setItem('adhx-theater-sound', muted ? 'off' : 'on')
+      sessionStorage.setItem(THEATER_SOUND_STORAGE_KEY, muted ? 'off' : 'on')
     } catch {
       // Same — never let a storage failure break playback.
     }
   }, [muted])
 
-  const [queueTypes, setQueueTypes] = useState<ContentType[]>([])
-  const [queuePrefReady, setQueuePrefReady] = useState(false)
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('adhx-theater-types')
-      if (stored != null) {
-        setQueueTypes(parseTheaterQueueTypes(stored))
-      } else if (localStorage.getItem('adhx-theater-visual') === '1') {
-        setQueueTypes(['video', 'photo'])
-      }
-    } catch {
-      // Storage unavailable — keep All.
-    }
-    setQueuePrefReady(true)
-  }, [])
-  useEffect(() => {
-    if (!queuePrefReady || !queueFilterAvailable) return
-    try {
-      const serialized = serializeTheaterQueueTypes(queueTypes)
-      if (serialized) localStorage.setItem('adhx-theater-types', serialized)
-      else localStorage.removeItem('adhx-theater-types')
-      localStorage.removeItem('adhx-theater-visual')
-    } catch {
-      // Never let a storage failure break playback.
-    }
-  }, [queueTypes, queuePrefReady, queueFilterAvailable])
-  const typeFilterActive = queueFilterAvailable && isTheaterQueueFilterActive(queueTypes)
+  const {
+    queueTypes,
+    setQueueTypes,
+    queuePrefReady,
+    typeFilterActive,
+    toggleQueueType,
+    clearQueueTypes,
+  } = useTheaterQueueTypes(queueFilterAvailable)
   queueTypesRef.current = queueTypes
   typeFilterActiveRef.current = typeFilterActive
-  const toggleQueueType = useCallback(
-    (type: ContentType) => {
-      if (!queueFilterAvailable) return
-      setQueueTypes((cur) => toggleTheaterQueueType(cur, type))
-    },
-    [queueFilterAvailable],
-  )
-  const clearQueueTypes = useCallback(() => {
-    if (!queueFilterAvailable) return
-    setQueueTypes([])
-  }, [queueFilterAvailable])
 
   const personalLensItems = useMemo(
     () => applyTheaterTypeLens(personalDisplayItems, typeFilterActive ? queueTypes : []),
@@ -1020,37 +963,31 @@ export function TheaterShell({
   }, [personalCurrentFeedItem, personalLensItems])
 
   useEffect(() => {
-    if (!isCollectionTab || !typeFilterActive || personalFinished) return
-    if (personalLensItems.length === 0) return
-    const queue = personalQueue
-    if (feedItemMatchesQueueTypes(queue[personalIndex], queueTypes)) return
-    let next = -1
-    for (let i = personalIndex; i < queue.length; i++) {
-      if (feedItemMatchesQueueTypes(queue[i], queueTypes)) {
-        next = i
-        break
-      }
+    if (!isCollectionTab || !queuePrefReady) return
+    if (skipSavedClampRef.current) {
+      skipSavedClampRef.current = false
+      return
     }
-    // A matching add prepends behind the cursor. Walk-forward-only used
-    // to skip it and dump Saved onto All Clear / empty Videos.
-    if (next === -1) {
-      for (let i = 0; i < personalIndex; i++) {
-        if (feedItemMatchesQueueTypes(queue[i], queueTypes)) {
-          next = i
-          break
-        }
-      }
-    }
-    setPersonalIndex(next === -1 ? queue.length : next)
-  }, [
-    isCollectionTab,
-    typeFilterActive,
-    queueTypes,
-    personalQueue,
-    personalIndex,
-    personalFinished,
-    personalLensItems.length,
-  ])
+    const queue = personalQueueRef.current
+    const types = typeFilterActive ? queueTypes : []
+    const played = playedSavedKeysRef.current
+    const next = savedStartIndex(queue.length, {
+      playingIndex: personalIndexRef.current,
+      isLeftover: (i) => {
+        const item = queue[i]
+        return !!item && !played.has(feedItemPlayingKey(item))
+      },
+      matches: (i) => {
+        const item = queue[i]
+        return !!item && feedItemMatchesQueueTypes(item, types)
+      },
+    })
+    if (next !== personalIndexRef.current) setPersonalIndex(next)
+    // Tab flips are not a clamp — Live paste keeps the Saved cursor
+    // (`isCollectionTab` is not a dep). Remount leftover start is
+    // AuthedTheater; `?open=` sets preserveSavedStart so hydrate does
+    // not snap a library tap back to the first unread.
+  }, [queuePrefReady, typeFilterActive, queueTypes])
 
   const isDesktop = useIsDesktopViewport()
   // Desktop de-clutter: collapses the dock for a full-bleed stage.
@@ -1063,7 +1000,7 @@ export function TheaterShell({
   const [currentKey, setCurrentKey] = useState<string | null>(null)
   useEffect(() => {
     setArticleMode(false)
-  }, [currentKey, personalIndex, isCollectionTab])
+  }, [isCollectionTab ? personalCurrentKey : currentKey])
   // Virtual "end of feed" stage entered by advancing past the last item (spec
   // addendum: end-of-feed waiting stage). `currentKey` is deliberately left
   // pointing at the last real item while waiting — that's what makes goPrev
@@ -1124,14 +1061,22 @@ export function TheaterShell({
   // the authed Live tab, AND a shared preview page, whose queue below the
   // shared post IS that same live feed (owner: a preview page showed no
   // sections while `/` showed them — "we just need to be always consistent
-  // here"). The shared post itself still leads, via `pinnedKey`, and is
-  // excluded from the grouping by the lists. Only a curated tag playlist opts
+  // here"). The shared post itself still leads, via `pinnedKey`, while it
+  // is the reason you're here; once this session watches it, it joins
+  // Watched earlier like any other post. Only a curated tag playlist opts
   // out: it has one authored order and no notion of "what's new".
   const liveOrdering = !loop
   // Grouping uses the arrival snapshot PLUS live seen: a post watched this
   // session slides into Watched once it is no longer on stage. The playing
   // row stays put (see `orderLiveQueue`).
   const seenOnEntry = seenSet.seenOnEntry
+  useEffect(() => {
+    if (!seenSet.ready) return
+    setSeenBeforeThisLeftoverRun((prev) => {
+      if (prev.size > 0 || seenOnEntry.length === 0) return prev
+      return new Set(seenOnEntry)
+    })
+  }, [seenSet.ready, seenOnEntry])
   const wasSeenOnEntry = useCallback((key: string) => seenOnEntry.includes(key), [seenOnEntry])
   const isSeenNow = useCallback((key: string) => seenSet.isSeen(key), [seenSet.isSeen])
 
@@ -1143,6 +1088,11 @@ export function TheaterShell({
   // read through a ref-free callback so the memo below re-runs when a poll
   // lands, which is exactly when the grouping changes.
   const isFreshKey = useCallback((key: string) => feed.freshKeys.has(key), [feed.freshKeys])
+  // Caught-up keeps `currentKey` on the last post so Back works. Grouping
+  // must not stayPut that row — it has been watched.
+  const groupingCurrentKey = waiting ? null : currentKey
+  const thisPostKey = sharedThisPostKey(sharedItemKey, isSeenNow, currentKey, waiting)
+  const displayPinKey = thisPostKey ?? (mode === 'shared' ? null : pinnedKey)
   const lensItems = useMemo(
     () =>
       applyTheaterTypeLens(
@@ -1157,10 +1107,10 @@ export function TheaterShell({
       liveOrdering && seenSet.ready
         ? orderLiveQueue(
             lensItems,
-            (key) => (key === sharedItemKey ? false : wasSeenOnEntry(key)),
+            (key) => liveQueueTreatAsUnseen(key, sharedItemKey, wasSeenOnEntry),
             isFreshKey,
-            (key) => (key === sharedItemKey ? false : isSeenNow(key)),
-            currentKey,
+            isSeenNow,
+            groupingCurrentKey,
           )
         : lensItems,
     [
@@ -1170,13 +1120,13 @@ export function TheaterShell({
       wasSeenOnEntry,
       isFreshKey,
       isSeenNow,
-      currentKey,
+      groupingCurrentKey,
       sharedItemKey,
     ],
   )
   const displayItems = useMemo(
-    () => pinKeyFirst(orderedItems, pinnedKey),
-    [orderedItems, pinnedKey],
+    () => pinKeyFirst(orderedItems, displayPinKey),
+    [orderedItems, displayPinKey],
   )
 
   // Where the already-watched block starts. 0 disables the boundary entirely
@@ -1185,17 +1135,18 @@ export function TheaterShell({
   // The shared post leads whether or not this viewer has seen it before, so a
   // re-visited shared link would otherwise start the queue with a WATCHED row
   // and zero the run — killing the boundary for the whole live queue behind
-  // it. Count the lead as pending: it's the post they followed a link to.
+  // it. Count the lead as pending until THIS session watches it; live seen
+  // then moves it into Watched and out of leftover.
   const unseenCount = useMemo(
     () =>
       liveOrdering && seenSet.ready && !rewatching
         ? pendingBlockLength(displayItems, (key) =>
             liveQueueGroupOf(
               key,
-              (k) => (k === sharedItemKey ? false : wasSeenOnEntry(k)),
+              (k) => liveQueueTreatAsUnseen(k, sharedItemKey, wasSeenOnEntry),
               isFreshKey,
-              (k) => (k === sharedItemKey ? false : isSeenNow(k)),
-              currentKey,
+              isSeenNow,
+              groupingCurrentKey,
             ),
           )
         : 0,
@@ -1207,7 +1158,7 @@ export function TheaterShell({
       wasSeenOnEntry,
       isFreshKey,
       isSeenNow,
-      currentKey,
+      groupingCurrentKey,
       sharedItemKey,
     ],
   )
@@ -1229,40 +1180,18 @@ export function TheaterShell({
   const membershipCheckedRef = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (!isPersonal || personalTab !== 'live') return
-    const unknown = displayItems
-      .filter((it) => it.bookmarkId && !membershipCheckedRef.current.has(theaterItemKey(it)))
-      .slice(0, 50)
-    if (unknown.length === 0) return
-    unknown.forEach((it) => membershipCheckedRef.current.add(theaterItemKey(it)))
-    const params = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '50' })
-    unknown.forEach((it) => {
-      params.append('id', it.bookmarkId as string)
-      params.append('idPlatform', it.platform ?? 'twitter')
+    fetchBookmarkMembership(displayItems, membershipCheckedRef.current, (owned) => {
+      setPersonalSavedKeys((prev) => {
+        const next = new Set(prev)
+        for (const f of owned) next.add(`${f.platform ?? 'twitter'}:${f.id}`)
+        return next
+      })
+      setLiveTagsByKey((prev) => {
+        const next = { ...prev }
+        for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
+        return next
+      })
     })
-    const attempted = unknown.map((it) => theaterItemKey(it))
-    fetch(`/api/feed?${params}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('lookup failed'))))
-      .then((d) => {
-        const owned: FeedItem[] = d?.items ?? []
-        if (!owned.length) return
-        setPersonalSavedKeys((prev) => {
-          const next = new Set(prev)
-          for (const f of owned) next.add(`${f.platform ?? 'twitter'}:${f.id}`)
-          return next
-        })
-        setLiveTagsByKey((prev) => {
-          const next = { ...prev }
-          for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
-          return next
-        })
-      })
-      .catch(() => {
-        // The ids were marked "checked" BEFORE the request so a re-render
-        // can't double-fetch them — but a failed lookup must not mark them
-        // checked forever, or an already-saved post shows "Save" for the rest
-        // of the session (state review). Un-mark so the next render retries.
-        for (const k of attempted) membershipCheckedRef.current.delete(k)
-      })
   }, [isPersonal, personalTab, displayItems])
 
   // Shared preview: seed tags for the lead (and any pulse items we land on)
@@ -1270,31 +1199,13 @@ export function TheaterShell({
   // tags-changed listener above covers in-session adds.
   useEffect(() => {
     if (mode !== 'shared' || !authMe.me?.authenticated) return
-    const unknown = displayItems
-      .filter((it) => it.bookmarkId && !membershipCheckedRef.current.has(theaterItemKey(it)))
-      .slice(0, 50)
-    if (unknown.length === 0) return
-    unknown.forEach((it) => membershipCheckedRef.current.add(theaterItemKey(it)))
-    const params = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '50' })
-    unknown.forEach((it) => {
-      params.append('id', it.bookmarkId as string)
-      params.append('idPlatform', it.platform ?? 'twitter')
+    fetchBookmarkMembership(displayItems, membershipCheckedRef.current, (owned) => {
+      setLiveTagsByKey((prev) => {
+        const next = { ...prev }
+        for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
+        return next
+      })
     })
-    const attempted = unknown.map((it) => theaterItemKey(it))
-    fetch(`/api/feed?${params}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('lookup failed'))))
-      .then((d) => {
-        const owned: FeedItem[] = d?.items ?? []
-        if (!owned.length) return
-        setLiveTagsByKey((prev) => {
-          const next = { ...prev }
-          for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
-          return next
-        })
-      })
-      .catch(() => {
-        for (const k of attempted) membershipCheckedRef.current.delete(k)
-      })
   }, [mode, authMe.me?.authenticated, displayItems])
 
   // Kept in a ref (rather than effect deps) so goNext/goPrev/the dwell timer
@@ -1847,11 +1758,13 @@ export function TheaterShell({
         return
       }
       if (progressKindFor(currentRef.current, articleMode) !== 'timed') return
+      const leaving = currentKeyRef.current
+      if (leaving) seenSet.markSeen(leaving)
       goNext()
     }
     window.addEventListener('theater-advance', handleAdvance)
     return () => window.removeEventListener('theater-advance', handleAdvance)
-  }, [goNext, isCollectionTab, articleMode, personalAdvanceOnEnded])
+  }, [goNext, isCollectionTab, articleMode, personalAdvanceOnEnded, seenSet.markSeen])
 
   // Prefetch at most one item ahead (extracted to useTheaterPrefetch.ts).
   useTheaterPrefetch(currentIndex, displayItems)
@@ -1900,10 +1813,11 @@ export function TheaterShell({
     // so newest-first is the honest order.
     //
     // EXCEPT in shared mode, where `pinnedKey` is not a lead-pick but the
-    // shared post itself — the one invariant of a preview page. Re-pointing it
-    // at an arrival bumps the post the visitor followed a link to out of slot
-    // 1, and leaves the "This post" heading (which tracks `sharedItemKey`)
-    // labelling a row in the middle of the list (review finding).
+    // shared post itself — the one invariant of a preview page while it is
+    // still This post. Re-pointing it at an arrival bumps the opened post
+    // out of slot 1, and can leave a stale "This post" heading on a row
+    // in the middle of the list (review finding). After this session
+    // watches the lead, This post is already gone.
     if (mode !== 'shared') setPinnedKey(pending)
     setCurrentKey(pending)
     setWaiting(false)
@@ -1925,7 +1839,8 @@ export function TheaterShell({
   // src-change effect calls play() itself; no resume event needed.
   useEffect(() => {
     if (waiting && !isCollectionTab) window.dispatchEvent(new CustomEvent('theater-pause'))
-  }, [waiting, isCollectionTab])
+    if (isCollectionTab && personalFinished) window.dispatchEvent(new CustomEvent('theater-pause'))
+  }, [waiting, isCollectionTab, personalFinished])
 
   // Live ⇄ Saved flips local tab state before the route changes. A Live
   // caught-up `theater-pause` would otherwise leave the shared <video>
@@ -2172,6 +2087,13 @@ export function TheaterShell({
   const collectionStageTheaterItem = personalCurrentFeedItem
     ? feedItemToTheaterItem(personalCurrentFeedItem)
     : null
+  // All Clear parks on the last row (like Live waiting) so the <video>
+  // stays mounted under the overlay.
+  const collectionParkedTheaterItem =
+    collectionStageTheaterItem ??
+    (personalFinished && personalQueue.length > 0
+      ? feedItemToTheaterItem(personalQueue[personalQueue.length - 1])
+      : null)
   const {
     chromeCurrent,
     chromeItems,
@@ -2207,8 +2129,9 @@ export function TheaterShell({
     personalIndex: personalLensIndex >= 0 ? personalLensIndex : 0,
     canPrev,
     canNext,
-    wasSeenOnEntry: liveOrdering
-      ? (key) => wasSeenOnEntry(key) || seenBeforeThisLeftoverRun.has(key)
+    wasSeenOnEntry: liveOrdering ? wasSeenOnEntry : undefined,
+    wasSeenBeforeLeftoverRun: liveOrdering
+      ? (key) => seenBeforeThisLeftoverRun.has(key)
       : undefined,
     rewatching,
     sharedItemKey,
@@ -2280,38 +2203,32 @@ export function TheaterShell({
               headline={theaterQueueEmptyHeadline(queueTypes, 'Saved')}
               onShowAll={clearQueueTypes}
             />
-          ) : isCollectionTab && personalFinished ? (
-            <CollectionAllClear
-              total={personalTotal}
-              onClose={() => onClose?.()}
-              onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
-            />
           ) : resolvingSharedLead ? (
             <StageResolving handle={sharedItem?.author} />
           ) : isSharedUnavailableOnCurrent && current ? (
             <StageUnavailable item={current} reason={sharedUnavailableReason} />
           ) : (
             <>
-              {/* One Stage for every playlist — Live, shared, tags, and My
-                  Collection. Collection is just a different queue; swapping
-                  in a second dispatcher paused playback on load whenever the
-                  live seed was already caught-up. The stage stays MOUNTED
-                  (paused — see the waiting-pause effect) underneath the
-                  waiting overlay, never swapped out: StageVideo's persistent
-                  <video> element carries the user's iOS unmuted-playback
-                  grant. The overlay's opaque #08070a covers it completely. */}
+              {/* Stage stays mounted under waiting / All Clear so the
+                  persistent <video> keeps the iOS unmute grant. */}
               <Stage
-                item={isCollectionTab ? collectionStageTheaterItem : current}
+                item={isCollectionTab ? collectionParkedTheaterItem : current}
                 muted={muted}
                 onRequestUnmute={onRequestUnmute}
                 onEnded={() => {
                   if (showSignInRef.current) return
-                  if (isCollectionTab) personalAdvanceOnEnded()
-                  else goNext()
+                  if (isCollectionTab) {
+                    personalAdvanceOnEnded()
+                    return
+                  }
+                  const leaving = currentKeyRef.current
+                  if (leaving) seenSet.markSeen(leaving)
+                  goNext()
                 }}
                 photoCaption={false}
                 repeat={repeatCurrentActive}
                 articleMode={articleMode}
+                covered={(waiting && !isCollectionTab) || (isCollectionTab && personalFinished)}
               />
               {typeFilterActive &&
               (isCollectionTab ? personalLensItems : displayItems).length === 0 ? (
@@ -2322,6 +2239,14 @@ export function TheaterShell({
                       isCollectionTab ? 'Saved' : 'Live',
                     )}
                     onShowAll={clearQueueTypes}
+                  />
+                </div>
+              ) : isCollectionTab && personalFinished ? (
+                <div className="absolute inset-0 z-10">
+                  <CollectionAllClear
+                    total={personalTotal}
+                    onClose={() => onClose?.()}
+                    onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
                   />
                 </div>
               ) : waiting && !isCollectionTab ? (
@@ -2385,7 +2310,8 @@ export function TheaterShell({
           queuePlayed={queuePlayed}
           queueToPlay={queueToPlay}
           queueLooping={queueLooping}
-          pinnedKey={sharedItemKey}
+          pinnedKey={thisPostKey}
+          waiting={isCollectionTab ? false : waiting}
           onSelect={chromeOnSelect}
           onPrev={chromeOnPrev}
           onNext={chromeOnNext}
@@ -2465,7 +2391,7 @@ export function TheaterShell({
         queuePlayed={queuePlayed}
         queueToPlay={queueToPlay}
         queueLooping={queueLooping}
-        pinnedKey={sharedItemKey}
+        pinnedKey={thisPostKey}
         savedToday={feed.savedToday}
         onSelect={chromeOnSelect}
         waiting={isCollectionTab ? false : waiting}

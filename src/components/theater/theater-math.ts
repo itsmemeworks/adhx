@@ -9,7 +9,7 @@ import type { ContentType } from '@/components/matter'
 import { theaterItemKey } from './types'
 import { previewPath } from '@/lib/activity/preview-path'
 import { hasKnownTimestamp } from '@/lib/utils/format'
-import type { RepeatMode, TheaterItem, TheaterMode } from './types'
+import type { PersonalTab, RepeatMode, TheaterItem, TheaterMode } from './types'
 import { inferType } from '@/lib/trending/filter'
 import { inferCollectionContentType } from './collection-item'
 import { SAVED_PATH, isSavedPath } from '@/lib/theater/collection-href'
@@ -330,6 +330,40 @@ export function liveQueueGroupOf(
 }
 
 /**
+ * Shared-lead exemption for *entry* grouping only.
+ * The opened post starts pending even if this viewer has seen it before
+ * (a return visit still plays the link they followed). Do not wrap live
+ * `isSeenNow` with this — after this session watches it, leftover and
+ * Watched earlier must treat it as done.
+ */
+export function liveQueueTreatAsUnseen(
+  key: string,
+  sharedItemKey: string | null | undefined,
+  wasSeen: (key: string) => boolean,
+): boolean {
+  if (sharedItemKey && key === sharedItemKey) return false
+  return wasSeen(key)
+}
+
+/**
+ * Preview-page "This post" carve-out. Keep it while the opened post is
+ * still why you're here; drop it once this session has watched it and
+ * it is no longer on stage (Next, or caught-up). Caught-up keeps the
+ * last `currentKey` for Back, so `waiting` is the signal there.
+ */
+export function sharedThisPostKey(
+  sharedItemKey: string | null | undefined,
+  isSeenNow: (key: string) => boolean,
+  currentKey: string | null,
+  waiting?: boolean,
+): string | null {
+  if (!sharedItemKey) return null
+  if (waiting) return null
+  if (isSeenNow(sharedItemKey) && currentKey !== sharedItemKey) return null
+  return sharedItemKey
+}
+
+/**
  * Pure: the timestamp the live queue SORTS by — deliberately the same value
  * the row chips DISPLAY (`addedAt`, when the post first hit ADHX).
  *
@@ -549,6 +583,8 @@ export function computeLiveNext(opts: {
  * describe the viewer's position: nothing pending (caught up — the whole queue
  * is what a re-watch would play), and having browsed back into already-watched
  * posts, where the index sits outside the run.
+ *
+ * @deprecated Use computeQueueCounts. Kept for tests that still import it.
  */
 export function computeQueueTotal(opts: {
   index: number
@@ -557,7 +593,8 @@ export function computeQueueTotal(opts: {
   repeatMode: RepeatMode
 }): number {
   const { index, length, unseenCount, repeatMode } = opts
-  if (repeatMode !== 'off') return length
+  if (repeatMode === 'one') return length > 0 ? 1 : 0
+  if (repeatMode === 'all') return length
   if (unseenCount <= 0 || index < 0 || index >= unseenCount) return length
   return unseenCount
 }
@@ -595,12 +632,12 @@ export function countPlayedThisRun<
     isSeen: (key: string) => boolean
   },
 ): number {
-  const currentStillPending =
-    opts.currentKey !== null && opts.currentIndex >= 0 && opts.currentIndex < opts.remaining
   let n = 0
   for (const item of items) {
     const key = theaterItemKey(item)
-    if (currentStillPending && key === opts.currentKey) continue
+    // Still on stage: dwell may have marked it seen, and a prepend bumps
+    // `currentIndex` past `remaining`. Do not count it until we leave.
+    if (opts.currentKey !== null && key === opts.currentKey) continue
     const fromRun = !opts.wasSeenOnEntry(key) || opts.isFresh(key)
     if (fromRun && opts.isSeen(key)) n++
   }
@@ -611,9 +648,10 @@ export function countPlayedThisRun<
  * Progress through the leftover run, or looping copy for the whole pile.
  *
  * Repeat off: `toPlay` is how many will actually play (23 new), `played`
- * is how many of those are done (16). Repeat on: `looping` and `length`
- * (23 on repeat). A list walk (Saved one-pass, Re-watch all) is the
- * 1-based now-playing index (`2 of 92` on the second post).
+ * is how many of those are done (16). Keep playing: `looping` and the
+ * pile (`23 on repeat`). Repeat this post: `1 on repeat`. A list walk
+ * (Saved one-pass, Re-watch all) is the 1-based now-playing index
+ * (`2 of 92` on the second post).
  */
 export function computeQueueCounts(opts: {
   index: number
@@ -625,7 +663,11 @@ export function computeQueueCounts(opts: {
   played?: number
 }): QueueCount {
   const { index, length, unseenCount, repeatMode, listWalk, played } = opts
-  if (repeatMode !== 'off') {
+  if (repeatMode === 'one') {
+    const n = length > 0 ? 1 : 0
+    return { looping: true, played: 0, toPlay: n, length: n }
+  }
+  if (repeatMode === 'all') {
     return { looping: true, played: 0, toPlay: length, length }
   }
   if (length <= 0) return { looping: false, played: 0, toPlay: 0, length: 0 }
@@ -633,6 +675,14 @@ export function computeQueueCounts(opts: {
     const finished = index < 0 || index >= length
     const position = finished ? length : index + 1
     return { looping: false, played: position, toPlay: length, length }
+  }
+  // Live leftover always stages the head. A prepend keeps the same post
+  // but bumps `index`, so playlist-index-as-played would flip "3 in queue"
+  // to "1 of 3" even though nothing has been left.
+  if (played !== undefined) {
+    const remaining = Math.max(0, unseenCount)
+    const done = Math.max(0, played)
+    return { looping: false, played: done, toPlay: done + remaining, length }
   }
   if (unseenCount >= length) {
     const finished = index < 0 || index >= length
@@ -644,7 +694,7 @@ export function computeQueueCounts(opts: {
   return { looping: false, played: done, toPlay: done + remaining, length }
 }
 
-/** Peek / dock copy. Off-repeat: "N in queue" until the first leave, then "16 of 23". Repeat on: "23 on repeat". */
+/** Peek / dock copy. Off-repeat: "N in queue" until the first leave, then "16 of 23". Keep playing: "23 on repeat". Repeat this post: "1 on repeat". */
 export function formatQueueCount(
   count: QueueCount | null | undefined,
 ): { text: string; ariaLabel: string } | null {
@@ -655,9 +705,11 @@ export function formatQueueCount(
     return { text: `${length} on repeat`, ariaLabel: `${length} on repeat` }
   }
   if (played <= 0) {
-    const n = toPlay > 0 ? toPlay : length
-    if (n <= 0) return null
-    return { text: `${n} in queue`, ariaLabel: `${n} in queue` }
+    // Caught-up (and first paint before leftover is known) is toPlay 0 —
+    // do not fall back to the pile size or the dock says "18 in queue"
+    // next to You're all caught up.
+    if (toPlay <= 0) return null
+    return { text: `${toPlay} in queue`, ariaLabel: `${toPlay} in queue` }
   }
   if (toPlay <= 0) {
     if (length <= 0) return null
@@ -699,6 +751,29 @@ export function theaterTabNavRestore(
   if (browserPath === dest) return null
   if (browserPath === '/live' || isSavedPath(browserPath)) return null
   return dest
+}
+
+/**
+ * Live `replaceState`s the bar onto a preview path. Putting `dest` in the
+ * bar *before* `router.push` made Playwright (and a following `1`/`2`)
+ * treat the other tab as already landed while this page was still mounted
+ * — `next === pageTab` then no-op'd the real navigation.
+ *
+ * Cross-tab: only push. Same-tab: rewrite a leftover preview path.
+ */
+export function theaterTabNavAction(
+  pageTab: PersonalTab,
+  next: PersonalTab,
+  browserPath: string,
+): {
+  replace: '/live' | typeof SAVED_PATH | null
+  push: '/live' | typeof SAVED_PATH | null
+} {
+  const dest = next === 'live' ? '/live' : SAVED_PATH
+  if (next === pageTab) {
+    return { replace: theaterTabNavRestore(browserPath, dest), push: null }
+  }
+  return { replace: null, push: dest }
 }
 
 /**

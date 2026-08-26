@@ -333,6 +333,9 @@ export function StageVideo({
     const handleResume = () => {
       const video = videoRef.current
       if (!video) return
+      // Covered = retained under text/photo, or Live waiting / Saved All Clear.
+      // A tab-flip theater-resume must not restart that clip.
+      if (covered) return
       // Same ended-means-replay rule as the toggle handler above.
       if (ended) {
         handleReplay()
@@ -353,7 +356,7 @@ export function StageVideo({
       window.removeEventListener('theater-pause', handlePause)
       window.removeEventListener('theater-resume', handleResume)
     }
-  }, [ended, needsGesture])
+  }, [ended, needsGesture, covered])
 
   // Broadcast the element's real playing/muted state so the mobile chrome's
   // pause and audio buttons stay in sync regardless of what triggered the

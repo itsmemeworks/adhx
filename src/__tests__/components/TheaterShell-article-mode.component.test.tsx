@@ -103,6 +103,63 @@ describe('TheaterShell: articleMode reset', () => {
     expect(captured.articleMode).toBe(false)
   })
 
+  it('does not clear Read when a Saved prepend bumps personalIndex on Live', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([videoItem('1'), videoItem('2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[
+            {
+              id: 's1',
+              platform: 'twitter',
+              author: 'a',
+              authorName: 'A',
+              text: 'saved',
+              tweetUrl: 'https://x.com/a/status/s1',
+              createdAt: '2026-08-18T00:00:00Z',
+              processedAt: '2026-08-18T00:00:00Z',
+              isArchived: false,
+              tags: [],
+              media: [],
+              links: [],
+            } as never,
+          ]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await act(async () => {
+      captured.onToggleArticleMode?.()
+    })
+    expect(captured.articleMode).toBe(true)
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('tweet-added', {
+          detail: {
+            added: {
+              id: 's0',
+              platform: 'twitter',
+              author: 'b',
+              authorName: 'B',
+              text: 'new',
+              tweetUrl: 'https://x.com/b/status/s0',
+              createdAt: '2026-08-18T00:00:00Z',
+              processedAt: '2026-08-18T00:00:00Z',
+              isArchived: false,
+              tags: [],
+              media: [],
+              links: [],
+            },
+          },
+        }),
+      )
+    })
+    expect(captured.articleMode).toBe(true)
+  })
+
   it('isolates the stage so Read video stays under chrome', async () => {
     let view: ReturnType<typeof render> | undefined
     await act(async () => {

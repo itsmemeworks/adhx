@@ -11,6 +11,7 @@ import {
   theaterQueueFilterLabel,
   theaterUrlSyncPath,
   theaterTabNavRestore,
+  theaterTabNavAction,
   isFeedEnd,
   computeCanPrev,
   computeCanNext,
@@ -288,6 +289,34 @@ describe('theaterTabNavRestore', () => {
   it('resyncs a Live replaceState preview path to the tab the viewer asked for', () => {
     expect(theaterTabNavRestore('/author99/status/99', '/saved')).toBe('/saved')
     expect(theaterTabNavRestore('/@bob/video/1', '/live')).toBe('/live')
+  })
+})
+
+describe('theaterTabNavAction', () => {
+  it('pushes the other tab without rewriting the bar first', () => {
+    expect(theaterTabNavAction('live', 'collection', '/alice/status/1')).toEqual({
+      replace: null,
+      push: '/saved',
+    })
+    expect(theaterTabNavAction('collection', 'live', '/saved')).toEqual({
+      replace: null,
+      push: '/live',
+    })
+  })
+
+  it('rewrites a leftover preview path only when the page already is that tab', () => {
+    expect(theaterTabNavAction('collection', 'collection', '/alice/status/1')).toEqual({
+      replace: '/saved',
+      push: null,
+    })
+    expect(theaterTabNavAction('live', 'live', '/alice/status/1')).toEqual({
+      replace: '/live',
+      push: null,
+    })
+    expect(theaterTabNavAction('live', 'live', '/live')).toEqual({
+      replace: null,
+      push: null,
+    })
   })
 })
 

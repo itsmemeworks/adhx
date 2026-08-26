@@ -238,6 +238,44 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(queueState().currentKey).toBe('twitter:2')
   })
 
+  it('Keep playing drops the pile count when a post is archived', async () => {
+    await act_(() => {
+      renderCollection(['1', '2', '3'])
+    })
+    expect(collectionProps().queueLooping).toBe(true)
+    expect(collectionProps().queueToPlay).toBe(3)
+
+    const onDone = collectionProps().collection as { onDone: () => void }
+    await act_(() => onDone.onDone())
+
+    expect(collectionProps().queueLooping).toBe(true)
+    expect(collectionProps().queueToPlay).toBe(2)
+    expect(collectionProps().queuePlayed).toBe(0)
+  })
+
+  it('Play once keeps the 1-based position after archiving the current row', async () => {
+    await act_(() => {
+      renderCollection(['1', '2', '3'])
+    })
+    const cycle = collectionProps().onCycleRepeat as () => void
+    await act_(() => cycle())
+    await act_(() => cycle())
+    expect(collectionProps().repeatMode).toBe('off')
+    const onNext = collectionProps().onNext as () => void
+    await act_(() => onNext())
+    expect(collectionProps().currentKey).toBe('twitter:2')
+    expect(collectionProps().queuePlayed).toBe(2)
+    expect(collectionProps().queueToPlay).toBe(3)
+
+    const onDone = collectionProps().collection as { onDone: () => void }
+    await act_(() => onDone.onDone())
+
+    expect(collectionProps().currentKey).toBe('twitter:3')
+    expect(collectionProps().queuePlayed).toBe(2)
+    expect(collectionProps().queueToPlay).toBe(2)
+    expect(collectionProps().queueLooping).toBe(false)
+  })
+
   it('skip (next) keeps the post and does not notify', async () => {
     const stats = vi.fn()
     window.addEventListener('stats-updated', stats)

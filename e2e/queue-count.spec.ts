@@ -18,6 +18,9 @@ test.describe('queue count — Live leftover run', () => {
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
 
+    // First paint can flash playlist-index "1 of N" before leftover `played`
+    // lands. Wait for the leftover copy, then read.
+    await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
     const start = await readQueueProgress(page)
     expect(start.played).toBe(0)
     expect(start.toPlay).toBeGreaterThan(1)
@@ -28,6 +31,10 @@ test.describe('queue count — Live leftover run', () => {
     await page.getByRole('button', { name: 'Stop when caught up' }).click()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
     await expect(visibleQueueCount(page)).toHaveText(/\d+ on repeat/)
+
+    await page.getByRole('button', { name: 'Keep playing' }).click()
+    await expect(page.getByRole('button', { name: 'Repeat this post' })).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText('1 on repeat')
   })
 })
 
@@ -42,6 +49,8 @@ authedTest.describe('queue count — Saved one-pass vs loop', () => {
     await expect(visibleQueueCount(page)).toHaveText(/\d+ on repeat/)
 
     await page.getByRole('button', { name: 'Keep playing' }).click()
+    await expect(page.getByRole('button', { name: 'Repeat this post' })).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText('1 on repeat')
     await page.getByRole('button', { name: 'Repeat this post' }).click()
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
 
@@ -52,6 +61,32 @@ authedTest.describe('queue count — Saved one-pass vs loop', () => {
 
     await goNext(page)
     await expect(visibleQueueCount(page)).toHaveText(`2 of ${start.toPlay}`)
+  })
+
+  authedTest('Videos filter names the video pile, not the full Saved list', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.removeItem('adhx-theater-repeat-saved')
+      localStorage.removeItem('adhx-theater-types')
+    })
+    await page.goto('/saved')
+    await expectTheaterReady(page)
+    await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
+    const all = await visibleQueueCount(page).innerText()
+    const allN = Number(all.match(/(\d+) on repeat/)?.[1])
+    expect(allN).toBeGreaterThan(1)
+
+    const queue = page.getByRole('dialog', { name: 'Playlist' })
+    await page.getByRole('button', { name: 'Queue', exact: true }).click()
+    await expect(queue).toBeVisible()
+    await queue.getByRole('button', { name: 'Videos', exact: true }).click()
+    await expect(queue.getByRole('button', { name: 'Videos', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    const filtered = await visibleQueueCount(page).innerText()
+    const videoN = Number(filtered.match(/(\d+) on repeat/)?.[1])
+    expect(videoN).toBeGreaterThan(0)
+    expect(videoN).toBeLessThan(allN)
   })
 })
 
