@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — Phase 5 theater state stabilized
+
+Persistent video playback now rejects superseded play promises and queued media events without remounting the iOS-granted element. Shared preview leads release after every departure, including waiting/unavailable paths, while live auth and cross-tab save/tag/delete membership stay current. Seen state uses bounded revisioned local operations (500 marks + 500 tombstones), atomic bulk unmarks, cross-tab convergence, and one-time legacy-array migration; pre-V2 tabs must reload. All 3,217 tests, typecheck, build, formatting, lint (warnings only), and focused review passes are green.
+
 ## 2026-08-26 — Phase 4 concurrency remediation verified
 
 Auth now uses atomic magic-link/OAuth state claims, one X identity per account, disconnect generations, cross-worker refresh leases, CAS token/profile writes, and transactional email claims. Moderation fails closed across cached and uncached public surfaces, with no-store APIs and banned-source sitemap/theater filtering. Sync uses durable heartbeat leases and ownership-checked terminal writes; manual/sync bookmark links merge without race-driven metadata loss. Startup migrations repair legacy duplicates before enforcing indexes. All 3,170 tests, typecheck, build, formatting, lint (warnings only), diff checks, and the final publication review are green. Ready for stacked PR review.

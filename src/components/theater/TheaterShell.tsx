@@ -273,7 +273,9 @@ export function TheaterShell({
   })
   const repeatModeRef = useRef(effectiveRepeatMode)
   repeatModeRef.current = effectiveRepeatMode
-  const signedIn = authed || !!authMe.me?.authenticated
+  // SSR auth is only a hydration hint. Once the client account request has
+  // produced a signed-in OR signed-out shape, that settled result wins.
+  const signedIn = authMe.me ? !!authMe.me.authenticated : authed
   const goTheaterTab = useCallback(
     (tab: PersonalTab) => {
       if (isPersonal) {
@@ -371,6 +373,73 @@ export function TheaterShell({
   useEffect(() => {
     personalSavedKeysRef.current = personalSavedKeys
   }, [personalSavedKeys])
+  const [liveTagsByKey, setLiveTagsByKey] = useState<Record<string, string[]>>({})
+  const membershipCheckedRef = useRef<Set<string>>(new Set())
+  const membershipRevisionsRef = useRef<Map<string, number>>(new Map())
+  const advanceMembershipRevision = useCallback((key: string) => {
+    const next = (membershipRevisionsRef.current.get(key) ?? 0) + 1
+    membershipRevisionsRef.current.set(key, next)
+  }, [])
+  const patchSavedMembership = useCallback((item: FeedItem) => {
+    const key = `${item.platform ?? 'twitter'}:${item.id}`
+    if (!personalSavedKeysRef.current.has(key)) {
+      const next = new Set(personalSavedKeysRef.current)
+      next.add(key)
+      personalSavedKeysRef.current = next
+      setPersonalSavedKeys(next)
+    }
+    setLiveTagsByKey((prev) => ({
+      ...prev,
+      [key]: item.tags ?? [],
+    }))
+  }, [])
+  const clearSavedMembership = useCallback((platform: string, id: string) => {
+    const key = `${platform}:${id}`
+    if (personalSavedKeysRef.current.has(key)) {
+      const next = new Set(personalSavedKeysRef.current)
+      next.delete(key)
+      personalSavedKeysRef.current = next
+      setPersonalSavedKeys(next)
+    }
+    setLiveTagsByKey((prev) => {
+      if (!(key in prev)) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }, [])
+  const patchAuthoritativeMembership = useCallback(
+    (item: FeedItem) => {
+      advanceMembershipRevision(`${item.platform ?? 'twitter'}:${item.id}`)
+      patchSavedMembership(item)
+    },
+    [advanceMembershipRevision, patchSavedMembership],
+  )
+  const clearAuthoritativeMembership = useCallback(
+    (platform: string, id: string) => {
+      advanceMembershipRevision(`${platform}:${id}`)
+      clearSavedMembership(platform, id)
+    },
+    [advanceMembershipRevision, clearSavedMembership],
+  )
+  const lookupMembership = useCallback(
+    (lookupItems: TheaterItem[]) => {
+      const revisions = new Map(
+        lookupItems.map((item) => {
+          const key = theaterItemKey(item)
+          return [key, membershipRevisionsRef.current.get(key) ?? 0] as const
+        }),
+      )
+      fetchBookmarkMembership(lookupItems, membershipCheckedRef.current, (owned) => {
+        for (const item of owned) {
+          const key = `${item.platform ?? 'twitter'}:${item.id}`
+          if ((membershipRevisionsRef.current.get(key) ?? 0) !== revisions.get(key)) continue
+          patchSavedMembership(item)
+        }
+      })
+    },
+    [patchSavedMembership],
+  )
   // Prepends sit at index 0 while the cursor stays put, so "everything
   // before the cursor is watched" would mark a brand-new save Watched.
   const [freshSavedKeys, setFreshSavedKeys] = useState<Set<string>>(() => new Set())
@@ -485,13 +554,21 @@ export function TheaterShell({
     clearPersonalUndoTimer()
     setPersonalUndo((u) => {
       if (shouldCommitDelete(u) && u) {
-        fetch(`/api/bookmarks/${u.item.id}?platform=${u.item.platform ?? 'twitter'}`, {
+        const item = u.item
+        void fetch(`/api/bookmarks/${item.id}?platform=${item.platform ?? 'twitter'}`, {
           method: 'DELETE',
-        }).catch(() => {})
-        onPostResolved?.(u.item, 'delete')
-        notifyCollectionChanged({
-          removed: { platform: u.item.platform ?? 'twitter', id: u.item.id },
         })
+          .then((response) => {
+            if (!response.ok) return
+            onPostResolved?.(item, 'delete')
+            // Unlike Archive, a successful DELETE is authoritative: receivers
+            // clear saved/tag membership and must not race a stale ownership
+            // lookup that can resurrect the just-deleted row.
+            notifyCollectionChanged({
+              removed: { platform: item.platform ?? 'twitter', id: item.id },
+            })
+          })
+          .catch(() => {})
       }
       return null
     })
@@ -564,16 +641,23 @@ export function TheaterShell({
     const onFeedChanged = (event: Event) => {
       const detail = (event as CustomEvent<CollectionFeedChangedDetail>).detail
       if (detail?.removed) {
+        const removed = detail.removed as CollectionFeedChangedDetail['removed'] & {
+          preserveMembership?: boolean
+        }
+        const platform = removed.platform || 'twitter'
+        if (!removed.preserveMembership) clearAuthoritativeMembership(platform, removed.id)
         const item = personalQueueRef.current.find(
-          (f) =>
-            f.id === detail.removed!.id &&
-            (f.platform ?? 'twitter') === (detail.removed!.platform || 'twitter'),
+          (f) => f.id === removed.id && (f.platform ?? 'twitter') === platform,
         )
         if (item) removeFromPersonalQueue(item)
         return
       }
       const added = detail?.added
       if (!added || typeof added.id !== 'string') return
+      // A remote save is authoritative even when this key was previously
+      // looked up as not-owned. Patch both membership surfaces immediately;
+      // do not wait for the once-per-mount lookup to become eligible again.
+      patchAuthoritativeMembership(added)
       prependToPersonalQueue(added)
       // Arrival time is now — LIFO must put it Next (or play it if
       // caught up). The source tweet's createdAt must not bury it.
@@ -595,7 +679,14 @@ export function TheaterShell({
     }
     window.addEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
     return () => window.removeEventListener(CLIENT_EVENTS.feedChanged, onFeedChanged)
-  }, [removeFromPersonalQueue, prependToPersonalQueue, feedPrepend, seenSet.unmarkSeen])
+  }, [
+    removeFromPersonalQueue,
+    prependToPersonalQueue,
+    feedPrepend,
+    seenSet.unmarkSeen,
+    patchAuthoritativeMembership,
+    clearAuthoritativeMembership,
+  ])
 
   const archiveCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
@@ -606,7 +697,14 @@ export function TheaterShell({
     }).catch(() => {})
     onPostResolved?.(item, 'archive')
     notifyCollectionChanged({
-      removed: { platform: item.platform ?? 'twitter', id: item.id },
+      // Archive removes the row from Saved's unread queue but does not remove
+      // collection ownership. The marker survives BroadcastChannel cloning
+      // while keeping the public client-event shape backward compatible.
+      removed: {
+        platform: item.platform ?? 'twitter',
+        id: item.id,
+        preserveMembership: true,
+      } as CollectionFeedChangedDetail['removed'],
     })
     commitPendingDelete()
     const action: PersonalUndoAction = { type: 'archive', item, index: idx }
@@ -731,6 +829,7 @@ export function TheaterShell({
         .detail
       if (!detail?.bookmarkId) return
       const platform = detail.platform ?? 'twitter'
+      advanceMembershipRevision(`${platform}:${detail.bookmarkId}`)
       setLiveTagsByKey((prev) => ({
         ...prev,
         [`${platform}:${detail.bookmarkId}`]: detail.tags ?? [],
@@ -746,7 +845,7 @@ export function TheaterShell({
     }
     window.addEventListener('bookmark-tags-changed', handleTagsChanged)
     return () => window.removeEventListener('bookmark-tags-changed', handleTagsChanged)
-  }, [isPersonal])
+  }, [isPersonal, advanceMembershipRevision])
 
   // Dialog a11y: move focus into the overlay on mount, restore on unmount.
   useEffect(() => {
@@ -794,7 +893,13 @@ export function TheaterShell({
           body: JSON.stringify({ url, source: 'manual' }),
         })
         if (res.ok) {
-          setPersonalSavedKeys((prev) => new Set(prev).add(key))
+          advanceMembershipRevision(key)
+          if (!personalSavedKeysRef.current.has(key)) {
+            const next = new Set(personalSavedKeysRef.current)
+            next.add(key)
+            personalSavedKeysRef.current = next
+            setPersonalSavedKeys(next)
+          }
           // Did we manage to hand the grid a ready-made row? If not (no
           // bookmarkId, a failed lookup, a row the feed didn't return) the grid
           // still has to learn about the post somehow, so fall back to the
@@ -818,6 +923,7 @@ export function TheaterShell({
                 )
                 if (saved) {
                   const row = saved
+                  patchAuthoritativeMembership(row)
                   prependToPersonalQueue(row)
                   // Hand the same row to the grid behind the overlay. It used to
                   // fire `tweet-added`, whose only listener refetches the WHOLE
@@ -845,7 +951,7 @@ export function TheaterShell({
       }
       return false
     },
-    [prependToPersonalQueue],
+    [prependToPersonalQueue, patchAuthoritativeMembership, advanceMembershipRevision],
   )
 
   const handlePastePost = useCallback(
@@ -889,7 +995,7 @@ export function TheaterShell({
           addedAt: new Date().toISOString(),
         }
         const key = theaterItemKey(theaterItem)
-        setPersonalSavedKeys((prev) => new Set(prev).add(key))
+        patchAuthoritativeMembership(row)
         markFreshSaved(key)
         seenSet.unmarkSeen([key])
         // Same-tab paste takes the stage now. The clip that was playing
@@ -936,7 +1042,7 @@ export function TheaterShell({
         return false
       }
     },
-    [feedPrepend, markFreshSaved, seenSet.unmarkSeen],
+    [feedPrepend, markFreshSaved, seenSet.unmarkSeen, patchAuthoritativeMembership],
   )
 
   const handleSharedTag = useCallback((item: TheaterItem) => {
@@ -1086,12 +1192,14 @@ export function TheaterShell({
    */
   const parkedUnplayedKeyRef = useRef<string | null>(null)
 
-  const { sharedPinned, clearSharedPin, sharedItemKey } = useSharedPin(
-    mode,
-    sharedItem,
-    leadUnavailable,
-    signedIn,
-  )
+  const {
+    sharedPinned,
+    clearSharedPin,
+    releaseSharedLead,
+    sharedItemKey,
+    sharedPlayableKey,
+    sharedLeadReleased,
+  } = useSharedPin(mode, sharedItem, leadUnavailable, signedIn)
 
   // Set once a user has navigated (keyboard/rail click) — after that, the
   // opening pick below never overrides their choice.
@@ -1113,14 +1221,21 @@ export function TheaterShell({
   // pinning there keeps current at index 0, so Next is always the newest
   // other post (a two-item loop).
   const pinLiveCurrent = liveOrdering && effectiveRepeatMode === 'off' && !waiting
+  // The opened preview is a landing guarantee, not a permanent queue member.
+  // Once it has been left, remove it from this session's playable list so
+  // Prev, repeat-all wrap, queue counts, and an unavailable tombstone cannot
+  // surface it again.
+  const playableItems = useMemo(
+    () =>
+      sharedLeadReleased && sharedItemKey
+        ? items.filter((item) => theaterItemKey(item) !== sharedItemKey)
+        : items,
+    [items, sharedLeadReleased, sharedItemKey],
+  )
   const lensItems = useMemo(
     () =>
-      applyTheaterTypeLens(
-        items,
-        typeFilterActive ? queueTypes : [],
-        sharedItem ? sharedItemKey : null,
-      ),
-    [items, typeFilterActive, queueTypes, sharedItem, sharedItemKey],
+      applyTheaterTypeLens(playableItems, typeFilterActive ? queueTypes : [], sharedPlayableKey),
+    [playableItems, typeFilterActive, queueTypes, sharedPlayableKey],
   )
   const displayItems = useMemo(
     () =>
@@ -1129,7 +1244,7 @@ export function TheaterShell({
             currentKey,
             onlyUnseen,
             isSeen: isSeenNow,
-            keepKey: sharedItemKey,
+            keepKey: sharedPlayableKey,
             pinCurrent: pinLiveCurrent,
             pinNextKey: pasteInterruptKey,
           })
@@ -1140,7 +1255,7 @@ export function TheaterShell({
       currentKey,
       onlyUnseen,
       isSeenNow,
-      sharedItemKey,
+      sharedPlayableKey,
       pinLiveCurrent,
       pasteInterruptKey,
     ],
@@ -1152,7 +1267,7 @@ export function TheaterShell({
             currentKey,
             onlyUnseen,
             isSeen: isSeenNow,
-            keepKey: sharedItemKey,
+            keepKey: sharedPlayableKey,
             pinCurrent: pinLiveCurrent,
             pinNextKey: pasteInterruptKey,
             appendSeen: true,
@@ -1164,7 +1279,7 @@ export function TheaterShell({
       lensItems,
       currentKey,
       isSeenNow,
-      sharedItemKey,
+      sharedPlayableKey,
       pinLiveCurrent,
       pasteInterruptKey,
       displayItems,
@@ -1184,38 +1299,18 @@ export function TheaterShell({
    * Seeded from the membership lookup below, which already fetches the saved
    * FeedItem (tags included), and kept current by the tags-changed listener.
    */
-  const [liveTagsByKey, setLiveTagsByKey] = useState<Record<string, string[]>>({})
-
-  const membershipCheckedRef = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (!isPersonal || personalTab !== 'live') return
-    fetchBookmarkMembership(displayItems, membershipCheckedRef.current, (owned) => {
-      setPersonalSavedKeys((prev) => {
-        const next = new Set(prev)
-        for (const f of owned) next.add(`${f.platform ?? 'twitter'}:${f.id}`)
-        return next
-      })
-      setLiveTagsByKey((prev) => {
-        const next = { ...prev }
-        for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
-        return next
-      })
-    })
-  }, [isPersonal, personalTab, displayItems])
+    lookupMembership(displayItems)
+  }, [isPersonal, personalTab, displayItems, lookupMembership])
 
   // Shared preview: seed tags for the lead (and any pulse items we land on)
   // so a reload of an already-tagged save shows Tag N. The
   // tags-changed listener above covers in-session adds.
   useEffect(() => {
     if (mode !== 'shared' || !authMe.me?.authenticated) return
-    fetchBookmarkMembership(displayItems, membershipCheckedRef.current, (owned) => {
-      setLiveTagsByKey((prev) => {
-        const next = { ...prev }
-        for (const f of owned) next[`${f.platform ?? 'twitter'}:${f.id}`] = f.tags ?? []
-        return next
-      })
-    })
-  }, [mode, authMe.me?.authenticated, displayItems])
+    lookupMembership(displayItems)
+  }, [mode, authMe.me?.authenticated, displayItems, lookupMembership])
 
   // Kept in a ref (rather than effect deps) so goNext/goPrev/the dwell timer
   // (useTheaterDwell) only reset when `currentKey` itself changes, not on
@@ -1447,60 +1542,91 @@ export function TheaterShell({
   // Same trick for the unseen boundary — goNext is an empty-deps callback.
   const currentKeyRef = useRef(currentKey)
   currentKeyRef.current = currentKey
+  const releaseSharedLeadIfLeaving = useCallback(
+    (from: string | null, to: string | null) => {
+      if (from && from === sharedItemKey && to && to !== from) releaseSharedLead()
+    },
+    [releaseSharedLead, sharedItemKey],
+  )
   const goNext = useCallback(() => {
-    setCurrentKey((key) => {
-      const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      const next = computeLoopedNext(
-        itemsRef.current.length,
-        idx,
-        loop || repeatModeRef.current === 'all',
-      )
-      if (next === null) return key
-      if (next === 'waiting') {
-        const pending = firstPendingLiveKey(itemsRef.current, isSeenRef.current, key)
-        if (pending) {
-          hasNavigatedRef.current = true
-          if (waitingRef.current) setWaiting(false)
-          return pending
-        }
-        if (!waitingRef.current) {
-          parkedUnplayedKeyRef.current = null
-          waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
-          setWaiting(true)
-        }
-        return key
+    const key = currentKeyRef.current
+    const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
+    const next = computeLoopedNext(
+      itemsRef.current.length,
+      idx,
+      loop || repeatModeRef.current === 'all',
+    )
+    if (next === null) return
+    if (next === 'waiting') {
+      const pending = firstPendingLiveKey(itemsRef.current, isSeenRef.current, key)
+      if (pending) {
+        hasNavigatedRef.current = true
+        if (waitingRef.current) setWaiting(false)
+        releaseSharedLeadIfLeaving(key, pending)
+        currentKeyRef.current = pending
+        setCurrentKey(pending)
+        return
       }
-      hasNavigatedRef.current = true
-      return theaterItemKey(itemsRef.current[next])
-    })
-  }, [loop])
+      if (!waitingRef.current) {
+        parkedUnplayedKeyRef.current = null
+        waitingBaselineFreshKeysRef.current = new Set(freshKeysRef.current)
+        // Crossing the unseen boundary is a real departure even though
+        // currentKey stays parked under the waiting overlay. Release the
+        // shared landing exemption so the lead cannot return through Prev,
+        // repeat-all, queue counts, or an unavailable tombstone.
+        if (key && key === sharedItemKey) releaseSharedLead()
+        setWaiting(true)
+      }
+      return
+    }
+    hasNavigatedRef.current = true
+    const nextKey = theaterItemKey(itemsRef.current[next])
+    releaseSharedLeadIfLeaving(key, nextKey)
+    currentKeyRef.current = nextKey
+    setCurrentKey(nextKey)
+  }, [loop, releaseSharedLeadIfLeaving, releaseSharedLead, sharedItemKey])
 
   const goPrev = useCallback(() => {
     // While waiting, "back" just returns to the last post it's already
     // parked on (currentKey never moved) — never step further back too.
     // (Collection mode never sets `waiting`, so this branch is inert there.)
     if (waitingRef.current) {
-      setWaiting(false)
+      // The shared lead is removed from the playable list after crossing the
+      // boundary. Prev may reveal a genuinely parked queue item, but it must
+      // never reveal that released lead again.
+      if (
+        currentKeyRef.current &&
+        itemsRef.current.some((item) => theaterItemKey(item) === currentKeyRef.current)
+      ) {
+        setWaiting(false)
+      }
       return
     }
-    setCurrentKey((key) => {
-      const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-      const prev = computeLoopedPrev(
-        itemsRef.current.length,
-        idx,
-        loop || repeatModeRef.current === 'all',
-      )
-      if (prev === null) return key
-      hasNavigatedRef.current = true
-      return theaterItemKey(itemsRef.current[prev])
-    })
-  }, [loop])
-
-  const onSelect = useCallback((key: string) => {
+    const key = currentKeyRef.current
+    const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
+    const prev = computeLoopedPrev(
+      itemsRef.current.length,
+      idx,
+      loop || repeatModeRef.current === 'all',
+    )
+    if (prev === null) return
     hasNavigatedRef.current = true
-    setWaiting(false)
-    setCurrentKey(key)
-  }, [])
+    const prevKey = theaterItemKey(itemsRef.current[prev])
+    releaseSharedLeadIfLeaving(key, prevKey)
+    currentKeyRef.current = prevKey
+    setCurrentKey(prevKey)
+  }, [loop, releaseSharedLeadIfLeaving])
+
+  const onSelect = useCallback(
+    (key: string) => {
+      hasNavigatedRef.current = true
+      setWaiting(false)
+      releaseSharedLeadIfLeaving(currentKeyRef.current, key)
+      currentKeyRef.current = key
+      setCurrentKey(key)
+    },
+    [releaseSharedLeadIfLeaving],
+  )
 
   // shared-post-repeat: USER-INITIATED navigation only — keyboard, the
   // chevron buttons, and dock/queue card selection all funnel through these
@@ -1554,9 +1680,14 @@ export function TheaterShell({
     // React may re-invoke (StrictMode double-render safety).
     const next = nextRepeatMode(repeatModeRef.current, loop)
     if (next === 'all' && waitingRef.current) {
-      setWaiting(false)
       const first = fullQueue()[0]
-      if (first) setCurrentKey(theaterItemKey(first))
+      if (first) {
+        setWaiting(false)
+        const firstKey = theaterItemKey(first)
+        releaseSharedLeadIfLeaving(currentKeyRef.current, firstKey)
+        currentKeyRef.current = firstKey
+        setCurrentKey(firstKey)
+      }
       // Same reason as `replayFromStart` — the key may not change, so the
       // paused stage needs telling explicitly.
       window.dispatchEvent(new CustomEvent('theater-resume'))
@@ -1570,7 +1701,7 @@ export function TheaterShell({
       setPersonalIndex(0)
     }
     setRepeatMode(next)
-  }, [clearSharedPin, loop, isCollectionTab])
+  }, [clearSharedPin, loop, isCollectionTab, releaseSharedLeadIfLeaving])
 
   // Re-watch all: mark the current playlist unseen and play newest-first
   // as a fresh Repeat-off run. Finished posts go to Seen again.
@@ -1583,7 +1714,10 @@ export function TheaterShell({
     clearSharedPin()
     parkedUnplayedKeyRef.current = null
     setWaiting(false)
-    setCurrentKey(theaterItemKey(first))
+    const firstKey = theaterItemKey(first)
+    releaseSharedLeadIfLeaving(currentKeyRef.current, firstKey)
+    currentKeyRef.current = firstKey
+    setCurrentKey(firstKey)
     // Resume explicitly. Entering the waiting stage fired `theater-pause` at a
     // still-mounted stage, and the auto-advance that got us here left
     // `currentKey` ON the last item — so when that item IS `items[0]` (the
@@ -1592,7 +1726,7 @@ export function TheaterShell({
     // re-runs, and nothing ever calls play() again. Owner report: "I click
     // rewatch all… it wasn't auto-playing for me."
     window.dispatchEvent(new CustomEvent('theater-resume'))
-  }, [clearSharedPin, seenSet.unmarkSeen])
+  }, [clearSharedPin, seenSet.unmarkSeen, releaseSharedLeadIfLeaving])
 
   /**
    * "Keep playing" on the caught-up stage: the standing choice, taken at the
@@ -1619,10 +1753,15 @@ export function TheaterShell({
     if (!resumeOnCurrent && list.length > 0) {
       const idx = list.findIndex((it) => theaterItemKey(it) === currentKeyRef.current)
       const next = list[(idx + 1 + list.length) % list.length]
-      if (next) setCurrentKey(theaterItemKey(next))
+      if (next) {
+        const nextKey = theaterItemKey(next)
+        releaseSharedLeadIfLeaving(currentKeyRef.current, nextKey)
+        currentKeyRef.current = nextKey
+        setCurrentKey(nextKey)
+      }
     }
     window.dispatchEvent(new CustomEvent('theater-resume'))
-  }, [clearSharedPin])
+  }, [clearSharedPin, releaseSharedLeadIfLeaving])
 
   const onRequestUnmute = useCallback(() => setMuted(false), [])
   // Explicit setter (not a blind toggle) — the chrome's audio button computes
@@ -1764,6 +1903,8 @@ export function TheaterShell({
     // resumes), and remember it so a non-user advance off it re-waits
     // instead of continuing into the already-browsed queue (round 8).
     waitingBaselineFreshKeysRef.current.add(pending)
+    releaseSharedLeadIfLeaving(currentKey, pending)
+    currentKeyRef.current = pending
     setCurrentKey(pending)
     setWaiting(false)
   }, [
@@ -1775,6 +1916,7 @@ export function TheaterShell({
     displayItems,
     currentKey,
     seenSet.isSeen,
+    releaseSharedLeadIfLeaving,
   ])
 
   // Entering the waiting stage pauses the (still-mounted, now-hidden) stage
@@ -1922,13 +2064,41 @@ export function TheaterShell({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) return
         window.dispatchEvent(
           new CustomEvent('theater-post-saved', {
             detail: { key },
           }),
         )
+        // The add response is intentionally small, so fetch the canonical
+        // FeedItem before broadcasting. Other open theaters need its tags and
+        // membership immediately; a bare notification cannot patch either.
+        try {
+          const q = new URLSearchParams({
+            hideArchived: 'false',
+            filter: 'all',
+            limit: '5',
+            id: sharedItem.bookmarkId ?? '',
+            idPlatform: sharedItem.platform,
+          })
+          const feedResponse = await fetch(`/api/feed?${q}`)
+          if (feedResponse.ok) {
+            const data = await feedResponse.json()
+            const saved = (data.items ?? []).find(
+              (item: FeedItem) =>
+                item.id === sharedItem.bookmarkId &&
+                (item.platform ?? 'twitter') === sharedItem.platform,
+            )
+            if (saved) {
+              patchAuthoritativeMembership(saved)
+              notifyCollectionChanged({ refetchFeed: false, added: saved })
+              return
+            }
+          }
+        } catch {
+          // Fall through to the normal refetch notification.
+        }
         notifyCollectionChanged()
       })
       .catch(() => {})
@@ -1940,6 +2110,7 @@ export function TheaterShell({
     awaitingSharedResolve,
     authMe.loading,
     authMe.me,
+    patchAuthoritativeMembership,
   ])
 
   const performClone = useCallback(async () => {
@@ -2162,7 +2333,7 @@ export function TheaterShell({
             />
           ) : resolvingSharedLead ? (
             <StageResolving handle={sharedItem?.author} />
-          ) : isSharedUnavailableOnCurrent && current ? (
+          ) : isSharedUnavailableOnCurrent && current && !(waiting && !isCollectionTab) ? (
             <StageUnavailable item={current} reason={sharedUnavailableReason} />
           ) : (
             <>
@@ -2281,7 +2452,7 @@ export function TheaterShell({
           isPlaylistOwner={isPlaylistOwner}
           saveStatus={saveStatus}
           onSavePlaylist={handleSavePlaylist}
-          authed={authed}
+          authed={signedIn}
           onRequestSignIn={openSignIn}
           repeatCurrent={repeatCurrentActive}
           repeatMode={displayRepeatMode}
@@ -2300,7 +2471,7 @@ export function TheaterShell({
         <DesktopStageChrome
           mode={mode}
           current={chromeCurrent}
-          authed={authed}
+          authed={signedIn}
           declutter={desktopDeclutter}
           onToggleDeclutter={onToggleDesktopDeclutter}
           playlist={playlist}

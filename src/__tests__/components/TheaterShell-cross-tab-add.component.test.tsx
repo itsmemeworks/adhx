@@ -125,7 +125,13 @@ type ChromeProps = {
   queuePlayed?: number
   queueToPlay?: number
   queueLooping?: boolean
-  collection?: { tab: string; onTabChange: (tab: string) => void }
+  collection?: {
+    tab: string
+    onTabChange: (tab: string) => void
+    savedKeys: Set<string>
+    tags?: string[]
+    onLiveTag: (item: TheaterItem) => Promise<void>
+  }
 }
 
 function chromeProps(): ChromeProps {
@@ -148,6 +154,14 @@ async function tapType(type: ContentType) {
 
 function fireAdded(item: FeedItem) {
   window.dispatchEvent(new CustomEvent('tweet-added', { detail: { added: item } }))
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((settle) => {
+    resolve = settle
+  })
+  return { promise, resolve }
 }
 
 describe('TheaterShell: cross-tab add + filters', () => {
@@ -190,6 +204,180 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().queueToPlay).toBe(3)
     expect(chromeProps().queueLooping).toBe(false)
   })
+
+  it('Live: a remote add patches saved and tag membership after a prior miss', async () => {
+    let membershipItems: FeedItem[] = []
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/bookmarks/add')) {
+        return { ok: true, json: async () => ({}) }
+      }
+      return { ok: true, json: async () => ({ items: membershipItems }) }
+    })
+    global.fetch = fetchSpy as never
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.some(([input]) => String(input).includes('/api/feed'))).toBe(true),
+    )
+    expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(false)
+
+    const remotelyAdded = feedItem('1', { tags: ['remote-tag'] })
+    membershipItems = [remotelyAdded]
+    await act(async () => fireAdded(remotelyAdded))
+
+    expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(true)
+    expect(chromeProps().collection?.tags).toEqual(['remote-tag'])
+    const savesBeforeTag = fetchSpy.mock.calls.filter(([input]) =>
+      String(input).includes('/api/bookmarks/add'),
+    ).length
+    await act(async () => {
+      await chromeProps().collection?.onLiveTag(textItem('1'))
+    })
+    expect(
+      fetchSpy.mock.calls.filter(([input]) => String(input).includes('/api/bookmarks/add')).length,
+    ).toBe(savesBeforeTag)
+
+    const membershipLookupsBeforeDelete = fetchSpy.mock.calls.filter(([input]) =>
+      String(input).includes('/api/feed'),
+    ).length
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('tweet-added', {
+          detail: { removed: { platform: 'twitter', id: '1' } },
+        }),
+      )
+    })
+    expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(false)
+    expect(chromeProps().collection?.tags).toBeUndefined()
+    expect(
+      fetchSpy.mock.calls.filter(([input]) => String(input).includes('/api/feed')).length,
+    ).toBe(membershipLookupsBeforeDelete)
+  })
+
+  it('Live: a remote archive preserves saved and tag membership', async () => {
+    const owned = feedItem('1', { tags: ['kept-tag'] })
+    const fetchSpy = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ items: [owned] }),
+    }))
+    global.fetch = fetchSpy as never
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[owned]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await waitFor(() => expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(true))
+    const lookupsBeforeArchive = fetchSpy.mock.calls.length
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('tweet-added', {
+          detail: {
+            removed: {
+              platform: 'twitter',
+              id: '1',
+              preserveMembership: true,
+            },
+          },
+        }),
+      )
+    })
+
+    expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(true)
+    expect(chromeProps().collection?.tags).toEqual(['kept-tag'])
+    expect(fetchSpy).toHaveBeenCalledTimes(lookupsBeforeArchive)
+  })
+
+  it('Live: a pending lookup cannot restore membership after a true delete', async () => {
+    const lookup = deferred<{ items: FeedItem[] }>()
+    const fetchSpy = vi.fn(async () => ({
+      ok: true,
+      json: async () => lookup.promise,
+    }))
+    global.fetch = fetchSpy as never
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+
+    await act(async () => fireAdded(feedItem('1', { tags: ['authoritative'] })))
+    expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(true)
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('tweet-added', {
+          detail: { removed: { platform: 'twitter', id: '1' } },
+        }),
+      )
+    })
+    expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(false)
+
+    await act(async () => {
+      lookup.resolve({ items: [feedItem('1', { tags: ['stale-owned'] })] })
+      await lookup.promise
+    })
+    expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(false)
+    expect(chromeProps().collection?.tags).toBeUndefined()
+  })
+
+  it.each([
+    { label: 'miss', staleItems: [] as FeedItem[] },
+    { label: 'older tags', staleItems: [feedItem('1', { tags: ['old-tag'] })] },
+  ])(
+    'Live: authoritative add wins when a pending lookup returns a stale $label',
+    async ({ staleItems }) => {
+      const lookup = deferred<{ items: FeedItem[] }>()
+      const fetchSpy = vi.fn(async () => ({
+        ok: true,
+        json: async () => lookup.promise,
+      }))
+      global.fetch = fetchSpy as never
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={seed([textItem('1')])}
+            mode="personal"
+            initialPersonalTab="live"
+            personalItems={[]}
+            onClose={vi.fn()}
+          />,
+        )
+      })
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalled())
+
+      await act(async () => fireAdded(feedItem('1', { tags: ['new-tag'] })))
+      await act(async () => {
+        lookup.resolve({ items: staleItems })
+        await lookup.promise
+      })
+
+      expect(chromeProps().collection?.savedKeys.has('twitter:1')).toBe(true)
+      expect(chromeProps().collection?.tags).toEqual(['new-tag'])
+    },
+  )
 
   it('Live: a mid-play add of a previously watched id is Next, not Seen', async () => {
     window.localStorage.setItem('adhx-seen-v1', JSON.stringify(['twitter:99']))

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { theaterItemKey, type TheaterItem, type TheaterMode } from './types'
 
 /**
@@ -18,12 +18,37 @@ export function useSharedPin(
   signedIn?: boolean,
 ) {
   const [sharedPinned, setSharedPinned] = useState(
-    mode === 'shared' && !sharedUnavailable && !signedIn,
+    mode === 'shared' && !!sharedItem && !sharedUnavailable && !signedIn,
   )
+  const [sharedLeadReleased, setSharedLeadReleased] = useState(false)
+  const sharedLeadReleasedRef = useRef(false)
+  const sharedPinDisqualifiedRef = useRef(Boolean(sharedUnavailable))
   useEffect(() => {
-    if (sharedUnavailable || signedIn) setSharedPinned(false)
-  }, [sharedUnavailable, signedIn])
+    if (sharedUnavailable) sharedPinDisqualifiedRef.current = true
+    const shouldPin =
+      mode === 'shared' &&
+      !!sharedItem &&
+      !signedIn &&
+      !sharedPinDisqualifiedRef.current &&
+      !sharedLeadReleasedRef.current
+    setSharedPinned(shouldPin)
+  }, [mode, sharedItem, sharedUnavailable, signedIn])
   const clearSharedPin = useCallback(() => setSharedPinned(false), [])
+  const releaseSharedLead = useCallback(() => {
+    if (sharedLeadReleasedRef.current) return
+    sharedLeadReleasedRef.current = true
+    sharedPinDisqualifiedRef.current = true
+    setSharedLeadReleased(true)
+    setSharedPinned(false)
+  }, [])
   const sharedItemKey = mode === 'shared' && sharedItem ? theaterItemKey(sharedItem) : null
-  return { sharedPinned, clearSharedPin, sharedItemKey }
+  const sharedPlayableKey = sharedLeadReleased ? null : sharedItemKey
+  return {
+    sharedPinned,
+    clearSharedPin,
+    releaseSharedLead,
+    sharedItemKey,
+    sharedPlayableKey,
+    sharedLeadReleased,
+  }
 }
