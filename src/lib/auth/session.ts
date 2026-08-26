@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { SignJWT, jwtVerify } from 'jose'
+import { hasLiveAccount } from './account-state'
 
 const SESSION_COOKIE_NAME = 'adhx_session'
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
@@ -64,6 +65,7 @@ export async function getSession(): Promise<Session | null> {
 export async function getCurrentUserId(): Promise<string | null> {
   const session = await getSession()
   if (!session?.userId) return null
+  if (!(await hasLiveAccount(session.userId))) return null
   const { isUserBanned } = await import('@/lib/admin/moderation')
   if (isUserBanned(session.userId)) return null
   return session.userId

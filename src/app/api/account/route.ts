@@ -12,7 +12,12 @@ import {
   tagShares,
   users,
   userIdentities,
+  usernameAliases,
   loginTokens,
+  activity,
+  analyticsEvents,
+  collectionEvents,
+  userBans,
 } from '@/lib/db/schema'
 import { eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
@@ -23,15 +28,16 @@ import { clearSessionCookie } from '@/lib/auth/session'
 /**
  * DELETE /api/account
  *
- * Completely deletes the user's account and all associated data: bookmarks,
+ * Deletes the user's account and associated private/product data: bookmarks,
  * tags, preferences, OAuth tokens, the `users` row,
  * and every linked sign-in identity (X + email) and outstanding magic-link
- * token. Nothing that identifies this account (username, email, X id)
- * survives — this is what makes "Delete account" actually delete the account.
+ * token. Historical moderation/audit records remain intact, but cannot be
+ * used as a live account or auth identity.
  *
- * The `activity` table is deliberately NOT touched here — it's an anonymous,
- * append-only event log; `userId` there is stored but never exposed and is
- * intentionally retained (see CLAUDE.md).
+ * Historical activity/analytics rows survive, but their nullable private
+ * user/viewer IDs are anonymized. Playlist events owned by this account and a
+ * ban targeting it are removed because those records cannot outlive the
+ * account they describe.
  *
  * This is a destructive, irreversible operation.
  */
@@ -86,10 +92,31 @@ export const DELETE = withAuth(async (_req, userId) => {
       // 13. Delete linked sign-in identities (X + email)
       db.delete(userIdentities).where(eq(userIdentities.userId, userId)).run()
 
-      // 14. Delete OAuth tokens
+      // 14. Delete redirects for every username this account previously used.
+      db.delete(usernameAliases).where(eq(usernameAliases.userId, userId)).run()
+
+      // 15. Delete OAuth tokens
       db.delete(oauthTokens).where(eq(oauthTokens.userId, userId)).run()
 
-      // 15. Delete the account itself
+      // 16. Preserve aggregate history without retaining this account's
+      // private actor/viewer ID.
+      db.update(activity).set({ userId: null }).where(eq(activity.userId, userId)).run()
+      db.update(analyticsEvents)
+        .set({ userId: null })
+        .where(eq(analyticsEvents.userId, userId))
+        .run()
+      db.update(collectionEvents)
+        .set({ viewerId: null })
+        .where(eq(collectionEvents.viewerId, userId))
+        .run()
+
+      // 17. Owner-keyed playlist events and a ban targeting this account have
+      // no valid meaning once the account itself is gone.
+      db.delete(collectionEvents).where(eq(collectionEvents.ownerUserId, userId)).run()
+      db.delete(userBans).where(eq(userBans.userId, userId)).run()
+
+      // 18. Delete the account itself. Database triggers installed by
+      // migrate.ts reject any later write carrying this now-dead account ID.
       db.delete(users).where(eq(users.id, userId)).run()
     })
 

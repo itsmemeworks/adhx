@@ -403,6 +403,9 @@ export const adminAudit = sqliteTable(
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   username: text('username').notNull().unique(),
+  // Authorization is attached to the immutable account id, never inferred
+  // from the mutable/reclaimable username.
+  role: text('role').notNull().default('user'), // 'user' | 'admin'
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   email: text('email'),

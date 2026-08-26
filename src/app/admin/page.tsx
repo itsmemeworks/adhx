@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { requireAdmin } from '@/lib/admin/guard'
 import { AdminClient } from './AdminClient'
 
@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 }
 
 export default async function AdminPage() {
-  const session = await getSession()
-  if (!session) redirect('/')
+  const userId = await getCurrentUserId()
+  if (!userId) redirect('/')
 
-  const gate = await requireAdmin(session.userId)
+  const gate = await requireAdmin(userId)
   if (!gate.ok) redirect('/settings')
 
   return <AdminClient />

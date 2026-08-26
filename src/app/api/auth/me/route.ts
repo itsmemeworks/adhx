@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
-import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
-import { isAdminUsername } from '@/lib/admin/guard'
-import { isUserBanned } from '@/lib/admin/moderation'
+import { isAdminUserId } from '@/lib/admin/guard'
 
 const SIGNED_OUT = {
   authenticated: false,
@@ -18,30 +15,13 @@ const SIGNED_OUT = {
 // Unlike /api/auth/twitter/status, "authenticated" here means "has a valid
 // session + a users row" — it does NOT require a live X connection.
 export async function GET() {
-  const session = await getSession()
-  if (!session?.userId) {
+  const userId = await getCurrentUserId()
+  if (!userId) {
     return NextResponse.json(SIGNED_OUT)
   }
 
-  if (isUserBanned(session.userId)) {
-    return NextResponse.json(SIGNED_OUT)
-  }
-
-  let account = await getAccount(session.userId)
-
+  const account = await getAccount(userId)
   if (!account) {
-    // Pre-migration session (no `users` row yet, e.g. created before this
-    // feature shipped) — create one lazily from the session so old sessions
-    // keep working without forcing a re-auth.
-    await db
-      .insert(users)
-      .values({ id: session.userId, username: session.username || session.userId })
-      .onConflictDoNothing()
-    account = await getAccount(session.userId)
-  }
-
-  if (!account) {
-    // Should be unreachable given the lazy-create above; degrade gracefully.
     return NextResponse.json(SIGNED_OUT)
   }
 
@@ -57,6 +37,6 @@ export async function GET() {
     },
     identities: account.identities,
     xConnected: account.xConnected,
-    isAdmin: isAdminUsername(account.user.username),
+    isAdmin: await isAdminUserId(userId),
   })
 }

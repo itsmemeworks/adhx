@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import { eq } from 'drizzle-orm'
 import { createTestDb, USER_A, USER_B, createTestBookmark, type TestDbInstance } from './setup'
 import {
   activity,
@@ -47,7 +48,7 @@ describe('admin console APIs', () => {
     mockUserId = USER_A
     process.env.ADMIN_USERNAMES = 'admin-user'
     await testInstance.db.insert(users).values([
-      { id: USER_A, username: 'admin-user' },
+      { id: USER_A, username: 'admin-user', role: 'admin' },
       { id: USER_B, username: 'regular-user' },
     ])
   })
@@ -63,8 +64,20 @@ describe('admin console APIs', () => {
     expect(res.status).toBe(403)
   })
 
-  it('403s everyone when ADMIN_USERNAMES is unset', async () => {
+  it('uses the stored role after the legacy bootstrap environment is removed', async () => {
     delete process.env.ADMIN_USERNAMES
+    const res = await getOverview(new NextRequest('http://localhost/api/admin/overview'))
+    expect(res.status).toBe(200)
+  })
+
+  it('does not grant admin to a new account that reclaims a former admin username', async () => {
+    await testInstance.db.delete(users).where(eq(users.id, USER_A))
+    await testInstance.db.insert(users).values({
+      id: 'replacement-user',
+      username: 'admin-user',
+    })
+    mockUserId = 'replacement-user'
+
     const res = await getOverview(new NextRequest('http://localhost/api/admin/overview'))
     expect(res.status).toBe(403)
   })

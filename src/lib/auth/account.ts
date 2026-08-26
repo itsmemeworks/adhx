@@ -35,8 +35,8 @@ export interface Account {
 /**
  * Read the full account view for a userId: the `users` row, its linked
  * identities, and whether an X (Twitter) connection is currently stored.
- * Returns null if there's no `users` row yet (e.g. a pre-migration session —
- * callers should lazily create one, see `/api/auth/me`).
+ * Returns null if the account no longer exists. Callers must treat that as
+ * signed out; recreating from a JWT would resurrect a deleted account.
  */
 export async function getAccount(userId: string): Promise<Account | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)

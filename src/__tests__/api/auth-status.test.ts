@@ -41,10 +41,14 @@ vi.stubEnv('TWITTER_CLIENT_ID', 'test-client-id')
 vi.stubEnv('TWITTER_CLIENT_SECRET', 'test-client-secret')
 
 describe('API: /api/auth/twitter/status', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     testInstance = createTestDb()
     mockSession = { userId: 'user-123' }
     vi.clearAllMocks()
+    await testInstance.db.insert(schema.users).values({
+      id: 'user-123',
+      username: 'testuser',
+    })
   })
 
   afterEach(() => {
@@ -66,6 +70,10 @@ describe('API: /api/auth/twitter/status', () => {
 
     it('returns authenticated: true with xConnected: false when no tokens stored (account outlives X)', async () => {
       mockSession = { userId: 'user-no-tokens' }
+      await testInstance.db.insert(schema.users).values({
+        id: 'user-no-tokens',
+        username: 'email-user',
+      })
 
       const { GET } = await import('@/app/api/auth/twitter/status/route')
       const response = await GET()
@@ -79,6 +87,18 @@ describe('API: /api/auth/twitter/status', () => {
       expect(data.user.id).toBe('user-no-tokens')
       expect(data.xConnected).toBe(false)
       expect(data.needsReconnect).toBe(false)
+    })
+
+    it('keeps a stale deleted-account session signed out without recreating the user', async () => {
+      mockSession = { userId: 'deleted-user' }
+
+      const { GET } = await import('@/app/api/auth/twitter/status/route')
+      const response = await GET()
+      const data = await response.json()
+
+      expect(data).toEqual({ authenticated: false, user: null })
+      const rows = await testInstance.db.select().from(schema.users)
+      expect(rows.map((row) => row.id)).not.toContain('deleted-user')
     })
   })
 

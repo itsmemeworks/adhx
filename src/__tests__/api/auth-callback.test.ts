@@ -30,16 +30,16 @@ vi.mock('@/lib/sentry', () => ({
   captureException: vi.fn(),
 }))
 
-// getSession() reads cookies() from next/headers, which throws outside a real
+// getCurrentUserId() reads cookies() from next/headers, which throws outside a real
 // request scope (this test invokes the route handler directly, not through
-// Next's server runtime). Mock just getSession to "no existing session" by
+// Next's server runtime). Mock it to "no existing session" by
 // default; keep setSessionCookie/clearSessionCookie real since they only use
 // NextResponse.cookies (no next/headers involved).
 vi.mock('@/lib/auth/session', async () => {
   const actual = await vi.importActual<typeof import('@/lib/auth/session')>('@/lib/auth/session')
   return {
     ...actual,
-    getSession: vi.fn(() => Promise.resolve(null)),
+    getCurrentUserId: vi.fn(() => Promise.resolve(null)),
   }
 })
 
@@ -62,8 +62,8 @@ function createCallbackRequest(params: Record<string, string>): NextRequest {
 
 async function seedSignedIn(userId = 'u_email', username = 'emailer') {
   await testInstance.db.insert(schema.users).values({ id: userId, username })
-  const { getSession } = await import('@/lib/auth/session')
-  vi.mocked(getSession).mockResolvedValue({ userId, username }) // overrides the default null session
+  const { getCurrentUserId } = await import('@/lib/auth/session')
+  vi.mocked(getCurrentUserId).mockResolvedValue(userId) // overrides the default null session
   return { userId, username }
 }
 
@@ -72,8 +72,8 @@ describe('API: /api/auth/twitter/callback', () => {
     testInstance = createTestDb()
     vi.clearAllMocks()
     vi.resetModules()
-    const { getSession } = await import('@/lib/auth/session')
-    vi.mocked(getSession).mockResolvedValue(null)
+    const { getCurrentUserId } = await import('@/lib/auth/session')
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -460,11 +460,8 @@ describe('API: /api/auth/twitter/callback', () => {
 
       // A different account is currently signed in and attempts to connect
       // the same X account (e.g. from Settings).
-      const { getSession } = await import('@/lib/auth/session')
-      vi.mocked(getSession).mockResolvedValueOnce({
-        userId: 'signed-in-user',
-        username: 'signedin',
-      })
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      vi.mocked(getCurrentUserId).mockResolvedValueOnce('signed-in-user')
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -544,11 +541,8 @@ describe('API: /api/auth/twitter/callback', () => {
       await testInstance.db
         .insert(schema.userIdentities)
         .values({ provider: 'email', providerId: 'detached@example.com', userId: 'detached-id' })
-      const { getSession } = await import('@/lib/auth/session')
-      vi.mocked(getSession).mockResolvedValue({
-        userId: 'detached-id',
-        username: 'detacheduser',
-      })
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      vi.mocked(getCurrentUserId).mockResolvedValue('detached-id')
 
       mockFetch.mockResolvedValueOnce({
         ok: true,

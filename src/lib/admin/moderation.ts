@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { activity, adminAudit, collectionEvents, moderatedPosts, userBans } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
-import { isAdminUsername } from './guard'
+import { isAdminUserId } from './guard'
 import { getUserIdForUsername, getUsernameForUserId } from '@/lib/users/lookup'
 import { previewPath } from '@/lib/activity/preview-path'
 
@@ -154,7 +154,7 @@ export async function setUserBanned(opts: {
     return { ok: false, error: 'You cannot ban your own account', status: 400 }
   }
   const targetUsername = (await getUsernameForUserId(targetUserId)) || username
-  if (isAdminUsername(targetUsername)) {
+  if (await isAdminUserId(targetUserId)) {
     return { ok: false, error: 'Cannot ban an admin', status: 400 }
   }
 

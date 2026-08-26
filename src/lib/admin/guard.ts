@@ -1,29 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUsernameForUserId } from '@/lib/users/lookup'
 import { withAuth } from '@/lib/api/with-auth'
-
-/**
- * `ADMIN_USERNAMES` is a comma-separated list of ADHX usernames. Unset or
- * empty means nobody is a moderator — every admin route 403s. Matching is
- * case-insensitive.
- */
-export function parseAdminUsernames(raw = process.env.ADMIN_USERNAMES): string[] {
-  return (raw ?? '')
-    .split(',')
-    .map((u) => u.trim().toLowerCase())
-    .filter(Boolean)
-}
-
-export function isAdminUsername(username: string | null | undefined): boolean {
-  if (!username) return false
-  const allowed = parseAdminUsernames()
-  if (allowed.length === 0) return false
-  return allowed.includes(username.toLowerCase())
-}
+import { db } from '@/lib/db'
+import { users } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 export async function isAdminUserId(userId: string): Promise<boolean> {
-  const username = await getUsernameForUserId(userId)
-  return isAdminUsername(username)
+  const [user] = await db
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  return user?.role === 'admin'
 }
 
 export type AdminActor = { userId: string; username: string }
@@ -31,20 +18,19 @@ export type AdminActor = { userId: string; username: string }
 export type AdminGate = { ok: true; actor: AdminActor } | { ok: false; response: NextResponse }
 
 export async function requireAdmin(userId: string): Promise<AdminGate> {
-  const allowed = parseAdminUsernames()
-  if (allowed.length === 0) {
+  const [user] = await db
+    .select({ username: users.username, role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  if (!user || user.role !== 'admin') {
     return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
   }
-  const username = await getUsernameForUserId(userId)
-  if (!username || !allowed.includes(username.toLowerCase())) {
-    return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-  return { ok: true, actor: { userId, username } }
+  return { ok: true, actor: { userId, username: user.username } }
 }
 
 /**
- * Auth + admin username gate. Use on every `/api/admin/*` route so an unset
- * `ADMIN_USERNAMES` stays a safe default (403 for everyone).
+ * Auth + immutable account-role gate. Use on every `/api/admin/*` route.
  */
 export function withAdmin<C = unknown>(
   handler: (req: NextRequest, actor: AdminActor, ctx: C) => Promise<Response> | Response,

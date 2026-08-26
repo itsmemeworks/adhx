@@ -228,6 +228,7 @@ export const FULL_SCHEMA_SQL = `
   CREATE TABLE users (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
+    role TEXT NOT NULL DEFAULT 'user',
     display_name TEXT,
     avatar_url TEXT,
     email TEXT,

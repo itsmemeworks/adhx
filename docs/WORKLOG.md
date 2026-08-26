@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — Trust boundaries hardened
+
+Deleted-account JWTs now require a live account, account-linked writes are rejected by durable SQLite guards, and admin access is persisted against immutable IDs with fail-loud legacy bootstrap. OG enrichment validates and pins public DNS answers at connection time across redirects. Sentry now sanitizes explicit and automatic events with keyed pseudonyms and bounded JSON/request redaction. Account deletion also clears aliases and anonymizes retained activity history. Focused tests, typecheck, formatting, and two review passes are green. Ready for review; follow-up phases cover atomic migrations, deterministic containers, bounded media/resource use, concurrency, theater state, and lower-risk audit findings.
+
 ## 2026-08-26 — YouTube: Shorts URLs only
 
 Paste, share, URL-prefix, the add API, and the desktop extension now reject `youtu.be`, `/watch?v=`, `/embed/`, and `/live/` — those forms are regular videos. `extractYouTubeId` (and the proxy) accept `youtube.com/shorts/{id}` only. Existing saved YouTube rows still play. Follow-up: a crafted `adhx.com/shorts/{regularId}` still embeds, because the id space is shared.

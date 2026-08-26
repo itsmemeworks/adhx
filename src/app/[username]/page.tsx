@@ -6,7 +6,7 @@ import { getAuthorProfile, isValidHandle, type AuthorItem } from '@/lib/authors/
 import { MatterLogo, PlatformGlyph, TypeBadge } from '@/components/matter'
 import { AvatarImage } from '@/components/avatar/AvatarImage'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { formatRelativeTime } from '@/lib/utils/format'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
@@ -170,9 +170,9 @@ function AuthorItemCard({ item, handle }: { item: AuthorItem; handle: string }) 
 
 export default async function AuthorHubPage({ params }: Props) {
   const { username } = await params
-  const [profile, session] = await Promise.all([loadProfile(username), getSession()])
+  const [profile, viewerUserId] = await Promise.all([loadProfile(username), getCurrentUserId()])
   if (!profile) notFound()
-  const signedOut = !session
+  const signedOut = !viewerUserId
 
   const displayName = profile.authorName || `@${profile.handle}`
   const profileUrl = `${BASE_URL}/${profile.handle}`

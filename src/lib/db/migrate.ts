@@ -8,6 +8,7 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 import { renameReadStatusToArchivedPosts } from './rename-read-status'
+import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -319,6 +320,7 @@ try {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL DEFAULT 'user',
       display_name TEXT,
       avatar_url TEXT,
       email TEXT,
@@ -348,6 +350,16 @@ try {
   console.log('[migrate] Warning: failed to create account tables', error)
 }
 
+// users.role — authorization belongs to the immutable account id. Existing
+// installs get a safe non-admin default; configured legacy admin usernames
+// are promoted once, below, after the account backfill has run.
+try {
+  db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+  console.log('[migrate] Added users.role')
+} catch {
+  // Column already exists — nothing to do.
+}
+
 // Backfill `users` + `user_identities` ('x' provider) from existing
 // oauth_tokens rows, plus a fallback for users whose tokens were later
 // deleted (bookmarks.user_id with no matching users row) so every existing
@@ -374,6 +386,30 @@ try {
   console.log('[migrate] Backfilled users/user_identities from oauth_tokens + bookmarks')
 } catch (error) {
   console.log('[migrate] Warning: users/user_identities backfill failed', error)
+}
+
+// Convert the legacy mutable-username allowlist only when every configured
+// account resolves. Zero/partial matches abort startup without promoting
+// anyone, and the rejected configuration is fingerprinted so a later claimant
+// can never become eligible on a future boot. ADMIN_USER_IDS is the retry-safe
+// recovery/future-grant path.
+try {
+  const { legacyPromoted, idPromoted } = applyAdminRoleBootstrap(db, {
+    adminUsernames: process.env.ADMIN_USERNAMES,
+    adminUserIds: process.env.ADMIN_USER_IDS,
+  })
+  if (legacyPromoted > 0) {
+    console.log(
+      `[migrate] Bootstrapped ${legacyPromoted} immutable admin role(s) from ADMIN_USERNAMES`,
+    )
+  }
+  if (idPromoted > 0) {
+    console.log(`[migrate] Applied ${idPromoted} immutable admin role grant(s)`)
+  }
+} catch (error) {
+  console.log('[migrate] FAILED admin role bootstrap', error)
+  db.close()
+  process.exit(1)
 }
 
 // users.username_chosen — gates the one-time `/welcome` username-choice
@@ -506,6 +542,20 @@ try {
   console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
 } catch (error) {
   console.log('[migrate] Warning: failed to create admin moderation tables', error)
+}
+
+// Durable account-deletion boundary. These triggers are installed only after
+// every guarded table and the users table exist. SQLite serializes competing
+// writers: a write committed before account deletion is swept by that same
+// deletion transaction; a write that proceeds afterward sees no users row and
+// aborts here. Existing historical rows are not scanned or rewritten.
+try {
+  installAccountWriteGuards(db)
+  console.log('[migrate] Ensured account-reference write guards')
+} catch (error) {
+  console.log('[migrate] FAILED installing account-reference write guards', error)
+  db.close()
+  process.exit(1)
 }
 
 try {

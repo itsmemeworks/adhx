@@ -10,8 +10,8 @@ import { eq } from 'drizzle-orm'
  *
  * Verifies:
  *  - unauthenticated → 401
- *  - authenticated but not in ADMIN_USERNAMES → 403
- *  - ADMIN_USERNAMES unset/empty → 403 even for a real admin username (safe default)
+ *  - authenticated without the admin role → 403
+ *  - the persisted role remains authoritative when the legacy env is absent
  *  - 404 for an unknown owner username
  *  - admin hides ALL collection_events rows for an (ownerUserId, tag), across actions
  *  - unhide (hidden: false) flips it back
@@ -59,7 +59,7 @@ describe('POST /api/admin/collections/hide', () => {
     vi.clearAllMocks()
 
     await testInstance.db.insert(users).values([
-      { id: USER_A, username: 'admin-user' },
+      { id: USER_A, username: 'admin-user', role: 'admin' },
       { id: USER_B, username: 'curator-user' },
     ])
   })
@@ -81,7 +81,7 @@ describe('POST /api/admin/collections/hide', () => {
     expect(res.status).toBe(401)
   })
 
-  it('403s a signed-in user whose username is not in ADMIN_USERNAMES', async () => {
+  it('403s a signed-in user without the admin role', async () => {
     mockUserId = USER_B // 'curator-user'
     process.env.ADMIN_USERNAMES = 'admin-user'
 
@@ -89,20 +89,20 @@ describe('POST /api/admin/collections/hide', () => {
     expect(res.status).toBe(403)
   })
 
-  it('403s everyone (even a real admin username) when ADMIN_USERNAMES is unset', async () => {
+  it('keeps the stored admin role when ADMIN_USERNAMES is unset', async () => {
     delete process.env.ADMIN_USERNAMES
     mockUserId = USER_A // 'admin-user'
 
     const res = await POST(createRequest({ username: 'curator-user', tag: 'memes' }))
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(200)
   })
 
-  it('403s everyone when ADMIN_USERNAMES is an empty string', async () => {
+  it('keeps the stored admin role when ADMIN_USERNAMES is empty', async () => {
     process.env.ADMIN_USERNAMES = ''
     mockUserId = USER_A
 
     const res = await POST(createRequest({ username: 'curator-user', tag: 'memes' }))
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(200)
   })
 
   it('400s when username or tag is missing', async () => {

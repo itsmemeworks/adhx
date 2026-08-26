@@ -8,9 +8,9 @@ import {
   deleteTokens,
 } from '@/lib/auth/oauth'
 import { db } from '@/lib/db'
-import { oauthTokens, users } from '@/lib/db/schema'
+import { oauthTokens } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { captureException } from '@/lib/sentry'
 import { handleRouteError } from '@/lib/api/response'
@@ -24,28 +24,17 @@ import { handleRouteError } from '@/lib/api/response'
 // refresh token died and needs a fresh /api/auth/twitter round-trip.
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session?.userId) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return NextResponse.json({ authenticated: false, user: null })
     }
 
-    let account = await getAccount(session.userId)
+    const account = await getAccount(userId)
     if (!account) {
-      // Pre-migration session (no `users` row yet) — create one lazily from
-      // the session so old sessions keep working without forcing a re-auth.
-      await db
-        .insert(users)
-        .values({ id: session.userId, username: session.username || session.userId })
-        .onConflictDoNothing()
-      account = await getAccount(session.userId)
-    }
-
-    if (!account) {
-      // Should be unreachable given the lazy-create above.
       return NextResponse.json({ authenticated: false, user: null })
     }
 
-    const tokens = await getStoredTokens(session.userId)
+    const tokens = await getStoredTokens(userId)
 
     if (!tokens) {
       // No X connection at all (email-only account, or a previously
@@ -70,7 +59,7 @@ export async function GET() {
     // user (this endpoint runs on every page load and could otherwise race the
     // sync flow), so the single-use refresh-token chain isn't broken.
     try {
-      const valid = await getValidTokens(session.userId)
+      const valid = await getValidTokens(userId)
       if (valid) {
         accessToken = valid.accessToken
         newExpiresAt = valid.expiresAt

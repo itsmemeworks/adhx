@@ -7,7 +7,7 @@ import {
   saveTokens,
   hasExistingTokens,
 } from '@/lib/auth/oauth'
-import { getSession, setSessionCookie } from '@/lib/auth/session'
+import { getCurrentUserId, setSessionCookie } from '@/lib/auth/session'
 import { findOrCreateUserForX } from '@/lib/auth/account'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics, captureException } from '@/lib/sentry'
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
     // X is a Settings link. Require a session BEFORE spending the one-time
     // OAuth code / PKCE verifier, so an expired cookie during consent does
     // not burn the grant.
-    const existingSession = await getSession()
-    if (!existingSession?.userId) {
+    const existingUserId = await getCurrentUserId()
+    if (!existingUserId) {
       return NextResponse.redirect(new URL('/?auth_error=x_link_only', BASE_URL))
     }
 
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
         name: user.name,
         profileImageUrl: user.profileImageUrl,
       },
-      existingSession.userId,
+      existingUserId,
     )
 
     if (linkResult.conflict === 'linked_elsewhere') {

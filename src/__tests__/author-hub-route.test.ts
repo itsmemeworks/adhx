@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+let mockCurrentUserId: string | null = null
 
 /**
  * Author hub route tests — `src/app/[username]/page.tsx`.
@@ -9,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  */
 
 vi.mock('@/lib/auth/session', () => ({
-  getSession: vi.fn(() => Promise.resolve(null)),
+  getCurrentUserId: vi.fn(() => Promise.resolve(mockCurrentUserId)),
 }))
 
 vi.mock('@/lib/authors/query', async (importOriginal) => {
@@ -56,6 +59,7 @@ const SAMPLE_PROFILE = {
 describe('Author hub route: /[username]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockCurrentUserId = null
   })
 
   describe('generateMetadata', () => {
@@ -144,6 +148,36 @@ describe('Author hub route: /[username]', () => {
       })
 
       expect(result).not.toBeNull()
+    })
+
+    it('renders signed-out chrome when validated auth rejects a stale session', async () => {
+      const { getAuthorProfile } = await import('@/lib/authors/query')
+      vi.mocked(getAuthorProfile).mockResolvedValue(SAMPLE_PROFILE)
+      mockCurrentUserId = null
+
+      const AuthorHubPage = (await import('@/app/[username]/page')).default
+      const result = await AuthorHubPage({
+        params: Promise.resolve({ username: 'testauthor' }),
+      })
+      const html = renderToStaticMarkup(result as React.ReactElement)
+
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      expect(getCurrentUserId).toHaveBeenCalledTimes(1)
+      expect(html).toContain('aria-label="ADHX home"')
+    })
+
+    it('omits signed-out chrome only for a validated live account', async () => {
+      const { getAuthorProfile } = await import('@/lib/authors/query')
+      vi.mocked(getAuthorProfile).mockResolvedValue(SAMPLE_PROFILE)
+      mockCurrentUserId = 'live-user'
+
+      const AuthorHubPage = (await import('@/app/[username]/page')).default
+      const result = await AuthorHubPage({
+        params: Promise.resolve({ username: 'testauthor' }),
+      })
+      const html = renderToStaticMarkup(result as React.ReactElement)
+
+      expect(html).not.toContain('aria-label="ADHX home"')
     })
 
     it('rejects a mismatched dynamic-route reserved-looking name with no data (404 rather than a crash)', async () => {
