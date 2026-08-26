@@ -9,6 +9,7 @@ import path from 'path'
 import fs from 'fs'
 import { renameReadStatusToArchivedPosts } from './rename-read-status'
 import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
+import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -26,59 +27,37 @@ const db = new Database(DB_PATH)
 db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
-// Create migrations tracking table (same as Drizzle uses)
-db.exec(`
-  CREATE TABLE IF NOT EXISTS __drizzle_migrations (
-    id INTEGER PRIMARY KEY,
-    hash TEXT NOT NULL,
-    created_at INTEGER
-  );
-`)
-
 // Read and apply migrations from drizzle folder
 const journalPath = path.join(MIGRATIONS_PATH, 'meta', '_journal.json')
 if (fs.existsSync(journalPath)) {
-  const journal = JSON.parse(fs.readFileSync(journalPath, 'utf-8'))
-
-  // Get already applied migrations
-  const applied = new Set(
-    (db.prepare('SELECT hash FROM __drizzle_migrations').all() as { hash: string }[]).map(
-      (row) => row.hash,
-    ),
-  )
-
-  // Apply new migrations
-  for (const entry of journal.entries) {
-    if (!applied.has(entry.tag)) {
+  try {
+    const journal = JSON.parse(fs.readFileSync(journalPath, 'utf-8')) as {
+      entries: Array<{ tag: string }>
+    }
+    const migrations: SqlMigration[] = journal.entries.map((entry) => {
       const sqlPath = path.join(MIGRATIONS_PATH, `${entry.tag}.sql`)
-      if (fs.existsSync(sqlPath)) {
-        const sql = fs.readFileSync(sqlPath, 'utf-8')
+      if (!fs.existsSync(sqlPath)) {
+        throw new SqlMigrationError(entry.tag, `Missing SQL file for migration ${entry.tag}`)
+      }
 
-        // Split by Drizzle's statement breakpoint marker and execute each
-        const statements = sql
-          .split('--> statement-breakpoint')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0)
+      return {
+        tag: entry.tag,
+        sql: fs.readFileSync(sqlPath, 'utf-8'),
+      }
+    })
 
-        try {
-          for (const statement of statements) {
-            db.exec(statement)
-          }
-        } catch (error) {
-          console.log(`[migrate] FAILED migration: ${entry.tag}`, error)
-          db.close()
-          process.exit(1)
-        }
-
-        // Record migration as applied
-        db.prepare('INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)').run(
-          entry.tag,
-          Date.now(),
-        )
-
-        console.log(`[migrate] Applied: ${entry.tag}`)
+    for (const result of runSqlMigrations(db, migrations)) {
+      if (result.status === 'applied') {
+        console.log(`[migrate] Applied: ${result.tag}`)
+      } else if (result.status === 'adopted') {
+        console.log(`[migrate] Adopted completed legacy migration: ${result.tag}`)
       }
     }
+  } catch (error) {
+    const tag = error instanceof SqlMigrationError ? `: ${error.tag}` : ''
+    console.log(`[migrate] FAILED migration${tag}`, error)
+    db.close()
+    process.exit(1)
   }
 }
 

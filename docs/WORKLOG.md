@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-26 — Deterministic containers and atomic migrations
+
+Docker now uses Corepack-pinned pnpm 9.15.9, the frozen lockfile, pruned production dependencies, and project-local `tsx`; CI builds and boots the real non-root runner, exercises native SQLite/migrations, and probes health. Drizzle SQL plus its journal row now commit atomically with foreign-key restoration. The legacy 0003 rebuild detects partial damage, safely replays its earliest crash point, and adopts a strict completed-but-unjournaled schema fingerprint without data replay. Focused tests/typecheck/review are green; the real image smoke runs in CI because local Docker is unavailable.
+
 ## 2026-08-26 — Trust boundaries hardened
 
 Deleted-account JWTs now require a live account, account-linked writes are rejected by durable SQLite guards, and admin access is persisted against immutable IDs with fail-loud legacy bootstrap. OG enrichment validates and pins public DNS answers at connection time across redirects. Sentry now sanitizes explicit and automatic events with keyed pseudonyms and bounded JSON/request redaction. Account deletion also clears aliases and anonymizes retained activity history. Focused tests, typecheck, formatting, and two review passes are green. Ready for review; follow-up phases cover atomic migrations, deterministic containers, bounded media/resource use, concurrency, theater state, and lower-risk audit findings.

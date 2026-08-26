@@ -99,6 +99,97 @@ jobs:
       - name: Build
         run: pnpm build
 
+  container-smoke:
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: adhx-ci:${{ github.sha }}
+      CONTAINER_NAME: adhx-container-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build assembled runner image
+        run: |
+          docker build \
+            --target runner \
+            --build-arg SENTRY_RELEASE="$GITHUB_SHA" \
+            --tag "$IMAGE_TAG" \
+            .
+
+      - name: Verify runner dependencies and migration
+        run: |
+          docker run --rm \
+            --env DATABASE_PATH=/tmp/adhx-migration-smoke.db \
+            --entrypoint sh \
+            "$IMAGE_TAG" \
+            -euc '
+              test "$(id -u)" = "1001"
+              test -x ./node_modules/.bin/tsx
+              ./node_modules/.bin/tsx --version
+              node -e '"'"'
+                const Database = require("better-sqlite3")
+                const db = new Database(":memory:")
+                if (db.prepare("select 1 as value").get().value !== 1) process.exit(1)
+                db.close()
+              '"'"'
+              ./node_modules/.bin/tsx src/lib/db/migrate.ts
+              node -e '"'"'
+                const Database = require("better-sqlite3")
+                const db = new Database(process.env.DATABASE_PATH)
+                const integrity = db.pragma("integrity_check", { simple: true })
+                const users = db.prepare(
+                  "select name from sqlite_master where type = ? and name = ?"
+                ).get("table", "users")
+                if (integrity !== "ok" || users?.name !== "users") process.exit(1)
+                db.close()
+              '"'"'
+            '
+
+      - name: Start runner and verify health
+        run: |
+          docker run --detach \
+            --name "$CONTAINER_NAME" \
+            --publish 127.0.0.1:3000:3000 \
+            --env DATABASE_PATH=/tmp/adhx-health-smoke.db \
+            --env NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 \
+            --env SESSION_SECRET=ci-container-smoke-session-secret \
+            --env TWITTER_CLIENT_ID=ci-container-smoke \
+            --env TWITTER_CLIENT_SECRET=ci-container-smoke \
+            "$IMAGE_TAG"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/api/health \
+              --output /tmp/adhx-health.json; then
+              if python3 -c '
+          import json
+          with open("/tmp/adhx-health.json", encoding="utf-8") as response:
+              data = json.load(response)
+          assert data.get("status") == "healthy"
+          assert data.get("checks", {}).get("database", {}).get("status") == "healthy"
+          '; then
+                exit 0
+              fi
+            fi
+            echo "Health check attempt ${attempt}/30 not healthy yet"
+            sleep 2
+          done
+
+          echo "Runner did not become healthy within 60 seconds"
+          exit 1
+
+      - name: Show runner diagnostics
+        if: failure()
+        run: |
+          docker ps --all --filter "name=^/${CONTAINER_NAME}$"
+          docker inspect "$CONTAINER_NAME" || true
+          docker logs "$CONTAINER_NAME" || true
+
+      - name: Clean up runner
+        if: always()
+        run: docker rm --force "$CONTAINER_NAME" 2>/dev/null || true
+
   # Dedicated formatting gate. Kept as its own job (rather than a step in `test`)
   # so it surfaces as a distinct required status check on PRs.
   format:

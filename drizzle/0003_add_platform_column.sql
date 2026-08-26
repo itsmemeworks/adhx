@@ -1,7 +1,7 @@
+PRAGMA foreign_keys=OFF;--> statement-breakpoint
 DROP INDEX IF EXISTS `bookmark_links_user_bookmark_idx`;--> statement-breakpoint
 ALTER TABLE `bookmark_links` ADD `platform` text DEFAULT 'twitter' NOT NULL;--> statement-breakpoint
 CREATE INDEX `bookmark_links_user_bookmark_idx` ON `bookmark_links` (`user_id`,`platform`,`bookmark_id`);--> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_bookmark_media` (
 	`id` text NOT NULL,
 	`user_id` text NOT NULL,
@@ -25,7 +25,6 @@ CREATE TABLE `__new_bookmark_media` (
 INSERT INTO `__new_bookmark_media`("id", "user_id", "platform", "bookmark_id", "media_type", "original_url", "preview_url", "local_path", "thumbnail_path", "download_status", "downloaded_at", "width", "height", "duration_ms", "file_size_bytes", "alt_text") SELECT "id", "user_id", 'twitter', "bookmark_id", "media_type", "original_url", "preview_url", "local_path", "thumbnail_path", "download_status", "downloaded_at", "width", "height", "duration_ms", "file_size_bytes", "alt_text" FROM `bookmark_media`;--> statement-breakpoint
 DROP TABLE `bookmark_media`;--> statement-breakpoint
 ALTER TABLE `__new_bookmark_media` RENAME TO `bookmark_media`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `bookmark_media_user_bookmark_idx` ON `bookmark_media` (`user_id`,`platform`,`bookmark_id`);--> statement-breakpoint
 CREATE TABLE `__new_bookmark_tags` (
 	`user_id` text NOT NULL,
@@ -100,4 +99,5 @@ CREATE TABLE `__new_read_status` (
 INSERT INTO `__new_read_status`("user_id", "platform", "bookmark_id", "read_at") SELECT "user_id", 'twitter', "bookmark_id", "read_at" FROM `read_status`;--> statement-breakpoint
 DROP TABLE `read_status`;--> statement-breakpoint
 ALTER TABLE `__new_read_status` RENAME TO `read_status`;--> statement-breakpoint
-CREATE INDEX `read_status_user_id_idx` ON `read_status` (`user_id`);
+CREATE INDEX `read_status_user_id_idx` ON `read_status` (`user_id`);--> statement-breakpoint
+PRAGMA foreign_keys=ON;
