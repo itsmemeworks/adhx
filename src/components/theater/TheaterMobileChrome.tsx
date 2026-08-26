@@ -88,20 +88,17 @@ export interface TheaterMobileChromeProps {
   seenReady: boolean
   freshKeys: ReadonlySet<string>
   newCount: number
-  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent only in playlist mode (one authored order, no groups); shared mode passes it and pins its lead post out of the grouping instead. */
-  wasSeenOnEntry?: (key: string) => boolean
-  /** The shared post on a preview page — pinned as the lead row and excluded from the section grouping (it isn't "what's new", it's the link the visitor followed). Passed straight to `UpNextList`. Dropped once this session has watched it. */
-  pinnedKey?: string | null
-  /** Caught-up stage — Queue grouping must not stayPut the last current row. */
   waiting?: boolean
   /** Whole queue size — looping copy uses this. Falls back to `items.length`. */
   queueTotal?: number
-  /** Finished posts from this leftover run. */
+  /** Unused for Repeat-off copy (`N in queue` uses toPlay). */
   queuePlayed?: number
-  /** How many posts this leftover run will play. */
+  /** Unseen remaining, or the looping pile size. */
   queueToPlay?: number
   /** Keep playing / Repeat this post. */
   queueLooping?: boolean
+  /** First Seen row in Repeat-off Queue. `-1` hides the section. */
+  seenStartIndex?: number
   onSelect: (key: string) => void
   /** Prev/next navigation for the peek bar's chevrons — the only mobile nav besides keyboard and video-ended auto-advance. */
   onPrev: () => void
@@ -201,13 +198,12 @@ export function TheaterMobileChrome({
   seenReady,
   freshKeys,
   newCount,
-  wasSeenOnEntry,
-  pinnedKey,
   waiting = false,
   queueTotal,
   queuePlayed,
   queueToPlay,
   queueLooping,
+  seenStartIndex = -1,
   onSelect,
   onPrev,
   onNext,
@@ -342,9 +338,8 @@ export function TheaterMobileChrome({
     }
   }
 
-  // Peek-bar centre: run progress (`16 of 23`) or looping pile (`24 on
-  // repeat`). Live always stages the leftover head, so `3 / 7` was just
-  // "you're on next".
+  // Peek-bar centre: Now playing + Next (`N in queue`) or every post (`N on
+  // repeat`).
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
   const peekNew = newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
@@ -353,7 +348,7 @@ export function TheaterMobileChrome({
       ? `${queueCount.text}${peekNew}`
       : newCount > 0 && collection?.tab !== 'collection'
         ? `${newCount} new`
-        : 'Up next'
+        : 'Queue'
   const peekLabel = peekPosition
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
@@ -865,9 +860,7 @@ export function TheaterMobileChrome({
               </button>
             </div>
 
-            {/* Centre slot: leftover to play + pile size. Collection used to
-                spend this on the Live/Collection tabs — they're in the top
-                scrim now, so every mode gets the count. */}
+            {/* Centre slot: Now playing + Next, or the full pile on repeat. */}
             <div className="pointer-events-none absolute inset-x-0 flex justify-center">
               <button
                 type="button"
@@ -986,10 +979,9 @@ export function TheaterMobileChrome({
           isSeen={isSeen}
           seenReady={seenReady}
           freshKeys={freshKeys}
-          wasSeenOnEntry={wasSeenOnEntry}
-          pinnedKey={pinnedKey}
           onSelect={handleSelect}
           repeatCurrent={repeatCurrent}
+          seenStartIndex={seenStartIndex}
           className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"
         />
       </div>

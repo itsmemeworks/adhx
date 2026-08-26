@@ -243,10 +243,10 @@ describe('DesktopDock', () => {
     expect(parked.querySelector('.grayscale')).toBeInTheDocument()
   })
 
-  it('does not label NEXT on a watched card after live regroup', () => {
+  it('labels NEXT on the following card', () => {
     const items = [
       videoItem({ bookmarkId: '1', text: 'playing-now' }),
-      videoItem({ bookmarkId: '2', text: 'already-watched' }),
+      videoItem({ bookmarkId: '2', text: 'up-next' }),
     ]
     render(
       <DesktopDock
@@ -254,12 +254,10 @@ describe('DesktopDock', () => {
         items={items}
         current={items[0]}
         currentKey={theaterItemKey(items[0])}
-        isSeen={(key) => key === theaterItemKey(items[1])}
-        wasSeenOnEntry={() => false}
       />,
     )
     expect(screen.getByText('NOW')).toBeInTheDocument()
-    expect(screen.queryByText('NEXT →')).not.toBeInTheDocument()
+    expect(screen.getByText('NEXT →')).toBeInTheDocument()
   })
 
   it('clicking a card calls onSelect with its key', () => {
@@ -290,12 +288,13 @@ describe('DesktopDock', () => {
       />,
     )
 
-    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('Queue'))
-    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    expect(screen.getByText('Now playing')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
   })
 
   it('clicking away from Queue closes the playlist', () => {
@@ -309,9 +308,9 @@ describe('DesktopDock', () => {
       />,
     )
     fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
-    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
     fireEvent.mouseDown(document.body)
-    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
   })
 
   it('↑/↓ move through Queue rows', async () => {
@@ -345,9 +344,9 @@ describe('DesktopDock', () => {
       />,
     )
     fireEvent(window, new CustomEvent('theater-toggle-show-all'))
-    expect(screen.getByText('Up next')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
     fireEvent(window, new CustomEvent('theater-toggle-show-all'))
-    expect(screen.queryByText('Up next')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
   })
 
   it('keeps Queue open when the stage advances to the next post', () => {
@@ -515,23 +514,23 @@ describe('DesktopDock: end cap restructure', () => {
     expect(toggle).toHaveTextContent('Queue')
   })
 
-  it('shows how many of this leftover run have played', () => {
+  it('shows unseen remaining as N in queue', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
     render(
       <DesktopDock
         {...dockBase}
         items={items}
-        current={items[1]}
-        currentKey={theaterItemKey(items[1])}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
         queueTotal={2}
-        queuePlayed={1}
+        queuePlayed={0}
         queueToPlay={2}
       />,
     )
-    expect(screen.getByLabelText('1 watched of 2')).toHaveTextContent('1 of 2')
+    expect(screen.getByLabelText('2 in queue')).toHaveTextContent('2 in queue')
   })
 
-  it('names the leftover run when nothing has played yet, and the pile when looping', () => {
+  it('names Now playing + Next off-repeat, and the pile when looping', () => {
     const items = Array.from({ length: 23 }, (_, i) => videoItem({ bookmarkId: `${i + 1}` }))
     const { rerender } = render(
       <DesktopDock

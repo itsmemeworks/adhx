@@ -67,41 +67,39 @@ authedTest.describe('archive', () => {
       await expect(caption(page, POST.alpha.text)).toBeVisible()
 
       const start = await readQueueProgress(page)
-      expect(start.played).toBe(1)
+      expect(start.played).toBe(0)
       expect(start.toPlay).toBeGreaterThan(1)
 
       await page.getByRole('button', { name: 'Archive' }).click()
       await expect(caption(page, POST.bravo.text)).toBeVisible()
-      await expect(visibleQueueCount(page)).toHaveText(`1 of ${start.toPlay - 1}`)
+      await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay - 1} in queue`)
 
       await page.getByRole('button', { name: 'Undo', exact: true }).click()
       await expect(caption(page, POST.alpha.text)).toBeVisible()
-      await expect(visibleQueueCount(page)).toHaveText(`1 of ${start.toPlay}`)
+      await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay} in queue`)
     },
   )
 
-  authedTest(
-    'Play once Archive mid-list keeps the 1-based position on a shorter pile',
-    async ({ page }) => {
-      await page.addInitScript(() => {
-        localStorage.setItem('adhx-theater-repeat-saved', 'off')
-      })
-      await page.goto('/saved')
-      await expectTheaterReady(page)
-      await goNext(page)
-      await expect(caption(page, POST.bravo.text)).toBeVisible()
-      const start = await readQueueProgress(page)
-      expect(start.played).toBe(2)
+  authedTest('Play once Archive mid-list shrinks unseen remaining', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('adhx-theater-repeat-saved', 'off')
+    })
+    await page.goto('/saved')
+    await expectTheaterReady(page)
+    await goNext(page)
+    await expect(caption(page, POST.bravo.text)).toBeVisible()
+    const start = await readQueueProgress(page)
+    expect(start.played).toBe(0)
+    expect(start.toPlay).toBeGreaterThan(0)
 
-      await page.getByRole('button', { name: 'Archive' }).click()
-      await expect(caption(page, POST.charlie.text)).toBeVisible()
-      await expect(visibleQueueCount(page)).toHaveText(`2 of ${start.toPlay - 1}`)
+    await page.getByRole('button', { name: 'Archive' }).click()
+    await expect(caption(page, POST.charlie.text)).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay - 1} in queue`)
 
-      await page.getByRole('button', { name: 'Undo', exact: true }).click()
-      await expect(caption(page, POST.bravo.text)).toBeVisible()
-      await expect(visibleQueueCount(page)).toHaveText(`2 of ${start.toPlay}`)
-    },
-  )
+    await page.getByRole('button', { name: 'Undo', exact: true }).click()
+    await expect(caption(page, POST.bravo.text)).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay} in queue`)
+  })
 
   authedTest('Keep playing Archive names the shorter pile', async ({ page }) => {
     await page.addInitScript(() => {

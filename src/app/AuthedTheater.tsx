@@ -32,16 +32,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, PersonalTab } from '@/components/theater/types'
 import { COLLECTION_QUEUE_LIMIT, SAVED_PATH, sameBookmark } from '@/lib/theater/collection-href'
-import {
-  feedItemPlayingKey,
-  readPlayedSavedKeys,
-  readSavedPlayingKey,
-  savedPlayingIndex,
-  savedStartIndex,
-} from '@/lib/theater/saved-playing'
+import { savedStartIndex } from '@/lib/theater/saved-playing'
 import {
   feedItemMatchesQueueTypes,
   parseTheaterQueueTypes,
+  sortFeedNewestFirst,
 } from '@/components/theater/theater-math'
 import { THEATER_QUEUE_TYPES_STORAGE_KEY } from '@/components/theater/theater-storage'
 import { theaterTabNavAction } from '@/components/theater/theater-math'
@@ -80,10 +75,8 @@ async function loadCollectionQueue(
   const res = await fetch(`/api/feed?${params}`)
   if (!res.ok) throw new Error('feed failed')
   const data = await res.json()
-  const queue: FeedItem[] = data.items ?? []
+  const queue: FeedItem[] = sortFeedNewestFirst(data.items ?? [])
   if (!openId) {
-    const playingIndex = savedPlayingIndex(queue, readSavedPlayingKey())
-    const played = readPlayedSavedKeys()
     let types: ReturnType<typeof parseTheaterQueueTypes> = []
     try {
       types = parseTheaterQueueTypes(localStorage.getItem(THEATER_QUEUE_TYPES_STORAGE_KEY))
@@ -93,8 +86,7 @@ async function loadCollectionQueue(
     return {
       items: queue,
       start: savedStartIndex(queue.length, {
-        playingIndex,
-        isLeftover: (i) => !played.has(feedItemPlayingKey(queue[i]!)),
+        playingIndex: 0,
         matches: (i) => feedItemMatchesQueueTypes(queue[i]!, types),
       }),
     }

@@ -136,7 +136,7 @@ describe('TheaterShell: Live filter vs preview pulses', () => {
       createdAt: '2026-08-19T00:00:00Z',
     })
     await act(async () => pushArrival?.(arrival))
-    expect(ids()).toEqual(['preview-video', 'v1', 'v2'])
+    expect(ids()).toEqual(['v1', 'preview-video', 'v2'])
     expect(chromeProps().currentKey).toBe(theaterItemKey(video))
   })
 

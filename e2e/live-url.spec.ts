@@ -55,7 +55,7 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await goNext(page)
     await expect(caption(page, POST.bravo.text)).toBeVisible()
     const before = await visibleQueueCount(page).innerText()
-    expect(before).toMatch(/^2 of /)
+    expect(before).toMatch(/\d+ in queue/)
 
     await page.getByRole('button', { name: 'Live', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(

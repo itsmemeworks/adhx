@@ -8,8 +8,10 @@ import {
   visibleQueueCount,
 } from './helpers'
 
-test.describe('queue count — Live leftover run', () => {
-  test('starts at N in queue, Next is 1 of N, Keep playing is N on repeat', async ({ page }) => {
+test.describe('queue count — Live LIFO', () => {
+  test('starts at N in queue, Next shrinks remaining, Keep playing is N on repeat', async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       localStorage.removeItem('adhx-theater-repeat')
       localStorage.removeItem('adhx-seen-v1')
@@ -18,15 +20,20 @@ test.describe('queue count — Live leftover run', () => {
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
 
-    // First paint can flash playlist-index "1 of N" before leftover `played`
-    // lands. Wait for the leftover copy, then read.
+    // Repeat-off copy is unseen remaining.
     await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
     const start = await readQueueProgress(page)
     expect(start.played).toBe(0)
     expect(start.toPlay).toBeGreaterThan(1)
 
     await goNext(page)
-    await expect(visibleQueueCount(page)).toHaveText(`${1} of ${start.toPlay}`)
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay - 1} in queue`)
+    await page.getByRole('button', { name: 'Queue', exact: true }).click()
+    const liveQueue = page.getByRole('dialog', { name: 'Playlist' })
+    await expect(liveQueue.getByText('Now playing', { exact: true })).toBeVisible()
+    await expect(liveQueue.getByText('Next', { exact: true })).toBeVisible()
+    await expect(liveQueue.getByText('Seen', { exact: true })).toBeVisible()
+    await page.keyboard.press('Escape')
 
     await page.getByRole('button', { name: 'Stop when caught up' }).click()
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
@@ -39,7 +46,7 @@ test.describe('queue count — Live leftover run', () => {
 })
 
 authedTest.describe('queue count — Saved one-pass vs loop', () => {
-  authedTest('Keep playing is the pile; Play once is played of the list', async ({ page }) => {
+  authedTest('Keep playing is the pile; Play once is unseen remaining', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.removeItem('adhx-theater-repeat-saved')
     })
@@ -55,12 +62,12 @@ authedTest.describe('queue count — Saved one-pass vs loop', () => {
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
 
     const start = await readQueueProgress(page)
-    expect(start.played).toBe(1)
+    expect(start.played).toBe(0)
     expect(start.toPlay).toBeGreaterThan(1)
-    await expect(visibleQueueCount(page)).toHaveText(`1 of ${start.toPlay}`)
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay} in queue`)
 
     await goNext(page)
-    await expect(visibleQueueCount(page)).toHaveText(`2 of ${start.toPlay}`)
+    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay - 1} in queue`)
   })
 
   authedTest('Videos filter names the video pile, not the full Saved list', async ({ page }) => {
@@ -99,13 +106,18 @@ test.describe('queue count — playlist loop', () => {
 })
 
 test.describe('preview Queue heading', () => {
-  test('the opened post is This post, not Shared post', async ({ page }) => {
+  test('the opened post is Now playing, not This post / Shared post', async ({ page }) => {
     await page.goto(`/${POST.preview.author}/status/${POST.preview.id}`)
     await expectTheaterReady(page)
     await page.getByRole('button', { name: 'Queue', exact: true }).click()
     const queue = page.getByRole('dialog', { name: 'Playlist' })
     await expect(queue).toBeVisible()
-    await expect(queue.getByText('This post', { exact: true })).toBeVisible()
-    await expect(queue.getByText('Shared post')).toHaveCount(0)
+    await expect(queue.getByText('Now playing', { exact: true })).toBeVisible()
+    await expect(queue.getByText('Next', { exact: true })).toBeVisible()
+    await expect(
+      queue.locator('[data-theater-queue-item]').filter({ hasText: POST.preview.text }),
+    ).toHaveAttribute('aria-current', 'true')
+    await expect(queue.getByText('This post', { exact: true })).toHaveCount(0)
+    await expect(queue.getByText('Shared post', { exact: true })).toHaveCount(0)
   })
 })

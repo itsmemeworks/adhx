@@ -52,11 +52,9 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help).toHaveCount(0)
 
     await first.click()
-    // Live leftover always stages the next unseen at index 0, so Previous
-    // stays disabled. The dock count is the signal that Next actually moved
-    // (`N of M`, not `N in queue`). A dwell during help can already be `1 of`,
-    // so this Next may land on `2 of`.
-    await expect(visibleQueueCount(page)).toHaveText(/^\d+ of /)
+    // Repeat off is remaining unseen (`N in queue`). Next shrinks that
+    // number; Previous stays disabled until the viewer has left the newest.
+    await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
   })
 
   test('. opens the signed-out menu; S opens sign-in', async ({ page }) => {
@@ -105,15 +103,18 @@ test.describe('theater shortcuts (signed out)', () => {
   }) => {
     await page.goto('/')
     await expectTheaterReady(page)
+    const pause = page.getByRole('button', { name: 'Pause' })
+    if (await pause.isVisible()) await pause.click()
     const before = (await visibleQueueCount(page).innerText()).replace(/\s+/g, ' ').trim()
 
     await page.keyboard.press('ArrowDown')
     await expect(visibleQueueCount(page)).toHaveText(before)
 
     await page.keyboard.press('ArrowRight')
-    await expect(visibleQueueCount(page)).toHaveText(/^\d+ of /)
+    await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
+    await expect(visibleQueueCount(page)).not.toHaveText(before)
     await page.keyboard.press('ArrowLeft')
-    await expect(visibleQueueCount(page)).toHaveText(/^\d+ of /)
+    await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
 
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
     await page.keyboard.press('e')

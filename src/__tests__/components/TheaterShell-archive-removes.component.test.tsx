@@ -264,15 +264,15 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     const onNext = collectionProps().onNext as () => void
     await act_(() => onNext())
     expect(collectionProps().currentKey).toBe('twitter:2')
-    expect(collectionProps().queuePlayed).toBe(2)
-    expect(collectionProps().queueToPlay).toBe(3)
+    expect(collectionProps().queuePlayed).toBe(0)
+    expect(collectionProps().queueToPlay).toBe(2)
 
     const onDone = collectionProps().collection as { onDone: () => void }
     await act_(() => onDone.onDone())
 
     expect(collectionProps().currentKey).toBe('twitter:3')
-    expect(collectionProps().queuePlayed).toBe(2)
-    expect(collectionProps().queueToPlay).toBe(2)
+    expect(collectionProps().queuePlayed).toBe(0)
+    expect(collectionProps().queueToPlay).toBe(1)
     expect(collectionProps().queueLooping).toBe(false)
   })
 

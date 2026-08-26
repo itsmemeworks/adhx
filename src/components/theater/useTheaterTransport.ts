@@ -7,7 +7,7 @@ import { useTheaterStageEvents } from './useTheaterStageEvents'
 import type { ProgressKind } from './TheaterProgressLine'
 
 /**
- * Shared mute / pause / leftover-copy for the desktop dock and mobile peek.
+ * Shared mute / pause / queue-count copy for the desktop dock and mobile peek.
  * Desktop and mobile used to copy the same handlers.
  */
 export function useTheaterTransport(opts: {

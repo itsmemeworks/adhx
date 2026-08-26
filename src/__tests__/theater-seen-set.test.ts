@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { appendSeenKey, isSeenKey, parseSeenList } from '@/components/theater/useSeenSet'
+import {
+  appendSeenKey,
+  isSeenKey,
+  parseSeenList,
+  removeSeenKeys,
+} from '@/components/theater/useSeenSet'
 
 /**
  * Pure-function coverage for the theater seen-set model (spec §5):
@@ -33,6 +38,17 @@ describe('isSeenKey', () => {
     expect(isSeenKey(['twitter:1', 'tiktok:2'], 'tiktok:2')).toBe(true)
     expect(isSeenKey(['twitter:1'], 'tiktok:2')).toBe(false)
     expect(isSeenKey([], 'tiktok:2')).toBe(false)
+  })
+})
+
+describe('removeSeenKeys', () => {
+  it('drops the given keys and keeps the rest', () => {
+    expect(removeSeenKeys(['a', 'b', 'c'], ['b'])).toEqual(['a', 'c'])
+  })
+
+  it('returns the same list when nothing matches', () => {
+    const list = ['a', 'b']
+    expect(removeSeenKeys(list, ['z'])).toBe(list)
   })
 })
 

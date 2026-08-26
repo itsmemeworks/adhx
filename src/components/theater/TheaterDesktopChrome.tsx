@@ -141,18 +141,16 @@ export interface DesktopDockProps {
   seenReady: boolean
   freshKeys: ReadonlySet<string>
   newCount: number
-  /** Passed straight through to `UpNextList` for its section headings — the arrival snapshot the queue was grouped by. Absent only in playlist mode (one authored order, no groups); shared mode passes it and pins its lead post out of the grouping instead. */
-  wasSeenOnEntry?: (key: string) => boolean
-  /** The shared post on a preview page — pinned as the lead row and excluded from the section grouping (it isn't "what's new", it's the link the visitor followed). Passed straight to `UpNextList`. */
-  pinnedKey?: string | null
   /** Whole queue size — looping copy uses this. Falls back to `items.length`. */
   queueTotal?: number
-  /** Finished posts from this leftover run. */
+  /** Unused for Repeat-off copy (`N in queue` uses toPlay). */
   queuePlayed?: number
-  /** How many posts this leftover run will play. */
+  /** Unseen remaining, or the looping pile size. */
   queueToPlay?: number
   /** Keep playing / Repeat this post. */
   queueLooping?: boolean
+  /** First Seen row in Repeat-off Queue. `-1` hides the section. */
+  seenStartIndex?: number
   savedToday: number
   onSelect: (key: string) => void
   waiting?: boolean
@@ -848,12 +846,11 @@ export function DesktopDock({
   seenReady,
   freshKeys,
   newCount,
-  wasSeenOnEntry,
-  pinnedKey,
   queueTotal,
   queuePlayed,
   queueToPlay,
   queueLooping,
+  seenStartIndex = -1,
   savedToday: _savedToday,
   onSelect,
   waiting = false,
@@ -1022,7 +1019,10 @@ export function DesktopDock({
             // Same as Queue: after regroup, index+1 is often a watched card.
             // Repeat-off will not auto-play it, so do not label NEXT →.
             const isNext =
-              !waiting && currentIndex >= 0 && i === currentIndex + 1 && !(wasSeenOnEntry && seen)
+              !waiting &&
+              currentIndex >= 0 &&
+              i === currentIndex + 1 &&
+              (seenStartIndex < 0 || i < seenStartIndex)
             // Queue rows grey watched thumbs; the strip must match. While the
             // caught-up overlay is up the parked "NOW" card is already watched
             // — dim it too, and do not label a sequential NEXT that will not
@@ -1201,7 +1201,7 @@ export function DesktopDock({
           )}
         </div>
 
-        {/* End cap — fades in over the strip. Queue / leftover · total / new.
+        {/* End cap — fades in over the strip. Queue / count / new.
           A filter-on ListFilter is the only closed-panel cue (types live in
           the overlay). */}
         <div
@@ -1269,7 +1269,7 @@ export function DesktopDock({
                   directly below it. Falls back to "Up next" where repeat isn't
                   offered (the personal theater's Collection tab). */}
                 <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
-                  {repeatCopy ? repeatCopy.queue : 'Up next'}
+                  {repeatCopy ? repeatCopy.queue : 'Queue'}
                 </span>
                 <button
                   type="button"
@@ -1293,10 +1293,9 @@ export function DesktopDock({
                 isSeen={isSeen}
                 seenReady={seenReady}
                 freshKeys={freshKeys}
-                wasSeenOnEntry={wasSeenOnEntry}
-                pinnedKey={pinnedKey}
                 onSelect={handlePanelSelect}
                 repeatCurrent={repeatCurrent}
+                seenStartIndex={seenStartIndex}
                 className="min-h-0 flex-1 pb-2"
               />
             </div>

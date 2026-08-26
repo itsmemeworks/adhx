@@ -30,7 +30,7 @@ authedTest.describe('signed-in navigation', () => {
     },
   )
 
-  authedTest('signed-in / continues Live leftover', async ({ page }) => {
+  authedTest('signed-in / lands on Live', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveURL(/\/live/)
     await expectTheaterReady(page)

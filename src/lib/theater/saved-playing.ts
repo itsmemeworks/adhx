@@ -78,32 +78,23 @@ export function savedPlayingIndex(
 }
 
 /**
- * Saved start / filter snap. Resume `playingIndex` only when no leftover
- * matching row sits before it. Live→Saved remounts used to land on the
- * restored cursor (or the next Videos row after a text cursor) and All
- * Clear while unchecked leftovers sat at the top.
+ * Saved start / type-filter snap. Newest-first LIFO starts at 0 unless
+ * `playingIndex` is an explicit `?open=` (or in-session) cursor that still
+ * matches the filter.
  */
 export function savedStartIndex(
   length: number,
   opts: {
     playingIndex: number
-    isLeftover: (index: number) => boolean
     matches?: (index: number) => boolean
   },
 ): number {
   const matches = opts.matches ?? (() => true)
-  let firstLeftover = -1
-  for (let i = 0; i < length; i++) {
-    if (!matches(i)) continue
-    if (opts.isLeftover(i)) {
-      firstLeftover = i
-      break
-    }
-  }
-  if (firstLeftover !== -1 && firstLeftover < opts.playingIndex) return firstLeftover
   if (opts.playingIndex >= 0 && opts.playingIndex < length && matches(opts.playingIndex)) {
     return opts.playingIndex
   }
-  if (firstLeftover !== -1) return firstLeftover
+  for (let i = 0; i < length; i++) {
+    if (matches(i)) return i
+  }
   return length
 }

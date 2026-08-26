@@ -112,12 +112,12 @@ describe('AuthedTheater collection load', () => {
     expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '0')
   })
 
-  it('resumes the session Saved cursor when earlier rows were left this run', async () => {
+  it('loads Saved newest-first, ignoring a leftover session cursor', async () => {
     sessionStorage.setItem(SAVED_PLAYING_STORAGE_KEY, 'twitter:b')
     sessionStorage.setItem(SAVED_PLAYED_STORAGE_KEY, JSON.stringify(['twitter:a']))
     render(<AuthedTheater seed={emptySeed} tab="collection" />)
     await waitFor(() => expect(screen.getByTestId('theater-shell')).toBeInTheDocument())
-    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '1')
+    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '0')
   })
 
   it('Videos leftover starts at the first video, not the next after a text cursor', async () => {

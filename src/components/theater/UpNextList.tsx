@@ -10,15 +10,7 @@ import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
 import { theaterRowCaption } from './TheaterText'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
-// Same predicates the shell uses to build the leftover order.
-import {
-  liveQueueGroupOf,
-  orderLiveQueue,
-  pinKeyFirst,
-  LIVE_QUEUE_GROUP_LABEL,
-  PINNED_POST_HEADING,
-  type LiveQueueGroup,
-} from './theater-math'
+import { queueSectionHeading } from './theater-math'
 import { THEATER_QUEUE_SCROLL_ATTR } from './useTheaterQueueOverlay'
 
 /** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
@@ -34,11 +26,9 @@ export function warmOnHover(item: TheaterItem) {
 }
 
 /**
- * Rail feed rows + the seen spine (spec §5). Live mode re-groups here the
- * same way the shell does, so a finished post slides into Watched earlier
- * even if the caller passed the raw arrival order. Playlist mode leaves
- * `items` as-is. Seen state is computed per row via `isSeen`, but only once
- * `seenReady` (SSR parity: everything renders unseen until hydration settles).
+ * Queue rows. The shell already hands a LIFO list (now playing first);
+ * this list does not re-order. Repeat off: Now playing, Next, Seen.
+ * Repeat: Now playing and Next.
  */
 
 export interface UpNextListProps {
@@ -49,17 +39,6 @@ export interface UpNextListProps {
   seenReady: boolean
   /** Keys that arrived via polling after mount (accent treatment). */
   freshKeys: ReadonlySet<string>
-  /**
-   * Was this key already watched when the session STARTED
-   * (`SeenSet.seenOnEntry`)? Drives the section headings, and must be the same
-   * snapshot `orderLiveQueue` grouped by. Live seen-state moves a finished
-   * row into Watched once it is no longer current. Absent in playlist mode,
-   * whose one curated order has no groups; SHARED mode does pass it (owner:
-   * a preview page's queue showed no sections at all while the same queue
-   * on `/` did — "we just need to be always consistent here"), with the
-   * shared post itself pinned out of the grouping via `pinnedKey`.
-   */
-  wasSeenOnEntry?: (key: string) => boolean
   onSelect: (key: string) => void
   /** Optional layout override for the scroll container — Rail passes `flex-1`. */
   className?: string
@@ -83,14 +62,8 @@ export interface UpNextListProps {
    * tag slot (where a non-current row would show "next ↓" or a seen check).
    */
   repeatCurrent?: boolean
-  /**
-   * The shared post on a preview page: always the lead row, and deliberately
-   * OUTSIDE the arrived/unwatched/watched grouping — it isn't part of "what's
-   * new", it's the thing you opened. It gets its own "This post"
-   * heading, is excluded from every group count, and never counts toward
-   * caught-up (which is about the live queue below it).
-   */
-  pinnedKey?: string | null
+  /** First Seen row (Repeat off). `-1` or omit = no Seen section. */
+  seenStartIndex?: number
 }
 
 export const TYPE_TILE: Record<
@@ -233,88 +206,21 @@ function Row({
 }
 
 export function UpNextList({
-  items: incoming,
+  items,
   currentKey,
   isSeen,
   seenReady,
   freshKeys,
-  wasSeenOnEntry,
   onSelect,
   className,
   ownScroll = true,
   collapsedCount,
   repeatCurrent,
-  pinnedKey,
+  seenStartIndex = -1,
 }: UpNextListProps) {
   const [expanded, setExpanded] = useState(false)
 
-  // Same grouping as TheaterShell: finished posts slide into Watched earlier.
-  // The shell already orders `displayItems` this way; doing it here too means
-  // a raw arrival-order list (tests, or a missed caller) still reads New /
-  // Up next / Watched. Playlist mode has no `wasSeenOnEntry` and stays put.
-  const items =
-    seenReady && wasSeenOnEntry
-      ? pinKeyFirst(
-          orderLiveQueue(incoming, wasSeenOnEntry, (k) => freshKeys.has(k), isSeen, currentKey),
-          pinnedKey ?? null,
-        )
-      : incoming
-
-  // Per-row seen flags (SSR-safe: everything false until seenReady).
   const seenFlags = items.map((item) => seenReady && isSeen(theaterItemKey(item)))
-
-  // Section headings, from the SAME grouping the queue was ordered by. A
-  // heading renders on the first row of each group, so the list reads
-  // "New since you opened / Not watched yet / Watched" instead of one
-  // undifferentiated run — owner: "do we need to be clear about what's been
-  // seen, what hasn't been seen yet, and then new things that have come in as
-  // we've been watching?". Only in grouped (live) mode: `wasSeenOnEntry`
-  // absent means playlist/shared, which has one curated order and no groups.
-  const groups: (LiveQueueGroup | null)[] = items.map((item) =>
-    seenReady && wasSeenOnEntry && theaterItemKey(item) !== pinnedKey
-      ? liveQueueGroupOf(
-          theaterItemKey(item),
-          wasSeenOnEntry,
-          (k) => freshKeys.has(k),
-          isSeen,
-          currentKey,
-        )
-      : null,
-  )
-  const groupCounts = groups.reduce<Partial<Record<LiveQueueGroup, number>>>((acc, g) => {
-    if (g) acc[g] = (acc[g] ?? 0) + 1
-    return acc
-  }, {})
-  /**
-   * How many rows in each group are STILL unwatched, live. Finished rows
-   * move into Watched; the heading count is the leftover in New / Up next.
-   * For "Watched earlier" the total is the useful number.
-   */
-  const groupRemaining = groups.reduce<Partial<Record<LiveQueueGroup, number>>>((acc, g, i) => {
-    if (g && g !== 'watched' && !seenFlags[i]) acc[g] = (acc[g] ?? 0) + 1
-    return acc
-  }, {})
-  const headingCount = (g: LiveQueueGroup) =>
-    g === 'watched' ? groupCounts.watched : groupRemaining[g]
-  /**
-   * Index → the heading that renders above that row: each group's first row,
-   * plus the pinned shared post, which gets a heading of its own because it
-   * belongs to no group. Without that, a preview page read "Up next / [the
-   * shared post] / New since you opened / … / [more unwatched posts with no
-   * heading]" — the pinned lead consumed the "Up next" heading and the real
-   * unwatched run below it went unlabelled.
-   */
-  const headingAt = new Map<number, { label: string; count?: number }>()
-  const started = new Set<LiveQueueGroup>()
-  groups.forEach((g, i) => {
-    if (!g || started.has(g)) return
-    started.add(g)
-    headingAt.set(i, { label: LIVE_QUEUE_GROUP_LABEL[g], count: headingCount(g) })
-  })
-  if (pinnedKey && seenReady && wasSeenOnEntry) {
-    const pinnedIndex = items.findIndex((item) => theaterItemKey(item) === pinnedKey)
-    if (pinnedIndex !== -1) headingAt.set(pinnedIndex, { label: PINNED_POST_HEADING })
-  }
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
 
   // Collapsed cutoff always covers the current row + its "next ↓" row, even
@@ -331,21 +237,15 @@ export function UpNextList({
       className={cn(ownScroll && 'overflow-y-auto', className)}
       {...(ownScroll ? { [THEATER_QUEUE_SCROLL_ATTR]: '' } : {})}
     >
-      {/* No summary line above the rows. The group headings ARE the summary —
-          a list whose only sections are "Watched earlier 19" (and, on a
-          preview page, "This post") already says there is nothing left to
-          watch, so a "You're all caught up" line above it was the same fact
-          twice (owner: "I don't think there's any point"). The end-of-queue
-          STAGE still says it, where it's the whole message rather than a
-          caption on a list that contradicts it with a "next ↓" row. */}
       <div className="flex flex-col gap-1 px-2">
         {visibleItems.map((item, i) => {
           const key = theaterItemKey(item)
           const isCurrent = i === currentIndex
-          // After live regroup the row after current is often Watched earlier.
-          // Next from the last pending post waits — do not paint next ↓ there.
-          const isNext = currentIndex >= 0 && i === currentIndex + 1 && groups[i] !== 'watched'
-          const heading = headingAt.get(i)
+          const isNext =
+            currentIndex >= 0 &&
+            i === currentIndex + 1 &&
+            (seenStartIndex < 0 || i < seenStartIndex)
+          const heading = queueSectionHeading(i, currentIndex, seenStartIndex)
           const row = (
             <Row
               key={key}
@@ -366,9 +266,6 @@ export function UpNextList({
                   className="mt-1 flex items-center gap-2 px-2.5 pb-0.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-3"
                 >
                   <span>{heading.label}</span>
-                  {!!heading.count && (
-                    <span className="font-mono normal-case tracking-normal">{heading.count}</span>
-                  )}
                   <span className="h-px flex-1 bg-hairline" />
                 </div>
                 {row}
