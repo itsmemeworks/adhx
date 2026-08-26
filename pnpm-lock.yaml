@@ -32,7 +32,7 @@ importers:
         version: 2.1.1
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(better-sqlite3@13.0.3)
+        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.0.3)
       hls.js:
         specifier: ^1.7.0
         version: 1.7.0
@@ -83,8 +83,8 @@ importers:
         specifier: ^16.3.2
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
+        specifier: ^9.6.0
+        version: 9.6.0
       '@types/node':
         specifier: ^25.9.2
         version: 25.9.2
@@ -1365,8 +1365,8 @@ packages:
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
-  '@types/better-sqlite3@7.6.13':
-    resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
+  '@types/better-sqlite3@9.6.0':
+    resolution: {integrity: sha512-ZEEwBSgMu7GYJOynoagg5X9JbxfL6dTJDsgViJIqh67jV44kyOr9RXfmFjLK5rzC4MWssP06t9hu/JwGDnUbCg==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -2375,6 +2375,7 @@ packages:
   eslint@9.39.2:
     resolution: {integrity: sha512-LEyamqS7W5HB3ujJyvi0HQK/dtVINZvd5mAAp9eT5S/ujByGjiZLCzPcHVzuXbpJDJF/cxwHlfceVUDZ2lnSTw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -5040,9 +5041,9 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.7
 
-  '@types/better-sqlite3@7.6.13':
+  '@types/better-sqlite3@9.6.0':
     dependencies:
-      '@types/node': 25.9.2
+      '@types/node': 25.9.5
 
   '@types/chai@5.2.3':
     dependencies:
@@ -5785,10 +5786,10 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.12
 
-  drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(better-sqlite3@13.0.3):
+  drizzle-orm@0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@9.6.0)(@types/pg@8.15.6)(better-sqlite3@13.0.3):
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
-      '@types/better-sqlite3': 7.6.13
+      '@types/better-sqlite3': 9.6.0
       '@types/pg': 8.15.6
       better-sqlite3: 13.0.3
 
