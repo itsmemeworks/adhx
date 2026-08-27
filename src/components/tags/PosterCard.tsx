@@ -78,7 +78,6 @@ export interface CollectionPosterCardProps {
 }
 
 const TILE_BG = '#171219'
-const BORDER = '#322b23'
 /** Every footer/overlay text element gets this so it stays legible over
  * light content — badges already carry their own backing, so this is only
  * needed on the bare title. */
@@ -218,11 +217,10 @@ export function CollectionPosterCard({
         href={href}
         aria-label={`View #${tag}`}
         className={cn(
-          'relative block overflow-hidden rounded-[14px] border transition-opacity hover:opacity-95',
+          'relative block overflow-hidden rounded-[14px] border border-hairline transition-opacity hover:opacity-95',
           heightClass,
           className,
         )}
-        style={{ borderColor: BORDER }}
       >
         {mosaic}
         {scrim}
@@ -235,8 +233,7 @@ export function CollectionPosterCard({
 
   return (
     <div
-      className={cn('overflow-hidden rounded-[14px] border bg-surface', className)}
-      style={{ borderColor: BORDER }}
+      className={cn('overflow-hidden rounded-[14px] border border-hairline bg-surface', className)}
     >
       <div className={cn('relative', heightClass)}>
         <Link href={href} aria-label={`View #${tag}`} className="absolute inset-0 z-0 block">
