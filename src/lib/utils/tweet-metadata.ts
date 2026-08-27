@@ -1,5 +1,5 @@
 import type { FxTwitterResponse } from '@/lib/media/fxembed'
-import { formatCount } from './format'
+import { formatCount, truncate } from './format'
 import { truncateWordBoundary, buildSnippetDescription, attributionFact } from './content-metadata'
 
 type FxTweet = NonNullable<FxTwitterResponse['tweet']>
@@ -7,6 +7,9 @@ type FxTweet = NonNullable<FxTwitterResponse['tweet']>
 const TITLE_CONTENT_LEN = 60
 /** Max length for "<content> — @handle" before we drop the handle to stay tidy. */
 const TITLE_WITH_HANDLE_BUDGET = 70
+const SOCIAL_QUOTE_LEN = 100
+const SOCIAL_LINK_LEN = 80
+const SOCIAL_CONTINUATION_LEN = 120
 
 /** Fallback title lead when a tweet has no text of its own to lead with. */
 function mediaFallbackLabel(tweet: FxTweet, screenName: string): string {
@@ -66,9 +69,8 @@ function engagementFact(tweet: FxTweet): string | undefined {
  * Holds and the reason to open ours: watch/send without the source app
  * (video) or readable without an X account (text/article).
  *
- * Kept deliberately separate from the richer OG/Twitter card description
- * (`buildDescription` in the page component), which carries quote/external-link
- * context for social unfurls instead.
+ * The richer OG/Twitter card description uses the same title-aware content
+ * continuation while prioritizing quote/external-link context.
  */
 export function buildTweetSeoDescription(
   tweet: FxTweet,
@@ -91,4 +93,122 @@ export function buildTweetSeoDescription(
       ? 'Watch and send it — no X app needed.'
       : 'Read the full post — no X account needed.',
   })
+}
+
+/**
+ * Social-unfurl description for X posts. Prioritizes distinct quote/external
+ * context, then continues past the title and appends compact content facts.
+ */
+export function buildTweetOgDescription(tweet: FxTweet, screenName: string, title: string): string {
+  const titleWithoutHandle = title.replace(/\s+—\s+@\S+$/, '').trim()
+  const titleLead = titleWithoutHandle.replace(/…$/, '').trim()
+  const seen = new Set([descriptionKey(titleLead)])
+  const coveredSources = [titleWithoutHandle]
+  const parts: string[] = []
+  const appendUnique = (display: string, source = display) => {
+    const key = descriptionKey(source)
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    parts.push(display)
+  }
+
+  // The title already carries the wrapper post's opening. Put the distinct
+  // quoted/linked subject first so social cards show it before truncating.
+  if (tweet.quote?.text) {
+    const quote = uncoveredDescriptionPart(tweet.quote.text, coveredSources)
+    if (quote) {
+      appendUnique(
+        `QT @${tweet.quote.author.screen_name}: "${quote.continues ? '…' : ''}${truncate(quote.text, SOCIAL_QUOTE_LEN)}"`,
+        quote.text,
+      )
+      coveredSources.push(tweet.quote.text)
+    }
+  }
+  if (tweet.external?.title) {
+    const link = uncoveredDescriptionPart(tweet.external.title, coveredSources)
+    if (link) {
+      appendUnique(
+        `\u{1f517} ${link.continues ? '…' : ''}${truncate(link.text, SOCIAL_LINK_LEN)}`,
+        link.text,
+      )
+      coveredSources.push(tweet.external.title)
+    }
+  }
+
+  const content = tweet.text || tweet.article?.preview_text || tweet.article?.title || ''
+  const remainder = uncoveredDescriptionPart(content, coveredSources)
+  if (remainder) {
+    appendUnique(
+      `${remainder.continues ? '…' : ''}${truncate(remainder.text, SOCIAL_CONTINUATION_LEN)}`,
+      remainder.text,
+    )
+  }
+
+  for (const fact of [
+    attributionFact(title, `@${screenName}`, 'X'),
+    mediaFact(tweet),
+    engagementFact(tweet),
+  ]) {
+    if (fact) appendUnique(fact)
+  }
+
+  appendUnique(
+    tweet.media?.videos?.length
+      ? 'Watch and send it — no X app needed.'
+      : 'Read the full post — no X account needed.',
+  )
+
+  return truncate(parts.join(' — '), 500)
+}
+
+function descriptionKey(value: string): string {
+  return compactDescriptionPart(value)
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[“”"'‘’….,!?()[\]{}:;—–-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+function compactDescriptionPart(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function uncoveredDescriptionPart(
+  value: string,
+  coveredSources: string[],
+): { text: string; continues: boolean } | null {
+  let text = compactDescriptionPart(value)
+  let continues = false
+
+  for (const covered of coveredSources) {
+    const coveredKey = descriptionKey(covered)
+    const textKey = descriptionKey(text)
+    if (!textKey || coveredKey === textKey) return null
+
+    const remainder = descriptionAfterCoveredPrefix(covered, text)
+    if (descriptionKey(remainder) !== textKey) {
+      text = remainder
+      continues = true
+    }
+  }
+
+  return text ? { text, continues } : null
+}
+
+function descriptionAfterCoveredPrefix(covered: string, value: string): string {
+  const text = compactDescriptionPart(value.replace(/https?:\/\/\S+/g, ''))
+  const compactCovered = compactDescriptionPart(covered.replace(/https?:\/\/\S+/g, ''))
+  const coveredWasTruncated = compactCovered.endsWith('…')
+  const lead = compactCovered.replace(/[“”"'‘’….,!?()[\]{}:;—–-]+$/, '').trim()
+  if (!lead || !text.toLowerCase().startsWith(lead.toLowerCase())) return text
+
+  const boundary = text[lead.length]
+  if (boundary && !coveredWasTruncated && !/[\s“”"'‘’.,!?()[\]{}:;—–-]/.test(boundary)) {
+    return text
+  }
+  return text
+    .slice(lead.length)
+    .replace(/^[\s“”"'‘’….,!?()[\]{}:;—–-]+/, '')
+    .trim()
 }

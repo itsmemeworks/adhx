@@ -123,9 +123,11 @@ describe('non-X preview metadata status', () => {
       expect(metadata.robots).toBeUndefined()
       expect(metadata.openGraph).toMatchObject({
         type: 'video.other',
+        description: metadata.description,
         images: [{ url: expect.stringContaining('/api/media/instagram/thumbnail') }],
         videos: [{ url: expect.stringContaining('/api/media/instagram/video') }],
       })
+      expect(metadata.description).not.toContain('Resolved Reel')
     })
 
     it('uses saved content as a rich fallback without calling Instagram', async () => {
@@ -196,12 +198,14 @@ describe('non-X preview metadata status', () => {
       expect(metadata.alternates).toEqual({ canonical: `https://adhx.com/p/${postId}` })
       expect(metadata.openGraph).toMatchObject({
         type: 'article',
+        description: metadata.description,
         images: [
           { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=1` },
           { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=2` },
           { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=3` },
         ],
       })
+      expect(metadata.description).not.toContain('An image carousel')
       expect(metadata.openGraph).not.toHaveProperty('videos')
       expect(metadata.twitter).toMatchObject({
         images: [
@@ -257,9 +261,11 @@ describe('non-X preview metadata status', () => {
       expect(metadata.robots).toBeUndefined()
       expect(metadata.openGraph).toMatchObject({
         type: 'video.other',
+        description: metadata.description,
         images: [{ url: expect.stringContaining('/api/media/tiktok/thumbnail') }],
         videos: [{ url: expect.stringContaining('/api/media/tiktok/video') }],
       })
+      expect(metadata.description).not.toContain('Resolved TikTok')
     })
 
     it('uses saved content as a rich fallback without calling TikTok', async () => {
@@ -329,8 +335,10 @@ describe('non-X preview metadata status', () => {
       expect(metadata.robots).toBeUndefined()
       expect(metadata.openGraph).toMatchObject({
         type: 'video.other',
+        description: metadata.description,
         images: [{ url: `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg` }],
       })
+      expect(metadata.description).not.toContain('Resolved Short')
     })
 
     it('uses saved content as a rich fallback without calling YouTube', async () => {
