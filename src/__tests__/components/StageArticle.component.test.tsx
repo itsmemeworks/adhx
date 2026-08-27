@@ -8,8 +8,10 @@ import { STAGE_TEXT_SCROLL_PAD } from '@/components/theater/stage-primitives'
 import type { TheaterItem } from '@/components/theater/types'
 
 vi.mock('@/lib/theater/article-body', () => ({
-  fetchArticleMarkdown: vi.fn().mockResolvedValue(null),
+  fetchArticleDetails: vi.fn().mockResolvedValue(null),
 }))
+
+import { fetchArticleDetails } from '@/lib/theater/article-body'
 
 function articleItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
   return {
@@ -33,6 +35,7 @@ function articleItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
 describe('StageArticle splash', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(fetchArticleDetails).mockResolvedValue(null)
   })
 
   it('shows the author avatar and username instead of an Article type chip', async () => {
@@ -62,5 +65,24 @@ describe('StageArticle splash', () => {
     await waitFor(() => {
       expect(screen.getByText(/Couldn't load the full article here/)).toBeInTheDocument()
     })
+  })
+
+  it('repairs a sparse seed with the title and cover returned by the article API', async () => {
+    vi.mocked(fetchArticleDetails).mockResolvedValue({
+      title: 'The actual article headline',
+      coverImageUrl: 'https://pbs.twimg.com/media/cover.jpg',
+      content: 'The article body.',
+    })
+    const { container } = render(
+      <StageArticle item={articleItem({ text: 'https://t.co/wrapper', thumbnailUrl: null })} />,
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'The actual article headline' }),
+    ).toBeInTheDocument()
+    expect(
+      container.querySelector('img[src="https://pbs.twimg.com/media/cover.jpg"]'),
+    ).not.toBeNull()
+    expect(await screen.findByText('The article body.')).toBeInTheDocument()
   })
 })

@@ -23,14 +23,14 @@ vi.mock('@/lib/preferences-context', () => ({
 }))
 
 vi.mock('@/lib/theater/article-body', () => ({
-  fetchArticleMarkdown: vi.fn(),
+  fetchArticleDetails: vi.fn(),
 }))
 
 vi.mock('@/lib/theater/share-tweet', () => ({
   fetchShareTweet: vi.fn().mockResolvedValue(null),
 }))
 
-import { fetchArticleMarkdown } from '@/lib/theater/article-body'
+import { fetchArticleDetails } from '@/lib/theater/article-body'
 
 function textItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
   return {
@@ -71,8 +71,8 @@ function articleItem(): TheaterItem {
 describe('theater Bionic Reading', () => {
   beforeEach(() => {
     prefs.bionicReading = true
-    vi.mocked(fetchArticleMarkdown).mockReset()
-    vi.mocked(fetchArticleMarkdown).mockResolvedValue(null)
+    vi.mocked(fetchArticleDetails).mockReset()
+    vi.mocked(fetchArticleDetails).mockResolvedValue(null)
   })
 
   it('bolds the first part of each word in Read-mode typeset text', () => {
@@ -129,9 +129,11 @@ describe('theater Bionic Reading', () => {
   })
 
   it('bolds the article headline and body when the preference is on', async () => {
-    vi.mocked(fetchArticleMarkdown).mockResolvedValue(
-      'The quick brown fox jumps over the lazy dog.',
-    )
+    vi.mocked(fetchArticleDetails).mockResolvedValue({
+      title: null,
+      coverImageUrl: null,
+      content: 'The quick brown fox jumps over the lazy dog.',
+    })
     render(<StageArticle item={articleItem()} />)
 
     const heading = screen.getByRole('heading', { name: 'How You Can Build Your Own Army' })
@@ -148,7 +150,11 @@ describe('theater Bionic Reading', () => {
   })
 
   it('does not nest bionic bold inside markdown bold', async () => {
-    vi.mocked(fetchArticleMarkdown).mockResolvedValue('a **bold** word')
+    vi.mocked(fetchArticleDetails).mockResolvedValue({
+      title: null,
+      coverImageUrl: null,
+      content: 'a **bold** word',
+    })
     render(<StageArticle item={articleItem()} />)
     await waitFor(() => {
       expect(screen.getByText(/bold/)).toBeInTheDocument()

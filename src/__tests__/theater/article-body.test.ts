@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   articleSharePath,
   composeArticleCopy,
+  fetchArticleDetails,
   fetchArticleMarkdown,
   resetArticleMarkdownCache,
 } from '@/lib/theater/article-body'
@@ -31,6 +32,28 @@ describe('composeArticleCopy', () => {
 })
 
 describe('fetchArticleMarkdown', () => {
+  it('keeps article title and cover metadata with the shared body fetch', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        article: {
+          title: 'A useful article',
+          coverImageUrl: 'https://pbs.twimg.com/media/cover.jpg',
+          content: '# Intro\n\nHello.',
+        },
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchArticleDetails('writer', '123')).resolves.toEqual({
+      title: 'A useful article',
+      coverImageUrl: 'https://pbs.twimg.com/media/cover.jpg',
+      content: '# Intro\n\nHello.',
+    })
+    await expect(fetchArticleMarkdown('writer', '123')).resolves.toBe('# Intro\n\nHello.')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('reads article.content from the share tweet API', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

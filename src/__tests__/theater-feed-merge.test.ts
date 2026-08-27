@@ -7,8 +7,8 @@ import type { TrendingItem } from '@/lib/trending/query'
  * NEWER than the current top inserts at the top and is reported via freshKeys;
  * an unknown key that is OLDER appends quietly at the bottom (an old post must
  * never surface at the top of Up next as "new"); anything already present
- * keeps its exact object reference and position so playback isn't disturbed
- * by a poll tick.
+ * keeps its position and exact object reference unless the poll fills display
+ * metadata that its seed did not have.
  */
 
 const make = (
@@ -75,6 +75,32 @@ describe('mergeFeedItems', () => {
     // disturbed by a poll tick.
     expect(items[1]).toBe(a)
     expect(items[2]).toBe(b)
+  })
+
+  it('fills a missing article cover and headline without moving the existing item', () => {
+    const sparse = {
+      ...make('article'),
+      contentType: 'article' as const,
+      text: 'https://t.co/wrapper',
+      thumbnailUrl: null,
+    }
+    const neighbor = make('neighbor')
+    const enriched = {
+      ...sparse,
+      text: 'The actual article headline',
+      thumbnailUrl: 'https://pbs.twimg.com/media/cover.jpg',
+    }
+
+    const { items, freshKeys } = mergeFeedItems([sparse, neighbor], [enriched, neighbor])
+
+    expect(items.map((item) => item.bookmarkId)).toEqual(['article', 'neighbor'])
+    expect(items[0]).toMatchObject({
+      text: 'The actual article headline',
+      thumbnailUrl: 'https://pbs.twimg.com/media/cover.jpg',
+    })
+    expect(items[0]).not.toBe(sparse)
+    expect(items[1]).toBe(neighbor)
+    expect(freshKeys).toEqual([])
   })
 
   it('preserves existing order — fresh items only ever land at the top', () => {

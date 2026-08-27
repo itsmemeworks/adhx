@@ -4,6 +4,7 @@ import {
   bookmarkTags,
   bookmarks,
   bookmarkMedia,
+  bookmarkLinks,
   moderatedPosts,
   userBans,
 } from '@/lib/db/schema'
@@ -139,9 +140,12 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
     .filter((row) => !moderation.value.has(`${row.platform}:${row.id}`))
     .filter((row) => !bannedOwners.value.has(row.ownerUserId))
 
-  // First media thumbnail per bookmark, if any — kept deliberately simple
-  // (no article-cover / quote-context resolution like the live pulse does).
+  // Resolve first-class media plus article metadata. Public-tag backfill is
+  // often the first copy of an older post mounted in Live, so dropping an X
+  // Article's bookmark-link cover/title here leaves both its dock card and
+  // StageArticle splash blank until a full reload.
   const mediaByBookmark = new Map<string, { url: string; isVideo: boolean }>()
+  const articleByBookmark = new Map<string, { title: string | null; cover: string | null }>()
   const allowedTuples = [
     ...new Map(
       rows.map((row) => [
@@ -187,6 +191,40 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
         isVideo: m.mediaType === 'video' || m.mediaType === 'animated_gif',
       })
     }
+
+    const linkRows = db
+      .select({
+        ownerUserId: bookmarkLinks.userId,
+        platform: bookmarkLinks.platform,
+        bookmarkId: bookmarkLinks.bookmarkId,
+        linkType: bookmarkLinks.linkType,
+        title: bookmarkLinks.previewTitle,
+        cover: bookmarkLinks.previewImageUrl,
+      })
+      .from(bookmarkLinks)
+      .where(
+        or(
+          ...allowedTuples.map((tuple) =>
+            and(
+              eq(bookmarkLinks.userId, tuple.ownerUserId),
+              eq(bookmarkLinks.platform, tuple.platform),
+              eq(bookmarkLinks.bookmarkId, tuple.bookmarkId),
+            ),
+          ),
+        ),
+      )
+      .all()
+    for (const link of linkRows) {
+      if (!link.title && !link.cover) continue
+      const key = `${link.ownerUserId}:${link.platform}:${link.bookmarkId}`
+      const current = articleByBookmark.get(key)
+      if (!current || link.linkType === 'article') {
+        articleByBookmark.set(key, {
+          title: link.title ?? current?.title ?? null,
+          cover: link.cover ?? current?.cover ?? null,
+        })
+      }
+    }
   }
 
   const seen = new Set(existing.map((item) => theaterItemKey(item)))
@@ -199,6 +237,7 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
     seen.add(publicKey)
 
     const media = mediaByBookmark.get(`${row.ownerUserId}:${publicKey}`)
+    const article = articleByBookmark.get(`${row.ownerUserId}:${publicKey}`)
     const contentType = inferContentType({
       platform: row.platform,
       category: row.category,
@@ -213,8 +252,9 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
       author: row.author,
       authorName: row.authorName,
       authorAvatarUrl: row.authorAvatarUrl,
-      text: row.text,
-      thumbnailUrl: media?.url ?? null,
+      text: contentType === 'article' ? (article?.title ?? row.text) : row.text,
+      thumbnailUrl:
+        contentType === 'article' ? (article?.cover ?? media?.url ?? null) : (media?.url ?? null),
       url: row.url,
       // BOTH times are ADHX-side, never the source platform's publish date
       // (owner decision, see TrendingItem.addedAt): `processedAt` is when the

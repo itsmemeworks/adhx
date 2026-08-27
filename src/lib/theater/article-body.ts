@@ -11,7 +11,13 @@ import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 const FETCH_TIMEOUT_MS = 10_000
 
-const inflight = new Map<string, Promise<string | null>>()
+export interface ArticleDetails {
+  title: string | null
+  coverImageUrl: string | null
+  content: string | null
+}
+
+const inflight = new Map<string, Promise<ArticleDetails | null>>()
 
 export function articleSharePath(author: string, id: string): string {
   return `/api/share/tweet/${encodeURIComponent(author)}/${encodeURIComponent(id)}`
@@ -19,11 +25,13 @@ export function articleSharePath(author: string, id: string): string {
 
 interface ShareTweetResponse {
   article?: {
+    title?: string | null
+    coverImageUrl?: string | null
     content?: string | null
   } | null
 }
 
-export function fetchArticleMarkdown(author: string, id: string): Promise<string | null> {
+export function fetchArticleDetails(author: string, id: string): Promise<ArticleDetails | null> {
   const key = `${author}:${id}`
   const existing = inflight.get(key)
   if (existing) return existing
@@ -31,17 +39,27 @@ export function fetchArticleMarkdown(author: string, id: string): Promise<string
   const pending = fetchWithTimeout(articleSharePath(author, id), FETCH_TIMEOUT_MS)
     .then((res) => (res.ok ? (res.json() as Promise<ShareTweetResponse>) : null))
     .then((data) => {
-      const markdown = data?.article?.content
-      return typeof markdown === 'string' && markdown.trim() ? markdown : null
+      if (!data?.article) return null
+      const { title, coverImageUrl, content } = data.article
+      return {
+        title: typeof title === 'string' && title.trim() ? title : null,
+        coverImageUrl:
+          typeof coverImageUrl === 'string' && coverImageUrl.trim() ? coverImageUrl : null,
+        content: typeof content === 'string' && content.trim() ? content : null,
+      }
     })
     .catch(() => null)
-    .then((markdown) => {
-      if (!markdown) inflight.delete(key)
-      return markdown
+    .then((details) => {
+      if (!details) inflight.delete(key)
+      return details
     })
 
   inflight.set(key, pending)
   return pending
+}
+
+export function fetchArticleMarkdown(author: string, id: string): Promise<string | null> {
+  return fetchArticleDetails(author, id).then((details) => details?.content ?? null)
 }
 
 /** Title + body, without repeating the title when the markdown already opens with it. */

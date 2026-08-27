@@ -18,7 +18,9 @@ export const TYPE_META: Record<ContentType, { label: string; dot: string }> = {
 
 /** GOB + ADHX lockup. Header placements stay at least 32px tall; compact
  * placements can lower `minHeight`. `auto` follows the page theme, while
- * fixed theater/panel surfaces opt into the matching supplied asset. */
+ * fixed theater/panel surfaces opt into the matching supplied asset. Hovering
+ * the lockup swaps only GOB for the matching animated loader while preserving
+ * the supplied ADHX wordmark. */
 export function MatterLogo({
   size = 22,
   minHeight = 32,
@@ -31,33 +33,49 @@ export function MatterLogo({
   className?: string
 }) {
   const height = Math.max(minHeight, size * 1.7)
-  const imageClass = 'block w-auto'
-  const imageStyle = { height }
+  const renderVariant = (variant: 'dark' | 'paper', wrapperClassName?: string) => {
+    const asset = variant === 'dark' ? '/logo-dark.png' : '/logo-paper.png'
+    const loader = variant === 'dark' ? '/gob-loader.svg' : '/gob-loader-paper.svg'
+    const aspectRatio = variant === 'dark' ? 700 / 280 : 476 / 176
+    const imageStyle = { height }
 
-  return (
-    <span className={cn('inline-flex items-center', className)} style={{ minHeight }}>
-      {surface === 'auto' ? (
-        <>
-          <img
-            src="/logo-paper.png"
-            alt="ADHX"
-            style={imageStyle}
-            className={cn(imageClass, 'dark:hidden')}
-          />
-          <img
-            src="/logo-dark.png"
-            alt="ADHX"
-            style={imageStyle}
-            className={cn(imageClass, 'hidden dark:block')}
-          />
-        </>
-      ) : (
+    return (
+      <span
+        className={cn('relative inline-block flex-none', wrapperClassName)}
+        style={{ width: height * aspectRatio, height }}
+      >
         <img
-          src={surface === 'dark' ? '/logo-dark.png' : '/logo-paper.png'}
+          src={asset}
           alt="ADHX"
           style={imageStyle}
-          className={imageClass}
+          className="absolute inset-0 block w-auto transition-opacity duration-100 group-hover/logo:opacity-0"
         />
+        <img
+          src={asset}
+          alt=""
+          aria-hidden
+          style={{ ...imageStyle, clipPath: 'inset(0 0 0 40%)' }}
+          className="pointer-events-none absolute inset-0 block w-auto opacity-0 transition-opacity duration-100 group-hover/logo:opacity-100"
+        />
+        <img
+          src={loader}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-1/2 h-full w-[40%] -translate-y-1/2 object-contain opacity-0 transition-opacity duration-100 group-hover/logo:opacity-100"
+        />
+      </span>
+    )
+  }
+
+  return (
+    <span className={cn('group/logo inline-flex items-center', className)} style={{ minHeight }}>
+      {surface === 'auto' ? (
+        <>
+          {renderVariant('paper', 'dark:hidden')}
+          {renderVariant('dark', 'hidden dark:inline-block')}
+        </>
+      ) : (
+        renderVariant(surface)
       )}
     </span>
   )
