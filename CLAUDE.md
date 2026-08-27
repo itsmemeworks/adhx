@@ -388,7 +388,7 @@ All preview routes render the shared-mode theater (`SharedPostStatic` + `<Theate
 
 **Instagram preview** (media resolution):
 
-- Metadata comes from Instagram's crawler Relay payload (`src/lib/media/instafix.ts`), with OG tags as a reduced fallback. Relay distinguishes images from Reels and preserves every ordered carousel child, dimensions, and accessibility text.
+- Metadata comes from Instagram's crawler Relay payload (`src/lib/media/instafix.ts`), with OG tags as a reduced fallback. Relay distinguishes images from Reels and preserves every ordered carousel child, dimensions, and accessibility text. OG is explicitly incomplete: a duplicate save may repair an empty media set from it, but must never replace a richer saved carousel. Mixed-carousel video children are persisted as poster-only photo slides until indexed child-video playback exists.
 - `/p/{id}` image posts use `/api/media/instagram/thumbnail?id=&index=` to re-resolve expiring signed CDN URLs. Single images and ordered carousels render through the same theater photo-album controls as X; Send/download uses the attachment form of that proxy.
 - `/reel/{id}` and `/reels/{id}` preserve the existing Reel path. There is no `og:video`.
 - MP4 via vxinstagram (`src/lib/media/mirrors.ts`) proxied at `/api/media/instagram/video`. Cold cache 404s for ~10–20s — the resolver retries; **do not attach `<video src>` until a Range probe 200/206s** (`probeInstagramVideo` in `src/lib/media/instagram-playback.ts`). The preview page also warms the cache (Range 0-1, fire-and-forget) so the probe is usually already hot.

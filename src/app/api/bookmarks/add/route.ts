@@ -151,12 +151,17 @@ async function addInstagramPost(
   }
 
   const contentType = meta.contentType
-  const media = meta.media.filter((item) => item.type === 'video' || !!item.imageUrl)
-  if (contentType === 'photo' && !media.some((item) => item.imageUrl)) {
+  const media = meta.media
+  if (
+    contentType === 'photo' &&
+    (media.length === 0 || !media.every((item) => Boolean(item.imageUrl)))
+  ) {
     return NextResponse.json({ error: 'Instagram images not available' }, { status: 404 })
   }
   const hasCompleteMediaReplacement =
-    media.length > 0 && media.every((item) => Boolean(item.imageUrl))
+    media.length > 0 &&
+    media.every((item) => Boolean(item.imageUrl)) &&
+    meta.mediaComplete !== false
 
   const now = new Date().toISOString()
   const handle = (meta.author || '').replace(/^@/, '') || 'instagram'
@@ -199,10 +204,29 @@ async function addInstagramPost(
         .run()
     }
 
-    // Replace the ordered child set atomically only when a duplicate refresh
-    // has a complete set of usable posters/images. A degraded crawler response
-    // must never erase healthy durable media from an earlier save.
-    if (bookmarkInsert.changes > 0 || hasCompleteMediaReplacement) {
+    const duplicateHasMedia =
+      bookmarkInsert.changes === 0 &&
+      db
+        .select({ id: bookmarkMedia.id })
+        .from(bookmarkMedia)
+        .where(
+          and(
+            eq(bookmarkMedia.userId, userId),
+            eq(bookmarkMedia.platform, 'instagram'),
+            eq(bookmarkMedia.bookmarkId, postId),
+          ),
+        )
+        .limit(1)
+        .all().length > 0
+
+    // Replace the ordered child set atomically when the post is new, the
+    // duplicate has no media to preserve, or the resolver returned a complete
+    // Relay set. OpenGraph only exposes the lead image and must not collapse a
+    // richer saved carousel.
+    if (
+      bookmarkInsert.changes > 0 ||
+      (media.length > 0 && (!duplicateHasMedia || hasCompleteMediaReplacement))
+    ) {
       db.delete(bookmarkMedia)
         .where(
           and(
@@ -214,17 +238,21 @@ async function addInstagramPost(
         .run()
 
       media.forEach((item, index) => {
+        // Mixed `/p/` carousel videos currently have a reliable poster but no
+        // indexed child-video stream. Persist them as poster-only photo slides
+        // so feed/theater never point several children at the container MP4.
+        const persistedType = contentType === 'photo' ? 'photo' : item.type
         db.insert(bookmarkMedia)
           .values({
             // Preserve the legacy Reel row id so existing references reconcile.
             id:
               contentType === 'video' && index === 0
                 ? `${postId}_photo_0`
-                : `${postId}_${item.type}_${index}`,
+                : `${postId}_${persistedType}_${index}`,
             userId,
             platform: 'instagram',
             bookmarkId: postId,
-            mediaType: item.type,
+            mediaType: persistedType,
             originalUrl: item.imageUrl || postUrl,
             previewUrl: item.imageUrl || null,
             width: item.width,

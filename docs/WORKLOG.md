@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Instagram carousel durability follow-up
+
+Late review closed three edge cases before merge: OpenGraph fallback metadata can repair an
+empty media set but cannot collapse a richer Relay-resolved carousel; mixed `/p/` video children
+are stored as ordered poster-only photo slides until indexed child playback exists; and send-file
+prefetch keys now include the resolved content type and source URL. Regression coverage exercises
+all three cases. Final gates pass: 3,458 Vitest tests, typecheck, build, formatting, and lint
+(warnings only). Current state: complete on the Instagram image-post PR; no follow-up known.
+
 ## 2026-08-27 — Instagram image posts and carousels complete
 
 Instagram `/p/` links now resolve single images and ordered mixed carousels from the crawler

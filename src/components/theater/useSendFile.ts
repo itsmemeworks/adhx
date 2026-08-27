@@ -176,8 +176,8 @@ export function resolveSendSource(item: SendableItem | null): SendSource | null 
   return null
 }
 
-function itemKey(item: SendableItem): string {
-  return `${item.platform}:${item.bookmarkId}`
+export function sendSourceKey(item: SendableItem, source: SendSource): string {
+  return `${item.platform}:${item.bookmarkId}:${item.contentType ?? 'unknown'}:${source.src}`
 }
 
 /** Absolute canonical preview URL for the caption / link-only share. */
@@ -236,7 +236,7 @@ export function useSendFile(
 
   const source = resolveSendSource(item)
   const supported = source !== null
-  const key = item && source ? itemKey(item) : null
+  const key = item && source ? sendSourceKey(item, source) : null
 
   useEffect(() => {
     // New item (or one that lost its source) — reset this instance. A shared

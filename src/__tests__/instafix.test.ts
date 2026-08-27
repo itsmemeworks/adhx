@@ -162,6 +162,7 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
       authorName: 'Penny Lane',
       contentType: 'video',
       media: [{ type: 'video', imageUrl: CDN_IMAGE }],
+      mediaComplete: false,
     })
     expect(await fetchReelMetadata('Cwnj8o6pKbn')).toEqual(result)
     // Hits instagram.com directly on the /reel/ path first.
@@ -206,6 +207,7 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
       ],
     })
     expect(metadata?.takenAt).toBe('2026-08-14T12:00:15.000Z')
+    expect(metadata?.mediaComplete).toBe(true)
   })
 
   it('chooses the highest-resolution allowed image candidate', () => {

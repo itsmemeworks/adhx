@@ -57,6 +57,8 @@ export interface InstagramMetadata {
   contentType: 'photo' | 'video'
   /** Ordered media children. Single posts contain one entry. */
   media: InstagramMedia[]
+  /** False when OpenGraph exposed only the first image and album completeness is unknown. */
+  mediaComplete?: boolean
 }
 
 export type InstagramMetadataStatus =
@@ -343,6 +345,7 @@ function metadataFromRelay(raw: RawInstagramMedia): InstagramMetadata | null {
     takenAt: takenAtSeconds ? new Date(takenAtSeconds * 1000).toISOString() : undefined,
     contentType: isVideo ? 'video' : 'photo',
     media,
+    mediaComplete: true,
   }
 }
 
@@ -408,6 +411,7 @@ function parseInstagramOg(html: string, requestedPath: string): InstagramMetadat
     authorName: parseDisplayName(twitterTitle) || parseDisplayName(ogTitle),
     contentType,
     media: imageUrl ? [{ type: contentType, imageUrl }] : [],
+    mediaComplete: false,
   }
 }
 
