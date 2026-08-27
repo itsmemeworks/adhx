@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — X Article covers repaired across the theater
+
+Sparse public-tag backfill items now carry the saved X Article headline and cover from
+`bookmark_links`, so Live dock cards and article splashes paint correctly on first load.
+Live polling also fills missing metadata on an already-mounted item without moving it, and
+`StageArticle` uses the article API's title/cover as a final fallback alongside the body.
+Regression coverage locks all three paths. Current state: complete.
+
 ## 2026-08-27 — GHCR release images added
 
 Every release now publishes provenance- and SBOM-attested AMD64 and ARM64 images to

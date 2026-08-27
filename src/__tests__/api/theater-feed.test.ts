@@ -330,6 +330,48 @@ describe('getTheaterFeed', () => {
     expect(item?.contentType).toBe('photo')
   })
 
+  it('keeps an X Article cover and headline on a public-tag backfill item', async () => {
+    seedPublicTagBookmark({
+      userId: 'curator',
+      tag: 'articles',
+      bookmarkId: 'article1',
+      author: 'writer',
+    })
+    testInstance.db
+      .update(bookmarks)
+      .set({ category: 'article', text: 'https://t.co/wrapper' })
+      .where(
+        and(
+          eq(bookmarks.userId, 'curator'),
+          eq(bookmarks.platform, 'twitter'),
+          eq(bookmarks.id, 'article1'),
+        ),
+      )
+      .run()
+    testInstance.db
+      .insert(bookmarkLinks)
+      .values({
+        userId: 'curator',
+        platform: 'twitter',
+        bookmarkId: 'article1',
+        originalUrl: 'https://t.co/wrapper',
+        expandedUrl: 'https://x.com/writer/article/article1',
+        linkType: 'article',
+        previewTitle: 'A useful article',
+        previewImageUrl: 'https://pbs.twimg.com/media/article-cover.jpg',
+      })
+      .run()
+
+    const seed = await getTheaterFeed()
+    const item = seed.items.find((candidate) => candidate.bookmarkId === 'article1')
+
+    expect(item).toMatchObject({
+      contentType: 'article',
+      text: 'A useful article',
+      thumbnailUrl: 'https://pbs.twimg.com/media/article-cover.jpg',
+    })
+  })
+
   /**
    * Owner report: playlist time chips looked like they showed the source
    * network's post date. Backfilled items carried `bookmarks.createdAt` (the

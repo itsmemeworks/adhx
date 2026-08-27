@@ -2,10 +2,11 @@
 
 /**
  * Article stage: cover splash → in-stage reader (spec §3/§6). The splash
- * (cover + headline) renders immediately from data already on `item` — it
- * looks complete even if the body never loads. The full body comes from the
- * public tweet JSON API (`/api/share/tweet/{author}/{id}`, 5-min cache),
- * whose `article.content` field is already `articleBlocksToMarkdown` output
+ * (cover + headline) renders immediately from data already on `item`, then
+ * fills either value from the article response when a sparse seed omitted it.
+ * The full body comes from the public tweet JSON API
+ * (`/api/share/tweet/{author}/{id}`, 5-min cache), whose `article.content` is
+ * already `articleBlocksToMarkdown` output
  * (see `src/app/api/share/tweet/[username]/[id]/route.ts`). A reading-progress
  * bar (bound to the reader's scroll position) replaces the video time bar.
  *
@@ -21,7 +22,7 @@ import { cn } from '@/lib/utils'
 import { toBionicText } from '@/components/feed/text-rendering'
 import { usePreferences } from '@/lib/preferences-context'
 import { previewPath } from '@/lib/activity/preview-path'
-import { fetchArticleMarkdown } from '@/lib/theater/article-body'
+import { fetchArticleDetails, type ArticleDetails } from '@/lib/theater/article-body'
 import {
   inlinePlainText,
   parseArticleMarkdown,
@@ -153,6 +154,7 @@ export function StageArticle({ item }: StageArticleProps) {
   const { preferences } = usePreferences()
   const bionic = preferences.bionicReading
   const [blocks, setBlocks] = useState<ArticleMdBlock[] | null>(null)
+  const [details, setDetails] = useState<ArticleDetails | null>(null)
   const [failed, setFailed] = useState(false)
   const [progress, setProgress] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -160,6 +162,7 @@ export function StageArticle({ item }: StageArticleProps) {
   useEffect(() => {
     let cancelled = false
     setBlocks(null)
+    setDetails(null)
     setFailed(false)
     setProgress(0)
     if (scrollRef.current) scrollRef.current.scrollTop = 0
@@ -170,14 +173,19 @@ export function StageArticle({ item }: StageArticleProps) {
       return
     }
 
-    fetchArticleMarkdown(item.author, item.bookmarkId)
-      .then((markdown) => {
+    fetchArticleDetails(item.author, item.bookmarkId)
+      .then((article) => {
         if (cancelled) return
-        if (!markdown) {
+        if (!article) {
           setFailed(true)
           return
         }
-        setBlocks(parseArticleMarkdown(markdown))
+        setDetails(article)
+        if (!article.content) {
+          setFailed(true)
+          return
+        }
+        setBlocks(parseArticleMarkdown(article.content))
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -195,7 +203,8 @@ export function StageArticle({ item }: StageArticleProps) {
     setProgress(max > 0 ? el.scrollTop / max : 0)
   }
 
-  const headline = (item.text || 'Saved article').trim()
+  const headline = (details?.title || item.text || 'Saved article').trim()
+  const coverImageUrl = item.thumbnailUrl || details?.coverImageUrl || null
   const href = previewPath(item.platform, item.author, item.bookmarkId || '')
   const hasReader = !!blocks && blocks.length > 0
 
@@ -207,12 +216,12 @@ export function StageArticle({ item }: StageArticleProps) {
         className={cn('h-full w-full overflow-y-auto', STAGE_TEXT_SCROLL_PAD)}
         data-theater-scroll
       >
-        {/* Splash: cover + headline. Renders from `item` alone — looks
-            complete even if the body fetch below never resolves. */}
+        {/* Splash: cover + headline. Paint from `item` immediately, then use
+            the shared article fetch as a fallback for sparse feed seeds. */}
         <div className="relative flex min-h-[46vh] w-full flex-col justify-end overflow-hidden sm:min-h-[52vh]">
-          {item.thumbnailUrl ? (
+          {coverImageUrl ? (
             <img
-              src={item.thumbnailUrl}
+              src={coverImageUrl}
               alt=""
               referrerPolicy="no-referrer"
               className="absolute inset-0 h-full w-full object-cover opacity-45"

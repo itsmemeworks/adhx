@@ -8,9 +8,10 @@
  *
  * The merge is deliberately conservative: a genuinely new key inserts at the
  * TOP of the list and is reported via `freshKeys` (for the rail's accent
- * treatment); every item that was already in the list keeps its exact object
- * reference and position so an in-flight `<video>` never gets disturbed by a
- * poll tick. The merge itself is exported as a pure function (`mergeFeedItems`)
+ * treatment). Existing items keep their object reference unless the poll can
+ * fill display metadata the seed lacked (notably an article cover/title from
+ * a sparse public-tag backfill); their position and playback identity never
+ * change. The merge itself is exported as a pure function (`mergeFeedItems`)
  * so it's unit-testable without a fetch/timer harness.
  */
 
@@ -51,8 +52,51 @@ interface ActivityResponse {
  * that are OLDER (e.g. the poll window differs from the seed, or an item
  * re-enters the API's dedup window) append quietly at the bottom instead —
  * an old post must never surface at the top of Up next as "new". Everything
- * already in `prev` is returned untouched (same order, same object refs).
+ * already in `prev` keeps its order and is only replaced when the poll fills
+ * missing display metadata.
  */
+function isBareUrl(value: string | null | undefined): boolean {
+  return /^https?:\/\/\S+$/i.test((value || '').trim())
+}
+
+function enrichExistingItem(existing: TheaterItem, incoming: TheaterItem): TheaterItem {
+  const thumbnailUrl = existing.thumbnailUrl || incoming.thumbnailUrl || null
+  const contentType = existing.contentType || incoming.contentType
+  const authorName = existing.authorName || incoming.authorName || null
+  const authorAvatarUrl = existing.authorAvatarUrl || incoming.authorAvatarUrl || null
+  const textLinks =
+    existing.textLinks?.length || !incoming.textLinks?.length
+      ? existing.textLinks
+      : incoming.textLinks
+  const text =
+    contentType === 'article' &&
+    incoming.text &&
+    (!existing.text || (isBareUrl(existing.text) && !isBareUrl(incoming.text)))
+      ? incoming.text
+      : existing.text
+
+  if (
+    thumbnailUrl === (existing.thumbnailUrl ?? null) &&
+    contentType === existing.contentType &&
+    authorName === (existing.authorName ?? null) &&
+    authorAvatarUrl === (existing.authorAvatarUrl ?? null) &&
+    textLinks === existing.textLinks &&
+    text === existing.text
+  ) {
+    return existing
+  }
+
+  return {
+    ...existing,
+    thumbnailUrl,
+    contentType,
+    authorName,
+    authorAvatarUrl,
+    textLinks,
+    text,
+  }
+}
+
 export function mergeFeedItems(
   prev: TheaterItem[],
   next: TheaterItem[],
@@ -62,6 +106,15 @@ export function mergeFeedItems(
   const freshKeys: string[] = []
   const fresh: TheaterItem[] = []
   const older: TheaterItem[] = []
+  const incomingByKey = new Map(next.map((item) => [theaterItemKey(item), item]))
+  let enriched = false
+  const retained = prev.map((item) => {
+    const incoming = incomingByKey.get(theaterItemKey(item))
+    if (!incoming) return item
+    const merged = enrichExistingItem(item, incoming)
+    if (merged !== item) enriched = true
+    return merged
+  })
 
   for (const item of next) {
     const key = theaterItemKey(item)
@@ -75,8 +128,8 @@ export function mergeFeedItems(
     }
   }
 
-  if (fresh.length === 0 && older.length === 0) return { items: prev, freshKeys }
-  return { items: [...fresh, ...prev, ...older], freshKeys }
+  if (fresh.length === 0 && older.length === 0 && !enriched) return { items: prev, freshKeys }
+  return { items: [...fresh, ...retained, ...older], freshKeys }
 }
 
 /**
