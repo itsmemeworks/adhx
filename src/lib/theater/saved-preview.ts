@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, count, desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks } from '@/lib/db/schema'
 
@@ -12,8 +12,8 @@ export interface SavedPreviewDisplay {
 
 /**
  * Cross-user display row for a preview page. Content is identical regardless
- * of saver — one row is enough to skip the upstream scrape/oEmbed. Never
- * selects `userId`.
+ * of saver — one row is enough to skip the upstream scrape/oEmbed. The chosen
+ * row's userId is used only for the indexed media count and is never returned.
  */
 export function getSavedPreviewDisplay(
   platform: 'instagram' | 'tiktok' | 'youtube',
@@ -21,17 +21,11 @@ export function getSavedPreviewDisplay(
 ): SavedPreviewDisplay | null {
   const row = db
     .select({
+      userId: bookmarks.userId,
       author: bookmarks.author,
       authorName: bookmarks.authorName,
       text: bookmarks.text,
       category: bookmarks.category,
-      mediaCount: sql<number>`(
-        SELECT COUNT(*)
-        FROM ${bookmarkMedia}
-        WHERE ${bookmarkMedia.userId} = ${bookmarks.userId}
-          AND ${bookmarkMedia.platform} = ${bookmarks.platform}
-          AND ${bookmarkMedia.bookmarkId} = ${bookmarks.id}
-      )`,
     })
     .from(bookmarks)
     .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
@@ -44,11 +38,22 @@ export function getSavedPreviewDisplay(
     .limit(1)
     .get()
   if (!row) return null
+  const media = db
+    .select({ mediaCount: count() })
+    .from(bookmarkMedia)
+    .where(
+      and(
+        eq(bookmarkMedia.userId, row.userId),
+        eq(bookmarkMedia.platform, platform),
+        eq(bookmarkMedia.bookmarkId, id),
+      ),
+    )
+    .get()
   return {
     author: row.author,
     authorName: row.authorName,
     text: row.text,
     category: row.category,
-    mediaCount: Number(row.mediaCount) || 0,
+    mediaCount: Number(media?.mediaCount) || 0,
   }
 }

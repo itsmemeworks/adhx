@@ -39,9 +39,9 @@ import {
  *     undefined for preview-only posts that were never saved; the client then
  *     falls back to a platform/thumbnail heuristic.
  *   - `thumbnailUrl` — resolved so Discover shows the same hero image as the
- *     collection: TikTok posters are derived as the deterministic proxy URL
- *     (the CDN needs signing the proxy adds), and article covers are pulled
- *     from the saved bookmark's enriched link.
+ *     collection: Instagram and TikTok posters are derived as deterministic
+ *     proxy URLs (their source CDN URLs expire or need signing), and article
+ *     covers are pulled from the saved bookmark's enriched link.
  */
 
 /**
@@ -644,16 +644,20 @@ async function fetchTrendingWindow(
   }
 
   /**
-   * The hero image for the card. TikTok posters come from our proxy (the CDN
-   * URL needs signing/referer the proxy adds) and are derived from the handle
-   * + id, so they work even for preview-only items. Article cards use the
-   * saved cover when one exists. Everything else keeps its recorded thumbnail.
+   * The hero image for the card. Instagram images/posters and TikTok posters
+   * come from our re-resolving proxies, so saved rows do not depend on an
+   * activity event retaining an expiring source CDN URL. Article cards use
+   * the saved cover when one exists. Everything else keeps its recorded
+   * thumbnail.
    */
   const thumbOf = (
     i: (typeof items)[number],
     key: string,
     type: ContentType | undefined,
   ): string | null => {
+    if (i.platform === 'instagram' && i.bookmarkId) {
+      return `/api/media/instagram/thumbnail?id=${encodeURIComponent(i.bookmarkId)}`
+    }
     if (i.platform === 'tiktok' && i.author && i.bookmarkId) {
       return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(i.author)}&id=${encodeURIComponent(i.bookmarkId)}`
     }

@@ -56,6 +56,35 @@ describe('getTrendingItems text enrichment', () => {
     expect(item?.text?.endsWith('…')).toBe(false)
   })
 
+  it('fills a text tweet with the original poster avatar from its saved bookmark', async () => {
+    testInstance.db
+      .insert(bookmarks)
+      .values(
+        createTestBookmark('owner-1', 'text-avatar', {
+          platform: 'twitter',
+          author: 'agent_mock',
+          authorName: 'Agent Mockingbird',
+          authorProfileImageUrl: 'https://pbs.twimg.com/profile_images/op-avatar.png',
+          category: 'text',
+          text: 'A text-only post',
+        }),
+      )
+      .run()
+    seedActivity({
+      bookmarkId: 'text-avatar',
+      author: 'agent_mock',
+      authorName: 'Agent Mockingbird',
+      authorAvatarUrl: null,
+      contentType: 'text',
+      createdAt: '2026-06-06T10:00:00Z',
+    })
+
+    const { items } = await getTrendingItems()
+    const item = items.find((candidate) => candidate.bookmarkId === 'text-avatar')
+
+    expect(item?.authorAvatarUrl).toBe('https://pbs.twimg.com/profile_images/op-avatar.png')
+  })
+
   it('still prefers the article title over the full bookmark text for X Articles', async () => {
     testInstance.db
       .insert(bookmarks)

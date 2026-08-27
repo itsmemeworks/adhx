@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { createTestDb, type TestDbInstance } from './api/setup'
-import { activity, bookmarks, type NewActivity } from '@/lib/db/schema'
+import { activity, bookmarkMedia, bookmarks, type NewActivity } from '@/lib/db/schema'
 
 /**
  * ANONYMITY INVARIANT regression test.
@@ -124,6 +124,53 @@ describe('trending anonymity invariant', () => {
     const { items } = await getTrendingItems()
 
     expect(items.find((item) => item.bookmarkId === 'ig-shape')?.contentType).toBe('photo')
+  })
+
+  it('derives a stable Instagram thumbnail and carousel size from saved media', async () => {
+    testInstance.db
+      .insert(bookmarks)
+      .values({
+        id: 'ig-carousel',
+        userId: 'carousel-saver',
+        platform: 'instagram',
+        author: 'creator',
+        text: 'six saved slides',
+        tweetUrl: 'https://www.instagram.com/p/ig-carousel/',
+        processedAt: '2026-06-06T10:00:00Z',
+        category: 'photo',
+      })
+      .run()
+    testInstance.db
+      .insert(bookmarkMedia)
+      .values(
+        Array.from({ length: 6 }, (_, index) => ({
+          id: `ig-carousel_${index + 1}`,
+          userId: 'carousel-saver',
+          platform: 'instagram' as const,
+          bookmarkId: 'ig-carousel',
+          mediaType: 'photo',
+          originalUrl: `https://scontent.example/${index + 1}.jpg`,
+        })),
+      )
+      .run()
+    seedActivity({
+      bookmarkId: 'ig-carousel',
+      platform: 'instagram',
+      author: 'creator',
+      url: '/p/ig-carousel',
+      contentType: 'photo',
+      thumbnailUrl: null,
+      createdAt: '2026-06-06T12:00:00Z',
+    })
+
+    const { items } = await getTrendingItems()
+    const item = items.find((candidate) => candidate.bookmarkId === 'ig-carousel')
+
+    expect(item).toMatchObject({
+      contentType: 'photo',
+      photoCount: 6,
+      thumbnailUrl: '/api/media/instagram/thumbnail?id=ig-carousel',
+    })
   })
 
   it('GET /api/trending never exposes userId in its JSON payload', async () => {

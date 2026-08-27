@@ -20,10 +20,11 @@ import { mediaRateLimit } from '@/lib/rate-limit'
  * og:video — no thumbnail. tiktxk.com DOES expose og:image on
  * `tiktokcdn-eu.com`, but the CDN 503s direct browser requests.
  *
- * Two-hop fetch: tiktxk.com (for the signed CDN URL) → tiktokcdn-eu.com
- * (for the actual JPEG), both server-side with proper UA. We re-serve
- * from our origin with a long Cache-Control so the FeedCard <img> tag
- * just works.
+ * Server-side fetch: tiktxk.com may serve metadata directly or redirect to
+ * the official tiktok.com page; its og:image then points to tiktokcdn-eu.com
+ * (the actual JPEG). Every redirect hop is allowlisted and fetched with the
+ * required UA/referer. We re-serve it from our origin with a long Cache-Control
+ * so the FeedCard <img> tag just works.
  */
 
 // In-memory cache for resolved CDN URLs (1 hour). Avoids hammering tiktxk
@@ -52,7 +53,11 @@ const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+
 const TIKTOK_IMAGE_CDN_HOSTS = ['tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com'].flatMap(
   (host) => [host, `.${host}`],
 )
-const TIKTOK_THUMBNAIL_MIRROR_HOSTS = ['tiktxk.com', '.tiktxk.com']
+// tiktxk currently redirects canonical video pages to the official TikTok
+// page, whose OG image is still the signed CDN URL we need. Keep every hop
+// exact/subdomain allowlisted: accepting official TikTok is safe, while an
+// arbitrary redirect remains blocked before its response body is read.
+const TIKTOK_THUMBNAIL_PAGE_HOSTS = ['tiktxk.com', '.tiktxk.com', 'tiktok.com', '.tiktok.com']
 
 // HTML entities that appear in og:image URLs (mostly `&amp;` between query
 // params, occasionally an escaped apostrophe).
@@ -95,7 +100,7 @@ async function resolveThumbnailUrl(
   const mirrorResponse = await fetchWithAllowlistedRedirects(
     `https://tiktxk.com/@${handle}/video/${videoId}`,
     {
-      hosts: TIKTOK_THUMBNAIL_MIRROR_HOSTS,
+      hosts: TIKTOK_THUMBNAIL_PAGE_HOSTS,
       timeoutMs: remainingTimeoutMs(deadline, MIRROR_TIMEOUT_MS),
       init: {
         headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },

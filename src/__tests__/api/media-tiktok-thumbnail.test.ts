@@ -5,10 +5,10 @@ import { GET } from '@/app/api/media/tiktok/thumbnail/route'
 /**
  * API Route Tests: /api/media/tiktok/thumbnail
  *
- * Step 1 resolves a CDN image URL by scraping tiktxk.com's og:image tag —
- * untrusted content. Step 2 must not fetch that resolved URL unless its host
- * is on the TikTok CDN allowlist (SSRF guard), same pattern as every sibling
- * media proxy.
+ * Step 1 resolves a CDN image URL from tiktxk.com or its redirect to the
+ * official TikTok page — both untrusted content. Step 2 must not fetch that
+ * resolved URL unless its host is on the TikTok CDN allowlist (SSRF guard),
+ * same pattern as every sibling media proxy.
  */
 
 const mocks = vi.hoisted(() => ({
@@ -83,6 +83,29 @@ describe('GET /api/media/tiktok/thumbnail', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
     const [imageCallUrl] = mockFetch.mock.calls[1]
     expect(imageCallUrl).toBe(cdnUrl)
+  })
+
+  it('follows the mirror redirect to the official TikTok page before reading og:image', async () => {
+    const sourceUrl = 'https://www.tiktok.com/@redirected_user/video/7619017281691045198'
+    const cdnUrl = 'https://p16-common-sign.tiktokcdn-eu.com/thumb.jpeg?x-signature=current'
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: sourceUrl },
+        }),
+      )
+      .mockResolvedValueOnce(htmlResponse(mirrorHtml(cdnUrl)))
+      .mockResolvedValueOnce(imageResponse())
+
+    const res = await GET(createRequest({ username: 'redirected_user', id: '7619017281691045198' }))
+
+    expect(res.status).toBe(200)
+    expect(mockFetch.mock.calls.map(([url]) => String(url))).toEqual([
+      'https://tiktxk.com/@redirected_user/video/7619017281691045198',
+      sourceUrl,
+      cdnUrl,
+    ])
   })
 
   it('SSRF guard: refuses to fetch a resolved CDN URL on an untrusted host', async () => {
