@@ -2,14 +2,14 @@ import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getOgImages } from '@/lib/utils/og-image'
-import { buildTweetTitle, buildTweetSeoDescription } from '@/lib/utils/tweet-metadata'
+import {
+  buildTweetTitle,
+  buildTweetSeoDescription,
+  buildTweetOgDescription,
+} from '@/lib/utils/tweet-metadata'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, stubTweetTheaterItem } from '@/lib/theater/shared-seed'
-import {
-  buildTweetOgDescription,
-  getCachedTweet,
-  resolveTweetShared,
-} from '@/lib/theater/resolve-shared-preview'
+import { getCachedTweet, resolveTweetShared } from '@/lib/theater/resolve-shared-preview'
 import { SharedPreviewPage, MODERATED_PAGE_METADATA } from '@/lib/theater/shared-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { readPostModeration } from '@/lib/admin/moderation'
@@ -88,7 +88,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = buildTweetTitle(tweet, tweet.author.screen_name)
   const description = buildTweetSeoDescription(tweet, tweet.author.screen_name, title)
-  const ogDescription = buildTweetOgDescription(tweet)
+  const ogDescription = buildTweetOgDescription(tweet, tweet.author.screen_name, title)
   const ogImages = getOgImages(tweet, baseUrl)
   const ogTitle = title
 

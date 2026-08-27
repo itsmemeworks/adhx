@@ -6,6 +6,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Social preview descriptions no longer repeat titles
+
+X Open Graph and Twitter cards now reuse the title-aware SERP continuation instead of restarting
+from the full post text, while retaining quote and external-link context. Real X fixtures cover
+text, photo, video, quote, article, and link shapes; route tests assert the production OG path.
+Instagram, TikTok, and YouTube route tests now also prove their shared description stays
+complementary to the title. Focused metadata tests, typecheck, lint, and formatting pass.
+
+## 2026-08-27 — Instagram OG thumbnails survive legacy empty media rows
+
+Saved Instagram posts can predate durable media rows even though the thumbnail proxy can still
+resolve their current image or poster. Preview metadata now publishes that same-origin proxy
+instead of falling back to the ADHX logo when a saved row has `mediaCount = 0`. A regression
+test covers the production-shaped image-post case. Focused tests, typecheck, lint, and formatting
+pass. Current state: complete; deploy required before existing share caches can refresh.
+
 ## 2026-08-27 — Instagram carousel durability follow-up
 
 Late review closed three edge cases before merge: OpenGraph fallback metadata can repair an

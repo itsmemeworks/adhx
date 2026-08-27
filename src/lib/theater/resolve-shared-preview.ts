@@ -82,20 +82,6 @@ export function buildTweetJsonLd(tweet: FxTweet, baseUrl: string, username: stri
   })
 }
 
-/** Richer OG/Twitter-card description (quote + off-site title). */
-export function buildTweetOgDescription(tweet: FxTweet): string {
-  const parts: string[] = []
-  const tweetText = tweet.text || tweet.article?.preview_text || tweet.article?.title || ''
-  if (tweetText) parts.push(tweetText)
-  if (tweet.quote?.text) {
-    parts.push(`QT @${tweet.quote.author.screen_name}: "${truncate(tweet.quote.text, 120)}"`)
-  }
-  if (tweet.external?.title) {
-    parts.push(`\u{1f517} ${tweet.external.title}`)
-  }
-  return truncate(parts.join(' — '), 500)
-}
-
 async function enrichTweetExternal(tweet: FxTweet): Promise<void> {
   if (tweet.external || tweet.article) return
   const facetUrls = extractUrlsFromFacets(tweet)

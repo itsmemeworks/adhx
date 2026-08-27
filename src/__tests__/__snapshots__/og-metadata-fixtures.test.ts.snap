@@ -7,7 +7,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
     "authors": [
       "https://x.com/iamgdsa",
     ],
-    "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to… · 4 photos · 2.4K likes, 98 reposts · Read the full post — no X account needed.",
+    "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to see the entire post — 4 photos — 2.4K likes, 98 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -24,7 +24,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > '4-images':
   "twitter": {
     "card": "summary_large_image",
     "creator": "@iamgdsa",
-    "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to… · 4 photos · 2.4K likes, 98 reposts · Read the full post — no X account needed.",
+    "description": "…500M views in 60 days. Dude spills some sauce on LinkedIn. Open this to see the entire post — 4 photos — 2.4K likes, 98 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-e63eNWkAATqEB.jpg",
     ],
@@ -40,7 +40,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
     "authors": [
       "https://x.com/aliniikk",
     ],
-    "description": "…This is not a short-term prediction. It is a structural… · @aliniikk on X · Article · 4.8K likes, 629 reposts · Read the full post — no X account needed.",
+    "description": "…This is not a short-term prediction. It is a structural claim about where the economy converges. To believe this, you n… — @aliniikk on X — Article — 4.8K likes, 629 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -57,7 +57,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-no
   "twitter": {
     "card": "summary_large_image",
     "creator": "@aliniikk",
-    "description": "…This is not a short-term prediction. It is a structural… · @aliniikk on X · Article · 4.8K likes, 629 reposts · Read the full post — no X account needed.",
+    "description": "…This is not a short-term prediction. It is a structural claim about where the economy converges. To believe this, you n… — @aliniikk on X — Article — 4.8K likes, 629 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1987673473108582402/yFQu0vw1_200x200.jpg",
     ],
@@ -73,7 +73,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
     "authors": [
       "https://x.com/NoahRyanCo",
     ],
-    "description": "Guys. I finally did it. After years of fidgeting with… · @NoahRyanCo on X · Article · 4.4K likes, 220 reposts · Read the full post — no X account needed.",
+    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyp… — @NoahRyanCo on X — Article — 4.4K likes, 220 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -90,7 +90,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'article-wi
   "twitter": {
     "card": "summary_large_image",
     "creator": "@NoahRyanCo",
-    "description": "Guys. I finally did it. After years of fidgeting with… · @NoahRyanCo on X · Article · 4.4K likes, 220 reposts · Read the full post — no X account needed.",
+    "description": "Guys. I finally did it. After years of fidgeting with macros, intermittent fasting, and diet “hacks”, I finally got hyp… — @NoahRyanCo on X — Article — 4.4K likes, 220 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-E_92mXcAALnrI.jpg",
     ],
@@ -106,7 +106,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
     "authors": [
       "https://x.com/moonpay",
     ],
-    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… · Video · 2.2K likes, 821 reposts · Watch and send it — no X app needed.",
+    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in the Avici app 2️⃣ Fund fast via SEPA I… — Video — 2.2K likes, 821 reposts — Watch and send it — no X app needed.",
     "images": [
       {
         "height": 630,
@@ -123,7 +123,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'emoji-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@moonpay",
-    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in… · Video · 2.2K likes, 821 reposts · Watch and send it — no X app needed.",
+    "description": "…Virtual Accounts powered by @moonpay & @iron 1️⃣ Claim your own named account in the Avici app 2️⃣ Fund fast via SEPA I… — Video — 2.2K likes, 821 reposts — Watch and send it — no X app needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2009617113384706048/img/uUdl5DT48QRZSEHb.jpg",
     ],
@@ -139,7 +139,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     "authors": [
       "https://x.com/maverickecom",
     ],
-    "description": "…We built a fully automated system that repurposes,… · @maverickecom on X · Photo · 4.5K likes, 491 reposts · Read the full post — no X account needed.",
+    "description": "…We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds… — @maverickecom on X — Photo — 4.5K likes, 491 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -156,7 +156,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
   "twitter": {
     "card": "summary_large_image",
     "creator": "@maverickecom",
-    "description": "…We built a fully automated system that repurposes,… · @maverickecom on X · Photo · 4.5K likes, 491 reposts · Read the full post — no X account needed.",
+    "description": "…We built a fully automated system that repurposes, localizes, and launches winning TikTok Shop content across hundreds… — @maverickecom on X — Photo — 4.5K likes, 491 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
@@ -172,7 +172,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     "authors": [
       "https://x.com/BasilTheGreat",
     ],
-    "description": "…made clear last night speaking on the UK and Keir… · @BasilTheGreat on X · 2 photos · 3.0K likes, 538 reposts · Read the full post — no X account needed.",
+    "description": "…made clear last night speaking on the UK and Keir Starmer ⬇️ "The government has, indeed, repeatedly threatened to retu… — @BasilTheGreat on X — 2 photos — 3.0K likes, 538 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -189,7 +189,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
   "twitter": {
     "card": "summary_large_image",
     "creator": "@BasilTheGreat",
-    "description": "…made clear last night speaking on the UK and Keir… · @BasilTheGreat on X · 2 photos · 3.0K likes, 538 reposts · Read the full post — no X account needed.",
+    "description": "…made clear last night speaking on the UK and Keir Starmer ⬇️ "The government has, indeed, repeatedly threatened to retu… — @BasilTheGreat on X — 2 photos — 3.0K likes, 538 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-w2zr6aEAAt-FN.png",
     ],
@@ -205,7 +205,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
     "authors": [
       "https://x.com/_The_Prophet__",
     ],
-    "description": "…real. The reversal was real. This is… · @_The_Prophet__ on X · Quote post · 5.9K likes, 916 reposts · Read the full post — no X account needed.",
+    "description": "QT @Faytuks: "NEW - Arab governments believe US-Iran tension has ‘de-escalated’ after Intense diplomatic efforts,…" — …real. The reversal was real. This is state-level controlled ignition. There was a greenlight. Then a high-level overrid… — @_The_Prophet__ on X — Quote post — 5.9K likes, 916 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -222,7 +222,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'long-text-
   "twitter": {
     "card": "summary_large_image",
     "creator": "@_The_Prophet__",
-    "description": "…real. The reversal was real. This is… · @_The_Prophet__ on X · Quote post · 5.9K likes, 916 reposts · Read the full post — no X account needed.",
+    "description": "QT @Faytuks: "NEW - Arab governments believe US-Iran tension has ‘de-escalated’ after Intense diplomatic efforts,…" — …real. The reversal was real. This is state-level controlled ignition. There was a greenlight. Then a high-level overrid… — @_The_Prophet__ on X — Quote post — 5.9K likes, 916 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-tNQK3akAAXwrR.jpg",
     ],
@@ -238,7 +238,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
     "authors": [
       "https://x.com/TheCinesthetic",
     ],
-    "description": "@TheCinesthetic on X · 4.9K likes, 401 reposts · Read the full post — no X account needed.",
+    "description": "@TheCinesthetic on X — 4.9K likes, 401 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -255,7 +255,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'plain-text
   "twitter": {
     "card": "summary_large_image",
     "creator": "@TheCinesthetic",
-    "description": "@TheCinesthetic on X · 4.9K likes, 401 reposts · Read the full post — no X account needed.",
+    "description": "@TheCinesthetic on X — 4.9K likes, 401 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1385452682517745667/mfcIUnoX_200x200.jpg",
     ],
@@ -271,7 +271,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
     "authors": [
       "https://x.com/Nate_Google_",
     ],
-    "description": "@Nate_Google_ on X · Quote post · 1.1K likes · Read the full post — no X account needed.",
+    "description": "QT @maverickecom: "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory We built a fully automated system that r…" — …welcome — @Nate_Google_ on X — Quote post — 1.1K likes — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -288,7 +288,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-i
   "twitter": {
     "card": "summary_large_image",
     "creator": "@Nate_Google_",
-    "description": "@Nate_Google_ on X · Quote post · 1.1K likes · Read the full post — no X account needed.",
+    "description": "QT @maverickecom: "Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory We built a fully automated system that r…" — …welcome — @Nate_Google_ on X — Quote post — 1.1K likes — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/media/G-o_WJ1akAA3-h-.jpg",
     ],
@@ -304,7 +304,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
     "authors": [
       "https://x.com/elonmusk",
     ],
-    "description": "Quote post · 3.2K likes, 423 reposts · Read the full post — no X account needed.",
+    "description": "QT @TheAliceSmith: "Two of the most important twentieth-century academics behind woke views of sexuality were Michel Fo…" — Quote post — 3.2K likes, 423 reposts — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -321,7 +321,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'quote-of-t
   "twitter": {
     "card": "summary_large_image",
     "creator": "@elonmusk",
-    "description": "Quote post · 3.2K likes, 423 reposts · Read the full post — no X account needed.",
+    "description": "QT @TheAliceSmith: "Two of the most important twentieth-century academics behind woke views of sexuality were Michel Fo…" — Quote post — 3.2K likes, 423 reposts — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/2008546467615580160/57KcqsTA_200x200.jpg",
     ],
@@ -337,7 +337,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
     "authors": [
       "https://x.com/grok",
     ],
-    "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing… · 114 likes · Read the full post — no X account needed.",
+    "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like… — 114 likes — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -354,7 +354,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'reply-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@grok",
-    "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing… · 114 likes · Read the full post — no X account needed.",
+    "description": "…postponements (not permanent cancellations) for some May 2026 local elections in areas undergoing reorganisation, like… — 114 likes — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1893219113717342208/Vgg2hEPa_200x200.jpg",
     ],
@@ -370,7 +370,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
     "authors": [
       "https://x.com/swyx",
     ],
-    "description": "…drop a model that is ~10x better than Stable Diffusion while being ~as small and… · Quote post · 636 likes · Read the full post — no X account needed.",
+    "description": "QT @bfl_ml: "Introducing FLUX.2 [klein]. Blazing fast. Beautiful. Generate stunning images in under a second whi…" — …drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye — Quote post — 636 likes — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -387,7 +387,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'text-quoti
   "twitter": {
     "card": "summary_large_image",
     "creator": "@swyx",
-    "description": "…drop a model that is ~10x better than Stable Diffusion while being ~as small and… · Quote post · 636 likes · Read the full post — no X account needed.",
+    "description": "QT @bfl_ml: "Introducing FLUX.2 [klein]. Blazing fast. Beautiful. Generate stunning images in under a second whi…" — …drop a model that is ~10x better than Stable Diffusion while being ~as small and basically nobody bats an eye — Quote post — 636 likes — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011825767634911237/img/rRqDWGszLMh8F1zp.jpg",
     ],
@@ -403,7 +403,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
     "authors": [
       "https://x.com/Kekius_Sage",
     ],
-    "description": "…space curves. Same numbers. Different geometry. Hidden order. · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Watch and send it — no X app needed.",
+    "description": "…space curves. Same numbers. Different geometry. Hidden order. — @Kekius_Sage on X — Video — 3.6K likes, 592 reposts — Watch and send it — no X app needed.",
     "images": [
       {
         "height": 630,
@@ -420,7 +420,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'video-twee
   "twitter": {
     "card": "summary_large_image",
     "creator": "@Kekius_Sage",
-    "description": "…space curves. Same numbers. Different geometry. Hidden order. · @Kekius_Sage on X · Video · 3.6K likes, 592 reposts · Watch and send it — no X app needed.",
+    "description": "…space curves. Same numbers. Different geometry. Hidden order. — @Kekius_Sage on X — Video — 3.6K likes, 592 reposts — Watch and send it — no X app needed.",
     "images": [
       "https://pbs.twimg.com/amplify_video_thumb/2011857732484423680/img/wFNhWwXUnF0woRwH.jpg",
     ],
@@ -436,7 +436,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
     "authors": [
       "https://x.com/skalskip92",
     ],
-    "description": "381 likes · Read the full post — no X account needed.",
+    "description": "381 likes — Read the full post — no X account needed.",
     "images": [
       {
         "height": 630,
@@ -453,7 +453,7 @@ exports[`OG Metadata with Real Fixtures > Full metadata generation > 'youtube-li
   "twitter": {
     "card": "summary_large_image",
     "creator": "@skalskip92",
-    "description": "381 likes · Read the full post — no X account needed.",
+    "description": "381 likes — Read the full post — no X account needed.",
     "images": [
       "https://pbs.twimg.com/profile_images/1557421659925237763/RzJu2YI3_200x200.jpg",
     ],

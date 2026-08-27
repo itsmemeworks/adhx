@@ -7,7 +7,11 @@
 
 import { describe, it, expect } from 'vitest'
 import { getOgImage } from '@/lib/utils/og-image'
-import { buildTweetTitle, buildTweetSeoDescription } from '@/lib/utils/tweet-metadata'
+import {
+  buildTweetTitle,
+  buildTweetSeoDescription,
+  buildTweetOgDescription,
+} from '@/lib/utils/tweet-metadata'
 import { fixtures, fixtureMetadata, type FixtureSlug } from './fixtures/tweets'
 
 const BASE_URL = 'https://adhx.com'
@@ -159,6 +163,7 @@ describe('OG Metadata with Real Fixtures', () => {
 
       const title = buildTweetTitle(tweet, tweet.author.screen_name)
       const description = buildTweetSeoDescription(tweet, tweet.author.screen_name, title)
+      const ogDescription = buildTweetOgDescription(tweet, tweet.author.screen_name, title)
       const ogImage = getOgImage(tweet, BASE_URL)
 
       const metadata = {
@@ -167,7 +172,7 @@ describe('OG Metadata with Real Fixtures', () => {
         openGraph: {
           type: 'article',
           title,
-          description,
+          description: ogDescription,
           siteName: 'ADHX',
           authors: [`https://x.com/${tweet.author.screen_name}`],
           publishedTime: tweet.created_at,
@@ -176,7 +181,7 @@ describe('OG Metadata with Real Fixtures', () => {
         twitter: {
           card: 'summary_large_image',
           title,
-          description,
+          description: ogDescription,
           images: [ogImage],
           creator: `@${tweet.author.screen_name}`,
         },
@@ -187,6 +192,14 @@ describe('OG Metadata with Real Fixtures', () => {
       // No brand suffix in the string — the layout title template adds '| ADHX'.
       expect(metadata.title.includes('| ADHX')).toBe(false)
       expect(metadata.description.length).toBeLessThanOrEqual(160)
+      expect(metadata.openGraph.description.length).toBeLessThanOrEqual(500)
+      const titleLead = title
+        .replace(/\s+—\s+@\S+$/, '')
+        .replace(/…$/, '')
+        .trim()
+      expect(metadata.openGraph.description.toLowerCase().startsWith(titleLead.toLowerCase())).toBe(
+        false,
+      )
       expect(metadata.openGraph.images[0].url).toBeTruthy()
       expect(metadata.twitter.card).toBe('summary_large_image')
 
