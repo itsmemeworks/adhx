@@ -7,8 +7,8 @@ import * as schema from '@/lib/db/schema'
  *
  * One sitemap covers: the hubs (homepage + /trending + per-lens hubs +
  * /trending/archive), public tag-collection pages, every saved +
- * preview-only content preview URL across platforms (de-duped by preview
- * path, preview-only URLs gated by `passesThinContentGate`), author hubs for
+ * preview-only content preview URL across platforms (de-duped by platform
+ * identity, preview-only URLs gated by `passesThinContentGate`), author hubs for
  * eligible X handles, and per-week trending archive URLs. Private tag PAGES
  * are excluded, but saved CONTENT is indexed regardless of tag visibility,
  * and no userId is ever exposed.
@@ -774,6 +774,41 @@ describe('Dynamic Sitemap', () => {
     expect(entries.some((entry) => entry.url.includes('ban-unknown'))).toBe(false)
   })
 
+  it('emits one authoritative photo path for conflicting legacy Instagram rows', async () => {
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values([
+        {
+          id: 'ig-shape',
+          userId: USER_A,
+          platform: 'instagram',
+          author: 'creator',
+          text: 'Legacy type',
+          tweetUrl: 'https://www.instagram.com/reel/ig-shape/',
+          processedAt: '2026-08-26T10:00:00Z',
+          category: 'video',
+        },
+        {
+          id: 'ig-shape',
+          userId: USER_B,
+          platform: 'instagram',
+          author: 'creator',
+          text: 'Repaired type',
+          tweetUrl: 'https://www.instagram.com/p/ig-shape/',
+          processedAt: '2026-08-26T11:00:00Z',
+          category: 'photo',
+        },
+      ])
+      .run()
+
+    const { default: sitemap } = await import('@/app/sitemap')
+    const urls = sitemap()
+      .map((entry) => entry.url)
+      .filter((url) => url.includes('/ig-shape'))
+
+    expect(urls).toEqual(['https://adhx.com/p/ig-shape'])
+  })
+
   it('never exposes a userId — entries are built from previewPath, not user ids', async () => {
     testInstance.db
       .insert(schema.oauthTokens)
@@ -818,16 +853,30 @@ describe('Dynamic Sitemap', () => {
 
     testInstance.db
       .insert(schema.activity)
-      .values({
-        action: 'preview',
-        platform: 'instagram',
-        bookmarkId: 'ig-1',
-        author: 'ighandle',
-        thumbnailUrl: 'https://instagram.example/thumb.jpg',
-        url: 'https://www.instagram.com/reels/ig-1',
-        userId: USER_B,
-        createdAt: new Date().toISOString(),
-      })
+      .values([
+        {
+          action: 'preview',
+          platform: 'instagram',
+          bookmarkId: 'ig-1',
+          author: 'ighandle',
+          thumbnailUrl: 'https://instagram.example/thumb.jpg',
+          url: 'https://www.instagram.com/reels/ig-1',
+          userId: USER_B,
+          contentType: 'video',
+          createdAt: new Date().toISOString(),
+        },
+        {
+          action: 'preview',
+          platform: 'instagram',
+          bookmarkId: 'ig-photo-1',
+          author: 'ighandle',
+          thumbnailUrl: 'https://instagram.example/photo.jpg',
+          url: 'https://www.instagram.com/p/ig-photo-1',
+          userId: USER_B,
+          contentType: 'photo',
+          createdAt: new Date().toISOString(),
+        },
+      ])
       .run()
 
     const { default: sitemap } = await import('@/app/sitemap')
@@ -845,5 +894,6 @@ describe('Dynamic Sitemap', () => {
     expect(entries.find((e) => e.url === 'https://adhx.com/twhandle/status/tw-1')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/@tkhandle/video/tk-1')).toBeDefined()
     expect(entries.find((e) => e.url === 'https://adhx.com/reels/ig-1')).toBeDefined()
+    expect(entries.find((e) => e.url === 'https://adhx.com/p/ig-photo-1')).toBeDefined()
   })
 })

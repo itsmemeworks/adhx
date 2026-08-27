@@ -304,7 +304,12 @@ export function TheaterMobileChrome({
 
   const handleShare = async () => {
     if (!current) return
-    const path = previewPath(current.platform, current.author, current.bookmarkId || '')
+    const path = previewPath(
+      current.platform,
+      current.author,
+      current.bookmarkId || '',
+      current.contentType,
+    )
     const shareUrl = new URL(path, window.location.origin).toString()
 
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
@@ -698,6 +703,7 @@ export function TheaterMobileChrome({
                   current.platform,
                   current.author,
                   current.bookmarkId ?? '',
+                  current.contentType,
                 )
                 if (!openUrl) return null
                 const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform

@@ -16,7 +16,7 @@ import type { NextRequest } from 'next/server'
  *
  * Extracted IDs are redirected to the clean route format:
  *   - X / Twitter  →  /{username}/status/{id}
- *   - Instagram    →  /reels/{id}
+ *   - Instagram    →  /reels/{id} for Reels, /p/{id} for feed posts
  *   - TikTok       →  /@{username}/video/{id}
  *   - YouTube      →  /shorts/{id}
  */
@@ -26,7 +26,7 @@ const TWITTER_URL_PATTERN =
   /^\/(https?:\/?\/?)?(?:www\.)?(x\.com|twitter\.com)\/(\w{1,15})\/status\/(\d+)/i
 
 const INSTAGRAM_URL_PATTERN =
-  /^\/(?:https?:\/?\/?)?(?:www\.)?instagram\.com\/(?:reels?|p)\/([A-Za-z0-9_-]+)/i
+  /^\/(?:https?:\/?\/?)?(?:www\.)?instagram\.com\/(reels?|p)\/([A-Za-z0-9_-]+)/i
 
 const TIKTOK_URL_PATTERN =
   /^\/(?:https?:\/?\/?)?(?:www\.|vm\.|m\.)?tiktok\.com\/@?([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})/i
@@ -54,8 +54,9 @@ export function proxy(request: NextRequest) {
 
   const reelMatch = pathname.match(INSTAGRAM_URL_PATTERN)
   if (reelMatch) {
-    const [, reelId] = reelMatch
-    const cleanUrl = new URL(`/reels/${reelId}`, request.url)
+    const [, sourcePath, reelId] = reelMatch
+    const destination = sourcePath.toLowerCase() === 'p' ? `/p/${reelId}` : `/reels/${reelId}`
+    const cleanUrl = new URL(destination, request.url)
     cleanUrl.search = request.nextUrl.search
     return NextResponse.redirect(cleanUrl, { status: 307 })
   }

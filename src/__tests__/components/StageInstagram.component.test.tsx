@@ -42,6 +42,7 @@ function makeItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
     author: 'someone',
     url: '/reels/reel-1',
     createdAt: '2026-08-20T00:00:00Z',
+    contentType: 'video',
     ...overrides,
   } as TheaterItem
 }
@@ -299,5 +300,38 @@ describe('StageInstagram late-attach playback (mount happens after the probe res
     expect(video.muted).toBe(true)
     expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
     expect(playMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('Instagram image stage', () => {
+  it('renders an ordered carousel without probing the Reel mirror', () => {
+    vi.mocked(probeInstagramVideo).mockClear()
+
+    const { container } = render(
+      <Stage
+        item={makeItem({
+          bookmarkId: 'carousel-1',
+          url: '/p/carousel-1',
+          contentType: 'photo',
+          photoCount: 3,
+          thumbnailUrl: '/api/media/instagram/thumbnail?id=carousel-1',
+        })}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+
+    expect(probeInstagramVideo).not.toHaveBeenCalled()
+    expect(container.querySelector('video')).toBeNull()
+    expect(container.querySelector('iframe')).toBeNull()
+    expect(
+      Array.from(container.querySelectorAll('img'))
+        .map((img) => img.getAttribute('src'))
+        .filter((src) => src?.startsWith('/api/media/instagram/thumbnail')),
+    ).toEqual([
+      '/api/media/instagram/thumbnail?id=carousel-1&index=1',
+      '/api/media/instagram/thumbnail?id=carousel-1&index=2',
+      '/api/media/instagram/thumbnail?id=carousel-1&index=3',
+    ])
   })
 })

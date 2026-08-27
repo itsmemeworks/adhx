@@ -101,25 +101,27 @@ export function feedItemToTheaterItem(item: FeedItem): TheaterItem {
     textLinks: toTextLinks(item.links),
     ...(quote ? { quote } : {}),
     ...(linkPreview ? { linkPreview } : {}),
-    ...twitterAlbum(item),
+    ...sourceAlbum(item),
   }
 }
 
-function twitterAlbum(
+function sourceAlbum(
   item: FeedItem,
 ): Pick<TheaterItem, 'videoCount' | 'videoPosters' | 'photoCount'> {
-  if ((item.platform ?? 'twitter') !== 'twitter') return {}
+  const platform = item.platform ?? 'twitter'
+  if (platform !== 'twitter' && platform !== 'instagram') return {}
   const media = item.media ?? []
   const videos = media.filter((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif')
   const photos = media.filter((m) => m.mediaType === 'photo')
+  const photoSlides = platform === 'instagram' && item.category === 'photo' ? media : photos
   return {
-    ...(videos.length > 1
+    ...(platform === 'twitter' && videos.length > 1
       ? {
           videoCount: videos.length,
           videoPosters: videos.map((m) => m.thumbnailUrl).filter((url): url is string => !!url),
         }
       : {}),
-    ...(photos.length > 1 ? { photoCount: photos.length } : {}),
+    ...(photoSlides.length > 1 ? { photoCount: photoSlides.length } : {}),
   }
 }
 

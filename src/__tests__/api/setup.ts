@@ -229,6 +229,7 @@ export const FULL_SCHEMA_SQL = `
     bookmark_id TEXT NOT NULL,
     hidden INTEGER NOT NULL DEFAULT 1,
     reason TEXT,
+    content_type TEXT,
     created_at TEXT NOT NULL,
     created_by TEXT NOT NULL,
     PRIMARY KEY (platform, bookmark_id)

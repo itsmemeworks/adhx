@@ -49,13 +49,18 @@ describe('parseShareUrl — X / Twitter', () => {
 })
 
 describe('parseShareUrl — Instagram', () => {
-  it('maps reels/reel/p to /reels/{id}', () => {
+  it('maps Reels to /reels and image-capable posts to /p', () => {
     expect(parseShareUrl('https://www.instagram.com/reels/DXVsqQ7CSXw')).toEqual({
       path: '/reels/DXVsqQ7CSXw',
     })
     expect(parseShareUrl('https://instagram.com/reel/DXVsqQ7CSXw/')).toEqual({
       path: '/reels/DXVsqQ7CSXw',
     })
+    expect(
+      parseShareUrl(
+        'https://www.instagram.com/p/DcHXej3lt5W/?utm_source=ig_web_copy_link&igsi=abc',
+      ),
+    ).toEqual({ path: '/p/DcHXej3lt5W' })
   })
 })
 

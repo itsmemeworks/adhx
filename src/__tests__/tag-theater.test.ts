@@ -105,6 +105,19 @@ describe('tagItemToTheaterItem', () => {
     expect(item.createdAt).toBe(new Date(0).toISOString())
   })
 
+  it('carries the full Instagram carousel size into a playlist theater item', () => {
+    const item = tagItemToTheaterItem(
+      tagItem({
+        platform: 'instagram',
+        contentType: 'photo',
+        extraMediaCount: 4,
+        url: '/p/album1',
+        externalUrl: 'https://www.instagram.com/p/album1/',
+      }),
+    )
+    expect(item.photoCount).toBe(5)
+  })
+
   /**
    * Owner report: the collection theater showed "56y" for a saved TikTok
    * with no stored `createdAt` — the epoch sentinel backfilled above.

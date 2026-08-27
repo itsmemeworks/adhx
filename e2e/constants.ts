@@ -128,6 +128,14 @@ export const PREVIEW_IG = {
   text: 'E2E-REEL',
 }
 
+export const PREVIEW_IG_PHOTO = {
+  id: 'e2ePhoto01',
+  author: 'e2ephotos',
+  authorName: 'E2E Photos',
+  text: 'E2E-INSTAGRAM-CAROUSEL',
+  imageCount: 3,
+}
+
 export const PREVIEW_TT = {
   id: '9000000000000000301',
   author: 'e2etiktok',

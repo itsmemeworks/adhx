@@ -106,6 +106,7 @@ export function hidePost(opts: {
   hidden: boolean
   actorUserId: string
   reason?: string | null
+  contentType?: string | null
 }): { updated: number; hidden: boolean } {
   const { platform, bookmarkId, hidden, actorUserId } = opts
   const reason = cleanReason(opts.reason)
@@ -119,12 +120,19 @@ export function hidePost(opts: {
           bookmarkId,
           hidden: 1,
           reason,
+          contentType: opts.contentType ?? null,
           createdAt,
           createdBy: actorUserId,
         })
         .onConflictDoUpdate({
           target: [moderatedPosts.platform, moderatedPosts.bookmarkId],
-          set: { hidden: 1, reason, createdAt, createdBy: actorUserId },
+          set: {
+            hidden: 1,
+            reason,
+            ...(opts.contentType ? { contentType: opts.contentType } : {}),
+            createdAt,
+            createdBy: actorUserId,
+          },
         })
         .run()
     } else {
@@ -145,6 +153,7 @@ export function hidePost(opts: {
       platform,
       id: bookmarkId,
       reason,
+      contentType: opts.contentType ?? null,
     })
 
     return { updated: result.changes ?? 0, hidden }
@@ -259,6 +268,11 @@ export function hidePlaylistEvents(opts: {
   })
 }
 
-export function previewPathFor(platform: string, author: string | null, id: string): string {
-  return previewPath(platform, author || 'unknown', id)
+export function previewPathFor(
+  platform: string,
+  author: string | null,
+  id: string,
+  contentType?: string | null,
+): string {
+  return previewPath(platform, author || 'unknown', id, contentType)
 }

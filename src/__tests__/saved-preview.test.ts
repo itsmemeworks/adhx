@@ -27,6 +27,7 @@ describe('getSavedPreviewDisplay', () => {
           author: 'chef',
           authorName: 'Chef',
           text: 'A pasta reel',
+          category: 'video',
         }),
       )
       .run()
@@ -36,6 +37,8 @@ describe('getSavedPreviewDisplay', () => {
       author: 'chef',
       authorName: 'Chef',
       text: 'A pasta reel',
+      category: 'video',
+      mediaCount: 0,
     })
     expect(row).not.toHaveProperty('userId')
   })
@@ -49,12 +52,14 @@ describe('getSavedPreviewDisplay', () => {
           author: 'alice',
           authorName: 'Alice',
           text: 'Same caption',
+          category: 'video',
         }),
         createTestBookmark(USER_B, 'tt-1', {
           platform: 'tiktok',
           author: 'alice',
           authorName: 'Alice',
           text: 'Same caption',
+          category: 'video',
         }),
       ])
       .run()
@@ -63,6 +68,33 @@ describe('getSavedPreviewDisplay', () => {
       author: 'alice',
       authorName: 'Alice',
       text: 'Same caption',
+      category: 'video',
+      mediaCount: 0,
+    })
+  })
+
+  it('prefers a repaired Instagram photo row over a legacy video classification', () => {
+    testInstance.db
+      .insert(bookmarks)
+      .values([
+        createTestBookmark(USER_A, 'ig-shape', {
+          platform: 'instagram',
+          author: 'creator',
+          text: 'Legacy row',
+          category: 'video',
+        }),
+        createTestBookmark(USER_B, 'ig-shape', {
+          platform: 'instagram',
+          author: 'creator',
+          text: 'Repaired row',
+          category: 'photo',
+        }),
+      ])
+      .run()
+
+    expect(getSavedPreviewDisplay('instagram', 'ig-shape')).toMatchObject({
+      text: 'Repaired row',
+      category: 'photo',
     })
   })
 

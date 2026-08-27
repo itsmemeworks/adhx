@@ -20,7 +20,9 @@ const PLATFORM_LABEL: Record<string, string> = {
 
 /** Map an item to its on-ADHX preview path (keeps clicks on-site). */
 export function itemHref(item: TrendingItem): string {
-  if (item.bookmarkId) return previewPath(item.platform, item.author, item.bookmarkId)
+  if (item.bookmarkId) {
+    return previewPath(item.platform, item.author, item.bookmarkId, item.contentType)
+  }
   return item.url
 }
 

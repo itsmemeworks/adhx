@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Instagram image posts and carousels complete
+
+Instagram `/p/` links now resolve single images and ordered mixed carousels from the crawler
+Relay payload, persist every child, render through preview/Saved/playlist/library theater paths,
+and send via the bounded same-origin image proxy; Reel MP4 behavior remains unchanged. Canonical
+paths, activity, sitemap, JSON-LD, moderation, dark-route chrome, and docs now distinguish photos
+from Reels. Live probes resolved the owner examples as 1 and 11 images and a live Reel as video.
+Final gates pass: 3,455 Vitest tests, 98 Playwright tests, typecheck, build, formatting, and lint
+(warnings only). Review remediation is complete with no actionable findings.
+
 ## 2026-08-27 — Local product walkthrough complete
 
 The owner-data browser walkthrough covered desktop and phone-sized Live, Saved, Queue, Library

@@ -36,6 +36,7 @@ export function tagItemToTheaterItem(item: TagItem): TheaterItem {
     addedAt: item.addedAt ?? null,
     contentType: item.contentType,
     thumbnailUrl: item.thumbnailUrl,
+    photoCount: item.contentType === 'photo' ? item.extraMediaCount + 1 : 0,
   }
 }
 

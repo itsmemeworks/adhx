@@ -59,6 +59,7 @@ The visible timestamp answers a different question on each surface:
 | `/saved`                    | Signed-in unseen Saved queue. Library links can select a post with `?open=`.                              |
 | `/library`                  | Signed-in grid over Saved: search, platform/type/tag filters, archived view, and grid/list/bento layouts. |
 | `/{user}/status/{id}`       | X post preview.                                                                                           |
+| `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                         |
 | `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                 |
 | `/@{user}/video/{id}`       | TikTok video preview.                                                                                     |
 | `/shorts/{id}`              | YouTube Shorts preview; regular YouTube videos are intentionally unsupported.                             |
@@ -82,11 +83,12 @@ Legacy routes stay as redirects: `/collection` → `/saved`, `/discover` →
 Username aliases permanently redirect old curator and playlist URLs after a
 rename.
 
-The five source preview shapes are first-class public pages, not modals:
+The source preview shapes are first-class public pages, not modals:
 
 | Source URL                      | ADHX URL                      |
 | ------------------------------- | ----------------------------- |
 | `x.com/{user}/status/{id}`      | `adhx.com/{user}/status/{id}` |
+| `instagram.com/p/{id}`          | `adhx.com/p/{id}`             |
 | `instagram.com/reel(s)/{id}`    | `adhx.com/reels/{id}`         |
 | `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` |
 | `youtube.com/shorts/{id}`       | `adhx.com/shorts/{id}`        |
@@ -384,12 +386,12 @@ terminates if it cannot enforce this boundary.
 
 Playback adapters reflect what each platform safely exposes:
 
-| Platform       | Metadata                                            | Playback/download                                                                                  |
-| -------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| X              | FxTwitter; X API only for the owner's bookmark sync | Range-aware MP4/image proxy over allowlisted `twimg.com`; HLS routes remain for long streams.      |
-| Instagram      | Saved data or Instagram OG metadata                 | vxinstagram-style mirror, Range-probed before attaching `src`; official Instagram iframe fallback. |
-| TikTok         | tnktok/fxTikTok metadata                            | Proxy follows the mirror's signed redirect to allowlisted TikTok CDN hosts.                        |
-| YouTube Shorts | Official oEmbed                                     | Privacy-enhanced `youtube-nocookie.com` iframe. No MP4 extraction or download.                     |
+| Platform       | Metadata                                                               | Playback/download                                                                                                 |
+| -------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| X              | FxTwitter; X API only for the owner's bookmark sync                    | Range-aware MP4/image proxy over allowlisted `twimg.com`; HLS routes remain for long streams.                     |
+| Instagram      | Crawler Relay payload (ordered image/carousel media), with OG fallback | Images use a fresh signed-CDN proxy; Reels use the Range-probed vxinstagram mirror with official iframe fallback. |
+| TikTok         | tnktok/fxTikTok metadata                                               | Proxy follows the mirror's signed redirect to allowlisted TikTok CDN hosts.                                       |
+| YouTube Shorts | Official oEmbed                                                        | Privacy-enhanced `youtube-nocookie.com` iframe. No MP4 extraction or download.                                    |
 
 User-controlled media parameters are validated before interpolation. Media
 URLs require HTTPS and exact hosts or dot-prefixed suffix matches—never

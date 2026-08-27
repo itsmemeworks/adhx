@@ -405,6 +405,8 @@ export const moderatedPosts = sqliteTable(
     bookmarkId: text('bookmark_id').notNull(),
     hidden: integer('hidden').notNull().default(1),
     reason: text('reason'),
+    // Route-shape hint for content with no saved/activity row (notably /p/).
+    contentType: text('content_type'),
     createdAt: text('created_at').notNull(),
     createdBy: text('created_by').notNull(),
   },

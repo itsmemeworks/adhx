@@ -905,7 +905,7 @@ export function TheaterShell({
   const handlePersonalLiveSave = useCallback(
     async (item: TheaterItem): Promise<boolean> => {
       const key = theaterItemKey(item)
-      const url = sourceUrl(item.platform, item.author, item.bookmarkId || '')
+      const url = sourceUrl(item.platform, item.author, item.bookmarkId || '', item.contentType)
       if (!url) return false
       try {
         const res = await fetch('/api/bookmarks/add', {
@@ -2078,7 +2078,12 @@ export function TheaterShell({
     sharedAutoSaveRef.current = true
     const key = theaterItemKey(sharedItem)
     if (!claimSharedAutoSave(key)) return
-    const url = sourceUrl(sharedItem.platform, sharedItem.author, sharedItem.bookmarkId ?? '')
+    const url = sourceUrl(
+      sharedItem.platform,
+      sharedItem.author,
+      sharedItem.bookmarkId ?? '',
+      sharedItem.contentType,
+    )
     if (!url) return
     const body = reason === 'save-intent' ? { url } : { url, source: 'url_prefix' as const }
     void fetch('/api/bookmarks/add', {

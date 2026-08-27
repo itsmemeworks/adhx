@@ -35,7 +35,9 @@ const PLATFORM_LABEL: Record<string, string> = {
 const BASE_URL = PUBLIC_BASE_URL
 
 function itemHref(item: TheaterItem): string {
-  if (item.bookmarkId) return previewPath(item.platform, item.author, item.bookmarkId)
+  if (item.bookmarkId) {
+    return previewPath(item.platform, item.author, item.bookmarkId, item.contentType)
+  }
   return item.url
 }
 

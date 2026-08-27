@@ -157,7 +157,41 @@ describe('API: /api/feed', () => {
       const media = await feedMedia('photopost1')
       expect(media.mediaType).toBe('photo')
       expect(media.url).toBe('/api/media/instagram/thumbnail?id=photopost1')
-      expect(media.shareUrl).toBe('https://www.instagram.com/p/photopost1/')
+      expect(media.shareUrl).toBe('/api/media/instagram/thumbnail?id=photopost1&download=1')
+    })
+
+    it('returns Instagram carousel images in numeric slide order with sendable URLs', async () => {
+      const id = 'carousel11'
+      await testInstance.db.insert(schema.bookmarks).values(
+        createTestBookmark(USER_A, id, {
+          platform: 'instagram',
+          category: 'photo',
+          tweetUrl: `https://www.instagram.com/p/${id}/`,
+        }),
+      )
+      await testInstance.db.insert(schema.bookmarkMedia).values(
+        Array.from({ length: 11 }, (_, index) => ({
+          id: `${id}_photo_${index}`,
+          userId: USER_A,
+          platform: 'instagram',
+          bookmarkId: id,
+          mediaType: 'photo',
+          originalUrl: `https://scontent.cdninstagram.com/${index + 1}.jpg`,
+        })),
+      )
+
+      const { GET } = await import('@/app/api/feed/route')
+      const data = await (await GET(createRequest({ hideArchived: 'false' }))).json()
+      const item = data.items.find((candidate: { id: string }) => candidate.id === id)
+
+      expect(item.media).toHaveLength(11)
+      expect(item.media.map((media: { id: string }) => media.id)).toEqual(
+        Array.from({ length: 11 }, (_, index) => `${id}_photo_${index}`),
+      )
+      expect(item.media[10]).toMatchObject({
+        url: `/api/media/instagram/thumbnail?id=${id}&index=11`,
+        shareUrl: `/api/media/instagram/thumbnail?id=${id}&index=11&download=1`,
+      })
     })
   })
 

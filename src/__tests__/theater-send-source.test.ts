@@ -95,6 +95,18 @@ describe('resolveSendSource', () => {
     expect(result?.src).not.toContain('/api/media/video?')
   })
 
+  it('Instagram photo → the downloadable same-origin image proxy', () => {
+    expect(
+      resolveSendSource(
+        item({ platform: 'instagram', bookmarkId: 'DcHXej3lt5W', contentType: 'photo' }),
+      ),
+    ).toEqual({
+      src: '/api/media/instagram/thumbnail?id=DcHXej3lt5W&index=1&download=1',
+      filename: 'adhx-instagram-DcHXej3lt5W.jpg',
+      kind: 'photo',
+    })
+  })
+
   it('youtube → null (no MP4 mirror exists — official iframe only)', () => {
     expect(resolveSendSource(item({ platform: 'youtube', contentType: 'video' }))).toBe(null)
   })

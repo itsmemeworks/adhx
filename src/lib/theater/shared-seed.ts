@@ -139,21 +139,28 @@ export function tweetToTheaterItem(input: TweetSharedInput): TheaterItem {
   }
 }
 
-export interface ReelSharedInput {
+export interface InstagramSharedInput {
   id: string
   author: string
   authorName?: string | null
   text?: string | null
   thumbnailUrl?: string | null
+  contentType: 'photo' | 'video'
+  photoCount?: number
 }
 
-/** URL-only stub — Reels are always video; the scrape only fills caption/author. */
+/** URL-only Reel stub; the resolver fills caption/author. */
 export function stubReelTheaterItem(id: string): TheaterItem {
-  return reelToTheaterItem({ id, author: 'instagram' })
+  return instagramToTheaterItem({ id, author: 'instagram', contentType: 'video' })
 }
 
-/** Map instafix/saved-reel fields (as computed by the reel preview page) into a TheaterItem. */
-export function reelToTheaterItem(input: ReelSharedInput): TheaterItem {
+/** URL-only `/p/` stub; resolution replaces it with the authoritative type. */
+export function stubInstagramPostTheaterItem(id: string): TheaterItem {
+  return instagramToTheaterItem({ id, author: 'instagram', contentType: 'photo' })
+}
+
+/** Map resolved/saved Instagram fields into a TheaterItem. */
+export function instagramToTheaterItem(input: InstagramSharedInput): TheaterItem {
   const author = stripAt(input.author) || 'instagram'
   return {
     action: 'preview',
@@ -164,12 +171,22 @@ export function reelToTheaterItem(input: ReelSharedInput): TheaterItem {
     authorAvatarUrl: null,
     text: input.text ?? null,
     thumbnailUrl: input.thumbnailUrl ?? null,
-    url: sourceUrl('instagram', author, input.id) ?? `https://www.instagram.com/reel/${input.id}/`,
+    url:
+      sourceUrl('instagram', author, input.id, input.contentType) ??
+      `https://www.instagram.com/${input.contentType === 'photo' ? 'p' : 'reel'}/${input.id}/`,
     // Ordering slot only — never displayed; `buildSharedSeed` backfills the
     // displayed `addedAt` from the pulse.
     createdAt: new Date().toISOString(),
-    contentType: 'video',
+    contentType: input.contentType,
+    ...(input.photoCount && input.photoCount > 1 ? { photoCount: input.photoCount } : {}),
   }
+}
+
+/** @deprecated Use instagramToTheaterItem. */
+export function reelToTheaterItem(
+  input: Omit<InstagramSharedInput, 'contentType'> & { contentType?: 'photo' | 'video' },
+): TheaterItem {
+  return instagramToTheaterItem({ ...input, contentType: input.contentType ?? 'video' })
 }
 
 export interface TikTokSharedInput {

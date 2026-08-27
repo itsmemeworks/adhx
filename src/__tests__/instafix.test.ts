@@ -30,10 +30,12 @@ vi.mock('next/cache', () => ({
 }))
 
 import {
+  fetchInstagramMetadata,
   fetchReelMetadata,
   fetchReelMetadataStatus,
   isAllowedImageUrl,
   isValidReelId,
+  parseInstagramDocument,
 } from '@/lib/media/instafix'
 
 const mockFetch = vi.fn()
@@ -89,6 +91,17 @@ const validHtml = `
   <meta name="twitter:title" content="Penny Lane (@pennylaneisthename) &#x2022; Instagram reel" />
   </head></html>
 `
+
+function relayHtml(id: string, media: Record<string, unknown>): string {
+  return `<html><body><script type="application/json" data-sjs>${JSON.stringify({
+    payload: {
+      xig_polaris_media: {
+        code: id,
+        if_not_gated_logged_out: { code: id, ...media },
+      },
+    },
+  })}</script></body></html>`
+}
 
 describe('isAllowedImageUrl', () => {
   it('accepts cdninstagram.com and fbcdn.net (and subdomains)', () => {
@@ -147,11 +160,150 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
       description: '34K likes, 419 comments - pennylaneisthename on August 31, 2023: caption',
       author: '@pennylaneisthename',
       authorName: 'Penny Lane',
+      contentType: 'video',
+      media: [{ type: 'video', imageUrl: CDN_IMAGE }],
     })
     expect(await fetchReelMetadata('Cwnj8o6pKbn')).toEqual(result)
     // Hits instagram.com directly on the /reel/ path first.
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(mockFetch.mock.calls[0][0]).toBe('https://www.instagram.com/reel/Cwnj8o6pKbn/')
+    expect(mockFetch.mock.calls[0][1]).toMatchObject({
+      headers: { 'User-Agent': expect.stringContaining('Googlebot') },
+    })
+  })
+
+  it('parses a single Instagram image from the crawler Relay payload', () => {
+    const metadata = parseInstagramDocument(
+      relayHtml('DcBQt5woBw2', {
+        __typename: 'XIGPolarisImageMedia',
+        media_type: 1,
+        user: { username: 'fontainesband', full_name: 'Fontaines D.C.' },
+        caption: { text: '5.' },
+        taken_at: 1786708815,
+        original_width: 1440,
+        original_height: 1800,
+        display_uri: CDN_IMAGE,
+        accessibility_caption: 'Photo by Fontaines D.C.',
+      }),
+      'DcBQt5woBw2',
+      '/p/DcBQt5woBw2/',
+    )
+
+    expect(metadata).toMatchObject({
+      contentType: 'photo',
+      author: '@fontainesband',
+      authorName: 'Fontaines D.C.',
+      caption: '5.',
+      imageUrl: CDN_IMAGE,
+      media: [
+        {
+          type: 'photo',
+          imageUrl: CDN_IMAGE,
+          width: 1440,
+          height: 1800,
+          altText: 'Photo by Fontaines D.C.',
+        },
+      ],
+    })
+    expect(metadata?.takenAt).toBe('2026-08-14T12:00:15.000Z')
+  })
+
+  it('chooses the highest-resolution allowed image candidate', () => {
+    const metadata = parseInstagramDocument(
+      relayHtml('quality123', {
+        __typename: 'XIGPolarisImageMedia',
+        media_type: 1,
+        user: { username: 'creator' },
+        display_uri: 'https://scontent.cdninstagram.com/640.jpg',
+        image_versions2: {
+          candidates: [
+            {
+              url: 'https://scontent.cdninstagram.com/320.jpg',
+              width: 320,
+              height: 400,
+            },
+            {
+              url: 'https://scontent.cdninstagram.com/1440.jpg',
+              width: 1440,
+              height: 1800,
+            },
+          ],
+        },
+      }),
+      'quality123',
+    )
+
+    expect(metadata?.imageUrl).toBe('https://scontent.cdninstagram.com/1440.jpg')
+    expect(metadata?.media[0]?.imageUrl).toBe('https://scontent.cdninstagram.com/1440.jpg')
+  })
+
+  it('preserves every ordered image in a large carousel', async () => {
+    const images = Array.from({ length: 11 }, (_, index) => ({
+      __typename: 'XIGPolarisImageMedia',
+      media_type: 1,
+      display_uri: `https://scontent.cdninstagram.com/carousel-${index + 1}.jpg`,
+      original_width: 1440,
+      original_height: 1920 + index,
+      accessibility_caption: `Slide ${index + 1}`,
+    }))
+    mockFetch.mockResolvedValueOnce(
+      htmlResponse(
+        relayHtml('DcHXej3lt5W', {
+          __typename: 'XIGPolarisCarouselMedia',
+          media_type: 8,
+          user: { username: 'goodnews', full_name: 'Good News' },
+          caption: { text: 'Good news carousel' },
+          carousel_media: images,
+          display_uri: images[0].display_uri,
+        }),
+      ),
+    )
+
+    const metadata = await fetchInstagramMetadata('DcHXej3lt5W')
+
+    expect(metadata?.contentType).toBe('photo')
+    expect(metadata?.media).toHaveLength(11)
+    expect(metadata?.media.map((media) => media.imageUrl)).toEqual(
+      images.map((image) => image.display_uri),
+    )
+    expect(metadata?.media[10]).toMatchObject({ altText: 'Slide 11', height: 1930 })
+  })
+
+  it('preserves mixed carousel ordering while keeping the container photo-shaped', () => {
+    const metadata = parseInstagramDocument(
+      relayHtml('mixed123', {
+        __typename: 'XIGPolarisCarouselMedia',
+        media_type: 8,
+        user: { username: 'creator' },
+        carousel_media: [
+          {
+            __typename: 'XIGPolarisImageMedia',
+            media_type: 1,
+            display_uri: 'https://scontent.cdninstagram.com/first.jpg',
+          },
+          {
+            __typename: 'XIGPolarisVideoMedia',
+            media_type: 2,
+            display_uri: 'https://scontent.cdninstagram.com/video-poster.jpg',
+          },
+          {
+            __typename: 'XIGPolarisImageMedia',
+            media_type: 1,
+            display_uri: 'https://scontent.cdninstagram.com/third.jpg',
+          },
+        ],
+      }),
+      'mixed123',
+      '/p/mixed123/',
+    )
+
+    expect(metadata?.contentType).toBe('photo')
+    expect(metadata?.media.map((media) => media.type)).toEqual(['photo', 'video', 'photo'])
+    expect(metadata?.media.map((media) => media.imageUrl)).toEqual([
+      'https://scontent.cdninstagram.com/first.jpg',
+      'https://scontent.cdninstagram.com/video-poster.jpg',
+      'https://scontent.cdninstagram.com/third.jpg',
+    ])
   })
 
   it('never exposes a video URL (Instagram no longer resolvable to MP4)', async () => {
@@ -182,6 +334,28 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
     expect(result?.author).toBe('@pennylaneisthename')
     expect(mockFetch).toHaveBeenCalledTimes(2)
     expect(mockFetch.mock.calls[1][0]).toBe('https://www.instagram.com/p/Cwnj8o6pKbn/')
+  })
+
+  it('probes the requested post shape first and keys cached fallbacks by that shape', async () => {
+    const genericPhotoHtml = `
+      <html><head>
+      <meta property="og:image" content="${CDN_IMAGE}" />
+      <meta property="og:title" content="Creator on Instagram: &quot;A photo&quot;" />
+      </head></html>
+    `
+    mockFetch
+      .mockResolvedValueOnce(htmlResponse(genericPhotoHtml))
+      .mockResolvedValueOnce(htmlResponse(validHtml))
+
+    const photo = await fetchInstagramMetadata('shape123', 'post')
+    const reel = await fetchInstagramMetadata('shape123', 'reel')
+
+    expect(photo?.contentType).toBe('photo')
+    expect(reel?.contentType).toBe('video')
+    expect(mockFetch.mock.calls.map(([url]) => url)).toEqual([
+      'https://www.instagram.com/p/shape123/',
+      'https://www.instagram.com/reel/shape123/',
+    ])
   })
 
   it('returns null when Instagram serves no usable OG tags', async () => {

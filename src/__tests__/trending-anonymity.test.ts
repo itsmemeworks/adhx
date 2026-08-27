@@ -86,6 +86,46 @@ describe('trending anonymity invariant', () => {
     expect(JSON.stringify(items)).not.toContain(SECRET_USER)
   })
 
+  it('prefers a repaired Instagram photo type over a legacy video row', async () => {
+    testInstance.db
+      .insert(bookmarks)
+      .values([
+        {
+          id: 'ig-shape',
+          userId: 'legacy-saver',
+          platform: 'instagram',
+          author: 'creator',
+          text: 'same post',
+          tweetUrl: 'https://www.instagram.com/reel/ig-shape/',
+          processedAt: '2026-06-06T10:00:00Z',
+          category: 'video',
+        },
+        {
+          id: 'ig-shape',
+          userId: 'repaired-saver',
+          platform: 'instagram',
+          author: 'creator',
+          text: 'same post',
+          tweetUrl: 'https://www.instagram.com/p/ig-shape/',
+          processedAt: '2026-06-06T11:00:00Z',
+          category: 'photo',
+        },
+      ])
+      .run()
+    seedActivity({
+      bookmarkId: 'ig-shape',
+      platform: 'instagram',
+      author: 'creator',
+      url: '/reels/ig-shape',
+      contentType: 'video',
+      createdAt: '2026-06-06T12:00:00Z',
+    })
+
+    const { items } = await getTrendingItems()
+
+    expect(items.find((item) => item.bookmarkId === 'ig-shape')?.contentType).toBe('photo')
+  })
+
   it('GET /api/trending never exposes userId in its JSON payload', async () => {
     seedActivity({ bookmarkId: '1', createdAt: '2026-06-06T10:00:00Z', userId: SECRET_USER })
 

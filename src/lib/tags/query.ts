@@ -290,8 +290,8 @@ async function fetchTagCollection(
       createdAt: b.createdAt,
       // The playlist's own time: when this post was added to the tag.
       addedAt: taggedAtByKey.get(key) ?? b.processedAt ?? null,
-      url: previewPath(b.platform, b.author, b.id),
-      externalUrl: sourceUrl(b.platform, b.author, b.id),
+      url: previewPath(b.platform, b.author, b.id, contentType),
+      externalUrl: sourceUrl(b.platform, b.author, b.id, contentType),
     }
   })
 

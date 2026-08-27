@@ -164,9 +164,8 @@ export interface TrendingItem {
   /** Per-clip posters for a Twitter video album, same order as `index`. */
   videoPosters?: string[]
   /**
-   * Twitter photo album (2–4 stills). Read seeds every `/api/media/image?index=`
-   * URL from this so the essay does not wait on `/api/share/tweet`. Absent / 1
-   * = a single photo (or unknown until hydrate).
+   * Ordered photo album count. X and Instagram stages derive same-origin image
+   * proxy URLs from this without exposing expiring source CDN URLs.
    */
   photoCount?: number
 }
@@ -418,6 +417,8 @@ async function fetchTrendingWindow(
   const counts = new Map<string, number>()
   const flags = new Map<string, { category: string | null }>()
   const mediaKinds = new Map<string, { video: boolean; photo: boolean }>()
+  const mediaPhotoIds = new Map<string, Set<string>>()
+  const mediaIds = new Map<string, Set<string>>()
   const articleCovers = new Map<string, string>()
   const articleTitles = new Map<string, string>()
   const fullTexts = new Map<string, string>()
@@ -435,7 +436,13 @@ async function fetchTrendingWindow(
         platform: bookmarks.platform,
         id: bookmarks.id,
         saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
-        category: sql<string | null>`max(${bookmarks.category})`,
+        // `/p/` rows were historically stored as video. If any saver has a
+        // repaired photo classification, prefer it over that legacy value.
+        category: sql<string | null>`CASE
+          WHEN max(CASE WHEN ${bookmarks.category} = 'photo' THEN 1 ELSE 0 END) = 1
+            THEN 'photo'
+          ELSE max(${bookmarks.category})
+        END`,
         avatar: sql<string | null>`max(${bookmarks.authorProfileImageUrl})`,
         // All rows for a post share the same text (it's the same source
         // content regardless of which user saved it) — `max()` picks any one,
@@ -535,6 +542,7 @@ async function fetchTrendingWindow(
       .select({
         platform: bookmarkMedia.platform,
         bookmarkId: bookmarkMedia.bookmarkId,
+        id: bookmarkMedia.id,
         mediaType: bookmarkMedia.mediaType,
       })
       .from(bookmarkMedia)
@@ -542,9 +550,17 @@ async function fetchTrendingWindow(
       .all()
     for (const m of mediaRows) {
       const k = `${m.platform}:${m.bookmarkId}`
+      const idsForPost = mediaIds.get(k) ?? new Set<string>()
+      idsForPost.add(m.id)
+      mediaIds.set(k, idsForPost)
       const cur = mediaKinds.get(k) ?? { video: false, photo: false }
       if (m.mediaType === 'video' || m.mediaType === 'animated_gif') cur.video = true
-      else if (m.mediaType === 'photo') cur.photo = true
+      else if (m.mediaType === 'photo') {
+        cur.photo = true
+        const idsForPost = mediaPhotoIds.get(k) ?? new Set<string>()
+        idsForPost.add(m.id)
+        mediaPhotoIds.set(k, idsForPost)
+      }
       mediaKinds.set(k, cur)
     }
 
@@ -664,6 +680,10 @@ async function fetchTrendingWindow(
     // replaced with parsed `textLinks`/`quote` fields and must never leak to
     // clients as opaque JSON strings.
     const { textLinks: _rawTextLinks, quoteJson: _rawQuoteJson, ...rest } = i
+    const photoCount =
+      i.platform === 'instagram' && contentType === 'photo'
+        ? mediaIds.get(key)?.size
+        : mediaPhotoIds.get(key)?.size
     return {
       ...rest,
       text: text && text.length > MAX_SERVED_TEXT ? `${text.slice(0, MAX_SERVED_TEXT - 1)}…` : text,
@@ -672,6 +692,7 @@ async function fetchTrendingWindow(
       trendCount:
         (counts.get(key) ?? 0) + (previewCounts.get(key) ?? 0) + (shareCounts.get(key) ?? 0),
       contentType,
+      ...(photoCount && photoCount > 1 ? { photoCount } : {}),
       thumbnailUrl: thumbOf(i, key, contentType),
       // Stable display time (see `addedAt`'s doc comment): the earliest
       // moment this post hit ADHX — first save or first activity event,

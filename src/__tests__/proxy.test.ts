@@ -289,12 +289,16 @@ describe('Proxy: URL Normalization', () => {
       expect(response.headers.get('location')).toBe('https://adhx.com/reels/DXVsqQ7CSXw')
     })
 
-    it('redirects /p/ (post) URLs to /reels/{id}', () => {
-      const request = createRequest('/https:/www.instagram.com/p/DXVsqQ7CSXw')
+    it('redirects /p/ image-capable URLs to /p/{id}', () => {
+      const request = createRequest(
+        '/https:/www.instagram.com/p/DcHXej3lt5W?utm_source=ig_web_copy_link&igsi=abc',
+      )
       const response = proxy(request)
 
       expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toBe('https://adhx.com/reels/DXVsqQ7CSXw')
+      expect(response.headers.get('location')).toBe(
+        'https://adhx.com/p/DcHXej3lt5W?utm_source=ig_web_copy_link&igsi=abc',
+      )
     })
 
     it('redirects without protocol', () => {

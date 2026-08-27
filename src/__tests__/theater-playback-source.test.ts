@@ -93,9 +93,19 @@ describe('resolvePlaybackSource', () => {
 
 describe('instagramWarmSrc', () => {
   it('resolves the mirror proxy URL for an instagram item', () => {
-    expect(instagramWarmSrc(item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw' }))).toBe(
-      '/api/media/instagram/video?id=DXVsqQ7CSXw',
-    )
+    expect(
+      instagramWarmSrc(
+        item({ platform: 'instagram', contentType: 'video', bookmarkId: 'DXVsqQ7CSXw' }),
+      ),
+    ).toBe('/api/media/instagram/video?id=DXVsqQ7CSXw')
+  })
+
+  it('does not warm the Reel video mirror for an Instagram image post', () => {
+    expect(
+      instagramWarmSrc(
+        item({ platform: 'instagram', contentType: 'photo', bookmarkId: 'DcHXej3lt5W' }),
+      ),
+    ).toBeNull()
   })
 
   it('returns null for non-instagram platforms', () => {

@@ -21,6 +21,7 @@ vi.mock('@/lib/theater/feed', () => ({
 import {
   buildSharedSeed,
   tweetToTheaterItem,
+  instagramToTheaterItem,
   reelToTheaterItem,
   tiktokToTheaterItem,
   youtubeToTheaterItem,
@@ -339,6 +340,25 @@ describe('per-platform mappers', () => {
     expect(out.contentType).toBe('video')
     expect(out.author).toBe('somereel')
     expect(out.url).toBe('https://www.instagram.com/reel/abc123/')
+  })
+
+  it('instagramToTheaterItem preserves the /p route and carousel size', () => {
+    const out = instagramToTheaterItem({
+      id: 'carousel123',
+      author: '@creator',
+      contentType: 'photo',
+      photoCount: 11,
+      thumbnailUrl: '/api/media/instagram/thumbnail?id=carousel123',
+    })
+
+    expect(out).toMatchObject({
+      platform: 'instagram',
+      bookmarkId: 'carousel123',
+      author: 'creator',
+      contentType: 'photo',
+      photoCount: 11,
+      url: 'https://www.instagram.com/p/carousel123/',
+    })
   })
 
   it('tiktokToTheaterItem derives the thumbnail proxy URL and a snowflake createdAt', () => {

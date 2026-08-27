@@ -85,8 +85,8 @@ export function Stage({
   // StageInstagram so the confirmed reel can play through the SAME video slot
   // below as X and TikTok — one element, one iOS unmute grant, for every MP4
   // platform. Called unconditionally (hooks rules); `active` gates the work.
-  const isInstagram = !!item && item.platform === 'instagram'
-  const instagram = useInstagramStage({ item, active: isInstagram, onEnded, repeat })
+  const isInstagramVideo = !!item && item.platform === 'instagram' && item.contentType === 'video'
+  const instagram = useInstagramStage({ item, active: isInstagramVideo, onEnded, repeat })
 
   // Does THIS item render through the shared <video> element? YouTube never
   // does — it's an iframe, which is a genuine platform ceiling for the grant.
@@ -96,15 +96,15 @@ export function Stage({
     !!item &&
     !isQuoteReader(item, false) &&
     item.platform !== 'youtube' &&
-    (isInstagram ? instagram.status === 'ready' : playback.kind === 'video' && !!playback.src)
+    (isInstagramVideo ? instagram.status === 'ready' : playback.kind === 'video' && !!playback.src)
   const twitterAlbum =
     !!item && item.platform === 'twitter' && item.contentType === 'video' && videoAlbum.count > 1
-  const videoSrc = isInstagram
+  const videoSrc = isInstagramVideo
     ? instagram.src
     : twitterAlbum && item
       ? reelVideoSrc(item, videoAlbum.index + 1)
       : playback.src
-  const videoPoster = isInstagram
+  const videoPoster = isInstagramVideo
     ? instagram.poster
     : twitterAlbum
       ? (videoAlbum.posters[videoAlbum.index] ?? playback.poster)
@@ -147,7 +147,7 @@ export function Stage({
     overlay = <StageText item={item} omitParentVideo flushTop underBand />
   } else if (!isStageVideoItem && !isYouTube) {
     const type = inferType(item)
-    if (isInstagram) {
+    if (isInstagramVideo) {
       // Not ready yet (or the mirror never answered): poster + spinner, or the
       // official-embed fallback. No player here — see `useInstagramStage`.
       overlay = <StageInstagram item={item} status={instagram.status} slow={instagram.slow} />
@@ -230,7 +230,7 @@ export function Stage({
 function StagePoster({ item, poster }: { item: TheaterItem; poster: string | null }) {
   const thumb = poster ?? item.thumbnailUrl ?? null
   const title = (item.text || '').trim()
-  const href = previewPath(item.platform, item.author, item.bookmarkId || '')
+  const href = previewPath(item.platform, item.author, item.bookmarkId || '', item.contentType)
 
   return (
     <StageFrame>

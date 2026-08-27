@@ -152,6 +152,47 @@ describe('admin console APIs', () => {
     expect(pulse[0].hidden).toBe(1)
   })
 
+  it('preserves an unknown Instagram photo route through inspect, hide, and overview', async () => {
+    const sourceUrl = 'https://www.instagram.com/p/DcHXej3lt5W/'
+    const inspected = await getPost(
+      new NextRequest(`http://localhost/api/admin/posts?url=${encodeURIComponent(sourceUrl)}`),
+    )
+    const inspectedPost = await inspected.json()
+    expect(inspectedPost).toMatchObject({
+      platform: 'instagram',
+      bookmarkId: 'DcHXej3lt5W',
+      previewPath: '/p/DcHXej3lt5W',
+      contentType: 'photo',
+    })
+
+    const hidden = await postPost(
+      new NextRequest('http://localhost/api/admin/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: inspectedPost.platform,
+          id: inspectedPost.bookmarkId,
+          contentType: inspectedPost.contentType,
+          reason: 'unknown photo',
+        }),
+      }),
+    )
+    expect(hidden.status).toBe(200)
+    expect(testInstance.db.select().from(moderatedPosts).all()[0]).toMatchObject({
+      platform: 'instagram',
+      bookmarkId: 'DcHXej3lt5W',
+      contentType: 'photo',
+    })
+
+    const overview = await getOverview(new NextRequest('http://localhost/api/admin/overview'))
+    expect((await overview.json()).hiddenPosts).toContainEqual(
+      expect.objectContaining({
+        bookmarkId: 'DcHXej3lt5W',
+        previewPath: '/p/DcHXej3lt5W',
+      }),
+    )
+  })
+
   it('does not write a new pulse event for a hidden post', () => {
     hidePost({
       platform: 'twitter',

@@ -38,8 +38,8 @@ export interface SocialMediaPostingInput {
   reposts?: number
   /** Reply/comment count. */
   replies?: number
-  /** Primary image URL (omit for text-only posts). */
-  image?: string
+  /** One image URL, or an ordered carousel of image URLs. */
+  image?: string | string[]
   /** Attached video, if any. */
   video?: VideoInput
 }

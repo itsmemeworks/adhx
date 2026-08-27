@@ -325,6 +325,7 @@ describe('AppShell theater surfaces', () => {
     '/t/you/cats',
     '/alice/status/123',
     '/reels/reel-id',
+    '/p/photo-post-id',
     '/shorts/abcdefghijk',
     '/@creator/video/123',
   ])('does not redirect a trusted signed-out public route %s', async (path) => {

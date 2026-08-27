@@ -87,6 +87,7 @@ export async function getRelatedSaves(input: RelatedSavesInput): Promise<Related
       const key = `${row.platform}:${row.bookmarkId}`
       if (seen.has(key)) continue
       seen.add(key)
+      const contentType = asContentType(row.contentType)
       results.push({
         platform: row.platform,
         bookmarkId: row.bookmarkId,
@@ -95,8 +96,8 @@ export async function getRelatedSaves(input: RelatedSavesInput): Promise<Related
         authorAvatarUrl: row.authorAvatarUrl,
         text: row.text,
         thumbnailUrl: row.thumbnailUrl,
-        contentType: asContentType(row.contentType),
-        url: row.url || previewPath(row.platform, row.author, row.bookmarkId),
+        contentType,
+        url: row.url || previewPath(row.platform, row.author, row.bookmarkId, contentType),
       })
       if (results.length >= RELATED_LIMIT) break
     }

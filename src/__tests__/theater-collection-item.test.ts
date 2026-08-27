@@ -90,10 +90,15 @@ describe('feedItemToTheaterItem', () => {
   })
 
   describe('inferCollectionContentType', () => {
-    it('tiktok/youtube/instagram are always video, even with no media row', () => {
+    it('keeps TikTok/YouTube video-only and lets Instagram use its saved category', () => {
       expect(inferCollectionContentType(item({ platform: 'tiktok', media: null }))).toBe('video')
       expect(inferCollectionContentType(item({ platform: 'youtube', media: null }))).toBe('video')
-      expect(inferCollectionContentType(item({ platform: 'instagram', media: null }))).toBe('video')
+      expect(
+        inferCollectionContentType(item({ platform: 'instagram', category: 'video', media: null })),
+      ).toBe('video')
+      expect(
+        inferCollectionContentType(item({ platform: 'instagram', category: 'photo', media: null })),
+      ).toBe('photo')
     })
 
     it('an X Article is "article" even when it has a cover image', () => {
@@ -219,6 +224,24 @@ describe('feedItemToTheaterItem video album', () => {
       }),
     )
     expect(t.photoCount).toBe(2)
+    expect(t.videoCount).toBeUndefined()
+  })
+
+  it('keeps every ordered Instagram carousel slide, including video posters', () => {
+    const t = feedItemToTheaterItem(
+      item({
+        platform: 'instagram',
+        category: 'photo',
+        media: [
+          { id: 'm1', mediaType: 'photo', url: 'a', thumbnailUrl: 'a', shareUrl: 'a' },
+          { id: 'm2', mediaType: 'video', url: 'b', thumbnailUrl: 'b', shareUrl: 'b' },
+          { id: 'm3', mediaType: 'photo', url: 'c', thumbnailUrl: 'c', shareUrl: 'c' },
+        ],
+      }),
+    )
+
+    expect(t.contentType).toBe('photo')
+    expect(t.photoCount).toBe(3)
     expect(t.videoCount).toBeUndefined()
   })
 

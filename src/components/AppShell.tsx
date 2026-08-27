@@ -106,6 +106,7 @@ export function AppShell({
   const isPreviewPage =
     /^\/\w+\/status\/\d+$/.test(pathname) ||
     /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
+    /^\/p\/[A-Za-z0-9_-]+$/.test(pathname) ||
     /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
     /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
   // TheaterShell is `fixed inset-0 z-[60]` and owns the chrome. Hide the

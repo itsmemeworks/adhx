@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  getReelMetadataStatus: vi.fn(),
+  getInstagramMetadataStatus: vi.fn(),
   getTikTokMetadataStatus: vi.fn(),
   getYouTubeMetadataStatus: vi.fn(),
   getSavedPreviewDisplay: vi.fn(),
@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/media/instafix', () => ({
-  getReelMetadataStatus: mocks.getReelMetadataStatus,
-  isValidReelId: (id: string) => /^[A-Za-z0-9_-]{5,20}$/.test(id),
+  getInstagramMetadataStatus: mocks.getInstagramMetadataStatus,
+  isValidInstagramId: (id: string) => /^[A-Za-z0-9_-]{5,20}$/.test(id),
 }))
 
 vi.mock('@/lib/media/tnktok', () => ({
@@ -43,12 +43,13 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/theater/shared-seed', () => ({
   stubReelTheaterItem: vi.fn(),
+  stubInstagramPostTheaterItem: vi.fn(),
   stubTikTokTheaterItem: vi.fn(),
   stubYouTubeTheaterItem: vi.fn(),
 }))
 
 vi.mock('@/lib/theater/resolve-shared-preview', () => ({
-  resolveReelShared: vi.fn(),
+  resolveInstagramShared: vi.fn(),
   resolveTikTokShared: vi.fn(),
   resolveYouTubeShared: vi.fn(),
 }))
@@ -80,7 +81,7 @@ describe('non-X preview metadata status', () => {
 
   describe('Instagram Reel', () => {
     it('noindexes a confirmed permanent miss without fabricated media claims', async () => {
-      mocks.getReelMetadataStatus.mockResolvedValue({ kind: 'permanent-miss' })
+      mocks.getInstagramMetadataStatus.mockResolvedValue({ kind: 'permanent-miss' })
       const { generateMetadata } = await import('@/app/reels/[id]/page')
 
       const metadata = await generateMetadata({ params: Promise.resolve({ id: REEL_ID }) })
@@ -95,7 +96,7 @@ describe('non-X preview metadata status', () => {
     })
 
     it('noindexes a transient failure without claiming unresolved media', async () => {
-      mocks.getReelMetadataStatus.mockResolvedValue({ kind: 'transient-failure' })
+      mocks.getInstagramMetadataStatus.mockResolvedValue({ kind: 'transient-failure' })
       const { generateMetadata } = await import('@/app/reels/[id]/page')
 
       const metadata = await generateMetadata({ params: Promise.resolve({ id: REEL_ID }) })
@@ -107,7 +108,7 @@ describe('non-X preview metadata status', () => {
     })
 
     it('indexes resolved Instagram metadata with rich preview claims', async () => {
-      mocks.getReelMetadataStatus.mockResolvedValue({
+      mocks.getInstagramMetadataStatus.mockResolvedValue({
         kind: 'resolved',
         metadata: {
           imageUrl: 'https://scontent.cdninstagram.com/thumb.jpg',
@@ -132,6 +133,8 @@ describe('non-X preview metadata status', () => {
         author: '@creator',
         authorName: 'Creator',
         text: 'Saved Reel',
+        category: 'video',
+        mediaCount: 1,
       })
       const { generateMetadata } = await import('@/app/reels/[id]/page')
 
@@ -143,7 +146,47 @@ describe('non-X preview metadata status', () => {
         images: [{ url: expect.stringContaining('/api/media/instagram/thumbnail') }],
         videos: [{ url: expect.stringContaining('/api/media/instagram/video') }],
       })
-      expect(mocks.getReelMetadataStatus).not.toHaveBeenCalled()
+      expect(mocks.getInstagramMetadataStatus).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Instagram image post', () => {
+    it('publishes every carousel image in order without a video claim', async () => {
+      const postId = 'DcHXej3lt5W'
+      mocks.getInstagramMetadataStatus.mockResolvedValue({
+        kind: 'resolved',
+        metadata: {
+          imageUrl: 'https://scontent.cdninstagram.com/1.jpg',
+          caption: 'An image carousel',
+          author: '@creator',
+          contentType: 'photo',
+          media: Array.from({ length: 3 }, (_, index) => ({
+            type: 'photo',
+            imageUrl: `https://scontent.cdninstagram.com/${index + 1}.jpg`,
+          })),
+        },
+      })
+      const { generateMetadata } = await import('@/app/p/[id]/page')
+
+      const metadata = await generateMetadata({ params: Promise.resolve({ id: postId }) })
+
+      expect(metadata.alternates).toEqual({ canonical: `https://adhx.com/p/${postId}` })
+      expect(metadata.openGraph).toMatchObject({
+        type: 'article',
+        images: [
+          { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=1` },
+          { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=2` },
+          { url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=3` },
+        ],
+      })
+      expect(metadata.openGraph).not.toHaveProperty('videos')
+      expect(metadata.twitter).toMatchObject({
+        images: [
+          `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=1`,
+          `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=2`,
+          `https://adhx.com/api/media/instagram/thumbnail?id=${postId}&index=3`,
+        ],
+      })
     })
   })
 

@@ -39,8 +39,9 @@ describe('progressKindFor', () => {
     expect(progressKindFor(make({ platform: 'tiktok' }))).toBe('video')
   })
 
-  it('returns video for instagram', () => {
-    expect(progressKindFor(make({ platform: 'instagram' }))).toBe('video')
+  it('uses the resolved Instagram media type', () => {
+    expect(progressKindFor(make({ platform: 'instagram', contentType: 'video' }))).toBe('video')
+    expect(progressKindFor(make({ platform: 'instagram', contentType: 'photo' }))).toBe('timed')
   })
 
   it('returns video for a twitter item whose contentType is video', () => {

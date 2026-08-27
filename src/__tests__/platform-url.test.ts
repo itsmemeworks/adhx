@@ -72,7 +72,7 @@ describe('detectPlatformPost — X / Twitter', () => {
 })
 
 describe('detectPlatformPost — Instagram', () => {
-  it('maps reels / reel / p to /reels/{id}', () => {
+  it('keeps Reel and feed-post preview routes distinct', () => {
     expect(detectPlatformPost('https://www.instagram.com/reels/DXVsqQ7CSXw')).toEqual({
       platform: 'instagram',
       id: 'DXVsqQ7CSXw',
@@ -81,9 +81,15 @@ describe('detectPlatformPost — Instagram', () => {
     expect(detectPlatformPost('https://instagram.com/reel/DXVsqQ7CSXw/')?.previewPath).toBe(
       '/reels/DXVsqQ7CSXw',
     )
-    expect(detectPlatformPost('https://instagram.com/p/DXVsqQ7CSXw/')?.previewPath).toBe(
-      '/reels/DXVsqQ7CSXw',
-    )
+    expect(
+      detectPlatformPost(
+        'https://instagram.com/p/DcHXej3lt5W/?utm_source=ig_web_copy_link&igsi=abc',
+      ),
+    ).toEqual({
+      platform: 'instagram',
+      id: 'DcHXej3lt5W',
+      previewPath: '/p/DcHXej3lt5W',
+    })
   })
 
   it('has no author for Instagram', () => {
