@@ -1,4 +1,4 @@
-# ADHX - Save now. Read never. Find always.
+# ADHX - Save it. Lose it. Find it.
 # https://adhx.com
 
 User-agent: *
@@ -7,11 +7,13 @@ Allow: /
 # Public content Google (and other crawlers) must fetch:
 # - /t/           public tag collections
 # - /api/share/   LLM-friendly tweet/tag JSON
+# - /api/og/      dynamic social cards
 # - /api/media/   VideoObject thumbnails + MP4 streams on preview pages
 #                 (GSC "Thumbnail blocked by robots.txt" was Disallow: /api/
 #                 winning over these poster URLs)
 Allow: /t/
 Allow: /api/share/
+Allow: /api/og/
 Allow: /api/media/
 
 # Everything else under /api/ is session-gated (feed, sync, auth, bookmarks)

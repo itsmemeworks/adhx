@@ -99,8 +99,8 @@ export function CollectionsBoard({
     <div className="min-h-screen bg-[#08070a] text-white/90">
       {!authed && (
         <header className="flex items-center gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-6">
-          <Link href="/" aria-label="ADHX home" className="[&_span]:text-white">
-            <MatterLogo size={19} />
+          <Link href="/" aria-label="ADHX home">
+            <MatterLogo size={19} surface="dark" />
           </Link>
           <span className="ml-2 inline-flex items-center gap-2">
             <LiveDot />

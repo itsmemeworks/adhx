@@ -69,7 +69,7 @@ export async function generateInstagramPreviewMetadata(
 
   if (!isValidInstagramId(id)) {
     return {
-      title: 'ADHX - Save now. Read never. Find always.',
+      title: 'ADHX - Save it. Lose it. Find it.',
     }
   }
 

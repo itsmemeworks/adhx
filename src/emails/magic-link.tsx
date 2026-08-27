@@ -35,8 +35,8 @@ const PANEL = '#201b16'
 const BORDER = '#322b23'
 const CLAY = '#e88a5e'
 const CLAY_GRAD = 'linear-gradient(135deg,#e88a5e,#d26b40)'
-/** Production origin so Gmail can fetch the mark even from local/staging sends. */
-const CLOUD_SRC = 'https://adhx.com/adhx-cloud.png'
+/** Production origin so email clients can fetch the dark-surface lockup. */
+const LOGO_SRC = 'https://adhx.com/logo-dark.png'
 
 const copy = {
   signin: {
@@ -75,11 +75,8 @@ export function MagicLinkEmail({ url, intent }: MagicLinkEmailProps) {
       <Body style={body}>
         <Container style={shell}>
           <Row style={brand}>
-            <Column style={{ width: 31, verticalAlign: 'middle' }}>
-              <Img src={CLOUD_SRC} width="23" height="26" alt="" style={cloud} />
-            </Column>
             <Column style={{ verticalAlign: 'middle' }}>
-              <Text style={wordmark}>ADHX</Text>
+              <Img src={LOGO_SRC} width="91" height="32" alt="ADHX" style={logo} />
             </Column>
           </Row>
 
@@ -99,7 +96,7 @@ export function MagicLinkEmail({ url, intent }: MagicLinkEmailProps) {
             <Text style={fine}>{t.fine}</Text>
           </Section>
 
-          <Text style={tagline}>Save now. Read never. Find always.</Text>
+          <Text style={tagline}>Save it. Lose it. Find it.</Text>
         </Container>
       </Body>
     </Html>
@@ -130,18 +127,8 @@ const brand: CSSProperties = {
   padding: '0 4px 20px',
 }
 
-const cloud: CSSProperties = {
+const logo: CSSProperties = {
   display: 'block',
-}
-
-const wordmark: CSSProperties = {
-  display: 'inline-block',
-  margin: 0,
-  verticalAlign: 'middle',
-  fontFamily: "'Indie Flower', cursive",
-  fontSize: '22px',
-  lineHeight: '1',
-  color: INK,
 }
 
 const card: CSSProperties = {

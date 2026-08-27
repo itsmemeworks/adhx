@@ -7,6 +7,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { CollectionPosterCard } from '@/components/tags'
 import { MakeYourOwnButton } from '@/components/auth/MakeYourOwnButton'
 import { AvatarImage } from '@/components/avatar/AvatarImage'
+import { MatterLogo } from '@/components/matter'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { Bookmark, Eye, Flame } from 'lucide-react'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
@@ -148,7 +149,7 @@ export default async function CuratorProfilePage({ params }: Props) {
   ].filter((s): s is string => Boolean(s))
 
   return (
-    <div className="min-h-screen" style={{ background: '#17130f' }}>
+    <div className="min-h-screen" style={{ background: '#08070a' }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
@@ -164,17 +165,8 @@ export default async function CuratorProfilePage({ params }: Props) {
       </ul>
 
       <nav className="flex items-center justify-between px-5 pt-5 sm:px-11">
-        <a href="/" aria-label="ADHX home" className="flex-none whitespace-nowrap">
-          <img
-            src="/adhx-cloud.png"
-            alt=""
-            aria-hidden
-            style={{ height: 28 }}
-            className="inline-block w-auto align-[-30%]"
-          />
-          <span className="ml-2 font-indie-flower leading-none text-white" style={{ fontSize: 24 }}>
-            ADHX
-          </span>
+        <a href="/" aria-label="ADHX home" className="flex-none">
+          <MatterLogo size={18} surface="dark" />
         </a>
         {isSignedOut ? (
           <MakeYourOwnButton className={TOP_PILL_CLASS} returnTo="/">
@@ -271,7 +263,7 @@ export default async function CuratorProfilePage({ params }: Props) {
 
       {isSignedOut && (
         <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
-          <p className="text-sm text-white/40">Save now. Read never. Find always.</p>
+          <p className="text-sm text-white/40">Save it. Lose it. Find it.</p>
           <MakeYourOwnButton className={FOOTER_CTA_CLASS} returnTo="/">
             Start saving
           </MakeYourOwnButton>

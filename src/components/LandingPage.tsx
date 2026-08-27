@@ -133,7 +133,7 @@ export function LandingPage() {
               </span>
             </span>
 
-            <div className="font-indie-flower leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">
+            <div className="font-indie-flower font-bold leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">
               ADHX
             </div>
 
@@ -141,7 +141,7 @@ export function LandingPage() {
               id="hero-title"
               className="font-serif font-semibold tracking-[-.015em] leading-[1.12] text-ink mb-3.5 text-[28px] min-[860px]:text-[38px]"
             >
-              Save now. Read never. <span className="text-clay">Find always.</span>
+              Save it. Lose it. <span className="text-clay">Find it.</span>
             </h1>
 
             <p className="text-[15px] min-[860px]:text-[17px] text-ink-2 leading-[1.55] mb-7 max-w-[440px]">
@@ -292,7 +292,7 @@ export function LandingPage() {
         {/* ───────── Footer ───────── */}
         <footer className="text-center py-8 border-t border-hairline">
           <span className="font-indie-flower text-[22px] text-ink-3">
-            Save now. Read never. Find always.
+            Save it. Lose it. Find it.
           </span>
           <p className="mt-3 text-xs text-ink-3">
             <a href="/privacy" className="underline-offset-2 hover:underline">

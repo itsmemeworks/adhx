@@ -1,11 +1,11 @@
 {
-  "name": "ADHX - Save now. Read never. Find always.",
+  "name": "ADHX - Save it. Lose it. Find it.",
   "short_name": "ADHX",
   "description": "Sync your X bookmarks, discover what's trending, and triage your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#8B5CF6",
+  "background_color": "#e4dac8",
+  "theme_color": "#08070a",
   "orientation": "portrait-primary",
   "categories": ["productivity", "social"],
   "icons": [

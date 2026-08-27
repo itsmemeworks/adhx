@@ -70,7 +70,7 @@ describe('Author hub route: /[username]', () => {
         params: Promise.resolve({ username: 'invalid-handle!' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save now. Read never. Find always.')
+      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
     })
 
     it('falls back to default metadata when the author has no public profile', async () => {
@@ -83,7 +83,7 @@ describe('Author hub route: /[username]', () => {
         params: Promise.resolve({ username: 'nobody' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save now. Read never. Find always.')
+      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
     })
 
     it('builds rich metadata from the author profile', async () => {

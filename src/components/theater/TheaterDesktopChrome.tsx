@@ -399,28 +399,12 @@ export function DesktopStageChrome({
           )}
         >
           {playlist && !collection ? (
-            // Inline-flow brand: an inline anchor's baseline is its TEXT
-            // baseline, so the wordmark sits on the same ruler as the tag
-            // name + curator line (MatterLogo is a nested flex whose
-            // computed baseline is the icon's bottom edge — wrong ruler).
-            <a href="/" aria-label="ADHX home" className="flex-none whitespace-nowrap">
-              <img
-                src="/adhx-cloud.png"
-                alt=""
-                aria-hidden
-                style={{ height: 32 }}
-                className="inline-block w-auto align-[-30%]"
-              />
-              <span
-                className="ml-2 font-indie-flower leading-none text-white"
-                style={{ fontSize: 28.5 }}
-              >
-                ADHX
-              </span>
+            <a href="/" aria-label="ADHX home" className="flex-none">
+              <MatterLogo size={19} surface="dark" />
             </a>
           ) : (
             <a href="/" aria-label="ADHX home" className="flex-none">
-              <MatterLogo size={19} className="[&>span]:text-white" />
+              <MatterLogo size={19} surface="dark" />
             </a>
           )}
           {tabs ? (

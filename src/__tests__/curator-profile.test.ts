@@ -280,7 +280,7 @@ describe('Curator profile route: /t/[username]', () => {
       expect(html).toContain('href="/tags"')
       expect(html).not.toContain('Make your own')
       expect(html).not.toContain('Start saving')
-      expect(html).not.toContain('Save now. Read never.')
+      expect(html).not.toContain('Save it. Lose it.')
     })
 
     it("signed in, someone else's profile: neither CTA renders", async () => {
@@ -298,7 +298,7 @@ describe('Curator profile route: /t/[username]', () => {
       expect(html).not.toContain('Make your own')
       expect(html).not.toContain('Manage playlists')
       expect(html).not.toContain('Start saving')
-      expect(html).not.toContain('Save now. Read never.')
+      expect(html).not.toContain('Save it. Lose it.')
     })
   })
 })

@@ -126,7 +126,7 @@ describe('TikTok preview route parameter normalization', () => {
       generateMetadata({
         params: Promise.resolve({ username: raw, id: '7619017281691045134' }),
       }),
-    ).resolves.toEqual({ title: 'ADHX - Save now. Read never. Find always.' })
+    ).resolves.toEqual({ title: 'ADHX - Save it. Lose it. Find it.' })
     expect(mocks.getTikTokMetadataStatus).not.toHaveBeenCalled()
   })
 
@@ -139,7 +139,7 @@ describe('TikTok preview route parameter normalization', () => {
         params: Promise.resolve({ username: raw, id: '7619017281691045134' }),
       })
 
-      expect(metadata).toEqual({ title: 'ADHX - Save now. Read never. Find always.' })
+      expect(metadata).toEqual({ title: 'ADHX - Save it. Lose it. Find it.' })
       expect(JSON.stringify(metadata)).not.toContain('@@')
       expect(mocks.getTikTokMetadataStatus).not.toHaveBeenCalled()
     },

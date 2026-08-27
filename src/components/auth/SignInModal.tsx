@@ -1,11 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import Image from 'next/image'
 import { isValidEmail } from '@/lib/utils/email'
 import { Mail, X } from 'lucide-react'
 import { THEATER_SHORTCUT_KEYS } from '@/components/theater/theater-shortcuts'
 import { registerModal, type ModalStackRegistration } from '@/lib/a11y/modal-stack'
+import { MatterLogo } from '@/components/matter'
 
 export interface SignInModalProps {
   open: boolean
@@ -224,18 +224,8 @@ export function SignInModal({
         </button>
 
         {/* Brand row */}
-        <div className="mb-6 flex items-center gap-2 pr-10">
-          <Image
-            src="/adhx-cloud.png"
-            alt=""
-            aria-hidden
-            width={23}
-            height={26}
-            style={{ height: 26, width: 'auto' }}
-          />
-          <span className="font-indie-flower leading-none" style={{ fontSize: 22, color: INK }}>
-            ADHX
-          </span>
+        <div className="mb-6 flex items-center pr-10">
+          <MatterLogo size={19} surface="dark" />
         </div>
 
         {stage === 'form' ? (

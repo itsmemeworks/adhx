@@ -64,7 +64,7 @@ const siteUrl = PUBLIC_BASE_URL
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'ADHX - Save now. Read never. Find always.',
+    default: 'ADHX - Save it. Lose it. Find it.',
     template: '%s | ADHX',
   },
   description:
@@ -106,22 +106,25 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: siteUrl,
     siteName: 'ADHX',
-    title: 'ADHX - Save now. Read never. Find always.',
+    title: 'ADHX - Save it. Lose it. Find it.',
     description:
       "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from opengraph-image.tsx
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ADHX - Save now. Read never. Find always.',
+    title: 'ADHX - Save it. Lose it. Find it.',
     description:
       "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
     // Images auto-generated from twitter-image.tsx
     creator: '@adhx_app',
   },
   icons: {
-    icon: [{ url: '/icon.png', type: 'image/png' }],
-    apple: '/apple-icon.png',
+    icon: [
+      { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon-16.png', type: 'image/png', sizes: '16x16' },
+    ],
+    apple: '/icon-192.png',
   },
   manifest: '/manifest.json',
   category: 'productivity',
@@ -129,8 +132,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#030712' },
+    { media: '(prefers-color-scheme: light)', color: '#e4dac8' },
+    { media: '(prefers-color-scheme: dark)', color: '#08070a' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -174,7 +177,7 @@ const websiteJsonLd = {
   publisher: {
     '@type': 'Organization',
     name: 'ADHX',
-    logo: 'https://adhx.com/logo.png',
+    logo: 'https://adhx.com/logo-paper.png',
   },
 }
 

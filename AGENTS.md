@@ -4,7 +4,7 @@ Orientation for AI agents (and humans) starting work in this repo with no prior 
 
 ## What this project is
 
-**ADHX** (adhx.com) — _"Save now. Read never. Find always."_ An open-source bookmark manager for people who save everything and read nothing. It syncs X/Twitter bookmarks, previews and saves Instagram Reels, TikToks, and YouTube Shorts via a URL-prefix trick (`x.com/...` → `adhx.com/...`), and turns the community's anonymous save/preview activity into public, crawlable pages (`/trending`). Next.js 16 App Router, SQLite + Drizzle, deployed on Fly.io (staging `adhx.fly.dev`, production `adhx.com`).
+**ADHX** (adhx.com) — _"Save it. Lose it. Find it."_ An open-source bookmark manager for people who save everything and read nothing. It syncs X/Twitter bookmarks, previews and saves Instagram Reels, TikToks, and YouTube Shorts via a URL-prefix trick (`x.com/...` → `adhx.com/...`), and turns the community's anonymous save/preview activity into public, crawlable pages (`/trending`). Next.js 16 App Router, SQLite + Drizzle, deployed on Fly.io (staging `adhx.fly.dev`, production `adhx.com`).
 
 Strategically, ADHX's growth engine is SEO/GEO: x.com is effectively uncrawlable, so ADHX preview pages act as the indexable, structured mirror of social content — every save creates a public long-tail landing page. Features that add per-user variable cost (metered AI) are deliberately out of scope for the free product.
 

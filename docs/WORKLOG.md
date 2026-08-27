@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — GOB brand and playlist social cards
+
+The GOB handoff now lives in `brand/BRAND.md`; supplied icons, favicons, paper/dark
+lockups, the 1200×630 site OG, and authoritative animated loaders replace the legacy cloud.
+The tagline is “Save it. Lose it. Find it.” across product copy, metadata, email, and docs.
+Public playlists now publish dynamic 1200×630 OG/Twitter cards with adaptive image mosaics,
+video badges, text-only tiles, and anonymous private/missing fallbacks. Thumbnail preloads are
+host-allowlisted, redirect-safe, timed out, and size-bounded. Focused tests, typecheck, and real
+ImageResponse renders pass. All 3,484 tests, typecheck, build, formatting, and lint (existing
+warnings only) pass. Current state: complete; deployment required.
+
 ## 2026-08-27 — Theater playlist media integrity repaired
 
 Live enrichment now derives durable Instagram thumbnail-proxy URLs, matching saved playlists.

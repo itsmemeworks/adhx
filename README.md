@@ -5,14 +5,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-> **Save now. Read never. Find always.**
+> **Save it. Lose it. Find it.**
 
 Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram images and Reels, TikTok, or YouTube Shorts** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
 
 ADHX is for the links you meant to come back to: one place to watch them, search them, tag them, archive them, or turn a tag into a public playlist. It is open source and self-hostable, with your saves stored in a SQLite file you own.
 
 <p align="center">
-  <img src="public/og-logo.png" alt="ADHX — save now, read never, find always" width="640" />
+  <img src="public/og-logo.png" alt="ADHX — save it, lose it, find it" width="640" />
 </p>
 
 > **Building, extending, or self-hosting ADHX?** Read the human-facing [architecture guide](ARCHITECTURE.md) for the routes, data flow, authentication, media handling, and security model.
@@ -56,6 +56,7 @@ Archive removes a post from your active Saved queue without deleting it. Archive
 Tagging is private until you choose to publish a tag. A published tag becomes a playlist with:
 
 - a shareable looping theater;
+- a branded mosaic social card that previews the playlist when its URL is shared;
 - a public curator profile;
 - a **Save playlist** action that lets another signed-in person clone its posts and tag into their own account; and
 - a place on the public [`/leaderboard`](https://adhx.com/leaderboard), where playlists are ranked by views and clones across today, this week, this month, or all time.

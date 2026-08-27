@@ -131,7 +131,10 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
         params: Promise.resolve({ username: 'nobody', tag: 'some-tag' }),
       })
 
-      expect(metadata.title).toBe('#some-tag — ADHX')
+      expect(metadata.title).toBe('ADHX playlist')
+      expect(JSON.stringify(metadata)).toContain('/api/og/playlist/brand/card?generic=1')
+      expect(JSON.stringify(metadata)).not.toContain('nobody')
+      expect(JSON.stringify(metadata)).not.toContain('some-tag')
     })
 
     it('marks a private tag noindex without leaking any content', async () => {
@@ -143,7 +146,11 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
         params: Promise.resolve({ username: 'curator', tag: 'secret-tag' }),
       })
 
+      expect(metadata.title).toBe('Private playlist — ADHX')
       expect(metadata.robots).toEqual({ index: false, follow: false })
+      expect(JSON.stringify(metadata)).toContain('/api/og/playlist/brand/card?generic=1')
+      expect(JSON.stringify(metadata)).not.toContain('curator')
+      expect(JSON.stringify(metadata)).not.toContain('secret-tag')
       expect(JSON.stringify(metadata)).not.toContain('secret content')
     })
 
@@ -159,6 +166,8 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       expect(metadata.title).toBe("#cool-stuff — @curator's playlist on ADHX")
       expect(metadata.description).toContain('2 bookmarks curated by @curator')
       expect(metadata.alternates?.canonical).toContain('/t/curator/cool-stuff')
+      expect(JSON.stringify(metadata)).toContain('/api/og/playlist/curator/cool-stuff')
+      expect(JSON.stringify(metadata)).not.toContain('https://example.com/thumb.jpg')
     })
   })
 
