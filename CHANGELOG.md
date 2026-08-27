@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.65.7](https://github.com/itsmemeworks/adhx/compare/v1.65.6...v1.65.7) (2026-08-27)
+
+
+### Bug Fixes
+
+* accept youtube shorts urls only ([#439](https://github.com/itsmemeworks/adhx/issues/439)) ([deffe93](https://github.com/itsmemeworks/adhx/commit/deffe93b48575e70558d9aee3008e619b2c3d46f))
+* complete full code review remediation ([#447](https://github.com/itsmemeworks/adhx/issues/447)) ([3bd9fbd](https://github.com/itsmemeworks/adhx/commit/3bd9fbd517600bfa3d4f70da71a88a9cd7ef9113))
+
 ## [1.65.6](https://github.com/itsmemeworks/adhx/compare/v1.65.5...v1.65.6) (2026-08-26)
 
 
