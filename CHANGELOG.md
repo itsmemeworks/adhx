@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.66.0](https://github.com/itsmemeworks/adhx/compare/v1.65.7...v1.66.0) (2026-08-27)
+
+
+### Features
+
+* support instagram image posts and carousels ([#449](https://github.com/itsmemeworks/adhx/issues/449)) ([f80d7ec](https://github.com/itsmemeworks/adhx/commit/f80d7ec47d407962231e2df5b85547b441f27600))
+
 ## [1.65.7](https://github.com/itsmemeworks/adhx/compare/v1.65.6...v1.65.7) (2026-08-27)
 
 
