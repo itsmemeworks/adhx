@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.66.1](https://github.com/itsmemeworks/adhx/compare/v1.66.0...v1.66.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* repair social preview images and copy ([#451](https://github.com/itsmemeworks/adhx/issues/451)) ([2768f27](https://github.com/itsmemeworks/adhx/commit/2768f27e68b6a45831d8344735f721351c214c54))
+
 ## [1.66.0](https://github.com/itsmemeworks/adhx/compare/v1.65.7...v1.66.0) (2026-08-27)
 
 
