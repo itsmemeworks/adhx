@@ -25,6 +25,7 @@ import {
   probeInstagramVideo,
 } from '@/lib/media/instagram-playback'
 import { previewPath } from '@/lib/activity/preview-path'
+import { PostLoader } from '@/components/PostLoader'
 import { StageFrame } from './stage-primitives'
 import type { TheaterItem } from './types'
 
@@ -262,7 +263,7 @@ export function StageInstagram({
       <div className="absolute inset-0 bg-[#08070a]/45" aria-hidden />
       <div className="relative">
         {phase === 'spinner' ? (
-          <img src="/gob-loader.svg" alt="" aria-hidden className="h-10 w-10" />
+          <PostLoader variant="dark" size={48} decorative />
         ) : (
           <span className="inline-flex min-h-[44px] items-center rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-white/80 backdrop-blur-md">
             starting…

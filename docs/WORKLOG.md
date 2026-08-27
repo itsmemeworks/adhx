@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — GOB post-loader coverage completed
+
+A shared theme-aware `PostLoader` now carries the supplied GOB animation across preview
+resolution, Saved queue startup, Instagram probing, library/media loading, playlist posters,
+landing activity, and share-target redirects. Action-level progress indicators remain compact
+spinners. Repeated poster-card announcements are suppressed, and both SVGs stop animating under
+`prefers-reduced-motion`. All 3,487 tests, typecheck, build, formatting, and lint (existing
+warnings only) pass. Current state: complete.
+
 ## 2026-08-27 — GOB brand and playlist social cards
 
 The GOB handoff now lives in `brand/BRAND.md`; supplied icons, favicons, paper/dark

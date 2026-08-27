@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Bookmark, Eye, Flame, Layers, User } from 'lucide-react'
+import { PostLoader } from '@/components/PostLoader'
 import { cn } from '@/lib/utils'
 
 /** Discovery view/save stats for this playlist (docs/specs/discovery-leaderboards.md §6).
@@ -303,14 +304,12 @@ function PosterMosaic({
   return (
     <div className={cn('grid h-full w-full', gridClass, featured ? 'gap-1' : 'gap-[2px]')}>
       {tilesLoading ? (
-        [0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="animate-pulse"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
-            aria-hidden
-          />
-        ))
+        <PostLoader
+          variant="dark"
+          size={56}
+          decorative
+          className="col-span-full row-span-full bg-[#08070a]"
+        />
       ) : tileCount === 0 ? (
         <PosterTileView tile={null} />
       ) : (

@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Image, Loader2 } from 'lucide-react'
+import { Image } from 'lucide-react'
+import { PostLoader } from '@/components/PostLoader'
 import { FeedCard } from './FeedCard'
 import { FeedListRow } from './FeedListRow'
 import { FeedBentoTile, BENTO_SPANS } from './FeedBentoTile'
@@ -249,10 +250,12 @@ export function FeedGrid({
           <div ref={sentinelRef} aria-hidden className="h-px w-full" />
           <div className="mt-8 flex flex-col items-center gap-3">
             {loading ? (
-              <div className="flex items-center gap-2 text-ink-3">
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span className="text-sm">Loading more…</span>
-              </div>
+              <PostLoader
+                variant="auto"
+                size={40}
+                caption="grabbing it…"
+                label="Loading more posts"
+              />
             ) : (
               // Fallback for keyboard users / when the observer can't fire
               // (e.g. very tall viewport, reduced-motion auto-scroll off).
@@ -285,16 +288,8 @@ export function FeedGrid({
 
 function LoadingSkeleton(): React.ReactElement {
   return (
-    <div className={GRID_CLASS}>
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div
-          key={i}
-          className="mb-4 break-inside-avoid"
-          style={{ height: `${180 + (i % 3) * 80}px` }}
-        >
-          <div className="w-full h-full bg-inset rounded-card animate-pulse" />
-        </div>
-      ))}
+    <div className="flex min-h-[420px] items-center justify-center rounded-card bg-paper">
+      <PostLoader variant="auto" size={72} caption="grabbing it…" label="Loading posts" />
     </div>
   )
 }

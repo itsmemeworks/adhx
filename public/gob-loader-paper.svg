@@ -4,6 +4,7 @@
 .eyes{animation:look 1.8s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(2deg)}}
 @keyframes look{0%,18%{transform:translate(0,0)}25%,43%{transform:translate(-7px,2px)}50%,68%{transform:translate(8px,-3px)}75%,93%{transform:translate(-1px,4px)}100%{transform:translate(0,0)}}
+@media (prefers-reduced-motion:reduce){.body,.eyes{animation:none}.body{transform:rotate(-4deg)}}
 </style>
 <g class="body">
 <rect x="10" y="14" width="76" height="72" rx="28" fill="#FFD426" stroke="#141414" stroke-width="6"/>

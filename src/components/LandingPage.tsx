@@ -22,6 +22,7 @@ import { LiveDot } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
 import { SignInModal } from '@/components/auth'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
+import { PostLoader } from '@/components/PostLoader'
 import type { ActivityItem } from '@/components/discover/types'
 import { IosHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
 import { AndroidLandingPromo } from '@/components/AndroidInstall'
@@ -199,12 +200,13 @@ export function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
             {!live.loaded ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-64 animate-pulse rounded-card border border-hairline bg-inset"
-                />
-              ))
+              <PostLoader
+                variant="auto"
+                size={64}
+                caption="grabbing it…"
+                label="Loading trending posts"
+                className="col-span-full min-h-64 rounded-card border border-hairline bg-inset"
+              />
             ) : live.items.length === 0 ? (
               <p className="col-span-full py-8 text-center text-[14.5px] text-ink-2">
                 Quiet right now — be the first to save something.
