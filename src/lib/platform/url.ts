@@ -88,7 +88,12 @@ export function detectPlatformPost(url: string): PlatformPost | null {
   const reel = parsed.pathname.match(PLATFORM_PATTERNS.instagram)
   if (reel && isHostOrSubdomainOf(parsed.href, INSTAGRAM_HOSTS)) {
     const id = reel[1]
-    return { platform: 'instagram', id, previewPath: `/reels/${id}` }
+    const instagramPath = /^\/p\//i.test(parsed.pathname) ? 'post' : 'reel'
+    return {
+      platform: 'instagram',
+      id,
+      previewPath: instagramPath === 'post' ? `/p/${id}` : `/reels/${id}`,
+    }
   }
 
   const tiktok = parsed.pathname.match(PLATFORM_PATTERNS.tiktok)

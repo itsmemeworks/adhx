@@ -9,9 +9,11 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { isTouchDevice } from './device'
 
 /** The on-ADHX preview URL for a saved item (absolute). */
-export function previewUrlForItem(item: Pick<FeedItem, 'platform' | 'author' | 'id'>): string {
+export function previewUrlForItem(
+  item: Pick<FeedItem, 'platform' | 'author' | 'id' | 'category'>,
+): string {
   const origin = typeof window !== 'undefined' ? window.location.origin : PUBLIC_BASE_URL
-  return `${origin}${previewPath(item.platform || 'twitter', item.author, item.id)}`
+  return `${origin}${previewPath(item.platform || 'twitter', item.author, item.id, item.category)}`
 }
 
 /**
@@ -19,7 +21,7 @@ export function previewUrlForItem(item: Pick<FeedItem, 'platform' | 'author' | '
  * success. Powers the quick Share buttons in the gallery + collection mode.
  */
 export async function copyPreviewLink(
-  item: Pick<FeedItem, 'platform' | 'author' | 'id'>,
+  item: Pick<FeedItem, 'platform' | 'author' | 'id' | 'category'>,
 ): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(previewUrlForItem(item))
@@ -36,7 +38,7 @@ export async function copyPreviewLink(
  * right confirmation. A user-cancelled share sheet resolves to `'cancelled'`.
  */
 export async function sharePreviewLink(
-  item: Pick<FeedItem, 'platform' | 'author' | 'id'>,
+  item: Pick<FeedItem, 'platform' | 'author' | 'id' | 'category'>,
 ): Promise<'shared' | 'copied' | 'cancelled' | 'failed'> {
   const url = previewUrlForItem(item)
   if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {

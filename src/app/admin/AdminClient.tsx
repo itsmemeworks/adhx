@@ -155,6 +155,7 @@ export function AdminClient() {
           id: post.bookmarkId,
           hidden,
           reason: hideReason || undefined,
+          contentType: post.contentType,
         }),
       })
       if (!res.ok) throw new Error('failed')

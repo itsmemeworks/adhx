@@ -5,7 +5,7 @@ import { eq, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 import { metrics } from '@/lib/sentry'
 import { handleRouteError } from '@/lib/api/response'
-import { fetchReelMetadata } from '@/lib/media/instafix'
+import { fetchInstagramMetadata } from '@/lib/media/instafix'
 import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
 import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
 import { fetchYouTubeMetadata, youtubeThumbnail, youtubeShortUrl } from '@/lib/media/youtube'
@@ -73,7 +73,12 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
     }
 
     if (detected?.platform === 'instagram') {
-      return await addInstagramReel(userId, detected.id, source)
+      return await addInstagramPost(
+        userId,
+        detected.id,
+        source,
+        detected.previewPath.startsWith('/p/') ? 'post' : 'reel',
+      )
     }
 
     // TikTok: canonical (@user/video/id) or a short link (vm./vt.tiktok.com).
@@ -89,7 +94,7 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
     return NextResponse.json(
       {
         error:
-          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/reels, tiktok.com/@user/video, youtube.com/shorts.',
+          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/p or /reels, tiktok.com/@user/video, youtube.com/shorts.',
       },
       { status: 400 },
     )
@@ -99,7 +104,12 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
   }
 })
 
-async function addInstagramReel(userId: string, reelId: string, source: string) {
+async function addInstagramPost(
+  userId: string,
+  postId: string,
+  source: string,
+  pathHint: 'post' | 'reel',
+) {
   const [existing] = await db
     .select()
     .from(bookmarks)
@@ -107,12 +117,12 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
       and(
         eq(bookmarks.userId, userId),
         eq(bookmarks.platform, 'instagram'),
-        eq(bookmarks.id, reelId),
+        eq(bookmarks.id, postId),
       ),
     )
     .limit(1)
 
-  const meta = await fetchReelMetadata(reelId)
+  const meta = await fetchInstagramMetadata(postId, pathHint)
   if (!meta) {
     if (existing) {
       const current = runInTransaction(
@@ -124,7 +134,7 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
               and(
                 eq(bookmarks.userId, userId),
                 eq(bookmarks.platform, 'instagram'),
-                eq(bookmarks.id, reelId),
+                eq(bookmarks.id, postId),
               ),
             )
             .limit(1)
@@ -137,56 +147,120 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
         )
       }
     }
-    return NextResponse.json({ error: 'Reel not available' }, { status: 404 })
+    return NextResponse.json({ error: 'Instagram post not available' }, { status: 404 })
   }
+
+  const contentType = meta.contentType
+  const media = meta.media
+  if (
+    contentType === 'photo' &&
+    (media.length === 0 || !media.every((item) => Boolean(item.imageUrl)))
+  ) {
+    return NextResponse.json({ error: 'Instagram images not available' }, { status: 404 })
+  }
+  const hasCompleteMediaReplacement =
+    media.length > 0 &&
+    media.every((item) => Boolean(item.imageUrl)) &&
+    meta.mediaComplete !== false
 
   const now = new Date().toISOString()
   const handle = (meta.author || '').replace(/^@/, '') || 'instagram'
-  const reelUrl = `https://www.instagram.com/reel/${reelId}/`
+  const sourcePath = contentType === 'photo' ? 'p' : 'reel'
+  const postUrl = `https://www.instagram.com/${sourcePath}/${postId}/`
 
   const result = runInTransaction(() => {
     const bookmarkInsert = db
       .insert(bookmarks)
       .values({
-        id: reelId,
+        id: postId,
         userId,
         platform: 'instagram',
         author: handle,
         authorName: meta.authorName || meta.author || null,
         authorProfileImageUrl: null,
         text: meta.caption || meta.description || '',
-        tweetUrl: reelUrl,
+        tweetUrl: postUrl,
+        createdAt: meta.takenAt || null,
         processedAt: now,
-        category: 'video',
+        category: contentType,
         source,
       })
       .onConflictDoNothing()
       .run()
 
-    // Store a 'video' media row: the Reel plays inline via the IG video proxy.
-    // Keep the historical `_photo_0` suffix so retries reconcile rows created by
-    // the photo→video backfill as well as crash-created parents missing media.
-    if (meta.imageUrl) {
-      db.insert(bookmarkMedia)
-        .values({
-          id: `${reelId}_photo_0`,
-          userId,
-          platform: 'instagram',
-          bookmarkId: reelId,
-          mediaType: 'video',
-          originalUrl: meta.imageUrl,
-          previewUrl: meta.imageUrl,
-        })
-        .onConflictDoUpdate({
-          target: [bookmarkMedia.userId, bookmarkMedia.platform, bookmarkMedia.id],
-          set: {
-            bookmarkId: reelId,
-            mediaType: 'video',
-            originalUrl: meta.imageUrl,
-            previewUrl: meta.imageUrl,
-          },
-        })
+    // A `/p/` URL used to be persisted as a Reel. Repair its routing/type on
+    // the next save without changing this user's original saved-at timestamp
+    // or overwriting content won by a concurrent insert.
+    if (bookmarkInsert.changes === 0) {
+      db.update(bookmarks)
+        .set({ category: contentType, tweetUrl: postUrl })
+        .where(
+          and(
+            eq(bookmarks.userId, userId),
+            eq(bookmarks.platform, 'instagram'),
+            eq(bookmarks.id, postId),
+          ),
+        )
         .run()
+    }
+
+    const duplicateHasMedia =
+      bookmarkInsert.changes === 0 &&
+      db
+        .select({ id: bookmarkMedia.id })
+        .from(bookmarkMedia)
+        .where(
+          and(
+            eq(bookmarkMedia.userId, userId),
+            eq(bookmarkMedia.platform, 'instagram'),
+            eq(bookmarkMedia.bookmarkId, postId),
+          ),
+        )
+        .limit(1)
+        .all().length > 0
+
+    // Replace the ordered child set atomically when the post is new, the
+    // duplicate has no media to preserve, or the resolver returned a complete
+    // Relay set. OpenGraph only exposes the lead image and must not collapse a
+    // richer saved carousel.
+    if (
+      bookmarkInsert.changes > 0 ||
+      (media.length > 0 && (!duplicateHasMedia || hasCompleteMediaReplacement))
+    ) {
+      db.delete(bookmarkMedia)
+        .where(
+          and(
+            eq(bookmarkMedia.userId, userId),
+            eq(bookmarkMedia.platform, 'instagram'),
+            eq(bookmarkMedia.bookmarkId, postId),
+          ),
+        )
+        .run()
+
+      media.forEach((item, index) => {
+        // Mixed `/p/` carousel videos currently have a reliable poster but no
+        // indexed child-video stream. Persist them as poster-only photo slides
+        // so feed/theater never point several children at the container MP4.
+        const persistedType = contentType === 'photo' ? 'photo' : item.type
+        db.insert(bookmarkMedia)
+          .values({
+            // Preserve the legacy Reel row id so existing references reconcile.
+            id:
+              contentType === 'video' && index === 0
+                ? `${postId}_photo_0`
+                : `${postId}_${persistedType}_${index}`,
+            userId,
+            platform: 'instagram',
+            bookmarkId: postId,
+            mediaType: persistedType,
+            originalUrl: item.imageUrl || postUrl,
+            previewUrl: item.imageUrl || null,
+            width: item.width,
+            height: item.height,
+            altText: item.altText,
+          })
+          .run()
+      })
     }
 
     return {
@@ -198,7 +272,7 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
           and(
             eq(bookmarks.userId, userId),
             eq(bookmarks.platform, 'instagram'),
-            eq(bookmarks.id, reelId),
+            eq(bookmarks.id, postId),
           ),
         )
         .limit(1)
@@ -218,14 +292,15 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
   recordActivity({
     action: 'save',
     platform: 'instagram',
-    bookmarkId: reelId,
+    bookmarkId: postId,
     author: handle,
     authorName: meta.authorName || meta.author || null,
     text: meta.caption || meta.description || null,
     thumbnailUrl: meta.imageUrl
-      ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(reelId)}`
+      ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(postId)}`
       : null,
-    url: previewPath('instagram', handle, reelId),
+    contentType,
+    url: previewPath('instagram', handle, postId, contentType),
     userId,
     source: source as 'manual' | 'url_prefix' | 'pwa_share',
   })
@@ -235,7 +310,7 @@ async function addInstagramReel(userId: string, reelId: string, source: string) 
     isDuplicate: false,
     platform: 'instagram',
     bookmark: result.bookmark,
-    message: 'Reel added to Saved.',
+    message: `${contentType === 'photo' ? 'Instagram post' : 'Reel'} added to Saved.`,
   })
 }
 

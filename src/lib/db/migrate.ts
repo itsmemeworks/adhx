@@ -920,6 +920,7 @@ try {
       bookmark_id TEXT NOT NULL,
       hidden INTEGER NOT NULL DEFAULT 1,
       reason TEXT,
+      content_type TEXT,
       created_at TEXT NOT NULL,
       created_by TEXT NOT NULL,
       PRIMARY KEY (platform, bookmark_id)
@@ -939,7 +940,16 @@ try {
     );
     CREATE INDEX IF NOT EXISTS admin_audit_created_at_idx ON admin_audit(created_at);
   `)
-  db.prepare('SELECT platform, bookmark_id, hidden FROM moderated_posts LIMIT 0').all()
+  try {
+    db.exec('ALTER TABLE moderated_posts ADD COLUMN content_type TEXT')
+    console.log('[migrate] Added moderated_posts.content_type')
+  } catch {
+    // Column already exists — the verification query below still fails closed
+    // if ALTER failed for any other reason and the column remains unavailable.
+  }
+  db.prepare(
+    'SELECT platform, bookmark_id, hidden, content_type FROM moderated_posts LIMIT 0',
+  ).all()
   db.prepare('SELECT user_id FROM user_bans LIMIT 0').all()
   console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
 } catch (error) {

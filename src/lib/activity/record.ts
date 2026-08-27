@@ -285,6 +285,7 @@ export function recordSharePulse(opts: {
         authorName: bookmarks.authorName,
         text: bookmarks.text,
         authorProfileImageUrl: bookmarks.authorProfileImageUrl,
+        category: bookmarks.category,
       })
       .from(bookmarks)
       .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
@@ -301,7 +302,8 @@ export function recordSharePulse(opts: {
       authorName: saved.authorName,
       authorAvatarUrl: saved.authorProfileImageUrl,
       text: saved.text,
-      url: previewPath(platform, saved.author, bookmarkId),
+      contentType: saved.category,
+      url: previewPath(platform, saved.author, bookmarkId, saved.category),
       userId: opts.userId,
     })
   } catch {
@@ -374,6 +376,7 @@ export function recordPreviewPulse(opts: {
         authorName: bookmarks.authorName,
         text: bookmarks.text,
         authorProfileImageUrl: bookmarks.authorProfileImageUrl,
+        category: bookmarks.category,
       })
       .from(bookmarks)
       .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
@@ -390,7 +393,8 @@ export function recordPreviewPulse(opts: {
       authorName: saved.authorName,
       authorAvatarUrl: saved.authorProfileImageUrl,
       text: saved.text,
-      url: previewPath(platform, saved.author, bookmarkId),
+      contentType: saved.category,
+      url: previewPath(platform, saved.author, bookmarkId, saved.category),
       userId: opts.userId,
     })
   } catch {

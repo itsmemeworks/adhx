@@ -5,6 +5,7 @@ import {
   ADD_VIDEO_B,
   POST,
   PREVIEW_IG,
+  PREVIEW_IG_PHOTO,
   PREVIEW_TT,
   PREVIEW_YT,
   QUOTED_INNER,
@@ -99,6 +100,35 @@ function html(res: ServerResponse, body: string) {
 }
 
 function instagramOg(id: string): string {
+  if (id === PREVIEW_IG_PHOTO.id) {
+    const media = Array.from({ length: PREVIEW_IG_PHOTO.imageCount }, (_, index) => ({
+      __typename: 'XIGPolarisImageMedia',
+      media_type: 1,
+      display_uri: `https://scontent.cdninstagram.com/e2e-${index + 1}.jpg`,
+      original_width: 1080,
+      original_height: 1350,
+      accessibility_caption: `E2E carousel slide ${index + 1}`,
+    }))
+    const relay = {
+      payload: {
+        xig_polaris_media: {
+          code: id,
+          if_not_gated_logged_out: {
+            code: id,
+            __typename: 'XIGPolarisCarouselMedia',
+            media_type: 8,
+            user: {
+              username: PREVIEW_IG_PHOTO.author,
+              full_name: PREVIEW_IG_PHOTO.authorName,
+            },
+            caption: { text: PREVIEW_IG_PHOTO.text },
+            carousel_media: media,
+          },
+        },
+      },
+    }
+    return `<!doctype html><html><head></head><body><script type="application/json" data-sjs>${JSON.stringify(relay)}</script></body></html>`
+  }
   const known = id === PREVIEW_IG.id ? PREVIEW_IG : { text: `E2E reel ${id}`, author: 'e2eig' }
   return `<!doctype html><html><head>
 <meta property="og:title" content="${known.text}" />

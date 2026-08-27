@@ -40,7 +40,12 @@ export function useTheaterCopy(current: TheaterItem | null, caption: string) {
   const copyLink = async () => {
     if (!current) return
     try {
-      const path = previewPath(current.platform, current.author, current.bookmarkId || '')
+      const path = previewPath(
+        current.platform,
+        current.author,
+        current.bookmarkId || '',
+        current.contentType,
+      )
       const url = new URL(path, window.location.origin).toString()
       await navigator.clipboard.writeText(url)
       pingAnalytic('post.copy', {

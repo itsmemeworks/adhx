@@ -249,6 +249,7 @@ describe('activity — previewPath', () => {
   it('builds on-ADHX preview paths per platform', () => {
     expect(previewPath('twitter', 'naval', '123')).toBe('/naval/status/123')
     expect(previewPath('instagram', 'someone', 'Cwnj8')).toBe('/reels/Cwnj8')
+    expect(previewPath('instagram', 'someone', 'DcHXe', 'photo')).toBe('/p/DcHXe')
     expect(previewPath('tiktok', 'user', '999')).toBe('/@user/video/999')
   })
 })

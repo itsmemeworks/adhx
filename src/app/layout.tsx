@@ -220,6 +220,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                       || p.indexOf('/trending/') === 0
                       || /^\\/\\w+\\/status\\/\\d+$/.test(p)
                       || /^\\/reels?\\/[A-Za-z0-9_-]+$/.test(p)
+                      || /^\\/p\\/[A-Za-z0-9_-]+$/.test(p)
                       || /^\\/shorts\\/[A-Za-z0-9_-]{11}$/.test(p)
                       || /^\\/@?[A-Za-z0-9._]+\\/video\\/\\d+$/.test(p);
                     resolved = isTheaterDark

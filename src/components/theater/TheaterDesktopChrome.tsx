@@ -372,7 +372,7 @@ export function DesktopStageChrome({
   const caption = current ? (current.text || '').trim() : ''
   const platformLabel = current ? (PLATFORM_LABEL[current.platform] ?? current.platform) : ''
   const openUrl = current
-    ? sourceUrl(current.platform, current.author, current.bookmarkId ?? '')
+    ? sourceUrl(current.platform, current.author, current.bookmarkId ?? '', current.contentType)
     : null
   const { linkCopied, textCopied, copyLink, copyText } = useTheaterCopy(current, caption)
   const rootRef = useRef<HTMLDivElement>(null)

@@ -7,7 +7,7 @@
 
 > **Save now. Read never. Find always.**
 
-Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram Reels, TikTok, or YouTube Shorts** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
+Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram images and Reels, TikTok, or YouTube Shorts** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
 
 ADHX is for the links you meant to come back to: one place to watch them, search them, tag them, archive them, or turn a tag into a public playlist. It is open source and self-hostable, with your saves stored in a SQLite file you own.
 
@@ -23,7 +23,7 @@ Social links are easy to save and hard to revisit. ADHX turns them into a watcha
 
 - **Watch before signing up.** Every supported link has a clean, shareable preview page with theater playback.
 - **Save with email.** Sign-in uses an email magic link. An X account is not required.
-- **Bring four platforms together.** X posts, photos, videos, quotes, and Articles sit beside Instagram Reels, TikToks, and YouTube Shorts.
+- **Bring four platforms together.** X posts, photos, videos, quotes, and Articles sit beside Instagram image posts and Reels, TikToks, and YouTube Shorts.
 - **Choose how you revisit things.** Watch your newest saves in **Saved**, browse and search them in the **library**, or group them into tagged **playlists**.
 - **Keep control.** Run ADHX yourself and keep the SQLite database on your own machine or volume.
 
@@ -34,6 +34,7 @@ Replace the source host with `adhx.com`, paste a link into ADHX, or use one of t
 | Source          | Example preview route         | Playback                                       |
 | --------------- | ----------------------------- | ---------------------------------------------- |
 | X               | `/{user}/status/{id}`         | Text, photos, video, quotes, and full Articles |
+| Instagram posts | `/p/{id}`                     | Full-resolution images and ordered carousels   |
 | Instagram Reels | `/reels/{id}` or `/reel/{id}` | Inline Reel video with an official fallback    |
 | TikTok          | `/@{user}/video/{id}`         | Inline video                                   |
 | YouTube Shorts  | `/shorts/{id}`                | Official privacy-enhanced YouTube player       |
@@ -96,7 +97,7 @@ YouTube Shorts use the official YouTube player, so ADHX does not download or sen
 ## How it fits together
 
 ```text
-X · Instagram Reels · TikTok · YouTube Shorts
+X · Instagram posts and Reels · TikTok · YouTube Shorts
                     │
      URL prefix · paste · share · extension
                     ▼

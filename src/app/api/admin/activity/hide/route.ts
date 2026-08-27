@@ -13,7 +13,13 @@ import { handleRouteError } from '@/lib/api/response'
  */
 export const POST = withAdmin(async (request: NextRequest, actor) => {
   try {
-    let body: { platform?: unknown; id?: unknown; hidden?: unknown; reason?: unknown }
+    let body: {
+      platform?: unknown
+      id?: unknown
+      hidden?: unknown
+      reason?: unknown
+      contentType?: unknown
+    }
     try {
       body = await request.json()
     } catch {
@@ -24,6 +30,8 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
     const bookmarkId = typeof body.id === 'string' ? body.id.trim() : ''
     const hidden = typeof body.hidden === 'boolean' ? body.hidden : true
     const reason = typeof body.reason === 'string' ? body.reason : null
+    const contentType =
+      body.contentType === 'photo' || body.contentType === 'video' ? body.contentType : undefined
 
     if (!platform || !bookmarkId) {
       return NextResponse.json({ error: 'platform and id are required' }, { status: 400 })
@@ -35,6 +43,7 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
       hidden,
       actorUserId: actor.userId,
       reason,
+      contentType,
     })
 
     return NextResponse.json({

@@ -36,7 +36,7 @@ export function DiscoverCard({
   const caption = (item.text || '').trim()
   const time = formatCompactRelativeTime(item.createdAt)
   // The footer platform + time link out to the post on its native platform.
-  const origin = sourceUrl(item.platform, item.author, item.bookmarkId ?? '')
+  const origin = sourceUrl(item.platform, item.author, item.bookmarkId ?? '', item.contentType)
 
   // Trending score = savers + previews (falls back to savers for older payloads).
   // The flame badge is a dark chip (matches the type badge) with an orange flame

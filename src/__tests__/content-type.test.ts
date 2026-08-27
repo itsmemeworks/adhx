@@ -23,10 +23,17 @@ describe('inferContentType', () => {
     ).toBe('article')
   })
 
-  it('tiktok / youtube / instagram are always video when unresolved', () => {
+  it('keeps TikTok/YouTube single-format while Instagram follows resolved media', () => {
     expect(inferContentType({ platform: 'tiktok' })).toBe('video')
     expect(inferContentType({ platform: 'youtube', hasPhoto: true })).toBe('video')
-    expect(inferContentType({ platform: 'instagram' })).toBe('video')
+    expect(inferContentType({ platform: 'instagram', category: 'video' })).toBe('video')
+    expect(inferContentType({ platform: 'instagram', hasPhoto: true })).toBe('photo')
+    expect(
+      inferContentType({
+        platform: 'instagram',
+        thumbnailUrl: '/api/media/instagram/thumbnail?id=photo',
+      }),
+    ).toBe('photo')
   })
 
   it('article beats video/photo so an X Article with a cover is still an article', () => {

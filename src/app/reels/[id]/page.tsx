@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
-import { getReelMetadataStatus, isValidReelId } from '@/lib/media/instafix'
+import { getInstagramMetadataStatus, isValidInstagramId } from '@/lib/media/instafix'
 import { getCurrentUserId } from '@/lib/auth/session'
 import {
   buildContentTitle,
@@ -9,8 +9,8 @@ import {
   previewPageMetadata,
   unavailablePreviewMetadata,
 } from '@/lib/utils/content-metadata'
-import { stubReelTheaterItem } from '@/lib/theater/shared-seed'
-import { resolveReelShared } from '@/lib/theater/resolve-shared-preview'
+import { stubInstagramPostTheaterItem, stubReelTheaterItem } from '@/lib/theater/shared-seed'
+import { resolveInstagramShared } from '@/lib/theater/resolve-shared-preview'
 import {
   MODERATED_PAGE_METADATA,
   SharedPreviewPage,
@@ -27,16 +27,23 @@ interface Props {
 export const dynamic = 'force-dynamic'
 
 export default async function ReelPreviewPage({ params }: Props) {
+  return InstagramPreviewPage({ params, pathHint: 'reel' })
+}
+
+export async function InstagramPreviewPage({
+  params,
+  pathHint,
+}: Props & { pathHint: 'post' | 'reel' }) {
   const { id } = await params
 
-  if (!isValidReelId(id)) {
+  if (!isValidInstagramId(id)) {
     redirect('/')
   }
 
   const moderation = readPostModeration('instagram', id)
   const moderated = !moderation.ok || moderation.value
   const userId = moderated ? null : await getCurrentUserId()
-  const stub = stubReelTheaterItem(id)
+  const stub = pathHint === 'post' ? stubInstagramPostTheaterItem(id) : stubReelTheaterItem(id)
   const seed = await sharedPreviewSeed(stub)
 
   return (
@@ -45,15 +52,22 @@ export default async function ReelPreviewPage({ params }: Props) {
       sharedItem={stub}
       authed={!!userId}
       unavailable={moderated}
-      sharedResolve={moderated ? undefined : resolveReelShared(id)}
+      sharedResolve={moderated ? undefined : resolveInstagramShared(id, pathHint)}
     />
   )
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return generateInstagramPreviewMetadata({ params }, 'reel')
+}
+
+export async function generateInstagramPreviewMetadata(
+  { params }: Props,
+  pathHint: 'post' | 'reel',
+): Promise<Metadata> {
   const { id } = await params
 
-  if (!isValidReelId(id)) {
+  if (!isValidInstagramId(id)) {
     return {
       title: 'ADHX - Save now. Read never. Find always.',
     }
@@ -63,17 +77,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!moderation.ok || moderation.value) return MODERATED_PAGE_METADATA
 
   const baseUrl = PUBLIC_BASE_URL
-  const canonicalUrl = `${baseUrl}/reels/${id}`
   const saved = getSavedPreviewDisplay('instagram', id)
-  const metadataStatus = saved ? null : await getReelMetadataStatus(id)
+  const metadataStatus = saved ? null : await getInstagramMetadataStatus(id, pathHint)
 
   if (!saved && metadataStatus?.kind !== 'resolved') {
     const permanent = metadataStatus?.kind === 'permanent-miss'
+    const noun = pathHint === 'post' ? 'Instagram post' : 'Instagram Reel'
+    const canonicalUrl = `${baseUrl}/${pathHint === 'post' ? 'p' : 'reels'}/${id}`
     return unavailablePreviewMetadata({
-      title: permanent ? 'Instagram Reel unavailable - ADHX' : 'Instagram Reel - ADHX',
+      title: permanent ? `${noun} unavailable - ADHX` : `${noun} - ADHX`,
       description: permanent
-        ? 'This Instagram Reel is no longer available.'
-        : 'This Instagram Reel preview is temporarily unavailable.',
+        ? `This ${noun} is no longer available.`
+        : `This ${noun} preview is temporarily unavailable.`,
       canonicalUrl,
     })
   }
@@ -83,23 +98,40 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const who = saved?.authorName || saved?.author || meta?.authorName || meta?.author
   const caption = saved?.text || meta?.caption || meta?.description || ''
   const available = Boolean(saved || meta)
-  const hasImage = saved ? true : !!meta?.imageUrl
+  const contentType =
+    meta?.contentType ||
+    (saved?.category === 'photo' ? 'photo' : saved?.category === 'video' ? 'video' : null) ||
+    (pathHint === 'post' ? 'photo' : 'video')
+  const isPhoto = contentType === 'photo'
+  const noun = isPhoto ? 'Instagram post' : 'Instagram Reel'
+  const canonicalUrl = `${baseUrl}/${isPhoto ? 'p' : 'reels'}/${id}`
+  const imageCount = saved ? saved.mediaCount : (meta?.media?.length ?? 0)
+  const hasImage = imageCount > 0 || !!meta?.imageUrl
 
-  const pageTitle = buildContentTitle(caption || (who ? `Reel by ${who}` : 'Instagram Reel'))
+  const pageTitle = buildContentTitle(
+    caption || (who ? `${isPhoto ? 'Post' : 'Reel'} by ${who}` : noun),
+  )
   const description = buildSnippetDescription({
     title: pageTitle,
     content: caption,
-    facts: [attributionFact(pageTitle, who, 'Instagram'), 'Reel'].filter((fact): fact is string =>
-      Boolean(fact),
+    facts: [attributionFact(pageTitle, who, 'Instagram'), isPhoto ? 'Photo' : 'Reel'].filter(
+      (fact): fact is string => Boolean(fact),
     ),
-    closer: 'Watch and send it — no Instagram app.',
+    closer: isPhoto
+      ? 'View and send it — no Instagram app.'
+      : 'Watch and send it — no Instagram app.',
   })
-  const image = hasImage
-    ? `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
-    : `${baseUrl}/og-logo.png`
-  const videoUrl = available
-    ? `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`
-    : undefined
+  const imageBase = `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
+  const image =
+    hasImage && isPhoto && imageCount > 1
+      ? Array.from({ length: imageCount }, (_, index) => `${imageBase}&index=${index + 1}`)
+      : hasImage
+        ? imageBase
+        : `${baseUrl}/og-logo.png`
+  const videoUrl =
+    available && !isPhoto
+      ? `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`
+      : undefined
 
   return previewPageMetadata({
     title: pageTitle,

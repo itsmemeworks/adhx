@@ -8,12 +8,20 @@ import { handleRouteError } from '@/lib/api/response'
 
 export const dynamic = 'force-dynamic'
 
-function resolveRef(request: NextRequest): { platform: string; id: string } | null {
+function resolveRef(
+  request: NextRequest,
+): { platform: string; id: string; contentType?: 'photo' | 'video' } | null {
   const q = request.nextUrl.searchParams
   const raw = q.get('url') || q.get('q') || ''
   if (raw) {
     const parsed = parseAdminPostRef(raw)
-    if (parsed) return { platform: parsed.platform, id: parsed.id }
+    if (parsed) {
+      return {
+        platform: parsed.platform,
+        id: parsed.id,
+        contentType: parsed.contentType,
+      }
+    }
   }
   const platform = (q.get('platform') || '').trim()
   const id = (q.get('id') || '').trim()
@@ -28,7 +36,7 @@ export const GET = withAdmin(async (request: NextRequest, actor) => {
       return NextResponse.json({ error: 'url or platform+id is required' }, { status: 400 })
     }
     const window = parseAnalyticsWindow(request.nextUrl.searchParams.get('window'))
-    return NextResponse.json(inspectPost(ref.platform, ref.id, window), {
+    return NextResponse.json(inspectPost(ref.platform, ref.id, window, ref.contentType), {
       headers: { 'Cache-Control': 'private, no-store' },
     })
   } catch (error) {
@@ -44,6 +52,7 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
       url?: unknown
       hidden?: unknown
       reason?: unknown
+      contentType?: unknown
     }
     try {
       body = await request.json()
@@ -57,6 +66,9 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
     const bookmarkId = (typeof body.id === 'string' ? body.id.trim() : '') || fromUrl?.id || ''
     const hidden = typeof body.hidden === 'boolean' ? body.hidden : true
     const reason = typeof body.reason === 'string' ? body.reason : null
+    const requestedContentType =
+      body.contentType === 'photo' || body.contentType === 'video' ? body.contentType : undefined
+    const contentType = fromUrl?.contentType ?? requestedContentType
 
     if (!platform || !bookmarkId) {
       return NextResponse.json({ error: 'platform and id (or url) are required' }, { status: 400 })
@@ -68,8 +80,9 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
       hidden,
       actorUserId: actor.userId,
       reason,
+      contentType,
     })
-    return NextResponse.json({ platform, id: bookmarkId, ...result })
+    return NextResponse.json({ platform, id: bookmarkId, contentType, ...result })
   } catch (error) {
     return handleRouteError(error, { endpoint: '/api/admin/posts', userId: actor.userId })
   }

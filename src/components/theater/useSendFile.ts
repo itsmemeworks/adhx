@@ -141,7 +141,14 @@ export function resolveSendSource(item: SendableItem | null): SendSource | null 
   // deliberate product decision (no compliant zero-cost source exists).
   if (item.platform === 'youtube') return null
 
-  // TikTok and Instagram are single-format platforms: always video.
+  if (item.platform === 'instagram' && item.contentType === 'photo') {
+    return {
+      src: `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
+      filename: `adhx-instagram-${item.bookmarkId}.jpg`,
+      kind: 'photo',
+    }
+  }
+
   if (item.platform === 'tiktok' || item.platform === 'instagram') {
     return {
       src: reelVideoSrc(item as TheaterItem),
@@ -169,13 +176,13 @@ export function resolveSendSource(item: SendableItem | null): SendSource | null 
   return null
 }
 
-function itemKey(item: SendableItem): string {
-  return `${item.platform}:${item.bookmarkId}`
+export function sendSourceKey(item: SendableItem, source: SendSource): string {
+  return `${item.platform}:${item.bookmarkId}:${item.contentType ?? 'unknown'}:${source.src}`
 }
 
 /** Absolute canonical preview URL for the caption / link-only share. */
 function canonicalUrlFor(item: TheaterItem): string {
-  const path = previewPath(item.platform, item.author, item.bookmarkId || '')
+  const path = previewPath(item.platform, item.author, item.bookmarkId || '', item.contentType)
   if (typeof window === 'undefined') return path
   return new URL(path, window.location.origin).toString()
 }
@@ -229,7 +236,7 @@ export function useSendFile(
 
   const source = resolveSendSource(item)
   const supported = source !== null
-  const key = item && source ? itemKey(item) : null
+  const key = item && source ? sendSourceKey(item, source) : null
 
   useEffect(() => {
     // New item (or one that lost its source) — reset this instance. A shared

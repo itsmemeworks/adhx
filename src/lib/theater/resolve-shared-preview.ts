@@ -17,7 +17,7 @@ import { buildSocialMediaPostingLd, buildVideoObjectLd } from '@/lib/utils/struc
 import { quoteRefFromSource } from '@/lib/theater/quote-ref'
 import { linkPreviewFromExternal } from '@/lib/theater/link-preview'
 import {
-  reelToTheaterItem,
+  instagramToTheaterItem,
   tiktokToTheaterItem,
   tweetToTheaterItem,
   youtubeToTheaterItem,
@@ -29,7 +29,7 @@ import { isLikelyBot } from '@/lib/activity/bot'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
-import { getReelMetadataStatus } from '@/lib/media/instafix'
+import { getInstagramMetadataStatus } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
 import { getTikTokMetadataStatus } from '@/lib/media/tnktok'
 import { getYouTubeMetadataStatus, youtubeEmbedUrl, youtubeThumbnail } from '@/lib/media/youtube'
@@ -230,16 +230,27 @@ export async function resolveTweetShared(
   }
 }
 
-export async function resolveReelShared(id: string): Promise<SharedResolveResult> {
+export async function resolveInstagramShared(
+  id: string,
+  pathHint: 'post' | 'reel' = 'reel',
+): Promise<SharedResolveResult> {
   const saved = getSavedPreviewDisplay('instagram', id)
-  const metadataStatus = saved ? null : await getReelMetadataStatus(id)
+  // Saved rows already preserve the resolved type and carousel length. Their
+  // images are re-resolved lazily by the thumbnail proxy, so avoid an upstream
+  // page fetch on every shared-preview open when a durable row exists.
+  const metadataStatus = saved ? null : await getInstagramMetadataStatus(id, pathHint)
   const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const author = saved?.author || meta?.author || null
   const authorName = saved?.authorName || meta?.authorName || null
   const caption = saved?.text || meta?.caption || null
-  const description = saved ? null : meta?.description || null
-  const hasImage = saved ? true : !!meta?.imageUrl
+  const description = meta?.description || null
+  const contentType =
+    meta?.contentType ||
+    (saved?.category === 'photo' ? 'photo' : saved?.category === 'video' ? 'video' : null) ||
+    (pathHint === 'post' ? 'photo' : 'video')
+  const photoCount = contentType === 'photo' ? meta?.media?.length || saved?.mediaCount || 1 : 0
+  const hasImage = Boolean(meta?.imageUrl || saved?.mediaCount)
   const imageUrl = hasImage
     ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : undefined
@@ -247,7 +258,7 @@ export async function resolveReelShared(id: string): Promise<SharedResolveResult
 
   const ua = (await headers()).get('user-agent')
   const human = !isLikelyBot(ua)
-  if (human) {
+  if (human && contentType === 'video') {
     void resolveInstagramVideo(id, { range: 'bytes=0-1' })
       .then((res) => res?.body?.cancel())
       .catch(() => {})
@@ -260,15 +271,18 @@ export async function resolveReelShared(id: string): Promise<SharedResolveResult
     authorName: authorName || author || null,
     text: caption || description || null,
     thumbnailUrl: imageUrl ?? null,
-    url: previewPath('instagram', author || 'instagram', id),
+    contentType,
+    url: previewPath('instagram', author || 'instagram', id, contentType),
   })
 
-  const item = reelToTheaterItem({
+  const item = instagramToTheaterItem({
     id,
     author: author || 'instagram',
     authorName: authorName || author || null,
     text: caption || description || null,
     thumbnailUrl: imageUrl ?? null,
+    contentType,
+    photoCount,
   })
 
   if (!seoEligible) {
@@ -277,38 +291,87 @@ export async function resolveReelShared(id: string): Promise<SharedResolveResult
 
   const baseUrl = PUBLIC_BASE_URL
   const ldAuthorName = authorName || author
+  const authorHandle = author?.replace(/^@/, '')
+  const sourcePath = contentType === 'photo' ? 'p' : 'reel'
+  const sourcePostUrl = `https://www.instagram.com/${sourcePath}/${id}/`
+  const previewUrl = `${baseUrl}/${contentType === 'photo' ? 'p' : 'reels'}/${id}`
+  const photoImages =
+    contentType === 'photo' && photoCount > 1
+      ? Array.from(
+          { length: photoCount },
+          (_, index) =>
+            `${baseUrl}/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}&index=${index + 1}`,
+        )
+      : imageUrl
+        ? [`${baseUrl}${imageUrl}`]
+        : []
   return {
     ok: true,
     item,
     seoEligible: true,
-    jsonLd: buildVideoObjectLd({
-      name:
-        caption || description || (authorName ? `${authorName} on Instagram` : 'Instagram Reel'),
-      description: caption || description || undefined,
-      thumbnailUrl: imageUrl ? `${baseUrl}${imageUrl}` : undefined,
-      contentUrl: `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`,
-      author: ldAuthorName
-        ? {
-            name: ldAuthorName,
-            url: author ? `https://www.instagram.com/${author}` : undefined,
-          }
-        : undefined,
-    }),
+    jsonLd:
+      contentType === 'video'
+        ? buildVideoObjectLd({
+            name:
+              caption ||
+              description ||
+              (authorName ? `${authorName} on Instagram` : 'Instagram Reel'),
+            description: caption || description || undefined,
+            thumbnailUrl: imageUrl ? `${baseUrl}${imageUrl}` : undefined,
+            contentUrl: `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`,
+            author: ldAuthorName
+              ? {
+                  name: ldAuthorName,
+                  url: authorHandle
+                    ? `https://www.instagram.com/${encodeURIComponent(authorHandle)}/`
+                    : undefined,
+                }
+              : undefined,
+          })
+        : buildSocialMediaPostingLd({
+            headline: truncate(
+              caption ||
+                description ||
+                (authorName ? `${authorName} on Instagram` : 'Instagram photo'),
+              110,
+            ),
+            text: caption || description || undefined,
+            author: {
+              name: ldAuthorName || 'Instagram',
+              url: authorHandle
+                ? `https://www.instagram.com/${encodeURIComponent(authorHandle)}/`
+                : undefined,
+            },
+            datePublished: meta?.takenAt,
+            url: sourcePostUrl,
+            mainEntityOfPage: previewUrl,
+            image:
+              photoImages.length > 1
+                ? photoImages
+                : photoImages.length === 1
+                  ? photoImages[0]
+                  : undefined,
+          }),
     staticPost: {
-      kind: 'instagram-reel',
+      kind: contentType === 'video' ? 'instagram-reel' : 'instagram-post',
       authorName: authorName || author,
       handle: author,
       text: caption || description,
-      sourceUrl: `https://www.instagram.com/reel/${id}/`,
-      label: 'Instagram post',
+      sourceUrl: sourcePostUrl,
+      label: contentType === 'video' ? 'Instagram Reel' : 'Instagram post',
     },
     related: {
       platform: 'instagram',
       bookmarkId: id,
       authorHandle: author || 'instagram',
-      contentType: 'video',
+      contentType,
     },
   }
+}
+
+/** Reel-route compatibility wrapper. */
+export async function resolveReelShared(id: string): Promise<SharedResolveResult> {
+  return resolveInstagramShared(id, 'reel')
 }
 
 export async function resolveTikTokShared(

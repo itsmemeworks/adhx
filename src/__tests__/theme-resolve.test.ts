@@ -38,11 +38,12 @@ describe('resolveInitialTheme', () => {
     expect(resolveInitialTheme(null, '/trending-archive', false)).toBe('light')
   })
 
-  it('defaults to dark on the four preview-page shapes when unset', () => {
+  it('defaults to dark on every preview-page shape when unset', () => {
     expect(resolveInitialTheme(null, '/someuser/status/123', false)).toBe('dark')
     expect(resolveInitialTheme(undefined, '/someuser/status/123', false)).toBe('dark')
     expect(resolveInitialTheme(null, '/reel/abc123', false)).toBe('dark')
     expect(resolveInitialTheme(null, '/reels/abc123', true)).toBe('dark')
+    expect(resolveInitialTheme(null, '/p/DcHXej3lt5W', false)).toBe('dark')
     expect(resolveInitialTheme(null, '/shorts/dQw4w9WgXcQ', false)).toBe('dark')
     expect(resolveInitialTheme(null, '/@someuser/video/1234567890', false)).toBe('dark')
     expect(resolveInitialTheme(null, '/someuser/video/1234567890', true)).toBe('dark')

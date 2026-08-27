@@ -69,15 +69,18 @@ export function buildFeedItem(
   // Build media URLs — platform-aware. Twitter uses FxEmbed; Instagram and
   // TikTok stream through our own proxy routes (CDN URLs require referer/sig
   // headers that only the proxy adds).
-  const mediaWithUrls = bookmarkMediaList.map((m, index) => {
+  const orderedMedia = [...bookmarkMediaList].sort(
+    (a, b) => mediaOrdinal(a.id) - mediaOrdinal(b.id),
+  )
+  const mediaWithUrls = orderedMedia.map((m, index) => {
     const mediaType = m.mediaType as 'photo' | 'video' | 'animated_gif'
 
     if (bookmark.platform === 'instagram') {
-      // Reels play inline via the IG video proxy (mirror registry), keyed by
-      // the reel id; the thumbnail proxy re-resolves the signed CDN poster
-      // fresh per view. A row still typed 'photo' (a rare photo post, or
-      // pre-backfill) renders as a poster + link-out instead of a player.
-      const thumbnailUrl = `/api/media/instagram/thumbnail?id=${encodeURIComponent(bookmark.id)}`
+      // Reels play inline via the IG video proxy; photos and ordered carousel
+      // children re-resolve fresh signed CDN URLs through the image proxy.
+      const mediaIndex = index + 1
+      const indexQuery = mediaIndex === 1 ? '' : `&index=${mediaIndex}`
+      const thumbnailUrl = `/api/media/instagram/thumbnail?id=${encodeURIComponent(bookmark.id)}${indexQuery}`
       const isVideo = m.mediaType === 'video'
       const streamUrl = `/api/media/instagram/video?id=${encodeURIComponent(bookmark.id)}`
       const downloadUrl = `/api/media/instagram/video/download?id=${encodeURIComponent(bookmark.id)}`
@@ -90,7 +93,7 @@ export function buildFeedItem(
         altText: m.altText,
         url: isVideo ? streamUrl : thumbnailUrl,
         thumbnailUrl,
-        shareUrl: isVideo ? downloadUrl : bookmark.tweetUrl,
+        shareUrl: isVideo ? downloadUrl : `${thumbnailUrl}&download=1`,
         originalUrl: null,
       }
     }
@@ -224,4 +227,9 @@ export function buildFeedItem(
     parentTweets: null,
     summary: bookmark.summary,
   }
+}
+
+function mediaOrdinal(id: string): number {
+  const match = id.match(/_(?:photo|video)_(\d+)$/)
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER
 }

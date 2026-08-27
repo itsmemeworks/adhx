@@ -35,7 +35,7 @@ export interface SharedTweetStatic {
 }
 
 export interface SharedSimplePostStatic {
-  kind: 'instagram-reel' | 'tiktok-video' | 'youtube-short'
+  kind: 'instagram-post' | 'instagram-reel' | 'tiktok-video' | 'youtube-short'
   authorName?: string | null
   handle?: string | null
   text?: string | null

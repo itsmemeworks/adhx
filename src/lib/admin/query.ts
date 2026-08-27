@@ -93,6 +93,7 @@ export function getAdminOverview(window: AnalyticsWindow = 'week'): AdminOvervie
       platform: moderatedPosts.platform,
       bookmarkId: moderatedPosts.bookmarkId,
       reason: moderatedPosts.reason,
+      contentType: moderatedPosts.contentType,
       createdAt: moderatedPosts.createdAt,
     })
     .from(moderatedPosts)
@@ -101,20 +102,24 @@ export function getAdminOverview(window: AnalyticsWindow = 'week'): AdminOvervie
     .limit(50)
     .all()
 
-  const authorByPost = new Map<string, string>()
+  const displayByPost = new Map<string, { author: string; contentType: string | null }>()
   if (hiddenRows.length > 0) {
-    const authors = db
+    const displays = db
       .select({
         platform: activity.platform,
         bookmarkId: activity.bookmarkId,
         author: activity.author,
+        contentType: activity.contentType,
       })
       .from(activity)
       .where(eq(activity.hidden, 1))
       .all()
-    for (const row of authors) {
+    for (const row of displays) {
       const key = `${row.platform}:${row.bookmarkId}`
-      if (!authorByPost.has(key) && row.author) authorByPost.set(key, row.author)
+      const current = displayByPost.get(key)
+      if (row.author && (!current || row.contentType === 'photo')) {
+        displayByPost.set(key, { author: row.author, contentType: row.contentType })
+      }
     }
   }
 
@@ -191,17 +196,21 @@ export function getAdminOverview(window: AnalyticsWindow = 'week'): AdminOvervie
       bannedUsers: count(bannedN[0]?.n),
       moderatedPosts: count(moderatedN[0]?.n),
     },
-    hiddenPosts: hiddenRows.map((row) => ({
-      platform: row.platform,
-      bookmarkId: row.bookmarkId,
-      reason: row.reason,
-      createdAt: row.createdAt,
-      previewPath: previewPathFor(
-        row.platform,
-        authorByPost.get(`${row.platform}:${row.bookmarkId}`) || null,
-        row.bookmarkId,
-      ),
-    })),
+    hiddenPosts: hiddenRows.map((row) => {
+      const display = displayByPost.get(`${row.platform}:${row.bookmarkId}`)
+      return {
+        platform: row.platform,
+        bookmarkId: row.bookmarkId,
+        reason: row.reason,
+        createdAt: row.createdAt,
+        previewPath: previewPathFor(
+          row.platform,
+          display?.author || null,
+          row.bookmarkId,
+          display?.contentType || row.contentType,
+        ),
+      }
+    }),
     bannedUsers,
     recentAudit,
   }
@@ -228,6 +237,7 @@ export function inspectPost(
   platform: string,
   bookmarkId: string,
   window: AnalyticsWindow,
+  contentTypeHint?: string | null,
 ): InspectedPost {
   const [mod] = db
     .select()
@@ -256,6 +266,7 @@ export function inspectPost(
       author: bookmarks.author,
       authorName: bookmarks.authorName,
       text: bookmarks.text,
+      category: bookmarks.category,
     })
     .from(bookmarks)
     .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
@@ -310,17 +321,19 @@ export function inspectPost(
   }
 
   const author = pulse?.author || saved?.author || null
+  const contentType =
+    pulse?.contentType || saved?.category || mod?.contentType || contentTypeHint || null
   return {
     platform,
     bookmarkId,
-    previewPath: previewPath(platform, author || 'unknown', bookmarkId),
+    previewPath: previewPath(platform, author || 'unknown', bookmarkId, contentType),
     hidden: mod?.hidden === 1 || pulse?.hidden === 1,
     reason: mod?.reason ?? null,
     author,
     authorName: pulse?.authorName || saved?.authorName || null,
     text: pulse?.text || saved?.text || null,
     thumbnailUrl: pulse?.thumbnailUrl ?? null,
-    contentType: pulse?.contentType ?? null,
+    contentType,
     saverCount: count(savers?.n),
     pulseEvents: count(pulseCount?.n),
     publicPlaylists,

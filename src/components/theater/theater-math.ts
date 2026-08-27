@@ -466,10 +466,10 @@ export function formatQueueCount(
  * there — a post missing either leaves the address bar alone.
  */
 export function theaterUrlSyncPath(
-  item: Pick<TheaterItem, 'platform' | 'bookmarkId' | 'author'> | null,
+  item: Pick<TheaterItem, 'platform' | 'bookmarkId' | 'author' | 'contentType'> | null,
 ): string | null {
   if (!item || !item.bookmarkId || !item.author) return null
-  return previewPath(item.platform, item.author, item.bookmarkId)
+  return previewPath(item.platform, item.author, item.bookmarkId, item.contentType)
 }
 
 /**

@@ -45,12 +45,7 @@ export function progressKindFor(item: TheaterItem | null, _articleMode = false):
   // article mode — the same element keeps playing above the reader.
   // `_articleMode` is kept so existing call sites don't churn.
   if (isQuoteReader(item, false)) return 'timed'
-  if (
-    item.platform === 'youtube' ||
-    item.platform === 'tiktok' ||
-    item.platform === 'instagram' ||
-    item.contentType === 'video'
-  ) {
+  if (item.platform === 'youtube' || item.platform === 'tiktok' || item.contentType === 'video') {
     return 'video'
   }
   return 'timed'

@@ -99,6 +99,19 @@ export function seedParentPhotos(item: TheaterItem): string[] {
     if (item.thumbnailUrl) return [proxiedPhotoSrc(author, id, 1)]
     return []
   }
+  if (item.platform === 'instagram' && item.bookmarkId) {
+    if (albumCount) {
+      return Array.from(
+        { length: albumCount },
+        (_, i) =>
+          `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId || '')}&index=${i + 1}`,
+      )
+    }
+    if (item.contentType === 'photo') {
+      return [`/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId)}&index=1`]
+    }
+    return []
+  }
   if (item.contentType === 'video') return []
   return item.thumbnailUrl ? [item.thumbnailUrl] : []
 }

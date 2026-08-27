@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 
 const mocks = vi.hoisted(() => ({
-  getReelMetadataStatus: vi.fn(),
+  getInstagramMetadataStatus: vi.fn(),
   getTikTokMetadataStatus: vi.fn(),
   getYouTubeMetadataStatus: vi.fn(),
   getSavedPreviewDisplay: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('@/lib/utils/og-fetch', () => ({
 }))
 
 vi.mock('@/lib/media/instafix', () => ({
-  getReelMetadataStatus: mocks.getReelMetadataStatus,
+  getInstagramMetadataStatus: mocks.getInstagramMetadataStatus,
 }))
 
 vi.mock('@/lib/media/tnktok', () => ({
@@ -43,22 +43,27 @@ vi.mock('@/lib/media/mirrors', () => ({
 
 vi.mock('@/lib/theater/shared-seed', () => ({
   buildSharedSeed: vi.fn(),
-  reelToTheaterItem: ({
+  instagramToTheaterItem: ({
     id,
     author,
     text,
+    contentType,
+    photoCount,
   }: {
     id: string
     author: string
     text: string | null
+    contentType: 'photo' | 'video'
+    photoCount?: number
   }) => ({
     action: 'preview',
     platform: 'instagram',
     bookmarkId: id,
     author,
     text,
-    contentType: 'video',
-    url: `https://www.instagram.com/reel/${id}/`,
+    contentType,
+    ...(photoCount && photoCount > 1 ? { photoCount } : {}),
+    url: `https://www.instagram.com/${contentType === 'photo' ? 'p' : 'reel'}/${id}/`,
   }),
   tiktokToTheaterItem: ({
     id,
@@ -145,7 +150,7 @@ const YOUTUBE_ID = 'Y9aytLYBajw'
 const platforms = [
   {
     name: 'Instagram',
-    statusMock: mocks.getReelMetadataStatus,
+    statusMock: mocks.getInstagramMetadataStatus,
     resolve: async () => {
       const { resolveReelShared } = await import('@/lib/theater/resolve-shared-preview')
       return resolveReelShared(REEL_ID)
@@ -241,6 +246,46 @@ describe('non-X shared preview SEO eligibility', () => {
       expect(platform.statusMock).not.toHaveBeenCalled()
     })
   }
+
+  it('emits an ordered image array for an Instagram carousel', async () => {
+    mocks.getInstagramMetadataStatus.mockResolvedValue({
+      kind: 'resolved',
+      metadata: {
+        imageUrl: 'https://scontent.cdninstagram.com/first.jpg',
+        caption: 'An image carousel',
+        author: '@creator',
+        authorName: 'Creator',
+        contentType: 'photo',
+        media: Array.from({ length: 3 }, (_, index) => ({
+          type: 'photo',
+          imageUrl: `https://scontent.cdninstagram.com/${index + 1}.jpg`,
+        })),
+      },
+    })
+
+    const { resolveInstagramShared } = await import('@/lib/theater/resolve-shared-preview')
+    const result = await resolveInstagramShared('carousel123', 'post')
+
+    expect(mocks.getInstagramMetadataStatus).toHaveBeenCalledWith('carousel123', 'post')
+    expect(result).toMatchObject({
+      ok: true,
+      seoEligible: true,
+      item: { contentType: 'photo', photoCount: 3 },
+      staticPost: { kind: 'instagram-post' },
+      jsonLd: {
+        '@type': 'SocialMediaPosting',
+        author: {
+          name: 'Creator',
+          url: 'https://www.instagram.com/creator/',
+        },
+        image: [
+          'https://adhx.com/api/media/instagram/thumbnail?id=carousel123&index=1',
+          'https://adhx.com/api/media/instagram/thumbnail?id=carousel123&index=2',
+          'https://adhx.com/api/media/instagram/thumbnail?id=carousel123&index=3',
+        ],
+      },
+    })
+  })
 })
 
 describe('ResolvedSharedSeo', () => {

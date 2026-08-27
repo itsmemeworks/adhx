@@ -48,7 +48,7 @@ vi.mock('@/lib/media/instafix', async () => {
     await vi.importActual<typeof import('@/lib/media/instafix')>('@/lib/media/instafix')
   return {
     ...actual,
-    fetchReelMetadata: (...args: unknown[]) => mockFetchReelMetadata(...args),
+    fetchInstagramMetadata: (...args: unknown[]) => mockFetchReelMetadata(...args),
   }
 })
 
@@ -117,6 +117,15 @@ describe('POST /api/bookmarks/add — Instagram', () => {
       caption: 'a reel',
       author: '@reel-maker',
       authorName: 'Reel Maker',
+      contentType: 'video',
+      media: [
+        {
+          type: 'video',
+          imageUrl: 'https://scontent.cdninstagram.com/reel.jpg',
+          width: 1080,
+          height: 1920,
+        },
+      ],
     })
   })
   afterEach(() => testInstance.close())
@@ -156,6 +165,166 @@ describe('POST /api/bookmarks/add — Instagram', () => {
         )
         .all(),
     ).toHaveLength(1)
+    expect(mockFetchReelMetadata).toHaveBeenCalledWith(REEL_ID, 'reel')
+  })
+
+  it('saves a tracked /p/ carousel as ordered photo media', async () => {
+    const postId = 'DcHXej3lt5W'
+    const images = Array.from({ length: 11 }, (_, index) => ({
+      type: 'photo' as const,
+      imageUrl: `https://scontent.cdninstagram.com/slide-${index + 1}.jpg`,
+      width: 1440,
+      height: 1920 + index,
+      altText: `Slide ${index + 1}`,
+    }))
+    mockFetchReelMetadata.mockResolvedValueOnce({
+      imageUrl: images[0].imageUrl,
+      caption: 'Good news carousel',
+      author: '@goodnews',
+      authorName: 'Good News',
+      contentType: 'photo',
+      media: images,
+    })
+
+    const res = await POST(
+      createRequest({
+        url: `https://www.instagram.com/p/${postId}/?utm_source=ig_web_copy_link&igsi=abc`,
+        source: 'manual',
+      }),
+    )
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      success: true,
+      platform: 'instagram',
+      bookmark: {
+        category: 'photo',
+        tweetUrl: `https://www.instagram.com/p/${postId}/`,
+      },
+    })
+
+    const stored = testInstance.db
+      .select()
+      .from(schema.bookmarkMedia)
+      .where(
+        and(
+          eq(schema.bookmarkMedia.userId, 'user-123'),
+          eq(schema.bookmarkMedia.platform, 'instagram'),
+          eq(schema.bookmarkMedia.bookmarkId, postId),
+        ),
+      )
+      .all()
+      .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+
+    expect(stored).toHaveLength(11)
+    expect(stored[0]).toMatchObject({
+      id: `${postId}_photo_0`,
+      mediaType: 'photo',
+      width: 1440,
+      height: 1920,
+      altText: 'Slide 1',
+    })
+    expect(stored[10]).toMatchObject({
+      id: `${postId}_photo_10`,
+      altText: 'Slide 11',
+    })
+    expect(testInstance.db.select().from(schema.activity).all()[0]).toMatchObject({
+      contentType: 'photo',
+      url: `/p/${postId}`,
+    })
+    expect(mockFetchReelMetadata).toHaveBeenCalledWith(postId, 'post')
+  })
+
+  it('does not collapse a saved carousel when a duplicate resolves through OpenGraph only', async () => {
+    const postId = 'carouselKeep'
+    const images = Array.from({ length: 3 }, (_, index) => ({
+      type: 'photo' as const,
+      imageUrl: `https://scontent.cdninstagram.com/keep-${index + 1}.jpg`,
+    }))
+    mockFetchReelMetadata.mockResolvedValueOnce({
+      imageUrl: images[0].imageUrl,
+      caption: 'Complete carousel',
+      author: '@creator',
+      contentType: 'photo',
+      media: images,
+      mediaComplete: true,
+    })
+    expect(
+      (
+        await POST(
+          createRequest({ url: `https://www.instagram.com/p/${postId}/`, source: 'manual' }),
+        )
+      ).status,
+    ).toBe(200)
+
+    mockFetchReelMetadata.mockResolvedValueOnce({
+      imageUrl: images[0].imageUrl,
+      caption: 'OpenGraph fallback',
+      author: '@creator',
+      contentType: 'photo',
+      media: [images[0]],
+      mediaComplete: false,
+    })
+    const duplicate = await POST(
+      createRequest({ url: `https://www.instagram.com/p/${postId}/`, source: 'manual' }),
+    )
+    expect(await duplicate.json()).toMatchObject({ success: false, isDuplicate: true })
+
+    const stored = testInstance.db
+      .select()
+      .from(schema.bookmarkMedia)
+      .where(
+        and(
+          eq(schema.bookmarkMedia.userId, 'user-123'),
+          eq(schema.bookmarkMedia.platform, 'instagram'),
+          eq(schema.bookmarkMedia.bookmarkId, postId),
+        ),
+      )
+      .all()
+    expect(stored).toHaveLength(3)
+    expect(stored.map((row) => row.previewUrl)).toEqual(images.map((image) => image.imageUrl))
+  })
+
+  it('stores mixed carousel video children as ordered poster-only photo slides', async () => {
+    const postId = 'mixedAlbum'
+    mockFetchReelMetadata.mockResolvedValueOnce({
+      imageUrl: 'https://scontent.cdninstagram.com/mixed-1.jpg',
+      caption: 'Mixed carousel',
+      author: '@creator',
+      contentType: 'photo',
+      mediaComplete: true,
+      media: [
+        { type: 'photo', imageUrl: 'https://scontent.cdninstagram.com/mixed-1.jpg' },
+        { type: 'video', imageUrl: 'https://scontent.cdninstagram.com/mixed-2.jpg' },
+        { type: 'photo', imageUrl: 'https://scontent.cdninstagram.com/mixed-3.jpg' },
+      ],
+    })
+
+    expect(
+      (
+        await POST(
+          createRequest({ url: `https://www.instagram.com/p/${postId}/`, source: 'manual' }),
+        )
+      ).status,
+    ).toBe(200)
+
+    const stored = testInstance.db
+      .select()
+      .from(schema.bookmarkMedia)
+      .where(
+        and(
+          eq(schema.bookmarkMedia.userId, 'user-123'),
+          eq(schema.bookmarkMedia.platform, 'instagram'),
+          eq(schema.bookmarkMedia.bookmarkId, postId),
+        ),
+      )
+      .all()
+      .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+    expect(stored.map((row) => row.id)).toEqual([
+      `${postId}_photo_0`,
+      `${postId}_photo_1`,
+      `${postId}_photo_2`,
+    ])
+    expect(stored.every((row) => row.mediaType === 'photo')).toBe(true)
   })
 
   it('repairs a duplicate parent missing media without inflating saves', async () => {
@@ -170,6 +339,20 @@ describe('POST /api/bookmarks/add — Instagram', () => {
         }),
       )
       .run()
+    mockFetchReelMetadata.mockResolvedValueOnce({
+      imageUrl: 'https://scontent.cdninstagram.com/reel.jpg',
+      caption: 'OpenGraph fallback',
+      author: '@reel-maker',
+      authorName: 'Reel Maker',
+      contentType: 'video',
+      media: [
+        {
+          type: 'video',
+          imageUrl: 'https://scontent.cdninstagram.com/reel.jpg',
+        },
+      ],
+      mediaComplete: false,
+    })
 
     const res = await POST(createRequest({ url: REEL_URL }))
     expect(await res.json()).toMatchObject({ success: false, isDuplicate: true })
@@ -188,6 +371,37 @@ describe('POST /api/bookmarks/add — Instagram', () => {
     ).toHaveLength(1)
     expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
     expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(0)
+  })
+
+  it('preserves healthy Reel media when a duplicate refresh has no poster', async () => {
+    expect((await POST(createRequest({ url: REEL_URL }))).status).toBe(200)
+    mockFetchReelMetadata.mockResolvedValueOnce({
+      caption: 'a degraded refresh',
+      author: '@reel-maker',
+      authorName: 'Reel Maker',
+      contentType: 'video',
+      media: [{ type: 'video' }],
+    })
+
+    const duplicate = await POST(createRequest({ url: REEL_URL }))
+    expect(await duplicate.json()).toMatchObject({ success: false, isDuplicate: true })
+
+    const stored = testInstance.db
+      .select()
+      .from(schema.bookmarkMedia)
+      .where(
+        and(
+          eq(schema.bookmarkMedia.userId, 'user-123'),
+          eq(schema.bookmarkMedia.platform, 'instagram'),
+          eq(schema.bookmarkMedia.bookmarkId, REEL_ID),
+        ),
+      )
+      .all()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]).toMatchObject({
+      previewUrl: 'https://scontent.cdninstagram.com/reel.jpg',
+      originalUrl: 'https://scontent.cdninstagram.com/reel.jpg',
+    })
   })
 
   it('recreates a duplicate deleted before repair and counts the actual insert', async () => {

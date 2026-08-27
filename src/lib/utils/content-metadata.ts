@@ -193,11 +193,12 @@ export function previewPageMetadata({
   title: string
   description: string
   canonicalUrl: string
-  image: string
+  image: string | string[]
   videoUrl?: string
   ogType?: 'video.other' | 'article'
 }): Metadata {
   const type = ogType ?? (videoUrl ? 'video.other' : 'article')
+  const images = Array.isArray(image) ? image : [image]
   return {
     title,
     description,
@@ -207,7 +208,7 @@ export function previewPageMetadata({
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
-      images: [{ url: image, alt: title }],
+      images: images.map((url) => ({ url, alt: title })),
       ...(videoUrl
         ? { videos: [{ url: videoUrl, type: 'video/mp4' as const, width: 1080, height: 1920 }] }
         : {}),
@@ -216,7 +217,7 @@ export function previewPageMetadata({
       card: 'summary_large_image',
       title,
       description,
-      images: [image],
+      images,
     },
     alternates: {
       canonical: canonicalUrl,

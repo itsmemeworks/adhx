@@ -55,7 +55,9 @@ export function usePlaybackSource(item: TheaterItem | null): PlaybackSource {
  * testable without a `fetch`/`window`.
  */
 export function instagramWarmSrc(item: TheaterItem | null): string | null {
-  if (!item || item.platform !== 'instagram' || !item.bookmarkId) return null
+  if (!item || item.platform !== 'instagram' || item.contentType !== 'video' || !item.bookmarkId) {
+    return null
+  }
   return instagramVideoSrc(item.bookmarkId)
 }
 

@@ -122,7 +122,12 @@ export function SavePostButton({
     if (status === 'saving' || status === 'saved' || status === 'tag' || !current.bookmarkId) return
     setStatus('saving')
     try {
-      const url = sourceUrl(current.platform, current.author, current.bookmarkId)
+      const url = sourceUrl(
+        current.platform,
+        current.author,
+        current.bookmarkId,
+        current.contentType,
+      )
       if (!url) throw new Error('No source URL for this post')
       const res = await fetch('/api/bookmarks/add', {
         method: 'POST',

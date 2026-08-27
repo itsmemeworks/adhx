@@ -26,7 +26,9 @@ export function trendingItemKey(item: TheaterItem): string {
 }
 
 export function trendingItemHref(item: TheaterItem): string {
-  if (item.bookmarkId) return previewPath(item.platform, item.author, item.bookmarkId)
+  if (item.bookmarkId) {
+    return previewPath(item.platform, item.author, item.bookmarkId, item.contentType)
+  }
   return item.url
 }
 

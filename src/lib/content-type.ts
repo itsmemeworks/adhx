@@ -7,13 +7,14 @@ import type { ContentType } from '@/components/matter'
  *
  * Priority:
  *   1. an already-resolved `contentType` (server-enriched pulse items)
- *   2. single-format platforms (tiktok / youtube / instagram) → video
- *   3. article (X Article, `category === 'article'`, article blocks, or a
+ *   2. single-format platforms (TikTok / YouTube) → video
+ *   3. Instagram's persisted resolved media category
+ *   4. article (X Article, `category === 'article'`, article blocks, or a
  *      link-preview with no first-class media)
- *   4. video / animated_gif
- *   5. photo
- *   6. thumbnail heuristics (preview-only pulse items)
- *   7. text
+ *   5. video / animated_gif
+ *   6. photo
+ *   7. thumbnail heuristics (preview-only pulse items)
+ *   8. text
  *
  * Quote tweets are not a type — they classify as text/photo/video/article
  * from their own media. Stored `content_type = 'quote'` is ignored so old
@@ -23,7 +24,7 @@ import type { ContentType } from '@/components/matter'
 
 export const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'article'])
 
-const SINGLE_FORMAT = new Set(['tiktok', 'youtube', 'instagram'])
+const SINGLE_FORMAT = new Set(['tiktok', 'youtube'])
 
 const VIDEO_THUMB_RE = /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/
 
@@ -55,6 +56,12 @@ export function inferContentType(signals: ContentSignals): ContentType {
 
   const platform = signals.platform ?? 'twitter'
   if (SINGLE_FORMAT.has(platform)) return 'video'
+  if (platform === 'instagram') {
+    const instagramCategory = asContentType(signals.category)
+    if (instagramCategory === 'photo' || instagramCategory === 'video') {
+      return instagramCategory
+    }
+  }
 
   if (signals.isXArticle || signals.category === 'article' || signals.hasArticleBlocks) {
     return 'article'

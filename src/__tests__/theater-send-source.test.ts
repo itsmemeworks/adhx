@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveSendSource } from '@/components/theater/useSendFile'
+import { resolveSendSource, sendSourceKey } from '@/components/theater/useSendFile'
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**
@@ -93,6 +93,37 @@ describe('resolveSendSource', () => {
       kind: 'video',
     })
     expect(result?.src).not.toContain('/api/media/video?')
+  })
+
+  it('Instagram photo → the downloadable same-origin image proxy', () => {
+    expect(
+      resolveSendSource(
+        item({ platform: 'instagram', bookmarkId: 'DcHXej3lt5W', contentType: 'photo' }),
+      ),
+    ).toEqual({
+      src: '/api/media/instagram/thumbnail?id=DcHXej3lt5W&index=1&download=1',
+      filename: 'adhx-instagram-DcHXej3lt5W.jpg',
+      kind: 'photo',
+    })
+  })
+
+  it('keys prefetched blobs by the resolved photo/video source', () => {
+    const photo = item({
+      platform: 'instagram',
+      bookmarkId: 'same-id',
+      contentType: 'photo',
+    })
+    const video = item({
+      platform: 'instagram',
+      bookmarkId: 'same-id',
+      contentType: 'video',
+    })
+    const photoSource = resolveSendSource(photo)
+    const videoSource = resolveSendSource(video)
+
+    expect(photoSource).not.toBeNull()
+    expect(videoSource).not.toBeNull()
+    expect(sendSourceKey(photo, photoSource!)).not.toBe(sendSourceKey(video, videoSource!))
   })
 
   it('youtube → null (no MP4 mirror exists — official iframe only)', () => {

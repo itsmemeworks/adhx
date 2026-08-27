@@ -10,6 +10,9 @@ describe('parseAdminPostRef', () => {
     expect(parseAdminPostRef('/reels/AbC_12')).toEqual(
       expect.objectContaining({ platform: 'instagram', id: 'AbC_12' }),
     )
+    expect(parseAdminPostRef('/p/DcHXej3lt5W')).toEqual(
+      expect.objectContaining({ platform: 'instagram', id: 'DcHXej3lt5W' }),
+    )
     expect(parseAdminPostRef('twitter:999')).toEqual(
       expect.objectContaining({ platform: 'twitter', id: '999' }),
     )

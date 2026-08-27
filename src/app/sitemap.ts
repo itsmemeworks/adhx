@@ -162,7 +162,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Content previews across all platforms: every distinct saved post, plus
   // preview-only posts (surfaced via the pulse but never saved), de-duped by
-  // their on-ADHX preview path. Twitter authors behind an eligible post are
+  // platform identity. Twitter authors behind an eligible post are
   // collected into `twitterAuthors` for the author-hub section below.
   const seen = new Set<string>()
   const twitterAuthors = new Map<string, string>() // handle -> most-recent ISO timestamp seen
@@ -173,23 +173,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       // real user curation, so it's always sitemap-eligible (no thin-content
       // gate) — newest-first + capped so one huge table can't crowd out others.
       const saved = db
-        .selectDistinct({
+        .select({
           id: bookmarks.id,
-          author: bookmarks.author,
-          createdAt: bookmarks.createdAt,
+          author: sql<string>`max(${bookmarks.author})`,
+          createdAt: sql<string | null>`max(${bookmarks.createdAt})`,
+          category: sql<string | null>`CASE
+            WHEN max(CASE WHEN ${bookmarks.category} = 'photo' THEN 1 ELSE 0 END) = 1
+              THEN 'photo'
+            ELSE max(${bookmarks.category})
+          END`,
         })
         .from(bookmarks)
         .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
         .where(and(eq(bookmarks.platform, platform), isNull(userBans.userId)))
-        .orderBy(desc(bookmarks.processedAt))
+        .groupBy(bookmarks.id)
+        .orderBy(desc(sql`max(${bookmarks.processedAt})`))
         .limit(SOURCE_CAP)
         .all()
       for (const b of saved) {
         if (!b.id || !b.author) continue
         if (moderated.has(`${platform}:${b.id}`)) continue
-        const path = previewPath(platform, b.author, b.id)
-        if (seen.has(path)) continue
-        seen.add(path)
+        const identity = `${platform}:${b.id}`
+        const path = previewPath(platform, b.author, b.id, b.category)
+        if (seen.has(identity)) continue
+        seen.add(identity)
         entries.push({
           url: `${baseUrl}${path}`,
           lastModified: b.createdAt ? new Date(b.createdAt) : undefined,
@@ -227,11 +234,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       for (const a of previewed) {
         if (!a.bookmarkId || !a.author) continue
         if (moderated.has(`${platform}:${a.bookmarkId}`)) continue
-        const path = previewPath(platform, a.author, a.bookmarkId)
-        if (seen.has(path)) continue
+        const identity = `${platform}:${a.bookmarkId}`
+        const path = previewPath(platform, a.author, a.bookmarkId, a.contentType)
+        if (seen.has(identity)) continue
         // Mark visited regardless of gate outcome so an older duplicate event
         // for the same post can't re-evaluate (and potentially flip-flop) it.
-        seen.add(path)
+        seen.add(identity)
         const passes = passesThinContentGate({
           hasMedia: !!a.thumbnailUrl,
           isArticle: a.contentType === 'article',

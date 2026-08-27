@@ -54,7 +54,8 @@ export function filterLabel(filter: FilterId): string {
  * The post's type for the badge/filtering. Prefer the real `contentType`
  * resolved server-side from the saved bookmark; otherwise fall back to a
  * heuristic:
- *   tiktok / youtube / instagram → video (single-format platforms)
+ *   TikTok / YouTube → video (single-format platforms)
+ *   Instagram uses its resolved photo/video type
  *   an avatar/profile image is NOT real media → text
  *   a Twitter video poster (ext_tw_video_thumb / amplify / tweet_video_thumb) → video
  *   any other thumbnail ⇒ photo, otherwise text

@@ -221,7 +221,7 @@ export function StageInstagram({
   const poster = item.thumbnailUrl ?? null
 
   if (status === 'failed') {
-    const href = previewPath('instagram', item.author, id)
+    const href = previewPath('instagram', item.author, id, item.contentType)
     return (
       <div className="relative flex h-full w-full items-center justify-center bg-[#08070a]">
         <div className="relative flex h-full w-full max-w-[480px] flex-col items-center justify-center gap-4 px-4 py-6">

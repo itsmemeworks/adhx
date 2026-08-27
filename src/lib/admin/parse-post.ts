@@ -5,6 +5,7 @@ const PREVIEW_PATHS: Array<{
   platform: PlatformId
   id: (m: RegExpMatchArray) => string
   author?: (m: RegExpMatchArray) => string
+  contentType?: 'photo' | 'video'
 }> = [
   {
     re: /^\/(\w{1,15})\/status\/(\d+)\/?$/i,
@@ -12,7 +13,18 @@ const PREVIEW_PATHS: Array<{
     id: (m) => m[2],
     author: (m) => m[1],
   },
-  { re: /^\/reels?\/([A-Za-z0-9_-]+)\/?$/i, platform: 'instagram', id: (m) => m[1] },
+  {
+    re: /^\/reels?\/([A-Za-z0-9_-]+)\/?$/i,
+    platform: 'instagram',
+    id: (m) => m[1],
+    contentType: 'video',
+  },
+  {
+    re: /^\/p\/([A-Za-z0-9_-]+)\/?$/i,
+    platform: 'instagram',
+    id: (m) => m[1],
+    contentType: 'photo',
+  },
   {
     re: /^\/@([A-Za-z0-9._]{1,30})\/video\/(\d{6,25})\/?$/i,
     platform: 'tiktok',
@@ -39,12 +51,23 @@ function pathFromInput(raw: string): string | null {
 /**
  * Accept a source URL, an on-ADHX preview path/URL, or `platform:id`.
  */
-export function parseAdminPostRef(raw: string): PlatformPost | null {
+export interface AdminPostRef extends PlatformPost {
+  contentType?: 'photo' | 'video'
+}
+
+export function parseAdminPostRef(raw: string): AdminPostRef | null {
   const trimmed = raw.trim()
   if (!trimmed) return null
 
   const detected = detectPlatformPost(trimmed)
-  if (detected) return detected
+  if (detected) {
+    return {
+      ...detected,
+      ...(detected.platform === 'instagram'
+        ? { contentType: detected.previewPath.startsWith('/p/') ? 'photo' : 'video' }
+        : {}),
+    }
+  }
 
   const shorthand = trimmed.match(SHORTHAND)
   if (shorthand) {
@@ -65,6 +88,7 @@ export function parseAdminPostRef(raw: string): PlatformPost | null {
       id,
       author,
       previewPath: path,
+      contentType: spec.contentType,
     }
   }
   return null
