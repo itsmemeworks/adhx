@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import {
+  collectionAggregates,
   collectionEvents,
   tagShares,
   bookmarkTags,
@@ -11,7 +12,11 @@ import {
 } from '@/lib/db/schema'
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
-import { listBannedUserIds } from '@/lib/admin/moderation'
+import {
+  moderationStateFingerprint,
+  readBannedUserIds,
+  readModeratedPostKeys,
+} from '@/lib/admin/moderation'
 
 /**
  * Discovery leaderboard ranking — the SINGLE audited read choke point over
@@ -34,10 +39,10 @@ import { listBannedUserIds } from '@/lib/admin/moderation'
  * keep `viewerId` out. Leaderboard entries expose only the owning curator's
  * public `username` (never a raw `userId`).
  *
- * Score = views + 5×clones, computed within the selected rolling window over
- * events where `hidden = 0`. An INNER JOIN against `tag_shares` (`isPublic =
- * 1`) means a playlist made private drops off the board on its next read —
- * there is no separate "unpublish" step to remember.
+ * Score = views + 5×clones. Finite windows aggregate the retained raw log;
+ * all-time reads use the durable, viewer-free collection_aggregates rollup.
+ * An INNER JOIN against `tag_shares` (`isPublic = 1`) means a playlist made
+ * private drops off the board on its next read.
  */
 
 export type RankWindow = 'day' | 'week' | 'month' | 'all'
@@ -189,6 +194,7 @@ function resolveTileThumbnail(
  */
 function getTileDataForTags(
   pairs: { userId: string; tag: string }[],
+  moderated: Set<string>,
 ): Map<string, { itemCount: number; tiles: LeaderboardTile[] }> {
   const result = new Map<string, { itemCount: number; tiles: LeaderboardTile[] }>()
   const pairKeys = new Set(pairs.map((p) => `${p.userId}:${p.tag}`))
@@ -212,6 +218,7 @@ function getTileDataForTags(
     // actually requested (a different owner happening to use the same tag
     // name) — restrict to the exact pairs we were asked about.
     .filter((r) => pairKeys.has(`${r.userId}:${r.tag}`))
+    .filter((r) => !moderated.has(`${r.platform}:${r.bookmarkId}`))
 
   if (taggedRows.length === 0) return result
 
@@ -321,6 +328,50 @@ interface RawLeaderboardRow {
   lastEventAt: string
 }
 
+interface LeaderboardModeration {
+  banned: Set<string>
+  moderated: Set<string>
+  hiddenPlaylists: Set<string>
+  key: string
+}
+
+function readLeaderboardModeration(): LeaderboardModeration | null {
+  const banned = readBannedUserIds()
+  const moderated = readModeratedPostKeys()
+  if (!banned.ok || !moderated.ok) return null
+
+  try {
+    // Playlist moderation lives on both finite-window events and durable
+    // all-time aggregates. Read the current hidden identities on every cache
+    // access so a hide/unhide changes the fingerprint immediately; merely
+    // proving both stores readable also makes warm hits fail closed if either
+    // publication store is unavailable.
+    const hiddenEvents = db
+      .select({ ownerUserId: collectionEvents.ownerUserId, tag: collectionEvents.tag })
+      .from(collectionEvents)
+      .where(eq(collectionEvents.hidden, 1))
+      .groupBy(collectionEvents.ownerUserId, collectionEvents.tag)
+      .all()
+    const hiddenAggregates = db
+      .select({ ownerUserId: collectionAggregates.ownerUserId, tag: collectionAggregates.tag })
+      .from(collectionAggregates)
+      .where(eq(collectionAggregates.hidden, 1))
+      .all()
+    const hiddenPlaylists = new Set(
+      [...hiddenEvents, ...hiddenAggregates].map((row) => `${row.ownerUserId}:${row.tag}`),
+    )
+
+    return {
+      banned: banned.value,
+      moderated: moderated.value,
+      hiddenPlaylists,
+      key: moderationStateFingerprint(banned.value, moderated.value, hiddenPlaylists),
+    }
+  } catch {
+    return null
+  }
+}
+
 /**
  * Compute the FULL (unlimited) ranked board for a window+mode — the
  * expensive query, cached below. `getCollectionLeaderboard()` slices this to
@@ -328,43 +379,76 @@ interface RawLeaderboardRow {
  * find one owner's rank, which would be wrong if it only ever saw a
  * pre-sliced top-N.
  */
-function computeLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEntry[] {
+function computeLeaderboard(
+  window: RankWindow,
+  mode: RankMode,
+  moderation: LeaderboardModeration,
+): LeaderboardEntry[] {
   if (mode === 'hot' || mode === 'rising') {
     throw new Error('not implemented')
   }
 
-  const windowStart = windowStartIso(window)
-  const whereClauses = [eq(collectionEvents.hidden, 0), eq(tagShares.isPublic, true)]
-  if (windowStart) whereClauses.push(gte(collectionEvents.createdAt, windowStart))
-
-  // ANONYMITY CHOKE POINT: only owner/tag/aggregate columns are selected —
-  // `viewerId` is intentionally absent and must stay that way.
-  const rows = db
-    .select({
-      ownerUserId: collectionEvents.ownerUserId,
-      tag: collectionEvents.tag,
-      viewCount: sql<number>`sum(case when ${collectionEvents.action} = 'view' then 1 else 0 end)`,
-      cloneCount: sql<number>`sum(case when ${collectionEvents.action} = 'clone' then 1 else 0 end)`,
-      lastEventAt: sql<string>`max(${collectionEvents.createdAt})`,
-    })
-    .from(collectionEvents)
-    // A playlist made private drops off the board immediately — there is
-    // no separate "unpublish" bookkeeping, this join is the enforcement.
-    .innerJoin(
-      tagShares,
-      and(
-        eq(tagShares.userId, collectionEvents.ownerUserId),
-        eq(tagShares.tag, collectionEvents.tag),
-      ),
-    )
-    .where(and(...whereClauses))
-    .groupBy(collectionEvents.ownerUserId, collectionEvents.tag)
-    .all() as unknown as RawLeaderboardRow[]
+  let rows: RawLeaderboardRow[]
+  if (window === 'all') {
+    // ANONYMITY CHOKE POINT: this table contains no viewer identifier at all.
+    // All-time work is proportional to playlist count, not retained history.
+    rows = db
+      .select({
+        ownerUserId: collectionAggregates.ownerUserId,
+        tag: collectionAggregates.tag,
+        viewCount: collectionAggregates.viewCount,
+        cloneCount: collectionAggregates.cloneCount,
+        lastEventAt: collectionAggregates.lastEventAt,
+      })
+      .from(collectionAggregates)
+      .innerJoin(
+        tagShares,
+        and(
+          eq(tagShares.userId, collectionAggregates.ownerUserId),
+          eq(tagShares.tag, collectionAggregates.tag),
+        ),
+      )
+      .where(and(eq(collectionAggregates.hidden, 0), eq(tagShares.isPublic, true)))
+      .all()
+      .filter((row): row is typeof row & { lastEventAt: string } => row.lastEventAt != null)
+  } else {
+    const windowStart = windowStartIso(window) as string
+    // Finite windows remain bounded by raw retention. Only aggregate columns
+    // are selected; collectionEvents.viewerId is intentionally absent.
+    rows = db
+      .select({
+        ownerUserId: collectionEvents.ownerUserId,
+        tag: collectionEvents.tag,
+        viewCount: sql<number>`sum(case when ${collectionEvents.action} = 'view' then 1 else 0 end)`,
+        cloneCount: sql<number>`sum(case when ${collectionEvents.action} = 'clone' then 1 else 0 end)`,
+        lastEventAt: sql<string>`max(${collectionEvents.createdAt})`,
+      })
+      .from(collectionEvents)
+      .innerJoin(
+        tagShares,
+        and(
+          eq(tagShares.userId, collectionEvents.ownerUserId),
+          eq(tagShares.tag, collectionEvents.tag),
+        ),
+      )
+      .where(
+        and(
+          eq(collectionEvents.hidden, 0),
+          eq(tagShares.isPublic, true),
+          gte(collectionEvents.createdAt, windowStart),
+        ),
+      )
+      .groupBy(collectionEvents.ownerUserId, collectionEvents.tag)
+      .all() as unknown as RawLeaderboardRow[]
+  }
 
   if (rows.length === 0) return []
 
-  const banned = listBannedUserIds()
-  const visible = banned.size === 0 ? rows : rows.filter((r) => !banned.has(r.ownerUserId))
+  const unbanned =
+    moderation.banned.size === 0 ? rows : rows.filter((r) => !moderation.banned.has(r.ownerUserId))
+  const visible = unbanned.filter(
+    (row) => !moderation.hiddenPlaylists.has(`${row.ownerUserId}:${row.tag}`),
+  )
   if (visible.length === 0) return []
 
   const usernames = resolveUsernames([...new Set(visible.map((r) => r.ownerUserId))])
@@ -396,7 +480,10 @@ function computeLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEntr
     return b.lastEventAt.localeCompare(a.lastEventAt)
   })
 
-  const tileData = getTileDataForTags(scored.map((r) => ({ userId: r.ownerUserId, tag: r.tag })))
+  const tileData = getTileDataForTags(
+    scored.map((r) => ({ userId: r.ownerUserId, tag: r.tag })),
+    moderation.moderated,
+  )
 
   return scored.map((r, index) => {
     const tiles = tileData.get(`${r.ownerUserId}:${r.tag}`)
@@ -425,7 +512,10 @@ function computeLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEntr
  * object identity, so there's nothing to explicitly reset.
  */
 const CACHE_TTL_MS = 60_000
-type RankCache = Map<string, { value: LeaderboardEntry[]; expiresAt: number }>
+type RankCache = Map<
+  string,
+  { value: LeaderboardEntry[]; expiresAt: number; moderationKey: string }
+>
 const cachesByDb = new WeakMap<object, RankCache>()
 
 function getCache(): RankCache {
@@ -445,11 +535,17 @@ function getCachedLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEn
   const cache = getCache()
   const key = `${window}:${mode}`
   const now = Date.now()
+  const moderation = readLeaderboardModeration()
+  if (!moderation) return []
   const hit = cache.get(key)
-  if (hit && hit.expiresAt > now) return hit.value
+  if (hit && hit.expiresAt > now && hit.moderationKey === moderation.key) return hit.value
 
-  const value = computeLeaderboard(window, mode)
-  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  const value = computeLeaderboard(window, mode, moderation)
+  cache.set(key, {
+    value,
+    expiresAt: now + CACHE_TTL_MS,
+    moderationKey: moderation.key,
+  })
   return value
 }
 

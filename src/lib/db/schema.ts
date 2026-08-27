@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { relations, sql } from 'drizzle-orm'
 
 // ===========================================
@@ -56,6 +56,7 @@ export const bookmarks = sqliteTable(
     ),
     userIdCategoryIdx: index('bookmarks_user_category_idx').on(table.userId, table.category),
     userIdPlatformIdx: index('bookmarks_user_platform_idx').on(table.userId, table.platform),
+    platformIdIdx: index('bookmarks_platform_id_idx').on(table.platform, table.id),
     userIdQuotedTweetIdx: index('bookmarks_user_quoted_tweet_idx').on(
       table.userId,
       table.quotedTweetId,
@@ -85,6 +86,12 @@ export const bookmarkLinks = sqliteTable(
       table.userId,
       table.platform,
       table.bookmarkId,
+    ),
+    identityIdx: uniqueIndex('bookmark_links_identity_idx').on(
+      table.userId,
+      table.platform,
+      table.bookmarkId,
+      table.expandedUrl,
     ),
   }),
 )
@@ -160,12 +167,20 @@ export const oauthTokens = sqliteTable('oauth_tokens', {
   scopes: text('scopes'),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text('updated_at'),
+  refreshLeaseId: text('refresh_lease_id'),
+  refreshLeaseStartedAt: text('refresh_lease_started_at'),
 })
 
-// OAuth state (for PKCE flow) - temporary, no userId needed
+// OAuth state (for PKCE flow) — bound to the ADHX account that initiated it.
+// The callback must present the same signed-in user before it can atomically
+// consume the verifier, preventing a session switch from linking X elsewhere.
 export const oauthState = sqliteTable('oauth_state', {
   state: text('state').primaryKey(),
   codeVerifier: text('code_verifier').notNull(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  xLinkVersion: integer('x_link_version').notNull().default(0),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
@@ -224,6 +239,7 @@ export const syncLogs = sqliteTable(
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(),
     startedAt: text('started_at').notNull(),
+    heartbeatAt: text('heartbeat_at'),
     completedAt: text('completed_at'),
     status: text('status').notNull(),
     totalFetched: integer('total_fetched').default(0),
@@ -235,6 +251,9 @@ export const syncLogs = sqliteTable(
   },
   (table) => ({
     userIdIdx: index('sync_logs_user_id_idx').on(table.userId),
+    oneRunningPerUserIdx: uniqueIndex('sync_logs_one_running_per_user_idx')
+      .on(table.userId)
+      .where(sql`${table.status} = 'running'`),
   }),
 )
 
@@ -285,14 +304,20 @@ export const activity = sqliteTable(
       table.bookmarkId,
       table.createdAt,
     ),
+    platformBookmarkHiddenIdx: index('activity_platform_bookmark_hidden_idx').on(
+      table.platform,
+      table.bookmarkId,
+      table.hidden,
+    ),
   }),
 )
 
-// Collection events — the append-only event log behind Discovery leaderboards
+// Collection events — timestamped raw detail behind Discovery leaderboards
 // (docs/specs/discovery-leaderboards.md §3). Collections are keyed by
 // (ownerUserId, tag), not (platform, bookmarkId), so they get their own log
 // rather than nullable columns on `activity`. Same invariants as `activity`:
-// append-only (exempt from the composite-PK user-owned-data convention),
+// append-only while retained, with lifecycle-only pruning after 90 days
+// (exempt from the composite-PK user-owned-data convention),
 // `viewerId` stored for dedupe/moderation but NEVER exposed by any read path
 // (every read goes through src/lib/discovery/rank.ts), recording is
 // fire-and-forget, and `hidden` is the content-level moderation lever.
@@ -314,6 +339,28 @@ export const collectionEvents = sqliteTable(
       table.createdAt,
     ),
     createdAtIdx: index('collection_events_created_at_idx').on(table.createdAt),
+  }),
+)
+
+// Durable all-time playlist totals. Raw collection_events are retained only
+// long enough for finite-window ranking and dedupe; this table preserves the
+// complete history without viewer identifiers or an unbounded event scan.
+export const collectionAggregates = sqliteTable(
+  'collection_aggregates',
+  {
+    ownerUserId: text('owner_user_id').notNull(),
+    tag: text('tag').notNull(),
+    viewCount: integer('view_count').notNull().default(0),
+    cloneCount: integer('clone_count').notNull().default(0),
+    lastEventAt: text('last_event_at'),
+    hidden: integer('hidden').notNull().default(0),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.ownerUserId, table.tag] }),
+    visibilityRecencyIdx: index('collection_aggregates_visibility_recency_idx').on(
+      table.hidden,
+      table.lastEventAt,
+    ),
   }),
 )
 
@@ -403,6 +450,9 @@ export const adminAudit = sqliteTable(
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   username: text('username').notNull().unique(),
+  // Authorization is attached to the immutable account id, never inferred
+  // from the mutable/reclaimable username.
+  role: text('role').notNull().default('user'), // 'user' | 'admin'
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
   email: text('email'),
@@ -419,12 +469,18 @@ export const users = sqliteTable('users', {
   // records the old name in `username_aliases` so old `/t/{username}/...`
   // links keep redirecting instead of 404ing.
   usernameChangeCount: integer('username_change_count').notNull().default(0),
+  // Monotonic revocation generation for X-link flows. OAuth state captures
+  // this value at start; disconnect increments it so callbacks already in
+  // flight cannot recreate an identity or token row afterward.
+  xLinkVersion: integer('x_link_version').notNull().default(0),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 })
 
 // Linked sign-in identities for a user — X OAuth and/or email magic link.
-// PK (provider, providerId) so the same X account or email can't be linked
-// to two different users at once.
+// PK (provider, providerId) means one provider identity cannot belong to two
+// ADHX users. The partial unique index also limits each ADHX user to one X
+// identity, matching oauth_tokens' one-row-per-user model; email identities
+// remain unconstrained by user_id during atomic email changes.
 export const userIdentities = sqliteTable(
   'user_identities',
   {
@@ -436,6 +492,9 @@ export const userIdentities = sqliteTable(
   (table) => ({
     pk: primaryKey({ columns: [table.provider, table.providerId] }),
     userIdIdx: index('user_identities_user_id_idx').on(table.userId),
+    oneXPerUserIdx: uniqueIndex('user_identities_one_x_per_user_idx')
+      .on(table.userId)
+      .where(sql`${table.provider} = 'x'`),
   }),
 )
 
@@ -530,6 +589,8 @@ export type Activity = typeof activity.$inferSelect
 export type NewActivity = typeof activity.$inferInsert
 export type CollectionEvent = typeof collectionEvents.$inferSelect
 export type NewCollectionEvent = typeof collectionEvents.$inferInsert
+export type CollectionAggregate = typeof collectionAggregates.$inferSelect
+export type NewCollectionAggregate = typeof collectionAggregates.$inferInsert
 export type AnalyticsEvent = typeof analyticsEvents.$inferSelect
 export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert
 export type ModeratedPost = typeof moderatedPosts.$inferSelect

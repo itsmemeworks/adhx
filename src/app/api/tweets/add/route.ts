@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db, runInTransaction } from '@/lib/db'
-import { bookmarks, bookmarkLinks, bookmarkMedia } from '@/lib/db/schema'
+import { bookmarks, bookmarkMedia, type NewBookmarkLink } from '@/lib/db/schema'
+import { upsertBookmarkLinks } from '@/lib/db/bookmark-link-merge'
 import { eq, and } from 'drizzle-orm'
 import { metrics, captureException } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
@@ -241,67 +242,55 @@ export const POST = withAuth(async (request, userId) => {
     }
 
     const quotedTweetData = tweet.quote
+    const linkCandidates: NewBookmarkLink[] = []
+
+    if (tweet.article && articlePreview) {
+      linkCandidates.push({
+        userId,
+        platform: 'twitter',
+        bookmarkId: parsed.tweetId,
+        expandedUrl: articlePreview.url,
+        domain: 'x.com',
+        linkType: 'article',
+        previewTitle: articlePreview.title,
+        previewDescription: articlePreview.description,
+        previewImageUrl: articlePreview.imageUrl,
+        contentJson: articleContentJson,
+      })
+    }
+
+    if (directUrls) {
+      for (const link of directUrls) {
+        linkCandidates.push({
+          userId,
+          platform: 'twitter',
+          bookmarkId: parsed.tweetId,
+          originalUrl: link.url,
+          expandedUrl: link.expanded_url || link.url,
+          domain: link.domain || null,
+        })
+      }
+    } else if (!tweet.article) {
+      for (const { link, og } of facetLinksWithOg) {
+        linkCandidates.push({
+          userId,
+          platform: 'twitter',
+          bookmarkId: parsed.tweetId,
+          originalUrl: link.url,
+          expandedUrl: link.expanded_url,
+          domain: link.domain || null,
+          previewTitle: og?.title || null,
+          previewDescription: og?.description || null,
+          previewImageUrl: og?.image || null,
+        })
+      }
+    }
 
     // All multi-table writes happen atomically: main bookmark + its media +
     // links, plus (optionally) the quoted tweet + its media.
-    runInTransaction(() => {
-      if (quotedTweetData && shouldInsertQuotedTweet) {
-        db.insert(bookmarks)
-          .values({
-            id: quotedTweetData.id,
-            userId,
-            author: quotedAuthor,
-            authorName: quotedTweetData.author?.name || null,
-            authorProfileImageUrl: quotedTweetData.author?.avatar_url || null,
-            text: quotedTweetData.text || '',
-            tweetUrl: `https://x.com/${quotedAuthor}/status/${quotedTweetData.id}`,
-            createdAt: quotedTweetData.created_at
-              ? new Date(quotedTweetData.created_at).toISOString()
-              : now,
-            processedAt: now,
-            category: quotedCategory,
-            source: 'quoted', // Mark as saved via quote
-          })
-          .onConflictDoNothing()
-          .run()
-
-        // Save media for the quoted tweet
-        if (quotedTweetData.media?.photos) {
-          quotedTweetData.media.photos.forEach((photo, i) => {
-            db.insert(bookmarkMedia)
-              .values({
-                id: `${quotedTweetData.id}_photo_${i}`,
-                userId,
-                bookmarkId: quotedTweetData.id,
-                mediaType: 'photo',
-                originalUrl: photo.url,
-                width: photo.width,
-                height: photo.height,
-              })
-              .onConflictDoNothing()
-              .run()
-          })
-        }
-        if (quotedTweetData.media?.videos) {
-          quotedTweetData.media.videos.forEach((video, i) => {
-            db.insert(bookmarkMedia)
-              .values({
-                id: `${quotedTweetData.id}_video_${i}`,
-                userId,
-                bookmarkId: quotedTweetData.id,
-                mediaType: 'video',
-                originalUrl: video.url,
-                previewUrl: video.thumbnail_url,
-                width: video.width,
-                height: video.height,
-              })
-              .onConflictDoNothing()
-              .run()
-          })
-        }
-      }
-
-      db.insert(bookmarks)
+    const inserted = runInTransaction(() => {
+      const bookmarkInsert = db
+        .insert(bookmarks)
         .values({
           id: parsed.tweetId,
           userId,
@@ -318,74 +307,83 @@ export const POST = withAuth(async (request, userId) => {
           quoteContext,
           quotedTweetId,
         })
+        .onConflictDoNothing()
         .run()
+      const inserted = bookmarkInsert.changes > 0
 
-      // Process media if present
-      if (tweet.media?.all && Array.isArray(tweet.media.all)) {
-        tweet.media.all.forEach((m, i) => {
+      if (inserted) {
+        if (quotedTweetData && shouldInsertQuotedTweet) {
+          db.insert(bookmarks)
+            .values({
+              id: quotedTweetData.id,
+              userId,
+              author: quotedAuthor,
+              authorName: quotedTweetData.author?.name || null,
+              authorProfileImageUrl: quotedTweetData.author?.avatar_url || null,
+              text: quotedTweetData.text || '',
+              tweetUrl: `https://x.com/${quotedAuthor}/status/${quotedTweetData.id}`,
+              createdAt: quotedTweetData.created_at
+                ? new Date(quotedTweetData.created_at).toISOString()
+                : now,
+              processedAt: now,
+              category: quotedCategory,
+              source: 'quoted',
+            })
+            .onConflictDoNothing()
+            .run()
+
+          for (const [i, photo] of (quotedTweetData.media?.photos || []).entries()) {
+            db.insert(bookmarkMedia)
+              .values({
+                id: `${quotedTweetData.id}_photo_${i}`,
+                userId,
+                bookmarkId: quotedTweetData.id,
+                mediaType: 'photo',
+                originalUrl: photo.url,
+                width: photo.width,
+                height: photo.height,
+              })
+              .onConflictDoNothing()
+              .run()
+          }
+          for (const [i, video] of (quotedTweetData.media?.videos || []).entries()) {
+            db.insert(bookmarkMedia)
+              .values({
+                id: `${quotedTweetData.id}_video_${i}`,
+                userId,
+                bookmarkId: quotedTweetData.id,
+                mediaType: 'video',
+                originalUrl: video.url,
+                previewUrl: video.thumbnail_url,
+                width: video.width,
+                height: video.height,
+              })
+              .onConflictDoNothing()
+              .run()
+          }
+        }
+
+        for (const [i, media] of (tweet.media?.all || []).entries()) {
           db.insert(bookmarkMedia)
             .values({
               id: `${parsed.tweetId}_${i}`,
               userId,
               bookmarkId: parsed.tweetId,
-              mediaType: m.type || 'photo',
-              originalUrl: m.url || '',
-              previewUrl: m.thumbnail_url || m.url || '',
-              width: m.width || null,
-              height: m.height || null,
+              mediaType: media.type || 'photo',
+              originalUrl: media.url || '',
+              previewUrl: media.thumbnail_url || media.url || '',
+              width: media.width || null,
+              height: media.height || null,
             })
             .onConflictDoNothing()
             .run()
-        })
-      }
-
-      // Process X Article link if present
-      if (tweet.article && articlePreview) {
-        db.insert(bookmarkLinks)
-          .values({
-            userId,
-            bookmarkId: parsed.tweetId,
-            expandedUrl: articlePreview.url,
-            domain: 'x.com',
-            linkType: 'article',
-            previewTitle: articlePreview.title,
-            previewDescription: articlePreview.description,
-            previewImageUrl: articlePreview.imageUrl,
-            contentJson: articleContentJson,
-          })
-          .run()
-      }
-
-      // Process other links if present (external URLs from tweet, or
-      // facet-extracted URLs with their pre-fetched OG metadata)
-      if (directUrls) {
-        for (const link of directUrls) {
-          db.insert(bookmarkLinks)
-            .values({
-              userId,
-              bookmarkId: parsed.tweetId,
-              originalUrl: link.url,
-              expandedUrl: link.expanded_url || link.url,
-              domain: link.domain || null,
-            })
-            .run()
-        }
-      } else if (!tweet.article) {
-        for (const { link, og } of facetLinksWithOg) {
-          db.insert(bookmarkLinks)
-            .values({
-              userId,
-              bookmarkId: parsed.tweetId,
-              originalUrl: link.url,
-              expandedUrl: link.expanded_url,
-              domain: link.domain || null,
-              previewTitle: og?.title || null,
-              previewDescription: og?.description || null,
-              previewImageUrl: og?.image || null,
-            })
-            .run()
         }
       }
+
+      // Link enrichment is merge-safe and remains additive when another
+      // request inserted the parent between the early check and this write.
+      upsertBookmarkLinks(linkCandidates)
+      return inserted
     })
 
     // Fetch the created bookmark
@@ -400,6 +398,18 @@ export const POST = withAuth(async (request, userId) => {
         ),
       )
       .limit(1)
+
+    if (!inserted) {
+      return NextResponse.json(
+        {
+          success: false,
+          isDuplicate: true,
+          message: 'This tweet is already in your bookmarks',
+          bookmark: newBookmark[0],
+        },
+        { status: 200 },
+      )
+    }
 
     // Track bookmark addition with source
     metrics.bookmarkAdded(source as 'manual' | 'url_prefix')

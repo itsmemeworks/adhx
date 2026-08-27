@@ -8,6 +8,8 @@ import {
   bookmarkMedia,
   bookmarkLinks,
   bookmarks,
+  moderatedPosts,
+  userBans,
 } from '@/lib/db/schema'
 
 /**
@@ -42,6 +44,24 @@ async function seedOwner() {
   })
 }
 
+async function seedWarmPublicTagPost() {
+  await seedOwner()
+  await testInstance.db.insert(tagShares).values({
+    userId: OWNER_ID,
+    tag: 'public-tag',
+    shareCode: 'code-warm',
+    isPublic: true,
+  })
+  await testInstance.db
+    .insert(bookmarks)
+    .values(createTestBookmark(OWNER_ID, 'warm-post', { text: 'warm cached content' }))
+  await testInstance.db.insert(bookmarkTags).values({
+    userId: OWNER_ID,
+    bookmarkId: 'warm-post',
+    tag: 'public-tag',
+  })
+}
+
 describe('getPublicTagCollection', () => {
   beforeEach(() => {
     testInstance = createTestDb()
@@ -57,6 +77,73 @@ describe('getPublicTagCollection', () => {
     await seedOwner()
     const result = await getPublicTagCollection(OWNER_USERNAME, 'never-shared')
     expect(result.status).toBe('not_found')
+  })
+
+  it('returns not_found when the owner ban state cannot be loaded', async () => {
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'public-tag',
+      shareCode: 'code-unavailable',
+      isPublic: true,
+    })
+    testInstance.sqlite.exec('DROP TABLE user_bans')
+
+    const result = await getPublicTagCollection(OWNER_USERNAME, 'public-tag')
+    expect(result.status).toBe('not_found')
+  })
+
+  it('returns not_found when post moderation state cannot be loaded', async () => {
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'public-tag',
+      shareCode: 'code-post-unavailable',
+      isPublic: true,
+    })
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    const result = await getPublicTagCollection(OWNER_USERNAME, 'public-tag')
+    expect(result.status).toBe('not_found')
+  })
+
+  it('rechecks hidden posts on a warm public playlist cache hit', async () => {
+    await seedWarmPublicTagPost()
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'public-tag')).status).toBe('ok')
+    await testInstance.db.insert(moderatedPosts).values({
+      platform: 'twitter',
+      bookmarkId: 'warm-post',
+      hidden: 1,
+      createdAt: new Date().toISOString(),
+      createdBy: 'admin',
+    })
+
+    const result = await getPublicTagCollection(OWNER_USERNAME, 'public-tag')
+
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    expect(result.data.items).toEqual([])
+    expect(result.data.tweetCount).toBe(0)
+  })
+
+  it('rechecks owner bans on a warm public playlist cache hit', async () => {
+    await seedWarmPublicTagPost()
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'public-tag')).status).toBe('ok')
+    await testInstance.db.insert(userBans).values({
+      userId: OWNER_ID,
+      createdAt: new Date().toISOString(),
+      createdBy: 'admin',
+    })
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'public-tag')).status).toBe('not_found')
+  })
+
+  it('fails closed when moderation storage fails after warming a playlist cache', async () => {
+    await seedWarmPublicTagPost()
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'public-tag')).status).toBe('ok')
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'public-tag')).status).toBe('not_found')
   })
 
   it('returns private (never leaking items) for a tag that is not public', async () => {
@@ -116,6 +203,24 @@ describe('getPublicTagCollection', () => {
     expect((await getPublicTagCollection(OWNER_USERNAME, 'secret-tag')).status).toBe('ok')
   })
 
+  it('invalidates only the targeted username and tag cache entry', async () => {
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values([
+      { userId: OWNER_ID, tag: 'first', shareCode: 'code-first', isPublic: true },
+      { userId: OWNER_ID, tag: 'second', shareCode: 'code-second', isPublic: true },
+    ])
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'first')).status).toBe('ok')
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'second')).status).toBe('ok')
+
+    await testInstance.db.update(tagShares).set({ isPublic: false })
+    invalidateTagCollectionCache(OWNER_USERNAME, 'first')
+
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'first')).status).toBe('private')
+    // The non-targeted entry remains the cached public snapshot.
+    expect((await getPublicTagCollection(OWNER_USERNAME, 'second')).status).toBe('ok')
+  })
+
   it('returns items for a public tag, ordered newest-first, with on-ADHX preview links', async () => {
     await seedOwner()
     await testInstance.db.insert(tagShares).values({
@@ -157,6 +262,38 @@ describe('getPublicTagCollection', () => {
     const newItem = result.data.items.find((i) => i.bookmarkId === 'tweet-new')
     expect(newItem?.url).toBe('/author2/status/tweet-new')
     expect(newItem?.externalUrl).toContain('x.com/author2/status/tweet-new')
+  })
+
+  it('omits moderated posts from a public playlist', async () => {
+    await seedOwner()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'public-tag',
+      shareCode: 'code-moderated',
+      isPublic: true,
+    })
+    await testInstance.db
+      .insert(bookmarks)
+      .values(createTestBookmark(OWNER_ID, 'hidden-post', { text: 'must not appear' }))
+    await testInstance.db.insert(bookmarkTags).values({
+      userId: OWNER_ID,
+      bookmarkId: 'hidden-post',
+      tag: 'public-tag',
+    })
+    await testInstance.db.insert(moderatedPosts).values({
+      platform: 'twitter',
+      bookmarkId: 'hidden-post',
+      hidden: 1,
+      createdAt: new Date().toISOString(),
+      createdBy: 'admin',
+    })
+
+    const result = await getPublicTagCollection(OWNER_USERNAME, 'public-tag')
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    expect(result.data.items).toEqual([])
+    expect(result.data.tweetCount).toBe(0)
+    expect(JSON.stringify(result)).not.toContain('must not appear')
   })
 
   it('returns ok with empty items when the tag is public but has zero tagged bookmarks', async () => {

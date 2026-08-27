@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation'
 import { Metadata } from 'next'
-import { fetchReelMetadata, isValidReelId } from '@/lib/media/instafix'
+import { getReelMetadataStatus, isValidReelId } from '@/lib/media/instafix'
 import { getCurrentUserId } from '@/lib/auth/session'
 import {
   buildContentTitle,
   buildSnippetDescription,
   attributionFact,
   previewPageMetadata,
+  unavailablePreviewMetadata,
 } from '@/lib/utils/content-metadata'
 import { stubReelTheaterItem } from '@/lib/theater/shared-seed'
 import { resolveReelShared } from '@/lib/theater/resolve-shared-preview'
@@ -15,13 +16,15 @@ import {
   SharedPreviewPage,
   sharedPreviewSeed,
 } from '@/lib/theater/shared-preview'
-import { isPostModerated } from '@/lib/admin/moderation'
+import { readPostModeration } from '@/lib/admin/moderation'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 
 interface Props {
   params: Promise<{ id: string }>
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function ReelPreviewPage({ params }: Props) {
   const { id } = await params
@@ -30,10 +33,11 @@ export default async function ReelPreviewPage({ params }: Props) {
     redirect('/')
   }
 
-  const userId = await getCurrentUserId()
+  const moderation = readPostModeration('instagram', id)
+  const moderated = !moderation.ok || moderation.value
+  const userId = moderated ? null : await getCurrentUserId()
   const stub = stubReelTheaterItem(id)
   const seed = await sharedPreviewSeed(stub)
-  const moderated = isPostModerated('instagram', id)
 
   return (
     <SharedPreviewPage
@@ -55,12 +59,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
-  if (isPostModerated('instagram', id)) return MODERATED_PAGE_METADATA
+  const moderation = readPostModeration('instagram', id)
+  if (!moderation.ok || moderation.value) return MODERATED_PAGE_METADATA
 
   const baseUrl = PUBLIC_BASE_URL
   const canonicalUrl = `${baseUrl}/reels/${id}`
   const saved = getSavedPreviewDisplay('instagram', id)
-  const meta = saved ? null : await fetchReelMetadata(id)
+  const metadataStatus = saved ? null : await getReelMetadataStatus(id)
+
+  if (!saved && metadataStatus?.kind !== 'resolved') {
+    const permanent = metadataStatus?.kind === 'permanent-miss'
+    return unavailablePreviewMetadata({
+      title: permanent ? 'Instagram Reel unavailable - ADHX' : 'Instagram Reel - ADHX',
+      description: permanent
+        ? 'This Instagram Reel is no longer available.'
+        : 'This Instagram Reel preview is temporarily unavailable.',
+      canonicalUrl,
+    })
+  }
+
+  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const who = saved?.authorName || saved?.author || meta?.authorName || meta?.author
   const caption = saved?.text || meta?.caption || meta?.description || ''

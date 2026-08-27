@@ -1,11 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  fetchWithAllowlistedRedirects,
   isAllowedHlsUrl,
   isAllowedTwitterMediaUrl,
+  isTweetGoneCached,
   makeHostAllowlist,
+  markTweetGone,
   buildAllowlistedUrl,
   TWITTER_HLS_HOSTS,
 } from '@/lib/media/proxy'
+
+afterEach(() => vi.useRealTimers())
 
 describe('makeHostAllowlist', () => {
   it('allows an exact host match', () => {
@@ -124,5 +129,73 @@ describe('buildAllowlistedUrl', () => {
     expect(buildAllowlistedUrl('https://a.b.twimg.com/foo.mp4', ['.twimg.com'])).toBe(
       'https://a.b.twimg.com/foo.mp4',
     )
+  })
+})
+
+describe('fetchWithAllowlistedRedirects', () => {
+  it('caps redirect hops without fetching beyond the allowlist', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(null, { status: 302, headers: { location: '/next/video.mp4' } }),
+      )
+
+    try {
+      await expect(
+        fetchWithAllowlistedRedirects('https://video.twimg.com/start/video.mp4', {
+          hosts: ['video.twimg.com'],
+          timeoutMs: 1_000,
+          maxRedirects: 2,
+        }),
+      ).rejects.toThrow(/hop limit/i)
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+      expect(
+        fetchSpy.mock.calls.every(([url]) => new URL(String(url)).hostname === 'video.twimg.com'),
+      ).toBe(true)
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('rejects and cancels an unexpected off-allowlist final response URL', async () => {
+    const cancel = vi.fn()
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      status: 200,
+      url: 'https://evil.example/video.mp4',
+      headers: new Headers(),
+      body: { cancel },
+    } as unknown as Response)
+
+    try {
+      await expect(
+        fetchWithAllowlistedRedirects('https://video.twimg.com/start/video.mp4', {
+          hosts: ['video.twimg.com'],
+          timeoutMs: 1_000,
+        }),
+      ).rejects.toThrow(/final media response URL/i)
+      expect(cancel).toHaveBeenCalledOnce()
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+})
+
+describe('gone tweet cache', () => {
+  it('expires negative results after ten minutes', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T12:00:00Z'))
+    markTweetGone('expiry-user/1')
+    expect(isTweetGoneCached('expiry-user/1')).toBe(true)
+
+    vi.advanceTimersByTime(10 * 60 * 1_000)
+
+    expect(isTweetGoneCached('expiry-user/1')).toBe(false)
+  })
+
+  it('hard-caps many simultaneously live tweet keys', () => {
+    for (let i = 0; i <= 1_000; i++) markTweetGone(`bounds-user/${i}`)
+
+    expect(isTweetGoneCached('bounds-user/0')).toBe(false)
+    expect(isTweetGoneCached('bounds-user/1000')).toBe(true)
   })
 })

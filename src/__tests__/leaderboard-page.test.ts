@@ -1,8 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createTestDb, type TestDbInstance } from './api/setup'
-import { collectionEvents, tagShares, users, type NewCollectionEvent } from '@/lib/db/schema'
+import {
+  collectionAggregates,
+  collectionEvents,
+  tagShares,
+  users,
+  type NewCollectionEvent,
+} from '@/lib/db/schema'
 import { getCurrentUserId } from '@/lib/auth/session'
+import { sql } from 'drizzle-orm'
 
 /**
  * /leaderboard page tests — `src/app/leaderboard/page.tsx` and
@@ -71,6 +78,26 @@ function seedEvent(
 ) {
   const row: NewCollectionEvent = { action: 'view', hidden: 0, ...overrides }
   testInstance.db.insert(collectionEvents).values(row).run()
+  testInstance.db
+    .insert(collectionAggregates)
+    .values({
+      ownerUserId: row.ownerUserId,
+      tag: row.tag,
+      viewCount: row.action === 'view' ? 1 : 0,
+      cloneCount: row.action === 'clone' ? 1 : 0,
+      lastEventAt: row.createdAt,
+      hidden: row.hidden ?? 0,
+    })
+    .onConflictDoUpdate({
+      target: [collectionAggregates.ownerUserId, collectionAggregates.tag],
+      set: {
+        viewCount: sql`${collectionAggregates.viewCount} + excluded.view_count`,
+        cloneCount: sql`${collectionAggregates.cloneCount} + excluded.clone_count`,
+        lastEventAt: sql`max(${collectionAggregates.lastEventAt}, excluded.last_event_at)`,
+        hidden: sql`max(${collectionAggregates.hidden}, excluded.hidden)`,
+      },
+    })
+    .run()
 }
 
 /** Extract + parse the page's `<script type="application/ld+json">` payload. */

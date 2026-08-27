@@ -30,16 +30,16 @@ vi.mock('@/lib/sentry', () => ({
   captureException: vi.fn(),
 }))
 
-// getSession() reads cookies() from next/headers, which throws outside a real
+// getCurrentUserId() reads cookies() from next/headers, which throws outside a real
 // request scope (this test invokes the route handler directly, not through
-// Next's server runtime). Mock just getSession to "no existing session" by
+// Next's server runtime). Mock it to "no existing session" by
 // default; keep setSessionCookie/clearSessionCookie real since they only use
 // NextResponse.cookies (no next/headers involved).
 vi.mock('@/lib/auth/session', async () => {
   const actual = await vi.importActual<typeof import('@/lib/auth/session')>('@/lib/auth/session')
   return {
     ...actual,
-    getSession: vi.fn(() => Promise.resolve(null)),
+    getCurrentUserId: vi.fn(() => Promise.resolve(null)),
   }
 })
 
@@ -61,9 +61,9 @@ function createCallbackRequest(params: Record<string, string>): NextRequest {
 }
 
 async function seedSignedIn(userId = 'u_email', username = 'emailer') {
-  await testInstance.db.insert(schema.users).values({ id: userId, username })
-  const { getSession } = await import('@/lib/auth/session')
-  vi.mocked(getSession).mockResolvedValue({ userId, username }) // overrides the default null session
+  await testInstance.db.insert(schema.users).values({ id: userId, username }).onConflictDoNothing()
+  const { getCurrentUserId } = await import('@/lib/auth/session')
+  vi.mocked(getCurrentUserId).mockResolvedValue(userId) // overrides the default null session
   return { userId, username }
 }
 
@@ -72,8 +72,8 @@ describe('API: /api/auth/twitter/callback', () => {
     testInstance = createTestDb()
     vi.clearAllMocks()
     vi.resetModules()
-    const { getSession } = await import('@/lib/auth/session')
-    vi.mocked(getSession).mockResolvedValue(null)
+    const { getCurrentUserId } = await import('@/lib/auth/session')
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -144,14 +144,65 @@ describe('API: /api/auth/twitter/callback', () => {
       const location = response.headers.get('location')
       expect(location).toContain('Invalid%20or%20expired%20state')
     })
+
+    it('rejects a callback after the browser switches to a different ADHX session', async () => {
+      await seedSignedIn('u_switched', 'switched')
+      await testInstance.db
+        .insert(schema.users)
+        .values({ id: 'u_initiator', username: 'initiator' })
+      await testInstance.db.insert(schema.oauthState).values({
+        state: 'bound-state',
+        codeVerifier: 'bound-verifier',
+        userId: 'u_initiator',
+        createdAt: new Date().toISOString(),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(
+        createCallbackRequest({
+          code: 'valid-code',
+          state: 'bound-state',
+        }),
+      )
+
+      expect(response.headers.get('location')).toContain('Invalid%20or%20expired%20state')
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(await testInstance.db.select().from(schema.userIdentities)).toHaveLength(0)
+      expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
+      const [state] = await testInstance.db.select().from(schema.oauthState)
+      expect(state.userId).toBe('u_initiator')
+    })
+
+    it('rejects an expired state before exchanging the authorization code', async () => {
+      await seedSignedIn()
+      await testInstance.db.insert(schema.oauthState).values({
+        state: 'expired-state',
+        codeVerifier: 'expired-verifier',
+        userId: 'u_email',
+        createdAt: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const response = await GET(
+        createCallbackRequest({
+          code: 'valid-code',
+          state: 'expired-state',
+        }),
+      )
+
+      expect(response.headers.get('location')).toContain('Invalid%20or%20expired%20state')
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
   })
 
   describe('Successful authentication', () => {
     beforeEach(async () => {
+      await testInstance.db.insert(schema.users).values({ id: 'u_email', username: 'emailer' })
       // Insert a valid OAuth state
       await testInstance.db.insert(schema.oauthState).values({
         state: 'valid-state',
         codeVerifier: 'test-code-verifier',
+        userId: 'u_email',
         createdAt: new Date().toISOString(),
       })
     })
@@ -169,7 +220,9 @@ describe('API: /api/auth/twitter/callback', () => {
       expect(response.headers.get('location')).toBe('http://localhost:3000/?auth_error=x_link_only')
       const cookies = response.headers.getSetCookie()
       expect(cookies.some((c) => c.includes('adhx_session'))).toBe(false)
-      expect(await testInstance.db.select().from(schema.users)).toHaveLength(0)
+      // The initiating account exists, but the unsigned callback creates
+      // nothing and cannot spend its state.
+      expect(await testInstance.db.select().from(schema.users)).toHaveLength(1)
       expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
       expect(mockFetch).not.toHaveBeenCalled()
       // PKCE verifier is not spent, so a later signed-in retry of Connect X
@@ -222,6 +275,170 @@ describe('API: /api/auth/twitter/callback', () => {
       // Verify session cookie was set
       const cookies = response.headers.getSetCookie()
       expect(cookies.some((c) => c.includes('adhx_session'))).toBe(true)
+    })
+
+    it('rejects a callback when disconnect wins during token exchange', async () => {
+      await seedSignedIn()
+      await testInstance.db.insert(schema.userIdentities).values({
+        provider: 'email',
+        providerId: 'reader@example.com',
+        userId: 'u_email',
+      })
+
+      let releaseExchange!: () => void
+      mockFetch.mockReturnValueOnce(
+        new Promise((resolve) => {
+          releaseExchange = () =>
+            resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  access_token: 'late-access',
+                  refresh_token: 'late-refresh',
+                  expires_in: 7200,
+                  scope: 'tweet.read',
+                }),
+            })
+        }),
+      )
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: { id: 'late-x-user', username: 'latex', name: 'Late X' },
+          }),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const pending = GET(createCallbackRequest({ code: 'valid-code', state: 'valid-state' }))
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+
+      const { unlinkX } = await import('@/lib/auth/account')
+      expect(await unlinkX('u_email')).toEqual({ ok: true })
+      releaseExchange()
+
+      const response = await pending
+      expect(response.headers.get('location')).toBe(
+        'http://localhost:3000/settings?auth_error=x_already_linked',
+      )
+      expect(
+        await testInstance.db
+          .select()
+          .from(schema.userIdentities)
+          .where(eq(schema.userIdentities.provider, 'x')),
+      ).toHaveLength(0)
+      expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
+      expect(
+        await testInstance.db
+          .select({ xLinkVersion: schema.users.xLinkVersion })
+          .from(schema.users)
+          .where(eq(schema.users.id, 'u_email')),
+      ).toEqual([{ xLinkVersion: 1 }])
+    })
+
+    it('allows only one of two parallel callbacks to consume an OAuth state', async () => {
+      await seedSignedIn()
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'new-access-token',
+            refresh_token: 'new-refresh-token',
+            expires_in: 7200,
+            scope: 'tweet.read users.read bookmark.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              id: 'parallel-x-user',
+              username: 'parallelx',
+              name: 'Parallel X',
+            },
+          }),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const responses = await Promise.all([
+        GET(createCallbackRequest({ code: 'valid-code', state: 'valid-state' })),
+        GET(createCallbackRequest({ code: 'valid-code', state: 'valid-state' })),
+      ])
+      const locations = responses.map((response) => response.headers.get('location'))
+
+      expect(locations.filter((location) => location?.endsWith('/settings'))).toHaveLength(1)
+      expect(
+        locations.filter((location) => location?.includes('Invalid%20or%20expired%20state')),
+      ).toHaveLength(1)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(1)
+      expect(
+        await testInstance.db
+          .select()
+          .from(schema.userIdentities)
+          .where(eq(schema.userIdentities.provider, 'x')),
+      ).toHaveLength(1)
+    })
+
+    it('allows only one winner when parallel states resolve to different X accounts', async () => {
+      await seedSignedIn()
+      await testInstance.db.insert(schema.oauthState).values({
+        state: 'second-state',
+        codeVerifier: 'second-code-verifier',
+        userId: 'u_email',
+        createdAt: new Date().toISOString(),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'access-a',
+            refresh_token: 'refresh-a',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: 'access-b',
+            refresh_token: 'refresh-b',
+            expires_in: 7200,
+            scope: 'tweet.read',
+          }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: { id: 'x-a', username: 'xa', name: 'X A' } }),
+      })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ data: { id: 'x-b', username: 'xb', name: 'X B' } }),
+      })
+
+      const { GET } = await import('@/app/api/auth/twitter/callback/route')
+      const responses = await Promise.all([
+        GET(createCallbackRequest({ code: 'code-a', state: 'valid-state' })),
+        GET(createCallbackRequest({ code: 'code-b', state: 'second-state' })),
+      ])
+      const locations = responses.map((response) => response.headers.get('location'))
+
+      expect(locations.filter((location) => location?.endsWith('/settings'))).toHaveLength(1)
+      expect(
+        locations.filter((location) => location?.includes('auth_error=x_already_linked')),
+      ).toHaveLength(1)
+      expect(mockFetch).toHaveBeenCalledTimes(4)
+
+      const identities = await testInstance.db
+        .select()
+        .from(schema.userIdentities)
+        .where(eq(schema.userIdentities.provider, 'x'))
+      const tokens = await testInstance.db.select().from(schema.oauthTokens)
+      expect(identities).toHaveLength(1)
+      expect(tokens).toHaveLength(1)
+      expect(tokens[0].username).toBe(identities[0].providerId === 'x-a' ? 'xa' : 'xb')
     })
 
     it('handles return URL cookie for URL prefix feature', async () => {
@@ -391,6 +608,10 @@ describe('API: /api/auth/twitter/callback', () => {
 
     it('identifies returning user in metrics', async () => {
       await seedSignedIn('existing-user', 'existinguser')
+      await testInstance.db
+        .update(schema.oauthState)
+        .set({ userId: 'existing-user' })
+        .where(eq(schema.oauthState.state, 'valid-state'))
       // Insert existing tokens for user
       await testInstance.db.insert(schema.oauthTokens).values({
         userId: 'existing-user',
@@ -444,9 +665,13 @@ describe('API: /api/auth/twitter/callback', () => {
     // contract: a conflict must redirect cleanly, never 500, never touch the
     // caller's session.
     beforeEach(async () => {
+      await testInstance.db
+        .insert(schema.users)
+        .values({ id: 'signed-in-user', username: 'signedin' })
       await testInstance.db.insert(schema.oauthState).values({
         state: 'valid-state',
         codeVerifier: 'test-code-verifier',
+        userId: 'signed-in-user',
         createdAt: new Date().toISOString(),
       })
     })
@@ -460,11 +685,8 @@ describe('API: /api/auth/twitter/callback', () => {
 
       // A different account is currently signed in and attempts to connect
       // the same X account (e.g. from Settings).
-      const { getSession } = await import('@/lib/auth/session')
-      vi.mocked(getSession).mockResolvedValueOnce({
-        userId: 'signed-in-user',
-        username: 'signedin',
-      })
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      vi.mocked(getCurrentUserId).mockResolvedValueOnce('signed-in-user')
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -544,11 +766,12 @@ describe('API: /api/auth/twitter/callback', () => {
       await testInstance.db
         .insert(schema.userIdentities)
         .values({ provider: 'email', providerId: 'detached@example.com', userId: 'detached-id' })
-      const { getSession } = await import('@/lib/auth/session')
-      vi.mocked(getSession).mockResolvedValue({
-        userId: 'detached-id',
-        username: 'detacheduser',
-      })
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      vi.mocked(getCurrentUserId).mockResolvedValue('detached-id')
+      await testInstance.db
+        .update(schema.oauthState)
+        .set({ userId: 'detached-id' })
+        .where(eq(schema.oauthState.state, 'valid-state'))
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -624,9 +847,11 @@ describe('API: /api/auth/twitter/callback', () => {
 
   describe('Token exchange errors', () => {
     beforeEach(async () => {
+      await seedSignedIn()
       await testInstance.db.insert(schema.oauthState).values({
         state: 'valid-state',
         codeVerifier: 'test-verifier',
+        userId: 'u_email',
         createdAt: new Date().toISOString(),
       })
     })

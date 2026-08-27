@@ -13,10 +13,19 @@ import { createTestDb, createTestBookmark, USER_A, USER_B, type TestDbInstance }
 
 let mockUserId: string | null = USER_A
 let testInstance: TestDbInstance
+let transactionCalls = 0
+let beforeTransaction: (() => void) | null = null
 
 vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
+  },
+  runInTransaction<R>(fn: () => R): R {
+    transactionCalls += 1
+    const interleave = beforeTransaction
+    beforeTransaction = null
+    interleave?.()
+    return testInstance.sqlite.transaction(fn)()
   },
 }))
 
@@ -32,8 +41,8 @@ vi.mock('@/lib/sentry', () => ({
   captureException: vi.fn(),
 }))
 
-function createRequest(method: string, body?: object): NextRequest {
-  return new NextRequest('http://localhost:3000/api/bookmarks/tweet-1/tags', {
+function createRequest(method: string, body?: object, platform = 'twitter'): NextRequest {
+  return new NextRequest(`http://localhost:3000/api/bookmarks/tweet-1/tags?platform=${platform}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
@@ -44,6 +53,8 @@ describe('API: /api/bookmarks/[id]/tags', () => {
   beforeEach(async () => {
     testInstance = createTestDb()
     mockUserId = USER_A
+    transactionCalls = 0
+    beforeTransaction = null
     vi.clearAllMocks()
 
     await testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_A, 'tweet-1'))
@@ -200,6 +211,105 @@ describe('API: /api/bookmarks/[id]/tags', () => {
       expect(response.status).toBe(400)
       const data = await response.json()
       expect(data.error).toContain('Maximum 5')
+    })
+
+    it('serializes concurrent fifth-tag requests at the transaction boundary', async () => {
+      await testInstance.db.insert(schema.bookmarkTags).values(
+        ['one', 'two', 'three', 'four'].map((tag) => ({
+          userId: USER_A,
+          platform: 'twitter',
+          bookmarkId: 'tweet-1',
+          tag,
+        })),
+      )
+
+      const { POST } = await import('@/app/api/bookmarks/[id]/tags/route')
+      const responses = await Promise.all([
+        POST(createRequest('POST', { tag: 'five' }), {
+          params: Promise.resolve({ id: 'tweet-1' }),
+        }),
+        POST(createRequest('POST', { tag: 'six' }), {
+          params: Promise.resolve({ id: 'tweet-1' }),
+        }),
+      ])
+
+      expect(responses.map((response) => response.status).sort()).toEqual([200, 400])
+      const rows = testInstance.db
+        .select()
+        .from(schema.bookmarkTags)
+        .where(
+          and(
+            eq(schema.bookmarkTags.userId, USER_A),
+            eq(schema.bookmarkTags.platform, 'twitter'),
+            eq(schema.bookmarkTags.bookmarkId, 'tweet-1'),
+          ),
+        )
+        .all()
+      expect(rows).toHaveLength(5)
+      expect(transactionCalls).toBe(2)
+    })
+
+    it('returns not found when the bookmark is deleted before the tag transaction', async () => {
+      beforeTransaction = () => {
+        testInstance.db
+          .delete(schema.bookmarks)
+          .where(
+            and(
+              eq(schema.bookmarks.userId, USER_A),
+              eq(schema.bookmarks.platform, 'twitter'),
+              eq(schema.bookmarks.id, 'tweet-1'),
+            ),
+          )
+          .run()
+      }
+
+      const { POST } = await import('@/app/api/bookmarks/[id]/tags/route')
+      const response = await POST(createRequest('POST', { tag: 'orphan' }), {
+        params: Promise.resolve({ id: 'tweet-1' }),
+      })
+
+      expect(response.status).toBe(404)
+      expect(await response.json()).toEqual({ error: 'Bookmark not found' })
+      expect(testInstance.db.select().from(schema.bookmarkTags).all()).toHaveLength(0)
+      expect(transactionCalls).toBe(1)
+    })
+
+    it('does not count tags from another user or platform', async () => {
+      await testInstance.db.insert(schema.bookmarkTags).values([
+        ...['a', 'b', 'c', 'd', 'e'].map((tag) => ({
+          userId: USER_B,
+          platform: 'twitter',
+          bookmarkId: 'tweet-1',
+          tag,
+        })),
+        ...['a', 'b', 'c', 'd', 'e'].map((tag) => ({
+          userId: USER_A,
+          platform: 'instagram',
+          bookmarkId: 'tweet-1',
+          tag,
+        })),
+      ])
+
+      const { POST } = await import('@/app/api/bookmarks/[id]/tags/route')
+      const response = await POST(createRequest('POST', { tag: 'mine' }), {
+        params: Promise.resolve({ id: 'tweet-1' }),
+      })
+
+      expect(response.status).toBe(200)
+      expect(
+        testInstance.db
+          .select()
+          .from(schema.bookmarkTags)
+          .where(
+            and(
+              eq(schema.bookmarkTags.userId, USER_A),
+              eq(schema.bookmarkTags.platform, 'twitter'),
+              eq(schema.bookmarkTags.bookmarkId, 'tweet-1'),
+            ),
+          )
+          .all(),
+      ).toHaveLength(1)
+      expect(transactionCalls).toBe(1)
     })
 
     it('handles duplicate tag gracefully', async () => {

@@ -13,16 +13,55 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
-import { render, waitFor, act } from '@testing-library/react'
+import { render, waitFor, act, screen, fireEvent } from '@testing-library/react'
 import FeedPage from '@/app/AuthedHome'
 import type { FeedItem } from '@/components/feed/types'
+import { SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
+import {
+  notifyCollectionChanged,
+  notifyTagsChanged,
+  resetClientEventBridgeForTests,
+  setClientEventAccount,
+} from '@/lib/client-events'
 
 let currentQuery = ''
 let currentParamsObj = new URLSearchParams(currentQuery)
 const urlListeners = new Set<() => void>()
 
+type EventListener = (event: Event) => void
+
+class MockEventSource {
+  static instances: MockEventSource[] = []
+  listeners: Record<string, EventListener[]> = {}
+  onerror: ((event: Event) => void) | null = null
+
+  constructor(public url: string) {
+    MockEventSource.instances.push(this)
+  }
+
+  addEventListener(type: string, listener: EventListener) {
+    ;(this.listeners[type] ||= []).push(listener)
+  }
+
+  close() {}
+
+  emit(type: string, data: unknown) {
+    const event = new MessageEvent(type, { data: JSON.stringify(data) })
+    this.listeners[type]?.forEach((listener) => listener(event))
+  }
+}
+
+const navigationMocks = vi.hoisted(() => ({
+  router: {
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  },
+}))
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => navigationMocks.router,
   usePathname: () => '/library',
   useSearchParams: () => {
     const [, forceRender] = useState(0)
@@ -54,7 +93,11 @@ vi.mock('@/components/feed', async (importOriginal) => {
       renderedJustAddedKey = props.justAddedKey
       return null
     },
-    FilterBar: () => null,
+    FilterBar: (props: { onFilterChange: (filter: 'videos') => void }) => (
+      <button type="button" onClick={() => props.onFilterChange('videos')}>
+        Videos filter probe
+      </button>
+    ),
   }
 })
 vi.mock('@/components/LandingPage', () => ({ LandingPage: () => null }))
@@ -94,6 +137,9 @@ let tagsRequests = 0
 let feedPages: FeedItem[][] = []
 
 beforeEach(() => {
+  resetClientEventBridgeForTests()
+  setClientEventAccount('1')
+  vi.clearAllMocks()
   currentQuery = ''
   currentParamsObj = new URLSearchParams(currentQuery)
   urlListeners.clear()
@@ -127,6 +173,9 @@ beforeEach(() => {
       tagsRequests += 1
       return jsonResponse({ tags: [] })
     }
+    if (url.startsWith('/api/sync/cooldown')) {
+      return jsonResponse({ canSync: true, cooldownRemaining: 0, lastSyncAt: null })
+    }
     if (url.startsWith('/api/bookmarks/add')) {
       // The id the add endpoint reports must match the row the follow-up
       // `/api/feed?id=` lookup returns, or the prepend silently no-ops.
@@ -149,11 +198,50 @@ async function mountGrid() {
 /** Fire the event `TagQuickPicker`/the grid's tag toggles dispatch. */
 function dispatchTagsChanged(bookmarkId: string, tags: string[], platform = 'twitter') {
   act(() => {
-    window.dispatchEvent(
-      new CustomEvent('bookmark-tags-changed', { detail: { platform, bookmarkId, tags } }),
-    )
+    notifyTagsChanged({ platform, bookmarkId, tags })
   })
 }
+
+describe('AuthedHome: filter URL synchronization', () => {
+  it('does not replace an already-matching URL after Next refreshes search params', async () => {
+    await mountGrid()
+    expect(navigationMocks.router.replace).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Videos filter probe' }))
+    await waitFor(() =>
+      expect(navigationMocks.router.replace).toHaveBeenCalledWith('?filter=videos', {
+        scroll: false,
+      }),
+    )
+    expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      currentParamsObj = new URLSearchParams('filter=videos')
+      urlListeners.forEach((listener) => listener())
+    })
+
+    await waitFor(() => expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1))
+  })
+
+  it('preserves unrelated query state while removing deprecated parameters once', async () => {
+    currentParamsObj = new URLSearchParams('search=term&unreadOnly=true')
+    await mountGrid()
+
+    await waitFor(() =>
+      expect(navigationMocks.router.replace).toHaveBeenCalledWith('?search=term', {
+        scroll: false,
+      }),
+    )
+    expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      currentParamsObj = new URLSearchParams('search=term')
+      urlListeners.forEach((listener) => listener())
+    })
+
+    await waitFor(() => expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1))
+  })
+})
 
 describe('AuthedHome: a tag added elsewhere lands on the card', () => {
   /**
@@ -211,7 +299,7 @@ describe('AuthedHome: a tag added elsewhere lands on the card', () => {
     await mountGrid()
 
     act(() => {
-      window.dispatchEvent(new CustomEvent('bookmark-tags-changed'))
+      notifyCollectionChanged({ refetchFeed: false, tagsChanged: true })
     })
 
     // A dispatch without detail (a "just refresh the counts" ping) must not be
@@ -293,5 +381,33 @@ describe('AuthedHome: pasting a link adds the post in place', () => {
     paste('https://adhx.com/t/weedauwl/investments')
 
     await waitFor(() => expect(renderedItems.map((i) => i.id)).toEqual(before))
+  })
+})
+
+describe('AuthedHome: sync error UX', () => {
+  it('preserves the in-progress SSE message instead of showing connection loss', async () => {
+    MockEventSource.instances = []
+    vi.stubGlobal('EventSource', MockEventSource)
+    currentQuery = 'firstLogin=true'
+    currentParamsObj = new URLSearchParams(currentQuery)
+
+    try {
+      render(<FeedPage />)
+      await waitFor(() => expect(MockEventSource.instances).toHaveLength(1), { timeout: 2000 })
+
+      act(() => {
+        const eventSource = MockEventSource.instances[0]
+        eventSource.emit('error', {
+          message: SYNC_IN_PROGRESS_MESSAGE,
+          code: 'in_progress',
+        })
+        eventSource.onerror?.(new Event('error'))
+      })
+
+      expect(await screen.findByText(SYNC_IN_PROGRESS_MESSAGE)).toBeInTheDocument()
+      expect(screen.queryByText(/Connection lost/)).not.toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

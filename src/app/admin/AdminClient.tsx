@@ -819,8 +819,8 @@ export function AdminClient() {
         <p className="flex items-start gap-2 text-[12.5px] text-ink-3">
           <AlertTriangle className="h-4 w-4 flex-none mt-0.5" />
           <span>
-            Hide and ban are reversible. They never delete a user&apos;s private collection. Set{' '}
-            <code>ADMIN_USERNAMES</code> on the host to control who can open this page.
+            Hide and ban are reversible. They never delete a user&apos;s private collection. Access
+            is limited to accounts with the persisted admin role.
           </span>
         </p>
         <p className="flex items-center gap-2 text-[12.5px] text-ink-3">

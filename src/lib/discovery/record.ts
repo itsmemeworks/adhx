@@ -1,6 +1,6 @@
-import { db } from '@/lib/db'
-import { collectionEvents, tagShares } from '@/lib/db/schema'
-import { and, eq, gt } from 'drizzle-orm'
+import { db, runInTransaction } from '@/lib/db'
+import { collectionAggregates, collectionEvents, tagShares } from '@/lib/db/schema'
+import { and, eq, gt, lt, sql } from 'drizzle-orm'
 import { recordAnalytic } from '@/lib/analytics/record'
 
 /**
@@ -21,6 +21,33 @@ export type CollectionEventAction = 'view' | 'clone'
 
 const SIGNED_IN_DEDUPE_WINDOW_MS = 30 * 60 * 1000 // 30 minutes
 const ANON_DEDUPE_WINDOW_MS = 60_000 // 60 seconds
+const RAW_EVENT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000
+const RETENTION_PRUNE_INTERVAL_MS = 60 * 60 * 1000
+
+// Runtime pruning is deliberately outside the event+aggregate transaction:
+// an unavailable/busy retention delete must never roll back an accepted event
+// or leave its durable all-time aggregate out of sync. The database identity is
+// tracked so isolated test databases (and a replaced runtime handle) get an
+// immediate first pass; in a normal process this reduces the indexed DELETE to
+// at most once per hour. Startup pruning remains the correctness backstop.
+let retentionDatabase: unknown
+let nextRetentionPruneAt = 0
+
+function maybePruneExpiredEvents(nowMs: number): void {
+  const database = db
+  if (retentionDatabase === database && nowMs < nextRetentionPruneAt) return
+
+  retentionDatabase = database
+  nextRetentionPruneAt = nowMs + RETENTION_PRUNE_INTERVAL_MS
+
+  try {
+    const cutoff = new Date(nowMs - RAW_EVENT_RETENTION_MS).toISOString()
+    database.delete(collectionEvents).where(lt(collectionEvents.createdAt, cutoff)).run()
+  } catch {
+    // Best-effort and separately committed. Retry after the bounded throttle;
+    // accepted event+aggregate writes above remain atomic and authoritative.
+  }
+}
 
 /** Whether `(ownerUserId, tag)` is currently a publicly shared playlist. */
 function isPublicCollection(ownerUserId: string, tag: string): boolean {
@@ -99,15 +126,54 @@ export function recordCollectionEvent(opts: {
       if (recent.length > 0) return
     }
 
-    db.insert(collectionEvents)
-      .values({
-        action,
-        ownerUserId,
-        tag,
-        viewerId,
-        createdAt: new Date().toISOString(),
-      })
-      .run()
+    const createdAt = new Date().toISOString()
+    runInTransaction(() => {
+      const aggregate = db
+        .select({ hidden: collectionAggregates.hidden })
+        .from(collectionAggregates)
+        .where(
+          and(eq(collectionAggregates.ownerUserId, ownerUserId), eq(collectionAggregates.tag, tag)),
+        )
+        .limit(1)
+        .all()[0]
+      const hidden = aggregate?.hidden ?? 0
+
+      db.insert(collectionEvents)
+        .values({
+          action,
+          ownerUserId,
+          tag,
+          viewerId,
+          createdAt,
+          hidden,
+        })
+        .run()
+
+      db.insert(collectionAggregates)
+        .values({
+          ownerUserId,
+          tag,
+          viewCount: action === 'view' ? 1 : 0,
+          cloneCount: action === 'clone' ? 1 : 0,
+          lastEventAt: createdAt,
+          hidden,
+        })
+        .onConflictDoUpdate({
+          target: [collectionAggregates.ownerUserId, collectionAggregates.tag],
+          set: {
+            viewCount: sql`${collectionAggregates.viewCount} + excluded.view_count`,
+            cloneCount: sql`${collectionAggregates.cloneCount} + excluded.clone_count`,
+            lastEventAt: sql`case
+              when ${collectionAggregates.lastEventAt} is null
+                or ${collectionAggregates.lastEventAt} < excluded.last_event_at
+              then excluded.last_event_at
+              else ${collectionAggregates.lastEventAt}
+            end`,
+          },
+        })
+        .run()
+    })
+    maybePruneExpiredEvents(Date.now())
     recordAnalytic({
       name: action === 'clone' ? 'playlist.clone' : 'playlist.view',
       userId: viewerId,

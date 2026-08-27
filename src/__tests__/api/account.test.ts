@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
+import { installAccountWriteGuards } from '@/lib/db/account-invariants'
 import { createTestDb, createTestBookmark, USER_A, USER_B, type TestDbInstance } from './setup'
 
 /**
@@ -86,6 +87,11 @@ async function seedUserData(userId: string) {
  */
 async function seedAccountData(userId: string, email: string) {
   await testInstance.db.insert(schema.users).values([{ id: userId, username: userId, email }])
+  await testInstance.db.insert(schema.usernameAliases).values({
+    username: `former-${userId}`,
+    userId,
+    createdAt: Date.now(),
+  })
   await testInstance.db.insert(schema.userIdentities).values([
     { provider: 'x', providerId: `x-${userId}`, userId },
     { provider: 'email', providerId: email, userId },
@@ -232,6 +238,57 @@ describe('API: /api/account', () => {
     await seedUserData(USER_B)
     await seedAccountData(USER_A, EMAIL_A)
     await seedAccountData(USER_B, EMAIL_B)
+    await testInstance.db.insert(schema.activity).values({
+      action: 'save',
+      bookmarkId: 't1',
+      author: 'testauthor',
+      url: '/testauthor/status/t1',
+      userId: USER_A,
+      createdAt: new Date().toISOString(),
+    })
+    await testInstance.db.insert(schema.analyticsEvents).values({
+      name: 'post.save',
+      userId: USER_A,
+      createdAt: new Date().toISOString(),
+    })
+    await testInstance.db.insert(schema.collectionEvents).values([
+      {
+        action: 'view',
+        ownerUserId: USER_A,
+        tag: 'owned-by-a',
+        viewerId: USER_B,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        action: 'view',
+        ownerUserId: USER_B,
+        tag: 'viewed-by-a',
+        viewerId: USER_A,
+        createdAt: new Date().toISOString(),
+      },
+    ])
+    await testInstance.db.insert(schema.collectionAggregates).values([
+      {
+        ownerUserId: USER_A,
+        tag: 'owned-by-a',
+        viewCount: 1,
+        cloneCount: 0,
+        lastEventAt: new Date().toISOString(),
+      },
+      {
+        ownerUserId: USER_B,
+        tag: 'viewed-by-a',
+        viewCount: 1,
+        cloneCount: 0,
+        lastEventAt: new Date().toISOString(),
+      },
+    ])
+    await testInstance.db.insert(schema.userBans).values({
+      userId: USER_A,
+      createdBy: USER_B,
+      createdAt: new Date().toISOString(),
+    })
+    installAccountWriteGuards(testInstance.sqlite)
   })
 
   afterEach(() => {
@@ -285,6 +342,12 @@ describe('API: /api/account', () => {
       .where(eq(schema.userIdentities.userId, USER_A))
     expect(identityRows).toHaveLength(0)
 
+    const aliasRows = await testInstance.db
+      .select()
+      .from(schema.usernameAliases)
+      .where(eq(schema.usernameAliases.userId, USER_A))
+    expect(aliasRows).toHaveLength(0)
+
     // Outstanding magic-link tokens for this account (by userId) and this
     // email (signin tokens only carry the email) are both gone
     const tokensByUserId = await testInstance.db
@@ -297,6 +360,68 @@ describe('API: /api/account', () => {
       .where(eq(schema.loginTokens.email, EMAIL_A))
     expect(tokensByUserId).toHaveLength(0)
     expect(tokensByEmail).toHaveLength(0)
+
+    // Historical aggregates survive without retaining this account's private
+    // actor/viewer ID. Owner-keyed playlist events and a target ban are gone.
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.activity)
+        .where(eq(schema.activity.bookmarkId, 't1')),
+    ).toMatchObject([{ userId: null }])
+    expect(await testInstance.db.select().from(schema.analyticsEvents)).toMatchObject([
+      { userId: null },
+    ])
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.collectionEvents)
+        .where(eq(schema.collectionEvents.ownerUserId, USER_A)),
+    ).toHaveLength(0)
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.collectionAggregates)
+        .where(eq(schema.collectionAggregates.ownerUserId, USER_A)),
+    ).toHaveLength(0)
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.collectionAggregates)
+        .where(eq(schema.collectionAggregates.ownerUserId, USER_B)),
+    ).toHaveLength(1)
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.collectionEvents)
+        .where(eq(schema.collectionEvents.ownerUserId, USER_B)),
+    ).toMatchObject([{ viewerId: null }])
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.userBans)
+        .where(eq(schema.userBans.userId, USER_A)),
+    ).toHaveLength(0)
+  })
+
+  it('rejects an authenticated persistence attempt after account deletion commits', async () => {
+    const { DELETE } = await import('@/app/api/account/route')
+    expect((await DELETE()).status).toBe(200)
+
+    expect(() =>
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO bookmarks
+            (id, user_id, platform, author, text, tweet_url, processed_at)
+           VALUES ('late-write', ?, 'twitter', 'author', 'text', 'url', ?)`,
+        )
+        .run(USER_A, new Date().toISOString()),
+    ).toThrow(/account reference does not exist/)
+    expect(
+      testInstance.sqlite
+        .prepare(`SELECT count(*) AS count FROM bookmarks WHERE user_id = ?`)
+        .get(USER_A),
+    ).toEqual({ count: 0 })
   })
 
   it('clears the session cookie on the response', async () => {
@@ -340,6 +465,11 @@ describe('API: /api/account', () => {
       .where(eq(schema.userIdentities.userId, USER_B))
     expect(userRows).toHaveLength(1)
     expect(identityRows).toHaveLength(2)
+    const aliasRows = await testInstance.db
+      .select()
+      .from(schema.usernameAliases)
+      .where(eq(schema.usernameAliases.userId, USER_B))
+    expect(aliasRows).toHaveLength(1)
 
     // User B's magic-link tokens survive
     const tokensByEmail = await testInstance.db

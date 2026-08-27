@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const liveUserIds = new Set<string>()
+const bannedUserIds = new Set<string>()
+let moderationReadable = true
+
 // Mock jose module
 vi.mock('jose', () => ({
   SignJWT: vi.fn().mockImplementation(() => ({
@@ -22,12 +26,24 @@ vi.mock('next/headers', () => ({
 }))
 
 vi.mock('@/lib/admin/moderation', () => ({
-  isUserBanned: () => false,
+  readUserBan: (userId: string) =>
+    moderationReadable
+      ? { ok: true as const, value: bannedUserIds.has(userId) }
+      : { ok: false as const, error: new Error('moderation unavailable') },
+}))
+
+vi.mock('@/lib/auth/account-state', () => ({
+  hasLiveAccount: vi.fn((userId: string) => Promise.resolve(liveUserIds.has(userId))),
 }))
 
 describe('Session Module', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    liveUserIds.clear()
+    bannedUserIds.clear()
+    moderationReadable = true
+    liveUserIds.add('user-456')
+    liveUserIds.add('user-789')
   })
 
   describe('getSession', () => {
@@ -125,10 +141,50 @@ describe('Session Module', () => {
 
       expect(userId).toBeNull()
     })
+
+    it('rejects a valid stale JWT after its account row is deleted', async () => {
+      const { jwtVerify } = await import('jose')
+      const mockJwtVerify = jwtVerify as ReturnType<typeof vi.fn>
+
+      mockCookieStore.get.mockReturnValue({ value: 'stale-jwt' })
+      mockJwtVerify.mockResolvedValue({
+        payload: { userId: 'deleted-user', username: 'former-user' },
+      })
+
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      expect(await getCurrentUserId()).toBeNull()
+    })
+
+    it('still rejects a banned account that has a live users row', async () => {
+      const { jwtVerify } = await import('jose')
+      const mockJwtVerify = jwtVerify as ReturnType<typeof vi.fn>
+      liveUserIds.add('banned-user')
+      bannedUserIds.add('banned-user')
+      mockCookieStore.get.mockReturnValue({ value: 'banned-jwt' })
+      mockJwtVerify.mockResolvedValue({
+        payload: { userId: 'banned-user', username: 'spammer' },
+      })
+
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      expect(await getCurrentUserId()).toBeNull()
+    })
+
+    it('rejects a valid session when the moderation store is unreadable', async () => {
+      const { jwtVerify } = await import('jose')
+      const mockJwtVerify = jwtVerify as ReturnType<typeof vi.fn>
+      moderationReadable = false
+      mockCookieStore.get.mockReturnValue({ value: 'valid-jwt' })
+      mockJwtVerify.mockResolvedValue({
+        payload: { userId: 'user-456', username: 'anotheruser' },
+      })
+
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      expect(await getCurrentUserId()).toBeNull()
+    })
   })
 
-  describe('requireAuth', () => {
-    it('should return userId when authenticated', async () => {
+  describe('withAuth integration', () => {
+    it('passes a validated live userId to an authenticated route', async () => {
       const { jwtVerify } = await import('jose')
       const mockJwtVerify = jwtVerify as ReturnType<typeof vi.fn>
 
@@ -137,18 +193,42 @@ describe('Session Module', () => {
         payload: { userId: 'user-789', username: 'authuser' },
       })
 
-      const { requireAuth } = await import('@/lib/auth/session')
-      const userId = await requireAuth()
+      const { withAuth } = await import('@/lib/api/with-auth')
+      const handler = vi.fn((_request: unknown, userId: string) =>
+        Response.json({ userId }, { status: 200 }),
+      )
+      const response = await withAuth(handler)()
 
-      expect(userId).toBe('user-789')
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ userId: 'user-789' })
+      expect(handler).toHaveBeenCalledOnce()
     })
 
-    it('should throw when not authenticated', async () => {
+    it('returns 401 without invoking the route when unauthenticated', async () => {
       mockCookieStore.get.mockReturnValue(undefined)
 
-      const { requireAuth } = await import('@/lib/auth/session')
+      const { withAuth } = await import('@/lib/api/with-auth')
+      const handler = vi.fn(() => new Response(null, { status: 204 }))
+      const response = await withAuth(handler)()
 
-      await expect(requireAuth()).rejects.toThrow('Unauthorized')
+      expect(response.status).toBe(401)
+      expect(handler).not.toHaveBeenCalled()
+    })
+
+    it('prevents a stale deleted-account session from reaching an authenticated route', async () => {
+      const { jwtVerify } = await import('jose')
+      const mockJwtVerify = jwtVerify as ReturnType<typeof vi.fn>
+      mockCookieStore.get.mockReturnValue({ value: 'stale-jwt' })
+      mockJwtVerify.mockResolvedValue({
+        payload: { userId: 'deleted-user', username: 'former-user' },
+      })
+
+      const { withAuth } = await import('@/lib/api/with-auth')
+      const handler = vi.fn(() => new Response(null, { status: 204 }))
+      const response = await withAuth(handler)()
+
+      expect(response.status).toBe(401)
+      expect(handler).not.toHaveBeenCalled()
     })
   })
 })

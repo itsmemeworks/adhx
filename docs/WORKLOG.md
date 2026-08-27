@@ -6,6 +6,103 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Local product walkthrough complete
+
+The owner-data browser walkthrough covered desktop and phone-sized Live, Saved, Queue, Library
+filters, Tags, Leaderboard, Settings, Trending, and streamed shared previews. The local database
+needed the documented migration before `users.role` existed; `pnpm db:migrate` restored it.
+The walkthrough then found and fixed a Next 16 same-URL `router.replace` loop in Library filters,
+plus unnamed Header account-menu and Bionic Reading controls. Regressions cover one-shot query
+cleanup/preservation, route-loop prevention, expanded state, and switch state. Final gates pass:
+3,431 Vitest tests, 97 Playwright tests, typecheck, build, formatting, lint (warnings only), and
+the zero-advisory dependency audit. All review and browser-verification work is complete.
+
+## 2026-08-27 — Completion audit and isolated browser suite green
+
+The post-remediation audit closed the remaining auth-scope, cross-tab, moderation-cache,
+retention, rate-limit identity, media-bound, and non-X SEO gaps without waivers. RSC payloads
+are now bound to the same immutable account confirmed by the client; mismatches fail closed,
+retry safely, and remount account providers only after trust. Public media uses trusted client
+identity, shared deadlines, bounded streams/caches, and regression coverage. Final gates pass:
+3,428 Vitest tests, 97 Playwright tests, typecheck, build, formatting, lint (warnings only),
+zero-advisory audit, and Chromium/Firefox extension validation. Owner-server browser walkthrough
+remains pending because port 3001 is not running.
+
+## 2026-08-26 — Full review closed and product docs refreshed
+
+All 36 review findings now have regression fixes and focused sign-off. Unresolved non-X pages
+noindex transient and permanent misses, explicitly clear inherited social cards, and stay dynamic
+for recovery; the unused resolve-reason field was removed. README is now a light product guide,
+while ARCHITECTURE explains current routing, theater, trust, data, media, privacy, and delivery
+boundaries without duplicating the runbook. All 3,387 tests, typecheck, build, formatting, lint
+(warnings only), dependency audit, and Chromium/Firefox extension gates pass. Local browser
+verification remains pending because the owner-managed server on port 3001 is not running.
+
+## 2026-08-26 — Superseded auth and moderation bypasses removed
+
+OAuth token tests now use encrypted DB fixtures instead of a production unconditional token
+upsert; callback persistence remains identity- and generation-guarded. Welcome validates a live,
+unbanned account, Sentry no longer exports its raw SDK namespace, and test-only auth/moderation
+compatibility helpers are gone. Focused tests, typecheck, lint, formatting, and diff checks pass.
+
+## 2026-08-26 — Non-X thin previews noindex consistently
+
+Instagram, TikTok, and YouTube preview metadata now returns noindex whenever trusted content is
+unresolved, including transient upstream failures, and dynamic rendering lets later recovery
+become indexable. Streamed JSON-LD/static bodies remain suppressed for both permanent and
+transient misses, with the reason encoded in the shared resolve result. Saved local metadata
+remains an indexable fallback. Focused SEO/cache tests, typecheck, lint, formatting, and diff
+checks passed before concurrent out-of-scope edits later blocked the global typecheck and format
+check; the SEO files remain clean.
+
+## 2026-08-26 — Playlist event retention no longer needs restarts
+
+Accepted playlist events now trigger an independently committed, hourly-throttled prune of raw
+detail older than 90 days. Event insertion and viewer-free aggregate increments remain atomic;
+retention failures cannot roll them back or separate their counts, and all-time aggregates are
+never pruned. Deterministic regressions cover no-restart expiry, aggregate survival, and retry
+after an injected delete failure. Focused discovery tests are green.
+
+## 2026-08-26 — Phase 6 public surfaces and data integrity verified
+
+Non-X previews now distinguish permanent misses from transient mirror failures without caching false noindex pages. Public analytics require trusted post identities, moderation/ban checks, actor-correct dedupe, and indexed lookups; uncaught Next server failures reach privacy-bounded Sentry instrumentation. URL parsing is host-anchored, non-X bookmark/media writes and tag/ban mutations are atomic, cards and stacked sign-in modals are keyboard/focus safe, and Firefox ships validated MV3 output with accurate AMO browsing-activity disclosure. CI now validates both extension artifacts. All 3,345 tests, typecheck, build, formatting, lint (warnings only), extension builds, diff checks, and integrated review are green.
+
+## 2026-08-26 — Phase 5 theater state stabilized
+
+Persistent video playback now rejects superseded play promises and queued media events without remounting the iOS-granted element. Shared preview leads release after every departure, including waiting/unavailable paths, while live auth and cross-tab save/tag/delete membership stay current. Seen state uses bounded revisioned local operations (500 marks + 500 tombstones), atomic bulk unmarks, cross-tab convergence, and one-time legacy-array migration; pre-V2 tabs must reload. All 3,217 tests, typecheck, build, formatting, lint (warnings only), and focused review passes are green.
+
+## 2026-08-26 — Phase 4 concurrency remediation verified
+
+Auth now uses atomic magic-link/OAuth state claims, one X identity per account, disconnect generations, cross-worker refresh leases, CAS token/profile writes, and transactional email claims. Moderation fails closed across cached and uncached public surfaces, with no-store APIs and banned-source sitemap/theater filtering. Sync uses durable heartbeat leases and ownership-checked terminal writes; manual/sync bookmark links merge without race-driven metadata loss. Startup migrations repair legacy duplicates before enforcing indexes. All 3,170 tests, typecheck, build, formatting, lint (warnings only), diff checks, and the final publication review are green. Ready for stacked PR review.
+
+## 2026-08-26 — Manual saves survive late insert races
+
+Manual tweet add now treats its transactional bookmark insert as the ownership boundary: a late loser returns duplicate without media/quote children, metrics, or pulse, while still field-wise upserting complementary links. Startup migration first reaps stale leases, then deterministically retains the newest fresh running lease per user and fails legacy duplicates before creating the unique index. Deterministic route and migration race regressions are green with focused tests, typecheck, lint, formatting, and diff checks.
+
+## 2026-08-26 — Link enrichment survives lost insert races
+
+Bookmark-link writes now use a shared field-wise upsert at the unique identity, including when sync loses the main bookmark insert; `inserted=false` still protects stats and pulses while complementary article/OG data is retained. Quoted-article conflicts use the same merge path. Startup now reaps only running syncs whose heartbeat/started timestamp is over 30 minutes old, preserving healthy cross-process leases. Focused race/migration tests, typecheck, lint, formatting, and diff checks are green.
+
+## 2026-08-26 — Bookmark link enrichment merges before dedupe
+
+Manual and synced tweet saves now consolidate repeated link identities before insert, merging each field independently so sparse duplicates cannot erase article or preview data. Startup migration cleanup updates a deterministic survivor with the richest non-null value from every duplicate row before deletion and unique-index creation. Regressions cover repeated manual URLs, article/direct overlap, complementary legacy metadata, and idempotent migration startup. Focused tests, typecheck, lint, and formatting are green.
+
+## 2026-08-26 — Auth, moderation, and sync races closed
+
+Magic links and OAuth state are now atomically single-use; X linking is durably bound to the initiating ADHX account and rejects session switching. Moderation reads distinguish visible content from an unavailable store and fail closed across auth, previews, pulse, sitemap, profiles, playlists, leaderboards, and the public tweet API; moderation schema failure stops startup. Sync claims one durable running row per user before opening SSE, stale rows recover on boot/claim, and insert-aware counting prevents duplicate stats and pulses. Link enrichment is uniqueness-protected after a richer-row-preserving cleanup. Full tests, typecheck, lint, formatting, migration regressions, and integrated review are required before publication.
+
+## 2026-08-26 — Public resource use bounded
+
+Public media now validates every redirect hop, bounds playlist/metadata reads, byte-limits chunked HLS streams, keeps body deadlines active, and separates preview/download/read rate budgets. Mirror retries have one 50s deadline; transient IG/TikTok metadata failures no longer become one-hour misses. Public query caches are hard-capped TTL/LRU windows with bounded trending pagination. Playlist events roll into durable viewer-free all-time aggregates atomically, retain 90 days of raw detail, and remain consistent through moderation/account deletion. Full tests, typecheck, formatting, and three integrated review passes are green.
+
+## 2026-08-26 — Deterministic containers and atomic migrations
+
+Docker now uses Corepack-pinned pnpm 9.15.9, the frozen lockfile, pruned production dependencies, and project-local `tsx`; CI builds and boots the real non-root runner, exercises native SQLite/migrations, and probes health. Drizzle SQL plus its journal row now commit atomically with foreign-key restoration. The legacy 0003 rebuild detects partial damage, safely replays its earliest crash point, and adopts a strict completed-but-unjournaled schema fingerprint without data replay. Focused tests/typecheck/review are green; the real image smoke runs in CI because local Docker is unavailable.
+
+## 2026-08-26 — Trust boundaries hardened
+
+Deleted-account JWTs now require a live account, account-linked writes are rejected by durable SQLite guards, and admin access is persisted against immutable IDs with fail-loud legacy bootstrap. OG enrichment validates and pins public DNS answers at connection time across redirects. Sentry now sanitizes explicit and automatic events with keyed pseudonyms and bounded JSON/request redaction. Account deletion also clears aliases and anonymizes retained activity history. Focused tests, typecheck, formatting, and two review passes are green. Ready for review; follow-up phases cover atomic migrations, deterministic containers, bounded media/resource use, concurrency, theater state, and lower-risk audit findings.
+
 ## 2026-08-26 — YouTube: Shorts URLs only
 
 Paste, share, URL-prefix, the add API, and the desktop extension now reject `youtu.be`, `/watch?v=`, `/embed/`, and `/live/` — those forms are regular videos. `extractYouTubeId` (and the proxy) accept `youtube.com/shorts/{id}` only. Existing saved YouTube rows still play. Follow-up: a crafted `adhx.com/shorts/{regularId}` still embeds, because the id space is shared.

@@ -10,9 +10,6 @@ import { markPreviewOpenIntent } from '@/lib/theater/autosave-shared'
  * 307s to the preview. (Instagram/X/YouTube share canonical-ish links that the
  * detector already handles.)
  */
-const TIKTOK_SHORTLINK =
-  /https?:\/\/(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|(?:www\.)?tiktok\.com\/t\/[A-Za-z0-9]+)/i
-
 /**
  * Pull the first http(s) URL out of the shared payload. Android share intents
  * (notably TikTok) frequently deliver the link inside the `text` field — often
@@ -55,8 +52,12 @@ export function parseShareUrl(url: string): { path: string } | null {
 }
 
 /**
- * Pull the TikTok short-link substring out of `url`, or `null` if it isn't
- * one. Exposed separately (rather than only inside `parseShareUrl`'s
+ * Validate `url` as a complete, top-level TikTok short link, or return `null`.
+ * This deliberately does not mine a nested URL from arbitrary text, paths, or
+ * query parameters. Caption payloads must first go through
+ * {@link extractSharedUrl}, which returns the explicit URL candidate.
+ *
+ * Exposed separately (rather than only inside `parseShareUrl`'s
  * pre-built `path` string) so a caller that needs a HARD navigation to the
  * `/api/tiktok/resolve` route — because it can't be handled by the client
  * router — can rebuild that URL itself from a constant prefix/suffix with
@@ -64,8 +65,29 @@ export function parseShareUrl(url: string): { path: string } | null {
  * of assigning a pre-concatenated string to `location.href`.
  */
 export function matchTikTokShortLink(url: string): string | null {
-  const short = url.match(TIKTOK_SHORTLINK)
-  return short ? short[0] : null
+  let parsed: URL
+  try {
+    parsed = new URL(url.trim())
+  } catch {
+    return null
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+  if (parsed.username || parsed.password || parsed.port) return null
+
+  const hostname = parsed.hostname.toLowerCase()
+  const shortCode = parsed.pathname.match(/^\/([A-Za-z0-9]+)\/?$/)
+
+  if ((hostname === 'vm.tiktok.com' || hostname === 'vt.tiktok.com') && shortCode) {
+    return `${parsed.protocol}//${hostname}/${shortCode[1]}`
+  }
+
+  const shareCode = parsed.pathname.match(/^\/t\/([A-Za-z0-9]+)\/?$/i)
+  if ((hostname === 'tiktok.com' || hostname === 'www.tiktok.com') && shareCode) {
+    return `${parsed.protocol}//${hostname}/t/${shareCode[1]}`
+  }
+
+  return null
 }
 
 /**
@@ -90,6 +112,8 @@ export interface PastedLinkRouter {
 /**
  * Resolve pasted/typed text to its on-ADHX destination and navigate there.
  * Returns whether a supported link was found (and navigation started).
+ * Clipboard captions are reduced to their first explicit http(s) URL via
+ * `extractSharedUrl`; an already-clean URL is returned unchanged.
  *
  * The single source of truth for the CodeQL-hardened navigation shape used
  * by every "paste a link" surface (the landing page's hero input and
@@ -106,15 +130,16 @@ export interface PastedLinkRouter {
  */
 export function navigateToPastedLink(router: PastedLinkRouter, raw: string): boolean {
   const trimmed = raw.trim()
+  const candidate = extractSharedUrl(trimmed) ?? trimmed
 
-  const shortLink = matchTikTokShortLink(trimmed)
+  const shortLink = matchTikTokShortLink(candidate)
   if (shortLink) {
     markPreviewOpenIntent('paste')
     window.location.href = `/api/tiktok/resolve?url=${encodeURIComponent(shortLink)}&go=1`
     return true
   }
 
-  const result = parseShareUrl(trimmed)
+  const result = parseShareUrl(candidate)
   if (result && isSafeInternalPath(result.path)) {
     markPreviewOpenIntent('paste')
     router.push(result.path)

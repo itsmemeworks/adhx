@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { clientEventMatchesCurrentAccount } from '@/lib/client-events'
 
 interface UseSyncListenerOptions {
   /** Whether a sync started via this page's own `startSync` is in flight. */
@@ -34,7 +35,9 @@ export function useSyncListener({ isSyncing, fetchFeed, fetchTags }: UseSyncList
   }, [fetchFeed, fetchTags, isSyncing])
 
   useEffect(() => {
-    const handleTweetAdded = () => fetchFeed(true)
+    const handleTweetAdded = (event: Event) => {
+      if (clientEventMatchesCurrentAccount(event)) fetchFeed(true)
+    }
     window.addEventListener('tweet-added', handleTweetAdded)
     return () => window.removeEventListener('tweet-added', handleTweetAdded)
   }, [fetchFeed])

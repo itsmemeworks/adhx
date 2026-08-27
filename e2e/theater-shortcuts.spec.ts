@@ -185,7 +185,7 @@ test.describe('theater shortcuts (signed out)', () => {
 
     await page.keyboard.press('q')
     await expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    await page.mouse.click(720, 360)
+    await page.mouse.click(64, 360)
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })

@@ -4,7 +4,7 @@
  * a raw HTTP status ("Request failed with code 402") to a human.
  */
 
-export type SyncErrorCode = 'reauth' | 'rate_limit' | 'unavailable' | 'generic'
+export type SyncErrorCode = 'reauth' | 'rate_limit' | 'unavailable' | 'in_progress' | 'generic'
 
 export const REAUTH_MESSAGE = 'Your X connection expired. Reconnect to keep syncing bookmarks.'
 
@@ -17,10 +17,13 @@ export const X_UNAVAILABLE_MESSAGE =
 
 export const RATE_LIMIT_MESSAGE = 'X is asking us to slow down. Wait a few minutes and try again.'
 
+export const SYNC_IN_PROGRESS_MESSAGE =
+  'A bookmark sync is already in progress. Please wait for it to finish.'
+
 export const GENERIC_SYNC_MESSAGE =
   'Something went wrong pulling bookmarks from X. Try again in a moment.'
 
-const KNOWN_CODES: readonly SyncErrorCode[] = ['reauth', 'rate_limit', 'unavailable']
+const KNOWN_CODES: readonly SyncErrorCode[] = ['reauth', 'rate_limit', 'unavailable', 'in_progress']
 
 export function parseSyncErrorEvent(e: Event): { message: string; code: SyncErrorCode } {
   if (e instanceof MessageEvent && typeof e.data === 'string' && e.data.length > 0) {

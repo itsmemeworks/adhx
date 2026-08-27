@@ -5,7 +5,12 @@ import { getUserIdForUsername } from '@/lib/users/lookup'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { inferContentType } from '@/lib/content-type'
-import { isUserBanned } from '@/lib/admin/moderation'
+import {
+  moderationStateFingerprint,
+  readModeratedPostKeys,
+  readUserBan,
+} from '@/lib/admin/moderation'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 
 /**
  * Public tag-collection query — the data layer for `/t/{username}/{tag}`.
@@ -55,13 +60,18 @@ export type TagCollectionResult =
 const ITEM_LIMIT = 60
 
 const CACHE_TTL_MS = 30_000
-type TagCache = Map<string, { value: TagCollectionResult; expiresAt: number }>
+const CACHE_MAX_ENTRIES = 128
+interface TagCacheEntry {
+  value: TagCollectionResult
+  moderationKey: string
+}
+type TagCache = TtlLruCache<string, TagCacheEntry>
 const cachesByDb = new WeakMap<object, TagCache>()
 
 function getCache(): TagCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
-    c = new Map()
+    c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
   }
   return c
@@ -86,17 +96,23 @@ export async function getPublicTagCollection(
   username: string,
   tagName: string,
 ): Promise<TagCollectionResult> {
+  const ownerId = await getUserIdForUsername(username)
+  if (!ownerId) return { status: 'not_found' }
+  const ban = readUserBan(ownerId)
+  const moderated = readModeratedPostKeys()
+  if (!ban.ok || ban.value || !moderated.ok) return { status: 'not_found' }
+  const moderationKey = moderationStateFingerprint(moderated.value)
+
   const cache = getCache()
   const key = `${username.toLowerCase()}:${tagName}`
-  const now = Date.now()
   const hit = cache.get(key)
-  if (hit && hit.expiresAt > now) return hit.value
+  if (hit && hit.moderationKey === moderationKey) return hit.value
 
-  const value = await fetchTagCollection(username, tagName)
+  const value = await fetchTagCollection(username, tagName, ownerId, moderated.value)
   // Never cache private/not_found — a visibility PATCH must be visible on the
   // next request, and those misses are a cheap local read.
   if (value.status === 'ok') {
-    cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+    cache.set(key, { value, moderationKey })
   }
   return value
 }
@@ -132,16 +148,16 @@ function resolveThumbnail(
   })
 }
 
-async function fetchTagCollection(username: string, tagName: string): Promise<TagCollectionResult> {
-  const ownerId = await getUserIdForUsername(username)
-  const user = ownerId ? { userId: ownerId } : null
-  if (!user) return { status: 'not_found' }
-  if (isUserBanned(user.userId)) return { status: 'not_found' }
-
+async function fetchTagCollection(
+  username: string,
+  tagName: string,
+  ownerId: string,
+  moderated: ReadonlySet<string>,
+): Promise<TagCollectionResult> {
   const [share] = await db
     .select()
     .from(tagShares)
-    .where(and(eq(tagShares.userId, user.userId), eq(tagShares.tag, tagName)))
+    .where(and(eq(tagShares.userId, ownerId), eq(tagShares.tag, tagName)))
     .limit(1)
   if (!share) return { status: 'not_found' }
   if (!share.isPublic) return { status: 'private' }
@@ -156,7 +172,7 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
       taggedAt: bookmarkTags.createdAt,
     })
     .from(bookmarkTags)
-    .where(and(eq(bookmarkTags.userId, user.userId), eq(bookmarkTags.tag, tagName)))
+    .where(and(eq(bookmarkTags.userId, ownerId), eq(bookmarkTags.tag, tagName)))
     .all()
 
   if (taggedRows.length === 0) {
@@ -175,12 +191,13 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
   const bookmarkResults = db
     .select()
     .from(bookmarks)
-    .where(and(eq(bookmarks.userId, user.userId), inArray(bookmarks.id, allIds)))
+    .where(and(eq(bookmarks.userId, ownerId), inArray(bookmarks.id, allIds)))
     .orderBy(desc(bookmarks.processedAt))
     .all()
 
   const matched = bookmarkResults
     .filter((b) => taggedKeySet.has(`${b.platform}:${b.id}`))
+    .filter((b) => !moderated.has(`${b.platform}:${b.id}`))
     // Newest-added-to-the-tag first. A playlist is ordered by when its curator
     // put each post IN it (owner) — not by when they first saved the post,
     // which is what `bookmarks.processedAt` above says. Rows with no
@@ -198,7 +215,7 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
       ? db
           .select()
           .from(bookmarkMedia)
-          .where(and(eq(bookmarkMedia.userId, user.userId), inArray(bookmarkMedia.bookmarkId, ids)))
+          .where(and(eq(bookmarkMedia.userId, ownerId), inArray(bookmarkMedia.bookmarkId, ids)))
           .all()
       : []
 
@@ -213,7 +230,7 @@ async function fetchTagCollection(username: string, tagName: string): Promise<Ta
             title: bookmarkLinks.previewTitle,
           })
           .from(bookmarkLinks)
-          .where(and(eq(bookmarkLinks.userId, user.userId), inArray(bookmarkLinks.bookmarkId, ids)))
+          .where(and(eq(bookmarkLinks.userId, ownerId), inArray(bookmarkLinks.bookmarkId, ids)))
           .all()
       : []
 

@@ -2,7 +2,12 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect } from 'vitest'
-import { GENERIC_SYNC_MESSAGE, REAUTH_MESSAGE, parseSyncErrorEvent } from '@/lib/sync/messages'
+import {
+  GENERIC_SYNC_MESSAGE,
+  REAUTH_MESSAGE,
+  SYNC_IN_PROGRESS_MESSAGE,
+  parseSyncErrorEvent,
+} from '@/lib/sync/messages'
 
 describe('parseSyncErrorEvent', () => {
   it('reads a classified SSE error payload', () => {
@@ -20,6 +25,16 @@ describe('parseSyncErrorEvent', () => {
       data: JSON.stringify({ message: 'X blocked bookmarks', code: 'unavailable' }),
     })
     expect(parseSyncErrorEvent(event).code).toBe('unavailable')
+  })
+
+  it('preserves an in-progress lock response', () => {
+    const event = new MessageEvent('error', {
+      data: JSON.stringify({ message: SYNC_IN_PROGRESS_MESSAGE, code: 'in_progress' }),
+    })
+    expect(parseSyncErrorEvent(event)).toEqual({
+      message: SYNC_IN_PROGRESS_MESSAGE,
+      code: 'in_progress',
+    })
   })
 
   it('falls back to generic for a bare EventSource onerror', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, USER_A, USER_B, type TestDbInstance } from './setup'
-import { collectionEvents, tagShares } from '@/lib/db/schema'
+import { collectionAggregates, collectionEvents, tagShares } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 
 /**
@@ -9,7 +9,8 @@ import { eq, and } from 'drizzle-orm'
  *
  * Verifies: happy-path view + clone insert, self-view no-op, private-tag
  * no-op, signed-in 30-min dedupe, anonymous 60s dedupe (across viewers), and
- * that errors are swallowed (never throws), matching `recordActivity()`.
+ * continuous 90-day raw retention without losing durable aggregates. Errors
+ * are swallowed (never throws), matching `recordActivity()`.
  */
 
 let testInstance: TestDbInstance
@@ -17,6 +18,9 @@ let testInstance: TestDbInstance
 vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
+  },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
   },
 }))
 
@@ -43,6 +47,7 @@ describe('recordCollectionEvent', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     testInstance.close()
   })
 
@@ -56,6 +61,15 @@ describe('recordCollectionEvent', () => {
     expect(rows[0].action).toBe('view')
     expect(rows[0].viewerId).toBe(USER_A)
     expect(rows[0].hidden).toBe(0)
+    expect(testInstance.db.select().from(collectionAggregates).all()).toEqual([
+      expect.objectContaining({
+        ownerUserId: USER_B,
+        tag: 'memes',
+        viewCount: 1,
+        cloneCount: 0,
+        hidden: 0,
+      }),
+    ])
   })
 
   it('records a clone event on a public collection', () => {
@@ -66,6 +80,9 @@ describe('recordCollectionEvent', () => {
     const rows = eventsFor(USER_B, 'memes')
     expect(rows).toHaveLength(1)
     expect(rows[0].action).toBe('clone')
+    expect(testInstance.db.select().from(collectionAggregates).all()[0]).toEqual(
+      expect.objectContaining({ viewCount: 0, cloneCount: 1 }),
+    )
   })
 
   it('records an anonymous event with a null viewerId', () => {
@@ -196,6 +213,80 @@ describe('recordCollectionEvent', () => {
     vi.useRealTimers()
   })
 
+  it('prunes expired raw detail after 90 days without a process restart', () => {
+    makePublic(USER_B, 'memes')
+    const startedAt = new Date('2026-01-01T12:00:00Z')
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+
+    recordCollectionEvent({ action: 'view', ownerUserId: USER_B, tag: 'memes', viewerId: USER_A })
+    expect(eventsFor(USER_B, 'memes')).toHaveLength(1)
+
+    vi.setSystemTime(new Date(startedAt.getTime() + 91 * 24 * 60 * 60 * 1000))
+    recordCollectionEvent({
+      action: 'clone',
+      ownerUserId: USER_B,
+      tag: 'memes',
+      viewerId: USER_A,
+    })
+
+    const rows = eventsFor(USER_B, 'memes')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].action).toBe('clone')
+    expect(testInstance.db.select().from(collectionAggregates).all()[0]).toEqual(
+      expect.objectContaining({
+        viewCount: 1,
+        cloneCount: 1,
+        lastEventAt: new Date().toISOString(),
+      }),
+    )
+  })
+
+  it('keeps accepted event and aggregate writes consistent when runtime pruning fails', () => {
+    makePublic(USER_B, 'memes')
+    const startedAt = new Date('2026-01-01T12:00:00Z')
+    vi.useFakeTimers()
+    vi.setSystemTime(startedAt)
+
+    recordCollectionEvent({ action: 'view', ownerUserId: USER_B, tag: 'memes', viewerId: USER_A })
+    vi.setSystemTime(new Date(startedAt.getTime() + 91 * 24 * 60 * 60 * 1000))
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_collection_event_prune
+      BEFORE DELETE ON collection_events
+      BEGIN
+        SELECT RAISE(ABORT, 'injected retention failure');
+      END;
+    `)
+
+    expect(() =>
+      recordCollectionEvent({
+        action: 'clone',
+        ownerUserId: USER_B,
+        tag: 'memes',
+        viewerId: USER_A,
+      }),
+    ).not.toThrow()
+
+    expect(eventsFor(USER_B, 'memes')).toHaveLength(2)
+    expect(testInstance.db.select().from(collectionAggregates).all()[0]).toEqual(
+      expect.objectContaining({ viewCount: 1, cloneCount: 1 }),
+    )
+
+    testInstance.sqlite.exec('DROP TRIGGER fail_collection_event_prune')
+    vi.advanceTimersByTime(60 * 60 * 1000 + 1)
+    recordCollectionEvent({
+      action: 'view',
+      ownerUserId: USER_B,
+      tag: 'memes',
+      viewerId: 'user-c-789',
+    })
+
+    expect(eventsFor(USER_B, 'memes')).toHaveLength(2)
+    expect(testInstance.db.select().from(collectionAggregates).all()[0]).toEqual(
+      expect.objectContaining({ viewCount: 2, cloneCount: 1 }),
+    )
+  })
+
   it('never throws, even after the sqlite handle is closed', () => {
     makePublic(USER_B, 'memes')
     testInstance.close()
@@ -208,6 +299,29 @@ describe('recordCollectionEvent', () => {
         viewerId: USER_A,
       }),
     ).not.toThrow()
+  })
+
+  it('rolls back the raw event when the aggregate upsert fails', () => {
+    makePublic(USER_B, 'memes')
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_collection_aggregate
+      BEFORE INSERT ON collection_aggregates
+      BEGIN
+        SELECT RAISE(ABORT, 'injected aggregate failure');
+      END;
+    `)
+
+    expect(() =>
+      recordCollectionEvent({
+        action: 'view',
+        ownerUserId: USER_B,
+        tag: 'memes',
+        viewerId: USER_A,
+      }),
+    ).not.toThrow()
+
+    expect(eventsFor(USER_B, 'memes')).toHaveLength(0)
+    expect(testInstance.db.select().from(collectionAggregates).all()).toHaveLength(0)
   })
 
   it('is a no-op when ownerUserId or tag is missing', () => {

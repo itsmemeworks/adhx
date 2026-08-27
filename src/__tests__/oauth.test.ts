@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, type TestDbInstance } from './api/setup'
+import * as schema from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { encryptToken } from '@/lib/auth/token-encryption'
 
 /**
  * OAuth Utilities Tests
@@ -10,15 +13,53 @@ import { createTestDb, type TestDbInstance } from './api/setup'
 
 let testInstance: TestDbInstance
 
+async function seedTokenFixture({
+  userId,
+  username,
+  profileImageUrl = null,
+  accessToken,
+  refreshToken,
+  expiresIn = 3600,
+  scopes = 'tweet.read',
+}: {
+  userId: string
+  username: string
+  profileImageUrl?: string | null
+  accessToken: string
+  refreshToken: string
+  expiresIn?: number
+  scopes?: string
+}) {
+  const now = new Date().toISOString()
+  await testInstance.db.insert(schema.oauthTokens).values({
+    userId,
+    username,
+    profileImageUrl,
+    accessToken: encryptToken(accessToken),
+    refreshToken: encryptToken(refreshToken),
+    expiresAt: Math.floor(Date.now() / 1000) + expiresIn,
+    scopes,
+    createdAt: now,
+    updatedAt: now,
+  })
+}
+
 vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 describe('OAuth Utilities', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     testInstance = createTestDb()
+    await testInstance.db.insert(schema.users).values([
+      { id: 'user-a', username: 'usera' },
+      { id: 'user-b', username: 'userb' },
+    ])
     vi.clearAllMocks()
   })
 
@@ -138,85 +179,139 @@ describe('OAuth Utilities', () => {
   })
 
   describe('OAuth State Management', () => {
-    it('saves and retrieves OAuth state', async () => {
+    it('saves and retrieves OAuth state for its initiating user', async () => {
       const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
 
       const state = 'test-state-123'
       const verifier = 'test-verifier-456'
 
-      await saveOAuthState(state, verifier)
-      const retrieved = await consumeOAuthState(state)
+      await testInstance.db
+        .update(schema.users)
+        .set({ xLinkVersion: 4 })
+        .where(eq(schema.users.id, 'user-a'))
+      await saveOAuthState(state, verifier, 'user-a')
+      const retrieved = await consumeOAuthState(state, 'user-a')
 
-      expect(retrieved).toBe(verifier)
+      expect(retrieved).toEqual({ codeVerifier: verifier, xLinkVersion: 4 })
     })
 
-    it('consumes state only once (one-time use)', async () => {
+    it('allows only one of two parallel consumers to use a state', async () => {
       const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
 
       const state = 'one-time-state'
       const verifier = 'one-time-verifier'
 
-      await saveOAuthState(state, verifier)
+      await saveOAuthState(state, verifier, 'user-a')
 
-      // First consumption should succeed
-      const first = await consumeOAuthState(state)
-      expect(first).toBe(verifier)
+      const results = await Promise.all([
+        consumeOAuthState(state, 'user-a'),
+        consumeOAuthState(state, 'user-a'),
+      ])
 
-      // Second consumption should return null
-      const second = await consumeOAuthState(state)
-      expect(second).toBeNull()
+      expect(results.filter((result) => result?.codeVerifier === verifier)).toHaveLength(1)
+      expect(results.filter((result) => result === null)).toHaveLength(1)
+      expect(await testInstance.db.select().from(schema.oauthState)).toHaveLength(0)
+    })
+
+    it('rejects a different session without consuming the initiating user state', async () => {
+      const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('bound-state', 'bound-verifier', 'user-a')
+
+      expect(await consumeOAuthState('bound-state', 'user-b')).toBeNull()
+      expect(await consumeOAuthState('bound-state', 'user-a')).toEqual({
+        codeVerifier: 'bound-verifier',
+        xLinkVersion: 0,
+      })
+    })
+
+    it('rejects expiry in the atomic consume statement', async () => {
+      const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('expired-state', 'expired-verifier', 'user-a')
+      await testInstance.db
+        .update(schema.oauthState)
+        .set({ createdAt: new Date(Date.now() - 11 * 60 * 1000).toISOString() })
+
+      expect(await consumeOAuthState('expired-state', 'user-a')).toBeNull()
+    })
+
+    it('cleans up expired states when starting a new flow', async () => {
+      const { saveOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('expired-state', 'expired-verifier', 'user-a')
+      await testInstance.db
+        .update(schema.oauthState)
+        .set({ createdAt: new Date(Date.now() - 11 * 60 * 1000).toISOString() })
+      await saveOAuthState('fresh-state', 'fresh-verifier', 'user-b')
+
+      const states = await testInstance.db.select().from(schema.oauthState)
+      expect(states).toEqual([expect.objectContaining({ state: 'fresh-state', userId: 'user-b' })])
+    })
+
+    it('deletes pending states when their initiating account is deleted', async () => {
+      const { saveOAuthState } = await import('@/lib/auth/oauth')
+
+      await saveOAuthState('owned-state', 'owned-verifier', 'user-a')
+      await testInstance.db.delete(schema.users).where(eq(schema.users.id, 'user-a'))
+
+      expect(await testInstance.db.select().from(schema.oauthState)).toHaveLength(0)
     })
 
     it('returns null for non-existent state', async () => {
       const { consumeOAuthState } = await import('@/lib/auth/oauth')
 
-      const result = await consumeOAuthState('nonexistent-state')
+      const result = await consumeOAuthState('nonexistent-state', 'user-a')
       expect(result).toBeNull()
     })
   })
 
-  describe('Token Storage', () => {
-    it('saves tokens for new user', async () => {
-      const { saveTokens, getStoredTokens } = await import('@/lib/auth/oauth')
+  describe('Token Storage Reads', () => {
+    it('loads encrypted tokens from a database fixture', async () => {
+      const { getStoredTokens } = await import('@/lib/auth/oauth')
 
-      await saveTokens(
-        'user-123',
-        'testuser',
-        'https://example.com/avatar.jpg',
-        'access-token-abc',
-        'refresh-token-xyz',
-        7200, // 2 hours
-        'tweet.read users.read',
-      )
+      await seedTokenFixture({
+        userId: 'user-a',
+        username: 'testuser',
+        profileImageUrl: 'https://example.com/avatar.jpg',
+        accessToken: 'access-token-abc',
+        refreshToken: 'refresh-token-xyz',
+        expiresIn: 7200,
+        scopes: 'tweet.read users.read',
+      })
 
-      const tokens = await getStoredTokens('user-123')
+      const tokens = await getStoredTokens('user-a')
 
       expect(tokens).not.toBeNull()
-      expect(tokens?.userId).toBe('user-123')
+      expect(tokens?.userId).toBe('user-a')
       expect(tokens?.username).toBe('testuser')
       expect(tokens?.profileImageUrl).toBe('https://example.com/avatar.jpg')
       expect(tokens?.accessToken).toBe('access-token-abc')
       expect(tokens?.refreshToken).toBe('refresh-token-xyz')
     })
 
-    it('updates tokens for existing user (upsert)', async () => {
-      const { saveTokens, getStoredTokens } = await import('@/lib/auth/oauth')
+    it('loads an updated encrypted token fixture', async () => {
+      const { getStoredTokens } = await import('@/lib/auth/oauth')
 
-      // Save initial tokens
-      await saveTokens('user-123', 'olduser', null, 'old-access', 'old-refresh', 3600, 'scope1')
+      await seedTokenFixture({
+        userId: 'user-a',
+        username: 'olduser',
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+        scopes: 'scope1',
+      })
+      await testInstance.db
+        .update(schema.oauthTokens)
+        .set({
+          username: 'newuser',
+          profileImageUrl: 'new-avatar',
+          accessToken: encryptToken('new-access'),
+          refreshToken: encryptToken('new-refresh'),
+          scopes: 'scope2',
+        })
+        .where(eq(schema.oauthTokens.userId, 'user-a'))
 
-      // Update tokens
-      await saveTokens(
-        'user-123',
-        'newuser',
-        'new-avatar',
-        'new-access',
-        'new-refresh',
-        7200,
-        'scope2',
-      )
-
-      const tokens = await getStoredTokens('user-123')
+      const tokens = await getStoredTokens('user-a')
 
       expect(tokens?.username).toBe('newuser')
       expect(tokens?.accessToken).toBe('new-access')
@@ -230,26 +325,21 @@ describe('OAuth Utilities', () => {
       expect(tokens).toBeNull()
     })
 
-    it('deletes tokens for user', async () => {
-      const { saveTokens, getStoredTokens, deleteTokens } = await import('@/lib/auth/oauth')
-
-      await saveTokens('user-to-delete', 'user', null, 'access', 'refresh', 3600, 'scopes')
-      await deleteTokens('user-to-delete')
-
-      const tokens = await getStoredTokens('user-to-delete')
-      expect(tokens).toBeNull()
-    })
-
     it('checks if user has existing tokens', async () => {
-      const { saveTokens, hasExistingTokens } = await import('@/lib/auth/oauth')
+      const { hasExistingTokens } = await import('@/lib/auth/oauth')
 
       // No tokens initially
-      const hasBefore = await hasExistingTokens('check-user')
+      const hasBefore = await hasExistingTokens('user-b')
       expect(hasBefore).toBe(false)
 
-      // After saving
-      await saveTokens('check-user', 'user', null, 'access', 'refresh', 3600, 'scopes')
-      const hasAfter = await hasExistingTokens('check-user')
+      await seedTokenFixture({
+        userId: 'user-b',
+        username: 'user',
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        scopes: 'scopes',
+      })
+      const hasAfter = await hasExistingTokens('user-b')
       expect(hasAfter).toBe(true)
     })
   })

@@ -4,7 +4,7 @@ import { Play, Check } from 'lucide-react'
 import type { FeedItem } from './types'
 import { TypeBadge } from '@/components/matter'
 import { formatCompactRelativeTime, formatDurationMs } from '@/lib/utils/format'
-import { feedItemType, feedItemTitle, feedItemThumb } from './feedItemMeta'
+import { feedItemSelectionLabel, feedItemType, feedItemTitle, feedItemThumb } from './feedItemMeta'
 import { cn } from '@/lib/utils'
 import { RECENT_GLOW } from './utils'
 
@@ -20,6 +20,7 @@ export function FeedBentoTile({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  selectionName,
   justAdded = false,
 }: {
   item: FeedItem
@@ -31,6 +32,8 @@ export function FeedBentoTile({
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  /** Tag name used in the selection-mode accessible action name. */
+  selectionName?: string
   /** Briefly glow: this is the post the viewer just pasted in. */
   justAdded?: boolean
 }) {
@@ -47,6 +50,10 @@ export function FeedBentoTile({
       <button
         type="button"
         onClick={selectionMode ? onToggleSelect : onClick}
+        aria-label={
+          selectionMode ? feedItemSelectionLabel(item, selected, selectionName) : undefined
+        }
+        aria-pressed={selectionMode ? selected : undefined}
         style={style}
         className={cn(
           'relative block overflow-hidden rounded-card border bg-surface shadow-m-sm text-left group',
@@ -125,6 +132,8 @@ export function FeedBentoTile({
     <button
       type="button"
       onClick={selectionMode ? onToggleSelect : onClick}
+      aria-label={selectionMode ? feedItemSelectionLabel(item, selected, selectionName) : undefined}
+      aria-pressed={selectionMode ? selected : undefined}
       style={style}
       className={cn(
         'relative flex flex-col overflow-hidden rounded-card border shadow-m-sm p-4 text-left',

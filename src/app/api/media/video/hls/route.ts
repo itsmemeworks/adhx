@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
-import { buildAllowlistedUrl, TWITTER_HLS_HOSTS } from '@/lib/media/proxy'
+import {
+  buildAllowlistedUrl,
+  fetchWithAllowlistedRedirects,
+  isMediaResponseTooLargeError,
+  isUntrustedMediaRedirectError,
+  readResponseBodyWithLimit,
+  TWITTER_HLS_HOSTS,
+  UntrustedMediaRedirectError,
+} from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+
+export const MAX_HLS_PLAYLIST_BYTES = 1024 * 1024
+const HLS_OPERATION_TIMEOUT_MS = 10_000
 
 /**
  * HLS Proxy - Fetches m3u8 playlists from Twitter and rewrites segment URLs
@@ -32,21 +42,26 @@ export async function GET(request: NextRequest) {
     // fetch target from the validated URL's own parsed components — never the
     // raw query-param string — so the fetched URL is provably safe.
     const safeHlsUrl = buildAllowlistedUrl(hlsUrl, TWITTER_HLS_HOSTS)
-    if (!safeHlsUrl) {
+    if (!safeHlsUrl || !isPlaylistUrl(safeHlsUrl)) {
       return NextResponse.json({ error: 'Invalid HLS URL' }, { status: 400 })
     }
 
     // Fetch the m3u8 playlist
-    const response = await fetchWithTimeout(safeHlsUrl, 10_000, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Referer: 'https://twitter.com/',
-        Origin: 'https://twitter.com',
+    const response = await fetchWithAllowlistedRedirects(safeHlsUrl, {
+      hosts: TWITTER_HLS_HOSTS,
+      timeoutMs: HLS_OPERATION_TIMEOUT_MS,
+      init: {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Referer: 'https://twitter.com/',
+          Origin: 'https://twitter.com',
+        },
       },
     })
 
     if (!response.ok) {
+      await response.body?.cancel()
       console.error(`HLS proxy failed: ${response.status} for ${hlsUrl}`)
       return NextResponse.json(
         { error: `Failed to fetch HLS playlist: ${response.status}` },
@@ -54,10 +69,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const playlistText = await response.text()
+    const playlistBytes = await readResponseBodyWithLimit(response, MAX_HLS_PLAYLIST_BYTES)
+    const playlistText = new TextDecoder().decode(playlistBytes)
 
     // Rewrite URLs in the playlist to use our segment proxy
-    const rewrittenPlaylist = rewritePlaylistUrls(playlistText, hlsUrl)
+    const rewrittenPlaylist = rewritePlaylistUrls(playlistText, safeHlsUrl)
 
     return new NextResponse(rewrittenPlaylist, {
       headers: {
@@ -66,6 +82,12 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    if (isMediaResponseTooLargeError(error)) {
+      return NextResponse.json({ error: 'HLS playlist exceeds maximum size' }, { status: 413 })
+    }
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted URL in HLS playlist' }, { status: 502 })
+    }
     console.error('HLS proxy error:', error)
     captureException(error, { endpoint: '/api/media/video/hls', hlsUrl })
     return NextResponse.json({ error: 'Failed to proxy HLS playlist' }, { status: 500 })
@@ -96,9 +118,9 @@ function rewritePlaylistUrls(playlist: string, baseUrl: string): string {
       // Handle URI="..." attributes in #EXT-X-MEDIA and #EXT-X-MAP tags
       if (trimmedLine.includes('URI=')) {
         return line.replace(/URI="([^"]+)"/, (match, uri) => {
-          const absoluteUrl = resolveUrl(uri, baseUrlObj)
+          const absoluteUrl = safeResolvedUrl(uri, baseUrlObj)
           // Check if it's a playlist (m3u8) or a segment
-          if (absoluteUrl.includes('.m3u8')) {
+          if (isPlaylistUrl(absoluteUrl)) {
             // Nested playlist - use main HLS proxy
             const proxyUrl = `/api/media/video/hls?url=${encodeURIComponent(absoluteUrl)}`
             return `URI="${proxyUrl}"`
@@ -112,10 +134,10 @@ function rewritePlaylistUrls(playlist: string, baseUrl: string): string {
 
       // Non-comment lines are URLs (segments or nested playlists)
       if (!trimmedLine.startsWith('#')) {
-        const absoluteUrl = resolveUrl(trimmedLine, baseUrlObj)
+        const absoluteUrl = safeResolvedUrl(trimmedLine, baseUrlObj)
 
         // Check if it's a nested playlist (.m3u8) or a segment (.ts, .m4s, etc.)
-        if (absoluteUrl.includes('.m3u8')) {
+        if (isPlaylistUrl(absoluteUrl)) {
           // Nested playlist - use the main HLS proxy
           return `/api/media/video/hls?url=${encodeURIComponent(absoluteUrl)}`
         } else {
@@ -129,15 +151,21 @@ function rewritePlaylistUrls(playlist: string, baseUrl: string): string {
     .join('\n')
 }
 
-/**
- * Resolves a potentially relative URL against a base URL
- */
-function resolveUrl(url: string, baseUrl: URL): string {
-  // Already absolute
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url
+function safeResolvedUrl(url: string, baseUrl: URL): string {
+  let resolved: string
+  try {
+    resolved = new URL(url, baseUrl).toString()
+  } catch {
+    throw new UntrustedMediaRedirectError('Invalid URL in HLS playlist')
   }
 
-  // Relative URL - resolve against base
-  return new URL(url, baseUrl).toString()
+  const safeUrl = buildAllowlistedUrl(resolved, TWITTER_HLS_HOSTS)
+  if (!safeUrl) {
+    throw new UntrustedMediaRedirectError('Untrusted URL in HLS playlist')
+  }
+  return safeUrl
+}
+
+function isPlaylistUrl(url: string): boolean {
+  return new URL(url).pathname.toLowerCase().endsWith('.m3u8')
 }

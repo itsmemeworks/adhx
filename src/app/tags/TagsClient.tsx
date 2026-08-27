@@ -16,7 +16,11 @@ import {
   Trash2,
 } from 'lucide-react'
 import type { FeedItem, TagItem } from '@/components/feed/types'
-import { CLIENT_EVENTS, notifyCollectionChanged } from '@/lib/client-events'
+import {
+  CLIENT_EVENTS,
+  clientEventMatchesCurrentAccount,
+  notifyCollectionChanged,
+} from '@/lib/client-events'
 import { CollectionPosterCard, type PosterTile } from '@/components/tags'
 import { cn } from '@/lib/utils'
 
@@ -76,7 +80,9 @@ export function TagsClient() {
    * mutation in the app announces itself; listen for it.
    */
   useEffect(() => {
-    const refresh = () => void loadTags()
+    const refresh = (event: Event) => {
+      if (clientEventMatchesCurrentAccount(event)) void loadTags()
+    }
     window.addEventListener(CLIENT_EVENTS.tagsChanged, refresh)
     window.addEventListener(CLIENT_EVENTS.feedChanged, refresh)
     return () => {

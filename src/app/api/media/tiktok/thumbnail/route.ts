@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 import { captureException } from '@/lib/sentry'
 import { isValidUsername, isValidVideoId } from '@/lib/media/tnktok'
-import { buildAllowlistedUrl } from '@/lib/media/proxy'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import {
+  buildAllowlistedUrl,
+  fetchWithAllowlistedRedirects,
+  isMediaResponseTooLargeError,
+  isUntrustedMediaRedirectError,
+  readResponseBodyWithLimit,
+} from '@/lib/media/proxy'
+import { mediaRateLimit } from '@/lib/rate-limit'
 
 /**
  * TikTok thumbnail proxy.
@@ -21,8 +28,15 @@ import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 // In-memory cache for resolved CDN URLs (1 hour). Avoids hammering tiktxk
 // for every gallery view of the same TikTok.
-const thumbnailUrlCache = new Map<string, { url: string; ts: number }>()
 const CACHE_TTL = 60 * 60 * 1000
+const thumbnailUrlCache = new TtlLruCache<string, string>({
+  maxSize: 1_000,
+  ttlMs: CACHE_TTL,
+})
+const MAX_MIRROR_HTML_BYTES = 256 * 1024
+const THUMBNAIL_REQUEST_TIMEOUT_MS = 10_000
+const MIRROR_TIMEOUT_MS = 8_000
+const IMAGE_TIMEOUT_MS = 10_000
 
 const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
 
@@ -38,6 +52,7 @@ const OG_IMAGE_RE = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+
 const TIKTOK_IMAGE_CDN_HOSTS = ['tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com'].flatMap(
   (host) => [host, `.${host}`],
 )
+const TIKTOK_THUMBNAIL_MIRROR_HOSTS = ['tiktxk.com', '.tiktxk.com']
 
 // HTML entities that appear in og:image URLs (mostly `&amp;` between query
 // params, occasionally an escaped apostrophe).
@@ -62,7 +77,69 @@ function decodeHtmlEntities(input: string): string {
   )
 }
 
+type ThumbnailResolution = { ok: true; url: string } | { ok: false; response: NextResponse }
+
+function remainingTimeoutMs(deadline: number, phaseLimitMs: number): number {
+  const remaining = deadline - Date.now()
+  if (remaining <= 0) {
+    throw new DOMException('TikTok thumbnail request deadline exceeded', 'TimeoutError')
+  }
+  return Math.min(phaseLimitMs, remaining)
+}
+
+async function resolveThumbnailUrl(
+  handle: string,
+  videoId: string,
+  deadline: number,
+): Promise<ThumbnailResolution> {
+  const mirrorResponse = await fetchWithAllowlistedRedirects(
+    `https://tiktxk.com/@${handle}/video/${videoId}`,
+    {
+      hosts: TIKTOK_THUMBNAIL_MIRROR_HOSTS,
+      timeoutMs: remainingTimeoutMs(deadline, MIRROR_TIMEOUT_MS),
+      init: {
+        headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
+      },
+    },
+  )
+
+  if (!mirrorResponse.ok) {
+    await mirrorResponse.body?.cancel()
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Mirror unavailable' }, { status: 502 }),
+    }
+  }
+
+  const html = new TextDecoder().decode(
+    await readResponseBodyWithLimit(mirrorResponse, MAX_MIRROR_HTML_BYTES),
+  )
+  const match = html.match(OG_IMAGE_RE)
+  if (!match) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'No thumbnail in mirror response' }, { status: 404 }),
+    }
+  }
+
+  // Validate the resolved host against the CDN allowlist and rebuild the URL
+  // from validated parsed components before it is cached or fetched.
+  const decoded = decodeHtmlEntities(match[1])
+  const safeCdnUrl = buildAllowlistedUrl(decoded, TIKTOK_IMAGE_CDN_HOSTS)
+  if (!safeCdnUrl) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Untrusted thumbnail CDN host' }, { status: 502 }),
+    }
+  }
+
+  return { ok: true, url: safeCdnUrl }
+}
+
 export async function GET(request: NextRequest) {
+  const rateLimited = mediaRateLimit(request)
+  if (rateLimited) return rateLimited
+
   const username = request.nextUrl.searchParams.get('username')
   const videoId = request.nextUrl.searchParams.get('id')
 
@@ -72,76 +149,71 @@ export async function GET(request: NextRequest) {
 
   const handle = username.startsWith('@') ? username.slice(1) : username
   const cacheKey = `${handle}/${videoId}`
+  const deadline = Date.now() + THUMBNAIL_REQUEST_TIMEOUT_MS
 
   try {
     // Step 1 — resolve the tiktokcdn-eu.com URL via tiktxk.com
-    let cdnUrl: string | undefined
-    const cached = thumbnailUrlCache.get(cacheKey)
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      cdnUrl = cached.url
-    }
+    let cdnUrl = thumbnailUrlCache.get(cacheKey)
+    const startedWithCachedUrl = cdnUrl !== undefined
+    const maxAttempts = startedWithCachedUrl ? 2 : 1
 
-    if (!cdnUrl) {
-      const mirrorResponse = await fetchWithTimeout(
-        `https://tiktxk.com/@${handle}/video/${videoId}`,
-        8_000,
-        {
-          headers: { 'User-Agent': 'Twitterbot/1.0', Accept: 'text/html' },
-          redirect: 'follow',
-        },
-      )
-
-      if (!mirrorResponse.ok) {
-        return NextResponse.json({ error: 'Mirror unavailable' }, { status: 502 })
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (!cdnUrl) {
+        const resolution = await resolveThumbnailUrl(handle, videoId, deadline)
+        if (!resolution.ok) return resolution.response
+        cdnUrl = resolution.url
+        thumbnailUrlCache.set(cacheKey, cdnUrl)
       }
 
-      const html = await mirrorResponse.text()
-      const match = html.match(OG_IMAGE_RE)
-      if (!match) {
-        return NextResponse.json({ error: 'No thumbnail in mirror response' }, { status: 404 })
-      }
+      try {
+        // Step 2 — fetch the JPEG with browser-grade headers.
+        const imageResponse = await fetchWithAllowlistedRedirects(cdnUrl, {
+          hosts: TIKTOK_IMAGE_CDN_HOSTS,
+          timeoutMs: remainingTimeoutMs(deadline, IMAGE_TIMEOUT_MS),
+          init: {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+              Referer: 'https://www.tiktok.com/',
+            },
+          },
+        })
 
-      // Validate the resolved host against the CDN allowlist and rebuild the
-      // URL from the validated parsed components (never the raw scraped
-      // string) before it's cached or fetched — this is the SSRF gate.
-      const decoded = decodeHtmlEntities(match[1])
-      const safeCdnUrl = buildAllowlistedUrl(decoded, TIKTOK_IMAGE_CDN_HOSTS)
-      if (!safeCdnUrl) {
-        return NextResponse.json({ error: 'Untrusted thumbnail CDN host' }, { status: 502 })
-      }
-
-      cdnUrl = safeCdnUrl
-      thumbnailUrlCache.set(cacheKey, { url: cdnUrl, ts: Date.now() })
-
-      // Trim cache if it grows
-      if (thumbnailUrlCache.size > 1000) {
-        const now = Date.now()
-        for (const [k, v] of thumbnailUrlCache.entries()) {
-          if (now - v.ts > CACHE_TTL) thumbnailUrlCache.delete(k)
+        if (imageResponse.ok && imageResponse.body) {
+          return new Response(imageResponse.body, {
+            headers: {
+              'Content-Type': imageResponse.headers.get('content-type') || 'image/jpeg',
+              'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+            },
+          })
         }
+
+        await imageResponse.body?.cancel()
+        thumbnailUrlCache.delete(cacheKey)
+        if (attempt + 1 < maxAttempts) {
+          cdnUrl = undefined
+          continue
+        }
+        return NextResponse.json({ error: 'Failed to fetch thumbnail' }, { status: 502 })
+      } catch (error) {
+        if (!isUntrustedMediaRedirectError(error)) throw error
+
+        thumbnailUrlCache.delete(cacheKey)
+        if (attempt + 1 < maxAttempts) {
+          cdnUrl = undefined
+          continue
+        }
+        return NextResponse.json({ error: 'Untrusted thumbnail redirect' }, { status: 502 })
       }
     }
 
-    // Step 2 — fetch the JPEG with browser-grade headers
-    const imageResponse = await fetchWithTimeout(cdnUrl, 10_000, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        Referer: 'https://www.tiktok.com/',
-      },
-    })
-
-    if (!imageResponse.ok || !imageResponse.body) {
-      return NextResponse.json({ error: 'Failed to fetch thumbnail' }, { status: 502 })
-    }
-
-    return new Response(imageResponse.body, {
-      headers: {
-        'Content-Type': imageResponse.headers.get('content-type') || 'image/jpeg',
-        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-      },
-    })
+    return NextResponse.json({ error: 'Failed to fetch thumbnail' }, { status: 502 })
   } catch (error) {
+    if (isMediaResponseTooLargeError(error)) {
+      return NextResponse.json({ error: 'Mirror response exceeds maximum size' }, { status: 502 })
+    }
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted thumbnail redirect' }, { status: 502 })
+    }
     console.error('TikTok thumbnail proxy error:', error)
     captureException(error, { endpoint: '/api/media/tiktok/thumbnail', username, videoId })
     return NextResponse.json({ error: 'Thumbnail proxy failed' }, { status: 500 })

@@ -43,6 +43,37 @@ export function feedItemTitle(item: FeedItem): string {
   return TYPE_META[feedItemType(item)].label
 }
 
+/** Distinguishing, whitespace-normalized excerpt for control accessible names. */
+export function feedItemAccessibleExcerpt(item: FeedItem, maxLength = 72): string {
+  const raw =
+    item.articlePreview?.title ||
+    item.text ||
+    item.quoteContext?.text ||
+    `${TYPE_META[feedItemType(item)].label} ${item.id}`
+  const normalized = raw.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxLength) return normalized
+  return `${normalized.slice(0, Math.max(1, maxLength - 1)).trimEnd()}…`
+}
+
+/** Shared content-specific description used by feed action controls. */
+export function feedItemAccessibleDescription(item: FeedItem): string {
+  const type = feedItemType(item)
+  const author = item.authorName?.trim() || (item.author ? `@${item.author}` : 'saved post')
+  return `${type} by ${author}: ${feedItemAccessibleExcerpt(item)}`
+}
+
+/** Selection-mode name shared across grid, list, and bento views. */
+export function feedItemSelectionLabel(
+  item: FeedItem,
+  selected: boolean,
+  selectionName?: string,
+): string {
+  const target = selectionName ? `#${selectionName}` : 'selection'
+  return `${selected ? 'Remove' : 'Add'} ${feedItemAccessibleDescription(item)} ${
+    selected ? 'from' : 'to'
+  } ${target}`
+}
+
 /** First media thumbnail (or article cover), if any. */
 export function feedItemThumb(item: FeedItem): string | null {
   return item.media?.[0]?.thumbnailUrl || item.articlePreview?.imageUrl || null

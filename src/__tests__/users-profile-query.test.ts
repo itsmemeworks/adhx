@@ -7,6 +7,8 @@ import {
   bookmarks,
   users,
   collectionEvents,
+  moderatedPosts,
+  userBans,
 } from '@/lib/db/schema'
 
 /**
@@ -56,6 +58,24 @@ async function seedOwnerViaOauthOnly() {
   })
 }
 
+async function seedWarmPublicProfile() {
+  await seedOwnerViaUsersTable()
+  await testInstance.db.insert(tagShares).values({
+    userId: OWNER_ID,
+    tag: 'public-tag',
+    shareCode: 'code-warm',
+    isPublic: true,
+  })
+  await testInstance.db
+    .insert(bookmarks)
+    .values(createTestBookmark(OWNER_ID, 'warm-post', { text: 'warm cached content' }))
+  await testInstance.db.insert(bookmarkTags).values({
+    userId: OWNER_ID,
+    bookmarkId: 'warm-post',
+    tag: 'public-tag',
+  })
+}
+
 describe('getPublicProfile', () => {
   beforeEach(() => {
     testInstance = createTestDb()
@@ -65,6 +85,19 @@ describe('getPublicProfile', () => {
   it('returns not_found when the username does not exist', async () => {
     const result = await getPublicProfile('nobody')
     expect(result.status).toBe('not_found')
+  })
+
+  it('does not cache not-found profiles', async () => {
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('not_found')
+    await seedOwnerViaUsersTable()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'just-published',
+      shareCode: 'code-new',
+      isPublic: true,
+    })
+
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('ok')
   })
 
   it('returns not_found when the user exists but has zero public collections', async () => {
@@ -78,6 +111,73 @@ describe('getPublicProfile', () => {
 
     const result = await getPublicProfile(OWNER_USERNAME)
     expect(result.status).toBe('not_found')
+  })
+
+  it('returns not_found when the owner ban state cannot be loaded', async () => {
+    await seedOwnerViaUsersTable()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'public-tag',
+      shareCode: 'code-unavailable',
+      isPublic: true,
+    })
+    testInstance.sqlite.exec('DROP TABLE user_bans')
+
+    const result = await getPublicProfile(OWNER_USERNAME)
+    expect(result.status).toBe('not_found')
+  })
+
+  it('returns not_found when post moderation state cannot be loaded', async () => {
+    await seedOwnerViaUsersTable()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'public-tag',
+      shareCode: 'code-post-unavailable',
+      isPublic: true,
+    })
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    const result = await getPublicProfile(OWNER_USERNAME)
+    expect(result.status).toBe('not_found')
+  })
+
+  it('rechecks hidden posts on a warm public profile cache hit', async () => {
+    await seedWarmPublicProfile()
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('ok')
+    await testInstance.db.insert(moderatedPosts).values({
+      platform: 'twitter',
+      bookmarkId: 'warm-post',
+      hidden: 1,
+      createdAt: new Date().toISOString(),
+      createdBy: 'admin',
+    })
+
+    const result = await getPublicProfile(OWNER_USERNAME)
+
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    expect(result.profile.postCount).toBe(0)
+    expect(result.profile.collections[0].count).toBe(0)
+  })
+
+  it('rechecks owner bans on a warm public profile cache hit', async () => {
+    await seedWarmPublicProfile()
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('ok')
+    await testInstance.db.insert(userBans).values({
+      userId: OWNER_ID,
+      createdAt: new Date().toISOString(),
+      createdBy: 'admin',
+    })
+
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('not_found')
+  })
+
+  it('fails closed when moderation storage fails after warming a profile cache', async () => {
+    await seedWarmPublicProfile()
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('ok')
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    expect((await getPublicProfile(OWNER_USERNAME)).status).toBe('not_found')
   })
 
   it('never lists a private tag alongside public ones, and excludes its posts from the count', async () => {
@@ -106,6 +206,38 @@ describe('getPublicProfile', () => {
     expect(result.profile.postCount).toBe(1)
     expect(JSON.stringify(result)).not.toContain('secret-tag')
     expect(JSON.stringify(result)).not.toContain('a very secret post')
+  })
+
+  it('omits moderated posts from public profile counts and tiles', async () => {
+    await seedOwnerViaUsersTable()
+    await testInstance.db.insert(tagShares).values({
+      userId: OWNER_ID,
+      tag: 'public-tag',
+      shareCode: 'code-moderated',
+      isPublic: true,
+    })
+    await testInstance.db
+      .insert(bookmarks)
+      .values(createTestBookmark(OWNER_ID, 'hidden-post', { text: 'must not appear' }))
+    await testInstance.db.insert(bookmarkTags).values({
+      userId: OWNER_ID,
+      bookmarkId: 'hidden-post',
+      tag: 'public-tag',
+    })
+    await testInstance.db.insert(moderatedPosts).values({
+      platform: 'twitter',
+      bookmarkId: 'hidden-post',
+      hidden: 1,
+      createdAt: new Date().toISOString(),
+      createdBy: 'admin',
+    })
+
+    const result = await getPublicProfile(OWNER_USERNAME)
+    expect(result.status).toBe('ok')
+    if (result.status !== 'ok') throw new Error('expected ok')
+    expect(result.profile.postCount).toBe(0)
+    expect(result.profile.collections[0].count).toBe(0)
+    expect(JSON.stringify(result)).not.toContain('must not appear')
   })
 
   it("never mixes another user's tagged posts into this profile (cross-user isolation)", async () => {

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
+let mockCurrentUserId: string | null = null
+
 /**
  * Shared-tag-collection route tests — `src/app/t/[username]/[tag]/page.tsx`.
  *
@@ -20,7 +22,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
  */
 
 vi.mock('@/lib/auth/session', () => ({
-  getSession: vi.fn(() => Promise.resolve(null)),
+  getCurrentUserId: vi.fn(() => Promise.resolve(mockCurrentUserId)),
 }))
 
 vi.mock('@/lib/tags/query', async (importOriginal) => {
@@ -35,7 +37,26 @@ vi.mock('@/lib/tags/query', async (importOriginal) => {
 // route-level test. Redirect behavior is covered by its own describe block
 // below.
 vi.mock('@/lib/users/lookup', () => ({
+  getUserIdForUsername: vi.fn(() => Promise.resolve('owner-id')),
   resolveUsernameAlias: vi.fn(() => Promise.resolve(null)),
+}))
+
+vi.mock('next/headers', () => ({
+  headers: vi.fn(() =>
+    Promise.resolve({
+      get: vi.fn(() => 'Mozilla/5.0'),
+    }),
+  ),
+}))
+
+const recordCollectionEventSpy = vi.fn()
+vi.mock('@/lib/discovery/record', () => ({
+  recordCollectionEvent: (event: unknown) => recordCollectionEventSpy(event),
+}))
+
+const recordAnalyticSpy = vi.fn()
+vi.mock('@/lib/analytics/record', () => ({
+  recordAnalytic: (event: unknown) => recordAnalyticSpy(event),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -97,6 +118,7 @@ const SAMPLE_COLLECTION = {
 describe('Shared tag route: /t/[username]/[tag]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockCurrentUserId = null
   })
 
   describe('generateMetadata', () => {
@@ -200,6 +222,46 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       expect(props.playlist).toEqual({ tag: 'cool-stuff', curator: 'curator', count: 2 })
       expect(props.seed.items).toHaveLength(2)
       expect(props.seed.items.map((i) => i.bookmarkId)).toEqual(['1', '2'])
+    })
+
+    it('treats a rejected stale session as anonymous chrome and analytics', async () => {
+      const { getPublicTagCollection } = await import('@/lib/tags/query')
+      vi.mocked(getPublicTagCollection).mockResolvedValue(SAMPLE_COLLECTION)
+      mockCurrentUserId = null
+
+      const SharedTagPage = (await import('@/app/t/[username]/[tag]/page')).default
+      const result = await SharedTagPage({
+        params: Promise.resolve({ username: 'curator', tag: 'cool-stuff' }),
+      })
+      renderToStaticMarkup(result as React.ReactElement)
+
+      const { getCurrentUserId } = await import('@/lib/auth/session')
+      expect(getCurrentUserId).toHaveBeenCalledTimes(1)
+      expect(theaterShellSpy).toHaveBeenCalledWith(expect.objectContaining({ authed: false }))
+      expect(recordCollectionEventSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ viewerId: null }),
+      )
+      expect(recordAnalyticSpy).toHaveBeenCalledWith(expect.objectContaining({ userId: null }))
+    })
+
+    it('persists only a validated live account ID for a playlist view', async () => {
+      const { getPublicTagCollection } = await import('@/lib/tags/query')
+      vi.mocked(getPublicTagCollection).mockResolvedValue(SAMPLE_COLLECTION)
+      mockCurrentUserId = 'viewer-id'
+
+      const SharedTagPage = (await import('@/app/t/[username]/[tag]/page')).default
+      const result = await SharedTagPage({
+        params: Promise.resolve({ username: 'curator', tag: 'cool-stuff' }),
+      })
+      renderToStaticMarkup(result as React.ReactElement)
+
+      expect(theaterShellSpy).toHaveBeenCalledWith(expect.objectContaining({ authed: true }))
+      expect(recordCollectionEventSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ viewerId: 'viewer-id' }),
+      )
+      expect(recordAnalyticSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'viewer-id' }),
+      )
     })
 
     it('decodes a percent-encoded username/tag before querying', async () => {

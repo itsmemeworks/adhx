@@ -28,6 +28,7 @@ import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
+import { notifyStatsUpdated } from '@/lib/client-events'
 import {
   generateAvatarDataUri,
   resolveAccountAvatarSrc,
@@ -850,7 +851,7 @@ function SettingsPage() {
     fetchCooldown()
     setMessage({ type: 'success', text: 'Bookmarks synced successfully!' })
     // Notify Header to refresh stats and cooldown
-    window.dispatchEvent(new CustomEvent('stats-updated'))
+    notifyStatsUpdated()
     window.dispatchEvent(new CustomEvent('sync-complete'))
   }
 
@@ -878,7 +879,7 @@ function SettingsPage() {
         setConfirmText('')
         setSyncHistory({ syncs: [], lastSyncAt: null, totalBookmarks: 0, xOnAdhx: 0, xSynced: 0 })
         // Notify Header to refresh stats
-        window.dispatchEvent(new CustomEvent('stats-updated'))
+        notifyStatsUpdated()
       } else {
         throw new Error('Failed to clear data')
       }
@@ -1061,6 +1062,7 @@ function SettingsPage() {
               </p>
             </div>
             <button
+              type="button"
               onClick={() => updatePreference('bionicReading', !preferences.bionicReading)}
               className={cn(
                 'relative inline-flex h-6 w-[42px] flex-shrink-0 cursor-pointer rounded-full p-[3px] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2',
@@ -1069,6 +1071,7 @@ function SettingsPage() {
                   : 'bg-surface border border-hairline justify-start',
               )}
               role="switch"
+              aria-label="Bionic reading"
               aria-checked={preferences.bionicReading}
             >
               <span className="pointer-events-none inline-block h-[18px] w-[18px] rounded-full bg-white shadow" />

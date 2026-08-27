@@ -12,7 +12,12 @@ import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
 import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
-import { isUserBanned } from '@/lib/admin/moderation'
+import {
+  moderationStateFingerprint,
+  readModeratedPostKeys,
+  readUserBan,
+} from '@/lib/admin/moderation'
+import { TtlLruCache } from '@/lib/cache/ttl-lru'
 
 /**
  * Public curator-profile query — the data layer for `/t/{username}`.
@@ -86,13 +91,18 @@ const TILES_PER_COLLECTION = 4
 const TEXT_FALLBACK_LENGTH = 40
 
 const CACHE_TTL_MS = 30_000
-type ProfileCache = Map<string, { value: PublicProfileResult; expiresAt: number }>
+const CACHE_MAX_ENTRIES = 128
+interface ProfileCacheEntry {
+  value: PublicProfileResult
+  moderationKey: string
+}
+type ProfileCache = TtlLruCache<string, ProfileCacheEntry>
 const cachesByDb = new WeakMap<object, ProfileCache>()
 
 function getCache(): ProfileCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
-    c = new Map()
+    c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
   }
   return c
@@ -103,14 +113,22 @@ function getCache(): ProfileCache {
  * user doesn't exist OR has zero public playlists.
  */
 export async function getPublicProfile(username: string): Promise<PublicProfileResult> {
+  const userId = await getUserIdForUsername(username)
+  if (!userId) return { status: 'not_found' }
+  const ban = readUserBan(userId)
+  const moderated = readModeratedPostKeys()
+  if (!ban.ok || ban.value || !moderated.ok) return { status: 'not_found' }
+  const moderationKey = moderationStateFingerprint(moderated.value)
+
   const cache = getCache()
   const key = username.toLowerCase()
-  const now = Date.now()
   const hit = cache.get(key)
-  if (hit && hit.expiresAt > now) return hit.value
+  if (hit && hit.moderationKey === moderationKey) return hit.value
 
-  const value = await fetchPublicProfile(username)
-  cache.set(key, { value, expiresAt: now + CACHE_TTL_MS })
+  const value = await fetchPublicProfile(username, userId, moderated.value)
+  // Do not retain username misses: they are cheap, attacker-controlled, and a
+  // newly-published profile should become visible without waiting for the TTL.
+  if (value.status === 'ok') cache.set(key, { value, moderationKey })
   return value
 }
 
@@ -141,11 +159,11 @@ function resolveThumbnail(
   })
 }
 
-async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileResult> {
-  const userId = await getUserIdForUsername(usernameParam)
-  if (!userId) return { status: 'not_found' }
-  if (isUserBanned(userId)) return { status: 'not_found' }
-
+async function fetchPublicProfile(
+  usernameParam: string,
+  userId: string,
+  moderated: ReadonlySet<string>,
+): Promise<PublicProfileResult> {
   const shares = db
     .select({ tag: tagShares.tag })
     .from(tagShares)
@@ -251,6 +269,7 @@ async function fetchPublicProfile(usernameParam: string): Promise<PublicProfileR
     .where(and(eq(bookmarks.userId, userId), inArray(bookmarks.id, allIds)))
     .orderBy(desc(bookmarks.processedAt))
     .all()
+    .filter((b) => !moderated.has(`${b.platform}:${b.id}`))
   const bookmarkByKey = new Map(bookmarkResults.map((b) => [`${b.platform}:${b.id}`, b]))
 
   // Group matched bookmarks by tag, preserving the processedAt-desc order

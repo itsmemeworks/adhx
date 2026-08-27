@@ -17,13 +17,17 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
-import { render, act } from '@testing-library/react'
+import { render, act, screen } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
+const mockStage = vi.fn((_props: Record<string, unknown>) => null)
 vi.mock('@/components/theater/Stage', () => ({
-  Stage: () => <div data-testid="stage" />,
+  Stage: (props: Record<string, unknown>) => {
+    mockStage(props)
+    return <div data-testid="stage" />
+  },
 }))
 
 const mockMobileChrome = vi.fn((_props: Record<string, unknown>) => null)
@@ -97,6 +101,7 @@ const STORAGE_KEY = 'adhx-theater-repeat'
 describe('TheaterShell: repeat is a remembered switch', () => {
   beforeEach(() => {
     mockMobileChrome.mockClear()
+    mockStage.mockClear()
     window.localStorage.clear()
   })
 
@@ -247,4 +252,156 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
     expect(chromeProps().queueToPlay).toBe(2)
     expect(chromeProps().queueLooping).toBe(false)
   })
+
+  it.each([
+    { unavailable: false, departure: 'next' },
+    { unavailable: false, departure: 'select' },
+    { unavailable: false, departure: 'timed' },
+    { unavailable: false, departure: 'ended' },
+    { unavailable: true, departure: 'timed' },
+  ])(
+    'releases an $unavailable lead after $departure and never queues it again',
+    async ({ unavailable, departure }) => {
+      window.localStorage.setItem('adhx-seen-v1', JSON.stringify([theaterItemKey(shared)]))
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={seed([shared, textItem('2')])}
+            mode="shared"
+            sharedItem={shared}
+            sharedUnavailable={unavailable}
+            authed={!unavailable && (departure === 'timed' || departure === 'ended')}
+          />,
+        )
+      })
+      expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
+
+      await act(async () => {
+        if (departure === 'next') {
+          ;(chromeProps().onNext as () => void)()
+        } else if (departure === 'select') {
+          ;(chromeProps().onSelect as (key: string) => void)('twitter:2')
+        } else if (departure === 'ended') {
+          const call = mockStage.mock.calls.at(-1)
+          if (!call) throw new Error('stage never rendered')
+          ;(call[0].onEnded as () => void)()
+        } else {
+          window.dispatchEvent(new CustomEvent('theater-advance'))
+        }
+      })
+
+      expect(chromeProps().currentKey).toBe('twitter:2')
+      expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual(['2'])
+      expect(chromeProps().queueTotal).toBe(1)
+
+      await act(async () => {
+        ;(chromeProps().onPrev as () => void)()
+      })
+      expect(chromeProps().currentKey).toBe('twitter:2')
+
+      await cycleRepeat()
+      expect(chromeProps().repeatMode).toBe('all')
+      expect(chromeProps().queueTotal).toBe(1)
+      await act(async () => {
+        ;(chromeProps().onNext as () => void)()
+      })
+      expect(chromeProps().currentKey).toBe('twitter:2')
+      expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual(['2'])
+    },
+  )
+
+  it.each([
+    { unavailable: false, departure: 'next' },
+    { unavailable: true, departure: 'timed' },
+  ])(
+    'releases a zero-successor $unavailable lead into waiting after $departure',
+    async ({ unavailable, departure }) => {
+      window.localStorage.setItem('adhx-seen-v1', JSON.stringify([theaterItemKey(shared)]))
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={seed([shared])}
+            mode="shared"
+            sharedItem={shared}
+            sharedUnavailable={unavailable}
+          />,
+        )
+      })
+
+      await act(async () => {
+        if (departure === 'next') {
+          ;(chromeProps().onNext as () => void)()
+        } else {
+          window.dispatchEvent(new CustomEvent('theater-advance'))
+        }
+      })
+
+      expect(chromeProps().waiting).toBe(true)
+      expect(chromeProps().queueTotal).toBe(0)
+      expect(chromeProps().items).toEqual([])
+      expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+      expect(screen.queryByText(/no longer available/i)).not.toBeInTheDocument()
+
+      await act(async () => {
+        ;(chromeProps().onPrev as () => void)()
+      })
+      expect(chromeProps().waiting).toBe(true)
+
+      await cycleRepeat()
+      expect(chromeProps().repeatMode).toBe('all')
+      expect(chromeProps().waiting).toBe(true)
+      expect(chromeProps().queueTotal).toBe(0)
+      expect(screen.queryByText(/no longer available/i)).not.toBeInTheDocument()
+    },
+  )
+
+  it.each([{ unavailable: false }, { unavailable: true }])(
+    'releases an $unavailable lead when every successor is already seen',
+    async ({ unavailable }) => {
+      const successors = [textItem('2'), textItem('3')]
+      window.localStorage.setItem(
+        'adhx-seen-v1',
+        JSON.stringify([shared, ...successors].map(theaterItemKey)),
+      )
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={seed([shared, ...successors])}
+            mode="shared"
+            sharedItem={shared}
+            sharedUnavailable={unavailable}
+          />,
+        )
+      })
+
+      await act(async () => {
+        if (unavailable) {
+          window.dispatchEvent(new CustomEvent('theater-advance'))
+        } else {
+          ;(chromeProps().onNext as () => void)()
+        }
+      })
+      expect(chromeProps().waiting).toBe(true)
+      expect(chromeProps().queueTotal).toBe(0)
+      expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+        '2',
+        '3',
+      ])
+
+      await act(async () => {
+        ;(chromeProps().onPrev as () => void)()
+      })
+      expect(chromeProps().waiting).toBe(true)
+
+      await cycleRepeat()
+      expect(chromeProps().waiting).toBe(false)
+      expect(chromeProps().repeatMode).toBe('all')
+      expect(chromeProps().queueTotal).toBe(2)
+      expect(chromeProps().currentKey).toBe('twitter:2')
+      expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+        '2',
+        '3',
+      ])
+    },
+  )
 })

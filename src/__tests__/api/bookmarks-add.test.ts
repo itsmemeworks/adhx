@@ -1,24 +1,32 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import * as schema from '@/lib/db/schema'
-import { createTestDb, type TestDbInstance } from './setup'
+import { createTestBookmark, createTestDb, type TestDbInstance } from './setup'
 import { and, eq } from 'drizzle-orm'
 import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
+import { metrics } from '@/lib/sentry'
 
 /**
  * API Route Tests: /api/bookmarks/add — YouTube Shorts dispatch.
  *
  * Verifies the platform-agnostic add endpoint resolves a YouTube URL via
- * oEmbed (mocked through fetch), stores a youtube bookmark + poster media row,
+ * mocked metadata, stores a youtube bookmark + poster media row,
  * and pushes an anonymous activity-pulse event.
  */
 
 let testInstance: TestDbInstance
 let mockUserId: string | null = 'user-123'
+let beforeTransaction: (() => void) | null = null
 
 vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
+  },
+  runInTransaction<R>(fn: () => R): R {
+    const interleave = beforeTransaction
+    beforeTransaction = null
+    interleave?.()
+    return testInstance.sqlite.transaction(fn)()
   },
 }))
 
@@ -34,6 +42,34 @@ vi.mock('@/lib/sentry', () => ({
 const mockFetch = vi.fn()
 global.fetch = mockFetch as unknown as typeof fetch
 
+const mockFetchReelMetadata = vi.fn()
+vi.mock('@/lib/media/instafix', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/media/instafix')>('@/lib/media/instafix')
+  return {
+    ...actual,
+    fetchReelMetadata: (...args: unknown[]) => mockFetchReelMetadata(...args),
+  }
+})
+
+const mockFetchTikTokMetadata = vi.fn()
+vi.mock('@/lib/media/tnktok', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/media/tnktok')>('@/lib/media/tnktok')
+  return {
+    ...actual,
+    fetchTikTokMetadata: (...args: unknown[]) => mockFetchTikTokMetadata(...args),
+  }
+})
+
+const mockFetchYouTubeMetadata = vi.fn()
+vi.mock('@/lib/media/youtube', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/media/youtube')>('@/lib/media/youtube')
+  return {
+    ...actual,
+    fetchYouTubeMetadata: (...args: unknown[]) => mockFetchYouTubeMetadata(...args),
+  }
+})
+
 import { POST } from '@/app/api/bookmarks/add/route'
 
 function createRequest(body: object): NextRequest {
@@ -44,22 +80,215 @@ function createRequest(body: object): NextRequest {
   })
 }
 
+function deleteSavedParent(platform: string, id: string): void {
+  testInstance.db
+    .delete(schema.bookmarks)
+    .where(
+      and(
+        eq(schema.bookmarks.userId, 'user-123'),
+        eq(schema.bookmarks.platform, platform),
+        eq(schema.bookmarks.id, id),
+      ),
+    )
+    .run()
+}
+
 function mockOembed() {
-  mockFetch.mockResolvedValue({
-    ok: true,
-    json: async () => ({
-      title: 'June 5, 2026',
-      author_name: 'BassForge',
-      author_url: 'https://www.youtube.com/@BassForge_us',
-    }),
+  mockFetchYouTubeMetadata.mockResolvedValue({
+    videoId: 'Y9aytLYBajw',
+    title: 'June 5, 2026',
+    authorName: 'BassForge',
+    author: '@BassForge_us',
+    thumbnailUrl: 'https://i.ytimg.com/vi/Y9aytLYBajw/hqdefault.jpg',
   })
 }
+
+describe('POST /api/bookmarks/add — Instagram', () => {
+  const REEL_ID = 'Cwnj8o6pKbn'
+  const REEL_URL = `https://www.instagram.com/reels/${REEL_ID}/`
+
+  beforeEach(() => {
+    testInstance = createTestDb()
+    mockUserId = 'user-123'
+    beforeTransaction = null
+    vi.clearAllMocks()
+    mockFetchReelMetadata.mockResolvedValue({
+      imageUrl: 'https://scontent.cdninstagram.com/reel.jpg',
+      caption: 'a reel',
+      author: '@reel-maker',
+      authorName: 'Reel Maker',
+    })
+  })
+  afterEach(() => testInstance.close())
+
+  it('writes the bookmark and expected media together', async () => {
+    const res = await POST(createRequest({ url: REEL_URL, source: 'url_prefix' }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      success: true,
+      isDuplicate: false,
+      platform: 'instagram',
+    })
+
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(
+          and(
+            eq(schema.bookmarks.userId, 'user-123'),
+            eq(schema.bookmarks.platform, 'instagram'),
+            eq(schema.bookmarks.id, REEL_ID),
+          ),
+        )
+        .all(),
+    ).toHaveLength(1)
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(
+          and(
+            eq(schema.bookmarkMedia.userId, 'user-123'),
+            eq(schema.bookmarkMedia.platform, 'instagram'),
+            eq(schema.bookmarkMedia.bookmarkId, REEL_ID),
+          ),
+        )
+        .all(),
+    ).toHaveLength(1)
+  })
+
+  it('repairs a duplicate parent missing media without inflating saves', async () => {
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark('user-123', REEL_ID, {
+          platform: 'instagram',
+          author: 'reel-maker',
+          tweetUrl: REEL_URL,
+          category: 'video',
+        }),
+      )
+      .run()
+
+    const res = await POST(createRequest({ url: REEL_URL }))
+    expect(await res.json()).toMatchObject({ success: false, isDuplicate: true })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(
+          and(
+            eq(schema.bookmarkMedia.userId, 'user-123'),
+            eq(schema.bookmarkMedia.platform, 'instagram'),
+            eq(schema.bookmarkMedia.bookmarkId, REEL_ID),
+          ),
+        )
+        .all(),
+    ).toHaveLength(1)
+    expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(0)
+  })
+
+  it('recreates a duplicate deleted before repair and counts the actual insert', async () => {
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark('user-123', REEL_ID, {
+          platform: 'instagram',
+          author: 'reel-maker',
+          tweetUrl: REEL_URL,
+          category: 'video',
+        }),
+      )
+      .run()
+    beforeTransaction = () => deleteSavedParent('instagram', REEL_ID)
+
+    const res = await POST(createRequest({ url: REEL_URL }))
+    expect(await res.json()).toMatchObject({ success: true, isDuplicate: false })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(
+          and(
+            eq(schema.bookmarks.userId, 'user-123'),
+            eq(schema.bookmarks.platform, 'instagram'),
+            eq(schema.bookmarks.id, REEL_ID),
+          ),
+        )
+        .all(),
+    ).toHaveLength(1)
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(1)
+    expect(metrics.bookmarkAdded).toHaveBeenCalledTimes(1)
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(1)
+  })
+
+  it('repairs media and returns the competing parent when another insert wins', async () => {
+    const initial = createTestBookmark('user-123', REEL_ID, {
+      platform: 'instagram',
+      author: 'reel-maker',
+      tweetUrl: REEL_URL,
+      category: 'video',
+    })
+    testInstance.db.insert(schema.bookmarks).values(initial).run()
+    beforeTransaction = () => {
+      deleteSavedParent('instagram', REEL_ID)
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values({ ...initial, text: 'won by another request' })
+        .run()
+    }
+
+    const res = await POST(createRequest({ url: REEL_URL }))
+    const body = await res.json()
+    expect(body).toMatchObject({
+      success: false,
+      isDuplicate: true,
+      bookmark: { text: 'won by another request' },
+    })
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(1)
+    expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(0)
+  })
+
+  it('rolls back the parent when the media write fails', async () => {
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_instagram_media
+      BEFORE INSERT ON bookmark_media
+      WHEN NEW.platform = 'instagram'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected media failure');
+      END;
+    `)
+
+    const res = await POST(createRequest({ url: REEL_URL }))
+    expect(res.status).toBe(500)
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarks)
+        .where(
+          and(
+            eq(schema.bookmarks.userId, 'user-123'),
+            eq(schema.bookmarks.platform, 'instagram'),
+            eq(schema.bookmarks.id, REEL_ID),
+          ),
+        )
+        .all(),
+    ).toHaveLength(0)
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(0)
+  })
+})
 
 describe('POST /api/bookmarks/add — YouTube', () => {
   beforeEach(() => {
     testInstance = createTestDb()
     mockUserId = 'user-123'
+    beforeTransaction = null
+    vi.clearAllMocks()
     mockFetch.mockReset()
+    mockFetchYouTubeMetadata.mockReset()
   })
   afterEach(() => testInstance.close())
 
@@ -116,7 +345,7 @@ describe('POST /api/bookmarks/add — YouTube', () => {
 
     const b = await POST(createRequest({ url: 'https://www.youtube.com/watch?v=Y9aytLYBajw' }))
     expect(b.status).toBe(400)
-    expect(mockFetch).not.toHaveBeenCalled()
+    expect(mockFetchYouTubeMetadata).not.toHaveBeenCalled()
   })
 
   it('records an anonymous activity-pulse save event', async () => {
@@ -132,8 +361,99 @@ describe('POST /api/bookmarks/add — YouTube', () => {
     })
   })
 
+  it('repairs a duplicate parent missing media without inflating saves', async () => {
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark('user-123', 'Y9aytLYBajw', {
+          platform: 'youtube',
+          author: 'BassForge_us',
+          tweetUrl: 'https://www.youtube.com/shorts/Y9aytLYBajw',
+          category: 'video',
+        }),
+      )
+      .run()
+
+    const res = await POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw' }))
+    expect(await res.json()).toMatchObject({ success: false, isDuplicate: true })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(
+          and(
+            eq(schema.bookmarkMedia.userId, 'user-123'),
+            eq(schema.bookmarkMedia.platform, 'youtube'),
+            eq(schema.bookmarkMedia.bookmarkId, 'Y9aytLYBajw'),
+          ),
+        )
+        .all(),
+    ).toHaveLength(1)
+    expect(mockFetchYouTubeMetadata).not.toHaveBeenCalled()
+    expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(0)
+  })
+
+  it('recreates a duplicate deleted before repair and counts the actual insert', async () => {
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark('user-123', 'Y9aytLYBajw', {
+          platform: 'youtube',
+          author: 'BassForge_us',
+          tweetUrl: 'https://www.youtube.com/shorts/Y9aytLYBajw',
+          category: 'video',
+        }),
+      )
+      .run()
+    beforeTransaction = () => deleteSavedParent('youtube', 'Y9aytLYBajw')
+
+    const res = await POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw' }))
+    expect(await res.json()).toMatchObject({ success: true, isDuplicate: false })
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(1)
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(1)
+    expect(mockFetchYouTubeMetadata).not.toHaveBeenCalled()
+    expect(metrics.bookmarkAdded).toHaveBeenCalledTimes(1)
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(1)
+  })
+
+  it('counts only the request that wins a concurrent parent insert', async () => {
+    mockOembed()
+
+    const responses = await Promise.all([
+      POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw' })),
+      POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw' })),
+    ])
+    const bodies = await Promise.all(responses.map((response) => response.json()))
+
+    expect(bodies.filter((body) => body.success)).toHaveLength(1)
+    expect(bodies.filter((body) => body.isDuplicate)).toHaveLength(1)
+    expect(metrics.bookmarkAdded).toHaveBeenCalledTimes(1)
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(1)
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(1)
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(1)
+  })
+
+  it('rolls back the parent when the media write fails', async () => {
+    mockOembed()
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_youtube_media
+      BEFORE INSERT ON bookmark_media
+      WHEN NEW.platform = 'youtube'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected media failure');
+      END;
+    `)
+
+    const res = await POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw' }))
+    expect(res.status).toBe(500)
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(0)
+    expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
+  })
+
   it('404s when the video cannot be resolved', async () => {
-    mockFetch.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
+    mockFetchYouTubeMetadata.mockResolvedValue(null)
     const res = await POST(createRequest({ url: 'https://youtube.com/shorts/Y9aytLYBajw' }))
     expect(res.status).toBe(404)
   })
@@ -158,21 +478,14 @@ describe('POST /api/bookmarks/add — YouTube', () => {
  * `@user/video/{id}` URL is parsed locally, no network call) — only
  * `fetchTikTokMetadata` is mocked.
  */
-const mockFetchTikTokMetadata = vi.fn()
-vi.mock('@/lib/media/tnktok', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/media/tnktok')>('@/lib/media/tnktok')
-  return {
-    ...actual,
-    fetchTikTokMetadata: (...args: unknown[]) => mockFetchTikTokMetadata(...args),
-  }
-})
-
 describe('POST /api/bookmarks/add — TikTok', () => {
   const REAL_SNOWFLAKE_ID = '7673414867981831440'
 
   beforeEach(() => {
     testInstance = createTestDb()
     mockUserId = 'user-123'
+    beforeTransaction = null
+    vi.clearAllMocks()
     mockFetchTikTokMetadata.mockReset()
   })
   afterEach(() => testInstance.close())
@@ -239,6 +552,103 @@ describe('POST /api/bookmarks/add — TikTok', () => {
       )
       .all()
     expect(row.createdAt).toBe(null)
+  })
+
+  it('repairs a duplicate parent missing media without inflating saves', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue({
+      videoUrl: 'https://cdn.tiktokv.com/video.mp4',
+      description: 'a cool video',
+      authorName: 'Some Creator',
+    })
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark('user-123', REAL_SNOWFLAKE_ID, {
+          platform: 'tiktok',
+          author: 'someuser',
+          tweetUrl: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}`,
+          category: 'video',
+        }),
+      )
+      .run()
+
+    const res = await POST(
+      createRequest({
+        url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}`,
+      }),
+    )
+    expect(await res.json()).toMatchObject({ success: false, isDuplicate: true })
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(
+          and(
+            eq(schema.bookmarkMedia.userId, 'user-123'),
+            eq(schema.bookmarkMedia.platform, 'tiktok'),
+            eq(schema.bookmarkMedia.bookmarkId, REAL_SNOWFLAKE_ID),
+          ),
+        )
+        .all(),
+    ).toHaveLength(1)
+    expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(0)
+  })
+
+  it('recreates a TikTok duplicate deleted before repair and counts the actual insert', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue({
+      videoUrl: 'https://cdn.tiktokv.com/video.mp4',
+      description: 'a cool video',
+      authorName: 'Some Creator',
+    })
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark('user-123', REAL_SNOWFLAKE_ID, {
+          platform: 'tiktok',
+          author: 'someuser',
+          tweetUrl: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}`,
+          category: 'video',
+        }),
+      )
+      .run()
+    beforeTransaction = () => deleteSavedParent('tiktok', REAL_SNOWFLAKE_ID)
+
+    const res = await POST(
+      createRequest({
+        url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}`,
+      }),
+    )
+    expect(await res.json()).toMatchObject({ success: true, isDuplicate: false })
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(1)
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(1)
+    expect(metrics.bookmarkAdded).toHaveBeenCalledTimes(1)
+    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(1)
+  })
+
+  it('rolls back the parent when the media write fails', async () => {
+    mockFetchTikTokMetadata.mockResolvedValue({
+      videoUrl: 'https://cdn.tiktokv.com/video.mp4',
+      description: 'a cool video',
+    })
+    testInstance.sqlite.exec(`
+      CREATE TRIGGER fail_tiktok_media
+      BEFORE INSERT ON bookmark_media
+      WHEN NEW.platform = 'tiktok'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected media failure');
+      END;
+    `)
+
+    const res = await POST(
+      createRequest({
+        url: `https://www.tiktok.com/@someuser/video/${REAL_SNOWFLAKE_ID}`,
+      }),
+    )
+    expect(res.status).toBe(500)
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+    expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(0)
+    expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
   })
 
   it('404s when the video cannot be resolved', async () => {

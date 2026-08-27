@@ -9,13 +9,16 @@ overrides:
   minimatch@<3.1.3: ^3.1.3
   minimatch@9: ^9.0.7
   brace-expansion@<2.0.3: ^2.0.3
-  brace-expansion@^1.0.0: ^1.1.12
+  brace-expansion@^1.0.0: ^1.1.18
   flatted@<3.4.2: ^3.4.2
   fast-uri@<3.1.2: ^3.1.2
+  js-yaml@^4.0.0: ^4.3.1
   picomatch@<4.0.4: ^4.0.4
   rollup@<4.59.0: ^4.59.0
   esbuild@<0.25.0: ^0.25.0
   postcss@<8.5.10: ^8.5.10
+  undici@^7.0.0: ^7.29.0
+  yaml@^2.0.0: ^2.8.3
 
 importers:
 
@@ -57,6 +60,9 @@ importers:
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
+      tsx:
+        specifier: ^4.23.12
+        version: 4.23.12
       twitter-api-v2:
         specifier: ^1.29.1
         version: 1.29.1
@@ -102,7 +108,7 @@ importers:
         version: 8.67.0(eslint@9.39.2(jiti@1.21.7))(typescript@5.9.3)
       '@vitejs/plugin-react':
         specifier: ^5.2.0
-        version: 5.2.0(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2))
+        version: 5.2.0(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0))
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)
@@ -138,19 +144,16 @@ importers:
         version: 3.9.6
       tailwindcss:
         specifier: ^3.4.0
-        version: 3.4.19(tsx@4.23.12)(yaml@2.8.2)
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
+        version: 3.4.19(tsx@4.23.12)(yaml@2.9.0)
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
       vite:
         specifier: ^6.4.2
-        version: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2)
+        version: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0)
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2))
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0))
 
 packages:
 
@@ -1801,8 +1804,8 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
-  brace-expansion@1.1.12:
-    resolution: {integrity: sha512-9T9UjW3r0UW5c1Q7GTwllptXwhvYmEzFhzMfZ9H7FQWt+uZePjZPjBP/W1ZEyZ1twGWom5/56TF4lPcqjnDHcg==}
+  brace-expansion@1.1.18:
+    resolution: {integrity: sha512-Edep/X9fGqVNmzKBVsDYIOtD+z1tuezV70LBjdCst9Tqu76lsnvRiZ6oTic1n+/BIwX6QDGAO94PN4N2SADvtw==}
 
   brace-expansion@5.0.9:
     resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
@@ -2818,10 +2821,6 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@4.3.0:
-    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
-    hasBin: true
-
   js-yaml@4.3.1:
     resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
@@ -3254,7 +3253,7 @@ packages:
       jiti: '>=1.21.0'
       postcss: ^8.5.10
       tsx: ^4.8.1
-      yaml: ^2.4.2
+      yaml: ^2.8.3
     peerDependenciesMeta:
       jiti:
         optional: true
@@ -3783,8 +3782,8 @@ packages:
   undici-types@7.24.6:
     resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
 
-  undici@7.27.2:
-    resolution: {integrity: sha512-uZsKNuzQxDMUY6M3pIMvy5tvlGmtq8XJ2oLAkfRKGNu+1VQAIvLy2xIVG5ATZl5wDXl/tddByAWCizRbOme+TA==}
+  undici@7.29.0:
+    resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
     engines: {node: '>=20.18.1'}
 
   unrs-resolver@1.12.2:
@@ -3821,7 +3820,7 @@ packages:
       sugarss: '*'
       terser: ^5.16.0
       tsx: ^4.8.1
-      yaml: ^2.4.2
+      yaml: ^2.8.3
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -3970,8 +3969,8 @@ packages:
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
-  yaml@2.8.2:
-    resolution: {integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==}
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
     engines: {node: '>= 14.6'}
     hasBin: true
 
@@ -4563,7 +4562,7 @@ snapshots:
       globals: 14.0.0
       ignore: 5.3.2
       import-fresh: 3.3.1
-      js-yaml: 4.3.0
+      js-yaml: 4.3.1
       minimatch: 3.1.5
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -5000,7 +4999,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2))
+      vitest: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0))
 
   '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
@@ -5251,7 +5250,7 @@ snapshots:
   '@unrs/resolver-binding-win32-x64-msvc@1.12.2':
     optional: true
 
-  '@vitejs/plugin-react@5.2.0(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2))':
+  '@vitejs/plugin-react@5.2.0(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
       '@babel/core': 7.29.7
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.7)
@@ -5259,7 +5258,7 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-rc.3
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
-      vite: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2)
+      vite: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -5275,7 +5274,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2))
+      vitest: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0))
 
   '@vitest/expect@4.1.10':
     dependencies:
@@ -5286,13 +5285,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
-  '@vitest/mocker@4.1.10(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2))':
+  '@vitest/mocker@4.1.10(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2)
+      vite: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.10':
     dependencies:
@@ -5505,7 +5504,7 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
-  brace-expansion@1.1.12:
+  brace-expansion@1.1.18:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
@@ -6640,10 +6639,6 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@4.3.0:
-    dependencies:
-      argparse: 2.0.1
-
   js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
@@ -6665,7 +6660,7 @@ snapshots:
       saxes: 6.0.0
       symbol-tree: 3.2.4
       tough-cookie: 6.0.1
-      undici: 7.27.2
+      undici: 7.29.0
       w3c-xmlserializer: 5.0.0
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
@@ -6732,7 +6727,7 @@ snapshots:
       nano-spawn: 2.0.0
       pidtree: 0.6.0
       string-argv: 0.3.2
-      yaml: 2.8.2
+      yaml: 2.9.0
 
   listr2@9.0.5:
     dependencies:
@@ -6829,7 +6824,7 @@ snapshots:
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 1.1.12
+      brace-expansion: 1.1.18
 
   minimist@1.2.8: {}
 
@@ -7061,14 +7056,14 @@ snapshots:
       camelcase-css: 2.0.1
       postcss: 8.5.26
 
-  postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.26)(tsx@4.23.12)(yaml@2.8.2):
+  postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.26)(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
       lilconfig: 3.1.3
     optionalDependencies:
       jiti: 1.21.7
       postcss: 8.5.26
       tsx: 4.23.12
-      yaml: 2.8.2
+      yaml: 2.9.0
 
   postcss-nested@6.2.0(postcss@8.5.26):
     dependencies:
@@ -7589,7 +7584,7 @@ snapshots:
 
   tailwind-merge@3.6.0: {}
 
-  tailwindcss@3.4.19(tsx@4.23.12)(yaml@2.8.2):
+  tailwindcss@3.4.19(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
       '@alloc/quick-lru': 5.2.0
       arg: 5.0.2
@@ -7608,7 +7603,7 @@ snapshots:
       postcss: 8.5.26
       postcss-import: 15.1.0(postcss@8.5.26)
       postcss-js: 4.1.0(postcss@8.5.26)
-      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.26)(tsx@4.23.12)(yaml@2.8.2)
+      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.26)(tsx@4.23.12)(yaml@2.9.0)
       postcss-nested: 6.2.0(postcss@8.5.26)
       postcss-selector-parser: 6.1.2
       resolve: 1.22.11
@@ -7755,7 +7750,7 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  undici@7.27.2: {}
+  undici@7.29.0: {}
 
   unrs-resolver@1.12.2:
     dependencies:
@@ -7798,7 +7793,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2):
+  vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.4)
@@ -7811,12 +7806,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 1.21.7
       tsx: 4.23.12
-      yaml: 2.8.2
+      yaml: 2.9.0
 
-  vitest@4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2)):
+  vitest@4.1.10(@opentelemetry/api@1.9.1)(@types/node@25.9.2)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.10
-      '@vitest/mocker': 4.1.10(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2))
+      '@vitest/mocker': 4.1.10(vite@6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.10
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
@@ -7833,7 +7828,7 @@ snapshots:
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vite: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.8.2)
+      vite: 6.4.3(@types/node@25.9.2)(jiti@1.21.7)(tsx@4.23.12)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
@@ -7932,7 +7927,7 @@ snapshots:
 
   yallist@3.1.1: {}
 
-  yaml@2.8.2: {}
+  yaml@2.9.0: {}
 
   yargs-parser@22.0.0: {}
 

@@ -18,6 +18,7 @@
  * (`/api/media/instagram/thumbnail?id=`), which re-resolves it fresh.
  */
 
+import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
 import { makeHostAllowlist } from '@/lib/media/proxy'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
@@ -40,6 +41,11 @@ export interface ReelMetadata {
   authorName?: string
 }
 
+export type ReelMetadataStatus =
+  | { kind: 'resolved'; metadata: ReelMetadata }
+  | { kind: 'permanent-miss' }
+  | { kind: 'transient-failure' }
+
 /**
  * Whether a URL points at a trusted Instagram image host. Exact-match or
  * dot-prefixed subdomain (never `.includes()` — that's an SSRF footgun), https only.
@@ -53,6 +59,18 @@ export function isValidReelId(id: string): boolean {
   return ID_PATTERN.test(id)
 }
 
+type InstagramResult =
+  | { kind: 'resolved'; metadata: ReelMetadata }
+  | { kind: 'permanent-miss' }
+  | { kind: 'transient-failure'; cause?: unknown }
+
+class TransientInstagramMetadataError extends Error {
+  constructor(cause?: unknown) {
+    super('Instagram metadata scrape failed transiently', { cause })
+    this.name = 'TransientInstagramMetadataError'
+  }
+}
+
 /**
  * Resolve a Reel's poster + caption + author from Instagram's own OG tags.
  * Returns null only when the post is unavailable (private/removed) or
@@ -63,13 +81,23 @@ export function isValidReelId(id: string): boolean {
  * early-bails at `</head>`, which the fetch-level Data Cache can't cache, so we
  * cache the resolved metadata instead. Repeat crawler hits to the same id reuse it.
  */
-export const fetchReelMetadata = unstable_cache(
+const fetchCachedReelMetadata = unstable_cache(
   async (id: string): Promise<ReelMetadata | null> => {
-    if (!isValidReelId(id)) return null
+    let sawTransientFailure = false
+    let transientCause: unknown
 
     for (const path of [`/reel/${id}/`, `/p/${id}/`]) {
-      const meta = await fetchFromInstagram(path)
-      if (meta) return meta
+      const result = await fetchFromInstagram(path)
+      if (result.kind === 'resolved') return result.metadata
+      if (result.kind === 'transient-failure') {
+        sawTransientFailure = true
+        transientCause = result.cause
+      }
+    }
+
+    // Cache a miss only when both canonical paths explicitly answer 404/410.
+    if (sawTransientFailure) {
+      throw new TransientInstagramMetadataError(transientCause)
     }
     return null
   },
@@ -77,7 +105,32 @@ export const fetchReelMetadata = unstable_cache(
   { revalidate: 3600 },
 )
 
-async function fetchFromInstagram(path: string): Promise<ReelMetadata | null> {
+export async function fetchReelMetadataStatus(id: string): Promise<ReelMetadataStatus> {
+  if (!isValidReelId(id)) return { kind: 'permanent-miss' }
+  try {
+    const metadata = await fetchCachedReelMetadata(id)
+    return metadata ? { kind: 'resolved', metadata } : { kind: 'permanent-miss' }
+  } catch {
+    return { kind: 'transient-failure' }
+  }
+}
+
+/**
+ * Request-scoped memoization shared by generateMetadata and the preview RSC.
+ * Cross-request result caching remains owned by fetchCachedReelMetadata.
+ */
+export const getReelMetadataStatus = cache(fetchReelMetadataStatus)
+
+/**
+ * Preserve the public Metadata|null contract. Invalid input avoids the cache
+ * and network; transient errors are caught only after escaping the callback.
+ */
+export async function fetchReelMetadata(id: string): Promise<ReelMetadata | null> {
+  const result = await fetchReelMetadataStatus(id)
+  return result.kind === 'resolved' ? result.metadata : null
+}
+
+async function fetchFromInstagram(path: string): Promise<InstagramResult> {
   try {
     const origin = (process.env.INSTAGRAM_OG_BASE?.trim() || 'https://www.instagram.com').replace(
       /\/$/,
@@ -89,28 +142,41 @@ async function fetchFromInstagram(path: string): Promise<ReelMetadata | null> {
       redirect: 'follow',
     })
 
-    if (!response.ok) return null
+    if (response.status === 404 || response.status === 410) {
+      return { kind: 'permanent-miss' }
+    }
+    if (!response.ok) return { kind: 'transient-failure' }
     const contentType = response.headers.get('content-type') || ''
-    if (!contentType.includes('text/html')) return null
+    if (!contentType.includes('text/html')) return { kind: 'transient-failure' }
 
     const reader = response.body?.getReader()
-    if (!reader) return null
+    if (!reader) return { kind: 'transient-failure' }
 
     // Instagram's HTML is ~800KB but the OG tags live in <head>; bail early.
     let html = ''
     const decoder = new TextDecoder()
     const maxBytes = 512 * 1024
-    while (html.length < maxBytes) {
+    let bytesRead = 0
+    while (bytesRead < maxBytes) {
       const { done, value } = await reader.read()
       if (done) break
-      html += decoder.decode(value, { stream: true })
+      const remaining = maxBytes - bytesRead
+      const chunk = value.byteLength > remaining ? value.subarray(0, remaining) : value
+      bytesRead += chunk.byteLength
+      html += decoder.decode(chunk, { stream: true })
       if (html.includes('</head>')) break
+      if (value.byteLength > remaining) break
     }
     reader.cancel().catch(() => {})
 
-    return parseInstagramOg(html)
-  } catch {
-    return null
+    const metadata = parseInstagramOg(html)
+    return metadata
+      ? { kind: 'resolved', metadata }
+      : // A 200 without usable tags may be a bot challenge, truncation, or a
+        // changed document shape; it is not evidence that the post is gone.
+        { kind: 'transient-failure' }
+  } catch (cause) {
+    return { kind: 'transient-failure', cause }
   }
 }
 

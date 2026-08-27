@@ -25,7 +25,7 @@ import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
 import { useSyncListener } from './useSyncListener'
 import { collectionPath } from '@/lib/theater/collection-href'
-import { notifyCollectionChanged } from '@/lib/client-events'
+import { clientEventMatchesCurrentAccount, notifyCollectionChanged } from '@/lib/client-events'
 
 export default function AuthedHome(): React.ReactElement {
   return (
@@ -533,6 +533,7 @@ function FeedPageContent(): React.ReactElement {
   useEffect(() => {
     if (!isAuthenticated) return
     const handler = (e: Event) => {
+      if (!clientEventMatchesCurrentAccount(e)) return
       void fetchTags()
       const detail = (e as CustomEvent).detail as
         { platform?: string; bookmarkId?: string; tags?: string[] } | undefined
@@ -611,6 +612,10 @@ function FeedPageContent(): React.ReactElement {
     // One-way cleanup of the superseded query name.
     params.delete('unreadOnly')
     const queryString = params.toString()
+    // Next 16 does real RSC work even when replacing the current URL. Since
+    // `useSearchParams()` receives a fresh identity after that work, an
+    // unconditional same-URL replace becomes a refresh loop.
+    if (queryString === searchParams.toString()) return
     router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
   }, [filter, platformFilter, sort, sortDirection, hideArchived, router, searchParams, pathname])
 

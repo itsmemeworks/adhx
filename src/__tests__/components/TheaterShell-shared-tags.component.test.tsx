@@ -10,7 +10,11 @@ import { useState } from 'react'
 import { render, act, waitFor, screen } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
-import { notifyTagsChanged } from '@/lib/client-events'
+import {
+  notifyTagsChanged,
+  resetClientEventBridgeForTests,
+  setClientEventAccount,
+} from '@/lib/client-events'
 import { resetSharedAutoSaveAttempts } from '@/lib/theater/autosave-shared'
 
 vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
@@ -52,7 +56,7 @@ vi.mock('@/components/theater/useTheaterFeed', () => ({
 vi.mock('@/components/auth', () => ({
   SignInModal: () => null,
   useAuthMe: () => ({
-    me: { authenticated: true, user: { username: 'owner' } },
+    me: { authenticated: true, user: { id: 'account-a', username: 'owner' } },
     loading: false,
     refresh: vi.fn(),
   }),
@@ -76,6 +80,8 @@ describe('TheaterShell shared-lead tags', () => {
   const originalGetEntries = performance.getEntriesByType
 
   beforeEach(() => {
+    resetClientEventBridgeForTests()
+    setClientEventAccount('account-a')
     resetSharedAutoSaveAttempts()
     sessionStorage.clear()
     window.history.replaceState(null, '', '/naval/status/123')

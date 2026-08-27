@@ -12,12 +12,16 @@ import { eq, and } from 'drizzle-orm'
 
 let testInstance: TestDbInstance
 let mockUserId: string | null = 'user-123'
+let beforeTransaction: (() => void) | null = null
 
 vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
   runInTransaction<R>(fn: () => R): R {
+    const hook = beforeTransaction
+    beforeTransaction = null
+    hook?.()
     return testInstance.sqlite.transaction(fn)()
   },
 }))
@@ -89,6 +93,52 @@ const mockTweetWithArticle = {
   },
 }
 
+const repeatedLinkUrl = 'https://example.com/articles/repeated'
+const mockTweetWithRepeatedLinks = {
+  tweet: {
+    ...mockTweetData.tweet,
+    urls: [
+      {
+        url: 'https://t.co/repeated-one',
+        expanded_url: repeatedLinkUrl,
+        domain: 'example.com',
+      },
+      {
+        url: 'https://t.co/repeated-two',
+        expanded_url: repeatedLinkUrl,
+        domain: 'example.com',
+      },
+    ],
+  },
+}
+
+const overlappingArticleUrl = 'https://x.com/testuser/article/123456789'
+const mockTweetWithOverlappingArticleLink = {
+  tweet: {
+    ...mockTweetData.tweet,
+    urls: [
+      {
+        url: 'https://t.co/article',
+        expanded_url: overlappingArticleUrl,
+        domain: 'x.com',
+      },
+    ],
+    article: {
+      title: 'Complete article title',
+      preview_text: 'Complete article description',
+      cover_media: {
+        media_info: {
+          original_img_url: 'https://pbs.twimg.com/article-cover.jpg',
+        },
+      },
+      content: {
+        blocks: [{ type: 'unstyled', text: 'Full article body' }],
+        entityMap: {},
+      },
+    },
+  },
+}
+
 const mockQuoteTweet = {
   tweet: {
     id: '999888777',
@@ -153,6 +203,7 @@ describe('API: /api/tweets/add', () => {
   beforeEach(() => {
     testInstance = createTestDb()
     mockUserId = 'user-123'
+    beforeTransaction = null
     vi.clearAllMocks()
   })
 
@@ -396,6 +447,125 @@ describe('API: /api/tweets/add', () => {
         )
       expect(tiktokBookmark).toHaveLength(1)
     })
+
+    it('returns duplicate and merges links when another writer wins after the precheck', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            tweet: {
+              ...mockTweetWithOverlappingArticleLink.tweet,
+              media: {
+                all: [
+                  {
+                    type: 'photo',
+                    url: 'https://pbs.twimg.com/loser-photo.jpg',
+                    width: 1200,
+                    height: 800,
+                  },
+                ],
+              },
+            },
+          }),
+      })
+      beforeTransaction = () => {
+        testInstance.db
+          .insert(schema.bookmarks)
+          .values({
+            id: '123456789',
+            userId: 'user-123',
+            platform: 'twitter',
+            author: 'testuser',
+            text: 'Sparse concurrent winner',
+            tweetUrl: 'https://x.com/testuser/status/123456789',
+            processedAt: new Date().toISOString(),
+          })
+          .run()
+        testInstance.db
+          .insert(schema.bookmarkMedia)
+          .values({
+            id: 'winner-photo',
+            userId: 'user-123',
+            platform: 'twitter',
+            bookmarkId: '123456789',
+            mediaType: 'photo',
+            originalUrl: 'https://pbs.twimg.com/winner-photo.jpg',
+          })
+          .run()
+        testInstance.db
+          .insert(schema.bookmarkLinks)
+          .values({
+            userId: 'user-123',
+            platform: 'twitter',
+            bookmarkId: '123456789',
+            originalUrl: 'https://t.co/article',
+            expandedUrl: overlappingArticleUrl,
+            domain: 'x.com',
+          })
+          .run()
+      }
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const { metrics } = await import('@/lib/sentry')
+      const response = await POST(createRequest({ url: 'https://x.com/testuser/status/123456789' }))
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data).toMatchObject({
+        success: false,
+        isDuplicate: true,
+        message: 'This tweet is already in your bookmarks',
+      })
+      expect(
+        await testInstance.db
+          .select()
+          .from(schema.bookmarks)
+          .where(
+            and(
+              eq(schema.bookmarks.userId, 'user-123'),
+              eq(schema.bookmarks.platform, 'twitter'),
+              eq(schema.bookmarks.id, '123456789'),
+            ),
+          ),
+      ).toHaveLength(1)
+
+      const media = await testInstance.db
+        .select()
+        .from(schema.bookmarkMedia)
+        .where(
+          and(
+            eq(schema.bookmarkMedia.userId, 'user-123'),
+            eq(schema.bookmarkMedia.platform, 'twitter'),
+            eq(schema.bookmarkMedia.bookmarkId, '123456789'),
+          ),
+        )
+      expect(media).toHaveLength(1)
+      expect(media[0].id).toBe('winner-photo')
+
+      const links = await testInstance.db
+        .select()
+        .from(schema.bookmarkLinks)
+        .where(
+          and(
+            eq(schema.bookmarkLinks.userId, 'user-123'),
+            eq(schema.bookmarkLinks.platform, 'twitter'),
+            eq(schema.bookmarkLinks.bookmarkId, '123456789'),
+            eq(schema.bookmarkLinks.expandedUrl, overlappingArticleUrl),
+          ),
+        )
+      expect(links).toHaveLength(1)
+      expect(links[0]).toMatchObject({
+        originalUrl: 'https://t.co/article',
+        linkType: 'article',
+        domain: 'x.com',
+        previewTitle: 'Complete article title',
+        previewDescription: 'Complete article description',
+        previewImageUrl: 'https://pbs.twimg.com/article-cover.jpg',
+      })
+      expect(links[0].contentJson).toContain('Full article body')
+      expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
+      expect(await testInstance.db.select().from(schema.activity)).toHaveLength(0)
+    })
   })
 
   describe('Category detection', () => {
@@ -519,6 +689,68 @@ describe('API: /api/tweets/add', () => {
 
       expect(media).toHaveLength(1)
       expect(media[0].mediaType).toBe('photo')
+    })
+  })
+
+  describe('Link processing', () => {
+    it('consolidates repeated expanded URLs without rolling back the manual save', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetWithRepeatedLinks),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(createRequest({ url: 'https://x.com/testuser/status/123456789' }))
+
+      expect(response.status).toBe(200)
+      expect((await response.json()).success).toBe(true)
+
+      const links = await testInstance.db
+        .select()
+        .from(schema.bookmarkLinks)
+        .where(
+          and(
+            eq(schema.bookmarkLinks.userId, 'user-123'),
+            eq(schema.bookmarkLinks.platform, 'twitter'),
+            eq(schema.bookmarkLinks.bookmarkId, '123456789'),
+            eq(schema.bookmarkLinks.expandedUrl, repeatedLinkUrl),
+          ),
+        )
+      expect(links).toHaveLength(1)
+    })
+
+    it('merges article metadata with a sparse direct-link duplicate', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockTweetWithOverlappingArticleLink),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(createRequest({ url: 'https://x.com/testuser/status/123456789' }))
+
+      expect(response.status).toBe(200)
+      expect((await response.json()).success).toBe(true)
+
+      const [link] = await testInstance.db
+        .select()
+        .from(schema.bookmarkLinks)
+        .where(
+          and(
+            eq(schema.bookmarkLinks.userId, 'user-123'),
+            eq(schema.bookmarkLinks.platform, 'twitter'),
+            eq(schema.bookmarkLinks.bookmarkId, '123456789'),
+            eq(schema.bookmarkLinks.expandedUrl, overlappingArticleUrl),
+          ),
+        )
+      expect(link).toMatchObject({
+        originalUrl: 'https://t.co/article',
+        linkType: 'article',
+        domain: 'x.com',
+        previewTitle: 'Complete article title',
+        previewDescription: 'Complete article description',
+        previewImageUrl: 'https://pbs.twimg.com/article-cover.jpg',
+      })
+      expect(link.contentJson).toContain('Full article body')
     })
   })
 

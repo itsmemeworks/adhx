@@ -36,6 +36,10 @@ export function personalKeyAction(e: PersonalKeyLike): PersonalKeyAction | null 
 }
 
 export interface UseTheaterKeyboardArgs {
+  /** Disable every global shortcut while AppShell's server/client auth scopes differ. */
+  disabled?: boolean
+  /** Reports the actual lifetime of the global keydown listener. */
+  onReadyChange?: (ready: boolean) => void
   isPersonal: boolean
   personalTab: PersonalTab
   goNext: () => void
@@ -73,6 +77,8 @@ export interface UseTheaterKeyboardArgs {
  * ⌘V / Ctrl+V is the OS paste event, not a keydown binding.
  */
 export function useTheaterKeyboard({
+  disabled = false,
+  onReadyChange,
   isPersonal,
   personalTab,
   goNext,
@@ -86,6 +92,11 @@ export function useTheaterKeyboard({
   isPlaybackHidden,
 }: UseTheaterKeyboardArgs): void {
   useEffect(() => {
+    if (disabled) {
+      onReadyChange?.(false)
+      return
+    }
+
     function handleKeyDown(e: KeyboardEvent) {
       if (isTheaterTypingTarget(e.target)) return
 
@@ -176,14 +187,20 @@ export function useTheaterKeyboard({
       }
     }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    onReadyChange?.(true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      onReadyChange?.(false)
+    }
   }, [
+    disabled,
     goNext,
     goPrev,
     isPersonal,
     personalTab,
     undoLastAction,
     onClose,
+    onReadyChange,
     onTabChange,
     helpOpen,
     onToggleHelp,

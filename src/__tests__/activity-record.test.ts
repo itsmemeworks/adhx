@@ -138,6 +138,35 @@ describe('activity — recordActivity', () => {
     expect(rows()).toHaveLength(0)
   })
 
+  it('skips pulse writes when post moderation state cannot be loaded', () => {
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    recordActivity({
+      action: 'preview',
+      platform: 'twitter',
+      bookmarkId: 'uncertain',
+      author: 'author',
+      url: '/author/status/uncertain',
+    })
+
+    expect(rows()).toHaveLength(0)
+  })
+
+  it('skips attributable pulse writes when user ban state cannot be loaded', () => {
+    testInstance.sqlite.exec('DROP TABLE user_bans')
+
+    recordActivity({
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: 'uncertain-user',
+      author: 'author',
+      url: '/author/status/uncertain-user',
+      userId: 'user-a',
+    })
+
+    expect(rows()).toHaveLength(0)
+  })
+
   it('stores sanitized textLinks and quote as JSON, capped at 8 links', () => {
     const links = Array.from({ length: 12 }, (_, i) => ({
       shortUrl: `https://t.co/${i}`,

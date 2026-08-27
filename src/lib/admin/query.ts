@@ -14,7 +14,6 @@ import {
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { getAnalyticsSummary, getPostAnalytics, type AnalyticsWindow } from '@/lib/analytics/query'
 import { getUserIdForUsername } from '@/lib/users/lookup'
-import { isAdminUsername } from './guard'
 import { isUserBanned, previewPathFor } from './moderation'
 import { previewPath } from '@/lib/activity/preview-path'
 
@@ -355,6 +354,7 @@ export async function inspectUser(
     .select({
       id: users.id,
       username: users.username,
+      role: users.role,
       displayName: users.displayName,
       createdAt: users.createdAt,
     })
@@ -368,6 +368,7 @@ export async function inspectUser(
       .select({
         id: users.id,
         username: users.username,
+        role: users.role,
         displayName: users.displayName,
         createdAt: users.createdAt,
       })
@@ -384,6 +385,7 @@ export async function inspectUser(
       .select({
         id: users.id,
         username: users.username,
+        role: users.role,
         displayName: users.displayName,
         createdAt: users.createdAt,
       })
@@ -426,7 +428,7 @@ export async function inspectUser(
     username: user.username,
     displayName: user.displayName,
     createdAt: user.createdAt ?? null,
-    isAdmin: isAdminUsername(user.username),
+    isAdmin: user.role === 'admin',
     isSelf: !!actorUserId && user.id === actorUserId,
     banned: !!ban || isUserBanned(user.id),
     banReason: ban?.reason ?? null,

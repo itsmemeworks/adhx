@@ -4,7 +4,7 @@ import { Play, Check, ChevronRight, Image as ImageIcon, FileText, Video, Link2 }
 import type { FeedItem } from './types'
 import { PlatformGlyph, TypeBadge, type ContentType } from '@/components/matter'
 import { formatCompactRelativeTime, formatDurationMs } from '@/lib/utils/format'
-import { feedItemType, feedItemTitle, feedItemThumb } from './feedItemMeta'
+import { feedItemSelectionLabel, feedItemType, feedItemTitle, feedItemThumb } from './feedItemMeta'
 import { cn } from '@/lib/utils'
 
 const TYPE_ICON: Record<ContentType, typeof Video> = {
@@ -32,6 +32,7 @@ export function FeedListRow({
   selectionMode = false,
   selected = false,
   onToggleSelect,
+  selectionName,
   justAdded = false,
 }: {
   item: FeedItem
@@ -42,6 +43,8 @@ export function FeedListRow({
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: () => void
+  /** Tag name used in the selection-mode accessible action name. */
+  selectionName?: string
   /** Briefly tinted: this is the post the viewer just pasted in. */
   justAdded?: boolean
 }) {
@@ -83,6 +86,8 @@ export function FeedListRow({
     <button
       type="button"
       onClick={selectionMode ? onToggleSelect : onClick}
+      aria-label={selectionMode ? feedItemSelectionLabel(item, selected, selectionName) : undefined}
+      aria-pressed={selectionMode ? selected : undefined}
       className={cn(
         'w-full flex items-center text-left border-b border-hairline transition-colors duration-150 hover:bg-inset/60',
         compact ? 'gap-3 px-4 py-[13px]' : 'gap-4 px-4 sm:px-[26px] py-[14px]',

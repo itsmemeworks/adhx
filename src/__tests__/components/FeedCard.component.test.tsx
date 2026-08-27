@@ -13,8 +13,8 @@
  * - TextCardContent: plain text tweets
  */
 
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { FeedCard } from '@/components/feed/FeedCard'
 import { fixtures, fixtureMetadata, type FixtureSlug } from '../fixtures/tweets'
 import { fxTwitterToFeedItem } from '../fixtures/tweets/helpers'
@@ -22,7 +22,20 @@ import { fxTwitterToFeedItem } from '../fixtures/tweets/helpers'
 // Mock handlers
 const mockOnExpand = vi.fn()
 
+function keyboardActivate(button: HTMLElement, key: 'Enter' | ' '): void {
+  button.focus()
+  fireEvent.keyDown(button, { key })
+  fireEvent.keyUp(button, { key })
+  // jsdom does not synthesize a native button click from keyboard events.
+  // This click represents the browser's one native activation after the key.
+  fireEvent.click(button, { detail: 0 })
+}
+
 describe('FeedCard Component Snapshots', () => {
+  beforeEach(() => {
+    mockOnExpand.mockClear()
+  })
+
   describe('Renders all fixture types correctly', () => {
     it.each(fixtureMetadata)('$slug: renders correctly', ({ slug }) => {
       const fixture = fixtures[slug as FixtureSlug]
@@ -149,6 +162,138 @@ describe('FeedCard Component Snapshots', () => {
       expect(container.querySelector('button[title="Copy link to this post"]')).toBeNull()
       expect(container.querySelector('button[title="Mark as read"]')).toBeNull()
       expect(container.querySelector('button[title="Mark as unread"]')).toBeNull()
+    })
+  })
+
+  describe('Keyboard and link accessibility', () => {
+    it('exposes one native primary button in the tab order and activates once per Enter or Space', () => {
+      const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
+      const onExpand = vi.fn()
+      render(
+        <FeedCard item={feedItem} lastSyncAt={null} sortField="processedAt" onExpand={onExpand} />,
+      )
+
+      const primaryAction = screen.getByRole('button', {
+        name: new RegExp(`open text by`, 'i'),
+      })
+      expect(primaryAction).toBeInstanceOf(HTMLButtonElement)
+      expect(primaryAction).toHaveAttribute('type', 'button')
+      expect(primaryAction).toHaveProperty('tabIndex', 0)
+
+      keyboardActivate(primaryAction, 'Enter')
+      expect(onExpand).toHaveBeenCalledTimes(1)
+
+      onExpand.mockClear()
+      keyboardActivate(primaryAction, ' ')
+      expect(onExpand).toHaveBeenCalledTimes(1)
+    })
+
+    it('uses aria-pressed and toggles selection instead of opening from the keyboard', () => {
+      const feedItem = fxTwitterToFeedItem(fixtures['plain-text'])
+      const onExpand = vi.fn()
+      const onToggleSelect = vi.fn()
+      const { rerender } = render(
+        <FeedCard
+          item={feedItem}
+          lastSyncAt={null}
+          sortField="processedAt"
+          onExpand={onExpand}
+          selectionMode
+          selected={false}
+          selectionName="research"
+          onToggleSelect={onToggleSelect}
+        />,
+      )
+
+      const addAction = screen.getByRole('button', {
+        name: /add text by .* to #research/i,
+      })
+      expect(addAction).toHaveAttribute('aria-pressed', 'false')
+      keyboardActivate(addAction, 'Enter')
+      expect(onToggleSelect).toHaveBeenCalledTimes(1)
+      expect(onExpand).not.toHaveBeenCalled()
+
+      onToggleSelect.mockClear()
+      keyboardActivate(addAction, ' ')
+      expect(onToggleSelect).toHaveBeenCalledTimes(1)
+      expect(onExpand).not.toHaveBeenCalled()
+
+      rerender(
+        <FeedCard
+          item={feedItem}
+          lastSyncAt={null}
+          sortField="processedAt"
+          onExpand={onExpand}
+          selectionMode
+          selected
+          selectionName="research"
+          onToggleSelect={onToggleSelect}
+        />,
+      )
+      expect(
+        screen.getByRole('button', { name: /remove text by .* from #research/i }),
+      ).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('keeps inline links independently focusable without nesting or card activation', () => {
+      const feedItem = {
+        ...fxTwitterToFeedItem(fixtures['plain-text']),
+        text: 'Read https://example.com/accessibility',
+      }
+      const onExpand = vi.fn()
+      const { container } = render(
+        <FeedCard item={feedItem} lastSyncAt={null} sortField="processedAt" onExpand={onExpand} />,
+      )
+
+      const primaryAction = screen.getByRole('button', { name: /open text by/i })
+      const inlineLink = screen.getByRole('link', { name: 'https://example.com/accessibility' })
+      expect(primaryAction.querySelector('a')).toBeNull()
+      expect(container.querySelector('button a, a button')).toBeNull()
+
+      inlineLink.focus()
+      expect(inlineLink).toHaveFocus()
+      fireEvent.click(inlineLink)
+      expect(onExpand).not.toHaveBeenCalled()
+
+      keyboardActivate(primaryAction, 'Enter')
+      expect(onExpand).toHaveBeenCalledTimes(1)
+    })
+
+    it('adds a normalized, bounded content excerpt that distinguishes repeated-author posts', () => {
+      const baseItem = fxTwitterToFeedItem(fixtures['plain-text'])
+      const firstItem = {
+        ...baseItem,
+        id: 'first-accessible-name',
+        text: `First   distinct\npost ${'with useful detail '.repeat(8)}`,
+      }
+      const secondItem = {
+        ...baseItem,
+        id: 'second-accessible-name',
+        text: 'Second distinct post',
+      }
+      render(
+        <>
+          <FeedCard item={firstItem} lastSyncAt={null} sortField="processedAt" onExpand={vi.fn()} />
+          <FeedCard
+            item={secondItem}
+            lastSyncAt={null}
+            sortField="processedAt"
+            onExpand={vi.fn()}
+          />
+        </>,
+      )
+
+      const primaryActions = screen.getAllByRole('button', { name: /open text by/i })
+      const firstName = primaryActions[0].getAttribute('aria-label') || ''
+      const secondName = primaryActions[1].getAttribute('aria-label') || ''
+      const firstExcerpt = firstName.split(': ')[1]
+
+      expect(firstName).toContain('First distinct post with useful detail')
+      expect(firstName).not.toMatch(/\s{2,}|\n/)
+      expect(firstExcerpt.length).toBeLessThanOrEqual(72)
+      expect(firstExcerpt).toMatch(/…$/)
+      expect(secondName).toContain('Second distinct post')
+      expect(firstName).not.toBe(secondName)
     })
   })
 

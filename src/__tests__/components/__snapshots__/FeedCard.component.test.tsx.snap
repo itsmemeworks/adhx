@@ -5,8 +5,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open photo by Guillaume: Apparently, a 19 year old built Wisprflow's UGC program to 500M views i…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="relative"
     >
@@ -89,8 +94,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open article by Ali Ansari: human data will be a $1 trillion/year market"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="relative overflow-hidden p-4 bg-gradient-to-br from-clay/[0.14] to-surface"
     >
@@ -167,8 +177,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'a
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open article by Noah Ryan: How to Get Shredded (Without Even Trying)"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="relative"
     >
@@ -236,8 +251,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'e
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open video by MoonPay 🟣: BREAKING: @AviciMoney now offers 🇺🇸 and 🇪🇺 Named Virtual Accounts p…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="relative"
     >
@@ -339,8 +359,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open photo by Noah Frydberg | Tiktok Shop For Brands: Nano Banana + Fastmoss + Manus + Veo3 = AI Content Factory We built a f…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="relative"
     >
@@ -451,8 +476,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open photo by Basil the Great: 🚨BREAKING: TRUMP FURIOUS WITH STARMER U.S state department made clear…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="relative"
     >
@@ -542,8 +572,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open text by SightBringer: ⚡️This is a live containment operation. The strike was real. The revers…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="bg-surface p-4"
     >
@@ -888,8 +923,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'p
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open text by cinesthetic.: What movie is 10/10, yet hardly anyone has heard of it?"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="bg-surface p-4"
     >
@@ -952,8 +992,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open text by Nate.Google: for all of you guys that haven’t cracked organic yet you’re welcome"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="bg-surface p-4"
     >
@@ -1167,8 +1212,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'q
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open text by Elon Musk: True"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="bg-surface p-4"
     >
@@ -1262,8 +1312,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'r
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open text by Grok: Based on recent reports, the UK government has approved postponements (…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="bg-surface p-4"
     >
@@ -1335,8 +1390,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 't
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open text by swyx: insane how much goalposts have shifted that bfl can just drop a model t…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="bg-surface p-4"
     >
@@ -1442,8 +1502,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'v
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open video by Kekius Maximus: Primes look chaotic in a line, but reveal structure when space curves.…"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="relative"
     >
@@ -1541,8 +1606,13 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'y
   class="mb-4 break-inside-avoid transition-all duration-300"
 >
   <div
-    class="group relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer border-hairline"
+    class="group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1] border-hairline"
   >
+    <button
+      aria-label="Open text by SkalskiP: link: https://www.youtube.com/watch?v=yGQb9KkvQ1Q"
+      class="pointer-events-auto !absolute inset-0 !z-0 cursor-pointer rounded-card focus:outline-none"
+      type="button"
+    />
     <div
       class="bg-surface p-4"
     >

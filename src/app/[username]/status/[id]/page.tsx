@@ -12,7 +12,7 @@ import {
 } from '@/lib/theater/resolve-shared-preview'
 import { SharedPreviewPage, MODERATED_PAGE_METADATA } from '@/lib/theater/shared-preview'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
-import { isPostModerated } from '@/lib/admin/moderation'
+import { readPostModeration } from '@/lib/admin/moderation'
 
 interface Props {
   params: Promise<{ username: string; id: string }>
@@ -29,11 +29,13 @@ export default async function QuickAddPage({ params }: Props) {
     redirect('/')
   }
 
-  const userId = await getCurrentUserId()
+  const moderation = readPostModeration('twitter', id)
+  const unavailable = !moderation.ok || moderation.value
+  const userId = unavailable ? null : await getCurrentUserId()
   const stub = stubTweetTheaterItem(username, id)
   const { seed } = await buildSharedSeed(stub)
 
-  if (isPostModerated('twitter', id)) {
+  if (unavailable) {
     return (
       <TheaterShell
         seed={seed}
@@ -68,7 +70,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   }
 
-  if (isPostModerated('twitter', id)) return MODERATED_PAGE_METADATA
+  const moderation = readPostModeration('twitter', id)
+  if (!moderation.ok || moderation.value) return MODERATED_PAGE_METADATA
 
   const tweet = await getCachedTweet(username, id)
 

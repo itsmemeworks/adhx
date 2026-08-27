@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { createTestDb, createTestBookmark, type TestDbInstance } from './setup'
 import {
   activity,
@@ -8,6 +8,8 @@ import {
   bookmarkMedia,
   bookmarkLinks,
   bookmarks,
+  moderatedPosts,
+  userBans,
   type NewActivity,
 } from '@/lib/db/schema'
 
@@ -160,6 +162,135 @@ describe('getTheaterFeed', () => {
     const seed = await getTheaterFeed()
 
     expect(seed.items.some((item) => item.bookmarkId === 'private1')).toBe(false)
+  })
+
+  it('excludes hidden posts while preserving visible public-tag backfill order', async () => {
+    seedActivity({ bookmarkId: 'live1', createdAt: minsAgo(5) })
+    seedPublicTagBookmark({
+      userId: 'curator',
+      tag: 'faves',
+      bookmarkId: 'visible-newer',
+      processedAt: '2026-08-20T12:00:00.000Z',
+    })
+    seedPublicTagBookmark({
+      userId: 'curator',
+      tag: 'faves',
+      bookmarkId: 'hidden-middle',
+      processedAt: '2026-08-20T11:00:00.000Z',
+    })
+    seedPublicTagBookmark({
+      userId: 'curator',
+      tag: 'faves',
+      bookmarkId: 'visible-older',
+      processedAt: '2026-08-20T10:00:00.000Z',
+    })
+    testInstance.db
+      .insert(moderatedPosts)
+      .values({
+        platform: 'twitter',
+        bookmarkId: 'hidden-middle',
+        hidden: 1,
+        createdAt: new Date().toISOString(),
+        createdBy: 'admin',
+      })
+      .run()
+
+    const seed = await getTheaterFeed()
+    const backfillIds = seed.items
+      .map((item) => item.bookmarkId)
+      .filter((id) => id?.startsWith('visible') || id === 'hidden-middle')
+
+    expect(backfillIds).toEqual(['visible-newer', 'visible-older'])
+  })
+
+  it('returns an empty feed when post moderation storage is unreadable', async () => {
+    seedActivity({ bookmarkId: 'live1', createdAt: minsAgo(5) })
+    seedPublicTagBookmark({ userId: 'curator', tag: 'faves', bookmarkId: 'uncertain' })
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    const seed = await getTheaterFeed()
+
+    expect(seed).toEqual({ items: [], savedToday: 0, recentActivity: 0 })
+  })
+
+  it('excludes backfill rows owned by banned curators', async () => {
+    seedPublicTagBookmark({ userId: 'allowed-curator', tag: 'faves', bookmarkId: 'allowed' })
+    seedPublicTagBookmark({ userId: 'banned-curator', tag: 'faves', bookmarkId: 'banned' })
+    testInstance.db
+      .insert(userBans)
+      .values({
+        userId: 'banned-curator',
+        createdAt: new Date().toISOString(),
+        createdBy: 'admin',
+      })
+      .run()
+
+    const seed = await getTheaterFeed()
+
+    expect(seed.items.map((item) => item.bookmarkId)).toContain('allowed')
+    expect(seed.items.map((item) => item.bookmarkId)).not.toContain('banned')
+  })
+
+  it('returns an empty feed when the ban store is unreadable', async () => {
+    seedActivity({ bookmarkId: 'live1', createdAt: minsAgo(5) })
+    seedPublicTagBookmark({ userId: 'curator', tag: 'faves', bookmarkId: 'uncertain' })
+    testInstance.sqlite.exec('DROP TABLE user_bans')
+
+    const seed = await getTheaterFeed()
+
+    expect(seed).toEqual({ items: [], savedToday: 0, recentActivity: 0 })
+  })
+
+  it('scopes media to the exact curator tuple when owners saved the same post id', async () => {
+    seedPublicTagBookmark({
+      userId: 'older-curator',
+      tag: 'faves',
+      bookmarkId: 'shared-id',
+      author: 'older-author',
+      processedAt: '2026-08-20T10:00:00.000Z',
+    })
+    seedPublicTagBookmark({
+      userId: 'newer-curator',
+      tag: 'faves',
+      bookmarkId: 'shared-id',
+      author: 'newer-author',
+      processedAt: '2026-08-20T12:00:00.000Z',
+    })
+    testInstance.db
+      .update(bookmarks)
+      .set({ text: 'newer curator metadata' })
+      .where(and(eq(bookmarks.userId, 'newer-curator'), eq(bookmarks.id, 'shared-id')))
+      .run()
+    testInstance.db
+      .insert(bookmarkMedia)
+      .values([
+        {
+          id: 'older-media',
+          userId: 'older-curator',
+          platform: 'twitter',
+          bookmarkId: 'shared-id',
+          mediaType: 'photo',
+          originalUrl: 'https://private.example/older.jpg',
+        },
+        {
+          id: 'newer-media',
+          userId: 'newer-curator',
+          platform: 'twitter',
+          bookmarkId: 'shared-id',
+          mediaType: 'photo',
+          originalUrl: 'https://public.example/newer.jpg',
+        },
+      ])
+      .run()
+
+    const seed = await getTheaterFeed()
+    const item = seed.items.find((candidate) => candidate.bookmarkId === 'shared-id')
+
+    expect(item?.author).toBe('newer-author')
+    expect(item?.text).toBe('newer curator metadata')
+    expect(item?.thumbnailUrl).toBe('https://public.example/newer.jpg')
+    expect(JSON.stringify(item)).not.toContain('older-curator')
+    expect(JSON.stringify(item)).not.toContain('newer-curator')
   })
 
   it('degrades to the plain trending items when the backfill query fails', async () => {

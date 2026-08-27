@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { eq } from 'drizzle-orm'
 import { createTestDb, type TestDbInstance } from './api/setup'
 import * as schema from '@/lib/db/schema'
 
@@ -17,10 +18,17 @@ import * as schema from '@/lib/db/schema'
  */
 
 let testInstance: TestDbInstance
+let beforeNextTransaction: (() => void) | null = null
 
 vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
+  },
+  runInTransaction<R>(fn: () => R): R {
+    const hook = beforeNextTransaction
+    beforeNextTransaction = null
+    hook?.()
+    return testInstance.sqlite.transaction(fn)()
   },
 }))
 
@@ -32,8 +40,21 @@ vi.stubEnv('TWITTER_CLIENT_SECRET', 'test-client-secret')
 
 const USER = 'user-1'
 
-function seedTokens(expiresInSec: number) {
-  return testInstance.db.insert(schema.oauthTokens).values({
+async function seedTokens(expiresInSec: number) {
+  await testInstance.db.insert(schema.users).values({ id: USER, username: 'tester' })
+  await testInstance.db.insert(schema.userIdentities).values([
+    {
+      provider: 'email',
+      providerId: 'tester@example.com',
+      userId: USER,
+    },
+    {
+      provider: 'x',
+      providerId: 'x-user-1',
+      userId: USER,
+    },
+  ])
+  await testInstance.db.insert(schema.oauthTokens).values({
     userId: USER,
     username: 'tester',
     profileImageUrl: null,
@@ -59,9 +80,39 @@ function mockRefreshOk(n = 1) {
   }
 }
 
+function deferRefreshResponse(responseValue: object) {
+  let release!: () => void
+  const response = new Promise((resolve) => {
+    release = () => resolve(responseValue)
+  })
+  mockFetch.mockReturnValueOnce(response)
+  return release
+}
+
+function deferRefreshOk() {
+  return deferRefreshResponse({
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        access_token: 'access-stale-refresh',
+        refresh_token: 'refresh-stale-refresh',
+        expires_in: 7200,
+      }),
+  })
+}
+
+function deferRefreshRejected() {
+  return deferRefreshResponse({
+    ok: false,
+    status: 400,
+    text: () => Promise.resolve('invalid_grant'),
+  })
+}
+
 describe('getValidTokens', () => {
   beforeEach(() => {
     testInstance = createTestDb()
+    beforeNextTransaction = null
     // mockReset (not clearAllMocks) drains any queued mockResolvedValueOnce
     // values so leftovers from one test can't bleed into the next.
     mockFetch.mockReset()
@@ -127,6 +178,197 @@ describe('getValidTokens', () => {
     // the single-use refresh token is spent once and the chain survives.
     expect(mockFetch).toHaveBeenCalledTimes(1)
     for (const r of results) expect(r?.accessToken).toBe('access-new')
+  })
+
+  it('allows only one external refresh across independent workers', async () => {
+    await seedTokens(-3600)
+    const releaseRefresh = deferRefreshOk()
+    const workerA = await import('@/lib/auth/oauth')
+
+    const winner = workerA.getValidTokens(USER)
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+
+    // A fresh module has a distinct in-memory coalescing map, like another
+    // worker/process, but shares the durable SQLite token row.
+    vi.resetModules()
+    const workerB = await import('@/lib/auth/oauth')
+    await expect(workerB.getValidTokens(USER)).rejects.toMatchObject({
+      name: 'TokenRefreshError',
+      status: 423,
+      fatal: false,
+    })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+
+    releaseRefresh()
+    await expect(winner).resolves.toMatchObject({
+      accessToken: 'access-stale-refresh',
+      refreshToken: 'refresh-stale-refresh',
+    })
+    await expect(workerB.getStoredTokens(USER)).resolves.toMatchObject({
+      accessToken: 'access-stale-refresh',
+      refreshToken: 'refresh-stale-refresh',
+      refreshLeaseId: null,
+      refreshLeaseStartedAt: null,
+    })
+  })
+
+  it('recovers a stale durable refresh lease', async () => {
+    await seedTokens(-3600)
+    await testInstance.db
+      .update(schema.oauthTokens)
+      .set({
+        refreshLeaseId: 'dead-worker',
+        refreshLeaseStartedAt: new Date(Date.now() - 31_000).toISOString(),
+      })
+      .where(eq(schema.oauthTokens.userId, USER))
+    mockRefreshOk()
+
+    const { getValidTokens, getStoredTokens } = await import('@/lib/auth/oauth')
+    await expect(getValidTokens(USER)).resolves.toMatchObject({
+      accessToken: 'access-new',
+      refreshToken: 'refresh-new',
+    })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    await expect(getStoredTokens(USER)).resolves.toMatchObject({
+      refreshLeaseId: null,
+      refreshLeaseStartedAt: null,
+    })
+  })
+
+  it('does not recreate tokens when disconnect wins during network refresh', async () => {
+    await seedTokens(-3600)
+    const releaseRefresh = deferRefreshOk()
+    const { getValidTokens } = await import('@/lib/auth/oauth')
+    const { unlinkX } = await import('@/lib/auth/account')
+
+    const outcome = getValidTokens(USER).catch((error) => error)
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+    expect(await unlinkX(USER)).toEqual({ ok: true })
+    releaseRefresh()
+
+    await expect(outcome).resolves.toMatchObject({
+      name: 'TokenRefreshError',
+      status: 409,
+      fatal: false,
+    })
+    expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.userIdentities)
+        .where(eq(schema.userIdentities.provider, 'x')),
+    ).toHaveLength(0)
+  })
+
+  it('returns newer callback tokens when they replace the row during refresh', async () => {
+    await seedTokens(-3600)
+    const releaseRefresh = deferRefreshOk()
+    const { getValidTokens, getStoredTokens, saveLinkedXTokens } = await import('@/lib/auth/oauth')
+
+    const pending = getValidTokens(USER)
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+    expect(
+      await saveLinkedXTokens(
+        USER,
+        'x-user-1',
+        'newer-callback',
+        null,
+        'access-callback-newer',
+        'refresh-callback-newer',
+        7200,
+        'tweet.read',
+        0,
+      ),
+    ).toBe(true)
+    releaseRefresh()
+
+    const result = await pending
+    expect(result).not.toBeNull()
+    expect(result!.accessToken).toBe('access-callback-newer')
+    expect(result!.refreshToken).toBe('refresh-callback-newer')
+    const stored = await getStoredTokens(USER)
+    expect(stored?.accessToken).toBe('access-callback-newer')
+    expect(stored?.refreshToken).toBe('refresh-callback-newer')
+  })
+
+  it('ignores a stale fatal response after newer callback tokens win', async () => {
+    await seedTokens(-3600)
+    const releaseRefresh = deferRefreshRejected()
+    const { getValidTokens, saveLinkedXTokens } = await import('@/lib/auth/oauth')
+
+    const pending = getValidTokens(USER)
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+    expect(
+      await saveLinkedXTokens(
+        USER,
+        'x-user-1',
+        'newer-callback',
+        null,
+        'access-callback-newer',
+        'refresh-callback-newer',
+        7200,
+        'tweet.read',
+        0,
+      ),
+    ).toBe(true)
+    releaseRefresh()
+
+    await expect(pending).resolves.toMatchObject({
+      accessToken: 'access-callback-newer',
+      refreshToken: 'refresh-callback-newer',
+    })
+  })
+
+  it('CAS invalidation preserves callback tokens saved after a fatal response', async () => {
+    await seedTokens(-3600)
+    const releaseRefresh = deferRefreshRejected()
+    const { getValidTokens, getStoredTokens } = await import('@/lib/auth/oauth')
+    const { encryptToken } = await import('@/lib/auth/token-encryption')
+
+    const pending = getValidTokens(USER)
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+    beforeNextTransaction = () => {
+      testInstance.db
+        .update(schema.oauthTokens)
+        .set({
+          username: 'newer-callback',
+          accessToken: encryptToken('access-after-fatal'),
+          refreshToken: encryptToken('refresh-after-fatal'),
+          expiresAt: Math.floor(Date.now() / 1000) + 7200,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(schema.oauthTokens.userId, USER))
+        .run()
+    }
+    releaseRefresh()
+
+    await expect(pending).resolves.toMatchObject({
+      accessToken: 'access-after-fatal',
+      refreshToken: 'refresh-after-fatal',
+    })
+    await expect(getStoredTokens(USER)).resolves.toMatchObject({
+      accessToken: 'access-after-fatal',
+      refreshToken: 'refresh-after-fatal',
+    })
+  })
+
+  it('classifies a stale fatal response as non-fatal after disconnect', async () => {
+    await seedTokens(-3600)
+    const releaseRefresh = deferRefreshRejected()
+    const { getValidTokens } = await import('@/lib/auth/oauth')
+    const { unlinkX } = await import('@/lib/auth/account')
+
+    const outcome = getValidTokens(USER).catch((error) => error)
+    await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+    expect(await unlinkX(USER)).toEqual({ ok: true })
+    releaseRefresh()
+
+    await expect(outcome).resolves.toMatchObject({
+      name: 'TokenRefreshError',
+      status: 409,
+      fatal: false,
+    })
+    expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
   })
 
   it('starts a new refresh after the in-flight one has settled', async () => {

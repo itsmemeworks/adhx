@@ -3,7 +3,7 @@ import { isLikelyBot } from '@/lib/activity/bot'
 import { recordActivity, type ActivityInput } from '@/lib/activity/record'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
-import { isPostModerated } from '@/lib/admin/moderation'
+import { readPostModeration } from '@/lib/admin/moderation'
 
 /**
  * Pulse a preview when a human opened it. Shared by Reels / TikTok / Shorts
@@ -14,7 +14,8 @@ export async function recordHumanPreview(
   event: Omit<ActivityInput, 'action'>,
 ): Promise<void> {
   if (!available) return
-  if (isPostModerated(event.platform, event.bookmarkId)) return
+  const moderation = readPostModeration(event.platform, event.bookmarkId)
+  if (!moderation.ok || moderation.value) return
   if (isLikelyBot((await headers()).get('user-agent'))) return
   recordActivity({ action: 'preview', ...event })
   metrics.theaterOpened('shared')

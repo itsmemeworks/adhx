@@ -171,5 +171,20 @@ describe('API: /api/media/image', () => {
       const data = await response.json()
       expect(data.error).toContain('Failed to fetch image')
     })
+
+    it('refuses an off-allowlist redirect from the image proxy host', async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { location: 'https://evil.example/image.jpg' },
+        }),
+      )
+
+      const { GET } = await import('@/app/api/media/image/route')
+      const response = await GET(createRequest({ author: 'user', tweetId: '456' }))
+
+      expect(response.status).toBe(502)
+      expect(mockFetch).toHaveBeenCalledOnce()
+    })
   })
 })

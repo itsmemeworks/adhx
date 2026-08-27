@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { imageDownloadResponse, isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
-import { mediaRateLimit } from '@/lib/rate-limit'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import {
+  fetchWithAllowlistedRedirects,
+  imageDownloadResponse,
+  isUntrustedMediaRedirectError,
+  isValidTweetAuthor,
+  isValidTweetId,
+  TWITTER_MEDIA_HOSTS,
+} from '@/lib/media/proxy'
+import { downloadRateLimit, mediaRateLimit } from '@/lib/rate-limit'
+
+const TWITTER_IMAGE_PROXY_HOSTS = ['d.fixupx.com', ...TWITTER_MEDIA_HOSTS]
 
 // GET /api/media/image?author=xxx&tweetId=xxx&index=1[&download=1]
 // Proxies images through the server to avoid CORS issues when downloading/sharing
@@ -10,14 +18,13 @@ import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 // (cacheable) response — the theater's Download button for photo posts uses
 // this variant, mirroring /api/media/video/download for videos.
 export async function GET(request: NextRequest) {
-  const rateLimited = mediaRateLimit(request)
-  if (rateLimited) return rateLimited
-
   const searchParams = request.nextUrl.searchParams
   const author = searchParams.get('author')
   const tweetId = searchParams.get('tweetId')
   const index = searchParams.get('index') || '1'
   const download = searchParams.get('download') === '1'
+  const rateLimited = download ? downloadRateLimit(request) : mediaRateLimit(request)
+  if (rateLimited) return rateLimited
 
   if (!author || !tweetId) {
     return NextResponse.json({ error: 'Missing author or tweetId' }, { status: 400 })
@@ -42,13 +49,18 @@ export async function GET(request: NextRequest) {
     // author/tweetId are validated above, so the only variable in this URL
     // is a trusted, fixed FxTwitter host — but external fetches must always
     // have a timeout per CLAUDE.md's Resilience Patterns.
-    const imageResponse = await fetchWithTimeout(imageUrl, 10_000, {
-      headers: {
-        'User-Agent': 'ADHX/1.0',
+    const imageResponse = await fetchWithAllowlistedRedirects(imageUrl, {
+      hosts: TWITTER_IMAGE_PROXY_HOSTS,
+      timeoutMs: 10_000,
+      init: {
+        headers: {
+          'User-Agent': 'ADHX/1.0',
+        },
       },
     })
 
     if (!imageResponse.ok) {
+      await imageResponse.body?.cancel()
       throw new Error(`Image fetch failed with status ${imageResponse.status}`)
     }
 
@@ -73,6 +85,9 @@ export async function GET(request: NextRequest) {
       headers: responseHeaders,
     })
   } catch (error) {
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted image redirect' }, { status: 502 })
+    }
     console.error('Error fetching image:', error)
     return NextResponse.json({ error: 'Failed to fetch image' }, { status: 500 })
   }

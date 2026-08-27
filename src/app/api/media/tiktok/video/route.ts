@@ -6,9 +6,23 @@ import {
   isValidUsername,
   isValidVideoId,
 } from '@/lib/media/tnktok'
-import { streamingResponse } from '@/lib/media/proxy'
+import {
+  fetchWithAllowlistedRedirects,
+  isUntrustedMediaRedirectError,
+  streamingResponse,
+} from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+
+const TIKTOK_VIDEO_HOSTS = [
+  'tnktok.com',
+  '.tnktok.com',
+  'tiktokcdn.com',
+  '.tiktokcdn.com',
+  'tiktokcdn-us.com',
+  '.tiktokcdn-us.com',
+  'tiktokcdn-eu.com',
+  '.tiktokcdn-eu.com',
+]
 
 /**
  * TikTok video proxy — streams the MP4 through the server for inline playback
@@ -40,20 +54,27 @@ export async function GET(request: NextRequest) {
     }
 
     const rangeHeader = request.headers.get('range')
-    const videoResponse = await fetchWithTimeout(meta.videoUrl, 30_000, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        ...(rangeHeader ? { Range: rangeHeader } : {}),
+    const videoResponse = await fetchWithAllowlistedRedirects(meta.videoUrl, {
+      hosts: TIKTOK_VIDEO_HOSTS,
+      timeoutMs: 30_000,
+      init: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          ...(rangeHeader ? { Range: rangeHeader } : {}),
+        },
       },
     })
 
     if ((!videoResponse.ok && videoResponse.status !== 206) || !videoResponse.body) {
+      await videoResponse.body?.cancel()
       return NextResponse.json({ error: 'Failed to fetch video' }, { status: 502 })
     }
 
     return streamingResponse(videoResponse)
   } catch (error) {
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted video redirect' }, { status: 502 })
+    }
     console.error('TikTok video proxy error:', error)
     captureException(error, { endpoint: '/api/media/tiktok/video', username, videoId })
     return NextResponse.json({ error: 'Stream failed' }, { status: 500 })

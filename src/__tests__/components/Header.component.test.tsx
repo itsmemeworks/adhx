@@ -187,10 +187,10 @@ describe('Header', () => {
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    const avatarButtons = screen.getAllByRole('button')
-    const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
-    expect(avatarButton).toBeDefined()
-    fireEvent.click(avatarButton!)
+    const avatarButton = screen.getByRole('button', { name: 'Account menu' })
+    expect(avatarButton).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(avatarButton)
+    expect(avatarButton).toHaveAttribute('aria-expanded', 'true')
 
     const theaterLinks = screen.getAllByRole('link', { name: 'Theater' })
     expect(theaterLinks.some((l) => l.getAttribute('href') === '/')).toBe(true)

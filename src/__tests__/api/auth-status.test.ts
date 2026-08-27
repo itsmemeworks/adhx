@@ -15,6 +15,9 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction<R>(fn: () => R): R {
+    return testInstance.sqlite.transaction(fn)()
+  },
 }))
 
 vi.mock('@/lib/auth/session', () => ({
@@ -41,10 +44,19 @@ vi.stubEnv('TWITTER_CLIENT_ID', 'test-client-id')
 vi.stubEnv('TWITTER_CLIENT_SECRET', 'test-client-secret')
 
 describe('API: /api/auth/twitter/status', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     testInstance = createTestDb()
     mockSession = { userId: 'user-123' }
     vi.clearAllMocks()
+    await testInstance.db.insert(schema.users).values({
+      id: 'user-123',
+      username: 'testuser',
+    })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'x',
+      providerId: 'x-user-123',
+      userId: 'user-123',
+    })
   })
 
   afterEach(() => {
@@ -66,6 +78,10 @@ describe('API: /api/auth/twitter/status', () => {
 
     it('returns authenticated: true with xConnected: false when no tokens stored (account outlives X)', async () => {
       mockSession = { userId: 'user-no-tokens' }
+      await testInstance.db.insert(schema.users).values({
+        id: 'user-no-tokens',
+        username: 'email-user',
+      })
 
       const { GET } = await import('@/app/api/auth/twitter/status/route')
       const response = await GET()
@@ -79,6 +95,18 @@ describe('API: /api/auth/twitter/status', () => {
       expect(data.user.id).toBe('user-no-tokens')
       expect(data.xConnected).toBe(false)
       expect(data.needsReconnect).toBe(false)
+    })
+
+    it('keeps a stale deleted-account session signed out without recreating the user', async () => {
+      mockSession = { userId: 'deleted-user' }
+
+      const { GET } = await import('@/app/api/auth/twitter/status/route')
+      const response = await GET()
+      const data = await response.json()
+
+      expect(data).toEqual({ authenticated: false, user: null })
+      const rows = await testInstance.db.select().from(schema.users)
+      expect(rows.map((row) => row.id)).not.toContain('deleted-user')
     })
   })
 
@@ -226,7 +254,7 @@ describe('API: /api/auth/twitter/status', () => {
         json: () =>
           Promise.resolve({
             data: {
-              id: 'user-123',
+              id: 'x-user-123',
               username: 'testuser',
               name: 'Test User',
               profile_image_url: 'https://pbs.twimg.com/profile_images/123_normal.jpg',
@@ -258,6 +286,140 @@ describe('API: /api/auth/twitter/status', () => {
       const data = await response.json()
       expect(data.authenticated).toBe(true)
       expect(data.user.profileImageUrl).toBeNull()
+    })
+
+    it('does not persist or show account A avatar after disconnect and relink to B', async () => {
+      await testInstance.db.insert(schema.userIdentities).values({
+        provider: 'email',
+        providerId: 'reader@example.com',
+        userId: 'user-123',
+      })
+      let releaseProfile!: () => void
+      mockFetch.mockReturnValueOnce(
+        new Promise((resolve) => {
+          releaseProfile = () =>
+            resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  data: {
+                    id: 'x-user-123',
+                    username: 'old-x',
+                    name: 'Old X',
+                    profile_image_url: 'https://example.com/account-a_normal.jpg',
+                  },
+                }),
+            })
+        }),
+      )
+
+      const { GET } = await import('@/app/api/auth/twitter/status/route')
+      const pending = GET()
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+
+      const { unlinkX, findOrCreateUserForX } = await import('@/lib/auth/account')
+      const { saveLinkedXTokens, getStoredTokens } = await import('@/lib/auth/oauth')
+      expect(await unlinkX('user-123')).toEqual({ ok: true })
+      const linked = await findOrCreateUserForX(
+        {
+          xUserId: 'x-user-b',
+          username: 'new-x',
+          name: 'New X',
+          profileImageUrl: 'https://example.com/account-b.jpg',
+        },
+        'user-123',
+        1,
+      )
+      expect(linked.conflict).toBeUndefined()
+      expect(
+        await saveLinkedXTokens(
+          'user-123',
+          'x-user-b',
+          'new-x',
+          'https://example.com/account-b.jpg',
+          'access-b',
+          'refresh-b',
+          7200,
+          'tweet.read',
+          1,
+        ),
+      ).toBe(true)
+      releaseProfile()
+
+      const response = await pending
+      const data = await response.json()
+      expect(data.user.username).toBe('new-x')
+      expect(data.user.profileImageUrl).toBe('https://example.com/account-b.jpg')
+      await expect(getStoredTokens('user-123')).resolves.toMatchObject({
+        username: 'new-x',
+        profileImageUrl: 'https://example.com/account-b.jpg',
+        accessToken: 'access-b',
+      })
+    })
+
+    it('reconciles relinked account B when slow account A has no avatar', async () => {
+      await testInstance.db.insert(schema.userIdentities).values({
+        provider: 'email',
+        providerId: 'reader@example.com',
+        userId: 'user-123',
+      })
+      let releaseProfile!: () => void
+      mockFetch.mockReturnValueOnce(
+        new Promise((resolve) => {
+          releaseProfile = () =>
+            resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  data: {
+                    id: 'x-user-123',
+                    username: 'old-x',
+                    name: 'Old X',
+                  },
+                }),
+            })
+        }),
+      )
+
+      const { GET } = await import('@/app/api/auth/twitter/status/route')
+      const pending = GET()
+      await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+
+      const { unlinkX, findOrCreateUserForX } = await import('@/lib/auth/account')
+      const { saveLinkedXTokens } = await import('@/lib/auth/oauth')
+      expect(await unlinkX('user-123')).toEqual({ ok: true })
+      const linked = await findOrCreateUserForX(
+        {
+          xUserId: 'x-user-b',
+          username: 'new-x',
+          name: 'New X',
+          profileImageUrl: 'https://example.com/account-b.jpg',
+        },
+        'user-123',
+        1,
+      )
+      expect(linked.conflict).toBeUndefined()
+      expect(
+        await saveLinkedXTokens(
+          'user-123',
+          'x-user-b',
+          'new-x',
+          'https://example.com/account-b.jpg',
+          'access-b',
+          'refresh-b',
+          7200,
+          'tweet.read',
+          1,
+        ),
+      ).toBe(true)
+      releaseProfile()
+
+      const response = await pending
+      const data = await response.json()
+      expect(data.user).toMatchObject({
+        username: 'new-x',
+        profileImageUrl: 'https://example.com/account-b.jpg',
+      })
     })
   })
 })

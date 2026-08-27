@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, waitFor } from '@testing-library/react'
 import { TagQuickPicker } from '@/components/tags/TagQuickPicker'
+import { resetClientEventBridgeForTests, setClientEventAccount } from '@/lib/client-events'
 
 function mockFetchSequence(): void {
   global.fetch = vi.fn().mockImplementation((url: string) => {
@@ -43,6 +44,8 @@ function pressPickerKey(key: string) {
 describe('TagQuickPicker Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetClientEventBridgeForTests()
+    setClientEventAccount('account-a')
     mockFetchSequence()
   })
 

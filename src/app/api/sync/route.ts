@@ -2,18 +2,19 @@ import { NextResponse } from 'next/server'
 import { fetchBookmarks, TwitterBookmark } from '@/lib/twitter/client'
 import { db } from '@/lib/db'
 import { bookmarks, syncLogs } from '@/lib/db/schema'
-import { eq, desc, and, lt } from 'drizzle-orm'
+import { eq, desc, and } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { withAuth } from '@/lib/api/with-auth'
 import { hasExistingTokens } from '@/lib/auth/oauth'
 import { captureException, captureMessage, metrics } from '@/lib/sentry'
-import { REAUTH_MESSAGE } from '@/lib/sync/messages'
+import { REAUTH_MESSAGE, SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
 import { isReauthError, toTwitterCallError } from '@/lib/twitter/errors'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { getSyncCooldownMs } from '@/lib/sync/config'
 import { saveBookmark } from '@/lib/sync/save-bookmark'
 import { addedAtForIndex } from '@/lib/sync/added-at'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { claimSync, finishOwnedSync, renewSyncLease } from '@/lib/sync/claim'
 
 /**
  * Cap on how many newly-synced tweets feed the public pulse per sync. Bookmarks
@@ -21,6 +22,21 @@ import { recordAnalytic } from '@/lib/analytics/record'
  * a large first-time backfill can't flood the shared, anonymous Discover feed.
  */
 const SYNC_PULSE_CAP = 25
+
+function terminalSyncErrorResponse(message: string, code: string): Response {
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        encoder.encode(`event: error\ndata: ${JSON.stringify({ message, code })}\n\n`),
+      )
+      controller.close()
+    },
+  })
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+  })
+}
 
 /**
  * Auth-loss during sync (valid session JWT, but the OAuth tokens are gone —
@@ -60,51 +76,29 @@ export const GET = withAuth(async (request, userId) => {
   // JSON 401) so EventSource delivers the classified message instead of the
   // client showing a generic "Connection lost".
   if (!(await hasExistingTokens(userId))) {
-    const encoder = new TextEncoder()
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(
-          encoder.encode(
-            `event: error\ndata: ${JSON.stringify({ message: REAUTH_MESSAGE, code: 'reauth' })}\n\n`,
-          ),
-        )
-        controller.close()
-      },
-    })
-    return new Response(stream, {
-      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
-    })
+    return terminalSyncErrorResponse(REAUTH_MESSAGE, 'reauth')
   }
-
-  // Reap this user's stuck 'running' sync rows (e.g. process killed/deployed
-  // over mid-sync, or a disconnected client whose stream never reached its
-  // finally block) so they don't accumulate and skew sync history forever.
-  const STALE_RUNNING_MS = 30 * 60 * 1000
-  await db
-    .update(syncLogs)
-    .set({
-      status: 'failed',
-      errorMessage: 'Sync timed out (stuck in running state)',
-      completedAt: new Date().toISOString(),
-    })
-    .where(
-      and(
-        eq(syncLogs.userId, userId),
-        eq(syncLogs.status, 'running'),
-        lt(syncLogs.startedAt, new Date(Date.now() - STALE_RUNNING_MS).toISOString()),
-      ),
-    )
 
   const searchParams = request.nextUrl.searchParams
   const all = searchParams.get('all') === 'true'
   const maxPagesRaw = parseInt(searchParams.get('maxPages') || '10', 10)
   const maxPages = Number.isNaN(maxPagesRaw) ? 10 : Math.min(20, Math.max(1, maxPagesRaw))
 
+  // Claim before returning the streaming response. Reaping a stale claim and
+  // inserting this running row happen in one transaction; the DB's partial
+  // unique index makes the lock durable across requests and app processes.
+  const claim = claimSync(userId, nanoid())
+  if (!claim.claimed) {
+    return terminalSyncErrorResponse(SYNC_IN_PROGRESS_MESSAGE, 'in_progress')
+  }
+  const { syncId } = claim
+
   // Disconnect handling: if the client goes away mid-sync (tab closed, nav
   // away, flaky mobile connection), stop paginating/processing and stop
   // enqueuing on a torn-down controller instead of running the full sync to
   // completion against a socket nobody's reading.
   let aborted = false
+  let leaseLost = false
   let keepAliveInterval: ReturnType<typeof setInterval> | undefined
   const onAbort = () => {
     aborted = true
@@ -125,33 +119,36 @@ export const GET = withAuth(async (request, userId) => {
         }
       }
 
-      // Create sync log entry
-      const syncId = nanoid()
-      const startedAt = new Date().toISOString()
-
-      await db.insert(syncLogs).values({
-        id: syncId,
-        userId, // Include userId for multi-user support
-        startedAt,
-        status: 'running',
-        triggerType: 'manual',
-      })
-
-      // Keep-alive interval to prevent connection drops (defined outside try so finally can clear it)
-      keepAliveInterval = setInterval(() => {
-        if (aborted) {
-          clearInterval(keepAliveInterval)
-          return
-        }
-        send('ping', { timestamp: Date.now() })
-      }, 10000) // Send ping every 10 seconds
-
-      // Track sync start
-      const syncType = all ? 'full' : 'incremental'
-      metrics.syncStarted(syncType)
       const syncStartTime = Date.now()
 
       try {
+        // Keep-alive interval to prevent connection drops (defined outside try so finally can clear it)
+        keepAliveInterval = setInterval(() => {
+          if (aborted) {
+            clearInterval(keepAliveInterval)
+            return
+          }
+          try {
+            if (!renewSyncLease(userId, syncId)) {
+              leaseLost = true
+              clearInterval(keepAliveInterval)
+              return
+            }
+          } catch {
+            // A failed renewal cannot prove ownership. Stop safely and leave
+            // the row for stale recovery rather than continuing unlocked.
+            leaseLost = true
+            clearInterval(keepAliveInterval)
+            return
+          }
+          send('ping', { timestamp: Date.now() })
+        }, 10000) // Send ping every 10 seconds
+
+        // Track sync start only after the durable claim exists. Any failure
+        // from here on is caught below and releases the claim as failed.
+        const syncType = all ? 'full' : 'incremental'
+        metrics.syncStarted(syncType)
+
         send('start', { syncId, total: null })
 
         // Get existing bookmark IDs for this user (strict userId check)
@@ -160,7 +157,7 @@ export const GET = withAuth(async (request, userId) => {
             await db
               .select({ id: bookmarks.id })
               .from(bookmarks)
-              .where(eq(bookmarks.userId, userId))
+              .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'twitter')))
           ).map((b) => b.id),
         )
 
@@ -178,12 +175,13 @@ export const GET = withAuth(async (request, userId) => {
           let cursor: string | undefined
           let hasMore = true
 
-          while (hasMore && pageNumber < maxPages && !aborted) {
+          while (hasMore && pageNumber < maxPages && !aborted && !leaseLost) {
             pageNumber++
             const result = await fetchBookmarks(userId, {
               maxResults: 100,
               paginationToken: cursor,
             })
+            if (leaseLost) break
 
             send('page', {
               pageNumber,
@@ -198,14 +196,16 @@ export const GET = withAuth(async (request, userId) => {
         } else {
           // Single fetch
           const result = await fetchBookmarks(userId, { maxResults: 50 })
-          allTweets = result.bookmarks
-          send('page', { pageNumber: 1, tweetsFound: result.bookmarks.length, cursor: null })
+          if (!leaseLost) {
+            allTweets = result.bookmarks
+            send('page', { pageNumber: 1, tweetsFound: result.bookmarks.length, cursor: null })
+          }
         }
 
         // Process each bookmark
         const total = allTweets.length
         for (let i = 0; i < allTweets.length; i++) {
-          if (aborted) break
+          if (aborted || leaseLost) break
 
           const tweet = allTweets[i]
           const isDuplicate = existingIds.has(tweet.id)
@@ -217,13 +217,25 @@ export const GET = withAuth(async (request, userId) => {
             // Count the "added" stamp backwards from the sync start so X's
             // newest-bookmarked-first order survives the Collection's
             // `added desc` sort — see addedAtForIndex.
-            const savedBookmark = await saveBookmark(
+            const { bookmark: savedBookmark, inserted } = await saveBookmark(
               tweet,
               userId,
               insertedDuringSync,
               addedAtForIndex(syncStartTime, i),
             )
-            insertedDuringSync.add(tweet.id) // Track that we inserted this ID
+            if (leaseLost) break
+            insertedDuringSync.add(tweet.id)
+            existingIds.add(tweet.id)
+
+            // The preloaded ID set is only an optimization. Another writer can
+            // insert after that snapshot, so the bookmark INSERT result is the
+            // source of truth for stats, events, and the public save pulse.
+            if (!inserted) {
+              duplicatesSkipped++
+              send('duplicate', { tweetId: tweet.id, skipped: true })
+              continue
+            }
+
             newBookmarks++
 
             // Feed the public pulse, same as a manual save — a newly-synced tweet
@@ -270,37 +282,40 @@ export const GET = withAuth(async (request, userId) => {
           }
         }
 
+        if (leaseLost) {
+          send('error', { message: SYNC_IN_PROGRESS_MESSAGE, code: 'in_progress' })
+          return
+        }
+
         if (aborted) {
           // Client disconnected mid-sync — record what we actually got through
           // rather than leaving the row stuck at 'running' (that's what the
           // stale-row reaper above cleans up for crashed processes, but we can
           // just mark it directly here since we're still running).
-          await db
-            .update(syncLogs)
-            .set({
-              completedAt: new Date().toISOString(),
-              status: 'failed',
-              errorMessage: 'Client disconnected',
-              totalFetched: total,
-              newBookmarks,
-              duplicatesSkipped,
-            })
-            .where(eq(syncLogs.id, syncId))
+          finishOwnedSync(userId, syncId, {
+            completedAt: new Date().toISOString(),
+            status: 'failed',
+            errorMessage: 'Client disconnected',
+            totalFetched: total,
+            newBookmarks,
+            duplicatesSkipped,
+          })
           return
         }
 
         // Update sync log
         const completedAt = new Date().toISOString()
-        await db
-          .update(syncLogs)
-          .set({
-            completedAt,
-            status: 'completed',
-            totalFetched: total,
-            newBookmarks,
-            duplicatesSkipped,
-          })
-          .where(eq(syncLogs.id, syncId))
+        const completed = finishOwnedSync(userId, syncId, {
+          completedAt,
+          status: 'completed',
+          totalFetched: total,
+          newBookmarks,
+          duplicatesSkipped,
+        })
+        if (!completed) {
+          send('error', { message: SYNC_IN_PROGRESS_MESSAGE, code: 'in_progress' })
+          return
+        }
 
         // Track sync completion
         const syncDuration = Date.now() - syncStartTime
@@ -320,7 +335,17 @@ export const GET = withAuth(async (request, userId) => {
         const classified = toTwitterCallError(error)
         const message = classified.message
 
-        // Track sync failure
+        const failed = finishOwnedSync(userId, syncId, {
+          completedAt: new Date().toISOString(),
+          status: 'failed',
+          errorMessage: message,
+        })
+        if (!failed) {
+          send('error', { message: SYNC_IN_PROGRESS_MESSAGE, code: 'in_progress' })
+          return
+        }
+
+        // Track sync failure only while this stream still owns the claim.
         metrics.syncFailed(classified.code)
 
         // Auth-loss is expected and user-recoverable — record it on the sync
@@ -343,16 +368,6 @@ export const GET = withAuth(async (request, userId) => {
             errorMessage: message,
           })
         }
-
-        // Update sync log with error
-        await db
-          .update(syncLogs)
-          .set({
-            completedAt: new Date().toISOString(),
-            status: 'failed',
-            errorMessage: message,
-          })
-          .where(eq(syncLogs.id, syncId))
 
         send('error', { message, code: classified.code })
       } finally {

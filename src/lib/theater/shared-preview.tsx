@@ -21,9 +21,9 @@ export async function sharedPreviewSeed(sharedItem: TheaterItem): Promise<Theate
   return seed
 }
 
-async function ResolvedSharedSeo({ resolve }: { resolve: Promise<SharedResolveResult> }) {
+export async function ResolvedSharedSeo({ resolve }: { resolve: Promise<SharedResolveResult> }) {
   const result = await resolve
-  if (!result.ok) return null
+  if (!result.ok || !result.seoEligible) return null
   return (
     <>
       <script

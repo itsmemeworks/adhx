@@ -7,7 +7,7 @@ import { getPublicTagCollection, type TagCollectionResult } from '@/lib/tags/que
 import { getUserIdForUsername, resolveUsernameAlias } from '@/lib/users/lookup'
 import { MatterLogo } from '@/components/matter'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { getSession } from '@/lib/auth/session'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { truncate } from '@/lib/utils/format'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { TheaterShell } from '@/components/theater/TheaterShell'
@@ -166,11 +166,14 @@ function SignedOutNav() {
 
 export default async function SharedTagPage({ params }: Props) {
   const { username, tag } = await params
-  const [result, session] = await Promise.all([loadCollection(username, tag), getSession()])
+  const [result, viewerUserId] = await Promise.all([
+    loadCollection(username, tag),
+    getCurrentUserId(),
+  ])
   if (result.status === 'redirect') permanentRedirect(`/t/${result.username}/${result.tag}`)
   if (result.status === 'not_found') notFound()
 
-  const signedOut = !session
+  const signedOut = !viewerUserId
 
   if (result.status === 'private') {
     return (
@@ -213,11 +216,11 @@ export default async function SharedTagPage({ params }: Props) {
           action: 'view',
           ownerUserId,
           tag: data.tag,
-          viewerId: session?.userId ?? null,
+          viewerId: viewerUserId,
         })
         recordAnalytic({
           name: 'theater.open',
-          userId: session?.userId ?? null,
+          userId: viewerUserId,
           tag: data.tag,
           surface: 'playlist',
         })

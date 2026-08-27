@@ -1,5 +1,7 @@
 import { ok } from '@/lib/api/response'
 import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
+import { publicReadRateLimit } from '@/lib/rate-limit'
+import type { NextResponse } from 'next/server'
 
 /**
  * GET /api/activity — the public, anonymous pulse for the landing + Discover.
@@ -7,8 +9,9 @@ import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
  * Thin wrapper over `getTrendingItems()` (the single audited choke point for
  * the anonymity invariant — `userId` is never selected there). Returns the
  * most recent community actions, enriched with save/trend counts, content type,
- * and resolved thumbnails. Short cache + SWR keeps it lively without hammering
- * the DB.
+ * and resolved thumbnails. Responses are never stored by intermediaries so
+ * each request revalidates current moderation; the data layer retains only a
+ * moderation-gated burst cache.
  *
  * Accepts an optional `?offset=` for `DiscoverFeed`'s infinite scroll — it
  * pages over the deduped, newest-first sequence (see `getTrendingItems`),
@@ -20,26 +23,32 @@ import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
  */
 export const dynamic = 'force-dynamic'
 
+function noStore(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'no-store')
+  return response
+}
+
 export async function GET(request?: Request) {
+  if (request) {
+    const limited = publicReadRateLimit(request)
+    if (limited) return noStore(limited)
+  }
+
   try {
     const offsetParam = request ? new URL(request.url).searchParams.get('offset') : null
     const parsedOffset = offsetParam ? parseInt(offsetParam, 10) : 0
     const offset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0
 
-    // FETCH 80 → dedup → LIMIT 30, no platform filter, and only the last
-    // LIVE_WINDOW_HOURS: this endpoint IS the theater's live feed, which is
-    // defined as the last 24 hours of community activity. The window must
-    // match the server seed (`getTheaterFeed`) or the first poll would append
-    // out-of-window posts the seed deliberately left out.
+    // Slice the bounded canonical trending window at LIMIT 30, with no platform
+    // filter and only the last LIVE_WINDOW_HOURS. This endpoint IS the
+    // theater's live feed, whose window must match `getTheaterFeed` or the
+    // first poll would append out-of-window posts the seed deliberately omitted.
     const { items, savedToday, recentActivity, hasMore } = await getTrendingItems({
       offset,
       withinHours: LIVE_WINDOW_HOURS,
     })
-    return ok(
-      { items, savedToday, recentActivity, hasMore },
-      { headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=15' } },
-    )
+    return noStore(ok({ items, savedToday, recentActivity, hasMore }))
   } catch {
-    return ok({ items: [], savedToday: 0, recentActivity: 0, hasMore: false })
+    return noStore(ok({ items: [], savedToday: 0, recentActivity: 0, hasMore: false }))
   }
 }

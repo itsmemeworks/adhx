@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   INSTAGRAM_MIRRORS,
   instagramVideoUrls,
   isAllowedInstagramMirrorUrl,
   isRetryableStatus,
+  resolveInstagramVideo,
   type VideoMirror,
 } from '@/lib/media/mirrors'
 
@@ -78,5 +79,159 @@ describe('mirror retry policy', () => {
     for (let i = 0; i < attempts - 1; i++) total += base * (i + 1)
     // The cold fetch was measured resolving at ~10-20s.
     expect(total).toBeGreaterThanOrEqual(20_000)
+  })
+})
+
+describe('Instagram mirror resolution deadline', () => {
+  const mockFetch = vi.fn()
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-26T12:00:00Z'))
+    mockFetch.mockReset()
+    global.fetch = mockFetch as unknown as typeof fetch
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('lets a cold-cache 404 become a successful response within the deadline', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(new Response('video', { status: 200 }))
+
+    const pending = resolveInstagramVideo('cold-reel', {
+      range: 'bytes=0-1',
+      attemptsPerMirror: 2,
+      totalTimeoutMs: 10_000,
+    })
+
+    await vi.advanceTimersByTimeAsync(1500)
+    const response = await pending
+
+    expect(response?.status).toBe(200)
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    for (const [, init] of mockFetch.mock.calls) {
+      expect(init.redirect).toBe('manual')
+      expect(new Headers(init.headers).get('Range')).toBe('bytes=0-1')
+    }
+    await response?.body?.cancel()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('bounds a hung attempt by the total wall-clock deadline', async () => {
+    mockFetch.mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal
+          if (!signal) throw new Error('expected request signal')
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+        }),
+    )
+
+    const startedAt = Date.now()
+    const pending = resolveInstagramVideo('hung-reel', {
+      attemptsPerMirror: 6,
+      attemptTimeoutMs: 30_000,
+      totalTimeoutMs: 1000,
+    })
+
+    await vi.advanceTimersByTimeAsync(1000)
+    await expect(pending).resolves.toBeNull()
+    expect(Date.now() - startedAt).toBe(1000)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('keeps the attempt timeout active while a successful body streams', async () => {
+    mockFetch.mockImplementationOnce(async (_url: string, init?: RequestInit) => {
+      const signal = init?.signal
+      if (!signal) throw new Error('expected request signal')
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            signal.addEventListener('abort', () => controller.error(signal.reason), { once: true })
+          },
+        }),
+        { status: 200 },
+      )
+    })
+
+    const response = await resolveInstagramVideo('slow-stream', {
+      attemptsPerMirror: 1,
+      attemptTimeoutMs: 100,
+      totalTimeoutMs: 5000,
+    })
+    const bodyAssertion = expect(response?.arrayBuffer()).rejects.toBeDefined()
+
+    await vi.advanceTimersByTimeAsync(100)
+    await bodyAssertion
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('revalidates every automatic redirect hop against the allowlist', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: 'https://d.rapidcdn.app/signed/video.mp4' },
+        }),
+      )
+      .mockResolvedValueOnce(new Response('video', { status: 200 }))
+
+    const response = await resolveInstagramVideo('redirected-reel', {
+      attemptsPerMirror: 1,
+      totalTimeoutMs: 5000,
+    })
+
+    expect(response?.status).toBe(200)
+    expect(mockFetch.mock.calls.map(([url]) => url)).toEqual([
+      'https://www.vxinstagram.com/offload/redirected-reel/0.mp4',
+      'https://d.rapidcdn.app/signed/video.mp4',
+    ])
+    await response?.body?.cancel()
+  })
+
+  it('does not follow a redirect to a suffix-spoofed host', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { Location: 'https://rapidcdn.app.evil.com/video.mp4' },
+      }),
+    )
+
+    await expect(
+      resolveInstagramVideo('unsafe-redirect', {
+        attemptsPerMirror: 3,
+        totalTimeoutMs: 5000,
+      }),
+    ).resolves.toBeNull()
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('honors caller cancellation and cleans up internal timers', async () => {
+    mockFetch.mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal
+          if (!signal) throw new Error('expected request signal')
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+        }),
+    )
+    const controller = new AbortController()
+    const pending = resolveInstagramVideo('cancelled-reel', {
+      signal: controller.signal,
+      totalTimeoutMs: 5000,
+    })
+    const assertion = expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+
+    controller.abort()
+
+    await assertion
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(0)
   })
 })

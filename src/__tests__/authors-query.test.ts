@@ -90,6 +90,17 @@ describe('getAuthorProfile', () => {
     expect(profile).toBeNull()
   })
 
+  it('does not cache not-found authors', async () => {
+    expect(await getAuthorProfile('justarrived')).toBeNull()
+    seedActivity({
+      bookmarkId: 'new-post',
+      author: 'justarrived',
+      createdAt: '2026-06-06T10:00:00Z',
+    })
+
+    expect((await getAuthorProfile('justarrived'))?.items[0].bookmarkId).toBe('new-post')
+  })
+
   it('matches the handle case-insensitively across activity and bookmarks', async () => {
     seedActivity({
       bookmarkId: '1',

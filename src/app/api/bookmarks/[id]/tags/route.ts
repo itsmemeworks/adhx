@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, runInTransaction } from '@/lib/db'
 import { bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
@@ -72,48 +72,63 @@ export const POST = withAuth(
       return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
     }
 
-    const existing = await db
-      .select({ tag: bookmarkTags.tag })
-      .from(bookmarkTags)
-      .where(
-        and(
-          eq(bookmarkTags.userId, userId),
-          eq(bookmarkTags.platform, platform),
-          eq(bookmarkTags.bookmarkId, id),
-        ),
-      )
-
-    if (existing.some((row) => row.tag === cleanTag)) {
-      return NextResponse.json({ success: true, tag: cleanTag })
-    }
-    if (existing.length >= MAX_TAGS_PER_POST) {
-      return NextResponse.json({ error: `Maximum ${MAX_TAGS_PER_POST} tags` }, { status: 400 })
-    }
-
+    let result:
+      | { outcome: 'inserted'; tagCount: number }
+      | { outcome: 'duplicate' }
+      | { outcome: 'limit' }
+      | { outcome: 'not-found' }
     try {
-      await db.insert(bookmarkTags).values({
-        userId,
-        platform,
-        bookmarkId: id,
-        tag: cleanTag,
-        // A playlist shows when a post joined THAT tag, not when the post was
-        // first saved — see bookmarkTags.createdAt.
-        createdAt: new Date().toISOString(),
+      result = runInTransaction(() => {
+        const parentExists =
+          db
+            .select({ id: bookmarks.id })
+            .from(bookmarks)
+            .where(
+              and(
+                eq(bookmarks.userId, userId),
+                eq(bookmarks.platform, platform),
+                eq(bookmarks.id, id),
+              ),
+            )
+            .limit(1)
+            .all().length > 0
+        if (!parentExists) {
+          return { outcome: 'not-found' as const }
+        }
+
+        const existing = db
+          .select({ tag: bookmarkTags.tag })
+          .from(bookmarkTags)
+          .where(
+            and(
+              eq(bookmarkTags.userId, userId),
+              eq(bookmarkTags.platform, platform),
+              eq(bookmarkTags.bookmarkId, id),
+            ),
+          )
+          .all()
+
+        if (existing.some((row) => row.tag === cleanTag)) {
+          return { outcome: 'duplicate' as const }
+        }
+        if (existing.length >= MAX_TAGS_PER_POST) {
+          return { outcome: 'limit' as const }
+        }
+
+        db.insert(bookmarkTags)
+          .values({
+            userId,
+            platform,
+            bookmarkId: id,
+            tag: cleanTag,
+            // A playlist shows when a post joined THAT tag, not when the post was
+            // first saved — see bookmarkTags.createdAt.
+            createdAt: new Date().toISOString(),
+          })
+          .run()
+
+        return { outcome: 'inserted' as const, tagCount: existing.length + 1 }
       })
-
-      const allTags = await db
-        .select({ tag: bookmarkTags.tag })
-        .from(bookmarkTags)
-        .where(
-          and(
-            eq(bookmarkTags.userId, userId),
-            eq(bookmarkTags.platform, platform),
-            eq(bookmarkTags.bookmarkId, id),
-          ),
-        )
-
-      metrics.bookmarkTagged(allTags.length)
-      recordPostAnalytic('post.tag', { userId, platform, bookmarkId: id, tag: cleanTag })
     } catch (error: unknown) {
       if ((error as { code?: string }).code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
         return NextResponse.json({ success: true, tag: cleanTag })
@@ -121,6 +136,18 @@ export const POST = withAuth(
       throw error
     }
 
+    if (result.outcome === 'not-found') {
+      return NextResponse.json({ error: 'Bookmark not found' }, { status: 404 })
+    }
+    if (result.outcome === 'limit') {
+      return NextResponse.json({ error: `Maximum ${MAX_TAGS_PER_POST} tags` }, { status: 400 })
+    }
+    if (result.outcome === 'duplicate') {
+      return NextResponse.json({ success: true, tag: cleanTag })
+    }
+
+    metrics.bookmarkTagged(result.tagCount)
+    recordPostAnalytic('post.tag', { userId, platform, bookmarkId: id, tag: cleanTag })
     return NextResponse.json({ success: true, tag: cleanTag })
   },
 )

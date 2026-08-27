@@ -19,7 +19,13 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/auth/session', () => ({
-  getSession: vi.fn(() => Promise.resolve(mockSession)),
+  getCurrentUserId: vi.fn(() => {
+    if (!mockSession?.userId) return Promise.resolve(null)
+    const banned = testInstance.sqlite
+      .prepare('SELECT user_id FROM user_bans WHERE user_id = ?')
+      .get(mockSession.userId)
+    return Promise.resolve(banned ? null : mockSession.userId)
+  }),
 }))
 
 describe('API: /api/auth/me', () => {
@@ -145,39 +151,31 @@ describe('API: /api/auth/me', () => {
     expect(data.xConnected).toBe(true)
   })
 
-  it('lazily creates a users row for a pre-migration session and returns it', async () => {
-    // Simulate an old session whose users row doesn't exist yet (no
-    // migration backfill has run against this in-memory test DB).
-    mockSession = { userId: 'legacy-user', username: 'legacyuser' }
+  it('keeps a stale deleted-account session signed out without recreating the user', async () => {
+    mockSession = { userId: 'deleted-user', username: 'former-user' }
 
     const { GET } = await import('@/app/api/auth/me/route')
     const response = await GET()
     const data = await response.json()
 
-    expect(data.authenticated).toBe(true)
-    expect(data.user.id).toBe('legacy-user')
-    expect(data.user.username).toBe('legacyuser')
-    expect(data.identities).toEqual({ x: null, email: null })
-    expect(data.xConnected).toBe(false)
+    expect(data.authenticated).toBe(false)
+    expect(data.user).toBeNull()
 
     const rows = await testInstance.db.select().from(schema.users)
-    expect(rows).toHaveLength(1)
+    expect(rows).toHaveLength(0)
     expect(data.isAdmin).toBe(false)
   })
 
-  it('sets isAdmin when the username is in ADMIN_USERNAMES', async () => {
-    const prev = process.env.ADMIN_USERNAMES
-    process.env.ADMIN_USERNAMES = 'xuser'
+  it('sets isAdmin from the immutable account role', async () => {
     await testInstance.db.insert(schema.users).values({
       id: 'admin-1',
       username: 'xuser',
+      role: 'admin',
     })
     mockSession = { userId: 'admin-1', username: 'xuser' }
     const { GET } = await import('@/app/api/auth/me/route')
     const data = await (await GET()).json()
     expect(data.isAdmin).toBe(true)
-    if (prev === undefined) delete process.env.ADMIN_USERNAMES
-    else process.env.ADMIN_USERNAMES = prev
   })
 
   it('returns the signed-out shape for a banned session', async () => {

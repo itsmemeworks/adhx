@@ -5,6 +5,7 @@ import { X, CheckCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ConnectWithX } from '@/components/matter'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
+import { notifyStatsUpdated } from '@/lib/client-events'
 
 interface SyncStats {
   total: number
@@ -118,7 +119,7 @@ export function SyncProgress({
         setProgress(100)
         // Notify gallery and header to refresh
         window.dispatchEvent(new CustomEvent('sync-complete'))
-        window.dispatchEvent(new CustomEvent('stats-updated'))
+        notifyStatsUpdated()
         if (silentRef.current) onCloseRef.current()
       })
 

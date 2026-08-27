@@ -10,7 +10,13 @@ import { NextRequest } from 'next/server'
  */
 
 const mockFetch = vi.fn()
+const mockDownloadRateLimit = vi.fn()
 global.fetch = mockFetch as unknown as typeof fetch
+
+vi.mock('@/lib/rate-limit', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/rate-limit')>('@/lib/rate-limit')
+  return { ...actual, downloadRateLimit: mockDownloadRateLimit }
+})
 
 function createRequest(path: string, id: string | null, range?: string): NextRequest {
   const url = new URL(`http://localhost:3000${path}`)
@@ -29,7 +35,11 @@ function upstream(status: number, headers: Record<string, string> = {}) {
 }
 
 describe('Instagram video endpoints', () => {
-  beforeEach(() => mockFetch.mockReset())
+  beforeEach(() => {
+    mockFetch.mockReset()
+    mockDownloadRateLimit.mockReset()
+    mockDownloadRateLimit.mockReturnValue(null)
+  })
 
   it('rejects a missing/invalid id with 400 (no fetch)', async () => {
     const { GET } = await import('@/app/api/media/instagram/video/route')
@@ -98,5 +108,30 @@ describe('Instagram video endpoints', () => {
     expect(response.status).toBe(200)
     expect(response.headers.get('content-disposition')).toContain('attachment')
     expect(response.headers.get('content-disposition')).toContain('instagram-DYP6_iUlDzp.mp4')
+  })
+
+  it('download route rate-limits before resolving a mirror', async () => {
+    mockDownloadRateLimit.mockReturnValueOnce(new Response(null, { status: 429 }))
+
+    const { GET } = await import('@/app/api/media/instagram/video/download/route')
+    const response = await GET(createRequest('/api/media/instagram/video/download', 'DYP6_iUlDzp'))
+
+    expect(response.status).toBe(429)
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('download route rejects a mirror redirect to an untrusted host', async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: 'https://evil.example/video.mp4' },
+      }),
+    )
+
+    const { GET } = await import('@/app/api/media/instagram/video/download/route')
+    const response = await GET(createRequest('/api/media/instagram/video/download', 'DYP6_iUlDzp'))
+
+    expect(response.status).toBe(502)
+    expect(mockFetch).toHaveBeenCalledOnce()
   })
 })

@@ -29,7 +29,7 @@
  * the old per-item element did.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import { dispatchTheaterStageTap } from './useTheaterStageEvents'
@@ -42,6 +42,15 @@ import type { TheaterItem } from './types'
  * ~10s as a text post rather than ending the session.
  */
 const ERRORED_ADVANCE_MS = 10_000
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: unknown }).name === 'AbortError'
+  )
+}
 
 export interface StageVideoProps {
   item: TheaterItem
@@ -96,6 +105,21 @@ export function StageVideo({
   onAlbumIndexChange,
 }: StageVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  // The element intentionally survives source swaps, so every asynchronous
+  // operation must carry the source generation it started under. A settled
+  // play()/probe from the previous MP4 must never mutate the new item's
+  // playback, mute, gesture, or error state.
+  const sourceGenerationRef = useRef(0)
+  const currentSrcRef = useRef(src)
+  // Native media events do not carry the resource that queued them. Committing
+  // a new src invalidates this binding synchronously; the next matching
+  // `loadstart` activates the new generation. Media-element tasks are ordered,
+  // so an ended/error/pause task left over from A runs before B's loadstart
+  // and is ignored.
+  // The URL checks also reject a lifecycle event while currentSrc still
+  // identifies A. This preserves one persistent element without pretending
+  // the generation read at event-dispatch time identifies the event's source.
+  const activeLifecycleRef = useRef<{ generation: number; src: string } | null>(null)
   const [ended, setEnded] = useState(false)
   const [needsGesture, setNeedsGesture] = useState(false)
   const [errored, setErrored] = useState(false)
@@ -128,6 +152,28 @@ export function StageVideo({
   // be told apart from a deliberate pause action, which clears this first.
   const catchUpAttemptedRef = useRef(false)
   const catchUpPendingRef = useRef(false)
+
+  const captureSource = () => ({
+    generation: sourceGenerationRef.current,
+    src: currentSrcRef.current,
+  })
+  const isCurrentSource = (generation: number, operationSrc: string) =>
+    sourceGenerationRef.current === generation && currentSrcRef.current === operationSrc
+  const absoluteSource = (operationSrc: string) => new URL(operationSrc, document.baseURI).href
+  const elementMatchesSource = (video: HTMLVideoElement, operationSrc: string) => {
+    const expected = absoluteSource(operationSrc)
+    return (
+      (!video.currentSrc || video.currentSrc === expected) && (!video.src || video.src === expected)
+    )
+  }
+  const isCurrentLifecycleEvent = (video: HTMLVideoElement) => {
+    const active = activeLifecycleRef.current
+    return (
+      active !== null &&
+      isCurrentSource(active.generation, active.src) &&
+      elementMatchesSource(video, active.src)
+    )
+  }
 
   // Reconcile the shell's `muted` signal onto the persistent element — but
   // only on an actual prop transition (this effect's dependency array), so
@@ -170,12 +216,27 @@ export function StageVideo({
     return () => window.removeEventListener('theater-set-muted', handler)
   }, [])
 
+  // A render can commit before the passive source-loading effect below runs.
+  // Invalidate A synchronously in the commit's layout phase so a queued media
+  // event (or a settling play promise) cannot observe A as current while the
+  // DOM already represents B. The passive effect consumes this generation;
+  // it does not increment again.
+  useLayoutEffect(() => {
+    sourceGenerationRef.current += 1
+    currentSrcRef.current = src
+    activeLifecycleRef.current = null
+  }, [src])
+
   // New item: reset per-video UI state, then swap the element's source in
   // place and play it. This is the ONLY place that calls play() for a
   // freshly-loaded source, so a rejection here is a trustworthy "needs a
   // gesture" signal — there's no second caller (like the old `autoPlay`
   // attribute) it could be racing against.
   useEffect(() => {
+    // The layout effect above already advanced this source generation before
+    // any queued native event could run. Capture it for load/play work.
+    const generation = sourceGenerationRef.current
+
     setEnded(false)
     setNeedsGesture(false)
     setErrored(false)
@@ -195,8 +256,13 @@ export function StageVideo({
     // earlier unmute, or a previous item's fallback re-mute) — never
     // re-derive from the `muted` prop here.
     video.play().then(
-      () => setPlaying(true),
+      () => {
+        if (!isCurrentSource(generation, src)) return
+        setPlaying(true)
+      },
       (err: unknown) => {
+        if (!isCurrentSource(generation, src)) return
+        if (isAbortError(err)) return
         logSV('play() rejected', err instanceof Error ? err.name : String(err))
         if (!video.muted) {
           // Unmuted continuation denied for this item — never leave the
@@ -205,14 +271,26 @@ export function StageVideo({
           video.muted = true
           setEffectiveMuted(true)
           video.play().then(
-            () => setPlaying(true),
-            () => setNeedsGesture(true),
+            () => {
+              if (!isCurrentSource(generation, src)) return
+              setPlaying(true)
+            },
+            (err: unknown) => {
+              if (!isCurrentSource(generation, src)) return
+              if (isAbortError(err)) return
+              setNeedsGesture(true)
+            },
           )
         } else {
           setNeedsGesture(true)
         }
       },
     )
+    return () => {
+      if (isCurrentSource(generation, src)) {
+        sourceGenerationRef.current += 1
+      }
+    }
   }, [src])
 
   // Cover transitions. Pausing is unconditional (a covered video must never be
@@ -235,10 +313,18 @@ export function StageVideo({
     if (!pausedByCoverRef.current) return
     pausedByCoverRef.current = false
     if (video.paused) {
+      const { generation, src: operationSrc } = captureSource()
       logSV(`uncovered — resuming (muted=${video.muted})`)
       video.play().then(
-        () => setPlaying(true),
-        () => setNeedsGesture(true),
+        () => {
+          if (!isCurrentSource(generation, operationSrc)) return
+          setPlaying(true)
+        },
+        (err: unknown) => {
+          if (!isCurrentSource(generation, operationSrc)) return
+          if (isAbortError(err)) return
+          setNeedsGesture(true)
+        },
       )
     }
   }, [covered])
@@ -273,11 +359,19 @@ export function StageVideo({
   const handleStartTap = () => {
     const video = videoRef.current
     if (!video) return
+    const { generation, src: operationSrc } = captureSource()
     setNeedsGesture(false)
     setErrored(false)
     video.play().then(
-      () => setPlaying(true),
-      () => setErrored(true),
+      () => {
+        if (!isCurrentSource(generation, operationSrc)) return
+        setPlaying(true)
+      },
+      (err: unknown) => {
+        if (!isCurrentSource(generation, operationSrc)) return
+        if (isAbortError(err)) return
+        setErrored(true)
+      },
     )
   }
 
@@ -297,9 +391,17 @@ export function StageVideo({
         return
       }
       if (video.paused) {
+        const { generation, src: operationSrc } = captureSource()
         video.play().then(
-          () => setPlaying(true),
-          () => setNeedsGesture(true),
+          () => {
+            if (!isCurrentSource(generation, operationSrc)) return
+            setPlaying(true)
+          },
+          (err: unknown) => {
+            if (!isCurrentSource(generation, operationSrc)) return
+            if (isAbortError(err)) return
+            setNeedsGesture(true)
+          },
         )
       } else {
         // A deliberate pause — disarm the catch-up watch first so the
@@ -345,9 +447,17 @@ export function StageVideo({
         handleStartTap()
         return
       }
+      const { generation, src: operationSrc } = captureSource()
       video.play().then(
-        () => setPlaying(true),
-        () => setNeedsGesture(true),
+        () => {
+          if (!isCurrentSource(generation, operationSrc)) return
+          setPlaying(true)
+        },
+        (err: unknown) => {
+          if (!isCurrentSource(generation, operationSrc)) return
+          if (isAbortError(err)) return
+          setNeedsGesture(true)
+        },
       )
     }
     window.addEventListener('theater-pause', handlePause)
@@ -374,9 +484,18 @@ export function StageVideo({
     )
   }, [effectiveMuted])
 
-  const handleTimeUpdate = () => {
-    const video = videoRef.current
-    if (!video || !video.duration) return
+  const handleLifecycleStart = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget
+    const { generation, src: operationSrc } = captureSource()
+    if (!isCurrentSource(generation, operationSrc) || !elementMatchesSource(video, operationSrc)) {
+      return
+    }
+    activeLifecycleRef.current = { generation, src: operationSrc }
+  }
+
+  const handleTimeUpdate = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget
+    if (!isCurrentLifecycleEvent(video) || !video.duration) return
     const progress = video.currentTime / video.duration
     // The shared top-of-screen progress line
     // (TheaterProgressLine, kind 'video') has no access to this element, so
@@ -384,7 +503,8 @@ export function StageVideo({
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress } }))
   }
 
-  const handleEnded = () => {
+  const handleEnded = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (!isCurrentLifecycleEvent(event.currentTarget)) return
     // Some browsers fire `pause` immediately before `ended` as part of
     // reaching the end of the media — never a catch-up rejection.
     catchUpPendingRef.current = false
@@ -414,17 +534,26 @@ export function StageVideo({
     catchUpPendingRef.current = false
     const video = videoRef.current
     if (!video) return
+    const { generation, src: operationSrc } = captureSource()
     video.muted = true
     setEffectiveMuted(true)
     video.play().then(
-      () => setPlaying(true),
-      () => setNeedsGesture(true),
+      () => {
+        if (!isCurrentSource(generation, operationSrc)) return
+        setPlaying(true)
+      },
+      (err: unknown) => {
+        if (!isCurrentSource(generation, operationSrc)) return
+        if (isAbortError(err)) return
+        setNeedsGesture(true)
+      },
     )
   }
 
   // The media element is the source of truth — a successful start (initial
   // play() or any later play() path) clears the gesture overlay.
-  const handleVideoPlaying = () => {
+  const handleVideoPlaying = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (!isCurrentLifecycleEvent(event.currentTarget)) return
     setPlaying(true)
     setNeedsGesture(false)
     // A playing element is by definition not at its end — clears any stale
@@ -449,8 +578,9 @@ export function StageVideo({
     }
   }
 
-  const handleVideoPause = () => {
-    const video = videoRef.current
+  const handleVideoPause = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget
+    if (!isCurrentLifecycleEvent(video)) return
     logSV('pause event', {
       ended: video?.ended ?? false,
       catchUpPending: catchUpPendingRef.current,
@@ -469,12 +599,20 @@ export function StageVideo({
   const handleReplay = () => {
     const video = videoRef.current
     if (!video) return
+    const { generation, src: operationSrc } = captureSource()
     setEnded(false)
     setErrored(false)
     video.currentTime = 0
     video.play().then(
-      () => setPlaying(true),
-      () => setNeedsGesture(true),
+      () => {
+        if (!isCurrentSource(generation, operationSrc)) return
+        setPlaying(true)
+      },
+      (err: unknown) => {
+        if (!isCurrentSource(generation, operationSrc)) return
+        if (isAbortError(err)) return
+        setNeedsGesture(true)
+      },
     )
   }
 
@@ -487,11 +625,17 @@ export function StageVideo({
   // the whole file. A 410 body carries `{ error: 'unavailable', reason }`;
   // anything else (including a non-410 error) leaves the generic
   // load-failure state with its retry button in place.
-  const handleVideoError = () => {
+  const handleVideoError = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (!isCurrentLifecycleEvent(event.currentTarget)) return
+    const { generation, src: operationSrc } = captureSource()
     setErrored(true)
-    fetch(src, { headers: { Range: 'bytes=0-1' } })
-      .then((res) => (res.status === 410 ? res.json() : null))
+    fetch(operationSrc, { headers: { Range: 'bytes=0-1' } })
+      .then((res) => {
+        if (!isCurrentSource(generation, operationSrc)) return null
+        return res.status === 410 ? res.json() : null
+      })
       .then((body) => {
+        if (!isCurrentSource(generation, operationSrc)) return
         if (body && typeof body.reason === 'string') {
           setUnavailableReason(body.reason)
         }
@@ -540,6 +684,7 @@ export function StageVideo({
         muted={effectiveMuted}
         loop={repeat}
         playsInline
+        onLoadStart={handleLifecycleStart}
         onPlaying={handleVideoPlaying}
         onPause={handleVideoPause}
         onTimeUpdate={handleTimeUpdate}

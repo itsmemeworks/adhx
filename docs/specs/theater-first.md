@@ -104,7 +104,7 @@ Route wiring:
 
 ## 5. Seen / unseen model
 
-- `localStorage` key `adhx-seen-v1`: JSON array of `"<platform>:<bookmarkId>"`, most-recent-last, capped at 500 (drop oldest). Marked when a post is staged ≥ 2s or acted on (Send/Save/Copy/open-original).
+- `adhx-seen-v1` remains a readable JSON-array projection of `"<platform>:<bookmarkId>"`, most-recent-last and capped at 500. Cross-tab authority is immutable V2 per-key/batch localStorage operations: deterministic latest-writer resolution, newest 500 marks + 500 tombstones, and atomic bulk Re-watch. Storage events coalesce and rescan authority rather than merging stale snapshots. Existing arrays migrate once; tabs still running pre-V2 code must reload.
 - `adhx-last-visit`: timestamp written on unload/hide; on load, items newer than it and not in the seen set count toward "N new since your last visit".
 - Divider: unseen above, "you're caught up" line, seen (dimmed + check) below. Zero-new state: skip the divider, show "You're all caught up — Top today" and lead with the top post.
 - Signed-in (Phase 3): merge with `read_status` — a saved+read post renders seen; marking seen in the theater on a saved post POSTs the existing `/api/bookmarks/[id]/read`. Public (unsaved) posts stay local-only.

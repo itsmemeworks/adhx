@@ -1,8 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { captureException } from '@/lib/sentry'
-import { buildAllowlistedUrl, TWITTER_HLS_HOSTS } from '@/lib/media/proxy'
+import {
+  buildAllowlistedUrl,
+  fetchWithAllowlistedRedirects,
+  isUntrustedMediaRedirectError,
+  limitResponseBody,
+  TWITTER_HLS_HOSTS,
+} from '@/lib/media/proxy'
 import { mediaRateLimit } from '@/lib/rate-limit'
-import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+
+export const MAX_HLS_SEGMENT_BYTES = 25 * 1024 * 1024
+const HLS_SEGMENT_TIMEOUT_MS = 10_000
+const SEGMENT_CONTENT_TYPES = new Set([
+  'application/octet-stream',
+  'audio/aac',
+  'audio/mp4',
+  'video/iso.segment',
+  'video/mp2t',
+  'video/mp4',
+])
 
 /**
  * HLS Segment Proxy - Fetches individual video segments from Twitter's CDN
@@ -32,21 +48,29 @@ export async function GET(request: NextRequest) {
     // fetch target from the validated URL's own parsed components — never the
     // raw query-param string — so the fetched URL is provably safe.
     const safeSegmentUrl = buildAllowlistedUrl(segmentUrl, TWITTER_HLS_HOSTS)
-    if (!safeSegmentUrl) {
+    const contentType = safeSegmentUrl ? segmentContentType(safeSegmentUrl) : null
+    if (!safeSegmentUrl || !contentType) {
       return NextResponse.json({ error: 'Invalid segment URL' }, { status: 400 })
     }
 
     // Fetch the segment
-    const response = await fetchWithTimeout(safeSegmentUrl, 10_000, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Referer: 'https://twitter.com/',
-        Origin: 'https://twitter.com',
+    const range = request.headers.get('range')
+    const response = await fetchWithAllowlistedRedirects(safeSegmentUrl, {
+      hosts: TWITTER_HLS_HOSTS,
+      timeoutMs: HLS_SEGMENT_TIMEOUT_MS,
+      init: {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Referer: 'https://twitter.com/',
+          Origin: 'https://twitter.com',
+          ...(range ? { Range: range } : {}),
+        },
       },
     })
 
     if (!response.ok) {
+      await response.body?.cancel()
       console.error(`Segment proxy failed: ${response.status} for ${segmentUrl}`)
       return NextResponse.json(
         { error: `Failed to fetch segment: ${response.status}` },
@@ -54,32 +78,58 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Determine content type based on file extension
-    let contentType = 'video/MP2T' // Default for .ts files
-    if (segmentUrl.includes('.m4s')) {
-      contentType = 'video/iso.segment'
-    } else if (segmentUrl.includes('.mp4')) {
-      contentType = 'video/mp4'
-    } else if (segmentUrl.includes('.m4a')) {
-      contentType = 'audio/mp4'
-    } else if (segmentUrl.includes('.aac')) {
-      contentType = 'audio/aac'
+    if (!response.body) {
+      return NextResponse.json({ error: 'Failed to fetch segment' }, { status: 502 })
     }
 
-    // Stream the segment data
-    const data = await response.arrayBuffer()
+    const declaredLength = response.headers.get('content-length')
+    if (/^\d+$/.test(declaredLength || '') && Number(declaredLength) > MAX_HLS_SEGMENT_BYTES) {
+      await response.body.cancel()
+      return NextResponse.json({ error: 'HLS segment exceeds maximum size' }, { status: 413 })
+    }
 
-    return new NextResponse(data, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Length': data.byteLength.toString(),
-        'Cache-Control': 'public, max-age=3600', // Cache segments for 1 hour
-        'Access-Control-Allow-Origin': '*',
-      },
+    const upstreamType = response.headers
+      .get('content-type')
+      ?.split(';', 1)[0]
+      ?.trim()
+      .toLowerCase()
+    if (upstreamType && !SEGMENT_CONTENT_TYPES.has(upstreamType)) {
+      await response.body.cancel()
+      return NextResponse.json({ error: 'Invalid HLS segment content type' }, { status: 502 })
+    }
+
+    const boundedBody = limitResponseBody(response, MAX_HLS_SEGMENT_BYTES)
+    if (!boundedBody) {
+      return NextResponse.json({ error: 'Failed to fetch segment' }, { status: 502 })
+    }
+
+    const headers = new Headers({
+      'Content-Type': upstreamType || contentType,
+      'Cache-Control': 'public, max-age=3600',
+      'Access-Control-Allow-Origin': '*',
     })
+    for (const header of ['content-length', 'content-range', 'accept-ranges']) {
+      const value = response.headers.get(header)
+      if (value) headers.set(header, value)
+    }
+
+    return new NextResponse(boundedBody, { status: response.status, headers })
   } catch (error) {
+    if (isUntrustedMediaRedirectError(error)) {
+      return NextResponse.json({ error: 'Untrusted HLS segment redirect' }, { status: 502 })
+    }
     console.error('Segment proxy error:', error)
     captureException(error, { endpoint: '/api/media/video/hls/segment', segmentUrl })
     return NextResponse.json({ error: 'Failed to proxy segment' }, { status: 500 })
   }
+}
+
+function segmentContentType(url: string): string | null {
+  const pathname = new URL(url).pathname.toLowerCase()
+  if (pathname.endsWith('.ts')) return 'video/mp2t'
+  if (pathname.endsWith('.m4s')) return 'video/iso.segment'
+  if (pathname.endsWith('.mp4')) return 'video/mp4'
+  if (pathname.endsWith('.m4a')) return 'audio/mp4'
+  if (pathname.endsWith('.aac')) return 'audio/aac'
+  return null
 }

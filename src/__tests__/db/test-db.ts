@@ -57,6 +57,8 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
       preview_image_url TEXT
     );
     CREATE INDEX bookmark_links_user_bookmark_idx ON bookmark_links(user_id, platform, bookmark_id);
+    CREATE UNIQUE INDEX bookmark_links_identity_idx
+      ON bookmark_links(user_id, platform, bookmark_id, expanded_url);
 
     -- Bookmark tags with composite PK (userId, platform, bookmarkId, tag)
     CREATE TABLE bookmark_tags (
@@ -120,7 +122,9 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
       expires_at INTEGER NOT NULL,
       scopes TEXT,
       created_at TEXT,
-      updated_at TEXT
+      updated_at TEXT,
+      refresh_lease_id TEXT,
+      refresh_lease_started_at TEXT
     );
 
     -- Sync logs
@@ -138,6 +142,8 @@ export function createTestDb(): BetterSQLite3Database<typeof schema> & { close: 
       trigger_type TEXT
     );
     CREATE INDEX sync_logs_user_id_idx ON sync_logs(user_id);
+    CREATE UNIQUE INDEX sync_logs_one_running_per_user_idx
+      ON sync_logs(user_id) WHERE status = 'running';
   `)
 
   const db = drizzle(sqlite, { schema })

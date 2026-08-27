@@ -1,13 +1,20 @@
 import crypto from 'crypto'
 import { db, runInTransaction } from '@/lib/db'
-import { users, userIdentities, loginTokens, oauthTokens, usernameAliases } from '@/lib/db/schema'
-import { and, desc, eq, gt, isNull, lt } from 'drizzle-orm'
-import { deleteTokens } from './oauth'
+import {
+  users,
+  userIdentities,
+  loginTokens,
+  oauthTokens,
+  oauthState,
+  usernameAliases,
+} from '@/lib/db/schema'
+import { and, desc, eq, gt, isNull, lt, ne, sql } from 'drizzle-orm'
 import { MAX_USERNAME_CHANGES, sanitizeUsername } from './username-rules'
 
 export { MAX_USERNAME_CHANGES, sanitizeUsername }
 
 const TOKEN_TTL_MS = 15 * 60 * 1000
+const MAX_EMAIL_CLAIM_ATTEMPTS = 100
 
 // ===========================================
 // Account read model
@@ -35,8 +42,8 @@ export interface Account {
 /**
  * Read the full account view for a userId: the `users` row, its linked
  * identities, and whether an X (Twitter) connection is currently stored.
- * Returns null if there's no `users` row yet (e.g. a pre-migration session —
- * callers should lazily create one, see `/api/auth/me`).
+ * Returns null if the account no longer exists. Callers must treat that as
+ * signed out; recreating from a JWT would resurrect a deleted account.
  */
 export async function getAccount(userId: string): Promise<Account | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
@@ -218,7 +225,7 @@ export interface FindOrCreateXResult {
   userId: string
   username: string
   created: boolean
-  conflict?: 'linked_elsewhere' | 'sign_in_required'
+  conflict?: 'linked_elsewhere' | 'sign_in_required' | 'stale_link'
 }
 
 /**
@@ -231,7 +238,63 @@ function isDuplicateRowError(error: unknown): boolean {
   return code === 'SQLITE_CONSTRAINT_PRIMARYKEY' || code === 'SQLITE_CONSTRAINT_UNIQUE'
 }
 
+function isRetryableSqliteRace(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code
+  return code === 'SQLITE_BUSY' || code === 'SQLITE_BUSY_SNAPSHOT' || code === 'SQLITE_LOCKED'
+}
+
 const MAX_RESOLVE_ATTEMPTS = 3
+
+function finalizeXIdentityAndProfile(params: {
+  userId: string
+  x: {
+    xUserId: string
+    username: string
+    name?: string | null
+    profileImageUrl: string | null
+  }
+  expectedXLinkVersion?: number
+  insertIdentity: boolean
+  onlyFillMissingProfile: boolean
+}): { username: string } | null {
+  const { userId, x, expectedXLinkVersion, insertIdentity, onlyFillMissingProfile } = params
+
+  return runInTransaction(() => {
+    const user = db.select().from(users).where(eq(users.id, userId)).limit(1).get()
+    if (!user) return null
+    if (expectedXLinkVersion !== undefined && user.xLinkVersion !== expectedXLinkVersion) {
+      return null
+    }
+
+    const identity = db
+      .select({ userId: userIdentities.userId })
+      .from(userIdentities)
+      .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.providerId, x.xUserId)))
+      .limit(1)
+      .get()
+    if (identity && identity.userId !== userId) return null
+    if (!identity) {
+      if (!insertIdentity) return null
+      db.insert(userIdentities).values({ provider: 'x', providerId: x.xUserId, userId }).run()
+    }
+
+    const updates: Partial<typeof users.$inferInsert> = {}
+    if (x.name && (onlyFillMissingProfile ? !user.displayName : x.name !== user.displayName)) {
+      updates.displayName = x.name
+    }
+    if (
+      x.profileImageUrl &&
+      (onlyFillMissingProfile ? !user.avatarUrl : x.profileImageUrl !== user.avatarUrl)
+    ) {
+      updates.avatarUrl = x.profileImageUrl
+    }
+    if (Object.keys(updates).length > 0) {
+      db.update(users).set(updates).where(eq(users.id, userId)).run()
+    }
+
+    return { username: user.username }
+  })
+}
 
 /**
  * Resolve (or create) the app account for an X login.
@@ -250,9 +313,10 @@ const MAX_RESOLVE_ATTEMPTS = 3
  *   without touching the session; otherwise relink X to that account. Was
  *   previously unhandled — a blind insert crashed with `SqliteError: UNIQUE
  *   constraint failed: users.id` (Sentry WHITE-SUN-6317-17).
- * - No existing identity + an active session (`sessionUserId`) → link this X
- *   account to that session's user (an email user connecting X for bookmark
- *   sync). X is not a sign-in method — it never creates an account.
+ * - No existing identity + an active session (`sessionUserId`) → if that user
+ *   already owns a different X identity, return `linked_elsewhere`; otherwise
+ *   link this X account for bookmark sync. X is not a sign-in method — it
+ *   never creates an account.
  * - No existing identity + no session → `sign_in_required`. The caller must
  *   bounce to email sign-in; do not create a user.
  *
@@ -263,8 +327,25 @@ const MAX_RESOLVE_ATTEMPTS = 3
 export async function findOrCreateUserForX(
   x: { xUserId: string; username: string; name?: string | null; profileImageUrl: string | null },
   sessionUserId?: string,
+  expectedXLinkVersion?: number,
 ): Promise<FindOrCreateXResult> {
   for (let attempt = 0; attempt < MAX_RESOLVE_ATTEMPTS; attempt++) {
+    if (sessionUserId && expectedXLinkVersion !== undefined) {
+      const [accountGeneration] = await db
+        .select({ xLinkVersion: users.xLinkVersion })
+        .from(users)
+        .where(eq(users.id, sessionUserId))
+        .limit(1)
+      if (!accountGeneration || accountGeneration.xLinkVersion !== expectedXLinkVersion) {
+        return {
+          userId: sessionUserId,
+          username: '',
+          created: false,
+          conflict: 'stale_link',
+        }
+      }
+    }
+
     const [existingIdentity] = await db
       .select()
       .from(userIdentities)
@@ -284,23 +365,49 @@ export async function findOrCreateUserForX(
         }
       }
 
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, existingIdentity.userId))
-        .limit(1)
-      const updates: Partial<typeof users.$inferInsert> = {}
-      if (x.name && x.name !== user?.displayName) updates.displayName = x.name
-      if (x.profileImageUrl && x.profileImageUrl !== user?.avatarUrl)
-        updates.avatarUrl = x.profileImageUrl
-      if (Object.keys(updates).length > 0) {
-        await db.update(users).set(updates).where(eq(users.id, existingIdentity.userId))
+      let finalized: { username: string } | null
+      try {
+        finalized = finalizeXIdentityAndProfile({
+          userId: existingIdentity.userId,
+          x,
+          expectedXLinkVersion,
+          insertIdentity: false,
+          onlyFillMissingProfile: false,
+        })
+      } catch (error) {
+        if (!isRetryableSqliteRace(error)) throw error
+        continue
+      }
+      if (!finalized) {
+        return {
+          userId: existingIdentity.userId,
+          username: '',
+          created: false,
+          conflict: 'stale_link',
+        }
       }
 
       return {
         userId: existingIdentity.userId,
-        username: user?.username ?? x.username,
+        username: finalized.username,
         created: false,
+      }
+    }
+
+    if (sessionUserId) {
+      const [sessionXIdentity] = await db
+        .select({ providerId: userIdentities.providerId })
+        .from(userIdentities)
+        .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.userId, sessionUserId)))
+        .limit(1)
+
+      if (sessionXIdentity && sessionXIdentity.providerId !== x.xUserId) {
+        return {
+          userId: sessionUserId,
+          username: '',
+          created: false,
+          conflict: 'linked_elsewhere',
+        }
       }
     }
 
@@ -315,49 +422,51 @@ export async function findOrCreateUserForX(
       }
 
       try {
-        runInTransaction(() => {
-          db.insert(userIdentities)
-            .values({ provider: 'x', providerId: x.xUserId, userId: ownerOfXId.id })
-            .run()
+        const finalized = finalizeXIdentityAndProfile({
+          userId: ownerOfXId.id,
+          x,
+          expectedXLinkVersion,
+          insertIdentity: true,
+          onlyFillMissingProfile: false,
         })
+        if (!finalized) {
+          return {
+            userId: ownerOfXId.id,
+            username: '',
+            created: false,
+            conflict: 'stale_link',
+          }
+        }
+        return { userId: ownerOfXId.id, username: finalized.username, created: false }
       } catch (err) {
-        if (!isDuplicateRowError(err)) throw err
+        if (!isDuplicateRowError(err) && !isRetryableSqliteRace(err)) throw err
         continue // lost the race — retry sees the winner's committed identity
       }
-
-      const updates: Partial<typeof users.$inferInsert> = {}
-      if (x.name && x.name !== ownerOfXId.displayName) updates.displayName = x.name
-      if (x.profileImageUrl && x.profileImageUrl !== ownerOfXId.avatarUrl)
-        updates.avatarUrl = x.profileImageUrl
-      if (Object.keys(updates).length > 0) {
-        await db.update(users).set(updates).where(eq(users.id, ownerOfXId.id))
-      }
-
-      return { userId: ownerOfXId.id, username: ownerOfXId.username, created: false }
     }
 
     if (sessionUserId) {
       // Linking a fresh X account to the currently signed-in (e.g. email) user.
       try {
-        runInTransaction(() => {
-          db.insert(userIdentities)
-            .values({ provider: 'x', providerId: x.xUserId, userId: sessionUserId })
-            .run()
+        const finalized = finalizeXIdentityAndProfile({
+          userId: sessionUserId,
+          x,
+          expectedXLinkVersion,
+          insertIdentity: true,
+          onlyFillMissingProfile: true,
         })
+        if (!finalized) {
+          return {
+            userId: sessionUserId,
+            username: '',
+            created: false,
+            conflict: 'stale_link',
+          }
+        }
+        return { userId: sessionUserId, username: finalized.username, created: false }
       } catch (err) {
-        if (!isDuplicateRowError(err)) throw err
+        if (!isDuplicateRowError(err) && !isRetryableSqliteRace(err)) throw err
         continue
       }
-
-      const [user] = await db.select().from(users).where(eq(users.id, sessionUserId)).limit(1)
-      const updates: Partial<typeof users.$inferInsert> = {}
-      if (x.name && !user?.displayName) updates.displayName = x.name
-      if (x.profileImageUrl && !user?.avatarUrl) updates.avatarUrl = x.profileImageUrl
-      if (Object.keys(updates).length > 0) {
-        await db.update(users).set(updates).where(eq(users.id, sessionUserId))
-      }
-
-      return { userId: sessionUserId, username: user?.username ?? x.username, created: false }
     }
 
     // X is not a sign-in method — never create an account from an X login.
@@ -375,38 +484,50 @@ export async function findOrCreateUserForEmail(
   rawEmail: string,
 ): Promise<{ userId: string; username: string; created: boolean }> {
   const email = rawEmail.trim().toLowerCase()
-
-  const [existingIdentity] = await db
-    .select()
-    .from(userIdentities)
-    .where(and(eq(userIdentities.provider, 'email'), eq(userIdentities.providerId, email)))
-    .limit(1)
-
-  if (existingIdentity) {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, existingIdentity.userId))
-      .limit(1)
-    return { userId: existingIdentity.userId, username: user?.username ?? '', created: false }
-  }
-
-  const userId = `u_${randomHex(8)}`
   const base = sanitizeLocalPart(email)
+  let usernameAttempt = 0
 
-  let username = base
-  let suffix = 1
-  while (await isUsernameTaken(username)) {
-    suffix += 1
-    username = `${base}${suffix}`.slice(0, 20)
+  for (let attempt = 0; attempt < MAX_EMAIL_CLAIM_ATTEMPTS; attempt++) {
+    const userId = `u_${randomHex(8)}`
+    const suffix = usernameAttempt === 0 ? '' : String(usernameAttempt + 1)
+    const username = `${base.slice(0, Math.max(1, 20 - suffix.length))}${suffix}`
+
+    try {
+      return runInTransaction(() => {
+        const existingIdentity = db
+          .select()
+          .from(userIdentities)
+          .where(and(eq(userIdentities.provider, 'email'), eq(userIdentities.providerId, email)))
+          .limit(1)
+          .get()
+        if (existingIdentity) {
+          const user = db
+            .select()
+            .from(users)
+            .where(eq(users.id, existingIdentity.userId))
+            .limit(1)
+            .get()
+          return {
+            userId: existingIdentity.userId,
+            username: user?.username ?? '',
+            created: false,
+          }
+        }
+
+        db.insert(users).values({ id: userId, username, email }).run()
+        db.insert(userIdentities).values({ provider: 'email', providerId: email, userId }).run()
+        return { userId, username, created: true }
+      })
+    } catch (error) {
+      if (!isDuplicateRowError(error) && !isRetryableSqliteRace(error)) throw error
+      if (isDuplicateRowError(error)) usernameAttempt += 1
+      // Another email claimant or username owner committed first. Retry from
+      // the identity lookup so same-email losers resolve to the winner and
+      // unrelated username collisions advance deterministically.
+    }
   }
 
-  runInTransaction(() => {
-    db.insert(users).values({ id: userId, username, email }).run()
-    db.insert(userIdentities).values({ provider: 'email', providerId: email, userId }).run()
-  })
-
-  return { userId, username, created: true }
+  throw new Error('findOrCreateUserForEmail: could not claim identity after repeated races')
 }
 
 export async function linkEmailToUser(
@@ -415,25 +536,51 @@ export async function linkEmailToUser(
 ): Promise<{ ok: true } | { error: 'email_in_use' }> {
   const email = rawEmail.trim().toLowerCase()
 
-  const [existingIdentity] = await db
-    .select()
-    .from(userIdentities)
-    .where(and(eq(userIdentities.provider, 'email'), eq(userIdentities.providerId, email)))
-    .limit(1)
+  for (let attempt = 0; attempt < MAX_EMAIL_CLAIM_ATTEMPTS; attempt++) {
+    try {
+      return runInTransaction(() => {
+        const account = db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+          .get()
+        if (!account) return { error: 'email_in_use' as const }
 
-  if (existingIdentity && existingIdentity.userId !== userId) {
-    return { error: 'email_in_use' }
+        const existingIdentity = db
+          .select()
+          .from(userIdentities)
+          .where(and(eq(userIdentities.provider, 'email'), eq(userIdentities.providerId, email)))
+          .limit(1)
+          .get()
+        if (existingIdentity && existingIdentity.userId !== userId) {
+          return { error: 'email_in_use' as const }
+        }
+
+        // Claim the target first. If another account wins its unique key, this
+        // transaction rolls back before the current email identity is touched.
+        if (!existingIdentity) {
+          db.insert(userIdentities).values({ provider: 'email', providerId: email, userId }).run()
+        }
+        db.delete(userIdentities)
+          .where(
+            and(
+              eq(userIdentities.provider, 'email'),
+              eq(userIdentities.userId, userId),
+              ne(userIdentities.providerId, email),
+            ),
+          )
+          .run()
+        db.update(users).set({ email }).where(eq(users.id, userId)).run()
+        return { ok: true as const }
+      })
+    } catch (error) {
+      if (isDuplicateRowError(error)) return { error: 'email_in_use' }
+      if (!isRetryableSqliteRace(error)) throw error
+    }
   }
 
-  runInTransaction(() => {
-    db.delete(userIdentities)
-      .where(and(eq(userIdentities.provider, 'email'), eq(userIdentities.userId, userId)))
-      .run()
-    db.insert(userIdentities).values({ provider: 'email', providerId: email, userId }).run()
-    db.update(users).set({ email }).where(eq(users.id, userId)).run()
-  })
-
-  return { ok: true }
+  throw new Error('linkEmailToUser: could not claim identity after repeated database races')
 }
 
 export async function unlinkX(userId: string): Promise<{ ok: true } | { error: 'last_identity' }> {
@@ -446,10 +593,17 @@ export async function unlinkX(userId: string): Promise<{ ok: true } | { error: '
     return { error: 'last_identity' }
   }
 
-  await db
-    .delete(userIdentities)
-    .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.userId, userId)))
-  await deleteTokens(userId)
+  runInTransaction(() => {
+    db.update(users)
+      .set({ xLinkVersion: sql`${users.xLinkVersion} + 1` })
+      .where(eq(users.id, userId))
+      .run()
+    db.delete(userIdentities)
+      .where(and(eq(userIdentities.provider, 'x'), eq(userIdentities.userId, userId)))
+      .run()
+    db.delete(oauthTokens).where(eq(oauthTokens.userId, userId)).run()
+    db.delete(oauthState).where(eq(oauthState.userId, userId)).run()
+  })
 
   return { ok: true }
 }
@@ -498,22 +652,23 @@ export async function consumeLoginToken(
   rawToken: string,
 ): Promise<typeof loginTokens.$inferSelect | null> {
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
-  const [row] = await db
-    .select()
-    .from(loginTokens)
-    .where(eq(loginTokens.tokenHash, tokenHash))
-    .limit(1)
-
-  if (!row) return null
-  if (row.usedAt) return null
-  if (row.expiresAt < Date.now()) return null
-
-  await db
+  const now = Date.now()
+  const [row] = db
     .update(loginTokens)
-    .set({ usedAt: new Date().toISOString() })
-    .where(eq(loginTokens.tokenHash, tokenHash))
+    .set({ usedAt: new Date(now).toISOString() })
+    .where(
+      and(
+        eq(loginTokens.tokenHash, tokenHash),
+        isNull(loginTokens.usedAt),
+        gt(loginTokens.expiresAt, now),
+      ),
+    )
+    .returning()
+    .all()
 
-  return row
+  // Preserve the historical return payload: callers receive the token row as
+  // it looked before consumption (usedAt null), while the stored row is marked.
+  return row ? { ...row, usedAt: null } : null
 }
 
 /**

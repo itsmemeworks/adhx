@@ -11,6 +11,8 @@
  *   embed:     https://www.youtube-nocookie.com/embed/{id}  (privacy-enhanced)
  */
 
+import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{11}$/
@@ -26,6 +28,11 @@ export interface YouTubeMetadata {
   /** i.ytimg.com poster. */
   thumbnailUrl: string
 }
+
+export type YouTubeMetadataStatus =
+  | { kind: 'resolved'; metadata: YouTubeMetadata }
+  | { kind: 'permanent-miss' }
+  | { kind: 'transient-failure' }
 
 export function isValidVideoId(id: string): boolean {
   return ID_PATTERN.test(id)
@@ -79,42 +86,75 @@ function handleFromAuthorUrl(authorUrl: string | undefined): string | undefined 
   return m ? `@${m[1]}` : undefined
 }
 
-/**
- * Resolve a Shorts video's metadata via oEmbed. Returns null when the video is
- * private/removed or the API is unreachable. Always queries the `watch` form
- * (a Short's id is a normal video id) for a stable hqdefault thumbnail.
- */
-export async function fetchYouTubeMetadata(videoId: string): Promise<YouTubeMetadata | null> {
-  if (!isValidVideoId(videoId)) return null
-
-  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
-  const oembedOrigin = (
-    process.env.YOUTUBE_OEMBED_BASE?.trim() || 'https://www.youtube.com'
-  ).replace(/\/$/, '')
-  const oembed = `${oembedOrigin}/oembed?url=${encodeURIComponent(watchUrl)}&format=json`
-
-  try {
-    const res = await fetchWithTimeout(oembed, 8_000, {
-      headers: { Accept: 'application/json' },
-      // Next Data Cache: dedupe repeat crawler hits to the same Short for an
-      // hour. Independent of full-route caching, so it works on the dynamic
-      // (cookie-reading) preview route. The AbortSignal timeout is unaffected.
-      next: { revalidate: 3600 },
-    })
-    if (!res.ok) return null
-    const data = (await res.json()) as {
-      title?: string
-      author_name?: string
-      author_url?: string
-    }
-    return {
-      videoId,
-      title: data.title,
-      authorName: data.author_name,
-      author: handleFromAuthorUrl(data.author_url),
-      thumbnailUrl: youtubeThumbnail(videoId),
-    }
-  } catch {
-    return null
+class TransientYouTubeMetadataError extends Error {
+  constructor(cause?: unknown) {
+    super('YouTube oEmbed metadata failed transiently', { cause })
+    this.name = 'TransientYouTubeMetadataError'
   }
+}
+
+const fetchCachedYouTubeMetadata = unstable_cache(
+  async (videoId: string): Promise<YouTubeMetadata | null> => {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`
+    const oembedOrigin = (
+      process.env.YOUTUBE_OEMBED_BASE?.trim() || 'https://www.youtube.com'
+    ).replace(/\/$/, '')
+    const oembed = `${oembedOrigin}/oembed?url=${encodeURIComponent(watchUrl)}&format=json`
+
+    try {
+      const res = await fetchWithTimeout(oembed, 8_000, {
+        headers: { Accept: 'application/json' },
+        // The outer metadata cache owns cross-request caching so temporary
+        // HTTP/network failures cannot become cached negative fetch responses.
+        cache: 'no-store',
+      })
+      // For a syntactically valid 11-character id, oEmbed uses 400 when no
+      // embeddable video exists; 404/410 are equally authoritative misses.
+      if (res.status === 400 || res.status === 404 || res.status === 410) return null
+      if (!res.ok) throw new TransientYouTubeMetadataError()
+      const data = (await res.json()) as {
+        title?: string
+        author_name?: string
+        author_url?: string
+      }
+      return {
+        videoId,
+        title: data.title,
+        authorName: data.author_name,
+        author: handleFromAuthorUrl(data.author_url),
+        thumbnailUrl: youtubeThumbnail(videoId),
+      }
+    } catch (cause) {
+      if (cause instanceof TransientYouTubeMetadataError) throw cause
+      throw new TransientYouTubeMetadataError(cause)
+    }
+  },
+  ['youtube-shorts-metadata'],
+  { revalidate: 3600 },
+)
+
+/**
+ * Resolve a Shorts video's metadata via oEmbed while preserving whether a
+ * miss is confirmed permanent or merely transient.
+ */
+export async function fetchYouTubeMetadataStatus(videoId: string): Promise<YouTubeMetadataStatus> {
+  if (!isValidVideoId(videoId)) return { kind: 'permanent-miss' }
+  try {
+    const metadata = await fetchCachedYouTubeMetadata(videoId)
+    return metadata ? { kind: 'resolved', metadata } : { kind: 'permanent-miss' }
+  } catch {
+    return { kind: 'transient-failure' }
+  }
+}
+
+/**
+ * Request-scoped memoization shared by generateMetadata and the preview RSC.
+ * Cross-request result caching remains owned by fetchCachedYouTubeMetadata.
+ */
+export const getYouTubeMetadataStatus = cache(fetchYouTubeMetadataStatus)
+
+/** Preserve the public Metadata|null compatibility wrapper. */
+export async function fetchYouTubeMetadata(videoId: string): Promise<YouTubeMetadata | null> {
+  const result = await fetchYouTubeMetadataStatus(videoId)
+  return result.kind === 'resolved' ? result.metadata : null
 }

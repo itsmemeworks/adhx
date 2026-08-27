@@ -140,6 +140,23 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     }
   })
 
+  it('registers no global shortcuts while the server-bound account scope is blocked', () => {
+    const heard = vi.fn()
+    const args = baseArgs({ disabled: true })
+    window.addEventListener('theater-save', heard)
+    try {
+      renderHook(() => useTheaterKeyboard(args))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })))
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' })))
+      act(() => pressSpace())
+
+      expect(args.goNext).not.toHaveBeenCalled()
+      expect(heard).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('theater-save', heard)
+    }
+  })
+
   it('Shift+? toggles help and blocks other keys while help is open', () => {
     const onToggleHelp = vi.fn()
     const args = baseArgs({ helpOpen: true, onToggleHelp })
@@ -235,5 +252,32 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       input.remove()
       window.removeEventListener('theater-save', heard)
     }
+  })
+})
+
+describe('useTheaterKeyboard readiness', () => {
+  it('tracks the actual keydown listener lifetime', () => {
+    const onReadyChange = vi.fn()
+    const { rerender, unmount } = renderHook(
+      ({ disabled }) =>
+        useTheaterKeyboard(
+          baseArgs({
+            disabled,
+            onReadyChange,
+          }),
+        ),
+      { initialProps: { disabled: false } },
+    )
+
+    expect(onReadyChange).toHaveBeenLastCalledWith(true)
+
+    rerender({ disabled: true })
+    expect(onReadyChange).toHaveBeenLastCalledWith(false)
+
+    rerender({ disabled: false })
+    expect(onReadyChange).toHaveBeenLastCalledWith(true)
+
+    unmount()
+    expect(onReadyChange).toHaveBeenLastCalledWith(false)
   })
 })

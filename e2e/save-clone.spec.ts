@@ -26,12 +26,10 @@ authedTest.describe('save and clone', () => {
     expect(await feedHasId(page, POST.preview.id)).toBe(false)
     await page.goto(`/${POST.preview.author}/status/${POST.preview.id}`)
     await expectTheaterReady(page)
-    // New-open autosave may already have flipped Save → Saved → Tag before
-    // we click. `name: 'Save'` also matches "Saved" — use exact.
-    const save = page.getByRole('button', { name: 'Save', exact: true })
-    if (await save.isVisible()) await save.click()
-    await expect(page.getByRole('button', { name: 'Tag this post' })).toBeVisible()
-    await expect.poll(() => feedHasId(page, POST.preview.id)).toBe(true)
+    // The authoritative contract is the bookmark write. Shared resolution,
+    // autosave, and the 10-second stage timer are independent, so transient
+    // Save/Tag chrome may already belong to the next staged post.
+    await expect.poll(() => feedHasId(page, POST.preview.id), { timeout: 30_000 }).toBe(true)
   })
 
   authedTest('Save playlist clones a curator tag the viewer does not own', async ({ page }) => {

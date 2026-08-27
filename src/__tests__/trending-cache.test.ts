@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, type TestDbInstance } from './api/setup'
-import { activity, type NewActivity } from '@/lib/db/schema'
+import { activity, moderatedPosts, userBans, users, type NewActivity } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 /**
  * Regression coverage for the short-lived cache added around
@@ -58,6 +59,69 @@ describe('getTrendingItems cache', () => {
     expect(second).toEqual(first)
   })
 
+  it('rechecks post moderation before serving a warm cache hit', async () => {
+    seedActivity({ bookmarkId: 'visible', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'hide-later', createdAt: '2026-06-06T11:00:00Z' })
+    expect((await getTrendingItems()).items).toHaveLength(2)
+    testInstance.db
+      .insert(moderatedPosts)
+      .values({
+        platform: 'twitter',
+        bookmarkId: 'hide-later',
+        hidden: 1,
+        createdAt: new Date().toISOString(),
+        createdBy: 'admin',
+      })
+      .run()
+
+    const second = await getTrendingItems()
+
+    expect(second.items.map((item) => item.bookmarkId)).toEqual(['visible'])
+  })
+
+  it('fails closed when moderation storage fails after warming the cache', async () => {
+    seedActivity({ bookmarkId: 'uncertain', createdAt: '2026-06-06T10:00:00Z' })
+    expect((await getTrendingItems()).items).toHaveLength(1)
+    testInstance.sqlite.exec('DROP TABLE moderated_posts')
+
+    await expect(getTrendingItems()).rejects.toThrow('Moderation store unavailable')
+  })
+
+  it('removes banned pulse rows and preserves separate post hides after unban', async () => {
+    testInstance.db.insert(users).values({ id: 'owner', username: 'owner' }).run()
+    seedActivity({
+      bookmarkId: 'visible-after-unban',
+      createdAt: '2026-06-06T10:00:00Z',
+      userId: 'owner',
+    })
+    seedActivity({
+      bookmarkId: 'separately-hidden',
+      createdAt: '2026-06-06T11:00:00Z',
+      userId: 'owner',
+    })
+    expect((await getTrendingItems()).items).toHaveLength(2)
+    testInstance.db
+      .insert(moderatedPosts)
+      .values({
+        platform: 'twitter',
+        bookmarkId: 'separately-hidden',
+        hidden: 1,
+        createdAt: new Date().toISOString(),
+        createdBy: 'admin',
+      })
+      .run()
+    testInstance.db
+      .insert(userBans)
+      .values({ userId: 'owner', createdAt: new Date().toISOString(), createdBy: 'admin' })
+      .run()
+
+    expect((await getTrendingItems()).items).toEqual([])
+
+    testInstance.db.delete(userBans).where(eq(userBans.userId, 'owner')).run()
+    const afterUnban = await getTrendingItems()
+    expect(afterUnban.items.map((item) => item.bookmarkId)).toEqual(['visible-after-unban'])
+  })
+
   it('does not bleed cached results across different db instances', async () => {
     seedActivity({ bookmarkId: 'a', createdAt: '2026-06-06T10:00:00Z' })
     const fromFirstDb = await getTrendingItems()
@@ -76,7 +140,7 @@ describe('getTrendingItems cache', () => {
     expect(fromSecondDb.items[0].bookmarkId).toBe('b')
   })
 
-  it('respects a distinct cache key per (platform, limit, minTrend) combination', async () => {
+  it('keeps platform-filtered canonical windows distinct', async () => {
     seedActivity({ bookmarkId: 'tw', platform: 'twitter', createdAt: '2026-06-06T10:00:00Z' })
     seedActivity({
       bookmarkId: 'tk',
@@ -92,5 +156,38 @@ describe('getTrendingItems cache', () => {
     expect(all.items.length).toBe(2)
     expect(twitterOnly.items.length).toBe(1)
     expect(twitterOnly.items[0].platform).toBe('twitter')
+  })
+
+  it('applies minTrend to the canonical window before pagination', async () => {
+    seedActivity({
+      bookmarkId: 'hot',
+      action: 'preview',
+      createdAt: '2026-06-06T10:00:00Z',
+    })
+    seedActivity({
+      bookmarkId: 'cold',
+      action: 'save',
+      createdAt: '2026-06-06T11:00:00Z',
+    })
+
+    const result = await getTrendingItems({ minTrend: 1, limit: 1 })
+
+    expect(result.items.map((item) => item.bookmarkId)).toEqual(['hot'])
+    expect(result.hasMore).toBe(false)
+  })
+
+  it('reuses one canonical cache window across limit and offset combinations', async () => {
+    seedActivity({ bookmarkId: 'old', createdAt: '2026-06-06T10:00:00Z' })
+    seedActivity({ bookmarkId: 'new', createdAt: '2026-06-06T11:00:00Z' })
+
+    expect((await getTrendingItems({ limit: 1 })).items[0].bookmarkId).toBe('new')
+
+    // A separately-keyed offset query would see this newly inserted row and
+    // return "new" at offset 1. The canonical cached window remains
+    // ["new", "old"], so offset 1 deterministically returns "old".
+    seedActivity({ bookmarkId: 'newest', createdAt: '2026-06-06T12:00:00Z' })
+    const secondPage = await getTrendingItems({ limit: 1, offset: 1 })
+
+    expect(secondPage.items.map((item) => item.bookmarkId)).toEqual(['old'])
   })
 })

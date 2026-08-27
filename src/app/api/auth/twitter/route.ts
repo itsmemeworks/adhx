@@ -6,9 +6,8 @@ import {
   buildAuthorizationUrl,
   getOAuthRedirectUri,
   saveOAuthState,
-  deleteTokens,
 } from '@/lib/auth/oauth'
-import { getSession, getCurrentUserId, clearSessionCookie } from '@/lib/auth/session'
+import { getCurrentUserId, clearSessionCookie } from '@/lib/auth/session'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
@@ -34,8 +33,9 @@ export async function GET(request: NextRequest) {
   const codeChallenge = generateCodeChallenge(codeVerifier)
   const state = generateState()
 
-  // Save state for callback verification
-  await saveOAuthState(state, codeVerifier)
+  // Save state for callback verification, bound to the account that started
+  // this link flow so switching sessions during X consent cannot retarget it.
+  await saveOAuthState(state, codeVerifier, userId)
 
   // Build authorization URL
   const authUrl = buildAuthorizationUrl(CLIENT_ID, getOAuthRedirectUri(), state, codeChallenge)
@@ -66,14 +66,9 @@ export async function GET(request: NextRequest) {
 
 // DELETE /api/auth/twitter - Logout
 export async function DELETE() {
-  const session = await getSession()
-
-  // Delete tokens for this user if session exists
-  if (session?.userId) {
-    await deleteTokens(session.userId)
-  }
-
-  // Clear the session cookie
+  // This legacy endpoint logs out of ADHX. X disconnection is the dedicated
+  // POST /api/auth/twitter/disconnect flow, which advances the durable link
+  // generation and removes identity/tokens/state atomically.
   const response = NextResponse.json({ success: true })
   clearSessionCookie(response)
 

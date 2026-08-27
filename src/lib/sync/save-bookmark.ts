@@ -2,7 +2,6 @@ import { fetchTweetData, extractEnrichmentData } from '@/lib/media/fxembed'
 import { db, runInTransaction } from '@/lib/db'
 import {
   bookmarks,
-  bookmarkLinks,
   bookmarkMedia,
   type NewBookmark,
   type NewBookmarkLink,
@@ -14,9 +13,15 @@ import type { TwitterBookmark } from '@/lib/twitter/client'
 import type { StreamedBookmark } from '@/components/feed/types'
 import { categorizeTweetByUrls, extractDomain, determineLinkType } from '@/lib/tweets/processor'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
+import { upsertBookmarkLinks } from '@/lib/db/bookmark-link-merge'
 
 // Note: categorizeBookmark, extractDomain, and determineLinkType are
 // imported from @/lib/tweets/processor for consistency with /api/tweets/add
+
+export interface SaveBookmarkResult {
+  bookmark: StreamedBookmark
+  inserted: boolean
+}
 
 /**
  * Save a single bookmark to the database with automatic enrichment.
@@ -33,7 +38,7 @@ export async function saveBookmark(
   userId: string,
   insertedDuringSync: Set<string>,
   processedAt?: string,
-): Promise<StreamedBookmark> {
+): Promise<SaveBookmarkResult> {
   const now = processedAt ?? new Date().toISOString()
   const authorUsername = tweet.author?.username || 'unknown'
   const tweetUrl = tweet.author
@@ -349,11 +354,30 @@ export async function saveBookmark(
             : null,
         }
       : null
+  const externalLinkInsert: NewBookmarkLink | null =
+    enrichment?.external && enrichment.external.url
+      ? {
+          userId,
+          platform: 'twitter',
+          bookmarkId: tweet.id,
+          expandedUrl: enrichment.external.url,
+          domain: extractDomain(enrichment.external.url),
+          linkType: 'article',
+          previewTitle: enrichment.external.title,
+          previewDescription: enrichment.external.description,
+          previewImageUrl: enrichment.external.imageUrl,
+        }
+      : null
+  const linksToUpsert = [
+    ...linkInserts,
+    ...(articleLinkInsert ? [articleLinkInsert] : []),
+    ...(externalLinkInsert ? [externalLinkInsert] : []),
+  ]
 
   // All writes for this bookmark (quoted tweet + bookmark + links + media)
   // happen in one transaction: either the full set lands, or none of it does,
   // so a mid-write crash/disconnect can't leave a bookmark half-saved.
-  const savedMedia = runInTransaction(() => {
+  const { savedMedia, inserted } = runInTransaction(() => {
     if (quotedInsert && quotedTweetId) {
       // Check if the quoted tweet already exists as a bookmark for THIS USER
       // OR was already inserted during this sync (use composite key: userId + id)
@@ -362,14 +386,19 @@ export async function saveBookmark(
         db
           .select({ id: bookmarks.id })
           .from(bookmarks)
-          .where(and(eq(bookmarks.userId, userId), eq(bookmarks.id, quotedTweetId)))
+          .where(
+            and(
+              eq(bookmarks.userId, userId),
+              eq(bookmarks.platform, 'twitter'),
+              eq(bookmarks.id, quotedTweetId),
+            ),
+          )
           .limit(1)
           .all().length > 0
 
       if (!alreadyInserted) {
         // Use onConflictDoNothing to handle case where another user already synced this tweet
         db.insert(bookmarks).values(quotedInsert.bookmark).onConflictDoNothing().run()
-        insertedDuringSync.add(quotedTweetId)
 
         for (const photo of quotedInsert.photos) {
           db.insert(bookmarkMedia).values(photo).onConflictDoNothing().run()
@@ -377,18 +406,18 @@ export async function saveBookmark(
         for (const video of quotedInsert.videos) {
           db.insert(bookmarkMedia).values(video).onConflictDoNothing().run()
         }
-        if (quotedInsert.articleLink) {
-          db.insert(bookmarkLinks).values(quotedInsert.articleLink).run()
-        }
-      } else {
-        insertedDuringSync.add(quotedTweetId)
       }
+      if (quotedInsert.articleLink) {
+        upsertBookmarkLinks([quotedInsert.articleLink])
+      }
+      insertedDuringSync.add(quotedTweetId)
     }
 
     // Insert bookmark with userId for multi-user support and enrichment data
     // Use onConflictDoNothing to handle case where another user already synced this tweet
     // Note: Current schema uses tweet ID as primary key, so same tweet can only exist once
-    db.insert(bookmarks)
+    const bookmarkInsert = db
+      .insert(bookmarks)
       .values({
         id: tweet.id,
         userId, // Include userId for multi-user support
@@ -410,99 +439,70 @@ export async function saveBookmark(
       })
       .onConflictDoNothing()
       .run()
+    const inserted = bookmarkInsert.changes > 0
 
-    // Insert links (include userId)
-    for (const link of linkInserts) {
-      db.insert(bookmarkLinks).values(link).run()
-    }
+    // Link enrichment is additive even when another writer won the bookmark
+    // insert. Field-wise upserts preserve existing rich values while allowing
+    // this writer to contribute complementary article/preview metadata.
+    upsertBookmarkLinks(linksToUpsert)
 
-    // Insert media (include userId for composite key)
-    for (const media of mediaInserts) {
-      db.insert(bookmarkMedia).values(media).onConflictDoNothing().run()
-    }
-
-    // Insert article link with preview data if enrichment found an article (include userId)
-    if (articleLinkInsert) {
-      db.insert(bookmarkLinks).values(articleLinkInsert).run()
-    }
-
-    // Insert external link with preview data if enrichment found external link
-    if (enrichment?.external && enrichment.external.url) {
-      // Check if we already added this link from tweet.entities.urls (filter by userId)
-      const existingLinks = db
-        .select()
-        .from(bookmarkLinks)
-        .where(and(eq(bookmarkLinks.userId, userId), eq(bookmarkLinks.bookmarkId, tweet.id)))
-        .all()
-
-      const existingMatch = existingLinks.find(
-        (link) => link.expandedUrl === enrichment!.external!.url,
-      )
-
-      if (!existingMatch) {
-        const domain = extractDomain(enrichment.external.url)
-        db.insert(bookmarkLinks)
-          .values({
-            userId,
-            bookmarkId: tweet.id,
-            expandedUrl: enrichment.external.url,
-            domain,
-            linkType: 'article',
-            previewTitle: enrichment.external.title,
-            previewDescription: enrichment.external.description,
-            previewImageUrl: enrichment.external.imageUrl,
-          })
-          .run()
-      } else {
-        // Update existing link with preview data
-        db.update(bookmarkLinks)
-          .set({
-            previewTitle: enrichment.external.title,
-            previewDescription: enrichment.external.description,
-            previewImageUrl: enrichment.external.imageUrl,
-          })
-          .where(eq(bookmarkLinks.id, existingMatch.id))
-          .run()
+    // Only the request that inserted the main bookmark owns media writes.
+    if (inserted) {
+      // Insert media (include userId for composite key)
+      for (const media of mediaInserts) {
+        db.insert(bookmarkMedia).values(media).onConflictDoNothing().run()
       }
     }
 
     // Query the media we just inserted for the return value (filter by userId)
-    return db
-      .select()
-      .from(bookmarkMedia)
-      .where(and(eq(bookmarkMedia.userId, userId), eq(bookmarkMedia.bookmarkId, tweet.id)))
-      .all()
+    return {
+      inserted,
+      savedMedia: db
+        .select()
+        .from(bookmarkMedia)
+        .where(
+          and(
+            eq(bookmarkMedia.userId, userId),
+            eq(bookmarkMedia.platform, 'twitter'),
+            eq(bookmarkMedia.bookmarkId, tweet.id),
+          ),
+        )
+        .all(),
+    }
   })
 
   // Build the StreamedBookmark return value
   return {
-    id: tweet.id,
-    author: authorUsername,
-    authorName,
-    authorProfileImageUrl,
-    text: tweet.text,
-    tweetUrl,
-    createdAt: tweet.createdAt ? new Date(tweet.createdAt).toISOString() : null,
-    processedAt: now,
-    category,
-    isArchived: false,
-    isQuote,
-    isRetweet,
-    media:
-      savedMedia.length > 0
-        ? savedMedia.map((m) => ({
-            id: m.id,
-            mediaType: m.mediaType,
-            url: m.originalUrl || '',
-            thumbnailUrl: m.previewUrl || m.originalUrl || '',
-          }))
+    inserted,
+    bookmark: {
+      id: tweet.id,
+      author: authorUsername,
+      authorName,
+      authorProfileImageUrl,
+      text: tweet.text,
+      tweetUrl,
+      createdAt: tweet.createdAt ? new Date(tweet.createdAt).toISOString() : null,
+      processedAt: now,
+      category,
+      isArchived: false,
+      isQuote,
+      isRetweet,
+      media:
+        savedMedia.length > 0
+          ? savedMedia.map((m) => ({
+              id: m.id,
+              mediaType: m.mediaType,
+              url: m.originalUrl || '',
+              thumbnailUrl: m.previewUrl || m.originalUrl || '',
+            }))
+          : null,
+      articlePreview: enrichment?.article
+        ? {
+            title: enrichment.article.title || null,
+            imageUrl: enrichment.article.imageUrl || null,
+          }
         : null,
-    articlePreview: enrichment?.article
-      ? {
-          title: enrichment.article.title || null,
-          imageUrl: enrichment.article.imageUrl || null,
-        }
-      : null,
-    tags: [],
+      tags: [],
+    },
   }
 }

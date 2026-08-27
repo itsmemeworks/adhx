@@ -22,7 +22,7 @@ import { GET } from '@/app/api/collections/trending/route'
 
 function requestFrom(ip: string, query = ''): NextRequest {
   return new NextRequest(`http://localhost/api/collections/trending${query}`, {
-    headers: { 'x-forwarded-for': ip },
+    headers: { 'fly-client-ip': ip },
   })
 }
 
@@ -78,6 +78,7 @@ describe('GET /api/collections/trending', () => {
   it('returns 400 on an invalid window', async () => {
     const res = await GET(requestFrom('1.1.1.3', '?window=nonsense'))
     expect(res.status).toBe(400)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
     const body = await res.json()
     expect(body.error).toBe('Invalid window')
   })
@@ -85,6 +86,7 @@ describe('GET /api/collections/trending', () => {
   it('returns 400 on a non-numeric limit', async () => {
     const res = await GET(requestFrom('1.1.1.4', '?limit=abc'))
     expect(res.status).toBe(400)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
     const body = await res.json()
     expect(body.error).toBe('Invalid limit')
   })
@@ -123,9 +125,23 @@ describe('GET /api/collections/trending', () => {
     expect(body.items.length).toBe(24)
   })
 
-  it('sets cache-control headers matching the trending endpoint convention', async () => {
+  it('prevents intermediary caching so visibility runs every request', async () => {
     const res = await GET(requestFrom('1.1.1.8'))
-    expect(res.headers.get('Cache-Control')).toBe('public, max-age=60, stale-while-revalidate=120')
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+  })
+
+  it('fails closed and remains non-cacheable when playlist visibility storage is unreadable', async () => {
+    seedUser('u1', 'alice')
+    seedShare('u1', 'tag')
+    seedEvent({ ownerUserId: 'u1', tag: 'tag', createdAt: new Date().toISOString() })
+    expect((await GET(requestFrom('1.1.1.9'))).status).toBe(200)
+    testInstance.sqlite.exec('DROP TABLE collection_events')
+
+    const res = await GET(requestFrom('1.1.1.10'))
+    const body = await res.json()
+
+    expect(body.items).toEqual([])
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
 
   it('returns 429 with Retry-After once an IP exceeds the per-minute limit', async () => {
@@ -136,6 +152,7 @@ describe('GET /api/collections/trending', () => {
     }
     expect(last!.status).toBe(429)
     expect(last!.headers.get('Retry-After')).toBeTruthy()
+    expect(last!.headers.get('Cache-Control')).toBe('no-store')
     const body = await last!.json()
     expect(body.error).toBe('Too many requests')
   })

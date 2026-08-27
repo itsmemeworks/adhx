@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, act, fireEvent } from '@testing-library/react'
+import { useLayoutEffect, useRef } from 'react'
 import { StageVideo } from '@/components/theater/StageVideo'
 import type { TheaterItem } from '@/components/theater/types'
 
@@ -32,6 +33,28 @@ function makeItem(overrides: Partial<TheaterItem> = {}): TheaterItem {
     createdAt: '2026-08-20T00:00:00Z',
     ...overrides,
   } as TheaterItem
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+function setCurrentSrc(video: HTMLVideoElement, src: string) {
+  Object.defineProperty(video, 'currentSrc', {
+    configurable: true,
+    value: new URL(src, document.baseURI).href,
+  })
+}
+
+function activateVideo(video: HTMLVideoElement, src?: string) {
+  if (src) setCurrentSrc(video, src)
+  fireEvent.loadStart(video)
 }
 
 describe('StageVideo repeat (shared-post-repeat)', () => {
@@ -215,6 +238,378 @@ describe('StageVideo transport start-path parity (owner: bottom play button did 
   })
 })
 
+describe('StageVideo source supersession', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+    vi.unstubAllGlobals()
+  })
+
+  it('ignores a stale AbortError without showing a gesture overlay or re-muting the new source', async () => {
+    const sourceAPlay = deferred<void>()
+    const playMock = vi
+      .fn()
+      .mockImplementationOnce(() => sourceAPlay.promise)
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const props = {
+      item: makeItem(),
+      poster: null,
+      muted: false,
+      onRequestUnmute: vi.fn(),
+    }
+    const { container, rerender } = render(<StageVideo {...props} src="/api/media/video?clip=a" />)
+    const video = container.querySelector('video') as HTMLVideoElement
+
+    await act(async () => {
+      rerender(<StageVideo {...props} src="/api/media/video?clip=b" />)
+      await Promise.resolve()
+    })
+    expect(playMock).toHaveBeenCalledTimes(2)
+    expect(video.muted).toBe(false)
+
+    await act(async () => {
+      sourceAPlay.reject(new DOMException('superseded', 'AbortError'))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(video.muted).toBe(false)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+    expect(playMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats a current-source AbortError after deliberate pause as a no-op', async () => {
+    const interruptedPlay = deferred<void>()
+    const playMock = vi.fn().mockImplementationOnce(() => interruptedPlay.promise)
+    HTMLMediaElement.prototype.play = playMock
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?clip=current"
+        poster={null}
+        muted={false}
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, '/api/media/video?clip=current')
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('theater-pause'))
+    })
+    await act(async () => {
+      interruptedPlay.reject(new DOMException('play interrupted by pause', 'AbortError'))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(playMock).toHaveBeenCalledTimes(1)
+    expect(video.muted).toBe(false)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+    expect(container.textContent).not.toContain("This video couldn't load.")
+  })
+
+  it('does not publish playing when an old source play resolves after the new source mounts', async () => {
+    const sourceAPlay = deferred<void>()
+    const sourceBPlay = deferred<void>()
+    const playMock = vi
+      .fn()
+      .mockImplementationOnce(() => sourceAPlay.promise)
+      .mockImplementationOnce(() => sourceBPlay.promise)
+    HTMLMediaElement.prototype.play = playMock
+    const playingEvents: boolean[] = []
+    const onPlayingState = (event: Event) => {
+      playingEvents.push((event as CustomEvent<{ playing: boolean }>).detail.playing)
+    }
+    window.addEventListener('theater-playing-state', onPlayingState)
+
+    const props = {
+      item: makeItem(),
+      poster: null,
+      muted: true,
+      onRequestUnmute: vi.fn(),
+    }
+    const { rerender } = render(<StageVideo {...props} src="/api/media/video?clip=a" />)
+    await act(async () => {
+      rerender(<StageVideo {...props} src="/api/media/video?clip=b" />)
+      await Promise.resolve()
+    })
+    playingEvents.length = 0
+
+    await act(async () => {
+      sourceAPlay.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(playingEvents).not.toContain(true)
+    window.removeEventListener('theater-playing-state', onPlayingState)
+  })
+
+  it('does not let a stale muted fallback settle or issue another play against the new source', async () => {
+    const sourceAInitial = deferred<void>()
+    const sourceAFallback = deferred<void>()
+    const playMock = vi
+      .fn()
+      .mockImplementationOnce(() => sourceAInitial.promise)
+      .mockImplementationOnce(() => sourceAFallback.promise)
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const props = {
+      item: makeItem(),
+      poster: null,
+      muted: false,
+      onRequestUnmute: vi.fn(),
+    }
+    const { container, rerender } = render(<StageVideo {...props} src="/api/media/video?clip=a" />)
+
+    await act(async () => {
+      sourceAInitial.reject(new Error('unmuted autoplay rejected'))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(playMock).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      rerender(<StageVideo {...props} src="/api/media/video?clip=b" />)
+      await Promise.resolve()
+    })
+    expect(playMock).toHaveBeenCalledTimes(3)
+
+    await act(async () => {
+      sourceAFallback.reject(new DOMException('superseded', 'AbortError'))
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(playMock).toHaveBeenCalledTimes(3)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+  })
+
+  it('keeps only the latest generation current across rapid album source swaps', async () => {
+    const clipA = deferred<void>()
+    const clipB = deferred<void>()
+    const clipC = deferred<void>()
+    const playMock = vi
+      .fn()
+      .mockImplementationOnce(() => clipA.promise)
+      .mockImplementationOnce(() => clipB.promise)
+      .mockImplementationOnce(() => clipC.promise)
+    HTMLMediaElement.prototype.play = playMock
+
+    const props = {
+      item: makeItem(),
+      poster: null,
+      muted: false,
+      onRequestUnmute: vi.fn(),
+      albumCount: 3,
+      albumPosters: [],
+      onAlbumIndexChange: vi.fn(),
+    }
+    const { container, rerender } = render(
+      <StageVideo {...props} src="/api/media/video?index=1" albumIndex={0} />,
+    )
+    await act(async () => {
+      rerender(<StageVideo {...props} src="/api/media/video?index=2" albumIndex={1} />)
+      await Promise.resolve()
+    })
+    await act(async () => {
+      rerender(<StageVideo {...props} src="/api/media/video?index=3" albumIndex={2} />)
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      clipA.reject(new Error('old clip failed'))
+      clipB.reject(new DOMException('old clip aborted', 'AbortError'))
+      clipC.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const video = container.querySelector('video') as HTMLVideoElement
+    expect(playMock).toHaveBeenCalledTimes(3)
+    expect(video.muted).toBe(false)
+    expect(container.querySelector('[aria-label="Play video"]')).toBeNull()
+  })
+
+  it('does not let a stale error probe mark the replacement source unavailable', async () => {
+    const sourceAProbe = deferred<{ status: number; json: () => Promise<{ reason: string }> }>()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(() => sourceAProbe.promise),
+    )
+
+    const props = {
+      item: makeItem(),
+      poster: null,
+      muted: true,
+      onRequestUnmute: vi.fn(),
+    }
+    const { container, rerender, queryByText } = render(
+      <StageVideo {...props} src="/api/media/video?clip=a" />,
+    )
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, '/api/media/video?clip=a')
+    fireEvent.error(video)
+
+    await act(async () => {
+      rerender(<StageVideo {...props} src="/api/media/video?clip=b" />)
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      sourceAProbe.resolve({
+        status: 410,
+        json: async () => ({ reason: 'Source A is unavailable' }),
+      })
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(queryByText('Source A is unavailable')).toBeNull()
+    expect(queryByText("This video couldn't load.")).toBeNull()
+  })
+
+  it('invalidates A during commit before B passive load/play work runs', async () => {
+    const sourceA = '/api/media/video?clip=commit-a'
+    const sourceB = '/api/media/video?clip=commit-b'
+    const onEnded = vi.fn()
+    const fetchMock = vi.fn().mockResolvedValue({ status: 500, json: async () => null })
+    vi.stubGlobal('fetch', fetchMock)
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('unmuted autoplay rejected'))
+      .mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    let sourceSeenInParentLayout: string | null = null
+    let playCallsAfterStaleEvents: number | null = null
+    let mutedAfterStaleEvents: boolean | null = null
+
+    function CommitRaceHarness({ source }: { source: string }) {
+      const hostRef = useRef<HTMLDivElement>(null)
+      // Child layout effects run before parent layout effects. This callback
+      // therefore sits exactly after StageVideo's synchronous invalidation
+      // and before its passive [src] load/play effect.
+      useLayoutEffect(() => {
+        if (source !== sourceB) return
+        const video = hostRef.current?.querySelector('video')
+        if (!video) throw new Error('no <video> rendered')
+        sourceSeenInParentLayout = video.src
+        setCurrentSrc(video, sourceA)
+        video.dispatchEvent(new Event('pause'))
+        video.dispatchEvent(new Event('ended'))
+        video.dispatchEvent(new Event('error'))
+        playCallsAfterStaleEvents = playMock.mock.calls.length
+        mutedAfterStaleEvents = video.muted
+      }, [source])
+
+      return (
+        <div ref={hostRef}>
+          <StageVideo
+            item={makeItem()}
+            src={source}
+            poster={null}
+            muted={false}
+            onRequestUnmute={vi.fn()}
+            onEnded={onEnded}
+          />
+        </div>
+      )
+    }
+
+    const { container, rerender, queryByText } = render(<CommitRaceHarness source={sourceA} />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, sourceA)
+    await act(async () => {
+      video.dispatchEvent(new Event('playing'))
+      await Promise.resolve()
+    })
+    expect(video.muted).toBe(false)
+    expect(playMock).toHaveBeenCalledTimes(2)
+
+    rerender(<CommitRaceHarness source={sourceB} />)
+
+    // B's passive effect had not assigned its source when the parent layout
+    // callback ran, proving the stale events exercised the commit/effect gap.
+    expect(sourceSeenInParentLayout).toBe(new URL(sourceA, document.baseURI).href)
+    expect(playCallsAfterStaleEvents).toBe(2)
+    expect(mutedAfterStaleEvents).toBe(false)
+    expect(onEnded).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(queryByText("This video couldn't load.")).toBeNull()
+    // Only B's own passive startup added a play call.
+    expect(playMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('rejects queued old-source pause, ended, and error events until the new lifecycle activates', async () => {
+    const sourceA = '/api/media/video?clip=a'
+    const sourceB = '/api/media/video?clip=b'
+    const onEnded = vi.fn()
+    const fetchMock = vi.fn().mockResolvedValue({ status: 500, json: async () => null })
+    vi.stubGlobal('fetch', fetchMock)
+    const playMock = vi.fn().mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+
+    const props = {
+      item: makeItem(),
+      poster: null,
+      muted: false,
+      onRequestUnmute: vi.fn(),
+      onEnded,
+    }
+    const { container, rerender, queryByText } = render(<StageVideo {...props} src={sourceA} />)
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, sourceA)
+
+    await act(async () => {
+      rerender(<StageVideo {...props} src={sourceB} />)
+      await Promise.resolve()
+    })
+    // Model the browser's ordered media task queue: B has been assigned and
+    // load() called, but its loadstart has not activated yet; currentSrc still
+    // identifies the resource whose queued events are now arriving.
+    setCurrentSrc(video, sourceA)
+    const callsAfterBPlay = playMock.mock.calls.length
+
+    act(() => {
+      video.dispatchEvent(new Event('pause'))
+      video.dispatchEvent(new Event('ended'))
+      video.dispatchEvent(new Event('error'))
+    })
+
+    expect(onEnded).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(playMock).toHaveBeenCalledTimes(callsAfterBPlay)
+    expect(video.muted).toBe(false)
+    expect(queryByText("This video couldn't load.")).toBeNull()
+
+    // Once B's matching loadstart arrives, genuine B lifecycle events work.
+    activateVideo(video, sourceB)
+    act(() => {
+      video.dispatchEvent(new Event('ended'))
+    })
+    expect(onEnded).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      video.dispatchEvent(new Event('error'))
+    })
+    expect(fetchMock).toHaveBeenCalledWith(sourceB, { headers: { Range: 'bytes=0-1' } })
+    expect(queryByText("This video couldn't load.")).not.toBeNull()
+  })
+})
+
 /**
  * Instagram catch-up unmute: every Instagram item is a genuinely fresh
  * StageVideo mount (see StageInstagram.tsx), so it carries no user-gesture
@@ -260,6 +655,7 @@ describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidenc
     })
     const video = container.querySelector('video') as HTMLVideoElement
     expect(video.muted).toBe(true) // fell back to muted, exactly as before this fix
+    activateVideo(video)
 
     // Confirmed playing — the only signal that triggers the catch-up retry.
     await act(async () => {
@@ -286,6 +682,7 @@ describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidenc
     })
     const video = container.querySelector('video') as HTMLVideoElement
     expect(video.muted).toBe(true)
+    activateVideo(video)
 
     await act(async () => {
       video.dispatchEvent(new Event('playing'))
@@ -317,6 +714,7 @@ describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidenc
       await Promise.resolve()
     })
     const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video)
 
     await act(async () => {
       video.dispatchEvent(new Event('playing'))
@@ -357,6 +755,7 @@ describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidenc
       await Promise.resolve()
     })
     const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video)
 
     await act(async () => {
       video.dispatchEvent(new Event('playing'))
@@ -510,6 +909,7 @@ describe('StageVideo: a failed video does not stall the playlist', () => {
     const video = rendered.container.querySelector('video')
     if (!video) throw new Error('no <video> rendered')
     act(() => {
+      activateVideo(video)
       fireEvent.error(video)
     })
     return rendered
@@ -575,6 +975,7 @@ describe('StageVideo stage tap is declutter, not play/pause', () => {
     const { container, onRequestUnmute } = renderVideo()
     const video = container.querySelector('video') as HTMLVideoElement
     Object.defineProperty(video, 'paused', { configurable: true, get: () => false })
+    pause.mockClear()
 
     fireEvent.click(container.firstElementChild as Element)
 
@@ -627,12 +1028,14 @@ describe('StageVideo twitter album', () => {
       onEnded,
     }
     const { container, rerender } = render(<StageVideo {...props} albumIndex={0} />)
-    fireEvent.ended(container.querySelector('video') as HTMLVideoElement)
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video)
+    fireEvent.ended(video)
     expect(onAlbumIndexChange).toHaveBeenCalledWith(1)
     expect(onEnded).not.toHaveBeenCalled()
 
     rerender(<StageVideo {...props} albumIndex={1} />)
-    fireEvent.ended(container.querySelector('video') as HTMLVideoElement)
+    fireEvent.ended(video)
     expect(onEnded).toHaveBeenCalledTimes(1)
   })
 })

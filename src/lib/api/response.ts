@@ -6,8 +6,8 @@ import { captureException } from '@/lib/sentry'
  *
  * Logs the error to the console (tagged with the endpoint), reports it to
  * Sentry with `{ endpoint, userId }` context, and returns a JSON error
- * response. The error is normalized to an `Error` instance before being
- * sent to Sentry so the stack trace is preserved.
+ * response. The shared Sentry boundary pseudonymizes the user id and
+ * sanitizes the normalized error before reporting it.
  *
  * Defaults preserve the existing contract: `{ error: 'Internal server error' }`
  * with status `500`. Pass `message`/`status` to match a route's current body.
@@ -15,7 +15,7 @@ import { captureException } from '@/lib/sentry'
  * @param error - The caught value (may be anything thrown).
  * @param ctx - Context for logging/reporting and the response shape.
  * @param ctx.endpoint - Route identifier used in the log tag and Sentry context.
- * @param ctx.userId - Optional user id forwarded to Sentry (never to the client).
+ * @param ctx.userId - Optional user id pseudonymized by the Sentry capture helper.
  * @param ctx.message - Optional client-facing error message (defaults to 'Internal server error').
  * @param ctx.status - Optional HTTP status code (defaults to 500).
  * @returns A `NextResponse` JSON error payload.

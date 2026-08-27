@@ -13,7 +13,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, screen, waitFor } from '@testing-library/react'
 import { TagsClient } from '@/app/tags/TagsClient'
-import { CLIENT_EVENTS } from '@/lib/client-events'
+import {
+  notifyCollectionChanged,
+  notifyTagsChanged,
+  resetClientEventBridgeForTests,
+  setClientEventAccount,
+} from '@/lib/client-events'
 
 function jsonResponse(body: unknown, ok = true) {
   return Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response)
@@ -22,6 +27,8 @@ function jsonResponse(body: unknown, ok = true) {
 describe('TagsClient stays live', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetClientEventBridgeForTests()
+    setClientEventAccount('account-a')
   })
 
   it('fetches /api/tags on mount and renders the returned tags', async () => {
@@ -68,7 +75,7 @@ describe('TagsClient stays live', () => {
     expect(screen.queryByText('#reading')).not.toBeInTheDocument()
     expect(tagsCallCount).toBe(1)
 
-    fireEvent(window, new Event(CLIENT_EVENTS.tagsChanged))
+    notifyTagsChanged({ platform: 'twitter', bookmarkId: '1', tags: ['reading'] })
 
     await waitFor(() => expect(screen.getByText('#reading')).toBeInTheDocument())
     expect(tagsCallCount).toBe(2)
@@ -93,7 +100,7 @@ describe('TagsClient stays live', () => {
     await waitFor(() => expect(screen.getByTitle('3 posts')).toBeInTheDocument())
     expect(tagsCallCount).toBe(1)
 
-    fireEvent(window, new Event(CLIENT_EVENTS.feedChanged))
+    notifyCollectionChanged()
 
     await waitFor(() => expect(screen.getByTitle('9 posts')).toBeInTheDocument())
     expect(tagsCallCount).toBe(2)

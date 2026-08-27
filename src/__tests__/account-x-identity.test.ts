@@ -27,7 +27,8 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import * as dbModule from '@/lib/db'
-import { findOrCreateUserForX } from '@/lib/auth/account'
+import { findOrCreateUserForX, unlinkX } from '@/lib/auth/account'
+import { saveLinkedXTokens } from '@/lib/auth/oauth'
 
 async function userRow(userId: string) {
   const [row] = await testInstance.db.select().from(schema.users).where(eq(schema.users.id, userId))
@@ -42,6 +43,12 @@ async function xIdentityRows() {
 }
 
 const X_USER = { xUserId: '111', username: 'exuser', name: 'Ex User', profileImageUrl: null }
+const OTHER_X_USER = {
+  xUserId: '222',
+  username: 'otherx',
+  name: 'Other X',
+  profileImageUrl: null,
+}
 
 describe('findOrCreateUserForX', () => {
   beforeEach(() => {
@@ -49,6 +56,7 @@ describe('findOrCreateUserForX', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     testInstance.close()
   })
 
@@ -95,6 +103,167 @@ describe('findOrCreateUserForX', () => {
     expect(identities).toEqual([
       expect.objectContaining({ provider: 'x', providerId: '111', userId: 'u_email1' }),
     ])
+  })
+
+  it('rejects linking a different X identity when the session already owns one', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await findOrCreateUserForX(X_USER, 'u_email1')
+
+    const result = await findOrCreateUserForX(OTHER_X_USER, 'u_email1')
+
+    expect(result).toEqual({
+      userId: 'u_email1',
+      username: '',
+      created: false,
+      conflict: 'linked_elsewhere',
+    })
+    expect(await xIdentityRows()).toEqual([
+      expect.objectContaining({ providerId: '111', userId: 'u_email1' }),
+    ])
+  })
+
+  it('allows exactly one winner when different X identities link concurrently', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+
+    const results = await Promise.all([
+      findOrCreateUserForX(X_USER, 'u_email1'),
+      findOrCreateUserForX(OTHER_X_USER, 'u_email1'),
+    ])
+
+    expect(results.filter((result) => !result.conflict)).toHaveLength(1)
+    expect(results.filter((result) => result.conflict === 'linked_elsewhere')).toHaveLength(1)
+    const identities = await xIdentityRows()
+    expect(identities).toHaveLength(1)
+    expect(['111', '222']).toContain(identities[0].providerId)
+  })
+
+  it('durably rejects a second X identity even outside the resolver', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'x',
+      providerId: '111',
+      userId: 'u_email1',
+    })
+
+    await expect(
+      testInstance.db.insert(schema.userIdentities).values({
+        provider: 'x',
+        providerId: '222',
+        userId: 'u_email1',
+      }),
+    ).rejects.toThrow(/UNIQUE/)
+  })
+
+  it('disconnects the sole X identity and token atomically while retaining email', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'email',
+      providerId: 'reader@example.com',
+      userId: 'u_email1',
+    })
+    await findOrCreateUserForX(X_USER, 'u_email1')
+    await testInstance.db.insert(schema.oauthTokens).values({
+      userId: 'u_email1',
+      username: 'exuser',
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    })
+    await testInstance.db.insert(schema.oauthState).values({
+      state: 'pending-link',
+      codeVerifier: 'verifier',
+      userId: 'u_email1',
+      xLinkVersion: 0,
+    })
+
+    expect(await unlinkX('u_email1')).toEqual({ ok: true })
+    expect(await xIdentityRows()).toHaveLength(0)
+    expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
+    expect(
+      await testInstance.db
+        .select()
+        .from(schema.userIdentities)
+        .where(eq(schema.userIdentities.provider, 'email')),
+    ).toHaveLength(1)
+    expect(await testInstance.db.select().from(schema.oauthState)).toHaveLength(0)
+    expect(await userRow('u_email1')).toMatchObject({ xLinkVersion: 1 })
+  })
+
+  it('does not recreate tokens when disconnect wins after callback identity resolution', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'email',
+      providerId: 'reader@example.com',
+      userId: 'u_email1',
+    })
+    await findOrCreateUserForX(X_USER, 'u_email1', 0)
+
+    // The callback has resolved/linked X but is paused before token finalize.
+    expect(await unlinkX('u_email1')).toEqual({ ok: true })
+    const saved = await saveLinkedXTokens(
+      'u_email1',
+      '111',
+      'exuser',
+      null,
+      'late-access',
+      'late-refresh',
+      7200,
+      'tweet.read',
+      0,
+    )
+
+    expect(saved).toBe(false)
+    expect(await xIdentityRows()).toHaveLength(0)
+    expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(0)
+  })
+
+  it('rejects stale identity linking when disconnect wins before callback resolution', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'email',
+      providerId: 'reader@example.com',
+      userId: 'u_email1',
+    })
+
+    expect(await unlinkX('u_email1')).toEqual({ ok: true })
+    const result = await findOrCreateUserForX(X_USER, 'u_email1', 0)
+
+    expect(result.conflict).toBe('stale_link')
+    expect(await xIdentityRows()).toHaveLength(0)
+  })
+
+  it('allows a fresh OAuth generation to reconnect after disconnect', async () => {
+    await testInstance.db.insert(schema.users).values({ id: 'u_email1', username: 'emailer' })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'email',
+      providerId: 'reader@example.com',
+      userId: 'u_email1',
+    })
+    await findOrCreateUserForX(X_USER, 'u_email1', 0)
+    expect(await unlinkX('u_email1')).toEqual({ ok: true })
+
+    const { saveOAuthState, consumeOAuthState } = await import('@/lib/auth/oauth')
+    await saveOAuthState('fresh-reconnect', 'fresh-verifier', 'u_email1')
+    const consumed = await consumeOAuthState('fresh-reconnect', 'u_email1')
+    expect(consumed).toEqual({ codeVerifier: 'fresh-verifier', xLinkVersion: 1 })
+
+    const linked = await findOrCreateUserForX(X_USER, 'u_email1', consumed!.xLinkVersion)
+    expect(linked.conflict).toBeUndefined()
+    expect(
+      await saveLinkedXTokens(
+        'u_email1',
+        '111',
+        'exuser',
+        null,
+        'fresh-access',
+        'fresh-refresh',
+        7200,
+        'tweet.read',
+        consumed!.xLinkVersion,
+      ),
+    ).toBe(true)
+    expect(await xIdentityRows()).toHaveLength(1)
+    expect(await testInstance.db.select().from(schema.oauthTokens)).toHaveLength(1)
   })
 
   it('reports linked_elsewhere and leaves the session untouched when the X identity belongs to someone else', async () => {
@@ -225,5 +394,89 @@ describe('findOrCreateUserForX', () => {
 
     const allUsers = await testInstance.db.select().from(schema.users)
     expect(allUsers).toHaveLength(1)
+  })
+
+  it('does not update profile when disconnect wins existing-identity finalization', async () => {
+    await testInstance.db.insert(schema.users).values({
+      id: 'u_email1',
+      username: 'exuser',
+      displayName: 'Original Name',
+      avatarUrl: 'https://example.com/original.jpg',
+    })
+    await testInstance.db.insert(schema.userIdentities).values([
+      {
+        provider: 'email',
+        providerId: 'reader@example.com',
+        userId: 'u_email1',
+      },
+      {
+        provider: 'x',
+        providerId: '111',
+        userId: 'u_email1',
+      },
+    ])
+    vi.spyOn(dbModule, 'runInTransaction').mockImplementationOnce((fn: () => unknown) => {
+      testInstance.sqlite.exec(`
+        UPDATE users SET x_link_version = x_link_version + 1 WHERE id = 'u_email1';
+        DELETE FROM user_identities WHERE provider = 'x' AND user_id = 'u_email1';
+      `)
+      return testInstance.sqlite.transaction(fn)()
+    })
+
+    const result = await findOrCreateUserForX(
+      {
+        ...X_USER,
+        name: 'Stale Name',
+        profileImageUrl: 'https://example.com/stale.jpg',
+      },
+      'u_email1',
+      0,
+    )
+
+    expect(result.conflict).toBe('stale_link')
+    expect(await userRow('u_email1')).toMatchObject({
+      displayName: 'Original Name',
+      avatarUrl: 'https://example.com/original.jpg',
+      xLinkVersion: 1,
+    })
+    expect(await xIdentityRows()).toHaveLength(0)
+  })
+
+  it('does not link or update profile when disconnect wins fresh-link finalization', async () => {
+    await testInstance.db.insert(schema.users).values({
+      id: 'u_email1',
+      username: 'emailer',
+      displayName: 'Original Name',
+      avatarUrl: 'https://example.com/original.jpg',
+    })
+    await testInstance.db.insert(schema.userIdentities).values({
+      provider: 'email',
+      providerId: 'reader@example.com',
+      userId: 'u_email1',
+    })
+    vi.spyOn(dbModule, 'runInTransaction').mockImplementationOnce((fn: () => unknown) => {
+      testInstance.sqlite.exec(
+        `UPDATE users SET x_link_version = x_link_version + 1 WHERE id = 'u_email1'`,
+      )
+      return testInstance.sqlite.transaction(fn)()
+    })
+
+    const result = await findOrCreateUserForX(
+      {
+        ...X_USER,
+        name: 'Stale Name',
+        profileImageUrl: 'https://example.com/stale.jpg',
+      },
+      'u_email1',
+      0,
+    )
+
+    expect(result.conflict).toBe('stale_link')
+    expect(await userRow('u_email1')).toMatchObject({
+      displayName: 'Original Name',
+      avatarUrl: 'https://example.com/original.jpg',
+      xLinkVersion: 1,
+    })
+    expect(await xIdentityRows()).toHaveLength(0)
   })
 })

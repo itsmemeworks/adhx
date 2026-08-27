@@ -360,15 +360,14 @@ export async function fetchTweetData(
     return null
   }
 
-  try {
-    // Timeout to prevent hanging when FxTwitter is slow/down. Defaults to 5s for
-    // latency-sensitive preview pages; background sync passes a longer value
-    // because article payloads (full content blocks) are large and reliably
-    // exceeding 5s under bulk load is exactly why synced articles arrived bare
-    // in Trending until they were individually previewed.
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? 5000)
+  // Keep the deadline active through response parsing. `fetch()` resolves once
+  // headers arrive, but a slow or stalled JSON body must not escape the same
+  // operation timeout.
+  const timeoutMs = opts.timeoutMs ?? 5000
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
+  try {
     const fxUrl = buildFxTwitterUrl(author, tweetId)
 
     const response = await fetch(fxUrl.toString(), {
@@ -383,9 +382,8 @@ export async function fetchTweetData(
       next: { revalidate: 3600 },
     })
 
-    clearTimeout(timeoutId)
-
     if (!response.ok) {
+      await response.body?.cancel()
       console.error(`FxTwitter API error: ${response.status}`)
       return null
     }
@@ -395,11 +393,13 @@ export async function fetchTweetData(
   } catch (error) {
     // AbortError means timeout - log differently for clarity
     if (error instanceof Error && error.name === 'AbortError') {
-      console.error(`FxTwitter API request timed out after ${opts.timeoutMs ?? 5000}ms`)
+      console.error(`FxTwitter API request timed out after ${timeoutMs}ms`)
     } else {
       console.error('Failed to fetch tweet data from FxTwitter:', error)
     }
     return null
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

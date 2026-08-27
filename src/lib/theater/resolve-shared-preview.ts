@@ -29,10 +29,10 @@ import { isLikelyBot } from '@/lib/activity/bot'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
-import { fetchReelMetadata } from '@/lib/media/instafix'
+import { getReelMetadataStatus } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
-import { fetchTikTokMetadata } from '@/lib/media/tnktok'
-import { fetchYouTubeMetadata, youtubeEmbedUrl, youtubeThumbnail } from '@/lib/media/youtube'
+import { getTikTokMetadataStatus } from '@/lib/media/tnktok'
+import { getYouTubeMetadataStatus, youtubeEmbedUrl, youtubeThumbnail } from '@/lib/media/youtube'
 import type { TextLinkRef } from '@/components/theater/types'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 
@@ -204,6 +204,7 @@ export async function resolveTweetShared(
   return {
     ok: true,
     item,
+    seoEligible: true,
     jsonLd: buildTweetJsonLd(tweet, PUBLIC_BASE_URL, username, id),
     staticPost: {
       kind: 'tweet',
@@ -231,7 +232,8 @@ export async function resolveTweetShared(
 
 export async function resolveReelShared(id: string): Promise<SharedResolveResult> {
   const saved = getSavedPreviewDisplay('instagram', id)
-  const meta = saved ? null : await fetchReelMetadata(id)
+  const metadataStatus = saved ? null : await getReelMetadataStatus(id)
+  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const author = saved?.author || meta?.author || null
   const authorName = saved?.authorName || meta?.authorName || null
@@ -241,7 +243,7 @@ export async function resolveReelShared(id: string): Promise<SharedResolveResult
   const imageUrl = hasImage
     ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
     : undefined
-  const available = saved ? true : !!meta
+  const seoEligible = Boolean(saved || meta)
 
   const ua = (await headers()).get('user-agent')
   const human = !isLikelyBot(ua)
@@ -251,7 +253,7 @@ export async function resolveReelShared(id: string): Promise<SharedResolveResult
       .catch(() => {})
   }
 
-  await recordHumanPreview(available && human, {
+  await recordHumanPreview(seoEligible && human, {
     platform: 'instagram',
     bookmarkId: id,
     author: author || 'instagram',
@@ -269,19 +271,22 @@ export async function resolveReelShared(id: string): Promise<SharedResolveResult
     thumbnailUrl: imageUrl ?? null,
   })
 
+  if (!seoEligible) {
+    return { ok: true, item, seoEligible: false, related: null }
+  }
+
   const baseUrl = PUBLIC_BASE_URL
   const ldAuthorName = authorName || author
   return {
     ok: true,
     item,
+    seoEligible: true,
     jsonLd: buildVideoObjectLd({
       name:
         caption || description || (authorName ? `${authorName} on Instagram` : 'Instagram Reel'),
       description: caption || description || undefined,
       thumbnailUrl: imageUrl ? `${baseUrl}${imageUrl}` : undefined,
-      contentUrl: available
-        ? `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`
-        : undefined,
+      contentUrl: `${baseUrl}/api/media/instagram/video?id=${encodeURIComponent(id)}`,
       author: ldAuthorName
         ? {
             name: ldAuthorName,
@@ -297,14 +302,12 @@ export async function resolveReelShared(id: string): Promise<SharedResolveResult
       sourceUrl: `https://www.instagram.com/reel/${id}/`,
       label: 'Instagram post',
     },
-    related: available
-      ? {
-          platform: 'instagram',
-          bookmarkId: id,
-          authorHandle: author || 'instagram',
-          contentType: 'video',
-        }
-      : null,
+    related: {
+      platform: 'instagram',
+      bookmarkId: id,
+      authorHandle: author || 'instagram',
+      contentType: 'video',
+    },
   }
 }
 
@@ -313,15 +316,16 @@ export async function resolveTikTokShared(
   id: string,
 ): Promise<SharedResolveResult> {
   const saved = getSavedPreviewDisplay('tiktok', id)
-  const meta = saved ? null : await fetchTikTokMetadata(handle, id)
+  const metadataStatus = saved ? null : await getTikTokMetadataStatus(handle, id)
+  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const author = saved?.author || meta?.author || null
   const authorName = saved?.authorName || meta?.authorName || null
   const description = saved?.text || meta?.description || null
   const hasVideo = saved ? true : !!meta?.videoUrl
-  const available = saved ? true : !!meta
+  const seoEligible = Boolean(saved || meta)
 
-  await recordHumanPreview(available, {
+  await recordHumanPreview(seoEligible, {
     platform: 'tiktok',
     bookmarkId: id,
     author: author || handle,
@@ -339,10 +343,15 @@ export async function resolveTikTokShared(
     text: description || meta?.title || null,
   })
 
+  if (!seoEligible) {
+    return { ok: true, item, seoEligible: false, related: null }
+  }
+
   const baseUrl = PUBLIC_BASE_URL
   return {
     ok: true,
     item,
+    seoEligible: true,
     jsonLd: buildVideoObjectLd({
       name: meta?.title || description || `@${handle} on TikTok`,
       description: description || undefined,
@@ -363,28 +372,27 @@ export async function resolveTikTokShared(
       sourceUrl: `https://www.tiktok.com/@${handle}/video/${id}`,
       label: 'TikTok video',
     },
-    related: available
-      ? {
-          platform: 'tiktok',
-          bookmarkId: id,
-          authorHandle: author || handle,
-          contentType: 'video',
-        }
-      : null,
+    related: {
+      platform: 'tiktok',
+      bookmarkId: id,
+      authorHandle: author || handle,
+      contentType: 'video',
+    },
   }
 }
 
 export async function resolveYouTubeShared(id: string): Promise<SharedResolveResult> {
   const saved = getSavedPreviewDisplay('youtube', id)
-  const meta = saved ? null : await fetchYouTubeMetadata(id)
+  const metadataStatus = saved ? null : await getYouTubeMetadataStatus(id)
+  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
 
   const author = saved?.author || meta?.author || null
   const authorName = saved?.authorName || meta?.authorName || null
   const title = saved?.text || meta?.title || null
-  const available = saved ? true : !!meta
+  const seoEligible = Boolean(saved || meta)
   const previewAuthor = author?.replace(/^@/, '') || authorName || 'youtube'
 
-  await recordHumanPreview(available, {
+  await recordHumanPreview(seoEligible, {
     platform: 'youtube',
     bookmarkId: id,
     author: previewAuthor,
@@ -401,10 +409,15 @@ export async function resolveYouTubeShared(id: string): Promise<SharedResolveRes
     text: title,
   })
 
+  if (!seoEligible) {
+    return { ok: true, item, seoEligible: false, related: null }
+  }
+
   const ldAuthorName = authorName || author
   return {
     ok: true,
     item,
+    seoEligible: true,
     jsonLd: buildVideoObjectLd({
       name: title || 'YouTube Short',
       thumbnailUrl: youtubeThumbnail(id),
@@ -419,13 +432,11 @@ export async function resolveYouTubeShared(id: string): Promise<SharedResolveRes
       sourceUrl: `https://www.youtube.com/shorts/${id}`,
       label: 'YouTube Short',
     },
-    related: available
-      ? {
-          platform: 'youtube',
-          bookmarkId: id,
-          authorHandle: previewAuthor,
-          contentType: 'video',
-        }
-      : null,
+    related: {
+      platform: 'youtube',
+      bookmarkId: id,
+      authorHandle: previewAuthor,
+      contentType: 'video',
+    },
   }
 }
