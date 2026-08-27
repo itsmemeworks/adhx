@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+<style>
+.body{animation:bob 1.8s ease-in-out infinite;transform-origin:48px 48px}
+.eyes{animation:look 1.8s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(2deg)}}
+@keyframes look{0%,18%{transform:translate(0,0)}25%,43%{transform:translate(-7px,2px)}50%,68%{transform:translate(8px,-3px)}75%,93%{transform:translate(-1px,4px)}100%{transform:translate(0,0)}}
+@media (prefers-reduced-motion:reduce){.body,.eyes{animation:none}.body{transform:rotate(-4deg)}}
+</style>
+<g class="body">
+<rect x="10" y="14" width="76" height="72" rx="28" fill="#FFD426" stroke="#141414" stroke-width="6"/>
+<g class="eyes">
+<circle cx="36" cy="46" r="7" fill="#141414"/>
+<circle cx="63" cy="42" r="11" fill="#141414"/>
+<circle cx="66" cy="39" r="3.5" fill="#FFD426"/>
+</g>
+<circle cx="49" cy="69" r="5" fill="#141414"/>
+</g>
+</svg>

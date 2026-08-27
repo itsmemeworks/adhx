@@ -18,13 +18,14 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import {
   instagramEmbedUrl,
   instagramVideoSrc,
   probeInstagramVideo,
 } from '@/lib/media/instagram-playback'
 import { previewPath } from '@/lib/activity/preview-path'
+import { PostLoader } from '@/components/PostLoader'
 import { StageFrame } from './stage-primitives'
 import type { TheaterItem } from './types'
 
@@ -262,7 +263,7 @@ export function StageInstagram({
       <div className="absolute inset-0 bg-[#08070a]/45" aria-hidden />
       <div className="relative">
         {phase === 'spinner' ? (
-          <Loader2 size={30} className="animate-spin text-white/80" aria-hidden />
+          <PostLoader variant="dark" size={48} decorative />
         ) : (
           <span className="inline-flex min-h-[44px] items-center rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-white/80 backdrop-blur-md">
             starting…

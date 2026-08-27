@@ -13,8 +13,8 @@ export default function NotFound() {
           Nothing saved here
         </h1>
         <p className="text-[15px] text-ink-2 mb-8">
-          This page doesn&rsquo;t exist, or it wandered off. Save now, read never, find always
-          &mdash; just not at this URL.
+          This page doesn&rsquo;t exist, or it wandered off. Save it. Lose it. Find it. &mdash; just
+          not at this URL.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

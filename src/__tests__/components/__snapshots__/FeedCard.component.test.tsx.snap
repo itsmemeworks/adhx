@@ -24,8 +24,23 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > '4
         style="--m-ar: 1.4586666666666666;"
       />
       <div
-        class="absolute inset-0 bg-inset animate-pulse"
-      />
+        class="flex flex-col items-center justify-center gap-3 text-center absolute inset-0 bg-inset"
+      >
+        <img
+          alt=""
+          aria-hidden="true"
+          class="block flex-none dark:hidden"
+          src="/gob-loader-paper.svg"
+          style="width: 40px; height: 40px;"
+        />
+        <img
+          alt=""
+          aria-hidden="true"
+          class="hidden flex-none dark:block"
+          src="/gob-loader.svg"
+          style="width: 40px; height: 40px;"
+        />
+      </div>
       <div
         aria-hidden="true"
         class="absolute inset-0 pointer-events-none"
@@ -378,8 +393,23 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         style="--m-ar: 1;"
       />
       <div
-        class="absolute inset-0 bg-inset animate-pulse"
-      />
+        class="flex flex-col items-center justify-center gap-3 text-center absolute inset-0 bg-inset"
+      >
+        <img
+          alt=""
+          aria-hidden="true"
+          class="block flex-none dark:hidden"
+          src="/gob-loader-paper.svg"
+          style="width: 40px; height: 40px;"
+        />
+        <img
+          alt=""
+          aria-hidden="true"
+          class="hidden flex-none dark:block"
+          src="/gob-loader.svg"
+          style="width: 40px; height: 40px;"
+        />
+      </div>
       <div
         aria-hidden="true"
         class="absolute inset-0 pointer-events-none"
@@ -495,8 +525,23 @@ exports[`FeedCard Component Snapshots > Renders all fixture types correctly > 'l
         style="--m-ar: 1.7773195876288659;"
       />
       <div
-        class="absolute inset-0 bg-inset animate-pulse"
-      />
+        class="flex flex-col items-center justify-center gap-3 text-center absolute inset-0 bg-inset"
+      >
+        <img
+          alt=""
+          aria-hidden="true"
+          class="block flex-none dark:hidden"
+          src="/gob-loader-paper.svg"
+          style="width: 40px; height: 40px;"
+        />
+        <img
+          alt=""
+          aria-hidden="true"
+          class="hidden flex-none dark:block"
+          src="/gob-loader.svg"
+          style="width: 40px; height: 40px;"
+        />
+      </div>
       <div
         aria-hidden="true"
         class="absolute inset-0 pointer-events-none"

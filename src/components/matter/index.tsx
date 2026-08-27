@@ -16,20 +16,49 @@ export const TYPE_META: Record<ContentType, { label: string; dot: string }> = {
   article: { label: 'Article', dot: 'bg-type-article' },
 }
 
-/** ADHX wordmark — cloud mark + Indie Flower "ADHX". */
-export function MatterLogo({ size = 22, className }: { size?: number; className?: string }) {
+/** GOB + ADHX lockup. Header placements stay at least 32px tall; compact
+ * placements can lower `minHeight`. `auto` follows the page theme, while
+ * fixed theater/panel surfaces opt into the matching supplied asset. */
+export function MatterLogo({
+  size = 22,
+  minHeight = 32,
+  surface = 'auto',
+  className,
+}: {
+  size?: number
+  minHeight?: number
+  surface?: 'auto' | 'dark' | 'paper'
+  className?: string
+}) {
+  const height = Math.max(minHeight, size * 1.7)
+  const imageClass = 'block w-auto'
+  const imageStyle = { height }
+
   return (
-    <span className={cn('flex items-center gap-2', className)}>
-      <img
-        src="/adhx-cloud.png"
-        alt=""
-        aria-hidden
-        style={{ height: size * 1.7 }}
-        className="w-auto block"
-      />
-      <span className="font-indie-flower leading-none text-ink" style={{ fontSize: size * 1.5 }}>
-        ADHX
-      </span>
+    <span className={cn('inline-flex items-center', className)} style={{ minHeight }}>
+      {surface === 'auto' ? (
+        <>
+          <img
+            src="/logo-paper.png"
+            alt="ADHX"
+            style={imageStyle}
+            className={cn(imageClass, 'dark:hidden')}
+          />
+          <img
+            src="/logo-dark.png"
+            alt="ADHX"
+            style={imageStyle}
+            className={cn(imageClass, 'hidden dark:block')}
+          />
+        </>
+      ) : (
+        <img
+          src={surface === 'dark' ? '/logo-dark.png' : '/logo-paper.png'}
+          alt="ADHX"
+          style={imageStyle}
+          className={imageClass}
+        />
+      )}
     </span>
   )
 }

@@ -5,14 +5,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-> **Save now. Read never. Find always.**
+> **Save it. Lose it. Find it.**
 
 Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram images and Reels, TikTok, or YouTube Shorts** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
 
 ADHX is for the links you meant to come back to: one place to watch them, search them, tag them, archive them, or turn a tag into a public playlist. It is open source and self-hostable, with your saves stored in a SQLite file you own.
 
 <p align="center">
-  <img src="public/og-logo.png" alt="ADHX — save now, read never, find always" width="640" />
+  <img src="public/og-logo.png" alt="ADHX — save it, lose it, find it" width="640" />
 </p>
 
 > **Building, extending, or self-hosting ADHX?** Read the human-facing [architecture guide](ARCHITECTURE.md) for the routes, data flow, authentication, media handling, and security model.
@@ -56,6 +56,7 @@ Archive removes a post from your active Saved queue without deleting it. Archive
 Tagging is private until you choose to publish a tag. A published tag becomes a playlist with:
 
 - a shareable looping theater;
+- a branded mosaic social card that previews the playlist when its URL is shared;
 - a public curator profile;
 - a **Save playlist** action that lets another signed-in person clone its posts and tag into their own account; and
 - a place on the public [`/leaderboard`](https://adhx.com/leaderboard), where playlists are ranked by views and clones across today, this week, this month, or all time.
@@ -180,28 +181,43 @@ Self-hosting keeps account data, saves, tags, and settings in your SQLite databa
 
 ### Docker
 
-The `Dockerfile` builds a standalone image and runs database migrations at startup. Docker exposes ADHX at [http://localhost:3000](http://localhost:3000):
+Every release publishes a public multi-platform image for AMD64 and ARM64 at
+[`ghcr.io/itsmemeworks/adhx`](https://github.com/itsmemeworks/adhx/pkgs/container/adhx).
+It runs database migrations automatically at startup and exposes ADHX on port 3000:
 
 ```bash
-docker build -t adhx .
+docker pull ghcr.io/itsmemeworks/adhx:latest
+export RESEND_API_KEY=re_your_key
+export EMAIL_FROM='ADHX <login@your-verified-domain.example>'
 docker run -d -p 3000:3000 -v adhx_data:/data \
   -e DATABASE_PATH=/data/adhx.db \
   -e SESSION_SECRET=$(openssl rand -base64 32) \
   -e NEXT_PUBLIC_APP_URL=http://localhost:3000 \
-  adhx
+  -e RESEND_API_KEY \
+  -e EMAIL_FROM \
+  ghcr.io/itsmemeworks/adhx:latest
 ```
 
-Add `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET` to enable X sync, with `<your-url>/api/auth/twitter/callback` registered in the X Developer Portal. Add `RESEND_API_KEY` and a verified `EMAIL_FROM` address to deliver real magic-link emails. `DATABASE_PATH` defaults to `/data/adhx.db` in the image.
+For reproducible deployments, replace `latest` with a release tag such as `1.66.2`.
+You can still build from source with `docker build -t adhx .`.
+
+`RESEND_API_KEY` and a verified `EMAIL_FROM` sender are required for magic-link sign-in in
+the production image. Add `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET` to enable X sync,
+with `<your-url>/api/auth/twitter/callback` registered in the X Developer Portal.
+`DATABASE_PATH` defaults to `/data/adhx.db` in the image.
 
 ### Docker Compose
 
-[`docker-compose.yml`](docker-compose.yml) builds the same image, publishes port 3000, and creates the persistent volume:
+[`docker-compose.yml`](docker-compose.yml) pulls the GHCR image, publishes port 3000, and creates the persistent volume:
 
 ```bash
-docker compose up --build
+docker compose pull
+docker compose up -d
 ```
 
-Set a real `SESSION_SECRET` rather than relying on the development fallback.
+Export `SESSION_SECRET`, `RESEND_API_KEY`, and `EMAIL_FROM` before starting Compose; it refuses
+to start without them. Set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>` to pin Compose to
+a release.
 
 ### Fly.io
 

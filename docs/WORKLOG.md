@@ -6,6 +6,35 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — GHCR release images added
+
+Every release now publishes provenance- and SBOM-attested AMD64 and ARM64 images to
+`ghcr.io/itsmemeworks/adhx`, tagged by full version, major/minor, major, and `latest`.
+Release Please explicitly dispatches publication because `GITHUB_TOKEN` release events do not
+chain workflows. Anonymous pulls are verified; GHCR's one-time organization-package visibility
+step fails with the settings URL until an owner marks it Public. Compose and self-hosting docs
+now consume the image by default. The GitHub repository description uses the current tagline.
+
+## 2026-08-27 — GOB post-loader coverage completed
+
+A shared theme-aware `PostLoader` now carries the supplied GOB animation across preview
+resolution, Saved queue startup, Instagram probing, library/media loading, playlist posters,
+landing activity, and share-target redirects. Action-level progress indicators remain compact
+spinners. Repeated poster-card announcements are suppressed, and both SVGs stop animating under
+`prefers-reduced-motion`. All 3,487 tests, typecheck, build, formatting, and lint (existing
+warnings only) pass. Current state: complete.
+
+## 2026-08-27 — GOB brand and playlist social cards
+
+The GOB handoff now lives in `brand/BRAND.md`; supplied icons, favicons, paper/dark
+lockups, the 1200×630 site OG, and authoritative animated loaders replace the legacy cloud.
+The tagline is “Save it. Lose it. Find it.” across product copy, metadata, email, and docs.
+Public playlists now publish dynamic 1200×630 OG/Twitter cards with adaptive image mosaics,
+video badges, text-only tiles, and anonymous private/missing fallbacks. Thumbnail preloads are
+host-allowlisted, redirect-safe, timed out, and size-bounded. Focused tests, typecheck, and real
+ImageResponse renders pass. All 3,484 tests, typecheck, build, formatting, and lint (existing
+warnings only) pass. Current state: complete; deployment required.
+
 ## 2026-08-27 — Theater playlist media integrity repaired
 
 Live enrichment now derives durable Instagram thumbnail-proxy URLs, matching saved playlists.

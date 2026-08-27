@@ -37,6 +37,7 @@ describe('CollectionPosterCard', () => {
 
     const link = screen.getByRole('link', { name: 'View #cool-stuff' })
     expect(link).toHaveAttribute('href', '/?tag=cool-stuff')
+    expect(link.closest('.border-hairline')).not.toBeNull()
 
     // The action button must NOT be nested inside the anchor.
     const button = screen.getByTestId('copy-btn')
@@ -73,6 +74,7 @@ describe('CollectionPosterCard', () => {
 
     const link = screen.getByRole('link', { name: 'View #cool-stuff' })
     expect(link).toHaveAttribute('href', '/t/curator/cool-stuff')
+    expect(link.className).toContain('border-hairline')
 
     // Title and count are inside the single link.
     expect(link).toHaveTextContent('#cool-stuff')
@@ -167,7 +169,7 @@ describe('CollectionPosterCard', () => {
       expect(screen.getByText('+6')).toBeInTheDocument()
     })
 
-    it('shows the pulsing skeleton mosaic when tilesLoading, ignoring the real tile count', () => {
+    it('shows the GOB post loader when tilesLoading, ignoring the real tile count', () => {
       const { container } = render(
         <CollectionPosterCard
           tag="loading"
@@ -178,8 +180,9 @@ describe('CollectionPosterCard', () => {
         />,
       )
       const grid = container.querySelector('.grid')!
-      expect(grid.children).toHaveLength(4)
-      expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4)
+      expect(grid.children).toHaveLength(1)
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(container.querySelector('img')).toHaveAttribute('src', '/gob-loader.svg')
     })
   })
 

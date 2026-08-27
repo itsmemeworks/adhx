@@ -153,7 +153,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'invalid-user', id: '123' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save now. Read never. Find always.')
+      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
       expect(metadata.description).toBe('For people who bookmark everything and read nothing.')
     })
 
@@ -164,7 +164,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'validuser', id: 'not-numeric' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save now. Read never. Find always.')
+      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
     })
 
     it('returns a minimal noindex tombstone when FxTwitter cannot resolve the tweet (deleted/private/suspended)', async () => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Image, Play, FileText, Check } from 'lucide-react'
+import { PostLoader } from '@/components/PostLoader'
 import { AuthorAvatar } from './AuthorAvatar'
 import {
   renderTextWithLinks,
@@ -267,7 +268,9 @@ function MediaContent({
           }}
         />
       )}
-      {!isVideo && !loaded && <div className="absolute inset-0 bg-inset animate-pulse" />}
+      {!isVideo && !loaded && (
+        <PostLoader variant="auto" size={40} decorative className="absolute inset-0 bg-inset" />
+      )}
 
       {/* Caption scrim (only when there's caption text) */}
       {caption && (

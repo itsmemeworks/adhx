@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
 
   if (!isValidVideoId(id)) {
-    return { title: 'ADHX - Save now. Read never. Find always.' }
+    return { title: 'ADHX - Save it. Lose it. Find it.' }
   }
 
   const moderation = readPostModeration('youtube', id)

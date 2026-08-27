@@ -35,7 +35,7 @@ Use org `your-org` and project `your-project`.
 
 ## ADHX
 
-**Save now. Read never. Find always.**
+**Save it. Lose it. Find it.**
 
 A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and saves Instagram image posts/carousels and Reels, TikTok videos, and YouTube Shorts via the same URL-prefix trick (Instagram images and TikTok/Reels offer file send/download; YouTube plays via the official iframe embed).
 
@@ -489,19 +489,26 @@ Other details:
 
 ### Branding Assets
 
-| File                  | Size            | Purpose                                                 |
-| --------------------- | --------------- | ------------------------------------------------------- |
-| `public/logo.png`     | 940KB           | App logo for favicon and in-app display                 |
-| `public/og-logo.png`  | 183KB, 1200×630 | OG image for social sharing (homepage + tweet fallback) |
-| `public/icon-192.png` | 36KB            | PWA icon (small)                                        |
-| `public/icon-512.png` | 166KB           | PWA icon (large)                                        |
+- `public/logo-dark.png` — transparent GOB + ADHX lockup for `#08070a` / `#322b23`
+- `public/logo-paper.png` — outlined transparent lockup for `#e4dac8`
+- `public/og-logo.png` — 1200×630 site-wide branded fallback
+- `public/icon-192.png` / `public/icon-512.png` — full-bleed PWA icons
+- `public/favicon-16.png` / `public/favicon-32.png` — browser favicons
+- `public/gob-loader.svg` / `public/gob-loader-paper.svg` — animated post loader; the SVG's
+  internal CSS must remain intact so `<img>` playback works
+
+`MatterLogo` selects the dark or paper lockup; fixed theater surfaces must pass
+`surface="dark"`. Header lockups are at least 32px tall. The brand tagline is
+**Save it. Lose it. Find it.**
 
 **OG Image Routes:**
 
 - `src/app/opengraph-image.tsx` - Serves `og-logo.png` for homepage OG
 - `src/app/twitter-image.tsx` - Serves `og-logo.png` for Twitter cards
-
-**Key distinction**: `logo.png` is the app logo (used on website/favicon). `og-logo.png` is the branded OG image (1200×630) used for all social sharing previews.
+- `src/app/api/og/playlist/[username]/[tag]/route.tsx` — dynamic 1200×630 playlist card:
+  adaptive one-to-five-image mosaic, text-tile fallback, generic empty/error card, and a
+  fully anonymous private/missing card. It preloads only allowlisted image hosts with bounded
+  reads and fetches Indie Flower TTF for `ImageResponse`.
 
 ### LLM-Friendly Previews & Structured Data
 
@@ -544,7 +551,11 @@ Key files:
 - Private tags and their tweets are never included
 - Falls back to homepage-only if database queries fail (e.g., during static build)
 
-`public/robots.txt` includes `Allow: /t/`, `Allow: /api/share/`, and `Allow: /api/media/` (VideoObject thumbnails + MP4 streams — without this GSC reports "Thumbnail blocked by robots.txt") while keeping `/api/` disallowed for authenticated endpoints. Longer Allow prefixes beat `Disallow: /api/` under Google's longest-match rule.
+`public/robots.txt` includes `Allow: /t/`, `Allow: /api/share/`, `Allow: /api/og/`
+(dynamic social cards), and `Allow: /api/media/` (VideoObject thumbnails + MP4 streams —
+without this GSC reports "Thumbnail blocked by robots.txt") while keeping `/api/` disallowed
+for authenticated endpoints. Longer Allow prefixes beat `Disallow: /api/` under Google's
+longest-match rule.
 
 ### Save Methods (Platform-Aware)
 
@@ -1001,6 +1012,7 @@ export async function GET() {
 | `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                                                                                                                                                                                     |
 | `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                                                                                                                                                                                   |
 | `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, `no-store` so moderation runs per request)                                                                                                                                                                                        |
+| `/api/og/playlist/[username]/[tag]`             | GET         | No   | Dynamic 1200×630 playlist social card; public playlists get adaptive mosaics/text tiles, private/missing playlists get a generic non-identifying card                                                                                                                  |
 | `/api/auth/twitter`                             | GET         | Yes  | Start X OAuth to _link_ bookmark sync (session required; unsigned → `/?auth_error=x_link_only`)                                                                                                                                                                        |
 | `/api/auth/twitter/callback`                    | GET         | Yes  | X OAuth callback (browser bounce; session required to link)                                                                                                                                                                                                            |
 | `/api/auth/twitter/status`                      | GET         | No   | Check auth status and refresh tokens                                                                                                                                                                                                                                   |
@@ -1132,9 +1144,10 @@ curl -s https://adhx.com/api/health | jq .version      # production
 
 - **CI** (`.github/workflows/ci.yml`) - Runs on PRs: lint, typecheck, test, build
 - **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io with environment selection (staging/production)
-- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers staging deploy via `workflow_dispatch`
+- **Container image** (`.github/workflows/image-publish.yml`) - Publishes public AMD64/ARM64 release images to `ghcr.io/itsmemeworks/adhx`
+- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers staging deploy and container publication via `workflow_dispatch`
 
-**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release-please workflow directly triggers deploy via `gh workflow run deploy.yml` instead.
+**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release-please workflow directly dispatches both downstream workflows. GHCR creates the organization package as private on its first publication and has no visibility API; an owner must set it to **Public** once in package settings. The publish workflow verifies anonymous pulls and fails with the exact settings URL until that is done.
 
 ### Sentry Release Tracking
 

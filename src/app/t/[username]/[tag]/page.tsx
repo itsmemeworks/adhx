@@ -40,10 +40,11 @@ interface Props {
 
 const BASE_URL = PUBLIC_BASE_URL
 
-function toAbsolute(url: string): string {
-  if (/^https?:\/\//.test(url)) return url
-  return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
+function playlistSocialCardUrl(username: string, tag: string): string {
+  return `${BASE_URL}/api/og/playlist/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
 }
+
+const ANONYMOUS_PLAYLIST_CARD_URL = `${playlistSocialCardUrl('brand', 'card')}?generic=1`
 
 type CollectionLoadResult =
   TagCollectionResult | { status: 'redirect'; username: string; tag: string }
@@ -79,24 +80,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const result = await loadCollection(username, tag)
 
   if (result.status === 'redirect') {
+    const redirectCardUrl = playlistSocialCardUrl(result.username, result.tag)
     return {
       title: `#${tag} — ADHX`,
       description: 'A curated playlist on ADHX.',
+      openGraph: {
+        images: [{ url: redirectCardUrl, width: 1200, height: 630, alt: 'ADHX playlist' }],
+      },
+      twitter: { card: 'summary_large_image', images: [redirectCardUrl] },
     }
   }
 
   if (result.status === 'private') {
     return {
-      title: `#${tag} — ADHX`,
+      title: 'Private playlist — ADHX',
       description: 'This playlist is private.',
       robots: { index: false, follow: false },
+      openGraph: {
+        images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
+      },
+      twitter: { card: 'summary_large_image', images: [ANONYMOUS_PLAYLIST_CARD_URL] },
     }
   }
 
   if (result.status === 'not_found') {
     return {
-      title: `#${tag} — ADHX`,
-      description: 'A curated playlist on ADHX.',
+      title: 'ADHX playlist',
+      description: 'Save it. Lose it. Find it.',
+      openGraph: {
+        images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
+      },
+      twitter: { card: 'summary_large_image', images: [ANONYMOUS_PLAYLIST_CARD_URL] },
     }
   }
 
@@ -112,7 +126,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}. ${truncate(previewTexts, 200)}`
     : `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}.`
   const canonicalUrl = `${BASE_URL}/t/${data.username}/${data.tag}`
-  const ogImage = data.items.find((i) => i.thumbnailUrl)?.thumbnailUrl
+  const socialCardUrl = playlistSocialCardUrl(data.username, data.tag)
 
   return {
     title,
@@ -124,15 +138,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       siteName: 'ADHX',
       url: canonicalUrl,
-      images: ogImage
-        ? [{ url: toAbsolute(ogImage), alt: `#${data.tag} playlist by @${data.username}` }]
-        : [{ url: `${BASE_URL}/og-logo.png`, width: 1200, height: 630, alt: 'ADHX' }],
+      images: [
+        {
+          url: socialCardUrl,
+          width: 1200,
+          height: 630,
+          alt: `#${data.tag} playlist by @${data.username}`,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [ogImage ? toAbsolute(ogImage) : `${BASE_URL}/og-logo.png`],
+      images: [socialCardUrl],
     },
   }
 }
@@ -145,7 +164,7 @@ function PoweredByFooter() {
         href="/"
         className="inline-flex items-center gap-1.5 text-sm text-ink-3 transition-colors hover:text-clay"
       >
-        Made with <MatterLogo size={13} /> ↗
+        Made with <MatterLogo size={13} minHeight={22} /> ↗
       </Link>
     </footer>
   )

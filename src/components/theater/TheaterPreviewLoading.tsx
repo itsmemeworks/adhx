@@ -1,4 +1,4 @@
-import { MatterLogo } from '@/components/matter'
+import { PostLoader } from '@/components/PostLoader'
 
 /**
  * Segment `loading.tsx` fallback for preview routes. Same near-black stage
@@ -7,11 +7,8 @@ import { MatterLogo } from '@/components/matter'
  */
 export function TheaterPreviewLoading() {
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-5 bg-[#08070a] px-6">
-      <MatterLogo size={22} className="[&>span]:text-white" />
-      <p className="text-[13px] text-white/45">
-        <span>Loading post</span>
-      </p>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#08070a] px-6">
+      <PostLoader variant="dark" size={88} caption="grabbing it…" />
     </div>
   )
 }

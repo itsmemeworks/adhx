@@ -3,22 +3,24 @@
 /**
  * Shared-preview lead while FxTwitter / a mirror / oEmbed is still in flight.
  * The theater chrome is already up — this is only the stage, so a cold
- * external link paints ADHX immediately instead of waiting on the proxy.
+ * external link paints GOB immediately instead of waiting on the proxy.
  */
 
-import { MatterLogo } from '@/components/matter'
+import { PostLoader } from '@/components/PostLoader'
 
 export function StageResolving({ handle }: { handle?: string | null }) {
   const who = handle?.replace(/^@+/, '')
   return (
     <div
-      className="flex h-full w-full flex-col items-center justify-center gap-5 bg-[#08070a] px-6 text-center"
+      className="flex h-full w-full items-center justify-center bg-[#08070a] px-6"
       data-testid="stage-resolving"
     >
-      <MatterLogo size={22} className="[&>span]:text-white" />
-      <p className="text-[13px] text-white/45">
-        <span>{who ? `Loading @${who}'s post` : 'Loading post'}</span>
-      </p>
+      <PostLoader
+        variant="dark"
+        size={88}
+        caption="grabbing it…"
+        label={who ? `Loading @${who}'s post` : 'Loading post'}
+      />
     </div>
   )
 }

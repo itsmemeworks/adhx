@@ -96,7 +96,7 @@ export const config = {
      * Match all paths except:
      * - /api/* (API routes)
      * - /_next/* (Next.js internals)
-     * - /favicon.ico, /logo.png, etc (static files)
+     * - /favicon.ico, /logo-dark.png, etc (static files)
      */
     '/((?!api|_next|favicon\\.ico|logo\\.png|.*\\.[a-z]{2,4}$).*)',
   ],

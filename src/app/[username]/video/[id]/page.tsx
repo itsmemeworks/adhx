@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const handle = normalizeHandle(username)
 
   if (!handle || !isValidUsername(handle) || !isValidVideoId(id)) {
-    return { title: 'ADHX - Save now. Read never. Find always.' }
+    return { title: 'ADHX - Save it. Lose it. Find it.' }
   }
 
   const moderation = readPostModeration('tiktok', id)

@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const profile = await loadProfile(username)
   if (!profile) {
     return {
-      title: 'ADHX - Save now. Read never. Find always.',
+      title: 'ADHX - Save it. Lose it. Find it.',
       description: 'For people who bookmark everything and read nothing.',
     }
   }

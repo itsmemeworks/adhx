@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { parseShareUrl, extractSharedUrl } from '@/lib/utils/parse-share-url'
 import { markPreviewOpenIntent } from '@/lib/theater/autosave-shared'
+import { PostLoader } from '@/components/PostLoader'
 
 function ShareRedirect() {
   const searchParams = useSearchParams()
@@ -65,7 +66,7 @@ function ShareRedirect() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper">
-      <div className="w-6 h-6 border-2 border-clay border-t-transparent rounded-full animate-spin" />
+      <PostLoader variant="auto" size={64} caption="grabbing it…" />
     </div>
   )
 }
@@ -75,7 +76,7 @@ export default function SharePage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-paper">
-          <div className="w-6 h-6 border-2 border-clay border-t-transparent rounded-full animate-spin" />
+          <PostLoader variant="auto" size={64} caption="grabbing it…" />
         </div>
       }
     >

@@ -26,9 +26,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { PostLoader } from '@/components/PostLoader'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, PersonalTab } from '@/components/theater/types'
 import { COLLECTION_QUEUE_LIMIT, SAVED_PATH, sameBookmark } from '@/lib/theater/collection-href'
@@ -184,7 +184,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
   if (needsCollection && load.status !== 'ready') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#08070a]">
-        <Loader2 className="h-8 w-8 animate-spin text-white/40" />
+        <PostLoader variant="dark" size={72} caption="grabbing it…" label="Loading Saved posts" />
       </div>
     )
   }

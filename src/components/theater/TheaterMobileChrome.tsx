@@ -391,7 +391,7 @@ export function TheaterMobileChrome({
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
           <a href="/" className="flex items-center" aria-label="ADHX home">
-            <MatterLogo size={16} className="[&>span]:text-white" />
+            <MatterLogo size={16} surface="dark" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
@@ -432,7 +432,7 @@ export function TheaterMobileChrome({
               visitor (`handleSaveCollection` in TheaterShell). */}
           <div className="flex items-center justify-between gap-3">
             <a href="/" className="flex items-center" aria-label="ADHX home">
-              <MatterLogo size={16} className="[&>span]:text-white" />
+              <MatterLogo size={16} surface="dark" />
             </a>
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
               #{playlist.tag}
@@ -448,7 +448,7 @@ export function TheaterMobileChrome({
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
           <a href="/" className="flex items-center" aria-label="ADHX home">
-            <MatterLogo size={16} className="[&>span]:text-white" />
+            <MatterLogo size={16} surface="dark" />
           </a>
           <div className="flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}

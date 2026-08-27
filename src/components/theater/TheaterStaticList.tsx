@@ -49,7 +49,7 @@ export function TheaterStaticList({
   savedToday: number
 }) {
   const jsonLd = buildCollectionPageLd({
-    name: 'ADHX — save now, read never, find always',
+    name: 'ADHX — save it, lose it, find it',
     description:
       'A live theater of what people are watching and sending across X, TikTok, Instagram and YouTube right now — save any post to your own collection in one tap and find it again later.',
     url: BASE_URL,
@@ -62,7 +62,7 @@ export function TheaterStaticList({
 
   return (
     <section aria-label="ADHX" className="sr-only">
-      <h1>ADHX — Save now. Read never. Find always.</h1>
+      <h1>ADHX — Save it. Lose it. Find it.</h1>
       <p>
         ADHX is a bookmark manager for X (Twitter), Instagram Reels, TikTok videos, and YouTube
         Shorts. Watch what the community is saving and sending right now, then save anything you

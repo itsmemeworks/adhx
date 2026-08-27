@@ -22,6 +22,7 @@ import { LiveDot } from '@/components/matter'
 import { PublicNav } from '@/components/PublicNav'
 import { SignInModal } from '@/components/auth'
 import { DiscoverCard } from '@/components/discover/DiscoverCard'
+import { PostLoader } from '@/components/PostLoader'
 import type { ActivityItem } from '@/components/discover/types'
 import { IosHow, IosShortcutInstallButton } from '@/components/IosShortcutInstall'
 import { AndroidLandingPromo } from '@/components/AndroidInstall'
@@ -133,7 +134,7 @@ export function LandingPage() {
               </span>
             </span>
 
-            <div className="font-indie-flower leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">
+            <div className="font-indie-flower font-bold leading-[.9] text-ink mb-4 text-[60px] min-[860px]:text-[84px]">
               ADHX
             </div>
 
@@ -141,7 +142,7 @@ export function LandingPage() {
               id="hero-title"
               className="font-serif font-semibold tracking-[-.015em] leading-[1.12] text-ink mb-3.5 text-[28px] min-[860px]:text-[38px]"
             >
-              Save now. Read never. <span className="text-clay">Find always.</span>
+              Save it. Lose it. <span className="text-clay">Find it.</span>
             </h1>
 
             <p className="text-[15px] min-[860px]:text-[17px] text-ink-2 leading-[1.55] mb-7 max-w-[440px]">
@@ -199,12 +200,13 @@ export function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[18px]">
             {!live.loaded ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-64 animate-pulse rounded-card border border-hairline bg-inset"
-                />
-              ))
+              <PostLoader
+                variant="auto"
+                size={64}
+                caption="grabbing it…"
+                label="Loading trending posts"
+                className="col-span-full min-h-64 rounded-card border border-hairline bg-inset"
+              />
             ) : live.items.length === 0 ? (
               <p className="col-span-full py-8 text-center text-[14.5px] text-ink-2">
                 Quiet right now — be the first to save something.
@@ -292,7 +294,7 @@ export function LandingPage() {
         {/* ───────── Footer ───────── */}
         <footer className="text-center py-8 border-t border-hairline">
           <span className="font-indie-flower text-[22px] text-ink-3">
-            Save now. Read never. Find always.
+            Save it. Lose it. Find it.
           </span>
           <p className="mt-3 text-xs text-ink-3">
             <a href="/privacy" className="underline-offset-2 hover:underline">

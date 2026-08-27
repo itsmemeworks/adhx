@@ -92,7 +92,10 @@ describe('TheaterShell sharedResolve', () => {
         />,
       )
     })
-    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+    const resolving = screen.getByTestId('stage-resolving')
+    expect(resolving).toBeInTheDocument()
+    expect(resolving.querySelector('img')).toHaveAttribute('src', '/gob-loader.svg')
+    expect(screen.getByText('grabbing it…')).toBeInTheDocument()
     expect(screen.queryByTestId('stage')).not.toBeInTheDocument()
   })
 
