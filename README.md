@@ -181,28 +181,43 @@ Self-hosting keeps account data, saves, tags, and settings in your SQLite databa
 
 ### Docker
 
-The `Dockerfile` builds a standalone image and runs database migrations at startup. Docker exposes ADHX at [http://localhost:3000](http://localhost:3000):
+Every release publishes a public multi-platform image for AMD64 and ARM64 at
+[`ghcr.io/itsmemeworks/adhx`](https://github.com/itsmemeworks/adhx/pkgs/container/adhx).
+It runs database migrations automatically at startup and exposes ADHX on port 3000:
 
 ```bash
-docker build -t adhx .
+docker pull ghcr.io/itsmemeworks/adhx:latest
+export RESEND_API_KEY=re_your_key
+export EMAIL_FROM='ADHX <login@your-verified-domain.example>'
 docker run -d -p 3000:3000 -v adhx_data:/data \
   -e DATABASE_PATH=/data/adhx.db \
   -e SESSION_SECRET=$(openssl rand -base64 32) \
   -e NEXT_PUBLIC_APP_URL=http://localhost:3000 \
-  adhx
+  -e RESEND_API_KEY \
+  -e EMAIL_FROM \
+  ghcr.io/itsmemeworks/adhx:latest
 ```
 
-Add `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET` to enable X sync, with `<your-url>/api/auth/twitter/callback` registered in the X Developer Portal. Add `RESEND_API_KEY` and a verified `EMAIL_FROM` address to deliver real magic-link emails. `DATABASE_PATH` defaults to `/data/adhx.db` in the image.
+For reproducible deployments, replace `latest` with a release tag such as `1.66.2`.
+You can still build from source with `docker build -t adhx .`.
+
+`RESEND_API_KEY` and a verified `EMAIL_FROM` sender are required for magic-link sign-in in
+the production image. Add `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET` to enable X sync,
+with `<your-url>/api/auth/twitter/callback` registered in the X Developer Portal.
+`DATABASE_PATH` defaults to `/data/adhx.db` in the image.
 
 ### Docker Compose
 
-[`docker-compose.yml`](docker-compose.yml) builds the same image, publishes port 3000, and creates the persistent volume:
+[`docker-compose.yml`](docker-compose.yml) pulls the GHCR image, publishes port 3000, and creates the persistent volume:
 
 ```bash
-docker compose up --build
+docker compose pull
+docker compose up -d
 ```
 
-Set a real `SESSION_SECRET` rather than relying on the development fallback.
+Export `SESSION_SECRET`, `RESEND_API_KEY`, and `EMAIL_FROM` before starting Compose; it refuses
+to start without them. Set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>` to pin Compose to
+a release.
 
 ### Fly.io
 

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — GHCR release images added
+
+Every release now publishes provenance- and SBOM-attested AMD64 and ARM64 images to
+`ghcr.io/itsmemeworks/adhx`, tagged by full version, major/minor, major, and `latest`.
+Release Please explicitly dispatches publication because `GITHUB_TOKEN` release events do not
+chain workflows. Anonymous pulls are verified; GHCR's one-time organization-package visibility
+step fails with the settings URL until an owner marks it Public. Compose and self-hosting docs
+now consume the image by default. The GitHub repository description uses the current tagline.
+
 ## 2026-08-27 — GOB post-loader coverage completed
 
 A shared theme-aware `PostLoader` now carries the supplied GOB animation across preview

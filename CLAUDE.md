@@ -1144,9 +1144,10 @@ curl -s https://adhx.com/api/health | jq .version      # production
 
 - **CI** (`.github/workflows/ci.yml`) - Runs on PRs: lint, typecheck, test, build
 - **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io with environment selection (staging/production)
-- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers staging deploy via `workflow_dispatch`
+- **Container image** (`.github/workflows/image-publish.yml`) - Publishes public AMD64/ARM64 release images to `ghcr.io/itsmemeworks/adhx`
+- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers staging deploy and container publication via `workflow_dispatch`
 
-**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release-please workflow directly triggers deploy via `gh workflow run deploy.yml` instead.
+**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release-please workflow directly dispatches both downstream workflows. GHCR creates the organization package as private on its first publication and has no visibility API; an owner must set it to **Public** once in package settings. The publish workflow verifies anonymous pulls and fails with the exact settings URL until that is done.
 
 ### Sentry Release Tracking
 
