@@ -151,6 +151,29 @@ describe('non-X preview metadata status', () => {
   })
 
   describe('Instagram image post', () => {
+    it('uses the thumbnail proxy for saved posts with legacy empty media rows', async () => {
+      const postId = 'DcgAGt4ijQr'
+      mocks.getSavedPreviewDisplay.mockReturnValue({
+        author: '@ravecultur',
+        authorName: 'Rave Cultur',
+        text: 'A saved Instagram image',
+        category: 'photo',
+        mediaCount: 0,
+      })
+      const { generateMetadata } = await import('@/app/p/[id]/page')
+
+      const metadata = await generateMetadata({ params: Promise.resolve({ id: postId }) })
+
+      expect(metadata.openGraph).toMatchObject({
+        type: 'article',
+        images: [{ url: `https://adhx.com/api/media/instagram/thumbnail?id=${postId}` }],
+      })
+      expect(metadata.twitter).toMatchObject({
+        images: [`https://adhx.com/api/media/instagram/thumbnail?id=${postId}`],
+      })
+      expect(mocks.getInstagramMetadataStatus).not.toHaveBeenCalled()
+    })
+
     it('publishes every carousel image in order without a video claim', async () => {
       const postId = 'DcHXej3lt5W'
       mocks.getInstagramMetadataStatus.mockResolvedValue({

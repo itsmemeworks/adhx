@@ -106,7 +106,9 @@ export async function generateInstagramPreviewMetadata(
   const noun = isPhoto ? 'Instagram post' : 'Instagram Reel'
   const canonicalUrl = `${baseUrl}/${isPhoto ? 'p' : 'reels'}/${id}`
   const imageCount = saved ? saved.mediaCount : (meta?.media?.length ?? 0)
-  const hasImage = imageCount > 0 || !!meta?.imageUrl
+  // Saved rows can predate durable Instagram media persistence, but the
+  // same-origin thumbnail route can still resolve their current image/poster.
+  const hasImage = Boolean(saved) || imageCount > 0 || !!meta?.imageUrl
 
   const pageTitle = buildContentTitle(
     caption || (who ? `${isPhoto ? 'Post' : 'Reel'} by ${who}` : noun),
