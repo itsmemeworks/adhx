@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — GOB lockup animates on hover
+
+Every shared `MatterLogo` placement now swaps the static GOB mark for the matching dark/paper
+loader animation on hover while keeping the supplied ADHX wordmark fixed. The same SVG
+reduced-motion behavior used by loading screens applies automatically. Current state: complete.
+
 ## 2026-08-27 — X Article covers repaired across the theater
 
 Sparse public-tag backfill items now carry the saved X Article headline and cover from
