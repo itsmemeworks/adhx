@@ -286,6 +286,41 @@ describe('non-X shared preview SEO eligibility', () => {
       },
     })
   })
+
+  it('restores a saved Instagram carousel size without scraping upstream', async () => {
+    mocks.getSavedPreviewDisplay.mockReturnValue({
+      author: '@ravecultur',
+      authorName: 'Rave Cultur',
+      text: 'A saved carousel',
+      category: 'photo',
+      mediaCount: 6,
+    })
+
+    const { resolveInstagramShared } = await import('@/lib/theater/resolve-shared-preview')
+    const result = await resolveInstagramShared('DcgAGt4ijQr', 'post')
+
+    expect(mocks.getInstagramMetadataStatus).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      ok: true,
+      seoEligible: true,
+      item: {
+        platform: 'instagram',
+        bookmarkId: 'DcgAGt4ijQr',
+        contentType: 'photo',
+        photoCount: 6,
+      },
+      jsonLd: {
+        image: [
+          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=1',
+          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=2',
+          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=3',
+          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=4',
+          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=5',
+          'https://adhx.com/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=6',
+        ],
+      },
+    })
+  })
 })
 
 describe('ResolvedSharedSeo', () => {

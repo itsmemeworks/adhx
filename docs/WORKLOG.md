@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Theater playlist media integrity repaired
+
+Live enrichment now derives durable Instagram thumbnail-proxy URLs, matching saved playlists.
+Direct saved `/p/` previews again receive their full carousel size: the old Drizzle scalar
+subquery generated self-comparisons and always returned zero, so it was replaced by a keyed
+user/platform/bookmark count using the existing composite index. TikTok thumbnail resolution safely follows tiktxk's
+new redirect to an exact/subdomain-allowlisted official TikTok page before proxying the CDN image.
+Text stages are regression-locked to the original poster's avatar. All 3,472 tests, typecheck,
+build, formatting, and lint (warnings only) pass. Current state: complete; deployment required.
+
 ## 2026-08-27 — Social preview descriptions no longer repeat titles
 
 X Open Graph and Twitter cards now reuse the title-aware SERP continuation instead of restarting

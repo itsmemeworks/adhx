@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createTestDb, createTestBookmark, USER_A, USER_B, type TestDbInstance } from './api/setup'
-import { bookmarks } from '@/lib/db/schema'
+import { bookmarkMedia, bookmarks } from '@/lib/db/schema'
 
 let testInstance: TestDbInstance
 
@@ -95,6 +95,61 @@ describe('getSavedPreviewDisplay', () => {
     expect(getSavedPreviewDisplay('instagram', 'ig-shape')).toMatchObject({
       text: 'Repaired row',
       category: 'photo',
+    })
+  })
+
+  it('counts only the selected saver’s platform-matching carousel media', () => {
+    testInstance.db
+      .insert(bookmarks)
+      .values([
+        createTestBookmark(USER_A, 'ig-carousel', {
+          platform: 'instagram',
+          author: 'creator',
+          text: 'Legacy two-slide row',
+          category: 'video',
+        }),
+        createTestBookmark(USER_B, 'ig-carousel', {
+          platform: 'instagram',
+          author: 'creator',
+          text: 'Six slides',
+          category: 'photo',
+        }),
+      ])
+      .run()
+    testInstance.db
+      .insert(bookmarkMedia)
+      .values([
+        ...Array.from({ length: 6 }, (_, index) => ({
+          id: `ig-carousel_${index + 1}`,
+          userId: USER_B,
+          platform: 'instagram' as const,
+          bookmarkId: 'ig-carousel',
+          mediaType: 'photo',
+          originalUrl: `https://scontent.example/${index + 1}.jpg`,
+        })),
+        ...Array.from({ length: 2 }, (_, index) => ({
+          id: `ig-carousel_legacy_${index + 1}`,
+          userId: USER_A,
+          platform: 'instagram' as const,
+          bookmarkId: 'ig-carousel',
+          mediaType: 'photo',
+          originalUrl: `https://legacy.example/${index + 1}.jpg`,
+        })),
+        {
+          id: 'same-id-other-platform',
+          userId: USER_B,
+          platform: 'twitter' as const,
+          bookmarkId: 'ig-carousel',
+          mediaType: 'photo',
+          originalUrl: 'https://pbs.twimg.com/other.jpg',
+        },
+      ])
+      .run()
+
+    expect(getSavedPreviewDisplay('instagram', 'ig-carousel')).toMatchObject({
+      text: 'Six slides',
+      category: 'photo',
+      mediaCount: 6,
     })
   })
 

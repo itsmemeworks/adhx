@@ -42,7 +42,10 @@ describe('StageText author row', () => {
     expect(profile).toHaveAttribute('target', '_blank')
     expect(profile).toHaveTextContent('jack')
     expect(profile).toHaveTextContent('@jack')
-    expect(screen.getByRole('img', { name: 'jack' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'jack' })).toHaveAttribute(
+      'src',
+      'https://example.com/jack.jpg',
+    )
   })
 
   it('renders a plain row when there is no handle', () => {
@@ -223,6 +226,36 @@ describe('StageText author row', () => {
 })
 
 describe('StageText photo album', () => {
+  it('cycles a saved six-image Instagram carousel from the direct preview', () => {
+    render(
+      <StageText
+        item={textItem({
+          platform: 'instagram',
+          author: 'ravecultur',
+          bookmarkId: 'DcgAGt4ijQr',
+          contentType: 'photo',
+          thumbnailUrl: '/api/media/instagram/thumbnail?id=DcgAGt4ijQr',
+          photoCount: 6,
+          url: 'https://www.instagram.com/p/DcgAGt4ijQr/',
+        })}
+        photo
+        photoCaption={false}
+      />,
+    )
+
+    expect(screen.getByLabelText('Photos, 6')).toBeInTheDocument()
+    const slides = document.querySelectorAll('[aria-label="Photos, 6"] img')
+    expect([...slides].map((slide) => slide.getAttribute('src'))).toEqual(
+      Array.from(
+        { length: 6 },
+        (_, index) => `/api/media/instagram/thumbnail?id=DcgAGt4ijQr&index=${index + 1}`,
+      ),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next photo, 1 of 6' }))
+    expect(screen.getByRole('button', { name: 'Next photo, 2 of 6' })).toBeInTheDocument()
+  })
+
   it('shows every photo on a multi-image tweet, not just the first', async () => {
     const { fetchShareTweet } = await import('@/lib/theater/share-tweet')
     vi.mocked(fetchShareTweet).mockResolvedValueOnce({
