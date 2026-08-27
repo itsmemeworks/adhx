@@ -19,7 +19,11 @@ vi.mock('@/lib/theme/context', () => ({
   useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
 }))
 
-const { updatePreference } = vi.hoisted(() => ({ updatePreference: vi.fn() }))
+const preferenceMocks = vi.hoisted(() => ({
+  updatePreference: vi.fn(),
+  bionicReading: false,
+}))
+const { updatePreference } = preferenceMocks
 
 vi.mock('@/lib/preferences-context', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/preferences-context')>()
@@ -27,7 +31,7 @@ vi.mock('@/lib/preferences-context', async (importOriginal) => {
     ...actual,
     usePreferences: () => ({
       preferences: {
-        bionicReading: false,
+        bionicReading: preferenceMocks.bionicReading,
         bodyFont: 'ibm-plex',
         avatarSource: 'x',
       },
@@ -89,6 +93,7 @@ function mockFetch(me: object, overrides: Partial<Record<string, FetchImpl>> = {
 describe('SettingsClient — Email, Username, and Sync X', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    preferenceMocks.bionicReading = false
   })
 
   it('renders both identity rows as connected when X and email are linked', async () => {
@@ -105,6 +110,25 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
     expect(screen.getByText('tester@example.com')).toBeInTheDocument()
     // Sync card should show the full sync UI (xConnected)
     expect(screen.getByRole('button', { name: /sync now/i })).toBeInTheDocument()
+  })
+
+  it('names and operates the Bionic Reading switch', async () => {
+    mockFetch(ME_EMAIL_ONLY)
+    const { rerender } = render(<SettingsClient />)
+
+    await waitFor(() => expect(screen.getByText('tester@example.com')).toBeInTheDocument())
+    const toggle = screen.getByRole('switch', { name: 'Bionic reading' })
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+
+    fireEvent.click(toggle)
+    expect(updatePreference).toHaveBeenCalledWith('bionicReading', true)
+
+    preferenceMocks.bionicReading = true
+    rerender(<SettingsClient />)
+    expect(screen.getByRole('switch', { name: 'Bionic reading' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
   })
 
   it('shows a Connect-with-X nudge in the sync card when only email is linked', async () => {

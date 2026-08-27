@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, useEffect } from 'react'
-import { render, waitFor, act, screen } from '@testing-library/react'
+import { render, waitFor, act, screen, fireEvent } from '@testing-library/react'
 import FeedPage from '@/app/AuthedHome'
 import type { FeedItem } from '@/components/feed/types'
 import { SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
@@ -51,8 +51,17 @@ class MockEventSource {
   }
 }
 
+const navigationMocks = vi.hoisted(() => ({
+  router: {
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  },
+}))
+
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => navigationMocks.router,
   usePathname: () => '/library',
   useSearchParams: () => {
     const [, forceRender] = useState(0)
@@ -84,7 +93,11 @@ vi.mock('@/components/feed', async (importOriginal) => {
       renderedJustAddedKey = props.justAddedKey
       return null
     },
-    FilterBar: () => null,
+    FilterBar: (props: { onFilterChange: (filter: 'videos') => void }) => (
+      <button type="button" onClick={() => props.onFilterChange('videos')}>
+        Videos filter probe
+      </button>
+    ),
   }
 })
 vi.mock('@/components/LandingPage', () => ({ LandingPage: () => null }))
@@ -126,6 +139,7 @@ let feedPages: FeedItem[][] = []
 beforeEach(() => {
   resetClientEventBridgeForTests()
   setClientEventAccount('1')
+  vi.clearAllMocks()
   currentQuery = ''
   currentParamsObj = new URLSearchParams(currentQuery)
   urlListeners.clear()
@@ -187,6 +201,47 @@ function dispatchTagsChanged(bookmarkId: string, tags: string[], platform = 'twi
     notifyTagsChanged({ platform, bookmarkId, tags })
   })
 }
+
+describe('AuthedHome: filter URL synchronization', () => {
+  it('does not replace an already-matching URL after Next refreshes search params', async () => {
+    await mountGrid()
+    expect(navigationMocks.router.replace).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Videos filter probe' }))
+    await waitFor(() =>
+      expect(navigationMocks.router.replace).toHaveBeenCalledWith('?filter=videos', {
+        scroll: false,
+      }),
+    )
+    expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      currentParamsObj = new URLSearchParams('filter=videos')
+      urlListeners.forEach((listener) => listener())
+    })
+
+    await waitFor(() => expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1))
+  })
+
+  it('preserves unrelated query state while removing deprecated parameters once', async () => {
+    currentParamsObj = new URLSearchParams('search=term&unreadOnly=true')
+    await mountGrid()
+
+    await waitFor(() =>
+      expect(navigationMocks.router.replace).toHaveBeenCalledWith('?search=term', {
+        scroll: false,
+      }),
+    )
+    expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      currentParamsObj = new URLSearchParams('search=term')
+      urlListeners.forEach((listener) => listener())
+    })
+
+    await waitFor(() => expect(navigationMocks.router.replace).toHaveBeenCalledTimes(1))
+  })
+})
 
 describe('AuthedHome: a tag added elsewhere lands on the card', () => {
   /**

@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Local product walkthrough complete
+
+The owner-data browser walkthrough covered desktop and phone-sized Live, Saved, Queue, Library
+filters, Tags, Leaderboard, Settings, Trending, and streamed shared previews. The local database
+needed the documented migration before `users.role` existed; `pnpm db:migrate` restored it.
+The walkthrough then found and fixed a Next 16 same-URL `router.replace` loop in Library filters,
+plus unnamed Header account-menu and Bionic Reading controls. Regressions cover one-shot query
+cleanup/preservation, route-loop prevention, expanded state, and switch state. Final gates pass:
+3,431 Vitest tests, 97 Playwright tests, typecheck, build, formatting, lint (warnings only), and
+the zero-advisory dependency audit. All review and browser-verification work is complete.
+
 ## 2026-08-27 — Completion audit and isolated browser suite green
 
 The post-remediation audit closed the remaining auth-scope, cross-tab, moderation-cache,

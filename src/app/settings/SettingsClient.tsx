@@ -1062,6 +1062,7 @@ function SettingsPage() {
               </p>
             </div>
             <button
+              type="button"
               onClick={() => updatePreference('bionicReading', !preferences.bionicReading)}
               className={cn(
                 'relative inline-flex h-6 w-[42px] flex-shrink-0 cursor-pointer rounded-full p-[3px] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2',
@@ -1070,6 +1071,7 @@ function SettingsPage() {
                   : 'bg-surface border border-hairline justify-start',
               )}
               role="switch"
+              aria-label="Bionic reading"
               aria-checked={preferences.bionicReading}
             >
               <span className="pointer-events-none inline-block h-[18px] w-[18px] rounded-full bg-white shadow" />

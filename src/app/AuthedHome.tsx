@@ -612,6 +612,10 @@ function FeedPageContent(): React.ReactElement {
     // One-way cleanup of the superseded query name.
     params.delete('unreadOnly')
     const queryString = params.toString()
+    // Next 16 does real RSC work even when replacing the current URL. Since
+    // `useSearchParams()` receives a fresh identity after that work, an
+    // unconditional same-URL replace becomes a refresh loop.
+    if (queryString === searchParams.toString()) return
     router.replace(queryString ? `?${queryString}` : pathname, { scroll: false })
   }, [filter, platformFilter, sort, sortDirection, hideArchived, router, searchParams, pathname])
 

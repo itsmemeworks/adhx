@@ -528,7 +528,10 @@ export function Header() {
               {/* User Menu */}
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => setShowUserMenu(!showUserMenu)}
+                  aria-label="Account menu"
+                  aria-expanded={showUserMenu}
                   className="w-[33px] h-[33px] rounded-full overflow-hidden hover:ring-2 hover:ring-clay/40 transition-all flex items-center justify-center"
                 >
                   <img
