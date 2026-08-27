@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.66.2](https://github.com/itsmemeworks/adhx/compare/v1.66.1...v1.66.2) (2026-08-27)
+
+
+### Bug Fixes
+
+* restore theater playlist media ([#453](https://github.com/itsmemeworks/adhx/issues/453)) ([a13cca5](https://github.com/itsmemeworks/adhx/commit/a13cca511fffa34d54c2371fa983d51931a1e5b4))
+
 ## [1.66.1](https://github.com/itsmemeworks/adhx/compare/v1.66.0...v1.66.1) (2026-08-27)
 
 
