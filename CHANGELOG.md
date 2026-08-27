@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.67.0](https://github.com/itsmemeworks/adhx/compare/v1.66.2...v1.67.0) (2026-08-27)
+
+
+### Features
+
+* apply gob brand and publish container images ([#455](https://github.com/itsmemeworks/adhx/issues/455)) ([89f7d0b](https://github.com/itsmemeworks/adhx/commit/89f7d0bdc3a1bd012f83c2bc6364eeaebc4799c9))
+
+
+### Bug Fixes
+
+* restore theater article covers and logo motion ([#457](https://github.com/itsmemeworks/adhx/issues/457)) ([cfb1c79](https://github.com/itsmemeworks/adhx/commit/cfb1c79dbaf0dea6d34711f3c4663e8ccfd1a137))
+
 ## [1.66.2](https://github.com/itsmemeworks/adhx/compare/v1.66.1...v1.66.2) (2026-08-27)
 
 
