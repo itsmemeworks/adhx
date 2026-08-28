@@ -60,6 +60,8 @@ const robotoMono = Roboto_Mono({
 })
 
 const siteUrl = PUBLIC_BASE_URL
+const siteDescription =
+  'Stop saying "wait, I had the perfect meme for this." Save your favorites, build shareable playlists, and become the meme lord your group chat deserves.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -67,8 +69,7 @@ export const metadata: Metadata = {
     default: 'ADHX - Save it. Lose it. Find it.',
     template: '%s | ADHX',
   },
-  description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+  description: siteDescription,
   keywords: [
     'X bookmarks',
     'Twitter bookmarks',
@@ -107,15 +108,13 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: 'ADHX',
     title: 'ADHX - Save it. Lose it. Find it.',
-    description:
-      "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+    description: siteDescription,
     // Images auto-generated from opengraph-image.tsx
   },
   twitter: {
     card: 'summary_large_image',
     title: 'ADHX - Save it. Lose it. Find it.',
-    description:
-      "Sync your X bookmarks, discover what's trending, and work through your backlog — tweets, threads, Reels, TikToks and Shorts in one searchable home.",
+    description: siteDescription,
     // Images auto-generated from twitter-image.tsx
     creator: '@adhx_app',
   },
