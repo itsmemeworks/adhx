@@ -50,7 +50,11 @@ export function fetchArticleDetails(author: string, id: string): Promise<Article
     })
     .catch(() => null)
     .then((details) => {
-      if (!details) inflight.delete(key)
+      // Keep the old retry contract for body consumers: an upstream response
+      // can transiently contain article metadata before its content is ready.
+      // StageArticle may still paint that title/cover, but a later read/copy
+      // must issue a fresh request instead of caching the incomplete payload.
+      if (!details?.content) inflight.delete(key)
       return details
     })
 

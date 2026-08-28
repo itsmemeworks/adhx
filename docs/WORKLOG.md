@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-27 — Article retry and logo hover layers hardened
+
+Metadata-only article responses no longer poison the shared body cache, so a later read/copy
+retries once upstream content is ready. The hover lockup now renders GOB and the ADHX wordmark
+as non-overlapping layers; only GOB crossfades, eliminating the wordmark dip mid-transition.
+Regression tests cover both behaviors. Current state: complete.
+
 ## 2026-08-27 — GOB lockup animates on hover
 
 Every shared `MatterLogo` placement now swaps the static GOB mark for the matching dark/paper

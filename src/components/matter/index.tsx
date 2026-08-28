@@ -46,16 +46,16 @@ export function MatterLogo({
       >
         <img
           src={asset}
-          alt="ADHX"
-          style={imageStyle}
+          alt=""
+          aria-hidden
+          style={{ ...imageStyle, clipPath: 'inset(0 60% 0 0)' }}
           className="absolute inset-0 block w-auto transition-opacity duration-100 group-hover/logo:opacity-0"
         />
         <img
           src={asset}
-          alt=""
-          aria-hidden
+          alt="ADHX"
           style={{ ...imageStyle, clipPath: 'inset(0 0 0 40%)' }}
-          className="pointer-events-none absolute inset-0 block w-auto opacity-0 transition-opacity duration-100 group-hover/logo:opacity-100"
+          className="pointer-events-none absolute inset-0 block w-auto"
         />
         <img
           src={loader}

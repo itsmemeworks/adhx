@@ -85,13 +85,20 @@ describe('fetchArticleMarkdown', () => {
   })
 
   it('returns null when the payload has no article body', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ article: { title: 'Just a title' } }),
-      }),
-    )
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ article: { title: 'Just a title', content: 'Body now ready.' } }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
     await expect(fetchArticleMarkdown('bob', '2')).resolves.toBeNull()
+    await expect(fetchArticleMarkdown('bob', '2')).resolves.toBe('Body now ready.')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })
