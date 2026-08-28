@@ -4,6 +4,7 @@ import { Archive as ArchiveIcon } from 'lucide-react'
 import { StageGlass } from './StageGlass'
 import { StageIconButton } from './stage-primitives'
 import type { TheaterPersonalChrome } from './types'
+import { cn } from '@/lib/utils'
 
 /** Same glass as Download / Link, distinguished by a clay border — not a filled CTA. */
 const DESKTOP_OUTLINE =
@@ -18,16 +19,18 @@ const DESKTOP_OUTLINE =
 export function TheaterCollectionActions({
   collection,
   variant,
+  className,
 }: {
   collection: TheaterPersonalChrome
   variant: 'desktop' | 'mobile'
+  className?: string
 }) {
   if (variant === 'mobile') {
     return (
       <StageIconButton
         onClick={() => collection.onDone()}
         aria-label="Archive"
-        className="border-clay"
+        className={cn('border-clay', className)}
         data-theater-action="archive"
       >
         <ArchiveIcon size={16} />

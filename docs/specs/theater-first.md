@@ -72,8 +72,9 @@ TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top ba
                            + `DesktopDock` (in-flow bottom dock: two-row 3-col transport —
                            prev / play-pause / next over expand / repeat / mute — +
                            horizontal filmstrip queue auto-scrolled to keep current visible + "Queue" panel (`Q` toggles; ↑/↓ traverse while open; Esc / click away closes))
-TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, peek bar with transport + audio +
-                           de-clutter, swipe up/down navigation, 70%-of-theater Up-next bottom sheet
+TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, a bounded right-side thumb zone
+                           with swipe up/down + subtle focus/repeat/playback/audio controls (hidden in focus mode), and a
+                           control bar with contextual post actions + Queue. 70%-of-theater Up-next bottom sheet
                            (clipped; does not auto-focus a row on open).
                            Read/Watch is icon-only on the left of the action row (book / TV).
                            Tap video/photo hides chrome and starts playback; tap again restores
@@ -155,7 +156,7 @@ Rendering lives in one place: `TheaterLinkedText` (`src/components/theater/Theat
 
 ## 8. Mobile
 
-- `/` signed-out on mobile = the reel: brand on the top scrim (no close button — it's home), progress bar, caption + meta on the bottom scrim, Send primary + Save + share-link, Up-next bottom sheet (peek with pulsing audio button while muted → swipe up for the list with the seen divider). Swipe video up/down = next/prev; audio toggle via peek-bar button. Evolves `/trending/play` rather than duplicating it — `/trending/play` redirects into the theater.
+- `/` signed-out on mobile = the reel: brand on the top scrim (no close button — it's home), progress bar, caption + meta on the bottom scrim, and an Up-next bottom sheet. A right-side thumb zone handles swipe up/down = next/prev without taking over article scrolling, album gestures, links, or embeds across the rest of the stage. Subtle focus, repeat, play/pause, mute/unmute, up, and down buttons live in that zone, with up = previous and down = next together below mute plus a two-column fallback for short landscape viewports. Repeat-off keeps session back-history for rewatching the post just left; a direct post landing visibly starts at Repeat one, where non-video playback stays visible but disabled. Focus makes hidden chrome inert while invisible swipes stay active, and tapping the zone restores it. The control bar puts Queue/count on the left and plain themed post-action icons on the right; those actions stay level with Queue and follow the row upward when the playlist expands. Evolves `/trending/play` rather than duplicating it — `/trending/play` redirects into the theater.
 - Non-video posts in the mobile feed render their stage variants full-screen (text typeset large; article cover splash → reader).
 - Tap targets ≥ 44px. No fake status bar or keyboard chrome.
 

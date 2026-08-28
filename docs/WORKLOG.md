@@ -6,6 +6,19 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-28 — Mobile theater gains thumb-first controls
+
+The mobile theater now has a bounded right-side gesture zone: swipe up for next and down for
+previous without taking over article scrolling, albums, links, or embeds across the rest of the
+stage. Subtle 48px focus, repeat, play/pause, mute/unmute, up, and down controls sit at thumb
+height, with up=previous and down=next grouped below mute; direct post landings visibly start at Repeat one.
+Repeat-off keeps bounded session back-history so up can rewatch a departed post. Repeated
+text/photo posts retain a disabled playback button so changing repeat mode does not shift the rail.
+Focus fades the rail and post actions while invisible swipes stay active, and tapping the zone
+restores the chrome. Queue/count sits left in the collapsed bar; plain themed Send/Copy,
+Save/Tag/Archive, Share, and Open icons align right. Gesture thresholds reject taps, horizontal
+drags, and slow holds. Focused tests, typecheck, formatting, and lint pass.
+
 ## 2026-08-28 — Open-source repo adopts meme-lord positioning
 
 The public GitHub description and README now lead with the same meme-saving and shareable-
