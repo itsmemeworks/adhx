@@ -258,6 +258,7 @@ export function TheaterMobileChrome({
   // 10s dwell as Live for photo/text/quote/article.
   const mediaKind = progressKindFor(current, articleMode)
   const progressKind = progressKindForPin(mediaKind, repeatCurrent)
+  const playbackControlDisabled = mediaKind !== 'video' && progressKind === 'none'
 
   // Pause/play button state. `'video'`-kind items mirror StageVideo's real
   // playing state (so the peek-bar button, or an autoplay retry, keeps the
@@ -813,12 +814,14 @@ export function TheaterMobileChrome({
                 {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
               </button>
             ) : null}
-            {(mediaKind === 'video' || progressKind !== 'none') && (
+            {(mediaKind === 'video' || progressKind !== 'none' || (repeatCurrent && current)) && (
               <button
                 type="button"
+                disabled={playbackControlDisabled}
+                aria-disabled={playbackControlDisabled}
                 onClick={handleTogglePause}
                 aria-label={paused ? 'Play' : 'Pause'}
-                className={THUMB_CONTROL_BTN}
+                className={cn(THUMB_CONTROL_BTN, playbackControlDisabled && 'opacity-35')}
               >
                 {paused ? (
                   <Play size={20} fill="currentColor" />

@@ -658,6 +658,15 @@ describe('TheaterMobileChrome: thumb controls and swipe zone', () => {
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
   })
 
+  it('keeps the playback control visible but disabled for a repeated text post', () => {
+    render(<TheaterMobileChrome {...base} current={textItem()} repeatCurrent repeatMode="one" />)
+
+    const pause = screen.getByRole('button', { name: 'Pause' })
+    expect(pause).toBeDisabled()
+    expect(pause).toHaveAttribute('aria-disabled', 'true')
+    expect(pause.className).toContain('opacity-35')
+  })
+
   it('advertises only the swipe directions that are available at queue boundaries', () => {
     const { rerender } = render(
       <TheaterMobileChrome {...base} current={videoItem()} canPrev={false} canNext />,

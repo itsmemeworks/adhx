@@ -1340,6 +1340,24 @@ export function TheaterShell({
   itemsRef.current = displayItems
   const lensItemsRef = useRef(lensItems)
   lensItemsRef.current = lensItems
+  const backHistoryRef = useRef<string[]>([])
+  const rememberCurrentForBack = useCallback(
+    (key: string | null) => {
+      if (
+        !key ||
+        !liveOrdering ||
+        loop ||
+        repeatModeRef.current !== 'off' ||
+        key === sharedItemKey
+      ) {
+        return
+      }
+      const history = backHistoryRef.current
+      if (history.at(-1) !== key) history.push(key)
+      if (history.length > 100) history.splice(0, history.length - 100)
+    },
+    [liveOrdering, loop, sharedItemKey],
+  )
   const fullQueue = () =>
     itemsRef.current.length > 0 ? itemsRef.current : sortNewestFirst(lensItemsRef.current)
   // Read fresh inside goNext/goPrev (empty-deps callbacks) without
@@ -1553,7 +1571,16 @@ export function TheaterShell({
   // Repeat 'all' navigates exactly like collection mode's loop: both
   // chevrons stay enabled whenever anything is current (round 8).
   const wrapNav = loop || effectiveRepeatMode === 'all'
-  const canPrev = wrapNav ? currentIndex !== -1 : computeCanPrev(currentIndex, waiting)
+  const hasRewatchHistory =
+    liveOrdering &&
+    !loop &&
+    effectiveRepeatMode === 'off' &&
+    backHistoryRef.current.some(
+      (key) => key !== currentKey && lensItems.some((item) => theaterItemKey(item) === key),
+    )
+  const canPrev = wrapNav
+    ? currentIndex !== -1
+    : hasRewatchHistory || computeCanPrev(currentIndex, waiting)
   const canNext = wrapNav ? currentIndex !== -1 : computeCanNext(currentIndex, waiting)
 
   // Read fresh inside the `theater-advance` listener below without
@@ -1624,6 +1651,23 @@ export function TheaterShell({
       return
     }
     const key = currentKeyRef.current
+    if (liveOrdering && !loop && repeatModeRef.current === 'off') {
+      while (backHistoryRef.current.length > 0) {
+        const previousKey = backHistoryRef.current.pop()
+        if (
+          !previousKey ||
+          previousKey === key ||
+          !lensItemsRef.current.some((item) => theaterItemKey(item) === previousKey)
+        ) {
+          continue
+        }
+        hasNavigatedRef.current = true
+        releaseSharedLeadIfLeaving(key, previousKey)
+        currentKeyRef.current = previousKey
+        setCurrentKey(previousKey)
+        return
+      }
+    }
     const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
     const prev = computeLoopedPrev(
       itemsRef.current.length,
@@ -1636,7 +1680,7 @@ export function TheaterShell({
     releaseSharedLeadIfLeaving(key, prevKey)
     currentKeyRef.current = prevKey
     setCurrentKey(prevKey)
-  }, [loop, releaseSharedLeadIfLeaving])
+  }, [liveOrdering, loop, releaseSharedLeadIfLeaving])
 
   const onSelect = useCallback(
     (key: string) => {
@@ -1657,6 +1701,7 @@ export function TheaterShell({
   // auto-arrival effect) calls them directly and must NEVER clear the pin.
   const goNextUser = useCallback(() => {
     const leaving = currentKeyRef.current
+    rememberCurrentForBack(leaving)
     if (leaving) {
       seenSet.markSeen(leaving)
     }
@@ -1665,7 +1710,7 @@ export function TheaterShell({
     parkedUnplayedKeyRef.current = null
     clearSharedPin()
     goNext()
-  }, [clearSharedPin, goNext, seenSet.markSeen])
+  }, [clearSharedPin, goNext, rememberCurrentForBack, seenSet.markSeen])
 
   const goPrevUser = useCallback(() => {
     parkedUnplayedKeyRef.current = null
@@ -1892,6 +1937,7 @@ export function TheaterShell({
       }
       if (progressKindFor(currentRef.current, articleMode) !== 'timed') return
       const leaving = currentKeyRef.current
+      rememberCurrentForBack(leaving)
       if (leaving) {
         seenSet.markSeen(leaving)
       }
@@ -1899,7 +1945,14 @@ export function TheaterShell({
     }
     window.addEventListener('theater-advance', handleAdvance)
     return () => window.removeEventListener('theater-advance', handleAdvance)
-  }, [goNext, isCollectionTab, articleMode, personalAdvanceOnEnded, seenSet.markSeen])
+  }, [
+    goNext,
+    isCollectionTab,
+    articleMode,
+    personalAdvanceOnEnded,
+    rememberCurrentForBack,
+    seenSet.markSeen,
+  ])
 
   // Prefetch at most one item ahead (extracted to useTheaterPrefetch.ts).
   useTheaterPrefetch(currentIndex, displayItems)
@@ -2378,6 +2431,7 @@ export function TheaterShell({
                     return
                   }
                   const leaving = currentKeyRef.current
+                  rememberCurrentForBack(leaving)
                   if (leaving) {
                     seenSet.markSeen(leaving)
                   }

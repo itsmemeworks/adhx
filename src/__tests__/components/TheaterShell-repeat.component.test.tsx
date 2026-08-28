@@ -176,6 +176,19 @@ describe('TheaterShell: repeat is a remembered switch', () => {
     expect(items.map((i) => i.bookmarkId)).toEqual(['2', '3', '1'])
   })
 
+  it('can go back to rewatch the previous post while repeat is off', async () => {
+    render(<TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} />)
+    expect((chromeProps().current as TheaterItem).bookmarkId).toBe('1')
+    expect(chromeProps().canPrev).toBe(false)
+
+    await act(async () => (chromeProps().onNext as () => void)())
+    expect((chromeProps().current as TheaterItem).bookmarkId).toBe('2')
+    expect(chromeProps().canPrev).toBe(true)
+
+    await act(async () => (chromeProps().onPrev as () => void)())
+    expect((chromeProps().current as TheaterItem).bookmarkId).toBe('1')
+  })
+
   it('shrinks the denominator to the unwatched run when most posts were already watched', async () => {
     // Two of three watched before this session started.
     window.localStorage.setItem(
