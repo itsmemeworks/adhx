@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.68.0](https://github.com/itsmemeworks/adhx/compare/v1.67.2...v1.68.0) (2026-08-28)
+
+
+### Features
+
+* add thumb-first mobile theater controls ([#463](https://github.com/itsmemeworks/adhx/issues/463)) ([8cd27f4](https://github.com/itsmemeworks/adhx/commit/8cd27f4497864d4336aea6770c1275f552d5a22c))
+
 ## [1.67.2](https://github.com/itsmemeworks/adhx/compare/v1.67.1...v1.67.2) (2026-08-28)
 
 
