@@ -12,6 +12,11 @@ describe('MatterLogo', () => {
     const logo = screen.getByAltText('ADHX')
     expect(logo).toHaveAttribute('src', '/logo-dark.png')
     expect(logo).toHaveStyle({ height: '32px' })
+    expect(logo).toHaveStyle({ clipPath: 'inset(0 0 0 40%)' })
+    expect(logo).not.toHaveClass('opacity-0', 'transition-opacity')
+    expect(container.querySelector('img[aria-hidden="true"][src="/logo-dark.png"]')).toHaveClass(
+      'group-hover/logo:opacity-0',
+    )
     expect(container.querySelector('img[src="/gob-loader.svg"]')).toBeInTheDocument()
   })
 
