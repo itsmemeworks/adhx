@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-28 — Open-source repo adopts meme-lord positioning
+
+The public GitHub description and README now lead with the same meme-saving and shareable-
+playlist pitch as the site metadata, while the README keeps its detailed product and
+self-hosting explanation. Repository topics now include memes and playlists. Current state:
+complete.
+
 ## 2026-08-28 — Homepage metadata gets meme-lord copy
 
 The default HTML, Open Graph, and Twitter descriptions now use one shared line about saving

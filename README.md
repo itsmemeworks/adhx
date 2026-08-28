@@ -7,6 +7,8 @@
 
 > **Save it. Lose it. Find it.**
 
+Stop saying "wait, I had the perfect meme for this." Save your favorites, build shareable playlists, and become the meme lord your group chat deserves.
+
 Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram images and Reels, TikTok, or YouTube Shorts** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
 
 ADHX is for the links you meant to come back to: one place to watch them, search them, tag them, archive them, or turn a tag into a public playlist. It is open source and self-hostable, with your saves stored in a SQLite file you own.
