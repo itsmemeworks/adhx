@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.67.2](https://github.com/itsmemeworks/adhx/compare/v1.67.1...v1.67.2) (2026-08-28)
+
+
+### Documentation
+
+* align repository with meme-lord positioning ([#461](https://github.com/itsmemeworks/adhx/issues/461)) ([b005d9c](https://github.com/itsmemeworks/adhx/commit/b005d9ca1b790386a670f5a26fad54989670b396))
+
 ## [1.67.1](https://github.com/itsmemeworks/adhx/compare/v1.67.0...v1.67.1) (2026-08-28)
 
 
