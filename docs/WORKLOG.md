@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-08-28 — Homepage metadata gets meme-lord copy
+
+The default HTML, Open Graph, and Twitter descriptions now use one shared line about saving
+memes, building shareable playlists, and becoming the group chat's meme lord. This replaces
+the older feature-list copy and keeps every homepage preview surface in sync. Current state:
+complete.
+
 ## 2026-08-27 — Article retry and logo hover layers hardened
 
 Metadata-only article responses no longer poison the shared body cache, so a later read/copy
