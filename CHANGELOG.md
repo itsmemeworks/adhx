@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.67.1](https://github.com/itsmemeworks/adhx/compare/v1.67.0...v1.67.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* preserve article retries and logo wordmark ([#458](https://github.com/itsmemeworks/adhx/issues/458)) ([deae297](https://github.com/itsmemeworks/adhx/commit/deae29771d5f63b58be8b57ea11a703e9240105e))
+
 ## [1.67.0](https://github.com/itsmemeworks/adhx/compare/v1.66.2...v1.67.0) (2026-08-27)
 
 
