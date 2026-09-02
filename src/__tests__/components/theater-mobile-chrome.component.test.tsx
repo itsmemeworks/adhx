@@ -665,7 +665,8 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(zone.className).toContain('w-20')
     expect(zone.className).toContain('env(safe-area-inset-bottom)')
     const capsule = zone.querySelector('[data-theater-swipe-control]')
-    expect(capsule).toHaveClass('rounded-full', 'divide-y')
+    expect(capsule).toHaveClass('rounded-full')
+    expect(capsule).not.toHaveClass('divide-y')
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
   })
 

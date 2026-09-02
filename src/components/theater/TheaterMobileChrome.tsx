@@ -742,7 +742,7 @@ export function TheaterMobileChrome({
             inert={declutter}
             data-theater-swipe-control
             className={cn(
-              'absolute bottom-2 right-3 flex h-28 w-12 flex-col overflow-hidden rounded-full border border-white/20 bg-black/35 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.28)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out divide-y divide-white/15 [@media(max-height:520px)]:h-20',
+              'absolute bottom-2 right-3 flex h-28 w-12 flex-col overflow-hidden rounded-full border border-white/20 bg-black/35 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.28)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
               declutter && 'pointer-events-none scale-95 opacity-0',
             )}
           >
