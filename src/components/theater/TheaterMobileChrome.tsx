@@ -701,7 +701,7 @@ export function TheaterMobileChrome({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open on ${platformLabel}`}
-                    className={cn(RAIL_ACTION_BTN, 'order-4')}
+                    className={cn(RAIL_ACTION_BTN, 'order-first')}
                     data-theater-action="open"
                     onClick={() =>
                       pingAnalytic('post.open', {

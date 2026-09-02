@@ -607,6 +607,7 @@ describe('TheaterMobileChrome: Open action uses the source platform glyph', () =
     )
     const open = screen.getByRole('link', { name: 'Open on X' })
     expect(open).toHaveAttribute('href', 'https://x.com/alice/status/1')
+    expect(open.className).toContain('order-first')
     expect(open.querySelector('svg')).toBeInTheDocument()
     expect(screen.queryByLabelText(/Added to ADHX/)).not.toBeInTheDocument()
   })
