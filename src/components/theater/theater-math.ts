@@ -167,11 +167,10 @@ export function pinKeySecond<
 /** Theater type pills, in the order they render. Empty selection = all types. */
 export const THEATER_QUEUE_TYPES: ContentType[] = ['video', 'photo', 'text', 'article']
 
-export const THEATER_QUEUE_TYPE_PILLS: { id: ContentType; label: string }[] = [
-  { id: 'video', label: 'Videos' },
-  { id: 'photo', label: 'Photos' },
-  { id: 'text', label: 'Text' },
-  { id: 'article', label: 'Articles' },
+export const THEATER_QUEUE_TYPE_PILLS: { types: readonly ContentType[]; label: string }[] = [
+  { types: ['video'], label: 'Videos' },
+  { types: ['photo'], label: 'Photos' },
+  { types: ['text', 'article'], label: 'Text' },
 ]
 
 const QUEUE_TYPE_SET = new Set<string>(THEATER_QUEUE_TYPES)
@@ -223,6 +222,29 @@ export function toggleTheaterQueueType(
   return orderedQueueTypes(next)
 }
 
+/** Visual pill state when one control represents one or more stored content types. */
+export function theaterQueueTypePillState(
+  selected: readonly ContentType[],
+  types: readonly ContentType[],
+): boolean | 'mixed' {
+  const selectedCount = types.filter((type) => selected.includes(type)).length
+  if (selectedCount === 0) return false
+  if (selectedCount === types.length) return true
+  return 'mixed'
+}
+
+/**
+ * Types a grouped pill should toggle. A partial legacy selection completes
+ * the group; a fully selected group turns every member off.
+ */
+export function theaterQueueTypePillToggleTargets(
+  selected: readonly ContentType[],
+  types: readonly ContentType[],
+): ContentType[] {
+  const allSelected = types.every((type) => selected.includes(type))
+  return allSelected ? [...types] : types.filter((type) => !selected.includes(type))
+}
+
 /**
  * Keep only the selected types. `keepKey` (the shared-preview lead)
  * stays even when its type is filtered out, so a pasted tweet isn't yanked
@@ -268,7 +290,9 @@ export function queueTypesForAddedItem(
 
 function selectedQueueTypeLabels(selected: readonly ContentType[]): string[] {
   const allow = new Set(orderedQueueTypes(selected))
-  return THEATER_QUEUE_TYPE_PILLS.filter((p) => allow.has(p.id)).map((p) => p.label)
+  return THEATER_QUEUE_TYPE_PILLS.filter((pill) => pill.types.some((type) => allow.has(type))).map(
+    (pill) => pill.label,
+  )
 }
 
 /** Tooltip / empty-state copy for an active type filter. */

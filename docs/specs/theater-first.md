@@ -65,8 +65,8 @@ TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top ba
                            paste button (expands into the preview field; ⌘V still
                            works globally — signed-in Live / Saved add in
                            place and stay on the tab; playlist has no paste); flame chip left of paste
-                           on every post type; Live / Saved type pills (All / Videos / Photos / Text /
-                           Articles) live in Queue (omitted on playlists);
+                           on every post type; Live / Saved type pills (All / Videos / Photos /
+                           Text, where Text includes articles) live in Queue (omitted on playlists);
                            bottom-left meta overlay
                            for video/photo; bottom-right actions — Open is the source platform glyph)
                            + `DesktopDock` (in-flow bottom dock: two-row 3-col transport —

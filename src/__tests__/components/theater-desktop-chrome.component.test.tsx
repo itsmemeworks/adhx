@@ -442,14 +442,18 @@ describe('DesktopDock', () => {
     const all = screen.getByRole('button', { name: 'All' })
     const videos = screen.getByRole('button', { name: 'Videos' })
     const photos = screen.getByRole('button', { name: 'Photos' })
+    const text = screen.getByRole('button', { name: 'Text' })
     expect(all).toHaveAttribute('aria-pressed', 'true')
     expect(videos).toHaveAttribute('aria-pressed', 'false')
     expect(photos).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Articles' })).toBeInTheDocument()
+    expect(text).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Articles' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Quotes' })).not.toBeInTheDocument()
     fireEvent.click(videos)
     expect(onToggleQueueType).toHaveBeenCalledWith('video')
+    onToggleQueueType.mockClear()
+    fireEvent.click(text)
+    expect(onToggleQueueType.mock.calls).toEqual([['text'], ['article']])
 
     rerender(
       <DesktopDock

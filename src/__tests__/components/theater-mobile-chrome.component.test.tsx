@@ -371,15 +371,19 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     )
     const videos = screen.getByRole('button', { name: 'Videos' })
     const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const text = screen.getByRole('button', { name: 'Text' })
     expect(videos).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Photos' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Articles' })).toBeInTheDocument()
+    expect(text).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Articles' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Quotes' })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Playlist filter' }).contains(paste)).toBe(false)
     fireEvent.click(videos)
     expect(onToggleQueueType).toHaveBeenCalledWith('video')
+    onToggleQueueType.mockClear()
+    fireEvent.click(text)
+    expect(onToggleQueueType.mock.calls).toEqual([['text'], ['article']])
 
     rerender(
       <TheaterMobileChrome
@@ -1291,10 +1295,13 @@ describe('TheaterMobileChrome: queue count label', () => {
       'true',
     )
     expect(screen.getByRole('button', { name: 'Photos, 1' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Text, 1' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Articles, 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Text, 2' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Articles, 1' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Photos, 1' }))
     expect(onToggleQueueType).toHaveBeenCalledWith('photo')
+    onToggleQueueType.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Text, 2' }))
+    expect(onToggleQueueType.mock.calls).toEqual([['text'], ['article']])
   })
 
   it('restores the quick-filter trigger when filtering advances the staged post', async () => {
@@ -1320,6 +1327,27 @@ describe('TheaterMobileChrome: queue count label', () => {
 
     await waitFor(() => expect(trigger).toHaveFocus())
     expect(screen.queryByRole('group', { name: 'Quick post filters' })).not.toBeInTheDocument()
+  })
+
+  it('focuses the grouped Text option for a partial legacy article selection', () => {
+    const item = textItem({ contentType: 'article' })
+    render(
+      <TheaterMobileChrome
+        {...base}
+        items={[item]}
+        typeFilterItems={[item]}
+        current={item}
+        currentKey={theaterItemKey(item)}
+        queueTypes={['article']}
+        onToggleQueueType={vi.fn()}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick filter posts' }))
+    const text = screen.getByRole('button', { name: 'Text, 1' })
+    expect(text).toHaveAttribute('aria-pressed', 'mixed')
+    expect(text).toHaveFocus()
   })
 
   it('playlist mode keeps the pile size in the peek bar; the tag lives in the expanded sheet', () => {

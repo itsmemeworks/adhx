@@ -67,6 +67,8 @@ import { TheaterQueueFilter } from './TheaterQueueFilter'
 import {
   isTheaterQueueFilterActive,
   theaterQueueFilterLabel,
+  theaterQueueTypePillState,
+  theaterQueueTypePillToggleTargets,
   THEATER_QUEUE_TYPE_PILLS,
 } from './theater-math'
 import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
@@ -328,7 +330,10 @@ export function TheaterMobileChrome({
       ) ?? []),
     ]
     const initial =
-      options().find((option) => option.getAttribute('aria-pressed') === 'true') ?? options()[0]
+      options().find((option) => {
+        const pressed = option.getAttribute('aria-pressed')
+        return pressed === 'true' || pressed === 'mixed'
+      }) ?? options()[0]
     initial?.focus({ preventScroll: true })
 
     const onPointerDown = (event: PointerEvent) => {
@@ -451,9 +456,7 @@ export function TheaterMobileChrome({
       )
     : null
   const quickFilterItems = typeFilterItems ?? items
-  const quickTypeCounts = new Map<ContentType, number>(
-    THEATER_QUEUE_TYPE_PILLS.map((pill) => [pill.id, 0]),
-  )
+  const quickTypeCounts = new Map<ContentType, number>()
   for (const item of quickFilterItems) {
     const itemType = inferType(item)
     quickTypeCounts.set(itemType, (quickTypeCounts.get(itemType) ?? 0) + 1)
@@ -904,15 +907,24 @@ export function TheaterMobileChrome({
             <span className="tabular-nums opacity-70">{quickFilterItems.length}</span>
           </button>
           {THEATER_QUEUE_TYPE_PILLS.map((pill) => {
-            const selected = queueTypes.includes(pill.id)
+            const pressed = theaterQueueTypePillState(queueTypes, pill.types)
+            const selected = pressed !== false
+            const count = pill.types.reduce(
+              (sum, type) => sum + (quickTypeCounts.get(type) ?? 0),
+              0,
+            )
             return (
               <button
-                key={pill.id}
+                key={pill.label}
                 type="button"
-                aria-pressed={selected}
-                aria-label={`${pill.label}, ${quickTypeCounts.get(pill.id) ?? 0}`}
+                aria-pressed={pressed}
+                aria-label={`${pill.label}, ${count}`}
                 data-quick-filter-option
-                onClick={() => onToggleQueueType(pill.id)}
+                onClick={() => {
+                  for (const type of theaterQueueTypePillToggleTargets(queueTypes, pill.types)) {
+                    onToggleQueueType(type)
+                  }
+                }}
                 onKeyDown={(event) => event.stopPropagation()}
                 className={cn(
                   'inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
@@ -920,7 +932,7 @@ export function TheaterMobileChrome({
                 )}
               >
                 <span>{pill.label}</span>
-                <span className="tabular-nums opacity-70">{quickTypeCounts.get(pill.id) ?? 0}</span>
+                <span className="tabular-nums opacity-70">{count}</span>
               </button>
             )
           })}

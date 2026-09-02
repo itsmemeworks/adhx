@@ -3,13 +3,17 @@
 /**
  * Live and Saved type multi-select. Lives in the playlist (Queue /
  * up-next sheet), not the top bar. Empty selection is All — tap any mix
- * of videos, photos, text, articles. Playlists do not mount this.
+ * of videos, photos, or text (including articles). Playlists do not mount this.
  * Persists as `adhx-theater-types`.
  */
 
 import { cn } from '@/lib/utils'
 import type { ContentType } from '@/components/matter'
-import { THEATER_QUEUE_TYPE_PILLS } from './theater-math'
+import {
+  theaterQueueTypePillState,
+  theaterQueueTypePillToggleTargets,
+  THEATER_QUEUE_TYPE_PILLS,
+} from './theater-math'
 
 const PILL = 'rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors duration-150'
 
@@ -44,16 +48,21 @@ export function TheaterQueueFilter({
         All
       </button>
       {THEATER_QUEUE_TYPE_PILLS.map((pill) => {
-        const on = selected.includes(pill.id)
+        const pressed = theaterQueueTypePillState(selected, pill.types)
+        const active = pressed !== false
         return (
           <button
-            key={pill.id}
+            key={pill.label}
             type="button"
-            aria-pressed={on}
-            onClick={() => onToggle(pill.id)}
+            aria-pressed={pressed}
+            onClick={() => {
+              for (const type of theaterQueueTypePillToggleTargets(selected, pill.types)) {
+                onToggle(type)
+              }
+            }}
             className={cn(
               PILL,
-              on ? 'bg-clay-grad text-white shadow-glow' : 'bg-inset text-ink-2 hover:text-ink',
+              active ? 'bg-clay-grad text-white shadow-glow' : 'bg-inset text-ink-2 hover:text-ink',
             )}
           >
             {pill.label}

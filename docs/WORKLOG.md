@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Theater text filter includes articles
+
+Theater filters now present three content choices: Videos, Photos, and Text. Text controls both
+plain text posts and articles, and its mobile quick-filter count combines both types. The grouped
+control supports old partial selections as a mixed state and completes them on tap. The stored
+content types remain separate, so playback and existing preferences keep their current data model.
+Current state: in flight; focused mobile, desktop, and filter-math tests pass.
+
 ## 2026-09-02 — Mobile playlist status and filtering separate
 
 The collapsed mobile playlist button now shows the number of posts that will play and a distinct
