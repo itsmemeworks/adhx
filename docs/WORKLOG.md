@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Stage author rows drop redundant platform chip
+
+Text, quote, and article stages no longer repeat the source-platform glyph beside the author.
+The existing Open action remains the platform affordance, while removing the right-edge chip
+prevents overlap with mobile theater controls. Focused author-row tests cover the simpler layout.
+Current state: in flight.
+
 ## 2026-08-28 — Mobile theater gains thumb-first controls
 
 The mobile theater now has a bounded right-side gesture zone: swipe up for next and down for
