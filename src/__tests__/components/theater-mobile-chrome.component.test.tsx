@@ -1657,6 +1657,11 @@ describe('TheaterMobileChrome: contextual Share options', () => {
     })
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
 
+    expect(screen.getByRole('button', { name: 'Share' })).toHaveClass(
+      'inline-flex',
+      'items-center',
+      'justify-center',
+    )
     openShareOptions()
     expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()
     const downloadOption = screen.getByRole('menuitem', { name: 'Download the video' })

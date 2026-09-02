@@ -146,7 +146,7 @@ export function TheaterMobileShareMenu({
         aria-label="Share"
         aria-haspopup="menu"
         aria-expanded={open}
-        className={triggerClassName}
+        className={cn('inline-flex items-center justify-center', triggerClassName)}
       >
         {linkCopied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
       </button>
