@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Theater author row drops redundant platform chip
+
+Text, quote, and article stages no longer repeat the source-platform glyph beside the author.
+The linked author identity already makes the destination clear, so the row now stays focused on
+the avatar, name, and handle. Current state: complete.
+
 ## 2026-08-28 — Mobile theater gains thumb-first controls
 
 The mobile theater now has a bounded right-side gesture zone: swipe up for next and down for
