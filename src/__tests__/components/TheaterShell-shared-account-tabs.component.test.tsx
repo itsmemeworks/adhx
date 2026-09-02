@@ -234,8 +234,8 @@ describe('TheaterShell shared-preview account tabs', () => {
 
     expect(mockDesktopChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
-    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatCurrent).toBe(false)
-    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('off')
+    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatCurrent).toBe(true)
+    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('one')
     expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
   })
 
@@ -254,8 +254,8 @@ describe('TheaterShell shared-preview account tabs', () => {
     })
     expect(mockDesktopChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
-    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatCurrent).toBe(false)
-    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('off')
+    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatCurrent).toBe(true)
+    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('one')
     expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
 
     authMe = { me: { authenticated: false }, loading: false, refresh: vi.fn() }
@@ -293,11 +293,13 @@ describe('TheaterShell shared-preview account tabs', () => {
       )
     })
     const beforeDeparture = mockMobileChrome.mock.calls.at(-1)?.[0]
-    expect(beforeDeparture?.repeatCurrent).toBe(false)
+    expect(beforeDeparture?.repeatCurrent).toBe(true)
+    expect(beforeDeparture?.repeatMode).toBe('one')
     await act(async () => {
       ;(beforeDeparture?.onNext as () => void)()
     })
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].currentKey).toBe('twitter:456')
+    expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('all')
 
     authMe = { me: { authenticated: false }, loading: false, refresh: vi.fn() }
     await act(async () => {
@@ -314,8 +316,8 @@ describe('TheaterShell shared-preview account tabs', () => {
     const afterSignOut = mockMobileChrome.mock.calls.at(-1)?.[0]
     expect(afterSignOut?.authed).toBe(false)
     expect(afterSignOut?.currentKey).toBe('twitter:456')
-    expect(afterSignOut?.repeatCurrent).toBe(false)
-    expect(afterSignOut?.repeatMode).toBe('off')
+    expect(afterSignOut?.repeatCurrent).toBe(true)
+    expect(afterSignOut?.repeatMode).toBe('all')
     expect((afterSignOut?.items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual(['456'])
   })
 

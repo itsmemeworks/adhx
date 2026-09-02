@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Direct previews hand off from Repeat one to Repeat all
+
+Every resolvable direct/shared preview now starts by looping its lead post, including signed-in
+visitors. A repeat-button tap or deliberate move to another post promotes playback to Repeat all;
+stray timed/video-ended events cannot escape the initial loop. Unavailable leads still advance
+normally. Focused repeat/auth tests and typecheck pass. Current state: complete.
+
 ## 2026-08-28 — Mobile theater gains thumb-first controls
 
 The mobile theater now has a bounded right-side gesture zone: swipe up for next and down for
