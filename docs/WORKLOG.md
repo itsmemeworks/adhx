@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Mobile Queue and Filter become one control
+
+The collapsed mobile bottom bar now presents Queue count and content-type Filter as one compact
+button because both open the same Up-next sheet. The active filter keeps its clay cue, while
+removing the redundant adjacent tap target. Current state: in flight; focused tests pass.
+
 ## 2026-09-02 — Mobile Share becomes post-aware
 
 The mobile action rail now sits immediately above the joined swipe capsule and keeps only the

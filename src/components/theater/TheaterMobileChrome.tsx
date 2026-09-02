@@ -13,7 +13,7 @@
  * instead of, the desktop `<Rail/>`).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import { useSheetDrag } from './useSheetDrag'
@@ -221,6 +221,7 @@ export function TheaterMobileChrome({
   onClearQueueTypes,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const queueControlDescriptionId = useId()
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
   const [copied, setCopied] = useState(false)
@@ -833,58 +834,59 @@ export function TheaterMobileChrome({
           </button>
 
           <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-            <div className="flex items-center">
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setSheetOpen((value) => !value)
-                }}
-                onTouchEnd={(event) => event.stopPropagation()}
-                aria-expanded={sheetOpen}
-                aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-                title={peekLabel}
-                data-theater-action="show-all"
-                className={cn(PEEK_ICON_BTN, 'relative')}
-              >
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setSheetOpen((value) => !value)
+              }}
+              onTouchEnd={(event) => event.stopPropagation()}
+              aria-expanded={sheetOpen}
+              aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+              aria-describedby={queueControlDescriptionId}
+              title={
+                onToggleQueueType && onClearQueueTypes
+                  ? filterOn
+                    ? `${peekLabel} · ${theaterQueueFilterLabel(queueTypes)}`
+                    : `${peekLabel} · Filter post types`
+                  : peekLabel
+              }
+              data-theater-action="show-all"
+              className={cn(
+                PEEK_ICON_BTN,
+                'relative',
+                onToggleQueueType && onClearQueueTypes && 'w-auto gap-2 px-2.5',
+              )}
+            >
+              <span className="relative inline-flex">
                 <List size={19} aria-hidden />
                 {queueBadge ? (
-                  <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-clay px-1 text-center text-[9px] font-bold leading-4 text-white">
+                  <span className="absolute -right-2.5 -top-2 min-w-4 rounded-full bg-clay px-1 text-center text-[9px] font-bold leading-4 text-white">
                     {queueBadge}
                   </span>
                 ) : null}
-                <span className="sr-only" data-theater-queue-count={queueCount ? '' : undefined}>
-                  {repeatCurrent ? 'On repeat' : peekLabel}
-                </span>
-              </button>
+              </span>
               {onToggleQueueType && onClearQueueTypes ? (
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setSheetOpen(true)
-                  }}
-                  onTouchEnd={(event) => event.stopPropagation()}
-                  aria-expanded={sheetOpen}
-                  aria-label="Filter queue"
-                  title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
+                <span
+                  className={cn('relative inline-flex', filterOn && 'text-clay')}
+                  aria-hidden
                   data-theater-queue-filter={filterOn ? '' : undefined}
-                  className={cn(
-                    PEEK_ICON_BTN,
-                    'relative',
-                    filterOn && 'text-clay hover:text-clay active:text-clay',
-                  )}
                 >
-                  <ListFilter size={19} aria-hidden />
+                  <ListFilter size={19} />
                   {filterOn ? (
-                    <span
-                      className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-clay"
-                      aria-hidden
-                    />
+                    <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-clay" />
                   ) : null}
-                </button>
+                </span>
               ) : null}
-            </div>
+              <span
+                id={queueControlDescriptionId}
+                className="sr-only"
+                data-theater-queue-count={queueCount ? '' : undefined}
+              >
+                {repeatCurrent ? 'On repeat' : peekLabel}
+                {filterOn ? `. Filtered to ${theaterQueueFilterLabel(queueTypes)}.` : ''}
+              </span>
+            </button>
 
             <div
               className="flex items-center gap-0.5"

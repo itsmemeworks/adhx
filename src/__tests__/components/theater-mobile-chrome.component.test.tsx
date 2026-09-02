@@ -1242,7 +1242,7 @@ describe('TheaterMobileChrome: queue count label', () => {
     expect(screen.getByText('Queue')).toBeInTheDocument()
   })
 
-  it('shows a dedicated active filter control without replacing the Queue button', () => {
+  it('combines Queue and its active type filter into one control', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -1258,18 +1258,24 @@ describe('TheaterMobileChrome: queue count label', () => {
         queueTotal={5}
       />,
     )
-    const peek = screen.getByText('5 in queue').closest('button')!
-    const filter = screen.getByRole('button', { name: 'Filter queue' })
+    const peek = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+    expect(screen.queryByRole('button', { name: 'Filter queue' })).not.toBeInTheDocument()
     expect(peek).not.toHaveAttribute('data-theater-queue-filter')
     expect(peek.querySelector('.lucide-list')).toBeInTheDocument()
-    expect(filter).toHaveAttribute('data-theater-queue-filter')
-    expect(filter).toHaveAttribute('title', 'Videos')
-    expect(filter.className).toContain('text-clay')
-    expect(filter.querySelector('.lucide-list-filter')).toBeInTheDocument()
+    expect(peek.querySelector('.lucide-list-filter')).toBeInTheDocument()
+    expect(peek.querySelector('[data-theater-queue-filter]')).toBeInTheDocument()
+    expect(peek).toHaveAttribute('title', '5 in queue · Videos')
+    expect(peek.className).toContain('w-auto')
+    expect(peek.className).toContain('gap-2')
+    const description = document.getElementById(peek.getAttribute('aria-describedby')!)
+    expect(description).toHaveTextContent('5 in queue. Filtered to Videos.')
     expect(screen.queryByText('Videos · 5')).not.toBeInTheDocument()
-    expect(filter).toHaveAttribute('aria-expanded', 'false')
-    fireEvent.click(filter)
-    expect(filter).toHaveAttribute('aria-expanded', 'true')
+    expect(peek).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(peek)
+    expect(peek).toHaveAttribute('aria-expanded', 'true')
+    peek.focus()
+    fireEvent.keyDown(peek, { key: 'ArrowDown' })
+    expect(document.querySelectorAll<HTMLElement>('[data-theater-queue-item]')[0]).toHaveFocus()
   })
 
   it('playlist mode keeps the pile size in the peek bar; the tag lives in the expanded sheet', () => {
