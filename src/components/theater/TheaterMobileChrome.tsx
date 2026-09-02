@@ -521,7 +521,7 @@ export function TheaterMobileChrome({
             {/* The poster's avatar + name — only for media posts. Text-like
                 posts (text/quote/article) show the author on the stage
                 itself, so this row stays hidden for them to avoid doubling
-                up. Caption stays two lines; Read is on the action row. */}
+                up. Tapping an expandable caption opens Read. */}
             {!textLike &&
               !articleMode &&
               (() => {
@@ -570,9 +570,8 @@ export function TheaterMobileChrome({
           </div>
 
           <div className="flex items-center gap-2">
-            {showArticleToggle && onToggleArticleMode ? (
+            {articleMode && showArticleToggle && onToggleArticleMode ? (
               <QuoteArticleToggle
-                articleMode={articleMode}
                 onToggle={onToggleArticleMode}
                 iconOnly
                 className="pointer-events-auto"

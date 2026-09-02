@@ -569,9 +569,8 @@ export function DesktopStageChrome({
         />
       )}
 
-      {/* Bottom-left: author + caption + Read. Read sits with the text
-          (not the Download/Save row) so it's obvious it's about the
-          caption. Article mode hides the caption but keeps Watch here. */}
+      {/* Bottom-left: author + tappable caption. Article mode hides the
+          caption but keeps Watch here. */}
       {current && (showMediaCaption || (showArticleToggle && onToggleArticleMode)) && (
         <div
           className={cn(
@@ -632,8 +631,8 @@ export function DesktopStageChrome({
               }
             />
           )}
-          {showArticleToggle && onToggleArticleMode ? (
-            <QuoteArticleToggle articleMode={articleMode} onToggle={onToggleArticleMode} />
+          {articleMode && showArticleToggle && onToggleArticleMode ? (
+            <QuoteArticleToggle onToggle={onToggleArticleMode} />
           ) : null}
         </div>
       )}

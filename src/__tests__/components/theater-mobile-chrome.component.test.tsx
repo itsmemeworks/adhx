@@ -127,7 +127,7 @@ describe('TheaterMobileChrome: caption', () => {
     expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
   })
 
-  it('puts Read on the left of the action row, under the caption', () => {
+  it('opens Read from the caption without a separate reading button', () => {
     const onToggle = vi.fn()
     render(
       <TheaterMobileChrome
@@ -139,10 +139,7 @@ describe('TheaterMobileChrome: caption', () => {
       />,
     )
     const caption = screen.getByText('a caption for the video')
-    const read = screen.getByRole('button', { name: /^Read$/ })
-    expect(caption.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(read.nextElementSibling?.className).toContain('fixed')
-    expect(read).not.toHaveTextContent('Read')
+    expect(screen.queryByRole('button', { name: /^Read$/ })).not.toBeInTheDocument()
     fireEvent.click(caption)
     expect(onToggle).toHaveBeenCalledTimes(1)
   })

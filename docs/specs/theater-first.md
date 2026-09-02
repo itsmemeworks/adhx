@@ -76,7 +76,7 @@ TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, a bounded ri
                            with swipe up/down + subtle focus/repeat/playback/audio controls (hidden in focus mode), and a
                            control bar with contextual post actions + Queue. 70%-of-theater Up-next bottom sheet
                            (clipped; does not auto-focus a row on open).
-                           Read/Watch is icon-only on the left of the action row (book / TV).
+                           Tap the caption for Read; Read mode keeps an icon-only Watch control.
                            Tap video/photo hides chrome and starts playback; tap again restores
                            overlays without pausing (Space / peek-bar own pause).
 UpNextList.tsx           — feed rows, seen divider, "next ↓" highlight

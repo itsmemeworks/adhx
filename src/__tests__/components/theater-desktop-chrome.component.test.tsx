@@ -974,7 +974,7 @@ describe('DesktopStageChrome', () => {
     expect(screen.queryByRole('button', { name: 'Read' })).not.toBeInTheDocument()
   })
 
-  it('keeps the media caption on a video+quote item and offers Read', () => {
+  it('opens a video+quote item from its caption without a separate Read button', () => {
     const onToggleArticleMode = vi.fn()
     render(
       <DesktopStageChrome
@@ -986,11 +986,10 @@ describe('DesktopStageChrome', () => {
       />,
     )
     const caption = screen.getByText('a caption for the video')
-    const read = screen.getByRole('button', { name: /^Read$/ })
-    expect(caption.compareDocumentPosition(read) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Read$/ })).not.toBeInTheDocument()
     fireEvent.click(caption)
     expect(onToggleArticleMode).toHaveBeenCalledTimes(1)
-    fireEvent.click(read)
+    fireEvent(window, new Event('theater-toggle-article'))
     expect(onToggleArticleMode).toHaveBeenCalledTimes(2)
   })
 

@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Theater captions become the only Read affordance
+
+Desktop and mobile no longer render a separate Read button beside expandable media captions;
+tapping the caption already opens the same reading view. Read mode still keeps the TV-shaped
+Watch control so viewers can return to full-bleed playback. Focused chrome tests cover both
+states. Current state: in flight.
+
 ## 2026-09-02 — Stage author rows drop redundant platform chip
 
 Text, quote, and article stages no longer repeat the source-platform glyph beside the author.

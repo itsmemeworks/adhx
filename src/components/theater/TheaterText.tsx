@@ -369,6 +369,8 @@ export interface TheaterLinkedTextProps {
    * are a two-line overlay, not a reading surface.
    */
   bionic?: boolean
+  /** Render URLs and mentions as plain text when the whole caption is a button. */
+  linkify?: boolean
 }
 
 /**
@@ -398,6 +400,7 @@ export function TheaterLinkedText({
   hideTweetLinks,
   platform = 'twitter',
   bionic,
+  linkify = true,
 }: TheaterLinkedTextProps) {
   const { preferences } = usePreferences()
   const applyBionic = bionic ?? preferences.bionicReading
@@ -410,6 +413,7 @@ export function TheaterLinkedText({
         if (segment.type === 'anchor' || (segment.type === 'mention' && segment.href)) {
           const href = segment.type === 'anchor' ? segment.href : (segment.href as string)
           const label = segment.type === 'anchor' ? segment.label : `@${segment.handle}`
+          if (!linkify) return <span key={segIndex}>{label}</span>
           return (
             <a
               key={segIndex}
