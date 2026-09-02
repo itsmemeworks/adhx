@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Theater sound preference persists across sessions
+
+Settings now offers **Sound on by default**. Account users persist it through `/api/preferences`;
+the browser caches the default in `localStorage`, and a tab's explicit mute/unmute remains the
+session override. Theater waits for account preferences without a hydration mismatch, starts
+audible playback when allowed, and retries unmuting on the next stage tap when mobile autoplay
+policy blocks the fresh page. The saved preference is never downgraded by that browser fallback.
+Focused component tests cover server load, browser fallback, session precedence, and tap retry.
+Current state: in flight.
+
 ## 2026-08-28 — Mobile theater gains thumb-first controls
 
 The mobile theater now has a bounded right-side gesture zone: swipe up for next and down for

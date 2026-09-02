@@ -2,6 +2,12 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import type { AvatarSource } from '@/lib/avatar/generated-avatar'
+import {
+  readStoredSoundPreference,
+  THEATER_SOUND_DEFAULT_STORAGE_KEY,
+  THEATER_SOUND_SESSION_STORAGE_KEY,
+  writeStoredSoundPreference,
+} from '@/lib/theater/sound-preference'
 
 export type BodyFont = 'ibm-plex' | 'inter' | 'lexend' | 'atkinson'
 export type { AvatarSource }
@@ -29,6 +35,7 @@ interface Preferences {
   bionicReading: boolean
   bodyFont: BodyFont
   avatarSource: AvatarSource
+  soundOn: boolean
 }
 
 interface PreferencesContextType {
@@ -41,6 +48,7 @@ const defaultPreferences: Preferences = {
   bionicReading: false,
   bodyFont: 'ibm-plex',
   avatarSource: 'x',
+  soundOn: false,
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -52,6 +60,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   // Fetch preferences on mount (only if authenticated)
   useEffect(() => {
     async function fetchPreferences() {
+      const localSoundOn = readStoredSoundPreference(
+        localStorage,
+        THEATER_SOUND_DEFAULT_STORAGE_KEY,
+      )
       try {
         // Check auth status first to avoid 401 on landing page. /api/auth/me
         // (not the X-only /api/auth/twitter/status) so email-only accounts
@@ -60,6 +72,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         const authData = await authResponse.json()
 
         if (!authData.authenticated) {
+          if (localSoundOn !== null) {
+            setPreferences((current) => ({ ...current, soundOn: localSoundOn }))
+          }
           setLoading(false)
           return
         }
@@ -67,14 +82,22 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         const response = await fetch('/api/preferences')
         if (response.ok) {
           const data = await response.json()
+          const soundOn = data.soundOn === 'true'
+          writeStoredSoundPreference(localStorage, THEATER_SOUND_DEFAULT_STORAGE_KEY, soundOn)
           setPreferences({
             bionicReading: data.bionicReading === 'true',
             bodyFont: (data.bodyFont as BodyFont) || 'ibm-plex',
             avatarSource: data.avatarSource === 'generated' ? 'generated' : 'x',
+            soundOn,
           })
+        } else if (localSoundOn !== null) {
+          setPreferences((current) => ({ ...current, soundOn: localSoundOn }))
         }
       } catch (error) {
         console.error('Failed to fetch preferences:', error)
+        if (localSoundOn !== null) {
+          setPreferences((current) => ({ ...current, soundOn: localSoundOn }))
+        }
       } finally {
         setLoading(false)
       }
@@ -101,6 +124,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         if (!response.ok) {
           throw new Error('Failed to update preference')
         }
+        if (key === 'soundOn' && typeof value === 'boolean') {
+          writeStoredSoundPreference(localStorage, THEATER_SOUND_DEFAULT_STORAGE_KEY, value)
+          writeStoredSoundPreference(sessionStorage, THEATER_SOUND_SESSION_STORAGE_KEY, value)
+        }
       } catch (error) {
         console.error('Failed to update preference:', error)
         // Revert on error
@@ -123,4 +150,8 @@ export function usePreferences() {
     throw new Error('usePreferences must be used within a PreferencesProvider')
   }
   return context
+}
+
+export function usePreferencesOptional() {
+  return useContext(PreferencesContext)
 }
