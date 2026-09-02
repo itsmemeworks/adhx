@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Mobile Share becomes post-aware
+
+The mobile action rail now sits immediately above the joined swipe capsule and keeps only the
+primary Save/Tag/Archive, Share, and Open controls visible. Share opens a focused menu derived
+from the staged post: Copy text/article when present, Download and native file Share for
+sendable video/photo media, and Share link for every post. Explicit downloads use attachment
+endpoints so iOS saves rather than opening inline playback. The menu roves focus, restores its
+trigger, and blocks theater shortcuts while open. Current state: in flight; focused tests pass.
+
 ## 2026-09-02 — Mobile Theater gets a stable control hierarchy
 
 Mobile prev/next are now joined into one swipeable right-side capsule; post actions form a

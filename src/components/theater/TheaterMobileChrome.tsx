@@ -18,10 +18,7 @@ import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import { useSheetDrag } from './useSheetDrag'
 import {
-  Loader2,
-  Share2,
   Bookmark,
-  Check,
   Repeat,
   Repeat1,
   Tag as TagIcon,
@@ -44,7 +41,6 @@ import { authorProfileUrl, previewPath, sourceUrl } from '@/lib/activity/preview
 import { pingAnalytic } from '@/lib/analytics/client'
 import { inferType } from '@/lib/trending/filter'
 import { useSendFile } from './useSendFile'
-import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
 import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
 import { useTheaterTransport } from './useTheaterTransport'
@@ -71,6 +67,7 @@ import { TheaterQueueFilter } from './TheaterQueueFilter'
 import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
 import { StageIconButton } from './stage-primitives'
 import { useMobileSwipeNavigation } from './useMobileSwipeNavigation'
+import { TheaterMobileShareMenu } from './TheaterMobileShareMenu'
 import type {
   RepeatMode,
   SavePlaylistStatus,
@@ -224,6 +221,7 @@ export function TheaterMobileChrome({
   onClearQueueTypes,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -293,6 +291,9 @@ export function TheaterMobileChrome({
   useEffect(() => {
     if (!current && declutter) setDeclutter(false)
   }, [current, declutter])
+  useEffect(() => {
+    setShareMenuOpen(false)
+  }, [currentKey, sheetOpen, declutter])
 
   useEffect(
     () => () => {
@@ -374,8 +375,7 @@ export function TheaterMobileChrome({
     (kind !== null && ['text', 'article'].includes(kind)) || isQuoteReader(current, false)
   const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
   const caption = textLike || articleMode ? '' : (current?.text || '').trim()
-  const fileAction = fileSendCopy(kind)
-  const copyAction = textCopyAction(kind)
+  const hasCopyableText = Boolean((current?.text || '').trim())
   const canSwipe = canPrev || canNext
   const swipeLabel =
     canPrev && canNext
@@ -578,7 +578,7 @@ export function TheaterMobileChrome({
                 'pointer-events-auto fixed right-3 z-[30] gap-1.5 transition-[opacity,transform] duration-200 ease-out',
                 sheetOpen
                   ? 'bottom-[calc(70%+0.75rem)] flex flex-row items-center justify-end'
-                  : 'top-[20%] flex flex-col items-center [@media(max-height:520px)]:top-16 [@media(max-height:520px)]:flex-row',
+                  : 'bottom-[calc(13rem+env(safe-area-inset-bottom))] flex flex-col items-center [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:flex-row',
                 declutter && 'pointer-events-none translate-y-2 opacity-0',
               )}
               data-testid="mobile-control-actions"
@@ -590,50 +590,6 @@ export function TheaterMobileChrome({
                   className={cn(RAIL_ACTION_BTN, 'order-2 border-clay')}
                 />
               )}
-              {sendFile.supported ? (
-                <StageIconButton
-                  onClick={() => {
-                    // No awaits before this call — the tap must stay a fresh
-                    // user gesture for iOS's share sheet (spec §2/§6).
-                    void sendFile.send()
-                  }}
-                  disabled={sendFile.sending}
-                  title={
-                    sendFile.mode === 'share'
-                      ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
-                      : fileAction.title
-                  }
-                  aria-label={
-                    sendFile.sending
-                      ? 'Getting file'
-                      : sendFile.primed
-                        ? 'Tap again'
-                        : fileAction.label
-                  }
-                  className={cn(RAIL_ACTION_BTN, 'order-5', sendFile.primed && 'text-clay')}
-                  data-theater-action="download"
-                >
-                  {sendFile.sending ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <fileAction.Icon size={16} />
-                  )}
-                </StageIconButton>
-              ) : textLike && (current.text || '').trim() ? (
-                <StageIconButton
-                  onClick={() => void copyText()}
-                  title={copyAction.title}
-                  aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
-                  className={cn(RAIL_ACTION_BTN, 'order-5')}
-                  data-theater-action="copy"
-                >
-                  {textCopied ? (
-                    <Check size={16} className="text-done" />
-                  ) : (
-                    <copyAction.Icon size={16} />
-                  )}
-                </StageIconButton>
-              ) : null}
               {playlist && isPlaylistOwner ? (
                 <StageIconButton
                   href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
@@ -716,14 +672,19 @@ export function TheaterMobileChrome({
                   <Bookmark size={16} />
                 </StageIconButton>
               )}
-              <StageIconButton
-                onClick={() => void handleShare()}
-                aria-label="Share link"
-                className={cn(RAIL_ACTION_BTN, 'order-3')}
-                data-theater-action="link"
-              >
-                {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
-              </StageIconButton>
+              <TheaterMobileShareMenu
+                open={shareMenuOpen}
+                onOpenChange={setShareMenuOpen}
+                kind={kind}
+                hasText={hasCopyableText}
+                textCopied={textCopied}
+                linkCopied={copied}
+                sendFile={sendFile}
+                onCopyText={() => void copyText()}
+                onShareLink={() => void handleShare()}
+                alignTop={sheetOpen}
+                triggerClassName={RAIL_ACTION_BTN}
+              />
               {(() => {
                 const openUrl = sourceUrl(
                   current.platform,

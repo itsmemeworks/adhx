@@ -22,8 +22,9 @@ const mockUseSendFile = vi.fn((..._args: unknown[]) => ({
   supported: false,
   ready: false,
   sending: false,
-  mode: 'download' as const,
+  mode: 'download' as 'download' | 'share',
   send: vi.fn(),
+  download: vi.fn(),
 }))
 
 vi.mock('@/components/theater/useSendFile', () => ({
@@ -102,6 +103,7 @@ beforeEach(() => {
     sending: false,
     mode: 'download' as const,
     send: vi.fn(),
+    download: vi.fn(),
   })
   mockTheaterAvatarMenu.mockClear()
 })
@@ -115,6 +117,11 @@ function peekCentreText(): string {
   const count = document.querySelector('[data-theater-queue-count]')
   expect(count).not.toBeNull()
   return (count?.textContent ?? '').trim()
+}
+
+function openShareOptions() {
+  fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+  return screen.getByRole('menu', { name: 'Share options' })
 }
 
 // Mobile actions use a frosted vertical rail. Save remains distinguishable
@@ -170,7 +177,9 @@ describe('TheaterMobileChrome: caption', () => {
       />,
     )
     expect(screen.queryByText('#ai')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Copy the article' })).toBeInTheDocument()
   })
 
   it('lets article body scroll through the empty caption zone', () => {
@@ -181,8 +190,8 @@ describe('TheaterMobileChrome: caption', () => {
         itemTags={['ai']}
       />,
     )
-    const copy = screen.getByRole('button', { name: 'Copy' })
-    const cluster = copy.parentElement
+    const share = screen.getByRole('button', { name: 'Share' })
+    const cluster = share.parentElement?.parentElement
     expect(cluster?.className).toContain('pointer-events-auto')
     expect(cluster?.className).toContain('fixed')
     expect(cluster?.className).toContain('right-3')
@@ -190,8 +199,8 @@ describe('TheaterMobileChrome: caption', () => {
     const actionRow = cluster?.parentElement
     expect(actionRow?.className).not.toContain('pointer-events-auto')
     expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
-    expect(copy.className).toContain('bg-black/30')
-    expect(copy.className).toContain('backdrop-blur-md')
+    expect(share.className).toContain('bg-black/30')
+    expect(share.className).toContain('backdrop-blur-md')
   })
 })
 
@@ -207,51 +216,49 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.parentElement).toHaveAttribute('data-testid', 'mobile-control-actions')
   })
 
-  it('Download and Save share the action-rail shape while Save keeps the clay cue', () => {
+  it('moves Download behind Share while Save stays directly on the action rail', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    const downloadBtn = screen.getByRole('button', { name: 'Download' })
-    expect(downloadBtn.className).not.toContain('border-clay')
-    expect(downloadBtn.className).toContain('border-white/15')
-    expect(downloadBtn.className).toContain('bg-black/30')
-    expect(downloadBtn).not.toHaveTextContent('Download')
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
 
     const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('text-clay')
   })
 
-  it('labels video and photo Download, distinguished by film vs image icon', () => {
+  it('labels video and photo downloads by the staged media type', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     const { rerender } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    const videoBtn = screen.getByRole('button', { name: 'Download' })
-    expect(videoBtn.querySelector('.lucide-film')).toBeTruthy()
-    expect(screen.getByTitle('Download the video')).toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
     rerender(<TheaterMobileChrome {...base} current={videoItem({ contentType: 'photo' })} />)
-    const photoBtn = screen.getByRole('button', { name: 'Download' })
-    expect(photoBtn.querySelector('.lucide-image')).toBeTruthy()
-    expect(screen.getByTitle('Download the photo')).toBeInTheDocument()
-    expect(screen.queryByTitle('Download the video')).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Download the photo' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Download the video' })).not.toBeInTheDocument()
   })
 
-  it('collection live-tab Save carries the clay cue while Download stays neutral', () => {
+  it('collection live-tab Save carries the clay cue while Download stays in Share', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     const collection: TheaterPersonalChrome = {
       tab: 'live',
@@ -271,8 +278,8 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.className).toContain('text-clay')
     expect(saveBtn).not.toHaveTextContent('Save')
 
-    const downloadBtn = screen.getByRole('button', { name: 'Download' })
-    expect(downloadBtn.className).not.toContain('border-clay')
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
   })
 
   it('collection tab uses Live actions plus Archive — no Later or Delete', () => {
@@ -282,6 +289,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       sending: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     const collection: TheaterPersonalChrome = {
       tab: 'collection',
@@ -296,11 +304,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
     const archive = screen.getByRole('button', { name: 'Archive' })
-    const download = screen.getByRole('button', { name: 'Download' })
-    expect(
-      archive.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' }).className).toContain('border-white/15')
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
@@ -313,6 +317,9 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
   })
 
   it('tagged collection Tag keeps the neutral rail style — clay is on the icon only', () => {
@@ -854,7 +861,7 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
       .getAllByLabelText('Expand up next')
       .find((element) => (element.textContent ?? '').trim().length > 0)!
 
-    expect(actions.className).toContain('top-[20%]')
+    expect(actions.className).toContain('bottom-[calc(13rem+env(safe-area-inset-bottom))]')
     expect(actions.className).toContain('flex-col')
     expect(screen.getByRole('button', { name: 'Save' }).className).toContain('h-11')
     fireEvent.click(queue)
@@ -862,6 +869,27 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
     expect(actions.className).toContain('flex-row')
     expect(actions.className).not.toContain('opacity-0')
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+  })
+
+  it('top-aligns the Share menu when Queue is open so short viewports do not clip it', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'share' as const,
+      send: vi.fn(),
+      download: vi.fn(),
+    })
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const queue = screen
+      .getAllByLabelText('Expand up next')
+      .find((element) => (element.textContent ?? '').trim().length > 0)!
+
+    fireEvent.click(queue)
+    openShareOptions()
+    const menu = screen.getByRole('menu', { name: 'Share options' })
+    expect(menu.className).toContain('top-0')
+    expect(menu.className).not.toContain('top-1/2')
   })
 
   it('keeps the up-next sheet open when the stage advances to the next post', () => {
@@ -1002,13 +1030,14 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
     expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
   })
 
-  it('keeps Download next to the Save-playlist CTA (same row as desktop)', () => {
+  it('keeps playlist media download inside Share', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     render(
       <TheaterMobileChrome
@@ -1018,12 +1047,13 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner={false}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save playlist · 12' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
   })
 
-  it('text posts on a playlist get Copy next to Save playlist', () => {
+  it('text posts on a playlist get Copy inside Share', () => {
     render(
       <TheaterMobileChrome
         {...base}
@@ -1032,17 +1062,19 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner={false}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save playlist · 12' })).toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()
   })
 
-  it('owner playlist: Download stays next to Manage playlist', () => {
+  it('owner playlist keeps Download in Share beside Manage playlist', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     render(
       <TheaterMobileChrome
@@ -1052,8 +1084,9 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
         isPlaylistOwner
       />,
     )
-    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Manage playlist' })).toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
   })
 })
 
@@ -1589,12 +1622,8 @@ describe('TheaterMobileChrome: repeat control', () => {
   })
 })
 
-/**
- * Round 8 (owner request): text-like posts (text/quote/article) have no
- * file to download, so the Download slot in the bottom scrim carries a
- * "Copy" pill (copies the post's full text) instead of vanishing.
- */
-describe('TheaterMobileChrome: Copy button for text-like posts', () => {
+/** Share exposes only the actions supported by the staged post. */
+describe('TheaterMobileChrome: contextual Share options', () => {
   const writeText = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
@@ -1607,22 +1636,112 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
     })
   })
 
-  it('shows a Copy icon (not Download) for a text-like post with no sendable file', () => {
+  it('offers Copy, Download, media Share, and Share link for a video with text', () => {
+    const send = vi.fn()
+    const download = vi.fn()
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'share' as const,
+      send,
+      download,
+    })
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()
+    const downloadOption = screen.getByRole('menuitem', { name: 'Download the video' })
+    expect(screen.getByRole('menuitem', { name: 'Share video' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
+    fireEvent.click(downloadOption)
+    expect(download).toHaveBeenCalledTimes(1)
+
+    openShareOptions()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Share video' }))
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('omits Copy when a sendable video has no text', () => {
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'share' as const,
+      send: vi.fn(),
+      download: vi.fn(),
+    })
+    render(<TheaterMobileChrome {...base} current={videoItem({ text: '' })} />)
+
+    openShareOptions()
+    expect(screen.queryByRole('menuitem', { name: /Copy/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share video' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
+  })
+
+  it('focuses and roves Share options, suppresses theater keys, and restores the trigger', () => {
     render(<TheaterMobileChrome {...base} current={textItem()} />)
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Copy')).not.toBeInTheDocument()
+    const trigger = screen.getByRole('button', { name: 'Share' })
+    const leakedKey = vi.fn()
+    window.addEventListener('keydown', leakedKey)
+
+    fireEvent.click(trigger)
+    const copy = screen.getByRole('menuitem', { name: "Copy the post's text" })
+    const link = screen.getByRole('menuitem', { name: 'Share link' })
+    expect(copy).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    expect(link).toHaveFocus()
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    expect(copy).toHaveFocus()
+    fireEvent.keyDown(window, { key: 'j' })
+    expect(leakedKey).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('menu', { name: 'Share options' })).not.toBeInTheDocument()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(trigger).toHaveFocus()
+    window.removeEventListener('keydown', leakedKey)
+  })
+
+  it('closes Share on Tab and moves focus past or before the menu trigger', async () => {
+    render(<TheaterMobileChrome {...base} current={textItem()} />)
+    const trigger = screen.getByRole('button', { name: 'Share' })
+    const open = screen.getByRole('link', { name: 'Open on X' })
+    const save = screen.getByRole('button', { name: 'Save' })
+
+    fireEvent.click(trigger)
+    fireEvent.keyDown(window, { key: 'Tab' })
+    await waitFor(() => expect(open).toHaveFocus())
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(trigger)
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true })
+    await waitFor(() => expect(save).toHaveFocus())
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('offers Copy and Share link for a text-only post', () => {
+    render(<TheaterMobileChrome {...base} current={textItem()} />)
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Download/ })).not.toBeInTheDocument()
   })
 
   it('uses a file-text icon for articles and a copy icon for tweets', () => {
     const { rerender } = render(
       <TheaterMobileChrome {...base} current={textItem({ contentType: 'article' })} />,
     )
+    openShareOptions()
     expect(
-      screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-file-text'),
+      screen.getByRole('menuitem', { name: 'Copy the article' }).querySelector('.lucide-file-text'),
     ).toBeTruthy()
     rerender(<TheaterMobileChrome {...base} current={textItem()} />)
-    expect(screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-copy')).toBeTruthy()
+    expect(
+      screen.getByRole('menuitem', { name: "Copy the post's text" }).querySelector('.lucide-copy'),
+    ).toBeTruthy()
   })
 
   it('copies the article body, not just the title', async () => {
@@ -1643,7 +1762,8 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
         })}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    openShareOptions()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy the article' }))
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
         'Army title\n\n# Why an army\n\nOne account has a ceiling.',
@@ -1653,15 +1773,19 @@ describe('TheaterMobileChrome: Copy button for text-like posts', () => {
 
   it("copies the post's full text and flashes Copied on tap", async () => {
     render(<TheaterMobileChrome {...base} current={textItem({ text: 'the full post body' })} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    openShareOptions()
+    fireEvent.click(screen.getByRole('menuitem', { name: "Copy the post's text" }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
-    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    openShareOptions()
+    expect(await screen.findByRole('menuitem', { name: 'Copied' })).toBeInTheDocument()
   })
 
-  it('renders no Copy pill for a text-like post with empty text', () => {
+  it('offers only Share link for a text-like post with empty text', () => {
     render(<TheaterMobileChrome {...base} current={textItem({ text: '' })} />)
-    expect(screen.queryByText('Copy')).not.toBeInTheDocument()
-    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+    openShareOptions()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Copy/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Download/ })).not.toBeInTheDocument()
   })
 })
 

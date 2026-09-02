@@ -56,6 +56,8 @@ export interface SendFile {
   mode: 'share' | 'download'
   /** Open the native share sheet (or fall back to the link). Call from a tap. */
   send: () => Promise<void>
+  /** Force a browser download, even on touch devices that can share files. */
+  download: () => void
 }
 
 /** Delay before prefetching starts — aligned with the seen-dwell threshold so
@@ -116,8 +118,10 @@ function prefetchBlob(key: string, mp4: string): Promise<Blob> {
 type SendableItem = Pick<TheaterItem, 'platform' | 'bookmarkId' | 'author' | 'contentType'>
 
 export interface SendSource {
-  /** The file's proxy/CDN URL — fetched into a blob for share/download. */
+  /** Inline proxy URL fetched into a blob for native file sharing. */
   src: string
+  /** Same-origin attachment endpoint used by the explicit Download option. */
+  downloadSrc: string
   filename: string
   /** Drives the fallback MIME (when the fetched blob carries no usable
    * Content-Type) and the button's title copy. */
@@ -144,23 +148,31 @@ export function resolveSendSource(item: SendableItem | null): SendSource | null 
   if (item.platform === 'instagram' && item.contentType === 'photo') {
     return {
       src: `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
+      downloadSrc: `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
       filename: `adhx-instagram-${item.bookmarkId}.jpg`,
       kind: 'photo',
     }
   }
 
+  if (item.platform === 'tiktok' && !item.author) return null
   if (item.platform === 'tiktok' || item.platform === 'instagram') {
+    const encodedId = encodeURIComponent(item.bookmarkId)
     return {
       src: reelVideoSrc(item as TheaterItem),
+      downloadSrc:
+        item.platform === 'instagram'
+          ? `/api/media/instagram/video/download?id=${encodedId}`
+          : `/api/media/tiktok/video/download?username=${encodeURIComponent(item.author || '')}&id=${encodedId}`,
       filename: `adhx-${item.platform}-${item.bookmarkId}.mp4`,
       kind: 'video',
     }
   }
 
   // Twitter carries text/photo/video/article.
-  if (item.platform === 'twitter' && item.contentType === 'video') {
+  if (item.platform === 'twitter' && item.contentType === 'video' && item.author) {
     return {
       src: reelVideoSrc(item as TheaterItem),
+      downloadSrc: `/api/media/video/download?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.bookmarkId)}&quality=hd`,
       filename: `adhx-twitter-${item.bookmarkId}.mp4`,
       kind: 'video',
     }
@@ -168,6 +180,7 @@ export function resolveSendSource(item: SendableItem | null): SendSource | null 
   if (item.platform === 'twitter' && item.contentType === 'photo' && item.author) {
     return {
       src: `/api/media/image?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
+      downloadSrc: `/api/media/image?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
       filename: `adhx-twitter-${item.bookmarkId}.jpg`,
       kind: 'photo',
     }
@@ -283,6 +296,22 @@ export function useSendFile(
       clearTimeout(delayTimer)
     }
   }, [key, source?.src, eager])
+
+  const download = useCallback(() => {
+    if (!item || !source) return
+    const link = document.createElement('a')
+    link.href = source.downloadSrc
+    link.download = source.filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    pingSharePulse(item.platform, item.bookmarkId || '')
+    pingAnalytic('post.send', {
+      platform: item.platform,
+      id: item.bookmarkId || undefined,
+      source: 'download',
+    })
+  }, [item, source])
 
   const send = useCallback(async () => {
     if (!item || !source) return
@@ -421,5 +450,5 @@ export function useSendFile(
     }
   }, [item, source, mode, key])
 
-  return { supported, ready, sending, primed, mode, send }
+  return { supported, ready, sending, primed, mode, send, download }
 }

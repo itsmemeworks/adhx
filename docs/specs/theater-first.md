@@ -73,7 +73,9 @@ TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top ba
                            prev / play-pause / next over expand / repeat / mute — +
                            horizontal filmstrip queue auto-scrolled to keep current visible + "Queue" panel (`Q` toggles; ↑/↓ traverse while open; Esc / click away closes))
 TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, a bounded right-side thumb zone
-                           with a joined up/down swipe capsule and a frosted contextual action rail.
+                           with a joined up/down swipe capsule and a frosted contextual action rail
+                           immediately above it. Share expands a type-aware menu (copy text/article,
+                           download/share media, share link) instead of exposing irrelevant actions.
                            The bottom bar keeps Queue + Filter separate from mute, prominent
                            play/pause, repeat, and focus. 70%-of-theater Up-next bottom sheet
                            (clipped; does not auto-focus a row on open).

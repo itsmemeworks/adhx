@@ -125,6 +125,31 @@ describe('useSendFile', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('exposes an explicit browser download action for contextual menus', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
+    let downloaded: { href: string; filename: string } | null = null
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloaded = { href: this.href, filename: this.download }
+    })
+    const { useSendFile } = await import('@/components/theater/useSendFile')
+    const { result } = renderHook(() => useSendFile(videoItem()))
+
+    act(() => result.current.download())
+
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(downloaded).toEqual({
+      href: new URL(
+        '/api/media/video/download?author=alice&tweetId=1&quality=hd',
+        window.location.origin,
+      ).toString(),
+      filename: 'adhx-twitter-1.mp4',
+    })
+    expect(document.querySelector('a[download="adhx-twitter-1.mp4"]')).toBeNull()
+    click.mockRestore()
+  })
+
   it('supported is false for an item with nothing sendable (text post)', async () => {
     const fetchMock = mockFetchResolvingVideo()
     vi.stubGlobal('fetch', fetchMock)
