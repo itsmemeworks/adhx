@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Mobile Theater gets a stable control hierarchy
+
+Mobile prev/next are now joined into one swipeable right-side capsule; post actions form a
+frosted rail above it. Queue and a dedicated type Filter sit left in the bottom bar, while
+mute, prominent play/pause, repeat, and focus stay grouped right. Tapping a paused video now
+plays it and enters focus without making a playing-video tap pause. Short viewports reflow
+actions to two columns. Current state: in flight; focused component and gesture tests pass.
+
 ## 2026-09-02 — Theater captions become the only Read affordance
 
 Desktop and mobile no longer render a separate Read button beside expandable media captions;

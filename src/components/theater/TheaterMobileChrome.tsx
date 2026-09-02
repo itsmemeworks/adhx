@@ -6,8 +6,8 @@
  * (brand + post meta — the Save CTA below covers sign-in), a bottom scrim
  * (author/caption + Download/Save/Share/Open), and an
  * Up-next bottom sheet — all `pointer-events-auto` islands inside an
- * otherwise `pointer-events-none` layer. A right-side thumb zone keeps
- * swipe navigation and the primary playback controls within easy reach.
+ * otherwise `pointer-events-none` layer. A right-side thumb zone owns joined
+ * swipe navigation + post actions; playback stays stable in the bottom bar.
  *
  * Rendered only below `lg` (`TheaterShell` mounts this alongside, not
  * instead of, the desktop `<Rail/>`).
@@ -32,6 +32,7 @@ import {
   Volume2,
   VolumeX,
   Maximize2,
+  Minimize2,
   ListFilter,
   List,
 } from 'lucide-react'
@@ -137,10 +138,8 @@ export interface TheaterMobileChromeProps {
    * Shared mode: the shared post is pinned + repeating (no auto-advance), so
    * the 10s 'timed' progress line would tick toward an advance that never
    * comes — demote it to 'none' while pinned (video repeat is native
-   * player-level and unaffected). Also swaps the peek bar's "Up next" label
-   * for a Repeat glyph + "On repeat" (owner: the loop had no visual cue and
-   * read as a bug) and accents the next chevron — the deliberate way past
-   * the repeat — with the clay treatment.
+   * player-level and unaffected). The Queue control exposes "On repeat" to
+   * assistive tech while the bottom repeat control carries the visual cue.
    */
   repeatCurrent?: boolean
   /**
@@ -173,17 +172,14 @@ export interface TheaterMobileChromeProps {
   onClearQueueTypes?: () => void
 }
 
-/** Height of the collapsed sheet's peek bar — kept in sync with the transform below. */
-const PEEK_H = '4.25rem'
-/** Shared style for the icon-only controls living in the peek bar — subtle on the themed (light/dark-following) surface, unlike the dark-stage scrim buttons above. */
+/** Collapsed bottom bar including the device home-indicator safe area. */
+const PEEK_H = 'calc(4.25rem + env(safe-area-inset-bottom))'
+/** Shared style for Queue, Filter, and playback controls in the bottom bar. */
 const PEEK_ICON_BTN =
-  'inline-flex h-10 w-10 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
-/** Larger, stage-mounted controls placed at natural thumb height. */
-const THUMB_CONTROL_BTN =
-  'pointer-events-auto inline-flex h-12 w-12 flex-none items-center justify-center rounded-full border border-white/15 bg-black/25 text-white/85 shadow-[0_6px_20px_rgba(0,0,0,.2)] backdrop-blur-sm transition-[transform,background-color,opacity] active:scale-95 active:bg-black/50 disabled:cursor-default [@media(max-height:520px)]:h-11 [@media(max-height:520px)]:w-11'
-/** Plain themed icon treatment used by Queue and every collapsed-bar action. */
-const CONTROL_BAR_BTN =
-  'h-11 w-11 min-h-11 min-w-11 rounded-full border-transparent bg-transparent text-ink-3 shadow-none backdrop-blur-none hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
+  'inline-flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
+/** Frosted post-action treatment for the right-side thumb rail. */
+const RAIL_ACTION_BTN =
+  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/30 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.22)] backdrop-blur-md transition-[transform,background-color] hover:bg-black/45 active:scale-95 active:bg-black/55'
 
 export function TheaterMobileChrome({
   mode,
@@ -286,11 +282,11 @@ export function TheaterMobileChrome({
     onPrev,
     onNext,
   })
-  // De-clutter: hides the top and bottom scrims (brand + caption/actions) for
-  // an unobstructed view of the stage. The peek bar (nav/pause/audio + the
-  // up-next sheet) deliberately stays visible and functional — the point is
-  // an unobstructed view while still being able to skip quickly. A tap on
-  // the video/photo also toggles this (and starts playback on enter).
+  // De-clutter: hides top/bottom scrims, post actions, and the visible swipe
+  // capsule for an unobstructed stage. The bottom Queue/filter/transport bar
+  // deliberately stays visible as the clear exit path; invisible swipe
+  // navigation also remains active. A video/photo tap enters this mode and
+  // starts a stopped clip.
   // Deliberately NOT reset on `currentKey`.
   const [declutter, setDeclutter] = useState(false)
   useTheaterStageTapDeclutter(declutter, setDeclutter)
@@ -497,12 +493,12 @@ export function TheaterMobileChrome({
         </div>
       )}
 
-      {/* Bottom scrim: author/caption + Send / Save / Share / Open. Padded
+      {/* Bottom scrim: author/caption plus the fixed post-action rail. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
           under it. The scrim is pointer-events-none so a typeset tweet /
           article stays scrollable — the thumb lands in the lower third,
           which used to be a full-width action row and swallowed the pan.
-          Only the media caption and the icon cluster capture taps. */}
+          Only the media caption and action rail capture taps. */}
       {current && (
         <div
           inert={declutter}
@@ -579,8 +575,10 @@ export function TheaterMobileChrome({
             ) : null}
             <div
               className={cn(
-                'pointer-events-auto fixed right-2 z-[30] flex items-center justify-end gap-1 transition-[opacity,transform] duration-200 ease-out',
-                sheetOpen ? 'top-[calc(30%+0.75rem)]' : 'bottom-3',
+                'pointer-events-auto fixed right-3 z-[30] gap-1.5 transition-[opacity,transform] duration-200 ease-out',
+                sheetOpen
+                  ? 'bottom-[calc(70%+0.75rem)] flex flex-row items-center justify-end'
+                  : 'top-[20%] flex flex-col items-center [@media(max-height:520px)]:top-16 [@media(max-height:520px)]:flex-row',
                 declutter && 'pointer-events-none translate-y-2 opacity-0',
               )}
               data-testid="mobile-control-actions"
@@ -589,7 +587,7 @@ export function TheaterMobileChrome({
                 <TheaterCollectionActions
                   collection={collection}
                   variant="mobile"
-                  className={CONTROL_BAR_BTN}
+                  className={cn(RAIL_ACTION_BTN, 'order-2 border-clay')}
                 />
               )}
               {sendFile.supported ? (
@@ -612,7 +610,7 @@ export function TheaterMobileChrome({
                         ? 'Tap again'
                         : fileAction.label
                   }
-                  className={cn(CONTROL_BAR_BTN, sendFile.primed && 'text-clay')}
+                  className={cn(RAIL_ACTION_BTN, 'order-5', sendFile.primed && 'text-clay')}
                   data-theater-action="download"
                 >
                   {sendFile.sending ? (
@@ -626,7 +624,7 @@ export function TheaterMobileChrome({
                   onClick={() => void copyText()}
                   title={copyAction.title}
                   aria-label={textCopied ? copyAction.copiedLabel : copyAction.idleLabel}
-                  className={CONTROL_BAR_BTN}
+                  className={cn(RAIL_ACTION_BTN, 'order-5')}
                   data-theater-action="copy"
                 >
                   {textCopied ? (
@@ -640,7 +638,7 @@ export function TheaterMobileChrome({
                 <StageIconButton
                   href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
                   aria-label="Manage playlist"
-                  className={CONTROL_BAR_BTN}
+                  className={cn(RAIL_ACTION_BTN, 'order-1')}
                 >
                   <TagIcon size={16} />
                 </StageIconButton>
@@ -650,7 +648,7 @@ export function TheaterMobileChrome({
                   status={saveStatus}
                   onSave={() => onSavePlaylist?.()}
                   iconOnly
-                  className={cn(CONTROL_BAR_BTN, 'text-clay')}
+                  className={cn(RAIL_ACTION_BTN, 'order-1 text-clay')}
                 />
               ) : collection?.tab === 'collection' ? (
                 <StageIconButton
@@ -660,7 +658,7 @@ export function TheaterMobileChrome({
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
                   aria-label={tagLabel}
-                  className={cn(CONTROL_BAR_BTN, 'relative')}
+                  className={cn(RAIL_ACTION_BTN, 'relative order-1')}
                   data-theater-action="tag"
                 >
                   <TagIcon
@@ -679,7 +677,7 @@ export function TheaterMobileChrome({
                     }}
                     onTouchEnd={(e) => e.stopPropagation()}
                     aria-label={tagThisPostLabel}
-                    className={cn(CONTROL_BAR_BTN, 'relative')}
+                    className={cn(RAIL_ACTION_BTN, 'relative order-1')}
                     data-theater-action="tag"
                   >
                     <TagIcon
@@ -692,7 +690,7 @@ export function TheaterMobileChrome({
                   <PersonalLiveSaveButton
                     current={current}
                     collection={collection}
-                    className={cn(CONTROL_BAR_BTN, 'inline-flex flex-none text-clay')}
+                    className={cn(RAIL_ACTION_BTN, 'order-1 inline-flex flex-none text-clay')}
                     iconSize={16}
                     iconOnly
                   />
@@ -702,8 +700,8 @@ export function TheaterMobileChrome({
                   current={current}
                   iconOnly
                   className={cn(
-                    CONTROL_BAR_BTN,
-                    'inline-flex flex-none text-clay disabled:opacity-70',
+                    RAIL_ACTION_BTN,
+                    'order-1 inline-flex flex-none text-clay disabled:opacity-70',
                   )}
                   tags={displayTags}
                   onTag={onSharedTag ? () => onSharedTag(current) : undefined}
@@ -712,7 +710,7 @@ export function TheaterMobileChrome({
                 <StageIconButton
                   onClick={() => onRequestSignIn?.()}
                   aria-label="Save"
-                  className={cn(CONTROL_BAR_BTN, 'text-clay')}
+                  className={cn(RAIL_ACTION_BTN, 'order-1 text-clay')}
                   data-theater-action="save"
                 >
                   <Bookmark size={16} />
@@ -721,7 +719,7 @@ export function TheaterMobileChrome({
               <StageIconButton
                 onClick={() => void handleShare()}
                 aria-label="Share link"
-                className={CONTROL_BAR_BTN}
+                className={cn(RAIL_ACTION_BTN, 'order-3')}
                 data-theater-action="link"
               >
                 {copied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
@@ -741,7 +739,7 @@ export function TheaterMobileChrome({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open on ${platformLabel}`}
-                    className={CONTROL_BAR_BTN}
+                    className={cn(RAIL_ACTION_BTN, 'order-4')}
                     data-theater-action="open"
                     onClick={() =>
                       pingAnalytic('post.open', {
@@ -759,12 +757,11 @@ export function TheaterMobileChrome({
         </div>
       )}
 
-      {/* Right-side thumb zone: vertical swipes navigate without stealing the
-          whole stage from article scrolling, horizontal albums, links, or
-          embedded players. Focus, repeat, playback, and audio sit at natural
-          thumb height; direct-link repeat-one is visible here instead of as
-          ambiguous next/previous copy. The expanded queue covers and disables
-          the zone. */}
+      {/* Right-side swipe capsule: a joined previous/next control makes the
+          gesture boundary visible without stealing the whole stage from
+          article scrolling, horizontal albums, links, or embedded players.
+          The full capsule accepts vertical swipes; its two halves remain
+          tappable fallbacks. */}
       {current && !sheetOpen ? (
         <div
           {...swipeNavigation}
@@ -775,83 +772,35 @@ export function TheaterMobileChrome({
           aria-label={swipeLabel}
           data-testid="mobile-swipe-zone"
           className={cn(
-            'absolute bottom-[calc(4.25rem+5.75rem)] right-0 top-[22%] z-[15] w-20 [@media(max-height:520px)]:bottom-[4.75rem] [@media(max-height:520px)]:top-[8%] [@media(max-height:520px)]:w-28',
+            'absolute bottom-[calc(5rem+env(safe-area-inset-bottom))] right-0 z-[15] h-36 w-20 [@media(max-height:520px)]:h-28',
             canSwipe ? 'pointer-events-auto touch-none' : 'pointer-events-none',
           )}
         >
           <div
             inert={declutter}
+            data-theater-swipe-control
             className={cn(
-              'absolute inset-y-0 right-0 flex w-[4.5rem] flex-col items-center justify-center gap-3 transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:right-1 [@media(max-height:520px)]:grid [@media(max-height:520px)]:w-[6.25rem] [@media(max-height:520px)]:grid-cols-2 [@media(max-height:520px)]:place-content-center [@media(max-height:520px)]:gap-1.5',
+              'absolute bottom-2 right-3 flex h-28 w-12 flex-col overflow-hidden rounded-full border border-white/20 bg-black/35 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.28)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out divide-y divide-white/15 [@media(max-height:520px)]:h-20',
               declutter && 'pointer-events-none scale-95 opacity-0',
             )}
           >
-            <button
-              type="button"
-              onClick={(event) => {
-                event.currentTarget.blur()
-                setDeclutter((value) => !value)
-              }}
-              aria-label={declutter ? 'Show controls' : 'Hide controls'}
-              className={THUMB_CONTROL_BTN}
-              data-theater-action="expand"
+            <span
+              className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 gap-0.5"
+              aria-hidden
             >
-              <Maximize2 size={20} />
-            </button>
-            {onCycleRepeat && repeatMode ? (
-              <button
-                type="button"
-                key={repeatMode}
-                onClick={onCycleRepeat}
-                aria-label={
-                  repeatModeLabel(repeatMode, { saved: collection?.tab === 'collection' }).action
-                }
-                className={cn(THUMB_CONTROL_BTN, repeatMode !== 'off' && 'text-clay')}
-                style={repeatMode !== 'off' ? { color: 'var(--m-accent)' } : undefined}
-                data-theater-action="repeat"
-              >
-                {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
-              </button>
-            ) : null}
-            {(mediaKind === 'video' || progressKind !== 'none' || (repeatCurrent && current)) && (
-              <button
-                type="button"
-                disabled={playbackControlDisabled}
-                aria-disabled={playbackControlDisabled}
-                onClick={handleTogglePause}
-                aria-label={paused ? 'Play' : 'Pause'}
-                className={cn(THUMB_CONTROL_BTN, playbackControlDisabled && 'opacity-35')}
-              >
-                {paused ? (
-                  <Play size={20} fill="currentColor" />
-                ) : (
-                  <Pause size={20} fill="currentColor" />
-                )}
-              </button>
-            )}
-            <button
-              type="button"
-              disabled={mediaKind !== 'video'}
-              aria-disabled={mediaKind !== 'video'}
-              onClick={handleAudioTap}
-              aria-label={displayMuted ? 'Unmute' : 'Mute'}
-              className={cn(
-                THUMB_CONTROL_BTN,
-                soundPulse && 'animate-sound-pulse',
-                mediaKind !== 'video' && 'opacity-35',
-              )}
-            >
-              {displayMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-            </button>
+              <span className="h-1 w-1 rounded-full bg-white/45" />
+              <span className="h-1 w-1 rounded-full bg-white/45" />
+              <span className="h-1 w-1 rounded-full bg-white/45" />
+            </span>
             <button
               type="button"
               disabled={!canPrev}
               aria-disabled={!canPrev}
               onClick={onPrev}
               aria-label="Previous post"
-              className={cn(THUMB_CONTROL_BTN, !canPrev && 'pointer-events-none opacity-25')}
+              className="flex min-h-0 flex-1 items-center justify-center transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
             >
-              <ChevronUp size={20} />
+              <ChevronUp size={21} />
             </button>
             <button
               type="button"
@@ -859,9 +808,9 @@ export function TheaterMobileChrome({
               aria-disabled={!canNext}
               onClick={onNext}
               aria-label="Next post"
-              className={cn(THUMB_CONTROL_BTN, !canNext && 'pointer-events-none opacity-25')}
+              className="flex min-h-0 flex-1 items-center justify-center transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
             >
-              <ChevronDown size={20} />
+              <ChevronDown size={21} />
             </button>
           </div>
         </div>
@@ -894,21 +843,24 @@ export function TheaterMobileChrome({
         className={cn(
           'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-hidden overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
           sheetOpen ? 'bg-surface' : 'bg-surface/70',
-          !sheetDrag.dragging && (sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-4.25rem)]'),
+          !sheetDrag.dragging &&
+            (sheetOpen
+              ? 'translate-y-0'
+              : 'translate-y-[calc(100%-4.25rem-env(safe-area-inset-bottom))]'),
         )}
       >
-        {/* Peek bar: drag handle on top (tap toggles; a real pointer drag
+        {/* Bottom bar: drag handle on top (tap toggles; a real pointer drag
             follows the finger 1:1 via useSheetDrag, snapping open/closed on
             release by distance or flick velocity — see the hook), then the
-            Queue/count at left and the fixed post-action cluster at right.
-            Up/down navigation lives together in the thumb rail. */}
+            Queue + Filter at left and transport at right. Post actions live
+            in the stage rail; up/down navigation shares one swipe capsule. */}
         {/* Exactly PEEK_H tall (owner: the collapsed bar floated a few px
             high with list content peeking below it — the natural content
             height is ~6px shorter than the 4.25rem window the collapse
             transform reveals, so the top of UpNextList showed through).
             Pinning the wrapper to the same height the transform uses makes
             the visible window and the peek content one and the same. */}
-        <div ref={peekRef} className="h-[4.25rem] flex-none overflow-hidden">
+        <div ref={peekRef} className="flex-none overflow-hidden" style={{ height: PEEK_H }}>
           <button
             type="button"
             {...sheetDrag.handlers}
@@ -919,38 +871,130 @@ export function TheaterMobileChrome({
             <span className="h-1 w-9 rounded-full bg-hairline" aria-hidden />
           </button>
 
-          <div className="relative flex items-center justify-start px-2 pb-2">
-            {/* Queue/count stays alone on the left while contextual post
-                actions align on the right. Count/repeat copy remains
-                available to assistive tech and as a compact badge. */}
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation()
-                setSheetOpen((value) => !value)
-              }}
-              onTouchEnd={(event) => event.stopPropagation()}
-              aria-expanded={sheetOpen}
-              aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-              title={filterOn ? theaterQueueFilterLabel(queueTypes) : peekLabel}
-              data-theater-action="show-all"
-              data-theater-queue-filter={filterOn ? '' : undefined}
-              className={cn(
-                PEEK_ICON_BTN,
-                'relative',
-                filterOn && 'text-clay hover:text-clay active:text-clay',
-              )}
-            >
-              {filterOn ? <ListFilter size={18} aria-hidden /> : <List size={18} aria-hidden />}
-              {queueBadge ? (
-                <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-clay px-1 text-center text-[9px] font-bold leading-4 text-white">
-                  {queueBadge}
+          <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setSheetOpen((value) => !value)
+                }}
+                onTouchEnd={(event) => event.stopPropagation()}
+                aria-expanded={sheetOpen}
+                aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                title={peekLabel}
+                data-theater-action="show-all"
+                className={cn(PEEK_ICON_BTN, 'relative')}
+              >
+                <List size={19} aria-hidden />
+                {queueBadge ? (
+                  <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-clay px-1 text-center text-[9px] font-bold leading-4 text-white">
+                    {queueBadge}
+                  </span>
+                ) : null}
+                <span className="sr-only" data-theater-queue-count={queueCount ? '' : undefined}>
+                  {repeatCurrent ? 'On repeat' : peekLabel}
                 </span>
+              </button>
+              {onToggleQueueType && onClearQueueTypes ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setSheetOpen(true)
+                  }}
+                  onTouchEnd={(event) => event.stopPropagation()}
+                  aria-expanded={sheetOpen}
+                  aria-label="Filter queue"
+                  title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
+                  data-theater-queue-filter={filterOn ? '' : undefined}
+                  className={cn(
+                    PEEK_ICON_BTN,
+                    'relative',
+                    filterOn && 'text-clay hover:text-clay active:text-clay',
+                  )}
+                >
+                  <ListFilter size={19} aria-hidden />
+                  {filterOn ? (
+                    <span
+                      className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-clay"
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
               ) : null}
-              <span className="sr-only" data-theater-queue-count={queueCount ? '' : undefined}>
-                {repeatCurrent ? 'On repeat' : peekLabel}
-              </span>
-            </button>
+            </div>
+
+            <div
+              className="flex items-center gap-0.5"
+              data-testid="mobile-playback-controls"
+              role="group"
+              aria-label="Playback controls"
+            >
+              <button
+                type="button"
+                disabled={mediaKind !== 'video'}
+                aria-disabled={mediaKind !== 'video'}
+                onClick={handleAudioTap}
+                aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                className={cn(
+                  PEEK_ICON_BTN,
+                  soundPulse && 'animate-sound-pulse',
+                  mediaKind !== 'video' && 'opacity-35',
+                )}
+              >
+                {displayMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+              </button>
+              {(mediaKind === 'video' || progressKind !== 'none' || (repeatCurrent && current)) && (
+                <button
+                  type="button"
+                  disabled={playbackControlDisabled}
+                  aria-disabled={playbackControlDisabled}
+                  onClick={handleTogglePause}
+                  aria-label={paused ? 'Play' : 'Pause'}
+                  className={cn(
+                    PEEK_ICON_BTN,
+                    'bg-clay text-white shadow-[0_3px_12px_rgba(182,92,56,.28)] hover:bg-clay hover:text-white active:bg-clay active:text-white',
+                    playbackControlDisabled && 'opacity-35',
+                  )}
+                >
+                  {paused ? (
+                    <Play size={19} fill="currentColor" />
+                  ) : (
+                    <Pause size={19} fill="currentColor" />
+                  )}
+                </button>
+              )}
+              {onCycleRepeat && repeatMode ? (
+                <button
+                  type="button"
+                  key={repeatMode}
+                  onClick={onCycleRepeat}
+                  aria-label={
+                    repeatModeLabel(repeatMode, { saved: collection?.tab === 'collection' }).action
+                  }
+                  className={cn(
+                    PEEK_ICON_BTN,
+                    repeatMode !== 'off' && 'text-clay hover:text-clay active:text-clay',
+                  )}
+                  data-theater-action="repeat"
+                >
+                  {repeatMode === 'one' ? <Repeat1 size={19} /> : <Repeat size={19} />}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.currentTarget.blur()
+                  setDeclutter((value) => !value)
+                }}
+                aria-label={declutter ? 'Show controls' : 'Hide controls'}
+                className={PEEK_ICON_BTN}
+                data-theater-action="expand"
+              >
+                {declutter ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
+              </button>
+            </div>
           </div>
         </div>
 

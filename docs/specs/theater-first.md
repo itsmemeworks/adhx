@@ -73,12 +73,13 @@ TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top ba
                            prev / play-pause / next over expand / repeat / mute — +
                            horizontal filmstrip queue auto-scrolled to keep current visible + "Queue" panel (`Q` toggles; ↑/↓ traverse while open; Esc / click away closes))
 TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, a bounded right-side thumb zone
-                           with swipe up/down + subtle focus/repeat/playback/audio controls (hidden in focus mode), and a
-                           control bar with contextual post actions + Queue. 70%-of-theater Up-next bottom sheet
+                           with a joined up/down swipe capsule and a frosted contextual action rail.
+                           The bottom bar keeps Queue + Filter separate from mute, prominent
+                           play/pause, repeat, and focus. 70%-of-theater Up-next bottom sheet
                            (clipped; does not auto-focus a row on open).
                            Tap the caption for Read; Read mode keeps an icon-only Watch control.
-                           Tap video/photo hides chrome and starts playback; tap again restores
-                           overlays without pausing (Space / peek-bar own pause).
+                           Tapping a stopped video starts it and enters focus; tapping a playing
+                           video never pauses it (Space / bottom bar own pause).
 UpNextList.tsx           — feed rows, seen divider, "next ↓" highlight
 useTheaterFeed.ts        — items + polling (see §4)
 useSeenSet.ts            — localStorage seen model (see §5)

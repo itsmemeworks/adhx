@@ -117,8 +117,8 @@ function peekCentreText(): string {
   return (count?.textContent ?? '').trim()
 }
 
-// Mobile actions share Queue's plain themed icon treatment in the collapsed
-// control bar. Save remains distinguishable through its clay icon.
+// Mobile actions use a frosted vertical rail. Save remains distinguishable
+// through its clay icon while transport stays grouped in the bottom bar.
 describe('TheaterMobileChrome: caption', () => {
   it('shows a two-line caption and no more/less control', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
@@ -185,28 +185,29 @@ describe('TheaterMobileChrome: caption', () => {
     const cluster = copy.parentElement
     expect(cluster?.className).toContain('pointer-events-auto')
     expect(cluster?.className).toContain('fixed')
-    expect(cluster?.className).toContain('right-2')
+    expect(cluster?.className).toContain('right-3')
     expect(cluster?.className).not.toContain('flex-1')
     const actionRow = cluster?.parentElement
     expect(actionRow?.className).not.toContain('pointer-events-auto')
     expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
-    expect(copy.className).toContain('bg-transparent')
-    expect(copy.className).toContain('backdrop-blur-none')
+    expect(copy.className).toContain('bg-black/30')
+    expect(copy.className).toContain('backdrop-blur-md')
   })
 })
 
 describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
-  it('sign-in prompt Save uses the control-bar style with a clay icon', () => {
+  it('sign-in prompt Save uses the action-rail style with a clay icon', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const saveBtn = screen.getByRole('button', { name: 'Save' })
-    expect(saveBtn.className).toContain('border-transparent')
+    expect(saveBtn.className).toContain('border-white/15')
+    expect(saveBtn.className).toContain('bg-black/30')
     expect(saveBtn.className).toContain('text-clay')
     expect(saveBtn.className).not.toContain('bg-clay-grad')
     expect(saveBtn).not.toHaveTextContent('Save')
     expect(saveBtn.parentElement).toHaveAttribute('data-testid', 'mobile-control-actions')
   })
 
-  it('Download and Save share the Queue button shape while Save keeps the clay cue', () => {
+  it('Download and Save share the action-rail shape while Save keeps the clay cue', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -217,8 +218,8 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const downloadBtn = screen.getByRole('button', { name: 'Download' })
     expect(downloadBtn.className).not.toContain('border-clay')
-    expect(downloadBtn.className).toContain('border-transparent')
-    expect(downloadBtn.className).toContain('bg-transparent')
+    expect(downloadBtn.className).toContain('border-white/15')
+    expect(downloadBtn.className).toContain('bg-black/30')
     expect(downloadBtn).not.toHaveTextContent('Download')
 
     const saveBtn = screen.getByRole('button', { name: 'Save' })
@@ -244,7 +245,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByTitle('Download the video')).not.toBeInTheDocument()
   })
 
-  it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
+  it('collection live-tab Save carries the clay cue while Download stays neutral', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -266,7 +267,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
 
     const saveBtn = screen.getByRole('button', { name: 'Save' })
-    expect(saveBtn.className).toContain('border-transparent')
+    expect(saveBtn.className).toContain('border-white/15')
     expect(saveBtn.className).toContain('text-clay')
     expect(saveBtn).not.toHaveTextContent('Save')
 
@@ -301,10 +302,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     ).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Share link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Tag' }).className).toContain('border-transparent')
+    expect(screen.getByRole('button', { name: 'Tag' }).className).toContain('border-white/15')
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
     expect(archive.className).toContain('rounded-full')
-    expect(archive.className).toContain('border-transparent')
+    expect(archive.className).toContain('border-clay')
     expect(archive.className).not.toContain('flex-col')
     expect(archive.className).not.toContain('bg-done')
     expect(archive.className).not.toContain('bg-clay-grad')
@@ -314,7 +315,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
   })
 
-  it('tagged collection Tag keeps the plain bar style — clay is on the icon only', () => {
+  it('tagged collection Tag keeps the neutral rail style — clay is on the icon only', () => {
     const collection: TheaterPersonalChrome = {
       tab: 'collection',
       onTabChange: vi.fn(),
@@ -328,7 +329,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
     const tag = screen.getByRole('button', { name: 'Tag 1' })
-    expect(tag.className).toContain('border-transparent')
+    expect(tag.className).toContain('border-white/15')
     expect(tag.className).not.toContain('text-clay')
     expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
   })
@@ -604,19 +605,19 @@ describe('TheaterMobileChrome: Open action uses the source platform glyph', () =
   })
 })
 
-// Focus uses the outward Maximize2 glyph, then the full thumb stack fades.
-// A stage/thumb-zone tap restores it, so no always-visible exit glyph is
-// needed over the focused post.
+// Focus lives with the bottom transport controls. Entering focus fades the
+// stage-mounted actions and joined swipe capsule while keeping an obvious
+// exit control in the bar.
 describe('TheaterMobileChrome: de-clutter icon', () => {
-  it('shows the outward focus icon, then fades the thumb controls', () => {
+  it('shows the outward focus icon, then an always-visible restore icon', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const toggle = screen.getByLabelText('Hide controls')
     expect(toggle.querySelector('.lucide-maximize-2')).toBeInTheDocument()
 
     fireEvent.click(toggle)
     const restored = screen.getByLabelText('Show controls')
-    expect(restored.querySelector('.lucide-maximize-2')).toBeInTheDocument()
-    expect(restored.parentElement?.className).toContain('opacity-0')
+    expect(restored.querySelector('.lucide-minimize-2')).toBeInTheDocument()
+    expect(restored.closest('[data-testid="mobile-playback-controls"]')).toBeInTheDocument()
   })
 
   it('a stage tap hides chrome and resumes; a second tap only restores overlays', () => {
@@ -637,22 +638,38 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
   })
 })
 
-describe('TheaterMobileChrome: thumb controls and swipe zone', () => {
-  it('puts comfortably sized, subtle pause and volume controls at thumb height', () => {
+describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
+  it('groups prominent playback controls in the bottom bar', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
 
     const pause = screen.getByRole('button', { name: 'Pause' })
     const volume = screen.getByRole('button', { name: 'Unmute' })
     const zone = screen.getByTestId('mobile-swipe-zone')
-    expect(pause.className).toContain('h-12')
-    expect(pause.className).toContain('w-12')
-    expect(pause.className).toContain('bg-black/25')
-    expect(volume.className).toContain('h-12')
+    expect(pause.className).toContain('h-11')
+    expect(pause.className).toContain('w-11')
+    expect(pause.className).toContain('bg-clay')
+    expect(volume.className).toContain('h-11')
+    expect(pause.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
+    expect(pause.parentElement?.parentElement?.parentElement).toHaveStyle({
+      height: 'calc(4.25rem + env(safe-area-inset-bottom))',
+    })
     expect(zone.className).toContain('w-20')
-    expect(zone.className).toContain('[@media(max-height:520px)]:bottom-[4.75rem]')
-    expect(zone.className).toContain('[@media(max-height:520px)]:w-28')
-    expect(pause.parentElement?.className).toContain('[@media(max-height:520px)]:grid-cols-2')
+    expect(zone.className).toContain('env(safe-area-inset-bottom)')
+    const capsule = zone.querySelector('[data-theater-swipe-control]')
+    expect(capsule).toHaveClass('rounded-full', 'divide-y')
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
+  })
+
+  it('reflows short-height actions into one row above a compact swipe capsule', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const actions = screen.getByTestId('mobile-control-actions')
+    const capsule = screen
+      .getByTestId('mobile-swipe-zone')
+      .querySelector('[data-theater-swipe-control]')!
+
+    expect(actions.className).toContain('[@media(max-height:520px)]:flex-row')
+    expect(actions.className).not.toContain('[@media(max-height:520px)]:grid')
+    expect(capsule.className).toContain('[@media(max-height:520px)]:h-20')
   })
 
   it('keeps the playback control visible but disabled for a repeated text post', () => {
@@ -705,6 +722,24 @@ describe('TheaterMobileChrome: thumb controls and swipe zone', () => {
     expect(onPrev).toHaveBeenCalledTimes(1)
   })
 
+  it('accepts a vertical swipe from anywhere inside the joined arrow capsule', () => {
+    const onNext = vi.fn()
+    render(<TheaterMobileChrome {...base} current={videoItem()} onNext={onNext} />)
+    const next = screen.getByRole('button', { name: 'Next post' })
+
+    fireEvent.touchStart(next, {
+      touches: [{ identifier: 1, clientX: 350, clientY: 720 }],
+    })
+    fireEvent.touchMove(next, {
+      touches: [{ identifier: 1, clientX: 351, clientY: 650 }],
+    })
+    fireEvent.touchEnd(next, {
+      changedTouches: [{ identifier: 1, clientX: 351, clientY: 620 }],
+    })
+
+    expect(onNext).toHaveBeenCalledTimes(1)
+  })
+
   it('does not turn a control tap into navigation', () => {
     const onNext = vi.fn()
     render(<TheaterMobileChrome {...base} current={videoItem()} onNext={onNext} />)
@@ -719,15 +754,16 @@ describe('TheaterMobileChrome: thumb controls and swipe zone', () => {
     expect(onNext).not.toHaveBeenCalled()
   })
 
-  it('hides thumb controls in focus mode while keeping the zone tappable to restore them', () => {
+  it('hides the joined swipe capsule in focus mode while keeping its zone tappable', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const zone = screen.getByTestId('mobile-swipe-zone')
-    const controls = screen.getByRole('button', { name: 'Pause' }).parentElement!
+    const controls = zone.querySelector('[data-theater-swipe-control]')!
 
     fireEvent.click(screen.getByLabelText('Hide controls'))
     expect(controls.className).toContain('opacity-0')
     expect(controls.className).toContain('pointer-events-none')
     expect(document.querySelectorAll('[inert]')).toHaveLength(2)
+    expect(screen.getByTestId('mobile-playback-controls')).toBeInTheDocument()
 
     fireEvent.click(zone)
     expect(controls.className).not.toContain('opacity-0')
@@ -811,17 +847,19 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
     expect(label()).toHaveAttribute('aria-label', 'Expand up next')
   })
 
-  it('keeps post actions in the control row when the playlist expands', () => {
+  it('moves the right-side action rail onto the sheet edge when Queue expands', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const actions = screen.getByTestId('mobile-control-actions')
     const queue = screen
       .getAllByLabelText('Expand up next')
       .find((element) => (element.textContent ?? '').trim().length > 0)!
 
-    expect(actions.className).toContain('bottom-3')
+    expect(actions.className).toContain('top-[20%]')
+    expect(actions.className).toContain('flex-col')
     expect(screen.getByRole('button', { name: 'Save' }).className).toContain('h-11')
     fireEvent.click(queue)
-    expect(actions.className).toContain('top-[calc(30%+0.75rem)]')
+    expect(actions.className).toContain('bottom-[calc(70%+0.75rem)]')
+    expect(actions.className).toContain('flex-row')
     expect(actions.className).not.toContain('opacity-0')
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
@@ -859,15 +897,17 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
 
   // Owner report: the collapsed peek bar floated a few px too short, letting
   // the top of the Up-next list peek through underneath it. The wrapper is
-  // now pinned to exactly PEEK_H (4.25rem) so the collapse transform's
-  // visible window and the peek content's actual height match.
-  it('the peek wrapper is pinned to a fixed 4.25rem height (no auto-height gap)', () => {
+  // pinned to PEEK_H plus the device safe area so the collapse transform's
+  // visible window and the bottom bar's actual height match.
+  it('pins the peek wrapper to 4.25rem plus the device safe area', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const handle = screen
       .getAllByLabelText(/(Expand|Collapse) up next/)
       .find((el) => el.querySelector('span[aria-hidden]'))!
     const wrapper = handle.parentElement!
-    expect(wrapper.className).toContain('h-[4.25rem]')
+    expect(wrapper).toHaveStyle({
+      height: 'calc(4.25rem + env(safe-area-inset-bottom))',
+    })
     expect(wrapper.className).toContain('flex-none')
     expect(wrapper.className).toContain('overflow-hidden')
   })
@@ -946,7 +986,7 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
     expect(screen.queryByText('Save playlist · 12')).not.toBeInTheDocument()
   })
 
-  it('the Save-playlist CTA uses the plain bar style with a clay cue', () => {
+  it('the Save-playlist CTA uses the frosted rail style with a clay cue', () => {
     render(
       <TheaterMobileChrome
         {...base}
@@ -956,7 +996,8 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
       />,
     )
     const savePlaylistBtn = screen.getByRole('button', { name: 'Save playlist · 12' })
-    expect(savePlaylistBtn.className).toContain('border-transparent')
+    expect(savePlaylistBtn.className).toContain('border-white/15')
+    expect(savePlaylistBtn.className).toContain('bg-black/30')
     expect(savePlaylistBtn.className).toContain('text-clay')
     expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
   })
@@ -1017,8 +1058,8 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
 })
 
 // A direct shared post is repeat-one until deliberate swipe navigation.
-// The repeat-one control now lives in the thumb rail; ambiguous Previous /
-// Next buttons no longer occupy the bottom control bar.
+// Repeat lives in the bottom transport group while previous / next share one
+// joined swipe capsule on the right.
 describe('TheaterMobileChrome: shared-post-repeat cue', () => {
   it('shows "On repeat" instead of "Up next" while pinned', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} repeatCurrent />)
@@ -1040,7 +1081,7 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
     expect(label).toHaveAttribute('aria-label', 'Collapse up next')
   })
 
-  it('shows repeat-one in the thumb rail with up/down buttons below mute', () => {
+  it('shows repeat-one in the bottom transport and joins the up/down buttons', () => {
     const onPrev = vi.fn()
     const onNext = vi.fn()
     render(
@@ -1060,9 +1101,10 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
     const previous = screen.getByLabelText('Previous post')
     expect(repeatOne.querySelector('.lucide-repeat-1')).toBeInTheDocument()
     expect(repeatOne.className).toContain('text-clay')
-    expect(next.className).toContain('h-12')
-    expect(previous.className).toContain('h-12')
-    expect(mute.compareDocumentPosition(previous) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(repeatOne.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
+    expect(next.parentElement).toBe(previous.parentElement)
+    expect(next.parentElement).toHaveAttribute('data-theater-swipe-control')
+    expect(mute.compareDocumentPosition(repeatOne) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(previous.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     fireEvent.click(previous)
     fireEvent.click(next)
@@ -1165,7 +1207,7 @@ describe('TheaterMobileChrome: queue count label', () => {
     expect(screen.getByText('Queue')).toBeInTheDocument()
   })
 
-  it('tints the peek clay and shows a filter icon when a type filter is on, without naming the types', () => {
+  it('shows a dedicated active filter control without replacing the Queue button', () => {
     const items = buildItems(5)
     render(
       <TheaterMobileChrome
@@ -1182,11 +1224,17 @@ describe('TheaterMobileChrome: queue count label', () => {
       />,
     )
     const peek = screen.getByText('5 in queue').closest('button')!
-    expect(peek).toHaveAttribute('data-theater-queue-filter')
-    expect(peek).toHaveAttribute('title', 'Videos')
-    expect(peek.className).toContain('text-clay')
-    expect(peek.querySelector('.lucide-list-filter')).toBeInTheDocument()
+    const filter = screen.getByRole('button', { name: 'Filter queue' })
+    expect(peek).not.toHaveAttribute('data-theater-queue-filter')
+    expect(peek.querySelector('.lucide-list')).toBeInTheDocument()
+    expect(filter).toHaveAttribute('data-theater-queue-filter')
+    expect(filter).toHaveAttribute('title', 'Videos')
+    expect(filter.className).toContain('text-clay')
+    expect(filter.querySelector('.lucide-list-filter')).toBeInTheDocument()
     expect(screen.queryByText('Videos · 5')).not.toBeInTheDocument()
+    expect(filter).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(filter)
+    expect(filter).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('playlist mode keeps the pile size in the peek bar; the tag lives in the expanded sheet', () => {
@@ -1449,8 +1497,8 @@ describe('TheaterMobileChrome: audio button gesture-context unmute', () => {
 })
 
 /**
- * A Spotify-style repeat control in the thumb rail beside focus, playback,
- * and audio. Only renders when BOTH `repeatMode` and `onCycleRepeat` are
+ * A Spotify-style repeat control in the bottom transport beside focus,
+ * playback, and audio. Only renders when BOTH `repeatMode` and `onCycleRepeat` are
  * provided — home/shared mode; collection mode always loops on its own and
  * the collection theater is a finite backlog, so neither passes these props.
  */
