@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Collapsed mobile Queue stops filter bleed
+
+The expanded mobile Queue content is now invisible, inert, and absent from the accessibility tree
+whenever the sheet is fully collapsed. This prevents selected filter-pill shadows from leaking
+through as one-pixel clay lines after the transform settles, while real drag gestures still reveal
+the list as they move. Current state: in flight; focused tests and a collapse visual pass passed.
+
 ## 2026-09-02 — Theater text filter includes articles
 
 Theater filters now present three content choices: Videos, Photos, and Text. Text controls both

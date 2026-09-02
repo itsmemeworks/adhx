@@ -235,6 +235,7 @@ export function TheaterMobileChrome({
   const quickFilterPanelId = useId()
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [quickFilterOpen, setQuickFilterOpen] = useState(false)
+  const [sheetRestingClosed, setSheetRestingClosed] = useState(true)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -245,6 +246,7 @@ export function TheaterMobileChrome({
   const quickFilterOpenRef = useRef(false)
   quickFilterOpenRef.current = quickFilterOpen
   const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
+  const sheetContentHidden = !sheetOpen && !sheetDrag.dragging && sheetRestingClosed
   // Eager on a shared preview page: there's one post the visitor followed a
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
@@ -314,6 +316,15 @@ export function TheaterMobileChrome({
   useEffect(() => {
     setQuickFilterOpen(false)
   }, [sheetOpen, declutter])
+  useEffect(() => {
+    if (sheetOpen || sheetDrag.dragging) {
+      setSheetRestingClosed(false)
+      return
+    }
+    if (sheetRestingClosed) return
+    const fallback = setTimeout(() => setSheetRestingClosed(true), 350)
+    return () => clearTimeout(fallback)
+  }, [sheetOpen, sheetDrag.dragging, sheetRestingClosed])
   useEffect(() => {
     if (!quickFilterOpenRef.current) return
     setQuickFilterOpen(false)
@@ -963,6 +974,16 @@ export function TheaterMobileChrome({
       <div
         ref={sheetRef}
         style={sheetDrag.style}
+        onTransitionEnd={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            event.propertyName === 'transform' &&
+            !sheetOpen &&
+            !sheetDrag.dragging
+          ) {
+            setSheetRestingClosed(true)
+          }
+        }}
         className={cn(
           'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-hidden overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
           sheetOpen ? 'bg-surface' : 'bg-surface/70',
@@ -1140,33 +1161,40 @@ export function TheaterMobileChrome({
           </div>
         </div>
 
-        {playlist && (
-          <div className="flex-none px-4 pb-2 pt-1">
-            <p className="truncate text-[15px] font-bold text-ink">#{playlist.tag}</p>
-            <p className="text-[12px] text-ink-3">
-              {playlist.count} {playlist.count === 1 ? 'post' : 'posts'}
-              {playlist.curator ? ` · @${playlist.curator}` : ''}
-            </p>
-          </div>
-        )}
-        {onToggleQueueType && onClearQueueTypes ? (
-          <TheaterQueueFilter
-            selected={queueTypes}
-            onToggle={onToggleQueueType}
-            onClear={onClearQueueTypes}
+        <div
+          className={cn('flex min-h-0 flex-1 flex-col', sheetContentHidden && 'invisible')}
+          aria-hidden={sheetContentHidden}
+          inert={sheetContentHidden ? true : undefined}
+          data-testid="mobile-sheet-content"
+        >
+          {playlist && (
+            <div className="flex-none px-4 pb-2 pt-1">
+              <p className="truncate text-[15px] font-bold text-ink">#{playlist.tag}</p>
+              <p className="text-[12px] text-ink-3">
+                {playlist.count} {playlist.count === 1 ? 'post' : 'posts'}
+                {playlist.curator ? ` · @${playlist.curator}` : ''}
+              </p>
+            </div>
+          )}
+          {onToggleQueueType && onClearQueueTypes ? (
+            <TheaterQueueFilter
+              selected={queueTypes}
+              onToggle={onToggleQueueType}
+              onClear={onClearQueueTypes}
+            />
+          ) : null}
+          <UpNextList
+            items={items}
+            currentKey={waiting ? null : currentKey}
+            isSeen={isSeen}
+            seenReady={seenReady}
+            freshKeys={freshKeys}
+            onSelect={handleSelect}
+            repeatCurrent={repeatCurrent}
+            seenStartIndex={seenStartIndex}
+            className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"
           />
-        ) : null}
-        <UpNextList
-          items={items}
-          currentKey={waiting ? null : currentKey}
-          isSeen={isSeen}
-          seenReady={seenReady}
-          freshKeys={freshKeys}
-          onSelect={handleSelect}
-          repeatCurrent={repeatCurrent}
-          seenStartIndex={seenStartIndex}
-          className="min-h-0 flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]"
-        />
+        </div>
       </div>
     </div>
   )

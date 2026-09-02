@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterPersonalChrome } from '@/components/theater/types'
@@ -369,6 +369,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
         onClearQueueTypes={onClearQueueTypes}
       />,
     )
+    fireEvent.click(document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!)
     const videos = screen.getByRole('button', { name: 'Videos' })
     const paste = screen.getByRole('button', { name: 'Paste a link' })
     const text = screen.getByRole('button', { name: 'Text' })
@@ -780,7 +781,8 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     fireEvent.click(screen.getByLabelText('Hide controls'))
     expect(controls.className).toContain('opacity-0')
     expect(controls.className).toContain('pointer-events-none')
-    expect(document.querySelectorAll('[inert]')).toHaveLength(2)
+    expect(document.querySelectorAll('[inert]')).toHaveLength(3)
+    expect(screen.getByTestId('mobile-sheet-content')).toHaveAttribute('inert')
     expect(screen.getByTestId('mobile-playback-controls')).toBeInTheDocument()
 
     fireEvent.click(zone)
@@ -814,6 +816,62 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
 
     fireEvent.click(findHandle())
     expect(findHandle()).toHaveAttribute('aria-label', 'Expand up next')
+  })
+
+  it('fully hides expanded filter content when the sheet is collapsed', () => {
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={videoItem()}
+        queueTypes={['video']}
+        onToggleQueueType={vi.fn()}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+    const content = screen.getByTestId('mobile-sheet-content')
+    const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+
+    expect(content.className).toContain('invisible')
+    expect(content).toHaveAttribute('aria-hidden', 'true')
+    expect(content).toHaveAttribute('inert')
+
+    fireEvent.click(queue)
+    expect(content.className).not.toContain('invisible')
+    expect(content).toHaveAttribute('aria-hidden', 'false')
+    expect(content).not.toHaveAttribute('inert')
+
+    fireEvent.click(queue)
+    expect(content.className).not.toContain('invisible')
+    fireEvent.transitionEnd(content.parentElement!, { propertyName: 'transform' })
+    expect(content.className).toContain('invisible')
+  })
+
+  it('falls back to hiding after the close duration and cancels that hide when reopened', () => {
+    vi.useFakeTimers()
+    try {
+      render(<TheaterMobileChrome {...base} current={videoItem()} />)
+      const content = screen.getByTestId('mobile-sheet-content')
+      const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+
+      fireEvent.click(queue)
+      fireEvent.click(queue)
+      act(() => vi.advanceTimersByTime(349))
+      expect(content.className).not.toContain('invisible')
+      act(() => vi.advanceTimersByTime(1))
+      expect(content.className).toContain('invisible')
+      expect(content).toHaveAttribute('aria-hidden', 'true')
+      expect(content).toHaveAttribute('inert')
+
+      fireEvent.click(queue)
+      fireEvent.click(queue)
+      act(() => vi.advanceTimersByTime(100))
+      fireEvent.click(queue)
+      act(() => vi.advanceTimersByTime(300))
+      expect(content.className).not.toContain('invisible')
+      expect(content).not.toHaveAttribute('inert')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('Escape and a click away close the up-next sheet; arrows move rows', async () => {
