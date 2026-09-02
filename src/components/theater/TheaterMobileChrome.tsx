@@ -915,7 +915,7 @@ export function TheaterMobileChrome({
                   aria-label={paused ? 'Play' : 'Pause'}
                   className={cn(
                     PEEK_ICON_BTN,
-                    'bg-clay text-white shadow-[0_3px_12px_rgba(182,92,56,.28)] hover:bg-clay hover:text-white active:bg-clay active:text-white',
+                    'text-clay hover:text-clay active:text-clay',
                     playbackControlDisabled && 'opacity-35',
                   )}
                 >

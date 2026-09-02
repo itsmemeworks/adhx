@@ -654,7 +654,9 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     const zone = screen.getByTestId('mobile-swipe-zone')
     expect(pause.className).toContain('h-11')
     expect(pause.className).toContain('w-11')
-    expect(pause.className).toContain('bg-clay')
+    expect(pause.className).toContain('text-clay')
+    expect(pause.className).not.toContain('bg-clay')
+    expect(pause.className).not.toContain('shadow-')
     expect(volume.className).toContain('h-11')
     expect(pause.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
     expect(pause.parentElement?.parentElement?.parentElement).toHaveStyle({
