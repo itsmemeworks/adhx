@@ -76,8 +76,10 @@ TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, a bounded ri
                            with a joined up/down swipe capsule and a frosted contextual action rail
                            immediately above it. Share expands a type-aware menu (copy text/article,
                            download/share media, share link) instead of exposing irrelevant actions.
-                           The bottom bar combines Queue + Filter, separate from mute, prominent
-                           play/pause, repeat, and focus. 70%-of-theater Up-next bottom sheet
+                           The bottom bar shows a playlist count plus an unseen badge; a separate
+                           Filter opens counted type pills without expanding the playlist. Mute,
+                           prominent play/pause, repeat, and focus stay grouped right.
+                           70%-of-theater Up-next bottom sheet
                            (clipped; does not auto-focus a row on open).
                            Tap the caption for Read; Read mode keeps an icon-only Watch control.
                            Tapping a stopped video starts it and enters focus; tapping a playing

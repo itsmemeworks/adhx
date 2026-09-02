@@ -64,7 +64,12 @@ import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
+import {
+  isTheaterQueueFilterActive,
+  theaterQueueFilterLabel,
+  THEATER_QUEUE_TYPE_PILLS,
+} from './theater-math'
+import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 import { StageIconButton } from './stage-primitives'
 import { useMobileSwipeNavigation } from './useMobileSwipeNavigation'
 import { TheaterMobileShareMenu } from './TheaterMobileShareMenu'
@@ -165,6 +170,8 @@ export interface TheaterMobileChromeProps {
   onToggleArticleMode?: () => void
   /** Live and Saved — omit on playlists. Empty `queueTypes` is All. */
   queueTypes?: ContentType[]
+  /** Unfiltered queue used only to count the quick type choices. */
+  typeFilterItems?: TheaterItem[]
   onToggleQueueType?: (type: ContentType) => void
   onClearQueueTypes?: () => void
 }
@@ -217,17 +224,24 @@ export function TheaterMobileChrome({
   articleMode = false,
   onToggleArticleMode,
   queueTypes = [],
+  typeFilterItems,
   onToggleQueueType,
   onClearQueueTypes,
 }: TheaterMobileChromeProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const queueControlDescriptionId = useId()
+  const quickFilterPanelId = useId()
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
+  const [quickFilterOpen, setQuickFilterOpen] = useState(false)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
+  const quickFilterRef = useRef<HTMLDivElement>(null)
+  const quickFilterTriggerRef = useRef<HTMLButtonElement>(null)
+  const quickFilterOpenRef = useRef(false)
+  quickFilterOpenRef.current = quickFilterOpen
   const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
   // Eager on a shared preview page: there's one post the visitor followed a
   // link FOR (pinned + repeating, not skimmed past), so the file should be
@@ -295,6 +309,72 @@ export function TheaterMobileChrome({
   useEffect(() => {
     setShareMenuOpen(false)
   }, [currentKey, sheetOpen, declutter])
+  useEffect(() => {
+    setQuickFilterOpen(false)
+  }, [sheetOpen, declutter])
+  useEffect(() => {
+    if (!quickFilterOpenRef.current) return
+    setQuickFilterOpen(false)
+    const frame = requestAnimationFrame(() =>
+      quickFilterTriggerRef.current?.focus({ preventScroll: true }),
+    )
+    return () => cancelAnimationFrame(frame)
+  }, [currentKey])
+  useEffect(() => {
+    if (!quickFilterOpen) return
+    const options = () => [
+      ...(quickFilterRef.current?.querySelectorAll<HTMLButtonElement>(
+        '[data-quick-filter-option]',
+      ) ?? []),
+    ]
+    const initial =
+      options().find((option) => option.getAttribute('aria-pressed') === 'true') ?? options()[0]
+    initial?.focus({ preventScroll: true })
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (
+        !quickFilterRef.current?.contains(target) &&
+        !quickFilterTriggerRef.current?.contains(target)
+      ) {
+        setQuickFilterOpen(false)
+      }
+    }
+    const onKeyDownCapture = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        setQuickFilterOpen(false)
+        quickFilterTriggerRef.current?.focus({ preventScroll: true })
+        return
+      }
+      const fromPanel =
+        event.target instanceof Node && quickFilterRef.current?.contains(event.target)
+      const fromTrigger =
+        event.target instanceof Node && quickFilterTriggerRef.current?.contains(event.target)
+      if ((fromPanel || fromTrigger) && (event.key === 'Enter' || event.key === ' ')) return
+      if (fromPanel && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        const rows = options()
+        const currentIndex = rows.findIndex((option) => option === document.activeElement)
+        const delta = event.key === 'ArrowRight' ? 1 : -1
+        rows[(currentIndex + delta + rows.length) % rows.length]?.focus({ preventScroll: true })
+        return
+      }
+      if (THEATER_SHORTCUT_KEYS.has(event.key)) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('keydown', onKeyDownCapture, true)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('keydown', onKeyDownCapture, true)
+    }
+  }, [quickFilterOpen])
 
   useEffect(
     () => () => {
@@ -360,7 +440,24 @@ export function TheaterMobileChrome({
         ? `${newCount} new`
         : 'Queue'
   const peekLabel = peekPosition
-  const queueBadge = queueCount?.text.match(/^\d+/)?.[0] ?? (newCount > 0 ? String(newCount) : null)
+  const queueDisplayCount = repeatCurrent
+    ? '1'
+    : (queueCount?.text.match(/^\d+/)?.[0] ?? String(queueTotal ?? items.length))
+  const queueItemsBeingPlayed = repeatCurrent && current ? [current] : items
+  const unseenQueueCount = seenReady
+    ? queueItemsBeingPlayed.reduce(
+        (count, item) => count + (isSeen(theaterItemKey(item)) ? 0 : 1),
+        0,
+      )
+    : null
+  const quickFilterItems = typeFilterItems ?? items
+  const quickTypeCounts = new Map<ContentType, number>(
+    THEATER_QUEUE_TYPE_PILLS.map((pill) => [pill.id, 0]),
+  )
+  for (const item of quickFilterItems) {
+    const itemType = inferType(item)
+    quickTypeCounts.set(itemType, (quickTypeCounts.get(itemType) ?? 0) + 1)
+  }
 
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
@@ -778,6 +875,58 @@ export function TheaterMobileChrome({
         </div>
       ) : null}
 
+      {quickFilterOpen && onToggleQueueType && onClearQueueTypes ? (
+        <div
+          ref={quickFilterRef}
+          id={quickFilterPanelId}
+          role="group"
+          aria-label="Quick post filters"
+          data-testid="mobile-quick-filters"
+          className="pointer-events-auto fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-2 right-24 z-[40] flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-[#121117]/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,.4)] backdrop-blur-xl"
+        >
+          <button
+            type="button"
+            aria-pressed={queueTypes.length === 0}
+            aria-label={`All posts, ${quickFilterItems.length}`}
+            data-quick-filter-option
+            onClick={() => {
+              if (queueTypes.length > 0) onClearQueueTypes()
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+            className={cn(
+              'inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
+              queueTypes.length === 0
+                ? 'bg-clay text-white'
+                : 'bg-white/10 text-white/80 hover:bg-white/15',
+            )}
+          >
+            <span>All</span>
+            <span className="tabular-nums opacity-70">{quickFilterItems.length}</span>
+          </button>
+          {THEATER_QUEUE_TYPE_PILLS.map((pill) => {
+            const selected = queueTypes.includes(pill.id)
+            return (
+              <button
+                key={pill.id}
+                type="button"
+                aria-pressed={selected}
+                aria-label={`${pill.label}, ${quickTypeCounts.get(pill.id) ?? 0}`}
+                data-quick-filter-option
+                onClick={() => onToggleQueueType(pill.id)}
+                onKeyDown={(event) => event.stopPropagation()}
+                className={cn(
+                  'inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
+                  selected ? 'bg-clay text-white' : 'bg-white/10 text-white/80 hover:bg-white/15',
+                )}
+              >
+                <span>{pill.label}</span>
+                <span className="tabular-nums opacity-70">{quickTypeCounts.get(pill.id) ?? 0}</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+
       {/* Backdrop: closes the sheet + blocks taps on the stage below while
           it's open. Shown regardless of de-clutter — the sheet itself stays
           live there. */}
@@ -834,59 +983,77 @@ export function TheaterMobileChrome({
           </button>
 
           <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation()
-                setSheetOpen((value) => !value)
-              }}
-              onTouchEnd={(event) => event.stopPropagation()}
-              aria-expanded={sheetOpen}
-              aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-              aria-describedby={queueControlDescriptionId}
-              title={
-                onToggleQueueType && onClearQueueTypes
-                  ? filterOn
-                    ? `${peekLabel} · ${theaterQueueFilterLabel(queueTypes)}`
-                    : `${peekLabel} · Filter post types`
-                  : peekLabel
-              }
-              data-theater-action="show-all"
-              className={cn(
-                PEEK_ICON_BTN,
-                'relative',
-                onToggleQueueType && onClearQueueTypes && 'w-auto gap-2 px-2.5',
-              )}
-            >
-              <span className="relative inline-flex">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setSheetOpen((value) => !value)
+                }}
+                onTouchEnd={(event) => event.stopPropagation()}
+                aria-expanded={sheetOpen}
+                aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
+                aria-describedby={queueControlDescriptionId}
+                title={peekLabel}
+                data-theater-action="show-all"
+                className={cn(PEEK_ICON_BTN, 'relative w-auto gap-1.5 px-2.5')}
+              >
                 <List size={19} aria-hidden />
-                {queueBadge ? (
-                  <span className="absolute -right-2.5 -top-2 min-w-4 rounded-full bg-clay px-1 text-center text-[9px] font-bold leading-4 text-white">
-                    {queueBadge}
+                <span
+                  className="text-[12px] font-bold tabular-nums text-ink"
+                  data-theater-play-count
+                >
+                  {queueDisplayCount}
+                </span>
+                {unseenQueueCount !== null && unseenQueueCount > 0 ? (
+                  <span
+                    className="absolute -right-1 -top-1 min-w-4 rounded-full bg-clay px-1 text-center text-[9px] font-bold leading-4 text-white"
+                    aria-label={`${unseenQueueCount} unseen`}
+                    data-theater-unseen-count
+                  >
+                    {unseenQueueCount}
                   </span>
                 ) : null}
-              </span>
-              {onToggleQueueType && onClearQueueTypes ? (
-                <span
-                  className={cn('relative inline-flex', filterOn && 'text-clay')}
-                  aria-hidden
-                  data-theater-queue-filter={filterOn ? '' : undefined}
-                >
-                  <ListFilter size={19} />
-                  {filterOn ? (
-                    <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-clay" />
+                <span id={queueControlDescriptionId} className="sr-only">
+                  <span data-theater-queue-count={queueCount ? '' : undefined}>
+                    {repeatCurrent ? 'On repeat' : peekLabel}
+                  </span>
+                  {unseenQueueCount !== null ? (
+                    <span>{`. ${unseenQueueCount} unseen.`}</span>
                   ) : null}
                 </span>
+              </button>
+
+              {onToggleQueueType && onClearQueueTypes ? (
+                <button
+                  ref={quickFilterTriggerRef}
+                  type="button"
+                  disabled={sheetOpen}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setQuickFilterOpen((value) => !value)
+                  }}
+                  onTouchEnd={(event) => event.stopPropagation()}
+                  aria-expanded={quickFilterOpen}
+                  aria-controls={quickFilterPanelId}
+                  aria-label="Quick filter posts"
+                  title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
+                  className={cn(
+                    PEEK_ICON_BTN,
+                    'relative',
+                    filterOn && 'text-clay hover:text-clay active:text-clay',
+                  )}
+                >
+                  <ListFilter size={19} aria-hidden />
+                  {filterOn ? (
+                    <span
+                      className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-clay"
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
               ) : null}
-              <span
-                id={queueControlDescriptionId}
-                className="sr-only"
-                data-theater-queue-count={queueCount ? '' : undefined}
-              >
-                {repeatCurrent ? 'On repeat' : peekLabel}
-                {filterOn ? `. Filtered to ${theaterQueueFilterLabel(queueTypes)}.` : ''}
-              </span>
-            </button>
+            </div>
 
             <div
               className="flex items-center gap-0.5"

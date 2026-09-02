@@ -1247,40 +1247,79 @@ describe('TheaterMobileChrome: queue count label', () => {
     expect(screen.getByText('Queue')).toBeInTheDocument()
   })
 
-  it('combines Queue and its active type filter into one control', () => {
-    const items = buildItems(5)
+  it('separates playlist status from quick type filters and shows their counts', () => {
+    const allItems = [
+      videoItem({ bookmarkId: '1' }),
+      videoItem({ bookmarkId: '2' }),
+      videoItem({ bookmarkId: '3', contentType: 'photo' }),
+      textItem({ bookmarkId: '4' }),
+      textItem({ bookmarkId: '5', contentType: 'article' }),
+    ]
+    const items = allItems.slice(0, 2)
+    const onToggleQueueType = vi.fn()
     render(
       <TheaterMobileChrome
         {...base}
         items={items}
+        typeFilterItems={allItems}
         current={items[1]}
         currentKey={theaterItemKey(items[1])}
         queueTypes={['video']}
-        onToggleQueueType={vi.fn()}
+        onToggleQueueType={onToggleQueueType}
         onClearQueueTypes={vi.fn()}
         queuePlayed={0}
-        queueToPlay={5}
-        queueTotal={5}
+        queueToPlay={2}
+        queueTotal={2}
       />,
     )
-    const peek = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+    const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+    const filter = screen.getByRole('button', { name: 'Quick filter posts' })
     expect(screen.queryByRole('button', { name: 'Filter queue' })).not.toBeInTheDocument()
-    expect(peek).not.toHaveAttribute('data-theater-queue-filter')
-    expect(peek.querySelector('.lucide-list')).toBeInTheDocument()
-    expect(peek.querySelector('.lucide-list-filter')).toBeInTheDocument()
-    expect(peek.querySelector('[data-theater-queue-filter]')).toBeInTheDocument()
-    expect(peek).toHaveAttribute('title', '5 in queue · Videos')
-    expect(peek.className).toContain('w-auto')
-    expect(peek.className).toContain('gap-2')
-    const description = document.getElementById(peek.getAttribute('aria-describedby')!)
-    expect(description).toHaveTextContent('5 in queue. Filtered to Videos.')
-    expect(screen.queryByText('Videos · 5')).not.toBeInTheDocument()
-    expect(peek).toHaveAttribute('aria-expanded', 'false')
-    fireEvent.click(peek)
-    expect(peek).toHaveAttribute('aria-expanded', 'true')
-    peek.focus()
-    fireEvent.keyDown(peek, { key: 'ArrowDown' })
-    expect(document.querySelectorAll<HTMLElement>('[data-theater-queue-item]')[0]).toHaveFocus()
+    expect(queue.querySelector('.lucide-list-filter')).not.toBeInTheDocument()
+    expect(queue.querySelector('[data-theater-play-count]')).toHaveTextContent('2')
+    expect(queue.querySelector('[data-theater-unseen-count]')).toHaveTextContent('2')
+    expect(queue).toHaveAttribute('aria-expanded', 'false')
+    expect(filter).toHaveAttribute('title', 'Videos')
+
+    fireEvent.click(filter)
+    expect(queue).toHaveAttribute('aria-expanded', 'false')
+    const quickFilters = screen.getByRole('group', { name: 'Quick post filters' })
+    expect(quickFilters).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All posts, 5' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Videos, 2' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Photos, 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Text, 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Articles, 1' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Photos, 1' }))
+    expect(onToggleQueueType).toHaveBeenCalledWith('photo')
+  })
+
+  it('restores the quick-filter trigger when filtering advances the staged post', async () => {
+    const items = buildItems(2)
+    const props = {
+      ...base,
+      items,
+      typeFilterItems: items,
+      queueTypes: ['video' as const],
+      onToggleQueueType: vi.fn(),
+      onClearQueueTypes: vi.fn(),
+    }
+    const { rerender } = render(
+      <TheaterMobileChrome {...props} current={items[0]} currentKey={theaterItemKey(items[0])} />,
+    )
+    const trigger = screen.getByRole('button', { name: 'Quick filter posts' })
+    fireEvent.click(trigger)
+    expect(screen.getByRole('button', { name: 'Videos, 2' })).toHaveFocus()
+
+    rerender(
+      <TheaterMobileChrome {...props} current={items[1]} currentKey={theaterItemKey(items[1])} />,
+    )
+
+    await waitFor(() => expect(trigger).toHaveFocus())
+    expect(screen.queryByRole('group', { name: 'Quick post filters' })).not.toBeInTheDocument()
   })
 
   it('playlist mode keeps the pile size in the peek bar; the tag lives in the expanded sheet', () => {

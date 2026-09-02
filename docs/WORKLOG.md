@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-02 — Mobile playlist status and filtering separate
+
+The collapsed mobile playlist button now shows the number of posts that will play and a distinct
+unseen badge instead of combining List and Filter glyphs. Filter is a separate control that opens
+a compact, counted All/Videos/Photos/Text/Articles picker without expanding Up next; the full
+sheet keeps its existing multi-select pills. Counts come from the unfiltered queue while playback
+continues to honor the active lens. Current state: in flight; focused tests and a 390px visual
+pass.
+
 ## 2026-09-02 — Mobile Queue and Filter become one control
 
 The collapsed mobile bottom bar now presents Queue count and content-type Filter as one compact
