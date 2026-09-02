@@ -676,6 +676,9 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
       .getByTestId('mobile-swipe-zone')
       .querySelector('[data-theater-swipe-control]')!
 
+    expect(actions.className).toContain('w-12')
+    expect(capsule.className).toContain('w-12')
+    expect(actions.className).toContain('[@media(max-height:520px)]:w-auto')
     expect(actions.className).toContain('[@media(max-height:520px)]:flex-row')
     expect(actions.className).not.toContain('[@media(max-height:520px)]:grid')
     expect(capsule.className).toContain('[@media(max-height:520px)]:h-20')

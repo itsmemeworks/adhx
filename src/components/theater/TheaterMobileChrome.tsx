@@ -579,7 +579,7 @@ export function TheaterMobileChrome({
                 'pointer-events-auto fixed right-3 z-[30] gap-1.5 transition-[opacity,transform] duration-200 ease-out',
                 sheetOpen
                   ? 'bottom-[calc(70%+0.75rem)] flex flex-row items-center justify-end'
-                  : 'bottom-[calc(13rem+env(safe-area-inset-bottom))] flex flex-col items-center [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:flex-row',
+                  : 'bottom-[calc(13rem+env(safe-area-inset-bottom))] flex w-12 flex-col items-center [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:w-auto [@media(max-height:520px)]:flex-row',
                 declutter && 'pointer-events-none translate-y-2 opacity-0',
               )}
               data-testid="mobile-control-actions"
