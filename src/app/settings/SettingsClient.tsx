@@ -20,6 +20,7 @@ import {
   User,
   Mail,
   AtSign,
+  Volume2,
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
@@ -697,7 +698,18 @@ function SettingsPage() {
   const [confirmText, setConfirmText] = useState('')
 
   // Reading preferences
-  const { preferences, updatePreference } = usePreferences()
+  const { preferences, updatePreference, loading: preferencesLoading } = usePreferences()
+  const [soundPreferenceSaving, setSoundPreferenceSaving] = useState(false)
+  const toggleSoundOnByDefault = async () => {
+    if (preferencesLoading || soundPreferenceSaving) return
+    const next = !preferences.soundOn
+    setSoundPreferenceSaving(true)
+    try {
+      await updatePreference('soundOn', next)
+    } finally {
+      setSoundPreferenceSaving(false)
+    }
+  }
 
   // Clear data modal ref
   const clearDataInputRef = useRef<HTMLInputElement>(null)
@@ -988,6 +1000,42 @@ function SettingsPage() {
 
         {/* Sync history */}
         <SyncHistoryCard syncs={syncHistory.syncs} loading={syncHistoryLoading} />
+
+        <SCard
+          icon={Volume2}
+          title="Theater playback"
+          sub="Choose how videos sound when they start"
+        >
+          <div className="flex items-center gap-[13px] rounded-[12px] bg-inset px-[15px] py-[14px]">
+            <div className="min-w-0 flex-1">
+              <div className="mb-0.5 font-bold text-[14.5px] text-ink">
+                <span>Sound on by default</span>
+              </div>
+              <p className="text-[12.5px] leading-relaxed text-ink-3">
+                Start Theater with sound whenever your browser allows it. Mobile browsers may still
+                need one tap.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void toggleSoundOnByDefault()}
+              disabled={preferencesLoading || soundPreferenceSaving}
+              className={cn(
+                'relative inline-flex h-6 w-[42px] flex-shrink-0 cursor-pointer rounded-full p-[3px] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2',
+                preferences.soundOn
+                  ? 'justify-end bg-clay-grad'
+                  : 'justify-start border border-hairline bg-surface',
+                (preferencesLoading || soundPreferenceSaving) && 'cursor-not-allowed opacity-60',
+              )}
+              role="switch"
+              aria-label="Sound on by default"
+              aria-checked={preferences.soundOn}
+              aria-busy={soundPreferenceSaving}
+            >
+              <span className="pointer-events-none inline-block h-[18px] w-[18px] rounded-full bg-white shadow" />
+            </button>
+          </div>
+        </SCard>
 
         {/* Reading Preferences Card */}
         <SCard icon={BookOpen} title="Reading preferences" sub="Customize your reading experience">

@@ -94,6 +94,15 @@ states. Current state: in flight.
 Text, quote, and article stages no longer repeat the source-platform glyph beside the author.
 The existing Open action remains the platform affordance, while removing the right-edge chip
 prevents overlap with mobile theater controls. Focused author-row tests cover the simpler layout.
+
+## 2026-09-02 — Theater sound preference persists across sessions
+
+Settings now offers **Sound on by default**. Account users persist it through `/api/preferences`;
+the browser caches the default in `localStorage`, and a tab's explicit mute/unmute remains the
+session override. Theater waits for account preferences without a hydration mismatch, starts
+audible playback when allowed, and retries unmuting on the next stage tap when mobile autoplay
+policy blocks the fresh page. The saved preference is never downgraded by that browser fallback.
+Focused component tests cover server load, browser fallback, session precedence, and tap retry.
 Current state: in flight.
 
 ## 2026-08-28 — Mobile theater gains thumb-first controls

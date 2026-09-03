@@ -68,13 +68,14 @@
  */
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { Play } from 'lucide-react'
+import { Play, Volume2 } from 'lucide-react'
 import { PlatformChip } from '@/components/matter'
 import { isValidVideoId, youtubeEmbedUrl } from '@/lib/media/youtube'
 import { previewPath } from '@/lib/activity/preview-path'
 import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
 import { logStage, logStageVerbose } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
+import { dispatchTheaterStageTap } from './useTheaterStageEvents'
 
 /** The embed's own origin — every inbound message is filtered to this, and
  * every outbound command is targeted at it. */
@@ -211,10 +212,7 @@ export interface StageYouTubeProps {
    * shell-owned signal StageVideo/StageInstagram receive. */
   muted: boolean
   /** The dock/peek-bar audio button asked to unmute — tells the shell so
-   * `muted` (and the next item's initial signal) follows. There's no
-   * stage-tap affordance here (unlike StageVideo): a cross-origin iframe
-   * swallows its own clicks, so the parent page never sees a tap on the
-   * player itself. */
+   * `muted` (and the next item's initial signal) follows. */
   onRequestUnmute: () => void
   /** Ended, errored, or stalled — the same advance path StageVideo's
    * `onEnded` drives. The personal theater's Collection tab now wires this through to pure
@@ -829,7 +827,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           // 'catchup' case — no gesture backs it, so a silent rejection
           // (round 2) is plausible; see `requestUnmute`'s comment for how
           // that differs from a user-gesture unmute (round 3).
-          if (!mutedRef.current) requestUnmute('catchup')
+          if (!mutedRef.current && !pendingUnmuteRef.current) requestUnmute('catchup')
           break
         // The raw postMessage protocol streams player state inside
         // `infoDelivery` payloads ({info:{playerState, muted, ...}}) — the
@@ -1075,6 +1073,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // on the new iframe drive the rest (mute-first nudge, retry ladder,
   // stall watchdog) normally.
   function handleTapToPlay() {
+    dispatchTheaterStageTap()
     readyRef.current = false
     hasPlayedRef.current = false
     pendingUnmuteRef.current = false
@@ -1091,9 +1090,15 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     setPlaying(false)
     setEffectiveMuted(true)
     setNeverStarted(false)
+    if (!mutedRef.current) requestUnmute('user')
     logStage('tap-to-play: reloading the iframe fresh inside a user gesture')
     setReloadNonce((n) => n + 1)
     armStallTimer(videoId)
+  }
+
+  function handlePreferredSoundTap() {
+    dispatchTheaterStageTap()
+    requestUnmute('user')
   }
 
   if (neverStarted) {
@@ -1155,18 +1160,33 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
       <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8">
         <div className="relative aspect-[9/16] h-[min(82vh,100%)] max-w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
           {clientOrigin && (
-            <iframe
-              key={`${videoId}-${reloadNonce}`}
-              id={playerId}
-              ref={iframeRef}
-              src={buildEmbedSrc(videoId, clientOrigin)}
-              title={text || 'YouTube Short'}
-              className="absolute inset-0 h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              onLoad={handleLoad}
-            />
+            <>
+              <iframe
+                key={`${videoId}-${reloadNonce}`}
+                id={playerId}
+                ref={iframeRef}
+                src={buildEmbedSrc(videoId, clientOrigin)}
+                title={text || 'YouTube Short'}
+                className="absolute inset-0 h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                onLoad={handleLoad}
+              />
+              {!muted && effectiveMuted ? (
+                <button
+                  type="button"
+                  onClick={handlePreferredSoundTap}
+                  className="absolute inset-0 z-10 flex items-end justify-center pb-8 text-white"
+                  aria-label="Enable sound"
+                >
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/55 px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur-md">
+                    <Volume2 className="h-4 w-4" />
+                    <span>Tap for sound</span>
+                  </span>
+                </button>
+              ) : null}
+            </>
           )}
         </div>
       </div>

@@ -17,6 +17,8 @@ import { SettingsClient } from '@/app/settings/SettingsClient'
 const preferenceMocks = vi.hoisted(() => ({
   updatePreference: vi.fn(),
   bionicReading: false,
+  soundOn: false,
+  loading: false,
 }))
 const { updatePreference } = preferenceMocks
 
@@ -29,9 +31,10 @@ vi.mock('@/lib/preferences-context', async (importOriginal) => {
         bionicReading: preferenceMocks.bionicReading,
         bodyFont: 'ibm-plex',
         avatarSource: 'x',
+        soundOn: preferenceMocks.soundOn,
       },
       updatePreference,
-      loading: false,
+      loading: preferenceMocks.loading,
     }),
   }
 })
@@ -89,6 +92,10 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     preferenceMocks.bionicReading = false
+    preferenceMocks.soundOn = false
+    preferenceMocks.loading = false
+    sessionStorage.clear()
+    localStorage.clear()
   })
 
   it('renders both identity rows as connected when X and email are linked', async () => {
@@ -126,6 +133,47 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
       'aria-checked',
       'true',
     )
+  })
+
+  it('names and operates the Sound on by default switch', async () => {
+    mockFetch(ME_EMAIL_ONLY)
+    const { rerender } = render(<SettingsClient />)
+
+    await waitFor(() => expect(screen.getByText('tester@example.com')).toBeInTheDocument())
+    const toggle = screen.getByRole('switch', { name: 'Sound on by default' })
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+
+    fireEvent.click(toggle)
+    expect(updatePreference).toHaveBeenCalledWith('soundOn', true)
+
+    preferenceMocks.soundOn = true
+    rerender(<SettingsClient />)
+    expect(screen.getByRole('switch', { name: 'Sound on by default' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+  })
+
+  it('blocks overlapping Sound on by default updates', async () => {
+    let finishUpdate: (() => void) | undefined
+    updatePreference.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishUpdate = resolve
+      }),
+    )
+    mockFetch(ME_EMAIL_ONLY)
+    render(<SettingsClient />)
+
+    await waitFor(() => expect(screen.getByText('tester@example.com')).toBeInTheDocument())
+    const toggle = screen.getByRole('switch', { name: 'Sound on by default' })
+    fireEvent.click(toggle)
+    expect(toggle).toBeDisabled()
+
+    fireEvent.click(toggle)
+    expect(updatePreference).toHaveBeenCalledTimes(1)
+
+    finishUpdate?.()
+    await waitFor(() => expect(toggle).not.toBeDisabled())
   })
 
   it('shows a Connect-with-X nudge in the sync card when only email is linked', async () => {

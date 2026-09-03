@@ -39,9 +39,9 @@ import {
   type CollectionFeedChangedDetail,
 } from '@/lib/client-events'
 import { theaterItemKey } from './types'
-import { THEATER_SOUND_STORAGE_KEY } from './theater-storage'
 import { useTheaterRepeatPrefs } from './useTheaterRepeatPrefs'
 import { useTheaterQueueTypes } from './useTheaterQueueTypes'
+import { useTheaterSoundPreference } from './useTheaterSoundPreference'
 import { fetchBookmarkMembership } from './fetch-bookmark-membership'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import {
@@ -90,6 +90,7 @@ import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 import { SignInModal, useAuthMe } from '@/components/auth'
 import { useAppAccountScope } from '@/components/AppShell'
 import { TagQuickPicker } from '@/components/tags'
+import { usePreferencesOptional } from '@/lib/preferences-context'
 import type {
   RepeatMode,
   SavePlaylistStatus,
@@ -1086,32 +1087,15 @@ export function TheaterShell({
     [handlePersonalLiveSave],
   )
 
-  const [muted, setMuted] = useState(true)
+  const preferenceContext = usePreferencesOptional()
+  const soundPreferenceReady = !preferenceContext || !preferenceContext.loading
+  const soundOnByDefault = preferenceContext?.preferences.soundOn ?? false
+  const [muted, setMuted] = useTheaterSoundPreference({
+    soundOnByDefault,
+    ready: soundPreferenceReady,
+  })
   const [articleMode, setArticleMode] = useState(false)
   const toggleArticleMode = useCallback(() => setArticleMode((v) => !v), [])
-
-  // Sound preference survives full-page navigations within the theater —
-  // paste-to-preview navigates with `window.location.assign`, which used to
-  // silently reset a viewer's sound to muted. Read on mount (not in the
-  // useState initializer — SSR renders muted, and a differing first client
-  // render would be a hydration mismatch on the audio buttons), write on
-  // every change. Best-effort only: on a fresh document the browser may
-  // still veto audible autoplay (no gesture yet); StageVideo's
-  // rejected-play fallback then re-mutes gracefully, exactly as before.
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem(THEATER_SOUND_STORAGE_KEY) === 'on') setMuted(false)
-    } catch {
-      // Storage can be unavailable (private mode) — keep the muted default.
-    }
-  }, [])
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(THEATER_SOUND_STORAGE_KEY, muted ? 'off' : 'on')
-    } catch {
-      // Same — never let a storage failure break playback.
-    }
-  }, [muted])
 
   const {
     queueTypes,
