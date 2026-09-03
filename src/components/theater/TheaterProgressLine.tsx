@@ -328,7 +328,7 @@ export function TheaterProgressLine({
         className={cn(
           'pointer-events-none fixed inset-x-0 z-[74] flex justify-center',
           desktopDock
-            ? 'bottom-[calc(124px+0.25rem)]'
+            ? 'bottom-[calc(124px+0.5625rem)]'
             : 'top-[calc(env(safe-area-inset-top)+0.5rem)]',
         )}
       >

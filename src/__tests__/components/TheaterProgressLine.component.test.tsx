@@ -118,7 +118,7 @@ describe('TheaterProgressLine', () => {
     expect(badge.parentElement).toHaveClass(
       'fixed',
       'inset-x-0',
-      'bottom-[calc(124px+0.25rem)]',
+      'bottom-[calc(124px+0.5625rem)]',
       'z-[74]',
       'justify-center',
     )
