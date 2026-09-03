@@ -69,7 +69,9 @@ export async function goNext(page: Page): Promise<void> {
 /** Stop auto-advance so a mid-test add does not race the 10s dwell. */
 export async function pauseTheater(page: Page): Promise<void> {
   const pause = page.getByRole('button', { name: 'Pause' })
-  if (await pause.isVisible()) await pause.click()
+  await expect(pause).toBeVisible({ timeout: 15_000 })
+  await pause.click()
+  await expect(page.getByRole('button', { name: 'Play' })).toBeVisible()
 }
 
 /** Caption text is also in the dock / SEO list — never assert it as a singleton. */
