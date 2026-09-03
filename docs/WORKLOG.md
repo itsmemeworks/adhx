@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — PR titles are verified before handoff
+
+The PR workflow guidance now requires Conventional Commit syntax for pull-request titles,
+prefers deriving a single-commit title from its commit subject, and verifies the final title
+with `gh pr view --json title`. This prevents code-green PRs from failing the semantic-title
+check because the PR title omitted its release prefix. Current state: complete.
+
 ## 2026-09-03 — Mobile captions clamp and tagged icons stay legible
 
 Overflowing media captions now clamp on an inner element instead of the native Read button,
