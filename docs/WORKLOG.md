@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Theater E2E pause waits for transport state
+
+The shared browser-test pause helper now waits for the Pause control, clicks it, and confirms Play
+before tests mutate the queue. The old optional click could silently miss hydration and let the
+10-second dwell advance during a cross-tab add, producing alternating current/next failures.
+Current state: complete; rerun pending.
+
 ## 2026-09-03 — Theater E2E selectors follow the redesigned controls
 
 Mobile collection coverage now opens the contextual Share menu before checking Share link, and
