@@ -32,10 +32,12 @@ test.describe('Live type filter vs preview pulses', () => {
       'aria-pressed',
       'true',
     )
-    await expect(page.getByRole('button', { name: 'Queue', exact: true })).toHaveText('Queue')
-    await expect(page.getByRole('button', { name: 'Queue', exact: true })).toHaveAttribute(
-      'data-theater-queue-filter',
-    )
+    await expect(
+      page.getByRole('button', { name: 'Queue', exact: true }).locator('[data-theater-play-count]'),
+    ).toHaveText('0')
+    const filter = page.getByRole('button', { name: 'Filter post types' })
+    await expect(filter).toHaveAttribute('data-theater-queue-filter')
+    await expect(filter).toHaveAccessibleDescription('Filtered to Videos.')
     await expect(page.getByText('No videos in Live right now')).toBeVisible()
 
     insertLivePulse({

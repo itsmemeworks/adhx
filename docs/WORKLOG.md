@@ -6,6 +6,33 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Queue E2E assertions freeze timed dwell
+
+Queue-count coverage now pauses before and after navigation, and the cross-tab Next assertion
+re-pauses after broadcasting an arrival. This keeps 10-second text dwell from changing the staged
+row while slower CI assertions inspect queue ordering. Current state: complete; rerun pending.
+
+## 2026-09-03 — Theater E2E pause helper becomes idempotent
+
+The pause helper now returns when the transport already shows exact **Play**, while excluding the
+separate **Play once** repeat control from that match. Otherwise it waits for Pause and confirms the
+state change. This supports callers that intentionally pause before and after navigation.
+Current state: complete; rerun pending.
+
+## 2026-09-03 — Theater E2E pause waits for transport state
+
+The shared browser-test pause helper now waits for the Pause control, clicks it, and confirms Play
+before tests mutate the queue. The old optional click could silently miss hydration and let the
+10-second dwell advance during a cross-tab add, producing alternating current/next failures.
+Current state: complete; rerun pending.
+
+## 2026-09-03 — Theater E2E selectors follow the redesigned controls
+
+Mobile collection coverage now opens the contextual Share menu before checking Share link, and
+desktop Live filtering reads the compact Queue count plus the separate active Filter control.
+These replace stale selectors exposed when the repeat and theater-control branches were combined.
+Current state: complete; the full component suite and prior integrated E2E run cover the behavior.
+
 ## 2026-09-03 — Desktop Queue adopts the mobile controls
 
 The desktop filmstrip end cap now uses the same compact playlist/count and filter controls as
