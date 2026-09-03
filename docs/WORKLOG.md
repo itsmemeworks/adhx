@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Theater E2E pause helper becomes idempotent
+
+The pause helper now returns when the transport already shows exact **Play**, while excluding the
+separate **Play once** repeat control from that match. Otherwise it waits for Pause and confirms the
+state change. This supports callers that intentionally pause before and after navigation.
+Current state: complete; rerun pending.
+
 ## 2026-09-03 — Theater E2E pause waits for transport state
 
 The shared browser-test pause helper now waits for the Pause control, clicks it, and confirms Play
