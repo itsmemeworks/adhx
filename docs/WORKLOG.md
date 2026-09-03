@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Theater E2E selectors follow the redesigned controls
+
+Mobile collection coverage now opens the contextual Share menu before checking Share link, and
+desktop Live filtering reads the compact Queue count plus the separate active Filter control.
+These replace stale selectors exposed when the repeat and theater-control branches were combined.
+Current state: complete; the full component suite and prior integrated E2E run cover the behavior.
+
 ## 2026-09-03 — Desktop Queue adopts the mobile controls
 
 The desktop filmstrip end cap now uses the same compact playlist/count and filter controls as
