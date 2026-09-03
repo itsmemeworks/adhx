@@ -4,6 +4,7 @@ import {
   authedTest,
   expectTheaterReady,
   goNext,
+  pauseTheater,
   readQueueProgress,
   visibleQueueCount,
 } from './helpers'
@@ -19,6 +20,7 @@ test.describe('queue count — Live LIFO', () => {
     await page.goto('/')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
+    await pauseTheater(page)
 
     // Repeat-off copy is unseen remaining.
     await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
@@ -27,6 +29,7 @@ test.describe('queue count — Live LIFO', () => {
     expect(start.toPlay).toBeGreaterThan(1)
 
     await goNext(page)
+    await pauseTheater(page)
     await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay - 1} in queue`)
     await page.getByRole('button', { name: 'Queue', exact: true }).click()
     const liveQueue = page.getByRole('dialog', { name: 'Playlist' })

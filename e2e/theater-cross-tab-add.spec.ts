@@ -194,6 +194,7 @@ authedTest.describe('theater cross-tab add', () => {
       await pauseTheater(page)
       const queue = await openTheaterQueue(page)
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
+      await pauseTheater(page)
 
       await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
       await expect(queue.getByText('Now playing', { exact: true })).toBeVisible()
