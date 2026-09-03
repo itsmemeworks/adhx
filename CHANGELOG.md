@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.0](https://github.com/itsmemeworks/adhx/compare/v1.69.0...v1.70.0) (2026-09-03)
+
+
+### Features
+
+* improve theater playback and mobile controls ([#474](https://github.com/itsmemeworks/adhx/issues/474)) ([69ebf9c](https://github.com/itsmemeworks/adhx/commit/69ebf9c3626fa87e2045ad02c3daa89381bbba10))
+
 ## [1.69.0](https://github.com/itsmemeworks/adhx/compare/v1.68.0...v1.69.0) (2026-09-03)
 
 
