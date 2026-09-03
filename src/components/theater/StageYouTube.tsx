@@ -478,7 +478,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     const t = estimatePlaybackSeconds()
     if (t == null) return
     window.dispatchEvent(
-      new CustomEvent('theater-video-progress', { detail: { progress: t / duration } }),
+      new CustomEvent('theater-video-progress', {
+        detail: { progress: t / duration, duration },
+      }),
     )
   }, [estimatePlaybackSeconds])
 
@@ -520,7 +522,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
         progressOriginMsRef.current = null
       }
       postCommand('seekTo', [seconds, true])
-      window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress } }))
+      window.dispatchEvent(
+        new CustomEvent('theater-video-progress', { detail: { progress, duration } }),
+      )
     }
     window.addEventListener(THEATER_SEEK, handleSeek)
     return () => window.removeEventListener(THEATER_SEEK, handleSeek)
@@ -836,7 +840,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           // reaches full before either looping (repeat) or the item
           // advances away.
           window.dispatchEvent(
-            new CustomEvent('theater-video-progress', { detail: { progress: 1 } }),
+            new CustomEvent('theater-video-progress', {
+              detail: { progress: 1, duration: lastKnownDurationRef.current ?? undefined },
+            }),
           )
           if (repeatRef.current) {
             lastKnownCurrentTimeRef.current = 0
@@ -1015,7 +1021,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
             if (acceptedReportedTime != null && lastKnownDurationRef.current) {
               window.dispatchEvent(
                 new CustomEvent('theater-video-progress', {
-                  detail: { progress: acceptedReportedTime / lastKnownDurationRef.current },
+                  detail: {
+                    progress: acceptedReportedTime / lastKnownDurationRef.current,
+                    duration: lastKnownDurationRef.current,
+                  },
                 }),
               )
             } else {

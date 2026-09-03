@@ -25,6 +25,7 @@ export interface UseTheaterQueueOverlayArgs {
    * black void, and the open animation fights the scroll.
    */
   autoFocus?: boolean
+  restoreSelector?: string
 }
 
 function queueRows(root: HTMLElement | null): HTMLElement[] {
@@ -49,18 +50,21 @@ function inQueueFilter(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest('[data-theater-queue-filter]'))
 }
 
+function inShortcutQueueFilter(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('[data-theater-filter-shortcut-flow]'))
+}
+
 export function useTheaterQueueOverlay({
   open,
   onClose,
   containerRef,
   autoFocus = true,
+  restoreSelector = '[data-theater-action="show-all"]',
 }: UseTheaterQueueOverlayArgs): void {
   useEffect(() => {
     if (!open) return
 
-    const trigger = containerRef.current?.querySelector<HTMLElement>(
-      '[data-theater-action="show-all"]',
-    )
+    const trigger = containerRef.current?.querySelector<HTMLElement>(restoreSelector)
     const restore =
       trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
     if (autoFocus) {
@@ -99,16 +103,20 @@ export function useTheaterQueueOverlay({
         return
       }
 
-      // Filter pills are real buttons: Enter / Space must toggle them.
-      // Arrows are eaten so they don't scroll the stage, but they do not
-      // steal focus into the list while a pill is active.
+      // The filter group owns its complete keyboard flow (arrow movement,
+      // Space toggle, Enter commit, Escape close). Let the event reach it;
+      // the group stops propagation before theater shortcuts can run.
       if (inQueueFilter(e.target)) {
+        if (inShortcutQueueFilter(e.target)) return
         if (
           e.key === 'ArrowDown' ||
           e.key === 'ArrowUp' ||
           e.key === 'ArrowLeft' ||
           e.key === 'ArrowRight'
         ) {
+          e.preventDefault()
+          e.stopPropagation()
+        } else if (e.key !== 'Enter' && e.key !== ' ' && THEATER_SHORTCUT_KEYS.has(e.key)) {
           e.preventDefault()
           e.stopPropagation()
         }
@@ -153,5 +161,5 @@ export function useTheaterQueueOverlay({
       window.removeEventListener('keydown', handleKeyDownCapture, true)
       if (restore?.isConnected) restore.focus({ preventScroll: true })
     }
-  }, [open, onClose, containerRef, autoFocus])
+  }, [open, onClose, containerRef, autoFocus, restoreSelector])
 }

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Theater scrub feedback and keyboard filtering
+
+Active timeline drags now show a centered, stable elapsed/duration badge on mobile and desktop;
+desktop places it above a vivid-clay track immediately above the filmstrip and hides both with
+de-clutter. Mobile Share and previous/next share the same hover/pressed treatment, including the
+capsule's curved ends. Opening the desktop type filter focuses its active option: arrows move,
+Space toggles in place, Enter toggles and closes, and Escape closes without driving shortcuts.
+Current state: in flight.
+
 ## 2026-09-03 — Desktop timeline scrubs without auth hydration drift
 
 Desktop now gives the top timeline a 32px seek target while keeping its chrome controls layered

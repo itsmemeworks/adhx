@@ -404,6 +404,9 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Articles' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Quotes' })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Playlist filter' }).contains(paste)).toBe(false)
+    videos.focus()
+    fireEvent.keyDown(videos, { key: 'ArrowRight' })
+    expect(videos).toHaveFocus()
     fireEvent.click(videos)
     expect(onToggleQueueType).toHaveBeenCalledWith('video')
     onToggleQueueType.mockClear()
@@ -1285,6 +1288,9 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
     expect(repeatOne.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
     expect(next.parentElement).toBe(previous.parentElement)
     expect(next.parentElement).toHaveAttribute('data-theater-swipe-control')
+    expect(next.parentElement).not.toHaveClass('py-2')
+    expect(previous).toHaveClass('rounded-t-full', 'pt-2')
+    expect(next).toHaveClass('rounded-b-full', 'pb-2')
     expect(mute.compareDocumentPosition(repeatOne) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(previous.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     fireEvent.click(previous)
@@ -1870,6 +1876,16 @@ describe('TheaterMobileChrome: contextual Share options', () => {
       'inline-flex',
       'items-center',
       'justify-center',
+      'hover:bg-white/10',
+      'active:bg-white/20',
+    )
+    expect(screen.getByRole('button', { name: 'Previous post' })).toHaveClass(
+      'hover:bg-white/10',
+      'active:bg-white/20',
+    )
+    expect(screen.getByRole('button', { name: 'Next post' })).toHaveClass(
+      'hover:bg-white/10',
+      'active:bg-white/20',
     )
     openShareOptions()
     expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()

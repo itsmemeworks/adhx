@@ -533,7 +533,11 @@ export function StageVideo({
     // The shared top-of-screen progress line
     // (TheaterProgressLine, kind 'video') has no access to this element, so
     // it subscribes to this event instead of reading the DOM directly.
-    window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress } }))
+    window.dispatchEvent(
+      new CustomEvent('theater-video-progress', {
+        detail: { progress, duration: video.duration },
+      }),
+    )
   }
 
   const handleEnded = (event: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -725,6 +729,8 @@ export function StageVideo({
         onLoadStart={handleLifecycleStart}
         onPlaying={handleVideoPlaying}
         onPause={handleVideoPause}
+        onLoadedMetadata={handleTimeUpdate}
+        onDurationChange={handleTimeUpdate}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onError={handleVideoError}

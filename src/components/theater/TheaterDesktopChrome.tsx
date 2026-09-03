@@ -848,14 +848,27 @@ export function DesktopDock({
   onClearQueueTypes,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
+  const [filterShortcutOpen, setFilterShortcutOpen] = useState(false)
   const queueControlDescriptionId = useId()
   const filterControlDescriptionId = useId()
+  const queueDialogId = useId()
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const rootRef = useRef<HTMLDivElement>(null)
   const queueRootRef = useRef<HTMLDivElement>(null)
-  const closeShowAll = useCallback(() => setShowAll(false), [])
+  const closeShowAll = useCallback(() => {
+    setShowAll(false)
+    setFilterShortcutOpen(false)
+  }, [])
   useTheaterActionHotkeys('desktop', rootRef)
-  useTheaterQueueOverlay({ open: showAll, onClose: closeShowAll, containerRef: rootRef })
+  useTheaterQueueOverlay({
+    open: showAll,
+    onClose: closeShowAll,
+    containerRef: rootRef,
+    autoFocus: !filterShortcutOpen,
+    restoreSelector: filterShortcutOpen
+      ? 'button[aria-label="Filter post types"]'
+      : '[data-theater-action="show-all"]',
+  })
 
   const kind = progressKindFor(current, articleMode)
   const { paused, displayMuted, soundPulse, queueCount, handleAudioTap, handleTogglePause } =
@@ -1204,10 +1217,14 @@ export function DesktopDock({
               type="button"
               aria-label="Queue"
               aria-describedby={queueControlDescriptionId}
+              aria-controls={queueDialogId}
               aria-expanded={showAll}
               title={queueCount?.ariaLabel ?? 'Queue'}
               data-theater-action="show-all"
-              onClick={() => setShowAll((v) => !v)}
+              onClick={() => {
+                setFilterShortcutOpen(false)
+                setShowAll((v) => !v)
+              }}
               className="relative inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-ink-2 transition-colors hover:bg-inset hover:text-ink"
             >
               <List size={19} aria-hidden />
@@ -1236,10 +1253,14 @@ export function DesktopDock({
                 type="button"
                 aria-label="Filter post types"
                 aria-describedby={filterOn ? filterControlDescriptionId : undefined}
+                aria-controls={queueDialogId}
                 aria-expanded={showAll}
                 title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
                 data-theater-queue-filter={filterOn ? '' : undefined}
-                onClick={() => setShowAll((value) => !value)}
+                onClick={() => {
+                  setFilterShortcutOpen(!showAll)
+                  setShowAll((value) => !value)
+                }}
                 className={cn(
                   'relative inline-flex h-11 w-11 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink',
                   filterOn && 'text-clay hover:text-clay',
@@ -1264,6 +1285,7 @@ export function DesktopDock({
           {showAll && (
             <div
               data-theater-queue-panel
+              id={queueDialogId}
               role="dialog"
               aria-label="Playlist"
               className="pointer-events-auto absolute bottom-full right-0 z-20 mb-2 flex max-h-[62vh] w-[380px] flex-col overflow-hidden rounded-xl border border-hairline bg-surface shadow-m-lg"
@@ -1280,7 +1302,7 @@ export function DesktopDock({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setShowAll(false)}
+                  onClick={closeShowAll}
                   aria-label="Close"
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-inset"
                 >
@@ -1292,6 +1314,10 @@ export function DesktopDock({
                   selected={queueTypes}
                   onToggle={onToggleQueueType}
                   onClear={onClearQueueTypes}
+                  autoFocus={filterShortcutOpen}
+                  onCommit={closeShowAll}
+                  onCancel={closeShowAll}
+                  keyboardShortcutFlow={filterShortcutOpen}
                 />
               ) : null}
               <UpNextList

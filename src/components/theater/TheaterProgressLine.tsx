@@ -34,6 +34,7 @@
 import { useEffect, useRef } from 'react'
 import { isQuoteReader, type TheaterItem } from './types'
 import { dispatchTheaterSeek, THEATER_SEEK, type TheaterSeekDetail } from './useTheaterStageEvents'
+import { cn } from '@/lib/utils'
 
 export type ProgressKind = 'video' | 'timed' | 'none'
 
@@ -73,30 +74,80 @@ export interface TheaterProgressLineProps {
   /** Current item key — progress resets when it changes. */
   itemKey: string | null
   kind: ProgressKind
+  /** Desktop renders immediately above the 124px filmstrip instead of at the viewport top. */
+  desktopDock?: boolean
+  /** Keep timer/event effects alive while de-clutter hides the desktop dock. */
+  hidden?: boolean
 }
 
 function paintProgress(
   fill: HTMLDivElement | null,
   slider: HTMLInputElement | null,
   progress: number,
+  durationSeconds?: number | null,
 ) {
   const clamped = Math.min(1, Math.max(0, progress))
   const pct = clamped * 100
   if (fill) fill.style.width = `${pct}%`
   if (slider) {
     slider.value = String(Math.round(clamped * 1000))
-    slider.setAttribute('aria-valuetext', `${Math.round(pct)}%`)
+    slider.setAttribute(
+      'aria-valuetext',
+      durationSeconds && Number.isFinite(durationSeconds)
+        ? `${formatPlaybackTime(clamped * durationSeconds)} of ${formatPlaybackTime(durationSeconds)}`
+        : `${Math.round(pct)}%`,
+    )
   }
 }
 
-export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps) {
+export function formatPlaybackTime(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds))
+  const hours = Math.floor(whole / 3600)
+  const minutes = Math.floor((whole % 3600) / 60)
+  const remainder = whole % 60
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+    : `${minutes}:${String(remainder).padStart(2, '0')}`
+}
+
+export function TheaterProgressLine({
+  itemKey,
+  kind,
+  desktopDock = false,
+  hidden = false,
+}: TheaterProgressLineProps) {
   const fillRef = useRef<HTMLDivElement>(null)
   const sliderRef = useRef<HTMLInputElement>(null)
+  const badgeRef = useRef<HTMLDivElement>(null)
+  const badgeTextRef = useRef<HTMLSpanElement>(null)
+  const durationRef = useRef<number | null>(kind === 'timed' ? NON_VIDEO_DWELL_MS / 1000 : null)
   const scrubbingRef = useRef(false)
 
   useEffect(() => {
     scrubbingRef.current = false
+    durationRef.current = kind === 'timed' ? NON_VIDEO_DWELL_MS / 1000 : null
+    badgeRef.current?.setAttribute('aria-hidden', 'true')
+    if (badgeRef.current) badgeRef.current.style.opacity = '0'
   }, [itemKey, kind])
+
+  const showScrubBadge = (progress: number) => {
+    const duration = durationRef.current
+    const badge = badgeRef.current
+    if (!badge || !badgeTextRef.current || !duration || !Number.isFinite(duration)) return
+    const clamped = Math.min(1, Math.max(0, progress))
+    badge.style.opacity = '1'
+    badgeTextRef.current.textContent = `${formatPlaybackTime(clamped * duration)} / ${formatPlaybackTime(duration)}`
+  }
+
+  const endScrub = () => {
+    scrubbingRef.current = false
+    badgeRef.current?.setAttribute('aria-hidden', 'true')
+    if (badgeRef.current) badgeRef.current.style.opacity = '0'
+  }
+
+  useEffect(() => {
+    if (hidden) endScrub()
+  }, [hidden])
 
   // kind 'video': mirror StageVideo's timeupdate-derived progress directly
   // onto the fill's width. No React state — a tick here must never trigger a
@@ -108,9 +159,14 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
     paintProgress(fill, sliderRef.current, 0)
 
     function handleProgress(e: Event) {
-      const detail = (e as CustomEvent<{ progress: number }>).detail
-      if (!detail || scrubbingRef.current) return
-      paintProgress(fillRef.current, sliderRef.current, detail.progress)
+      const detail = (e as CustomEvent<{ progress: number; duration?: number }>).detail
+      if (!detail) return
+      if (detail.duration && Number.isFinite(detail.duration)) durationRef.current = detail.duration
+      if (scrubbingRef.current) {
+        showScrubBadge(Number(sliderRef.current?.value ?? 0) / 1000)
+        return
+      }
+      paintProgress(fillRef.current, sliderRef.current, detail.progress, durationRef.current)
     }
 
     window.addEventListener('theater-video-progress', handleProgress)
@@ -126,7 +182,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
     if (kind !== 'timed') return
     const fill = fillRef.current
     if (!fill) return
-    paintProgress(fill, sliderRef.current, 0)
+    paintProgress(fill, sliderRef.current, 0, NON_VIDEO_DWELL_MS / 1000)
 
     let rafId = 0
     let baseline: number | null = null
@@ -144,7 +200,12 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
       elapsedMs = now - baseline
       const node = fillRef.current
       if (node) {
-        paintProgress(node, sliderRef.current, elapsedMs / NON_VIDEO_DWELL_MS)
+        paintProgress(
+          node,
+          sliderRef.current,
+          elapsedMs / NON_VIDEO_DWELL_MS,
+          NON_VIDEO_DWELL_MS / 1000,
+        )
       }
       if (elapsedMs >= NON_VIDEO_DWELL_MS) {
         if (!advanced) {
@@ -183,7 +244,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
       elapsedMs = Math.min(1, Math.max(0, detail.progress)) * NON_VIDEO_DWELL_MS
       baseline = null
       advanced = false
-      paintProgress(fillRef.current, sliderRef.current, detail.progress)
+      paintProgress(fillRef.current, sliderRef.current, detail.progress, NON_VIDEO_DWELL_MS / 1000)
     }
 
     window.addEventListener('theater-pause', handlePause)
@@ -204,18 +265,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
   if (kind === 'none') return null
 
   return (
-    <div
-      className="group pointer-events-auto fixed inset-x-0 top-0 z-[70] h-[calc(env(safe-area-inset-top)+44px)] touch-none lg:h-8"
-      data-theater-progress
-    >
-      <div className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-[3px] bg-white/15">
-        <div
-          ref={fillRef}
-          data-theater-progress-fill
-          className="relative h-full bg-clay after:absolute after:right-0 after:top-1/2 after:h-2 after:w-2 after:translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-clay after:shadow-[0_0_8px_rgba(240,127,76,.65)] after:transition-transform group-focus-within:after:scale-125 group-active:after:scale-125"
-          style={{ width: '0%' }}
-        />
-      </div>
+    <div className="contents" data-theater-progress>
       <input
         ref={sliderRef}
         type="range"
@@ -226,34 +276,71 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
         aria-label="Playback position"
         aria-valuetext="0%"
         data-theater-progress-slider
-        className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-11 w-full cursor-ew-resize opacity-0 lg:h-8"
+        disabled={hidden}
+        className={cn(
+          'peer fixed inset-x-0 z-[70] w-full touch-none cursor-ew-resize opacity-0',
+          desktopDock
+            ? 'bottom-[124px] top-auto h-9'
+            : 'pointer-events-auto top-[env(safe-area-inset-top)] h-11',
+          hidden ? 'pointer-events-none' : 'pointer-events-auto',
+        )}
         onPointerDown={() => {
           scrubbingRef.current = true
+          showScrubBadge(Number(sliderRef.current?.value ?? 0) / 1000)
         }}
-        onPointerUp={() => {
-          scrubbingRef.current = false
-        }}
-        onPointerCancel={() => {
-          scrubbingRef.current = false
-        }}
-        onLostPointerCapture={() => {
-          scrubbingRef.current = false
-        }}
+        onPointerUp={endScrub}
+        onPointerCancel={endScrub}
+        onLostPointerCapture={endScrub}
         onTouchStart={() => {
           scrubbingRef.current = true
+          showScrubBadge(Number(sliderRef.current?.value ?? 0) / 1000)
         }}
-        onTouchEnd={() => {
-          scrubbingRef.current = false
-        }}
-        onTouchCancel={() => {
-          scrubbingRef.current = false
-        }}
+        onTouchEnd={endScrub}
+        onTouchCancel={endScrub}
         onInput={(event) => {
           const progress = Number(event.currentTarget.value) / 1000
-          paintProgress(fillRef.current, sliderRef.current, progress)
+          paintProgress(fillRef.current, sliderRef.current, progress, durationRef.current)
+          if (scrubbingRef.current) showScrubBadge(progress)
           dispatchTheaterSeek(progress)
         }}
       />
+      <div
+        className={cn(
+          'pointer-events-none fixed inset-x-0 z-[70] transition-opacity',
+          desktopDock
+            ? 'bottom-[124px] top-auto h-1 bg-white/20'
+            : 'top-[env(safe-area-inset-top)] h-[3px] bg-white/15',
+          'peer-focus:ring-2 peer-focus:ring-[#f07f4c] peer-focus:ring-offset-1 peer-focus:ring-offset-black',
+          hidden && 'opacity-0',
+        )}
+      >
+        <div
+          ref={fillRef}
+          data-theater-progress-fill
+          className={cn(
+            'relative h-full bg-clay after:absolute after:right-0 after:top-1/2 after:h-2 after:w-2 after:translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-clay after:shadow-[0_0_8px_rgba(240,127,76,.65)]',
+            desktopDock && 'bg-[#f07f4c] shadow-[0_0_10px_rgba(240,127,76,.72)] after:bg-[#f07f4c]',
+          )}
+          style={{ width: '0%' }}
+        />
+      </div>
+      <div
+        className={cn(
+          'pointer-events-none fixed inset-x-0 z-[72] flex justify-center',
+          desktopDock
+            ? 'bottom-[calc(124px+0.25rem)]'
+            : 'top-[calc(env(safe-area-inset-top)+0.5rem)]',
+        )}
+      >
+        <div
+          ref={badgeRef}
+          data-theater-scrub-time
+          aria-hidden="true"
+          className="pointer-events-none w-max min-w-[7rem] whitespace-nowrap rounded-full border border-white/20 bg-[#121117]/95 px-2 py-1 text-center font-mono text-[11px] font-semibold leading-none tabular-nums text-white opacity-0 shadow-[0_5px_18px_rgba(0,0,0,.35)] backdrop-blur-md"
+        >
+          <span ref={badgeTextRef}>0:00 / 0:00</span>
+        </div>
+      </div>
     </div>
   )
 }

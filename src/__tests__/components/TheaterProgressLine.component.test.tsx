@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { render, act, fireEvent } from '@testing-library/react'
-import { TheaterProgressLine } from '@/components/theater/TheaterProgressLine'
+import { formatPlaybackTime, TheaterProgressLine } from '@/components/theater/TheaterProgressLine'
 import { THEATER_SEEK } from '@/components/theater/useTheaterStageEvents'
 
 describe('TheaterProgressLine', () => {
@@ -28,7 +28,6 @@ describe('TheaterProgressLine', () => {
     try {
       expect(slider).toHaveAttribute('aria-label', 'Playback position')
       expect(slider.className).toContain('h-11')
-      expect(slider.className).toContain('lg:h-8')
 
       fireEvent.input(slider, { target: { value: '375' } })
 
@@ -39,6 +38,95 @@ describe('TheaterProgressLine', () => {
     } finally {
       window.removeEventListener(THEATER_SEEK, seek)
     }
+  })
+
+  it('shows a drag-following elapsed/duration badge only while scrubbing', () => {
+    const { container } = render(<TheaterProgressLine itemKey="video:1" kind="video" />)
+    const slider = container.querySelector('[data-theater-progress-slider]') as HTMLInputElement
+    const badge = container.querySelector('[data-theater-scrub-time]') as HTMLElement
+
+    expect(badge).toHaveAttribute('aria-hidden', 'true')
+    expect(badge).toHaveClass('opacity-0')
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('theater-video-progress', {
+          detail: { progress: 0.25, duration: 125 },
+        }),
+      )
+    })
+    expect(slider).toHaveAttribute('aria-valuetext', '0:31 of 2:05')
+
+    fireEvent.pointerDown(slider)
+    fireEvent.input(slider, { target: { value: '400' } })
+    expect(badge).toHaveAttribute('aria-hidden', 'true')
+    expect(badge).toHaveTextContent('0:50 / 2:05')
+    expect(badge.style.left).toBe('')
+    expect(badge.style.opacity).toBe('1')
+    expect(badge).toHaveClass('w-max', 'min-w-[7rem]', 'whitespace-nowrap')
+    expect(badge.parentElement).toHaveClass(
+      'fixed',
+      'inset-x-0',
+      'z-[72]',
+      'justify-center',
+      'top-[calc(env(safe-area-inset-top)+0.5rem)]',
+    )
+
+    fireEvent.pointerUp(slider)
+    expect(badge).toHaveAttribute('aria-hidden', 'true')
+    expect(badge.style.opacity).toBe('0')
+  })
+
+  it('formats long playback durations without dropping hours', () => {
+    expect(formatPlaybackTime(7)).toBe('0:07')
+    expect(formatPlaybackTime(3_725)).toBe('1:02:05')
+  })
+
+  it('shows target time when duration arrives during the first scrub', () => {
+    const { container } = render(<TheaterProgressLine itemKey="video:first" kind="video" />)
+    const slider = container.querySelector('[data-theater-progress-slider]') as HTMLInputElement
+    const badge = container.querySelector('[data-theater-scrub-time]') as HTMLElement
+
+    fireEvent.pointerDown(slider)
+    fireEvent.input(slider, { target: { value: '600' } })
+    expect(badge.style.opacity).not.toBe('1')
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('theater-video-progress', {
+          detail: { progress: 0, duration: 90 },
+        }),
+      )
+    })
+    expect(badge).toHaveTextContent('0:54 / 1:30')
+    expect(badge.style.opacity).toBe('1')
+  })
+
+  it('places the desktop line above the filmstrip and hides it with de-clutter', () => {
+    const { container, rerender } = render(
+      <TheaterProgressLine itemKey="video:desktop" kind="video" desktopDock />,
+    )
+    const slider = container.querySelector('[data-theater-progress-slider]') as HTMLElement
+    const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
+    const track = fill.parentElement
+    const badge = container.querySelector('[data-theater-scrub-time]') as HTMLElement
+
+    expect(slider).toHaveClass('bottom-[124px]', 'top-auto', 'h-9', 'z-[70]')
+    expect(track).toHaveClass('bottom-[124px]', 'top-auto', 'h-1', 'z-[70]')
+    expect(track).toHaveClass('peer-focus:ring-2', 'peer-focus:ring-[#f07f4c]')
+    expect(fill).toHaveClass('bg-[#f07f4c]')
+    expect(badge.parentElement).toHaveClass(
+      'fixed',
+      'inset-x-0',
+      'bottom-[calc(124px+0.25rem)]',
+      'z-[72]',
+      'justify-center',
+    )
+    expect(badge).toHaveClass('whitespace-nowrap')
+
+    rerender(<TheaterProgressLine itemKey="video:desktop" kind="video" desktopDock hidden />)
+    expect(slider).toHaveClass('pointer-events-none')
+    expect(slider).toBeDisabled()
+    expect(track).toHaveClass('opacity-0')
   })
 
   it('resumes progress updates after a pointer or touch scrub is canceled', () => {

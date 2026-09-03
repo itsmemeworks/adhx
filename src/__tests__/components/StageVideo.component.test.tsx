@@ -110,6 +110,29 @@ describe('StageVideo progress scrubbing', () => {
     expect(container.querySelector('video')).toBe(video)
   })
 
+  it('publishes duration with progress so the scrub badge can show target time', () => {
+    const src = '/api/media/video?tweetId=progress'
+    const progress = vi.fn()
+    window.addEventListener('theater-video-progress', progress)
+    const { container } = render(
+      <StageVideo item={makeItem()} src={src} poster={null} muted onRequestUnmute={vi.fn()} />,
+    )
+    const video = container.querySelector('video') as HTMLVideoElement
+    Object.defineProperty(video, 'duration', { configurable: true, value: 200 })
+    video.currentTime = 50
+    activateVideo(video, src)
+
+    try {
+      fireEvent.loadedMetadata(video)
+      expect((progress.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({
+        progress: 0.25,
+        duration: 200,
+      })
+    } finally {
+      window.removeEventListener('theater-video-progress', progress)
+    }
+  })
+
   it('does not seek a video retained underneath a non-video stage', () => {
     const src = '/api/media/video?clip=covered'
     const { container } = render(

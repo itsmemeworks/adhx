@@ -185,7 +185,7 @@ const PEEK_ICON_BTN =
   'inline-flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
 /** Frosted post-action treatment for the right-side thumb rail. */
 const RAIL_ACTION_BTN =
-  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/20 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.18)] backdrop-blur-md transition-[transform,background-color] hover:bg-black/35 active:scale-95 active:bg-black/45'
+  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/20 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.18)] backdrop-blur-md transition-[transform,background-color] hover:bg-white/10 active:scale-95 active:bg-white/20'
 
 export function TheaterMobileChrome({
   mode,
@@ -845,7 +845,7 @@ export function TheaterMobileChrome({
             inert={declutter}
             data-theater-swipe-control
             className={cn(
-              'absolute bottom-2 right-3 flex h-28 w-12 flex-col gap-2 overflow-hidden rounded-full border border-white/20 bg-black/25 py-2 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.22)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
+              'absolute bottom-2 right-3 flex h-28 w-12 flex-col gap-2 overflow-hidden rounded-full border border-white/20 bg-black/25 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.22)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
               declutter && 'pointer-events-none scale-95 opacity-0',
             )}
           >
@@ -855,7 +855,7 @@ export function TheaterMobileChrome({
               aria-disabled={!canPrev}
               onClick={onPrev}
               aria-label="Previous post"
-              className="flex min-h-0 flex-1 items-center justify-center transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
+              className="flex min-h-0 flex-1 items-center justify-center rounded-t-full pt-2 transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
             >
               <ChevronUp size={21} />
             </button>
@@ -865,7 +865,7 @@ export function TheaterMobileChrome({
               aria-disabled={!canNext}
               onClick={onNext}
               aria-label="Next post"
-              className="flex min-h-0 flex-1 items-center justify-center transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
+              className="flex min-h-0 flex-1 items-center justify-center rounded-b-full pb-2 transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
             >
               <ChevronDown size={21} />
             </button>
