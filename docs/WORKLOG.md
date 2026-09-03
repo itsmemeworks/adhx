@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Scrubbing keeps one visible timeline
+
+The invisible range control no longer paints an offset focus ring around the visible progress track;
+that ring looked like a second orange timeline while dragging. Focus now strengthens the existing
+track background without adding another line. The desktop track now paints above the stage gradient,
+so its clay fill stays vivid at the filmstrip edge. Current state: in flight; component regression added.
+
 ## 2026-09-03 — Theater scrub feedback and keyboard filtering
 
 Active timeline drags now show a centered, stable elapsed/duration badge on mobile and desktop;

@@ -1020,7 +1020,7 @@ describe('DesktopStageChrome', () => {
       container.querySelector('button[aria-label="Paste a link"]')?.closest('.lg\\:block'),
     ).toHaveClass('z-[71]')
     expect(container.querySelector('[data-theater-scrub-time]')?.parentElement).toHaveClass(
-      'z-[72]',
+      'z-[74]',
     )
     expect(screen.getByRole('dialog').closest('[role="presentation"]')).toHaveClass('z-[80]')
   })

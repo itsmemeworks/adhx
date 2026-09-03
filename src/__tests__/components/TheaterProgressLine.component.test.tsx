@@ -66,7 +66,7 @@ describe('TheaterProgressLine', () => {
     expect(badge.parentElement).toHaveClass(
       'fixed',
       'inset-x-0',
-      'z-[72]',
+      'z-[74]',
       'justify-center',
       'top-[calc(env(safe-area-inset-top)+0.5rem)]',
     )
@@ -111,14 +111,15 @@ describe('TheaterProgressLine', () => {
     const badge = container.querySelector('[data-theater-scrub-time]') as HTMLElement
 
     expect(slider).toHaveClass('bottom-[124px]', 'top-auto', 'h-9', 'z-[70]')
-    expect(track).toHaveClass('bottom-[124px]', 'top-auto', 'h-1', 'z-[70]')
-    expect(track).toHaveClass('peer-focus:ring-2', 'peer-focus:ring-[#f07f4c]')
+    expect(track).toHaveClass('bottom-[124px]', 'top-auto', 'h-1', 'z-[72]')
+    expect(track).toHaveClass('peer-focus-visible:bg-white/40', 'peer-focus-visible:brightness-125')
+    expect(track).not.toHaveClass('peer-focus:ring-2')
     expect(fill).toHaveClass('bg-[#f07f4c]')
     expect(badge.parentElement).toHaveClass(
       'fixed',
       'inset-x-0',
       'bottom-[calc(124px+0.25rem)]',
-      'z-[72]',
+      'z-[74]',
       'justify-center',
     )
     expect(badge).toHaveClass('whitespace-nowrap')

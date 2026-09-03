@@ -306,11 +306,11 @@ export function TheaterProgressLine({
       />
       <div
         className={cn(
-          'pointer-events-none fixed inset-x-0 z-[70] transition-opacity',
+          'pointer-events-none fixed inset-x-0 transition-[opacity,filter,background-color]',
           desktopDock
-            ? 'bottom-[124px] top-auto h-1 bg-white/20'
-            : 'top-[env(safe-area-inset-top)] h-[3px] bg-white/15',
-          'peer-focus:ring-2 peer-focus:ring-[#f07f4c] peer-focus:ring-offset-1 peer-focus:ring-offset-black',
+            ? 'bottom-[124px] top-auto z-[72] h-1 bg-white/20'
+            : 'top-[env(safe-area-inset-top)] z-[70] h-[3px] bg-white/15',
+          'peer-focus-visible:bg-white/40 peer-focus-visible:brightness-125',
           hidden && 'opacity-0',
         )}
       >
@@ -326,7 +326,7 @@ export function TheaterProgressLine({
       </div>
       <div
         className={cn(
-          'pointer-events-none fixed inset-x-0 z-[72] flex justify-center',
+          'pointer-events-none fixed inset-x-0 z-[74] flex justify-center',
           desktopDock
             ? 'bottom-[calc(124px+0.25rem)]'
             : 'top-[calc(env(safe-area-inset-top)+0.5rem)]',
