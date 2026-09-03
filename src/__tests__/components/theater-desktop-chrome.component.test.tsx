@@ -350,6 +350,37 @@ describe('DesktopDock', () => {
     expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
   })
 
+  it('Shift+Q toggles the desktop filter shortcut flow', async () => {
+    const items = [videoItem({ bookmarkId: '1', text: 'unique caption text' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        queueTypes={[]}
+        onToggleQueueType={vi.fn()}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'All' })).toHaveFocus())
+
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+
+    fireEvent(window, new CustomEvent('theater-toggle-show-all'))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'All' })).toHaveFocus())
+
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+  })
+
   it('keeps Queue open when the stage advances to the next post', () => {
     const items = [
       videoItem({ bookmarkId: '1', text: 'first playlist row' }),
@@ -518,6 +549,7 @@ describe('DesktopDock: end cap restructure', () => {
     expect(toggle.querySelector('.lucide-list')).toBeInTheDocument()
     expect(toggle.querySelector('[data-theater-play-count]')).toHaveTextContent('2')
     expect(toggle).not.toHaveTextContent('Queue')
+    expect(toggle).toHaveAttribute('aria-keyshortcuts', 'Q')
     expect(toggle.parentElement).toHaveClass('flex-col')
   })
 
@@ -598,6 +630,8 @@ describe('DesktopDock: end cap restructure', () => {
     const queue = screen.getByRole('button', { name: 'Queue' })
     const filter = screen.getByRole('button', { name: 'Filter post types' })
     expect(queue.querySelector('.lucide-list-filter')).not.toBeInTheDocument()
+    expect(filter).toHaveAttribute('aria-keyshortcuts', 'Shift+Q')
+    expect(filter).toHaveAttribute('data-theater-action', 'queue-filter')
     expect(filter).toHaveAttribute('data-theater-queue-filter')
     expect(filter).toHaveAttribute('title', 'Videos')
     expect(filter.className).toContain('text-clay')

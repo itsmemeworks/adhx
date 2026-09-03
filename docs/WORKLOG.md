@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Playlist and filter both have toggle shortcuts
+
+`Q` now explicitly toggles the playlist/Queue panel and `Shift+Q` toggles the desktop type-filter
+flow, focusing its current option for arrow/Space/Enter control. Both controls expose
+`aria-keyshortcuts`, and the help overlay lists the pair together. Current state: in flight;
+shortcut resolution, event dispatch, desktop toggling, and accessible hints have regression tests.
+
 ## 2026-09-03 — Scrubbing keeps one visible timeline
 
 The invisible range control no longer paints an offset focus ring around the visible progress track;

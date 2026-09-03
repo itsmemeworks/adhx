@@ -23,6 +23,7 @@ export type TheaterShortcut =
   | 'close'
   | 'toggleMenu'
   | 'toggleShowAll'
+  | 'toggleFilter'
   | 'toggleHelp'
   | 'toggleArticle'
   | 'replay'
@@ -44,6 +45,7 @@ export const THEATER_ACTION_EVENTS = {
   archive: 'theater-archive',
   toggleMenu: 'theater-toggle-menu',
   toggleShowAll: 'theater-toggle-show-all',
+  toggleFilter: 'theater-toggle-filter',
   toggleArticle: 'theater-toggle-article',
   replay: 'theater-replay',
   keepPlaying: 'theater-keep-playing',
@@ -64,6 +66,7 @@ export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
   archive: 'archive',
   toggleMenu: 'menu',
   toggleShowAll: 'show-all',
+  toggleFilter: 'queue-filter',
   toggleArticle: 'read',
   replay: 'replay',
   keepPlaying: 'keep-playing',
@@ -206,7 +209,7 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
       return 'keepPlaying'
     case 'q':
     case 'Q':
-      return 'toggleShowAll'
+      return e.shiftKey ? 'toggleFilter' : 'toggleShowAll'
     case '.':
       return 'toggleMenu'
     case '?':
@@ -263,6 +266,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
       { keys: ['1'], label: 'Live' },
       { keys: ['2'], label: 'Saved' },
       { keys: ['Q'], label: 'Queue' },
+      { keys: ['⇧Q'], label: 'Filter (desktop)' },
     ],
   },
   {

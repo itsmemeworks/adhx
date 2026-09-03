@@ -1219,6 +1219,7 @@ export function DesktopDock({
               aria-describedby={queueControlDescriptionId}
               aria-controls={queueDialogId}
               aria-expanded={showAll}
+              aria-keyshortcuts="Q"
               title={queueCount?.ariaLabel ?? 'Queue'}
               data-theater-action="show-all"
               onClick={() => {
@@ -1255,11 +1256,17 @@ export function DesktopDock({
                 aria-describedby={filterOn ? filterControlDescriptionId : undefined}
                 aria-controls={queueDialogId}
                 aria-expanded={showAll}
+                aria-keyshortcuts="Shift+Q"
                 title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
                 data-theater-queue-filter={filterOn ? '' : undefined}
+                data-theater-action="queue-filter"
                 onClick={() => {
-                  setFilterShortcutOpen(!showAll)
-                  setShowAll((value) => !value)
+                  if (showAll && filterShortcutOpen) {
+                    closeShowAll()
+                    return
+                  }
+                  setFilterShortcutOpen(true)
+                  setShowAll(true)
                 }}
                 className={cn(
                   'relative inline-flex h-11 w-11 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink',

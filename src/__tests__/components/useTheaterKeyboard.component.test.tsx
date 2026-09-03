@@ -123,6 +123,7 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     window.addEventListener('theater-copy-link', heard)
     window.addEventListener('theater-toggle-menu', heard)
     window.addEventListener('theater-toggle-show-all', heard)
+    window.addEventListener('theater-toggle-filter', heard)
     try {
       renderHook(() => useTheaterKeyboard(baseArgs()))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 's' })))
@@ -130,13 +131,15 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'l' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '.' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'q' })))
-      expect(heard).toHaveBeenCalledTimes(5)
+      act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Q', shiftKey: true })))
+      expect(heard).toHaveBeenCalledTimes(6)
     } finally {
       window.removeEventListener('theater-save', heard)
       window.removeEventListener('theater-tag', heard)
       window.removeEventListener('theater-copy-link', heard)
       window.removeEventListener('theater-toggle-menu', heard)
       window.removeEventListener('theater-toggle-show-all', heard)
+      window.removeEventListener('theater-toggle-filter', heard)
     }
   })
 
