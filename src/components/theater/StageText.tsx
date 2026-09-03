@@ -127,7 +127,7 @@ export function StageText({
   const text = (item.text || '').trim()
   const authorName = item.authorName || (item.author ? `@${item.author}` : 'Saved post')
   const { quote, parentPhotos, parentVideo } = useHydratedQuote(item)
-  const captionRef = useRef<HTMLParagraphElement>(null)
+  const captionRef = useRef<HTMLParagraphElement | HTMLButtonElement>(null)
 
   if (photo) {
     const fallback = stagePhotoSrc(item)

@@ -6,19 +6,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterAvatarMenu } from '@/components/theater/TheaterAvatarMenu'
 import { invalidateAuthMe } from '@/components/auth'
 
-const themeMock = vi.hoisted(() => ({
-  resolvedTheme: 'dark' as 'light' | 'dark',
-  setTheme: vi.fn(),
-}))
-
-vi.mock('@/lib/theme/context', () => ({
-  useThemeOptional: () => ({
-    theme: themeMock.resolvedTheme,
-    resolvedTheme: themeMock.resolvedTheme,
-    setTheme: themeMock.setTheme,
-  }),
-}))
-
 // Mutable so individual tests can simulate viewing the burger menu from
 // somewhere other than the home theater (a shared preview page) — real
 // usePathname() would return whatever route the component is mounted under.
@@ -71,8 +58,6 @@ describe('TheaterAvatarMenu', () => {
     // refetch for every test.
     invalidateAuthMe()
     mockPathname = '/'
-    themeMock.resolvedTheme = 'dark'
-    themeMock.setTheme.mockReset()
   })
 
   afterEach(() => {
@@ -107,28 +92,9 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.getByText('Tags')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
-    expect(screen.getByText('Light mode')).toBeInTheDocument()
+    expect(screen.queryByText(/mode$/)).not.toBeInTheDocument()
     expect(screen.getByText('Sign out')).toBeInTheDocument()
     expect(screen.getByText('@weedauwl')).toBeInTheDocument()
-  })
-
-  it('switches the persisted site theme from the theater account menu', async () => {
-    mockAuthMe(AUTHED_ME)
-    render(<TheaterAvatarMenu />)
-    fireEvent.click(await screen.findByLabelText('Account menu'))
-
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Light mode' }))
-    expect(themeMock.setTheme).toHaveBeenCalledWith('light')
-  })
-
-  it('offers dark mode when the current site theme is light', async () => {
-    themeMock.resolvedTheme = 'light'
-    mockAuthMe(AUTHED_ME)
-    render(<TheaterAvatarMenu />)
-    fireEvent.click(await screen.findByLabelText('Account menu'))
-
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Dark mode' }))
-    expect(themeMock.setTheme).toHaveBeenCalledWith('dark')
   })
 
   it('leads with the ADHX username, never the email, for an email-only account', async () => {
@@ -336,8 +302,6 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
   beforeEach(() => {
     invalidateAuthMe()
     mockPathname = '/'
-    themeMock.resolvedTheme = 'dark'
-    themeMock.setTheme.mockReset()
   })
 
   afterEach(() => {
@@ -356,7 +320,7 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
     fireEvent.click(button)
     expect(screen.getByText('Theater')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
-    expect(screen.getByText('Light mode')).toBeInTheDocument()
+    expect(screen.queryByText(/mode$/)).not.toBeInTheDocument()
     expect(screen.queryByText('Privacy')).not.toBeInTheDocument()
     expect(screen.getByText('Sign in')).toBeInTheDocument()
   })

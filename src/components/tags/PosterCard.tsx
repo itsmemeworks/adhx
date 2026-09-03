@@ -98,8 +98,8 @@ const CLAY_BADGE_STYLE: React.CSSProperties = {
 /**
  * Reusable "poster" card (Option C): the content mosaic IS the card, with a
  * serif tag title overlaid on a bottom scrim. Always dark inside — content-
- * on-dark by nature, like `TagQuickPicker`/`SignInModal` — regardless of the
- * site's light/dark theme; the page around it stays on Matter tokens.
+ * on-dark by nature, like `TagQuickPicker`/`SignInModal`; the page around it
+ * stays on the warmer Matter tokens.
  *
  * Consumed by `/tags` (`TagsClient.tsx`, mosaic link + title/stats overlay,
  * Public/Private and copy/open/delete in a row under the image), the public

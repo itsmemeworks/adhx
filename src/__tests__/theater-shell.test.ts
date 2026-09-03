@@ -109,18 +109,19 @@ describe('theaterQueueFilterLabel', () => {
     expect(theaterQueueFilterLabel([])).toBe('Queue')
     expect(theaterQueueFilterLabel(['video'])).toBe('Videos')
     expect(theaterQueueFilterLabel(['video', 'photo'])).toBe('Videos · Photos')
-    expect(theaterQueueFilterLabel(['video', 'text', 'article'])).toBe('3 types')
+    expect(theaterQueueFilterLabel(['video', 'text', 'article'])).toBe('Videos · Text')
+    expect(theaterQueueFilterLabel(['article'])).toBe('Text')
   })
 })
 
 describe('theaterQueueEmptyHeadline', () => {
   it('names the selected types', () => {
-    expect(theaterQueueEmptyHeadline(['article'])).toBe('No articles in Live right now')
+    expect(theaterQueueEmptyHeadline(['article'])).toBe('No text in Live right now')
     expect(theaterQueueEmptyHeadline(['video', 'photo'])).toBe(
       'No videos or photos in Live right now',
     )
     expect(theaterQueueEmptyHeadline(['video', 'text', 'article'])).toBe(
-      'No videos, text, or articles in Live right now',
+      'No videos or text in Live right now',
     )
     expect(theaterQueueEmptyHeadline(['video'], 'Saved')).toBe('No videos in Saved right now')
   })

@@ -15,10 +15,8 @@ import {
   LogIn,
   LogOut,
   Menu,
-  Moon,
   Radio,
   Settings,
-  Sun,
   Tag,
   Trophy,
   type LucideIcon,
@@ -31,11 +29,9 @@ import { usePreferences } from '@/lib/preferences-context'
 import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 import { isSavedPath } from '@/lib/theater/collection-href'
 import { setClientEventAccount } from '@/lib/client-events'
-import { useThemeOptional } from '@/lib/theme/context'
 
-// The theater is ALWAYS dark regardless of the site's light/dark theme, so
-// the dropdown panel uses a hardcoded palette rather than the Matter theme
-// tokens — same precedent as SignInModal.tsx.
+// Keep the theater dropdown on its exact stage palette rather than inheriting
+// the warmer page-level Matter tokens — same precedent as SignInModal.tsx.
 const PANEL = '#201b16'
 const BORDER = '#322b23'
 const INK = '#f3ece0'
@@ -54,30 +50,6 @@ function CurrentDot() {
       aria-hidden
       data-testid="menu-current-dot"
     />
-  )
-}
-
-/** Theme action shared by the signed-in avatar menu and signed-out burger.
- * The theater panel itself stays dark, but the explicit choice applies
- * immediately to theme-aware surfaces and persists when the visitor leaves. */
-function MenuThemeToggle() {
-  const theme = useThemeOptional()
-  if (!theme) return null
-
-  const isDark = theme.resolvedTheme === 'dark'
-  const Icon = isDark ? Sun : Moon
-
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={() => theme.setTheme(isDark ? 'light' : 'dark')}
-      className={`${MENU_ROW} w-full text-left`}
-      style={{ color: SUBTLE }}
-    >
-      <Icon size={15} />
-      <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
-    </button>
   )
 }
 
@@ -424,7 +396,6 @@ export function TheaterAvatarMenu({
               <span>Leaderboard</span>
             </MenuLink>
             <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
-            <MenuThemeToggle />
             <button
               type="button"
               role="menuitem"
@@ -562,7 +533,6 @@ export function TheaterAvatarMenu({
             <span>Settings</span>
           </MenuLink>
           <div className="my-1 h-px" style={{ backgroundColor: BORDER }} />
-          <MenuThemeToggle />
           <button
             type="button"
             role="menuitem"

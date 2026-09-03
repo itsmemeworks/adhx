@@ -3,8 +3,9 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, act, fireEvent } from '@testing-library/react'
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { StageVideo } from '@/components/theater/StageVideo'
+import { useTheaterStageTapDeclutter } from '@/components/theater/useTheaterStageEvents'
 import type { TheaterItem } from '@/components/theater/types'
 
 /**
@@ -949,21 +950,39 @@ describe('StageVideo: a failed video does not stall the playlist', () => {
   })
 })
 
-describe('StageVideo stage tap is declutter, not play/pause', () => {
+describe('StageVideo stage tap enters focus and resumes playback', () => {
   afterEach(() => {
     HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
   })
 
-  function renderVideo() {
-    const onRequestUnmute = vi.fn()
-    const view = render(
+  function DeclutterVideo({ onRequestUnmute }: { onRequestUnmute: () => void }) {
+    const [declutter, setDeclutter] = useState(false)
+    useTheaterStageTapDeclutter(declutter, setDeclutter)
+    return (
       <StageVideo
         item={makeItem()}
         src="/api/media/video?a=1"
         poster={null}
         muted
         onRequestUnmute={onRequestUnmute}
-      />,
+      />
+    )
+  }
+
+  function renderVideo(withDeclutter = false) {
+    const onRequestUnmute = vi.fn()
+    const view = render(
+      withDeclutter ? (
+        <DeclutterVideo onRequestUnmute={onRequestUnmute} />
+      ) : (
+        <StageVideo
+          item={makeItem()}
+          src="/api/media/video?a=1"
+          poster={null}
+          muted
+          onRequestUnmute={onRequestUnmute}
+        />
+      ),
     )
     return { ...view, onRequestUnmute }
   }
@@ -983,6 +1002,83 @@ describe('StageVideo stage tap is declutter, not play/pause', () => {
     expect(pause).not.toHaveBeenCalled()
     expect(onRequestUnmute).not.toHaveBeenCalled()
     window.removeEventListener('theater-stage-tap', heard)
+  })
+
+  it('plays a paused video from a stage tap', () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const { container } = renderVideo()
+    const video = container.querySelector('video') as HTMLVideoElement
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => true })
+    play.mockClear()
+
+    fireEvent.click(container.firstElementChild as Element)
+
+    expect(play).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not turn a generic error-overlay tap into an implicit retry', () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 500 }))
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const { container, getByText } = renderVideo()
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, '/api/media/video?a=1')
+    fireEvent.error(video)
+    expect(getByText("This video couldn't load.")).toBeInTheDocument()
+    play.mockClear()
+
+    fireEvent.click(container.firstElementChild as Element)
+
+    expect(play).not.toHaveBeenCalled()
+    expect(getByText("This video couldn't load.")).toBeInTheDocument()
+    fetchMock.mockRestore()
+  })
+
+  it('does not retry an error when autoplay had already requested a gesture', async () => {
+    const play = vi
+      .spyOn(HTMLMediaElement.prototype, 'play')
+      .mockRejectedValue(new DOMException('Gesture required', 'NotAllowedError'))
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 500 }))
+    const { container, findByText } = renderVideo(true)
+    const video = container.querySelector('video') as HTMLVideoElement
+    await act(async () => {
+      await Promise.resolve()
+    })
+    play.mockResolvedValue(undefined)
+    activateVideo(video, '/api/media/video?a=1')
+    fireEvent.error(video)
+    expect(await findByText("This video couldn't load.")).toBeInTheDocument()
+    play.mockClear()
+
+    fireEvent.click(container.firstElementChild as Element)
+
+    expect(play).not.toHaveBeenCalled()
+    fetchMock.mockRestore()
+  })
+
+  it('does not retry an unavailable video from a stage tap', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ reason: 'This post is unavailable' }), {
+        status: 410,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const { container, findByText } = renderVideo()
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, '/api/media/video?a=1')
+    fireEvent.error(video)
+    expect(await findByText('This post is unavailable')).toBeInTheDocument()
+    play.mockClear()
+
+    fireEvent.click(container.firstElementChild as Element)
+
+    expect(play).not.toHaveBeenCalled()
+    expect(await findByText('This post is unavailable')).toBeInTheDocument()
+    fetchMock.mockRestore()
   })
 
   it('does not unmute on tap — sound stays on the chrome audio button', () => {

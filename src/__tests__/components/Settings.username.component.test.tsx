@@ -12,11 +12,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { SettingsClient } from '@/app/settings/SettingsClient'
 
-vi.mock('@/lib/theme/context', () => ({
-  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-  useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-}))
-
 // The chooser debounces its availability check by 350ms.
 const DEBOUNCE_WAIT = { timeout: 2000 }
 
