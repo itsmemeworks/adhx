@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.69.0](https://github.com/itsmemeworks/adhx/compare/v1.68.0...v1.69.0) (2026-09-03)
+
+
+### Features
+
+* refine theater controls and dark theme ([#468](https://github.com/itsmemeworks/adhx/issues/468)) ([77f9a53](https://github.com/itsmemeworks/adhx/commit/77f9a5396c30123d49d0b569c9c99bfa7595b077))
+* remember theater sound preference ([#467](https://github.com/itsmemeworks/adhx/issues/467)) ([8cd7359](https://github.com/itsmemeworks/adhx/commit/8cd735948b36744e1fb9866e83cb3b7b634bff69))
+
+
+### Bug Fixes
+
+* hand direct previews to repeat all ([#466](https://github.com/itsmemeworks/adhx/issues/466)) ([26fdb0b](https://github.com/itsmemeworks/adhx/commit/26fdb0bf4ac082e746a494ffe89cbcf6f3833f46))
+* remove redundant stage platform chip ([#465](https://github.com/itsmemeworks/adhx/issues/465)) ([f0c3e32](https://github.com/itsmemeworks/adhx/commit/f0c3e322e202804df015db7b67df5f5682c39e9c))
+
 ## [1.68.0](https://github.com/itsmemeworks/adhx/compare/v1.67.2...v1.68.0) (2026-08-28)
 
 
