@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.1](https://github.com/itsmemeworks/adhx/compare/v1.70.0...v1.70.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* cover ios theater safe area ([#476](https://github.com/itsmemeworks/adhx/issues/476)) ([fb610db](https://github.com/itsmemeworks/adhx/commit/fb610db65225a5b2dfa5f7e4b654efe85e1ef673))
+
 ## [1.70.0](https://github.com/itsmemeworks/adhx/compare/v1.69.0...v1.70.0) (2026-09-03)
 
 
