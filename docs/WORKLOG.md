@@ -23,6 +23,12 @@ policy blocks the fresh page. The saved preference is never downgraded by that b
 Focused component tests cover server load, browser fallback, session precedence, and tap retry.
 Current state: in flight.
 
+## 2026-09-02 — Theater author row drops redundant platform chip
+
+Text, quote, and article stages no longer repeat the source-platform glyph beside the author.
+The linked author identity already makes the destination clear, so the row now stays focused on
+the avatar, name, and handle. Current state: complete.
+
 ## 2026-08-28 — Mobile theater gains thumb-first controls
 
 The mobile theater now has a bounded right-side gesture zone: swipe up for next and down for
