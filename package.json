@@ -50,20 +50,20 @@
     "url": "https://github.com/itsmemeworks/adhx/issues"
   },
   "dependencies": {
-    "@sentry/node": "^10.70.0",
+    "@sentry/node": "^10.72.0",
     "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
-    "hls.js": "^1.7.0",
-    "jose": "^6.2.9",
-    "lucide-react": "^1.31.0",
-    "next": "^16.3.1",
+    "hls.js": "^1.7.1",
+    "jose": "^6.2.10",
+    "lucide-react": "^1.37.0",
+    "next": "^16.3.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-email": "^6.9.2",
+    "react-email": "^6.9.3",
     "tailwind-merge": "^3.6.0",
     "twitter-api-v2": "^1.29.1",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.13"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
