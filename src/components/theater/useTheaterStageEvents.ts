@@ -4,9 +4,23 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 
 /** User tapped the video or photo — chrome toggles overlays, does not pause. */
 export const THEATER_STAGE_TAP = 'theater-stage-tap'
+export const THEATER_SEEK = 'theater-seek'
+
+export interface TheaterSeekDetail {
+  progress: number
+}
 
 export function dispatchTheaterStageTap() {
   window.dispatchEvent(new CustomEvent(THEATER_STAGE_TAP))
+}
+
+/** Seek the active video or timed dwell to a normalized 0..1 position. */
+export function dispatchTheaterSeek(progress: number) {
+  window.dispatchEvent(
+    new CustomEvent<TheaterSeekDetail>(THEATER_SEEK, {
+      detail: { progress: Math.min(1, Math.max(0, progress)) },
+    }),
+  )
 }
 
 /**

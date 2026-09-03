@@ -5,7 +5,10 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, act, fireEvent } from '@testing-library/react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { StageVideo } from '@/components/theater/StageVideo'
-import { useTheaterStageTapDeclutter } from '@/components/theater/useTheaterStageEvents'
+import {
+  THEATER_SEEK,
+  useTheaterStageTapDeclutter,
+} from '@/components/theater/useTheaterStageEvents'
 import type { TheaterItem } from '@/components/theater/types'
 
 /**
@@ -86,6 +89,48 @@ describe('StageVideo repeat (shared-post-repeat)', () => {
     )
     const video = container.querySelector('video') as HTMLVideoElement
     expect(video.loop).toBe(false)
+  })
+})
+
+describe('StageVideo progress scrubbing', () => {
+  it('seeks the active persistent video without remounting it', () => {
+    const src = '/api/media/video?clip=scrub'
+    const { container } = render(
+      <StageVideo item={makeItem()} src={src} poster={null} muted onRequestUnmute={vi.fn()} />,
+    )
+    const video = container.querySelector('video') as HTMLVideoElement
+    Object.defineProperty(video, 'duration', { configurable: true, value: 200 })
+    activateVideo(video, src)
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.25 } }))
+    })
+
+    expect(video.currentTime).toBe(50)
+    expect(container.querySelector('video')).toBe(video)
+  })
+
+  it('does not seek a video retained underneath a non-video stage', () => {
+    const src = '/api/media/video?clip=covered'
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src={src}
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+        covered
+      />,
+    )
+    const video = container.querySelector('video') as HTMLVideoElement
+    Object.defineProperty(video, 'duration', { configurable: true, value: 200 })
+    activateVideo(video, src)
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.25 } }))
+    })
+
+    expect(video.currentTime).toBe(0)
   })
 })
 

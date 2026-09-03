@@ -33,6 +33,7 @@
 
 import { useEffect, useRef } from 'react'
 import { isQuoteReader, type TheaterItem } from './types'
+import { dispatchTheaterSeek, THEATER_SEEK, type TheaterSeekDetail } from './useTheaterStageEvents'
 
 export type ProgressKind = 'video' | 'timed' | 'none'
 
@@ -74,8 +75,28 @@ export interface TheaterProgressLineProps {
   kind: ProgressKind
 }
 
+function paintProgress(
+  fill: HTMLDivElement | null,
+  slider: HTMLInputElement | null,
+  progress: number,
+) {
+  const clamped = Math.min(1, Math.max(0, progress))
+  const pct = clamped * 100
+  if (fill) fill.style.width = `${pct}%`
+  if (slider) {
+    slider.value = String(Math.round(clamped * 1000))
+    slider.setAttribute('aria-valuetext', `${Math.round(pct)}%`)
+  }
+}
+
 export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps) {
   const fillRef = useRef<HTMLDivElement>(null)
+  const sliderRef = useRef<HTMLInputElement>(null)
+  const scrubbingRef = useRef(false)
+
+  useEffect(() => {
+    scrubbingRef.current = false
+  }, [itemKey, kind])
 
   // kind 'video': mirror StageVideo's timeupdate-derived progress directly
   // onto the fill's width. No React state — a tick here must never trigger a
@@ -84,14 +105,12 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
     if (kind !== 'video') return
     const fill = fillRef.current
     if (!fill) return
-    fill.style.width = '0%'
+    paintProgress(fill, sliderRef.current, 0)
 
     function handleProgress(e: Event) {
       const detail = (e as CustomEvent<{ progress: number }>).detail
-      const node = fillRef.current
-      if (!node || !detail) return
-      const pct = Math.min(100, Math.max(0, detail.progress * 100))
-      node.style.width = `${pct}%`
+      if (!detail || scrubbingRef.current) return
+      paintProgress(fillRef.current, sliderRef.current, detail.progress)
     }
 
     window.addEventListener('theater-video-progress', handleProgress)
@@ -107,7 +126,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
     if (kind !== 'timed') return
     const fill = fillRef.current
     if (!fill) return
-    fill.style.width = '0%'
+    paintProgress(fill, sliderRef.current, 0)
 
     let rafId = 0
     let baseline: number | null = null
@@ -116,7 +135,8 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
     let advanced = false
 
     const tick = (now: number) => {
-      if (paused) {
+      if (paused || scrubbingRef.current) {
+        baseline = null
         rafId = requestAnimationFrame(tick)
         return
       }
@@ -124,8 +144,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
       elapsedMs = now - baseline
       const node = fillRef.current
       if (node) {
-        const pct = Math.min(100, (elapsedMs / NON_VIDEO_DWELL_MS) * 100)
-        node.style.width = `${pct}%`
+        paintProgress(node, sliderRef.current, elapsedMs / NON_VIDEO_DWELL_MS)
       }
       if (elapsedMs >= NON_VIDEO_DWELL_MS) {
         if (!advanced) {
@@ -158,10 +177,19 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
         window.dispatchEvent(new CustomEvent('theater-pause'))
       }
     }
+    const handleSeek = (event: Event) => {
+      const detail = (event as CustomEvent<TheaterSeekDetail>).detail
+      if (!detail || !Number.isFinite(detail.progress)) return
+      elapsedMs = Math.min(1, Math.max(0, detail.progress)) * NON_VIDEO_DWELL_MS
+      baseline = null
+      advanced = false
+      paintProgress(fillRef.current, sliderRef.current, detail.progress)
+    }
 
     window.addEventListener('theater-pause', handlePause)
     window.addEventListener('theater-resume', handleResume)
     window.addEventListener('theater-toggle-play', handleTogglePlay)
+    window.addEventListener(THEATER_SEEK, handleSeek)
     rafId = requestAnimationFrame(tick)
 
     return () => {
@@ -169,6 +197,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
       window.removeEventListener('theater-pause', handlePause)
       window.removeEventListener('theater-resume', handleResume)
       window.removeEventListener('theater-toggle-play', handleTogglePlay)
+      window.removeEventListener(THEATER_SEEK, handleSeek)
     }
   }, [kind, itemKey])
 
@@ -176,17 +205,55 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[70] pt-[env(safe-area-inset-top)]"
-      aria-hidden
+      className="group pointer-events-auto fixed inset-x-0 top-0 z-[70] h-[calc(env(safe-area-inset-top)+44px)] touch-none lg:h-3"
+      data-theater-progress
     >
-      <div className="h-[3px] w-full bg-white/15">
+      <div className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-[3px] bg-white/15">
         <div
           ref={fillRef}
           data-theater-progress-fill
-          className="h-full bg-clay"
+          className="relative h-full bg-clay after:absolute after:right-0 after:top-1/2 after:h-2 after:w-2 after:translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:bg-clay after:shadow-[0_0_8px_rgba(240,127,76,.65)] after:transition-transform group-focus-within:after:scale-125 group-active:after:scale-125"
           style={{ width: '0%' }}
         />
       </div>
+      <input
+        ref={sliderRef}
+        type="range"
+        min="0"
+        max="1000"
+        step="1"
+        defaultValue="0"
+        aria-label="Playback position"
+        aria-valuetext="0%"
+        data-theater-progress-slider
+        className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-11 w-full cursor-ew-resize opacity-0 lg:h-3"
+        onPointerDown={() => {
+          scrubbingRef.current = true
+        }}
+        onPointerUp={() => {
+          scrubbingRef.current = false
+        }}
+        onPointerCancel={() => {
+          scrubbingRef.current = false
+        }}
+        onLostPointerCapture={() => {
+          scrubbingRef.current = false
+        }}
+        onTouchStart={() => {
+          scrubbingRef.current = true
+        }}
+        onTouchEnd={() => {
+          scrubbingRef.current = false
+        }}
+        onTouchCancel={() => {
+          scrubbingRef.current = false
+        }}
+        onInput={(event) => {
+          const progress = Number(event.currentTarget.value) / 1000
+          paintProgress(fillRef.current, sliderRef.current, progress)
+          dispatchTheaterSeek(progress)
+        }}
+      />
     </div>
   )
 }

@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi } from 'vitest'
-import { render, act } from '@testing-library/react'
+import { render, act, fireEvent } from '@testing-library/react'
 import { TheaterProgressLine } from '@/components/theater/TheaterProgressLine'
+import { THEATER_SEEK } from '@/components/theater/useTheaterStageEvents'
 
 describe('TheaterProgressLine', () => {
   it('video kind paints the fill from theater-video-progress', () => {
@@ -16,6 +17,67 @@ describe('TheaterProgressLine', () => {
       window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 0.4 } }))
     })
     expect(fill.style.width).toBe('40%')
+  })
+
+  it('exposes the line as a seekable slider with a larger invisible hit area', () => {
+    const { container } = render(<TheaterProgressLine itemKey="youtube:1" kind="video" />)
+    const slider = container.querySelector('[data-theater-progress-slider]') as HTMLInputElement
+    const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
+    const seek = vi.fn()
+    window.addEventListener(THEATER_SEEK, seek)
+    try {
+      expect(slider).toHaveAttribute('aria-label', 'Playback position')
+      expect(slider.className).toContain('h-11')
+
+      fireEvent.input(slider, { target: { value: '375' } })
+
+      expect(fill.style.width).toBe('37.5%')
+      expect(slider).toHaveAttribute('aria-valuetext', '38%')
+      expect(seek).toHaveBeenCalledTimes(1)
+      expect((seek.mock.calls[0][0] as CustomEvent).detail).toEqual({ progress: 0.375 })
+    } finally {
+      window.removeEventListener(THEATER_SEEK, seek)
+    }
+  })
+
+  it('resumes progress updates after a pointer or touch scrub is canceled', () => {
+    const { container } = render(<TheaterProgressLine itemKey="youtube:1" kind="video" />)
+    const slider = container.querySelector('[data-theater-progress-slider]') as HTMLInputElement
+    const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
+
+    fireEvent.pointerDown(slider)
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('theater-video-progress', { detail: { progress: 0.25 } }),
+      )
+    })
+    expect(fill.style.width).toBe('0%')
+
+    fireEvent.pointerCancel(slider)
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('theater-video-progress', { detail: { progress: 0.25 } }),
+      )
+    })
+    expect(fill.style.width).toBe('25%')
+
+    fireEvent.touchStart(slider)
+    fireEvent.touchCancel(slider)
+    act(() => {
+      window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 0.5 } }))
+    })
+    expect(fill.style.width).toBe('50%')
+  })
+
+  it('scrubs a timed post to the requested dwell position', () => {
+    const { container } = render(<TheaterProgressLine itemKey="photo:1" kind="timed" />)
+    const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.6 } }))
+    })
+
+    expect(fill.style.width).toBe('60%')
   })
 
   it('renders nothing for kind none', () => {

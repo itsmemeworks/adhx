@@ -515,10 +515,10 @@ export function TheaterMobileChrome({
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
-          <a href="/" className="flex items-center" aria-label="ADHX home">
+          <a href="/" className="relative z-[71] flex items-center" aria-label="ADHX home">
             <MatterLogo size={16} surface="dark" />
           </a>
-          <div className="flex flex-none items-center gap-1.5">
+          <div className="relative z-[71] flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
@@ -555,7 +555,7 @@ export function TheaterMobileChrome({
               carried entirely by the Save-playlist CTA below, which
               already opens the sign-in modal in place for a signed-out
               visitor (`handleSaveCollection` in TheaterShell). */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="relative z-[71] flex items-center justify-between gap-3">
             <a href="/" className="flex items-center" aria-label="ADHX home">
               <MatterLogo size={16} surface="dark" />
             </a>
@@ -572,10 +572,10 @@ export function TheaterMobileChrome({
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
-          <a href="/" className="flex items-center" aria-label="ADHX home">
+          <a href="/" className="relative z-[71] flex items-center" aria-label="ADHX home">
             <MatterLogo size={16} surface="dark" />
           </a>
-          <div className="flex flex-none items-center gap-1.5">
+          <div className="relative z-[71] flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
@@ -845,18 +845,10 @@ export function TheaterMobileChrome({
             inert={declutter}
             data-theater-swipe-control
             className={cn(
-              'absolute bottom-2 right-3 flex h-28 w-12 flex-col overflow-hidden rounded-full border border-white/20 bg-black/25 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.22)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
+              'absolute bottom-2 right-3 flex h-28 w-12 flex-col gap-2 overflow-hidden rounded-full border border-white/20 bg-black/25 py-2 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.22)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
               declutter && 'pointer-events-none scale-95 opacity-0',
             )}
           >
-            <span
-              className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 gap-0.5"
-              aria-hidden
-            >
-              <span className="h-1 w-1 rounded-full bg-white/45" />
-              <span className="h-1 w-1 rounded-full bg-white/45" />
-              <span className="h-1 w-1 rounded-full bg-white/45" />
-            </span>
             <button
               type="button"
               disabled={!canPrev}

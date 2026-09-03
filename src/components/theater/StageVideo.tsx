@@ -32,7 +32,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
-import { dispatchTheaterStageTap } from './useTheaterStageEvents'
+import {
+  dispatchTheaterStageTap,
+  THEATER_SEEK,
+  type TheaterSeekDetail,
+} from './useTheaterStageEvents'
 import { nextAlbumIndex, StageAlbumDots, StageAlbumScroller } from './StageAlbumChrome'
 import type { TheaterItem } from './types'
 
@@ -188,6 +192,33 @@ export function StageVideo({
     video.muted = muted
     setEffectiveMuted(muted)
   }, [muted])
+
+  // The top progress line is an interactive scrubber. Seek the persistent
+  // media element in place so its iOS sound grant survives, and ignore the
+  // event while this player is only being retained underneath a non-video
+  // stage.
+  useEffect(() => {
+    const handleSeek = (event: Event) => {
+      const detail = (event as CustomEvent<TheaterSeekDetail>).detail
+      const video = videoRef.current
+      if (
+        covered ||
+        !video ||
+        !detail ||
+        !Number.isFinite(detail.progress) ||
+        !Number.isFinite(video.duration) ||
+        video.duration <= 0 ||
+        !isCurrentLifecycleEvent(video)
+      ) {
+        return
+      }
+      const progress = Math.min(1, Math.max(0, detail.progress))
+      video.currentTime = progress * video.duration
+      if (progress < 1) setEnded(false)
+    }
+    window.addEventListener(THEATER_SEEK, handleSeek)
+    return () => window.removeEventListener(THEATER_SEEK, handleSeek)
+  }, [covered])
 
   // Gesture-context fast path (the persistent double-tap-to-unmute bug): the
   // chrome's audio button dispatches this SYNCHRONOUSLY, from inside its own

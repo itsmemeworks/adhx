@@ -742,7 +742,9 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     const capsule = zone.querySelector('[data-theater-swipe-control]')
     expect(capsule).toHaveClass('rounded-full')
     expect(capsule).toHaveClass('bg-black/25')
+    expect(capsule).toHaveClass('gap-2')
     expect(capsule).not.toHaveClass('divide-y')
+    expect(capsule?.querySelector('[data-theater-swipe-hint]')).toBeNull()
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
   })
 
@@ -786,6 +788,13 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
       'aria-label',
       'Swipe down for previous post',
     )
+
+    rerender(
+      <TheaterMobileChrome {...base} current={videoItem()} canPrev={false} canNext={false} />,
+    )
+    expect(
+      screen.getByTestId('mobile-swipe-zone').querySelector('[data-theater-swipe-hint]'),
+    ).toBeNull()
   })
 
   it('swipes up for next and down for previous', () => {

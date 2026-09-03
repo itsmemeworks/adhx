@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Theater timeline scrubs and mobile swipe advertises itself
+
+The clay timeline is now an accessible range control with a larger invisible hit area and visible
+thumb. Dragging seeks native videos and YouTube Shorts, while photo/text/article timelines seek
+within their 10-second dwell without restarting playback state. The existing bounded mobile
+previous/next swipe gesture remains intact, but its ambiguous three dots are replaced by a
+clean empty gap between the joined arrow buttons, with no divider or extra label.
+Current state: in flight; focused tests, typecheck, lint, formatting, and a mobile browser check pass.
+
 ## 2026-09-03 — PR titles are verified before handoff
 
 The PR workflow guidance now requires Conventional Commit syntax for pull-request titles,
