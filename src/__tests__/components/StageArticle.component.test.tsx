@@ -53,6 +53,7 @@ describe('StageArticle splash', () => {
     const profile = screen.getByTitle('View @adriamatz on X')
     expect(profile).toHaveAttribute('href', 'https://x.com/adriamatz')
     expect(profile).toHaveAttribute('target', '_blank')
+    expect(profile.parentElement?.children).toHaveLength(1)
     await waitFor(() => {
       expect(screen.getByText(/Couldn't load the full article here/)).toBeInTheDocument()
     })

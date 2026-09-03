@@ -11,7 +11,6 @@ import type { MouseEvent, ReactNode, TouchEvent } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AuthorAvatar } from '@/components/feed/AuthorAvatar'
-import { PlatformChip } from '@/components/matter'
 import { authorProfileUrl } from '@/lib/activity/preview-path'
 import { PLATFORM_LABEL, type TheaterItem } from './types'
 import { StageGlass } from './StageGlass'
@@ -192,9 +191,8 @@ export function StageFrame({ children }: { children: ReactNode }) {
 
 /**
  * Tweet-style author row on text/quote/article stages — avatar + name +
- * `@handle` + platform chip. Links to the creator's profile on their own
- * platform (same `authorProfileUrl` the media chrome uses). Plain row when
- * there's no handle.
+ * `@handle`. Links to the creator's profile on their own platform (same
+ * `authorProfileUrl` the media chrome uses). Plain row when there's no handle.
  */
 export function StageAuthorRow({ item }: { item: TheaterItem }) {
   const handle = (item.author || '').replace(/^@+/, '').trim()
@@ -224,7 +222,6 @@ export function StageAuthorRow({ item }: { item: TheaterItem }) {
       ) : (
         <div className="flex min-w-0 flex-1 items-center gap-3">{inner}</div>
       )}
-      <PlatformChip platform={item.platform} />
     </div>
   )
 }
