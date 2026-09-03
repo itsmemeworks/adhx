@@ -134,6 +134,27 @@ describe('TheaterMobileChrome: caption', () => {
     expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
   })
 
+  it('turns measured caption overflow into a Safari-safe inner clamp and Read control', async () => {
+    const clientHeight = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(32)
+    const scrollHeight = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(96)
+    try {
+      render(
+        <TheaterMobileChrome
+          {...base}
+          current={videoItem({ text: 'A long media caption that needs the full reading mode.' })}
+          onToggleArticleMode={vi.fn()}
+        />,
+      )
+
+      const read = await screen.findByRole('button', { name: 'Read the full post' })
+      expect(read).not.toHaveClass('line-clamp-2')
+      expect(read.querySelector('span.line-clamp-2')).not.toBeNull()
+    } finally {
+      clientHeight.mockRestore()
+      scrollHeight.mockRestore()
+    }
+  })
+
   it('opens Read from the caption without a separate reading button', () => {
     const onToggle = vi.fn()
     render(
@@ -338,7 +359,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     const tag = screen.getByRole('button', { name: 'Tag 1' })
     expect(tag.className).toContain('border-white/15')
     expect(tag.className).not.toContain('text-clay')
-    expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
+    const icon = tag.querySelector('.lucide-tag')
+    expect(icon?.classList.contains('text-clay')).toBe(true)
+    expect(icon).toHaveAttribute('fill', 'none')
+    expect(tag).toHaveTextContent('1')
   })
 
   it('shows paste on the personal Live tab too', () => {
@@ -380,6 +404,9 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Articles' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Quotes' })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Playlist filter' }).contains(paste)).toBe(false)
+    videos.focus()
+    fireEvent.keyDown(videos, { key: 'ArrowRight' })
+    expect(videos).toHaveFocus()
     fireEvent.click(videos)
     expect(onToggleQueueType).toHaveBeenCalledWith('video')
     onToggleQueueType.mockClear()
@@ -718,7 +745,9 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     const capsule = zone.querySelector('[data-theater-swipe-control]')
     expect(capsule).toHaveClass('rounded-full')
     expect(capsule).toHaveClass('bg-black/25')
+    expect(capsule).toHaveClass('gap-2')
     expect(capsule).not.toHaveClass('divide-y')
+    expect(capsule?.querySelector('[data-theater-swipe-hint]')).toBeNull()
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
   })
 
@@ -762,6 +791,13 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
       'aria-label',
       'Swipe down for previous post',
     )
+
+    rerender(
+      <TheaterMobileChrome {...base} current={videoItem()} canPrev={false} canNext={false} />,
+    )
+    expect(
+      screen.getByTestId('mobile-swipe-zone').querySelector('[data-theater-swipe-hint]'),
+    ).toBeNull()
   })
 
   it('swipes up for next and down for previous', () => {
@@ -1252,6 +1288,9 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
     expect(repeatOne.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
     expect(next.parentElement).toBe(previous.parentElement)
     expect(next.parentElement).toHaveAttribute('data-theater-swipe-control')
+    expect(next.parentElement).not.toHaveClass('py-2')
+    expect(previous).toHaveClass('rounded-t-full', 'pt-2')
+    expect(next).toHaveClass('rounded-b-full', 'pb-2')
     expect(mute.compareDocumentPosition(repeatOne) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(previous.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     fireEvent.click(previous)
@@ -1837,6 +1876,16 @@ describe('TheaterMobileChrome: contextual Share options', () => {
       'inline-flex',
       'items-center',
       'justify-center',
+      'hover:bg-white/10',
+      'active:bg-white/20',
+    )
+    expect(screen.getByRole('button', { name: 'Previous post' })).toHaveClass(
+      'hover:bg-white/10',
+      'active:bg-white/20',
+    )
+    expect(screen.getByRole('button', { name: 'Next post' })).toHaveClass(
+      'hover:bg-white/10',
+      'active:bg-white/20',
     )
     openShareOptions()
     expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()

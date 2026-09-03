@@ -12,6 +12,8 @@ After substantive work (feature, fix, docs, workflow):
 1. **Commit** on a feature branch — never to `main`. Conventional Commits, lowercase subject.
 2. **Push** to origin (`git push -u origin HEAD` for a new branch). No force-push unless the user asks.
 3. **Open or update a PR** with `gh`, using the account named in gitignored `CLAUDE.local.md`. If a PR already exists for the branch, push updates it — do not open a duplicate. If none exists, `gh pr create`.
+   - PR titles must use Conventional Commit syntax with a lowercase subject (for example, `fix: resolve login issue`). Prefer deriving a single-commit PR title from its commit subject.
+   - Verify the final title with `gh pr view --json title` before handoff; correct it immediately if it would fail the semantic-title check.
 4. **Do not merge.** The user merges PRs manually.
 
 Skip only when the user explicitly says the work is local-only / do not share.

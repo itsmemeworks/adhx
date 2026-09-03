@@ -40,7 +40,7 @@ export function SavePostButton({
    * this callback the button stays on Saved (the old dead-end).
    */
   onTag?: () => void
-  /** Current tags on this post — fills the Tag icon and shows a count (max 5). */
+  /** Current tags on this post — colors the Tag icon and shows a count (max 5). */
   tags?: string[]
 }) {
   const [status, setStatus] = useState<SaveStatus>('idle')
@@ -163,11 +163,7 @@ export function SavePostButton({
     ) : status === 'saved' ? (
       <Check size={iconSize} className="text-done" />
     ) : status === 'tag' ? (
-      <TagIcon
-        size={iconSize}
-        className={tagCount > 0 ? 'text-clay' : undefined}
-        fill={tagCount > 0 ? 'currentColor' : 'none'}
-      />
+      <TagIcon size={iconSize} className={tagCount > 0 ? 'text-clay' : undefined} />
     ) : (
       <Bookmark size={iconSize} />
     )

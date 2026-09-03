@@ -12,7 +12,7 @@ import { TheaterLinkedText } from './TheaterText'
 import type { TextLinkRef } from './types'
 
 export interface TheaterCaptionProps {
-  captionRef: Ref<HTMLParagraphElement | HTMLButtonElement>
+  captionRef: Ref<HTMLParagraphElement | HTMLButtonElement | HTMLSpanElement>
   platform: string
   text: string
   hasMedia?: boolean
@@ -33,11 +33,7 @@ export function TheaterCaption({
   className,
   onOpenRead,
 }: TheaterCaptionProps) {
-  const classes = cn(
-    'line-clamp-2 text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]',
-    onOpenRead && 'cursor-pointer text-left',
-    className,
-  )
+  const classes = cn('line-clamp-2 text-white/90 [text-shadow:0_1px_3px_rgba(0,0,0,.6)]', className)
   const linkedText = (
     <TheaterLinkedText
       platform={platform}
@@ -53,7 +49,6 @@ export function TheaterCaption({
   if (onOpenRead) {
     return (
       <button
-        ref={captionRef as Ref<HTMLButtonElement>}
         type="button"
         aria-label="Read the full post"
         title="Read the full post"
@@ -61,10 +56,12 @@ export function TheaterCaption({
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') event.stopPropagation()
         }}
-        className={classes}
+        className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left"
         data-theater-action="read"
       >
-        {linkedText}
+        <span ref={captionRef as Ref<HTMLSpanElement>} className={classes}>
+          {linkedText}
+        </span>
       </button>
     )
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import { setClientEventAccount, subscribeClientEventAuthScopeChange } from '@/lib/client-events'
 
 /**
@@ -47,8 +47,15 @@ let authRetryTimer: ReturnType<typeof setTimeout> | null = null
 let authRetryAttempt = 0
 let authRetryGeneration: number | null = null
 let authRecoveryRequired = false
+interface AuthMeSnapshot {
+  me: AuthMe | null
+  loading: boolean
+}
+let authSnapshot: AuthMeSnapshot = { me: cache, loading: authLoading }
+const serverAuthSnapshot: AuthMeSnapshot = { me: null, loading: true }
 
 function notify() {
+  authSnapshot = { me: cache, loading: authLoading }
   listeners.forEach((listener) => listener())
 }
 
@@ -168,42 +175,37 @@ subscribeClientEventAuthScopeChange(() => {
   void refreshAuthMe({ broadcastScopeChange: false, retryOnFailure: true })
 })
 
-export function useAuthMe() {
-  const [me, setMe] = useState<AuthMe | null>(cache)
-  const [loading, setLoading] = useState(authLoading)
+function subscribeAuthMe(listener: () => void) {
+  listeners.add(listener)
+  if (cache === null) {
+    if (authRecoveryRequired) {
+      void refreshAuthMe({ broadcastScopeChange: false, retryOnFailure: true })
+    } else {
+      void refreshAuthMe({ retryOnFailure: true })
+    }
+  }
+  return () => {
+    listeners.delete(listener)
+    if (listeners.size === 0) {
+      cancelAuthRetry()
+      if (inflight?.retryOnFailure) {
+        authGeneration += 1
+        inflight = null
+      }
+    }
+  }
+}
 
+export function useAuthMe() {
   // Initial discovery and explicit refreshes both recover from transient
   // failures. Until one settles, auth remains unresolved and account-scoped
   // client events stay fail-closed.
   const refresh = useCallback(() => refreshAuthMe({ retryOnFailure: true }), [])
-
-  useEffect(() => {
-    const listener = () => {
-      setMe(cache)
-      setLoading(authLoading)
-    }
-    listeners.add(listener)
-    if (cache === null) {
-      if (authRecoveryRequired) {
-        void refreshAuthMe({ broadcastScopeChange: false, retryOnFailure: true })
-      } else {
-        void refresh()
-      }
-    } else {
-      setMe(cache)
-      setLoading(authLoading)
-    }
-    return () => {
-      listeners.delete(listener)
-      if (listeners.size === 0) {
-        cancelAuthRetry()
-        if (inflight?.retryOnFailure) {
-          authGeneration += 1
-          inflight = null
-        }
-      }
-    }
-  }, [refresh])
+  const { me, loading } = useSyncExternalStore(
+    subscribeAuthMe,
+    () => authSnapshot,
+    () => serverAuthSnapshot,
+  )
 
   return { me, loading, refresh }
 }

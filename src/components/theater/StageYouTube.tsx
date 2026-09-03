@@ -75,7 +75,11 @@ import { previewPath } from '@/lib/activity/preview-path'
 import { StageFrame, StageHeadline, StageCTA } from './stage-primitives'
 import { logStage, logStageVerbose } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
-import { dispatchTheaterStageTap } from './useTheaterStageEvents'
+import {
+  dispatchTheaterStageTap,
+  THEATER_SEEK,
+  type TheaterSeekDetail,
+} from './useTheaterStageEvents'
 
 /** The embed's own origin — every inbound message is filtered to this, and
  * every outbound command is targeted at it. */
@@ -181,6 +185,16 @@ const STARTUP_RETRY_DELAYS_MS = [1_000, 2_500, 5_000]
  * desktop heartbeat stream never trips the pull. */
 const PROGRESS_TICK_MS = 250
 const PROGRESS_STARVED_MS = 1_500
+const SEEK_CONFIRM_TOLERANCE_SECONDS = 0.75
+const SEEK_CONFIRM_TIMEOUT_MS = 2_500
+const SEEK_CONFIRM_MAX_MISSES = 4
+
+interface PendingSeek {
+  target: number
+  direction: -1 | 0 | 1
+  requestedAt: number
+  misses: number
+}
 
 /** Playback seconds from a YT info payload. iOS/desktop often omit
  * `currentTime` until an in-iframe gesture but still send
@@ -353,6 +367,10 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   const lastKnownRateRef = useRef(1)
   const progressOriginTimeRef = useRef<number | null>(null)
   const progressOriginMsRef = useRef<number | null>(null)
+  // YouTube can deliver a heartbeat queued before a seek command. Keep the
+  // desired target authoritative until a payload confirms the player reached
+  // it, otherwise that stale heartbeat visibly snaps the timeline backward.
+  const pendingSeekRef = useRef<PendingSeek | null>(null)
   // Round 6: what we last explicitly told the player to be (via `mute`/
   // `unMute`) — the mute-state counterpart of `hasPlayedRef`'s "only trust
   // evidence" discipline. `infoDelivery` streams frequently enough that a
@@ -460,7 +478,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     const t = estimatePlaybackSeconds()
     if (t == null) return
     window.dispatchEvent(
-      new CustomEvent('theater-video-progress', { detail: { progress: t / duration } }),
+      new CustomEvent('theater-video-progress', {
+        detail: { progress: t / duration, duration },
+      }),
     )
   }, [estimatePlaybackSeconds])
 
@@ -474,6 +494,41 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     if (t != null) progressOriginTimeRef.current = t
     progressOriginMsRef.current = null
   }, [estimatePlaybackSeconds])
+
+  // Mirror native-video scrubbing through YouTube's command protocol. The
+  // progress line only becomes seekable after the player has reported a
+  // duration, so a missing duration is a safe no-op during startup.
+  useEffect(() => {
+    const handleSeek = (event: Event) => {
+      const detail = (event as CustomEvent<TheaterSeekDetail>).detail
+      const duration = lastKnownDurationRef.current
+      if (!detail || !Number.isFinite(detail.progress) || duration == null || duration <= 0) {
+        return
+      }
+      const progress = Math.min(1, Math.max(0, detail.progress))
+      const seconds = progress * duration
+      const from = estimatePlaybackSeconds() ?? lastKnownCurrentTimeRef.current ?? seconds
+      pendingSeekRef.current = {
+        target: seconds,
+        direction: Math.sign(seconds - from) as -1 | 0 | 1,
+        requestedAt: Date.now(),
+        misses: 0,
+      }
+      lastKnownCurrentTimeRef.current = seconds
+      if (playing) {
+        startProgressClock(seconds)
+      } else {
+        progressOriginTimeRef.current = seconds
+        progressOriginMsRef.current = null
+      }
+      postCommand('seekTo', [seconds, true])
+      window.dispatchEvent(
+        new CustomEvent('theater-video-progress', { detail: { progress, duration } }),
+      )
+    }
+    window.addEventListener(THEATER_SEEK, handleSeek)
+    return () => window.removeEventListener(THEATER_SEEK, handleSeek)
+  }, [estimatePlaybackSeconds, playing, postCommand, startProgressClock])
 
   // Round 2: never trust the embed URL's `autoplay=1&mute=1` params alone —
   // drive startup explicitly, mute BEFORE play every time. Used by the load
@@ -631,6 +686,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     lastKnownRateRef.current = 1
     progressOriginTimeRef.current = null
     progressOriginMsRef.current = null
+    pendingSeekRef.current = null
     lastLoggedStateRef.current = null
     clearStartupRetryTimers()
     setPlaying(false)
@@ -784,7 +840,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           // reaches full before either looping (repeat) or the item
           // advances away.
           window.dispatchEvent(
-            new CustomEvent('theater-video-progress', { detail: { progress: 1 } }),
+            new CustomEvent('theater-video-progress', {
+              detail: { progress: 1, duration: lastKnownDurationRef.current ?? undefined },
+            }),
           )
           if (repeatRef.current) {
             lastKnownCurrentTimeRef.current = 0
@@ -923,15 +981,50 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
             if (typeof info.playbackRate === 'number' && info.playbackRate > 0) {
               lastKnownRateRef.current = info.playbackRate
             }
-            if (reportedTime != null) {
-              startProgressClock(reportedTime)
-              lastKnownCurrentTimeRef.current = reportedTime
+            const pendingSeek = pendingSeekRef.current
+            let acceptedReportedTime = reportedTime
+            let resolvedPendingSeek = false
+            if (reportedTime != null && pendingSeek != null) {
+              const reachedTarget =
+                pendingSeek.direction > 0
+                  ? reportedTime >= pendingSeek.target - SEEK_CONFIRM_TOLERANCE_SECONDS
+                  : pendingSeek.direction < 0
+                    ? reportedTime <= pendingSeek.target + SEEK_CONFIRM_TOLERANCE_SECONDS
+                    : Math.abs(reportedTime - pendingSeek.target) <= SEEK_CONFIRM_TOLERANCE_SECONDS
+              const confirmationExpired =
+                Date.now() - pendingSeek.requestedAt >= SEEK_CONFIRM_TIMEOUT_MS ||
+                pendingSeek.misses >= SEEK_CONFIRM_MAX_MISSES
+              if (reachedTarget || confirmationExpired) {
+                pendingSeekRef.current = null
+                resolvedPendingSeek = true
+              } else {
+                pendingSeek.misses += 1
+                acceptedReportedTime = null
+                logStageVerbose(
+                  `ignoring pre-seek time ${reportedTime.toFixed(2)} while awaiting ${pendingSeek.target.toFixed(2)}`,
+                )
+              }
+            }
+            if (
+              acceptedReportedTime != null &&
+              resolvedPendingSeek &&
+              unmuteAwaitingConfirmRef.current &&
+              unmuteConfirmSourceRef.current === 'catchup'
+            ) {
+              catchupUnmuteBaselineTimeRef.current = acceptedReportedTime
+            }
+            if (acceptedReportedTime != null) {
+              startProgressClock(acceptedReportedTime)
+              lastKnownCurrentTimeRef.current = acceptedReportedTime
               lastTimeSignalAtRef.current = Date.now()
             }
-            if (reportedTime != null && lastKnownDurationRef.current) {
+            if (acceptedReportedTime != null && lastKnownDurationRef.current) {
               window.dispatchEvent(
                 new CustomEvent('theater-video-progress', {
-                  detail: { progress: reportedTime / lastKnownDurationRef.current },
+                  detail: {
+                    progress: acceptedReportedTime / lastKnownDurationRef.current,
+                    duration: lastKnownDurationRef.current,
+                  },
                 }),
               )
             } else {
@@ -944,15 +1037,15 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
             // this heartbeat also carried `playerState: 2`,
             // `fallBackToMuted()` has already cleared
             // `unmuteAwaitingConfirmRef` and this is a harmless no-op.
-            if (reportedTime != null) {
+            if (acceptedReportedTime != null) {
               if (
                 unmuteAwaitingConfirmRef.current &&
                 unmuteConfirmSourceRef.current === 'catchup' &&
                 catchupUnmuteBaselineTimeRef.current !== null &&
-                reportedTime - catchupUnmuteBaselineTimeRef.current > 1.5
+                acceptedReportedTime - catchupUnmuteBaselineTimeRef.current > 1.5
               ) {
                 logStage(
-                  `catchup unmute sustained (currentTime ${reportedTime.toFixed(2)} vs baseline ${catchupUnmuteBaselineTimeRef.current.toFixed(2)}) — clearing pending`,
+                  `catchup unmute sustained (currentTime ${acceptedReportedTime.toFixed(2)} vs baseline ${catchupUnmuteBaselineTimeRef.current.toFixed(2)}) — clearing pending`,
                 )
                 unmuteAwaitingConfirmRef.current = false
                 catchupUnmuteBaselineTimeRef.current = null

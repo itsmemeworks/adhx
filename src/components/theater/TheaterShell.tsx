@@ -2484,10 +2484,10 @@ export function TheaterShell({
             </>
           )}
         </div>
-        {/* Desktop counterpart to the mobile chrome's top progress line
-            (Instagram-style, spans the full viewport including the rail —
-            that's fine, arguably good). `kind` is gated on `isDesktop` rather
-            than just rendered unconditionally: the mobile chrome below is
+        {/* Desktop counterpart to the mobile chrome's top progress line sits
+            immediately above the filmstrip and disappears with de-clutter.
+            `kind` is gated on `isDesktop` rather than just rendered
+            unconditionally: the mobile chrome below is
             ALWAYS mounted (only CSS-hidden at lg, its effects keep running),
             so without this gate — and the matching gate on the chrome's
             `current` prop below — two independent 'timed' timers would both
@@ -2497,6 +2497,8 @@ export function TheaterShell({
             `onEnded`. */}
         <TheaterProgressLine
           itemKey={chromeCurrentKey}
+          desktopDock
+          hidden={desktopDeclutter}
           kind={
             resolvingSharedLead
               ? 'none'

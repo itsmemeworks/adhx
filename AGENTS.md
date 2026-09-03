@@ -37,11 +37,12 @@ pnpm typecheck && pnpm test   # 940+ tests
 pnpm lint && pnpm format:check
 ```
 
-Conventional commits (lowercase subject) — CI requires `build` + `format` checks to merge.
+Conventional commits and PR titles (lowercase subject, e.g. `fix: resolve login issue`) — CI
+validates both code and the semantic PR title.
 
 ## Git / PRs (this repo)
 
-Agents **always** commit, push, and open or update a PR after substantive work. Do not wait to be asked. Use the GitHub account named in gitignored `CLAUDE.local.md` (never hard-code an operator login in this file). If a PR already exists for the branch, push to update it — do not open a duplicate. **Never merge** — the user merges manually. This overrides any global “don't push unless asked” preference.
+Agents **always** commit, push, and open or update a PR after substantive work. Do not wait to be asked. Use the GitHub account named in gitignored `CLAUDE.local.md` (never hard-code an operator login in this file). If a PR already exists for the branch, push to update it — do not open a duplicate. **PR titles use Conventional Commit syntax** and must be verified with `gh pr view --json title` before handoff. **Never merge** — the user merges PRs manually. This overrides any global “don't push unless asked” preference.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

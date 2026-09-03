@@ -6,6 +6,61 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Playlist and filter both have toggle shortcuts
+
+`Q` now explicitly toggles the playlist/Queue panel and `Shift+Q` toggles the desktop type-filter
+flow, focusing its current option for arrow/Space/Enter control. Both controls expose
+`aria-keyshortcuts`, and the help overlay lists the pair together. Current state: in flight;
+shortcut resolution, event dispatch, desktop toggling, and accessible hints have regression tests.
+
+## 2026-09-03 — Scrubbing keeps one visible timeline
+
+The invisible range control no longer paints an offset focus ring around the visible progress track;
+that ring looked like a second orange timeline while dragging. Focus now strengthens the existing
+track background without adding another line. The desktop track now paints above the stage gradient,
+so its clay fill stays vivid at the filmstrip edge. Current state: in flight; component regression added.
+
+## 2026-09-03 — Theater scrub feedback and keyboard filtering
+
+Active timeline drags now show a centered, stable elapsed/duration badge on mobile and desktop;
+desktop places it above a vivid-clay track immediately above the filmstrip and hides both with
+de-clutter. Mobile Share and previous/next share the same hover/pressed treatment, including the
+capsule's curved ends. Opening the desktop type filter focuses its active option: arrows move,
+Space toggles in place, Enter toggles and closes, and Escape closes without driving shortcuts.
+Current state: in flight.
+
+## 2026-09-03 — Desktop timeline scrubs without auth hydration drift
+
+Desktop now gives the top timeline a 32px seek target while keeping its chrome controls layered
+above it. `useAuthMe` now uses `useSyncExternalStore` with a stable unresolved server snapshot,
+so a warm browser auth cache cannot render account chrome against signed-out server HTML during
+preview navigation. Current state: in flight; regression coverage added for desktop seek geometry
+and warm-cache hydration.
+
+## 2026-09-03 — Theater timeline scrubs and mobile swipe advertises itself
+
+The clay timeline is now an accessible range control with a larger invisible hit area and visible
+thumb. Dragging seeks native videos and YouTube Shorts, while photo/text/article timelines seek
+within their 10-second dwell without restarting playback state. The existing bounded mobile
+previous/next swipe gesture remains intact, but its ambiguous three dots are replaced by a
+clean empty gap between the joined arrow buttons, with no divider or extra label.
+Current state: in flight; focused tests, typecheck, lint, formatting, and a mobile browser check pass.
+
+## 2026-09-03 — PR titles are verified before handoff
+
+The PR workflow guidance now requires Conventional Commit syntax for pull-request titles,
+prefers deriving a single-commit title from its commit subject, and verifies the final title
+with `gh pr view --json title`. This prevents code-green PRs from failing the semantic-title
+check because the PR title omitted its release prefix. Current state: complete.
+
+## 2026-09-03 — Mobile captions clamp and tagged icons stay legible
+
+Overflowing media captions now clamp on an inner element instead of the native Read button,
+whose iOS Safari `flow-root` display exposed the full post over the stage. Read remains the
+tap target and Watch still returns from reading mode. Tagged actions keep Lucide's outlined
+tag shape, with the existing clay stroke and count badge, instead of filling into an
+unrecognizable solid glyph. Current state: in flight; focused tests and mobile browser checks pass.
+
 ## 2026-09-03 — Queue E2E assertions freeze timed dwell
 
 Queue-count coverage now pauses before and after navigation, and the cross-tab Next assertion

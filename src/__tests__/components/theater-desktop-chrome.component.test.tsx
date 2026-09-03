@@ -15,6 +15,7 @@ import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
 import { resetSavePostOwnershipCache } from '@/components/theater/SavePostButton'
 import { resetClampExpandPreference } from '@/components/theater/useClampExpand'
+import { SignInModal } from '@/components/auth/SignInModal'
 
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
 Element.prototype.scrollIntoView = vi.fn()
@@ -349,6 +350,37 @@ describe('DesktopDock', () => {
     expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
   })
 
+  it('Shift+Q toggles the desktop filter shortcut flow', async () => {
+    const items = [videoItem({ bookmarkId: '1', text: 'unique caption text' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        queueTypes={[]}
+        onToggleQueueType={vi.fn()}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'All' })).toHaveFocus())
+
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+
+    fireEvent(window, new CustomEvent('theater-toggle-show-all'))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'All' })).toHaveFocus())
+
+    fireEvent(window, new CustomEvent('theater-toggle-filter'))
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+  })
+
   it('keeps Queue open when the stage advances to the next post', () => {
     const items = [
       videoItem({ bookmarkId: '1', text: 'first playlist row' }),
@@ -517,6 +549,7 @@ describe('DesktopDock: end cap restructure', () => {
     expect(toggle.querySelector('.lucide-list')).toBeInTheDocument()
     expect(toggle.querySelector('[data-theater-play-count]')).toHaveTextContent('2')
     expect(toggle).not.toHaveTextContent('Queue')
+    expect(toggle).toHaveAttribute('aria-keyshortcuts', 'Q')
     expect(toggle.parentElement).toHaveClass('flex-col')
   })
 
@@ -597,6 +630,8 @@ describe('DesktopDock: end cap restructure', () => {
     const queue = screen.getByRole('button', { name: 'Queue' })
     const filter = screen.getByRole('button', { name: 'Filter post types' })
     expect(queue.querySelector('.lucide-list-filter')).not.toBeInTheDocument()
+    expect(filter).toHaveAttribute('aria-keyshortcuts', 'Shift+Q')
+    expect(filter).toHaveAttribute('data-theater-action', 'queue-filter')
     expect(filter).toHaveAttribute('data-theater-queue-filter')
     expect(filter).toHaveAttribute('title', 'Videos')
     expect(filter.className).toContain('text-clay')
@@ -604,8 +639,79 @@ describe('DesktopDock: end cap restructure', () => {
     expect(filter).toHaveAccessibleDescription('Filtered to Videos.')
     expect(screen.queryByText('Videos')).not.toBeInTheDocument()
     fireEvent.click(filter)
-    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Playlist' })
+    expect(dialog).toBeInTheDocument()
+    expect(queue).toHaveAttribute('aria-controls', dialog.id)
+    expect(filter).toHaveAttribute('aria-controls', dialog.id)
     expect(screen.getByRole('button', { name: 'Videos' })).toBeInTheDocument()
+  })
+
+  it('supports the complete keyboard shortcut flow in the desktop type filter', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    const onToggleQueueType = vi.fn()
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        queueTypes={['video']}
+        onToggleQueueType={onToggleQueueType}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+
+    const filter = screen.getByRole('button', { name: 'Filter post types' })
+    fireEvent.click(filter)
+    const videos = screen.getByRole('button', { name: 'Videos' })
+    const photos = screen.getByRole('button', { name: 'Photos' })
+    const text = screen.getByRole('button', { name: 'Text' })
+    expect(videos).toHaveFocus()
+
+    fireEvent.keyDown(videos, { key: 'ArrowRight' })
+    expect(photos).toHaveFocus()
+    fireEvent.keyDown(photos, { key: ' ' })
+    expect(onToggleQueueType).toHaveBeenCalledWith('photo')
+    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    const leakedShortcut = vi.fn()
+    window.addEventListener('keydown', leakedShortcut)
+    fireEvent.keyDown(photos, { key: 'j' })
+    expect(leakedShortcut).not.toHaveBeenCalled()
+    window.removeEventListener('keydown', leakedShortcut)
+    const queueShortcut = vi.fn()
+    window.addEventListener('keydown', queueShortcut)
+    fireEvent.keyDown(photos, { key: 'Q' })
+    expect(queueShortcut).toHaveBeenCalledTimes(1)
+    window.removeEventListener('keydown', queueShortcut)
+
+    fireEvent.keyDown(photos, { key: 'ArrowRight' })
+    expect(text).toHaveFocus()
+    fireEvent.keyDown(text, { key: 'Enter' })
+    expect(onToggleQueueType).toHaveBeenCalledWith('text')
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+  })
+
+  it('closes a keyboard-opened desktop type filter on Escape', () => {
+    const items = [videoItem({ bookmarkId: '1' })]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[0]}
+        currentKey={theaterItemKey(items[0])}
+        queueTypes={[]}
+        onToggleQueueType={vi.fn()}
+        onClearQueueTypes={vi.fn()}
+      />,
+    )
+
+    const filter = screen.getByRole('button', { name: 'Filter post types' })
+    fireEvent.click(filter)
+    const all = screen.getByRole('button', { name: 'All' })
+    expect(all).toHaveFocus()
+    fireEvent.keyDown(all, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+    expect(filter).toHaveFocus()
   })
 
   it('omits the filter control when filtering is unavailable', () => {
@@ -933,6 +1039,25 @@ describe('DesktopStageChrome', () => {
     declutter: false,
     onToggleDeclutter: vi.fn(),
   }
+
+  it('layers the scrub badge above desktop chrome without raising its hit target', () => {
+    const { container } = render(
+      <>
+        <TheaterProgressLine itemKey="twitter:1" kind="video" />
+        <DesktopStageChrome {...stageBase} current={videoItem()} />
+        <SignInModal open onClose={vi.fn()} />
+      </>,
+    )
+
+    expect(container.querySelector('[data-theater-progress-slider]')).toHaveClass('z-[70]')
+    expect(
+      container.querySelector('button[aria-label="Paste a link"]')?.closest('.lg\\:block'),
+    ).toHaveClass('z-[71]')
+    expect(container.querySelector('[data-theater-scrub-time]')?.parentElement).toHaveClass(
+      'z-[74]',
+    )
+    expect(screen.getByRole('dialog').closest('[role="presentation"]')).toHaveClass('z-[80]')
+  })
 
   it('renders the merged meta line and caption for a video item, without top-bar meta chips', () => {
     const item = videoItem()

@@ -185,7 +185,7 @@ const PEEK_ICON_BTN =
   'inline-flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
 /** Frosted post-action treatment for the right-side thumb rail. */
 const RAIL_ACTION_BTN =
-  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/20 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.18)] backdrop-blur-md transition-[transform,background-color] hover:bg-black/35 active:scale-95 active:bg-black/45'
+  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/20 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.18)] backdrop-blur-md transition-[transform,background-color] hover:bg-white/10 active:scale-95 active:bg-white/20'
 
 export function TheaterMobileChrome({
   mode,
@@ -515,10 +515,10 @@ export function TheaterMobileChrome({
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
-          <a href="/" className="flex items-center" aria-label="ADHX home">
+          <a href="/" className="relative z-[71] flex items-center" aria-label="ADHX home">
             <MatterLogo size={16} surface="dark" />
           </a>
-          <div className="flex flex-none items-center gap-1.5">
+          <div className="relative z-[71] flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
@@ -555,7 +555,7 @@ export function TheaterMobileChrome({
               carried entirely by the Save-playlist CTA below, which
               already opens the sign-in modal in place for a signed-out
               visitor (`handleSaveCollection` in TheaterShell). */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="relative z-[71] flex items-center justify-between gap-3">
             <a href="/" className="flex items-center" aria-label="ADHX home">
               <MatterLogo size={16} surface="dark" />
             </a>
@@ -572,10 +572,10 @@ export function TheaterMobileChrome({
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
-          <a href="/" className="flex items-center" aria-label="ADHX home">
+          <a href="/" className="relative z-[71] flex items-center" aria-label="ADHX home">
             <MatterLogo size={16} surface="dark" />
           </a>
-          <div className="flex flex-none items-center gap-1.5">
+          <div className="relative z-[71] flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
@@ -729,11 +729,7 @@ export function TheaterMobileChrome({
                   className={cn(RAIL_ACTION_BTN, 'relative order-1')}
                   data-theater-action="tag"
                 >
-                  <TagIcon
-                    size={16}
-                    className={tagCount > 0 ? 'text-clay' : undefined}
-                    fill={tagCount > 0 ? 'currentColor' : 'none'}
-                  />
+                  <TagIcon size={16} className={tagCount > 0 ? 'text-clay' : undefined} />
                   <TheaterTagCount count={tagCount} variant="badge" />
                 </StageIconButton>
               ) : collection?.tab === 'live' ? (
@@ -748,11 +744,7 @@ export function TheaterMobileChrome({
                     className={cn(RAIL_ACTION_BTN, 'relative order-1')}
                     data-theater-action="tag"
                   >
-                    <TagIcon
-                      size={16}
-                      className={tagCount > 0 ? 'text-clay' : undefined}
-                      fill={tagCount > 0 ? 'currentColor' : 'none'}
-                    />
+                    <TagIcon size={16} className={tagCount > 0 ? 'text-clay' : undefined} />
                     <TheaterTagCount count={tagCount} variant="badge" />
                   </StageIconButton>
                   <PersonalLiveSaveButton
@@ -853,25 +845,17 @@ export function TheaterMobileChrome({
             inert={declutter}
             data-theater-swipe-control
             className={cn(
-              'absolute bottom-2 right-3 flex h-28 w-12 flex-col overflow-hidden rounded-full border border-white/20 bg-black/25 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.22)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
+              'absolute bottom-2 right-3 flex h-28 w-12 flex-col gap-2 overflow-hidden rounded-full border border-white/20 bg-black/25 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.22)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
               declutter && 'pointer-events-none scale-95 opacity-0',
             )}
           >
-            <span
-              className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 gap-0.5"
-              aria-hidden
-            >
-              <span className="h-1 w-1 rounded-full bg-white/45" />
-              <span className="h-1 w-1 rounded-full bg-white/45" />
-              <span className="h-1 w-1 rounded-full bg-white/45" />
-            </span>
             <button
               type="button"
               disabled={!canPrev}
               aria-disabled={!canPrev}
               onClick={onPrev}
               aria-label="Previous post"
-              className="flex min-h-0 flex-1 items-center justify-center transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
+              className="flex min-h-0 flex-1 items-center justify-center rounded-t-full pt-2 transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
             >
               <ChevronUp size={21} />
             </button>
@@ -881,7 +865,7 @@ export function TheaterMobileChrome({
               aria-disabled={!canNext}
               onClick={onNext}
               aria-label="Next post"
-              className="flex min-h-0 flex-1 items-center justify-center transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
+              className="flex min-h-0 flex-1 items-center justify-center rounded-b-full pb-2 transition-colors hover:bg-white/10 active:bg-white/20 disabled:opacity-25"
             >
               <ChevronDown size={21} />
             </button>

@@ -43,6 +43,7 @@ describe('resolveTheaterShortcut', () => {
     expect(resolveTheaterShortcut({ key: '.' })).toBe('toggleMenu')
     expect(resolveTheaterShortcut({ key: 'q' })).toBe('toggleShowAll')
     expect(resolveTheaterShortcut({ key: 'Q' })).toBe('toggleShowAll')
+    expect(resolveTheaterShortcut({ key: 'Q', shiftKey: true })).toBe('toggleFilter')
     expect(resolveTheaterShortcut({ key: '?' })).toBe('toggleHelp')
     expect(resolveTheaterShortcut({ key: '/', shiftKey: true })).toBe('toggleHelp')
     expect(resolveTheaterShortcut({ key: 'Escape' })).toBe('close')
@@ -90,6 +91,7 @@ describe('resolveTheaterShortcut', () => {
     expect(THEATER_ACTION_EVENTS.save).toBe('theater-save')
     expect(THEATER_ACTION_EVENTS.toggleMenu).toBe('theater-toggle-menu')
     expect(THEATER_ACTION_EVENTS.toggleShowAll).toBe('theater-toggle-show-all')
+    expect(THEATER_ACTION_EVENTS.toggleFilter).toBe('theater-toggle-filter')
     expect(THEATER_ACTION_EVENTS.toggleArticle).toBe('theater-toggle-article')
     expect(THEATER_ACTION_EVENTS.replay).toBe('theater-replay')
     expect(THEATER_ACTION_EVENTS.keepPlaying).toBe('theater-keep-playing')
@@ -122,12 +124,13 @@ describe('resolveTheaterShortcut', () => {
     expect(actions?.rows.find((r) => r.label === 'Read / Watch')?.keys).toEqual(['F'])
   })
 
-  it('lists Live and Saved on the theater help', () => {
+  it('lists Live, Saved, Queue, and the desktop Filter shortcut on theater help', () => {
     const theater = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Theater')
     expect(theater?.rows).toEqual([
       { keys: ['1'], label: 'Live' },
       { keys: ['2'], label: 'Saved' },
       { keys: ['Q'], label: 'Queue' },
+      { keys: ['⇧Q'], label: 'Filter (desktop)' },
     ])
   })
 

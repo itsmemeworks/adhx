@@ -4,7 +4,8 @@
  * Global keydown handling for TheaterShell. One keymap for every theater
  * surface (Live, collection, playlist, shared): →/←/j/k next-prev, ↑/↓
  * scroll text, 1/2 Live⇄Saved (signed-in), Space play/pause, M mute,
- * E expand, R repeat, Q Queue, S/T/L/C/D/O/A/F/W/P action buttons, . menu, Shift+? help.
+ * E expand, R repeat, Q Queue, Shift+Q filter, S/T/L/C/D/O/A/F/W/P action buttons,
+ * . menu, Shift+? help.
  * Collection still has U (undo Archive) and Escape (close). `personalKeyAction`
  * is re-exported from TheaterShell for tests.
  */
@@ -174,6 +175,7 @@ export function useTheaterKeyboard({
         case 'archive':
         case 'toggleMenu':
         case 'toggleShowAll':
+        case 'toggleFilter':
         case 'toggleArticle':
         case 'replay':
         case 'keepPlaying':

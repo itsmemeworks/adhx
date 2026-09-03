@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, fireEvent, act } from '@testing-library/react'
 import { StageYouTube, readYtCurrentTime, readYtDuration } from '@/components/theater/StageYouTube'
 import { resetYtDebugLines, YtDebugOverlay } from '@/components/theater/YtDebugOverlay'
+import { THEATER_SEEK } from '@/components/theater/useTheaterStageEvents'
 import type { TheaterItem } from '@/components/theater/types'
 
 /**
@@ -466,6 +467,178 @@ describe('StageYouTube', () => {
     postMessage.mockClear()
     dispatchWindowEvent(new CustomEvent('theater-resume'))
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'playVideo' })
+  })
+
+  it('seeks with the reported duration when the progress line is scrubbed', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, currentTime: 10, duration: 100 },
+    })
+    postMessage.mockClear()
+
+    dispatchWindowEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.65 } }))
+
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({
+      func: 'seekTo',
+      args: [65, true],
+    })
+  })
+
+  it('ignores queued pre-seek time payloads until YouTube confirms the target', () => {
+    const progress: number[] = []
+    const onProgress = (event: Event) => {
+      progress.push((event as CustomEvent<{ progress: number }>).detail.progress)
+    }
+    window.addEventListener('theater-video-progress', onProgress)
+    try {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 10, duration: 100 },
+      })
+      progress.length = 0
+
+      dispatchWindowEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.65 } }))
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 11, duration: 100 },
+      })
+
+      expect(progress.some((value) => Math.abs(value - 0.11) < 0.001)).toBe(false)
+      expect(progress.at(-1)).toBeCloseTo(0.65)
+
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 65, duration: 100 },
+      })
+      expect(progress.at(-1)).toBe(0.65)
+    } finally {
+      window.removeEventListener('theater-video-progress', onProgress)
+    }
+  })
+
+  it('quarantines stale payloads for small forward and backward seeks', () => {
+    const progress: number[] = []
+    const onProgress = (event: Event) => {
+      progress.push((event as CustomEvent<{ progress: number }>).detail.progress)
+    }
+    window.addEventListener('theater-video-progress', onProgress)
+    try {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 10, duration: 100 },
+      })
+
+      progress.length = 0
+      dispatchWindowEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.12 } }))
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 10.5, duration: 100 },
+      })
+      expect(progress.some((value) => Math.abs(value - 0.105) < 0.001)).toBe(false)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 12, duration: 100 },
+      })
+      expect(progress.at(-1)).toBe(0.12)
+
+      progress.length = 0
+      dispatchWindowEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.1 } }))
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 11.5, duration: 100 },
+      })
+      expect(progress.some((value) => Math.abs(value - 0.115) < 0.001)).toBe(false)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 10, duration: 100 },
+      })
+      expect(progress.at(-1)).toBe(0.1)
+    } finally {
+      window.removeEventListener('theater-video-progress', onProgress)
+    }
+  })
+
+  it('reconciles to YouTube after a bounded number of unconfirmed seek payloads', () => {
+    const progress: number[] = []
+    const onProgress = (event: Event) => {
+      progress.push((event as CustomEvent<{ progress: number }>).detail.progress)
+    }
+    window.addEventListener('theater-video-progress', onProgress)
+    try {
+      const { container } = render(
+        <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+      )
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement
+      const { fakeWindow } = stubContentWindow(iframe)
+      fireEvent.load(iframe)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 10, duration: 100 },
+      })
+      dispatchWindowEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.65 } }))
+
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        postFromPlayer(fakeWindow, {
+          event: 'infoDelivery',
+          info: { playerState: 1, currentTime: 11, duration: 100 },
+        })
+      }
+
+      expect(progress.at(-1)).toBe(0.11)
+      postFromPlayer(fakeWindow, {
+        event: 'infoDelivery',
+        info: { playerState: 1, currentTime: 12, duration: 100 },
+      })
+      expect(progress.at(-1)).toBe(0.12)
+    } finally {
+      window.removeEventListener('theater-video-progress', onProgress)
+    }
+  })
+
+  it('rebases catch-up unmute evidence after a forward seek', () => {
+    const { container } = render(
+      <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, muted: false, currentTime: 0, duration: 100 },
+    })
+
+    dispatchWindowEvent(new CustomEvent(THEATER_SEEK, { detail: { progress: 0.65 } }))
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, muted: false, currentTime: 65, duration: 100 },
+    })
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, muted: false, currentTime: 66, duration: 100 },
+    })
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toEqual(['mute', 'playVideo'])
   })
 
   it('sends mute immediately, but defers unMute until a confirmed playing state, when the muted prop transitions', () => {

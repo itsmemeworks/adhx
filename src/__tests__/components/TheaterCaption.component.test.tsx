@@ -37,15 +37,21 @@ describe('TheaterCaption', () => {
 
   it('opens Read when the truncated caption is clicked', () => {
     const onOpenRead = vi.fn()
+    const captionRef = createRef<HTMLParagraphElement | HTMLButtonElement | HTMLSpanElement>()
     render(
       <TheaterCaption
-        captionRef={createRef<HTMLParagraphElement>()}
+        captionRef={captionRef}
         platform="twitter"
         text="two lines of caption that might clamp"
         onOpenRead={onOpenRead}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Read the full post' }))
+    const read = screen.getByRole('button', { name: 'Read the full post' })
+    const clamp = read.querySelector('span.line-clamp-2')
+    expect(read).not.toHaveClass('line-clamp-2')
+    expect(clamp).not.toBeNull()
+    expect(captionRef.current).toBe(clamp)
+    fireEvent.click(read)
     expect(onOpenRead).toHaveBeenCalledTimes(1)
   })
 
