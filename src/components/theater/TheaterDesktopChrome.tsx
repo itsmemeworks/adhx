@@ -21,7 +21,7 @@
  * viewport gating beyond CSS.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import Link from 'next/link'
@@ -36,8 +36,7 @@ import {
   Tag as TagIcon,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
-  ChevronDown,
+  List,
   ListFilter,
   Maximize2,
   Pause,
@@ -140,7 +139,6 @@ export interface DesktopDockProps {
   isSeen: (key: string) => boolean
   seenReady: boolean
   freshKeys: ReadonlySet<string>
-  newCount: number
   /** Whole queue size — looping copy uses this. Falls back to `items.length`. */
   queueTotal?: number
   /** Unused for Repeat-off copy (`N in queue` uses toPlay). */
@@ -831,7 +829,6 @@ export function DesktopDock({
   isSeen,
   seenReady,
   freshKeys,
-  newCount,
   queueTotal,
   queuePlayed,
   queueToPlay,
@@ -859,6 +856,8 @@ export function DesktopDock({
   onClearQueueTypes,
 }: DesktopDockProps) {
   const [showAll, setShowAll] = useState(false)
+  const queueControlDescriptionId = useId()
+  const filterControlDescriptionId = useId()
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const rootRef = useRef<HTMLDivElement>(null)
   const queueRootRef = useRef<HTMLDivElement>(null)
@@ -888,6 +887,16 @@ export function DesktopDock({
   }, [currentKey])
 
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const queueDisplayCount = repeatCurrent
+    ? '1'
+    : (queueCount?.text.match(/^\d+/)?.[0] ?? String(queueTotal ?? items.length))
+  const queueItemsBeingPlayed = repeatCurrent && current ? [current] : items
+  const unseenQueueCount = seenReady
+    ? queueItemsBeingPlayed.reduce(
+        (count, item) => count + (isSeen(theaterItemKey(item)) ? 0 : 1),
+        0,
+      )
+    : null
   const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
   const repeatCopy = repeatMode
     ? repeatModeLabel(repeatMode, { saved: _collection?.tab === 'collection' })
@@ -1187,9 +1196,8 @@ export function DesktopDock({
           )}
         </div>
 
-        {/* End cap — fades in over the strip. Queue / count / new.
-          A filter-on ListFilter is the only closed-panel cue (types live in
-          the overlay). */}
+        {/* End cap — the same compact Queue/count + Filter controls as mobile.
+          The panel itself still opens above the filmstrip on desktop. */}
         <div
           ref={queueRootRef}
           data-theater-dock-cap
@@ -1199,44 +1207,65 @@ export function DesktopDock({
               'linear-gradient(to right, transparent 0%, var(--m-card) 3.25rem, var(--m-card) 100%)',
           }}
         >
-          <div className="pointer-events-auto flex flex-col items-end gap-0.5">
+          <div className="pointer-events-auto flex flex-col items-center gap-1">
             <button
               type="button"
               aria-label="Queue"
+              aria-describedby={queueControlDescriptionId}
               aria-expanded={showAll}
-              title={filterOn ? theaterQueueFilterLabel(queueTypes) : undefined}
+              title={queueCount?.ariaLabel ?? 'Queue'}
               data-theater-action="show-all"
-              data-theater-queue-filter={filterOn ? '' : undefined}
               onClick={() => setShowAll((v) => !v)}
-              className={cn(
-                'inline-flex items-center gap-1 text-[12.5px] font-semibold transition-colors',
-                filterOn ? 'text-clay hover:text-clay' : 'text-ink-2 hover:text-ink',
-              )}
+              className="relative inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-ink-2 transition-colors hover:bg-inset hover:text-ink"
             >
-              {showAll ? (
-                <ChevronDown size={13} className="flex-none" />
-              ) : (
-                <ChevronUp size={13} className="flex-none" />
-              )}
-              <span>Queue</span>
-              {filterOn ? <ListFilter size={12} className="flex-none" aria-hidden /> : null}
+              <List size={19} aria-hidden />
+              <span className="text-[12px] font-bold tabular-nums text-ink" data-theater-play-count>
+                {queueDisplayCount}
+              </span>
+              {unseenQueueCount !== null && unseenQueueCount > 0 ? (
+                <span
+                  className="absolute -right-1 -top-1 min-w-4 rounded-full bg-clay px-1 text-center text-[9px] font-bold leading-4 text-white"
+                  aria-hidden
+                  data-theater-unseen-count
+                >
+                  {unseenQueueCount}
+                </span>
+              ) : null}
+              <span id={queueControlDescriptionId} className="sr-only">
+                <span data-theater-queue-count>
+                  {queueCount?.ariaLabel ?? `${queueDisplayCount} in queue`}
+                </span>
+                {unseenQueueCount !== null ? <span>{`. ${unseenQueueCount} unseen.`}</span> : null}
+              </span>
             </button>
-            {queueCount ? (
-              <span
-                data-theater-queue-count
-                className="text-[11px] tabular-nums text-ink-3"
-                aria-label={queueCount.ariaLabel}
+
+            {onToggleQueueType && onClearQueueTypes ? (
+              <button
+                type="button"
+                aria-label="Filter post types"
+                aria-describedby={filterOn ? filterControlDescriptionId : undefined}
+                aria-expanded={showAll}
+                title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
+                data-theater-queue-filter={filterOn ? '' : undefined}
+                onClick={() => setShowAll((value) => !value)}
+                className={cn(
+                  'relative inline-flex h-11 w-11 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink',
+                  filterOn && 'text-clay hover:text-clay',
+                )}
               >
-                {queueCount.text}
-              </span>
-            ) : null}
-            {!playlist && newCount > 0 ? (
-              <span
-                className="text-[11px] font-medium tabular-nums text-clay"
-                aria-label={`${newCount} new`}
-              >
-                {newCount} new
-              </span>
+                <ListFilter size={19} aria-hidden />
+                {filterOn ? (
+                  <>
+                    <span
+                      className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-clay"
+                      aria-hidden
+                    />
+                    <span id={filterControlDescriptionId} className="sr-only">
+                      {`Filtered to ${theaterQueueFilterLabel(queueTypes)}.`}
+                    </span>
+                  </>
+                ) : null}
+              </button>
             ) : null}
           </div>
 

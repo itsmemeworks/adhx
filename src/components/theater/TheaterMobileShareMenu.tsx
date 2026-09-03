@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Download, Link2, Loader2, Send, Share2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContentType } from '@/components/matter'
@@ -15,9 +15,9 @@ export function TheaterMobileShareMenu({
   open,
   onOpenChange,
   kind,
+  actionKey,
   hasText,
   textCopied,
-  linkCopied,
   sendFile,
   onCopyText,
   onShareLink,
@@ -27,12 +27,12 @@ export function TheaterMobileShareMenu({
   open: boolean
   onOpenChange: (open: boolean) => void
   kind: ContentType | null
+  actionKey: string | null
   hasText: boolean
   textCopied: boolean
-  linkCopied: boolean
   sendFile: SendFile
-  onCopyText: () => void
-  onShareLink: () => void
+  onCopyText: () => boolean | Promise<boolean>
+  onShareLink: () => boolean | Promise<boolean>
   alignTop?: boolean
   triggerClassName?: string
 }) {
@@ -40,9 +40,19 @@ export function TheaterMobileShareMenu({
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const skipFocusRestoreRef = useRef(false)
+  const completedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [completedActionKey, setCompletedActionKey] = useState<string | null>(null)
+  const actionComplete = completedActionKey !== null && completedActionKey === actionKey
   const fileAction = fileSendCopy(kind)
   const copyAction = textCopyAction(kind)
   const mediaLabel = kind === 'photo' ? 'photo' : 'video'
+
+  useEffect(
+    () => () => {
+      if (completedTimeoutRef.current) clearTimeout(completedTimeoutRef.current)
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!open) return
@@ -132,9 +142,20 @@ export function TheaterMobileShareMenu({
     }
   }, [open, onOpenChange])
 
-  const run = (action: () => void) => {
-    action()
+  const markComplete = (completedKey: string | null) => {
+    setCompletedActionKey(completedKey)
+    if (completedTimeoutRef.current) clearTimeout(completedTimeoutRef.current)
+    completedTimeoutRef.current = setTimeout(() => setCompletedActionKey(null), 1600)
+  }
+
+  const run = async (action: () => boolean | Promise<boolean>) => {
+    const startedForKey = actionKey
     onOpenChange(false)
+    try {
+      if (await action()) markComplete(startedForKey)
+    } catch {
+      // The chosen action did not complete; leave the Share glyph unchanged.
+    }
   }
 
   return (
@@ -148,7 +169,10 @@ export function TheaterMobileShareMenu({
         aria-expanded={open}
         className={cn('inline-flex items-center justify-center', triggerClassName)}
       >
-        {linkCopied ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
+        {actionComplete ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
+        <span className="sr-only" role="status" aria-live="polite">
+          {actionComplete ? 'Share action completed' : ''}
+        </span>
       </button>
 
       <div
@@ -169,7 +193,7 @@ export function TheaterMobileShareMenu({
             type="button"
             role="menuitem"
             tabIndex={open ? 0 : -1}
-            onClick={() => run(onCopyText)}
+            onClick={() => void run(onCopyText)}
             onKeyDown={(event) => event.stopPropagation()}
             className={MENU_ITEM}
             data-theater-action="copy"
@@ -184,7 +208,7 @@ export function TheaterMobileShareMenu({
             type="button"
             role="menuitem"
             tabIndex={open ? 0 : -1}
-            onClick={() => run(sendFile.download)}
+            onClick={() => void run(sendFile.download)}
             onKeyDown={(event) => event.stopPropagation()}
             className={MENU_ITEM}
             data-theater-action="download"
@@ -200,7 +224,7 @@ export function TheaterMobileShareMenu({
             role="menuitem"
             tabIndex={open ? 0 : -1}
             disabled={sendFile.sending}
-            onClick={() => run(() => void sendFile.send())}
+            onClick={() => void run(sendFile.send)}
             onKeyDown={(event) => event.stopPropagation()}
             className={MENU_ITEM}
           >
@@ -219,7 +243,7 @@ export function TheaterMobileShareMenu({
           type="button"
           role="menuitem"
           tabIndex={open ? 0 : -1}
-          onClick={() => run(onShareLink)}
+          onClick={() => void run(onShareLink)}
           onKeyDown={(event) => event.stopPropagation()}
           className={MENU_ITEM}
           data-theater-action="link"

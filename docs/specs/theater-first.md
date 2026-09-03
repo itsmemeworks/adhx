@@ -71,11 +71,15 @@ TheaterDesktopChrome.tsx — `DesktopStageChrome` (overlays inside stage: top ba
                            for video/photo; bottom-right actions — Open is the source platform glyph)
                            + `DesktopDock` (in-flow bottom dock: two-row 3-col transport —
                            prev / play-pause / next over expand / repeat / mute — +
-                           horizontal filmstrip queue auto-scrolled to keep current visible + "Queue" panel (`Q` toggles; ↑/↓ traverse while open; Esc / click away closes))
+                           horizontal filmstrip queue auto-scrolled to keep current visible +
+                           compact playlist/count and filter controls matching mobile; either
+                           opens the "Queue" panel (`Q` toggles; ↑/↓ traverse while open;
+                           Esc / click away closes))
 TheaterMobileChrome.tsx  — mobile reel chrome: top/bottom scrims, a bounded right-side thumb zone
                            with a joined up/down swipe capsule and a frosted contextual action rail
                            immediately above it. Share expands a type-aware menu (copy text/article,
-                           download/share media, share link) instead of exposing irrelevant actions.
+                           download/share media, share link) instead of exposing irrelevant actions,
+                           then flashes a green rail tick only after the chosen action completes.
                            The bottom bar shows a playlist count plus an unseen badge; a separate
                            Filter opens counted type pills without expanding the playlist. Mute,
                            prominent play/pause, repeat, and focus stay grouped right.
@@ -156,12 +160,17 @@ Rendering lives in one place: `TheaterLinkedText` (`src/components/theater/Theat
 
 ## 7. Theme
 
-- The stage is always near-black (`#08070a`) in both themes.
-- The rail follows the theme system, but **theater surfaces default dark**: when `localStorage.theme` is unset, the FOUC script and `ThemeProvider` resolve to `dark` on theater routes (instead of `system`). An explicit user toggle wins everywhere, as today. Non-theater surfaces keep the current `system` default.
+- Dark is the only product theme. The stage remains near-black (`#08070a`), while rails and
+  non-theater surfaces use the warm dark Matter palette. There is no user or system theme switch.
 
 ## 8. Mobile
 
-- `/` signed-out on mobile = the reel: brand on the top scrim (no close button — it's home), progress bar, caption + meta on the bottom scrim, and an Up-next bottom sheet. A right-side thumb zone handles swipe up/down = next/prev without taking over article scrolling, album gestures, links, or embeds across the rest of the stage. Subtle focus, repeat, play/pause, mute/unmute, up, and down buttons live in that zone, with up = previous and down = next together below mute plus a two-column fallback for short landscape viewports. Repeat-off keeps session back-history for rewatching the post just left; a direct post landing visibly starts at Repeat one, where non-video playback stays visible but disabled. Focus makes hidden chrome inert while invisible swipes stay active, and tapping the zone restores it. The control bar puts Queue/count on the left and plain themed post-action icons on the right; those actions stay level with Queue and follow the row upward when the playlist expands. Evolves `/trending/play` rather than duplicating it — `/trending/play` redirects into the theater.
+- `/` signed-out on mobile = the reel: brand on the top scrim, caption/meta over the stage, a
+  right-side frosted action rail above a joined up/down swipe capsule, and an Up-next bottom sheet.
+  Playback controls (sound, play/pause, repeat, Focus) stay in the bottom bar. Focus hides stage
+  chrome while leaving transport as the exit; if Up next is open, Focus collapses it and enters
+  de-clutter in the same tap. Repeat-off keeps session back-history, direct previews start at Repeat
+  one, and `/trending/play` redirects into this theater rather than duplicating it.
 - Non-video posts in the mobile feed render their stage variants full-screen (text typeset large; article cover splash → reader).
 - Tap targets ≥ 44px. No fake status bar or keyboard chrome.
 

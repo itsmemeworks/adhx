@@ -76,11 +76,6 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
-vi.mock('@/lib/theme/context', () => ({
-  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-  useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-}))
-
 /** Last props the grid was rendered with. */
 let renderedItems: FeedItem[] = []
 let renderedJustAddedKey: string | null | undefined

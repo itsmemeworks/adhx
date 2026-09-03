@@ -6,6 +6,35 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Desktop Queue adopts the mobile controls
+
+The desktop filmstrip end cap now uses the same compact playlist/count and filter controls as
+mobile instead of stacked Queue, count, and new-copy rows. The playlist control shows the number
+that will play plus an unseen badge; the filter icon opens the existing panel and carries the
+active-filter cue. Current state: in flight; typecheck, 99 focused tests, and a desktop browser
+pass succeed.
+
+## 2026-09-03 — Mobile Focus closes Up next
+
+Pressing the mobile Focus control while Up next is open now collapses the playlist and enters
+clutter-free mode in the same tap. This prevents the expanded sheet from covering the stage after
+the user explicitly asks to focus. Current state: in flight; focused component tests pass.
+
+## 2026-09-03 — ADHX becomes dark-only
+
+Dark is now the single product theme across theater, library, public pages, and Settings.
+The root renders dark on the server with one dark token set and browser theme color; legacy
+light/system preferences are ignored. Theme controls were removed from public navigation,
+account/theater dropdowns, profile and playlist pages, and the Settings Appearance card.
+Current state: in flight; 3,513 tests, typecheck, lint, format, and a local browser pass succeed.
+
+## 2026-09-02 — Mobile Share confirms completed actions
+
+The mobile rail Share glyph now becomes a green tick after Copy, Download, media Share, or
+Share link completes successfully. Cancelled or failed native shares keep the Share glyph, and
+the confirmation clears after 1.6 seconds or immediately when the staged post changes.
+Current state: in flight; typecheck and 118 focused theater/send tests pass.
+
 ## 2026-09-02 — Collapsed mobile Queue stops filter bleed
 
 The expanded mobile Queue content is now invisible, inert, and absent from the accessibility tree

@@ -14,11 +14,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { SettingsClient } from '@/app/settings/SettingsClient'
 
-vi.mock('@/lib/theme/context', () => ({
-  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-  useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-}))
-
 const preferenceMocks = vi.hoisted(() => ({
   updatePreference: vi.fn(),
   bionicReading: false,
@@ -101,6 +96,8 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
     render(<SettingsClient />)
 
     await waitFor(() => expect(screen.getAllByText('@tester')[0]).toBeInTheDocument())
+    expect(screen.queryByText('Appearance')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^(Light|Dark|System)$/ })).not.toBeInTheDocument()
     expect(screen.getByText('Account')).toBeInTheDocument()
     expect(screen.getByText('Your email, public username, and avatar')).toBeInTheDocument()
     expect(screen.queryByText('Email')).not.toBeInTheDocument()

@@ -2602,7 +2602,6 @@ export function TheaterShell({
         isSeen={chromeIsSeen}
         seenReady={chromeSeenReady}
         freshKeys={chromeFreshKeys}
-        newCount={chromeNewCount}
         queueTotal={queueTotal}
         queuePlayed={queuePlayed}
         queueToPlay={queueToPlay}

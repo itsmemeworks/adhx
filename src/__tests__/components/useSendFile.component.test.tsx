@@ -336,7 +336,7 @@ describe('useSendFile — an early tap waits for the file instead of sharing a l
     const useSendFile = await importOnMobile()
     const { result } = renderHook(() => useSendFile(videoItem()))
 
-    let sendPromise: Promise<void> = Promise.resolve()
+    let sendPromise: Promise<boolean> = Promise.resolve(false)
     await act(async () => {
       sendPromise = result.current.send()
     })

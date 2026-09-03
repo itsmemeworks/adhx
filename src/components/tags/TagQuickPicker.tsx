@@ -15,8 +15,8 @@ export interface TagQuickPickerProps {
 }
 
 // This surface is ALWAYS dark (the theater is always dark, regardless of the
-// site's light/dark theme) — hardcoded like SignInModal.tsx rather than
-// pulling from the Matter tokens, which flip with the `light`/`dark` class.
+// surrounding page treatment) — hardcoded like SignInModal.tsx rather than
+// pulling from the warmer Matter page tokens.
 const INK = '#f3ece0'
 const MUTED = '#857a69'
 const SUBTLE = '#b8ac99'

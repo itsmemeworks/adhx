@@ -55,9 +55,9 @@ export interface SendFile {
    */
   mode: 'share' | 'download'
   /** Open the native share sheet (or fall back to the link). Call from a tap. */
-  send: () => Promise<void>
+  send: () => Promise<boolean>
   /** Force a browser download, even on touch devices that can share files. */
-  download: () => void
+  download: () => boolean
 }
 
 /** Delay before prefetching starts — aligned with the seen-dwell threshold so
@@ -298,7 +298,7 @@ export function useSendFile(
   }, [key, source?.src, eager])
 
   const download = useCallback(() => {
-    if (!item || !source) return
+    if (!item || !source) return false
     const link = document.createElement('a')
     link.href = source.downloadSrc
     link.download = source.filename
@@ -311,10 +311,11 @@ export function useSendFile(
       id: item.bookmarkId || undefined,
       source: 'download',
     })
+    return true
   }, [item, source])
 
   const send = useCallback(async () => {
-    if (!item || !source) return
+    if (!item || !source) return false
     setSending(true)
     try {
       const canonicalUrl = canonicalUrlFor(item)
@@ -362,11 +363,11 @@ export function useSendFile(
               id: item.bookmarkId || undefined,
               source: 'share',
             })
-            return
+            return true
           } catch (err) {
             // User dismissed the sheet — a cancel, not a failure. Don't fall
             // through to a second share/download prompt.
-            if (err instanceof DOMException && err.name === 'AbortError') return
+            if (err instanceof DOMException && err.name === 'AbortError') return false
             // Activation expired while we fetched the file (both iOS and
             // Chrome consume transient activation across an `await`). The file
             // IS cached now, so a second tap shares it inside its own gesture
@@ -374,7 +375,7 @@ export function useSendFile(
             // which is the failure the owner reported.
             if (err instanceof DOMException && err.name === 'NotAllowedError') {
               setPrimed(true)
-              return
+              return false
             }
             // Any other error (e.g. unsupported payload at share-time):
             // fall through to the link/download paths below.
@@ -395,9 +396,9 @@ export function useSendFile(
             id: item.bookmarkId || undefined,
             source: 'share',
           })
-          return
+          return true
         } catch (err) {
-          if (err instanceof DOMException && err.name === 'AbortError') return
+          if (err instanceof DOMException && err.name === 'AbortError') return false
         }
       }
 
@@ -418,7 +419,7 @@ export function useSendFile(
           id: item.bookmarkId || undefined,
           source: 'download',
         })
-        return
+        return true
       }
 
       // Download mode with no blob yet (early click): stream the same-origin
@@ -437,14 +438,20 @@ export function useSendFile(
           id: item.bookmarkId || undefined,
           source: 'download',
         })
-        return
+        return true
       }
 
       // Last resort (share mode, share failed, no blob): copy the link so
       // the tap still does something.
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(canonicalUrl)
+        try {
+          await navigator.clipboard.writeText(canonicalUrl)
+          return true
+        } catch {
+          return false
+        }
       }
+      return false
     } finally {
       setSending(false)
     }

@@ -199,7 +199,7 @@ describe('TheaterMobileChrome: caption', () => {
     const actionRow = cluster?.parentElement
     expect(actionRow?.className).not.toContain('pointer-events-auto')
     expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
-    expect(share.className).toContain('bg-black/30')
+    expect(share.className).toContain('bg-black/20')
     expect(share.className).toContain('backdrop-blur-md')
   })
 })
@@ -209,7 +209,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('border-white/15')
-    expect(saveBtn.className).toContain('bg-black/30')
+    expect(saveBtn.className).toContain('bg-black/20')
     expect(saveBtn.className).toContain('text-clay')
     expect(saveBtn.className).not.toContain('bg-clay-grad')
     expect(saveBtn).not.toHaveTextContent('Save')
@@ -633,6 +633,51 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
     expect(restored.closest('[data-testid="mobile-playback-controls"]')).toBeInTheDocument()
   })
 
+  it('collapses an open playlist before entering clutter-free mode', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+
+    fireEvent.click(queue)
+    expect(queue).toHaveAttribute('aria-expanded', 'true')
+
+    fireEvent.click(screen.getByLabelText('Hide controls'))
+    expect(queue).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByLabelText('Show controls')).toBeInTheDocument()
+    const actions = screen.getByTestId('mobile-control-actions')
+    expect(actions.className).toContain('opacity-0')
+    expect(actions.className).toContain('bottom-[calc(70%+0.75rem)]')
+  })
+
+  it('presents Focus rather than Show controls when Up next is opened from clutter-free mode', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+
+    fireEvent.click(screen.getByLabelText('Hide controls'))
+    fireEvent.click(queue)
+
+    const focus = screen.getByLabelText('Hide controls')
+    expect(focus.querySelector('.lucide-maximize-2')).toBeInTheDocument()
+    fireEvent.click(focus)
+    expect(queue).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByLabelText('Show controls')).toBeInTheDocument()
+  })
+
+  it('repositions hidden chrome before a rapid restore during the playlist-close fade', async () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
+    const actions = screen.getByTestId('mobile-control-actions')
+
+    fireEvent.click(queue)
+    fireEvent.click(screen.getByLabelText('Hide controls'))
+    fireEvent.click(screen.getByLabelText('Show controls'))
+
+    expect(actions.className).toContain('opacity-0')
+    await waitFor(() => {
+      expect(actions.className).not.toContain('bottom-[calc(70%+0.75rem)]')
+      expect(actions.className).not.toContain('opacity-0')
+    })
+  })
+
   it('a stage tap hides chrome and resumes; a second tap only restores overlays', () => {
     const resumes: Event[] = []
     const onResume = (e: Event) => resumes.push(e)
@@ -672,6 +717,7 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(zone.className).toContain('env(safe-area-inset-bottom)')
     const capsule = zone.querySelector('[data-theater-swipe-control]')
     expect(capsule).toHaveClass('rounded-full')
+    expect(capsule).toHaveClass('bg-black/25')
     expect(capsule).not.toHaveClass('divide-y')
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
   })
@@ -1094,7 +1140,7 @@ describe('TheaterMobileChrome: collection mode brand logo is always home', () =>
     )
     const savePlaylistBtn = screen.getByRole('button', { name: 'Save playlist · 12' })
     expect(savePlaylistBtn.className).toContain('border-white/15')
-    expect(savePlaylistBtn.className).toContain('bg-black/30')
+    expect(savePlaylistBtn.className).toContain('bg-black/20')
     expect(savePlaylistBtn.className).toContain('text-clay')
     expect(savePlaylistBtn.className).not.toContain('bg-clay-grad')
   })
@@ -1803,6 +1849,64 @@ describe('TheaterMobileChrome: contextual Share options', () => {
     openShareOptions()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Share video' }))
     expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a green tick after the chosen Share action completes and resets it for the next post', async () => {
+    let finishShare: ((completed: boolean) => void) | undefined
+    const send = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishShare = resolve
+        }),
+    )
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'share' as const,
+      send,
+      download: vi.fn(() => true),
+    })
+    const { rerender } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const share = screen.getByRole('button', { name: 'Share' })
+
+    openShareOptions()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Share video' }))
+    expect(share.querySelector('.lucide-check')).not.toBeInTheDocument()
+
+    await act(async () => finishShare?.(true))
+    await waitFor(() => {
+      expect(share.querySelector('.lucide-check')).toHaveClass('text-done')
+    })
+
+    rerender(<TheaterMobileChrome {...base} current={textItem({ bookmarkId: 'next' })} />)
+    expect(share.querySelector('.lucide-check')).not.toBeInTheDocument()
+  })
+
+  it('does not show an old Share completion on a post reached while the action was in flight', async () => {
+    let finishShare: ((completed: boolean) => void) | undefined
+    mockUseSendFile.mockReturnValue({
+      supported: true,
+      ready: true,
+      sending: false,
+      mode: 'share' as const,
+      send: vi.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            finishShare = resolve
+          }),
+      ),
+      download: vi.fn(() => true),
+    })
+    const { rerender } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const share = screen.getByRole('button', { name: 'Share' })
+
+    openShareOptions()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Share video' }))
+    rerender(<TheaterMobileChrome {...base} current={textItem({ bookmarkId: 'next' })} />)
+    await act(async () => finishShare?.(true))
+
+    expect(share.querySelector('.lucide-check')).not.toBeInTheDocument()
   })
 
   it('omits Copy when a sendable video has no text', () => {

@@ -23,10 +23,6 @@ vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: layoutMocks.getCurrentUserId,
 }))
 
-vi.mock('@/lib/theme/context', () => ({
-  ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
-}))
-
 vi.mock('@/components/AppShell', () => ({
   AppShell: ({
     children,
@@ -52,6 +48,8 @@ describe('RootLayout auth scope binding', () => {
     )
 
     expect(layoutMocks.getCurrentUserId).toHaveBeenCalledOnce()
+    expect(markup).toContain('<html lang="en" class="dark">')
+    expect(markup).not.toContain("localStorage.getItem('theme')")
     expect(markup).toContain('data-server-account-id="account-b"')
     expect(markup).toContain('private payload')
   })

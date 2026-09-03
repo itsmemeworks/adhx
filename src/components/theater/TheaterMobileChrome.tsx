@@ -185,7 +185,7 @@ const PEEK_ICON_BTN =
   'inline-flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
 /** Frosted post-action treatment for the right-side thumb rail. */
 const RAIL_ACTION_BTN =
-  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/30 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.22)] backdrop-blur-md transition-[transform,background-color] hover:bg-black/45 active:scale-95 active:bg-black/55'
+  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/20 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.18)] backdrop-blur-md transition-[transform,background-color] hover:bg-black/35 active:scale-95 active:bg-black/45'
 
 export function TheaterMobileChrome({
   mode,
@@ -236,9 +236,10 @@ export function TheaterMobileChrome({
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [quickFilterOpen, setQuickFilterOpen] = useState(false)
   const [sheetRestingClosed, setSheetRestingClosed] = useState(true)
+  const [focusClosingSheet, setFocusClosingSheet] = useState(false)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
-  const [copied, setCopied] = useState(false)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const focusClosingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const focusRestoreFrameRef = useRef<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
   const quickFilterRef = useRef<HTMLDivElement>(null)
@@ -313,6 +314,13 @@ export function TheaterMobileChrome({
   useEffect(() => {
     setShareMenuOpen(false)
   }, [currentKey, sheetOpen, declutter])
+  useEffect(
+    () => () => {
+      if (focusClosingTimeoutRef.current) clearTimeout(focusClosingTimeoutRef.current)
+      if (focusRestoreFrameRef.current !== null) cancelAnimationFrame(focusRestoreFrameRef.current)
+    },
+    [],
+  )
   useEffect(() => {
     setQuickFilterOpen(false)
   }, [sheetOpen, declutter])
@@ -392,19 +400,12 @@ export function TheaterMobileChrome({
     }
   }, [quickFilterOpen])
 
-  useEffect(
-    () => () => {
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-    },
-    [],
-  )
-
   const handleSelect = (key: string) => {
     onSelect(key)
   }
 
   const handleShare = async () => {
-    if (!current) return
+    if (!current) return false
     const path = previewPath(
       current.platform,
       current.author,
@@ -421,10 +422,10 @@ export function TheaterMobileChrome({
           id: current.bookmarkId || undefined,
           source: 'share',
         })
-        return
+        return true
       } catch (err) {
         // User dismissed the sheet — a cancel, not a failure.
-        if (err instanceof DOMException && err.name === 'AbortError') return
+        if (err instanceof DOMException && err.name === 'AbortError') return false
         // Any other error: fall through to the clipboard fallback below.
       }
     }
@@ -435,12 +436,11 @@ export function TheaterMobileChrome({
         platform: current.platform,
         id: current.bookmarkId || undefined,
       })
-      setCopied(true)
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 1600)
+      return true
     } catch {
       // Clipboard can be denied (permissions/insecure context) — nothing
       // actionable to show beyond the button itself.
+      return false
     }
   }
 
@@ -688,7 +688,7 @@ export function TheaterMobileChrome({
             <div
               className={cn(
                 'pointer-events-auto fixed right-3 z-[30] gap-1.5 transition-[opacity,transform] duration-200 ease-out',
-                sheetOpen
+                sheetOpen || focusClosingSheet
                   ? 'bottom-[calc(70%+0.75rem)] flex flex-row items-center justify-end'
                   : 'bottom-[calc(13rem+env(safe-area-inset-bottom))] flex w-12 flex-col items-center [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:w-auto [@media(max-height:520px)]:flex-row',
                 declutter && 'pointer-events-none translate-y-2 opacity-0',
@@ -788,12 +788,12 @@ export function TheaterMobileChrome({
                 open={shareMenuOpen}
                 onOpenChange={setShareMenuOpen}
                 kind={kind}
+                actionKey={current ? theaterItemKey(current) : null}
                 hasText={hasCopyableText}
                 textCopied={textCopied}
-                linkCopied={copied}
                 sendFile={sendFile}
-                onCopyText={() => void copyText()}
-                onShareLink={() => void handleShare()}
+                onCopyText={copyText}
+                onShareLink={handleShare}
                 alignTop={sheetOpen}
                 triggerClassName={RAIL_ACTION_BTN}
               />
@@ -853,7 +853,7 @@ export function TheaterMobileChrome({
             inert={declutter}
             data-theater-swipe-control
             className={cn(
-              'absolute bottom-2 right-3 flex h-28 w-12 flex-col overflow-hidden rounded-full border border-white/20 bg-black/35 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.28)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
+              'absolute bottom-2 right-3 flex h-28 w-12 flex-col overflow-hidden rounded-full border border-white/20 bg-black/25 text-white/90 shadow-[0_8px_28px_rgba(0,0,0,.22)] backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@media(max-height:520px)]:h-20',
               declutter && 'pointer-events-none scale-95 opacity-0',
             )}
           >
@@ -1149,13 +1149,40 @@ export function TheaterMobileChrome({
                 type="button"
                 onClick={(event) => {
                   event.currentTarget.blur()
+                  if (sheetOpen) {
+                    setFocusClosingSheet(true)
+                    setSheetOpen(false)
+                    setDeclutter(true)
+                    if (focusClosingTimeoutRef.current) {
+                      clearTimeout(focusClosingTimeoutRef.current)
+                    }
+                    focusClosingTimeoutRef.current = setTimeout(() => {
+                      focusClosingTimeoutRef.current = null
+                      setFocusClosingSheet(false)
+                    }, 220)
+                    return
+                  }
+                  if (focusClosingSheet) {
+                    if (focusClosingTimeoutRef.current) {
+                      clearTimeout(focusClosingTimeoutRef.current)
+                      focusClosingTimeoutRef.current = null
+                    }
+                    setFocusClosingSheet(false)
+                    focusRestoreFrameRef.current = requestAnimationFrame(() => {
+                      focusRestoreFrameRef.current = requestAnimationFrame(() => {
+                        focusRestoreFrameRef.current = null
+                        setDeclutter(false)
+                      })
+                    })
+                    return
+                  }
                   setDeclutter((value) => !value)
                 }}
-                aria-label={declutter ? 'Show controls' : 'Hide controls'}
+                aria-label={declutter && !sheetOpen ? 'Show controls' : 'Hide controls'}
                 className={PEEK_ICON_BTN}
                 data-theater-action="expand"
               >
-                {declutter ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
+                {declutter && !sheetOpen ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
               </button>
             </div>
           </div>

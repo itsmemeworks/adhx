@@ -9,7 +9,6 @@ import {
   Roboto_Mono,
 } from 'next/font/google'
 import './globals.css'
-import { ThemeProvider } from '@/lib/theme/context'
 import { AppShell } from '@/components/AppShell'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
@@ -130,10 +129,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#e4dac8' },
-    { media: '(prefers-color-scheme: dark)', color: '#08070a' },
-  ],
+  themeColor: '#08070a',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -192,49 +188,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // as the SIBLING of an element — see the note in TheaterLinkedText and
   // `docs/specs/translation-safety.md`.
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark">
       <head>
-        {/* Blocking script to prevent theme FOUC - runs before React hydrates */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('theme');
-                  var resolved = theme;
-                  if (theme === 'system') {
-                    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  } else if (!theme) {
-                    // No stored preference: theater-dark routes default to dark
-                    // (theater-first.md §7) — the home theater ('/'), the dark
-                    // ranked-list Browse view ('/trending', '/trending/<filter>'),
-                    // and the four preview-page shapes; everywhere else follows
-                    // the device. Mirrors isTheaterDarkRoute()/resolveInitialTheme()
-                    // in src/lib/theme/context.tsx (and its preview regexes mirror
-                    // isPreviewPage in src/components/AppShell.tsx) — keep all
-                    // three in lockstep.
-                    var p = location.pathname;
-                    var isTheaterDark = p === '/'
-                      || p === '/live'
-                      || p === '/saved'
-                      || p === '/collection'
-                      || p === '/trending'
-                      || p.indexOf('/trending/') === 0
-                      || /^\\/\\w+\\/status\\/\\d+$/.test(p)
-                      || /^\\/reels?\\/[A-Za-z0-9_-]+$/.test(p)
-                      || /^\\/p\\/[A-Za-z0-9_-]+$/.test(p)
-                      || /^\\/shorts\\/[A-Za-z0-9_-]{11}$/.test(p)
-                      || /^\\/@?[A-Za-z0-9._]+\\/video\\/\\d+$/.test(p);
-                    resolved = isTheaterDark
-                      ? 'dark'
-                      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                  }
-                  document.documentElement.classList.add(resolved);
-                } catch (e) {}
-              })();
-            `,
-          }}
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
@@ -247,9 +202,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body
         className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable}`}
       >
-        <ThemeProvider>
-          <AppShell serverAccountId={serverAccountId}>{children}</AppShell>
-        </ThemeProvider>
+        <AppShell serverAccountId={serverAccountId}>{children}</AppShell>
       </body>
     </html>
   )

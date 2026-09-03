@@ -6,7 +6,6 @@ import { headers } from 'next/headers'
 import { getPublicTagCollection, type TagCollectionResult } from '@/lib/tags/query'
 import { getUserIdForUsername, resolveUsernameAlias } from '@/lib/users/lookup'
 import { MatterLogo } from '@/components/matter'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { truncate } from '@/lib/utils/format'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
@@ -172,14 +171,11 @@ function PoweredByFooter() {
 
 function SignedOutNav() {
   return (
-    <>
-      <ThemeToggle className="fixed right-3 top-3 z-50 border border-hairline bg-surface/70 shadow-m-sm backdrop-blur" />
-      <nav className="px-5 pt-5 sm:px-11">
-        <Link href="/" aria-label="ADHX home" className="inline-flex hover:opacity-80">
-          <MatterLogo size={18} />
-        </Link>
-      </nav>
-    </>
+    <nav className="px-5 pt-5 sm:px-11">
+      <Link href="/" aria-label="ADHX home" className="inline-flex hover:opacity-80">
+        <MatterLogo size={18} />
+      </Link>
+    </nav>
   )
 }
 

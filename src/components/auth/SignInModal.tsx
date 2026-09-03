@@ -19,8 +19,8 @@ export interface SignInModalProps {
 }
 
 // This surface is ALWAYS dark, like the theater — regardless of the site's
-// light/dark theme setting — so colors are hardcoded rather than pulled from
-// the Matter theme tokens (which flip with the `light`/`dark` class).
+// the surrounding page treatment — colors are hardcoded rather than pulled
+// from the warmer Matter page tokens.
 const INK = '#f3ece0'
 const MUTED = '#857a69'
 const SUBTLE = '#b8ac99'

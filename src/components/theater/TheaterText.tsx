@@ -5,7 +5,7 @@
  * theater text site renders through (StageText, the rails' now-playing, the
  * mobile caption, the quote card), so URLs are clickable everywhere and the
  * styling stays consistent. Mirrors what `renderTextWithLinks` does for the
- * light feed surfaces (`src/components/feed/utils.tsx`) but styled for the
+ * feed surfaces (`src/components/feed/utils.tsx`) but styled for the
  * near-black stage (clay links) and built on a pure, unit-testable splitter.
  *
  * Media `t.co` tails are stripped when the post carries media (same
