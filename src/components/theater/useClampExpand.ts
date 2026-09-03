@@ -11,10 +11,10 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
  * fires at 0×0 and would otherwise drop Watch.
  */
 export function useClampExpand(resetKey: string | null) {
-  const [node, setNode] = useState<HTMLParagraphElement | HTMLButtonElement | null>(null)
+  const [node, setNode] = useState<HTMLElement | null>(null)
   const [overflowing, setOverflowing] = useState(false)
   const keyRef = useRef(resetKey)
-  const ref = useCallback((el: HTMLParagraphElement | HTMLButtonElement | null) => {
+  const ref = useCallback((el: HTMLElement | null) => {
     setNode(el)
   }, [])
 

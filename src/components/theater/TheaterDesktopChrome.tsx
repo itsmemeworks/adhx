@@ -734,11 +734,7 @@ export function DesktopStageChrome({
                 aria-label={tagLabel}
                 data-theater-action="tag"
               >
-                <TagIcon
-                  size={14}
-                  className={tagCount > 0 ? 'text-clay' : undefined}
-                  fill={tagCount > 0 ? 'currentColor' : 'none'}
-                />
+                <TagIcon size={14} className={tagCount > 0 ? 'text-clay' : undefined} />
                 <span>Tag</span>
                 <TheaterTagCount count={tagCount} />
               </StageGlass>
@@ -754,11 +750,7 @@ export function DesktopStageChrome({
                     aria-label={tagLabel}
                     data-theater-action="tag"
                   >
-                    <TagIcon
-                      size={14}
-                      className={tagCount > 0 ? 'text-clay' : undefined}
-                      fill={tagCount > 0 ? 'currentColor' : 'none'}
-                    />
+                    <TagIcon size={14} className={tagCount > 0 ? 'text-clay' : undefined} />
                     <span>Tag</span>
                     <TheaterTagCount count={tagCount} />
                   </StageGlass>

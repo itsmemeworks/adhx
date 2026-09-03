@@ -729,11 +729,7 @@ export function TheaterMobileChrome({
                   className={cn(RAIL_ACTION_BTN, 'relative order-1')}
                   data-theater-action="tag"
                 >
-                  <TagIcon
-                    size={16}
-                    className={tagCount > 0 ? 'text-clay' : undefined}
-                    fill={tagCount > 0 ? 'currentColor' : 'none'}
-                  />
+                  <TagIcon size={16} className={tagCount > 0 ? 'text-clay' : undefined} />
                   <TheaterTagCount count={tagCount} variant="badge" />
                 </StageIconButton>
               ) : collection?.tab === 'live' ? (
@@ -748,11 +744,7 @@ export function TheaterMobileChrome({
                     className={cn(RAIL_ACTION_BTN, 'relative order-1')}
                     data-theater-action="tag"
                   >
-                    <TagIcon
-                      size={16}
-                      className={tagCount > 0 ? 'text-clay' : undefined}
-                      fill={tagCount > 0 ? 'currentColor' : 'none'}
-                    />
+                    <TagIcon size={16} className={tagCount > 0 ? 'text-clay' : undefined} />
                     <TheaterTagCount count={tagCount} variant="badge" />
                   </StageIconButton>
                   <PersonalLiveSaveButton

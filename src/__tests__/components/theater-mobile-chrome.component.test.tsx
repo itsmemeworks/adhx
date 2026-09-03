@@ -134,6 +134,27 @@ describe('TheaterMobileChrome: caption', () => {
     expect(screen.queryByRole('button', { name: 'more' })).not.toBeInTheDocument()
   })
 
+  it('turns measured caption overflow into a Safari-safe inner clamp and Read control', async () => {
+    const clientHeight = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(32)
+    const scrollHeight = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(96)
+    try {
+      render(
+        <TheaterMobileChrome
+          {...base}
+          current={videoItem({ text: 'A long media caption that needs the full reading mode.' })}
+          onToggleArticleMode={vi.fn()}
+        />,
+      )
+
+      const read = await screen.findByRole('button', { name: 'Read the full post' })
+      expect(read).not.toHaveClass('line-clamp-2')
+      expect(read.querySelector('span.line-clamp-2')).not.toBeNull()
+    } finally {
+      clientHeight.mockRestore()
+      scrollHeight.mockRestore()
+    }
+  })
+
   it('opens Read from the caption without a separate reading button', () => {
     const onToggle = vi.fn()
     render(
@@ -338,7 +359,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     const tag = screen.getByRole('button', { name: 'Tag 1' })
     expect(tag.className).toContain('border-white/15')
     expect(tag.className).not.toContain('text-clay')
-    expect(tag.querySelector('.lucide-tag')?.classList.contains('text-clay')).toBe(true)
+    const icon = tag.querySelector('.lucide-tag')
+    expect(icon?.classList.contains('text-clay')).toBe(true)
+    expect(icon).toHaveAttribute('fill', 'none')
+    expect(tag).toHaveTextContent('1')
   })
 
   it('shows paste on the personal Live tab too', () => {

@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Mobile captions clamp and tagged icons stay legible
+
+Overflowing media captions now clamp on an inner element instead of the native Read button,
+whose iOS Safari `flow-root` display exposed the full post over the stage. Read remains the
+tap target and Watch still returns from reading mode. Tagged actions keep Lucide's outlined
+tag shape, with the existing clay stroke and count badge, instead of filling into an
+unrecognizable solid glyph. Current state: in flight; focused tests and mobile browser checks pass.
+
 ## 2026-09-03 — Queue E2E assertions freeze timed dwell
 
 Queue-count coverage now pauses before and after navigation, and the cross-tab Next assertion
