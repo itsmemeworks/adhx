@@ -10,7 +10,7 @@ describe('TheaterCaption', () => {
   it('renders a clamped caption with no more/less control and no tap-to-expand', () => {
     render(
       <TheaterCaption
-        captionRef={createRef<HTMLParagraphElement>()}
+        captionRef={createRef<HTMLParagraphElement | HTMLButtonElement>()}
         platform="twitter"
         text="two lines of caption that might clamp"
       />,
@@ -49,17 +49,39 @@ describe('TheaterCaption', () => {
     expect(onOpenRead).toHaveBeenCalledTimes(1)
   })
 
-  it('does not open Read when a link inside the caption is clicked', () => {
+  it('renders expandable linked text as one native button without nested links', () => {
     const onOpenRead = vi.fn()
     render(
       <TheaterCaption
-        captionRef={createRef<HTMLParagraphElement>()}
+        captionRef={createRef<HTMLParagraphElement | HTMLButtonElement>()}
         platform="twitter"
         text="see https://example.com/post for more"
         onOpenRead={onOpenRead}
       />,
     )
-    fireEvent.click(screen.getByRole('link'))
-    expect(onOpenRead).not.toHaveBeenCalled()
+    const read = screen.getByRole('button', { name: 'Read the full post' })
+    expect(read).toHaveTextContent('see https://example.com/post for more')
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('keeps Space on the native Read caption from reaching global theater shortcuts', () => {
+    const heard = vi.fn()
+    window.addEventListener('keydown', heard)
+    try {
+      render(
+        <TheaterCaption
+          captionRef={createRef<HTMLParagraphElement | HTMLButtonElement>()}
+          platform="twitter"
+          text="two lines of caption that might clamp"
+          onOpenRead={vi.fn()}
+        />,
+      )
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Read the full post' }), {
+        key: ' ',
+      })
+      expect(heard).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener('keydown', heard)
+    }
   })
 })

@@ -42,6 +42,7 @@ describe('StageText author row', () => {
     expect(profile).toHaveAttribute('target', '_blank')
     expect(profile).toHaveTextContent('jack')
     expect(profile).toHaveTextContent('@jack')
+    expect(profile.parentElement?.children).toHaveLength(1)
     expect(screen.getByRole('img', { name: 'jack' })).toHaveAttribute(
       'src',
       'https://example.com/jack.jpg',

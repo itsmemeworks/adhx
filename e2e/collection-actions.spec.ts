@@ -90,7 +90,10 @@ authedTest.describe('collection actions (mobile)', () => {
     async ({ page }) => {
       await page.goto(`/saved?open=${POST.hotel.id}&platform=twitter`)
       await expectTheaterReady(page)
-      await expect(page.getByRole('button', { name: 'Share link' })).toBeVisible()
+      const share = page.getByRole('button', { name: 'Share' })
+      await expect(share).toBeVisible()
+      await share.click()
+      await expect(page.getByRole('menuitem', { name: 'Share link' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Tag' })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Open on X' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()

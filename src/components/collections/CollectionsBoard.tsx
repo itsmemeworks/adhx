@@ -26,7 +26,7 @@ import {
  * the `authed` prop — otherwise the page stacks two headers. Signed-out
  * visitors keep it (it's their only nav on this public page); while auth is
  * still unresolved, Header itself renders nothing on this route rather than
- * flashing its own light chrome over this dark one (see the flash guard in
+ * flashing its own chrome over this dark one (see the flash guard in
  * `src/components/Header.tsx`). Per the owner's review, the "Trending
  * posts →" link is gone from this header in both states — /trending is
  * SEO-only infrastructure, not a user-facing surface.

@@ -12,7 +12,7 @@ export function dispatchTheaterStageTap() {
 /**
  * Stage tap = Instagram-style chrome toggle: first tap hides overlays and
  * starts playback; second tap only restores overlays. Pause stays on the
- * peek-bar / dock button (and Space).
+ * bottom-bar / dock button (and Space).
  */
 export function useTheaterStageTapDeclutter(
   declutter: boolean,
@@ -37,7 +37,7 @@ export function useTheaterStageTapDeclutter(
 
 /**
  * StageVideo / StageYouTube broadcast playing + mute on window. Desktop dock
- * and mobile peek bar both mirror those events for pause/audio buttons.
+ * and mobile bottom bar both mirror those events for pause/audio buttons.
  */
 export function useTheaterStageEvents() {
   const [videoPlaying, setVideoPlaying] = useState(true)

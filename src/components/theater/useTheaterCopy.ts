@@ -38,7 +38,7 @@ export function useTheaterCopy(current: TheaterItem | null, caption: string) {
   }, [current])
 
   const copyLink = async () => {
-    if (!current) return
+    if (!current) return false
     try {
       const path = previewPath(
         current.platform,
@@ -55,13 +55,15 @@ export function useTheaterCopy(current: TheaterItem | null, caption: string) {
       setLinkCopied(true)
       if (linkTimeout.current) clearTimeout(linkTimeout.current)
       linkTimeout.current = setTimeout(() => setLinkCopied(false), 1600)
+      return true
     } catch {
       // Clipboard denial has nothing actionable to surface.
+      return false
     }
   }
 
   const copyText = async () => {
-    if (!current) return
+    if (!current) return false
     let payload = caption
     if (
       inferType(current) === 'article' &&
@@ -72,14 +74,16 @@ export function useTheaterCopy(current: TheaterItem | null, caption: string) {
       const markdown = await fetchArticleMarkdown(current.author, current.bookmarkId)
       if (markdown) payload = composeArticleCopy(caption, markdown)
     }
-    if (!payload) return
+    if (!payload) return false
     try {
       await navigator.clipboard.writeText(payload)
       setTextCopied(true)
       if (textTimeout.current) clearTimeout(textTimeout.current)
       textTimeout.current = setTimeout(() => setTextCopied(false), 1600)
+      return true
     } catch {
       // Clipboard denial has nothing actionable to surface.
+      return false
     }
   }
 

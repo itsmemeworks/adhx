@@ -46,11 +46,6 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
-vi.mock('@/lib/theme/context', () => ({
-  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-  useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-}))
-
 vi.mock('@/components/feed', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/feed')>()
   return {

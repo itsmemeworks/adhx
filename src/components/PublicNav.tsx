@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 import { MatterLogo } from '@/components/matter'
-import { ThemeToggle } from '@/components/ThemeToggle'
 
 /**
  * The shared signed-out top nav for the public surfaces (landing + /trending).
@@ -61,7 +60,6 @@ export function PublicNav({
         >
           <GithubGlyph size={18} />
         </a>
-        <ThemeToggle className="-mr-1 sm:mr-0" />
         <button
           type="button"
           onClick={onSignIn}

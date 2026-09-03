@@ -15,18 +15,15 @@ import {
   UserX,
   BookOpen,
   Type,
-  Monitor,
-  Moon,
-  Sun,
   Check,
   Shield,
   User,
   Mail,
   AtSign,
+  Volume2,
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
-import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
 import { notifyStatsUpdated } from '@/lib/client-events'
 import {
@@ -670,7 +667,6 @@ function SyncHistoryCard({ syncs, loading }: { syncs: SyncHistoryEntry[]; loadin
 
 function SettingsPage() {
   const searchParams = useSearchParams()
-  const { theme, setTheme } = useTheme()
 
   const [me, setMe] = useState<AuthMe | null>(null)
   const [meLoading, setMeLoading] = useState(true)
@@ -702,7 +698,18 @@ function SettingsPage() {
   const [confirmText, setConfirmText] = useState('')
 
   // Reading preferences
-  const { preferences, updatePreference } = usePreferences()
+  const { preferences, updatePreference, loading: preferencesLoading } = usePreferences()
+  const [soundPreferenceSaving, setSoundPreferenceSaving] = useState(false)
+  const toggleSoundOnByDefault = async () => {
+    if (preferencesLoading || soundPreferenceSaving) return
+    const next = !preferences.soundOn
+    setSoundPreferenceSaving(true)
+    try {
+      await updatePreference('soundOn', next)
+    } finally {
+      setSoundPreferenceSaving(false)
+    }
+  }
 
   // Clear data modal ref
   const clearDataInputRef = useRef<HTMLInputElement>(null)
@@ -906,16 +913,6 @@ function SettingsPage() {
     }
   }
 
-  const themeOptions: {
-    value: 'light' | 'dark' | 'system'
-    label: string
-    icon: React.ComponentType<{ className?: string }>
-  }[] = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ]
-
   return (
     <div className="min-h-screen bg-paper">
       <div className="max-w-[760px] mx-auto px-4 sm:px-8 py-8 sm:py-10 flex flex-col gap-5">
@@ -1004,34 +1001,41 @@ function SettingsPage() {
         {/* Sync history */}
         <SyncHistoryCard syncs={syncHistory.syncs} loading={syncHistoryLoading} />
 
-        {/* Appearance Card */}
         <SCard
-          icon={theme === 'dark' ? Moon : Sun}
-          title="Appearance"
-          sub="Light, or warm dark mode"
-          right={
-            <div className="inline-flex gap-[3px] p-[3px] bg-inset rounded-[10px]">
-              {themeOptions.map(({ value, label, icon: OptIcon }) => {
-                const active = theme === value
-                return (
-                  <button
-                    key={value}
-                    onClick={() => setTheme(value)}
-                    aria-pressed={active}
-                    title={label}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-[13px] font-semibold transition-all',
-                      active ? 'bg-surface text-clay shadow-m-sm' : 'text-ink-3 hover:text-ink-2',
-                    )}
-                  >
-                    <OptIcon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{label}</span>
-                  </button>
-                )
-              })}
+          icon={Volume2}
+          title="Theater playback"
+          sub="Choose how videos sound when they start"
+        >
+          <div className="flex items-center gap-[13px] rounded-[12px] bg-inset px-[15px] py-[14px]">
+            <div className="min-w-0 flex-1">
+              <div className="mb-0.5 font-bold text-[14.5px] text-ink">
+                <span>Sound on by default</span>
+              </div>
+              <p className="text-[12.5px] leading-relaxed text-ink-3">
+                Start Theater with sound whenever your browser allows it. Mobile browsers may still
+                need one tap.
+              </p>
             </div>
-          }
-        />
+            <button
+              type="button"
+              onClick={() => void toggleSoundOnByDefault()}
+              disabled={preferencesLoading || soundPreferenceSaving}
+              className={cn(
+                'relative inline-flex h-6 w-[42px] flex-shrink-0 cursor-pointer rounded-full p-[3px] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-clay focus:ring-offset-2',
+                preferences.soundOn
+                  ? 'justify-end bg-clay-grad'
+                  : 'justify-start border border-hairline bg-surface',
+                (preferencesLoading || soundPreferenceSaving) && 'cursor-not-allowed opacity-60',
+              )}
+              role="switch"
+              aria-label="Sound on by default"
+              aria-checked={preferences.soundOn}
+              aria-busy={soundPreferenceSaving}
+            >
+              <span className="pointer-events-none inline-block h-[18px] w-[18px] rounded-full bg-white shadow" />
+            </button>
+          </div>
+        </SCard>
 
         {/* Reading Preferences Card */}
         <SCard icon={BookOpen} title="Reading preferences" sub="Customize your reading experience">

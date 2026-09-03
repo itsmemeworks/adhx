@@ -584,6 +584,23 @@ describe('StageYouTube', () => {
     window.removeEventListener('theater-muted-state', handler)
   })
 
+  it('offers a page-owned tap that retries preferred sound as a user unmute', () => {
+    const { container, getByRole } = render(
+      <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+
+    postMessage.mockClear()
+    fireEvent.click(getByRole('button', { name: 'Enable sound' }))
+
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'unMute' })
+  })
+
   // Round 4: the owner reproduced the unmute→remute loop on DESKTOP too,
   // where iOS's cross-origin-gesture policy doesn't even apply — proving a
   // silent "no signal yet" timer was never a reliable rejection signal for

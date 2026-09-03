@@ -38,6 +38,7 @@ interface ActiveSwipe extends SwipePoint {
 }
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (target instanceof Element && target.closest('[data-theater-swipe-control]')) return false
   return (
     target instanceof Element &&
     Boolean(
