@@ -91,6 +91,14 @@ describe('Header', () => {
     expect(screen.queryByText(/view on github/i)).not.toBeInTheDocument()
   })
 
+  it('keeps non-theater chrome below the iOS top safe area', async () => {
+    mockFetch(true)
+    render(<Header />)
+
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
+    expect(screen.getByRole('banner')).toHaveClass('pt-[env(safe-area-inset-top)]')
+  })
+
   describe('leaderboard flash guard (avoids a header flash over the board on load)', () => {
     it('renders nothing on /leaderboard while auth is still unresolved', () => {
       mockPathname = '/leaderboard'

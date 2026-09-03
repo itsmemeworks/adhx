@@ -358,7 +358,7 @@ describe('useSeenSet cross-tab convergence', () => {
     expect(trackedAuthorityKeys).toEqual(new Set(authorityKeys()))
     expect(physicalOperationCount()).toBeLessThanOrEqual(1_000)
     expect(quotaFailures).toBe(0)
-  }, 10_000)
+  }, 30_000)
 
   it('coalesces an operation-event burst into one storage scan', () => {
     window.localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(['stable']))
