@@ -70,33 +70,38 @@ vi.mock('next/image', () => ({
 }))
 
 // Mock preferences context with default values
-vi.mock('@/lib/preferences-context', () => ({
-  usePreferences: () => ({
+vi.mock('@/lib/preferences-context', () => {
+  const preferenceContext = () => ({
     preferences: {
       bionicReading: false,
       bodyFont: 'ibm-plex',
       avatarSource: 'x',
+      soundOn: false,
     },
     updatePreference: vi.fn(),
     loading: false,
-  }),
-  PreferencesProvider: ({ children }: { children: React.ReactNode }) => children,
-  FONT_OPTIONS: {
-    'ibm-plex': {
-      name: 'IBM Plex Sans',
-      description: 'Clean and professional - the default choice',
+  })
+  return {
+    usePreferences: preferenceContext,
+    usePreferencesOptional: preferenceContext,
+    PreferencesProvider: ({ children }: { children: React.ReactNode }) => children,
+    FONT_OPTIONS: {
+      'ibm-plex': {
+        name: 'IBM Plex Sans',
+        description: 'Clean and professional - the default choice',
+      },
+      lexend: {
+        name: 'Lexend',
+        description: 'Designed specifically for ADHD and reading difficulties',
+      },
+      atkinson: {
+        name: 'Atkinson Hyperlegible',
+        description: 'Maximum legibility - great letter differentiation',
+      },
+      inter: {
+        name: 'Inter',
+        description: 'Neutral and familiar with excellent screen rendering',
+      },
     },
-    lexend: {
-      name: 'Lexend',
-      description: 'Designed specifically for ADHD and reading difficulties',
-    },
-    atkinson: {
-      name: 'Atkinson Hyperlegible',
-      description: 'Maximum legibility - great letter differentiation',
-    },
-    inter: {
-      name: 'Inter',
-      description: 'Neutral and familiar with excellent screen rendering',
-    },
-  },
-}))
+  }
+})

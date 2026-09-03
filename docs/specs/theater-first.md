@@ -122,7 +122,7 @@ Route wiring:
 | youtube                        | official `youtube-nocookie` iframe               | no MP4 exists; appears instantly, plays on its own tap; CSP already allows it                                                                                                                                  |
 | photo / text / quote / article | Stage variants (no media pipeline)               | article body via `articleBlocksToMarkdown`                                                                                                                                                                     |
 
-- **Autoplay**: first landing has no gesture → autoplay **muted**; sound toggle is the rail/peek-bar audio button (pulsing while muted+playing) or tapping the stage. After the first user interaction, all subsequent posts play with sound. Focus-mode convention (click-to-play-with-sound) applies once a gesture exists.
+- **Autoplay**: playback defaults muted. Signed-in users can enable **Sound on by default** in Settings; the account preference is server-backed and cached in `localStorage`, while a tab's latest audio-button choice in `sessionStorage` wins for that tab. Mobile browsers can still reject audible autoplay on a fresh document, so a stage tap retries the preferred unmute inside the user gesture. The rail/dock audio button remains the explicit control.
 - **Prefetch**: current post plays; next post's source resolves in the background (IG warms, MP4s get a Range 0-1 request). Prefetch at most 1 ahead — bandwidth restraint, no cost explosion.
 - **End of video**: stop and show a replay + "↓ next" nudge. No auto-advance (fights the caught-up model); revisit after telemetry.
 - All external fetches keep `AbortSignal.timeout()`.
