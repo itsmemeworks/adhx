@@ -186,6 +186,9 @@ export function SavePostButton({
         // `border-clay/50` is a no-op (hex CSS vars drop Tailwind /NN) and
         // tw-merge would steal the white glass border if we left it here.
         status === 'tag' && 'border-white/25',
+        // Callers color the unsaved Bookmark clay. Once it morphs to Tag,
+        // keep an empty Tag neutral; only a real tag count colors the glyph.
+        status === 'tag' && 'text-white/90',
         status === 'saved' && 'animate-save-pop',
         status === 'tag' && iconOnly && 'relative',
       )}

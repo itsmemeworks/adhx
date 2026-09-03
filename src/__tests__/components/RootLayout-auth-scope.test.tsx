@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import RootLayout from '@/app/layout'
+import RootLayout, { viewport } from '@/app/layout'
 
 const layoutMocks = vi.hoisted(() => ({
   getCurrentUserId: vi.fn(),
@@ -64,5 +64,11 @@ describe('RootLayout auth scope binding', () => {
     )
 
     expect(markup).toContain('data-server-account-id="signed-out"')
+  })
+})
+
+describe('RootLayout viewport', () => {
+  it('covers iOS safe areas so fixed theater chrome paints to the browser edge', () => {
+    expect(viewport.viewportFit).toBe('cover')
   })
 })

@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TheaterMobileChrome } from '@/components/theater/TheaterMobileChrome'
+import { resetSavePostOwnershipCache } from '@/components/theater/SavePostButton'
 import { theaterItemKey } from '@/components/theater/types'
 import type { TheaterItem, TheaterPersonalChrome } from '@/components/theater/types'
 import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
@@ -97,6 +98,7 @@ const base = {
 
 beforeEach(() => {
   resetClampExpandPreference()
+  resetSavePostOwnershipCache()
   mockUseSendFile.mockReturnValue({
     supported: false,
     ready: false,
@@ -363,6 +365,47 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(icon?.classList.contains('text-clay')).toBe(true)
     expect(icon).toHaveAttribute('fill', 'none')
     expect(tag).toHaveTextContent('1')
+  })
+
+  it('centers a shared zero-count Tag without reserving or coloring count space', async () => {
+    const onSharedTag = vi.fn()
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [{ id: '1', platform: 'twitter' }] }),
+    })
+    const { rerender } = render(
+      <TheaterMobileChrome
+        {...base}
+        mode="shared"
+        authed
+        current={videoItem()}
+        itemTags={[]}
+        onSharedTag={onSharedTag}
+      />,
+    )
+
+    const tag = await screen.findByRole('button', { name: 'Tag' })
+    expect(tag).toHaveClass('items-center', 'justify-center', 'text-white/90')
+    expect(tag).not.toHaveClass('text-clay')
+    expect(tag.querySelector('.lucide-tag')).not.toHaveClass('text-clay')
+    expect(tag.querySelector('.lucide-tag')).toHaveAttribute('fill', 'none')
+    expect(tag.textContent).toBe('')
+    expect(tag.querySelectorAll('span')).toHaveLength(1)
+
+    rerender(
+      <TheaterMobileChrome
+        {...base}
+        mode="shared"
+        authed
+        current={videoItem()}
+        itemTags={['cats']}
+        onSharedTag={onSharedTag}
+      />,
+    )
+    const tagged = screen.getByRole('button', { name: 'Tag 1' })
+    expect(tagged).toHaveClass('items-center', 'justify-center', 'text-white/90')
+    expect(tagged.querySelector('.lucide-tag')).toHaveClass('text-clay')
+    expect(tagged).toHaveTextContent('1')
   })
 
   it('shows paste on the personal Live tab too', () => {

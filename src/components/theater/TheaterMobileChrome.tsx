@@ -761,7 +761,7 @@ export function TheaterMobileChrome({
                   iconOnly
                   className={cn(
                     RAIL_ACTION_BTN,
-                    'order-1 inline-flex flex-none text-clay disabled:opacity-70',
+                    'order-1 inline-flex flex-none items-center justify-center text-clay disabled:opacity-70',
                   )}
                   tags={displayTags}
                   onTag={onSharedTag ? () => onSharedTag(current) : undefined}

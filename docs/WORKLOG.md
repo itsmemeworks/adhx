@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Mobile Theater fills iOS safe areas
+
+The root viewport now opts into `viewport-fit=cover`, so fixed Theater chrome paints through the
+iOS bottom safe area instead of exposing the page background as a detached band. Shared-preview
+Tag buttons now explicitly center their icon-only content and return to neutral styling at zero
+tags; a real count still adds the clay outlined glyph and badge. Current state: in flight; focused
+layout and mobile-chrome regressions added. Real-device Safari validation remains.
+
 ## 2026-09-03 — Playlist and filter both have toggle shortcuts
 
 `Q` now explicitly toggles the playlist/Queue panel and `Shift+Q` toggles the desktop type-filter
