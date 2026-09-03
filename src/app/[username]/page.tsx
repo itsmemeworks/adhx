@@ -5,7 +5,6 @@ import { ExternalLink, FileText, Play } from 'lucide-react'
 import { getAuthorProfile, isValidHandle, type AuthorItem } from '@/lib/authors/query'
 import { MatterLogo, PlatformGlyph, TypeBadge } from '@/components/matter'
 import { AvatarImage } from '@/components/avatar/AvatarImage'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { formatRelativeTime } from '@/lib/utils/format'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
@@ -213,18 +212,14 @@ export default async function AuthorHubPage({ params }: Props) {
 
       {/* Wayfinding for visitors arriving from search — the global Header
           (AppShell) renders nothing for signed-out users, so this page supplies
-          its own way back to ADHX plus the theme toggle here, matching the
-          signed-out branch of DiscoverFeed (/trending). Signed-in visitors
-          already have the global Header, so we skip this to avoid a double nav. */}
+          its own way back to ADHX. Signed-in visitors already have the global
+          Header, so we skip this to avoid a double nav. */}
       {signedOut && (
-        <>
-          <ThemeToggle className="fixed right-3 top-3 z-50 border border-hairline bg-surface/70 shadow-m-sm backdrop-blur" />
-          <nav className="px-5 pt-5 sm:px-11">
-            <Link href="/" aria-label="ADHX home" className="inline-flex hover:opacity-80">
-              <MatterLogo size={18} />
-            </Link>
-          </nav>
-        </>
+        <nav className="px-5 pt-5 sm:px-11">
+          <Link href="/" aria-label="ADHX home" className="inline-flex hover:opacity-80">
+            <MatterLogo size={18} />
+          </Link>
+        </nav>
       )}
 
       <header className="border-b border-hairline px-5 py-10 sm:px-11">

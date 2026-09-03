@@ -3,19 +3,18 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 
 /**
- * Overflow measurement for the theater's 2-line caption. Read appears when
- * `overflowing` is true (or the post is a quote-on-media). There is no
- * tap-to-expand — that path hid Read if a leftover expand preference was set.
+ * Overflow measurement for the theater's 2-line caption. The caption becomes
+ * the Read control when `overflowing` is true (or the post is a quote-on-media).
  *
  * Once a caption overflows for the current item, the flag stays true until
  * the item changes. Read unmounts the clamped line; a ResizeObserver then
- * fires at 0×0 and would otherwise drop Read after Watch.
+ * fires at 0×0 and would otherwise drop Watch.
  */
 export function useClampExpand(resetKey: string | null) {
-  const [node, setNode] = useState<HTMLParagraphElement | null>(null)
+  const [node, setNode] = useState<HTMLParagraphElement | HTMLButtonElement | null>(null)
   const [overflowing, setOverflowing] = useState(false)
   const keyRef = useRef(resetKey)
-  const ref = useCallback((el: HTMLParagraphElement | null) => {
+  const ref = useCallback((el: HTMLParagraphElement | HTMLButtonElement | null) => {
     setNode(el)
   }, [])
 

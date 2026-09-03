@@ -3,20 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import {
-  Search,
-  Settings,
-  Sun,
-  Moon,
-  X,
-  RefreshCw,
-  Bookmark,
-  Radio,
-  LogOut,
-  Tag,
-  Trophy,
-} from 'lucide-react'
-import { useTheme } from '@/lib/theme/context'
+import { Search, Settings, X, RefreshCw, Bookmark, Radio, LogOut, Tag, Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
 import { usePreferences } from '@/lib/preferences-context'
@@ -64,7 +51,6 @@ export function Header() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  const { resolvedTheme, setTheme } = useTheme()
   const { preferences } = usePreferences()
   // Search lives only on /library (collection) and /tags. On /tags it filters
   // the tag list via the same cross-component custom-event pattern documented
@@ -359,10 +345,6 @@ export function Header() {
     router.refresh()
   }
 
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')
-  }
-
   // Format remaining cooldown time with seconds for live countdown
   const formatCooldown = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000)
@@ -394,7 +376,7 @@ export function Header() {
   // header for signed-out visitors (CollectionsBoard). Auth starts out
   // unresolved (`authStatus === null`) on every page load, and until it
   // resolves the check above can't yet bail out — so without this guard,
-  // this component's light header briefly stacks above the board's dark one
+  // this component's app header briefly stacks above the board's own header
   // and then vanishes once the fetch confirms the visitor is signed out.
   // Scoped to just these routes: making the WHOLE header wait for auth would
   // flash-hide it on every authed page instead.
@@ -521,9 +503,9 @@ export function Header() {
                     <Search className="w-[18px] h-[18px]" />
                   </button>
                 ))}
-              {/* Theme toggle + Sync are secondary actions — they live in the
-                  avatar menu (all viewports), not the main nav bar. Adding by
-                  URL is paste-first now (PasteToPreview) — no Add button. */}
+              {/* Sync is a secondary action in the avatar menu (all viewports),
+                  not the main nav bar. Adding by URL is paste-first now
+                  (PasteToPreview) — no Add button. */}
 
               {/* User Menu */}
               <div className="relative">
@@ -648,24 +630,13 @@ export function Header() {
                         </Link>
                       </div>
 
-                      {/* Theme + Sync — secondary actions, in the menu on all
+                      {/* Sync is a secondary action in the menu on all
                           viewports (no longer in the main nav bar). */}
-                      <div className="border-t border-hairline py-1">
-                        <button
-                          onClick={toggleTheme}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset text-ink-2 hover:text-ink transition-colors"
-                        >
-                          {resolvedTheme === 'dark' ? (
-                            <Sun className="w-4 h-4" />
-                          ) : (
-                            <Moon className="w-4 h-4" />
-                          )}
-                          {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
-                        </button>
-                        {/* Email-only accounts have no X connection, so
-                            there's nothing to sync — hide the item rather
-                            than showing an action that can never succeed. */}
-                        {xConnected && (
+                      {/* Email-only accounts have no X connection, so hide
+                          the whole section rather than leaving an empty
+                          divider where the theme action used to sit. */}
+                      {xConnected && (
+                        <div className="border-t border-hairline py-1">
                           <button
                             onClick={() => {
                               if (cooldown.canSync) {
@@ -686,8 +657,8 @@ export function Header() {
                               ? 'Sync bookmarks'
                               : `Sync in ${formatCooldown(displayedCooldown)}`}
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Sign out */}
                       <div className="border-t border-hairline py-1">

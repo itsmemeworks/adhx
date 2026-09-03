@@ -82,7 +82,7 @@ export function visibleCaption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).locator('visible=true').first()
 }
 
-/** Visible Read / Watch pill — not the tappable caption, not the CSS-hidden chrome copy. */
+/** Visible caption-to-Read button or Read-mode Watch control. */
 export function readToggle(page: Page) {
   return page.locator('[data-theater-action="read"]').locator('visible=true').first()
 }

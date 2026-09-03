@@ -15,9 +15,6 @@ import {
   UserX,
   BookOpen,
   Type,
-  Monitor,
-  Moon,
-  Sun,
   Check,
   Shield,
   User,
@@ -27,7 +24,6 @@ import {
 } from 'lucide-react'
 import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
-import { useTheme } from '@/lib/theme/context'
 import { ConnectWithX } from '@/components/matter'
 import { notifyStatsUpdated } from '@/lib/client-events'
 import {
@@ -671,7 +667,6 @@ function SyncHistoryCard({ syncs, loading }: { syncs: SyncHistoryEntry[]; loadin
 
 function SettingsPage() {
   const searchParams = useSearchParams()
-  const { theme, setTheme } = useTheme()
 
   const [me, setMe] = useState<AuthMe | null>(null)
   const [meLoading, setMeLoading] = useState(true)
@@ -918,16 +913,6 @@ function SettingsPage() {
     }
   }
 
-  const themeOptions: {
-    value: 'light' | 'dark' | 'system'
-    label: string
-    icon: React.ComponentType<{ className?: string }>
-  }[] = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ]
-
   return (
     <div className="min-h-screen bg-paper">
       <div className="max-w-[760px] mx-auto px-4 sm:px-8 py-8 sm:py-10 flex flex-col gap-5">
@@ -1015,35 +1000,6 @@ function SettingsPage() {
 
         {/* Sync history */}
         <SyncHistoryCard syncs={syncHistory.syncs} loading={syncHistoryLoading} />
-
-        {/* Appearance Card */}
-        <SCard
-          icon={theme === 'dark' ? Moon : Sun}
-          title="Appearance"
-          sub="Light, or warm dark mode"
-          right={
-            <div className="inline-flex gap-[3px] p-[3px] bg-inset rounded-[10px]">
-              {themeOptions.map(({ value, label, icon: OptIcon }) => {
-                const active = theme === value
-                return (
-                  <button
-                    key={value}
-                    onClick={() => setTheme(value)}
-                    aria-pressed={active}
-                    title={label}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-[13px] font-semibold transition-all',
-                      active ? 'bg-surface text-clay shadow-m-sm' : 'text-ink-3 hover:text-ink-2',
-                    )}
-                  >
-                    <OptIcon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          }
-        />
 
         <SCard
           icon={Volume2}

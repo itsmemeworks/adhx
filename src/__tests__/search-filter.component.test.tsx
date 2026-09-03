@@ -89,11 +89,6 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
-vi.mock('@/lib/theme/context', () => ({
-  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-  useThemeOptional: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: vi.fn() }),
-}))
-
 // Heavy/irrelevant children — stub them out so the test exercises only the
 // URL <-> state wiring under scrutiny.
 vi.mock('@/components/feed', async (importOriginal) => {

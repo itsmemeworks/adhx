@@ -38,6 +38,7 @@ describe('resolveSendSource', () => {
     const result = resolveSendSource(item({ platform: 'twitter', contentType: 'video' }))
     expect(result).toEqual({
       src: '/api/media/video?author=jack&tweetId=123&quality=hd',
+      downloadSrc: '/api/media/video/download?author=jack&tweetId=123&quality=hd',
       filename: 'adhx-twitter-123.mp4',
       kind: 'video',
     })
@@ -55,6 +56,7 @@ describe('resolveSendSource', () => {
     const result = resolveSendSource(item({ platform: 'twitter', contentType: 'photo' }))
     expect(result).toEqual({
       src: '/api/media/image?author=jack&tweetId=123&index=1&download=1',
+      downloadSrc: '/api/media/image?author=jack&tweetId=123&index=1&download=1',
       filename: 'adhx-twitter-123.jpg',
       kind: 'photo',
     })
@@ -72,12 +74,19 @@ describe('resolveSendSource', () => {
     )
   })
 
+  it('twitter video with no author → nothing sendable (download proxy requires it)', () => {
+    expect(resolveSendSource(item({ platform: 'twitter', contentType: 'video', author: '' }))).toBe(
+      null,
+    )
+  })
+
   it('tiktok → its own MP4 proxy, regardless of recorded contentType (single-format platform)', () => {
     const result = resolveSendSource(
       item({ platform: 'tiktok', author: '@bob', bookmarkId: '7', contentType: undefined }),
     )
     expect(result).toEqual({
       src: '/api/media/tiktok/video?username=%40bob&id=7',
+      downloadSrc: '/api/media/tiktok/video/download?username=%40bob&id=7',
       filename: 'adhx-tiktok-7.mp4',
       kind: 'video',
     })
@@ -89,6 +98,7 @@ describe('resolveSendSource', () => {
     )
     expect(result).toEqual({
       src: '/api/media/instagram/video?id=DXVsqQ7CSXw',
+      downloadSrc: '/api/media/instagram/video/download?id=DXVsqQ7CSXw',
       filename: 'adhx-instagram-DXVsqQ7CSXw.mp4',
       kind: 'video',
     })
@@ -102,6 +112,7 @@ describe('resolveSendSource', () => {
       ),
     ).toEqual({
       src: '/api/media/instagram/thumbnail?id=DcHXej3lt5W&index=1&download=1',
+      downloadSrc: '/api/media/instagram/thumbnail?id=DcHXej3lt5W&index=1&download=1',
       filename: 'adhx-instagram-DcHXej3lt5W.jpg',
       kind: 'photo',
     })

@@ -379,6 +379,7 @@ export function StageVideo({
     const handler = () => {
       const video = videoRef.current
       if (!video) return
+      if (errored || unavailableReason) return
       // Ended with nowhere auto-advance took it (e.g. behind the waiting
       // overlay): the transport's play means "watch it again" — there's no
       // end-overlay replay button anymore.
@@ -414,7 +415,7 @@ export function StageVideo({
     }
     window.addEventListener('theater-toggle-play', handler)
     return () => window.removeEventListener('theater-toggle-play', handler)
-  }, [ended, needsGesture])
+  }, [ended, needsGesture, errored, unavailableReason])
 
   // Explicit pause/resume (mobile theater's pause button, TheaterMobileChrome)
   // — unlike `theater-toggle-play` above, these have a single fixed meaning
@@ -438,6 +439,7 @@ export function StageVideo({
       // Covered = retained under text/photo, or Live waiting / Saved All Clear.
       // A tab-flip theater-resume must not restart that clip.
       if (covered) return
+      if (errored || unavailableReason) return
       // Same ended-means-replay rule as the toggle handler above.
       if (ended) {
         handleReplay()
@@ -466,7 +468,7 @@ export function StageVideo({
       window.removeEventListener('theater-pause', handlePause)
       window.removeEventListener('theater-resume', handleResume)
     }
-  }, [ended, needsGesture, covered])
+  }, [ended, needsGesture, covered, errored, unavailableReason])
 
   // Broadcast the element's real playing/muted state so the mobile chrome's
   // pause and audio buttons stay in sync regardless of what triggered the
@@ -646,9 +648,13 @@ export function StageVideo({
   }
 
   const handleStageTap = (_e?: React.MouseEvent) => {
-    // Ended / blocked-autoplay still start the player (same gesture that
-    // hides chrome). A playing or paused video never toggles pause here —
-    // the tap is declutter; peek-bar / Space own pause.
+    // A stage tap always gets a stopped clip moving, then hands chrome focus
+    // to the shell. It never pauses a playing video — pause remains an
+    // explicit transport action in the bottom bar / desktop dock.
+    if (errored || unavailableReason) {
+      dispatchTheaterStageTap()
+      return
+    }
     if (ended) {
       handleReplay()
       dispatchTheaterStageTap()
@@ -659,6 +665,7 @@ export function StageVideo({
       dispatchTheaterStageTap()
       return
     }
+    if (videoRef.current?.paused) handleStartTap()
     dispatchTheaterStageTap()
   }
 

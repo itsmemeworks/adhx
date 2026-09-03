@@ -6,6 +6,95 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Desktop Queue adopts the mobile controls
+
+The desktop filmstrip end cap now uses the same compact playlist/count and filter controls as
+mobile instead of stacked Queue, count, and new-copy rows. The playlist control shows the number
+that will play plus an unseen badge; the filter icon opens the existing panel and carries the
+active-filter cue. Current state: in flight; typecheck, 99 focused tests, and a desktop browser
+pass succeed.
+
+## 2026-09-03 — Mobile Focus closes Up next
+
+Pressing the mobile Focus control while Up next is open now collapses the playlist and enters
+clutter-free mode in the same tap. This prevents the expanded sheet from covering the stage after
+the user explicitly asks to focus. Current state: in flight; focused component tests pass.
+
+## 2026-09-03 — ADHX becomes dark-only
+
+Dark is now the single product theme across theater, library, public pages, and Settings.
+The root renders dark on the server with one dark token set and browser theme color; legacy
+light/system preferences are ignored. Theme controls were removed from public navigation,
+account/theater dropdowns, profile and playlist pages, and the Settings Appearance card.
+Current state: in flight; 3,513 tests, typecheck, lint, format, and a local browser pass succeed.
+
+## 2026-09-02 — Mobile Share confirms completed actions
+
+The mobile rail Share glyph now becomes a green tick after Copy, Download, media Share, or
+Share link completes successfully. Cancelled or failed native shares keep the Share glyph, and
+the confirmation clears after 1.6 seconds or immediately when the staged post changes.
+Current state: in flight; typecheck and 118 focused theater/send tests pass.
+
+## 2026-09-02 — Collapsed mobile Queue stops filter bleed
+
+The expanded mobile Queue content is now invisible, inert, and absent from the accessibility tree
+whenever the sheet is fully collapsed. This prevents selected filter-pill shadows from leaking
+through as one-pixel clay lines after the transform settles, while real drag gestures still reveal
+the list as they move. Current state: in flight; focused tests and a collapse visual pass passed.
+
+## 2026-09-02 — Theater text filter includes articles
+
+Theater filters now present three content choices: Videos, Photos, and Text. Text controls both
+plain text posts and articles, and its mobile quick-filter count combines both types. The grouped
+control supports old partial selections as a mixed state and completes them on tap. The stored
+content types remain separate, so playback and existing preferences keep their current data model.
+Current state: in flight; focused mobile, desktop, and filter-math tests pass.
+
+## 2026-09-02 — Mobile playlist status and filtering separate
+
+The collapsed mobile playlist button now shows the number of posts that will play and a distinct
+unseen badge instead of combining List and Filter glyphs. Filter is a separate control that opens
+a compact, counted All/Videos/Photos/Text/Articles picker without expanding Up next; the full
+sheet keeps its existing multi-select pills. Counts come from the unfiltered queue while playback
+continues to honor the active lens. Current state: in flight; focused tests and a 390px visual
+pass.
+
+## 2026-09-02 — Mobile Queue and Filter become one control
+
+The collapsed mobile bottom bar now presents Queue count and content-type Filter as one compact
+button because both open the same Up-next sheet. The active filter keeps its clay cue, while
+removing the redundant adjacent tap target. Current state: in flight; focused tests pass.
+
+## 2026-09-02 — Mobile Share becomes post-aware
+
+The mobile action rail now sits immediately above the joined swipe capsule and keeps only the
+primary Save/Tag/Archive, Share, and Open controls visible. Share opens a focused menu derived
+from the staged post: Copy text/article when present, Download and native file Share for
+sendable video/photo media, and Share link for every post. Explicit downloads use attachment
+endpoints so iOS saves rather than opening inline playback. The menu roves focus, restores its
+trigger, and blocks theater shortcuts while open. Current state: in flight; focused tests pass.
+
+## 2026-09-02 — Mobile Theater gets a stable control hierarchy
+
+Mobile prev/next are now joined into one swipeable right-side capsule; post actions form a
+frosted rail above it. Queue and a dedicated type Filter sit left in the bottom bar, while
+mute, prominent play/pause, repeat, and focus stay grouped right. Tapping a paused video now
+plays it and enters focus without making a playing-video tap pause. Short viewports reflow
+actions to two columns. Current state: in flight; focused component and gesture tests pass.
+
+## 2026-09-02 — Theater captions become the only Read affordance
+
+Desktop and mobile no longer render a separate Read button beside expandable media captions;
+tapping the caption already opens the same reading view. Read mode still keeps the TV-shaped
+Watch control so viewers can return to full-bleed playback. Focused chrome tests cover both
+states. Current state: in flight.
+
+## 2026-09-02 — Stage author rows drop redundant platform chip
+
+Text, quote, and article stages no longer repeat the source-platform glyph beside the author.
+The existing Open action remains the platform affordance, while removing the right-edge chip
+prevents overlap with mobile theater controls. Focused author-row tests cover the simpler layout.
+
 ## 2026-09-02 — Theater sound preference persists across sessions
 
 Settings now offers **Sound on by default**. Account users persist it through `/api/preferences`;
