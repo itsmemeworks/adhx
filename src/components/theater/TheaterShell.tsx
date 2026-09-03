@@ -1204,7 +1204,7 @@ export function TheaterShell({
     sharedItemKey,
     sharedPlayableKey,
     sharedLeadReleased,
-  } = useSharedPin(mode, sharedItem, leadUnavailable, signedIn)
+  } = useSharedPin(mode, sharedItem, leadUnavailable)
 
   // Set once a user has navigated (keyboard/rail click) — after that, the
   // opening pick below never overrides their choice.
@@ -1322,6 +1322,8 @@ export function TheaterShell({
   // every unrelated re-render (polling, seen-state updates, etc.).
   const itemsRef = useRef(displayItems)
   itemsRef.current = displayItems
+  const queueItemsRef = useRef(queueItems)
+  queueItemsRef.current = queueItems
   const lensItemsRef = useRef(lensItems)
   lensItemsRef.current = lensItems
   const backHistoryRef = useRef<string[]>([])
@@ -1498,6 +1500,15 @@ export function TheaterShell({
   // 'timed' auto-advance suppression below — see `isSharedPostPinned`'s doc
   // comment for why the "actually current" half matters.
   const isSharedPinnedOnCurrent = isSharedPostPinned(mode, sharedItemKey, sharedPinned, currentKey)
+  // TASK 3: the current stage item is the shared lead AND it's an
+  // unavailable (deleted/private/suspended) source — swaps in
+  // `StageUnavailable` below instead of the normal `<Stage/>` dispatch.
+  const isSharedUnavailableOnCurrent = isSharedItemUnavailable(
+    mode,
+    leadUnavailable,
+    sharedItemKey,
+    currentKey,
+  )
   // Round 8: the shared-post pin and the repeat button's 'one' mode are the
   // same player-level behavior (loop the current post, suppress every
   // auto-advance path) — this is THE combined signal every consumer uses:
@@ -1517,6 +1528,7 @@ export function TheaterShell({
    * and repeat-all over a one-post queue alike.
    */
   const loopingSingleItem =
+    !isSharedUnavailableOnCurrent &&
     (isCollectionTab ? personalLensItems.length : displayItems.length) === 1 &&
     (loop || effectiveRepeatMode === 'all')
   const repeatCurrentActive =
@@ -1528,20 +1540,17 @@ export function TheaterShell({
   // The repeat BUTTON shows the truth the viewer experiences (browser-agent
   // finding: the peek bar said "On repeat" while the button said "Repeat:
   // off"): a pinned shared post IS repeat-one in effect, so the button
-  // displays 'one' while the pin holds, and tapping it then releases the pin
-  // (see `cycleRepeatMode`) — one control, state + action.
+  // displays 'one' while the pin holds, and tapping it promotes the queue to
+  // repeat-all (see `cycleRepeatMode`) — one control, state + action.
   const displayRepeatMode: RepeatMode = isSharedPinnedOnCurrent ? 'one' : effectiveRepeatMode
   const sharedPinActiveRef = useRef(isSharedPinnedOnCurrent)
   sharedPinActiveRef.current = isSharedPinnedOnCurrent
-  // TASK 3: the current stage item is the shared lead AND it's an
-  // unavailable (deleted/private/suspended) source — swaps in
-  // `StageUnavailable` below instead of the normal `<Stage/>` dispatch.
-  const isSharedUnavailableOnCurrent = isSharedItemUnavailable(
-    mode,
-    leadUnavailable,
-    sharedItemKey,
-    currentKey,
-  )
+  const promoteSharedPinToRepeatAll = useCallback(() => {
+    if (!sharedPinActiveRef.current) return false
+    clearSharedPin()
+    setRepeatMode('all')
+    return true
+  }, [clearSharedPin])
   const resolvingSharedLead =
     awaitingSharedResolve &&
     mode === 'shared' &&
@@ -1554,7 +1563,7 @@ export function TheaterShell({
   // there's a current item — there's no waiting stage and no dead end.
   // Repeat 'all' navigates exactly like collection mode's loop: both
   // chevrons stay enabled whenever anything is current (round 8).
-  const wrapNav = loop || effectiveRepeatMode === 'all'
+  const wrapNav = !isSharedUnavailableOnCurrent && (loop || effectiveRepeatMode === 'all')
   const hasRewatchHistory =
     liveOrdering &&
     !loop &&
@@ -1562,9 +1571,11 @@ export function TheaterShell({
     backHistoryRef.current.some(
       (key) => key !== currentKey && lensItems.some((item) => theaterItemKey(item) === key),
     )
-  const canPrev = wrapNav
-    ? currentIndex !== -1
-    : hasRewatchHistory || computeCanPrev(currentIndex, waiting)
+  const canPrev = isSharedPinnedOnCurrent
+    ? false
+    : wrapNav
+      ? currentIndex !== -1
+      : hasRewatchHistory || computeCanPrev(currentIndex, waiting)
   const canNext = wrapNav ? currentIndex !== -1 : computeCanNext(currentIndex, waiting)
 
   // Read fresh inside the `theater-advance` listener below without
@@ -1583,11 +1594,9 @@ export function TheaterShell({
   const goNext = useCallback(() => {
     const key = currentKeyRef.current
     const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-    const next = computeLoopedNext(
-      itemsRef.current.length,
-      idx,
-      loop || repeatModeRef.current === 'all',
-    )
+    const wrapCurrent =
+      (loop || repeatModeRef.current === 'all') && !(leadUnavailable && key === sharedItemKey)
+    const next = computeLoopedNext(itemsRef.current.length, idx, wrapCurrent)
     if (next === null) return
     if (next === 'waiting') {
       const pending = firstPendingLiveKey(itemsRef.current, isSeenRef.current, key)
@@ -1616,7 +1625,7 @@ export function TheaterShell({
     releaseSharedLeadIfLeaving(key, nextKey)
     currentKeyRef.current = nextKey
     setCurrentKey(nextKey)
-  }, [loop, releaseSharedLeadIfLeaving, releaseSharedLead, sharedItemKey])
+  }, [leadUnavailable, loop, releaseSharedLeadIfLeaving, releaseSharedLead, sharedItemKey])
 
   const goPrev = useCallback(() => {
     // While waiting, "back" just returns to the last post it's already
@@ -1653,18 +1662,16 @@ export function TheaterShell({
       }
     }
     const idx = itemsRef.current.findIndex((it) => theaterItemKey(it) === key)
-    const prev = computeLoopedPrev(
-      itemsRef.current.length,
-      idx,
-      loop || repeatModeRef.current === 'all',
-    )
+    const wrapCurrent =
+      (loop || repeatModeRef.current === 'all') && !(leadUnavailable && key === sharedItemKey)
+    const prev = computeLoopedPrev(itemsRef.current.length, idx, wrapCurrent)
     if (prev === null) return
     hasNavigatedRef.current = true
     const prevKey = theaterItemKey(itemsRef.current[prev])
     releaseSharedLeadIfLeaving(key, prevKey)
     currentKeyRef.current = prevKey
     setCurrentKey(prevKey)
-  }, [liveOrdering, loop, releaseSharedLeadIfLeaving])
+  }, [leadUnavailable, liveOrdering, loop, releaseSharedLeadIfLeaving, sharedItemKey])
 
   const onSelect = useCallback(
     (key: string) => {
@@ -1692,11 +1699,27 @@ export function TheaterShell({
     // Browsing leaves the "parked, never played" case even if a full
     // walk later lands back on the same key.
     parkedUnplayedKeyRef.current = null
-    clearSharedPin()
+    if (promoteSharedPinToRepeatAll()) {
+      const successor = queueItemsRef.current.find((item) => theaterItemKey(item) !== leaving)
+      if (successor) {
+        onSelect(theaterItemKey(successor))
+        return
+      }
+    } else {
+      clearSharedPin()
+    }
     goNext()
-  }, [clearSharedPin, goNext, rememberCurrentForBack, seenSet.markSeen])
+  }, [
+    clearSharedPin,
+    goNext,
+    onSelect,
+    promoteSharedPinToRepeatAll,
+    rememberCurrentForBack,
+    seenSet.markSeen,
+  ])
 
   const goPrevUser = useCallback(() => {
+    if (sharedPinActiveRef.current) return
     parkedUnplayedKeyRef.current = null
     clearSharedPin()
     goPrev()
@@ -1705,10 +1728,10 @@ export function TheaterShell({
   const onSelectUser = useCallback(
     (key: string) => {
       parkedUnplayedKeyRef.current = null
-      clearSharedPin()
+      if (key !== currentKeyRef.current && !promoteSharedPinToRepeatAll()) clearSharedPin()
       onSelect(key)
     },
-    [clearSharedPin, onSelect],
+    [clearSharedPin, onSelect, promoteSharedPinToRepeatAll],
   )
 
   // The repeat button (round 8): one control cycling off → all → one.
@@ -1716,13 +1739,10 @@ export function TheaterShell({
   // immediately by wrapping to the top of the queue — that's what "repeat
   // the playlist" means from the end of it.
   const cycleRepeatMode = useCallback(() => {
-    // While the shared-post pin holds, the button displays 'one' (see
-    // `displayRepeatMode`) — so a tap means "stop repeating this post":
-    // release the pin and land on 'off', exactly what the displayed
-    // one → off step promises. Only after that does the normal cycle apply.
+    // A direct preview starts at repeat-one regardless of the saved preference.
+    // Its first repeat tap promotes the whole remaining queue to repeat-all.
     if (sharedPinActiveRef.current) {
-      clearSharedPin()
-      setRepeatMode('off')
+      promoteSharedPinToRepeatAll()
       return
     }
     // Computed from the ref (not a state updater) so the waiting-stage exit
@@ -1751,7 +1771,7 @@ export function TheaterShell({
       setPersonalIndex(0)
     }
     setRepeatMode(next)
-  }, [clearSharedPin, loop, isCollectionTab, releaseSharedLeadIfLeaving])
+  }, [loop, isCollectionTab, promoteSharedPinToRepeatAll, releaseSharedLeadIfLeaving])
 
   // Re-watch all: mark the current playlist unseen and play newest-first
   // as a fresh Repeat-off run. Finished posts go to Seen again.
@@ -2320,7 +2340,7 @@ export function TheaterShell({
     personalFreshKeys: freshSavedKeys,
     newCount,
     unseenCount,
-    effectiveRepeatMode,
+    effectiveRepeatMode: displayRepeatMode,
     personalIndex: personalLensIndex >= 0 ? personalLensIndex : 0,
     canPrev,
     canNext,
@@ -2415,6 +2435,7 @@ export function TheaterShell({
                 onRequestUnmute={onRequestUnmute}
                 onEnded={() => {
                   if (showSignInRef.current) return
+                  if (repeatCurrentActiveRef.current) return
                   if (isCollectionTab) {
                     personalAdvanceOnEnded()
                     return

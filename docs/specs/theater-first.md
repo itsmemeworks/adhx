@@ -169,8 +169,9 @@ Rendering lives in one place: `TheaterLinkedText` (`src/components/theater/Theat
   right-side frosted action rail above a joined up/down swipe capsule, and an Up-next bottom sheet.
   Playback controls (sound, play/pause, repeat, Focus) stay in the bottom bar. Focus hides stage
   chrome while leaving transport as the exit; if Up next is open, Focus collapses it and enters
-  de-clutter in the same tap. Repeat-off keeps session back-history, direct previews start at Repeat
-  one, and `/trending/play` redirects into this theater rather than duplicating it.
+  de-clutter in the same tap. Repeat-off keeps session back-history; direct previews start at Repeat
+  one, then a Repeat tap or deliberate move promotes the queue to Repeat all. `/trending/play`
+  redirects into this theater rather than duplicating it.
 - Non-video posts in the mobile feed render their stage variants full-screen (text typeset large; article cover splash → reader).
 - Tap targets ≥ 44px. No fake status bar or keyboard chrome.
 

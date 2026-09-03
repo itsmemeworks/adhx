@@ -262,15 +262,126 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
       )
     })
     expect(chromeProps().queuePlayed).toBe(0)
-    expect(chromeProps().queueToPlay).toBe(2)
-    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueToPlay).toBe(1)
+    expect(chromeProps().queueTotal).toBe(1)
+    expect(chromeProps().queueLooping).toBe(true)
   })
+
+  it('promotes a direct preview from repeat-one to repeat-all on repeat tap', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell seed={seed([shared, textItem('2')])} mode="shared" sharedItem={shared} />,
+      )
+    })
+    expect(chromeProps().repeatCurrent).toBe(true)
+    expect(chromeProps().repeatMode).toBe('one')
+
+    await cycleRepeat()
+
+    expect(chromeProps().repeatCurrent).toBe(false)
+    expect(chromeProps().repeatMode).toBe('all')
+    expect(chromeProps().queueLooping).toBe(true)
+  })
+
+  it('promotes a direct preview to repeat-all when moving next', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell seed={seed([shared, textItem('2')])} mode="shared" sharedItem={shared} />,
+      )
+    })
+
+    await act(async () => {
+      ;(chromeProps().onNext as () => void)()
+    })
+
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect(chromeProps().repeatMode).toBe('all')
+    expect(chromeProps().queueLooping).toBe(true)
+  })
+
+  it('keeps a no-op Previous from escaping the direct-preview loop', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell seed={seed([shared, textItem('2')])} mode="shared" sharedItem={shared} />,
+      )
+    })
+    expect(chromeProps().canPrev).toBe(false)
+
+    await act(async () => {
+      ;(chromeProps().onPrev as () => void)()
+    })
+
+    expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
+    expect(chromeProps().repeatCurrent).toBe(true)
+    expect(chromeProps().repeatMode).toBe('one')
+  })
+
+  it('lets an unavailable-only preview reach waiting despite a saved Repeat-all preference', async () => {
+    window.localStorage.setItem(STORAGE_KEY, 'all')
+    await act(async () => {
+      render(
+        <TheaterShell seed={seed([shared])} mode="shared" sharedItem={shared} sharedUnavailable />,
+      )
+    })
+    expect(chromeProps().repeatMode).toBe('all')
+    expect(chromeProps().repeatCurrent).toBe(false)
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent('theater-advance'))
+    })
+
+    expect(chromeProps().waiting).toBe(true)
+    expect(chromeProps().items).toEqual([])
+  })
+
+  it('does not let keyboard Previous wrap an unavailable lead to the queue tail', async () => {
+    window.localStorage.setItem(STORAGE_KEY, 'all')
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([shared, textItem('2')])}
+          mode="shared"
+          sharedItem={shared}
+          sharedUnavailable
+        />,
+      )
+    })
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))
+    })
+
+    expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
+  })
+
+  it.each(['timed', 'ended'])(
+    'keeps a direct preview on repeat-one after a stray $departure auto-advance',
+    async (departure) => {
+      await act(async () => {
+        render(
+          <TheaterShell seed={seed([shared, textItem('2')])} mode="shared" sharedItem={shared} />,
+        )
+      })
+
+      await act(async () => {
+        if (departure === 'ended') {
+          const call = mockStage.mock.calls.at(-1)
+          if (!call) throw new Error('stage never rendered')
+          ;(call[0].onEnded as () => void)()
+        } else {
+          window.dispatchEvent(new CustomEvent('theater-advance'))
+        }
+      })
+
+      expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
+      expect(chromeProps().repeatCurrent).toBe(true)
+      expect(chromeProps().repeatMode).toBe('one')
+    },
+  )
 
   it.each([
     { unavailable: false, departure: 'next' },
     { unavailable: false, departure: 'select' },
-    { unavailable: false, departure: 'timed' },
-    { unavailable: false, departure: 'ended' },
     { unavailable: true, departure: 'timed' },
   ])(
     'releases an $unavailable lead after $departure and never queues it again',
@@ -312,7 +423,12 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
       })
       expect(chromeProps().currentKey).toBe('twitter:2')
 
-      await cycleRepeat()
+      if (!unavailable && (departure === 'next' || departure === 'select')) {
+        expect(chromeProps().repeatMode).toBe('all')
+      } else {
+        expect(chromeProps().repeatMode).toBe('off')
+        await cycleRepeat()
+      }
       expect(chromeProps().repeatMode).toBe('all')
       expect(chromeProps().queueTotal).toBe(1)
       await act(async () => {
@@ -360,7 +476,12 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
       })
       expect(chromeProps().waiting).toBe(true)
 
-      await cycleRepeat()
+      if (!unavailable && departure === 'next') {
+        expect(chromeProps().repeatMode).toBe('all')
+      } else {
+        expect(chromeProps().repeatMode).toBe('off')
+        await cycleRepeat()
+      }
       expect(chromeProps().repeatMode).toBe('all')
       expect(chromeProps().waiting).toBe(true)
       expect(chromeProps().queueTotal).toBe(0)
@@ -394,6 +515,18 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
           ;(chromeProps().onNext as () => void)()
         }
       })
+      if (!unavailable) {
+        expect(chromeProps().waiting).toBe(false)
+        expect(chromeProps().repeatMode).toBe('all')
+        expect(chromeProps().queueTotal).toBe(2)
+        expect(chromeProps().currentKey).toBe('twitter:2')
+        expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+          '2',
+          '3',
+        ])
+        return
+      }
+
       expect(chromeProps().waiting).toBe(true)
       expect(chromeProps().queueTotal).toBe(0)
       expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
@@ -406,6 +539,7 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
       })
       expect(chromeProps().waiting).toBe(true)
 
+      expect(chromeProps().repeatMode).toBe('off')
       await cycleRepeat()
       expect(chromeProps().waiting).toBe(false)
       expect(chromeProps().repeatMode).toBe('all')

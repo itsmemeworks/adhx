@@ -6,19 +6,17 @@ import { theaterItemKey, type TheaterItem, type TheaterMode } from './types'
 /**
  * Shared-post-repeat pin. Separate from `pinnedKey` (display order): this
  * one decides whether the shared post REPEATS instead of auto-advancing
- * into the live pulse. Starts on in shared mode for signed-out visitors
- * (unless the lead is unavailable). Signed-in previews skip the pin —
- * the opened post leads the unseen Live run.
- * Only a deliberate next/prev/select clears it when it is on.
+ * into the live pulse. Starts on for every resolvable shared preview,
+ * regardless of authentication state.
+ * A repeat-button tap or deliberate navigation clears it when it is on.
  */
 export function useSharedPin(
   mode: TheaterMode,
   sharedItem: TheaterItem | undefined,
   sharedUnavailable?: boolean,
-  signedIn?: boolean,
 ) {
   const [sharedPinned, setSharedPinned] = useState(
-    mode === 'shared' && !!sharedItem && !sharedUnavailable && !signedIn,
+    mode === 'shared' && !!sharedItem && !sharedUnavailable,
   )
   const [sharedLeadReleased, setSharedLeadReleased] = useState(false)
   const sharedLeadReleasedRef = useRef(false)
@@ -28,11 +26,10 @@ export function useSharedPin(
     const shouldPin =
       mode === 'shared' &&
       !!sharedItem &&
-      !signedIn &&
       !sharedPinDisqualifiedRef.current &&
       !sharedLeadReleasedRef.current
     setSharedPinned(shouldPin)
-  }, [mode, sharedItem, sharedUnavailable, signedIn])
+  }, [mode, sharedItem, sharedUnavailable])
   const clearSharedPin = useCallback(() => setSharedPinned(false), [])
   const releaseSharedLead = useCallback(() => {
     if (sharedLeadReleasedRef.current) return
