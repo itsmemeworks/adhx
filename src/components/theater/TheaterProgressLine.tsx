@@ -205,7 +205,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
 
   return (
     <div
-      className="group pointer-events-auto fixed inset-x-0 top-0 z-[70] h-[calc(env(safe-area-inset-top)+44px)] touch-none lg:h-3"
+      className="group pointer-events-auto fixed inset-x-0 top-0 z-[70] h-[calc(env(safe-area-inset-top)+44px)] touch-none lg:h-8"
       data-theater-progress
     >
       <div className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-[3px] bg-white/15">
@@ -226,7 +226,7 @@ export function TheaterProgressLine({ itemKey, kind }: TheaterProgressLineProps)
         aria-label="Playback position"
         aria-valuetext="0%"
         data-theater-progress-slider
-        className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-11 w-full cursor-ew-resize opacity-0 lg:h-3"
+        className="absolute inset-x-0 top-[env(safe-area-inset-top)] h-11 w-full cursor-ew-resize opacity-0 lg:h-8"
         onPointerDown={() => {
           scrubbingRef.current = true
         }}

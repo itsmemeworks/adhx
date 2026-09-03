@@ -28,6 +28,7 @@ describe('TheaterProgressLine', () => {
     try {
       expect(slider).toHaveAttribute('aria-label', 'Playback position')
       expect(slider.className).toContain('h-11')
+      expect(slider.className).toContain('lg:h-8')
 
       fireEvent.input(slider, { target: { value: '375' } })
 

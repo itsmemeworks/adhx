@@ -377,7 +377,7 @@ export function DesktopStageChrome({
   useTheaterActionHotkeys('desktop', rootRef)
 
   return (
-    <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
+    <div ref={rootRef} className="pointer-events-none absolute inset-0 z-[71] hidden lg:block">
       {/* Top bar: brand + LIVE left, paste-a-link + avatar right.
           De-clutter lives in the dock — the menu stays put. */}
       <div

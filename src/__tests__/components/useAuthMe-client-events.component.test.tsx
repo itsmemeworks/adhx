@@ -3,6 +3,8 @@
  */
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderToString } from 'react-dom/server'
+import { hydrateRoot } from 'react-dom/client'
 import { invalidateAuthMe, useAuthMe } from '@/components/auth/useAuthMe'
 import {
   clientEventMatchesAccount,
@@ -113,6 +115,39 @@ describe('useAuthMe client-event account scope', () => {
 
     await waitFor(() => expect(screen.getByText('signed-out')).toBeInTheDocument())
     expect(setAccountMock).toHaveBeenLastCalledWith(null, { broadcast: true })
+  })
+
+  it('hydrates from an unresolved server snapshot even when the client cache is warm', async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => account('account-a'),
+    })) as never
+
+    const warm = render(<Probe />)
+    await waitFor(() => expect(screen.getByText('account-a')).toBeInTheDocument())
+    warm.unmount()
+
+    const serverMarkup = renderToString(<Probe />)
+    expect(serverMarkup).toContain('loading')
+    expect(serverMarkup).not.toContain('account-a')
+
+    const container = document.createElement('div')
+    container.innerHTML = serverMarkup
+    document.body.appendChild(container)
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const root = hydrateRoot(container, <Probe />)
+    try {
+      await waitFor(() => expect(container).toHaveTextContent('account-a'))
+      expect(
+        consoleError.mock.calls.some(([message]) =>
+          String(message).includes('Hydration failed because the server rendered HTML'),
+        ),
+      ).toBe(false)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+      consoleError.mockRestore()
+    }
   })
 
   it('keeps an initial failure unresolved, retries, and recovers the account scope', async () => {

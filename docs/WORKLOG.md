@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-03 — Desktop timeline scrubs without auth hydration drift
+
+Desktop now gives the top timeline a 32px seek target while keeping its chrome controls layered
+above it. `useAuthMe` now uses `useSyncExternalStore` with a stable unresolved server snapshot,
+so a warm browser auth cache cannot render account chrome against signed-out server HTML during
+preview navigation. Current state: in flight; regression coverage added for desktop seek geometry
+and warm-cache hydration.
+
 ## 2026-09-03 — Theater timeline scrubs and mobile swipe advertises itself
 
 The clay timeline is now an accessible range control with a larger invisible hit area and visible

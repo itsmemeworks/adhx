@@ -15,6 +15,7 @@ import { peekPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 import { resetArticleMarkdownCache } from '@/lib/theater/article-body'
 import { resetSavePostOwnershipCache } from '@/components/theater/SavePostButton'
 import { resetClampExpandPreference } from '@/components/theater/useClampExpand'
+import { SignInModal } from '@/components/auth/SignInModal'
 
 // jsdom has no scrollIntoView — the dock auto-scrolls the current filmstrip card into view.
 Element.prototype.scrollIntoView = vi.fn()
@@ -933,6 +934,22 @@ describe('DesktopStageChrome', () => {
     declutter: false,
     onToggleDeclutter: vi.fn(),
   }
+
+  it('layers desktop controls above the scrub target and below modal overlays', () => {
+    const { container } = render(
+      <>
+        <TheaterProgressLine itemKey="twitter:1" kind="video" />
+        <DesktopStageChrome {...stageBase} current={videoItem()} />
+        <SignInModal open onClose={vi.fn()} />
+      </>,
+    )
+
+    expect(container.querySelector('[data-theater-progress]')).toHaveClass('z-[70]')
+    expect(
+      container.querySelector('button[aria-label="Paste a link"]')?.closest('.lg\\:block'),
+    ).toHaveClass('z-[71]')
+    expect(screen.getByRole('dialog').closest('[role="presentation"]')).toHaveClass('z-[80]')
+  })
 
   it('renders the merged meta line and caption for a video item, without top-bar meta chips', () => {
     const item = videoItem()
