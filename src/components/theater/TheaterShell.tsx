@@ -150,6 +150,44 @@ export {
 } from './theater-math'
 export type { PersonalUndoAction, RepeatMode } from './theater-math'
 
+const PASTED_FEED_RETRY_MAX_MS = 1_000
+const PASTED_FEED_MAX_ATTEMPTS = 5
+type PasteLookupRetry = { platform: string; id: string; request: number }
+
+async function waitForPastedFeedItem(
+  platform: string,
+  id: string,
+  shouldContinue: () => boolean,
+): Promise<FeedItem | null> {
+  let attempt = 0
+  const query = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
+  query.append('id', id)
+  query.append('idPlatform', platform)
+
+  while (shouldContinue() && attempt < PASTED_FEED_MAX_ATTEMPTS) {
+    try {
+      const response = await fetch(`/api/feed?${query}`)
+      if (response.ok) {
+        const json = await response.json()
+        const saved = (json.items ?? []).find(
+          (item: FeedItem) => (item.platform ?? 'twitter') === platform && item.id === id,
+        )
+        if (saved) return saved
+      }
+    } catch {
+      // The add already committed. Keep the resolving stage visible and
+      // retry the authoritative feed row instead of revealing the old post.
+    }
+
+    attempt += 1
+    if (attempt >= PASTED_FEED_MAX_ATTEMPTS) break
+    const delay = Math.min(150 * 2 ** (attempt - 1), PASTED_FEED_RETRY_MAX_MS)
+    await new Promise((resolve) => setTimeout(resolve, delay))
+  }
+
+  return null
+}
+
 export interface TheaterShellProps {
   seed: TheaterFeedSeed
   mode?: TheaterMode
@@ -391,7 +429,16 @@ export function TheaterShell({
   const [personalSavedKeys, setPersonalSavedKeys] = useState<Set<string>>(new Set())
   const personalSavedKeysRef = useRef(personalSavedKeys)
   const [pasteResolvingItem, setPasteResolvingItem] = useState<TheaterItem | null>(null)
+  const [pasteLookupRetry, setPasteLookupRetry] = useState<PasteLookupRetry | null>(null)
   const pasteRequestRef = useRef(0)
+  const pasteResolvingRef = useRef(false)
+  const shellMountedRef = useRef(true)
+  useEffect(() => {
+    shellMountedRef.current = true
+    return () => {
+      shellMountedRef.current = false
+    }
+  }, [])
   useEffect(() => {
     personalSavedKeysRef.current = personalSavedKeys
   }, [personalSavedKeys])
@@ -979,13 +1026,83 @@ export function TheaterShell({
     [prependToPersonalQueue, patchAuthoritativeMembership, advanceMembershipRevision],
   )
 
+  const installPastedRow = useCallback(
+    (row: FeedItem, request: number): boolean => {
+      const theaterItem = {
+        ...feedItemToTheaterItem(row),
+        addedAt: new Date().toISOString(),
+      }
+      const key = theaterItemKey(theaterItem)
+      patchAuthoritativeMembership(row)
+      markFreshSaved(key)
+      seenSet.unmarkSeen([key])
+      let clearAfterLiveStage = false
+      if (pasteRequestRef.current === request) {
+        // Same-tab paste takes the stage now. The clip that was playing
+        // becomes Next. tweet-added / a second window still prepends
+        // without stealing (prependToPersonalQueue).
+        const sameRow = (a: FeedItem, b: FeedItem) =>
+          a.id === b.id && (a.platform ?? 'twitter') === (b.platform ?? 'twitter')
+        const playingSaved = personalQueueRef.current[personalIndexRef.current]
+        const wasFinished = personalFinishedRef.current || personalQueueRef.current.length === 0
+        const interrupted =
+          !wasFinished && playingSaved && !sameRow(playingSaved, row) ? playingSaved : null
+        const rest = sortFeedNewestFirst(
+          personalQueueRef.current.filter(
+            (item) => !sameRow(item, row) && !(interrupted && sameRow(item, interrupted)),
+          ),
+        )
+        const nextQueue = interrupted ? [row, interrupted, ...rest] : [row, ...rest]
+        personalQueueRef.current = nextQueue
+        setPersonalQueue(nextQueue)
+        setPersonalIndex(0)
+        const interruptedKey =
+          personalTabRef.current === 'collection'
+            ? interrupted
+              ? theaterItemKey(feedItemToTheaterItem(interrupted))
+              : null
+            : liveNowKeyRef.current && liveNowKeyRef.current !== key
+              ? liveNowKeyRef.current
+              : null
+        pastePlayKeyRef.current = interruptedKey ? key : null
+        setPasteInterruptKey(interruptedKey)
+        if (personalTabRef.current !== 'collection') {
+          clearAfterLiveStage = true
+          setLivePasteKey(key)
+        }
+      } else {
+        prependToPersonalQueue(row)
+      }
+      feedPrepend(theaterItem)
+      skipSavedClampRef.current = true
+      setQueueTypes((current) => queueTypesForAddedItem(current, row))
+
+      if (onCollectionAddedRef.current) {
+        onCollectionAddedRef.current(row)
+      }
+      notifyCollectionChanged({ refetchFeed: false, added: row })
+      return clearAfterLiveStage
+    },
+    [
+      feedPrepend,
+      markFreshSaved,
+      patchAuthoritativeMembership,
+      prependToPersonalQueue,
+      seenSet.unmarkSeen,
+    ],
+  )
+
   const handlePastePost = useCallback(
     async (url: string): Promise<boolean> => {
+      if (pasteResolvingRef.current) return false
       const resolvingItem = pastedPostResolvingStub(url)
       if (!resolvingItem) return false
       const request = pasteRequestRef.current + 1
       let clearAfterLiveStage = false
+      let keepResolvingForRetry = false
       pasteRequestRef.current = request
+      pasteResolvingRef.current = true
+      setPasteLookupRetry(null)
       setPasteResolvingItem(resolvingItem)
 
       try {
@@ -997,104 +1114,61 @@ export function TheaterShell({
         const data = await res.json().catch(() => null)
         if (!res.ok) return false
 
-        const platform: string = data?.platform ?? 'twitter'
-        const id: string | undefined = data?.bookmark?.id
-        if (!id) {
-          notifyCollectionChanged({ refetchFeed: true })
-          return true
-        }
+        const platform: string = data?.platform ?? resolvingItem.platform ?? 'twitter'
+        const id: string | undefined = data?.bookmark?.id ?? resolvingItem.bookmarkId
+        if (!id) return false
 
-        const q = new URLSearchParams({ hideArchived: 'false', filter: 'all', limit: '5' })
-        q.append('id', id)
-        q.append('idPlatform', platform)
-        const fres = await fetch(`/api/feed?${q}`)
-        if (!fres.ok) {
-          notifyCollectionChanged({ refetchFeed: true })
-          return true
-        }
-        const feedJson = await fres.json()
-        const saved: FeedItem | undefined = (feedJson.items ?? []).find(
-          (f: FeedItem) => (f.platform ?? 'twitter') === platform && f.id === id,
-        )
+        const saved = await waitForPastedFeedItem(platform, id, () => shellMountedRef.current)
         if (!saved) {
-          notifyCollectionChanged({ refetchFeed: true })
-          return true
-        }
-
-        const row = saved
-        const theaterItem = {
-          ...feedItemToTheaterItem(row),
-          addedAt: new Date().toISOString(),
-        }
-        const key = theaterItemKey(theaterItem)
-        patchAuthoritativeMembership(row)
-        markFreshSaved(key)
-        seenSet.unmarkSeen([key])
-        if (pasteRequestRef.current === request) {
-          // Same-tab paste takes the stage now. The clip that was playing
-          // becomes Next. tweet-added / a second window still prepends
-          // without stealing (prependToPersonalQueue).
-          const sameRow = (a: FeedItem, b: FeedItem) =>
-            a.id === b.id && (a.platform ?? 'twitter') === (b.platform ?? 'twitter')
-          const playingSaved = personalQueueRef.current[personalIndexRef.current]
-          const wasFinished = personalFinishedRef.current || personalQueueRef.current.length === 0
-          const interrupted =
-            !wasFinished && playingSaved && !sameRow(playingSaved, row) ? playingSaved : null
-          const rest = sortFeedNewestFirst(
-            personalQueueRef.current.filter(
-              (f) => !sameRow(f, row) && !(interrupted && sameRow(f, interrupted)),
-            ),
-          )
-          const nextQueue = interrupted ? [row, interrupted, ...rest] : [row, ...rest]
-          personalQueueRef.current = nextQueue
-          setPersonalQueue(nextQueue)
-          setPersonalIndex(0)
-          const interruptedKey =
-            personalTabRef.current === 'collection'
-              ? interrupted
-                ? theaterItemKey(feedItemToTheaterItem(interrupted))
-                : null
-              : liveNowKeyRef.current && liveNowKeyRef.current !== key
-                ? liveNowKeyRef.current
-                : null
-          pastePlayKeyRef.current = interruptedKey ? key : null
-          setPasteInterruptKey(interruptedKey)
-          if (personalTabRef.current !== 'collection') {
-            clearAfterLiveStage = true
-            setLivePasteKey(key)
+          if (shellMountedRef.current && pasteRequestRef.current === request) {
+            keepResolvingForRetry = true
+            setPasteLookupRetry({ platform, id, request })
+            notifyCollectionChanged({ refetchFeed: true })
+            return true
           }
-        } else {
-          // A newer paste owns the resolving stage. Keep this completed save
-          // in both queues without stealing focus from that newer request.
-          prependToPersonalQueue(row)
+          return false
         }
-        feedPrepend(theaterItem)
-        skipSavedClampRef.current = true
-        setQueueTypes((cur) => queueTypesForAddedItem(cur, row))
 
-        if (onCollectionAddedRef.current) {
-          onCollectionAddedRef.current(row)
-        }
-        // Same-tab tweet-added would re-prepend and bump the index. Other
-        // windows still hear `{ added }` over BroadcastChannel.
-        notifyCollectionChanged({ refetchFeed: false, added: row })
+        clearAfterLiveStage = installPastedRow(saved, request)
         return true
       } catch {
         return false
       } finally {
-        if (pasteRequestRef.current === request && !clearAfterLiveStage) {
+        if (pasteRequestRef.current === request && !clearAfterLiveStage && !keepResolvingForRetry) {
+          pasteResolvingRef.current = false
           setPasteResolvingItem(null)
         }
       }
     },
-    [
-      feedPrepend,
-      markFreshSaved,
-      seenSet.unmarkSeen,
-      patchAuthoritativeMembership,
-      prependToPersonalQueue,
-    ],
+    [installPastedRow],
   )
+  const retryPasteLookup = useCallback(() => {
+    if (!pasteLookupRetry) return
+    const target = pasteLookupRetry
+    setPasteLookupRetry(null)
+    void (async () => {
+      const saved = await waitForPastedFeedItem(
+        target.platform,
+        target.id,
+        () => shellMountedRef.current,
+      )
+      if (!saved) {
+        if (shellMountedRef.current && pasteRequestRef.current === target.request) {
+          setPasteLookupRetry(target)
+        }
+        return
+      }
+      const clearAfterLiveStage = installPastedRow(saved, target.request)
+      if (
+        shellMountedRef.current &&
+        pasteRequestRef.current === target.request &&
+        !clearAfterLiveStage
+      ) {
+        pasteResolvingRef.current = false
+        setPasteResolvingItem(null)
+      }
+    })()
+  }, [installPastedRow, pasteLookupRetry])
 
   const handleSharedTag = useCallback((item: TheaterItem) => {
     if (!item.bookmarkId) return
@@ -1187,6 +1261,8 @@ export function TheaterShell({
     setCurrentKey(livePasteKey)
     setWaiting(false)
     setLivePasteKey(null)
+    pasteResolvingRef.current = false
+    setPasteLookupRetry(null)
     setPasteResolvingItem(null)
   }, [livePasteKey])
   useEffect(() => {
@@ -1947,6 +2023,7 @@ export function TheaterShell({
   useEffect(() => {
     function handleAdvance() {
       if (showSignInRef.current) return
+      if (pasteResolvingRef.current) return
       // shared-post-repeat / repeat 'one': belt-and-suspenders —
       // TheaterProgressLine's 'timed' kind is already suppressed to 'none'
       // while repeating (so this event is never actually dispatched for a
@@ -2484,6 +2561,7 @@ export function TheaterShell({
                 onRequestUnmute={onRequestUnmute}
                 onEnded={() => {
                   if (showSignInRef.current) return
+                  if (pasteResolvingRef.current) return
                   if (repeatCurrentActiveRef.current) return
                   if (isCollectionTab) {
                     personalAdvanceOnEnded()
@@ -2507,7 +2585,11 @@ export function TheaterShell({
               />
               {personalPasteResolving ? (
                 <div className="absolute inset-0 z-10">
-                  <StageResolving handle={personalPasteResolving.author} />
+                  <StageResolving
+                    handle={personalPasteResolving.author}
+                    failed={!!pasteLookupRetry}
+                    onRetry={retryPasteLookup}
+                  />
                 </div>
               ) : typeFilterActive &&
                 (isCollectionTab ? personalLensItems : lensItems).length === 0 ? (

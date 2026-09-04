@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Paste resolving now suspends the staged post
+
+Personal paste pauses the covered MP4 or YouTube player and blocks every timed/video advance until
+resolution settles, so a failed add restores the exact post that was interrupted. Successful adds
+keep the Gob resolver visible through bounded authoritative-feed retries instead of revealing stale
+content; exhausted lookups show a feed-only Retry action and never repeat the committed add. The
+parsed URL supplies a safe ID fallback. Current state: complete; MP4, YouTube, advancement,
+serialization, and transient-feed regressions added.
+
 ## 2026-09-04 — Theater paints resolving posts immediately
 
 Personal Live/Saved paste now stages the Gob resolver before add/enrichment returns, then swaps in

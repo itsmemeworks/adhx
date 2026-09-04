@@ -155,6 +155,27 @@ describe('StageVideo progress scrubbing', () => {
 
     expect(video.currentTime).toBe(0)
   })
+
+  it('defers an ended signal while covered and advances after the cover leaves', () => {
+    const onEnded = vi.fn()
+    const props = {
+      item: makeItem(),
+      src: '/api/media/video?clip=covered-ended',
+      poster: null,
+      muted: true,
+      onRequestUnmute: vi.fn(),
+      onEnded,
+    }
+    const { container, rerender } = render(<StageVideo {...props} covered />)
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, props.src)
+
+    fireEvent.ended(video)
+    expect(onEnded).not.toHaveBeenCalled()
+
+    rerender(<StageVideo {...props} />)
+    expect(onEnded).toHaveBeenCalledTimes(1)
+  })
 })
 
 /**
@@ -695,6 +716,7 @@ describe('StageVideo source supersession', () => {
 describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidence-only revert)', () => {
   afterEach(() => {
     HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.pause = vi.fn()
   })
 
   it('unmutes once playback is confirmed after falling back to muted, while the shell wants sound', async () => {
@@ -800,6 +822,53 @@ describe('StageVideo Instagram catch-up unmute (confirmed-playing retry, evidenc
     expect(video.muted).toBe(true) // reverted
     // Reverting also resumes playback with a fresh play() call.
     expect(playMock.mock.calls.length).toBeGreaterThan(callsBeforeRevert)
+  })
+
+  it('treats a covered resolver pause as deliberate and resumes without reverting sound', async () => {
+    const playMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('unmuted autoplay rejected'))
+      .mockResolvedValue(undefined)
+    const pauseMock = vi.fn()
+    HTMLMediaElement.prototype.play = playMock
+    HTMLMediaElement.prototype.pause = pauseMock
+
+    const props = {
+      item: makeItem(),
+      src: '/api/media/video?a=1',
+      poster: null,
+      muted: false,
+      onRequestUnmute: vi.fn(),
+    }
+    const { container, rerender } = render(<StageVideo {...props} />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video)
+    await act(async () => {
+      video.dispatchEvent(new Event('playing'))
+      await Promise.resolve()
+    })
+    expect(video.muted).toBe(false)
+
+    Object.defineProperty(video, 'paused', { configurable: true, value: false })
+    rerender(<StageVideo {...props} covered />)
+    expect(pauseMock).toHaveBeenCalled()
+
+    const callsBeforePauseEvent = playMock.mock.calls.length
+    await act(async () => {
+      video.dispatchEvent(new Event('pause'))
+      await Promise.resolve()
+    })
+    expect(video.muted).toBe(false)
+    expect(playMock).toHaveBeenCalledTimes(callsBeforePauseEvent)
+
+    Object.defineProperty(video, 'paused', { configurable: true, value: true })
+    rerender(<StageVideo {...props} />)
+    expect(playMock.mock.calls.length).toBeGreaterThan(callsBeforePauseEvent)
   })
 
   it('does NOT treat the pause that precedes a natural `ended` as a catch-up rejection', async () => {
@@ -962,7 +1031,7 @@ describe('StageVideo: a failed video does not stall the playlist', () => {
    * `act` — nesting act around it while the scheduler is faked leaves React
    * uncommitted and the container empty.
    */
-  function renderErrored(props: { onEnded?: () => void; repeat?: boolean }) {
+  function renderErrored(props: { onEnded?: () => void; repeat?: boolean; covered?: boolean }) {
     global.fetch = vi.fn().mockResolvedValue({ status: 500, json: async () => null }) as never
     vi.useFakeTimers()
     const rendered = render(
@@ -1007,6 +1076,30 @@ describe('StageVideo: a failed video does not stall the playlist', () => {
       vi.advanceTimersByTime(30_000)
     })
     expect(onEnded).not.toHaveBeenCalled()
+  })
+
+  it('restarts the error-advance timer after a resolver cover leaves', () => {
+    const onEnded = vi.fn()
+    const rendered = renderErrored({ onEnded, covered: true })
+    act(() => {
+      vi.advanceTimersByTime(30_000)
+    })
+    expect(onEnded).not.toHaveBeenCalled()
+
+    rendered.rerender(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+        onEnded={onEnded}
+      />,
+    )
+    act(() => {
+      vi.advanceTimersByTime(10_500)
+    })
+    expect(onEnded).toHaveBeenCalledTimes(1)
   })
 
   it('does nothing when there is nowhere to advance to (collection)', () => {

@@ -469,6 +469,110 @@ describe('StageYouTube', () => {
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'playVideo' })
   })
 
+  it('pauses while covered and defers ended advancement until the cover leaves', () => {
+    const onEnded = vi.fn()
+    const props = {
+      item: makeItem(),
+      muted: true,
+      onRequestUnmute: vi.fn(),
+      onEnded,
+    }
+    const { container, rerender } = render(<StageYouTube {...props} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    postMessage.mockClear()
+
+    rerender(<StageYouTube {...props} covered />)
+    expect(
+      postMessage.mock.calls.some(([payload]) => JSON.parse(payload).func === 'pauseVideo'),
+    ).toBe(true)
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 0 })
+    expect(onEnded).not.toHaveBeenCalled()
+
+    postMessage.mockClear()
+    rerender(<StageYouTube {...props} />)
+    expect(onEnded).toHaveBeenCalledTimes(1)
+    expect(
+      postMessage.mock.calls.some(([payload]) => JSON.parse(payload).func === 'playVideo'),
+    ).toBe(false)
+  })
+
+  it('does not resume on uncover when the user paused immediately before the cover', () => {
+    const props = {
+      item: makeItem(),
+      muted: true,
+      onRequestUnmute: vi.fn(),
+      onEnded: vi.fn(),
+    }
+    const { container, rerender } = render(<StageYouTube {...props} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    postMessage.mockClear()
+
+    // Do not send the player's delayed state-2 acknowledgement before the
+    // cover arrives: this is the race the synchronous intent ref protects.
+    dispatchWindowEvent(new CustomEvent('theater-pause'))
+    rerender(<StageYouTube {...props} covered />)
+    postMessage.mockClear()
+
+    rerender(<StageYouTube {...props} />)
+    expect(
+      postMessage.mock.calls.some(([payload]) => JSON.parse(payload).func === 'playVideo'),
+    ).toBe(false)
+  })
+
+  it('resumes on uncover when the cover interrupted active playback', () => {
+    const props = {
+      item: makeItem(),
+      muted: true,
+      onRequestUnmute: vi.fn(),
+      onEnded: vi.fn(),
+    }
+    const { container, rerender } = render(<StageYouTube {...props} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+    rerender(<StageYouTube {...props} covered />)
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+    postMessage.mockClear()
+
+    rerender(<StageYouTube {...props} />)
+    expect(
+      postMessage.mock.calls.some(([payload]) => JSON.parse(payload).func === 'playVideo'),
+    ).toBe(true)
+  })
+
+  it('defers a covered player error and advances when the cover leaves', () => {
+    const onEnded = vi.fn()
+    const props = {
+      item: makeItem(),
+      muted: true,
+      onRequestUnmute: vi.fn(),
+      onEnded,
+    }
+    const { container, rerender } = render(<StageYouTube {...props} covered />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    postFromPlayer(fakeWindow, { event: 'onError', info: 150 })
+    expect(onEnded).not.toHaveBeenCalled()
+
+    rerender(<StageYouTube {...props} />)
+    expect(onEnded).toHaveBeenCalledTimes(1)
+  })
+
   it('seeks with the reported duration when the progress line is scrubbed', () => {
     const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
     const iframe = container.querySelector('iframe') as HTMLIFrameElement

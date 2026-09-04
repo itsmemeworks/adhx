@@ -61,8 +61,8 @@ export interface StageProps {
    */
   articleMode?: boolean
   /**
-   * Pause the persistent <video> without unmounting it (Live waiting,
-   * Saved All Clear). Same cover as a text/photo overlay.
+   * Pause the persistent player without unmounting it (paste resolving,
+   * Live waiting, Saved All Clear). Same cover as a text/photo overlay.
    */
   covered?: boolean
 }
@@ -197,6 +197,7 @@ export function Stage({
             onRequestUnmute={onRequestUnmute}
             onEnded={onEnded}
             repeat={repeat}
+            covered={covered}
           />
         </div>
       ) : retained ? (
