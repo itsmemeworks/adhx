@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.3](https://github.com/itsmemeworks/adhx/compare/v1.70.2...v1.70.3) (2026-09-04)
+
+
+### Bug Fixes
+
+* keep ios theater header visible ([#484](https://github.com/itsmemeworks/adhx/issues/484)) ([86465e3](https://github.com/itsmemeworks/adhx/commit/86465e309e438b150949b71b35d39b54a735569f))
+
 ## [1.70.2](https://github.com/itsmemeworks/adhx/compare/v1.70.1...v1.70.2) (2026-09-04)
 
 
