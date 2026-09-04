@@ -14,6 +14,19 @@ Direct X, Instagram, TikTok, and YouTube previews use the same resolving stage, 
 now paints a side-effect-free responsive Theater shell instead of a standalone loader. Current
 state: complete; focused transitions, 3,568 tests, typecheck, lint, formatting, and build pass.
 
+## 2026-09-04 — Desktop Theater consolidates sharing
+
+Desktop post actions now use one Share pill instead of separate Copy/Download and Link pills.
+Its expandable, type-aware menu reuses the mobile Theater behavior for text copy, media download
+or native file sharing, and link sharing while leaving Save, Tag, Archive, and Open unchanged.
+Current state: in flight; desktop and shared-menu regressions added.
+
+## 2026-09-04 — Desktop Theater drops the redundant Live indicator
+
+The generic desktop Live view now leaves only the ADHX logo in the top-left; the green-dot Live
+label was redundant with the surrounding Theater context. Explicit Live/Saved tabs remain where
+they communicate a real choice. Current state: in flight; component regression added.
+
 ## 2026-09-04 — Mobile Theater avoids the iOS fixed-viewport gap
 
 Mobile WebKit now uses an absolute, large-viewport Theater shell instead of the fixed root that

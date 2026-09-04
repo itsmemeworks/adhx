@@ -9,9 +9,10 @@
  *
  * Two components, one file:
  *  - `DesktopStageChrome` — absolutely-positioned overlays INSIDE the stage
- *    wrapper (brand + LIVE, flame chip, paste-a-link input,
+ *    wrapper (brand, flame chip, paste-a-link input,
  *    the media post's author/caption overlay (Read opens the stacked article),
- *    and the action buttons — Open is the source platform glyph).
+ *    and the action buttons — sharing is one type-aware menu and Open is the
+ *    source platform glyph).
  *  - `DesktopDock` — the in-flow bottom dock AFTER the stage wrapper
  *    (two-row transport + de-clutter + horizontal filmstrip + end cap), plus the
  *    "Queue" overlay panel reusing `UpNextList`.
@@ -28,9 +29,7 @@ import Link from 'next/link'
 import {
   Bookmark,
   Check,
-  Loader2,
   Clipboard,
-  Link as LinkIcon,
   Repeat,
   Repeat1,
   Tag as TagIcon,
@@ -55,14 +54,14 @@ import { inferType } from '@/lib/trending/filter'
 import { resolvePastedPost } from '@/lib/theater/paste-preview'
 import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import { useSendFile } from './useSendFile'
-import { fileSendCopy, textCopyAction } from './send-action'
 import { useTheaterCopy } from './useTheaterCopy'
 import { useTheaterTransport } from './useTheaterTransport'
+import { TheaterShareMenu } from './TheaterShareMenu'
 import { SavePostButton, PersonalLiveSaveButton } from './SavePostButton'
 import { FlameChip } from './TheaterMetaChips'
 import { TheaterTagCount } from './TheaterTagCount'
 import { tagActionLabel } from '@/lib/utils/tag'
-import { StageGlass } from './StageGlass'
+import { StageGlass, STAGE_GLASS_FILL } from './StageGlass'
 import { QuoteArticleToggle } from './QuoteArticleToggle'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { useClampExpand } from './useClampExpand'
@@ -102,7 +101,7 @@ export interface DesktopStageChromeProps {
   /** De-clutter fades the overlays out (mobile-chrome pattern: opacity + slight translate, pointer-events-none). */
   declutter: boolean
   onToggleDeclutter: () => void
-  /** Playlist mode (`/t/{username}/{tag}`): identity chrome + swaps the top bar's LIVE/paste-button right side for "Make your own", and the bottom-right Save action for the Save-playlist CTA. */
+  /** Playlist mode (`/t/{username}/{tag}`): identity chrome + swaps the top bar's paste-button right side for "Make your own", and the bottom-right Save action for the Save-playlist CTA. */
   playlist?: TheaterPlaylistMeta
   saveStatus?: SavePlaylistStatus
   onSavePlaylist?: () => void
@@ -111,7 +110,7 @@ export interface DesktopStageChromeProps {
   onRequestSignIn?: () => void
   /** Playlist mode, non-owner viewers: the "Make your own" CTA — opens the sign-in modal in place (authed non-owners are routed home instead, handled by the caller). */
   onRequestMakeYourOwn?: () => void
-  /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive left of Download. */
+  /** Collection mode: Collection↔Live tab switcher in the top bar; Collection tab adds Archive left of Share. */
   collection?: TheaterPersonalChrome
   /** Shared+authed: open the tag picker after the Save pill morphs to Tag. */
   onSharedTag?: (item: TheaterItem) => void
@@ -240,6 +239,7 @@ export function DesktopStageChrome({
   onToggleArticleMode,
 }: DesktopStageChromeProps) {
   const [pasteOpen, setPasteOpen] = useState(false)
+  const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const [pasteValue, setPasteValue] = useState('')
   const [pasteError, setPasteError] = useState(false)
   const pasteErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -349,12 +349,9 @@ export function DesktopStageChrome({
 
   const kind = current ? inferType(current) : null
   const quoteReader = isQuoteReader(current, false)
-  const textLike = (kind !== null && ['text', 'article'].includes(kind)) || quoteReader
   const isMedia = (kind === 'video' || kind === 'photo') && !quoteReader
   const showMediaCaption = isMedia && !articleMode
   const showArticleToggle = offerArticleMode(current, overflowing, articleMode)
-  const fileAction = fileSendCopy(kind)
-  const copyAction = textCopyAction(kind)
   const trendCount = current ? (current.trendCount ?? current.saveCount ?? 0) : 0
   const displayTags = collection?.tags ?? itemTags
   const tagCount = displayTags?.length ?? 0
@@ -372,13 +369,17 @@ export function DesktopStageChrome({
   const openUrl = current
     ? sourceUrl(current.platform, current.author, current.bookmarkId ?? '', current.contentType)
     : null
-  const { linkCopied, textCopied, copyLink, copyText } = useTheaterCopy(current, caption)
+  const { textCopied, copyLink, copyText } = useTheaterCopy(current, caption)
   const rootRef = useRef<HTMLDivElement>(null)
   useTheaterActionHotkeys('desktop', rootRef)
 
+  useEffect(() => {
+    setShareMenuOpen(false)
+  }, [currentKey, declutter])
+
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-[71] hidden lg:block">
-      {/* Top bar: brand + LIVE left, paste-a-link + avatar right.
+      {/* Top bar: brand left, paste-a-link + avatar right.
           De-clutter lives in the dock — the menu stays put. */}
       <div
         className={cn(
@@ -461,14 +462,7 @@ export function DesktopStageChrome({
                 <span> loops</span>
               </span>
             </>
-          ) : (
-            <>
-              <span className="inline-flex flex-none items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-white/55">
-                <span className="h-2 w-2 flex-none rounded-full bg-live" aria-hidden />
-                <span>Live</span>
-              </span>
-            </>
-          )}
+          ) : null}
         </div>
 
         <div className="pointer-events-auto flex flex-none items-center gap-2.5">
@@ -647,66 +641,19 @@ export function DesktopStageChrome({
             {collection?.tab === 'collection' && (
               <TheaterCollectionActions collection={collection} variant="desktop" />
             )}
-            {sendFile.supported ? (
-              <StageGlass
-                as="button"
-                type="button"
-                onClick={() => void sendFile.send()}
-                disabled={sendFile.sending}
-                title={
-                  sendFile.mode === 'share'
-                    ? `Opens your share sheet with the ${kind === 'photo' ? 'photo' : 'video'}`
-                    : fileAction.title
-                }
-                className={cn(GLASS, sendFile.primed && 'border-clay')}
-                data-theater-action="download"
-              >
-                {/* Same contract as the mobile pill: the spinner covers the file
-                  fetch a tap starts, and `primed` asks for the second tap the
-                  share sheet needs rather than downgrading to a link. Reachable
-                  here on a tablet, which gets this chrome at lg+ widths. */}
-                {sendFile.sending ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <fileAction.Icon size={14} />
-                )}
-                <span>
-                  {sendFile.sending
-                    ? 'Getting file'
-                    : sendFile.primed
-                      ? 'Tap again'
-                      : fileAction.label}
-                </span>
-              </StageGlass>
-            ) : textLike && caption ? (
-              // Text-like posts have no file — the slot copies tweet text or
-              // the article, labeled so it's clear what you get.
-              <StageGlass
-                as="button"
-                type="button"
-                onClick={() => void copyText()}
-                title={copyAction.title}
-                className={GLASS}
-                data-theater-action="copy"
-              >
-                {textCopied ? (
-                  <Check size={14} className="text-done" />
-                ) : (
-                  <copyAction.Icon size={14} />
-                )}
-                <span>{textCopied ? copyAction.copiedLabel : copyAction.idleLabel}</span>
-              </StageGlass>
-            ) : null}
-            <StageGlass
-              as="button"
-              type="button"
-              onClick={() => void copyLink()}
-              className={GLASS}
-              data-theater-action="link"
-            >
-              {linkCopied ? <Check size={14} className="text-done" /> : <LinkIcon size={14} />}
-              <span>{linkCopied ? 'Copied' : 'Link'}</span>
-            </StageGlass>
+            <TheaterShareMenu
+              open={shareMenuOpen}
+              onOpenChange={setShareMenuOpen}
+              kind={kind}
+              actionKey={currentKey}
+              hasText={Boolean(caption)}
+              textCopied={textCopied}
+              sendFile={sendFile}
+              onCopyText={copyText}
+              onShareLink={copyLink}
+              triggerClassName={cn(STAGE_GLASS_FILL, GLASS, shareMenuOpen && 'bg-white/20')}
+              variant="desktop"
+            />
             {playlist ? (
               isPlaylistOwner ? (
                 <StageGlass

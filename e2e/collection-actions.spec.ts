@@ -43,11 +43,14 @@ authedTest.describe('collection actions', () => {
     async ({ page }) => {
       await page.goto(`/saved?open=${POST.hotel.id}&platform=twitter`)
       await expectTheaterReady(page)
-      await expect(page.getByRole('button', { name: 'Link', exact: true })).toBeVisible()
+      const share = page.getByRole('button', { name: 'Share', exact: true })
+      await expect(share).toBeVisible()
+      await share.click()
+      await expect(page.getByRole('menuitem', { name: 'Share link' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Copy' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Tag', exact: true })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Open' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Copy' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Later' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Delete' })).toHaveCount(0)
       // `name: 'Save'` also matches the Saved tab — use exact.
