@@ -763,7 +763,7 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
     expect(screen.getByLabelText('Show controls')).toBeInTheDocument()
     const actions = screen.getByTestId('mobile-control-actions')
     expect(actions.className).toContain('opacity-0')
-    expect(actions.className).toContain('bottom-[calc(70%+0.75rem)]')
+    expect(actions.className).toContain('bottom-[calc(70%+1.75rem)]')
   })
 
   it('presents Focus rather than Show controls when Up next is opened from clutter-free mode', () => {
@@ -791,7 +791,7 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
 
     expect(actions.className).toContain('opacity-0')
     await waitFor(() => {
-      expect(actions.className).not.toContain('bottom-[calc(70%+0.75rem)]')
+      expect(actions.className).not.toContain('bottom-[calc(70%+1.75rem)]')
       expect(actions.className).not.toContain('opacity-0')
     })
   })
@@ -1085,7 +1085,7 @@ describe('TheaterMobileChrome: Up-next playlist toggle', () => {
     expect(label()).toHaveAttribute('aria-label', 'Expand up next')
   })
 
-  it('moves the right-side action rail onto the sheet edge when Queue expands', () => {
+  it('moves the right-side action rail above the seek target when Queue expands', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const actions = screen.getByTestId('mobile-control-actions')
     const queue = screen
@@ -1096,7 +1096,7 @@ describe('TheaterMobileChrome: Up-next playlist toggle', () => {
     expect(actions.className).toContain('flex-col')
     expect(screen.getByRole('button', { name: 'Save' }).className).toContain('h-11')
     fireEvent.click(queue)
-    expect(actions.className).toContain('bottom-[calc(70%+0.75rem)]')
+    expect(actions.className).toContain('bottom-[calc(70%+1.75rem)]')
     expect(actions.className).toContain('flex-row')
     expect(actions.className).not.toContain('opacity-0')
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()

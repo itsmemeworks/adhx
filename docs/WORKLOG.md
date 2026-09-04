@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Expanded mobile actions clear the scrub target
+
+Geometry review found the expanded Queue's right-side post actions overlapping the seek hitbox by
+12px, so a right-edge scrub could trigger Share/Open. The action row now sits 28px above the dock.
+The mobile browser regression removes only Next's dev portal, performs real touch taps on Playlist,
+asserts browser hit targets, and proves the expanded actions end above the slider.
+Current state: complete locally; focused component and Chromium checks pass.
+
 ## 2026-09-04 — Mobile progress rail replaces Queue drag
 
 The mobile dock's straight top edge is now a clearly visible 4px playback rail with a larger

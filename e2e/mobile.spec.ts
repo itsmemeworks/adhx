@@ -3,7 +3,7 @@ import { POST } from './constants'
 import { expectTheaterReady } from './helpers'
 
 test.describe('mobile viewport', () => {
-  test.use({ viewport: { width: 390, height: 844 } })
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
 
   test('signed-out Live theater is usable at phone width', async ({ page }) => {
     test.setTimeout(90_000)
@@ -101,11 +101,44 @@ test.describe('mobile viewport', () => {
 
     // The Playlist button is the only touch toggle now; the former drag strip
     // is gone so it cannot compete with horizontal scrubbing on this edge.
-    // Invoke the button directly because Next dev's bottom-left tools portal
-    // overlaps this coordinate in the E2E server (production has no portal).
-    await queue.evaluate((button: HTMLButtonElement) => button.click())
+    // Hide only Next's dev-only portal, then use a real touch tap and verify
+    // the browser's hit target before both open and close interactions.
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
+    const queueCenter = async () => {
+      const box = await queue.boundingBox()
+      expect(box).not.toBeNull()
+      return {
+        x: (box?.x ?? 0) + (box?.width ?? 0) / 2,
+        y: (box?.y ?? 0) + (box?.height ?? 0) / 2,
+      }
+    }
+    const queueHitTarget = async () => {
+      const center = await queueCenter()
+      return page.evaluate(
+        ({ x, y }) =>
+          document
+            .elementFromPoint(x, y)
+            ?.closest('[data-theater-action="show-all"]')
+            ?.getAttribute('data-theater-action') ?? null,
+        center,
+      )
+    }
+    await expect.poll(queueHitTarget).toBe('show-all')
+    await queue.tap()
     await expect(queue).toHaveAttribute('aria-expanded', 'true')
-    await queue.evaluate((button: HTMLButtonElement) => button.click())
+
+    // Expanded post actions stay entirely above the slider's 32px seek area,
+    // so horizontal scrubbing cannot trigger Share/Open at the right edge.
+    const expandedSliderBox = await slider.boundingBox()
+    const expandedActionsBox = await page.getByTestId('mobile-control-actions').boundingBox()
+    expect(expandedSliderBox).not.toBeNull()
+    expect(expandedActionsBox).not.toBeNull()
+    expect((expandedActionsBox?.y ?? 0) + (expandedActionsBox?.height ?? 0)).toBeLessThan(
+      expandedSliderBox?.y ?? 0,
+    )
+
+    await expect.poll(queueHitTarget).toBe('show-all')
+    await queue.tap()
     await expect(queue).toHaveAttribute('aria-expanded', 'false')
 
     const menu = page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]')
