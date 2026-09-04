@@ -238,11 +238,22 @@ export function StageVideo({
   // it runs.
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ muted: boolean }>).detail
+      const detail = (e as CustomEvent<{ muted: boolean; source?: 'user' | 'catchup' }>).detail
       if (!detail) return
       const video = videoRef.current
       if (!video) return
-      logSV(`theater-set-muted(${detail.muted}) applied synchronously`)
+      logSV(`theater-set-muted(${detail.muted}, ${detail.source ?? 'user'}) applied synchronously`)
+      if (!detail.muted && detail.source === 'catchup' && video.muted) {
+        // Cross-tab/local preference synchronization has no user activation.
+        // Watch for the platform's observed rejection-pause exactly like the
+        // automatic fresh-element catch-up path below.
+        catchUpAttemptedRef.current = true
+        catchUpPendingRef.current = true
+      } else {
+        // A real audio-button/stage gesture, or an explicit mute, must never
+        // be mistaken for a gesture-less autoplay attempt.
+        catchUpPendingRef.current = false
+      }
       video.muted = detail.muted
       setEffectiveMuted(detail.muted)
     }

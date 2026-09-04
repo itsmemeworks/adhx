@@ -4,8 +4,8 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import type { AvatarSource } from '@/lib/avatar/generated-avatar'
 import {
   readStoredSoundPreference,
+  THEATER_SOUND_CHOICE_STORAGE_KEY,
   THEATER_SOUND_DEFAULT_STORAGE_KEY,
-  THEATER_SOUND_SESSION_STORAGE_KEY,
   writeStoredSoundPreference,
 } from '@/lib/theater/sound-preference'
 
@@ -110,9 +110,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     async <K extends keyof Preferences>(key: K, value: Preferences[K]) => {
       // Store previous value for revert
       const previousValue = preferences[key]
+      const isSoundUpdate = key === 'soundOn' && typeof value === 'boolean'
+      const soundOnValue = isSoundUpdate ? (value as boolean) : null
 
       // Optimistic update
       setPreferences((prev) => ({ ...prev, [key]: value }))
+      if (soundOnValue !== null) {
+        // Publish the interaction immediately so open Theaters follow it.
+        // Never write this choice again after the network round-trip: a
+        // player action in another tab may be newer by then.
+        writeStoredSoundPreference(localStorage, THEATER_SOUND_CHOICE_STORAGE_KEY, soundOnValue)
+      }
 
       try {
         const response = await fetch('/api/preferences', {
@@ -124,13 +132,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         if (!response.ok) {
           throw new Error('Failed to update preference')
         }
-        if (key === 'soundOn' && typeof value === 'boolean') {
-          writeStoredSoundPreference(localStorage, THEATER_SOUND_DEFAULT_STORAGE_KEY, value)
-          writeStoredSoundPreference(sessionStorage, THEATER_SOUND_SESSION_STORAGE_KEY, value)
+        if (soundOnValue !== null) {
+          writeStoredSoundPreference(localStorage, THEATER_SOUND_DEFAULT_STORAGE_KEY, soundOnValue)
         }
       } catch (error) {
         console.error('Failed to update preference:', error)
-        // Revert on error
+        // Revert the account setting, but retain the browser's explicit
+        // choice. Rolling that shared value back can overwrite a newer player
+        // action (including an off → on ABA sequence) from another tab.
         setPreferences((prev) => ({ ...prev, [key]: previousValue }))
       }
     },

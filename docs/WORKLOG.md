@@ -41,6 +41,15 @@ the queue surface stays clipped, and a narrow invisible strip preserves drag-to-
 Current state: complete locally; hostile +180px geometry passes CI Chromium plus manual
 Chromium/WebKit phone emulation. The loading dock is component-covered; CI does not install WebKit.
 
+## 2026-09-04 — Theater remembers sound across links and tabs
+
+The audio button now stores the viewer's latest mute/unmute choice in browser-wide local storage,
+instead of a tab-only session value, and live storage events synchronize already-open Theaters.
+New links attempt the saved choice on mobile and desktop; cross-tab auto-unmutes are explicitly
+classified as gesture-less so iOS can recover to muted playback and retry on the next stage tap.
+Legacy tab values migrate on first load. Current state: complete locally; component and cross-tab
+browser regressions cover native video and YouTube behavior.
+
 ## 2026-09-04 — iOS top controls clear the playback scrubber
 
 Real-browser mobile emulation found the invisible top playback slider intercepting Paste/menu
