@@ -74,7 +74,7 @@ import {
 import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 import { StageIconButton } from './stage-primitives'
 import { useMobileSwipeNavigation } from './useMobileSwipeNavigation'
-import { TheaterMobileShareMenu } from './TheaterMobileShareMenu'
+import { TheaterShareMenu } from './TheaterShareMenu'
 import type {
   RepeatMode,
   SavePlaylistStatus,
@@ -776,7 +776,7 @@ export function TheaterMobileChrome({
                   <Bookmark size={16} />
                 </StageIconButton>
               )}
-              <TheaterMobileShareMenu
+              <TheaterShareMenu
                 open={shareMenuOpen}
                 onOpenChange={setShareMenuOpen}
                 kind={kind}

@@ -11,7 +11,7 @@ import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 const MENU_ITEM =
   'flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-semibold text-white transition-colors hover:bg-white/10 active:bg-white/15 disabled:opacity-50'
 
-export function TheaterMobileShareMenu({
+export function TheaterShareMenu({
   open,
   onOpenChange,
   kind,
@@ -23,6 +23,7 @@ export function TheaterMobileShareMenu({
   onShareLink,
   alignTop = false,
   triggerClassName,
+  variant = 'mobile',
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -35,6 +36,7 @@ export function TheaterMobileShareMenu({
   onShareLink: () => boolean | Promise<boolean>
   alignTop?: boolean
   triggerClassName?: string
+  variant?: 'mobile' | 'desktop'
 }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -46,6 +48,7 @@ export function TheaterMobileShareMenu({
   const fileAction = fileSendCopy(kind)
   const copyAction = textCopyAction(kind)
   const mediaLabel = kind === 'photo' ? 'photo' : 'video'
+  const desktop = variant === 'desktop'
 
   useEffect(
     () => () => {
@@ -159,7 +162,7 @@ export function TheaterMobileShareMenu({
   }
 
   return (
-    <div ref={rootRef} className="relative order-3">
+    <div ref={rootRef} className={cn('relative', !desktop && 'order-3')}>
       <button
         ref={triggerRef}
         type="button"
@@ -169,7 +172,12 @@ export function TheaterMobileShareMenu({
         aria-expanded={open}
         className={cn('inline-flex items-center justify-center', triggerClassName)}
       >
-        {actionComplete ? <Check size={16} className="text-done" /> : <Share2 size={16} />}
+        {actionComplete ? (
+          <Check size={desktop ? 14 : 16} className="text-done" />
+        ) : (
+          <Share2 size={desktop ? 14 : 16} />
+        )}
+        {desktop ? <span>Share</span> : null}
         <span className="sr-only" role="status" aria-live="polite">
           {actionComplete ? 'Share action completed' : ''}
         </span>
@@ -181,11 +189,13 @@ export function TheaterMobileShareMenu({
         aria-label="Share options"
         aria-hidden={!open}
         className={cn(
-          'absolute right-[calc(100%+0.6rem)] w-48 rounded-2xl border border-white/15 bg-[#121117]/95 p-1.5 text-white shadow-[0_16px_50px_rgba(0,0,0,.45)] backdrop-blur-xl transition-[opacity,transform] duration-150',
-          alignTop ? 'top-0' : 'top-1/2 -translate-y-1/2',
+          'absolute w-48 rounded-2xl border border-white/15 bg-[#121117]/95 p-1.5 text-white shadow-[0_16px_50px_rgba(0,0,0,.45)] backdrop-blur-xl transition-[opacity,transform] duration-150',
+          desktop
+            ? 'bottom-[calc(100%+0.6rem)] right-0'
+            : cn('right-[calc(100%+0.6rem)]', alignTop ? 'top-0' : 'top-1/2 -translate-y-1/2'),
           open
             ? 'pointer-events-auto translate-x-0 opacity-100'
-            : 'pointer-events-none translate-x-2 opacity-0 invisible',
+            : 'pointer-events-none invisible translate-x-2 opacity-0',
         )}
       >
         {hasText ? (
