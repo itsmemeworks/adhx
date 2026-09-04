@@ -31,7 +31,7 @@ export function TheaterPreviewLoading() {
         </div>
 
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pb-12 pt-[max(1rem,env(safe-area-inset-top))] lg:hidden"
+          className="theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pb-12 pt-[max(1rem,env(safe-area-inset-top))] lg:hidden"
           data-testid="theater-loading-mobile-chrome"
           style={{ background: 'linear-gradient(rgba(8,7,10,.7), transparent)' }}
         >

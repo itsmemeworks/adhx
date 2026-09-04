@@ -18,6 +18,8 @@ describe('TheaterPreviewLoading', () => {
       '/gob-loader.svg',
     )
     expect(screen.getByTestId('theater-loading-desktop-chrome')).toBeInTheDocument()
-    expect(screen.getByTestId('theater-loading-mobile-chrome')).toBeInTheDocument()
+    expect(screen.getByTestId('theater-loading-mobile-chrome')).toHaveClass(
+      'theater-mobile-top-chrome',
+    )
   })
 })
