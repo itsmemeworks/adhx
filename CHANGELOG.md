@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.70.5](https://github.com/itsmemeworks/adhx/compare/v1.70.4...v1.70.5) (2026-09-04)
+
+
+### Bug Fixes
+
+* anchor mobile theater controls to viewport ([#488](https://github.com/itsmemeworks/adhx/issues/488)) ([be494f3](https://github.com/itsmemeworks/adhx/commit/be494f351a946709275129b2cf18e2d2fc4c34cc))
+* remember theater sound across tabs ([#489](https://github.com/itsmemeworks/adhx/issues/489)) ([2a052b5](https://github.com/itsmemeworks/adhx/commit/2a052b5cc433a285852bd37a00bba40974e69f99))
+
 ## [1.70.4](https://github.com/itsmemeworks/adhx/compare/v1.70.3...v1.70.4) (2026-09-04)
 
 

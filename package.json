@@ -1,6 +1,6 @@
 {
   "name": "adhx",
-  "version": "1.70.4",
+  "version": "1.70.5",
   "description": "Save it. Lose it. Find it. A Twitter/X bookmark manager for people who bookmark everything and read nothing.",
   "type": "module",
   "packageManager": "pnpm@9.15.9",
