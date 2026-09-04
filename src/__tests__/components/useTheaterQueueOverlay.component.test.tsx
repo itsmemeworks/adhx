@@ -196,7 +196,6 @@ describe('useTheaterQueueOverlay', () => {
         personalTab: 'collection',
         goNext: vi.fn(),
         goPrev: vi.fn(),
-        setMuted: vi.fn(),
         undoLastAction: vi.fn(),
         onClose,
       })

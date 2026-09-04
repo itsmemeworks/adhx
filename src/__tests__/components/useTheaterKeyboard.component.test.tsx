@@ -16,7 +16,6 @@ function baseArgs(overrides: Partial<Parameters<typeof useTheaterKeyboard>[0]> =
     personalTab: 'live' as const,
     goNext: vi.fn(),
     goPrev: vi.fn(),
-    setMuted: vi.fn(),
     undoLastAction: vi.fn(),
     ...overrides,
   }
@@ -109,7 +108,7 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     expect(args.goPrev).not.toHaveBeenCalled()
   })
 
-  it('other keys (goNext/goPrev/mute) are unaffected by isPlaybackHidden', () => {
+  it('navigation keys are unaffected by isPlaybackHidden', () => {
     const args = baseArgs({ isPlaybackHidden: () => true })
     renderHook(() => useTheaterKeyboard(args))
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })))
@@ -175,6 +174,7 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     const onToggleHelp = vi.fn()
     const heard: string[] = []
     const names = [
+      'theater-toggle-mute',
       'theater-copy-text',
       'theater-send-file',
       'theater-open',
@@ -205,7 +205,6 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'e' })))
       act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })))
       expect(onToggleHelp).toHaveBeenCalledTimes(1)
-      expect(args.setMuted).toHaveBeenCalledTimes(1)
       expect(heard).toEqual([...names])
     } finally {
       for (const { name, fn } of listeners) {

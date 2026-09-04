@@ -88,6 +88,7 @@ describe('resolveTheaterShortcut', () => {
     ]) {
       expect(THEATER_SHORTCUT_KEYS.has(key)).toBe(true)
     }
+    expect(THEATER_ACTION_EVENTS.toggleMute).toBe('theater-toggle-mute')
     expect(THEATER_ACTION_EVENTS.save).toBe('theater-save')
     expect(THEATER_ACTION_EVENTS.toggleMenu).toBe('theater-toggle-menu')
     expect(THEATER_ACTION_EVENTS.toggleShowAll).toBe('theater-toggle-show-all')

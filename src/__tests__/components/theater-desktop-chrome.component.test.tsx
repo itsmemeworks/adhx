@@ -1060,6 +1060,41 @@ describe('DesktopDock: audio button gesture-context unmute', () => {
       window.removeEventListener('theater-set-muted', listener)
     }
   })
+
+  it('routes M through the displayed media state after an autoplay fallback', () => {
+    const onSetMuted = vi.fn()
+    const heard: boolean[] = []
+    const listener = (e: Event) => heard.push((e as CustomEvent<{ muted: boolean }>).detail.muted)
+    window.addEventListener('theater-set-muted', listener)
+    try {
+      render(
+        <DesktopDock
+          {...dockBase}
+          items={items}
+          current={items[0]}
+          currentKey={theaterItemKey(items[0])}
+          muted={false}
+          onSetMuted={onSetMuted}
+        />,
+      )
+
+      // Preference still says sound on, but the browser rejected audible
+      // autoplay and the live media element reports that it is muted.
+      fireEvent(
+        window,
+        new CustomEvent('theater-muted-state', {
+          detail: { muted: true },
+        }),
+      )
+      expect(screen.getByLabelText('Unmute')).toHaveAttribute('data-theater-action', 'mute')
+
+      fireEvent(window, new CustomEvent('theater-toggle-mute'))
+      expect(heard).toEqual([false])
+      expect(onSetMuted).toHaveBeenCalledWith(false)
+    } finally {
+      window.removeEventListener('theater-set-muted', listener)
+    }
+  })
 })
 
 describe('DesktopStageChrome', () => {

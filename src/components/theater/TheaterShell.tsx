@@ -2122,7 +2122,6 @@ export function TheaterShell({
     personalTab,
     goNext: isCollectionTab ? skipCurrent : goNextUser,
     goPrev: isCollectionTab ? personalStepBack : goPrevUser,
-    setMuted,
     undoLastAction,
     onClose,
     onTabChange: isPersonal || (mode === 'shared' && signedIn) ? goTheaterTab : undefined,

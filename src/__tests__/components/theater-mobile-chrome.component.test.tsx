@@ -225,13 +225,14 @@ describe('TheaterMobileChrome: caption', () => {
     )
     const share = screen.getByRole('button', { name: 'Share' })
     const cluster = share.parentElement?.parentElement
-    expect(cluster?.className).toContain('pointer-events-auto')
+    expect(cluster?.className).toContain('pointer-events-none')
     expect(cluster?.className).toContain('fixed')
     expect(cluster?.className).toContain('right-3')
     expect(cluster?.className).not.toContain('flex-1')
     const actionRow = cluster?.parentElement
     expect(actionRow?.className).not.toContain('pointer-events-auto')
     expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
+    expect(share.className).toContain('pointer-events-auto')
     expect(share.className).toContain('bg-black/20')
     expect(share.className).toContain('backdrop-blur-md')
   })
@@ -306,9 +307,14 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
 
+    expect(screen.getByTestId('mobile-control-actions')).toHaveClass(
+      'min-h-[12.125rem]',
+      'pointer-events-none',
+    )
     const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('border-white/15')
     expect(saveBtn.className).toContain('text-clay')
+    expect(saveBtn).toHaveClass('items-center', 'justify-center', 'pointer-events-auto')
     expect(saveBtn).not.toHaveTextContent('Save')
 
     openShareOptions()
@@ -820,12 +826,16 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     const pause = screen.getByRole('button', { name: 'Pause' })
     const volume = screen.getByRole('button', { name: 'Unmute' })
     const zone = screen.getByTestId('mobile-swipe-zone')
+    const bottomScrim = screen.getByTestId('mobile-bottom-scrim')
     expect(pause.className).toContain('h-11')
     expect(pause.className).toContain('w-11')
     expect(pause.className).toContain('text-clay')
     expect(pause.className).not.toContain('bg-clay')
     expect(pause.className).not.toContain('shadow-')
     expect(volume.className).toContain('h-11')
+    expect(volume).toHaveAttribute('data-theater-action', 'mute')
+    expect(bottomScrim).toHaveClass('transition-opacity')
+    expect(bottomScrim).not.toHaveClass('transition-[opacity,transform]', 'translate-y-3')
     expect(pause.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
     expect(
       [...pause.parentElement!.children].map((control) => control.getAttribute('aria-label')),

@@ -956,6 +956,7 @@ export function DesktopDock({
             disabled={kind !== 'video'}
             aria-disabled={kind !== 'video'}
             onClick={handleAudioTap}
+            data-theater-action="mute"
             className={cn(TRANSPORT_BTN, soundPulse && 'animate-sound-pulse text-ink')}
           >
             {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}

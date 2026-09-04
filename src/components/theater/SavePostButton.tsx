@@ -266,7 +266,7 @@ export function PersonalLiveSaveButton({
       onClick={() => collection.onSave(current)}
       className={cn(
         className,
-        'overflow-hidden',
+        'items-center justify-center overflow-hidden',
         exiting && 'animate-save-slot-out pointer-events-none',
       )}
       aria-label={iconOnly ? 'Save' : undefined}
