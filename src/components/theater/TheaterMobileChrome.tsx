@@ -614,7 +614,10 @@ export function TheaterMobileChrome({
         </div>
       )}
 
-      {/* Bottom scrim: author/caption plus the fixed post-action rail. Padded
+      {/* Bottom scrim: author/caption plus the fixed post-action rail. The
+          whole scrim follows the visual viewport; anchoring it to the large
+          media paint layer lets mobile browser chrome push caption text
+          behind the fixed dock after returning from a normal page. Padded
           above the sheet's peek bar (opaque, themed) so the gradient tucks
           under it. The scrim is pointer-events-none so a typeset tweet /
           article stays scrollable — the thumb lands in the lower third,
@@ -627,7 +630,7 @@ export function TheaterMobileChrome({
             // A transformed ancestor becomes the containing block for its
             // fixed rail in WebKit. Fade only, otherwise leaving Focus can
             // briefly anchor the actions to this scrim below the viewport.
-            'pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-opacity duration-200 ease-out',
+            'pointer-events-none fixed inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-opacity duration-200 ease-out',
             declutter && 'opacity-0',
           )}
           data-testid="mobile-bottom-scrim"
@@ -706,9 +709,6 @@ export function TheaterMobileChrome({
                 // the slider's 1.5rem reach above it, and a 0.25rem gap.
                 collection &&
                   '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-28',
-                // Live's Save slot retires after ownership catches up. Preserve
-                // the four-slot height so the remaining rail cannot jump down.
-                collection?.tab === 'live' && 'min-h-[12.125rem]',
                 actionRailHidden && 'hidden',
               )}
               aria-hidden={actionRailHidden}
@@ -773,6 +773,7 @@ export function TheaterMobileChrome({
                     className={cn(RAIL_ACTION_BTN, 'order-1 inline-flex flex-none text-clay')}
                     iconSize={16}
                     iconOnly
+                    preserveSlot
                   />
                 </>
               ) : mode === 'shared' && authed ? (
@@ -844,7 +845,8 @@ export function TheaterMobileChrome({
       {/* Right-side swipe capsule: a joined previous/next control makes the
           gesture boundary visible without stealing the whole stage from
           article scrolling, horizontal albums, links, or embedded players.
-          The full capsule accepts vertical swipes; its two halves remain
+          It is fixed to the same visual viewport as the action rail and dock;
+          the full capsule accepts vertical swipes and its two halves remain
           tappable fallbacks. */}
       {current && !sheetOpen ? (
         <div
@@ -856,7 +858,7 @@ export function TheaterMobileChrome({
           aria-label={swipeLabel}
           data-testid="mobile-swipe-zone"
           className={cn(
-            'absolute bottom-[calc(5rem+env(safe-area-inset-bottom))] right-0 z-[15] h-36 w-20 [@media(max-height:520px)]:h-28',
+            'fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-0 z-[15] h-36 w-20 [@media(max-height:520px)]:h-28',
             canSwipe ? 'pointer-events-auto touch-none' : 'pointer-events-none',
           )}
         >

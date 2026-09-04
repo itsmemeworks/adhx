@@ -172,4 +172,25 @@ describe('PersonalLiveSaveButton — save slot collapses', () => {
     })
     expect(screen.queryByText('Save')).not.toBeInTheDocument()
   })
+
+  it('can retain an inert mobile rail slot after the button retires', async () => {
+    const current = item()
+    const { container } = render(
+      <PersonalLiveSaveButton
+        current={current}
+        collection={chrome(true)}
+        className={CLASS}
+        preserveSlot
+      />,
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(280)
+    })
+
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+    const placeholder = container.querySelector('[data-theater-save-placeholder]')
+    expect(placeholder).toHaveAttribute('aria-hidden', 'true')
+    expect(placeholder).toHaveClass('invisible', 'pointer-events-none')
+  })
 })

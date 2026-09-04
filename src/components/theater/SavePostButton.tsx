@@ -236,12 +236,15 @@ export function PersonalLiveSaveButton({
   className,
   iconSize = 14,
   iconOnly,
+  preserveSlot = false,
 }: {
   current: TheaterItem
   collection: TheaterPersonalChrome
   className: string
   iconSize?: number
   iconOnly?: boolean
+  /** Keep an inert layout slot after Save retires (mobile vertical rail). */
+  preserveSlot?: boolean
 }) {
   const saved = collection.savedKeys.has(theaterItemKey(current))
   const [exiting, setExiting] = useState(false)
@@ -258,7 +261,15 @@ export function PersonalLiveSaveButton({
     return () => window.clearTimeout(timer)
   }, [saved])
 
-  if (gone) return null
+  if (gone) {
+    return preserveSlot ? (
+      <span
+        aria-hidden
+        data-theater-save-placeholder
+        className={cn(className, 'invisible pointer-events-none')}
+      />
+    ) : null
+  }
   return (
     <StageGlass
       as="button"

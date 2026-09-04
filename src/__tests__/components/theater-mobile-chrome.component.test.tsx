@@ -307,10 +307,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
 
-    expect(screen.getByTestId('mobile-control-actions')).toHaveClass(
-      'min-h-[12.125rem]',
-      'pointer-events-none',
-    )
+    const actions = screen.getByTestId('mobile-control-actions')
+    expect(actions).toHaveClass('pointer-events-none')
+    expect(actions).not.toHaveClass('min-h-[12.125rem]')
+    expect(actions.children).toHaveLength(4)
     const saveBtn = screen.getByRole('button', { name: 'Save' })
     expect(saveBtn.className).toContain('border-white/15')
     expect(saveBtn.className).toContain('text-clay')
@@ -835,6 +835,10 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(volume.className).toContain('h-11')
     expect(volume).toHaveAttribute('data-theater-action', 'mute')
     expect(bottomScrim).toHaveClass('transition-opacity')
+    expect(bottomScrim).toHaveClass('fixed')
+    expect(bottomScrim).not.toHaveClass('absolute')
+    expect(zone).toHaveClass('fixed')
+    expect(zone).not.toHaveClass('absolute')
     expect(bottomScrim).not.toHaveClass('transition-[opacity,transform]', 'translate-y-3')
     expect(pause.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
     expect(

@@ -13,7 +13,7 @@ test.describe('mobile viewport', () => {
     await expect(page.getByRole('button', { name: 'Previous post' })).toBeVisible()
   })
 
-  test('iOS Chrome geometry keeps the dock visible and moves scrubbing away from the top edge', async ({
+  test('iOS Chrome geometry keeps every mobile control edge on the visual viewport', async ({
     page,
   }) => {
     test.setTimeout(90_000)
@@ -46,8 +46,14 @@ test.describe('mobile viewport', () => {
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(lockedAt)
 
     const dock = page.getByTestId('mobile-theater-dock')
+    const bottomScrim = page.getByTestId('mobile-bottom-scrim')
+    const postActions = page.getByTestId('mobile-control-actions')
+    const swipeZone = page.getByTestId('mobile-swipe-zone')
+    const swipeControl = swipeZone.locator('[data-theater-swipe-control]')
     const queue = page.locator('[data-theater-action="show-all"]:visible')
     await expect(dock).toHaveCSS('position', 'fixed')
+    await expect(bottomScrim).toHaveCSS('position', 'fixed')
+    await expect(swipeZone).toHaveCSS('position', 'fixed')
     await expect(dock).toHaveCSS('border-radius', '0px')
     await expect(dock).toHaveCSS('border-top-width', '0px')
     await expect(dock).toHaveCSS('background-color', 'rgba(18, 17, 23, 0.85)')
@@ -71,9 +77,33 @@ test.describe('mobile viewport', () => {
     const sliderBox = await slider.boundingBox()
     const trackBox = await track.boundingBox()
     const dockBox = await dock.boundingBox()
+    const bottomScrimBox = await bottomScrim.boundingBox()
+    const captionBox = await bottomScrim.locator(':scope > div').first().boundingBox()
+    const swipeControlBox = await swipeControl.boundingBox()
+    const visibleActionBottom = await postActions.locator(':scope > *').evaluateAll((actions) =>
+      actions.reduce((bottom, action) => {
+        const style = getComputedStyle(action)
+        if (style.display === 'none' || style.visibility === 'hidden') return bottom
+        return Math.max(bottom, action.getBoundingClientRect().bottom)
+      }, 0),
+    )
     expect(sliderBox).not.toBeNull()
     expect(trackBox).not.toBeNull()
     expect(dockBox).not.toBeNull()
+    expect(bottomScrimBox).not.toBeNull()
+    expect(captionBox).not.toBeNull()
+    expect(swipeControlBox).not.toBeNull()
+    expect(visibleActionBottom).toBeGreaterThan(0)
+    expect(
+      Math.abs((bottomScrimBox?.y ?? 0) + (bottomScrimBox?.height ?? 0) - initialHeight),
+    ).toBeLessThanOrEqual(1)
+    expect((captionBox?.y ?? 0) + (captionBox?.height ?? 0)).toBeLessThanOrEqual(dockBox?.y ?? 0)
+    expect((swipeControlBox?.y ?? 0) + (swipeControlBox?.height ?? 0)).toBeLessThanOrEqual(
+      dockBox?.y ?? 0,
+    )
+    const actionToSwipeGap = (swipeControlBox?.y ?? 0) - visibleActionBottom
+    expect(actionToSwipeGap).toBeGreaterThanOrEqual(0)
+    expect(actionToSwipeGap).toBeLessThanOrEqual(12)
     expect(sliderBox?.y ?? 0).toBeGreaterThan(initialHeight / 2)
     expect(Math.abs((trackBox?.y ?? 0) - (dockBox?.y ?? Number.MAX_VALUE))).toBeLessThanOrEqual(2)
     const scrubY = (trackBox?.y ?? 0) + (trackBox?.height ?? 0) / 2
@@ -142,7 +172,6 @@ test.describe('mobile viewport', () => {
 
     // Queue owns the expanded state. The vertical post-action rail is removed
     // from layout and interaction until the sheet has fully collapsed again.
-    const postActions = page.getByTestId('mobile-control-actions')
     await expect(postActions).toHaveAttribute('aria-hidden', 'true')
     await expect(postActions).toHaveAttribute('inert', '')
     await expect(postActions).toHaveCSS('display', 'none')
@@ -228,6 +257,55 @@ test.describe('mobile viewport', () => {
 
 authedTest.describe('mobile personal controls', () => {
   authedTest.use({ viewport: { width: 844, height: 390 }, hasTouch: true })
+
+  authedTest('Settings logo returns to aligned bottom chrome', async ({ page }) => {
+    authedTest.setTimeout(90_000)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/settings')
+    await page.getByRole('link', { name: 'ADHX home' }).click()
+    await expectTheaterReady(page)
+
+    const viewportHeight = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>('.theater-shell-viewport')
+      if (!shell) throw new Error('Theater viewport did not mount')
+      shell.style.position = 'absolute'
+      shell.style.bottom = 'auto'
+      shell.style.height = `${window.innerHeight + 180}px`
+      return window.innerHeight
+    })
+
+    const dock = page.getByTestId('mobile-theater-dock')
+    const scrim = page.getByTestId('mobile-bottom-scrim')
+    const actions = page.getByTestId('mobile-control-actions')
+    const zone = page.getByTestId('mobile-swipe-zone')
+    const capsule = zone.locator('[data-theater-swipe-control]')
+    await expect(scrim).toHaveCSS('position', 'fixed')
+    await expect(zone).toHaveCSS('position', 'fixed')
+
+    const [dockBox, scrimBox, capsuleBox] = await Promise.all([
+      dock.boundingBox(),
+      scrim.boundingBox(),
+      capsule.boundingBox(),
+    ])
+    const visibleActionBottom = await actions.locator(':scope > *').evaluateAll((railActions) =>
+      railActions.reduce((bottom, action) => {
+        const style = getComputedStyle(action)
+        if (style.display === 'none' || style.visibility === 'hidden') return bottom
+        return Math.max(bottom, action.getBoundingClientRect().bottom)
+      }, 0),
+    )
+    expect(dockBox).not.toBeNull()
+    expect(scrimBox).not.toBeNull()
+    expect(capsuleBox).not.toBeNull()
+    expect(visibleActionBottom).toBeGreaterThan(0)
+    expect(
+      Math.abs((scrimBox?.y ?? 0) + (scrimBox?.height ?? 0) - viewportHeight),
+    ).toBeLessThanOrEqual(1)
+    expect((capsuleBox?.y ?? 0) + (capsuleBox?.height ?? 0)).toBeLessThanOrEqual(dockBox?.y ?? 0)
+    const actionToCapsuleGap = (capsuleBox?.y ?? 0) - visibleActionBottom
+    expect(actionToCapsuleGap).toBeGreaterThanOrEqual(0)
+    expect(actionToCapsuleGap).toBeLessThanOrEqual(12)
+  })
 
   authedTest(
     'short landscape keeps four vertical actions clear and Q preserves focus',

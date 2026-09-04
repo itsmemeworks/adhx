@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Mobile bottom chrome shares one visual viewport
+
+Returning from Settings exposed a split coordinate system: the oversized media paint layer owned
+the absolute caption and previous/next zone, while the action rail and playlist dock were viewport-
+fixed. Dynamic browser chrome could therefore push text behind the dock and separate the capsule
+from its action rail. Caption/scrim and the bounded swipe zone now use the visual viewport too.
+Live keeps the retired Save slot in its real order, so Share stays beside the capsule without any
+action jumping; the former container min-height no longer leaves a blank slot under Share.
+The hostile-height browser regression checks their fixed positioning, dock clearance, and joined
+rail-to-capsule spacing. Current state: complete locally.
+
 ## 2026-09-04 — Sound hotkey follows media; mobile Live rail stays anchored
 
 Browser fallback can leave the saved sound choice on while the live element is muted; `M` used to
