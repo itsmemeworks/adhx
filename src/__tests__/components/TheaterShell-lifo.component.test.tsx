@@ -208,6 +208,20 @@ describe('TheaterShell LIFO queue', () => {
     expect(new Set(seen.slice(0, 4)).size).toBe(4)
   })
 
+  it('repeat-all inserts a poll arrival after Now playing and keeps traversal order', async () => {
+    window.localStorage.setItem('adhx-theater-repeat', 'all')
+    await act(async () => {
+      render(<TheaterShell seed={seed([textItem('1', 1), textItem('2', 2), textItem('3', 3)])} />)
+    })
+
+    await act(async () => pushArrival?.(textItem('fresh', 0)))
+    expect(chromeProps().items.map((item) => item.bookmarkId)).toEqual(['1', 'fresh', '2', '3'])
+
+    await act(async () => chromeProps().onNext?.())
+    expect(chromeProps().currentKey).toBe('twitter:fresh')
+    expect(chromeProps().items.map((item) => item.bookmarkId)).toEqual(['fresh', '2', '3', '1'])
+  })
+
   it('repeat-all counts the whole playlist; repeat-one is 1', async () => {
     await act(async () => {
       render(<TheaterShell seed={seed([textItem('1', 1), textItem('2', 2), textItem('3', 3)])} />)

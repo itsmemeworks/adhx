@@ -33,7 +33,12 @@
 
 import { useEffect, useRef } from 'react'
 import { isQuoteReader, type TheaterItem } from './types'
-import { dispatchTheaterSeek, THEATER_SEEK, type TheaterSeekDetail } from './useTheaterStageEvents'
+import {
+  dispatchTheaterSeek,
+  dispatchTheaterUserPlaybackState,
+  THEATER_SEEK,
+  type TheaterSeekDetail,
+} from './useTheaterStageEvents'
 import { cn } from '@/lib/utils'
 
 export type ProgressKind = 'video' | 'timed' | 'none'
@@ -231,9 +236,11 @@ export function TheaterProgressLine({
     // the dock and peek-bar icons stay in sync.
     const handleTogglePlay = () => {
       if (paused) {
+        dispatchTheaterUserPlaybackState(false)
         handleResume()
         window.dispatchEvent(new CustomEvent('theater-resume'))
       } else {
+        dispatchTheaterUserPlaybackState(true)
         handlePause()
         window.dispatchEvent(new CustomEvent('theater-pause'))
       }

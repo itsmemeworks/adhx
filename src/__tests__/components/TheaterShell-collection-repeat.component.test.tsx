@@ -205,6 +205,51 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     expect(screen.getByText('All caught up')).toBeInTheDocument()
   })
 
+  it('keeps Now playing first and wraps Previous from the Saved head', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+
+    expect(chromeProps().canPrev).toBe(true)
+    await act(async () => (chromeProps().onPrev as () => void)())
+
+    expect(chromeProps().currentKey).toBe('twitter:3')
+    expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+      '3',
+      '1',
+      '2',
+    ])
+  })
+
+  it('promotes Saved Play once to repeat-all when Previous wraps', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await cycleRepeat() // all -> one
+    await cycleRepeat() // one -> off
+
+    await act(async () => (chromeProps().onPrev as () => void)())
+
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect(chromeProps().repeatMode).toBe('all')
+  })
+
   it('does not share its repeat preference with Live', async () => {
     await act(async () => {
       render(

@@ -77,6 +77,7 @@ import { logStage, logStageVerbose } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
 import {
   dispatchTheaterStageTap,
+  dispatchTheaterUserPlaybackState,
   THEATER_SEEK,
   type TheaterSeekDetail,
 } from './useTheaterStageEvents'
@@ -1239,6 +1240,7 @@ export function StageYouTube({
     function handleToggle() {
       if (!readyRef.current || coveredRef.current) return
       shouldPlayRef.current = !playing
+      dispatchTheaterUserPlaybackState(playing)
       postCommand(playing ? 'pauseVideo' : 'playVideo')
     }
     window.addEventListener('theater-toggle-play', handleToggle)

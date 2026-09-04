@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Theater queues rotate around Now playing
+
+Live, Saved, shared, and curated queues now render and traverse one current-first circular order:
+the departed post moves to the tail, and cross-tab/poll arrivals become Next without stealing the
+stage. Saved inserts remote rows after its real cursor so the list and transport cannot disagree.
+Previous is available whenever another row exists and wraps into Repeat all at the queue head.
+Explicit pause intent now wins late dwell/video-ended races on pointer and keyboard controls.
+Current state: complete; queue, arrival, repeat, Saved, playlist, and pause regressions added.
+
 ## 2026-09-04 — Paste resolving now suspends the staged post
 
 Personal paste pauses the covered MP4 or YouTube player and blocks every timed/video advance until

@@ -34,6 +34,7 @@ import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import {
   dispatchTheaterStageTap,
+  dispatchTheaterUserPlaybackState,
   THEATER_SEEK,
   type TheaterSeekDetail,
 } from './useTheaterStageEvents'
@@ -428,14 +429,17 @@ export function StageVideo({
       // overlay): the transport's play means "watch it again" — there's no
       // end-overlay replay button anymore.
       if (ended) {
+        dispatchTheaterUserPlaybackState(false)
         handleReplay()
         return
       }
       if (needsGesture) {
+        dispatchTheaterUserPlaybackState(false)
         handleStartTap()
         return
       }
       if (video.paused) {
+        dispatchTheaterUserPlaybackState(false)
         const { generation, src: operationSrc } = captureSource()
         video.play().then(
           () => {
@@ -449,6 +453,7 @@ export function StageVideo({
           },
         )
       } else {
+        dispatchTheaterUserPlaybackState(true)
         // A deliberate pause — disarm the catch-up watch first so the
         // `onPause` this triggers is never misread as the platform vetoing
         // the automatic unmute.

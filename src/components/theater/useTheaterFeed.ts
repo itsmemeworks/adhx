@@ -187,8 +187,15 @@ export function useTheaterFeed(
         const data: ActivityResponse = await res.json()
         if (cancelled || !Array.isArray(data.items)) return
 
-        const { items: merged, freshKeys: newFresh } = mergeFeedItems(itemsRef.current, data.items)
-        if (merged !== itemsRef.current) setItems(merged)
+        const currentItems = itemsRef.current
+        const { items: merged, freshKeys: newFresh } = mergeFeedItems(currentItems, data.items)
+        if (merged !== currentItems) {
+          // Publish to the ref before React commits. A cross-tab prepend that
+          // lands while this poll is in flight must be part of the next merge,
+          // never overwritten by a stale poll snapshot.
+          itemsRef.current = merged
+          setItems(merged)
+        }
         if (newFresh.length) {
           setFreshKeys((prev) => {
             const next = new Set(prev)
@@ -217,17 +224,19 @@ export function useTheaterFeed(
 
   const prependItem = useCallback((item: TheaterItem) => {
     const key = theaterItemKey(item)
-    setItems((prev) => {
-      if (prev.some((existing) => theaterItemKey(existing) === key)) {
-        return [item, ...prev.filter((existing) => theaterItemKey(existing) !== key)]
-      }
-      return [item, ...prev]
-    })
+    const currentItems = itemsRef.current
+    const next = currentItems.some((existing) => theaterItemKey(existing) === key)
+      ? [item, ...currentItems.filter((existing) => theaterItemKey(existing) !== key)]
+      : [item, ...currentItems]
+    itemsRef.current = next
+    setItems(next)
     setFreshKeys((prev) => new Set(prev).add(key))
   }, [])
 
   const replaceItem = useCallback((item: TheaterItem) => {
-    setItems((prev) => replaceFeedItem(prev, item))
+    const next = replaceFeedItem(itemsRef.current, item)
+    itemsRef.current = next
+    setItems(next)
   }, [])
 
   return { items, savedToday, recentActivity, freshKeys, prependItem, replaceItem }

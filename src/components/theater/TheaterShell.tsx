@@ -29,7 +29,7 @@ import { useTheaterKeyboard } from './useTheaterKeyboard'
 import { TheaterShortcutsHelp } from './TheaterShortcutsHelp'
 import { useTheaterPrefetch } from './useTheaterPrefetch'
 import { useTheaterDwell } from './useTheaterDwell'
-import { useTheaterStageTapDeclutter } from './useTheaterStageEvents'
+import { THEATER_USER_PLAYBACK_STATE, useTheaterStageTapDeclutter } from './useTheaterStageEvents'
 import { TheaterProgressLine, progressKindFor, progressKindForPin } from './TheaterProgressLine'
 import { feedItemToTheaterItem } from './collection-item'
 import {
@@ -67,6 +67,8 @@ import {
   queueTypesForAddedItem,
   theaterQueueEmptyHeadline,
   orderLifoQueue,
+  rotateKeyFirst,
+  insertKeysAfter,
   sortNewestFirst,
   sortFeedNewestFirst,
   firstPendingLiveKey,
@@ -114,6 +116,8 @@ export {
   personalAdvanceOnEndedIndex,
   personalStepBackIndex,
   pinKeyFirst,
+  rotateKeyFirst,
+  insertKeysAfter,
   applyTheaterTypeLens,
   personalAdvanceMatching,
   personalAdvanceOnEndedMatching,
@@ -351,6 +355,8 @@ export function TheaterShell({
   const feedPrepend = feed.prependItem
   const seenSet = useSeenSet()
   const { items } = feed
+  const liveItemsRef = useRef(items)
+  liveItemsRef.current = items
 
   const [resolvedUnavailable, setResolvedUnavailable] = useState(false)
   const [sharedResolved, setSharedResolved] = useState(() => !sharedResolve)
@@ -430,6 +436,9 @@ export function TheaterShell({
   const personalSavedKeysRef = useRef(personalSavedKeys)
   const [pasteResolvingItem, setPasteResolvingItem] = useState<TheaterItem | null>(null)
   const [pasteLookupRetry, setPasteLookupRetry] = useState<PasteLookupRetry | null>(null)
+  const [liveTraversalKeys, setLiveTraversalKeys] = useState<string[] | null>(null)
+  const liveTraversalKeysRef = useRef(liveTraversalKeys)
+  liveTraversalKeysRef.current = liveTraversalKeys
   const pasteRequestRef = useRef(0)
   const pasteResolvingRef = useRef(false)
   const shellMountedRef = useRef(true)
@@ -531,6 +540,7 @@ export function TheaterShell({
   // defer — the read/no-op already happened synchronously.
   const undoDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shellRef = useRef<HTMLDivElement>(null)
+  const userPausedRef = useRef(false)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
   const personalTotal = personalQueue.length
@@ -695,12 +705,25 @@ export function TheaterShell({
       const oldLength = personalQueueRef.current.length
       const wasEmpty = oldLength === 0
       const wasFinished = personalIndexRef.current >= oldLength
-      personalQueueRef.current = [item, ...personalQueueRef.current]
+      const insertAfterCurrent =
+        personalTabRef.current === 'collection' && !wasEmpty && !wasFinished
+      if (insertAfterCurrent) {
+        const at = Math.min(personalIndexRef.current + 1, oldLength)
+        personalQueueRef.current = [
+          ...personalQueueRef.current.slice(0, at),
+          item,
+          ...personalQueueRef.current.slice(at),
+        ]
+      } else {
+        personalQueueRef.current = [item, ...personalQueueRef.current]
+      }
       setPersonalQueue(personalQueueRef.current)
       markFreshSaved(theaterItemKey(feedItemToTheaterItem(item)))
       // Stay on the playing post. All Clear (or an empty queue) jumps to
-      // the new head — +1 past the end would keep CollectionAllClear up.
-      setPersonalIndex((i) => (wasEmpty || wasFinished ? 0 : i + 1))
+      // the new head. While Saved is open, insertion after the cursor makes
+      // the arrival both visually and behaviorally Next. Live still prepends
+      // its Saved snapshot and shifts the cursor to preserve its item.
+      setPersonalIndex((i) => (wasEmpty || wasFinished ? 0 : insertAfterCurrent ? i : i + 1))
       return true
     },
     [markFreshSaved],
@@ -724,6 +747,15 @@ export function TheaterShell({
       }
       const added = detail?.added
       if (!added || typeof added.id !== 'string') return
+      const addedKey = theaterItemKey(feedItemToTheaterItem(added))
+      const playingKey = liveNowKeyRef.current
+      if (personalTabRef.current !== 'collection' && playingKey && playingKey !== addedKey) {
+        const existing =
+          liveTraversalKeysRef.current ?? sortNewestFirst(liveItemsRef.current).map(theaterItemKey)
+        const nextTraversal = insertKeysAfter(existing, playingKey, [addedKey])
+        liveTraversalKeysRef.current = nextTraversal
+        setLiveTraversalKeys(nextTraversal)
+      }
       // A remote save is authoritative even when this key was previously
       // looked up as not-owned. Patch both membership surfaces immediately;
       // do not wait for the once-per-mount lookup to become eligible again.
@@ -795,6 +827,7 @@ export function TheaterShell({
   // Transport / keyboard next on the collection tab (same as Live arrows).
   const skipCurrent = useCallback(() => {
     if (!personalCurrentFeedItem) return
+    userPausedRef.current = false
     savedWatchLeaveRef.current = true
     setPersonalIndex((i) =>
       personalSkipMatching(
@@ -845,11 +878,25 @@ export function TheaterShell({
   }, [personalUndo, onPostRestored, clearPersonalUndoTimer, clearUndoDismissTimer])
 
   // ArrowUp "Back": pure navigation only — never touches read/delete state,
-  // unlike `U` (which reverses the last action).
+  // unlike `U` (which reverses the last action). At the head, Previous wraps
+  // to the last matching row and promotes Saved to Repeat all; a loaded queue
+  // must never present a dead Previous control.
   const personalStepBack = useCallback(() => {
+    userPausedRef.current = false
     savedWatchLeaveRef.current = true
-    setPersonalIndex((i) => personalStepBackMatching(i, allowPersonalIndex))
-  }, [allowPersonalIndex])
+    const currentIndex = personalIndexRef.current
+    const previous = personalStepBackMatching(currentIndex, allowPersonalIndex)
+    if (previous !== currentIndex) {
+      setPersonalIndex(previous)
+      return
+    }
+    for (let i = personalQueueRef.current.length - 1; i >= 0; i--) {
+      if (i === currentIndex || !allowPersonalIndex(i)) continue
+      setSavedRepeatMode('all')
+      setPersonalIndex(i)
+      return
+    }
+  }, [allowPersonalIndex, setSavedRepeatMode])
 
   // A video ended, or a photo/text/article's 10s dwell finished, in My
   // Collection. Pure navigation — same as skip/next — not Archive.
@@ -1256,6 +1303,19 @@ export function TheaterShell({
     sharedItem ? theaterItemKey(sharedItem) : null,
   )
   liveNowKeyRef.current = currentKey
+  const activePlayingKey = isCollectionTab ? personalCurrentKey : currentKey
+  useEffect(() => {
+    if (isCollectionTab || !currentKey || feed.freshKeys.size === 0) return
+    const newestKeys = sortNewestFirst(liveItemsRef.current).map(theaterItemKey)
+    const base =
+      liveTraversalKeysRef.current ?? newestKeys.filter((key) => !feed.freshKeys.has(key))
+    const known = new Set(base)
+    const fresh = newestKeys.filter((key) => feed.freshKeys.has(key) && !known.has(key))
+    if (fresh.length === 0) return
+    const nextTraversal = insertKeysAfter(base, currentKey, fresh)
+    liveTraversalKeysRef.current = nextTraversal
+    setLiveTraversalKeys(nextTraversal)
+  }, [currentKey, feed.freshKeys, isCollectionTab, items])
   useEffect(() => {
     if (!livePasteKey) return
     setCurrentKey(livePasteKey)
@@ -1327,11 +1387,12 @@ export function TheaterShell({
   const liveOrdering = !loop
   const isSeenNow = useCallback((key: string) => seenSet.isSeen(key), [seenSet.isSeen])
   const onlyUnseen = liveOrdering && seenSet.ready && effectiveRepeatMode === 'off'
-  // Pin now-playing on Repeat off even before seen hydrates. A newer
-  // arrival must sit as Next. Repeat all walks newest-first and wraps —
-  // pinning there keeps current at index 0, so Next is always the newest
-  // other post (a two-item loop).
+  // Repeat off pins Now playing ahead of fresh arrivals so a remote add is
+  // Next, never a stage steal. Repeating queues rotate around Now playing:
+  // traversal order is preserved and the row just left moves to the tail.
   const pinLiveCurrent = liveOrdering && effectiveRepeatMode === 'off' && !waiting
+  const rotateLiveCurrent =
+    liveOrdering && effectiveRepeatMode !== 'off' && !waiting && !!currentKey
   // The opened preview is a landing guarantee, not a permanent queue member.
   // Once it has been left, remove it from this session's playable list so
   // Prev, repeat-all wrap, queue counts, and an unavailable tombstone cannot
@@ -1348,50 +1409,69 @@ export function TheaterShell({
       applyTheaterTypeLens(playableItems, typeFilterActive ? queueTypes : [], sharedPlayableKey),
     [playableItems, typeFilterActive, queueTypes, sharedPlayableKey],
   )
+  const traversalLensItems = useMemo(() => {
+    const newest = sortNewestFirst(lensItems)
+    if (!liveTraversalKeys) return newest
+    const byKey = new Map(newest.map((item) => [theaterItemKey(item), item]))
+    const ordered = liveTraversalKeys.flatMap((key) => {
+      const item = byKey.get(key)
+      if (!item) return []
+      byKey.delete(key)
+      return [item]
+    })
+    return [...ordered, ...byKey.values()]
+  }, [lensItems, liveTraversalKeys])
   const displayItems = useMemo(
     () =>
       liveOrdering
-        ? orderLifoQueue(lensItems, {
+        ? orderLifoQueue(traversalLensItems, {
             currentKey,
             onlyUnseen,
             isSeen: isSeenNow,
             keepKey: sharedPlayableKey,
             pinCurrent: pinLiveCurrent,
+            rotateCurrent: rotateLiveCurrent,
             pinNextKey: pasteInterruptKey,
+            preserveOrder: true,
           })
-        : lensItems,
+        : rotateKeyFirst(lensItems, currentKey),
     [
       liveOrdering,
       lensItems,
+      traversalLensItems,
       currentKey,
       onlyUnseen,
       isSeenNow,
       sharedPlayableKey,
       pinLiveCurrent,
+      rotateLiveCurrent,
       pasteInterruptKey,
     ],
   )
   const queueItems = useMemo(
     () =>
       liveOrdering && onlyUnseen
-        ? orderLifoQueue(lensItems, {
+        ? orderLifoQueue(traversalLensItems, {
             currentKey,
             onlyUnseen,
             isSeen: isSeenNow,
             keepKey: sharedPlayableKey,
             pinCurrent: pinLiveCurrent,
+            rotateCurrent: rotateLiveCurrent,
             pinNextKey: pasteInterruptKey,
+            preserveOrder: true,
             appendSeen: true,
           })
         : displayItems,
     [
       liveOrdering,
       onlyUnseen,
-      lensItems,
+      traversalLensItems,
       currentKey,
       isSeenNow,
       sharedPlayableKey,
       pinLiveCurrent,
+      rotateLiveCurrent,
       pasteInterruptKey,
       displayItems,
     ],
@@ -1674,11 +1754,16 @@ export function TheaterShell({
     backHistoryRef.current.some(
       (key) => key !== currentKey && lensItems.some((item) => theaterItemKey(item) === key),
     )
-  const canPrev = isSharedPinnedOnCurrent
+  const hasCircularPrevious =
+    !!currentKey && queueItems.some((item) => theaterItemKey(item) !== currentKey)
+  const canPrev = isSharedUnavailableOnCurrent
     ? false
-    : wrapNav
-      ? currentIndex !== -1
-      : hasRewatchHistory || computeCanPrev(currentIndex, waiting)
+    : waiting ||
+      (currentIndex !== -1 &&
+        (wrapNav ||
+          hasRewatchHistory ||
+          hasCircularPrevious ||
+          computeCanPrev(currentIndex, waiting)))
   const canNext = wrapNav ? currentIndex !== -1 : computeCanNext(currentIndex, waiting)
 
   // Read fresh inside the `theater-advance` listener below without
@@ -1688,6 +1773,37 @@ export function TheaterShell({
   // Same trick for the unseen boundary — goNext is an empty-deps callback.
   const currentKeyRef = useRef(currentKey)
   currentKeyRef.current = currentKey
+  // A deliberate transport pause wins races with a late timed/video-ended
+  // event. Without this synchronous guard, slow CI and real devices could
+  // enter waiting just before a remote add, making that add steal the stage.
+  useEffect(() => {
+    const handleUserPlaybackState = (event: Event) => {
+      const paused = (event as CustomEvent<{ paused?: boolean }>).detail?.paused
+      if (typeof paused !== 'boolean') return
+      userPausedRef.current = paused
+      if (
+        paused &&
+        waitingRef.current &&
+        currentKeyRef.current &&
+        queueItemsRef.current.some((item) => theaterItemKey(item) === currentKeyRef.current)
+      ) {
+        waitingRef.current = false
+        setWaiting(false)
+      }
+    }
+    const handleResume = () => {
+      userPausedRef.current = false
+    }
+    window.addEventListener(THEATER_USER_PLAYBACK_STATE, handleUserPlaybackState)
+    window.addEventListener('theater-resume', handleResume)
+    return () => {
+      window.removeEventListener(THEATER_USER_PLAYBACK_STATE, handleUserPlaybackState)
+      window.removeEventListener('theater-resume', handleResume)
+    }
+  }, [])
+  useEffect(() => {
+    userPausedRef.current = false
+  }, [activePlayingKey])
   const releaseSharedLeadIfLeaving = useCallback(
     (from: string | null, to: string | null) => {
       if (from && from === sharedItemKey && to && to !== from) releaseSharedLead()
@@ -1742,6 +1858,7 @@ export function TheaterShell({
         currentKeyRef.current &&
         itemsRef.current.some((item) => theaterItemKey(item) === currentKeyRef.current)
       ) {
+        waitingRef.current = false
         setWaiting(false)
       }
       return
@@ -1794,6 +1911,7 @@ export function TheaterShell({
   // `onEnded`, the 'timed' `theater-advance` listener, the waiting-stage
   // auto-arrival effect) calls them directly and must NEVER clear the pin.
   const goNextUser = useCallback(() => {
+    userPausedRef.current = false
     const leaving = currentKeyRef.current
     rememberCurrentForBack(leaving)
     if (leaving) {
@@ -1822,14 +1940,36 @@ export function TheaterShell({
   ])
 
   const goPrevUser = useCallback(() => {
-    if (sharedPinActiveRef.current) return
+    userPausedRef.current = false
     parkedUnplayedKeyRef.current = null
-    clearSharedPin()
+    const leaving = currentKeyRef.current
+    const wasWaiting = waitingRef.current
     goPrev()
-  }, [clearSharedPin, goPrev])
+    if (wasWaiting || currentKeyRef.current !== leaving || isSharedUnavailableOnCurrent) return
+
+    const previous = queueItemsRef.current
+      .slice()
+      .reverse()
+      .find((item) => theaterItemKey(item) !== leaving)
+    if (!previous) return
+
+    if (!promoteSharedPinToRepeatAll()) {
+      clearSharedPin()
+      setRepeatMode('all')
+    }
+    onSelect(theaterItemKey(previous))
+  }, [
+    clearSharedPin,
+    goPrev,
+    isSharedUnavailableOnCurrent,
+    onSelect,
+    promoteSharedPinToRepeatAll,
+    setRepeatMode,
+  ])
 
   const onSelectUser = useCallback(
     (key: string) => {
+      userPausedRef.current = false
       parkedUnplayedKeyRef.current = null
       if (key !== currentKeyRef.current && !promoteSharedPinToRepeatAll()) clearSharedPin()
       onSelect(key)
@@ -2024,6 +2164,7 @@ export function TheaterShell({
     function handleAdvance() {
       if (showSignInRef.current) return
       if (pasteResolvingRef.current) return
+      if (userPausedRef.current) return
       // shared-post-repeat / repeat 'one': belt-and-suspenders —
       // TheaterProgressLine's 'timed' kind is already suppressed to 'none'
       // while repeating (so this event is never actually dispatched for a
@@ -2073,6 +2214,7 @@ export function TheaterShell({
   useEffect(() => {
     if (!waiting) return
     if (isCollectionTab) return
+    if (userPausedRef.current) return
     const arrived = findFreshArrival(
       feed.freshKeys,
       waitingBaselineFreshKeysRef.current,
@@ -2424,14 +2566,18 @@ export function TheaterShell({
       onlyUnseen: effectiveRepeatMode === 'off',
       isSeen: personalIsSeen,
       pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
+      rotateCurrent: effectiveRepeatMode !== 'off' && !personalFinished && !!personalCurrentKey,
       pinNextKey: pasteInterruptKey,
+      preserveOrder: true,
     }),
     personalQueueItems: orderLifoQueue(personalLensItems, {
       currentKey: personalCurrentKey,
       onlyUnseen: effectiveRepeatMode === 'off',
       isSeen: personalIsSeen,
       pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
+      rotateCurrent: effectiveRepeatMode !== 'off' && !personalFinished && !!personalCurrentKey,
       pinNextKey: pasteInterruptKey,
+      preserveOrder: true,
       appendSeen: effectiveRepeatMode === 'off',
     }),
     displayItems,
@@ -2446,6 +2592,7 @@ export function TheaterShell({
     unseenCount,
     effectiveRepeatMode: displayRepeatMode,
     personalIndex: personalLensIndex >= 0 ? personalLensIndex : 0,
+    personalCanPrev: personalFinished ? personalLensItems.length > 0 : personalLensItems.length > 1,
     canPrev,
     canNext,
   })
@@ -2477,6 +2624,7 @@ export function TheaterShell({
   const chromeOnNext = isCollectionTab ? skipCurrent : goNextUser
   const chromeOnSelect = isCollectionTab
     ? (key: string) => {
+        userPausedRef.current = false
         const idx = personalQueue.findIndex(
           (fi) => theaterItemKey(feedItemToTheaterItem(fi)) === key,
         )
@@ -2562,6 +2710,7 @@ export function TheaterShell({
                 onEnded={() => {
                   if (showSignInRef.current) return
                   if (pasteResolvingRef.current) return
+                  if (userPausedRef.current) return
                   if (repeatCurrentActiveRef.current) return
                   if (isCollectionTab) {
                     personalAdvanceOnEnded()

@@ -53,8 +53,8 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help).toHaveCount(0)
 
     await first.click()
-    // Repeat off is remaining unseen (`N in queue`). Next shrinks that
-    // number; Previous stays disabled until the viewer has left the newest.
+    // Repeat off is remaining unseen (`N in queue`). Previous is always
+    // available when another row exists and wraps into Repeat all at the head.
     await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
   })
 
