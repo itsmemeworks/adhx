@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — iOS Theater keeps top controls visible
+
+Mobile WebKit now fixes only the Theater's top chrome to the visual viewport while the stage and
+bottom surfaces retain the absolute `100lvh` paint area that removed the toolbar gap. Paste,
+account-menu, playlist, and cold-loading headers therefore stay reachable after browser chrome
+collapse without making Queue or transport jump. Desktop and Android behavior is unchanged.
+Current state: complete; focused viewport and mobile chrome regressions pass. Real-device check remains.
+
 ## 2026-09-04 — Now playing is a queue-rendering invariant
 
 Desktop filmstrip/Queue and the mobile sheet now normalize every list around the staged post, so

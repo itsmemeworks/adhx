@@ -126,6 +126,17 @@ function openShareOptions() {
   return screen.getByRole('menu', { name: 'Share options' })
 }
 
+describe('TheaterMobileChrome: iOS viewport anchoring', () => {
+  it('keeps Paste and the account menu inside the visual-viewport chrome layer', () => {
+    const { container } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
+
+    expect(container.firstElementChild).toHaveClass('absolute')
+    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    expect(paste.closest('.theater-mobile-top-chrome')).not.toBeNull()
+    expect(mockTheaterAvatarMenu).toHaveBeenCalled()
+  })
+})
+
 // Mobile actions use a frosted vertical rail. Save remains distinguishable
 // through its clay icon while transport stays grouped in the bottom bar.
 describe('TheaterMobileChrome: caption', () => {

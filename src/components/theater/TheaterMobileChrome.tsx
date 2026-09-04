@@ -510,7 +510,7 @@ export function TheaterMobileChrome({
       {collection ? (
         <div
           className={cn(
-            'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
@@ -540,7 +540,7 @@ export function TheaterMobileChrome({
       ) : playlist ? (
         <div
           className={cn(
-            'pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
@@ -567,7 +567,7 @@ export function TheaterMobileChrome({
       ) : (
         <div
           className={cn(
-            'pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}

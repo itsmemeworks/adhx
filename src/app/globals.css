@@ -100,7 +100,9 @@
  * Theater then shows the page background. Keep the normal fixed shell on
  * desktop and Android; mobile WebKit gets an absolute shell sized to the
  * stable large viewport so its stage and bottom chrome keep painting through
- * the browser's translucent toolbar area. `100vh` is the older-iOS fallback.
+ * the browser's translucent toolbar area. Its interactive chrome stays fixed
+ * to the visual viewport so browser scroll/collapse cannot move Paste or the
+ * menu above the screen. `100vh` is the older-iOS fallback.
  */
 @media (max-width: 1023px) {
   @supports (-webkit-touch-callout: none) {
@@ -109,6 +111,10 @@
       bottom: auto;
       height: 100vh;
       height: 100lvh;
+    }
+
+    .theater-mobile-top-chrome {
+      position: fixed;
     }
   }
 }
