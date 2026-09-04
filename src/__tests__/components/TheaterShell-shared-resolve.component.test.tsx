@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  *
  * Shared-preview pages pass a URL stub + a resolve Promise so ADHX chrome
- * paints before FxTwitter. Tweets hide the stage until that Promise settles;
- * Reels/TikTok/Shorts are already video and play immediately.
+ * paints before upstream metadata. Every platform keeps the same resolving
+ * container on stage until that Promise settles.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { render, act, screen, waitFor } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
@@ -31,17 +31,18 @@ vi.mock('@/components/auth', () => ({
 vi.mock('@/components/theater/useTheaterFeed', () => ({
   useTheaterFeed: (seed: TheaterFeedSeed) => {
     const [items, setItems] = useState(seed.items)
+    const replaceItem = useCallback((item: TheaterItem) => {
+      setItems((prev) =>
+        prev.map((existing) => (existing.bookmarkId === item.bookmarkId ? item : existing)),
+      )
+    }, [])
     return {
       items,
       savedToday: 0,
       recentActivity: 0,
       freshKeys: new Set<string>(),
       prependItem: () => undefined,
-      replaceItem: (item: TheaterItem) => {
-        setItems((prev) =>
-          prev.map((existing) => (existing.bookmarkId === item.bookmarkId ? item : existing)),
-        )
-      },
+      replaceItem,
     }
   },
 }))
@@ -99,7 +100,7 @@ describe('TheaterShell sharedResolve', () => {
     expect(screen.queryByTestId('stage')).not.toBeInTheDocument()
   })
 
-  it('does not block a Reel/TikTok/Short stub — those are already video', async () => {
+  it('shows the same resolving stage for a Reel before metadata settles', async () => {
     const item = reelStub()
     await act(async () => {
       render(
@@ -111,8 +112,39 @@ describe('TheaterShell sharedResolve', () => {
         />,
       )
     })
+    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+    expect(screen.queryByTestId('stage')).not.toBeInTheDocument()
+  })
+
+  it('replaces the resolving stub in place when metadata succeeds', async () => {
+    const item = tweetStub()
+    let settle!: (result: SharedResolveResult) => void
+    const sharedResolve = new Promise<SharedResolveResult>((resolve) => {
+      settle = resolve
+    })
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([item])}
+          mode="shared"
+          sharedItem={item}
+          sharedResolve={sharedResolve}
+        />,
+      )
+    })
+    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+
+    await act(async () => {
+      settle({
+        ok: true,
+        item: { ...item, text: 'Resolved post' },
+        seoEligible: false,
+        related: null,
+      })
+    })
+
+    await waitFor(() => expect(screen.queryByTestId('stage-resolving')).not.toBeInTheDocument())
     expect(screen.getByTestId('stage')).toBeInTheDocument()
-    expect(screen.queryByTestId('stage-resolving')).not.toBeInTheDocument()
   })
 
   it('swaps in StageUnavailable when the tweet resolve misses', async () => {

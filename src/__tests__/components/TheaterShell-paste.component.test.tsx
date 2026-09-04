@@ -93,11 +93,13 @@ function chromeProps() {
   const call = mockMobileChrome.mock.calls.at(-1)
   if (!call) throw new Error('chrome never rendered')
   return call[0] as {
+    current?: TheaterItem | null
     currentKey?: string | null
     items?: { bookmarkId?: string; id?: string }[]
     queueTypes?: unknown
     onCycleRepeat?: () => void
     onNext?: () => void
+    onPastePost?: (url: string) => boolean | Promise<boolean>
   }
 }
 
@@ -161,6 +163,106 @@ describe('TheaterShell: personal paste adds in place', () => {
     })
     expect(assignSpy).not.toHaveBeenCalled()
     await waitFor(() => expect(chromeProps().currentKey).toBe('twitter:99'))
+  })
+
+  it('stages resolving feedback immediately on desktop and mobile, then installs the saved row', async () => {
+    let finishAdd!: (value: {
+      ok: boolean
+      json: () => Promise<{ platform: string; bookmark: { id: string } }>
+    }) => void
+    const addResponse = new Promise<{
+      ok: boolean
+      json: () => Promise<{ platform: string; bookmark: { id: string } }>
+    }>((resolve) => {
+      finishAdd = resolve
+    })
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/bookmarks/add')) return addResponse
+      if (url.includes('/api/feed')) {
+        return { ok: true, json: async () => ({ items: [feedItem('99')] }) }
+      }
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+
+    let result!: Promise<boolean>
+    await act(async () => {
+      result = Promise.resolve(capturedOnPastePost!('https://x.com/alice/status/99'))
+      await Promise.resolve()
+    })
+
+    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe('twitter:99')
+    expect(chromeProps().current).toBeNull()
+    expect(chromeProps().onPastePost).toBe(capturedOnPastePost)
+
+    finishAdd({
+      ok: true,
+      json: async () => ({ platform: 'twitter', bookmark: { id: '99' } }),
+    })
+    await act(async () => {
+      await result
+    })
+
+    await waitFor(() => expect(screen.queryByTestId('stage-resolving')).not.toBeInTheDocument())
+    expect(chromeProps().currentKey).toBe('twitter:99')
+    expect(chromeProps().current?.bookmarkId).toBe('99')
+  })
+
+  it('removes a failed resolving stub and restores the untouched current post', async () => {
+    let finishAdd!: (value: { ok: boolean; json: () => Promise<{ error: string }> }) => void
+    const addResponse = new Promise<{
+      ok: boolean
+      json: () => Promise<{ error: string }>
+    }>((resolve) => {
+      finishAdd = resolve
+    })
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/api/bookmarks/add')) return addResponse
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[feedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().currentKey).toBe('twitter:1')
+
+    let result!: Promise<boolean>
+    await act(async () => {
+      result = Promise.resolve(capturedOnPastePost!('https://x.com/alice/status/99'))
+      await Promise.resolve()
+    })
+    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe('twitter:99')
+
+    finishAdd({ ok: false, json: async () => ({ error: 'upstream unavailable' }) })
+    await act(async () => {
+      expect(await result).toBe(false)
+    })
+
+    await waitFor(() => expect(screen.queryByTestId('stage-resolving')).not.toBeInTheDocument())
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect((chromeProps().items ?? []).map((item) => item.bookmarkId ?? item.id)).toEqual(['1'])
   })
 
   it('POSTs add and does not navigate away from Saved', async () => {
