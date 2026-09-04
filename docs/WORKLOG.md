@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Mobile Theater avoids the iOS fixed-viewport gap
+
+Mobile WebKit now uses an absolute, large-viewport Theater shell instead of the fixed root that
+iOS 26 clips when its browser toolbar settles. This keeps the stage and bottom control surface
+painting through the translucent toolbar area after media loads, while desktop and Android retain
+the existing fixed overlay. Current state: in flight; CSS regression coverage and full checks pass.
+Real-device iOS verification remains.
+
 ## 2026-09-03 — Mobile Theater fills iOS safe areas
 
 The root viewport now opts into `viewport-fit=cover`, so fixed Theater chrome paints through the

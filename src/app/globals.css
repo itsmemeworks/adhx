@@ -94,6 +94,25 @@
   }
 }
 
+/*
+ * iOS 26 WebKit can clip a fixed, full-viewport element to the smaller
+ * visual viewport once the browser toolbar settles. The exposed strip below
+ * Theater then shows the page background. Keep the normal fixed shell on
+ * desktop and Android; mobile WebKit gets an absolute shell sized to the
+ * stable large viewport so its stage and bottom chrome keep painting through
+ * the browser's translucent toolbar area. `100vh` is the older-iOS fallback.
+ */
+@media (max-width: 1023px) {
+  @supports (-webkit-touch-callout: none) {
+    .theater-shell-viewport {
+      position: absolute;
+      bottom: auto;
+      height: 100vh;
+      height: 100lvh;
+    }
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
