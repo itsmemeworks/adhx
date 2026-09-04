@@ -197,19 +197,44 @@ describe('DesktopDock', () => {
       .filter((b) => b.getAttribute('aria-current') !== null || b.querySelector('img, svg'))
     expect(buttons.length).toBeGreaterThan(0)
 
-    const currentCard = screen.getByText('NOW').closest('button')
+    const currentCard = screen.getByText('NOW PLAYING').closest('button')
     expect(currentCard).toHaveAttribute('aria-current', 'true')
     expect(screen.getByText('NEXT →')).toBeInTheDocument()
-    // NOW / NEXT must not grow the card: same fixed-height meta row as
+    // NOW PLAYING / NEXT must not grow the card: same fixed-height meta row as
     // cards with no status label (body line-height used to stretch them).
-    const nowRow = screen.getByText('NOW').parentElement
+    const nowRow = screen.getByText('NOW PLAYING').parentElement
     const nextRow = screen.getByText('NEXT →').parentElement
     expect(nowRow?.className).toContain('h-4')
     expect(nextRow?.className).toContain('h-4')
     expect(screen.getByText('NEXT →').className).toContain('whitespace-nowrap')
   })
 
-  it('greys watched filmstrip thumbs like the queue, and hides NOW/NEXT while caught up', () => {
+  it('renders the filmstrip from Now Playing even when current arrives in the middle', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'previous post' }),
+      videoItem({ bookmarkId: '2', text: 'playing post' }),
+      videoItem({ bookmarkId: '3', text: 'next post' }),
+    ]
+    render(
+      <DesktopDock
+        {...dockBase}
+        items={items}
+        current={items[1]}
+        currentKey={theaterItemKey(items[1])}
+      />,
+    )
+
+    const playing = screen.getByText('playing post').closest('button')!
+    const next = screen.getByText('next post').closest('button')!
+    const previous = screen.getByText('previous post').closest('button')!
+    expect(playing).toHaveAttribute('aria-current', 'true')
+    expect(playing).toHaveTextContent('NOW PLAYING')
+    expect(next).toHaveTextContent('NEXT →')
+    expect(playing.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(next.compareDocumentPosition(previous) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('greys watched filmstrip thumbs like the queue, and hides NOW PLAYING/NEXT while caught up', () => {
     const items = [
       videoItem({ bookmarkId: '1', text: 'playing-now' }),
       videoItem({ bookmarkId: '2', text: 'watched-a' }),
@@ -228,7 +253,7 @@ describe('DesktopDock', () => {
     const watched = screen.getByText('watched-a').closest('button')!
     expect(watched.className).toContain('opacity-45')
     expect(watched.querySelector('.grayscale')).toBeInTheDocument()
-    const current = screen.getByText('NOW').closest('button')!
+    const current = screen.getByText('NOW PLAYING').closest('button')!
     expect(current.className).not.toContain('opacity-45')
 
     rerender(
@@ -241,7 +266,7 @@ describe('DesktopDock', () => {
         waiting
       />,
     )
-    expect(screen.queryByText('NOW')).not.toBeInTheDocument()
+    expect(screen.queryByText('NOW PLAYING')).not.toBeInTheDocument()
     expect(screen.queryByText('NEXT →')).not.toBeInTheDocument()
     const parked = screen.getByText('watched-b').closest('button')!
     expect(parked.className).toContain('opacity-45')
@@ -261,7 +286,7 @@ describe('DesktopDock', () => {
         currentKey={theaterItemKey(items[0])}
       />,
     )
-    expect(screen.getByText('NOW')).toBeInTheDocument()
+    expect(screen.getByText('NOW PLAYING')).toBeInTheDocument()
     expect(screen.getByText('NEXT →')).toBeInTheDocument()
   })
 
@@ -886,7 +911,7 @@ describe('DesktopDock: collection Loops divider hidden under repeat "one"', () =
 // "this is on purpose" cue — one small chip in the end cap plus an accented
 // next chevron (the deliberate way past the loop).
 describe('DesktopDock: shared-post-repeat cue', () => {
-  it('the filmstrip current card shows "Repeat" instead of "NOW" while pinned', () => {
+  it('the filmstrip current card shows "Repeat" instead of "NOW PLAYING" while pinned', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
     render(
       <DesktopDock
@@ -898,10 +923,10 @@ describe('DesktopDock: shared-post-repeat cue', () => {
       />,
     )
     expect(screen.getByText('Repeat')).toBeInTheDocument()
-    expect(screen.queryByText('NOW')).not.toBeInTheDocument()
+    expect(screen.queryByText('NOW PLAYING')).not.toBeInTheDocument()
   })
 
-  it('the filmstrip current card shows "NOW" (not "Repeat") when not pinned', () => {
+  it('the filmstrip current card shows "NOW PLAYING" (not "Repeat") when not pinned', () => {
     const items = [videoItem({ bookmarkId: '1' }), videoItem({ bookmarkId: '2' })]
     render(
       <DesktopDock
@@ -911,11 +936,11 @@ describe('DesktopDock: shared-post-repeat cue', () => {
         currentKey={theaterItemKey(items[0])}
       />,
     )
-    expect(screen.getByText('NOW')).toBeInTheDocument()
+    expect(screen.getByText('NOW PLAYING')).toBeInTheDocument()
     expect(screen.queryByText('Repeat')).not.toBeInTheDocument()
   })
 
-  it('never shows both "NOW" and "Repeat" on the current card at once', () => {
+  it('never shows both "NOW PLAYING" and "Repeat" on the current card at once', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
@@ -1879,7 +1904,7 @@ describe('DesktopDock: hides the time text for an unknown addedAt (filmstrip car
         currentKey={theaterItemKey(items[0])}
       />,
     )
-    const card = screen.getByText('NOW').closest('button')!
+    const card = screen.getByText('NOW PLAYING').closest('button')!
     expect(card.querySelector('svg')).toBeInTheDocument()
     expect(card.querySelector('span.font-mono')).not.toBeInTheDocument()
   })
@@ -1894,7 +1919,7 @@ describe('DesktopDock: hides the time text for an unknown addedAt (filmstrip car
         currentKey={theaterItemKey(items[0])}
       />,
     )
-    const card = screen.getByText('NOW').closest('button')!
+    const card = screen.getByText('NOW PLAYING').closest('button')!
     expect(card.querySelector('span.font-mono')).toBeInTheDocument()
   })
 

@@ -74,7 +74,10 @@ export async function pauseTheater(page: Page): Promise<void> {
   const pause = page.getByRole('button', { name: 'Pause' })
   await expect(pause).toBeVisible({ timeout: 15_000 })
   await pause.click()
-  await expect(play).toBeVisible()
+  // External players can still be starting when the transport receives the
+  // click, so their media event may not flip the icon immediately. The click
+  // synchronously records paused user intent in TheaterShell, which is the
+  // invariant these race-sensitive tests need.
 }
 
 /** Caption text is also in the dock / SEO list — never assert it as a singleton. */

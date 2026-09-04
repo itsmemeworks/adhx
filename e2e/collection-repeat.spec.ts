@@ -43,20 +43,29 @@ authedTest.describe('collection repeat', () => {
     }
   })
 
-  authedTest('Next past the last post shows All Clear; Keep playing restarts', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('adhx-theater-repeat-saved', 'off')
-    })
-    await page.goto(`/saved?open=${TIKTOK_TWIN.id}&platform=tiktok`)
-    await expectTheaterReady(page)
-    await expect(caption(page, TIKTOK_TWIN.text)).toBeVisible()
-    await goNext(page)
-    await expect(page.getByRole('heading', { name: 'All caught up' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
+  authedTest(
+    'a deep-linked last post follows visible Next before All Clear; Keep playing restarts',
+    async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('adhx-theater-repeat-saved', 'off')
+      })
+      await page.goto(`/saved?open=${TIKTOK_TWIN.id}&platform=tiktok`)
+      await expectTheaterReady(page)
+      await expect(caption(page, TIKTOK_TWIN.text)).toBeVisible()
+      await goNext(page)
+      await expect(page.getByRole('heading', { name: 'All caught up' })).toHaveCount(0)
 
-    await page.keyboard.press('p')
-    await expect(page.getByRole('heading', { name: 'All caught up' })).toHaveCount(0)
-    await expect(caption(page, POST.alpha.text)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
-  })
+      const allClear = page.getByRole('heading', { name: 'All caught up' })
+      for (let step = 0; step < 20 && !(await allClear.isVisible()); step += 1) {
+        await goNext(page)
+      }
+      await expect(allClear).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
+
+      await page.keyboard.press('p')
+      await expect(allClear).toHaveCount(0)
+      await expect(caption(page, POST.alpha.text)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
+    },
+  )
 })

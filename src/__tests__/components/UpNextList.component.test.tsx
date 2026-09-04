@@ -75,6 +75,26 @@ describe('UpNextList Now playing / Next', () => {
     expect(screen.queryByText('This post')).not.toBeInTheDocument()
   })
 
+  it('moves a non-leading current row to the top and preserves circular order', () => {
+    render(
+      <UpNextList
+        {...base}
+        items={[post('a', 'previous'), post('b', 'playing'), post('c', 'upcoming')]}
+        currentKey="twitter:b"
+      />,
+    )
+
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-theater-queue-item]'))
+    expect(rows.map((row) => row.dataset.theaterItemKey)).toEqual([
+      'twitter:b',
+      'twitter:c',
+      'twitter:a',
+    ])
+    expect(screen.getAllByRole('separator')[0]).toHaveTextContent(QUEUE_NOW_PLAYING)
+    expect(rows[0]).toHaveAttribute('aria-current', 'true')
+    expect(rows[1]).toHaveTextContent('next ↓')
+  })
+
   it('does not invent leftover section headings', () => {
     render(<UpNextList {...base} items={[post('a'), post('b')]} />)
     expect(screen.queryByText('New since you opened')).not.toBeInTheDocument()
@@ -94,6 +114,26 @@ describe('UpNextList Now playing / Next', () => {
     )
     const headings = screen.getAllByRole('separator').map((el) => el.textContent?.trim())
     expect(headings).toEqual([QUEUE_NOW_PLAYING, QUEUE_NEXT, QUEUE_SEEN])
+  })
+
+  it('labels a selected one-item Seen queue as Now playing', () => {
+    render(
+      <UpNextList
+        {...base}
+        items={[post('a', 'playing again')]}
+        currentKey="twitter:a"
+        isSeen={() => true}
+        seenStartIndex={0}
+      />,
+    )
+
+    expect(screen.getAllByRole('separator').map((el) => el.textContent?.trim())).toEqual([
+      QUEUE_NOW_PLAYING,
+    ])
+    expect(screen.getByText('playing again').closest('button')).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
   })
 
   it('Repeat does not show Seen', () => {

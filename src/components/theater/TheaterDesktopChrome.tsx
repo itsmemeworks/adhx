@@ -22,7 +22,7 @@
  * viewport gating beyond CSS.
  */
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
 import Link from 'next/link'
@@ -81,7 +81,11 @@ import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import { isTheaterQueueFilterActive, theaterQueueFilterLabel } from './theater-math'
+import {
+  currentFirstQueue,
+  isTheaterQueueFilterActive,
+  theaterQueueFilterLabel,
+} from './theater-math'
 import type {
   RepeatMode,
   SavePlaylistStatus,
@@ -839,17 +843,25 @@ export function DesktopDock({
   }, [currentKey])
 
   const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const normalizedQueue = useMemo(
+    () => currentFirstQueue(items, waiting ? null : currentKey, seenStartIndex),
+    [currentKey, items, seenStartIndex, waiting],
+  )
+  const orderedItems = normalizedQueue.items
+  const orderedSeenStartIndex = normalizedQueue.seenStartIndex
   const queueDisplayCount = repeatCurrent
     ? '1'
-    : (queueCount?.text.match(/^\d+/)?.[0] ?? String(queueTotal ?? items.length))
-  const queueItemsBeingPlayed = repeatCurrent && current ? [current] : items
+    : (queueCount?.text.match(/^\d+/)?.[0] ?? String(queueTotal ?? orderedItems.length))
+  const queueItemsBeingPlayed = repeatCurrent && current ? [current] : orderedItems
   const unseenQueueCount = seenReady
     ? queueItemsBeingPlayed.reduce(
         (count, item) => count + (isSeen(theaterItemKey(item)) ? 0 : 1),
         0,
       )
     : null
-  const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+  const currentIndex = currentKey
+    ? orderedItems.findIndex((it) => theaterItemKey(it) === currentKey)
+    : -1
   const repeatCopy = repeatMode
     ? repeatModeLabel(repeatMode, { saved: _collection?.tab === 'collection' })
     : null
@@ -959,7 +971,7 @@ export function DesktopDock({
           className="flex h-full items-stretch gap-2.5 overflow-x-auto py-3 pr-28 [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none' }}
         >
-          {items.map((item, i) => {
+          {orderedItems.map((item, i) => {
             const key = theaterItemKey(item)
             const isCurrent = key === currentKey
             const seen = seenReady && isSeen(key)
@@ -969,7 +981,7 @@ export function DesktopDock({
               !waiting &&
               currentIndex >= 0 &&
               i === currentIndex + 1 &&
-              (seenStartIndex < 0 || i < seenStartIndex)
+              (orderedSeenStartIndex < 0 || i < orderedSeenStartIndex)
             // Queue rows grey watched thumbs; the strip must match. While the
             // caught-up overlay is up the parked "NOW" card is already watched
             // — dim it too, and do not label a sequential NEXT that will not
@@ -1057,7 +1069,7 @@ export function DesktopDock({
                       </span>
                     ) : isCurrent && !waiting ? (
                       <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
-                        NOW
+                        NOW PLAYING
                       </span>
                     ) : isNext ? (
                       <span className="whitespace-nowrap text-[9.5px] font-bold uppercase leading-none tracking-wide text-clay">
@@ -1080,7 +1092,7 @@ export function DesktopDock({
             after the last item goes — matching goNext's actual wrap target.
             Hidden while the repeat button is on 'one' — the queue isn't
             wrapping then, the current post is looping. */}
-          {playlist && items.length > 0 && repeatMode !== 'one' && (
+          {playlist && orderedItems.length > 0 && repeatMode !== 'one' && (
             <>
               <div
                 aria-hidden
@@ -1090,7 +1102,7 @@ export function DesktopDock({
                 <span className="text-[9px] font-bold uppercase tracking-wide">Loops</span>
               </div>
               {(() => {
-                const first = items[0]
+                const first = orderedItems[0]
                 const key = theaterItemKey(first)
                 const type = inferType(first)
                 const tile = TYPE_TILE[type]
@@ -1275,14 +1287,14 @@ export function DesktopDock({
                 />
               ) : null}
               <UpNextList
-                items={items}
+                items={orderedItems}
                 currentKey={waiting ? null : currentKey}
                 isSeen={isSeen}
                 seenReady={seenReady}
                 freshKeys={freshKeys}
                 onSelect={handlePanelSelect}
                 repeatCurrent={repeatCurrent}
-                seenStartIndex={seenStartIndex}
+                seenStartIndex={orderedSeenStartIndex}
                 className="min-h-0 flex-1 pb-2"
               />
             </div>

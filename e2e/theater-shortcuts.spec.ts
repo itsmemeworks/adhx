@@ -170,11 +170,14 @@ test.describe('theater shortcuts (signed out)', () => {
     const toggle = page.getByRole('button', { name: 'Queue', exact: true })
     await page.keyboard.press('q')
     await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const panel = page.locator('[data-theater-queue-panel]')
     const current = page.locator(
       '[data-theater-queue-panel] [data-theater-queue-item][aria-current="true"]',
     )
     await expect(current).toBeFocused()
     const rows = page.locator('[data-theater-queue-panel] [data-theater-queue-item]')
+    await expect(panel.getByText('Now playing', { exact: true })).toBeVisible()
+    await expect(rows.first()).toHaveAttribute('aria-current', 'true')
     if ((await rows.count()) > 1) {
       await page.keyboard.press('ArrowDown')
       await expect(current).not.toBeFocused()
@@ -187,6 +190,21 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true')
     await page.mouse.click(64, 360)
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('mobile Queue visibly starts with Now playing and the current row', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/')
+    await expectTheaterReady(page)
+
+    await page.locator('[data-theater-action="show-all"]:visible').click()
+    const sheet = page.getByTestId('mobile-sheet-content')
+    const rows = sheet.locator('[data-theater-queue-item]')
+    await expect(sheet.getByText('Now playing', { exact: true })).toBeVisible()
+    await expect(rows.first()).toHaveAttribute('aria-current', 'true')
+    if ((await rows.count()) > 1) {
+      await expect(rows.nth(1).getByText('next ↓', { exact: true })).toBeVisible()
+    }
   })
 })
 

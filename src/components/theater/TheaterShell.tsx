@@ -59,8 +59,6 @@ import {
 import {
   shouldCommitDelete,
   shouldDismissUndo,
-  personalAdvanceOnEndedMatching,
-  personalSkipMatching,
   personalStepBackMatching,
   applyTheaterTypeLens,
   feedItemMatchesQueueTypes,
@@ -68,6 +66,7 @@ import {
   theaterQueueEmptyHeadline,
   orderLifoQueue,
   rotateKeyFirst,
+  currentFirstQueue,
   insertKeysAfter,
   sortNewestFirst,
   sortFeedNewestFirst,
@@ -117,6 +116,7 @@ export {
   personalStepBackIndex,
   pinKeyFirst,
   rotateKeyFirst,
+  currentFirstQueue,
   insertKeysAfter,
   applyTheaterTypeLens,
   personalAdvanceMatching,
@@ -557,6 +557,8 @@ export function TheaterShell({
   const [playedSavedKeys, setPlayedSavedKeys] = useState<Set<string>>(() => readPlayedSavedKeys())
   const playedSavedKeysRef = useRef(playedSavedKeys)
   playedSavedKeysRef.current = playedSavedKeys
+  const personalOrderedQueueRef = useRef<TheaterItem[]>([])
+  const personalSeenStartIndexRef = useRef(-1)
   const personalCurrentKey = personalCurrentFeedItem
     ? theaterItemKey(feedItemToTheaterItem(personalCurrentFeedItem))
     : null
@@ -823,21 +825,41 @@ export function TheaterShell({
     removeFromPersonalQueue,
   ])
 
+  const selectPersonalQueueKey = useCallback((key: string) => {
+    const index = personalQueueRef.current.findIndex(
+      (item) => theaterItemKey(feedItemToTheaterItem(item)) === key,
+    )
+    if (index !== -1) setPersonalIndex(index)
+  }, [])
+
   // Skip: next post without changing read state and without a Later toast.
-  // Transport / keyboard next on the collection tab (same as Live arrows).
+  // The rendered Saved queue is current-first and circular; transport reads
+  // that same order so a deep link or queue pick cannot display one Next row
+  // and play another.
   const skipCurrent = useCallback(() => {
-    if (!personalCurrentFeedItem) return
+    const currentKey = personalCurrentRef.current
+      ? theaterItemKey(feedItemToTheaterItem(personalCurrentRef.current))
+      : null
+    if (!currentKey) return
     userPausedRef.current = false
     savedWatchLeaveRef.current = true
-    setPersonalIndex((i) =>
-      personalSkipMatching(
-        i,
-        personalQueueRef.current.length,
-        repeatModeRef.current,
-        allowPersonalIndex,
-      ),
-    )
-  }, [personalCurrentFeedItem, allowPersonalIndex])
+    const repeat = repeatModeRef.current === 'one' ? 'all' : repeatModeRef.current
+    if (repeatModeRef.current === 'one') setSavedRepeatMode('all')
+    const ordered = personalOrderedQueueRef.current
+    const currentAt = ordered.findIndex((item) => theaterItemKey(item) === currentKey)
+    const nextAt = currentAt + 1
+    const next = currentAt >= 0 ? ordered[nextAt] : null
+    const nextKey = next ? theaterItemKey(next) : null
+    const reachedSeen =
+      repeat === 'off' &&
+      personalSeenStartIndexRef.current >= 0 &&
+      nextAt >= personalSeenStartIndexRef.current
+    if (!nextKey || reachedSeen) {
+      setPersonalIndex(personalQueueRef.current.length)
+      return
+    }
+    selectPersonalQueueKey(nextKey)
+  }, [selectPersonalQueueKey, setSavedRepeatMode])
 
   const undoLastAction = useCallback(() => {
     if (!personalUndo) return
@@ -909,16 +931,8 @@ export function TheaterShell({
   personalFinishedRef.current = personalFinished
 
   const personalAdvanceOnEnded = useCallback(() => {
-    savedWatchLeaveRef.current = true
-    setPersonalIndex((i) =>
-      personalAdvanceOnEndedMatching(
-        i,
-        personalQueueLengthRef.current,
-        repeatModeRef.current,
-        allowPersonalIndex,
-      ),
-    )
-  }, [allowPersonalIndex])
+    skipCurrent()
+  }, [skipCurrent])
 
   const keepPlayingCollection = useCallback(() => {
     setSavedRepeatMode('all')
@@ -2013,6 +2027,11 @@ export function TheaterShell({
     ) {
       setPersonalIndex(0)
     }
+    if (next === 'off' && isCollectionTab) {
+      const freshRun = new Set<string>()
+      playedSavedKeysRef.current = freshRun
+      setPlayedSavedKeys(freshRun)
+    }
     setRepeatMode(next)
   }, [loop, isCollectionTab, promoteSharedPinToRepeatAll, releaseSharedLeadIfLeaving])
 
@@ -2565,8 +2584,7 @@ export function TheaterShell({
       currentKey: personalCurrentKey,
       onlyUnseen: effectiveRepeatMode === 'off',
       isSeen: personalIsSeen,
-      pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
-      rotateCurrent: effectiveRepeatMode !== 'off' && !personalFinished && !!personalCurrentKey,
+      rotateCurrent: !personalFinished && !!personalCurrentKey,
       pinNextKey: pasteInterruptKey,
       preserveOrder: true,
     }),
@@ -2574,8 +2592,7 @@ export function TheaterShell({
       currentKey: personalCurrentKey,
       onlyUnseen: effectiveRepeatMode === 'off',
       isSeen: personalIsSeen,
-      pinCurrent: effectiveRepeatMode === 'off' && !personalFinished && !!personalCurrentKey,
-      rotateCurrent: effectiveRepeatMode !== 'off' && !personalFinished && !!personalCurrentKey,
+      rotateCurrent: !personalFinished && !!personalCurrentKey,
       pinNextKey: pasteInterruptKey,
       preserveOrder: true,
       appendSeen: effectiveRepeatMode === 'off',
@@ -2596,6 +2613,17 @@ export function TheaterShell({
     canPrev,
     canNext,
   })
+  const settledQueueOrder = currentFirstQueue(
+    settledChromeItems,
+    settledChromeCurrentKey,
+    seenStartIndex,
+  )
+  const settledListedItems = settledQueueOrder.items
+  const settledListedSeenStartIndex = settledQueueOrder.seenStartIndex
+  if (isCollectionTab) {
+    personalOrderedQueueRef.current = settledListedItems
+    personalSeenStartIndexRef.current = settledListedSeenStartIndex
+  }
   const personalPasteResolving = isPersonal ? pasteResolvingItem : null
   const personalPasteKey = personalPasteResolving ? theaterItemKey(personalPasteResolving) : null
   // The pending item owns the visible stage immediately, but never enters an
@@ -2606,9 +2634,9 @@ export function TheaterShell({
   const chromeItems = personalPasteResolving
     ? [
         personalPasteResolving,
-        ...settledChromeItems.filter((item) => theaterItemKey(item) !== personalPasteKey),
+        ...settledListedItems.filter((item) => theaterItemKey(item) !== personalPasteKey),
       ]
-    : settledChromeItems
+    : settledListedItems
   const chromeCurrentKey = personalPasteKey ?? settledChromeCurrentKey
   const chromeIsSeen = personalPasteResolving ? () => false : settledChromeIsSeen
   const chromeSeenReady = personalPasteResolving ? false : settledChromeSeenReady
@@ -2821,7 +2849,7 @@ export function TheaterShell({
           queuePlayed={queuePlayed}
           queueToPlay={queueToPlay}
           queueLooping={queueLooping}
-          seenStartIndex={seenStartIndex}
+          seenStartIndex={settledListedSeenStartIndex}
           waiting={isCollectionTab ? false : waiting}
           onSelect={chromeOnSelect}
           onPrev={chromeOnPrev}
@@ -2901,7 +2929,7 @@ export function TheaterShell({
         queuePlayed={queuePlayed}
         queueToPlay={queueToPlay}
         queueLooping={queueLooping}
-        seenStartIndex={seenStartIndex}
+        seenStartIndex={settledListedSeenStartIndex}
         savedToday={feed.savedToday}
         onSelect={chromeOnSelect}
         waiting={isCollectionTab ? false : waiting}

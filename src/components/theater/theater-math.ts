@@ -163,6 +163,42 @@ export function rotateKeyFirst<
   return [...items.slice(idx), ...items.slice(0, idx)]
 }
 
+/**
+ * UI boundary: Queue surfaces always start with Now playing, even if a
+ * caller briefly supplies the underlying circular order before it rotates.
+ * Repeat-off keeps its playable/Seen boundary intact.
+ */
+export function currentFirstQueue<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(
+  items: T[],
+  currentKey: string | null,
+  seenStartIndex = -1,
+): { items: T[]; seenStartIndex: number } {
+  if (!currentKey) return { items, seenStartIndex }
+  if (seenStartIndex < 0) {
+    return { items: rotateKeyFirst(items, currentKey), seenStartIndex }
+  }
+
+  const playable = items.slice(0, seenStartIndex)
+  const seen = items.slice(seenStartIndex)
+  const playableIndex = playable.findIndex((item) => theaterItemKey(item) === currentKey)
+  if (playableIndex >= 0) {
+    return {
+      items: [...playable.slice(playableIndex), ...playable.slice(0, playableIndex), ...seen],
+      seenStartIndex,
+    }
+  }
+
+  const seenIndex = seen.findIndex((item) => theaterItemKey(item) === currentKey)
+  if (seenIndex < 0) return { items, seenStartIndex }
+  const current = seen[seenIndex]
+  return {
+    items: [current, ...playable, ...seen.slice(0, seenIndex), ...seen.slice(seenIndex + 1)],
+    seenStartIndex: playable.length + 1,
+  }
+}
+
 /** Insert unique queue keys directly after an anchor without disturbing the rest. */
 export function insertKeysAfter(
   order: readonly string[],
@@ -445,7 +481,9 @@ export function orderLifoQueue<
     ? newest.filter((it) => {
         const key = theaterItemKey(it)
         if (opts.keepKey && key === opts.keepKey) return true
-        if (opts.pinCurrent && opts.currentKey && key === opts.currentKey) return true
+        if ((opts.pinCurrent || opts.rotateCurrent) && opts.currentKey && key === opts.currentKey) {
+          return true
+        }
         return !isSeen(key)
       })
     : newest

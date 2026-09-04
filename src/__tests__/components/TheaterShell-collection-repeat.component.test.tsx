@@ -205,6 +205,107 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     expect(screen.getByText('All caught up')).toBeInTheDocument()
   })
 
+  it('keeps a deep-linked Saved post first and makes its visible Next the transport Next', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+          initialPersonalIndex={1}
+          preserveSavedStart
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await cycleRepeat() // all -> one
+    await cycleRepeat() // one -> off
+
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+      '2',
+      '3',
+      '1',
+    ])
+
+    await act(async () => (chromeProps().onNext as () => void)())
+    expect(chromeProps().currentKey).toBe('twitter:3')
+  })
+
+  it('rotates Saved around a picked row so Queue and transport keep the same Next', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await cycleRepeat() // all -> one
+    await cycleRepeat() // one -> off
+
+    await act(async () => (chromeProps().onSelect as (key: string) => void)('twitter:3'))
+    expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+      '3',
+      '2',
+      '1',
+    ])
+
+    await act(async () => (chromeProps().onNext as () => void)())
+    expect(chromeProps().currentKey).toBe('twitter:2')
+  })
+
+  it('promotes repeat-one to repeat-all when deliberate Next follows the visible queue', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await cycleRepeat() // all -> one
+
+    await act(async () => (chromeProps().onNext as () => void)())
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect(chromeProps().repeatMode).toBe('all')
+  })
+
+  it('uses the visible unseen successor after selecting an already-Seen row', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={emptySeed}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await cycleRepeat() // all -> one
+    await cycleRepeat() // one -> off
+    await act(async () => (chromeProps().onNext as () => void)())
+    expect(chromeProps().currentKey).toBe('twitter:2')
+
+    await act(async () => (chromeProps().onSelect as (key: string) => void)('twitter:1'))
+    expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+      '1',
+      '3',
+      '2',
+    ])
+
+    await act(async () => (chromeProps().onNext as () => void)())
+    expect(chromeProps().currentKey).toBe('twitter:3')
+  })
+
   it('keeps Now playing first and wraps Previous from the Saved head', async () => {
     await act(async () => {
       render(

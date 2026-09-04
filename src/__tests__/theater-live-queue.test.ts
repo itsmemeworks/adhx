@@ -11,6 +11,7 @@ import {
   computeQueueCounts,
   formatQueueCount,
   insertKeysAfter,
+  currentFirstQueue,
 } from '@/components/theater/TheaterShell'
 
 type Item = {
@@ -57,6 +58,20 @@ describe('insertKeysAfter', () => {
   it('merges same-batch arrivals after current without dropping earlier arrivals', () => {
     const first = insertKeysAfter(['a', 'b', 'c'], 'a', ['x'])
     expect(insertKeysAfter(first, 'a', ['y'])).toEqual(['a', 'y', 'x', 'b', 'c'])
+  })
+})
+
+describe('currentFirstQueue', () => {
+  it('rotates the visible queue around current without changing reverse traversal', () => {
+    const queue = currentFirstQueue([item('a', 1), item('b', 2), item('c', 3)], key('b'))
+    expect(ids(queue.items)).toEqual(['b', 'c', 'a'])
+    expect(queue.items.at(-1)?.bookmarkId).toBe('a')
+  })
+
+  it('keeps Seen rows after the rotated playable section', () => {
+    const queue = currentFirstQueue([item('a', 1), item('b', 2), item('seen', 3)], key('b'), 2)
+    expect(ids(queue.items)).toEqual(['b', 'a', 'seen'])
+    expect(queue.seenStartIndex).toBe(2)
   })
 })
 

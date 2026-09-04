@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Now playing is a queue-rendering invariant
+
+Desktop filmstrip/Queue and the mobile sheet now normalize every list around the staged post, so
+Now playing is always the first visible section and the circular successor is always Next.
+Saved transport consumes that same normalized order for deep links, picks, repeat-one exits, and
+already-Seen selections; Previous still reaches the circular tail and promotes Repeat all as needed.
+Current state: complete; component, shell, reverse-navigation, and desktop/mobile browser coverage pass.
+
 ## 2026-09-04 — Theater queues rotate around Now playing
 
 Live, Saved, shared, and curated queues now render and traverse one current-first circular order:
