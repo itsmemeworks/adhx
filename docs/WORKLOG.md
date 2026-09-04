@@ -10,10 +10,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 The viewport-fixed caption scrim created a stacking context below the larger invisible swipe zone,
 letting the zone steal the bottom 16px of Share even though the visible controls did not overlap.
-The action rail is now a higher-z sibling, captions clear the scrub hitbox, and all edge controls
-plus caption padding honor landscape safe-area insets. Browser regressions assert actual
+The action rail is now a higher-z sibling, captions clear the scrub hitbox, and edge controls plus
+expanded Queue/filter content honor landscape safe-area insets. Browser regressions assert actual
 `elementFromPoint` ownership and a non-empty media caption under hostile geometry. A dedicated
-mobile WebKit smoke project now joins Chromium in CI. Current state: complete locally.
+mobile WebKit smoke project now joins Chromium in CI and the local installer. State: complete.
 
 ## 2026-09-04 — Mobile bottom chrome shares one visual viewport
 

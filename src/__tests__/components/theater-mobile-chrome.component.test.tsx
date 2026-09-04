@@ -1052,6 +1052,7 @@ describe('TheaterMobileChrome: Up-next playlist toggle', () => {
     const content = screen.getByTestId('mobile-sheet-content')
     const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
 
+    expect(content).toHaveClass('pl-[env(safe-area-inset-left)]', 'pr-[env(safe-area-inset-right)]')
     expect(content.className).toContain('invisible')
     expect(content).toHaveAttribute('aria-hidden', 'true')
     expect(content).toHaveAttribute('inert')
@@ -1605,6 +1606,10 @@ describe('TheaterMobileChrome: queue count label', () => {
     expect(queue).toHaveAttribute('aria-expanded', 'false')
     const quickFilters = screen.getByRole('group', { name: 'Quick post filters' })
     expect(quickFilters).toBeInTheDocument()
+    expect(quickFilters).toHaveClass(
+      'left-[max(0.5rem,env(safe-area-inset-left))]',
+      'right-[calc(6rem+env(safe-area-inset-right))]',
+    )
     expect(screen.getByRole('button', { name: 'All posts, 5' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Videos, 2' })).toHaveAttribute(
       'aria-pressed',

@@ -111,10 +111,9 @@ test.describe('mobile viewport', () => {
     expect(actionToSwipeGap).toBeGreaterThanOrEqual(0)
     expect(actionToSwipeGap).toBeLessThanOrEqual(12)
     expect(
-      await page.evaluate(({ x, y }) => {
-        const rail = document.querySelector('[data-testid="mobile-control-actions"]')
+      await postActions.evaluate((rail, { x, y }) => {
         const hit = document.elementFromPoint(x, y)
-        return !!rail && !!hit && rail.contains(hit)
+        return !!hit && rail.contains(hit)
       }, actionGeometry.point),
     ).toBe(true)
     expect(sliderBox?.y ?? 0).toBeGreaterThan(initialHeight / 2)
@@ -231,14 +230,13 @@ test.describe('mobile viewport', () => {
     await page.goto(`/${POST.quoted.author}/status/${POST.quoted.id}`)
     await expectTheaterReady(page)
 
-    const scrim = page.getByTestId('mobile-bottom-scrim')
+    const theater = page.locator('.theater-shell-viewport').filter({ visible: true }).last()
+    const scrim = theater.getByTestId('mobile-bottom-scrim')
     const caption = scrim.getByText(POST.quoted.text, { exact: true })
-    const dock = page.getByTestId('mobile-theater-dock')
-    const slider = page.locator('[data-theater-progress-slider]')
+    const dock = theater.getByTestId('mobile-theater-dock')
+    const slider = theater.locator('[data-theater-progress-slider]')
     await expect(caption).toBeVisible()
-    const viewportHeight = await page.evaluate(() => {
-      const shell = document.querySelector<HTMLElement>('.theater-shell-viewport')
-      if (!shell) throw new Error('Theater viewport did not mount')
+    const viewportHeight = await theater.evaluate((shell) => {
       shell.style.position = 'absolute'
       shell.style.bottom = 'auto'
       shell.style.height = `${window.innerHeight + 180}px`
@@ -302,6 +300,24 @@ test.describe('mobile viewport', () => {
     expect(viewportWidth - (playbackBox!.x + playbackBox!.width)).toBeCloseTo(44, 0)
     await expect(scrim).toHaveCSS('padding-left', '34px')
     await expect(scrim).toHaveCSS('padding-right', '44px')
+
+    const quickFilterTrigger = page.getByRole('button', { name: 'Quick filter posts' })
+    await quickFilterTrigger.tap()
+    const quickFilters = page.getByTestId('mobile-quick-filters')
+    const firstQuickFilter = quickFilters.locator('[data-quick-filter-option]').first()
+    await expect(quickFilters).toBeVisible()
+    const [quickFiltersBox, firstQuickFilterBox] = await Promise.all([
+      quickFilters.boundingBox(),
+      firstQuickFilter.boundingBox(),
+    ])
+    expect(quickFiltersBox).not.toBeNull()
+    expect(firstQuickFilterBox).not.toBeNull()
+    expect(quickFiltersBox!.x).toBeCloseTo(34, 0)
+    expect(viewportWidth - (quickFiltersBox!.x + quickFiltersBox!.width)).toBeCloseTo(140, 0)
+    expect(firstQuickFilterBox!.x).toBeGreaterThanOrEqual(42)
+    await quickFilterTrigger.tap()
+    await expect(quickFilters).toHaveCount(0)
+
     await queue.tap()
     await expect(queue).toHaveAttribute('aria-expanded', 'true')
     await expect
@@ -316,6 +332,26 @@ test.describe('mobile viewport', () => {
     await expect(postActions).toHaveAttribute('aria-hidden', 'true')
     await expect(postActions).toHaveAttribute('inert', '')
     await expect(postActions).toHaveCSS('display', 'none')
+    const sheetContent = page.getByTestId('mobile-sheet-content')
+    const queueFilter = sheetContent.locator('[data-theater-queue-filter]')
+    const firstQueueFilter = queueFilter.locator('button').first()
+    const firstQueueRow = sheetContent.locator('[data-theater-queue-item]').first()
+    await expect(sheetContent).toHaveCSS('padding-left', '34px')
+    await expect(sheetContent).toHaveCSS('padding-right', '44px')
+    await expect(firstQueueFilter).toBeVisible()
+    await expect(firstQueueRow).toBeVisible()
+    const [firstQueueFilterBox, firstQueueRowBox] = await Promise.all([
+      firstQueueFilter.boundingBox(),
+      firstQueueRow.boundingBox(),
+    ])
+    expect(firstQueueFilterBox).not.toBeNull()
+    expect(firstQueueRowBox).not.toBeNull()
+    expect(firstQueueFilterBox!.x).toBeGreaterThanOrEqual(34)
+    expect(firstQueueRowBox!.x).toBeGreaterThanOrEqual(34)
+    expect(firstQueueFilterBox!.x + firstQueueFilterBox!.width).toBeLessThanOrEqual(
+      viewportWidth - 44,
+    )
+    expect(firstQueueRowBox!.x + firstQueueRowBox!.width).toBeLessThanOrEqual(viewportWidth - 44)
     await expect(page.getByRole('button', { name: 'Paste a link' })).toBeInViewport()
     await expect(
       page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]'),

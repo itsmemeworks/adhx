@@ -8,25 +8,24 @@ test.describe('mobile WebKit viewport', () => {
     await page.goto(`/${POST.quoted.author}/status/${POST.quoted.id}`)
     await expectTheaterReady(page)
 
-    const shell = page.locator('.theater-shell-viewport')
-    const top = page.locator('.theater-mobile-top-chrome')
-    const dock = page.getByTestId('mobile-theater-dock')
-    const scrim = page.getByTestId('mobile-bottom-scrim')
-    const actions = page.getByTestId('mobile-control-actions')
-    const zone = page.getByTestId('mobile-swipe-zone')
+    const shell = page.locator('.theater-shell-viewport').filter({ visible: true }).last()
+    const top = shell.locator('.theater-mobile-top-chrome')
+    const dock = shell.getByTestId('mobile-theater-dock')
+    const scrim = shell.getByTestId('mobile-bottom-scrim')
+    const actions = shell.getByTestId('mobile-control-actions')
+    const zone = shell.getByTestId('mobile-swipe-zone')
     const capsule = zone.locator('[data-theater-swipe-control]')
     const caption = scrim.getByText(POST.quoted.text, { exact: true })
-    const slider = page.locator('[data-theater-progress-slider]')
+    const slider = shell.locator('[data-theater-progress-slider]')
 
     await expect(dock).toHaveCSS('position', 'fixed')
     await expect(scrim).toHaveCSS('position', 'fixed')
     await expect(zone).toHaveCSS('position', 'fixed')
     await expect(caption).toBeVisible()
 
-    const viewportHeight = await page.evaluate(() => {
-      const shellElement = document.querySelector<HTMLElement>('.theater-shell-viewport')
-      const topElement = document.querySelector<HTMLElement>('.theater-mobile-top-chrome')
-      if (!shellElement || !topElement) throw new Error('Theater viewport chrome did not mount')
+    const viewportHeight = await shell.evaluate((shellElement) => {
+      const topElement = shellElement.querySelector<HTMLElement>('.theater-mobile-top-chrome')
+      if (!topElement) throw new Error('Theater viewport chrome did not mount')
       // Playwright's desktop WebKit build does not expose iOS-only
       // `-webkit-touch-callout`, even with an iPhone descriptor. Reproduce the
       // exact declarations from that guarded branch while retaining WebKit's
@@ -71,10 +70,9 @@ test.describe('mobile WebKit viewport', () => {
     )
     expect(lowestActionPoint.bottom).toBeGreaterThan(0)
     expect(
-      await page.evaluate(({ x, y }) => {
-        const rail = document.querySelector('[data-testid="mobile-control-actions"]')
+      await actions.evaluate((rail, { x, y }) => {
         const hit = document.elementFromPoint(x, y)
-        return !!rail && !!hit && rail.contains(hit)
+        return !!hit && rail.contains(hit)
       }, lowestActionPoint),
     ).toBe(true)
 

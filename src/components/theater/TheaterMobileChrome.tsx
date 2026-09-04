@@ -903,7 +903,7 @@ export function TheaterMobileChrome({
           role="group"
           aria-label="Quick post filters"
           data-testid="mobile-quick-filters"
-          className="pointer-events-auto fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-2 right-24 z-[40] flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-[#121117]/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,.4)] backdrop-blur-xl"
+          className="pointer-events-auto fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-[max(0.5rem,env(safe-area-inset-left))] right-[calc(6rem+env(safe-area-inset-right))] z-[40] flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-[#121117]/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,.4)] backdrop-blur-xl"
         >
           <button
             type="button"
@@ -1195,7 +1195,7 @@ export function TheaterMobileChrome({
 
         <div
           className={cn(
-            'flex min-h-0 flex-1 flex-col overflow-hidden',
+            'flex min-h-0 flex-1 flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
             sheetContentHidden && 'invisible',
           )}
           aria-hidden={sheetContentHidden}
