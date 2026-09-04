@@ -24,8 +24,10 @@ const mockUseSendFile = vi.fn((..._args: unknown[]) => ({
   supported: false,
   ready: false,
   sending: false,
+  primed: false,
   mode: 'download' as const,
   send: vi.fn(),
+  download: vi.fn(),
 }))
 
 vi.mock('@/components/theater/useSendFile', () => ({
@@ -106,8 +108,10 @@ beforeEach(() => {
     supported: false,
     ready: false,
     sending: false,
+    primed: false,
     mode: 'download' as const,
     send: vi.fn(),
+    download: vi.fn(),
   })
   mockTheaterAvatarMenu.mockClear()
   Object.defineProperty(window, 'matchMedia', {
@@ -1040,6 +1044,13 @@ describe('DesktopStageChrome', () => {
     onToggleDeclutter: vi.fn(),
   }
 
+  it('does not repeat the implied Live mode beside the logo', () => {
+    render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
+
+    expect(screen.getByRole('link', { name: 'ADHX home' })).toBeInTheDocument()
+    expect(screen.queryByText('Live')).not.toBeInTheDocument()
+  })
+
   it('layers the scrub badge above desktop chrome without raising its hit target', () => {
     const { container } = render(
       <>
@@ -1134,13 +1145,15 @@ describe('DesktopStageChrome', () => {
     expect(onToggleArticleMode).toHaveBeenCalledTimes(2)
   })
 
-  it('hides the media caption in article mode, offers Watch, and keeps Download', () => {
+  it('hides the media caption in article mode, offers Watch, and keeps Download in Share', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
+      primed: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     render(
       <DesktopStageChrome
@@ -1157,7 +1170,8 @@ describe('DesktopStageChrome', () => {
       'title',
       'Back to watching',
     )
-    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
   })
 
   it('renders no caption overlay for a text item, and opens the source via the platform glyph', () => {
@@ -1437,13 +1451,10 @@ describe('DesktopStageChrome', () => {
 })
 
 /**
- * Save/Download button hierarchy (round 8, owner: the solid clay-grad Save
- * fill was "too much") — Save now uses SAVE_OUTLINE (a clay border on the
- * same glass background every other pill uses, distinguished from Download/
- * Link/Open only by that border accent), never the old solid `bg-clay-grad`
- * PRIMARY treatment. Download stays on plain GLASS (`border-white/25`).
+ * Save/Share button hierarchy — Save keeps its clay outline while the
+ * type-aware Share menu consolidates Copy, Download, and Share link.
  */
-describe('DesktopStageChrome: Save/Download button hierarchy', () => {
+describe('DesktopStageChrome: Save/Share button hierarchy', () => {
   const stageBase = {
     mode: 'home' as const,
     declutter: false,
@@ -1461,42 +1472,54 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(saveBtn.className).not.toContain('bg-clay-grad')
   })
 
-  it("Download is secondary (glass, border-white/25), distinct from Save's clay border", () => {
+  it("Share is secondary glass, distinct from Save's clay border", () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
+      primed: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
-    const downloadBtn = screen.getByText('Download').closest('button')!
-    expect(downloadBtn.className).not.toContain('bg-clay-grad')
-    expect(downloadBtn.className).not.toContain('border-clay')
-    expect(downloadBtn.className).toContain('border-white/25')
+    const shareBtn = screen.getByRole('button', { name: 'Share' })
+    expect(shareBtn.className).not.toContain('bg-clay-grad')
+    expect(shareBtn.className).not.toContain('border-clay')
+    expect(shareBtn.className).toContain('border-white/25')
 
     // Save must still carry the clay-border outline alongside it.
     const saveBtn = screen.getByText('Save').closest('button')!
     expect(saveBtn.className).toContain('border-clay')
   })
 
-  it('labels video and photo Download, distinguished by film vs image icon', () => {
+  it('offers type-aware Copy, Download, and Share-link actions from one menu', () => {
+    const download = vi.fn()
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
+      primed: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download,
     })
     const { rerender } = render(<DesktopStageChrome {...stageBase} current={videoItem()} />)
-    const videoBtn = screen.getByRole('button', { name: 'Download' })
-    expect(videoBtn.querySelector('.lucide-film')).toBeTruthy()
-    expect(screen.getByTitle('Download the video')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Link' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()
+    const videoDownload = screen.getByRole('menuitem', { name: 'Download the video' })
+    expect(videoDownload.querySelector('.lucide-download')).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
+    fireEvent.click(videoDownload)
+    expect(download).toHaveBeenCalled()
+
     rerender(<DesktopStageChrome {...stageBase} current={videoItem({ contentType: 'photo' })} />)
-    const photoBtn = screen.getByRole('button', { name: 'Download' })
-    expect(photoBtn.querySelector('.lucide-image')).toBeTruthy()
-    expect(screen.getByTitle('Download the photo')).toBeInTheDocument()
-    expect(screen.queryByTitle('Download the video')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('menuitem', { name: 'Download the photo' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Download the video' })).not.toBeInTheDocument()
   })
 
   it('shared+authed SavePostButton carries the clay-border outline', async () => {
@@ -1514,7 +1537,8 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       />,
     )
     expect(screen.queryByText('#ai')).not.toBeInTheDocument()
-    expect(screen.getByText('Copy')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('menuitem', { name: 'Copy the article' })).toBeInTheDocument()
   })
 
   it('shared+authed shows Tag N when the lead has tags, not action-row chips', async () => {
@@ -1599,13 +1623,15 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(screen.getAllByText('Live')).toHaveLength(1)
   })
 
-  it('collection live-tab Save carries the clay-border outline, Download (when present) stays plain glass', () => {
+  it('collection live-tab Save carries the clay outline while Share stays plain glass', () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
       sending: false,
+      primed: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     const collection = {
       tab: 'live' as const,
@@ -1623,8 +1649,8 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     const saveBtn = screen.getByText('Save').closest('button')!
     expect(saveBtn.className).toContain('border-clay')
 
-    const downloadBtn = screen.getByText('Download').closest('button')!
-    expect(downloadBtn.className).not.toContain('border-clay')
+    const shareBtn = screen.getByRole('button', { name: 'Share' })
+    expect(shareBtn.className).not.toContain('border-clay')
   })
 
   it('playlist mode: the Save-playlist CTA also carries the clay-border outline, not the old solid clay-grad fill', () => {
@@ -1647,8 +1673,10 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
       supported: true,
       ready: true,
       sending: false,
+      primed: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     const collection = {
       tab: 'collection' as const,
@@ -1663,13 +1691,13 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     }
     render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
     const archive = screen.getByRole('button', { name: 'Archive' })
-    const download = screen.getByRole('button', { name: 'Download' })
-    expect(
-      archive.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    const share = screen.getByRole('button', { name: 'Share' })
+    expect(archive.compareDocumentPosition(share) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(archive.className).toContain('border-clay')
     expect(archive.className).not.toContain('bg-clay-grad')
-    expect(screen.getByRole('button', { name: 'Link' })).toBeInTheDocument()
+    fireEvent.click(share)
+    expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
@@ -1677,16 +1705,21 @@ describe('DesktopStageChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
   })
 
-  it('text posts never show Download (nothing sendable)', () => {
+  it('text posts omit Download from Share when nothing is sendable', () => {
     mockUseSendFile.mockReturnValue({
       supported: false,
       ready: false,
       sending: false,
+      primed: false,
       mode: 'download' as const,
       send: vi.fn(),
+      download: vi.fn(),
     })
     render(<DesktopStageChrome {...stageBase} current={textItem()} />)
-    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.queryByRole('menuitem', { name: /Download/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
   })
 
   it('renders Live before Saved, not the bare "Collection" label', () => {
@@ -1885,12 +1918,8 @@ describe('DesktopDock: hides the time text for an unknown addedAt (filmstrip car
   })
 })
 
-/**
- * Round 8: text-like posts (text/quote/article) have no file to download,
- * so the Download slot carries a "Copy" pill (copies the post's full text)
- * instead of vanishing.
- */
-describe('DesktopStageChrome: Copy button for text-like posts', () => {
+/** Text/quote/article copy stays available inside the consolidated Share menu. */
+describe('DesktopStageChrome: text-like Share options', () => {
   const stageBase = {
     mode: 'home' as const,
     declutter: false,
@@ -1909,30 +1938,36 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
     })
   })
 
-  it('shows a Copy pill (not Download) for a text-like post with no sendable file', () => {
+  it('offers Copy and Share link, but not Download, for text-only posts', () => {
     render(<DesktopStageChrome {...stageBase} current={textItem()} />)
-    expect(screen.getByText('Copy')).toBeInTheDocument()
-    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('menuitem', { name: "Copy the post's text" })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Download/ })).not.toBeInTheDocument()
   })
 
-  it('copies the post\'s full text and flashes "Copied" on click', async () => {
+  it("copies the post's full text from Share", async () => {
     render(<DesktopStageChrome {...stageBase} current={textItem({ text: 'the full post body' })} />)
-    fireEvent.click(screen.getByText('Copy'))
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: "Copy the post's text" }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('the full post body'))
-    expect(await screen.findByText('Copied')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Share' }).querySelector('.lucide-check'),
+    ).toBeTruthy()
   })
 
   it('uses a file-text icon for articles and a copy icon for tweets', () => {
     const { rerender } = render(
       <DesktopStageChrome {...stageBase} current={textItem({ contentType: 'article' })} />,
     )
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
     expect(
-      screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-file-text'),
+      screen.getByRole('menuitem', { name: 'Copy the article' }).querySelector('.lucide-file-text'),
     ).toBeTruthy()
-    expect(screen.getByTitle('Copy the article')).toBeInTheDocument()
     rerender(<DesktopStageChrome {...stageBase} current={textItem()} />)
-    expect(screen.getByRole('button', { name: 'Copy' }).querySelector('.lucide-copy')).toBeTruthy()
-    expect(screen.getByTitle("Copy the post's text")).toBeInTheDocument()
+    expect(
+      screen.getByRole('menuitem', { name: "Copy the post's text" }).querySelector('.lucide-copy'),
+    ).toBeTruthy()
   })
 
   it('copies the article body, not just the title', async () => {
@@ -1953,7 +1988,8 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
         })}
       />,
     )
-    fireEvent.click(screen.getByText('Copy'))
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Copy the article' }))
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(
         'Army title\n\n# Why an army\n\nOne account has a ceiling.',
@@ -1961,10 +1997,12 @@ describe('DesktopStageChrome: Copy button for text-like posts', () => {
     )
   })
 
-  it('renders no Copy pill for a text-like post with empty text', () => {
+  it('offers only Share link for a text-like post with empty text', () => {
     render(<DesktopStageChrome {...stageBase} current={textItem({ text: '' })} />)
-    expect(screen.queryByText('Copy')).not.toBeInTheDocument()
-    expect(screen.queryByText('Download')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Copy/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Download/ })).not.toBeInTheDocument()
   })
 })
 
