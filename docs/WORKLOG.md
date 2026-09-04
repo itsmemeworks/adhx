@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Short-landscape Queue clears the top chrome
+
+Raising expanded post actions above the seek target put them under Paste/menu at 844×390.
+Short viewports now center that action row while preserving its vertical scrubber clearance.
+The browser regression waits for the dock's 300ms transition to finish before measuring, then checks
+both landscape top-chrome separation and portrait seek separation so in-flight geometry cannot pass.
+Current state: complete locally; component and portrait/landscape Chromium coverage pass.
+
 ## 2026-09-04 — Expanded mobile actions clear the scrub target
 
 Geometry review found the expanded Queue's right-side post actions overlapping the seek hitbox by

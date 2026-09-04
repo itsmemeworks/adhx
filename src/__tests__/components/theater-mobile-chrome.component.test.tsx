@@ -842,7 +842,7 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
   })
 
-  it('reflows short-height actions into one row above a compact swipe capsule', () => {
+  it('reflows short-height actions and centers them when Queue opens', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const actions = screen.getByTestId('mobile-control-actions')
     const capsule = screen
@@ -855,6 +855,13 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(actions.className).toContain('[@media(max-height:520px)]:flex-row')
     expect(actions.className).not.toContain('[@media(max-height:520px)]:grid')
     expect(capsule.className).toContain('[@media(max-height:520px)]:h-20')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand up next' }))
+    expect(actions).toHaveClass(
+      '[@media(max-height:520px)]:inset-x-0',
+      '[@media(max-height:520px)]:mx-auto',
+      '[@media(max-height:520px)]:w-max',
+    )
   })
 
   it('keeps the playback control visible but disabled for a repeated text post', () => {

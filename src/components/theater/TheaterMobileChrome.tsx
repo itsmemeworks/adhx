@@ -695,7 +695,7 @@ export function TheaterMobileChrome({
               className={cn(
                 'pointer-events-auto fixed right-3 z-[30] gap-1.5 transition-[opacity,transform] duration-200 ease-out',
                 sheetOpen || focusClosingSheet
-                  ? 'bottom-[calc(70%+1.75rem)] flex flex-row items-center justify-end'
+                  ? 'bottom-[calc(70%+1.75rem)] flex flex-row items-center justify-end [@media(max-height:520px)]:inset-x-0 [@media(max-height:520px)]:mx-auto [@media(max-height:520px)]:w-max'
                   : 'bottom-[calc(13rem+env(safe-area-inset-bottom))] flex w-12 flex-col items-center [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:w-auto [@media(max-height:520px)]:flex-row',
                 declutter && 'pointer-events-none translate-y-2 opacity-0',
               )}

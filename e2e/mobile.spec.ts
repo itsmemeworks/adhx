@@ -126,6 +126,13 @@ test.describe('mobile viewport', () => {
     await expect.poll(queueHitTarget).toBe('show-all')
     await queue.tap()
     await expect(queue).toHaveAttribute('aria-expanded', 'true')
+    await expect
+      .poll(async () => {
+        const box = await dock.boundingBox()
+        const viewportHeight = await page.evaluate(() => window.innerHeight)
+        return box ? Math.abs(box.y - viewportHeight * 0.3) <= 1 : false
+      })
+      .toBe(true)
 
     // Expanded post actions stay entirely above the slider's 32px seek area,
     // so horizontal scrubbing cannot trigger Share/Open at the right edge.
@@ -168,6 +175,55 @@ test.describe('mobile viewport', () => {
 
     await page.getByRole('button', { name: 'Show controls' }).click()
     await page.getByRole('button', { name: 'Paste a link' }).click()
+  })
+
+  test('short landscape Queue keeps actions clear of top chrome and the seek target', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    await page.setViewportSize({ width: 844, height: 390 })
+    await page.goto('/')
+    await expectTheaterReady(page)
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
+
+    const dock = page.getByTestId('mobile-theater-dock')
+    const queue = page.locator('[data-theater-action="show-all"]:visible')
+    await queue.tap()
+    await expect(queue).toHaveAttribute('aria-expanded', 'true')
+    await expect
+      .poll(async () => {
+        const box = await dock.boundingBox()
+        const viewportHeight = await page.evaluate(() => window.innerHeight)
+        return box ? Math.abs(box.y - viewportHeight * 0.3) <= 1 : false
+      })
+      .toBe(true)
+
+    const actionsBox = await page.getByTestId('mobile-control-actions').boundingBox()
+    const sliderBox = await page.locator('[data-theater-progress-slider]').boundingBox()
+    const pasteBox = await page.getByRole('button', { name: 'Paste a link' }).boundingBox()
+    const menuBox = await page
+      .locator('.theater-mobile-top-chrome [data-theater-action="menu"]')
+      .boundingBox()
+    expect(actionsBox).not.toBeNull()
+    expect(sliderBox).not.toBeNull()
+    expect(pasteBox).not.toBeNull()
+    expect(menuBox).not.toBeNull()
+
+    const overlaps = (
+      a: { x: number; y: number; width: number; height: number },
+      b: { x: number; y: number; width: number; height: number },
+    ) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+
+    expect(overlaps(actionsBox!, pasteBox!)).toBe(false)
+    expect(overlaps(actionsBox!, menuBox!)).toBe(false)
+    expect((actionsBox?.y ?? 0) + (actionsBox?.height ?? 0)).toBeLessThan(sliderBox?.y ?? 0)
+    const viewportWidth = await page.evaluate(() => window.innerWidth)
+    expect(
+      Math.abs((actionsBox?.x ?? 0) + (actionsBox?.width ?? 0) / 2 - viewportWidth / 2),
+    ).toBeLessThanOrEqual(1)
+
+    await queue.tap()
+    await expect(queue).toHaveAttribute('aria-expanded', 'false')
   })
 
   test('tweet preview pin still holds on a phone', async ({ page }) => {
