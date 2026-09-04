@@ -500,8 +500,6 @@ export function TheaterMobileChrome({
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 lg:hidden">
-      <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
-
       {/* Top scrim: brand (left) + flame/trend (right). De-clutter hides this
           whole scrim (meta included) — expected: immersion hides meta too.
           Collection mode replaces post meta with the tag/curator identity
@@ -956,18 +954,17 @@ export function TheaterMobileChrome({
         />
       )}
 
-      {/* Up-next sheet: a peek bar pinned to the bottom, dragged/tapped open
-          to ~70% of the theater. Height is % of the fixed stage, not `dvh`,
-          so iOS visual-viewport jumps (URL bar, focus) don't resize the
-          sheet mid-animation. overflow-hidden clips the list to the sheet
-          so a translating open never paints a full-screen black void.
-          Transform-only (no layout thrash), theme-following surface —
-          translucent so the stage reads through while collapsed, more
-          opaque once open so the list stays comfortably readable.
+      {/* Up-next sheet: a straight-edged Queue/transport dock fixed to the
+          visual viewport, then translated open to ~70%. Unlike the absolute
+          media paint layer, this must follow iOS Safari AND Chrome's different
+          toolbar geometry or Chrome can place the collapsed bar below view.
+          The progress rail rides on this edge instead of the screen top,
+          avoiding Chrome's native tab-swipe gesture.
           Unlike the scrims, de-clutter does NOT fade the Queue handle out;
           post actions and thumb controls do fade for an unobstructed stage. */}
       <div
         ref={sheetRef}
+        data-testid="mobile-theater-dock"
         style={sheetDrag.style}
         onTransitionEnd={(event) => {
           if (
@@ -980,7 +977,7 @@ export function TheaterMobileChrome({
           }
         }}
         className={cn(
-          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-hidden overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
+          'pointer-events-auto fixed inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-visible overscroll-contain border-t border-white/15 shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
           sheetOpen ? 'bg-surface' : 'bg-surface/70',
           !sheetDrag.dragging &&
             (sheetOpen
@@ -988,6 +985,8 @@ export function TheaterMobileChrome({
               : 'translate-y-[calc(100%-4.25rem-env(safe-area-inset-bottom))]'),
         )}
       >
+        <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
+
         {/* Bottom bar: drag handle on top (tap toggles; a real pointer drag
             follows the finger 1:1 via useSheetDrag, snapping open/closed on
             release by distance or flick velocity — see the hook), then the
@@ -1000,15 +999,12 @@ export function TheaterMobileChrome({
             Pinning the wrapper to the same height the transform uses makes
             the visible window and the peek content one and the same. */}
         <div ref={peekRef} className="flex-none overflow-hidden" style={{ height: PEEK_H }}>
-          <button
-            type="button"
+          <div
             {...sheetDrag.handlers}
-            aria-expanded={sheetOpen}
-            aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-            className="flex w-full touch-none items-center justify-center pb-0.5 pt-2"
-          >
-            <span className="h-1 w-9 rounded-full bg-hairline" aria-hidden />
-          </button>
+            aria-hidden="true"
+            data-theater-sheet-handle
+            className="flex h-3 w-full touch-none items-center justify-center"
+          />
 
           <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-1.5">
@@ -1184,7 +1180,10 @@ export function TheaterMobileChrome({
         </div>
 
         <div
-          className={cn('flex min-h-0 flex-1 flex-col', sheetContentHidden && 'invisible')}
+          className={cn(
+            'flex min-h-0 flex-1 flex-col overflow-hidden',
+            sheetContentHidden && 'invisible',
+          )}
           aria-hidden={sheetContentHidden}
           inert={sheetContentHidden ? true : undefined}
           data-testid="mobile-sheet-content"

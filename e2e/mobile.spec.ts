@@ -13,7 +13,7 @@ test.describe('mobile viewport', () => {
     await expect(page.getByRole('button', { name: 'Previous post' })).toBeVisible()
   })
 
-  test('iOS viewport shell keeps the document locked and top controls tappable', async ({
+  test('iOS Chrome geometry keeps the dock visible and moves scrubbing away from the top edge', async ({
     page,
   }) => {
     test.setTimeout(90_000)
@@ -23,11 +23,11 @@ test.describe('mobile viewport', () => {
       page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]'),
     ).toBeVisible()
 
-    // Chromium does not match the iOS-only `-webkit-touch-callout` feature
-    // query. Apply only its positioning result here; z-index and document
-    // locking still come from production code, so this catches the fixed
-    // stacking-context regression where the invisible z-70 scrubber stole
-    // Paste/menu taps.
+    // Chromium does not match the iOS-only `-webkit-touch-callout` query.
+    // Reproduce Chrome iOS's failure geometry: the large media paint layer is
+    // taller than the visible viewport while document scroll stays locked at
+    // zero. An absolute dock disappears below view here; a visual-viewport
+    // fixed dock remains reachable.
     const initialHeight = await page.evaluate(() => window.innerHeight)
     await page.evaluate((height) => {
       const shell = document.querySelector<HTMLElement>('.theater-shell-viewport')
@@ -37,7 +37,7 @@ test.describe('mobile viewport', () => {
       shell.style.bottom = 'auto'
       shell.style.height = `${height + 180}px`
       top.style.position = 'fixed'
-      window.scrollTo(0, 180)
+      window.scrollTo(0, 0)
     }, initialHeight)
 
     const lockedAt = await page.evaluate(() => window.scrollY)
@@ -45,14 +45,39 @@ test.describe('mobile viewport', () => {
     await page.mouse.wheel(0, 400)
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(lockedAt)
 
-    // The fixed header is pointer-transparent between its control clusters,
-    // so the full-width playback scrubber beneath it must still own the
-    // centre of the top-edge hit area.
+    const dock = page.getByTestId('mobile-theater-dock')
+    const queue = page.locator('[data-theater-action="show-all"]:visible')
+    await expect(dock).toHaveCSS('position', 'fixed')
+    await expect(dock).toHaveCSS('border-radius', '0px')
+    await expect(queue).toBeInViewport()
+
+    // The progress rail is the dock's straight top edge. Its larger invisible
+    // hit target sits immediately above that edge—not at the screen top, where
+    // Chrome owns the native tab-switch gesture.
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('theater-pause')))
     const slider = page.locator('[data-theater-progress-slider]')
+    const track = page.locator('[data-theater-progress-fill]').locator('..')
     const sliderBox = await slider.boundingBox()
+    const trackBox = await track.boundingBox()
+    const dockBox = await dock.boundingBox()
     expect(sliderBox).not.toBeNull()
-    const scrubY = (sliderBox?.y ?? 0) + (sliderBox?.height ?? 0) / 2
+    expect(trackBox).not.toBeNull()
+    expect(dockBox).not.toBeNull()
+    expect(sliderBox?.y ?? 0).toBeGreaterThan(initialHeight / 2)
+    expect(Math.abs((trackBox?.y ?? 0) - (dockBox?.y ?? Number.MAX_VALUE))).toBeLessThanOrEqual(2)
+    const scrubY = (trackBox?.y ?? 0) + (trackBox?.height ?? 0) / 2
+    expect(scrubY).toBeGreaterThanOrEqual(sliderBox?.y ?? Number.MAX_VALUE)
+    expect(scrubY).toBeLessThanOrEqual(
+      (sliderBox?.y ?? 0) + (sliderBox?.height ?? Number.MIN_SAFE_INTEGER),
+    )
+    expect(
+      await page.evaluate(
+        ({ x, y }) =>
+          document.elementFromPoint(x, y)?.hasAttribute('data-theater-progress-slider') ?? false,
+        { x: 195, y: 2 },
+      ),
+    ).toBe(false)
+
     const scrubStartX = 140
     const scrubEndX = 250
     expect(

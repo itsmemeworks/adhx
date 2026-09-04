@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Mobile dock follows Safari and Chrome visual viewports
+
+The oversized iOS `100lvh` layer is now paint-only: Queue/transport and its loading fallback are
+fixed to the visual viewport, so Chrome cannot place the collapsed bar below its toolbar.
+Playback progress moved from the OS-owned top edge to a straight full-width rail above that dock;
+the queue surface stays clipped, and a narrow invisible strip preserves drag-to-expand.
+Current state: complete locally; hostile +180px geometry passes CI Chromium plus manual
+Chromium/WebKit phone emulation. The loading dock is component-covered; CI does not install WebKit.
+
 ## 2026-09-04 — iOS top controls clear the playback scrubber
 
 Real-browser mobile emulation found the invisible top playback slider intercepting Paste/menu
