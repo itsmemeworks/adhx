@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.4](https://github.com/itsmemeworks/adhx/compare/v1.70.3...v1.70.4) (2026-09-04)
+
+
+### Bug Fixes
+
+* lock theater document scrolling ([#486](https://github.com/itsmemeworks/adhx/issues/486)) ([d712ba1](https://github.com/itsmemeworks/adhx/commit/d712ba197bde8a013831e5ed34c2626fb800e717))
+
 ## [1.70.3](https://github.com/itsmemeworks/adhx/compare/v1.70.2...v1.70.3) (2026-09-04)
 
 
