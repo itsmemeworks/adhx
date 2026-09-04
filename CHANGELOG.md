@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.6](https://github.com/itsmemeworks/adhx/compare/v1.70.5...v1.70.6) (2026-09-04)
+
+
+### Bug Fixes
+
+* stabilize theater sound and mobile actions ([#491](https://github.com/itsmemeworks/adhx/issues/491)) ([9b5f5c7](https://github.com/itsmemeworks/adhx/commit/9b5f5c700324af9c8ec1092d92673d24acf9d609))
+
 ## [1.70.5](https://github.com/itsmemeworks/adhx/compare/v1.70.4...v1.70.5) (2026-09-04)
 
 
