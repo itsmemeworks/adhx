@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.70.2](https://github.com/itsmemeworks/adhx/compare/v1.70.1...v1.70.2) (2026-09-04)
+
+
+### Bug Fixes
+
+* prevent ios theater bottom gap ([#479](https://github.com/itsmemeworks/adhx/issues/479)) ([218024a](https://github.com/itsmemeworks/adhx/commit/218024a8ddbd9558252bb746a72d0dbeb46b1171))
+* respect ios top safe area ([#478](https://github.com/itsmemeworks/adhx/issues/478)) ([a0ed60d](https://github.com/itsmemeworks/adhx/commit/a0ed60d81367dfe17cbb64c210dc6eb2dcb66fcd))
+* show resolving theater instantly ([#482](https://github.com/itsmemeworks/adhx/issues/482)) ([1c8346f](https://github.com/itsmemeworks/adhx/commit/1c8346faf94a3b7e9b786df24df6985d6cdb6808))
+* simplify desktop theater controls ([#481](https://github.com/itsmemeworks/adhx/issues/481)) ([757ca50](https://github.com/itsmemeworks/adhx/commit/757ca503900d3d40c29ca05226ea7cef929a78d9))
+* stabilize theater queue and paste transitions ([#483](https://github.com/itsmemeworks/adhx/issues/483)) ([abd4791](https://github.com/itsmemeworks/adhx/commit/abd47917fe65d41a2c58289d251523830d1c0dc8))
+
 ## [1.70.1](https://github.com/itsmemeworks/adhx/compare/v1.70.0...v1.70.1) (2026-09-03)
 
 
