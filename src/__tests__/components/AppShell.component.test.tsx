@@ -162,6 +162,7 @@ describe('AppShell theater surfaces', () => {
 
     expect(screen.getByText('public list')).toBeInTheDocument()
     expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
+    expect(screen.getByRole('banner')).toHaveClass('pt-[env(safe-area-inset-top)]')
     expect(appShellMocks.headerEffects).toBe(0)
 
     appShellMocks.auth.me = signedIn('account-b')

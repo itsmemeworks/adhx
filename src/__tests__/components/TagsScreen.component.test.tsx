@@ -255,11 +255,14 @@ describe('TagsClient', () => {
       return jsonResponse({})
     }) as unknown as typeof fetch
 
-    render(<TagsClient />)
+    const { container } = render(<TagsClient />)
 
     await waitFor(() => expect(screen.getByText('#work')).toBeInTheDocument())
-    await waitFor(() => expect(screen.getByAltText('')).toBeInTheDocument())
-    expect(screen.getByAltText('')).toHaveAttribute('src', 'https://example.com/thumb.jpg')
+    await waitFor(() =>
+      expect(
+        container.querySelector('img[src="https://example.com/thumb.jpg"]'),
+      ).toBeInTheDocument(),
+    )
     expect(screen.getByText(/a text-only post/i)).toBeInTheDocument()
     // 6 posts in the tag, all 4 (PREVIEW_LIMIT) tiles fetched → the 4th cell
     // becomes the overflow tile: N = count - 3 = 3.

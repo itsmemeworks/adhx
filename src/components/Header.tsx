@@ -388,7 +388,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-surface border-b border-hairline">
+      <header className="sticky top-0 z-50 border-b border-hairline bg-surface pt-[env(safe-area-inset-top)]">
         <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Left section - Logo and Stats */}
           <div className="flex items-center gap-4 flex-shrink-0">
