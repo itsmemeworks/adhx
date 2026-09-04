@@ -49,14 +49,19 @@ test.describe('mobile viewport', () => {
     const queue = page.locator('[data-theater-action="show-all"]:visible')
     await expect(dock).toHaveCSS('position', 'fixed')
     await expect(dock).toHaveCSS('border-radius', '0px')
+    await expect(dock).toHaveCSS('border-top-width', '0px')
+    await expect(dock).toHaveCSS('background-color', 'rgba(18, 17, 23, 0.85)')
     await expect(queue).toBeInViewport()
+    await expect(page.locator('[data-theater-sheet-handle]')).toHaveCount(0)
 
     // The progress rail is the dock's straight top edge. Its larger invisible
     // hit target sits immediately above that edge—not at the screen top, where
     // Chrome owns the native tab-switch gesture.
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('theater-pause')))
     const slider = page.locator('[data-theater-progress-slider]')
-    const track = page.locator('[data-theater-progress-fill]').locator('..')
+    const track = page.locator('[data-theater-progress-track]')
+    await expect(track).toBeVisible()
+    await expect(track).toHaveCSS('height', '4px')
     const sliderBox = await slider.boundingBox()
     const trackBox = await track.boundingBox()
     const dockBox = await dock.boundingBox()
@@ -93,6 +98,15 @@ test.describe('mobile viewport', () => {
     await page.mouse.move(scrubEndX, scrubY, { steps: 4 })
     await page.mouse.up()
     await expect.poll(() => slider.inputValue()).not.toBe(beforeScrub)
+
+    // The Playlist button is the only touch toggle now; the former drag strip
+    // is gone so it cannot compete with horizontal scrubbing on this edge.
+    // Invoke the button directly because Next dev's bottom-left tools portal
+    // overlaps this coordinate in the E2E server (production has no portal).
+    await queue.evaluate((button: HTMLButtonElement) => button.click())
+    await expect(queue).toHaveAttribute('aria-expanded', 'true')
+    await queue.evaluate((button: HTMLButtonElement) => button.click())
+    await expect(queue).toHaveAttribute('aria-expanded', 'false')
 
     const menu = page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]')
     await expect(menu).toBeInViewport()

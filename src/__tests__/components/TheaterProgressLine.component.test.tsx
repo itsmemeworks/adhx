@@ -28,7 +28,8 @@ describe('TheaterProgressLine', () => {
     try {
       expect(slider).toHaveAttribute('aria-label', 'Playback position')
       expect(slider).toHaveClass('absolute', '-top-6', 'bottom-auto', 'h-8')
-      expect(fill.parentElement).toHaveClass('absolute', 'top-0', 'h-[3px]', 'z-[32]')
+      expect(fill.parentElement).toHaveAttribute('data-theater-progress-track')
+      expect(fill.parentElement).toHaveClass('absolute', 'top-0', 'h-1', 'z-[32]', 'bg-white/[.35]')
 
       fireEvent.input(slider, { target: { value: '375' } })
 

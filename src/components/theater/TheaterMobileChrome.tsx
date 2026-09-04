@@ -16,7 +16,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
-import { useSheetDrag } from './useSheetDrag'
 import {
   Bookmark,
   Repeat,
@@ -241,13 +240,11 @@ export function TheaterMobileChrome({
   const focusClosingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const focusRestoreFrameRef = useRef<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
-  const peekRef = useRef<HTMLDivElement>(null)
   const quickFilterRef = useRef<HTMLDivElement>(null)
   const quickFilterTriggerRef = useRef<HTMLButtonElement>(null)
   const quickFilterOpenRef = useRef(false)
   quickFilterOpenRef.current = quickFilterOpen
-  const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
-  const sheetContentHidden = !sheetOpen && !sheetDrag.dragging && sheetRestingClosed
+  const sheetContentHidden = !sheetOpen && sheetRestingClosed
   // Eager on a shared preview page: there's one post the visitor followed a
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
@@ -325,14 +322,14 @@ export function TheaterMobileChrome({
     setQuickFilterOpen(false)
   }, [sheetOpen, declutter])
   useEffect(() => {
-    if (sheetOpen || sheetDrag.dragging) {
+    if (sheetOpen) {
       setSheetRestingClosed(false)
       return
     }
     if (sheetRestingClosed) return
     const fallback = setTimeout(() => setSheetRestingClosed(true), 350)
     return () => clearTimeout(fallback)
-  }, [sheetOpen, sheetDrag.dragging, sheetRestingClosed])
+  }, [sheetOpen, sheetRestingClosed])
   useEffect(() => {
     if (!quickFilterOpenRef.current) return
     setQuickFilterOpen(false)
@@ -958,54 +955,48 @@ export function TheaterMobileChrome({
           visual viewport, then translated open to ~70%. Unlike the absolute
           media paint layer, this must follow iOS Safari AND Chrome's different
           toolbar geometry or Chrome can place the collapsed bar below view.
-          The progress rail rides on this edge instead of the screen top,
-          avoiding Chrome's native tab-swipe gesture.
-          Unlike the scrims, de-clutter does NOT fade the Queue handle out;
+          The visible, seekable progress rail IS this edge instead of the
+          screen top, avoiding Chrome's native tab-swipe gesture. The Queue
+          button is the sole touch toggle; there is deliberately no sheet drag.
+          Unlike the scrims, de-clutter does NOT fade the Queue button out;
           post actions and thumb controls do fade for an unobstructed stage. */}
       <div
         ref={sheetRef}
         data-testid="mobile-theater-dock"
-        style={sheetDrag.style}
         onTransitionEnd={(event) => {
           if (
             event.target === event.currentTarget &&
             event.propertyName === 'transform' &&
-            !sheetOpen &&
-            !sheetDrag.dragging
+            !sheetOpen
           ) {
             setSheetRestingClosed(true)
           }
         }}
         className={cn(
-          'pointer-events-auto fixed inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-visible overscroll-contain border-t border-white/15 shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
-          sheetOpen ? 'bg-surface' : 'bg-surface/70',
-          !sheetDrag.dragging &&
-            (sheetOpen
-              ? 'translate-y-0'
-              : 'translate-y-[calc(100%-4.25rem-env(safe-area-inset-bottom))]'),
+          'pointer-events-auto fixed inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-visible overscroll-contain shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
+          sheetOpen ? 'bg-surface' : 'bg-[#121117]/85',
+          sheetOpen
+            ? 'translate-y-0'
+            : 'translate-y-[calc(100%-4.25rem-env(safe-area-inset-bottom))]',
         )}
       >
         <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
 
-        {/* Bottom bar: drag handle on top (tap toggles; a real pointer drag
-            follows the finger 1:1 via useSheetDrag, snapping open/closed on
-            release by distance or flick velocity — see the hook), then the
-            Queue + Filter at left and transport at right. Post actions live
-            in the stage rail; up/down navigation shares one swipe capsule. */}
+        {/* Bottom bar: the Queue button toggles the playlist. The 12px top
+            inset keeps controls clear of the scrubber's hit target without
+            creating a second drag/tap surface. Post actions live in the stage
+            rail; up/down navigation shares one swipe capsule. */}
         {/* Exactly PEEK_H tall (owner: the collapsed bar floated a few px
             high with list content peeking below it — the natural content
             height is ~6px shorter than the 4.25rem window the collapse
             transform reveals, so the top of UpNextList showed through).
             Pinning the wrapper to the same height the transform uses makes
             the visible window and the peek content one and the same. */}
-        <div ref={peekRef} className="flex-none overflow-hidden" style={{ height: PEEK_H }}>
-          <div
-            {...sheetDrag.handlers}
-            aria-hidden="true"
-            data-theater-sheet-handle
-            className="flex h-3 w-full touch-none items-center justify-center"
-          />
-
+        <div
+          data-testid="mobile-theater-peek"
+          className="flex-none overflow-hidden pt-3"
+          style={{ height: PEEK_H }}
+        >
           <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-1.5">
               <button

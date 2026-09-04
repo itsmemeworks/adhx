@@ -312,11 +312,12 @@ export function TheaterProgressLine({
         }}
       />
       <div
+        data-theater-progress-track
         className={cn(
           'pointer-events-none inset-x-0 transition-[opacity,filter,background-color]',
           desktopDock
             ? 'fixed bottom-[124px] top-auto z-[72] h-1 bg-white/20'
-            : 'absolute bottom-auto top-0 z-[32] h-[3px] bg-white/25',
+            : 'absolute bottom-auto top-0 z-[32] h-1 bg-white/[.35] shadow-[0_-1px_0_rgba(0,0,0,.45)]',
           'peer-focus-visible:bg-white/40 peer-focus-visible:brightness-125',
           hidden && 'opacity-0',
         )}

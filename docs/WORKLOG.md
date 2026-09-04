@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Mobile progress rail replaces Queue drag
+
+The mobile dock's straight top edge is now a clearly visible 4px playback rail with a larger
+invisible seek target immediately above it, keeping horizontal scrubbing away from browser chrome.
+The competing drag/tap strip and `useSheetDrag` machinery are removed completely; the Playlist
+button is the sole touch control for opening and closing Queue (keyboard, Escape, and backdrop
+accessibility paths remain). The control row keeps the old 12px inset without owning gestures.
+Current state: complete locally; component and hostile-viewport browser regressions cover visibility,
+scrubbing, the absent drag target, and button-only toggling.
+
 ## 2026-09-04 — Mobile dock follows Safari and Chrome visual viewports
 
 The oversized iOS `100lvh` layer is now paint-only: Queue/transport and its loading fallback are

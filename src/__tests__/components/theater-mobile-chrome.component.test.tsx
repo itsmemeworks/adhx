@@ -963,31 +963,18 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
   })
 })
 
-// The drag mechanics themselves (live-follow, snap thresholds, flick
-// velocity, tap classification) are unit-tested against the hook directly in
-// use-sheet-drag.component.test.tsx — jsdom pointer-event sequences are
-// flaky to simulate reliably through a full component render. This just
-// confirms the gesture strip is wired to the hook end to end without becoming
-// a second focusable Queue control.
-describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
-  it('keeps the drag strip non-focusable while its tap path toggles the sheet', () => {
+describe('TheaterMobileChrome: Up-next playlist toggle', () => {
+  it('removes the drag surface and uses the Playlist button as the sole touch toggle', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    // The visual grab pill is gone—the progress rail now owns the dock edge.
-    // The narrow, invisible drag strip remains available below it.
-    const handle = document.querySelector<HTMLDivElement>('[data-theater-sheet-handle]')!
     const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
 
-    expect(handle.tagName).toBe('DIV')
-    expect(handle).toHaveAttribute('aria-hidden', 'true')
-    expect(handle).not.toHaveAttribute('role')
-    expect(handle).not.toHaveAttribute('tabindex')
-    expect(handle.className).toContain('touch-none')
+    expect(document.querySelector('[data-theater-sheet-handle]')).toBeNull()
     expect(queue).toHaveAttribute('aria-expanded', 'false')
 
-    fireEvent.click(handle)
+    fireEvent.click(queue)
     expect(queue).toHaveAttribute('aria-expanded', 'true')
 
-    fireEvent.click(handle)
+    fireEvent.click(queue)
     expect(queue).toHaveAttribute('aria-expanded', 'false')
   })
 
@@ -1173,16 +1160,14 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
   // visible window and the bottom bar's actual height match.
   it('pins the peek wrapper to 4.25rem plus the device safe area', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    const handle = document.querySelector<HTMLDivElement>('[data-theater-sheet-handle]')!
-    const wrapper = handle.parentElement!
+    const wrapper = screen.getByTestId('mobile-theater-peek')
     expect(wrapper).toHaveStyle({
       height: 'calc(4.25rem + env(safe-area-inset-bottom))',
     })
-    expect(wrapper.className).toContain('flex-none')
-    expect(wrapper.className).toContain('overflow-hidden')
+    expect(wrapper).toHaveClass('flex-none', 'overflow-hidden', 'pt-3')
   })
 
-  it('uses a straight viewport-fixed dock and does not steal focus on expand', () => {
+  it('uses a straight viewport-fixed dock with a visible seek rail on its top edge', () => {
     render(
       <TheaterMobileChrome
         {...base}
@@ -1192,15 +1177,27 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
         onClearQueueTypes={vi.fn()}
       />,
     )
-    const handle = document.querySelector<HTMLDivElement>('[data-theater-sheet-handle]')!
     const sheet = screen.getByTestId('mobile-theater-dock')
-    expect(sheet).toContainElement(handle)
-    expect(sheet).toHaveClass('fixed', 'inset-x-0', 'bottom-0', 'h-[70%]', 'overflow-visible')
-    expect(sheet).not.toHaveClass('absolute', 'rounded-t-2xl')
+    expect(sheet).toHaveClass(
+      'fixed',
+      'inset-x-0',
+      'bottom-0',
+      'h-[70%]',
+      'overflow-visible',
+      'bg-[#121117]/85',
+    )
+    expect(sheet).not.toHaveClass('absolute', 'rounded-t-2xl', 'border-t')
+    expect(sheet.querySelector('[data-theater-sheet-handle]')).toBeNull()
     expect(screen.getByTestId('mobile-sheet-content')).toHaveClass('overflow-hidden')
     expect(sheet.querySelector('[data-theater-progress-slider]')).toHaveClass('absolute', '-top-6')
+    expect(sheet.querySelector('[data-theater-progress-track]')).toHaveClass(
+      'absolute',
+      'top-0',
+      'h-1',
+      'bg-white/[.35]',
+    )
 
-    fireEvent.click(handle)
+    fireEvent.click(screen.getByRole('button', { name: 'Expand up next' }))
     expect(document.activeElement).not.toHaveAttribute('data-theater-queue-item')
     expect(screen.getByRole('group', { name: 'Playlist filter' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Videos' })).toBeVisible()
@@ -1912,7 +1909,7 @@ describe('TheaterMobileChrome: repeat control', () => {
     fireEvent.click(screen.getByLabelText('Stop when caught up'))
     expect(onCycleRepeat).toHaveBeenCalledTimes(1)
     // Sheet stays collapsed — the repeat button stops propagation so it
-    // never also toggles the drag-handle's open/closed state.
+    // never also toggles the Playlist button's open/closed state.
     expect(screen.queryAllByLabelText('Collapse up next')).toHaveLength(0)
   })
 
