@@ -1008,6 +1008,43 @@ describe('StageVideo theater-set-muted (gesture-context fast path)', () => {
     })
     expect(video.muted).toBe(false)
   })
+
+  it('treats a cross-tab unmute as catch-up and recovers from an autoplay-policy pause', async () => {
+    const playMock = vi.fn().mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.play = playMock
+    const { container } = render(
+      <StageVideo
+        item={makeItem()}
+        src="/api/media/video?a=1"
+        poster={null}
+        muted
+        onRequestUnmute={vi.fn()}
+      />,
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video)
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('theater-set-muted', {
+          detail: { muted: false, source: 'catchup' },
+        }),
+      )
+    })
+    expect(video.muted).toBe(false)
+
+    const callsBeforePause = playMock.mock.calls.length
+    await act(async () => {
+      video.dispatchEvent(new Event('pause'))
+      await Promise.resolve()
+    })
+
+    expect(video.muted).toBe(true)
+    expect(playMock.mock.calls.length).toBeGreaterThan(callsBeforePause)
+  })
 })
 
 /**

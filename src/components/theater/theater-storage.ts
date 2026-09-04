@@ -1,17 +1,15 @@
 /**
  * Theater persistence catalog.
  *
- * localStorage lasts across visits (seen list, repeat, queue types).
- * sessionStorage is this tab only — mute follows a paste navigation, Saved
- * cursor survives a /live ⇄ /saved remount, neither should leak to a new
- * device or a later week.
+ * localStorage lasts across visits (seen list, repeat, queue types, and the
+ * viewer's last sound choice). Saved cursor state remains tab-scoped.
  */
 
 export { LIVE_REPEAT_STORAGE_KEY, SAVED_REPEAT_STORAGE_KEY } from './types'
 export { SEEN_STORAGE_KEY, LAST_VISIT_STORAGE_KEY } from './useSeenSet'
 export { SAVED_PLAYING_STORAGE_KEY, SAVED_PLAYED_STORAGE_KEY } from '@/lib/theater/saved-playing'
 export {
-  THEATER_SOUND_SESSION_STORAGE_KEY as THEATER_SOUND_STORAGE_KEY,
+  THEATER_SOUND_CHOICE_STORAGE_KEY as THEATER_SOUND_STORAGE_KEY,
   THEATER_SOUND_DEFAULT_STORAGE_KEY,
 } from '@/lib/theater/sound-preference'
 
