@@ -1844,7 +1844,7 @@ export function TheaterShell({
   const onSetMuted = useCallback((next: boolean) => setMuted(next), [])
 
   // Suppress the browser's native pull-to-refresh / overscroll chaining while
-  // the theater is mounted — it's a fixed full-viewport overlay, not a normal
+  // the theater is mounted — it's a full-viewport overlay, not a normal
   // scrolling page, so a swipe-down at the top should never yank in the
   // browser's refresh UI. Chrome/Android honors `overscroll-behavior` alone;
   // without our own touchmove preventDefault (removed along with swipe nav —
@@ -2399,7 +2399,7 @@ export function TheaterShell({
       aria-label={isPersonal ? 'Saved' : undefined}
       tabIndex={isPersonal ? -1 : undefined}
       data-theater-keyboard-ready={keyboardReady ? 'true' : undefined}
-      className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
+      className="theater-shell-viewport fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
     >
       {sharedResolve ? (
         <Suspense fallback={null}>
