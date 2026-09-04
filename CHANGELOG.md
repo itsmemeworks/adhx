@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.7](https://github.com/itsmemeworks/adhx/compare/v1.70.6...v1.70.7) (2026-09-04)
+
+
+### Bug Fixes
+
+* keep mobile theater chrome aligned ([#493](https://github.com/itsmemeworks/adhx/issues/493)) ([2079b00](https://github.com/itsmemeworks/adhx/commit/2079b0040231796874a4c572b76574ffec91663b))
+
 ## [1.70.6](https://github.com/itsmemeworks/adhx/compare/v1.70.5...v1.70.6) (2026-09-04)
 
 
