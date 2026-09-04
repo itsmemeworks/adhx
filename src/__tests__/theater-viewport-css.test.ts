@@ -32,5 +32,8 @@ describe('mobile Theater viewport', () => {
     expect(globalsCss).toMatch(
       /@supports \(-webkit-touch-callout: none\)[\s\S]*\.theater-mobile-top-chrome\s*\{[^}]*position: fixed;/,
     )
+    expect(globalsCss).toMatch(
+      /@supports \(-webkit-touch-callout: none\)[\s\S]*\.theater-mobile-top-chrome\s*\{[^}]*position: fixed;/,
+    )
   })
 })
