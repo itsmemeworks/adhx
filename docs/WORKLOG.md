@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Theater locks document scrolling in every mode
+
+The absolute iOS `100lvh` paint layer no longer makes shared previews vertically pan: every
+Theater mode now locks both document scroll roots while mounted and restores their prior values.
+Mobile WebKit applies the same lock immediately to the cold-loading shell; nested article, text,
+album, and Queue scrollers remain independently scrollable. Current state: complete; regression
+coverage includes shared-mode mount/unmount restoration and the iOS loading selector.
+
 ## 2026-09-04 — iOS Theater keeps top controls visible
 
 Mobile WebKit now fixes only the Theater's top chrome to the visual viewport while the stage and

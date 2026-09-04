@@ -114,6 +114,41 @@ describe('TheaterShell: live queue type filter', () => {
     window.localStorage.clear()
   })
 
+  it('locks document scrolling in shared mode and restores both roots on unmount', () => {
+    const html = document.documentElement
+    const body = document.body
+    const originalHtml = html.style.overflow
+    const originalBody = body.style.overflow
+    const originalHtmlOverscroll = html.style.overscrollBehavior
+    const originalBodyOverscroll = body.style.overscrollBehavior
+    html.style.overflow = 'scroll'
+    body.style.overflow = 'auto'
+    html.style.overscrollBehavior = 'contain'
+    body.style.overscrollBehavior = 'auto'
+
+    try {
+      const lead = item('lead', { contentType: 'video' })
+      const { unmount } = render(
+        <TheaterShell mode="shared" sharedItem={lead} seed={seed([lead])} />,
+      )
+
+      expect(html.style.overflow).toBe('hidden')
+      expect(body.style.overflow).toBe('hidden')
+      expect(html.style.overscrollBehavior).toBe('none')
+      expect(body.style.overscrollBehavior).toBe('none')
+      unmount()
+      expect(html.style.overflow).toBe('scroll')
+      expect(body.style.overflow).toBe('auto')
+      expect(html.style.overscrollBehavior).toBe('contain')
+      expect(body.style.overscrollBehavior).toBe('auto')
+    } finally {
+      html.style.overflow = originalHtml
+      body.style.overflow = originalBody
+      html.style.overscrollBehavior = originalHtmlOverscroll
+      body.style.overscrollBehavior = originalBodyOverscroll
+    }
+  })
+
   it('lets the viewer pick videos and photos independently', async () => {
     render(
       <TheaterShell

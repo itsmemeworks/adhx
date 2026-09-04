@@ -102,10 +102,17 @@
  * stable large viewport so its stage and bottom chrome keep painting through
  * the browser's translucent toolbar area. Its interactive chrome stays fixed
  * to the visual viewport so browser scroll/collapse cannot move Paste or the
- * menu above the screen. `100vh` is the older-iOS fallback.
+ * menu above the screen. Lock the document roots immediately (including the
+ * route-loading shell) so the oversized paint layer cannot pan the page.
+ * `100vh` is the older-iOS fallback.
  */
 @media (max-width: 1023px) {
   @supports (-webkit-touch-callout: none) {
+    html:has(.theater-shell-viewport),
+    body:has(.theater-shell-viewport) {
+      overflow: hidden;
+    }
+
     .theater-shell-viewport {
       position: absolute;
       bottom: auto;
