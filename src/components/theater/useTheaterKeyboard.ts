@@ -11,7 +11,6 @@
  */
 
 import { useEffect } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
 import type { PersonalTab } from './types'
 import {
   THEATER_ACTION_EVENTS,
@@ -45,7 +44,6 @@ export interface UseTheaterKeyboardArgs {
   personalTab: PersonalTab
   goNext: () => void
   goPrev: () => void
-  setMuted: Dispatch<SetStateAction<boolean>>
   undoLastAction: () => void
   onClose?: () => void
   /**
@@ -84,7 +82,6 @@ export function useTheaterKeyboard({
   personalTab,
   goNext,
   goPrev,
-  setMuted,
   undoLastAction,
   onClose,
   onTabChange,
@@ -163,9 +160,6 @@ export function useTheaterKeyboard({
           }
           break
         case 'toggleMute':
-          e.preventDefault()
-          setMuted((m) => !m)
-          break
         case 'save':
         case 'tag':
         case 'copyLink':
@@ -207,6 +201,5 @@ export function useTheaterKeyboard({
     helpOpen,
     onToggleHelp,
     isPlaybackHidden,
-    setMuted,
   ])
 }

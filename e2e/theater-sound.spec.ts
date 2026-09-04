@@ -3,6 +3,33 @@ import { PREVIEW_YT } from './constants'
 import { expectTheaterReady } from './helpers'
 import { stubYouTubeEmbed } from './yt-embed-stub'
 
+test('desktop M restores a persisted sound choice after media falls back to muted', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.addInitScript(() => localStorage.setItem('adhx-theater-sound', 'on'))
+  await stubYouTubeEmbed(page)
+  await page.goto(`/shorts/${PREVIEW_YT.id}`)
+  await expectTheaterReady(page)
+  await expect(page.getByRole('button', { name: 'Mute' })).toBeVisible()
+
+  // Model a browser rejecting gesture-less audible playback while retaining
+  // the viewer's explicit browser-wide preference.
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent('theater-set-muted', {
+        detail: { muted: true, source: 'catchup' },
+      }),
+    )
+  })
+  await expect(page.getByRole('button', { name: 'Unmute' })).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('adhx-theater-sound'))).toBe('on')
+
+  await page.keyboard.press('m')
+  await expect(page.getByRole('button', { name: 'Mute' })).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('adhx-theater-sound'))).toBe('on')
+})
+
 test('the last sound choice follows links and synchronizes mobile and desktop tabs', async ({
   context,
   page,

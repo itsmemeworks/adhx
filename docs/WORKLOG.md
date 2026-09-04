@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Sound hotkey follows media; mobile Live rail stays anchored
+
+Browser fallback can leave the saved sound choice on while the live element is muted; `M` used to
+toggle the saved choice, so the first press did nothing visible and a second press was required.
+`M` now activates the visible audio control, which derives its target from the live media state.
+The mobile Live rail reserves its four-action footprint while Save retires, preventing Open/Tag/
+Share from drifting down toward the playlist dock; its icon-only Save content is explicitly centered.
+The bottom scrim now fades without transforming, so WebKit cannot rebase its fixed rail during Focus.
+Current state: complete locally; production repro, focused tests, and local desktop/mobile browser
+checks pass.
+
 ## 2026-09-04 — Expanded Queue owns the mobile control surface
 
 The bottom transport now orders Focus, play/pause, Repeat, then sound, swapping the old outer slots.

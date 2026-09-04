@@ -184,7 +184,7 @@ const PEEK_ICON_BTN =
   'inline-flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink active:bg-inset active:text-ink'
 /** Frosted post-action treatment for the right-side thumb rail. */
 const RAIL_ACTION_BTN =
-  'h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/20 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.18)] backdrop-blur-md transition-[transform,background-color] hover:bg-white/10 active:scale-95 active:bg-white/20'
+  'pointer-events-auto h-11 w-11 min-h-11 min-w-11 rounded-full border border-white/15 bg-black/20 text-white/90 shadow-[0_5px_18px_rgba(0,0,0,.18)] backdrop-blur-md transition-[transform,background-color] hover:bg-white/10 active:scale-95 active:bg-white/20'
 
 export function TheaterMobileChrome({
   mode,
@@ -624,9 +624,13 @@ export function TheaterMobileChrome({
         <div
           inert={declutter}
           className={cn(
-            'pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-[opacity,transform] duration-200 ease-out',
-            declutter && 'translate-y-3 opacity-0',
+            // A transformed ancestor becomes the containing block for its
+            // fixed rail in WebKit. Fade only, otherwise leaving Focus can
+            // briefly anchor the actions to this scrim below the viewport.
+            'pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-opacity duration-200 ease-out',
+            declutter && 'opacity-0',
           )}
+          data-testid="mobile-bottom-scrim"
           style={{
             paddingBottom: `calc(${PEEK_H} + 0.75rem)`,
             background: textLike
@@ -697,11 +701,14 @@ export function TheaterMobileChrome({
             <div
               ref={actionRailRef}
               className={cn(
-                'pointer-events-auto fixed right-3 z-[30] flex w-12 flex-col items-center gap-1.5 bottom-[calc(13rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
+                'pointer-events-none fixed right-3 z-[30] flex w-12 flex-col items-center gap-1.5 bottom-[calc(13rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
                 // In a short personal theater, 6rem = the 4.25rem dock,
                 // the slider's 1.5rem reach above it, and a 0.25rem gap.
                 collection &&
                   '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-28',
+                // Live's Save slot retires after ownership catches up. Preserve
+                // the four-slot height so the remaining rail cannot jump down.
+                collection?.tab === 'live' && 'min-h-[12.125rem]',
                 actionRailHidden && 'hidden',
               )}
               aria-hidden={actionRailHidden}
@@ -1169,6 +1176,7 @@ export function TheaterMobileChrome({
                 aria-disabled={mediaKind !== 'video'}
                 onClick={handleAudioTap}
                 aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                data-theater-action="mute"
                 className={cn(
                   PEEK_ICON_BTN,
                   soundPulse && 'animate-sound-pulse',

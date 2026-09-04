@@ -36,6 +36,7 @@ export type TheaterShortcut =
   | 'scrollUp'
 
 export const THEATER_ACTION_EVENTS = {
+  toggleMute: 'theater-toggle-mute',
   save: 'theater-save',
   tag: 'theater-tag',
   copyLink: 'theater-copy-link',
@@ -57,6 +58,7 @@ export type TheaterActionName = keyof typeof THEATER_ACTION_EVENTS
 
 /** data-theater-action value for the matching control in the visible chrome. */
 export const THEATER_ACTION_ATTR: Record<TheaterActionName, string> = {
+  toggleMute: 'mute',
   save: 'save',
   tag: 'tag',
   copyLink: 'link',
