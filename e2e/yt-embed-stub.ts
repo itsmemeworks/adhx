@@ -7,7 +7,10 @@ import type { Page } from '@playwright/test'
  * until a click inside the frame — the real-player starvation the clay bar
  * now interpolates around.
  */
-export function fakeYtPlayerHtml(durationSec: number): string {
+export function fakeYtPlayerHtml(
+  durationSec: number,
+  options: { rejectSecondUnmute?: boolean } = {},
+): string {
   return `<!doctype html><html><head>
 <style>html,body{margin:0;width:100%;height:100%;background:#000;min-height:100vh}</style>
 </head><body>
@@ -18,6 +21,8 @@ export function fakeYtPlayerHtml(durationSec: number): string {
   var frozenElapsed = 0;
   var reportTime = false;
   var playerState = 1;
+  var unmuteCount = 0;
+  var rejectSecondUnmute = ${options.rejectSecondUnmute === true};
   function send(event, info) {
     parent.postMessage(JSON.stringify({ event: event, info: info }), '*');
   }
@@ -39,6 +44,20 @@ export function fakeYtPlayerHtml(durationSec: number): string {
     }
     if (data.func === 'getCurrentTime' && reportTime) {
       send('infoDelivery', { currentTime: elapsed(), duration: duration, playerState: playerState });
+    }
+    if (data.func === 'mute') {
+      send('infoDelivery', { playerState: playerState, muted: true });
+    }
+    if (data.func === 'unMute') {
+      unmuteCount += 1;
+      send('infoDelivery', { playerState: playerState, muted: false });
+      if (rejectSecondUnmute && unmuteCount >= 2) {
+        setTimeout(function () {
+          frozenElapsed = elapsed();
+          playerState = 2;
+          send('onStateChange', 2);
+        }, 0);
+      }
     }
     if (data.func === 'pauseVideo') {
       frozenElapsed = elapsed();
@@ -70,12 +89,16 @@ export function isYoutubeNocookieFrameUrl(url: string): boolean {
   }
 }
 
-export async function stubYouTubeEmbed(page: Page, durationSec = 20): Promise<void> {
+export async function stubYouTubeEmbed(
+  page: Page,
+  durationSec = 20,
+  options: { rejectSecondUnmute?: boolean } = {},
+): Promise<void> {
   await page.route('https://www.youtube-nocookie.com/embed/**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'text/html',
-      body: fakeYtPlayerHtml(durationSec),
+      body: fakeYtPlayerHtml(durationSec, options),
     })
   })
 }

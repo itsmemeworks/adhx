@@ -757,21 +757,36 @@ export function StageYouTube({
   // `requestUnmute()`'s confirmed-playing gate. No-ops before the handshake
   // completes — `onReady` applies the latest value instead once it does.
   const applyMuted = useCallback(
-    (next: boolean) => {
+    (next: boolean, source: 'user' | 'catchup' = 'user', origin: 'event' | 'prop' = 'event') => {
       if (!readyRef.current) return
       if (next) {
+        const alreadyMuted = lastCommandedMutedRef.current
         pendingUnmuteRef.current = false
         unmuteAwaitingConfirmRef.current = false
         catchupUnmuteBaselineTimeRef.current = null
         lastCommandedMutedRef.current = true
         setEffectiveMuted(true)
-        postCommand('mute')
-      } else {
-        // A deliberate user gesture (the audio-button tap) — never the
-        // automatic catch-up path (that one only ever fires from
-        // `onReady`/`applyPlayerState` below).
-        requestUnmute('user')
+        if (!alreadyMuted) postCommand('mute')
+        return
       }
+
+      // The synchronous event normally applies a choice before the matching
+      // React prop arrives. Do not send twice or reclassify a queued catch-up.
+      if (origin === 'prop' && pendingUnmuteRef.current) return
+
+      const upgradesCatchup =
+        origin === 'event' &&
+        source === 'user' &&
+        ((pendingUnmuteRef.current && pendingUnmuteSourceRef.current === 'catchup') ||
+          (unmuteAwaitingConfirmRef.current && unmuteConfirmSourceRef.current === 'catchup'))
+      if (lastCommandedMutedRef.current === false && !upgradesCatchup) return
+      if (
+        source === 'catchup' &&
+        (pendingUnmuteRef.current || lastCommandedMutedRef.current === false)
+      ) {
+        return
+      }
+      requestUnmute(source)
     },
     [postCommand, requestUnmute],
   )
@@ -785,7 +800,7 @@ export function StageYouTube({
   // is usually already correct, so this is idempotent housekeeping, not the
   // primary mechanism.
   useEffect(() => {
-    applyMuted(muted)
+    applyMuted(muted, 'user', 'prop')
   }, [muted, applyMuted])
 
   // An opaque Theater state (paste resolver, waiting, All Clear) must suspend
@@ -850,10 +865,10 @@ export function StageYouTube({
   // stage on one consistent contract.
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ muted: boolean }>).detail
+      const detail = (e as CustomEvent<{ muted: boolean; source?: 'user' | 'catchup' }>).detail
       if (!detail) return
-      logStage(`theater-set-muted(${detail.muted}) applied`)
-      applyMuted(detail.muted)
+      logStage(`theater-set-muted(${detail.muted}, ${detail.source ?? 'user'}) applied`)
+      applyMuted(detail.muted, detail.source ?? 'user', 'event')
     }
     window.addEventListener('theater-set-muted', handler)
     return () => window.removeEventListener('theater-set-muted', handler)

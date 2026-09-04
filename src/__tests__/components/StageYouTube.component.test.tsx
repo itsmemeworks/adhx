@@ -799,6 +799,123 @@ describe('StageYouTube', () => {
     expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'mute' })
   })
 
+  it('keeps a cross-tab unmute classified as catch-up when the matching prop arrives', () => {
+    const { container, rerender } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    dispatchWindowEvent(
+      new CustomEvent('theater-set-muted', {
+        detail: { muted: false, source: 'catchup' },
+      }),
+    )
+    expect(postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)).not.toContain(
+      'unMute',
+    )
+
+    // The hook updates React state after dispatching the catch-up event. That
+    // later prop must be idempotent, not silently upgraded to a user gesture.
+    rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'unMute' })
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, muted: false },
+    })
+    postMessage.mockClear()
+
+    // iOS can accept the command and then enforce autoplay policy by pausing.
+    // Because this remains catch-up, the player recovers as muted playback.
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toContain('mute')
+    expect(funcs).toContain('playVideo')
+  })
+
+  it('does not upgrade a playing cross-tab unmute when its matching prop arrives', () => {
+    const { container, rerender } = render(
+      <StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />,
+    )
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+    dispatchWindowEvent(
+      new CustomEvent('theater-set-muted', {
+        detail: { muted: false, source: 'catchup' },
+      }),
+    )
+    expect(JSON.parse(postMessage.mock.calls.at(-1)![0])).toMatchObject({ func: 'unMute' })
+    rerender(<StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />)
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, muted: false },
+    })
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).toContain('mute')
+    expect(funcs).toContain('playVideo')
+  })
+
+  it('cancels a queued cross-tab unmute when mute wins before playback starts', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+
+    dispatchWindowEvent(
+      new CustomEvent('theater-set-muted', {
+        detail: { muted: false, source: 'catchup' },
+      }),
+    )
+    dispatchWindowEvent(
+      new CustomEvent('theater-set-muted', {
+        detail: { muted: true, source: 'catchup' },
+      }),
+    )
+    postMessage.mockClear()
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+    expect(postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)).not.toContain(
+      'unMute',
+    )
+  })
+
+  it('lets a real gesture upgrade an in-flight cross-tab unmute', () => {
+    const { container } = render(<StageYouTube item={makeItem()} muted onRequestUnmute={vi.fn()} />)
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement
+    const { postMessage, fakeWindow } = stubContentWindow(iframe)
+    fireEvent.load(iframe)
+    postFromPlayer(fakeWindow, { event: 'onReady' })
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 1 })
+
+    dispatchWindowEvent(
+      new CustomEvent('theater-set-muted', {
+        detail: { muted: false, source: 'catchup' },
+      }),
+    )
+    dispatchWindowEvent(new CustomEvent('theater-set-muted', { detail: { muted: false } }))
+    postFromPlayer(fakeWindow, {
+      event: 'infoDelivery',
+      info: { playerState: 1, muted: false },
+    })
+    postMessage.mockClear()
+
+    postFromPlayer(fakeWindow, { event: 'onStateChange', info: 2 })
+    const funcs = postMessage.mock.calls.map(([payload]) => JSON.parse(payload).func)
+    expect(funcs).not.toContain('mute')
+    expect(funcs).not.toContain('playVideo')
+  })
+
   it('never asks for sound before a confirmed playing state, even when the shell is already unmuted before the handshake completes', () => {
     const { container } = render(
       <StageYouTube item={makeItem()} muted={false} onRequestUnmute={vi.fn()} />,
