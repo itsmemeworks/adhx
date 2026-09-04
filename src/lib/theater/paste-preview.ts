@@ -8,7 +8,9 @@
  * navigation — same rule as `/share`).
  */
 
-import { extractSharedUrl, parseShareUrl } from '@/lib/utils/parse-share-url'
+import { extractSharedUrl, matchTikTokShortLink, parseShareUrl } from '@/lib/utils/parse-share-url'
+import { detectPlatformPost, type PlatformPost } from '@/lib/platform/url'
+import type { TheaterItem } from '@/components/theater/types'
 
 /**
  * Pure: the app path to navigate to for pasted text, or null when the text
@@ -38,4 +40,59 @@ export function resolvePastedPost(text: string): PastedPost | null {
   if (!url) return null
   const path = parseShareUrl(url)?.path
   return path ? { url, path } : null
+}
+
+/**
+ * Client-safe URL stub for instant Theater feedback. It is deliberately not
+ * inserted into either authoritative queue: the add/feed response replaces
+ * this temporary stage, while failure simply uncovers the untouched post.
+ */
+export function pastedPostResolvingStub(url: string): TheaterItem | null {
+  const post = detectPlatformPost(url)
+  if (post) return platformPostResolvingStub(post, url)
+  if (!matchTikTokShortLink(url)) return null
+
+  return {
+    action: 'preview',
+    platform: 'tiktok',
+    bookmarkId: null,
+    author: 'tiktok',
+    authorName: null,
+    authorAvatarUrl: null,
+    text: null,
+    thumbnailUrl: null,
+    url,
+    createdAt: new Date().toISOString(),
+    contentType: 'video',
+  }
+}
+
+function platformPostResolvingStub(post: PlatformPost, source: string): TheaterItem {
+  const contentType =
+    post.platform === 'twitter'
+      ? 'text'
+      : post.platform === 'instagram' && post.previewPath.startsWith('/p/')
+        ? 'photo'
+        : 'video'
+  const author =
+    post.author ||
+    (post.platform === 'instagram'
+      ? 'instagram'
+      : post.platform === 'youtube'
+        ? 'youtube'
+        : post.platform)
+
+  return {
+    action: 'preview',
+    platform: post.platform,
+    bookmarkId: post.id,
+    author,
+    authorName: null,
+    authorAvatarUrl: null,
+    text: null,
+    thumbnailUrl: null,
+    url: source,
+    createdAt: new Date().toISOString(),
+    contentType,
+  }
 }

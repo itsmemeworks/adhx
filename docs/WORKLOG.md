@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Theater paints resolving posts immediately
+
+Personal Live/Saved paste now stages the Gob resolver before add/enrichment returns, then swaps in
+the saved row without remounting the persistent stage; failures uncover the untouched queue/cursor.
+Direct X, Instagram, TikTok, and YouTube previews use the same resolving stage, and route loading
+now paints a side-effect-free responsive Theater shell instead of a standalone loader. Current
+state: complete; focused transitions, 3,568 tests, typecheck, lint, formatting, and build pass.
+
 ## 2026-09-04 — Desktop Theater consolidates sharing
 
 Desktop post actions now use one Share pill instead of separate Copy/Download and Link pills.

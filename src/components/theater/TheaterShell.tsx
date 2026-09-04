@@ -86,6 +86,7 @@ import { useSharedPin } from './useSharedPin'
 import { SharedResolveBridge } from './SharedResolveBridge'
 import { useTheaterLiveUrl } from './useTheaterLiveUrl'
 import { resolveTheaterChrome } from './theater-chrome'
+import { pastedPostResolvingStub } from '@/lib/theater/paste-preview'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 import { SignInModal, useAuthMe } from '@/components/auth'
 import { useAppAccountScope } from '@/components/AppShell'
@@ -389,6 +390,8 @@ export function TheaterShell({
 
   const [personalSavedKeys, setPersonalSavedKeys] = useState<Set<string>>(new Set())
   const personalSavedKeysRef = useRef(personalSavedKeys)
+  const [pasteResolvingItem, setPasteResolvingItem] = useState<TheaterItem | null>(null)
+  const pasteRequestRef = useRef(0)
   useEffect(() => {
     personalSavedKeysRef.current = personalSavedKeys
   }, [personalSavedKeys])
@@ -978,6 +981,13 @@ export function TheaterShell({
 
   const handlePastePost = useCallback(
     async (url: string): Promise<boolean> => {
+      const resolvingItem = pastedPostResolvingStub(url)
+      if (!resolvingItem) return false
+      const request = pasteRequestRef.current + 1
+      let clearAfterLiveStage = false
+      pasteRequestRef.current = request
+      setPasteResolvingItem(resolvingItem)
+
       try {
         const res = await fetch('/api/bookmarks/add', {
           method: 'POST',
@@ -1020,35 +1030,44 @@ export function TheaterShell({
         patchAuthoritativeMembership(row)
         markFreshSaved(key)
         seenSet.unmarkSeen([key])
-        // Same-tab paste takes the stage now. The clip that was playing
-        // becomes Next. tweet-added / a second window still prepends
-        // without stealing (prependToPersonalQueue).
-        const sameRow = (a: FeedItem, b: FeedItem) =>
-          a.id === b.id && (a.platform ?? 'twitter') === (b.platform ?? 'twitter')
-        const playingSaved = personalQueueRef.current[personalIndexRef.current]
-        const wasFinished = personalFinishedRef.current || personalQueueRef.current.length === 0
-        const interrupted =
-          !wasFinished && playingSaved && !sameRow(playingSaved, row) ? playingSaved : null
-        const rest = sortFeedNewestFirst(
-          personalQueueRef.current.filter(
-            (f) => !sameRow(f, row) && !(interrupted && sameRow(f, interrupted)),
-          ),
-        )
-        const nextQueue = interrupted ? [row, interrupted, ...rest] : [row, ...rest]
-        personalQueueRef.current = nextQueue
-        setPersonalQueue(nextQueue)
-        setPersonalIndex(0)
-        const interruptedKey =
-          personalTabRef.current === 'collection'
-            ? interrupted
-              ? theaterItemKey(feedItemToTheaterItem(interrupted))
-              : null
-            : liveNowKeyRef.current && liveNowKeyRef.current !== key
-              ? liveNowKeyRef.current
-              : null
-        pastePlayKeyRef.current = interruptedKey ? key : null
-        setPasteInterruptKey(interruptedKey)
-        if (personalTabRef.current !== 'collection') setLivePasteKey(key)
+        if (pasteRequestRef.current === request) {
+          // Same-tab paste takes the stage now. The clip that was playing
+          // becomes Next. tweet-added / a second window still prepends
+          // without stealing (prependToPersonalQueue).
+          const sameRow = (a: FeedItem, b: FeedItem) =>
+            a.id === b.id && (a.platform ?? 'twitter') === (b.platform ?? 'twitter')
+          const playingSaved = personalQueueRef.current[personalIndexRef.current]
+          const wasFinished = personalFinishedRef.current || personalQueueRef.current.length === 0
+          const interrupted =
+            !wasFinished && playingSaved && !sameRow(playingSaved, row) ? playingSaved : null
+          const rest = sortFeedNewestFirst(
+            personalQueueRef.current.filter(
+              (f) => !sameRow(f, row) && !(interrupted && sameRow(f, interrupted)),
+            ),
+          )
+          const nextQueue = interrupted ? [row, interrupted, ...rest] : [row, ...rest]
+          personalQueueRef.current = nextQueue
+          setPersonalQueue(nextQueue)
+          setPersonalIndex(0)
+          const interruptedKey =
+            personalTabRef.current === 'collection'
+              ? interrupted
+                ? theaterItemKey(feedItemToTheaterItem(interrupted))
+                : null
+              : liveNowKeyRef.current && liveNowKeyRef.current !== key
+                ? liveNowKeyRef.current
+                : null
+          pastePlayKeyRef.current = interruptedKey ? key : null
+          setPasteInterruptKey(interruptedKey)
+          if (personalTabRef.current !== 'collection') {
+            clearAfterLiveStage = true
+            setLivePasteKey(key)
+          }
+        } else {
+          // A newer paste owns the resolving stage. Keep this completed save
+          // in both queues without stealing focus from that newer request.
+          prependToPersonalQueue(row)
+        }
         feedPrepend(theaterItem)
         skipSavedClampRef.current = true
         setQueueTypes((cur) => queueTypesForAddedItem(cur, row))
@@ -1062,9 +1081,19 @@ export function TheaterShell({
         return true
       } catch {
         return false
+      } finally {
+        if (pasteRequestRef.current === request && !clearAfterLiveStage) {
+          setPasteResolvingItem(null)
+        }
       }
     },
-    [feedPrepend, markFreshSaved, seenSet.unmarkSeen, patchAuthoritativeMembership],
+    [
+      feedPrepend,
+      markFreshSaved,
+      seenSet.unmarkSeen,
+      patchAuthoritativeMembership,
+      prependToPersonalQueue,
+    ],
   )
 
   const handleSharedTag = useCallback((item: TheaterItem) => {
@@ -1158,6 +1187,7 @@ export function TheaterShell({
     setCurrentKey(livePasteKey)
     setWaiting(false)
     setLivePasteKey(null)
+    setPasteResolvingItem(null)
   }, [livePasteKey])
   useEffect(() => {
     if (livePasteKey) return
@@ -1552,10 +1582,7 @@ export function TheaterShell({
     return true
   }, [clearSharedPin])
   const resolvingSharedLead =
-    awaitingSharedResolve &&
-    mode === 'shared' &&
-    currentKey === sharedItemKey &&
-    sharedItem?.platform === 'twitter'
+    awaitingSharedResolve && mode === 'shared' && currentKey === sharedItemKey
   // End-states for the peek bar's prev/next chevrons (tester feedback: at the
   // first post, pressing "back" silently did nothing). `currentIndex === -1`
   // (nothing current, e.g. an empty list) always reads as "can't navigate".
@@ -1879,7 +1906,7 @@ export function TheaterShell({
   const [keyboardReady, setKeyboardReady] = useState(false)
   const onToggleHelp = useCallback(() => setHelpOpen((open) => !open), [])
   useTheaterKeyboard({
-    disabled: !accountScopeTrusted,
+    disabled: !accountScopeTrusted || !!pasteResolvingItem,
     onReadyChange: setKeyboardReady,
     isPersonal,
     personalTab,
@@ -1903,7 +1930,7 @@ export function TheaterShell({
     loop,
     itemsRef,
     seenSet,
-    paused: resolvingSharedLead || waiting,
+    paused: resolvingSharedLead || !!pasteResolvingItem || waiting,
   })
 
   useTheaterLiveUrl({ mode, isCollectionTab, currentKey, itemsRef })
@@ -2295,19 +2322,19 @@ export function TheaterShell({
       ? feedItemToTheaterItem(personalQueue[personalQueue.length - 1])
       : null)
   const {
-    chromeCurrent,
-    chromeItems,
-    chromeCurrentKey,
-    chromeIsSeen,
-    chromeSeenReady,
-    chromeFreshKeys,
-    chromeNewCount,
+    chromeCurrent: settledChromeCurrent,
+    chromeItems: settledChromeItems,
+    chromeCurrentKey: settledChromeCurrentKey,
+    chromeIsSeen: settledChromeIsSeen,
+    chromeSeenReady: settledChromeSeenReady,
+    chromeFreshKeys: settledChromeFreshKeys,
+    chromeNewCount: settledChromeNewCount,
     queueTotal,
     queuePlayed,
     queueToPlay,
     queueLooping,
-    chromeCanPrev,
-    chromeCanNext,
+    chromeCanPrev: settledChromeCanPrev,
+    chromeCanNext: settledChromeCanNext,
     seenStartIndex,
   } = resolveTheaterChrome({
     isCollectionTab,
@@ -2345,6 +2372,28 @@ export function TheaterShell({
     canPrev,
     canNext,
   })
+  const personalPasteResolving = isPersonal ? pasteResolvingItem : null
+  const personalPasteKey = personalPasteResolving ? theaterItemKey(personalPasteResolving) : null
+  // The pending item owns the visible stage immediately, but never enters an
+  // authoritative queue. Keeping `current` null hides actions for the old
+  // post; success installs the resolved row, while failure reveals the exact
+  // queue/cursor that was underneath.
+  const chromeCurrent = personalPasteResolving ? null : settledChromeCurrent
+  const chromeItems = personalPasteResolving
+    ? [
+        personalPasteResolving,
+        ...settledChromeItems.filter((item) => theaterItemKey(item) !== personalPasteKey),
+      ]
+    : settledChromeItems
+  const chromeCurrentKey = personalPasteKey ?? settledChromeCurrentKey
+  const chromeIsSeen = personalPasteResolving ? () => false : settledChromeIsSeen
+  const chromeSeenReady = personalPasteResolving ? false : settledChromeSeenReady
+  const chromeFreshKeys = personalPasteResolving
+    ? new Set([personalPasteKey as string])
+    : settledChromeFreshKeys
+  const chromeNewCount = personalPasteResolving ? settledChromeNewCount + 1 : settledChromeNewCount
+  const chromeCanPrev = personalPasteResolving ? false : settledChromeCanPrev
+  const chromeCanNext = personalPasteResolving ? false : settledChromeCanNext
   // Collection transport matches Live: next/prev skip without changing
   // archive state. Archive is a button, not a chevron.
   const chromeOnPrev = isCollectionTab ? personalStepBack : goPrevUser
@@ -2450,10 +2499,18 @@ export function TheaterShell({
                 photoCaption={false}
                 repeat={repeatCurrentActive}
                 articleMode={articleMode}
-                covered={(waiting && !isCollectionTab) || (isCollectionTab && personalFinished)}
+                covered={
+                  !!personalPasteResolving ||
+                  (waiting && !isCollectionTab) ||
+                  (isCollectionTab && personalFinished)
+                }
               />
-              {typeFilterActive &&
-              (isCollectionTab ? personalLensItems : lensItems).length === 0 ? (
+              {personalPasteResolving ? (
+                <div className="absolute inset-0 z-10">
+                  <StageResolving handle={personalPasteResolving.author} />
+                </div>
+              ) : typeFilterActive &&
+                (isCollectionTab ? personalLensItems : lensItems).length === 0 ? (
                 <div className="absolute inset-0 z-10">
                   <StageVisualEmpty
                     headline={theaterQueueEmptyHeadline(
@@ -2500,7 +2557,7 @@ export function TheaterShell({
           desktopDock
           hidden={desktopDeclutter}
           kind={
-            resolvingSharedLead
+            resolvingSharedLead || personalPasteResolving
               ? 'none'
               : isDesktop
                 ? progressKindForPin(

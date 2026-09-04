@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolvePastedLink } from '@/lib/theater/paste-preview'
+import { pastedPostResolvingStub, resolvePastedLink } from '@/lib/theater/paste-preview'
 
 describe('resolvePastedLink', () => {
   it('maps an X status URL to its preview path', () => {
@@ -42,5 +42,35 @@ describe('resolvePastedLink', () => {
     expect(resolvePastedLink('https://youtu.be/Y9aytLYBajw')).toBeNull()
     expect(resolvePastedLink('https://www.youtube.com/watch?v=Y9aytLYBajw')).toBeNull()
     expect(resolvePastedLink('')).toBeNull()
+  })
+})
+
+describe('pastedPostResolvingStub', () => {
+  it.each([
+    ['https://x.com/naval/status/123', 'twitter', '123', 'text'],
+    ['https://www.instagram.com/p/DaigXfxAkrE/', 'instagram', 'DaigXfxAkrE', 'photo'],
+    ['https://www.instagram.com/reel/DaigXfxAkrE/', 'instagram', 'DaigXfxAkrE', 'video'],
+    [
+      'https://www.tiktok.com/@user/video/7648011069385919752',
+      'tiktok',
+      '7648011069385919752',
+      'video',
+    ],
+    ['https://youtube.com/shorts/aqz-KE-bpKQ', 'youtube', 'aqz-KE-bpKQ', 'video'],
+  ])('builds an immediate %s stage stub', (url, platform, id, contentType) => {
+    expect(pastedPostResolvingStub(url)).toMatchObject({
+      platform,
+      bookmarkId: id,
+      contentType,
+      text: null,
+    })
+  })
+
+  it('builds an identity-safe temporary stub for a TikTok short link', () => {
+    expect(pastedPostResolvingStub('https://vm.tiktok.com/ZMabc123/')).toMatchObject({
+      platform: 'tiktok',
+      bookmarkId: null,
+      contentType: 'video',
+    })
   })
 })
