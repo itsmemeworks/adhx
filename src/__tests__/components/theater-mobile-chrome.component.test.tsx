@@ -132,7 +132,8 @@ describe('TheaterMobileChrome: iOS viewport anchoring', () => {
 
     expect(container.firstElementChild).toHaveClass('absolute')
     const paste = screen.getByRole('button', { name: 'Paste a link' })
-    expect(paste.closest('.theater-mobile-top-chrome')).not.toBeNull()
+    expect(paste.closest('.theater-mobile-top-chrome')).toHaveClass('pointer-events-none')
+    expect(paste.closest('.pointer-events-auto')).not.toBeNull()
     expect(mockTheaterAvatarMenu).toHaveBeenCalled()
   })
 })
@@ -730,6 +731,17 @@ describe('TheaterMobileChrome: Open action uses the source platform glyph', () =
 // stage-mounted actions and joined swipe capsule while keeping an obvious
 // exit control in the bar.
 describe('TheaterMobileChrome: de-clutter icon', () => {
+  it('makes the pointer-enabled top control islands inert while hidden', () => {
+    render(<TheaterMobileChrome {...base} current={videoItem()} />)
+    const top = screen
+      .getByRole('button', { name: 'Paste a link' })
+      .closest('.theater-mobile-top-chrome')
+    expect(top).not.toHaveAttribute('inert')
+
+    fireEvent.click(screen.getByLabelText('Hide controls'))
+    expect(top).toHaveAttribute('inert')
+  })
+
   it('shows the outward focus icon, then an always-visible restore icon', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const toggle = screen.getByLabelText('Hide controls')
@@ -944,7 +956,7 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     fireEvent.click(screen.getByLabelText('Hide controls'))
     expect(controls.className).toContain('opacity-0')
     expect(controls.className).toContain('pointer-events-none')
-    expect(document.querySelectorAll('[inert]')).toHaveLength(3)
+    expect(document.querySelector('.theater-mobile-top-chrome')).toHaveAttribute('inert')
     expect(screen.getByTestId('mobile-sheet-content')).toHaveAttribute('inert')
     expect(screen.getByTestId('mobile-playback-controls')).toBeInTheDocument()
 

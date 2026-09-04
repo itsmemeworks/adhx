@@ -18,7 +18,7 @@ describe('mobile Theater viewport', () => {
   it('paints through the iOS bottom toolbar while fixing chrome to the visible viewport', () => {
     expect(theaterShell).toContain('theater-shell-viewport fixed inset-0')
     expect(mobileChrome).toContain(
-      'theater-mobile-top-chrome pointer-events-auto absolute inset-x-0 top-0',
+      'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0',
     )
     expect(previewLoading).toContain(
       'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0',
@@ -32,8 +32,6 @@ describe('mobile Theater viewport', () => {
     expect(globalsCss).toMatch(
       /@supports \(-webkit-touch-callout: none\)[\s\S]*\.theater-mobile-top-chrome\s*\{[^}]*position: fixed;/,
     )
-    expect(globalsCss).toMatch(
-      /@supports \(-webkit-touch-callout: none\)[\s\S]*\.theater-mobile-top-chrome\s*\{[^}]*position: fixed;/,
-    )
+    expect(globalsCss).toMatch(/\.theater-mobile-top-chrome\s*\{[^}]*z-index: 71;/)
   })
 })
