@@ -1079,7 +1079,7 @@ describe('DesktopStageChrome', () => {
   it('layers the scrub badge above desktop chrome without raising its hit target', () => {
     const { container } = render(
       <>
-        <TheaterProgressLine itemKey="twitter:1" kind="video" />
+        <TheaterProgressLine itemKey="twitter:1" kind="video" desktopDock />
         <DesktopStageChrome {...stageBase} current={videoItem()} />
         <SignInModal open onClose={vi.fn()} />
       </>,

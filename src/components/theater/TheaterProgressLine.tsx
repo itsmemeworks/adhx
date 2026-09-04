@@ -1,8 +1,10 @@
 'use client'
 
 /**
- * Instagram-style progress line for the mobile theater, fixed at the very top
- * of the screen (clay/orange on a faint track):
+ * Theater playback progress (clay/orange on a faint track). Production
+ * mobile chrome mounts it on the straight top edge of the viewport-fixed
+ * bottom dock, keeping scrub gestures away from iOS Chrome's native
+ * top-edge tab gesture:
  * - kind 'video': fill mirrors the current video's playback — driven by
  *   `theater-video-progress` window CustomEvents (detail: { progress: 0..1 })
  *   dispatched by StageVideo on timeupdate. YouTube also gets this kind
@@ -285,10 +287,8 @@ export function TheaterProgressLine({
         data-theater-progress-slider
         disabled={hidden}
         className={cn(
-          'peer fixed inset-x-0 z-[70] w-full touch-none cursor-ew-resize opacity-0',
-          desktopDock
-            ? 'bottom-[124px] top-auto h-9'
-            : 'pointer-events-auto top-[env(safe-area-inset-top)] h-11',
+          'peer inset-x-0 z-[70] w-full touch-none cursor-ew-resize opacity-0',
+          desktopDock ? 'fixed bottom-[124px] top-auto h-9' : 'absolute -top-6 bottom-auto h-8',
           hidden ? 'pointer-events-none' : 'pointer-events-auto',
         )}
         onPointerDown={() => {
@@ -312,11 +312,12 @@ export function TheaterProgressLine({
         }}
       />
       <div
+        data-theater-progress-track
         className={cn(
-          'pointer-events-none fixed inset-x-0 transition-[opacity,filter,background-color]',
+          'pointer-events-none inset-x-0 transition-[opacity,filter,background-color]',
           desktopDock
-            ? 'bottom-[124px] top-auto z-[72] h-1 bg-white/20'
-            : 'top-[env(safe-area-inset-top)] z-[70] h-[3px] bg-white/15',
+            ? 'fixed bottom-[124px] top-auto z-[72] h-1 bg-white/20'
+            : 'absolute bottom-auto top-0 z-[32] h-1 bg-white/[.35] shadow-[0_-1px_0_rgba(0,0,0,.45)]',
           'peer-focus-visible:bg-white/40 peer-focus-visible:brightness-125',
           hidden && 'opacity-0',
         )}
@@ -333,10 +334,10 @@ export function TheaterProgressLine({
       </div>
       <div
         className={cn(
-          'pointer-events-none fixed inset-x-0 z-[74] flex justify-center',
+          'pointer-events-none inset-x-0 flex justify-center',
           desktopDock
-            ? 'bottom-[calc(124px+0.5625rem)]'
-            : 'top-[calc(env(safe-area-inset-top)+0.5rem)]',
+            ? 'fixed bottom-[calc(124px+0.5625rem)] z-[74]'
+            : 'absolute bottom-[calc(100%+0.5rem)] z-[34]',
         )}
       >
         <div

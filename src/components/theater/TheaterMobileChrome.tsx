@@ -16,7 +16,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 import { useTheaterQueueOverlay } from './useTheaterQueueOverlay'
-import { useSheetDrag } from './useSheetDrag'
 import {
   Bookmark,
   Repeat,
@@ -241,13 +240,13 @@ export function TheaterMobileChrome({
   const focusClosingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const focusRestoreFrameRef = useRef<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
-  const peekRef = useRef<HTMLDivElement>(null)
+  const actionRailRef = useRef<HTMLDivElement>(null)
+  const queueToggleRef = useRef<HTMLButtonElement>(null)
   const quickFilterRef = useRef<HTMLDivElement>(null)
   const quickFilterTriggerRef = useRef<HTMLButtonElement>(null)
   const quickFilterOpenRef = useRef(false)
   quickFilterOpenRef.current = quickFilterOpen
-  const sheetDrag = useSheetDrag({ open: sheetOpen, onOpenChange: setSheetOpen, sheetRef, peekRef })
-  const sheetContentHidden = !sheetOpen && !sheetDrag.dragging && sheetRestingClosed
+  const sheetContentHidden = !sheetOpen && sheetRestingClosed
   // Eager on a shared preview page: there's one post the visitor followed a
   // link FOR (pinned + repeating, not skimmed past), so the file should be
   // ready before they reach for Send — the only way the share sheet opens
@@ -325,14 +324,14 @@ export function TheaterMobileChrome({
     setQuickFilterOpen(false)
   }, [sheetOpen, declutter])
   useEffect(() => {
-    if (sheetOpen || sheetDrag.dragging) {
+    if (sheetOpen) {
       setSheetRestingClosed(false)
       return
     }
     if (sheetRestingClosed) return
     const fallback = setTimeout(() => setSheetRestingClosed(true), 350)
     return () => clearTimeout(fallback)
-  }, [sheetOpen, sheetDrag.dragging, sheetRestingClosed])
+  }, [sheetOpen, sheetRestingClosed])
   useEffect(() => {
     if (!quickFilterOpenRef.current) return
     setQuickFilterOpen(false)
@@ -497,11 +496,10 @@ export function TheaterMobileChrome({
         : canPrev
           ? 'Swipe down for previous post'
           : 'Playback controls'
+  const actionRailHidden = declutter || sheetOpen || !sheetRestingClosed || focusClosingSheet
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 lg:hidden">
-      <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
-
       {/* Top scrim: brand (left) + flame/trend (right). De-clutter hides this
           whole scrim (meta included) — expected: immersion hides meta too.
           Collection mode replaces post meta with the tag/curator identity
@@ -697,13 +695,17 @@ export function TheaterMobileChrome({
               />
             ) : null}
             <div
+              ref={actionRailRef}
               className={cn(
-                'pointer-events-auto fixed right-3 z-[30] gap-1.5 transition-[opacity,transform] duration-200 ease-out',
-                sheetOpen || focusClosingSheet
-                  ? 'bottom-[calc(70%+0.75rem)] flex flex-row items-center justify-end'
-                  : 'bottom-[calc(13rem+env(safe-area-inset-bottom))] flex w-12 flex-col items-center [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:w-auto [@media(max-height:520px)]:flex-row',
-                declutter && 'pointer-events-none translate-y-2 opacity-0',
+                'pointer-events-auto fixed right-3 z-[30] flex w-12 flex-col items-center gap-1.5 bottom-[calc(13rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
+                // In a short personal theater, 6rem = the 4.25rem dock,
+                // the slider's 1.5rem reach above it, and a 0.25rem gap.
+                collection &&
+                  '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-28',
+                actionRailHidden && 'hidden',
               )}
+              aria-hidden={actionRailHidden}
+              inert={actionRailHidden ? true : undefined}
               data-testid="mobile-control-actions"
             >
               {collection?.tab === 'collection' && (
@@ -797,7 +799,6 @@ export function TheaterMobileChrome({
                 sendFile={sendFile}
                 onCopyText={copyText}
                 onShareLink={handleShare}
-                alignTop={sheetOpen}
                 triggerClassName={RAIL_ACTION_BTN}
               />
               {(() => {
@@ -956,67 +957,64 @@ export function TheaterMobileChrome({
         />
       )}
 
-      {/* Up-next sheet: a peek bar pinned to the bottom, dragged/tapped open
-          to ~70% of the theater. Height is % of the fixed stage, not `dvh`,
-          so iOS visual-viewport jumps (URL bar, focus) don't resize the
-          sheet mid-animation. overflow-hidden clips the list to the sheet
-          so a translating open never paints a full-screen black void.
-          Transform-only (no layout thrash), theme-following surface —
-          translucent so the stage reads through while collapsed, more
-          opaque once open so the list stays comfortably readable.
-          Unlike the scrims, de-clutter does NOT fade the Queue handle out;
+      {/* Up-next sheet: a straight-edged Queue/transport dock fixed to the
+          visual viewport, then translated open to ~70%. Unlike the absolute
+          media paint layer, this must follow iOS Safari AND Chrome's different
+          toolbar geometry or Chrome can place the collapsed bar below view.
+          The visible, seekable progress rail IS this edge instead of the
+          screen top, avoiding Chrome's native tab-swipe gesture. The Queue
+          button is the sole touch toggle; there is deliberately no sheet drag.
+          Unlike the scrims, de-clutter does NOT fade the Queue button out;
           post actions and thumb controls do fade for an unobstructed stage. */}
       <div
         ref={sheetRef}
-        style={sheetDrag.style}
+        data-testid="mobile-theater-dock"
         onTransitionEnd={(event) => {
           if (
             event.target === event.currentTarget &&
             event.propertyName === 'transform' &&
-            !sheetOpen &&
-            !sheetDrag.dragging
+            !sheetOpen
           ) {
             setSheetRestingClosed(true)
           }
         }}
         className={cn(
-          'pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-hidden overscroll-contain rounded-t-2xl shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
-          sheetOpen ? 'bg-surface' : 'bg-surface/70',
-          !sheetDrag.dragging &&
-            (sheetOpen
-              ? 'translate-y-0'
-              : 'translate-y-[calc(100%-4.25rem-env(safe-area-inset-bottom))]'),
+          'pointer-events-auto fixed inset-x-0 bottom-0 z-20 flex h-[70%] flex-col overflow-visible overscroll-contain shadow-[0_-8px_24px_rgba(0,0,0,.35)] backdrop-blur-md transition-[transform,background-color] duration-300 ease-out',
+          sheetOpen ? 'bg-surface' : 'bg-[#121117]/85',
+          sheetOpen
+            ? 'translate-y-0'
+            : 'translate-y-[calc(100%-4.25rem-env(safe-area-inset-bottom))]',
         )}
       >
-        {/* Bottom bar: drag handle on top (tap toggles; a real pointer drag
-            follows the finger 1:1 via useSheetDrag, snapping open/closed on
-            release by distance or flick velocity — see the hook), then the
-            Queue + Filter at left and transport at right. Post actions live
-            in the stage rail; up/down navigation shares one swipe capsule. */}
+        <TheaterProgressLine itemKey={currentKey} kind={progressKind} />
+
+        {/* Bottom bar: the Queue button toggles the playlist. The 12px top
+            inset keeps controls clear of the scrubber's hit target without
+            creating a second drag/tap surface. Post actions live in the stage
+            rail; up/down navigation shares one swipe capsule. */}
         {/* Exactly PEEK_H tall (owner: the collapsed bar floated a few px
             high with list content peeking below it — the natural content
             height is ~6px shorter than the 4.25rem window the collapse
             transform reveals, so the top of UpNextList showed through).
             Pinning the wrapper to the same height the transform uses makes
             the visible window and the peek content one and the same. */}
-        <div ref={peekRef} className="flex-none overflow-hidden" style={{ height: PEEK_H }}>
-          <button
-            type="button"
-            {...sheetDrag.handlers}
-            aria-expanded={sheetOpen}
-            aria-label={sheetOpen ? 'Collapse up next' : 'Expand up next'}
-            className="flex w-full touch-none items-center justify-center pb-0.5 pt-2"
-          >
-            <span className="h-1 w-9 rounded-full bg-hairline" aria-hidden />
-          </button>
-
+        <div
+          data-testid="mobile-theater-peek"
+          className="flex-none overflow-hidden pt-3"
+          style={{ height: PEEK_H }}
+        >
           <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-1.5">
               <button
+                ref={queueToggleRef}
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
-                  setSheetOpen((value) => !value)
+                  const opening = !sheetOpen
+                  if (opening && actionRailRef.current?.contains(document.activeElement)) {
+                    queueToggleRef.current?.focus({ preventScroll: true })
+                  }
+                  setSheetOpen(opening)
                 }}
                 onTouchEnd={(event) => event.stopPropagation()}
                 aria-expanded={sheetOpen}
@@ -1091,17 +1089,42 @@ export function TheaterMobileChrome({
             >
               <button
                 type="button"
-                disabled={mediaKind !== 'video'}
-                aria-disabled={mediaKind !== 'video'}
-                onClick={handleAudioTap}
-                aria-label={displayMuted ? 'Unmute' : 'Mute'}
-                className={cn(
-                  PEEK_ICON_BTN,
-                  soundPulse && 'animate-sound-pulse',
-                  mediaKind !== 'video' && 'opacity-35',
-                )}
+                onClick={(event) => {
+                  event.currentTarget.blur()
+                  if (sheetOpen) {
+                    setFocusClosingSheet(true)
+                    setSheetOpen(false)
+                    setDeclutter(true)
+                    if (focusClosingTimeoutRef.current) {
+                      clearTimeout(focusClosingTimeoutRef.current)
+                    }
+                    focusClosingTimeoutRef.current = setTimeout(() => {
+                      focusClosingTimeoutRef.current = null
+                      setFocusClosingSheet(false)
+                    }, 220)
+                    return
+                  }
+                  if (focusClosingSheet) {
+                    if (focusClosingTimeoutRef.current) {
+                      clearTimeout(focusClosingTimeoutRef.current)
+                      focusClosingTimeoutRef.current = null
+                    }
+                    setFocusClosingSheet(false)
+                    focusRestoreFrameRef.current = requestAnimationFrame(() => {
+                      focusRestoreFrameRef.current = requestAnimationFrame(() => {
+                        focusRestoreFrameRef.current = null
+                        setDeclutter(false)
+                      })
+                    })
+                    return
+                  }
+                  setDeclutter((value) => !value)
+                }}
+                aria-label={declutter && !sheetOpen ? 'Show controls' : 'Hide controls'}
+                className={PEEK_ICON_BTN}
+                data-theater-action="expand"
               >
-                {displayMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+                {declutter && !sheetOpen ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
               </button>
               {(mediaKind === 'video' || progressKind !== 'none' || (repeatCurrent && current)) && (
                 <button
@@ -1142,49 +1165,27 @@ export function TheaterMobileChrome({
               ) : null}
               <button
                 type="button"
-                onClick={(event) => {
-                  event.currentTarget.blur()
-                  if (sheetOpen) {
-                    setFocusClosingSheet(true)
-                    setSheetOpen(false)
-                    setDeclutter(true)
-                    if (focusClosingTimeoutRef.current) {
-                      clearTimeout(focusClosingTimeoutRef.current)
-                    }
-                    focusClosingTimeoutRef.current = setTimeout(() => {
-                      focusClosingTimeoutRef.current = null
-                      setFocusClosingSheet(false)
-                    }, 220)
-                    return
-                  }
-                  if (focusClosingSheet) {
-                    if (focusClosingTimeoutRef.current) {
-                      clearTimeout(focusClosingTimeoutRef.current)
-                      focusClosingTimeoutRef.current = null
-                    }
-                    setFocusClosingSheet(false)
-                    focusRestoreFrameRef.current = requestAnimationFrame(() => {
-                      focusRestoreFrameRef.current = requestAnimationFrame(() => {
-                        focusRestoreFrameRef.current = null
-                        setDeclutter(false)
-                      })
-                    })
-                    return
-                  }
-                  setDeclutter((value) => !value)
-                }}
-                aria-label={declutter && !sheetOpen ? 'Show controls' : 'Hide controls'}
-                className={PEEK_ICON_BTN}
-                data-theater-action="expand"
+                disabled={mediaKind !== 'video'}
+                aria-disabled={mediaKind !== 'video'}
+                onClick={handleAudioTap}
+                aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                className={cn(
+                  PEEK_ICON_BTN,
+                  soundPulse && 'animate-sound-pulse',
+                  mediaKind !== 'video' && 'opacity-35',
+                )}
               >
-                {declutter && !sheetOpen ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
+                {displayMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
               </button>
             </div>
           </div>
         </div>
 
         <div
-          className={cn('flex min-h-0 flex-1 flex-col', sheetContentHidden && 'invisible')}
+          className={cn(
+            'flex min-h-0 flex-1 flex-col overflow-hidden',
+            sheetContentHidden && 'invisible',
+          )}
           aria-hidden={sheetContentHidden}
           inert={sheetContentHidden ? true : undefined}
           data-testid="mobile-sheet-content"

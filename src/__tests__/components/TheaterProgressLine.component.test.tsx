@@ -19,7 +19,7 @@ describe('TheaterProgressLine', () => {
     expect(fill.style.width).toBe('40%')
   })
 
-  it('exposes the line as a seekable slider with a larger invisible hit area', () => {
+  it('exposes the dock line as a seekable slider with a larger hit area above it', () => {
     const { container } = render(<TheaterProgressLine itemKey="youtube:1" kind="video" />)
     const slider = container.querySelector('[data-theater-progress-slider]') as HTMLInputElement
     const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
@@ -27,7 +27,9 @@ describe('TheaterProgressLine', () => {
     window.addEventListener(THEATER_SEEK, seek)
     try {
       expect(slider).toHaveAttribute('aria-label', 'Playback position')
-      expect(slider.className).toContain('h-11')
+      expect(slider).toHaveClass('absolute', '-top-6', 'bottom-auto', 'h-8')
+      expect(fill.parentElement).toHaveAttribute('data-theater-progress-track')
+      expect(fill.parentElement).toHaveClass('absolute', 'top-0', 'h-1', 'z-[32]', 'bg-white/[.35]')
 
       fireEvent.input(slider, { target: { value: '375' } })
 
@@ -64,11 +66,11 @@ describe('TheaterProgressLine', () => {
     expect(badge.style.opacity).toBe('1')
     expect(badge).toHaveClass('w-max', 'min-w-[7rem]', 'whitespace-nowrap')
     expect(badge.parentElement).toHaveClass(
-      'fixed',
+      'absolute',
       'inset-x-0',
-      'z-[74]',
+      'z-[34]',
       'justify-center',
-      'top-[calc(env(safe-area-inset-top)+0.5rem)]',
+      'bottom-[calc(100%+0.5rem)]',
     )
 
     fireEvent.pointerUp(slider)

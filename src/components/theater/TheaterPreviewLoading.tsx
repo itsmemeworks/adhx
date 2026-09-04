@@ -54,13 +54,17 @@ export function TheaterPreviewLoading() {
         </div>
 
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-t from-black/85 to-transparent px-4 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-8 lg:hidden"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-20 h-[calc(4.25rem+env(safe-area-inset-bottom))] border-t border-white/15 bg-[#121117]/85 px-2 pb-[calc(.5rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-md lg:hidden"
+          data-testid="theater-loading-mobile-dock"
           aria-hidden
         >
-          <div className="ml-auto flex h-12 w-52 items-center justify-end gap-2 rounded-full border border-white/15 bg-white/[.08] px-2 backdrop-blur-xl">
-            <span className="h-8 w-8 rounded-full bg-white/[.08]" />
-            <span className="h-10 w-10 rounded-full bg-white/[.12]" />
-            <span className="h-8 w-8 rounded-full bg-white/[.08]" />
+          <div className="flex h-11 items-center justify-between">
+            <span className="h-9 w-16 rounded-full bg-white/[.08]" />
+            <div className="flex items-center gap-2">
+              <span className="h-8 w-8 rounded-full bg-white/[.08]" />
+              <span className="h-10 w-10 rounded-full bg-white/[.12]" />
+              <span className="h-8 w-8 rounded-full bg-white/[.08]" />
+            </div>
           </div>
         </div>
       </div>

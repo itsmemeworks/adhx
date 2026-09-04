@@ -197,7 +197,10 @@ test.describe('theater shortcuts (signed out)', () => {
     await page.goto('/')
     await expectTheaterReady(page)
 
-    await page.locator('[data-theater-action="show-all"]:visible').click()
+    // This suite runs against Next dev, whose bottom-left dev-tools portal
+    // overlaps the mobile Queue button at this viewport. The test is about
+    // rendered queue order, so open it through the production Q shortcut.
+    await page.keyboard.press('q')
     const sheet = page.getByTestId('mobile-sheet-content')
     const rows = sheet.locator('[data-theater-queue-item]')
     await expect(sheet.getByText('Now playing', { exact: true })).toBeVisible()

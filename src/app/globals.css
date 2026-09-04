@@ -99,17 +99,17 @@
  * visual viewport once the browser toolbar settles. The exposed strip below
  * Theater then shows the page background. Keep the normal fixed shell on
  * desktop and Android; mobile WebKit gets an absolute shell sized to the
- * stable large viewport so its stage and bottom chrome keep painting through
- * the browser's translucent toolbar area. Its interactive chrome stays fixed
- * to the visual viewport so browser scroll/collapse cannot move Paste or the
- * menu above the screen. Lock the document roots immediately (including the
- * route-loading shell) so the oversized paint layer cannot pan the page.
+ * stable large viewport so its stage keeps painting through the browser's
+ * translucent toolbar area. Interactive top chrome and the mobile dock stay
+ * independently fixed to the visual viewport, so browser scroll/collapse
+ * cannot move either control edge off-screen. Lock the document roots
+ * immediately (including the route-loading shell) so the oversized paint
+ * layer cannot pan the page.
  * `100vh` is the older-iOS fallback.
  */
 .theater-mobile-top-chrome {
-  /* The invisible playback scrubber is z-70 across the top edge. Raising the
-   * whole header keeps its fixed stacking context—and therefore Paste/menu—
-   * above that hit target. */
+  /* Keep Paste/menu above stage gestures. Playback scrubbing now lives above
+   * the bottom dock, leaving the OS-owned top edge gesture-free. */
   z-index: 71;
 }
 

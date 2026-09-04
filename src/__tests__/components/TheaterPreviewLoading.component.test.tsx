@@ -21,5 +21,10 @@ describe('TheaterPreviewLoading', () => {
     expect(screen.getByTestId('theater-loading-mobile-chrome')).toHaveClass(
       'theater-mobile-top-chrome',
     )
+    expect(screen.getByTestId('theater-loading-mobile-dock')).toHaveClass(
+      'fixed',
+      'bottom-0',
+      'border-t',
+    )
   })
 })

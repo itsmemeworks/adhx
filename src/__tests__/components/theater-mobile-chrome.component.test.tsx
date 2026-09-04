@@ -111,9 +111,7 @@ beforeEach(() => {
 })
 
 /**
- * The peek bar's centre label. Two buttons carry the "Expand up next" label
- * (the drag handle above it does too), so pick the one that actually holds
- * text — the handle is a bare chevron.
+ * The peek bar's Queue button carries its accessible count in a nested span.
  */
 function peekCentreText(): string {
   const count = document.querySelector('[data-theater-queue-count]')
@@ -764,8 +762,8 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
     expect(queue).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByLabelText('Show controls')).toBeInTheDocument()
     const actions = screen.getByTestId('mobile-control-actions')
-    expect(actions.className).toContain('opacity-0')
-    expect(actions.className).toContain('bottom-[calc(70%+0.75rem)]')
+    expect(actions).toHaveClass('hidden')
+    expect(actions).toHaveAttribute('inert')
   })
 
   it('presents Focus rather than Show controls when Up next is opened from clutter-free mode', () => {
@@ -782,20 +780,19 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
     expect(screen.getByLabelText('Show controls')).toBeInTheDocument()
   })
 
-  it('repositions hidden chrome before a rapid restore during the playlist-close fade', async () => {
+  it('keeps the vertical action rail hidden until the playlist-close fade settles', async () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
-    const actions = screen.getByTestId('mobile-control-actions')
 
     fireEvent.click(queue)
     fireEvent.click(screen.getByLabelText('Hide controls'))
     fireEvent.click(screen.getByLabelText('Show controls'))
 
-    expect(actions.className).toContain('opacity-0')
+    expect(screen.getByTestId('mobile-control-actions')).toHaveClass('hidden')
     await waitFor(() => {
-      expect(actions.className).not.toContain('bottom-[calc(70%+0.75rem)]')
-      expect(actions.className).not.toContain('opacity-0')
+      expect(screen.getByTestId('mobile-control-actions')).not.toHaveClass('hidden')
     })
+    expect(screen.getByTestId('mobile-control-actions').className).toContain('flex-col')
   })
 
   it('a stage tap hides chrome and resumes; a second tap only restores overlays', () => {
@@ -830,6 +827,9 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(pause.className).not.toContain('shadow-')
     expect(volume.className).toContain('h-11')
     expect(pause.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
+    expect(
+      [...pause.parentElement!.children].map((control) => control.getAttribute('aria-label')),
+    ).toEqual(['Hide controls', 'Pause', 'Unmute'])
     expect(pause.parentElement?.parentElement?.parentElement).toHaveStyle({
       height: 'calc(4.25rem + env(safe-area-inset-bottom))',
     })
@@ -844,7 +844,7 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(zone).toHaveAttribute('aria-label', 'Swipe up for next post or down for previous post')
   })
 
-  it('reflows short-height actions into one row above a compact swipe capsule', () => {
+  it('keeps short-height post actions vertical and hides them when Queue opens', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const actions = screen.getByTestId('mobile-control-actions')
     const capsule = screen
@@ -852,11 +852,35 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
       .querySelector('[data-theater-swipe-control]')!
 
     expect(actions.className).toContain('w-12')
+    expect(actions.className).toContain('flex-col')
     expect(capsule.className).toContain('w-12')
-    expect(actions.className).toContain('[@media(max-height:520px)]:w-auto')
-    expect(actions.className).toContain('[@media(max-height:520px)]:flex-row')
-    expect(actions.className).not.toContain('[@media(max-height:520px)]:grid')
+    expect(actions.className).not.toContain('[@media(max-height:520px)]:w-auto')
+    expect(actions.className).not.toContain('[@media(max-height:520px)]:flex-row')
+    expect(actions.className).not.toContain('[@media(max-height:520px)]:right-28')
+    expect(actions.className).not.toContain(
+      '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))]',
+    )
     expect(capsule.className).toContain('[@media(max-height:520px)]:h-20')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand up next' }))
+    expect(screen.getByTestId('mobile-control-actions')).toHaveClass('hidden')
+  })
+
+  it('shifts the four-action personal rail left of top and swipe controls in short landscape', () => {
+    render(
+      <TheaterMobileChrome {...base} current={videoItem()} collection={collectionCollection()} />,
+    )
+
+    const actions = screen.getByTestId('mobile-control-actions')
+    expect(actions).toHaveClass(
+      'flex-col',
+      '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))]',
+      '[@media(max-height:520px)]:right-28',
+    )
+    expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
   })
 
   it('keeps the playback control visible but disabled for a repeated text post', () => {
@@ -965,32 +989,19 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
   })
 })
 
-// The drag mechanics themselves (live-follow, snap thresholds, flick
-// velocity, tap classification) are unit-tested against the hook directly in
-// use-sheet-drag.component.test.tsx — jsdom pointer-event sequences are
-// flaky to simulate reliably through a full component render. This just
-// confirms the handle is wired to the hook end to end: it toggles via the
-// tap/click path and carries `touch-action: none` so the browser doesn't
-// claim the gesture for scrolling.
-describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
-  it("the handle toggles the sheet via click (the hook's tap/keyboard path) and is touch-action: none", () => {
+describe('TheaterMobileChrome: Up-next playlist toggle', () => {
+  it('removes the drag surface and uses the Playlist button as the sole touch toggle', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    // Both the drag handle and the center "Up next" label button share this
-    // aria-label — find the handle specifically by its drag-pill child.
-    const findHandle = () =>
-      screen
-        .getAllByLabelText(/(Expand|Collapse) up next/)
-        .find((el) => el.querySelector('span[aria-hidden]'))!
+    const queue = document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!
 
-    const handle = findHandle()
-    expect(handle).toHaveAttribute('aria-label', 'Expand up next')
-    expect(handle.className).toContain('touch-none')
+    expect(document.querySelector('[data-theater-sheet-handle]')).toBeNull()
+    expect(queue).toHaveAttribute('aria-expanded', 'false')
 
-    fireEvent.click(handle)
-    expect(findHandle()).toHaveAttribute('aria-label', 'Collapse up next')
+    fireEvent.click(queue)
+    expect(queue).toHaveAttribute('aria-expanded', 'true')
 
-    fireEvent.click(findHandle())
-    expect(findHandle()).toHaveAttribute('aria-label', 'Expand up next')
+    fireEvent.click(queue)
+    expect(queue).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('fully hides expanded filter content when the sheet is collapsed', () => {
@@ -1017,7 +1028,9 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
 
     fireEvent.click(queue)
     expect(content.className).not.toContain('invisible')
-    fireEvent.transitionEnd(content.parentElement!, { propertyName: 'transform' })
+    fireEvent.transitionEnd(screen.getByTestId('mobile-theater-dock'), {
+      propertyName: 'transform',
+    })
     expect(content.className).toContain('invisible')
   })
 
@@ -1092,13 +1105,18 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
         .getAllByLabelText(/(Expand|Collapse) up next/)
         .find((el) => (el.textContent ?? '').trim().length > 0)!
     expect(label()).toHaveAttribute('aria-label', 'Expand up next')
+    screen.getByRole('button', { name: 'Share' }).focus()
+    expect(screen.getByRole('button', { name: 'Share' })).toHaveFocus()
+
     fireEvent(window, new CustomEvent('theater-toggle-show-all'))
     expect(label()).toHaveAttribute('aria-label', 'Collapse up next')
+    expect(label()).toHaveFocus()
+
     fireEvent(window, new CustomEvent('theater-toggle-show-all'))
     expect(label()).toHaveAttribute('aria-label', 'Expand up next')
   })
 
-  it('moves the right-side action rail onto the sheet edge when Queue expands', () => {
+  it('shows the post-action rail only while Queue is fully collapsed', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const actions = screen.getByTestId('mobile-control-actions')
     const queue = screen
@@ -1108,14 +1126,24 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
     expect(actions.className).toContain('bottom-[calc(13rem+env(safe-area-inset-bottom))]')
     expect(actions.className).toContain('flex-col')
     expect(screen.getByRole('button', { name: 'Save' }).className).toContain('h-11')
+
     fireEvent.click(queue)
-    expect(actions.className).toContain('bottom-[calc(70%+0.75rem)]')
-    expect(actions.className).toContain('flex-row')
-    expect(actions.className).not.toContain('opacity-0')
-    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+    expect(actions).toHaveClass('hidden')
+    expect(actions).toHaveAttribute('aria-hidden', 'true')
+    expect(actions).toHaveAttribute('inert')
+
+    fireEvent.click(queue)
+    expect(actions).toHaveClass('hidden')
+    fireEvent.transitionEnd(screen.getByTestId('mobile-theater-dock'), {
+      propertyName: 'transform',
+    })
+    expect(actions).toHaveClass('flex-col')
+    expect(actions).not.toHaveClass('hidden')
+    expect(actions).toHaveAttribute('aria-hidden', 'false')
+    expect(actions).not.toHaveAttribute('inert')
   })
 
-  it('top-aligns the Share menu when Queue is open so short viewports do not clip it', () => {
+  it('closes Share options as Queue opens and hides the action rail', async () => {
     mockUseSendFile.mockReturnValue({
       supported: true,
       ready: true,
@@ -1129,11 +1157,13 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
       .getAllByLabelText('Expand up next')
       .find((element) => (element.textContent ?? '').trim().length > 0)!
 
-    fireEvent.click(queue)
     openShareOptions()
-    const menu = screen.getByRole('menu', { name: 'Share options' })
-    expect(menu.className).toContain('top-0')
-    expect(menu.className).not.toContain('top-1/2')
+    expect(screen.getByRole('menu', { name: 'Share options' })).toBeVisible()
+    fireEvent.click(queue)
+    await waitFor(() =>
+      expect(screen.queryByRole('menu', { name: 'Share options' })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByTestId('mobile-control-actions')).toHaveClass('hidden')
   })
 
   it('keeps the up-next sheet open when the stage advances to the next post', () => {
@@ -1173,18 +1203,14 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
   // visible window and the bottom bar's actual height match.
   it('pins the peek wrapper to 4.25rem plus the device safe area', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
-    const handle = screen
-      .getAllByLabelText(/(Expand|Collapse) up next/)
-      .find((el) => el.querySelector('span[aria-hidden]'))!
-    const wrapper = handle.parentElement!
+    const wrapper = screen.getByTestId('mobile-theater-peek')
     expect(wrapper).toHaveStyle({
       height: 'calc(4.25rem + env(safe-area-inset-bottom))',
     })
-    expect(wrapper.className).toContain('flex-none')
-    expect(wrapper.className).toContain('overflow-hidden')
+    expect(wrapper).toHaveClass('flex-none', 'overflow-hidden', 'pt-3')
   })
 
-  it('the sheet is 70% of the theater, clipped, and does not steal focus on expand', () => {
+  it('uses a straight viewport-fixed dock with a visible seek rail on its top edge', () => {
     render(
       <TheaterMobileChrome
         {...base}
@@ -1194,14 +1220,27 @@ describe('TheaterMobileChrome: Up-next sheet drag handle wiring', () => {
         onClearQueueTypes={vi.fn()}
       />,
     )
-    const handle = screen
-      .getAllByLabelText(/(Expand|Collapse) up next/)
-      .find((el) => el.querySelector('span[aria-hidden]'))!
-    const sheet = handle.closest('.rounded-t-2xl')!
-    expect(sheet.className).toContain('h-[70%]')
-    expect(sheet.className).toContain('overflow-hidden')
+    const sheet = screen.getByTestId('mobile-theater-dock')
+    expect(sheet).toHaveClass(
+      'fixed',
+      'inset-x-0',
+      'bottom-0',
+      'h-[70%]',
+      'overflow-visible',
+      'bg-[#121117]/85',
+    )
+    expect(sheet).not.toHaveClass('absolute', 'rounded-t-2xl', 'border-t')
+    expect(sheet.querySelector('[data-theater-sheet-handle]')).toBeNull()
+    expect(screen.getByTestId('mobile-sheet-content')).toHaveClass('overflow-hidden')
+    expect(sheet.querySelector('[data-theater-progress-slider]')).toHaveClass('absolute', '-top-6')
+    expect(sheet.querySelector('[data-theater-progress-track]')).toHaveClass(
+      'absolute',
+      'top-0',
+      'h-1',
+      'bg-white/[.35]',
+    )
 
-    fireEvent.click(handle)
+    fireEvent.click(screen.getByRole('button', { name: 'Expand up next' }))
     expect(document.activeElement).not.toHaveAttribute('data-theater-queue-item')
     expect(screen.getByRole('group', { name: 'Playlist filter' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Videos' })).toBeVisible()
@@ -1373,6 +1412,8 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
       />,
     )
     const repeatOne = screen.getByLabelText('Repeat this post')
+    const focus = screen.getByLabelText('Hide controls')
+    const pause = screen.getByLabelText('Pause')
     const mute = screen.getByLabelText('Unmute')
     const next = screen.getByLabelText('Next post')
     const previous = screen.getByLabelText('Previous post')
@@ -1384,7 +1425,11 @@ describe('TheaterMobileChrome: shared-post-repeat cue', () => {
     expect(next.parentElement).not.toHaveClass('py-2')
     expect(previous).toHaveClass('rounded-t-full', 'pt-2')
     expect(next).toHaveClass('rounded-b-full', 'pb-2')
-    expect(mute.compareDocumentPosition(repeatOne) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      [...repeatOne.parentElement!.children].map((control) => control.getAttribute('aria-label')),
+    ).toEqual(['Hide controls', 'Pause', 'Repeat this post', 'Unmute'])
+    expect(focus.compareDocumentPosition(pause) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(repeatOne.compareDocumentPosition(mute) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(previous.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     fireEvent.click(previous)
     fireEvent.click(next)
@@ -1913,7 +1958,7 @@ describe('TheaterMobileChrome: repeat control', () => {
     fireEvent.click(screen.getByLabelText('Stop when caught up'))
     expect(onCycleRepeat).toHaveBeenCalledTimes(1)
     // Sheet stays collapsed — the repeat button stops propagation so it
-    // never also toggles the drag-handle's open/closed state.
+    // never also toggles the Playlist button's open/closed state.
     expect(screen.queryAllByLabelText('Collapse up next')).toHaveLength(0)
   })
 
