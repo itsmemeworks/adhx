@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, Play, Image as ImageIcon, Type as TypeIcon, FileText, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addedToAdhxLabel, formatCompactRelativeTime, hasKnownTimestamp } from '@/lib/utils/format'
@@ -10,7 +10,7 @@ import { instagramWarmSrc, prefetchPlayback } from './usePlaybackSource'
 import { theaterRowCaption } from './TheaterText'
 import type { TheaterItem } from './types'
 import { theaterItemKey } from './types'
-import { queueSectionHeading } from './theater-math'
+import { currentFirstQueue, queueSectionHeading } from './theater-math'
 import { THEATER_QUEUE_SCROLL_ATTR } from './useTheaterQueueOverlay'
 
 /** Instagram rows warmed this session (by key) — hover-warm fires at most once per row. */
@@ -221,17 +221,26 @@ export function UpNextList({
 }: UpNextListProps) {
   const [expanded, setExpanded] = useState(false)
 
-  const seenFlags = items.map((item) => seenReady && isSeen(theaterItemKey(item)))
-  const currentIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
+  const normalized = useMemo(
+    () => currentFirstQueue(items, currentKey, seenStartIndex),
+    [currentKey, items, seenStartIndex],
+  )
+  const orderedItems = normalized.items
+  const orderedSeenStartIndex = normalized.seenStartIndex
+  const seenFlags = orderedItems.map((item) => seenReady && isSeen(theaterItemKey(item)))
+  const currentIndex = currentKey
+    ? orderedItems.findIndex((it) => theaterItemKey(it) === currentKey)
+    : -1
 
   // Collapsed cutoff always covers the current row + its "next ↓" row, even
   // if the viewer has navigated past `collapsedCount` items already. The
   // divider above only ever falls within this prefix, so slicing preserves
   // its index unchanged.
   const cutoff = collapsedCount != null ? Math.max(collapsedCount, currentIndex + 2) : items.length
-  const showToggle = collapsedCount != null && items.length > cutoff
-  const visibleItems = collapsedCount != null && !expanded ? items.slice(0, cutoff) : items
-  const hiddenCount = items.length - cutoff
+  const showToggle = collapsedCount != null && orderedItems.length > cutoff
+  const visibleItems =
+    collapsedCount != null && !expanded ? orderedItems.slice(0, cutoff) : orderedItems
+  const hiddenCount = orderedItems.length - cutoff
 
   return (
     <div
@@ -245,8 +254,8 @@ export function UpNextList({
           const isNext =
             currentIndex >= 0 &&
             i === currentIndex + 1 &&
-            (seenStartIndex < 0 || i < seenStartIndex)
-          const heading = queueSectionHeading(i, currentIndex, seenStartIndex)
+            (orderedSeenStartIndex < 0 || i < orderedSeenStartIndex)
+          const heading = queueSectionHeading(i, currentIndex, orderedSeenStartIndex)
           const row = (
             <Row
               key={key}

@@ -221,7 +221,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
     expect(queueState().currentKey).toBe('twitter:2')
   })
 
-  it('prepends a post added in another window without leaving the current one', async () => {
+  it('places a post added in another window after the current one', async () => {
     await act_(() => {
       renderCollection(['1', '2', '3'])
     })
@@ -233,7 +233,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
       notifyCollectionChanged({ added: feedItem('99') })
     })
 
-    expect(queueState().ids).toEqual(['99', '1', '2', '3'])
+    expect(queueState().ids).toEqual(['2', '99', '3', '1'])
     expect(queueState().currentKey).toBe('twitter:2')
   })
 
@@ -312,7 +312,7 @@ describe('TheaterShell: Archive removes the post from the collection queue', () 
       const onNext = collectionProps().onNext as () => void
       await act_(() => onNext())
       expect(stats).not.toHaveBeenCalled()
-      expect(queueState().ids).toEqual(['1', '2', '3'])
+      expect(queueState().ids).toEqual(['2', '3', '1'])
       expect(queueState().currentKey).toBe('twitter:2')
     } finally {
       window.removeEventListener('stats-updated', stats)

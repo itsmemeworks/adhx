@@ -34,6 +34,7 @@ import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import {
   dispatchTheaterStageTap,
+  dispatchTheaterUserPlaybackState,
   THEATER_SEEK,
   type TheaterSeekDetail,
 } from './useTheaterStageEvents'
@@ -156,6 +157,8 @@ export function StageVideo({
   // be told apart from a deliberate pause action, which clears this first.
   const catchUpAttemptedRef = useRef(false)
   const catchUpPendingRef = useRef(false)
+  const pausedByCoverRef = useRef(false)
+  const deferredEndedRef = useRef<(() => void) | null>(null)
 
   const captureSource = () => ({
     generation: sourceGenerationRef.current,
@@ -275,6 +278,7 @@ export function StageVideo({
     setPlaying(false)
     catchUpAttemptedRef.current = false
     catchUpPendingRef.current = false
+    deferredEndedRef.current = null
 
     const video = videoRef.current
     if (!video) return
@@ -329,16 +333,26 @@ export function StageVideo({
   // actually paused, and only when the src hasn't changed underneath — a src
   // change means the `[src]` effect above is already calling play(), and this
   // must not become a second caller of it.
-  const pausedByCoverRef = useRef(false)
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
     if (covered) {
       if (!video.paused) {
         logSV('covered by a non-video item — pausing, element retained')
+        // A cover is an intentional pause, just like the transport's fixed
+        // pause command. Disarm catch-up attribution before the native pause
+        // event arrives so it cannot be mistaken for an autoplay rejection.
+        catchUpPendingRef.current = false
         video.pause()
         pausedByCoverRef.current = true
       }
+      return
+    }
+    if (deferredEndedRef.current) {
+      const finishEnded = deferredEndedRef.current
+      deferredEndedRef.current = null
+      pausedByCoverRef.current = false
+      finishEnded()
       return
     }
     if (!pausedByCoverRef.current) return
@@ -374,11 +388,11 @@ export function StageVideo({
    * absent, e.g. collection, where Delete is the way past a dead post).
    */
   useEffect(() => {
-    if (!errored || !onEnded || repeat) return
+    if (!errored || !onEnded || repeat || covered) return
     logSV(`errored — advancing in ${ERRORED_ADVANCE_MS}ms rather than stalling the queue`)
     const timer = setTimeout(() => onEnded(), ERRORED_ADVANCE_MS)
     return () => clearTimeout(timer)
-  }, [errored, onEnded, repeat])
+  }, [errored, onEnded, repeat, covered])
 
   // The ONE start path for a not-yet-started video (autoplay rejected, the
   // tap-to-play overlay showing): used by the overlay's own tap AND — via the
@@ -415,14 +429,17 @@ export function StageVideo({
       // overlay): the transport's play means "watch it again" — there's no
       // end-overlay replay button anymore.
       if (ended) {
+        dispatchTheaterUserPlaybackState(false)
         handleReplay()
         return
       }
       if (needsGesture) {
+        dispatchTheaterUserPlaybackState(false)
         handleStartTap()
         return
       }
       if (video.paused) {
+        dispatchTheaterUserPlaybackState(false)
         const { generation, src: operationSrc } = captureSource()
         video.play().then(
           () => {
@@ -436,6 +453,7 @@ export function StageVideo({
           },
         )
       } else {
+        dispatchTheaterUserPlaybackState(true)
         // A deliberate pause — disarm the catch-up watch first so the
         // `onPause` this triggers is never misread as the platform vetoing
         // the automatic unmute.
@@ -545,14 +563,21 @@ export function StageVideo({
     // Some browsers fire `pause` immediately before `ended` as part of
     // reaching the end of the media — never a catch-up rejection.
     catchUpPendingRef.current = false
-    if (!repeat && albumCount > 1 && albumIndex < albumCount - 1 && onAlbumIndexChange) {
-      onAlbumIndexChange(albumIndex + 1)
-      return
-    }
     setEnded(true)
     setPlaying(false)
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 1 } }))
-    onEnded?.()
+    const finishEnded = () => {
+      if (!repeat && albumCount > 1 && albumIndex < albumCount - 1 && onAlbumIndexChange) {
+        onAlbumIndexChange(albumIndex + 1)
+        return
+      }
+      onEnded?.()
+    }
+    if (covered) {
+      deferredEndedRef.current = finishEnded
+      return
+    }
+    finishEnded()
   }
 
   const showAlbum = !covered && albumCount > 1 && !!onAlbumIndexChange

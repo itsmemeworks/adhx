@@ -77,6 +77,7 @@ import { logStage, logStageVerbose } from './YtDebugOverlay'
 import type { TheaterItem } from './types'
 import {
   dispatchTheaterStageTap,
+  dispatchTheaterUserPlaybackState,
   THEATER_SEEK,
   type TheaterSeekDetail,
 } from './useTheaterStageEvents'
@@ -244,6 +245,8 @@ export interface StageYouTubeProps {
    * or errors outright, still advances rather than looping on nothing.
    */
   repeat?: boolean
+  /** Pause the iframe player while an opaque Theater overlay covers it. */
+  covered?: boolean
 }
 
 /**
@@ -290,7 +293,14 @@ interface YouTubeMessage {
   info?: unknown
 }
 
-export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: StageYouTubeProps) {
+export function StageYouTube({
+  item,
+  muted,
+  onRequestUnmute,
+  onEnded,
+  repeat,
+  covered = false,
+}: StageYouTubeProps) {
   const videoId = resolveYouTubeVideoId(item)
   const text = (item.text || '').trim()
 
@@ -390,6 +400,13 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   const onEndedRef = useRef(onEnded)
   const onRequestUnmuteRef = useRef(onRequestUnmute)
   const repeatRef = useRef(repeat)
+  const coveredRef = useRef(covered)
+  const playingRef = useRef(false)
+  const shouldPlayRef = useRef(true)
+  const pausedByCoverRef = useRef(false)
+  const pendingAdvanceRef = useRef(false)
+  const pendingReplayRef = useRef(false)
+  coveredRef.current = covered
   // Defense-in-depth for `armStallTimer`'s fired callback (see its own
   // comment): the latest `videoId`, so a stall timer can refuse to act if
   // it somehow fires after the displayed item has already moved on.
@@ -453,6 +470,11 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // (live-queue case) all funnel through here, exactly matching StageVideo's
   // one-caller discipline for its own advance signal.
   const advance = useCallback(() => {
+    if (coveredRef.current) {
+      pendingAdvanceRef.current = true
+      return
+    }
+    pendingAdvanceRef.current = false
     clearStallTimer()
     clearStartupRetryTimers()
     onEndedRef.current?.()
@@ -502,7 +524,13 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     const handleSeek = (event: Event) => {
       const detail = (event as CustomEvent<TheaterSeekDetail>).detail
       const duration = lastKnownDurationRef.current
-      if (!detail || !Number.isFinite(detail.progress) || duration == null || duration <= 0) {
+      if (
+        coveredRef.current ||
+        !detail ||
+        !Number.isFinite(detail.progress) ||
+        duration == null ||
+        duration <= 0
+      ) {
         return
       }
       const progress = Math.min(1, Math.max(0, detail.progress))
@@ -536,6 +564,13 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // rung.
   const sendMuteAndPlay = useCallback(
     (tag: string) => {
+      if (coveredRef.current || !shouldPlayRef.current) {
+        if (coveredRef.current) pausedByCoverRef.current = shouldPlayRef.current
+        lastCommandedMutedRef.current = true
+        postCommand('mute')
+        postCommand('pauseVideo')
+        return
+      }
       logStage(tag, '-> mute, playVideo')
       postCommand('mute')
       postCommand('playVideo')
@@ -582,6 +617,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
       clearStallTimer()
       stallTimerRef.current = setTimeout(() => {
         if (forVideoId !== currentVideoIdRef.current) return
+        if (coveredRef.current) return
         if (hasPlayedRef.current) return
         if (repeatRef.current) {
           logStage('stall: pinned/repeat item never started — showing tap-to-play overlay')
@@ -632,6 +668,11 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // `applyPlayerState`) — never a timer.
   const requestUnmute = useCallback(
     (source: 'user' | 'catchup') => {
+      if (coveredRef.current) {
+        pendingUnmuteRef.current = true
+        pendingUnmuteSourceRef.current = source
+        return
+      }
       if (!hasPlayedRef.current) {
         pendingUnmuteRef.current = true
         pendingUnmuteSourceRef.current = source
@@ -688,8 +729,13 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     progressOriginMsRef.current = null
     pendingSeekRef.current = null
     lastLoggedStateRef.current = null
+    shouldPlayRef.current = true
+    pausedByCoverRef.current = false
+    pendingAdvanceRef.current = false
+    pendingReplayRef.current = false
     clearStartupRetryTimers()
     setPlaying(false)
+    playingRef.current = false
     setNeverStarted(false)
     // The embed URL always carries mute=1 regardless of what the shell
     // wants — reflect that actual starting state rather than the shell's
@@ -741,6 +787,57 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   useEffect(() => {
     applyMuted(muted)
   }, [muted, applyMuted])
+
+  // An opaque Theater state (paste resolver, waiting, All Clear) must suspend
+  // the iframe just like StageVideo's `covered` prop. Remember whether this
+  // transition interrupted active/startup playback so an already user-paused
+  // Short stays paused when the overlay leaves.
+  useEffect(() => {
+    if (covered) {
+      clearStallTimer()
+      clearStartupRetryTimers()
+      pausedByCoverRef.current = shouldPlayRef.current
+      pendingUnmuteRef.current = !mutedRef.current
+      pendingUnmuteSourceRef.current = 'catchup'
+      unmuteAwaitingConfirmRef.current = false
+      catchupUnmuteBaselineTimeRef.current = null
+      freezeProgressClock()
+      playingRef.current = false
+      setPlaying(false)
+      if (readyRef.current) postCommand('pauseVideo')
+      return
+    }
+
+    if (pendingAdvanceRef.current) {
+      advance()
+      return
+    }
+    if (!pausedByCoverRef.current) return
+    pausedByCoverRef.current = false
+    if (!readyRef.current) return
+    if (pendingReplayRef.current) {
+      pendingReplayRef.current = false
+      lastKnownCurrentTimeRef.current = 0
+      progressOriginTimeRef.current = 0
+      postCommand('seekTo', [0, true])
+    }
+    armStallTimer(videoId)
+    if (!mutedRef.current) {
+      lastCommandedMutedRef.current = true
+      setEffectiveMuted(true)
+      postCommand('mute')
+    }
+    postCommand('playVideo')
+  }, [
+    covered,
+    videoId,
+    armStallTimer,
+    clearStallTimer,
+    clearStartupRetryTimers,
+    advance,
+    freezeProgressClock,
+    postCommand,
+  ])
 
   // Gesture-context fast path (mobile round 7 — the persistent
   // double-tap-to-unmute bug): the chrome's audio button dispatches this
@@ -804,11 +901,20 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           hasPlayedRef.current = true
           clearStallTimer()
           clearStartupRetryTimers()
+          if (coveredRef.current || !shouldPlayRef.current) {
+            if (coveredRef.current) pausedByCoverRef.current = shouldPlayRef.current
+            freezeProgressClock()
+            playingRef.current = false
+            setPlaying(false)
+            postCommand('pauseVideo')
+            return
+          }
           if (progressOriginMsRef.current == null) {
             startProgressClock(
               lastKnownCurrentTimeRef.current ?? progressOriginTimeRef.current ?? 0,
             )
           }
+          playingRef.current = true
           setPlaying(true)
           if (unmuteAwaitingConfirmRef.current && unmuteConfirmSourceRef.current === 'user') {
             // Kept playing right through the unmute — it took. Stop
@@ -825,6 +931,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           if (pendingUnmuteRef.current) requestUnmute(pendingUnmuteSourceRef.current)
         } else if (state === 2) {
           freezeProgressClock()
+          playingRef.current = false
           setPlaying(false)
           if (unmuteAwaitingConfirmRef.current) {
             // iOS rejected the unmuted resume by silently pausing instead
@@ -835,6 +942,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           }
         } else if (state === 0) {
           freezeProgressClock()
+          playingRef.current = false
           setPlaying(false)
           // Mirror StageVideo's own ended-state dispatch: the bar visibly
           // reaches full before either looping (repeat) or the item
@@ -844,6 +952,14 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
               detail: { progress: 1, duration: lastKnownDurationRef.current ?? undefined },
             }),
           )
+          if (coveredRef.current) {
+            if (repeatRef.current) {
+              pendingReplayRef.current = true
+            } else {
+              advance()
+            }
+            return
+          }
           if (repeatRef.current) {
             lastKnownCurrentTimeRef.current = 0
             progressOriginTimeRef.current = 0
@@ -873,7 +989,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           // mute BEFORE play, then keep re-sending on a bounded ladder
           // until state 1 is confirmed (cleared above the moment it is).
           sendMuteAndPlay('onReady')
-          scheduleStartupRetries()
+          if (!coveredRef.current && shouldPlayRef.current) scheduleStartupRetries()
           // If the shell's `muted` had already flipped false before the
           // handshake finished (e.g. the user unmuted on a previous item),
           // do NOT ask for sound yet — `requestUnmute()` just records the
@@ -885,7 +1001,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
           // 'catchup' case — no gesture backs it, so a silent rejection
           // (round 2) is plausible; see `requestUnmute`'s comment for how
           // that differs from a user-gesture unmute (round 3).
-          if (!mutedRef.current && !pendingUnmuteRef.current) requestUnmute('catchup')
+          if (shouldPlayRef.current && !mutedRef.current && !pendingUnmuteRef.current) {
+            requestUnmute('catchup')
+          }
           break
         // The raw postMessage protocol streams player state inside
         // `infoDelivery` payloads ({info:{playerState, muted, ...}}) — the
@@ -1120,7 +1238,9 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // dispatched by TheaterShell) — flips based on the last known state.
   useEffect(() => {
     function handleToggle() {
-      if (!readyRef.current) return
+      if (!readyRef.current || coveredRef.current) return
+      shouldPlayRef.current = !playing
+      dispatchTheaterUserPlaybackState(playing)
       postCommand(playing ? 'pauseVideo' : 'playVideo')
     }
     window.addEventListener('theater-toggle-play', handleToggle)
@@ -1132,10 +1252,12 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
   // `theater-resume` handlers.
   useEffect(() => {
     function handlePause() {
+      shouldPlayRef.current = false
       if (readyRef.current) postCommand('pauseVideo')
     }
     function handleResume() {
-      if (readyRef.current) postCommand('playVideo')
+      shouldPlayRef.current = true
+      if (readyRef.current && !coveredRef.current) postCommand('playVideo')
     }
     window.addEventListener('theater-pause', handlePause)
     window.addEventListener('theater-resume', handleResume)
@@ -1180,6 +1302,7 @@ export function StageYouTube({ item, muted, onRequestUnmute, onEnded, repeat }: 
     progressOriginMsRef.current = null
     lastLoggedStateRef.current = null
     clearStartupRetryTimers()
+    shouldPlayRef.current = true
     setPlaying(false)
     setEffectiveMuted(true)
     setNeverStarted(false)

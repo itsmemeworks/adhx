@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 
 /** User tapped the video or photo — chrome toggles overlays, does not pause. */
 export const THEATER_STAGE_TAP = 'theater-stage-tap'
 export const THEATER_SEEK = 'theater-seek'
+export const THEATER_USER_PLAYBACK_STATE = 'theater-user-playback-state'
 
 export interface TheaterSeekDetail {
   progress: number
@@ -21,6 +22,11 @@ export function dispatchTheaterSeek(progress: number) {
       detail: { progress: Math.min(1, Math.max(0, progress)) },
     }),
   )
+}
+
+/** Synchronous user intent, used to beat late ended/dwell events. */
+export function dispatchTheaterUserPlaybackState(paused: boolean) {
+  window.dispatchEvent(new CustomEvent(THEATER_USER_PLAYBACK_STATE, { detail: { paused } }))
 }
 
 /**

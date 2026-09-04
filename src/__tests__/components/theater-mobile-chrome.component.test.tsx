@@ -617,6 +617,33 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(peekCentreText()).toBe('1 on repeat')
   })
 
+  it('opens the mobile queue with Now playing first and circular order below it', () => {
+    const items = [
+      videoItem({ bookmarkId: '1', text: 'previous post' }),
+      videoItem({ bookmarkId: '2', text: 'playing post' }),
+      videoItem({ bookmarkId: '3', text: 'next post' }),
+    ]
+    render(
+      <TheaterMobileChrome
+        {...base}
+        current={items[1]}
+        items={items}
+        currentKey={theaterItemKey(items[1])}
+      />,
+    )
+
+    fireEvent.click(document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!)
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-theater-queue-item]'))
+    expect(rows.map((row) => row.dataset.theaterItemKey)).toEqual([
+      'twitter:2',
+      'twitter:3',
+      'twitter:1',
+    ])
+    expect(screen.getAllByRole('separator')[0]).toHaveTextContent('Now playing')
+    expect(rows[0]).toHaveAttribute('aria-current', 'true')
+    expect(rows[1]).toHaveTextContent('next ↓')
+  })
+
   /**
    * "N new" counts arrivals in the live pulse. The Collection tab is a finite
    * backlog the viewer is working down — nothing arrives into it mid-session,

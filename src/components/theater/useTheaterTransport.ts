@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { formatQueueCount, type QueueCount } from './theater-math'
 import { logAV } from './YtDebugOverlay'
-import { useTheaterStageEvents } from './useTheaterStageEvents'
+import { dispatchTheaterUserPlaybackState, useTheaterStageEvents } from './useTheaterStageEvents'
 import type { ProgressKind } from './TheaterProgressLine'
 
 /**
@@ -43,13 +43,23 @@ export function useTheaterTransport(opts: {
 
   const handleTogglePause = () => {
     if (opts.kind === 'video') {
-      window.dispatchEvent(new CustomEvent(videoPlaying ? 'theater-pause' : 'theater-resume'))
+      dispatchTheaterUserPlaybackState(videoPlaying)
+      window.dispatchEvent(
+        new CustomEvent(videoPlaying ? 'theater-pause' : 'theater-resume', {
+          detail: { source: 'transport' },
+        }),
+      )
       return
     }
     if (opts.kind === 'timed') {
       const next = !timedPaused
+      dispatchTheaterUserPlaybackState(next)
       setTimedPaused(next)
-      window.dispatchEvent(new CustomEvent(next ? 'theater-pause' : 'theater-resume'))
+      window.dispatchEvent(
+        new CustomEvent(next ? 'theater-pause' : 'theater-resume', {
+          detail: { source: 'transport' },
+        }),
+      )
     }
   }
 

@@ -210,6 +210,107 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().queuePlayed).toBe(0)
     expect(chromeProps().queueToPlay).toBe(3)
     expect(chromeProps().queueLooping).toBe(false)
+
+    await act(async () => chromeProps().onNext())
+    expect(chromeProps().currentKey).toBe('twitter:99')
+    expect(queueIds()).toEqual(['99', '2', '1'])
+  })
+
+  it('Live: a transport pause beats a late advance before a remote add', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('theater-user-playback-state', { detail: { paused: true } }),
+      )
+      window.dispatchEvent(new CustomEvent('theater-advance'))
+      fireAdded(feedItem('99'))
+    })
+
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(queueIds()).toEqual(['1', '99', '2'])
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+  })
+
+  it('Live: explicit Next from a paused final post still plays the next arrival', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent('theater-user-playback-state', { detail: { paused: true } }),
+      )
+      chromeProps().onNext()
+    })
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+
+    await act(async () => fireAdded(feedItem('99')))
+
+    expect(chromeProps().currentKey).toBe('twitter:99')
+    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
+  })
+
+  it('Live: multiple remote adds stay newest-first directly after Now playing', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+
+    await act(async () => {
+      fireAdded(feedItem('98'))
+      fireAdded(feedItem('99'))
+    })
+
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(queueIds()).toEqual(['1', '99', '98', '2'])
+  })
+
+  it('Live Repeat all keeps the previous post at the tail after playing an arrival', async () => {
+    window.localStorage.setItem('adhx-theater-repeat', 'all')
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2'), textItem('3')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+
+    await act(async () => fireAdded(feedItem('99')))
+    expect(queueIds()).toEqual(['1', '99', '2', '3'])
+
+    await act(async () => chromeProps().onNext())
+    expect(chromeProps().currentKey).toBe('twitter:99')
+    expect(queueIds()).toEqual(['99', '2', '3', '1'])
   })
 
   it('Live: a remote add patches saved and tag membership after a prior miss', async () => {
@@ -565,14 +666,18 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().currentKey).toBe('twitter:55')
   })
 
-  it('Saved: tweet-added prepends without leaving the current post', async () => {
+  it('Saved: tweet-added stays Next without leaving the current post', async () => {
     await act(async () => {
       render(
         <TheaterShell
           seed={seed([])}
           mode="personal"
           initialPersonalTab="collection"
-          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+          personalItems={[
+            feedItem('1', { processedAt: '2026-08-20T00:00:00Z' }),
+            feedItem('2', { processedAt: '2026-08-19T00:00:00Z' }),
+            feedItem('3', { processedAt: '2026-08-18T00:00:00Z' }),
+          ]}
           onClose={vi.fn()}
         />,
       )
@@ -580,9 +685,9 @@ describe('TheaterShell: cross-tab add + filters', () => {
     await act(async () => chromeProps().onNext())
     expect(chromeProps().currentKey).toBe('twitter:2')
 
-    await act(async () => fireAdded(feedItem('99')))
+    await act(async () => fireAdded(feedItem('99', { processedAt: '2026-08-21T00:00:00Z' })))
 
-    expect(queueIds()).toEqual(['99', '1', '2', '3'])
+    expect(queueIds()).toEqual(['2', '99', '3', '1'])
     expect(chromeProps().currentKey).toBe('twitter:2')
     expect(chromeProps().repeatMode).toBe('all')
     expect(chromeProps().isSeen('twitter:99')).toBe(false)
@@ -634,8 +739,8 @@ describe('TheaterShell: cross-tab add + filters', () => {
     await act(async () => fireAdded(feedItem('99')))
 
     expect(chromeProps().queueTypes).toEqual([])
-    expect(queueIds()[0]).toBe('99')
-    expect(queueIds()[1]).toBe('1')
+    expect(queueIds()[0]).toBe('1')
+    expect(queueIds()[1]).toBe('99')
     expect(chromeProps().currentKey).toBe('twitter:1')
   })
 
@@ -706,7 +811,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     await act(async () => fireAdded(videoFeedItem('77')))
 
     expect(chromeProps().queueTypes).toEqual(['video'])
-    expect(queueIds()).toEqual(['77', '1'])
+    expect(queueIds()).toEqual(['1', '77'])
     expect(chromeProps().currentKey).toBe('twitter:1')
   })
 

@@ -149,6 +149,73 @@ export function pinKeyFirst<
   return copy
 }
 
+/**
+ * Rotate a circular queue so the current row is first while preserving the
+ * traversal order after it. Rows before the current one move to the tail, so
+ * the post just left appears at the bottom rather than directly underneath.
+ */
+export function rotateKeyFirst<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(items: T[], currentKey: string | null): T[] {
+  if (!currentKey) return items
+  const idx = items.findIndex((item) => theaterItemKey(item) === currentKey)
+  if (idx <= 0) return items
+  return [...items.slice(idx), ...items.slice(0, idx)]
+}
+
+/**
+ * UI boundary: Queue surfaces always start with Now playing, even if a
+ * caller briefly supplies the underlying circular order before it rotates.
+ * Repeat-off keeps its playable/Seen boundary intact.
+ */
+export function currentFirstQueue<
+  T extends { platform: string; bookmarkId?: string | null; url: string },
+>(
+  items: T[],
+  currentKey: string | null,
+  seenStartIndex = -1,
+): { items: T[]; seenStartIndex: number } {
+  if (!currentKey) return { items, seenStartIndex }
+  if (seenStartIndex < 0) {
+    return { items: rotateKeyFirst(items, currentKey), seenStartIndex }
+  }
+
+  const playable = items.slice(0, seenStartIndex)
+  const seen = items.slice(seenStartIndex)
+  const playableIndex = playable.findIndex((item) => theaterItemKey(item) === currentKey)
+  if (playableIndex >= 0) {
+    return {
+      items: [...playable.slice(playableIndex), ...playable.slice(0, playableIndex), ...seen],
+      seenStartIndex,
+    }
+  }
+
+  const seenIndex = seen.findIndex((item) => theaterItemKey(item) === currentKey)
+  if (seenIndex < 0) return { items, seenStartIndex }
+  const current = seen[seenIndex]
+  return {
+    items: [current, ...playable, ...seen.slice(0, seenIndex), ...seen.slice(seenIndex + 1)],
+    seenStartIndex: playable.length + 1,
+  }
+}
+
+/** Insert unique queue keys directly after an anchor without disturbing the rest. */
+export function insertKeysAfter(
+  order: readonly string[],
+  anchor: string | null,
+  inserted: readonly string[],
+): string[] {
+  const additions = inserted.filter(
+    (key, index) => key !== anchor && inserted.indexOf(key) === index,
+  )
+  if (additions.length === 0) return order.slice()
+  const additionSet = new Set(additions)
+  const remaining = order.filter((key) => !additionSet.has(key))
+  const anchorIndex = anchor ? remaining.indexOf(anchor) : -1
+  if (anchorIndex === -1) return [...additions, ...remaining]
+  return [...remaining.slice(0, anchorIndex + 1), ...additions, ...remaining.slice(anchorIndex + 1)]
+}
+
 /** Same-tab paste: keep the interrupted post as Next under the new lead. */
 export function pinKeySecond<
   T extends { platform: string; bookmarkId?: string | null; url: string },
@@ -385,8 +452,12 @@ export interface OrderLifoQueueOpts {
   keepKey?: string | null
   /** Repeat off only: pin now playing so a newer arrival is Next. Never on Repeat all. */
   pinCurrent?: boolean
+  /** Repeat/playlist: rotate the circular order around Now playing. */
+  rotateCurrent?: boolean
   /** Same-tab paste: the interrupted post sits as Next under the new lead. */
   pinNextKey?: string | null
+  /** The caller already supplied the authoritative session traversal order. */
+  preserveOrder?: boolean
   /** Repeat off Queue: keep seen rows after Now / Next. Playback omits this. */
   appendSeen?: boolean
 }
@@ -395,7 +466,8 @@ export interface OrderLifoQueueOpts {
  * Live / Saved playback order: newest first. Repeat off keeps only unseen
  * posts (plus the row on stage). A mid-play arrival sorts to the top, then
  * now playing is pinned so it plays next when the current post ends.
- * Repeat all must not pin — Next walks the full newest-first list.
+ * Repeat queues rotate around the current row so Next still walks the full
+ * list while Queue always starts at Now playing.
  */
 export function orderLifoQueue<
   T extends { platform: string; bookmarkId?: string | null; url: string } & {
@@ -403,19 +475,27 @@ export function orderLifoQueue<
     createdAt: string
   },
 >(items: T[], opts: OrderLifoQueueOpts = {}): T[] {
-  const newest = sortNewestFirst(items)
+  const newest = opts.preserveOrder ? items : sortNewestFirst(items)
   const isSeen = opts.isSeen ?? (() => false)
   const playable = opts.onlyUnseen
     ? newest.filter((it) => {
         const key = theaterItemKey(it)
         if (opts.keepKey && key === opts.keepKey) return true
-        if (opts.pinCurrent && opts.currentKey && key === opts.currentKey) return true
+        if ((opts.pinCurrent || opts.rotateCurrent) && opts.currentKey && key === opts.currentKey) {
+          return true
+        }
         return !isSeen(key)
       })
     : newest
-  const pinned =
-    opts.pinCurrent && opts.currentKey ? pinKeyFirst(playable, opts.currentKey) : playable
-  const ordered = opts.pinNextKey ? pinKeySecond(pinned, opts.pinNextKey, opts.currentKey) : pinned
+  const currentFirst =
+    opts.rotateCurrent && opts.currentKey
+      ? rotateKeyFirst(playable, opts.currentKey)
+      : opts.pinCurrent && opts.currentKey
+        ? pinKeyFirst(playable, opts.currentKey)
+        : playable
+  const ordered = opts.pinNextKey
+    ? pinKeySecond(currentFirst, opts.pinNextKey, opts.currentKey)
+    : currentFirst
   if (!opts.onlyUnseen || !opts.appendSeen) return ordered
   const playableKeys = new Set(ordered.map((it) => theaterItemKey(it)))
   const seen = newest.filter((it) => !playableKeys.has(theaterItemKey(it)))

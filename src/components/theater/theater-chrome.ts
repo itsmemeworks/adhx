@@ -26,6 +26,8 @@ export interface TheaterChromeInput {
   unseenCount: number
   effectiveRepeatMode: RepeatMode
   personalIndex: number
+  /** Saved uses its own cursor and wrap-on-Previous policy. */
+  personalCanPrev?: boolean
   canPrev: boolean
   canNext: boolean
 }
@@ -93,7 +95,9 @@ export function resolveTheaterChrome(input: TheaterChromeInput): TheaterChromeMo
     queuePlayed: queueCount.played,
     queueToPlay: queueCount.toPlay,
     queueLooping: queueCount.looping,
-    chromeCanPrev: input.isCollectionTab ? input.personalIndex > 0 : input.canPrev,
+    chromeCanPrev: input.isCollectionTab
+      ? (input.personalCanPrev ?? input.personalIndex > 0)
+      : input.canPrev,
     chromeCanNext: input.isCollectionTab ? !input.personalFinished : input.canNext,
     seenStartIndex,
   }

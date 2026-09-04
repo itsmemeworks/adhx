@@ -6,12 +6,18 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
-import { render, act, waitFor, screen } from '@testing-library/react'
+import { render, act, fireEvent, waitFor, screen } from '@testing-library/react'
 import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
-vi.mock('@/components/theater/Stage', () => ({ Stage: () => <div data-testid="stage" /> }))
+const { mockStage } = vi.hoisted(() => ({ mockStage: vi.fn() }))
+vi.mock('@/components/theater/Stage', () => ({
+  Stage: (props: Record<string, unknown>) => {
+    mockStage(props)
+    return <div data-testid="stage" />
+  },
+}))
 
 let capturedOnPastePost: ((url: string) => boolean | Promise<boolean>) | undefined
 const mockMobileChrome = vi.fn((_props: Record<string, unknown>) => null)
@@ -113,6 +119,7 @@ describe('TheaterShell: personal paste adds in place', () => {
   beforeEach(() => {
     capturedOnPastePost = undefined
     mockMobileChrome.mockClear()
+    mockStage.mockClear()
     window.localStorage.clear()
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -219,6 +226,188 @@ describe('TheaterShell: personal paste adds in place', () => {
     await waitFor(() => expect(screen.queryByTestId('stage-resolving')).not.toBeInTheDocument())
     expect(chromeProps().currentKey).toBe('twitter:99')
     expect(chromeProps().current?.bookmarkId).toBe('99')
+  })
+
+  it('covers the playing stage and ignores its advancement while paste resolution is pending', async () => {
+    let finishAdd!: (value: { ok: boolean; json: () => Promise<{ error: string }> }) => void
+    const addResponse = new Promise<{
+      ok: boolean
+      json: () => Promise<{ error: string }>
+    }>((resolve) => {
+      finishAdd = resolve
+    })
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/api/bookmarks/add')) return addResponse
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[videoFeedItem('1'), feedItem('2')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().currentKey).toBe('twitter:1')
+
+    let result!: Promise<boolean>
+    await act(async () => {
+      result = Promise.resolve(capturedOnPastePost!('https://x.com/alice/status/99'))
+      await Promise.resolve()
+    })
+
+    const pendingStage = mockStage.mock.calls.at(-1)?.[0] as {
+      covered?: boolean
+      onEnded?: () => void
+    }
+    expect(pendingStage.covered).toBe(true)
+    await act(async () => {
+      expect(await capturedOnPastePost!('https://x.com/alice/status/100')).toBe(false)
+    })
+    expect(
+      (global.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(([input]) =>
+        String(input).includes('/api/bookmarks/add'),
+      ),
+    ).toHaveLength(1)
+    await act(async () => pendingStage.onEnded?.())
+    expect(chromeProps().currentKey).toBe('twitter:99')
+
+    finishAdd({ ok: false, json: async () => ({ error: 'upstream unavailable' }) })
+    await act(async () => {
+      expect(await result).toBe(false)
+    })
+    expect(chromeProps().currentKey).toBe('twitter:1')
+  })
+
+  it('keeps resolving after a committed add until the authoritative feed row is available', async () => {
+    vi.useFakeTimers()
+    let feedAttempts = 0
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/bookmarks/add')) {
+        return {
+          ok: true,
+          json: async () => ({ platform: 'twitter', bookmark: {} }),
+        }
+      }
+      if (
+        url.includes('/api/feed') &&
+        url.includes('id=99') &&
+        url.includes('idPlatform=twitter')
+      ) {
+        feedAttempts += 1
+        if (feedAttempts === 1) return { ok: false, json: async () => ({ error: 'temporary' }) }
+        return { ok: true, json: async () => ({ items: [feedItem('99')] }) }
+      }
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+
+    try {
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={seed([textItem('1')])}
+            mode="personal"
+            initialPersonalTab="live"
+            personalItems={[feedItem('1')]}
+            onClose={vi.fn()}
+          />,
+        )
+      })
+
+      let result!: Promise<boolean>
+      await act(async () => {
+        result = Promise.resolve(capturedOnPastePost!('https://x.com/alice/status/99'))
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+      expect(feedAttempts).toBe(1)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(150)
+        expect(await result).toBe(true)
+      })
+
+      expect(feedAttempts).toBeGreaterThanOrEqual(2)
+      expect(screen.queryByTestId('stage-resolving')).not.toBeInTheDocument()
+      expect(chromeProps().currentKey).toBe('twitter:99')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('bounds failed feed lookups and leaves an explicit retry state over the saved post', async () => {
+    vi.useFakeTimers()
+    let feedAttempts = 0
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/bookmarks/add')) {
+        return {
+          ok: true,
+          json: async () => ({ platform: 'twitter', bookmark: {} }),
+        }
+      }
+      if (
+        url.includes('/api/feed') &&
+        url.includes('id=99') &&
+        url.includes('idPlatform=twitter')
+      ) {
+        feedAttempts += 1
+        if (feedAttempts <= 5) {
+          return { ok: false, json: async () => ({ error: 'still unavailable' }) }
+        }
+        return { ok: true, json: async () => ({ items: [feedItem('99')] }) }
+      }
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+
+    try {
+      await act(async () => {
+        render(
+          <TheaterShell
+            seed={seed([textItem('1')])}
+            mode="personal"
+            initialPersonalTab="live"
+            personalItems={[feedItem('1')]}
+            onClose={vi.fn()}
+          />,
+        )
+      })
+
+      let result!: Promise<boolean>
+      await act(async () => {
+        result = Promise.resolve(capturedOnPastePost!('https://x.com/alice/status/99'))
+        await vi.advanceTimersByTimeAsync(2_050)
+        expect(await result).toBe(true)
+      })
+
+      expect(feedAttempts).toBe(5)
+      expect(screen.getByTestId('stage-resolving-error')).toBeInTheDocument()
+      expect(chromeProps().currentKey).toBe('twitter:99')
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Retry loading' }))
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+
+      expect(feedAttempts).toBeGreaterThanOrEqual(6)
+      expect(
+        (global.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(([input]) =>
+          String(input).includes('/api/bookmarks/add'),
+        ),
+      ).toHaveLength(1)
+      expect(screen.queryByTestId('stage-resolving-error')).not.toBeInTheDocument()
+      expect(chromeProps().currentKey).toBe('twitter:99')
+      expect(chromeProps().current?.bookmarkId).toBe('99')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('removes a failed resolving stub and restores the untouched current post', async () => {

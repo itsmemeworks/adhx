@@ -179,7 +179,7 @@ describe('TheaterShell: repeat is a remembered switch', () => {
   it('can go back to rewatch the previous post while repeat is off', async () => {
     render(<TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} />)
     expect((chromeProps().current as TheaterItem).bookmarkId).toBe('1')
-    expect(chromeProps().canPrev).toBe(false)
+    expect(chromeProps().canPrev).toBe(true)
 
     await act(async () => (chromeProps().onNext as () => void)())
     expect((chromeProps().current as TheaterItem).bookmarkId).toBe('2')
@@ -187,6 +187,20 @@ describe('TheaterShell: repeat is a remembered switch', () => {
 
     await act(async () => (chromeProps().onPrev as () => void)())
     expect((chromeProps().current as TheaterItem).bookmarkId).toBe('1')
+  })
+
+  it('wraps Previous from the queue head and promotes the session to repeat-all', async () => {
+    render(<TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} />)
+
+    await act(async () => (chromeProps().onPrev as () => void)())
+
+    expect((chromeProps().current as TheaterItem).bookmarkId).toBe('3')
+    expect(chromeProps().repeatMode).toBe('all')
+    expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+      '3',
+      '1',
+      '2',
+    ])
   })
 
   it('shrinks the denominator to the unwatched run when most posts were already watched', async () => {
@@ -208,6 +222,21 @@ describe('TheaterShell: repeat is a remembered switch', () => {
     await cycleRepeat() // -> all: the watched ones are back in play
     expect(chromeProps().queueLooping).toBe(true)
     expect(chromeProps().queueTotal).toBe(3)
+  })
+
+  it('rotates a curated playlist so Now playing stays first', async () => {
+    render(
+      <TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} mode="playlist" />,
+    )
+
+    await act(async () => (chromeProps().onNext as () => void)())
+
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect((chromeProps().items as TheaterItem[]).map((item) => item.bookmarkId)).toEqual([
+      '2',
+      '3',
+      '1',
+    ])
   })
 })
 
@@ -299,21 +328,21 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
     expect(chromeProps().queueLooping).toBe(true)
   })
 
-  it('keeps a no-op Previous from escaping the direct-preview loop', async () => {
+  it('promotes a direct preview to repeat-all when moving previous', async () => {
     await act(async () => {
       render(
         <TheaterShell seed={seed([shared, textItem('2')])} mode="shared" sharedItem={shared} />,
       )
     })
-    expect(chromeProps().canPrev).toBe(false)
+    expect(chromeProps().canPrev).toBe(true)
 
     await act(async () => {
       ;(chromeProps().onPrev as () => void)()
     })
 
-    expect(chromeProps().currentKey).toBe(theaterItemKey(shared))
+    expect(chromeProps().currentKey).toBe('twitter:2')
     expect(chromeProps().repeatCurrent).toBe(true)
-    expect(chromeProps().repeatMode).toBe('one')
+    expect(chromeProps().repeatMode).toBe('all')
   })
 
   it('lets an unavailable-only preview reach waiting despite a saved Repeat-all preference', async () => {

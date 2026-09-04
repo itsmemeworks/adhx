@@ -6,6 +6,32 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Now playing is a queue-rendering invariant
+
+Desktop filmstrip/Queue and the mobile sheet now normalize every list around the staged post, so
+Now playing is always the first visible section and the circular successor is always Next.
+Saved transport consumes that same normalized order for deep links, picks, repeat-one exits, and
+already-Seen selections; Previous still reaches the circular tail and promotes Repeat all as needed.
+Current state: complete; component, shell, reverse-navigation, and desktop/mobile browser coverage pass.
+
+## 2026-09-04 — Theater queues rotate around Now playing
+
+Live, Saved, shared, and curated queues now render and traverse one current-first circular order:
+the departed post moves to the tail, and cross-tab/poll arrivals become Next without stealing the
+stage. Saved inserts remote rows after its real cursor so the list and transport cannot disagree.
+Previous is available whenever another row exists and wraps into Repeat all at the queue head.
+Explicit pause intent now wins late dwell/video-ended races on pointer and keyboard controls.
+Current state: complete; queue, arrival, repeat, Saved, playlist, and pause regressions added.
+
+## 2026-09-04 — Paste resolving now suspends the staged post
+
+Personal paste pauses the covered MP4 or YouTube player and blocks every timed/video advance until
+resolution settles, so a failed add restores the exact post that was interrupted. Successful adds
+keep the Gob resolver visible through bounded authoritative-feed retries instead of revealing stale
+content; exhausted lookups show a feed-only Retry action and never repeat the committed add. The
+parsed URL supplies a safe ID fallback. Current state: complete; MP4, YouTube, advancement,
+serialization, and transient-feed regressions added.
+
 ## 2026-09-04 — Theater paints resolving posts immediately
 
 Personal Live/Saved paste now stages the Gob resolver before add/enrichment returns, then swaps in

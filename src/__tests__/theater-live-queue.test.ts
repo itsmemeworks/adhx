@@ -10,6 +10,8 @@ import {
   computeLoopedNext,
   computeQueueCounts,
   formatQueueCount,
+  insertKeysAfter,
+  currentFirstQueue,
 } from '@/components/theater/TheaterShell'
 
 type Item = {
@@ -49,6 +51,27 @@ describe('sortNewestFirst', () => {
   it('returns the same reference when already newest-first', () => {
     const items = [item('new', 1), item('old', 8)]
     expect(sortNewestFirst(items)).toBe(items)
+  })
+})
+
+describe('insertKeysAfter', () => {
+  it('merges same-batch arrivals after current without dropping earlier arrivals', () => {
+    const first = insertKeysAfter(['a', 'b', 'c'], 'a', ['x'])
+    expect(insertKeysAfter(first, 'a', ['y'])).toEqual(['a', 'y', 'x', 'b', 'c'])
+  })
+})
+
+describe('currentFirstQueue', () => {
+  it('rotates the visible queue around current without changing reverse traversal', () => {
+    const queue = currentFirstQueue([item('a', 1), item('b', 2), item('c', 3)], key('b'))
+    expect(ids(queue.items)).toEqual(['b', 'c', 'a'])
+    expect(queue.items.at(-1)?.bookmarkId).toBe('a')
+  })
+
+  it('keeps Seen rows after the rotated playable section', () => {
+    const queue = currentFirstQueue([item('a', 1), item('b', 2), item('seen', 3)], key('b'), 2)
+    expect(ids(queue.items)).toEqual(['b', 'a', 'seen'])
+    expect(queue.seenStartIndex).toBe(2)
   })
 })
 
@@ -92,16 +115,16 @@ describe('orderLifoQueue', () => {
     ).toEqual(['playing', 'next'])
   })
 
-  it('repeat-all is newest-first without a pin so Next can walk the pile', () => {
+  it('repeat-all rotates the newest-first pile around Now playing', () => {
     const items = [item('a', 1), item('b', 2), item('c', 3)]
     expect(
       ids(
         orderLifoQueue(items, {
           currentKey: key('c'),
-          pinCurrent: false,
+          rotateCurrent: true,
         }),
       ),
-    ).toEqual(['a', 'b', 'c'])
+    ).toEqual(['c', 'a', 'b'])
   })
 
   it('paste interrupt sits as Next under the new lead', () => {
