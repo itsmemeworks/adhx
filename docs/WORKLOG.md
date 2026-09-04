@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Mobile rail owns its complete touch target
+
+The viewport-fixed caption scrim created a stacking context below the larger invisible swipe zone,
+letting the zone steal the bottom 16px of Share even though the visible controls did not overlap.
+The action rail is now a higher-z sibling, captions clear the scrub hitbox, and all edge controls
+plus caption padding honor landscape safe-area insets. Browser regressions assert actual
+`elementFromPoint` ownership and a non-empty media caption under hostile geometry. A dedicated
+mobile WebKit smoke project now joins Chromium in CI. Current state: complete locally.
+
 ## 2026-09-04 — Mobile bottom chrome shares one visual viewport
 
 Returning from Settings exposed a split coordinate system: the oversized media paint layer owned

@@ -80,12 +80,18 @@ test.describe('mobile viewport', () => {
     const bottomScrimBox = await bottomScrim.boundingBox()
     const captionBox = await bottomScrim.locator(':scope > div').first().boundingBox()
     const swipeControlBox = await swipeControl.boundingBox()
-    const visibleActionBottom = await postActions.locator(':scope > *').evaluateAll((actions) =>
-      actions.reduce((bottom, action) => {
-        const style = getComputedStyle(action)
-        if (style.display === 'none' || style.visibility === 'hidden') return bottom
-        return Math.max(bottom, action.getBoundingClientRect().bottom)
-      }, 0),
+    const actionGeometry = await postActions.locator(':scope > *').evaluateAll((actions) =>
+      actions.reduce(
+        (geometry, action) => {
+          const style = getComputedStyle(action)
+          if (style.display === 'none' || style.visibility === 'hidden') return geometry
+          const rect = action.getBoundingClientRect()
+          return rect.bottom > geometry.bottom
+            ? { bottom: rect.bottom, point: { x: rect.left + rect.width / 2, y: rect.bottom - 2 } }
+            : geometry
+        },
+        { bottom: 0, point: { x: 0, y: 0 } },
+      ),
     )
     expect(sliderBox).not.toBeNull()
     expect(trackBox).not.toBeNull()
@@ -93,7 +99,7 @@ test.describe('mobile viewport', () => {
     expect(bottomScrimBox).not.toBeNull()
     expect(captionBox).not.toBeNull()
     expect(swipeControlBox).not.toBeNull()
-    expect(visibleActionBottom).toBeGreaterThan(0)
+    expect(actionGeometry.bottom).toBeGreaterThan(0)
     expect(
       Math.abs((bottomScrimBox?.y ?? 0) + (bottomScrimBox?.height ?? 0) - initialHeight),
     ).toBeLessThanOrEqual(1)
@@ -101,9 +107,16 @@ test.describe('mobile viewport', () => {
     expect((swipeControlBox?.y ?? 0) + (swipeControlBox?.height ?? 0)).toBeLessThanOrEqual(
       dockBox?.y ?? 0,
     )
-    const actionToSwipeGap = (swipeControlBox?.y ?? 0) - visibleActionBottom
+    const actionToSwipeGap = (swipeControlBox?.y ?? 0) - actionGeometry.bottom
     expect(actionToSwipeGap).toBeGreaterThanOrEqual(0)
     expect(actionToSwipeGap).toBeLessThanOrEqual(12)
+    expect(
+      await page.evaluate(({ x, y }) => {
+        const rail = document.querySelector('[data-testid="mobile-control-actions"]')
+        const hit = document.elementFromPoint(x, y)
+        return !!rail && !!hit && rail.contains(hit)
+      }, actionGeometry.point),
+    ).toBe(true)
     expect(sliderBox?.y ?? 0).toBeGreaterThan(initialHeight / 2)
     expect(Math.abs((trackBox?.y ?? 0) - (dockBox?.y ?? Number.MAX_VALUE))).toBeLessThanOrEqual(2)
     const scrubY = (trackBox?.y ?? 0) + (trackBox?.height ?? 0) / 2
@@ -213,15 +226,82 @@ test.describe('mobile viewport', () => {
     await page.getByRole('button', { name: 'Paste a link' }).click()
   })
 
+  test('media caption stays above the dock when the paint layer is taller', async ({ page }) => {
+    test.setTimeout(90_000)
+    await page.goto(`/${POST.quoted.author}/status/${POST.quoted.id}`)
+    await expectTheaterReady(page)
+
+    const scrim = page.getByTestId('mobile-bottom-scrim')
+    const caption = scrim.getByText(POST.quoted.text, { exact: true })
+    const dock = page.getByTestId('mobile-theater-dock')
+    const slider = page.locator('[data-theater-progress-slider]')
+    await expect(caption).toBeVisible()
+    const viewportHeight = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>('.theater-shell-viewport')
+      if (!shell) throw new Error('Theater viewport did not mount')
+      shell.style.position = 'absolute'
+      shell.style.bottom = 'auto'
+      shell.style.height = `${window.innerHeight + 180}px`
+      return window.innerHeight
+    })
+
+    const [scrimBox, captionBox, dockBox, sliderBox] = await Promise.all([
+      scrim.boundingBox(),
+      caption.boundingBox(),
+      dock.boundingBox(),
+      slider.boundingBox(),
+    ])
+    expect(scrimBox).not.toBeNull()
+    expect(captionBox).not.toBeNull()
+    expect(dockBox).not.toBeNull()
+    expect(sliderBox).not.toBeNull()
+    expect(captionBox!.height).toBeGreaterThan(0)
+    expect(scrimBox!.y + scrimBox!.height).toBeCloseTo(viewportHeight, 0)
+    expect(captionBox!.y + captionBox!.height).toBeLessThanOrEqual(dockBox!.y)
+    expect(captionBox!.y + captionBox!.height).toBeLessThan(sliderBox!.y)
+  })
+
   test('short landscape Queue hides post actions and leaves top chrome clear', async ({ page }) => {
     test.setTimeout(90_000)
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', {
+      insets: { top: 0, left: 34, bottom: 0, right: 44 },
+    })
     await page.setViewportSize({ width: 844, height: 390 })
     await page.goto('/')
     await expectTheaterReady(page)
     await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
 
     const dock = page.getByTestId('mobile-theater-dock')
+    const swipeZone = page.getByTestId('mobile-swipe-zone')
+    const scrim = page.getByTestId('mobile-bottom-scrim')
     const queue = page.locator('[data-theater-action="show-all"]:visible')
+    const menu = page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]')
+    const home = page.locator('.theater-mobile-top-chrome a[aria-label="ADHX home"]')
+    const playback = page.getByTestId('mobile-playback-controls')
+    const viewportWidth = page.viewportSize()!.width
+    const [swipeBox, actionsBox, queueBox, menuBox, homeBox, playbackBox] = await Promise.all([
+      swipeZone.boundingBox(),
+      page.getByTestId('mobile-control-actions').boundingBox(),
+      queue.boundingBox(),
+      menu.boundingBox(),
+      home.boundingBox(),
+      playback.boundingBox(),
+    ])
+    expect(swipeBox).not.toBeNull()
+    expect(actionsBox).not.toBeNull()
+    expect(queueBox).not.toBeNull()
+    expect(menuBox).not.toBeNull()
+    expect(homeBox).not.toBeNull()
+    expect(playbackBox).not.toBeNull()
+    expect(viewportWidth - (swipeBox!.x + swipeBox!.width)).toBeCloseTo(44, 0)
+    expect(viewportWidth - (actionsBox!.x + actionsBox!.width)).toBeCloseTo(56, 0)
+    expect(queueBox!.x).toBeCloseTo(34, 0)
+    expect(homeBox!.x).toBeCloseTo(34, 0)
+    expect(viewportWidth - (menuBox!.x + menuBox!.width)).toBeCloseTo(44, 0)
+    expect(viewportWidth - (playbackBox!.x + playbackBox!.width)).toBeCloseTo(44, 0)
+    await expect(scrim).toHaveCSS('padding-left', '34px')
+    await expect(scrim).toHaveCSS('padding-right', '44px')
     await queue.tap()
     await expect(queue).toHaveAttribute('aria-expanded', 'true')
     await expect
@@ -311,6 +391,10 @@ authedTest.describe('mobile personal controls', () => {
     'short landscape keeps four vertical actions clear and Q preserves focus',
     async ({ page }) => {
       authedTest.setTimeout(90_000)
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send('Emulation.setSafeAreaInsetsOverride', {
+        insets: { top: 0, left: 34, bottom: 0, right: 44 },
+      })
       await page.goto('/saved')
       await expectTheaterReady(page)
       await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
@@ -320,30 +404,40 @@ authedTest.describe('mobile personal controls', () => {
       const account = page.getByRole('button', { name: 'Account menu' })
       const swipe = page.locator('[data-theater-swipe-control]')
       const slider = page.locator('[data-theater-progress-slider]')
+      const queue = page.locator('[data-theater-action="show-all"]:visible')
+      const playback = page.getByTestId('mobile-playback-controls')
       await expect(postActions).toHaveCSS('flex-direction', 'column')
       await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Tag' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Share' })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Open on X' })).toBeVisible()
 
-      const [actionsBox, pasteBox, accountBox, swipeBox, sliderBox] = await Promise.all([
-        postActions.boundingBox(),
-        paste.boundingBox(),
-        account.boundingBox(),
-        swipe.boundingBox(),
-        slider.boundingBox(),
-      ])
+      const [actionsBox, pasteBox, accountBox, swipeBox, sliderBox, queueBox, playbackBox] =
+        await Promise.all([
+          postActions.boundingBox(),
+          paste.boundingBox(),
+          account.boundingBox(),
+          swipe.boundingBox(),
+          slider.boundingBox(),
+          queue.boundingBox(),
+          playback.boundingBox(),
+        ])
       expect(actionsBox).not.toBeNull()
       expect(pasteBox).not.toBeNull()
       expect(accountBox).not.toBeNull()
       expect(swipeBox).not.toBeNull()
       expect(sliderBox).not.toBeNull()
+      expect(queueBox).not.toBeNull()
+      expect(playbackBox).not.toBeNull()
+      expect(page.viewportSize()!.width - (actionsBox!.x + actionsBox!.width)).toBeCloseTo(156, 0)
+      expect(page.viewportSize()!.width - (accountBox!.x + accountBox!.width)).toBeCloseTo(44, 0)
+      expect(queueBox!.x).toBeCloseTo(34, 0)
+      expect(page.viewportSize()!.width - (playbackBox!.x + playbackBox!.width)).toBeCloseTo(44, 0)
       expect(actionsBox!.x + actionsBox!.width).toBeLessThan(pasteBox!.x)
       expect(actionsBox!.x + actionsBox!.width).toBeLessThan(accountBox!.x)
       expect(actionsBox!.x + actionsBox!.width).toBeLessThan(swipeBox!.x)
       expect(actionsBox!.y + actionsBox!.height).toBeLessThan(sliderBox!.y)
 
-      const queue = page.locator('[data-theater-action="show-all"]:visible')
       await page.getByRole('button', { name: 'Share' }).focus()
       await page.keyboard.press('q')
       await expect(queue).toHaveAttribute('aria-expanded', 'true')

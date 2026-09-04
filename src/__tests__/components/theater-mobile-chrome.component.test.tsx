@@ -130,8 +130,16 @@ describe('TheaterMobileChrome: iOS viewport anchoring', () => {
 
     expect(container.firstElementChild).toHaveClass('absolute')
     const paste = screen.getByRole('button', { name: 'Paste a link' })
-    expect(paste.closest('.theater-mobile-top-chrome')).toHaveClass('pointer-events-none')
+    expect(paste.closest('.theater-mobile-top-chrome')).toHaveClass(
+      'pointer-events-none',
+      'pl-[max(1rem,env(safe-area-inset-left))]',
+      'pr-[max(1rem,env(safe-area-inset-right))]',
+    )
     expect(paste.closest('.pointer-events-auto')).not.toBeNull()
+    expect(screen.getByTestId('mobile-theater-peek').firstElementChild).toHaveClass(
+      'pl-[max(0.5rem,env(safe-area-inset-left))]',
+      'pr-[max(0.5rem,env(safe-area-inset-right))]',
+    )
     expect(mockTheaterAvatarMenu).toHaveBeenCalled()
   })
 })
@@ -197,7 +205,11 @@ describe('TheaterMobileChrome: caption', () => {
     )
     expect(screen.queryByText('a caption for the video')).not.toBeInTheDocument()
     const watch = screen.getByRole('button', { name: 'Watch' })
-    expect(watch.nextElementSibling?.className).toContain('fixed')
+    const bottomScrim = screen.getByTestId('mobile-bottom-scrim')
+    const actionRail = screen.getByTestId('mobile-control-actions')
+    expect(bottomScrim.contains(watch)).toBe(true)
+    expect(actionRail).toHaveClass('fixed')
+    expect(bottomScrim.contains(actionRail)).toBe(false)
     expect(watch).not.toHaveTextContent('Watch')
   })
 
@@ -225,13 +237,19 @@ describe('TheaterMobileChrome: caption', () => {
     )
     const share = screen.getByRole('button', { name: 'Share' })
     const cluster = share.parentElement?.parentElement
+    expect(cluster).toBeTruthy()
+    if (!cluster) throw new Error('Missing mobile action rail')
     expect(cluster?.className).toContain('pointer-events-none')
     expect(cluster?.className).toContain('fixed')
-    expect(cluster?.className).toContain('right-3')
+    expect(cluster?.className).toContain('right-[calc(0.75rem+env(safe-area-inset-right))]')
     expect(cluster?.className).not.toContain('flex-1')
-    const actionRow = cluster?.parentElement
-    expect(actionRow?.className).not.toContain('pointer-events-auto')
-    expect(actionRow?.parentElement?.className).toContain('pointer-events-none')
+    const bottomScrim = screen.getByTestId('mobile-bottom-scrim')
+    expect(bottomScrim).toHaveClass('pointer-events-none')
+    expect(bottomScrim.contains(cluster)).toBe(false)
+    expect(bottomScrim).toHaveClass(
+      'pl-[max(1rem,env(safe-area-inset-left))]',
+      'pr-[max(1rem,env(safe-area-inset-right))]',
+    )
     expect(share.className).toContain('pointer-events-auto')
     expect(share.className).toContain('bg-black/20')
     expect(share.className).toContain('backdrop-blur-md')
@@ -840,6 +858,7 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(zone).toHaveClass('fixed')
     expect(zone).not.toHaveClass('absolute')
     expect(bottomScrim).not.toHaveClass('transition-[opacity,transform]', 'translate-y-3')
+    expect(zone.className).toContain('right-[env(safe-area-inset-right)]')
     expect(pause.parentElement).toHaveAttribute('data-testid', 'mobile-playback-controls')
     expect(
       [...pause.parentElement!.children].map((control) => control.getAttribute('aria-label')),
@@ -870,7 +889,9 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(capsule.className).toContain('w-12')
     expect(actions.className).not.toContain('[@media(max-height:520px)]:w-auto')
     expect(actions.className).not.toContain('[@media(max-height:520px)]:flex-row')
-    expect(actions.className).not.toContain('[@media(max-height:520px)]:right-28')
+    expect(actions.className).not.toContain(
+      '[@media(max-height:520px)]:right-[calc(7rem+env(safe-area-inset-right))]',
+    )
     expect(actions.className).not.toContain(
       '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))]',
     )
@@ -889,7 +910,7 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(actions).toHaveClass(
       'flex-col',
       '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))]',
-      '[@media(max-height:520px)]:right-28',
+      '[@media(max-height:520px)]:right-[calc(7rem+env(safe-area-inset-right))]',
     )
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()

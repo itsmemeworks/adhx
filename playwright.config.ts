@@ -18,7 +18,18 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: '**/mobile-webkit.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'webkit-mobile',
+      testMatch: '**/mobile-webkit.spec.ts',
+      use: { ...devices['iPhone 13'], browserName: 'webkit' },
+    },
+  ],
   webServer: {
     command: 'pnpm exec tsx e2e/serve.ts',
     url: `${E2E_ORIGIN}/api/health`,
