@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { POST } from './constants'
-import { expectTheaterReady } from './helpers'
+import { authedTest, expectTheaterReady } from './helpers'
 
 test.describe('mobile viewport', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
@@ -53,6 +53,12 @@ test.describe('mobile viewport', () => {
     await expect(dock).toHaveCSS('background-color', 'rgba(18, 17, 23, 0.85)')
     await expect(queue).toBeInViewport()
     await expect(page.locator('[data-theater-sheet-handle]')).toHaveCount(0)
+    const playbackLabels = await page
+      .getByTestId('mobile-playback-controls')
+      .locator(':scope > button')
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
+    expect(playbackLabels[0]).toBe('Hide controls')
+    expect(playbackLabels.at(-1)).toMatch(/^(Mute|Unmute)$/)
 
     // The progress rail is the dock's straight top edge. Its larger invisible
     // hit target sits immediately above that edge—not at the screen top, where
@@ -134,19 +140,20 @@ test.describe('mobile viewport', () => {
       })
       .toBe(true)
 
-    // Expanded post actions stay entirely above the slider's 32px seek area,
-    // so horizontal scrubbing cannot trigger Share/Open at the right edge.
-    const expandedSliderBox = await slider.boundingBox()
-    const expandedActionsBox = await page.getByTestId('mobile-control-actions').boundingBox()
-    expect(expandedSliderBox).not.toBeNull()
-    expect(expandedActionsBox).not.toBeNull()
-    expect((expandedActionsBox?.y ?? 0) + (expandedActionsBox?.height ?? 0)).toBeLessThan(
-      expandedSliderBox?.y ?? 0,
-    )
+    // Queue owns the expanded state. The vertical post-action rail is removed
+    // from layout and interaction until the sheet has fully collapsed again.
+    const postActions = page.getByTestId('mobile-control-actions')
+    await expect(postActions).toHaveAttribute('aria-hidden', 'true')
+    await expect(postActions).toHaveAttribute('inert', '')
+    await expect(postActions).toHaveCSS('display', 'none')
 
     await expect.poll(queueHitTarget).toBe('show-all')
     await queue.tap()
     await expect(queue).toHaveAttribute('aria-expanded', 'false')
+    await expect(postActions).toHaveAttribute('aria-hidden', 'false')
+    await expect(postActions).not.toHaveAttribute('inert')
+    await expect(postActions).toHaveCSS('display', 'flex')
+    await expect(postActions).toHaveClass(/flex-col/)
 
     const menu = page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]')
     await expect(menu).toBeInViewport()
@@ -177,9 +184,7 @@ test.describe('mobile viewport', () => {
     await page.getByRole('button', { name: 'Paste a link' }).click()
   })
 
-  test('short landscape Queue keeps actions clear of top chrome and the seek target', async ({
-    page,
-  }) => {
+  test('short landscape Queue hides post actions and leaves top chrome clear', async ({ page }) => {
     test.setTimeout(90_000)
     await page.setViewportSize({ width: 844, height: 390 })
     await page.goto('/')
@@ -198,29 +203,14 @@ test.describe('mobile viewport', () => {
       })
       .toBe(true)
 
-    const actionsBox = await page.getByTestId('mobile-control-actions').boundingBox()
-    const sliderBox = await page.locator('[data-theater-progress-slider]').boundingBox()
-    const pasteBox = await page.getByRole('button', { name: 'Paste a link' }).boundingBox()
-    const menuBox = await page
-      .locator('.theater-mobile-top-chrome [data-theater-action="menu"]')
-      .boundingBox()
-    expect(actionsBox).not.toBeNull()
-    expect(sliderBox).not.toBeNull()
-    expect(pasteBox).not.toBeNull()
-    expect(menuBox).not.toBeNull()
-
-    const overlaps = (
-      a: { x: number; y: number; width: number; height: number },
-      b: { x: number; y: number; width: number; height: number },
-    ) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
-
-    expect(overlaps(actionsBox!, pasteBox!)).toBe(false)
-    expect(overlaps(actionsBox!, menuBox!)).toBe(false)
-    expect((actionsBox?.y ?? 0) + (actionsBox?.height ?? 0)).toBeLessThan(sliderBox?.y ?? 0)
-    const viewportWidth = await page.evaluate(() => window.innerWidth)
-    expect(
-      Math.abs((actionsBox?.x ?? 0) + (actionsBox?.width ?? 0) / 2 - viewportWidth / 2),
-    ).toBeLessThanOrEqual(1)
+    const postActions = page.getByTestId('mobile-control-actions')
+    await expect(postActions).toHaveAttribute('aria-hidden', 'true')
+    await expect(postActions).toHaveAttribute('inert', '')
+    await expect(postActions).toHaveCSS('display', 'none')
+    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeInViewport()
+    await expect(
+      page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]'),
+    ).toBeInViewport()
 
     await queue.tap()
     await expect(queue).toHaveAttribute('aria-expanded', 'false')
@@ -234,4 +224,91 @@ test.describe('mobile viewport', () => {
     await expect(page.getByText(POST.preview.text).first()).toBeVisible()
     await expect(page.getByRole('button', { name: 'Repeat this post' })).toBeVisible()
   })
+})
+
+authedTest.describe('mobile personal controls', () => {
+  authedTest.use({ viewport: { width: 844, height: 390 }, hasTouch: true })
+
+  authedTest(
+    'short landscape keeps four vertical actions clear and Q preserves focus',
+    async ({ page }) => {
+      authedTest.setTimeout(90_000)
+      await page.goto('/saved')
+      await expectTheaterReady(page)
+      await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
+
+      const postActions = page.getByTestId('mobile-control-actions')
+      const paste = page.getByRole('button', { name: 'Paste a link' })
+      const account = page.getByRole('button', { name: 'Account menu' })
+      const swipe = page.locator('[data-theater-swipe-control]')
+      const slider = page.locator('[data-theater-progress-slider]')
+      await expect(postActions).toHaveCSS('flex-direction', 'column')
+      await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Tag' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Share' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Open on X' })).toBeVisible()
+
+      const [actionsBox, pasteBox, accountBox, swipeBox, sliderBox] = await Promise.all([
+        postActions.boundingBox(),
+        paste.boundingBox(),
+        account.boundingBox(),
+        swipe.boundingBox(),
+        slider.boundingBox(),
+      ])
+      expect(actionsBox).not.toBeNull()
+      expect(pasteBox).not.toBeNull()
+      expect(accountBox).not.toBeNull()
+      expect(swipeBox).not.toBeNull()
+      expect(sliderBox).not.toBeNull()
+      expect(actionsBox!.x + actionsBox!.width).toBeLessThan(pasteBox!.x)
+      expect(actionsBox!.x + actionsBox!.width).toBeLessThan(accountBox!.x)
+      expect(actionsBox!.x + actionsBox!.width).toBeLessThan(swipeBox!.x)
+      expect(actionsBox!.y + actionsBox!.height).toBeLessThan(sliderBox!.y)
+
+      const queue = page.locator('[data-theater-action="show-all"]:visible')
+      await page.getByRole('button', { name: 'Share' }).focus()
+      await page.keyboard.press('q')
+      await expect(queue).toHaveAttribute('aria-expanded', 'true')
+      await expect(queue).toBeFocused()
+      await expect(postActions).toHaveCSS('display', 'none')
+    },
+  )
+
+  authedTest(
+    'compact landscape keeps every personal action inside the viewport',
+    async ({ page }) => {
+      authedTest.setTimeout(90_000)
+      await page.setViewportSize({ width: 568, height: 320 })
+      await page.goto('/saved')
+      await expectTheaterReady(page)
+      await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
+
+      const postActions = page.getByTestId('mobile-control-actions')
+      const paste = page.getByRole('button', { name: 'Paste a link' })
+      const swipe = page.locator('[data-theater-swipe-control]')
+      const dock = page.getByTestId('mobile-theater-dock')
+      const slider = page.locator('[data-theater-progress-slider]')
+      await expect(postActions).toHaveCSS('flex-direction', 'column')
+      await expect(page.getByRole('link', { name: 'Open on X' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+
+      const [actionsBox, pasteBox, swipeBox, dockBox, sliderBox] = await Promise.all([
+        postActions.boundingBox(),
+        paste.boundingBox(),
+        swipe.boundingBox(),
+        dock.boundingBox(),
+        slider.boundingBox(),
+      ])
+      expect(actionsBox).not.toBeNull()
+      expect(pasteBox).not.toBeNull()
+      expect(swipeBox).not.toBeNull()
+      expect(dockBox).not.toBeNull()
+      expect(sliderBox).not.toBeNull()
+      expect(actionsBox!.y).toBeGreaterThanOrEqual(0)
+      expect(actionsBox!.y + actionsBox!.height).toBeLessThan(dockBox!.y)
+      expect(actionsBox!.y + actionsBox!.height).toBeLessThan(sliderBox!.y)
+      expect(actionsBox!.x + actionsBox!.width).toBeLessThan(pasteBox!.x)
+      expect(actionsBox!.x + actionsBox!.width).toBeLessThan(swipeBox!.x)
+    },
+  )
 })

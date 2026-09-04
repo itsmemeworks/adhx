@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-04 — Expanded Queue owns the mobile control surface
+
+The bottom transport now orders Focus, play/pause, Repeat, then sound, swapping the old outer slots.
+Save/Tag/Share/Open remain a vertical rail in every viewport and leave layout as soon as Queue
+opens; they return only after the closing transition settles.
+This supersedes the temporary horizontal action row above the expanded sheet.
+Short personal-theater landscapes place the four-action rail left of Paste/Account and swipe, with
+its foot 4px above the scrub hitbox; keyboard Queue opening transfers focus to the Queue toggle.
+Current state: complete locally; component and portrait/landscape browser coverage updated.
+
 ## 2026-09-04 — Short-landscape Queue clears the top chrome
 
 Raising expanded post actions above the seek target put them under Paste/menu at 844×390.

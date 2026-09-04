@@ -240,6 +240,8 @@ export function TheaterMobileChrome({
   const focusClosingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const focusRestoreFrameRef = useRef<number | null>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
+  const actionRailRef = useRef<HTMLDivElement>(null)
+  const queueToggleRef = useRef<HTMLButtonElement>(null)
   const quickFilterRef = useRef<HTMLDivElement>(null)
   const quickFilterTriggerRef = useRef<HTMLButtonElement>(null)
   const quickFilterOpenRef = useRef(false)
@@ -494,6 +496,7 @@ export function TheaterMobileChrome({
         : canPrev
           ? 'Swipe down for previous post'
           : 'Playback controls'
+  const actionRailHidden = declutter || sheetOpen || !sheetRestingClosed || focusClosingSheet
 
   return (
     <div ref={rootRef} className="pointer-events-none absolute inset-0 z-10 lg:hidden">
@@ -692,13 +695,17 @@ export function TheaterMobileChrome({
               />
             ) : null}
             <div
+              ref={actionRailRef}
               className={cn(
-                'pointer-events-auto fixed right-3 z-[30] gap-1.5 transition-[opacity,transform] duration-200 ease-out',
-                sheetOpen || focusClosingSheet
-                  ? 'bottom-[calc(70%+1.75rem)] flex flex-row items-center justify-end [@media(max-height:520px)]:inset-x-0 [@media(max-height:520px)]:mx-auto [@media(max-height:520px)]:w-max'
-                  : 'bottom-[calc(13rem+env(safe-area-inset-bottom))] flex w-12 flex-col items-center [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:w-auto [@media(max-height:520px)]:flex-row',
-                declutter && 'pointer-events-none translate-y-2 opacity-0',
+                'pointer-events-auto fixed right-3 z-[30] flex w-12 flex-col items-center gap-1.5 bottom-[calc(13rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
+                // In a short personal theater, 6rem = the 4.25rem dock,
+                // the slider's 1.5rem reach above it, and a 0.25rem gap.
+                collection &&
+                  '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-28',
+                actionRailHidden && 'hidden',
               )}
+              aria-hidden={actionRailHidden}
+              inert={actionRailHidden ? true : undefined}
               data-testid="mobile-control-actions"
             >
               {collection?.tab === 'collection' && (
@@ -792,7 +799,6 @@ export function TheaterMobileChrome({
                 sendFile={sendFile}
                 onCopyText={copyText}
                 onShareLink={handleShare}
-                alignTop={sheetOpen}
                 triggerClassName={RAIL_ACTION_BTN}
               />
               {(() => {
@@ -1000,10 +1006,15 @@ export function TheaterMobileChrome({
           <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center gap-1.5">
               <button
+                ref={queueToggleRef}
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
-                  setSheetOpen((value) => !value)
+                  const opening = !sheetOpen
+                  if (opening && actionRailRef.current?.contains(document.activeElement)) {
+                    queueToggleRef.current?.focus({ preventScroll: true })
+                  }
+                  setSheetOpen(opening)
                 }}
                 onTouchEnd={(event) => event.stopPropagation()}
                 aria-expanded={sheetOpen}
@@ -1078,17 +1089,42 @@ export function TheaterMobileChrome({
             >
               <button
                 type="button"
-                disabled={mediaKind !== 'video'}
-                aria-disabled={mediaKind !== 'video'}
-                onClick={handleAudioTap}
-                aria-label={displayMuted ? 'Unmute' : 'Mute'}
-                className={cn(
-                  PEEK_ICON_BTN,
-                  soundPulse && 'animate-sound-pulse',
-                  mediaKind !== 'video' && 'opacity-35',
-                )}
+                onClick={(event) => {
+                  event.currentTarget.blur()
+                  if (sheetOpen) {
+                    setFocusClosingSheet(true)
+                    setSheetOpen(false)
+                    setDeclutter(true)
+                    if (focusClosingTimeoutRef.current) {
+                      clearTimeout(focusClosingTimeoutRef.current)
+                    }
+                    focusClosingTimeoutRef.current = setTimeout(() => {
+                      focusClosingTimeoutRef.current = null
+                      setFocusClosingSheet(false)
+                    }, 220)
+                    return
+                  }
+                  if (focusClosingSheet) {
+                    if (focusClosingTimeoutRef.current) {
+                      clearTimeout(focusClosingTimeoutRef.current)
+                      focusClosingTimeoutRef.current = null
+                    }
+                    setFocusClosingSheet(false)
+                    focusRestoreFrameRef.current = requestAnimationFrame(() => {
+                      focusRestoreFrameRef.current = requestAnimationFrame(() => {
+                        focusRestoreFrameRef.current = null
+                        setDeclutter(false)
+                      })
+                    })
+                    return
+                  }
+                  setDeclutter((value) => !value)
+                }}
+                aria-label={declutter && !sheetOpen ? 'Show controls' : 'Hide controls'}
+                className={PEEK_ICON_BTN}
+                data-theater-action="expand"
               >
-                {displayMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+                {declutter && !sheetOpen ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
               </button>
               {(mediaKind === 'video' || progressKind !== 'none' || (repeatCurrent && current)) && (
                 <button
@@ -1129,42 +1165,17 @@ export function TheaterMobileChrome({
               ) : null}
               <button
                 type="button"
-                onClick={(event) => {
-                  event.currentTarget.blur()
-                  if (sheetOpen) {
-                    setFocusClosingSheet(true)
-                    setSheetOpen(false)
-                    setDeclutter(true)
-                    if (focusClosingTimeoutRef.current) {
-                      clearTimeout(focusClosingTimeoutRef.current)
-                    }
-                    focusClosingTimeoutRef.current = setTimeout(() => {
-                      focusClosingTimeoutRef.current = null
-                      setFocusClosingSheet(false)
-                    }, 220)
-                    return
-                  }
-                  if (focusClosingSheet) {
-                    if (focusClosingTimeoutRef.current) {
-                      clearTimeout(focusClosingTimeoutRef.current)
-                      focusClosingTimeoutRef.current = null
-                    }
-                    setFocusClosingSheet(false)
-                    focusRestoreFrameRef.current = requestAnimationFrame(() => {
-                      focusRestoreFrameRef.current = requestAnimationFrame(() => {
-                        focusRestoreFrameRef.current = null
-                        setDeclutter(false)
-                      })
-                    })
-                    return
-                  }
-                  setDeclutter((value) => !value)
-                }}
-                aria-label={declutter && !sheetOpen ? 'Show controls' : 'Hide controls'}
-                className={PEEK_ICON_BTN}
-                data-theater-action="expand"
+                disabled={mediaKind !== 'video'}
+                aria-disabled={mediaKind !== 'video'}
+                onClick={handleAudioTap}
+                aria-label={displayMuted ? 'Unmute' : 'Mute'}
+                className={cn(
+                  PEEK_ICON_BTN,
+                  soundPulse && 'animate-sound-pulse',
+                  mediaKind !== 'video' && 'opacity-35',
+                )}
               >
-                {declutter && !sheetOpen ? <Minimize2 size={19} /> : <Maximize2 size={19} />}
+                {displayMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
               </button>
             </div>
           </div>
