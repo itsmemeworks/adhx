@@ -87,6 +87,7 @@ import { useSharedPin } from './useSharedPin'
 import { SharedResolveBridge } from './SharedResolveBridge'
 import { useTheaterLiveUrl } from './useTheaterLiveUrl'
 import { resolveTheaterChrome } from './theater-chrome'
+import { acquireTheaterDocumentLock } from './theater-document-lock'
 import { pastedPostResolvingStub } from '@/lib/theater/paste-preview'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 import { SignInModal, useAuthMe } from '@/components/auth'
@@ -990,15 +991,12 @@ export function TheaterShell({
     }
   }, [isPersonal])
 
-  // Lock the underlying page's scroll while the collection overlay is mounted.
-  useEffect(() => {
-    if (!isPersonal) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [isPersonal])
+  // Every Theater mode is a full-viewport surface. Lock both document scroll
+  // roots while it is mounted so mobile WebKit cannot pan the absolute 100lvh
+  // paint layer or trigger pull-to-refresh. Nested article, text, and Queue
+  // scrollers remain available. The shared lock is overlap-safe during route
+  // transitions where an outgoing and incoming shell may briefly coexist.
+  useEffect(() => acquireTheaterDocumentLock(document), [])
 
   // Tag-from-live target: tapping Tag on a live item first ensures the post
   // is SAVED (a tag row needs a bookmark row to hang off), then opens the
@@ -2104,29 +2102,6 @@ export function TheaterShell({
   // for actually flipping the live element is the synchronous
   // `theater-set-muted` window event the same tap dispatches.
   const onSetMuted = useCallback((next: boolean) => setMuted(next), [])
-
-  // Suppress the browser's native pull-to-refresh / overscroll chaining while
-  // the theater is mounted — it's a full-viewport overlay, not a normal
-  // scrolling page, so a swipe-down at the top should never yank in the
-  // browser's refresh UI. Chrome/Android honors `overscroll-behavior` alone;
-  // without our own touchmove preventDefault (removed along with swipe nav —
-  // navigation is buttons + keyboard + video-ended auto-advance now), older
-  // iOS Safari may still rubber-band the fixed page slightly on an
-  // aggressive drag — acceptable, and Chrome/Android is unaffected. Restores
-  // whatever was there before (defensive — nothing else in the app currently
-  // sets this).
-  useEffect(() => {
-    const html = document.documentElement
-    const body = document.body
-    const prevHtml = html.style.overscrollBehavior
-    const prevBody = body.style.overscrollBehavior
-    html.style.overscrollBehavior = 'none'
-    body.style.overscrollBehavior = 'none'
-    return () => {
-      html.style.overscrollBehavior = prevHtml
-      body.style.overscrollBehavior = prevBody
-    }
-  }, [])
 
   // Space must never resume the paused stage hidden behind the waiting
   // overlay — ref-backed so the keyboard listener never re-registers.

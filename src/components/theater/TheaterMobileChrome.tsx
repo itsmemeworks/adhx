@@ -509,16 +509,21 @@ export function TheaterMobileChrome({
           action row, not a time chip. */}
       {collection ? (
         <div
+          inert={declutter}
           className={cn(
-            'theater-mobile-top-chrome pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
-          <a href="/" className="relative z-[71] flex items-center" aria-label="ADHX home">
+          <a
+            href="/"
+            className="pointer-events-auto relative z-[71] flex items-center"
+            aria-label="ADHX home"
+          >
             <MatterLogo size={16} surface="dark" />
           </a>
-          <div className="relative z-[71] flex flex-none items-center gap-1.5">
+          <div className="pointer-events-auto relative z-[71] flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Same add-in-place paste as desktop — stay on Live / My
                 Collection; do not bounce to a preview page. */}
@@ -539,8 +544,9 @@ export function TheaterMobileChrome({
         </div>
       ) : playlist ? (
         <div
+          inert={declutter}
           className={cn(
-            'theater-mobile-top-chrome pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
@@ -556,7 +562,7 @@ export function TheaterMobileChrome({
               already opens the sign-in modal in place for a signed-out
               visitor (`handleSaveCollection` in TheaterShell). */}
           <div className="relative z-[71] flex items-center justify-between gap-3">
-            <a href="/" className="flex items-center" aria-label="ADHX home">
+            <a href="/" className="pointer-events-auto flex items-center" aria-label="ADHX home">
               <MatterLogo size={16} surface="dark" />
             </a>
             <span className="min-w-0 truncate text-[15px] font-bold text-white">
@@ -566,16 +572,21 @@ export function TheaterMobileChrome({
         </div>
       ) : (
         <div
+          inert={declutter}
           className={cn(
-            'theater-mobile-top-chrome pointer-events-auto absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
         >
-          <a href="/" className="relative z-[71] flex items-center" aria-label="ADHX home">
+          <a
+            href="/"
+            className="pointer-events-auto relative z-[71] flex items-center"
+            aria-label="ADHX home"
+          >
             <MatterLogo size={16} surface="dark" />
           </a>
-          <div className="relative z-[71] flex flex-none items-center gap-1.5">
+          <div className="pointer-events-auto relative z-[71] flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Mobile equivalent of the desktop top bar's paste button (⌘V still works there)
                 input (spec §8/DesktopStageChrome) — touch Safari has no
