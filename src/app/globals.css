@@ -100,11 +100,11 @@
  * Theater then shows the page background. Keep the normal fixed shell on
  * desktop and Android; mobile WebKit gets an absolute shell sized to the
  * stable large viewport so its stage keeps painting through the browser's
- * translucent toolbar area. Interactive top chrome and the mobile dock stay
- * independently fixed to the visual viewport, so browser scroll/collapse
- * cannot move either control edge off-screen. Lock the document roots
- * immediately (including the route-loading shell) so the oversized paint
- * layer cannot pan the page.
+ * translucent toolbar area. Interactive top chrome, caption/actions, swipe
+ * controls, and the mobile dock stay independently fixed to the visual
+ * viewport, so browser scroll/collapse cannot move either control edge
+ * off-screen. Lock the document roots immediately (including the
+ * route-loading shell) so the oversized paint layer cannot pan the page.
  * `100vh` is the older-iOS fallback.
  */
 .theater-mobile-top-chrome {
