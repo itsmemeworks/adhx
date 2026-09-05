@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * Personal theater paste: add the post in place and stay on Live /
- * Saved. Never `location.assign` to a preview page.
+ * Saved. If saving fails, open the preview without restoring the old post.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
@@ -11,7 +11,11 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import type { FeedItem } from '@/components/feed/types'
 import type { TheaterFeedSeed, TheaterItem } from '@/components/theater/types'
 
-const { mockStage } = vi.hoisted(() => ({ mockStage: vi.fn() }))
+const { mockStage, navigateToAppPath } = vi.hoisted(() => ({
+  mockStage: vi.fn(),
+  navigateToAppPath: vi.fn(),
+}))
+vi.mock('@/lib/theater/navigate-app-path', () => ({ navigateToAppPath }))
 vi.mock('@/components/theater/Stage', () => ({
   Stage: (props: Record<string, unknown>) => {
     mockStage(props)
@@ -120,6 +124,7 @@ describe('TheaterShell: personal paste adds in place', () => {
     capturedOnPastePost = undefined
     mockMobileChrome.mockClear()
     mockStage.mockClear()
+    navigateToAppPath.mockClear()
     window.localStorage.clear()
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -169,6 +174,7 @@ describe('TheaterShell: personal paste adds in place', () => {
       source: 'manual',
     })
     expect(assignSpy).not.toHaveBeenCalled()
+    expect(navigateToAppPath).not.toHaveBeenCalled()
     await waitFor(() => expect(chromeProps().currentKey).toBe('twitter:99'))
   })
 
@@ -278,9 +284,52 @@ describe('TheaterShell: personal paste adds in place', () => {
 
     finishAdd({ ok: false, json: async () => ({ error: 'upstream unavailable' }) })
     await act(async () => {
-      expect(await result).toBe(false)
+      expect(await result).toBe(true)
     })
-    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(navigateToAppPath).toHaveBeenCalledExactlyOnceWith('/alice/status/99')
+    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe('twitter:99')
+  })
+
+  it.each([
+    ['live', 'unavailable'],
+    ['saved', 'unavailable'],
+    ['live', 'network'],
+    ['saved', 'network'],
+  ] as const)('%s: opens the pasted Reel when saving fails (%s)', async (tab, failure) => {
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes('/api/bookmarks/add')) {
+        if (failure === 'network') throw new TypeError('Failed to fetch')
+        return {
+          ok: false,
+          status: 404,
+          json: async () => ({ error: 'Instagram post not available' }),
+        }
+      }
+      return { ok: true, json: async () => ({ items: [] }) }
+    }) as never
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1')])}
+          mode="personal"
+          initialPersonalTab={tab === 'saved' ? 'collection' : 'live'}
+          personalItems={[videoFeedItem('1')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await act(async () => {
+      expect(
+        await capturedOnPastePost!(
+          'https://www.instagram.com/reel/Dc5ATuiiS0V/?igsi=dm9jdTR5cTN0dDg4',
+        ),
+      ).toBe(true)
+    })
+    expect(navigateToAppPath).toHaveBeenCalledExactlyOnceWith('/reels/Dc5ATuiiS0V')
+    expect(chromeProps().currentKey).toBe('instagram:Dc5ATuiiS0V')
+    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+    expect(mockStage.mock.calls.at(-1)?.[0].covered).toBe(true)
   })
 
   it('keeps resolving after a committed add until the authoritative feed row is available', async () => {
@@ -410,7 +459,7 @@ describe('TheaterShell: personal paste adds in place', () => {
     }
   })
 
-  it('removes a failed resolving stub and restores the untouched current post', async () => {
+  it('keeps the pasted post staged while navigating after a failed save', async () => {
     let finishAdd!: (value: { ok: boolean; json: () => Promise<{ error: string }> }) => void
     const addResponse = new Promise<{
       ok: boolean
@@ -446,12 +495,16 @@ describe('TheaterShell: personal paste adds in place', () => {
 
     finishAdd({ ok: false, json: async () => ({ error: 'upstream unavailable' }) })
     await act(async () => {
-      expect(await result).toBe(false)
+      expect(await result).toBe(true)
     })
 
-    await waitFor(() => expect(screen.queryByTestId('stage-resolving')).not.toBeInTheDocument())
-    expect(chromeProps().currentKey).toBe('twitter:1')
-    expect((chromeProps().items ?? []).map((item) => item.bookmarkId ?? item.id)).toEqual(['1'])
+    expect(navigateToAppPath).toHaveBeenCalledExactlyOnceWith('/alice/status/99')
+    expect(screen.getByTestId('stage-resolving')).toBeInTheDocument()
+    expect(chromeProps().currentKey).toBe('twitter:99')
+    expect((chromeProps().items ?? []).map((item) => item.bookmarkId ?? item.id)).toEqual([
+      '99',
+      '1',
+    ])
   })
 
   it('POSTs add and does not navigate away from Saved', async () => {
@@ -485,6 +538,7 @@ describe('TheaterShell: personal paste adds in place', () => {
       ).toBe(true)
     })
     expect(assignSpy).not.toHaveBeenCalled()
+    expect(navigateToAppPath).not.toHaveBeenCalled()
   })
 
   it('resets a type filter to All when the pasted post is a different type', async () => {
