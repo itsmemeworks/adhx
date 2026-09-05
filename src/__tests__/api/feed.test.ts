@@ -67,6 +67,65 @@ describe('API: /api/feed', () => {
     })
   })
 
+  describe('literal search characters', () => {
+    it.each([
+      ['author', 'alice_smith', 'aliceXsmith'],
+      ['authorName', 'Alice_Smith', 'AliceXSmith'],
+      ['text', 'Discount 50%', 'Discount 500'],
+      ['text', 'path\\file', 'pathfile'],
+    ])('matches literal characters in %s', async (field, value, decoy) => {
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values([
+          createTestBookmark(USER_A, 'match', { [field]: value }),
+          createTestBookmark(USER_A, 'decoy', { [field]: decoy }),
+          createTestBookmark(USER_B, 'other-user', { [field]: value }),
+        ])
+        .run()
+
+      const { GET } = await import('@/app/api/feed/route')
+      const response = await GET(createRequest({ search: value }))
+      expect(response.status).toBe(200)
+      expect((await response.json()).items.map((item: { id: string }) => item.id)).toEqual([
+        'match',
+      ])
+    })
+
+    it.each(['previewTitle', 'previewDescription'] as const)(
+      'matches literal characters in article %s',
+      async (field) => {
+        testInstance.db
+          .insert(schema.bookmarks)
+          .values([createTestBookmark(USER_A, 'match'), createTestBookmark(USER_A, 'decoy')])
+          .run()
+        testInstance.db
+          .insert(schema.bookmarkLinks)
+          .values([
+            {
+              userId: USER_A,
+              bookmarkId: 'match',
+              expandedUrl: 'https://example.com/article',
+              [field]: '50%_off\\today',
+            },
+            {
+              userId: USER_A,
+              bookmarkId: 'decoy',
+              expandedUrl: 'https://example.com/other',
+              [field]: '500Xofftoday',
+            },
+          ])
+          .run()
+
+        const { GET } = await import('@/app/api/feed/route')
+        const response = await GET(createRequest({ search: '50%_off\\today' }))
+        expect(response.status).toBe(200)
+        expect((await response.json()).items.map((item: { id: string }) => item.id)).toEqual([
+          'match',
+        ])
+      },
+    )
+  })
+
   describe('hideArchived', () => {
     async function idsFor(params: Record<string, string>) {
       const { GET } = await import('@/app/api/feed/route')

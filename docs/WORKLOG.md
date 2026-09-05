@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-05 — Close playlist moderation and redirect gaps; repair literal search
+
+Public playlist JSON and cloning now reject banned owners or unreadable moderation storage,
+omit hidden platform/post pairs from content and clone counts, and disable JSON response caching.
+Sign-in return paths reject control characters and verify the parsed destination stays same-origin.
+Library search now declares SQLite's escape character, restoring literal underscores, percent signs,
+and backslashes in author, text, and article searches. Regression tests cover all three review findings.
+State: implemented for review; no schema changes or deployment required beyond the application update.
+
 ## 2026-09-04 — Mobile rail owns its complete touch target
 
 The viewport-fixed caption scrim created a stacking context below the larger invisible swipe zone,
