@@ -8,7 +8,7 @@ import {
   syncLogs,
   bookmarkTags,
 } from '@/lib/db/schema'
-import { eq, desc, asc, like, and, or, sql, count, inArray, SQL, isNull } from 'drizzle-orm'
+import { eq, desc, asc, and, or, sql, count, inArray, SQL, isNull } from 'drizzle-orm'
 import { metrics } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
@@ -18,8 +18,8 @@ export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'
 export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
 
 /**
- * Escape LIKE pattern metacharacters to prevent injection.
- * SQLite LIKE uses % (any chars) and _ (single char) as wildcards.
+ * Match search input literally, including SQLite's % and _ wildcards.
+ * Every LIKE using this pattern must explicitly declare the escape character.
  */
 function escapeLikePattern(input: string): string {
   return input.replace(/[%_\\]/g, '\\$&')
@@ -97,16 +97,16 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
         FROM ${bookmarkLinks}
         WHERE ${bookmarkLinks.userId} = ${userId}
         AND (
-          LOWER(${bookmarkLinks.previewTitle}) LIKE LOWER(${'%' + safeSearch + '%'})
-          OR LOWER(${bookmarkLinks.previewDescription}) LIKE LOWER(${'%' + safeSearch + '%'})
+          LOWER(${bookmarkLinks.previewTitle}) LIKE LOWER(${'%' + safeSearch + '%'}) ESCAPE ${'\\'}
+          OR LOWER(${bookmarkLinks.previewDescription}) LIKE LOWER(${'%' + safeSearch + '%'}) ESCAPE ${'\\'}
         )
       )`
 
       conditions.push(
         or(
-          like(bookmarks.text, `%${safeSearch}%`),
-          like(bookmarks.author, `%${safeSearch}%`),
-          like(bookmarks.authorName, `%${safeSearch}%`),
+          sql`${bookmarks.text} LIKE ${`%${safeSearch}%`} ESCAPE ${'\\'}`,
+          sql`${bookmarks.author} LIKE ${`%${safeSearch}%`} ESCAPE ${'\\'}`,
+          sql`${bookmarks.authorName} LIKE ${`%${safeSearch}%`} ESCAPE ${'\\'}`,
           sql`(${bookmarks.id}, ${bookmarks.platform}) IN ${articleMatchSubquery}`,
         )!,
       )

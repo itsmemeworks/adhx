@@ -5,6 +5,8 @@ import { tagShares } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { listTaggedBookmarks, serializeSharedPosts } from '@/lib/tags/clone'
 
+const responseHeaders = { 'Cache-Control': 'no-store' }
+
 /**
  * GET /api/share/tag/by-name/[username]/[tag]
  * Public access to a shared tag using friendly URL (username + tag name)
@@ -27,7 +29,10 @@ export async function GET(
     }
 
     if (!ownerId) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404, headers: responseHeaders },
+      )
     }
 
     const [share] = await db
@@ -37,26 +42,41 @@ export async function GET(
       .limit(1)
 
     if (!share) {
-      return NextResponse.json({ error: 'Tag not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Tag not found' },
+        { status: 404, headers: responseHeaders },
+      )
     }
     if (!share.isPublic) {
-      return NextResponse.json({ error: 'This tag is private' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'This tag is private' },
+        { status: 403, headers: responseHeaders },
+      )
     }
 
-    const { bookmarks: bookmarkResults, media: mediaResults } = await listTaggedBookmarks(
-      share.userId,
-      tagName,
-    )
-    const tweets = serializeSharedPosts(bookmarkResults, mediaResults)
+    const results = await listTaggedBookmarks(share.userId, tagName)
+    if (!results) {
+      return NextResponse.json(
+        { error: 'Tag not found' },
+        { status: 404, headers: responseHeaders },
+      )
+    }
+    const tweets = serializeSharedPosts(results.bookmarks, results.media)
 
-    return NextResponse.json({
-      tag: tagName,
-      username,
-      tweets,
-      tweetCount: tweets.length,
-    })
+    return NextResponse.json(
+      {
+        tag: tagName,
+        username,
+        tweets,
+        tweetCount: tweets.length,
+      },
+      { headers: responseHeaders },
+    )
   } catch (error) {
     console.error('Error fetching shared tag:', error)
-    return NextResponse.json({ error: 'Failed to fetch tag' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch tag' },
+      { status: 500, headers: responseHeaders },
+    )
   }
 }

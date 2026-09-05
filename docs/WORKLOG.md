@@ -6,6 +6,24 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-05 — Close playlist moderation and redirect gaps; repair literal search
+
+Public playlist JSON and cloning now reject banned owners or unreadable moderation storage,
+omit hidden platform/post pairs from content and clone counts, and disable JSON response caching.
+Sign-in return paths reject control characters and verify the parsed destination stays same-origin.
+Library search now declares SQLite's escape character, restoring literal underscores, percent signs,
+and backslashes in author, text, and article searches. Regression tests cover all three review findings.
+State: implemented for review; no schema changes or deployment required beyond the application update.
+
+## 2026-09-04 — Mobile rail owns its complete touch target
+
+The viewport-fixed caption scrim created a stacking context below the larger invisible swipe zone,
+letting the zone steal the bottom 16px of Share even though the visible controls did not overlap.
+The action rail is now a higher-z sibling, captions clear the scrub hitbox, and edge controls plus
+expanded Queue/filter content honor landscape safe-area insets. Browser regressions assert actual
+`elementFromPoint` ownership and a non-empty media caption under hostile geometry. A dedicated
+mobile WebKit smoke project now joins Chromium in CI and the local installer. State: complete.
+
 ## 2026-09-04 — Mobile bottom chrome shares one visual viewport
 
 Returning from Settings exposed a split coordinate system: the oversized media paint layer owned

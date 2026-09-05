@@ -1207,7 +1207,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 pnpm test         # Run all 943 tests
 pnpm test:watch   # Watch mode
 pnpm test:e2e     # Playwright against an isolated Next on :3002 (not `pnpm dev`)
-pnpm test:e2e:install  # download Chromium once
+pnpm test:e2e:install  # download Chromium and WebKit once
 ```
 
 Browser tests live in `e2e/*.spec.ts` and are **not** part of `pnpm test`. `e2e/serve.ts` migrates + seeds `data/e2e.db` (or `data/adhdone.db` on GitHub Actions) **before** spawning Next on :3002, then mints a session JWT against that file. Do not point them at the owner's `:3001` / `adhdone.db`.

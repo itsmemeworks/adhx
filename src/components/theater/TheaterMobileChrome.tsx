@@ -509,7 +509,7 @@ export function TheaterMobileChrome({
         <div
           inert={declutter}
           className={cn(
-            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
@@ -544,7 +544,7 @@ export function TheaterMobileChrome({
         <div
           inert={declutter}
           className={cn(
-            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex flex-col gap-1.5 px-4 pb-8 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
@@ -572,7 +572,7 @@ export function TheaterMobileChrome({
         <div
           inert={declutter}
           className={cn(
-            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
+            'theater-mobile-top-chrome pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 px-4 pb-8 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] transition-[opacity,transform] duration-200 ease-out',
             declutter && 'pointer-events-none -translate-y-3 opacity-0',
           )}
           style={{ background: 'linear-gradient(to bottom, rgba(11,11,17,.75), transparent)' }}
@@ -614,232 +614,234 @@ export function TheaterMobileChrome({
         </div>
       )}
 
-      {/* Bottom scrim: author/caption plus the fixed post-action rail. The
-          whole scrim follows the visual viewport; anchoring it to the large
-          media paint layer lets mobile browser chrome push caption text
-          behind the fixed dock after returning from a normal page. Padded
-          above the sheet's peek bar (opaque, themed) so the gradient tucks
-          under it. The scrim is pointer-events-none so a typeset tweet /
-          article stays scrollable — the thumb lands in the lower third,
-          which used to be a full-width action row and swallowed the pan.
-          Only the media caption and action rail capture taps. */}
+      {/* Bottom scrim: author/caption fixed to the visual viewport. Anchoring
+          it to the large media paint layer lets mobile browser chrome push
+          caption text behind the fixed dock after returning from a normal
+          page. It stays below the swipe zone so the full bounded gesture area
+          remains usable; the higher-z post-action rail is a sibling below.
+          The scrim is pointer-events-none so a typeset tweet / article stays
+          scrollable. Only the media caption captures taps. */}
       {current && (
-        <div
-          inert={declutter}
-          className={cn(
-            // A transformed ancestor becomes the containing block for its
-            // fixed rail in WebKit. Fade only, otherwise leaving Focus can
-            // briefly anchor the actions to this scrim below the viewport.
-            'pointer-events-none fixed inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pt-12 transition-opacity duration-200 ease-out',
-            declutter && 'opacity-0',
-          )}
-          data-testid="mobile-bottom-scrim"
-          style={{
-            paddingBottom: `calc(${PEEK_H} + 0.75rem)`,
-            background: textLike
-              ? 'linear-gradient(to top, rgba(11,11,17,.55) 0%, transparent 42%)'
-              : 'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
-          }}
-        >
-          <div className={cn((!textLike || caption) && 'pointer-events-auto')}>
-            {/* The poster's avatar + name — only for media posts. Text-like
-                posts (text/quote/article) show the author on the stage
-                itself, so this row stays hidden for them to avoid doubling
-                up. Tapping an expandable caption opens Read. */}
-            {!textLike &&
-              !articleMode &&
-              (() => {
-                const profileUrl = authorProfileUrl(current.platform, current.author)
-                const inner = (
-                  <>
-                    <AuthorAvatar
-                      src={current.authorAvatarUrl ?? current.thumbnailUrl}
-                      author={current.author}
-                      size="sm"
-                    />
-                    <span className="min-w-0 truncate text-[13px] font-semibold text-white">
-                      {current.authorName || (handle ? `@${handle}` : 'Saved post')}
-                    </span>
-                  </>
-                )
-                // Tappable author (round 8): jump to the creator's profile on
-                // their own platform. Plain row when there's no handle.
-                return profileUrl ? (
-                  <a
-                    href={profileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-h-[32px] items-center gap-2"
-                    aria-label={`View @${handle} on ${PLATFORM_LABEL[current.platform] ?? current.platform}`}
-                  >
-                    {inner}
-                  </a>
-                ) : (
-                  <div className="flex items-center gap-2">{inner}</div>
-                )
-              })()}
-            {caption && !articleMode && (
-              <TheaterCaption
-                captionRef={captionRef}
-                platform={current.platform}
-                text={caption}
-                links={current?.textLinks}
-                hideTweetLinks={!!current?.quote}
-                className="mt-1.5 text-[13.5px] leading-snug"
-                onOpenRead={
-                  showArticleToggle && onToggleArticleMode ? onToggleArticleMode : undefined
-                }
-              />
+        <>
+          <div
+            inert={declutter}
+            className={cn(
+              'pointer-events-none fixed inset-x-0 bottom-0 flex flex-col gap-3 px-4 pb-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-12 transition-opacity duration-200 ease-out',
+              declutter && 'opacity-0',
             )}
+            data-testid="mobile-bottom-scrim"
+            style={{
+              // Clear the slider's 1.5rem hit area plus a 0.25rem gap.
+              paddingBottom: `calc(${PEEK_H} + 1.75rem)`,
+              background: textLike
+                ? 'linear-gradient(to top, rgba(11,11,17,.55) 0%, transparent 42%)'
+                : 'linear-gradient(to top, rgba(11,11,17,.88) 0%, rgba(11,11,17,.55) 55%, transparent 100%)',
+            }}
+          >
+            <div className={cn((!textLike || caption) && 'pointer-events-auto')}>
+              {/* The poster's avatar + name — only for media posts. Text-like
+                  posts (text/quote/article) show the author on the stage
+                  itself, so this row stays hidden for them to avoid doubling
+                  up. Tapping an expandable caption opens Read. */}
+              {!textLike &&
+                !articleMode &&
+                (() => {
+                  const profileUrl = authorProfileUrl(current.platform, current.author)
+                  const inner = (
+                    <>
+                      <AuthorAvatar
+                        src={current.authorAvatarUrl ?? current.thumbnailUrl}
+                        author={current.author}
+                        size="sm"
+                      />
+                      <span className="min-w-0 truncate text-[13px] font-semibold text-white">
+                        {current.authorName || (handle ? `@${handle}` : 'Saved post')}
+                      </span>
+                    </>
+                  )
+                  // Tappable author (round 8): jump to the creator's profile on
+                  // their own platform. Plain row when there's no handle.
+                  return profileUrl ? (
+                    <a
+                      href={profileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-h-[32px] items-center gap-2"
+                      aria-label={`View @${handle} on ${PLATFORM_LABEL[current.platform] ?? current.platform}`}
+                    >
+                      {inner}
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-2">{inner}</div>
+                  )
+                })()}
+              {caption && !articleMode && (
+                <TheaterCaption
+                  captionRef={captionRef}
+                  platform={current.platform}
+                  text={caption}
+                  links={current?.textLinks}
+                  hideTweetLinks={!!current?.quote}
+                  className="mt-1.5 text-[13.5px] leading-snug"
+                  onOpenRead={
+                    showArticleToggle && onToggleArticleMode ? onToggleArticleMode : undefined
+                  }
+                />
+              )}
+            </div>
+            {articleMode && showArticleToggle && onToggleArticleMode ? (
+              <div className="flex items-center gap-2">
+                <QuoteArticleToggle
+                  onToggle={onToggleArticleMode}
+                  iconOnly
+                  className="pointer-events-auto"
+                />
+              </div>
+            ) : null}
           </div>
 
-          <div className="flex items-center gap-2">
-            {articleMode && showArticleToggle && onToggleArticleMode ? (
-              <QuoteArticleToggle
-                onToggle={onToggleArticleMode}
-                iconOnly
-                className="pointer-events-auto"
+          {/* Keep the action rail outside the scrim's fixed-position stacking
+              context. Its z-index must beat the larger invisible swipe zone,
+              not merely the visible capsule, so every action owns its full
+              touch target. */}
+          <div
+            ref={actionRailRef}
+            className={cn(
+              'pointer-events-none fixed right-[calc(0.75rem+env(safe-area-inset-right))] z-[30] flex w-12 flex-col items-center gap-1.5 bottom-[calc(13rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
+              // In a short personal theater, 6rem = the 4.25rem dock,
+              // the slider's 1.5rem reach above it, and a 0.25rem gap.
+              collection &&
+                '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-[calc(7rem+env(safe-area-inset-right))]',
+              actionRailHidden && 'hidden',
+            )}
+            aria-hidden={actionRailHidden}
+            inert={actionRailHidden ? true : undefined}
+            data-testid="mobile-control-actions"
+          >
+            {collection?.tab === 'collection' && (
+              <TheaterCollectionActions
+                collection={collection}
+                variant="mobile"
+                className={cn(RAIL_ACTION_BTN, 'order-2 border-clay')}
               />
-            ) : null}
-            <div
-              ref={actionRailRef}
-              className={cn(
-                'pointer-events-none fixed right-3 z-[30] flex w-12 flex-col items-center gap-1.5 bottom-[calc(13rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
-                // In a short personal theater, 6rem = the 4.25rem dock,
-                // the slider's 1.5rem reach above it, and a 0.25rem gap.
-                collection &&
-                  '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-28',
-                actionRailHidden && 'hidden',
-              )}
-              aria-hidden={actionRailHidden}
-              inert={actionRailHidden ? true : undefined}
-              data-testid="mobile-control-actions"
-            >
-              {collection?.tab === 'collection' && (
-                <TheaterCollectionActions
-                  collection={collection}
-                  variant="mobile"
-                  className={cn(RAIL_ACTION_BTN, 'order-2 border-clay')}
-                />
-              )}
-              {playlist && isPlaylistOwner ? (
-                <StageIconButton
-                  href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
-                  aria-label="Manage playlist"
-                  className={cn(RAIL_ACTION_BTN, 'order-1')}
-                >
-                  <TagIcon size={16} />
-                </StageIconButton>
-              ) : playlist ? (
-                <SavePlaylistButton
-                  count={playlist.count}
-                  status={saveStatus}
-                  onSave={() => onSavePlaylist?.()}
-                  iconOnly
-                  className={cn(RAIL_ACTION_BTN, 'order-1 text-clay')}
-                />
-              ) : collection?.tab === 'collection' ? (
+            )}
+            {playlist && isPlaylistOwner ? (
+              <StageIconButton
+                href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
+                aria-label="Manage playlist"
+                className={cn(RAIL_ACTION_BTN, 'order-1')}
+              >
+                <TagIcon size={16} />
+              </StageIconButton>
+            ) : playlist ? (
+              <SavePlaylistButton
+                count={playlist.count}
+                status={saveStatus}
+                onSave={() => onSavePlaylist?.()}
+                iconOnly
+                className={cn(RAIL_ACTION_BTN, 'order-1 text-clay')}
+              />
+            ) : collection?.tab === 'collection' ? (
+              <StageIconButton
+                onClick={(e) => {
+                  e.stopPropagation()
+                  collection.onTag()
+                }}
+                onTouchEnd={(e) => e.stopPropagation()}
+                aria-label={tagLabel}
+                className={cn(RAIL_ACTION_BTN, 'relative order-1')}
+                data-theater-action="tag"
+              >
+                <TagIcon size={16} className={tagCount > 0 ? 'text-clay' : undefined} />
+                <TheaterTagCount count={tagCount} variant="badge" />
+              </StageIconButton>
+            ) : collection?.tab === 'live' ? (
+              <>
                 <StageIconButton
                   onClick={(e) => {
                     e.stopPropagation()
-                    collection.onTag()
+                    collection.onLiveTag?.(current)
                   }}
                   onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label={tagLabel}
+                  aria-label={tagThisPostLabel}
                   className={cn(RAIL_ACTION_BTN, 'relative order-1')}
                   data-theater-action="tag"
                 >
                   <TagIcon size={16} className={tagCount > 0 ? 'text-clay' : undefined} />
                   <TheaterTagCount count={tagCount} variant="badge" />
                 </StageIconButton>
-              ) : collection?.tab === 'live' ? (
-                <>
-                  <StageIconButton
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      collection.onLiveTag?.(current)
-                    }}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    aria-label={tagThisPostLabel}
-                    className={cn(RAIL_ACTION_BTN, 'relative order-1')}
-                    data-theater-action="tag"
-                  >
-                    <TagIcon size={16} className={tagCount > 0 ? 'text-clay' : undefined} />
-                    <TheaterTagCount count={tagCount} variant="badge" />
-                  </StageIconButton>
-                  <PersonalLiveSaveButton
-                    current={current}
-                    collection={collection}
-                    className={cn(RAIL_ACTION_BTN, 'order-1 inline-flex flex-none text-clay')}
-                    iconSize={16}
-                    iconOnly
-                    preserveSlot
-                  />
-                </>
-              ) : mode === 'shared' && authed ? (
-                <SavePostButton
+                <PersonalLiveSaveButton
                   current={current}
+                  collection={collection}
+                  className={cn(RAIL_ACTION_BTN, 'order-1 inline-flex flex-none text-clay')}
+                  iconSize={16}
                   iconOnly
-                  className={cn(
-                    RAIL_ACTION_BTN,
-                    'order-1 inline-flex flex-none items-center justify-center text-clay disabled:opacity-70',
-                  )}
-                  tags={displayTags}
-                  onTag={onSharedTag ? () => onSharedTag(current) : undefined}
+                  preserveSlot
                 />
-              ) : (
-                <StageIconButton
-                  onClick={() => onRequestSignIn?.()}
-                  aria-label="Save"
-                  className={cn(RAIL_ACTION_BTN, 'order-1 text-clay')}
-                  data-theater-action="save"
-                >
-                  <Bookmark size={16} />
-                </StageIconButton>
-              )}
-              <TheaterShareMenu
-                open={shareMenuOpen}
-                onOpenChange={setShareMenuOpen}
-                kind={kind}
-                actionKey={current ? theaterItemKey(current) : null}
-                hasText={hasCopyableText}
-                textCopied={textCopied}
-                sendFile={sendFile}
-                onCopyText={copyText}
-                onShareLink={handleShare}
-                triggerClassName={RAIL_ACTION_BTN}
+              </>
+            ) : mode === 'shared' && authed ? (
+              <SavePostButton
+                current={current}
+                iconOnly
+                className={cn(
+                  RAIL_ACTION_BTN,
+                  'order-1 inline-flex flex-none items-center justify-center text-clay disabled:opacity-70',
+                )}
+                tags={displayTags}
+                onTag={onSharedTag ? () => onSharedTag(current) : undefined}
               />
-              {(() => {
-                const openUrl = sourceUrl(
-                  current.platform,
-                  current.author,
-                  current.bookmarkId ?? '',
-                  current.contentType,
-                )
-                if (!openUrl) return null
-                const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
-                return (
-                  <StageIconButton
-                    href={openUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open on ${platformLabel}`}
-                    className={cn(RAIL_ACTION_BTN, 'order-first')}
-                    data-theater-action="open"
-                    onClick={() =>
-                      pingAnalytic('post.open', {
-                        platform: current.platform,
-                        id: current.bookmarkId || undefined,
-                      })
-                    }
-                  >
-                    <PlatformGlyph platform={current.platform} size={16} />
-                  </StageIconButton>
-                )
-              })()}
-            </div>
+            ) : (
+              <StageIconButton
+                onClick={() => onRequestSignIn?.()}
+                aria-label="Save"
+                className={cn(RAIL_ACTION_BTN, 'order-1 text-clay')}
+                data-theater-action="save"
+              >
+                <Bookmark size={16} />
+              </StageIconButton>
+            )}
+            <TheaterShareMenu
+              open={shareMenuOpen}
+              onOpenChange={setShareMenuOpen}
+              kind={kind}
+              actionKey={current ? theaterItemKey(current) : null}
+              hasText={hasCopyableText}
+              textCopied={textCopied}
+              sendFile={sendFile}
+              onCopyText={copyText}
+              onShareLink={handleShare}
+              triggerClassName={RAIL_ACTION_BTN}
+            />
+            {(() => {
+              const openUrl = sourceUrl(
+                current.platform,
+                current.author,
+                current.bookmarkId ?? '',
+                current.contentType,
+              )
+              if (!openUrl) return null
+              const platformLabel = PLATFORM_LABEL[current.platform] ?? current.platform
+              return (
+                <StageIconButton
+                  href={openUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open on ${platformLabel}`}
+                  className={cn(RAIL_ACTION_BTN, 'order-first')}
+                  data-theater-action="open"
+                  onClick={() =>
+                    pingAnalytic('post.open', {
+                      platform: current.platform,
+                      id: current.bookmarkId || undefined,
+                    })
+                  }
+                >
+                  <PlatformGlyph platform={current.platform} size={16} />
+                </StageIconButton>
+              )
+            })()}
           </div>
-        </div>
+        </>
       )}
 
       {/* Right-side swipe capsule: a joined previous/next control makes the
@@ -858,7 +860,7 @@ export function TheaterMobileChrome({
           aria-label={swipeLabel}
           data-testid="mobile-swipe-zone"
           className={cn(
-            'fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-0 z-[15] h-36 w-20 [@media(max-height:520px)]:h-28',
+            'fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-[env(safe-area-inset-right)] z-[15] h-36 w-20 [@media(max-height:520px)]:h-28',
             canSwipe ? 'pointer-events-auto touch-none' : 'pointer-events-none',
           )}
         >
@@ -901,7 +903,7 @@ export function TheaterMobileChrome({
           role="group"
           aria-label="Quick post filters"
           data-testid="mobile-quick-filters"
-          className="pointer-events-auto fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-2 right-24 z-[40] flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-[#121117]/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,.4)] backdrop-blur-xl"
+          className="pointer-events-auto fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-[max(0.5rem,env(safe-area-inset-left))] right-[calc(6rem+env(safe-area-inset-right))] z-[40] flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-[#121117]/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,.4)] backdrop-blur-xl"
         >
           <button
             type="button"
@@ -1012,7 +1014,7 @@ export function TheaterMobileChrome({
           className="flex-none overflow-hidden pt-3"
           style={{ height: PEEK_H }}
         >
-          <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+          <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]">
             <div className="flex items-center gap-1.5">
               <button
                 ref={queueToggleRef}
@@ -1193,7 +1195,7 @@ export function TheaterMobileChrome({
 
         <div
           className={cn(
-            'flex min-h-0 flex-1 flex-col overflow-hidden',
+            'flex min-h-0 flex-1 flex-col overflow-hidden pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]',
             sheetContentHidden && 'invisible',
           )}
           aria-hidden={sheetContentHidden}
