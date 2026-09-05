@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.8](https://github.com/itsmemeworks/adhx/compare/v1.70.7...v1.70.8) (2026-09-05)
+
+
+### Bug Fixes
+
+* harden sharing and restore search and mobile controls ([#495](https://github.com/itsmemeworks/adhx/issues/495)) ([21f874a](https://github.com/itsmemeworks/adhx/commit/21f874a1f05c59dceab49e0f60b6b090afbfb80e))
+
 ## [1.70.7](https://github.com/itsmemeworks/adhx/compare/v1.70.6...v1.70.7) (2026-09-04)
 
 
