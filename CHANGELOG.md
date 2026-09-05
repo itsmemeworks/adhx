@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.70.9](https://github.com/itsmemeworks/adhx/compare/v1.70.8...v1.70.9) (2026-09-05)
+
+
+### Bug Fixes
+
+* open pasted posts when saving fails ([#497](https://github.com/itsmemeworks/adhx/issues/497)) ([d130181](https://github.com/itsmemeworks/adhx/commit/d130181a9365599670b9c3f3f81dfedc8c4e5f6a))
+
 ## [1.70.8](https://github.com/itsmemeworks/adhx/compare/v1.70.7...v1.70.8) (2026-09-05)
 
 
