@@ -45,7 +45,8 @@ export function resolvePastedPost(text: string): PastedPost | null {
 /**
  * Client-safe URL stub for instant Theater feedback. It is deliberately not
  * inserted into either authoritative queue: the add/feed response replaces
- * this temporary stage, while failure simply uncovers the untouched post.
+ * this temporary stage. If saving fails, it covers the old post until the
+ * pasted post’s preview opens.
  */
 export function pastedPostResolvingStub(url: string): TheaterItem | null {
   const post = detectPlatformPost(url)

@@ -88,7 +88,8 @@ import { SharedResolveBridge } from './SharedResolveBridge'
 import { useTheaterLiveUrl } from './useTheaterLiveUrl'
 import { resolveTheaterChrome } from './theater-chrome'
 import { acquireTheaterDocumentLock } from './theater-document-lock'
-import { pastedPostResolvingStub } from '@/lib/theater/paste-preview'
+import { pastedPostResolvingStub, resolvePastedLink } from '@/lib/theater/paste-preview'
+import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 import { SignInModal, useAuthMe } from '@/components/auth'
 import { useAppAccountScope } from '@/components/AppShell'
@@ -1155,14 +1156,25 @@ export function TheaterShell({
     async (url: string): Promise<boolean> => {
       if (pasteResolvingRef.current) return false
       const resolvingItem = pastedPostResolvingStub(url)
-      if (!resolvingItem) return false
+      const previewPath = resolvePastedLink(url)
+      if (!resolvingItem || !previewPath) return false
       const request = pasteRequestRef.current + 1
       let clearAfterLiveStage = false
       let keepResolvingForRetry = false
+      let openingPreview = false
       pasteRequestRef.current = request
       pasteResolvingRef.current = true
       setPasteLookupRetry(null)
       setPasteResolvingItem(resolvingItem)
+
+      const openPreview = (): boolean => {
+        if (!shellMountedRef.current || pasteRequestRef.current !== request) return false
+        // Metadata needed to save can fail while the preview can still play.
+        // Keep the old stage covered until navigation replaces this shell.
+        navigateToAppPath(previewPath)
+        openingPreview = true
+        return true
+      }
 
       try {
         const res = await fetch('/api/bookmarks/add', {
@@ -1171,11 +1183,11 @@ export function TheaterShell({
           body: JSON.stringify({ url, source: 'manual' }),
         })
         const data = await res.json().catch(() => null)
-        if (!res.ok) return false
+        if (!res.ok) return openPreview()
 
         const platform: string = data?.platform ?? resolvingItem.platform ?? 'twitter'
         const id: string | undefined = data?.bookmark?.id ?? resolvingItem.bookmarkId
-        if (!id) return false
+        if (!id) return openPreview()
 
         const saved = await waitForPastedFeedItem(platform, id, () => shellMountedRef.current)
         if (!saved) {
@@ -1191,9 +1203,14 @@ export function TheaterShell({
         clearAfterLiveStage = installPastedRow(saved, request)
         return true
       } catch {
-        return false
+        return openPreview()
       } finally {
-        if (pasteRequestRef.current === request && !clearAfterLiveStage && !keepResolvingForRetry) {
+        if (
+          pasteRequestRef.current === request &&
+          !clearAfterLiveStage &&
+          !keepResolvingForRetry &&
+          !openingPreview
+        ) {
           pasteResolvingRef.current = false
           setPasteResolvingItem(null)
         }

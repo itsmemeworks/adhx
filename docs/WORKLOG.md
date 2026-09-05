@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-05 — Paste opens the new post even when saving fails
+
+Personal Live/Saved paste previously removed its loading cover on an add error, resuming the old
+post. A failed save now opens the canonical preview with the old stage covered until navigation;
+successful saves retain in-place playback and queue ordering. Instagram metadata failure can no
+longer prevent a playable preview from opening. Component regressions cover Live/Saved API and
+network failures; desktop/mobile browser regressions use the reported Reel URL.
+State: implemented for review; requires application deployment. No schema changes.
+
 ## 2026-09-05 — Close playlist moderation and redirect gaps; repair literal search
 
 Public playlist JSON and cloning now reject banned owners or unreadable moderation storage,
