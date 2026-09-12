@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-12 — Put watch history in the existing filters
+
+Removed the floating All / Unwatched navigation-style pill from desktop and mobile.
+Watch history now sits beside Post type in the desktop Queue/filter panel, mobile quick
+filters, and expanded Queue. The filter icon highlights Unwatched as well as type lenses.
+Playback, browser-local history, and the default All selection retain their existing behavior.
+Updated desktop/mobile browser checks for the panel and active indication; all 118 browser tests pass.
+State: implemented for review; requires application deployment. No schema changes.
+
 ## 2026-09-12 — Keep new arrivals directly next after selecting an older post
 
 A stable CI queue scenario exposed a real ordering gap: repeat-off pinned the selected post

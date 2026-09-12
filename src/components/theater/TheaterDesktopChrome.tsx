@@ -81,7 +81,6 @@ import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import { TheaterWatchFilter } from './TheaterWatchFilter'
 import {
   currentFirstQueue,
   isTheaterQueueFilterActive,
@@ -552,15 +551,6 @@ export function DesktopStageChrome({
         </div>
       </div>
 
-      {collection?.tab === 'collection' && collection.onWatchFilterChange && !declutter && (
-        <div className="pointer-events-auto absolute left-7 top-[4.75rem]">
-          <TheaterWatchFilter
-            value={collection.watchFilter ?? 'all'}
-            onChange={collection.onWatchFilterChange}
-          />
-        </div>
-      )}
-
       {/* Media veil: a light bottom fade under the 2-line caption. Long
           text goes to Read, not an expand/dim overlay. */}
       {current && showMediaCaption && (
@@ -799,7 +789,7 @@ export function DesktopDock({
   declutter,
   onToggleDeclutter,
   playlist,
-  collection: _collection,
+  collection,
   repeatCurrent = false,
   repeatMode,
   onCycleRepeat,
@@ -827,7 +817,7 @@ export function DesktopDock({
     containerRef: rootRef,
     autoFocus: !filterShortcutOpen,
     restoreSelector: filterShortcutOpen
-      ? 'button[aria-label="Filter post types"]'
+      ? 'button[aria-label="Filter posts"]'
       : '[data-theater-action="show-all"]',
   })
 
@@ -852,7 +842,19 @@ export function DesktopDock({
     el?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
   }, [currentKey])
 
-  const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const watchFilter =
+    collection?.tab === 'collection' && collection.onWatchFilterChange
+      ? { value: collection.watchFilter ?? 'all', onChange: collection.onWatchFilterChange }
+      : undefined
+  const typeFilterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const watchFilterOn = watchFilter?.value === 'unwatched'
+  const filterOn = typeFilterOn || watchFilterOn
+  const filterLabel = [
+    watchFilterOn ? 'Unwatched' : '',
+    typeFilterOn ? theaterQueueFilterLabel(queueTypes) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
   const normalizedQueue = useMemo(
     () => currentFirstQueue(items, waiting ? null : currentKey, seenStartIndex),
     [currentKey, items, seenStartIndex, waiting],
@@ -873,7 +875,7 @@ export function DesktopDock({
     ? orderedItems.findIndex((it) => theaterItemKey(it) === currentKey)
     : -1
   const repeatCopy = repeatMode
-    ? repeatModeLabel(repeatMode, { saved: _collection?.tab === 'collection' })
+    ? repeatModeLabel(repeatMode, { saved: collection?.tab === 'collection' })
     : null
 
   const handlePanelSelect = (key: string) => {
@@ -1222,12 +1224,12 @@ export function DesktopDock({
             {onToggleQueueType && onClearQueueTypes ? (
               <button
                 type="button"
-                aria-label="Filter post types"
+                aria-label="Filter posts"
                 aria-describedby={filterOn ? filterControlDescriptionId : undefined}
                 aria-controls={queueDialogId}
                 aria-expanded={showAll}
                 aria-keyshortcuts="Shift+Q"
-                title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
+                title={filterOn ? filterLabel : 'Filter posts'}
                 data-theater-queue-filter={filterOn ? '' : undefined}
                 data-theater-action="queue-filter"
                 onClick={() => {
@@ -1251,7 +1253,7 @@ export function DesktopDock({
                       aria-hidden
                     />
                     <span id={filterControlDescriptionId} className="sr-only">
-                      {`Filtered to ${theaterQueueFilterLabel(queueTypes)}.`}
+                      {`Filtered to ${filterLabel}.`}
                     </span>
                   </>
                 ) : null}
@@ -1288,6 +1290,7 @@ export function DesktopDock({
               </div>
               {onToggleQueueType && onClearQueueTypes ? (
                 <TheaterQueueFilter
+                  watchFilter={watchFilter}
                   selected={queueTypes}
                   onToggle={onToggleQueueType}
                   onClear={onClearQueueTypes}

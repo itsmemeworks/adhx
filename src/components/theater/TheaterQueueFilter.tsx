@@ -10,6 +10,7 @@
 import { cn } from '@/lib/utils'
 import type { ContentType } from '@/components/matter'
 import { useEffect, useRef, type KeyboardEvent } from 'react'
+import { TheaterWatchFilter, type TheaterWatchFilterProps } from './TheaterWatchFilter'
 import { THEATER_SHORTCUT_KEYS } from './theater-shortcuts'
 import {
   theaterQueueTypePillState,
@@ -17,7 +18,8 @@ import {
   THEATER_QUEUE_TYPE_PILLS,
 } from './theater-math'
 
-const PILL = 'rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors duration-150'
+const PILL =
+  'inline-flex min-h-9 items-center rounded-full px-3 py-1 text-[11px] font-semibold transition-colors duration-150'
 
 export function TheaterQueueFilter({
   selected,
@@ -27,6 +29,7 @@ export function TheaterQueueFilter({
   onCommit,
   onCancel,
   keyboardShortcutFlow = false,
+  watchFilter,
 }: {
   selected: readonly ContentType[]
   onToggle: (type: ContentType) => void
@@ -35,9 +38,10 @@ export function TheaterQueueFilter({
   onCommit?: () => void
   onCancel?: () => void
   keyboardShortcutFlow?: boolean
+  watchFilter?: TheaterWatchFilterProps
 }) {
   const allOn = selected.length === 0
-  const buttonsRef = useRef<Array<HTMLButtonElement | null>>([])
+  const rootRef = useRef<HTMLDivElement>(null)
   const didAutoFocusRef = useRef(false)
   useEffect(() => {
     if (!autoFocus) {
@@ -54,14 +58,14 @@ export function TheaterQueueFilter({
             (pill) => theaterQueueTypePillState(selected, pill.types) !== false,
           ) + 1,
         )
-    buttonsRef.current[activeIndex]?.focus({ preventScroll: true })
+    rootRef.current
+      ?.querySelectorAll<HTMLButtonElement>('button')
+      [activeIndex]?.focus({ preventScroll: true })
   }, [allOn, autoFocus, selected])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!keyboardShortcutFlow) return
-    const buttons = buttonsRef.current.filter(
-      (button): button is HTMLButtonElement => button !== null,
-    )
+    const buttons = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])
     const currentIndex = buttons.findIndex((button) => button === document.activeElement)
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -115,6 +119,7 @@ export function TheaterQueueFilter({
 
   return (
     <div
+      ref={rootRef}
       role="group"
       aria-label="Playlist filter"
       data-theater-queue-filter=""
@@ -122,11 +127,14 @@ export function TheaterQueueFilter({
       className="flex flex-none flex-wrap items-center gap-1.5 px-4 pb-2"
       onKeyDown={handleKeyDown}
     >
+      {watchFilter && (
+        <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+          Post type
+        </span>
+      )}
       <button
-        ref={(node) => {
-          buttonsRef.current[0] = node
-        }}
         type="button"
+        aria-label="All post types"
         aria-pressed={allOn}
         onClick={() => {
           if (!allOn) onClear()
@@ -138,14 +146,11 @@ export function TheaterQueueFilter({
       >
         All
       </button>
-      {THEATER_QUEUE_TYPE_PILLS.map((pill, index) => {
+      {THEATER_QUEUE_TYPE_PILLS.map((pill) => {
         const pressed = theaterQueueTypePillState(selected, pill.types)
         const active = pressed !== false
         return (
           <button
-            ref={(node) => {
-              buttonsRef.current[index + 1] = node
-            }}
             key={pill.label}
             type="button"
             aria-pressed={pressed}
@@ -163,6 +168,7 @@ export function TheaterQueueFilter({
           </button>
         )
       })}
+      {watchFilter && <TheaterWatchFilter {...watchFilter} />}
     </div>
   )
 }

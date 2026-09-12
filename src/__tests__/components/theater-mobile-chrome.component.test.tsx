@@ -475,7 +475,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     const paste = screen.getByRole('button', { name: 'Paste a link' })
     const text = screen.getByRole('button', { name: 'Text' })
     expect(videos).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'All post types' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     expect(screen.getByRole('button', { name: 'Photos' })).toBeInTheDocument()
     expect(text).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Articles' })).not.toBeInTheDocument()
@@ -501,7 +504,10 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     )
     expect(screen.getByRole('button', { name: 'Videos' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Photos' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'All post types' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
 
     const saved: TheaterPersonalChrome = {
       tab: 'collection',

@@ -53,7 +53,7 @@ These names describe different parts of ADHX:
 - **The library** is the searchable, filterable grid over those saves at `/library`.
 - **A playlist** is one tag you have made public. It plays as a looping theater at `/t/{username}/{tag}`.
 
-My videos starts with **All** selected each time you open it. Choose **Unwatched** to hide posts you have already passed in this browser. This filter is separate from Repeat: turning Repeat off plays the selected list once, while previously played posts remain available in the **Seen** section when All is selected.
+My videos starts with **All** selected each time you open it. Open the filter control beside Queue and choose **Unwatched** under **Watch history** to hide posts you have already passed in this browser. This filter is separate from Repeat: turning Repeat off plays the selected list once, while previously played posts remain available in the **Seen** section when All is selected.
 
 Watched history stays in this browser, with up to 500 recent marks retained. It does not sync between devices or create public activity. My videos loads the full collection in pages of 100; the first page is not a collection limit.
 

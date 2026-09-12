@@ -147,7 +147,7 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(page.getByRole('button', { name: 'Videos', exact: true })).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Queue', exact: true }).click()
-    const all = page.getByRole('button', { name: 'All', exact: true })
+    const all = page.getByRole('button', { name: 'All post types', exact: true })
     const videos = page.getByRole('button', { name: 'Videos', exact: true })
     const photos = page.getByRole('button', { name: 'Photos', exact: true })
     await expect(all).toHaveAttribute('aria-pressed', 'true')
