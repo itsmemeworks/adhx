@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-12 — Keep new arrivals directly next after selecting an older post
+
+A stable CI queue scenario exposed a real ordering gap: repeat-off pinned the selected post
+only after inserting arrivals, leaving newer unseen predecessors ahead of the new Next item.
+Live arrivals now insert against the same current-first order that playback renders; repeat-all
+retains its circular order. Component and queue regressions cover selecting an older unseen post.
+The two race-sensitive browser scenarios explicitly select and pause known text fixtures,
+avoiding external-player startup and stale transport icons during test setup.
+State: implemented for review in the Instagram delivery PR; no schema changes.
+
 ## 2026-09-12 — Direct Instagram video delivery and legacy photo fallback
 
 Relay `video_versions` now supplies allowlisted MP4 URLs before the mirror fallback.

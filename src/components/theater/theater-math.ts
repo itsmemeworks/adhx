@@ -204,6 +204,7 @@ export function insertKeysAfter(
   order: readonly string[],
   anchor: string | null,
   inserted: readonly string[],
+  opts: { pinAnchor?: boolean } = {},
 ): string[] {
   const additions = inserted.filter(
     (key, index) => key !== anchor && inserted.indexOf(key) === index,
@@ -213,6 +214,12 @@ export function insertKeysAfter(
   const remaining = order.filter((key) => !additionSet.has(key))
   const anchorIndex = anchor ? remaining.indexOf(anchor) : -1
   if (anchorIndex === -1) return [...additions, ...remaining]
+  // Repeat-off pins Now playing first when rendering. Apply that same order
+  // before inserting arrivals, or an older selected post's predecessors would
+  // jump ahead of its new Next item when the renderer pins it later.
+  if (opts.pinAnchor) {
+    return [remaining[anchorIndex], ...additions, ...remaining.filter((key) => key !== anchor)]
+  }
   return [...remaining.slice(0, anchorIndex + 1), ...additions, ...remaining.slice(anchorIndex + 1)]
 }
 

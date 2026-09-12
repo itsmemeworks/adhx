@@ -55,6 +55,19 @@ describe('sortNewestFirst', () => {
 })
 
 describe('insertKeysAfter', () => {
+  it('keeps fresh arrivals directly after a pinned older current post', () => {
+    const first = insertKeysAfter(['a', 'b', 'c'], 'b', ['x'], { pinAnchor: true })
+    expect(first).toEqual(['b', 'x', 'a', 'c'])
+    expect(insertKeysAfter(first, 'b', ['y'], { pinAnchor: true })).toEqual([
+      'b',
+      'y',
+      'x',
+      'a',
+      'c',
+    ])
+    // Repeat-all keeps the circular traversal order instead.
+    expect(insertKeysAfter(['a', 'b', 'c'], 'b', ['x'])).toEqual(['a', 'b', 'x', 'c'])
+  })
   it('merges same-batch arrivals after current without dropping earlier arrivals', () => {
     const first = insertKeysAfter(['a', 'b', 'c'], 'a', ['x'])
     expect(insertKeysAfter(first, 'a', ['y'])).toEqual(['a', 'y', 'x', 'b', 'c'])

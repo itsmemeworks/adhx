@@ -791,7 +791,9 @@ export function TheaterShell({
       if (personalTabRef.current !== 'collection' && playingKey && playingKey !== addedKey) {
         const existing =
           liveTraversalKeysRef.current ?? sortNewestFirst(liveItemsRef.current).map(theaterItemKey)
-        const nextTraversal = insertKeysAfter(existing, playingKey, [addedKey])
+        const nextTraversal = insertKeysAfter(existing, playingKey, [addedKey], {
+          pinAnchor: repeatModeRef.current === 'off',
+        })
         liveTraversalKeysRef.current = nextTraversal
         setLiveTraversalKeys(nextTraversal)
       }
@@ -1395,7 +1397,9 @@ export function TheaterShell({
     const known = new Set(base)
     const fresh = newestKeys.filter((key) => feed.freshKeys.has(key) && !known.has(key))
     if (fresh.length === 0) return
-    const nextTraversal = insertKeysAfter(base, currentKey, fresh)
+    const nextTraversal = insertKeysAfter(base, currentKey, fresh, {
+      pinAnchor: repeatModeRef.current === 'off',
+    })
     liveTraversalKeysRef.current = nextTraversal
     setLiveTraversalKeys(nextTraversal)
   }, [currentKey, feed.freshKeys, isCollectionTab, items])

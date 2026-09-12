@@ -191,11 +191,21 @@ authedTest.describe('theater cross-tab add', () => {
       await page.goto('/live')
       await expectTheaterReady(page)
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
-      await pauseTheater(page)
       const queue = await openTheaterQueue(page)
-      await addAndBroadcast(page, tweetUrl(ADD_TEXT))
+      // Earlier preview tests add external media to the public feed. Its Play
+      // icon can mean "not ready yet", not a deliberate pause. Choose a known
+      // timed post so this queue-ordering test never races a provider's startup
+      // or fallback timer on a slower CI runner.
+      const current = queue
+        .locator('[data-theater-queue-item]')
+        .filter({ hasText: POST.alpha.text })
+      await current.click()
+      await expect(current).toHaveAttribute('aria-current', 'true')
       await pauseTheater(page)
+      await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible()
+      await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
+      await expect(current).toHaveAttribute('aria-current', 'true')
       await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
       await expect(queue.getByText('Now playing', { exact: true })).toBeVisible()
       await expect(queue.getByText('Next', { exact: true })).toBeVisible()
@@ -308,15 +318,23 @@ authedTest.describe('theater cross-tab add', () => {
       })
       await page.goto('/live')
       await expectTheaterReady(page)
+      const queue = await openTheaterQueue(page)
+      await queue
+        .locator('[data-theater-queue-item]')
+        .filter({ hasText: POST.preview.text })
+        .click()
+      await expect(visibleCaption(page, POST.preview.text)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
       await pauseTheater(page)
       await goNext(page)
+      await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
       await pauseTheater(page)
+      await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible()
       await expect(visibleQueueCount(page)).toHaveText(/\d+ in queue/)
       const afterNext = await visibleQueueCount(page).innerText()
       const remaining = Number(afterNext.match(/(\d+) in queue/)?.[1])
       expect(remaining).toBeGreaterThan(0)
-      const queue = await openTheaterQueue(page)
-
       await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
       const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
