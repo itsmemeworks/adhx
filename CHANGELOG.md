@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.71.1](https://github.com/itsmemeworks/adhx/compare/v1.71.0...v1.71.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* restore instagram delivery and keep arrivals next ([#508](https://github.com/itsmemeworks/adhx/issues/508)) ([e3a1067](https://github.com/itsmemeworks/adhx/commit/e3a1067139859c01cb1838174fd240066f7b86fa))
+
 ## [1.71.0](https://github.com/itsmemeworks/adhx/compare/v1.70.9...v1.71.0) (2026-09-12)
 
 
