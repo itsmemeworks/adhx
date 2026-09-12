@@ -4,7 +4,7 @@ import { deleteLivePulse, expectTheaterReady, insertLivePulse } from './helpers'
 const PULSE_TEXT_ID = '9000000000000000888'
 const PULSE_VIDEO_ID = '9000000000000000889'
 
-test.describe('Live type filter vs preview pulses', () => {
+test.describe('Discover type filter vs preview pulses', () => {
   test.beforeEach(() => {
     deleteLivePulse([PULSE_TEXT_ID, PULSE_VIDEO_ID])
   })
@@ -20,7 +20,7 @@ test.describe('Live type filter vs preview pulses', () => {
       localStorage.removeItem('adhx-theater-types')
       localStorage.removeItem('adhx-theater-visual')
     })
-    // Do not reload — Live replaceStates the bar onto a preview path, and a
+    // Do not reload — Discover replaceStates the bar onto a preview path, and a
     // reload would remount shared mode (which keeps a text lead under Videos).
     await page.getByRole('button', { name: 'Queue', exact: true }).click()
     // Mobile UpNextList stays mounted (lg:hidden). getByText matches that
@@ -38,7 +38,7 @@ test.describe('Live type filter vs preview pulses', () => {
     const filter = page.getByRole('button', { name: 'Filter post types' })
     await expect(filter).toHaveAttribute('data-theater-queue-filter')
     await expect(filter).toHaveAccessibleDescription('Filtered to Videos.')
-    await expect(page.getByText('No videos in Live right now')).toBeVisible()
+    await expect(page.getByText('No videos in Discover right now')).toBeVisible()
 
     insertLivePulse({
       id: PULSE_TEXT_ID,
@@ -59,7 +59,7 @@ test.describe('Live type filter vs preview pulses', () => {
 
     // Server trending cache is 12s; the theater poll is another 12s.
     await expect(queue.getByText('E2E-PULSE-VIDEO')).toBeVisible({ timeout: 40_000 })
-    await expect(page.getByText('No videos in Live right now')).toHaveCount(0)
+    await expect(page.getByText('No videos in Discover right now')).toHaveCount(0)
     await expect(queue.getByText('E2E-PULSE-TEXT')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'All', exact: true }).click()

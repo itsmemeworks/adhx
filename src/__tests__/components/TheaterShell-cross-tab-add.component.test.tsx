@@ -121,6 +121,7 @@ type ChromeProps = {
   currentKey: string | null
   queueTypes: ContentType[]
   repeatMode: string
+  repeatCurrent: boolean
   freshKeys: Set<string>
   isSeen: (key: string) => boolean
   onNext: () => void
@@ -132,6 +133,9 @@ type ChromeProps = {
   queueLooping?: boolean
   collection?: {
     tab: string
+    onDone: () => void
+    watchFilter: 'all' | 'unwatched'
+    onWatchFilterChange: (value: 'all' | 'unwatched') => void
     onTabChange: (tab: string) => void
     savedKeys: Set<string>
     tags?: string[]
@@ -186,6 +190,100 @@ describe('TheaterShell: cross-tab add + filters', () => {
       }
       return { ok: true, json: async () => ({ items: [] }) }
     }) as never
+  })
+
+  it('My videos defaults to All, including watched saves, and Unwatched never deletes them', async () => {
+    localStorage.setItem('adhx-seen-v1', JSON.stringify(['twitter:1']))
+    localStorage.setItem('adhx-theater-repeat-saved', 'off')
+    await act(async () => {
+      render(
+        <TheaterShell
+          mode="personal"
+          seed={seed([textItem('community')])}
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+        />,
+      )
+    })
+    expect(chromeProps().collection?.watchFilter).toBe('all')
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(queueIds()).toEqual(['1', '2', '3'])
+    await act(async () => chromeProps().collection!.onWatchFilterChange('unwatched'))
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect(queueIds()).toEqual(['2', '3'])
+    await act(async () => chromeProps().onNext())
+    expect(chromeProps().currentKey).toBe('twitter:3')
+    expect(queueIds()).toEqual(['3'])
+    await act(async () => chromeProps().onNext())
+    expect(screen.getByText('All caught up')).toBeInTheDocument()
+    await act(async () => chromeProps().collection!.onWatchFilterChange('all'))
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(queueIds()).toEqual(['1', '2', '3'])
+  })
+
+  it('Unwatched skips watched rows after Archive and Undo restores the selected save', async () => {
+    localStorage.setItem('adhx-seen-v1', JSON.stringify(['twitter:2']))
+    await act(async () => {
+      render(
+        <TheaterShell
+          mode="personal"
+          seed={seed([])}
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+        />,
+      )
+    })
+    await act(async () => chromeProps().collection!.onWatchFilterChange('unwatched'))
+    await act(async () => chromeProps().collection!.onDone())
+    expect(chromeProps().currentKey).toBe('twitter:3')
+    expect(queueIds()).toEqual(['3'])
+    await act(async () => screen.getByRole('button', { name: 'Undo' }).click())
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(queueIds()).toEqual(['1', '3'])
+  })
+
+  it('My videos repeat-off plays all saves once without hiding the watched rows', async () => {
+    localStorage.setItem('adhx-theater-repeat-saved', 'off')
+    await act(async () => {
+      render(
+        <TheaterShell
+          mode="personal"
+          seed={seed([])}
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2')]}
+        />,
+      )
+    })
+    await act(async () => chromeProps().onNext())
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect(queueIds()).toEqual(['2', '1'])
+    await act(async () => chromeProps().onNext())
+    expect(screen.getByText('End of your queue')).toBeInTheDocument()
+    expect(queueIds()).toEqual(['1', '2'])
+  })
+
+  it('Unwatched stays independent of repeat and type filters', async () => {
+    localStorage.setItem('adhx-seen-v1', JSON.stringify(['twitter:1']))
+    await act(async () => {
+      render(
+        <TheaterShell
+          mode="personal"
+          seed={seed([])}
+          initialPersonalTab="collection"
+          personalItems={[videoFeedItem('1'), videoFeedItem('2'), feedItem('3')]}
+        />,
+      )
+    })
+    await act(async () => chromeProps().collection!.onWatchFilterChange('unwatched'))
+    await tapType('video')
+    expect(queueIds()).toEqual(['2'])
+    // Repeat all must not loop the sole unwatched video forever.
+    expect(chromeProps().repeatCurrent).toBe(false)
+    await act(async () => chromeProps().onNext())
+    await waitFor(() => expect(screen.getByText('All caught up')).toBeInTheDocument())
+    await act(async () => chromeProps().collection!.onWatchFilterChange('all'))
+    expect(queueIds()).toEqual(['1', '2'])
+    expect(chromeProps().currentKey).toBe('twitter:1')
   })
 
   it('Live: a mid-play add grows the queue without moving the current post', async () => {
@@ -539,13 +637,13 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().queueTypes).toEqual(['text'])
     expect(chromeProps().currentKey).toBe(theaterItemKey(video))
     expect(screen.queryByText('Nothing playing')).not.toBeInTheDocument()
-    expect(screen.getByText('No text in Live right now')).toBeInTheDocument()
+    expect(screen.getByText('No text in Discover right now')).toBeInTheDocument()
 
     await tapType('text')
     expect(chromeProps().queueTypes).toEqual([])
     expect(chromeProps().currentKey).toBe(theaterItemKey(video))
     expect(screen.queryByText('Nothing playing')).not.toBeInTheDocument()
-    expect(screen.queryByText('No text in Live right now')).not.toBeInTheDocument()
+    expect(screen.queryByText('No text in Discover right now')).not.toBeInTheDocument()
     expect(screen.getByTestId('stage')).toHaveAttribute('data-item-key', theaterItemKey(video))
   })
 
@@ -962,11 +1060,11 @@ describe('TheaterShell: cross-tab add + filters', () => {
     await act(async () => cycle())
     await act(async () => cycle())
     await act(async () => chromeProps().onNext())
-    expect(screen.getByText('All caught up')).toBeInTheDocument()
+    expect(screen.getByText('End of your queue')).toBeInTheDocument()
 
     await act(async () => fireAdded(feedItem('99')))
 
-    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(screen.queryByText('End of your queue')).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe('twitter:99')
     expect(queueIds()[0]).toBe('99')
     expect(chromeProps().repeatMode).toBe('off')

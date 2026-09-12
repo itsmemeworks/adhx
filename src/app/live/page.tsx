@@ -6,8 +6,8 @@ import { recordAnalytic } from '@/lib/analytics/record'
 import AuthedTheater from '../AuthedTheater'
 
 /**
- * `/live` — signed-in Live tab (community pulse). Signed-out visitors go to
- * `/`, which is the public live theater. Signed-in `/` redirects here.
+ * `/live` — signed-in Discover tab (community pulse). Signed-out visitors go to
+ * `/`, which is the public live theater. Signed-in `/` opens My videos at `/saved`.
  *
  * force-dynamic: session cookie + runtime SQLite.
  */

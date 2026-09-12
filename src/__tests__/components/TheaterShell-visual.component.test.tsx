@@ -266,7 +266,7 @@ describe('TheaterShell: live queue type filter', () => {
     expect(chromeProps().currentKey).toBe('twitter:2')
   })
 
-  it('2 does not All Clear Live when the Saved snapshot is empty', async () => {
+  it('1 preserves Discover while the My videos route loads', async () => {
     const onPersonalTabChange = vi.fn()
     render(
       <TheaterShell
@@ -278,14 +278,14 @@ describe('TheaterShell: live queue type filter', () => {
       />,
     )
     await act(async () => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
     })
     expect(onPersonalTabChange).toHaveBeenCalledWith('collection')
     expect(chromeProps().currentKey).toBe('twitter:1')
     expect(screen.queryByText('Nothing to review')).not.toBeInTheDocument()
   })
 
-  it('1 and 2 flip Live ⇄ Saved on the personal theater', async () => {
+  it('1 and 2 flip My videos ⇄ Discover on the personal theater', async () => {
     const onPersonalTabChange = vi.fn()
     render(
       <TheaterShell
@@ -298,12 +298,12 @@ describe('TheaterShell: live queue type filter', () => {
     )
     expect(chromeProps().onToggleQueueType).toBeDefined()
     await act(async () => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
     })
     expect(onPersonalTabChange).toHaveBeenCalledWith('collection')
     expect(chromeProps().onToggleQueueType).toBeDefined()
     await act(async () => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
     })
     expect(onPersonalTabChange).toHaveBeenCalledWith('live')
     expect(chromeProps().onToggleQueueType).toBeDefined()
@@ -318,7 +318,7 @@ describe('TheaterShell: live queue type filter', () => {
       />,
     )
     await act(async () => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
     })
     expect(chromeProps().onToggleQueueType).toBeUndefined()
   })
@@ -326,13 +326,13 @@ describe('TheaterShell: live queue type filter', () => {
   it('shows the empty overlay when Live has none of the selected types', async () => {
     render(<TheaterShell seed={seed([item('1', { contentType: 'text' })])} />)
     await tapType('video')
-    expect(screen.getByText('No videos in Live right now')).toBeInTheDocument()
+    expect(screen.getByText('No videos in Discover right now')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show every post' })).toBeInTheDocument()
     await act(async () => {
       screen.getByRole('button', { name: 'Show every post' }).click()
     })
     expect(chromeProps().queueTypes).toEqual([])
-    expect(screen.queryByText('No videos in Live right now')).not.toBeInTheDocument()
+    expect(screen.queryByText('No videos in Discover right now')).not.toBeInTheDocument()
   })
 
   it('shows the empty overlay when Saved has none of the selected types', async () => {
@@ -345,7 +345,7 @@ describe('TheaterShell: live queue type filter', () => {
       />,
     )
     await tapType('video')
-    expect(screen.getByText('No videos in Saved right now')).toBeInTheDocument()
+    expect(screen.getByText('No videos in My videos right now')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show every post' })).toBeInTheDocument()
   })
 

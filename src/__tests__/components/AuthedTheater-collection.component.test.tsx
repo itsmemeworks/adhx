@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  *
  * `/saved` is the only personal theater. AuthedTheater fetches the
- * active queue at the API cap (100) before mounting the shell; a failed
+ * complete active queue in capped pages before mounting the shell; a failed
  * fetch is an error (Retry), not a fake all-clear.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import AuthedTheater from '@/app/AuthedTheater'
 import { COLLECTION_QUEUE_LIMIT } from '@/lib/theater/collection-href'
 import { SAVED_PLAYED_STORAGE_KEY, SAVED_PLAYING_STORAGE_KEY } from '@/lib/theater/saved-playing'
@@ -45,6 +45,19 @@ vi.mock('@/components/theater/TheaterShell', () => ({
 const emptySeed = { items: [], savedToday: 0, recentActivity: 0 }
 
 function jsonResponse(body: unknown, ok = true) {
+  // Single-page fixture default; pagination tests provide the real metadata.
+  if (body && typeof body === 'object' && 'items' in body && !('pagination' in body)) {
+    const items = body.items as unknown[]
+    body = {
+      ...body,
+      pagination: {
+        page: 1,
+        limit: COLLECTION_QUEUE_LIMIT,
+        total: items.length,
+        totalPages: Math.ceil(items.length / COLLECTION_QUEUE_LIMIT),
+      },
+    }
+  }
   return Promise.resolve({
     ok,
     status: ok ? 200 : 500,
@@ -88,10 +101,110 @@ describe('AuthedTheater collection load', () => {
     expect(feedRequests[0]).toContain('filter=all')
   })
 
+  it('loads every page of more than 100 posts, newest first, including watched posts', async () => {
+    const rows = Array.from({ length: 205 }, (_, i) => ({
+      id: String(i),
+      platform: 'twitter',
+      processedAt: new Date(Date.UTC(2026, 0, 1, 0, 0, 205 - i)).toISOString(),
+    }))
+    feedImpl = (url) => {
+      const page = Number(new URL(url, 'https://adhx.com').searchParams.get('page'))
+      return jsonResponse({
+        items: rows.slice((page - 1) * 100, page * 100),
+        pagination: { page, limit: 100, total: 205, totalPages: 3 },
+      })
+    }
+    sessionStorage.setItem(SAVED_PLAYED_STORAGE_KEY, JSON.stringify(['twitter:0']))
+    render(<AuthedTheater seed={emptySeed} tab="collection" />)
+    await waitFor(() =>
+      expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-count', '205'),
+    )
+    expect(shellSpy.mock.calls.at(-1)?.[0].personalItems).toEqual(rows)
+    expect(
+      feedRequests.map((url) => new URL(url, 'https://adhx.com').searchParams.get('page')),
+    ).toEqual(['1', '2', '3'])
+    expect(
+      feedRequests.every((url) => url.includes('hideArchived=true') && url.includes('filter=all')),
+    ).toBe(true)
+  })
+
+  it('opens the platform-qualified post beyond page one without prepending a duplicate', async () => {
+    const rows = Array.from({ length: 101 }, (_, i) => ({ id: String(i), platform: 'twitter' }))
+    rows.push({ id: '0', platform: 'tiktok' })
+    feedImpl = (url) => {
+      const page = Number(new URL(url, 'https://adhx.com').searchParams.get('page'))
+      return jsonResponse({
+        items: rows.slice((page - 1) * 100, page * 100),
+        pagination: { page, limit: 100, total: 102, totalPages: 2 },
+      })
+    }
+    render(<AuthedTheater seed={emptySeed} tab="collection" openId="0" openPlatform="tiktok" />)
+    await waitFor(() =>
+      expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-index', '101'),
+    )
+    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-count', '102')
+    expect(feedRequests).toHaveLength(2)
+  })
+
+  it.each(['failure', 'empty', 'duplicate', 'changed-total'])(
+    'does not mount an incomplete queue when a later page is %s',
+    async (problem) => {
+      const rows = Array.from({ length: 100 }, (_, i) => ({ id: String(i), platform: 'twitter' }))
+      feedImpl = (url) => {
+        const page = Number(new URL(url, 'https://adhx.com').searchParams.get('page'))
+        if (page === 1) {
+          return jsonResponse({
+            items: rows,
+            pagination: { page, limit: 100, total: 101, totalPages: 2 },
+          })
+        }
+        if (problem === 'failure') return jsonResponse({ error: 'unavailable' }, false)
+        return jsonResponse({
+          items:
+            problem === 'empty'
+              ? []
+              : [{ id: problem === 'duplicate' ? '0' : '100', platform: 'twitter' }],
+          pagination: {
+            page,
+            limit: 100,
+            total: problem === 'changed-total' ? 102 : 101,
+            totalPages: 2,
+          },
+        })
+      }
+      render(<AuthedTheater seed={emptySeed} tab="collection" />)
+      await waitFor(() => expect(screen.getByText(/couldn.t load My videos/i)).toBeInTheDocument())
+      expect(screen.queryByTestId('theater-shell')).not.toBeInTheDocument()
+      expect(feedRequests).toHaveLength(2)
+    },
+  )
+
+  it('aborts a pending collection load on navigation and requests no further pages', async () => {
+    let finish!: (response: Response) => void
+    feedImpl = () =>
+      new Promise((resolve) => {
+        finish = resolve
+      })
+    const view = render(<AuthedTheater seed={emptySeed} tab="collection" />)
+    const requestSignal = vi.mocked(fetch).mock.calls[0]?.[1]?.signal
+    view.rerender(<AuthedTheater seed={emptySeed} tab="live" />)
+    expect(requestSignal?.aborted).toBe(true)
+    await act(async () => {
+      finish(
+        await jsonResponse({
+          items: Array.from({ length: 100 }, (_, i) => ({ id: String(i), platform: 'twitter' })),
+          pagination: { page: 1, limit: 100, total: 101, totalPages: 2 },
+        }),
+      )
+    })
+    expect(feedRequests).toHaveLength(1)
+    expect(screen.getByTestId('theater-shell')).toHaveAttribute('data-count', '0')
+  })
+
   it('shows an error — not all-clear — when the feed request fails', async () => {
     feedImpl = () => jsonResponse({ error: 'nope' }, false)
     render(<AuthedTheater seed={emptySeed} tab="collection" />)
-    await waitFor(() => expect(screen.getByText(/couldn.t load Saved/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/couldn.t load My videos/i)).toBeInTheDocument())
     expect(screen.queryByTestId('theater-shell')).not.toBeInTheDocument()
   })
 

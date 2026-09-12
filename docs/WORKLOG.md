@@ -6,6 +6,24 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-12 — Update the Discover empty-state browser regression
+
+The full CI browser suite caught two stale Live empty-state assertions after the Discover rename.
+Updated the preview-pulse test to assert the new copy while retaining its video/text filtering
+and empty-to-populated queue checks. All 114 browser tests pass locally without retries.
+State: implemented for review in the personal-home PR.
+Follow-up: run the complete browser suite for navigation/copy changes, beyond targeted scenarios.
+
+## 2026-09-12 — Personal videos first, with an explicit watch filter
+
+Signed-in home now opens My videos (`/saved`); the community feed is secondary Discover (`/live`).
+My videos loads every non-archived save in 100-row pages; incomplete loads show Retry.
+All / Unwatched is visible on desktop and mobile and defaults to All on each visit, independent
+of Repeat. Saved departures mark browser-local history without publishing activity; Unwatched
+retains the active post, skips watched archive successors, and offers Show all when caught up.
+Navigation, preview links, and shortcut labels agree; Library and public playlist contracts remain.
+State: implemented for review; requires application deployment. No schema changes.
+
 ## 2026-09-05 — Paste opens the new post even when saving fails
 
 Personal Live/Saved paste previously removed its loading cover on an add error, resuming the old

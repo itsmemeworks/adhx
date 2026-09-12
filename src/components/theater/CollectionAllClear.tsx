@@ -15,12 +15,20 @@ import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 
 export interface CollectionAllClearProps {
   total: number
+  unwatched?: boolean
+  onShowAll?: () => void
   onClose: () => void
   /** Repeat the queue from the top — same offer as Live's waiting stage. */
   onKeepPlaying?: () => void
 }
 
-export function CollectionAllClear({ total, onClose, onKeepPlaying }: CollectionAllClearProps) {
+export function CollectionAllClear({
+  total,
+  unwatched = false,
+  onShowAll,
+  onClose,
+  onKeepPlaying,
+}: CollectionAllClearProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   useTheaterActionHotkeys('any', rootRef)
 
@@ -30,32 +38,50 @@ export function CollectionAllClear({ total, onClose, onKeepPlaying }: Collection
       className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#08070a] px-6 text-center"
     >
       <PartyPopper className="h-10 w-10 text-clay" />
-      <StageHeadline>{total > 0 ? 'All caught up' : 'Nothing to review'}</StageHeadline>
+      <StageHeadline>
+        {total === 0
+          ? 'Your collection starts here'
+          : unwatched
+            ? 'All caught up'
+            : 'End of your queue'}
+      </StageHeadline>
       {total > 0 ? (
         <p className="text-sm text-white/60">
-          You cleared {total} {total === 1 ? 'post' : 'posts'}.
+          {unwatched
+            ? 'Your watched saves are still in All.'
+            : 'Your saves are still here. Play them again whenever you like.'}
         </p>
       ) : (
-        <p className="text-sm text-white/60">Nothing waiting in Saved. Nice.</p>
+        <p className="text-sm text-white/60">Paste a link above to save your first post.</p>
       )}
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-        {onKeepPlaying && (
+        {unwatched && total > 0 && onShowAll ? (
           <button
             type="button"
-            onClick={onKeepPlaying}
-            data-theater-action="keep-playing"
-            className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+            onClick={onShowAll}
+            className="min-h-[44px] rounded-full bg-white/15 px-5 py-2.5 text-sm font-semibold text-white"
           >
-            <Repeat size={15} />
-            <span>Keep playing</span>
+            Show all
           </button>
+        ) : (
+          onKeepPlaying && (
+            <button
+              type="button"
+              onClick={onKeepPlaying}
+              data-theater-action="keep-playing"
+              className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+            >
+              <Repeat size={15} />
+              <span>Keep playing</span>
+            </button>
+          )
         )}
         <button
           type="button"
           onClick={onClose}
           className="min-h-[44px] rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
         >
-          Close
+          Open library
         </button>
       </div>
     </div>

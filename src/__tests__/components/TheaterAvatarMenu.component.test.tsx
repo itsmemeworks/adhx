@@ -88,7 +88,7 @@ describe('TheaterAvatarMenu', () => {
     fireEvent.click(button)
 
     expect(screen.getByText('Library')).toBeInTheDocument()
-    expect(screen.getByText('Theater')).toBeInTheDocument()
+    expect(screen.getByText('My videos')).toBeInTheDocument()
     expect(screen.getByText('Tags')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
@@ -134,58 +134,30 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.getByText('Settings').closest('a')).toHaveAttribute('href', '/settings')
   })
 
-  it('on the home theater, Theater closes the menu instead of navigating', async () => {
-    mockPathname = '/'
-    mockAuthMe(AUTHED_ME)
-    render(<TheaterAvatarMenu />)
-    fireEvent.click(await screen.findByLabelText('Account menu'))
-
-    const theaterEntry = screen.getByText('Theater').closest('button')
-    expect(theaterEntry).toBeInTheDocument()
-
-    fireEvent.click(theaterEntry!)
-    expect(screen.queryByText('Theater')).not.toBeInTheDocument()
-  })
-
-  it('from a shared preview page, Theater is a link home', async () => {
+  it('links directly to personal videos and discovery from a shared preview', async () => {
     mockPathname = '/naval/status/123'
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    expect(screen.getByText('Theater').closest('a')).toHaveAttribute('href', '/')
+    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveAttribute('href', '/saved')
+    expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveAttribute('href', '/live')
+    expect(screen.queryByRole('menuitem', { name: 'Theater' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'My videos' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
   })
 
-  // Owner follow-up: the home theater's URL-sync effect rewrites the
-  // address bar to per-post preview paths mid-session (theaterUrlSyncPath),
-  // so `usePathname` alone reads as a shared-preview-page pathname even
-  // while the visitor is still inside the home theater. `theaterActive`
-  // lets the mounting chrome override that.
-  it('theaterActive marks Theater current (close-only button) even when the URL has been rewritten mid-session', async () => {
-    mockPathname = '/naval/status/123'
-    mockAuthMe(AUTHED_ME)
-    render(<TheaterAvatarMenu theaterActive />)
-    fireEvent.click(await screen.findByLabelText('Account menu'))
-
-    const theaterEntry = screen.getByText('Theater').closest('button')
-    expect(theaterEntry).toBeInTheDocument()
-    expect(theaterEntry).toHaveAttribute('aria-current', 'page')
-    expect(theaterEntry!.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
-
-    fireEvent.click(theaterEntry!)
-    expect(screen.queryByText('Theater')).not.toBeInTheDocument()
-  })
-
-  it('without theaterActive, the same rewritten pathname still renders Theater as an unmarked link', async () => {
-    mockPathname = '/naval/status/123'
+  it('marks the personal destination when mounted without theater tabs', async () => {
+    mockPathname = '/saved'
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    const theaterLink = screen.getByText('Theater').closest('a')!
-    expect(theaterLink).toHaveAttribute('href', '/')
-    expect(theaterLink).not.toHaveAttribute('aria-current')
-    expect(theaterLink.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
   })
 
   it('POSTs logout and redirects on Sign out', async () => {
@@ -261,38 +233,27 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.queryByText('Library')).not.toBeInTheDocument()
   })
 
-  it('moves focus through items with arrows and activates the focused link with Enter', async () => {
+  it('moves focus through destinations and activates the focused link with Enter', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
-
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus())
-
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus())
     pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
-
+    expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveFocus()
     pressMenuKey('j')
-    expect(screen.getByRole('menuitem', { name: 'Tags' })).toHaveFocus()
-
-    pressMenuKey('k')
     expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
-
+    pressMenuKey('k')
+    expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveFocus()
     pressMenuKey('End')
     expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
-
     pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
-
+    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus()
     pressMenuKey('Home')
-    expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus()
-
+    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus()
     pressMenuKey('ArrowDown')
-    pressMenuKey('ArrowDown')
-    pressMenuKey('ArrowDown')
-    const leaderboard = screen.getByRole('menuitem', { name: 'Leaderboard' })
-    expect(leaderboard).toHaveFocus()
+    const discover = screen.getByRole('menuitem', { name: 'Discover' })
     const click = vi.fn((e: Event) => e.preventDefault())
-    leaderboard.addEventListener('click', click)
+    discover.addEventListener('click', click)
     pressMenuKey('Enter')
     expect(click).toHaveBeenCalled()
   })
@@ -428,14 +389,7 @@ describe('TheaterAvatarMenu — signed-out burger (allowSignedOut)', () => {
   })
 })
 
-/**
- * Live ⇄ Saved under Theater (owner: "Theater just has two sub
- * options: live and collection and we can just highlight which one is
- * selected"). Mobile has no room for a tab pill, so this is the only
- * switcher there. Desktop keeps the top-bar pill and still passes
- * `theaterTabs` so `.` + arrows can pick a tab.
- */
-describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
+describe('TheaterAvatarMenu — personal destinations', () => {
   beforeEach(() => {
     mockPathname = '/'
     invalidateAuthMe()
@@ -445,102 +399,54 @@ describe('TheaterAvatarMenu — Theater sub-options (theaterTabs)', () => {
     vi.unstubAllGlobals()
   })
 
-  async function openWith(tab: 'live' | 'collection', onTabChange = vi.fn()) {
+  async function openWith(tab?: 'live' | 'collection', onTabChange = vi.fn()) {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu theaterActive theaterTabs={{ tab, onTabChange }} />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
     return onTabChange
   }
 
-  it('lists Live then Saved under Theater, same 13px row as Library', async () => {
-    await openWith('live')
-
-    const theater = screen.getByRole('menuitem', { name: 'Theater' })
-    const live = screen.getByRole('menuitem', { name: 'Live' })
-    const collection = screen.getByRole('menuitem', { name: 'Saved' })
-    const library = screen.getByRole('menuitem', { name: 'Library' })
-    expect(theater.className).toContain('text-[13px]')
-    expect(live.className).toContain('text-[13px]')
-    expect(live.className).toContain('pl-[2.4rem]')
-    expect(collection.className).toContain('pl-[2.4rem]')
-    expect(theater.compareDocumentPosition(live) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(live.compareDocumentPosition(collection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(
-      collection.compareDocumentPosition(library) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-  })
-
-  it('highlights the selected tab and only that one', async () => {
-    await openWith('live')
-
-    const live = screen.getByText('Live').closest('button')!
-    const collection = screen.getByText('Saved').closest('button')!
-    expect(live).toHaveAttribute('aria-current', 'page')
-    expect(live.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
-    expect(collection).not.toHaveAttribute('aria-current')
-    expect(collection.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
-  })
-
-  it('moves the highlight with the selection', async () => {
+  it('puts My videos first, followed by Discover and Library', async () => {
     await openWith('collection')
-
-    expect(screen.getByText('Saved').closest('button')).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByText('Live').closest('button')).not.toHaveAttribute('aria-current')
+    expect(
+      screen
+        .getAllByRole('menuitem')
+        .slice(0, 3)
+        .map((item) => item.textContent),
+    ).toEqual(['My videos', 'Discover', 'Library'])
+    expect(screen.queryByRole('menuitem', { name: 'Theater' })).not.toBeInTheDocument()
   })
 
-  it('switches tabs through onTabChange, not a link, and closes the menu', async () => {
+  it.each([
+    ['live', 'Discover', 'My videos'],
+    ['collection', 'My videos', 'Discover'],
+  ] as const)('highlights only the %s destination', async (tab, selected, other) => {
+    await openWith(tab)
+    const current = screen.getByRole('menuitem', { name: selected })
+    expect(current).toHaveAttribute('aria-current', 'page')
+    expect(current.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: other })).not.toHaveAttribute('aria-current')
+  })
+
+  it('marks neither destination on a shared preview', async () => {
+    await openWith()
+    expect(screen.getByRole('menuitem', { name: 'My videos' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('switches through the tab callback and closes the menu', async () => {
     const onTabChange = await openWith('live')
-
-    // A real <a href> would reload the stage the viewer is watching; the
-    // chrome flips the tab locally first, then navigates.
-    const collection = screen.getByText('Saved').closest('button')!
-    expect(collection.tagName).toBe('BUTTON')
-
-    fireEvent.click(collection)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My videos' }))
     expect(onTabChange).toHaveBeenCalledWith('collection')
-    await waitFor(() => expect(screen.queryByText('Saved')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('My videos')).not.toBeInTheDocument())
   })
 
-  it('keeps Theater as a Radio menu row; Live and Saved are indented children', async () => {
-    await openWith('live')
-
-    expect(screen.getAllByText('Theater')).toHaveLength(1)
-    const theater = screen.getByRole('menuitem', { name: 'Theater' })
-    expect(theater.querySelector('svg')).toBeTruthy()
-    expect(screen.getByRole('menuitem', { name: 'Live' }).querySelector('svg')).toBeTruthy()
-    expect(screen.getByRole('menuitem', { name: 'Saved' }).querySelector('svg')).toBeTruthy()
-    // The selected child carries "you are here", not Theater itself.
-    expect(theater).not.toHaveAttribute('aria-current')
-    expect(theater.querySelector('[data-testid="menu-current-dot"]')).not.toBeInTheDocument()
-  })
-
-  it('clicking Theater on the home theater closes the menu without switching tabs', async () => {
+  it('keyboard navigation follows the same personal-first order', async () => {
     const onTabChange = await openWith('live')
-
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Theater' }))
-    expect(onTabChange).not.toHaveBeenCalled()
-    await waitFor(() => expect(screen.queryByText('Theater')).not.toBeInTheDocument())
-  })
-
-  it('arrows move Theater → Live → Saved', async () => {
-    await openWith('live')
-
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Theater' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus())
     pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'Live' })).toHaveFocus()
-    pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveFocus()
-    pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
-  })
-
-  it('falls back to the plain Theater entry when no tabs are passed', async () => {
-    mockAuthMe(AUTHED_ME)
-    render(<TheaterAvatarMenu theaterActive />)
-    fireEvent.click(await screen.findByLabelText('Account menu'))
-
-    expect(screen.getByText('Theater')).toBeInTheDocument()
-    expect(screen.queryByText('Saved')).not.toBeInTheDocument()
-    expect(screen.queryByText('Live')).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveFocus()
+    pressMenuKey('Enter')
+    expect(onTabChange).toHaveBeenCalledWith('live')
   })
 })

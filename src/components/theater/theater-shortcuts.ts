@@ -197,9 +197,9 @@ export function resolveTheaterShortcut(e: TheaterKeyLike): TheaterShortcut | nul
     case 'R':
       return 'cycleRepeat'
     case '1':
-      return 'tabLive'
-    case '2':
       return 'tabSaved'
+    case '2':
+      return 'tabLive'
     case 'u':
     case 'U':
       return 'undo'
@@ -265,8 +265,8 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
   {
     title: 'Theater',
     rows: [
-      { keys: ['1'], label: 'Live' },
-      { keys: ['2'], label: 'Saved' },
+      { keys: ['1'], label: 'My videos' },
+      { keys: ['2'], label: 'Discover' },
       { keys: ['Q'], label: 'Queue' },
       { keys: ['⇧Q'], label: 'Filter (desktop)' },
     ],

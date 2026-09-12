@@ -622,13 +622,13 @@ describe('TheaterShell: personal paste adds in place', () => {
     await act(async () => cycle())
     await act(async () => cycle())
     await act(async () => onNext())
-    expect(screen.getByText('All caught up')).toBeInTheDocument()
+    expect(screen.getByText('End of your queue')).toBeInTheDocument()
 
     await act(async () => {
       await capturedOnPastePost!('https://x.com/alice/status/99')
     })
 
-    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(screen.queryByText('End of your queue')).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe('twitter:99')
   })
 

@@ -379,6 +379,7 @@ authedTest.describe('mobile personal controls', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/settings')
     await page.getByRole('link', { name: 'ADHX home' }).click()
+    await expect(page).toHaveURL(/\/saved/)
     await expectTheaterReady(page)
 
     const viewportHeight = await page.evaluate(() => {

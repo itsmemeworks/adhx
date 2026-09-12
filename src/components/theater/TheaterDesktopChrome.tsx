@@ -81,6 +81,7 @@ import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
+import { TheaterWatchFilter } from './TheaterWatchFilter'
 import {
   currentFirstQueue,
   isTheaterQueueFilterActive,
@@ -550,6 +551,15 @@ export function DesktopStageChrome({
           />
         </div>
       </div>
+
+      {collection?.tab === 'collection' && collection.onWatchFilterChange && !declutter && (
+        <div className="pointer-events-auto absolute left-7 top-[4.75rem]">
+          <TheaterWatchFilter
+            value={collection.watchFilter ?? 'all'}
+            onChange={collection.onWatchFilterChange}
+          />
+        </div>
+      )}
 
       {/* Media veil: a light bottom fade under the 2-line caption. Long
           text goes to Read, not an expand/dim overlay. */}

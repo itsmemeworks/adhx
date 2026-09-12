@@ -41,8 +41,8 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help.getByText('Expand')).toBeVisible()
     await expect(help.getByText('Repeat')).toBeVisible()
     await expect(help.getByText('Theater')).toBeVisible()
-    await expect(help.getByText('Live', { exact: true })).toBeVisible()
-    await expect(help.getByText('Saved', { exact: true })).toBeVisible()
+    await expect(help.getByText('Discover', { exact: true })).toBeVisible()
+    await expect(help.getByText('My videos', { exact: true })).toBeVisible()
     await expect(help.getByText('Queue', { exact: true })).toBeVisible()
     await expect(help.getByText('Scroll text')).toBeVisible()
 
@@ -287,24 +287,26 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Library' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Live' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Saved' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Discover' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'My videos' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
   })
 
-  authedTest('. then arrows then Enter switches to Saved', async ({ page }) => {
+  authedTest('. then arrows then Enter switches to Discover', async ({ page }) => {
     await page.goto('/')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Theater' })).toBeFocused()
+    await expect(page.getByRole('menuitem', { name: 'My videos' })).toBeFocused()
     await page.keyboard.press('ArrowDown')
-    await expect(page.getByRole('menuitem', { name: 'Live' })).toBeFocused()
-    await page.keyboard.press('ArrowDown')
-    await expect(page.getByRole('menuitem', { name: 'Saved' })).toBeFocused()
+    await expect(page.getByRole('menuitem', { name: 'Discover' })).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect(page).toHaveURL(/\/saved/)
+    await expect(page.getByRole('button', { name: 'Discover', exact: true })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    await expect(page).not.toHaveURL(/\/saved/)
   })
 
   authedTest('. then arrows then Enter follows a menu link', async ({ page }) => {
@@ -313,8 +315,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Theater' })).toBeFocused()
-    await page.keyboard.press('ArrowDown')
+    await expect(page.getByRole('menuitem', { name: 'My videos' })).toBeFocused()
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
@@ -324,21 +325,21 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page).toHaveURL(/\/leaderboard/)
   })
 
-  authedTest('1 and 2 switch Live ⇄ Saved', async ({ page }) => {
+  authedTest('1 opens My videos and 2 opens Discover', async ({ page }) => {
     await page.goto('/live')
     await expectTheaterReady(page)
-    const liveTab = page.getByRole('button', { name: 'Live', exact: true })
-    const savedTab = page.getByRole('button', { name: 'Saved', exact: true })
+    const liveTab = page.getByRole('button', { name: 'Discover', exact: true })
+    const savedTab = page.getByRole('button', { name: 'My videos', exact: true })
     await expect(liveTab).toHaveAttribute('aria-current', 'true')
 
-    await page.keyboard.press('2')
+    await page.keyboard.press('1')
     await expect(page).toHaveURL(/\/saved/)
     await expectTheaterReady(page)
     await expect(savedTab).toHaveAttribute('aria-current', 'true')
 
-    // Focus the tab chrome so a stage iframe cannot eat Digit1.
+    // Focus the tab chrome so a stage iframe cannot eat Digit2.
     await savedTab.click()
-    await page.keyboard.press('1')
+    await page.keyboard.press('2')
     await expect(liveTab).toHaveAttribute('aria-current', 'true')
     await expect(page).not.toHaveURL(/\/saved/)
   })

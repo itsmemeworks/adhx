@@ -281,7 +281,7 @@ export function LandingPage() {
             <ValueProp
               icon={<Zap className="w-5 h-5" />}
               title="Watch it, don't doomscroll"
-              body="Go through Saved one post at a time. Keep it, or archive it and admit you'll never watch it."
+              body="Play My videos one post at a time. Switch between everything you saved and just the unwatched posts."
             />
             <ValueProp
               icon={<Search className="w-5 h-5" />}

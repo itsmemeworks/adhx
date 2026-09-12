@@ -26,7 +26,7 @@ Social links are easy to save and hard to revisit. ADHX turns them into a watcha
 - **Watch before signing up.** Every supported link has a clean, shareable preview page with theater playback.
 - **Save with email.** Sign-in uses an email magic link. An X account is not required.
 - **Bring four platforms together.** X posts, photos, videos, quotes, and Articles sit beside Instagram image posts and Reels, TikToks, and YouTube Shorts.
-- **Choose how you revisit things.** Watch your newest saves in **Saved**, browse and search them in the **library**, or group them into tagged **playlists**.
+- **Choose how you revisit things.** Watch all your saves, newest first, in **My videos**, browse and search them in the **library**, or group them into tagged **playlists**.
 - **Keep control.** Run ADHX yourself and keep the SQLite database on your own machine or volume.
 
 ## From a link to something useful
@@ -43,17 +43,21 @@ Replace the source host with `adhx.com`, paste a link into ADHX, or use one of t
 
 For example, `x.com/user/status/123` becomes `adhx.com/user/status/123`. You can also paste the full original URL after `adhx.com/`.
 
-Preview pages are useful even if you never save anything: they are readable, linkable pages that keep viewing inside ADHX. Saving adds the post to your account and makes it available in Saved and the library.
+Preview pages are useful even if you never save anything: they are readable, linkable pages that keep viewing inside ADHX. Saving adds the post to your account and makes it available in My videos and the library.
 
-## Saved, library, and playlists
+## My videos, library, and playlists
 
 These names describe different parts of ADHX:
 
-- **Saved** is your pile of saves and the active watch queue at `/saved`. Newest saves play first.
+- **My videos** at `/saved` is your signed-in home. It includes all your non-archived saves, newest first, including posts you have already watched.
 - **The library** is the searchable, filterable grid over those saves at `/library`.
 - **A playlist** is one tag you have made public. It plays as a looping theater at `/t/{username}/{tag}`.
 
-Archive removes a post from your active Saved queue without deleting it. Archive is private: it never creates a public activity event or tells other people what you archived. Use **Show archived** in the library to find those posts again.
+My videos starts with **All** selected each time you open it. Choose **Unwatched** to hide posts you have already passed in this browser. This filter is separate from Repeat: turning Repeat off plays the selected list once, while previously played posts remain available in the **Seen** section when All is selected.
+
+Watched history stays in this browser, with up to 500 recent marks retained. It does not sync between devices or create public activity. My videos loads the full collection in pages of 100; the first page is not a collection limit.
+
+Archive removes a post from your My videos queue without deleting it. Archive is private: it never creates a public activity event or tells other people what you archived. Use **Show archived** in the library to find those posts again.
 
 Tagging is private until you choose to publish a tag. A published tag becomes a playlist with:
 
@@ -63,11 +67,11 @@ Tagging is private until you choose to publish a tag. A published tag becomes a 
 - a **Save playlist** action that lets another signed-in person clone its posts and tag into their own account; and
 - a place on the public [`/leaderboard`](https://adhx.com/leaderboard), where playlists are ranked by views and clones across today, this week, this month, or all time.
 
-## Live and Trending
+## Discover and Trending
 
 ADHX also turns anonymous community activity into ways to discover what people are watching:
 
-- **Live** is the full-screen community theater. Signed-out visitors see it at `/`. Signed-in visits to `/` redirect to `/live`; `/live` is the signed-in Live route.
+- **Discover** is the secondary, full-screen community theater at `/live`. It shows recent community activity, rather than your personal collection. Signed-out visitors see the public theater at `/`; signed-in visits to `/` open My videos at `/saved`.
 - **Trending** at [`/trending`](https://adhx.com/trending) is the public ranked view. It orders active posts by momentum rather than simply showing the newest one first, with filters for videos, photos, text, and Articles.
 
 Public activity is anonymous. ADHX never exposes the user ID attached to an activity record, and private Archive actions do not enter the public pulse.
@@ -107,7 +111,7 @@ X · Instagram posts and Reels · TikTok · YouTube Shorts
         ADHX preview theater (no account)
                     │ email sign-in + Save
                     ▼
-       Saved queue ───── library
+       My videos ─────── library
             │               │
           Archive         tag + publish
           (private)          ▼

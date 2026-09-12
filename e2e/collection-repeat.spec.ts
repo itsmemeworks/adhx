@@ -53,9 +53,9 @@ authedTest.describe('collection repeat', () => {
       await expectTheaterReady(page)
       await expect(caption(page, TIKTOK_TWIN.text)).toBeVisible()
       await goNext(page)
-      await expect(page.getByRole('heading', { name: 'All caught up' })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'End of your queue' })).toHaveCount(0)
 
-      const allClear = page.getByRole('heading', { name: 'All caught up' })
+      const allClear = page.getByRole('heading', { name: 'End of your queue' })
       for (let step = 0; step < 20 && !(await allClear.isVisible()); step += 1) {
         await goNext(page)
       }
