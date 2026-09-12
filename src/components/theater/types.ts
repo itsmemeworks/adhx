@@ -94,8 +94,8 @@ export type TheaterMode = 'home' | 'shared' | 'playlist' | 'personal'
 /** Collection mode's Collection ↔ Live sub-tab (unified-theater-collection.md §2).
  * Internal values are unchanged (plumbed through TheaterShell, AuthedHome,
  * and the Header's `open-theater` dispatches) — only display order/label
- * changed: Live reads first and is the default landing tab, "Collection" is
- * labeled "Saved" so it's the viewer's own pile, not a shared playlist.
+ * changed: My videos reads first and is the default landing tab; Discover
+ * contains community activity.
  * See `PERSONAL_TAB_ORDER`/`PERSONAL_TAB_LABEL` below for the chrome's
  * single source of truth for both. */
 export type PersonalTab = 'collection' | 'live'
@@ -128,7 +128,7 @@ export const REPEAT_MODE_LABEL: Record<
   },
   all: {
     action: 'Keep playing',
-    state: 'Keeps playing — watched posts too, then round again',
+    state: 'Keeps playing the selected queue',
     queue: 'Keeps playing',
   },
   one: {
@@ -158,14 +158,13 @@ export function repeatModeLabel(
   return REPEAT_MODE_LABEL[mode]
 }
 
-/** Left-to-right render order for the Live/Saved tab switcher —
- * Live first, matching the default in TheaterShell's `useState`. */
-export const PERSONAL_TAB_ORDER: readonly PersonalTab[] = ['live', 'collection']
+/** Personal videos first; community discovery stays secondary. */
+export const PERSONAL_TAB_ORDER: readonly PersonalTab[] = ['collection', 'live']
 
 /** Display labels for the tab switcher (desktop top bar + mobile peek bar). */
 export const PERSONAL_TAB_LABEL: Record<PersonalTab, string> = {
-  live: 'Live',
-  collection: 'Saved',
+  live: 'Discover',
+  collection: 'My videos',
 }
 
 /** Identity + loop metadata for a public playlist theater (a shared tag — mode `'playlist'`). */
@@ -183,13 +182,16 @@ export type SavePlaylistStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 /** Live ⇄ Saved cluster — personal theater, or a signed-in shared preview. */
 export interface TheaterAccountTabs {
-  tab: PersonalTab
+  /** Shared previews belong to neither personal destination. */
+  tab?: PersonalTab
   onTabChange: (tab: PersonalTab) => void
   onClose: () => void
 }
 
 /** Collection-mode chrome contract — present only when `mode === 'personal'`. */
 export interface TheaterPersonalChrome {
+  watchFilter?: 'all' | 'unwatched'
+  onWatchFilterChange?: (filter: 'all' | 'unwatched') => void
   tab: PersonalTab
   onTabChange: (tab: PersonalTab) => void
   /** Archive: mark read and drop the post from the collection queue. */

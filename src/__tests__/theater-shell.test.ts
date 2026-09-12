@@ -116,14 +116,16 @@ describe('theaterQueueFilterLabel', () => {
 
 describe('theaterQueueEmptyHeadline', () => {
   it('names the selected types', () => {
-    expect(theaterQueueEmptyHeadline(['article'])).toBe('No text in Live right now')
+    expect(theaterQueueEmptyHeadline(['article'])).toBe('No text in Discover right now')
     expect(theaterQueueEmptyHeadline(['video', 'photo'])).toBe(
-      'No videos or photos in Live right now',
+      'No videos or photos in Discover right now',
     )
     expect(theaterQueueEmptyHeadline(['video', 'text', 'article'])).toBe(
-      'No videos or text in Live right now',
+      'No videos or text in Discover right now',
     )
-    expect(theaterQueueEmptyHeadline(['video'], 'Saved')).toBe('No videos in Saved right now')
+    expect(theaterQueueEmptyHeadline(['video'], 'My videos')).toBe(
+      'No videos in My videos right now',
+    )
   })
 })
 

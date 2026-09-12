@@ -136,16 +136,9 @@ function TheaterMenuEntry({
 }
 
 /**
- * The Theater Radio row plus Live / Saved indented under it (owner:
- * keep the same icon and 13px font as Library; the tabs are sub-rows with
- * their own icons). Mobile has no room for a tab pill in the top scrim, so
- * this is the only switcher there. Desktop keeps its top-bar pill for the
- * mouse and still mounts these rows so `.` + arrows can pick a tab.
- *
- * Selecting a tab goes through `onTabChange` rather than an `<a href>`: the
- * pair is routes (`/live` and `/saved`) but the chrome flips the tab locally
- * first so the switch is instant, then navigates — a plain link would reload
- * the stage the viewer is watching.
+ * Personal destinations are top-level rows, ordered My videos then Discover.
+ * The callback preserves in-place selection before route navigation. A shared
+ * preview omits `tab`, so neither destination is incorrectly marked current.
  */
 const PERSONAL_TAB_ICON: Record<PersonalTab, LucideIcon> = {
   live: Activity,
@@ -156,16 +149,13 @@ function TheaterTabsGroup({
   tab,
   onTabChange,
   onClose,
-  isHome,
 }: {
-  tab: PersonalTab
+  tab?: PersonalTab
   onTabChange: (tab: PersonalTab) => void
   onClose: () => void
-  isHome: boolean
 }) {
   return (
     <>
-      <TheaterMenuEntry isHome={isHome} onClose={onClose} markCurrent={false} />
       {PERSONAL_TAB_ORDER.map((t) => {
         const Icon = PERSONAL_TAB_ICON[t]
         return (
@@ -178,7 +168,7 @@ function TheaterTabsGroup({
               onTabChange(t)
               onClose()
             }}
-            className={`${MENU_ROW} w-full py-2.5 pr-4 pl-[2.4rem] text-left`}
+            className={`${MENU_ROW} w-full py-2.5 text-left`}
             style={{ color: tab === t ? INK : SUBTLE }}
           >
             <Icon size={15} />
@@ -221,12 +211,11 @@ export interface TheaterAvatarMenuProps {
    */
   theaterActive?: boolean
   /**
-   * Expands the Theater entry into Live / Saved with the selected one
-   * marked. Passed whenever the Live ⇄ Saved switch exists (personal
-   * theater + signed-in shared preview). Playlist / signed-out home omit it
-   * and keep the single Theater row.
+   * Personal destination callbacks, with an optional current destination.
+   * Shared previews omit the current tab. Without callbacks, signed-in
+   * visitors get ordinary links to My videos and Discover.
    */
-  theaterTabs?: { tab: PersonalTab; onTabChange: (tab: PersonalTab) => void }
+  theaterTabs?: { tab?: PersonalTab; onTabChange: (tab: PersonalTab) => void }
 }
 
 /**
@@ -498,19 +487,24 @@ export function TheaterAvatarMenu({
             </div>
           </div>
 
-          {/* Nav group — Theater first (the two tabs, or the single Theater
-              entry), then Library, then Tags / Leaderboard / Settings. Matches
-              the authed Header avatar menu so signed-in visitors aren't
-              stranded on a preview page. */}
+          {/* Personal destinations first, matching the Header navigation. */}
           {theaterTabs ? (
             <TheaterTabsGroup
               tab={theaterTabs.tab}
               onTabChange={theaterTabs.onTabChange}
               onClose={close}
-              isHome={isHome}
             />
           ) : (
-            <TheaterMenuEntry isHome={isHome} onClose={close} />
+            <>
+              <MenuLink href="/saved" onClick={close} current={isSavedPath(pathname)}>
+                <Inbox size={15} />
+                <span>My videos</span>
+              </MenuLink>
+              <MenuLink href="/live" onClick={close} current={pathname === '/live'}>
+                <Activity size={15} />
+                <span>Discover</span>
+              </MenuLink>
+            </>
           )}
           <MenuLink href="/library" onClick={close}>
             <Bookmark size={15} />

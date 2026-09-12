@@ -24,7 +24,7 @@ vi.mock('@/components/theater/TheaterDesktopChrome', () => ({
     accountTabs,
   }: {
     itemTags?: string[]
-    accountTabs?: { tab: string }
+    accountTabs?: { tab?: string }
   }) => (
     <div data-testid="desktop-tags" data-account-tab={accountTabs?.tab ?? ''}>
       {(itemTags ?? []).join(',')}
@@ -38,7 +38,7 @@ vi.mock('@/components/theater/TheaterMobileChrome', () => ({
     accountTabs,
   }: {
     itemTags?: string[]
-    accountTabs?: { tab: string }
+    accountTabs?: { tab?: string }
   }) => (
     <div data-testid="mobile-tags" data-account-tab={accountTabs?.tab ?? ''}>
       {(itemTags ?? []).join(',')}
@@ -122,8 +122,8 @@ describe('TheaterShell shared-lead tags', () => {
     })
     await waitFor(() => expect(screen.getByTestId('desktop-tags')).toHaveTextContent('social'))
     expect(screen.getByTestId('mobile-tags')).toHaveTextContent('social')
-    expect(screen.getByTestId('desktop-tags')).toHaveAttribute('data-account-tab', 'live')
-    expect(screen.getByTestId('mobile-tags')).toHaveAttribute('data-account-tab', 'live')
+    expect(screen.getByTestId('desktop-tags')).toHaveAttribute('data-account-tab', '')
+    expect(screen.getByTestId('mobile-tags')).toHaveAttribute('data-account-tab', '')
   })
 
   it('patches the Tag count when TagQuickPicker broadcasts bookmark-tags-changed', async () => {

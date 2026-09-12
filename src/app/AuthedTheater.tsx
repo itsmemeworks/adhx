@@ -1,22 +1,22 @@
 'use client'
 
 /**
- * The signed-in theater. Default landing is Live (`/live`) — leftover
- * community posts. Saved (`/saved`) is the unread pile you come back to.
+ * The signed-in theater. Default landing is My videos (`/saved`) — all
+ * your active saves, newest first. Discover (`/live`) is community activity.
  *
- * The Live ⇄ Saved switch is a pair of ROUTES rather than local state:
+ * The My videos ⇄ Discover switch is a pair of ROUTES rather than local state:
  *
- *   `/live`     Live — the community's last 24 hours (signed-in home)
- *   `/saved`    Saved — your own active queue
+ *   `/saved`    My videos — your complete active queue (signed-in home)
+ *   `/live`     Discover — the community's last 24 hours
  *   `/library`  the grid (filters, search, views) — `AuthedHome`
  *
  * Making each side a real URL means it's linkable, back/forward works, and a
  * reload keeps you where you were. The switch still flips the shell's tab
  * locally first so it responds on tap, then navigates.
  *
- * `TheaterShell` snapshots `personalItems` at mount (a Saved session is a
+ * `TheaterShell` snapshots `personalItems` at mount (a personal session is a
  * fixed queue), so the queue has to be in hand BEFORE the shell mounts —
- * hence the fetch-then-render on the `/saved` route only. Live never waits
+ * hence the fetch-then-render on the `/saved` route only. Discover never waits
  * on it: switching tabs is a navigation, so the queue is always loaded by
  * the route that needs it.
  *
@@ -48,7 +48,7 @@ export const TAB_ROUTES: Record<PersonalTab, '/live' | typeof SAVED_PATH> = {
 }
 
 export interface AuthedTheaterProps {
-  /** Server-rendered live seed — present on BOTH routes so flipping to Live has something to show before the navigation lands. */
+  /** Server-rendered live seed — present on BOTH routes so flipping to Discover has something to show before the navigation lands. */
   seed: TheaterFeedSeed
   tab: PersonalTab
   /** Deep-link: start (or prepend) this saved post. From `/saved?open=`. */
@@ -64,6 +64,7 @@ type CollectionLoad =
   | { status: 'ready'; items: FeedItem[]; start: number }
 
 async function loadCollectionQueue(
+  signal: AbortSignal,
   openId?: string,
   openPlatform?: string,
 ): Promise<{ items: FeedItem[]; start: number }> {
@@ -72,10 +73,45 @@ async function loadCollectionQueue(
     hideArchived: 'true',
     limit: String(COLLECTION_QUEUE_LIMIT),
   })
-  const res = await fetch(`/api/feed?${params}`)
-  if (!res.ok) throw new Error('feed failed')
-  const data = await res.json()
-  const queue: FeedItem[] = sortFeedNewestFirst(data.items ?? [])
+  const items: FeedItem[] = []
+  const identities = new Set<string>()
+  let total: number | undefined
+  let totalPages = 1
+  // Each request stays at the API's 100-row cap; the shell mounts only once
+  // the complete queue is available. A failed later page must not silently
+  // turn the first page into the user's entire collection.
+  for (let page = 1; page <= totalPages; page += 1) {
+    signal.throwIfAborted()
+    params.set('page', String(page))
+    const res = await fetch(`/api/feed?${params}`, { signal })
+    if (!res.ok) throw new Error('feed failed')
+    const data = await res.json()
+    signal.throwIfAborted()
+    const pagination = data.pagination
+    if (
+      !Array.isArray(data.items) ||
+      !pagination ||
+      pagination.page !== page ||
+      pagination.limit !== COLLECTION_QUEUE_LIMIT ||
+      !Number.isSafeInteger(pagination.total) ||
+      pagination.total < 0 ||
+      pagination.totalPages !== Math.ceil(pagination.total / COLLECTION_QUEUE_LIMIT) ||
+      (total !== undefined && pagination.total !== total)
+    ) {
+      throw new Error('feed pagination changed or is invalid')
+    }
+    total = pagination.total
+    totalPages = pagination.totalPages
+    const expectedLength = Math.min(COLLECTION_QUEUE_LIMIT, total! - items.length)
+    if (data.items.length !== expectedLength) throw new Error('feed page incomplete')
+    for (const item of data.items as FeedItem[]) {
+      const identity = `${item.platform ?? 'twitter'}:${item.id}`
+      if (identities.has(identity)) throw new Error('feed pagination repeated a post')
+      identities.add(identity)
+      items.push(item)
+    }
+  }
+  const queue = sortFeedNewestFirst(items)
   if (!openId) {
     let types: ReturnType<typeof parseTheaterQueueTypes> = []
     try {
@@ -97,7 +133,7 @@ async function loadCollectionQueue(
     : queue.findIndex((i) => i.id === openId)
   if (start !== -1) return { items: queue, start }
 
-  // Archived, or outside the first 100 — fetch that one row and put it first
+  // Archived — fetch that one row and put it first
   // so a card tap / `?open=` always lands on the post the viewer asked for.
   const oneParams = new URLSearchParams({
     hideArchived: 'false',
@@ -106,7 +142,7 @@ async function loadCollectionQueue(
   })
   oneParams.append('id', openId)
   if (openPlatform) oneParams.append('idPlatform', openPlatform)
-  const one = await fetch(`/api/feed?${oneParams}`)
+  const one = await fetch(`/api/feed?${oneParams}`, { signal })
   if (one.ok) {
     const body = await one.json()
     const item = openPlatform
@@ -127,17 +163,17 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
 
   useEffect(() => {
     if (!needsCollection) return
-    let cancelled = false
+    const controller = new AbortController()
     setLoad({ status: 'loading' })
-    loadCollectionQueue(openId, openPlatform)
+    loadCollectionQueue(controller.signal, openId, openPlatform)
       .then((result) => {
-        if (!cancelled) setLoad({ status: 'ready', ...result })
+        if (!controller.signal.aborted) setLoad({ status: 'ready', ...result })
       })
       .catch(() => {
-        if (!cancelled) setLoad({ status: 'error' })
+        if (!controller.signal.aborted) setLoad({ status: 'error' })
       })
     return () => {
-      cancelled = true
+      controller.abort()
     }
   }, [needsCollection, openId, openPlatform, retryKey])
 
@@ -168,7 +204,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#08070a] px-6">
         <p className="text-center text-white/70">
-          <span>Couldn&apos;t load Saved.</span>
+          <span>Couldn&apos;t load My videos.</span>
         </p>
         <button
           type="button"
@@ -184,7 +220,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
   if (needsCollection && load.status !== 'ready') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#08070a]">
-        <PostLoader variant="dark" size={72} caption="grabbing it…" label="Loading Saved posts" />
+        <PostLoader variant="dark" size={72} caption="grabbing it…" label="Loading My videos" />
       </div>
     )
   }

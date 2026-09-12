@@ -8,12 +8,12 @@ authedTest.describe('signed-in navigation', () => {
   })
 
   authedTest(
-    'header and account menu reach Theater, Library, Tags, and Settings',
+    'header and account menu reach My videos, Library, Tags, and Settings',
     async ({ page }) => {
       await page.goto('/library')
       await expect(caption(page, POST.echo.text)).toBeVisible({ timeout: 20_000 })
 
-      await page.getByRole('link', { name: 'Theater', exact: true }).click()
+      await page.getByRole('link', { name: 'My videos', exact: true }).click()
       await expectTheaterReady(page)
 
       await page.getByRole('button', { name: 'Account menu' }).click()
@@ -30,47 +30,65 @@ authedTest.describe('signed-in navigation', () => {
     },
   )
 
-  authedTest('signed-in / lands on Live', async ({ page }) => {
+  authedTest('signed-in / lands on My videos', async ({ page }) => {
     await page.goto('/')
-    await expect(page).toHaveURL(/\/live/)
+    await expect(page).toHaveURL(/\/saved/)
     await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Live', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'My videos', exact: true })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
   })
 
-  authedTest('Saved ↔ Live is a pair of routes', async ({ page }) => {
+  authedTest('My videos ↔ Discover is a pair of routes', async ({ page }) => {
     await page.goto('/saved')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
 
     await page.goto('/live')
     await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'My videos', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Saved', exact: true }).click()
+    await page.getByRole('button', { name: 'My videos', exact: true }).click()
     await expect(page).toHaveURL(/\/saved/)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
   })
 
-  authedTest('signed-in preview shows Live ⇄ Saved; Close goes to library', async ({ page }) => {
-    const previewPath = `/${POST.preview.author}/status/${POST.preview.id}`
-    await page.goto(previewPath)
-    await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Live' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
+  authedTest(
+    'signed-in preview offers both destinations without selecting one; Close goes to library',
+    async ({ page }) => {
+      const previewPath = `/${POST.preview.author}/status/${POST.preview.id}`
+      await page.goto(previewPath)
+      await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Discover' })).not.toHaveAttribute(
+        'aria-current',
+      )
+      await expect(
+        page.getByRole('button', { name: 'My videos', exact: true }),
+      ).not.toHaveAttribute('aria-current')
+      await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Saved', exact: true }).click()
-    await expect(page).toHaveURL(/\/saved/)
-    await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
+      await page.getByRole('button', { name: 'My videos', exact: true }).click()
+      await expect(page).toHaveURL(/\/saved/)
+      await expectTheaterReady(page)
+      await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
 
-    await page.goto(previewPath)
-    await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Close' }).click()
-    await expect(page).toHaveURL(/\/library/)
-  })
+      await page.goto(previewPath)
+      await expectTheaterReady(page)
+      await page.getByRole('button', { name: 'Discover', exact: true }).click()
+      await expect(page.getByRole('button', { name: 'Discover', exact: true })).toHaveAttribute(
+        'aria-current',
+        'true',
+      )
+
+      await page.goto(previewPath)
+      await expectTheaterReady(page)
+      await page.getByRole('button', { name: 'Close' }).click()
+      await expect(page).toHaveURL(/\/library/)
+    },
+  )
 
   authedTest('collection Close lands on the library grid', async ({ page }) => {
     await page.goto('/saved')

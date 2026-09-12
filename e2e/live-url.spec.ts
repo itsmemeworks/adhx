@@ -28,9 +28,9 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
   authedTest('clicking Saved after Live restores /saved', async ({ page }) => {
     await page.goto('/saved')
     await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Live', exact: true }).click()
+    await page.getByRole('button', { name: 'Discover', exact: true }).click()
     await expect(page).toHaveURL(/\/status\//, { timeout: 15_000 })
-    await page.getByRole('button', { name: 'Saved', exact: true }).click()
+    await page.getByRole('button', { name: 'My videos', exact: true }).click()
     await expect(page).toHaveURL(/\/saved/)
     await expect(page).not.toHaveURL(/\/status\//)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
@@ -48,26 +48,27 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
   })
 
-  authedTest('Saved Play once cursor and count survive a Live flip', async ({ page }) => {
+  authedTest('My videos starts with all saves again after a Discover visit', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('adhx-theater-repeat-saved', 'off')
     })
     await page.goto('/saved')
     await expectTheaterReady(page)
+    const initialCount = await visibleQueueCount(page).innerText()
     await goNext(page)
     await expect(caption(page, POST.bravo.text)).toBeVisible()
     const before = await visibleQueueCount(page).innerText()
     expect(before).toMatch(/\d+ in queue/)
 
-    await page.getByRole('button', { name: 'Live', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Live', exact: true })).toHaveAttribute(
+    await page.getByRole('button', { name: 'Discover', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Discover', exact: true })).toHaveAttribute(
       'aria-current',
       'true',
     )
-    await page.getByRole('button', { name: 'Saved', exact: true }).click()
+    await page.getByRole('button', { name: 'My videos', exact: true }).click()
     await expect(page).toHaveURL(/\/saved/)
-    await expect(caption(page, POST.bravo.text)).toBeVisible()
-    await expect(visibleQueueCount(page)).toHaveText(before)
+    await expect(caption(page, POST.alpha.text)).toBeVisible()
+    await expect(visibleQueueCount(page)).toHaveText(initialCount)
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
   })
 })

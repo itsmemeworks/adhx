@@ -1,9 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Signed-in shared preview: Live ⇄ Saved must hit the same
- * routes as `/` (`/saved`, Close → `/library`). Live is already
- * current on a preview, so that click is a no-op.
+ * Signed-in shared previews belong to neither destination. My videos and
+ * Discover open their routes; Close returns to the Library.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useState } from 'react'
@@ -32,10 +31,10 @@ function AccountTabButtons({ accountTabs }: { accountTabs?: TheaterAccountTabs }
   return (
     <div>
       <button type="button" onClick={() => accountTabs.onTabChange('live')}>
-        Live
+        Discover
       </button>
       <button type="button" onClick={() => accountTabs.onTabChange('collection')}>
-        Saved
+        My videos
       </button>
       <button type="button" onClick={accountTabs.onClose}>
         Close
@@ -128,7 +127,7 @@ describe('TheaterShell shared-preview account tabs', () => {
     resetSharedAutoSaveAttempts()
   })
 
-  it('Saved and Close push the personal-theater routes; Live is a no-op', async () => {
+  it('both destinations navigate and neither is marked current on a preview', async () => {
     const item = textItem('123')
     await act(async () => {
       render(
@@ -141,17 +140,23 @@ describe('TheaterShell shared-preview account tabs', () => {
       )
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Live' }))
-    expect(pushSpy).not.toHaveBeenCalled()
+    expect(
+      (mockDesktopChrome.mock.calls.at(-1)?.[0].accountTabs as TheaterAccountTabs).tab,
+    ).toBeUndefined()
+    expect(
+      (mockMobileChrome.mock.calls.at(-1)?.[0].accountTabs as TheaterAccountTabs).tab,
+    ).toBeUndefined()
+    fireEvent.click(screen.getByRole('button', { name: 'Discover' }))
+    expect(pushSpy).toHaveBeenCalledWith('/live')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
+    fireEvent.click(screen.getByRole('button', { name: 'My videos' }))
     expect(pushSpy).toHaveBeenCalledWith('/saved')
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(pushSpy).toHaveBeenCalledWith('/library')
   })
 
-  it('2 pushes /saved from the keyboard; 1 is a no-op', async () => {
+  it('1 opens My videos and 2 opens Discover from the keyboard', async () => {
     const item = textItem('123')
     await act(async () => {
       render(
@@ -167,12 +172,12 @@ describe('TheaterShell shared-preview account tabs', () => {
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }))
     })
-    expect(pushSpy).not.toHaveBeenCalled()
+    expect(pushSpy).toHaveBeenCalledWith('/saved')
 
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
     })
-    expect(pushSpy).toHaveBeenCalledWith('/saved')
+    expect(pushSpy).toHaveBeenCalledWith('/live')
   })
 
   it('signed-out shared preview does not mount the account tabs', async () => {
@@ -187,7 +192,7 @@ describe('TheaterShell shared-preview account tabs', () => {
         />,
       )
     })
-    expect(screen.queryByRole('button', { name: 'Saved' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'My videos' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
     expect(pushSpy).not.toHaveBeenCalled()
 
@@ -214,7 +219,7 @@ describe('TheaterShell shared-preview account tabs', () => {
     })
     expect(mockDesktopChrome.mock.calls.at(-1)?.[0].authed).toBe(false)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].authed).toBe(false)
-    expect(screen.queryByRole('button', { name: 'Saved' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'My videos' })).not.toBeInTheDocument()
 
     authMe = {
       me: { authenticated: true, user: { username: 'owner' } },
@@ -236,7 +241,7 @@ describe('TheaterShell shared-preview account tabs', () => {
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatCurrent).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('one')
-    expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'My videos' })).toBeInTheDocument()
   })
 
   it('lets settled client sign-out override a true SSR auth hint', async () => {
@@ -256,7 +261,7 @@ describe('TheaterShell shared-preview account tabs', () => {
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatCurrent).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('one')
-    expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'My videos' })).toBeInTheDocument()
 
     authMe = { me: { authenticated: false }, loading: false, refresh: vi.fn() }
     await act(async () => {
@@ -274,7 +279,7 @@ describe('TheaterShell shared-preview account tabs', () => {
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].authed).toBe(false)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatCurrent).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].repeatMode).toBe('one')
-    expect(screen.queryByRole('button', { name: 'Saved' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'My videos' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
   })
 
@@ -337,6 +342,6 @@ describe('TheaterShell shared-preview account tabs', () => {
 
     expect(mockDesktopChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
     expect(mockMobileChrome.mock.calls.at(-1)?.[0].authed).toBe(true)
-    expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'My videos' })).toBeInTheDocument()
   })
 })

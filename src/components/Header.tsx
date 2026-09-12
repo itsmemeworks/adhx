@@ -3,7 +3,18 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { Search, Settings, X, RefreshCw, Bookmark, Radio, LogOut, Tag, Trophy } from 'lucide-react'
+import {
+  Search,
+  Settings,
+  X,
+  RefreshCw,
+  Bookmark,
+  Inbox,
+  Compass,
+  LogOut,
+  Tag,
+  Trophy,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
 import { usePreferences } from '@/lib/preferences-context'
@@ -397,35 +408,30 @@ export function Header() {
               <MatterLogo size={20} />
             </Link>
 
-            {/* Primary nav — every entry is a real route now that the theater
-                has its own: signed-in `/` (and this Theater link) lands on
-                `/live`; `/saved` is the unread pile; the grid is
-                `/library`. "Theater" names the surface rather than one tab.
-                Only when authenticated, hidden on mobile (mobile uses the menu). */}
+            {/* Personal videos are the primary destination. Mobile uses the account menu. */}
             {authStatus?.authenticated && (
               <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
-                <Link
-                  href="/library"
-                  className={cn(
-                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/library'
-                      ? 'bg-clay/[0.12] text-clay'
-                      : 'text-ink-2 hover:text-ink',
-                  )}
-                >
-                  Library
-                </Link>
-                <Link
-                  href="/"
-                  className={cn(
-                    'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/' || pathname === '/live' || isSavedPath(pathname)
-                      ? 'bg-clay/[0.12] text-clay'
-                      : 'text-ink-2 hover:text-ink',
-                  )}
-                >
-                  Theater
-                </Link>
+                {[
+                  {
+                    href: '/saved',
+                    label: 'My videos',
+                    active: pathname === '/' || isSavedPath(pathname),
+                  },
+                  { href: '/live', label: 'Discover', active: pathname === '/live' },
+                  { href: '/library', label: 'Library', active: pathname === '/library' },
+                ].map(({ href, label, active }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'rounded-full px-3 py-1.5 font-semibold transition-colors',
+                      active ? 'bg-clay/[0.12] text-clay' : 'text-ink-2 hover:text-ink',
+                    )}
+                  >
+                    {label}
+                  </Link>
+                ))}
                 <Link
                   href="/tags"
                   className={cn(
@@ -565,22 +571,36 @@ export function Header() {
                         </div>
                       </div>
 
-                      {/* Nav + Settings links — Theater then Library, matching
-                          the theater avatar menu. */}
+                      {/* Same destination order as the theater account menu. */}
                       <div className="py-1">
-                        <Link
-                          href="/"
-                          onClick={() => setShowUserMenu(false)}
-                          className={cn(
-                            'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/' || pathname === '/live' || isSavedPath(pathname)
-                              ? 'font-semibold text-clay'
-                              : 'text-ink-2 hover:text-ink',
-                          )}
-                        >
-                          <Radio className="w-4 h-4" />
-                          Theater
-                        </Link>
+                        {[
+                          {
+                            href: '/saved',
+                            label: 'My videos',
+                            Icon: Inbox,
+                            active: pathname === '/' || isSavedPath(pathname),
+                          },
+                          {
+                            href: '/live',
+                            label: 'Discover',
+                            Icon: Compass,
+                            active: pathname === '/live',
+                          },
+                        ].map(({ href, label, Icon, active }) => (
+                          <Link
+                            key={href}
+                            href={href}
+                            onClick={() => setShowUserMenu(false)}
+                            aria-current={active ? 'page' : undefined}
+                            className={cn(
+                              'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
+                              active ? 'font-semibold text-clay' : 'text-ink-2 hover:text-ink',
+                            )}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span>{label}</span>
+                          </Link>
+                        ))}
                         <Link
                           href="/library"
                           onClick={() => setShowUserMenu(false)}

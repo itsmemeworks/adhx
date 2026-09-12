@@ -230,8 +230,8 @@ describe('useTheaterKeyboard: isPlaybackHidden space guard', () => {
     renderHook(() => useTheaterKeyboard(baseArgs({ onTabChange })))
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' })))
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' })))
-    expect(onTabChange).toHaveBeenNthCalledWith(1, 'live')
-    expect(onTabChange).toHaveBeenNthCalledWith(2, 'collection')
+    expect(onTabChange).toHaveBeenNthCalledWith(1, 'collection')
+    expect(onTabChange).toHaveBeenNthCalledWith(2, 'live')
 
     const silent = baseArgs()
     renderHook(() => useTheaterKeyboard(silent))

@@ -63,6 +63,7 @@ import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
+import { TheaterWatchFilter } from './TheaterWatchFilter'
 import {
   isTheaterQueueFilterActive,
   theaterQueueFilterLabel,
@@ -523,8 +524,8 @@ export function TheaterMobileChrome({
           </a>
           <div className="pointer-events-auto relative z-[71] flex flex-none items-center gap-1.5">
             {current ? <FlameChip trendCount={trendCount} /> : null}
-            {/* Same add-in-place paste as desktop — stay on Live / My
-                Collection; do not bounce to a preview page. */}
+            {/* Same paste flow as desktop: save in place, with a preview fallback
+                if metadata cannot be saved. */}
             <PasteLinkButton iconOnly onPastePost={onPastePost} />
             {/* Live ⇄ Saved lives in this menu on mobile, as two
                 sub-options under Theater (owner: a tab pill up here "is
@@ -538,6 +539,17 @@ export function TheaterMobileChrome({
               theaterActive
               theaterTabs={{ tab: collection.tab, onTabChange: collection.onTabChange }}
             />
+          </div>
+          <div className="pointer-events-auto absolute left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] top-[calc(max(0.75rem,env(safe-area-inset-top))+3.5rem)] flex items-center justify-between gap-3">
+            <span className="rounded-full bg-black/35 px-3 py-2 text-sm font-semibold text-white backdrop-blur-md">
+              {collection.tab === 'collection' ? 'My videos' : 'Discover'}
+            </span>
+            {collection.tab === 'collection' && collection.onWatchFilterChange && (
+              <TheaterWatchFilter
+                value={collection.watchFilter ?? 'all'}
+                onChange={collection.onWatchFilterChange}
+              />
+            )}
           </div>
         </div>
       ) : playlist ? (

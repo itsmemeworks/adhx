@@ -149,7 +149,7 @@ function StarterCard({ entry }: { entry: StarterEntry }) {
             disabled={state === 'cloning'}
             className={SURFACE_BUTTON}
           >
-            {state === 'cloning' ? 'Adding…' : 'Add to Saved'}
+            {state === 'cloning' ? 'Adding…' : 'Add to My videos'}
           </button>
           {state === 'error' && (
             <span className="text-[10.5px] text-red-600 dark:text-red-400">

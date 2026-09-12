@@ -10,8 +10,7 @@ import { collectionPath } from '@/lib/theater/collection-href'
 /**
  * `/` — signed-out public live theater + crawlable static list.
  *
- * Signed IN this redirects to `/live` (community leftover). Saved is
- * `/saved`. An explicit add (`?added=success|duplicate`) still opens
+ * Signed IN this redirects to My videos at `/saved`. An explicit add (`?added=success|duplicate`) still opens
  * the saved post on `/saved`.
  *
  * force-dynamic: session cookie + runtime SQLite (migrated at container start).
@@ -35,7 +34,7 @@ export default async function HomePage({
     if ((params.added === 'success' || params.added === 'duplicate') && addedId) {
       redirect(collectionPath({ open: addedId, platform: params.platform }))
     }
-    redirect('/live')
+    redirect('/saved')
   }
 
   const seed = await getTheaterFeed()

@@ -1463,7 +1463,7 @@ describe('DesktopStageChrome', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
     const closeBtn = screen.getByLabelText('Close')
-    const liveTab = screen.getByText('Live', { selector: 'button' })
+    const liveTab = screen.getByText('Discover', { selector: 'button' })
     // Same immediate pill container as the tab buttons (contained cluster).
     expect(closeBtn.parentElement).toBe(liveTab.parentElement)
     fireEvent.click(closeBtn)
@@ -1662,7 +1662,7 @@ describe('DesktopStageChrome: Save/Share button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Tag 6' })).not.toBeInTheDocument()
   })
 
-  it('signed-in shared preview shows Live ⇄ Saved, not the visitor LIVE badge', () => {
+  it('signed-in shared preview offers both destinations without selecting either', () => {
     const onTabChange = vi.fn()
     const onClose = vi.fn()
     render(
@@ -1671,16 +1671,19 @@ describe('DesktopStageChrome: Save/Share button hierarchy', () => {
         mode="shared"
         authed
         current={videoItem()}
-        accountTabs={{ tab: 'live', onTabChange, onClose }}
+        accountTabs={{ onTabChange, onClose }}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Live' })).toHaveAttribute('aria-current', 'true')
-    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
+    expect(screen.getByRole('button', { name: 'Discover' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('button', { name: 'My videos' })).not.toHaveAttribute('aria-current')
+    fireEvent.click(screen.getByRole('button', { name: 'Discover' }))
+    expect(onTabChange).toHaveBeenCalledWith('live')
+    fireEvent.click(screen.getByRole('button', { name: 'My videos' }))
     expect(onTabChange).toHaveBeenCalledWith('collection')
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(onClose).toHaveBeenCalled()
     // Visitor live-dot badge is gone — only the Live tab button remains.
-    expect(screen.getAllByText('Live')).toHaveLength(1)
+    expect(screen.getAllByText('Discover')).toHaveLength(1)
   })
 
   it('collection live-tab Save carries the clay outline while Share stays plain glass', () => {
@@ -1782,7 +1785,7 @@ describe('DesktopStageChrome: Save/Share button hierarchy', () => {
     expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
   })
 
-  it('renders Live before Saved, not the bare "Collection" label', () => {
+  it('renders My videos before Discover', () => {
     const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
@@ -1797,10 +1800,10 @@ describe('DesktopStageChrome: Save/Share button hierarchy', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem()} collection={collection} />)
 
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
-    const liveTab = screen.getByText('Live', { selector: 'button' })
-    const collectionTab = screen.getByText('Saved')
+    const liveTab = screen.getByText('Discover', { selector: 'button' })
+    const collectionTab = screen.getByText('My videos')
     expect(
-      liveTab.compareDocumentPosition(collectionTab) & Node.DOCUMENT_POSITION_FOLLOWING,
+      collectionTab.compareDocumentPosition(liveTab) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })
 })
@@ -2233,7 +2236,7 @@ describe('DesktopStageChrome: theaterTabs prop wiring', () => {
         theaterTabs: { tab: 'live', onTabChange: collection.onTabChange },
       }),
     )
-    expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'My videos' })).toBeInTheDocument()
   })
 
   it('passes Live / Saved into the avatar menu from signed-in shared tabs', () => {
@@ -2243,11 +2246,11 @@ describe('DesktopStageChrome: theaterTabs prop wiring', () => {
         {...stageBase}
         mode="shared"
         current={videoItem()}
-        accountTabs={{ tab: 'live', onTabChange, onClose: vi.fn() }}
+        accountTabs={{ onTabChange, onClose: vi.fn() }}
       />,
     )
     expect(mockTheaterAvatarMenu).toHaveBeenCalledWith(
-      expect.objectContaining({ theaterTabs: { tab: 'live', onTabChange } }),
+      expect.objectContaining({ theaterTabs: { tab: undefined, onTabChange } }),
     )
   })
 

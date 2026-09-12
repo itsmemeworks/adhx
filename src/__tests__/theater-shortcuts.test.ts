@@ -35,8 +35,8 @@ describe('resolveTheaterShortcut', () => {
     expect(resolveTheaterShortcut({ key: 'R' })).toBe('cycleRepeat')
     expect(resolveTheaterShortcut({ key: 'i' })).toBe(null)
     expect(resolveTheaterShortcut({ key: 'I' })).toBe(null)
-    expect(resolveTheaterShortcut({ key: '1' })).toBe('tabLive')
-    expect(resolveTheaterShortcut({ key: '2' })).toBe('tabSaved')
+    expect(resolveTheaterShortcut({ key: '1' })).toBe('tabSaved')
+    expect(resolveTheaterShortcut({ key: '2' })).toBe('tabLive')
     expect(resolveTheaterShortcut({ key: 'u' })).toBe('undo')
     expect(resolveTheaterShortcut({ key: 'w' })).toBe('replay')
     expect(resolveTheaterShortcut({ key: 'p' })).toBe('keepPlaying')
@@ -125,11 +125,11 @@ describe('resolveTheaterShortcut', () => {
     expect(actions?.rows.find((r) => r.label === 'Read / Watch')?.keys).toEqual(['F'])
   })
 
-  it('lists Live, Saved, Queue, and the desktop Filter shortcut on theater help', () => {
+  it('lists My videos, Discover, Queue, and the desktop Filter shortcut on theater help', () => {
     const theater = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Theater')
     expect(theater?.rows).toEqual([
-      { keys: ['1'], label: 'Live' },
-      { keys: ['2'], label: 'Saved' },
+      { keys: ['1'], label: 'My videos' },
+      { keys: ['2'], label: 'Discover' },
       { keys: ['Q'], label: 'Queue' },
       { keys: ['⇧Q'], label: 'Filter (desktop)' },
     ])

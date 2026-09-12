@@ -347,8 +347,7 @@ export function TheaterShell({
         return
       }
       if (mode !== 'shared' || !signedIn) return
-      if (tab === 'live') return
-      router.push('/saved')
+      router.push(tab === 'collection' ? '/saved' : '/live')
     },
     [isPersonal, changePersonalTab, mode, signedIn, router],
   )
@@ -392,12 +391,23 @@ export function TheaterShell({
   )
   const personalQueueRef = useRef(personalQueue)
   personalQueueRef.current = personalQueue
+  // Watching and repeating are independent: All never hides watched saves.
+  const [watchFilter, setWatchFilter] = useState<'all' | 'unwatched'>('all')
+  const watchFilterRef = useRef(watchFilter)
+  watchFilterRef.current = watchFilter
+  const isSavedWatchedRef = useRef<(key: string) => boolean>(() => false)
+  const savedRunKeysRef = useRef(new Set<string>())
   const queueTypesRef = useRef<ContentType[]>([])
   const typeFilterActiveRef = useRef(false)
   const allowPersonalIndex = useCallback((i: number) => {
     const queue = personalQueueRef.current
     const item = queue[i]
     if (!item) return false
+    if (
+      watchFilterRef.current === 'unwatched' &&
+      isSavedWatchedRef.current(theaterItemKey(feedItemToTheaterItem(item)))
+    )
+      return false
     return feedItemMatchesQueueTypes(item, typeFilterActiveRef.current ? queueTypesRef.current : [])
   }, [])
   const [personalIndex, setPersonalIndex] = useState(() => Math.max(0, initialPersonalIndex ?? 0))
@@ -413,17 +423,11 @@ export function TheaterShell({
     const prev = previousPersonalTabRef.current
     previousPersonalTabRef.current = personalTab
     if (prev !== 'live' || personalTab !== 'collection') return
+    savedRunKeysRef.current.clear()
     const queue = personalQueueRef.current
-    const types = typeFilterActiveRef.current ? queueTypesRef.current : []
-    const next = savedStartIndex(queue.length, {
-      playingIndex: 0,
-      matches: (i) => {
-        const item = queue[i]
-        return !!item && feedItemMatchesQueueTypes(item, types)
-      },
-    })
+    const next = savedStartIndex(queue.length, { playingIndex: 0, matches: allowPersonalIndex })
     if (next !== personalIndexRef.current) setPersonalIndex(next)
-  }, [personalTab])
+  }, [personalTab, allowPersonalIndex])
   // Adds may reset Videos → All. That is not a user filter tap — keep the
   // current post instead of jumping to the newest prepend. `?open=`
   // skips the first hydrate clamp for the same reason.
@@ -557,10 +561,7 @@ export function TheaterShell({
     [personalQueue],
   )
   const [playedSavedKeys, setPlayedSavedKeys] = useState<Set<string>>(() => readPlayedSavedKeys())
-  const playedSavedKeysRef = useRef(playedSavedKeys)
-  playedSavedKeysRef.current = playedSavedKeys
   const personalOrderedQueueRef = useRef<TheaterItem[]>([])
-  const personalSeenStartIndexRef = useRef(-1)
   const personalCurrentKey = personalCurrentFeedItem
     ? theaterItemKey(feedItemToTheaterItem(personalCurrentFeedItem))
     : null
@@ -572,6 +573,7 @@ export function TheaterShell({
   useEffect(() => {
     const prev = prevSavedKeyRef.current
     if (prev && prev !== personalCurrentKey && savedWatchLeaveRef.current) {
+      seenSet.markSeen(prev)
       setPlayedSavedKeys((s) => {
         if (s.has(prev)) return s
         const next = new Set(s)
@@ -581,8 +583,25 @@ export function TheaterShell({
     }
     savedWatchLeaveRef.current = false
     prevSavedKeyRef.current = personalCurrentKey
-  }, [personalCurrentKey])
-  const personalIsSeen = useCallback((key: string) => playedSavedKeys.has(key), [playedSavedKeys])
+  }, [personalCurrentKey, seenSet.markSeen])
+  const personalIsSeen = useCallback(
+    (key: string) => playedSavedKeys.has(key) || seenSet.isSeen(key),
+    [playedSavedKeys, seenSet.isSeen],
+  )
+  isSavedWatchedRef.current = personalIsSeen
+  const changeWatchFilter = useCallback(
+    (next: 'all' | 'unwatched') => {
+      if (watchFilterRef.current === next) return
+      watchFilterRef.current = next
+      setWatchFilter(next)
+      savedRunKeysRef.current.clear()
+      savedWatchLeaveRef.current = false
+      const first = personalQueueRef.current.findIndex((_, i) => allowPersonalIndex(i))
+      setPersonalIndex(first < 0 ? personalQueueRef.current.length : first)
+      userPausedRef.current = false
+    },
+    [allowPersonalIndex],
+  )
   useEffect(() => {
     writePlayedSavedKeys(playedSavedKeys)
   }, [playedSavedKeys])
@@ -670,34 +689,50 @@ export function TheaterShell({
    * shifts the next post INTO `idx`, so staying put IS advancing. Later is
    * different and still just advances — "show me this again" means keep it.
    */
-  const removeFromPersonalQueue = useCallback((item: FeedItem) => {
-    const platform = item.platform ?? 'twitter'
-    // Removed by IDENTITY, not by the index the caller captured. These handlers
-    // close over `personalIndex`, and the keyboard listener re-subscribes only
-    // after a render — so two events landing in the same tick (OS key-repeat
-    // on ArrowRight, a fast double-tap) both carried the SAME stale index, and
-    // the second removal took whichever unresolved post had slid into that
-    // slot. Filtering by key makes a repeat a no-op instead (review finding).
-    //
-    // `filter`, not `toSpliced`: the latter is ES2023 and Next's compiler does
-    // not polyfill prototype methods, so on iOS 16.0-16.3 it is `undefined`
-    // and pressing Archive would throw into the error boundary. This project
-    // targets ES2017 for exactly that reason.
-    //
-    // If the dropped row sat *before* the cursor (another window archived an
-    // earlier post), slide the index back so we stay on the same post.
-    const removedAt = personalQueueRef.current.findIndex(
-      (f) => f.id === item.id && (f.platform ?? 'twitter') === platform,
-    )
-    if (removedAt === -1) return
-    // Keep the ref in lockstep so a same-tick second call (local Archive
-    // also fires `tweet-added` with `removed`) is a no-op, not a second splice.
-    personalQueueRef.current = personalQueueRef.current.filter(
-      (f) => !(f.id === item.id && (f.platform ?? 'twitter') === platform),
-    )
-    setPersonalQueue(personalQueueRef.current)
-    setPersonalIndex((i) => (removedAt < i ? i - 1 : i))
-  }, [])
+  const removeFromPersonalQueue = useCallback(
+    (item: FeedItem) => {
+      const platform = item.platform ?? 'twitter'
+      // Removed by IDENTITY, not by the index the caller captured. These handlers
+      // close over `personalIndex`, and the keyboard listener re-subscribes only
+      // after a render — so two events landing in the same tick (OS key-repeat
+      // on ArrowRight, a fast double-tap) both carried the SAME stale index, and
+      // the second removal took whichever unresolved post had slid into that
+      // slot. Filtering by key makes a repeat a no-op instead (review finding).
+      //
+      // `filter`, not `toSpliced`: the latter is ES2023 and Next's compiler does
+      // not polyfill prototype methods, so on iOS 16.0-16.3 it is `undefined`
+      // and pressing Archive would throw into the error boundary. This project
+      // targets ES2017 for exactly that reason.
+      //
+      // If the dropped row sat *before* the cursor (another window archived an
+      // earlier post), slide the index back so we stay on the same post.
+      const removedAt = personalQueueRef.current.findIndex(
+        (f) => f.id === item.id && (f.platform ?? 'twitter') === platform,
+      )
+      if (removedAt === -1) return
+      // Keep the ref in lockstep so a same-tick second call (local Archive
+      // also fires `tweet-added` with `removed`) is a no-op, not a second splice.
+      personalQueueRef.current = personalQueueRef.current.filter(
+        (f) => !(f.id === item.id && (f.platform ?? 'twitter') === platform),
+      )
+      setPersonalQueue(personalQueueRef.current)
+      setPersonalIndex((i) => {
+        if (removedAt !== i) return removedAt < i ? i - 1 : i
+        const queue = personalQueueRef.current
+        for (let offset = 0; offset < queue.length; offset++) {
+          const candidate = (i + offset) % queue.length
+          const key = theaterItemKey(feedItemToTheaterItem(queue[candidate]))
+          if (
+            allowPersonalIndex(candidate) &&
+            (repeatModeRef.current !== 'off' || !savedRunKeysRef.current.has(key))
+          )
+            return candidate
+        }
+        return queue.length
+      })
+    },
+    [allowPersonalIndex],
+  )
 
   const prependToPersonalQueue = useCallback(
     (item: FeedItem) => {
@@ -847,16 +882,16 @@ export function TheaterShell({
     savedWatchLeaveRef.current = true
     const repeat = repeatModeRef.current === 'one' ? 'all' : repeatModeRef.current
     if (repeatModeRef.current === 'one') setSavedRepeatMode('all')
+    savedRunKeysRef.current.add(currentKey)
     const ordered = personalOrderedQueueRef.current
     const currentAt = ordered.findIndex((item) => theaterItemKey(item) === currentKey)
-    const nextAt = currentAt + 1
-    const next = currentAt >= 0 ? ordered[nextAt] : null
+    const candidates = currentAt < 0 ? [] : ordered.slice(currentAt + 1)
+    const next = candidates.find((item) => {
+      const key = theaterItemKey(item)
+      return repeat !== 'off' || !savedRunKeysRef.current.has(key)
+    })
     const nextKey = next ? theaterItemKey(next) : null
-    const reachedSeen =
-      repeat === 'off' &&
-      personalSeenStartIndexRef.current >= 0 &&
-      nextAt >= personalSeenStartIndexRef.current
-    if (!nextKey || reachedSeen) {
+    if (!nextKey) {
       setPersonalIndex(personalQueueRef.current.length)
       return
     }
@@ -937,9 +972,12 @@ export function TheaterShell({
   }, [skipCurrent])
 
   const keepPlayingCollection = useCallback(() => {
+    changeWatchFilter('all')
+    savedRunKeysRef.current.clear()
     setSavedRepeatMode('all')
-    setPersonalIndex(0)
-  }, [])
+    const first = personalQueueRef.current.findIndex((_, i) => allowPersonalIndex(i))
+    setPersonalIndex(first < 0 ? personalQueueRef.current.length : first)
+  }, [changeWatchFilter, allowPersonalIndex, setSavedRepeatMode])
 
   // Flush any pending delete, and cancel the undo-toast dismiss timer, when
   // the shell unmounts (AuthedHome closes collection by conditionally unmounting
@@ -1287,9 +1325,19 @@ export function TheaterShell({
   queueTypesRef.current = queueTypes
   typeFilterActiveRef.current = typeFilterActive
 
-  const personalLensItems = useMemo(
+  const personalTypeItems = useMemo(
     () => applyTheaterTypeLens(personalDisplayItems, typeFilterActive ? queueTypes : []),
     [personalDisplayItems, typeFilterActive, queueTypes],
+  )
+  const personalLensItems = useMemo(
+    () =>
+      watchFilter === 'all'
+        ? personalTypeItems
+        : personalTypeItems.filter((item) => {
+            const key = theaterItemKey(item)
+            return key === personalCurrentKey || !personalIsSeen(key)
+          }),
+    [personalTypeItems, watchFilter, personalCurrentKey, personalIsSeen],
   )
   const personalLensIndex = useMemo(() => {
     if (!personalCurrentFeedItem) return personalLensItems.length
@@ -1306,11 +1354,17 @@ export function TheaterShell({
     }
     const queue = personalQueueRef.current
     const types = typeFilterActive ? queueTypes : []
+    savedRunKeysRef.current.clear()
     const next = savedStartIndex(queue.length, {
       playingIndex: skipSavedClampRef.current ? personalIndexRef.current : 0,
       matches: (i) => {
         const item = queue[i]
-        return !!item && feedItemMatchesQueueTypes(item, types)
+        return (
+          !!item &&
+          feedItemMatchesQueueTypes(item, types) &&
+          (watchFilterRef.current === 'all' ||
+            !isSavedWatchedRef.current(theaterItemKey(feedItemToTheaterItem(item))))
+        )
       },
     })
     if (next !== personalIndexRef.current) setPersonalIndex(next)
@@ -1745,7 +1799,7 @@ export function TheaterShell({
   const loopingSingleItem =
     !isSharedUnavailableOnCurrent &&
     (isCollectionTab ? personalLensItems.length : displayItems.length) === 1 &&
-    (loop || effectiveRepeatMode === 'all')
+    (loop || (effectiveRepeatMode === 'all' && !(isCollectionTab && watchFilter === 'unwatched')))
   const repeatCurrentActive =
     isSharedPinnedOnCurrent || effectiveRepeatMode === 'one' || loopingSingleItem
   // Read fresh inside the `theater-advance` listener (empty-deps-registered
@@ -2040,15 +2094,18 @@ export function TheaterShell({
       personalFinishedRef.current &&
       personalQueueLengthRef.current > 0
     ) {
-      setPersonalIndex(0)
+      const first = personalQueueRef.current.findIndex((_, i) => allowPersonalIndex(i))
+      setPersonalIndex(first < 0 ? personalQueueRef.current.length : first)
     }
-    if (next === 'off' && isCollectionTab) {
-      const freshRun = new Set<string>()
-      playedSavedKeysRef.current = freshRun
-      setPlayedSavedKeys(freshRun)
-    }
+    if (next === 'off' && isCollectionTab) savedRunKeysRef.current.clear()
     setRepeatMode(next)
-  }, [loop, isCollectionTab, promoteSharedPinToRepeatAll, releaseSharedLeadIfLeaving])
+  }, [
+    loop,
+    isCollectionTab,
+    promoteSharedPinToRepeatAll,
+    releaseSharedLeadIfLeaving,
+    allowPersonalIndex,
+  ])
 
   // Re-watch all: mark the current playlist unseen and play newest-first
   // as a fresh Repeat-off run. Finished posts go to Seen again.
@@ -2297,18 +2354,13 @@ export function TheaterShell({
   // your own") is nonsense — the chromes swap those CTAs for a Manage link.
   const isPlaylistOwner =
     !!playlist && !!scopedAuthMe?.user?.username && scopedAuthMe.user.username === playlist.curator
-  // Signed-in preview: same Live ⇄ Saved cluster as `/`. Live is
-  // current (this page is the live pulse with a pinned lead); Saved
-  // and Close are the personal-theater routes. Do not pass `personalChrome`
+  // A shared preview belongs to neither My videos nor Discover. Both
+  // destinations remain available without claiming the preview is a saved queue. Do not pass `personalChrome`
   // — that would swap the shared Save/Tag pill for the live-tab pair.
   const sharedAccountTabs: TheaterAccountTabs | undefined =
     mode === 'shared' && signedIn
       ? {
-          tab: 'live',
-          onTabChange: (tab) => {
-            if (tab === 'live') return
-            router.push('/saved')
-          },
+          onTabChange: (tab) => router.push(tab === 'collection' ? '/saved' : '/live'),
           onClose: () => router.push('/library'),
         }
       : undefined
@@ -2574,7 +2626,7 @@ export function TheaterShell({
     personalDisplayItems: orderLifoQueue(personalLensItems, {
       currentKey: personalCurrentKey,
       onlyUnseen: effectiveRepeatMode === 'off',
-      isSeen: personalIsSeen,
+      isSeen: (key) => savedRunKeysRef.current.has(key),
       rotateCurrent: !personalFinished && !!personalCurrentKey,
       pinNextKey: pasteInterruptKey,
       preserveOrder: true,
@@ -2582,7 +2634,7 @@ export function TheaterShell({
     personalQueueItems: orderLifoQueue(personalLensItems, {
       currentKey: personalCurrentKey,
       onlyUnseen: effectiveRepeatMode === 'off',
-      isSeen: personalIsSeen,
+      isSeen: (key) => savedRunKeysRef.current.has(key),
       rotateCurrent: !personalFinished && !!personalCurrentKey,
       pinNextKey: pasteInterruptKey,
       preserveOrder: true,
@@ -2613,14 +2665,13 @@ export function TheaterShell({
   const settledListedSeenStartIndex = settledQueueOrder.seenStartIndex
   if (isCollectionTab) {
     personalOrderedQueueRef.current = settledListedItems
-    personalSeenStartIndexRef.current = settledListedSeenStartIndex
   }
   const personalPasteResolving = isPersonal ? pasteResolvingItem : null
   const personalPasteKey = personalPasteResolving ? theaterItemKey(personalPasteResolving) : null
   // The pending item owns the visible stage immediately, but never enters an
   // authoritative queue. Keeping `current` null hides actions for the old
-  // post; success installs the resolved row, while failure reveals the exact
-  // queue/cursor that was underneath.
+  // post; success installs the resolved row, while save failure opens the
+  // preview without uncovering the previous clip.
   const chromeCurrent = personalPasteResolving ? null : settledChromeCurrent
   const chromeItems = personalPasteResolving
     ? [
@@ -2648,6 +2699,8 @@ export function TheaterShell({
           (fi) => theaterItemKey(feedItemToTheaterItem(fi)) === key,
         )
         if (idx !== -1) {
+          if (personalCurrentKey && personalCurrentKey !== key)
+            savedRunKeysRef.current.add(personalCurrentKey)
           savedWatchLeaveRef.current = true
           setPersonalIndex(idx)
         }
@@ -2657,6 +2710,8 @@ export function TheaterShell({
   const personalChrome: TheaterPersonalChrome | undefined = isPersonal
     ? {
         tab: personalTab,
+        watchFilter,
+        onWatchFilterChange: changeWatchFilter,
         onTabChange: changePersonalTab,
         onDone: archiveCurrent,
         onTag: () => {
@@ -2689,7 +2744,7 @@ export function TheaterShell({
       ref={shellRef}
       role={isPersonal ? 'dialog' : undefined}
       aria-modal={isPersonal ? true : undefined}
-      aria-label={isPersonal ? 'Saved' : undefined}
+      aria-label={isPersonal ? (isCollectionTab ? 'My videos' : 'Discover') : undefined}
       tabIndex={isPersonal ? -1 : undefined}
       data-theater-keyboard-ready={keyboardReady ? 'true' : undefined}
       className="theater-shell-viewport fixed inset-0 z-[60] flex flex-col overflow-hidden bg-[#08070a] outline-none"
@@ -2709,9 +2764,9 @@ export function TheaterShell({
             a stacking context here that z-20 paints over sibling chrome (z-10
             paste / flame / avatar) and steals those clicks. */}
         <div className="absolute inset-0 isolate z-0" data-testid="theater-stage">
-          {isCollectionTab && typeFilterActive && personalLensItems.length === 0 ? (
+          {isCollectionTab && typeFilterActive && personalTypeItems.length === 0 ? (
             <StageVisualEmpty
-              headline={theaterQueueEmptyHeadline(queueTypes, 'Saved')}
+              headline={theaterQueueEmptyHeadline(queueTypes, 'My videos')}
               onShowAll={clearQueueTypes}
             />
           ) : resolvingSharedLead ? (
@@ -2760,12 +2815,12 @@ export function TheaterShell({
                   />
                 </div>
               ) : typeFilterActive &&
-                (isCollectionTab ? personalLensItems : lensItems).length === 0 ? (
+                (isCollectionTab ? personalTypeItems : lensItems).length === 0 ? (
                 <div className="absolute inset-0 z-10">
                   <StageVisualEmpty
                     headline={theaterQueueEmptyHeadline(
                       queueTypes,
-                      isCollectionTab ? 'Saved' : 'Live',
+                      isCollectionTab ? 'My videos' : 'Discover',
                     )}
                     onShowAll={clearQueueTypes}
                   />
@@ -2774,6 +2829,8 @@ export function TheaterShell({
                 <div className="absolute inset-0 z-10">
                   <CollectionAllClear
                     total={personalTotal}
+                    unwatched={watchFilter === 'unwatched'}
+                    onShowAll={() => changeWatchFilter('all')}
                     onClose={() => onClose?.()}
                     onKeepPlaying={personalTotal > 0 ? keepPlayingCollection : undefined}
                   />

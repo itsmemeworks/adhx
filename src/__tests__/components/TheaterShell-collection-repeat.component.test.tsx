@@ -122,7 +122,7 @@ describe('TheaterShell: collection tab has the repeat control', () => {
 
     await act(async () => stageOnEnded?.())
     expect(chromeProps().currentKey).toBe('twitter:1')
-    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(screen.queryByText('End of your queue')).not.toBeInTheDocument()
   })
 
   it('Keep playing on All Clear restarts the queue in repeat-all', async () => {
@@ -142,11 +142,11 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     expect(chromeProps().repeatMode).toBe('off')
     const onNext = chromeProps().onNext as () => void
     await act(async () => onNext())
-    expect(screen.getByText('All caught up')).toBeInTheDocument()
+    expect(screen.getByText('End of your queue')).toBeInTheDocument()
     expect(screen.getByTestId('stage')).toBeInTheDocument()
 
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Keep playing' })))
-    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(screen.queryByText('End of your queue')).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe('twitter:1')
     expect(chromeProps().repeatMode).toBe('all')
   })
@@ -175,7 +175,7 @@ describe('TheaterShell: collection tab has the repeat control', () => {
       window.dispatchEvent(new CustomEvent('theater-advance'))
     })
     expect(chromeProps().currentKey).toBe('twitter:1')
-    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(screen.queryByText('End of your queue')).not.toBeInTheDocument()
   })
 
   it('Next wraps the Saved list while repeat is all, and one run when off', async () => {
@@ -195,14 +195,14 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     expect(chromeProps().currentKey).toBe('twitter:2')
     await act(async () => onNext())
     expect(chromeProps().currentKey).toBe('twitter:1')
-    expect(screen.queryByText('All caught up')).not.toBeInTheDocument()
+    expect(screen.queryByText('End of your queue')).not.toBeInTheDocument()
 
     await cycleRepeat() // all -> one
     await cycleRepeat() // one -> off
     await act(async () => onNext())
     expect(chromeProps().currentKey).toBe('twitter:2')
     await act(async () => onNext())
-    expect(screen.getByText('All caught up')).toBeInTheDocument()
+    expect(screen.getByText('End of your queue')).toBeInTheDocument()
   })
 
   it('keeps a deep-linked Saved post first and makes its visible Next the transport Next', async () => {
