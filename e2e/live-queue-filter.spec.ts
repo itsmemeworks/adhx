@@ -35,7 +35,7 @@ test.describe('Discover type filter vs preview pulses', () => {
     await expect(
       page.getByRole('button', { name: 'Queue', exact: true }).locator('[data-theater-play-count]'),
     ).toHaveText('0')
-    const filter = page.getByRole('button', { name: 'Filter post types' })
+    const filter = page.getByRole('button', { name: 'Filter posts' })
     await expect(filter).toHaveAttribute('data-theater-queue-filter')
     await expect(filter).toHaveAccessibleDescription('Filtered to Videos.')
     await expect(page.getByText('No videos in Discover right now')).toBeVisible()
@@ -62,8 +62,8 @@ test.describe('Discover type filter vs preview pulses', () => {
     await expect(page.getByText('No videos in Discover right now')).toHaveCount(0)
     await expect(queue.getByText('E2E-PULSE-TEXT')).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'All', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
+    await page.getByRole('button', { name: 'All post types', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'All post types', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     )

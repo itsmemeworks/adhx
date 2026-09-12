@@ -395,7 +395,9 @@ describe('DesktopDock', () => {
 
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
     expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: 'All' })).toHaveFocus())
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'All post types' })).toHaveFocus(),
+    )
 
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
     expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
@@ -404,7 +406,9 @@ describe('DesktopDock', () => {
     expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
     expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: 'All' })).toHaveFocus())
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'All post types' })).toHaveFocus(),
+    )
 
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
     expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
@@ -500,7 +504,7 @@ describe('DesktopDock', () => {
     expect(screen.queryByRole('button', { name: 'Videos' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Queue' }))
-    const all = screen.getByRole('button', { name: 'All' })
+    const all = screen.getByRole('button', { name: 'All post types' })
     const videos = screen.getByRole('button', { name: 'Videos' })
     const photos = screen.getByRole('button', { name: 'Photos' })
     const text = screen.getByRole('button', { name: 'Text' })
@@ -527,10 +531,13 @@ describe('DesktopDock', () => {
         onClearQueueTypes={onClearQueueTypes}
       />,
     )
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'All post types' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
     expect(screen.getByRole('button', { name: 'Videos' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Photos' })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('button', { name: 'All' }))
+    fireEvent.click(screen.getByRole('button', { name: 'All post types' }))
     expect(onClearQueueTypes).toHaveBeenCalledTimes(1)
 
     rerender(
@@ -657,7 +664,7 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
     const queue = screen.getByRole('button', { name: 'Queue' })
-    const filter = screen.getByRole('button', { name: 'Filter post types' })
+    const filter = screen.getByRole('button', { name: 'Filter posts' })
     expect(queue.querySelector('.lucide-list-filter')).not.toBeInTheDocument()
     expect(filter).toHaveAttribute('aria-keyshortcuts', 'Shift+Q')
     expect(filter).toHaveAttribute('data-theater-action', 'queue-filter')
@@ -690,7 +697,7 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
 
-    const filter = screen.getByRole('button', { name: 'Filter post types' })
+    const filter = screen.getByRole('button', { name: 'Filter posts' })
     fireEvent.click(filter)
     const videos = screen.getByRole('button', { name: 'Videos' })
     const photos = screen.getByRole('button', { name: 'Photos' })
@@ -734,9 +741,9 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
 
-    const filter = screen.getByRole('button', { name: 'Filter post types' })
+    const filter = screen.getByRole('button', { name: 'Filter posts' })
     fireEvent.click(filter)
-    const all = screen.getByRole('button', { name: 'All' })
+    const all = screen.getByRole('button', { name: 'All post types' })
     expect(all).toHaveFocus()
     fireEvent.keyDown(all, { key: 'Escape' })
     expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
@@ -755,7 +762,7 @@ describe('DesktopDock: end cap restructure', () => {
       />,
     )
     expect(screen.getByRole('button', { name: 'Queue' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Filter post types' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Filter posts' })).not.toBeInTheDocument()
   })
 
   it('moves the unseen count into a badge on the playlist control', () => {

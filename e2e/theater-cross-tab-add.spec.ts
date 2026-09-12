@@ -92,10 +92,9 @@ authedTest.describe('theater cross-tab add', () => {
 
     await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
-    await expect(queue.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    await expect(
+      queue.getByRole('button', { name: 'All post types', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true')
     await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
     await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
   })
@@ -150,10 +149,9 @@ authedTest.describe('theater cross-tab add', () => {
 
     await addAndBroadcast(page, tweetUrl(ADD_TEXT))
 
-    await expect(queue.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    await expect(
+      queue.getByRole('button', { name: 'All post types', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true')
     await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
   })
 

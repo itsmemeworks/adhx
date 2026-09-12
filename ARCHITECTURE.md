@@ -160,7 +160,8 @@ a partial collection. The library's `?open=` links can still open an archived
 post explicitly.
 
 My videos starts with **All** selected on each mount, including posts watched
-on previous visits. **Unwatched** is an explicit filter against the existing
+on previous visits. The Queue/filter panels group **Post type** and **Watch history**;
+there is no separate watch-filter bar over the stage. **Unwatched** filters against the existing
 browser-local seen history, independent of Repeat. Leaving a saved post marks
 it seen; these marks retain up to 500 recent identities in this browser, do not
 create server-side watched statuses, and do not emit public activity. The

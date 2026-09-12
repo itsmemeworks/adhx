@@ -447,7 +447,19 @@ export function TheaterMobileChrome({
   // Peek-bar centre: Now playing + Next (`N in queue`) or every post (`N on
   // repeat`).
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
-  const filterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const watchFilter =
+    collection?.tab === 'collection' && collection.onWatchFilterChange
+      ? { value: collection.watchFilter ?? 'all', onChange: collection.onWatchFilterChange }
+      : undefined
+  const typeFilterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
+  const watchFilterOn = watchFilter?.value === 'unwatched'
+  const filterOn = typeFilterOn || watchFilterOn
+  const filterLabel = [
+    watchFilterOn ? 'Unwatched' : '',
+    typeFilterOn ? theaterQueueFilterLabel(queueTypes) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
   const peekNew = newCount > 0 && collection?.tab !== 'collection' ? ` · ${newCount} new` : ''
   const peekPosition =
     queueIndex !== -1 && queueCount
@@ -544,12 +556,6 @@ export function TheaterMobileChrome({
             <span className="rounded-full bg-black/35 px-3 py-2 text-sm font-semibold text-white backdrop-blur-md">
               {collection.tab === 'collection' ? 'My videos' : 'Discover'}
             </span>
-            {collection.tab === 'collection' && collection.onWatchFilterChange && (
-              <TheaterWatchFilter
-                value={collection.watchFilter ?? 'all'}
-                onChange={collection.onWatchFilterChange}
-              />
-            )}
           </div>
         </div>
       ) : playlist ? (
@@ -915,8 +921,14 @@ export function TheaterMobileChrome({
           role="group"
           aria-label="Quick post filters"
           data-testid="mobile-quick-filters"
+          onKeyDown={(event) => event.stopPropagation()}
           className="pointer-events-auto fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-[max(0.5rem,env(safe-area-inset-left))] right-[calc(6rem+env(safe-area-inset-right))] z-[40] flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/15 bg-[#121117]/95 p-2 shadow-[0_12px_40px_rgba(0,0,0,.4)] backdrop-blur-xl"
         >
+          {watchFilter && (
+            <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+              Post type
+            </span>
+          )}
           <button
             type="button"
             aria-pressed={queueTypes.length === 0}
@@ -966,6 +978,7 @@ export function TheaterMobileChrome({
               </button>
             )
           })}
+          {watchFilter && <TheaterWatchFilter {...watchFilter} />}
         </div>
       ) : null}
 
@@ -1086,7 +1099,7 @@ export function TheaterMobileChrome({
                   aria-expanded={quickFilterOpen}
                   aria-controls={quickFilterPanelId}
                   aria-label="Quick filter posts"
-                  title={filterOn ? theaterQueueFilterLabel(queueTypes) : 'Filter post types'}
+                  title={filterOn ? filterLabel : 'Filter posts'}
                   className={cn(
                     PEEK_ICON_BTN,
                     'relative',
@@ -1225,6 +1238,7 @@ export function TheaterMobileChrome({
           )}
           {onToggleQueueType && onClearQueueTypes ? (
             <TheaterQueueFilter
+              watchFilter={watchFilter}
               selected={queueTypes}
               onToggle={onToggleQueueType}
               onClear={onClearQueueTypes}
