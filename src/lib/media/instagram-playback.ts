@@ -24,12 +24,13 @@ export function instagramVideoSrc(id: string): string {
 
 /**
  * Confirm the MP4 proxy is ready (Range 0-1, so we don't download the file).
- * Returns false on 400/502 or after the retry budget — callers then embed.
+ * Returns true for video, a photo count for a confirmed image post, or false
+ * when unavailable (callers then embed).
  */
 export async function probeInstagramVideo(
   id: string,
   opts?: { fetch?: typeof fetch; signal?: AbortSignal },
-): Promise<boolean> {
+): Promise<boolean | { photoCount: number }> {
   const doFetch = opts?.fetch ?? globalThis.fetch
   const url = instagramVideoSrc(id)
 
@@ -42,6 +43,18 @@ export async function probeInstagramVideo(
         headers: { Range: 'bytes=0-1' },
         signal,
       })
+      if (res.status === 409) {
+        const data = await res.json()
+        if (
+          data.contentType === 'photo' &&
+          Number.isInteger(data.photoCount) &&
+          data.photoCount >= 1 &&
+          data.photoCount <= 20
+        ) {
+          return { photoCount: data.photoCount }
+        }
+        return false
+      }
       await res.body?.cancel()
       if (res.ok || res.status === 206) return true
       // Server already spent the mirror retry budget. Don't wait another 35s.

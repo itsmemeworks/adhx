@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Instagram Reel stage (spec §6/§11): NEVER attaches `<video src>` until the
- * mirror proxy answers a Range probe with 200/206 (`probeInstagramVideo`) —
+ * Instagram Reel stage (spec §6/§11): attaches `<video src>` only after the
+ * media proxy answers a Range probe with 200/206 (`probeInstagramVideo`) —
  * vxinstagram's cold cache can 404-retry for ~10–20s and a media element
  * aborts sooner than that, which used to surface as a false "failed to load"
  * (see `instagram-playback.ts`). While probing: poster + a small spinner for
@@ -24,7 +24,6 @@ import {
   instagramVideoSrc,
   probeInstagramVideo,
 } from '@/lib/media/instagram-playback'
-import { previewPath } from '@/lib/activity/preview-path'
 import { PostLoader } from '@/components/PostLoader'
 import { StageFrame } from './stage-primitives'
 import type { TheaterItem } from './types'
@@ -38,7 +37,7 @@ export interface StageInstagramProps {
   repeat?: boolean
 }
 
-type ProbeStatus = 'probing' | 'ready' | 'failed'
+type ProbeStatus = 'probing' | 'ready' | 'failed' | 'photo'
 
 /** Cap the visible "probing" wait at 3s before switching to the quieter status line (spec §11). */
 const INSTAGRAM_SPINNER_MS = 3_000
@@ -57,10 +56,10 @@ const ADVANCE_AFTER_EMBED_FALLBACK_MS = 8_000
  * very cold mirror before it even resolves to 'failed'. That's far longer
  * than a viewer will wait on a stalled item in an auto-advancing queue, so
  * this is a hard ceiling independent of the probe's own outcome: if nothing
- * has started playing by this point, advance — the probe keeps running in
- * the background and still warms `probedReady` for next time.
+ * has started playing by this point, advance. Changing the item cancels its
+ * pending probe. The server gets its complete 30s resolution budget first.
  */
-const NEVER_STARTED_GUARD_MS = 20_000
+const NEVER_STARTED_GUARD_MS = 35_000
 
 /**
  * Pure: given the current probe status, should an auto-advance guard fire?
@@ -81,7 +80,8 @@ const probedReady = new Set<string>()
 export function instagramStagePhase(
   status: ProbeStatus,
   slow: boolean,
-): 'spinner' | 'status' | 'video' | 'embed' {
+): 'spinner' | 'status' | 'video' | 'embed' | 'photo' {
+  if (status === 'photo') return 'photo'
   if (status === 'ready') return 'video'
   if (status === 'failed') return 'embed'
   return slow ? 'status' : 'spinner'
@@ -91,7 +91,8 @@ export function instagramStagePhase(
 export interface InstagramStageState {
   status: ProbeStatus
   slow: boolean
-  /** The mirror MP4, only once the probe confirmed it. */
+  photoCount: number
+  /** The proxied MP4, only once the probe confirmed it. */
   src: string | null
   poster: string | null
 }
@@ -123,10 +124,15 @@ export function useInstagramStage({
   repeat?: boolean
 }): InstagramStageState {
   const id = (active && item?.bookmarkId) || ''
-  const [status, setStatus] = useState<ProbeStatus>(() =>
-    probedReady.has(id) ? 'ready' : 'probing',
-  )
+  const [probe, setProbe] = useState<{ id: string; status: ProbeStatus }>(() => ({
+    id,
+    status: probedReady.has(id) ? 'ready' : 'probing',
+  }))
+  // A result for the previous post must never grant this post a video source
+  // (or render its photo album) before this post's own probe has completed.
+  const status = probe.id === id ? probe.status : probedReady.has(id) ? 'ready' : 'probing'
   const [slow, setSlow] = useState(false)
+  const [photoCount, setPhotoCount] = useState(1)
 
   useEffect(() => {
     // Inert for every non-Instagram item. This MUST come first: falling
@@ -134,6 +140,7 @@ export function useInstagramStage({
     // embed-fallback guard and auto-advanced any item that merely happened to
     // be on stage — the YouTube stall-watchdog test caught exactly that.
     if (!active) return
+    const setStatus = (status: ProbeStatus) => setProbe({ id, status })
     setSlow(false)
 
     if (probedReady.has(id)) {
@@ -151,8 +158,13 @@ export function useInstagramStage({
 
     probeInstagramVideo(id, { signal: controller.signal }).then((ok) => {
       if (controller.signal.aborted) return
-      if (ok) probedReady.add(id)
-      setStatus(ok ? 'ready' : 'failed')
+      if (typeof ok === 'object') {
+        setPhotoCount(ok.photoCount)
+        setStatus('photo')
+      } else {
+        if (ok) probedReady.add(id)
+        setStatus(ok ? 'ready' : 'failed')
+      }
     })
 
     return () => {
@@ -169,14 +181,12 @@ export function useInstagramStage({
     statusRef.current = status
   }, [status])
 
-  // Guard 2: the IG-embed fallback never fires `ended` on its own (it's a
-  // bare iframe we don't control). Give a viewer a moment on it, then move
-  // the queue along. Keyed on `status` transitioning to 'failed', so a later
-  // item that lands in 'ready' or a fresh 'probing' never inherits a stale
-  // timer (the effect's own cleanup clears it on every status change).
+  // Neither an iframe nor a legacy photo fires a video `ended` event. Give
+  // viewers eight seconds before advancing; a pinned shared post stays put.
+  // A status change cancels the timer before it can affect the next item.
   useEffect(() => {
     if (!active || !onEnded || repeat) return
-    if (status !== 'failed') return
+    if (status !== 'failed' && status !== 'photo') return
     const timer = setTimeout(() => {
       onEnded()
     }, ADVANCE_AFTER_EMBED_FALLBACK_MS)
@@ -200,7 +210,13 @@ export function useInstagramStage({
 
   const poster = (active && item?.thumbnailUrl) || null
 
-  return { status, slow, src: status === 'ready' && id ? instagramVideoSrc(id) : null, poster }
+  return {
+    status,
+    slow,
+    photoCount,
+    src: status === 'ready' && id ? instagramVideoSrc(id) : null,
+    poster,
+  }
 }
 
 /**
@@ -222,10 +238,22 @@ export function StageInstagram({
   const poster = item.thumbnailUrl ?? null
 
   if (status === 'failed') {
-    const href = previewPath('instagram', item.author, id, item.contentType)
+    const href = `https://www.instagram.com/p/${encodeURIComponent(id)}/`
     return (
       <div className="relative flex h-full w-full items-center justify-center bg-[#08070a]">
-        <div className="relative flex h-full w-full max-w-[480px] flex-col items-center justify-center gap-4 px-4 py-6">
+        <div className="relative flex h-full w-full max-w-[480px] flex-col items-center justify-center gap-4 px-4 pb-6 pt-24 lg:pt-6">
+          <p className="flex-none text-center text-sm text-white/70">
+            We couldn’t load this video. Try the original post on Instagram.
+          </p>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[44px] flex-none items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
+          >
+            Open Instagram
+            <ArrowRight size={15} />
+          </a>
           <div className="h-full w-full overflow-hidden rounded-2xl bg-black">
             {id && (
               <iframe
@@ -236,13 +264,6 @@ export function StageInstagram({
               />
             )}
           </div>
-          <a
-            href={href}
-            className="inline-flex min-h-[44px] flex-none items-center gap-1.5 rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-          >
-            Open preview
-            <ArrowRight size={15} />
-          </a>
         </div>
       </div>
     )

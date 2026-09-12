@@ -147,7 +147,20 @@ export function Stage({
     overlay = <StageText item={item} omitParentVideo flushTop underBand />
   } else if (!isStageVideoItem && !isYouTube) {
     const type = inferType(item)
-    if (isInstagramVideo) {
+    if (isInstagramVideo && instagram.status === 'photo') {
+      overlay = (
+        <StageText
+          item={{
+            ...item,
+            contentType: 'photo',
+            photoCount: instagram.photoCount,
+            thumbnailUrl: `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId || '')}`,
+          }}
+          photo={!articleMode}
+          photoCaption={photoCaption}
+        />
+      )
+    } else if (isInstagramVideo) {
       // Not ready yet (or the mirror never answered): poster + spinner, or the
       // official-embed fallback. No player here — see `useInstagramStage`.
       overlay = <StageInstagram item={item} status={instagram.status} slow={instagram.slow} />

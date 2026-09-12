@@ -130,7 +130,7 @@ describe('StageInstagram auto-advance guards', () => {
     ).resolves.not.toThrow()
   })
 
-  it('advances via the never-started guard (~20s) when the probe is still pending past its warm-up window', async () => {
+  it('advances via the never-started guard (~35s) when the probe is still pending past its warm-up window', async () => {
     vi.mocked(probeInstagramVideo).mockReturnValue(new Promise<boolean>(() => {}))
     const onEnded = vi.fn()
 
@@ -144,7 +144,7 @@ describe('StageInstagram auto-advance guards', () => {
     )
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(19_000)
+      await vi.advanceTimersByTimeAsync(34_000)
     })
     expect(onEnded).not.toHaveBeenCalled()
 
@@ -304,6 +304,41 @@ describe('StageInstagram late-attach playback (mount happens after the probe res
 })
 
 describe('Instagram image stage', () => {
+  it('renders a legacy Reel as a photo album and advances without creating a video or embed', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(probeInstagramVideo).mockResolvedValue({ photoCount: 2 })
+      const onEnded = vi.fn()
+      const { container } = render(
+        <Stage
+          item={makeItem({ bookmarkId: 'legacy-photo' })}
+          muted
+          onRequestUnmute={vi.fn()}
+          onEnded={onEnded}
+        />,
+      )
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(container.querySelector('video')).toBeNull()
+      expect(container.querySelector('iframe')).toBeNull()
+      expect(
+        Array.from(container.querySelectorAll('img'))
+          .map((img) => img.getAttribute('src'))
+          .filter((src) => src?.startsWith('/api/media/instagram/thumbnail')),
+      ).toEqual([
+        '/api/media/instagram/thumbnail?id=legacy-photo&index=1',
+        '/api/media/instagram/thumbnail?id=legacy-photo&index=2',
+      ])
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(8_000)
+      })
+      expect(onEnded).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('renders an ordered carousel without probing the Reel mirror', () => {
     vi.mocked(probeInstagramVideo).mockClear()
 

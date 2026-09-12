@@ -23,6 +23,24 @@ describe('instagram playback URLs', () => {
 })
 
 describe('probeInstagramVideo', () => {
+  it('recognizes photos without retrying them as videos', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ contentType: 'photo', photoCount: 3 }), { status: 409 }),
+      )
+    await expect(probeInstagramVideo('photo123', { fetch })).resolves.toEqual({ photoCount: 3 })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not trust an invalid photo count', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ contentType: 'photo', photoCount: 100000 }), { status: 409 }),
+      )
+    await expect(probeInstagramVideo('photo123', { fetch })).resolves.toBe(false)
+  })
   it('treats 206 as ready and cancels the body (Range probe only)', async () => {
     const cancel = vi.fn()
     const fetch = vi.fn().mockResolvedValue({ ok: false, status: 206, body: { cancel } })

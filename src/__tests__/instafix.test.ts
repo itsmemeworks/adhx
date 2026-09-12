@@ -239,6 +239,35 @@ describe('fetchReelMetadata (Instagram-direct, no video)', () => {
     expect(metadata?.media[0]?.imageUrl).toBe('https://scontent.cdninstagram.com/1440.jpg')
   })
 
+  it('retains a direct MP4 from the requested Reel and rejects non-CDN candidates', () => {
+    const metadata = parseInstagramDocument(
+      relayHtml('video123', {
+        __typename: 'XIGPolarisVideoMedia',
+        media_type: 2,
+        video_versions: [
+          { url: 'https://cdninstagram.com.evil.example/video.mp4' },
+          { url: 'http://video.cdninstagram.com/insecure.mp4' },
+          { url: 'https://video.cdninstagram.com/clip.mp4?signature=public' },
+        ],
+      }),
+      'video123',
+    )
+    expect(metadata?.media[0]?.videoUrl).toBe(
+      'https://video.cdninstagram.com/clip.mp4?signature=public',
+    )
+    expect(metadata?.contentType).toBe('video')
+    expect(
+      parseInstagramDocument(
+        relayHtml('different123', {
+          __typename: 'XIGPolarisVideoMedia',
+          media_type: 2,
+          video_versions: [{ url: 'https://video.cdninstagram.com/other.mp4' }],
+        }),
+        'video123',
+      )?.media[0]?.videoUrl,
+    ).toBeUndefined()
+  })
+
   it('preserves every ordered image in a large carousel', async () => {
     const images = Array.from({ length: 11 }, (_, index) => ({
       __typename: 'XIGPolarisImageMedia',
