@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.71.2](https://github.com/itsmemeworks/adhx/compare/v1.71.1...v1.71.2) (2026-09-12)
+
+
+### Bug Fixes
+
+* group watch history with theater filters ([#513](https://github.com/itsmemeworks/adhx/issues/513)) ([5bf8879](https://github.com/itsmemeworks/adhx/commit/5bf8879aa13f16a91b0532490bbebc9d434d9719))
+
 ## [1.71.1](https://github.com/itsmemeworks/adhx/compare/v1.71.0...v1.71.1) (2026-09-12)
 
 
