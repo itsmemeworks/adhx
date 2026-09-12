@@ -403,12 +403,12 @@ terminates if it cannot enforce this boundary.
 
 Playback adapters reflect what each platform safely exposes:
 
-| Platform       | Metadata                                                               | Playback/download                                                                                                 |
-| -------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| X              | FxTwitter; X API only for the owner's bookmark sync                    | Range-aware MP4/image proxy over allowlisted `twimg.com`; HLS routes remain for long streams.                     |
-| Instagram      | Crawler Relay payload (ordered image/carousel media), with OG fallback | Images use a fresh signed-CDN proxy; Reels use the Range-probed vxinstagram mirror with official iframe fallback. |
-| TikTok         | tnktok/fxTikTok metadata                                               | Proxy follows the mirror's signed redirect to allowlisted TikTok CDN hosts.                                       |
-| YouTube Shorts | Official oEmbed                                                        | Privacy-enhanced `youtube-nocookie.com` iframe. No MP4 extraction or download.                                    |
+| Platform       | Metadata                                                               | Playback/download                                                                                                            |
+| -------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| X              | FxTwitter; X API only for the owner's bookmark sync                    | Range-aware MP4/image proxy over allowlisted `twimg.com`; HLS routes remain for long streams.                                |
+| Instagram      | Crawler Relay payload (ordered image/carousel media), with OG fallback | Images and Reels use signed-CDN proxies; Reels resolve Relay MP4 URLs first, then the mirror, with official iframe fallback. |
+| TikTok         | tnktok/fxTikTok metadata                                               | Proxy follows the mirror's signed redirect to allowlisted TikTok CDN hosts.                                                  |
+| YouTube Shorts | Official oEmbed                                                        | Privacy-enhanced `youtube-nocookie.com` iframe. No MP4 extraction or download.                                               |
 
 User-controlled media parameters are validated before interpolation. Media
 URLs require HTTPS and exact hosts or dot-prefixed suffix matches—never

@@ -1,17 +1,10 @@
 /**
  * Instagram post metadata — fetched directly from Instagram.
  *
- * History: ADHX used to resolve a streamable MP4 via InstaFix-style mirrors
- * (toinstagram.com / uuinstagram.com). Those mirrors are dead as of mid-2026 —
- * the upstream Wikidepia/InstaFix project was archived 2026-04-02 and the
- * forks now 302-redirect to instagram.com because Instagram cut off the
- * anonymous scraping they relied on. No drop-in replacement exists.
- *
  * Instagram serves a crawler-only Relay payload to Googlebot. Unlike the
  * OpenGraph fallback, it identifies image vs video posts and includes every
- * ordered carousel child. Video bytes still go through the vxinstagram MP4
- * registry (`src/lib/media/mirrors.ts`); this module only resolves metadata
- * and image/poster URLs.
+ * ordered carousel child, including signed MP4 URLs in `video_versions`.
+ * `instagram-video.ts` proxies those directly, with mirrors as a fallback.
  *
  * The `og:image` URL is a signed `*.cdninstagram.com` link that expires, so
  * callers that need a durable thumbnail should go through the thumbnail proxy
@@ -35,6 +28,8 @@ export interface InstagramMedia {
   type: 'photo' | 'video'
   /** Image itself for photos; poster for videos. Signed and expiring. */
   imageUrl?: string
+  /** Direct MP4 for video media. Signed and expiring, like imageUrl. */
+  videoUrl?: string
   width?: number
   height?: number
   altText?: string
@@ -138,7 +133,7 @@ async function resolveInstagramMetadata(
 const fetchCachedInstagramMetadata = unstable_cache(
   (id: string, pathHint: InstagramPathHint): Promise<InstagramMetadata | null> =>
     resolveInstagramMetadata(id, pathHint),
-  ['instagram-post-metadata-v3'],
+  ['instagram-post-metadata-v4'],
   { revalidate: 3600 },
 )
 
@@ -175,7 +170,7 @@ export async function fetchInstagramMetadata(
   return result.kind === 'resolved' ? result.metadata : null
 }
 
-/** Bypass the cross-request cache when a signed CDN image URL has expired. */
+/** Bypass the cross-request cache when a signed CDN media URL has expired. */
 export async function fetchFreshInstagramMetadata(
   id: string,
   pathHint: InstagramPathHint = 'reel',
@@ -375,9 +370,15 @@ function mediaFromRelay(raw: Record<string, unknown> | null): InstagramMedia | n
     bestCandidate?.url || (displayUrl && isAllowedImageUrl(displayUrl) ? displayUrl : undefined)
   if (type === 'photo' && !imageUrl) return null
 
+  const videoVersions = Array.isArray(raw.video_versions) ? raw.video_versions : []
+  const videoUrl = videoVersions
+    .map((candidate) => stringValue(objectValue(candidate)?.url))
+    .find((url) => !!url && isAllowedImageUrl(url))
+
   return {
     type,
     imageUrl,
+    ...(type === 'video' && videoUrl ? { videoUrl } : {}),
     width: numberValue(raw.original_width),
     height: numberValue(raw.original_height),
     altText: stringValue(raw.accessibility_caption),

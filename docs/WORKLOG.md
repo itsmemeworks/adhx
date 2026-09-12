@@ -6,6 +6,27 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-12 — Keep new arrivals directly next after selecting an older post
+
+A stable CI queue scenario exposed a real ordering gap: repeat-off pinned the selected post
+only after inserting arrivals, leaving newer unseen predecessors ahead of the new Next item.
+Live arrivals now insert against the same current-first order that playback renders; repeat-all
+retains its circular order. Component and queue regressions cover selecting an older unseen post.
+The two race-sensitive browser scenarios explicitly select and pause known text fixtures,
+avoiding external-player startup and stale transport icons during test setup.
+State: implemented for review in the Instagram delivery PR; no schema changes.
+
+## 2026-09-12 — Direct Instagram video delivery and legacy photo fallback
+
+Relay `video_versions` now supplies allowlisted MP4 URLs before the mirror fallback.
+Streaming and downloads share a 30s resolution budget, Range forwarding, redirect validation,
+and one expired-signature refresh; validated refreshed URLs survive the probe/player handoff.
+Structured photos mislabeled by old saves render the photo album without video retries;
+stored classification is unchanged. Unavailable embeds link to Instagram above mobile controls, avoiding a preview loop.
+Verified a real Reel playing and downloading locally; the original reported URL still exposes no usable post data.
+State: implemented for review; requires application deployment. No schema changes.
+Follow-up: verify CI (four live CDN tests later hit local TLS trust errors); monitor crawler availability after deployment.
+
 ## 2026-09-12 — Update the Discover empty-state browser regression
 
 The full CI browser suite caught two stale Live empty-state assertions after the Discover rename.

@@ -9,6 +9,11 @@ import { NextRequest } from 'next/server'
  * the routes are tested without hitting a real mirror.
  */
 
+vi.mock('@/lib/media/instafix', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/media/instafix')>()
+  return { ...actual, fetchInstagramMetadata: vi.fn().mockResolvedValue(null) }
+})
+
 const mockFetch = vi.fn()
 const mockDownloadRateLimit = vi.fn()
 global.fetch = mockFetch as unknown as typeof fetch

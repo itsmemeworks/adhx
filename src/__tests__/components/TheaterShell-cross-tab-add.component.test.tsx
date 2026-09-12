@@ -340,6 +340,26 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
   })
 
+  it('Live: an arrival is immediately Next after selecting an older unseen post', async () => {
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={seed([textItem('1'), textItem('2'), textItem('3')])}
+          mode="personal"
+          initialPersonalTab="live"
+          personalItems={[]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    await act(async () => chromeProps().onSelect('twitter:2'))
+    await act(async () => fireAdded(feedItem('99')))
+    expect(chromeProps().currentKey).toBe('twitter:2')
+    expect(queueIds()).toEqual(['2', '99', '1', '3'])
+    await act(async () => chromeProps().onNext())
+    expect(chromeProps().currentKey).toBe('twitter:99')
+  })
+
   it('Live: explicit Next from a paused final post still plays the next arrival', async () => {
     await act(async () => {
       render(
