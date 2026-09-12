@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.71.0](https://github.com/itsmemeworks/adhx/compare/v1.70.9...v1.71.0) (2026-09-12)
+
+
+### Features
+
+* make personal videos the default home ([#505](https://github.com/itsmemeworks/adhx/issues/505)) ([08f6b36](https://github.com/itsmemeworks/adhx/commit/08f6b36233b00ac590bae2eb645c9ea26f305393))
+
 ## [1.70.9](https://github.com/itsmemeworks/adhx/compare/v1.70.8...v1.70.9) (2026-09-05)
 
 
