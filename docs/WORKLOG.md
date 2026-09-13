@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-13 — Compact desktop filters and unobstructed playlist controls
+
+Desktop Filter opens a small counted post-type menu; Queue continues to open the playlist.
+Both use 32px desktop pills, while mobile keeps its 44px touch targets.
+Open desktop panels sit above stage shading and hide the underlying post actions until closed.
+Counts use the full type-filter source so choosing a type does not erase other type counts.
+Keyboard regression coverage retains Shift+Q, arrows, Enter, Escape, and focus restoration.
+State: implemented for review in the launch UX PR; not deployed.
+
 ## 2026-09-13 — Make the launch theater easier to understand
 
 Discover defaults to Videos + Hide watched; Saved defaults to All posts with history visible.

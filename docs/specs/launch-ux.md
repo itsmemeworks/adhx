@@ -14,6 +14,8 @@ Saved makes their own posts easy to find again.
 - A labelled content filter is visible beside Queue on desktop and mobile.
   One panel contains post type choices and a Hide watched switch. Its selected
   state remains understandable with the panel closed and using a screen reader.
+  Desktop Filter opens a compact menu with counts independently of Queue; its
+  pills are 32px high. Open panels hide the stage actions and sit above shading.
 - Watch filtering and Repeat are independent. Caught-up Discover offers an explicit
   Watch again action; it does not silently include excluded watched posts.
 - Shared links always open their target. Public playlists retain their authored
@@ -52,4 +54,6 @@ Saved makes their own posts easy to find again.
 - Complete isolated browser suite: 124/124 pass (Chromium and mobile WebKit).
   Manual preview tabs were parked during the run; the shared-link fixture uses
   an existing save so asynchronous saving cannot change another test's collection.
+- Desktop panel refinement: 25 browser checks pass for compact counted filters,
+  32px playlist pills, action occlusion, mobile filtering, and keyboard navigation.
 - Implementation and verification complete for PR review. No production deployment performed.

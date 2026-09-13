@@ -2745,7 +2745,7 @@ export function TheaterShell({
         onClose: () => onClose?.(),
       }
     : undefined
-  const mobileTypeFilterItems = useMemo(
+  const typeFilterItems = useMemo(
     () =>
       isCollectionTab ? personalQueue.map((item) => feedItemToTheaterItem(item)) : playableItems,
     [isCollectionTab, personalQueue, playableItems],
@@ -2940,7 +2940,7 @@ export function TheaterShell({
               : undefined
           }
           queueTypes={queueTypes}
-          typeFilterItems={mobileTypeFilterItems}
+          typeFilterItems={typeFilterItems}
           onToggleQueueType={queueFilterAvailable ? toggleQueueType : undefined}
           onClearQueueTypes={queueFilterAvailable ? clearQueueTypes : undefined}
         />
@@ -2983,6 +2983,7 @@ export function TheaterShell({
         )}
       </div>
       <DesktopDock
+        typeFilterItems={typeFilterItems}
         mode={mode}
         items={chromeItems}
         current={chromeCurrent}

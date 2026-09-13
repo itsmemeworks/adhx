@@ -138,6 +138,7 @@ export interface DesktopStageChromeProps {
 export interface DesktopDockProps {
   mode: TheaterMode
   items: TheaterItem[]
+  typeFilterItems?: TheaterItem[]
   current: TheaterItem | null
   currentKey: string | null
   isSeen: (key: string) => boolean
@@ -639,6 +640,7 @@ export function DesktopStageChrome({
       {/* Bottom-right actions. Tag count lives on the Tag button (max 5). */}
       {current ? (
         <div
+          data-theater-desktop-actions
           className={cn(
             'pointer-events-auto absolute bottom-6 right-7 flex items-center gap-2 transition-[opacity,transform] duration-200 ease-out',
             declutter && 'translate-y-3 opacity-0 pointer-events-none',
@@ -770,6 +772,7 @@ const TRANSPORT_BTN =
 export function DesktopDock({
   mode: _mode,
   items,
+  typeFilterItems,
   current,
   currentKey,
   isSeen,
@@ -807,6 +810,7 @@ export function DesktopDock({
   const queueControlDescriptionId = useId()
   const filterControlDescriptionId = useId()
   const queueDialogId = useId()
+  const quickFilterId = useId()
   const cardRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const rootRef = useRef<HTMLDivElement>(null)
   const queueRootRef = useRef<HTMLDivElement>(null)
@@ -816,7 +820,7 @@ export function DesktopDock({
   }, [])
   useTheaterActionHotkeys('desktop', rootRef)
   useTheaterQueueOverlay({
-    open: showAll,
+    open: showAll || filterShortcutOpen,
     onClose: closeShowAll,
     containerRef: rootRef,
     autoFocus: !filterShortcutOpen,
@@ -891,7 +895,7 @@ export function DesktopDock({
     <div
       ref={rootRef}
       className={cn(
-        'relative hidden flex-none items-center gap-4 border-t border-hairline bg-surface px-5 text-ink transition-all duration-200 lg:flex',
+        'relative z-[72] hidden flex-none items-center gap-4 border-t border-hairline bg-surface px-5 text-ink transition-all duration-200 lg:flex',
         declutter ? 'h-0 overflow-hidden border-t-0 opacity-0' : 'h-[124px]',
       )}
     >
@@ -1231,19 +1235,15 @@ export function DesktopDock({
                 type="button"
                 aria-label="Filter posts"
                 aria-describedby={filterOn ? filterControlDescriptionId : undefined}
-                aria-controls={queueDialogId}
-                aria-expanded={showAll}
+                aria-controls={quickFilterId}
+                aria-expanded={filterShortcutOpen}
                 aria-keyshortcuts="Shift+Q"
                 title={filterOn ? filterLabel : 'Filter posts'}
                 data-theater-queue-filter={filterOn ? '' : undefined}
                 data-theater-action="queue-filter"
                 onClick={() => {
-                  if (showAll && filterShortcutOpen) {
-                    closeShowAll()
-                    return
-                  }
-                  setFilterShortcutOpen(true)
-                  setShowAll(true)
+                  setShowAll(false)
+                  setFilterShortcutOpen((open) => !open)
                 }}
                 className={cn(
                   'relative inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-ink-3 transition-colors hover:bg-inset hover:text-ink',
@@ -1268,6 +1268,26 @@ export function DesktopDock({
               </button>
             ) : null}
           </div>
+
+          {filterShortcutOpen && onToggleQueueType && onClearQueueTypes && (
+            <div
+              id={quickFilterId}
+              data-theater-quick-filter-panel
+              className="pointer-events-auto absolute bottom-full right-0 z-20 mb-2 w-max max-w-[380px] rounded-xl border border-hairline bg-surface pt-3 shadow-m-lg"
+            >
+              <TheaterQueueFilter
+                selected={queueTypes}
+                onToggle={onToggleQueueType}
+                onClear={onClearQueueTypes}
+                countItems={typeFilterItems ?? items}
+                watchFilter={watchFilter}
+                autoFocus
+                keyboardShortcutFlow
+                onCommit={closeShowAll}
+                onCancel={closeShowAll}
+              />
+            </div>
+          )}
 
           {showAll && (
             <div
@@ -1302,10 +1322,6 @@ export function DesktopDock({
                   selected={queueTypes}
                   onToggle={onToggleQueueType}
                   onClear={onClearQueueTypes}
-                  autoFocus={filterShortcutOpen}
-                  onCommit={closeShowAll}
-                  onCancel={closeShowAll}
-                  keyboardShortcutFlow={filterShortcutOpen}
                 />
               ) : null}
               <UpNextList

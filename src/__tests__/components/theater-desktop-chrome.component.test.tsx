@@ -394,24 +394,24 @@ describe('DesktopDock', () => {
     )
 
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
-    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Quick post filters' })).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'All post types' })).toHaveFocus(),
     )
 
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
-    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Quick post filters' })).not.toBeInTheDocument()
 
     fireEvent(window, new CustomEvent('theater-toggle-show-all'))
     expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
-    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Quick post filters' })).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'All post types' })).toHaveFocus(),
     )
 
     fireEvent(window, new CustomEvent('theater-toggle-filter'))
-    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Quick post filters' })).not.toBeInTheDocument()
   })
 
   it('keeps Queue open when the stage advances to the next post', () => {
@@ -650,7 +650,7 @@ describe('DesktopDock: end cap restructure', () => {
     expect(document.querySelector('[data-theater-play-count]')).toHaveTextContent('1')
   })
 
-  it('shows a separate filter icon with a clay active cue and opens the playlist filters', () => {
+  it('shows a separate filter icon with a clay active cue and opens compact filters with counts', () => {
     const items = [videoItem({ bookmarkId: '1' })]
     render(
       <DesktopDock
@@ -675,9 +675,11 @@ describe('DesktopDock: end cap restructure', () => {
     expect(filter).toHaveAccessibleDescription('Filtered to Videos.')
     expect(screen.getByText('Videos')).toBeInTheDocument()
     fireEvent.click(filter)
-    const dialog = screen.getByRole('dialog', { name: 'Playlist' })
+    const dialog = screen.getByRole('group', { name: 'Quick post filters' }).parentElement!
     expect(dialog).toBeInTheDocument()
-    expect(queue).toHaveAttribute('aria-controls', dialog.id)
+    expect(queue).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Videos' })).toHaveAccessibleDescription('1 posts')
     expect(filter).toHaveAttribute('aria-controls', dialog.id)
     expect(screen.getByRole('button', { name: 'Videos' })).toBeInTheDocument()
   })
@@ -708,7 +710,7 @@ describe('DesktopDock: end cap restructure', () => {
     expect(photos).toHaveFocus()
     fireEvent.keyDown(photos, { key: ' ' })
     expect(onToggleQueueType).toHaveBeenCalledWith('photo')
-    expect(screen.getByRole('dialog', { name: 'Playlist' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Quick post filters' })).toBeInTheDocument()
     const leakedShortcut = vi.fn()
     window.addEventListener('keydown', leakedShortcut)
     fireEvent.keyDown(photos, { key: 'j' })
@@ -724,7 +726,7 @@ describe('DesktopDock: end cap restructure', () => {
     expect(text).toHaveFocus()
     fireEvent.keyDown(text, { key: 'Enter' })
     expect(onToggleQueueType).toHaveBeenCalledWith('text')
-    expect(screen.queryByRole('dialog', { name: 'Playlist' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Quick post filters' })).not.toBeInTheDocument()
   })
 
   it('closes a keyboard-opened desktop type filter on Escape', () => {

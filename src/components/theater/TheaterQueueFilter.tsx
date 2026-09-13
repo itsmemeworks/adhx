@@ -3,6 +3,8 @@
 /** Single-choice post types and watch filtering, shared by the desktop and mobile Queue. */
 
 import { cn } from '@/lib/utils'
+import { inferType } from '@/lib/trending/filter'
+import type { TheaterItem } from './types'
 import type { ContentType } from '@/components/matter'
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { TheaterWatchFilter, type TheaterWatchFilterProps } from './TheaterWatchFilter'
@@ -14,7 +16,7 @@ import {
 } from './theater-math'
 
 const PILL =
-  'inline-flex min-h-11 items-center rounded-full px-3 py-1 text-[11px] font-semibold transition-colors duration-150'
+  'inline-flex min-h-11 lg:min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors duration-150'
 
 export function TheaterQueueFilter({
   selected,
@@ -25,6 +27,7 @@ export function TheaterQueueFilter({
   onCancel,
   keyboardShortcutFlow = false,
   watchFilter,
+  countItems,
 }: {
   selected: readonly ContentType[]
   onToggle: (type: ContentType) => void
@@ -34,7 +37,13 @@ export function TheaterQueueFilter({
   onCancel?: () => void
   keyboardShortcutFlow?: boolean
   watchFilter?: TheaterWatchFilterProps
+  countItems?: readonly TheaterItem[]
 }) {
+  const counts = new Map<ContentType, number>()
+  for (const item of countItems ?? []) {
+    const type = inferType(item)
+    counts.set(type, (counts.get(type) ?? 0) + 1)
+  }
   const allOn = selected.length === 0
   const rootRef = useRef<HTMLDivElement>(null)
   const didAutoFocusRef = useRef(false)
@@ -116,7 +125,7 @@ export function TheaterQueueFilter({
     <div
       ref={rootRef}
       role="group"
-      aria-label="Playlist filter"
+      aria-label={countItems ? 'Quick post filters' : 'Playlist filter'}
       data-theater-queue-filter=""
       data-theater-filter-shortcut-flow={keyboardShortcutFlow ? '' : undefined}
       className="flex flex-none flex-wrap items-center gap-1.5 px-4 pb-2"
@@ -131,6 +140,7 @@ export function TheaterQueueFilter({
         type="button"
         aria-label="All post types"
         aria-pressed={allOn}
+        aria-description={countItems ? `${countItems.length} posts` : undefined}
         onClick={() => {
           if (!allOn) onClear()
         }}
@@ -140,6 +150,7 @@ export function TheaterQueueFilter({
         )}
       >
         All
+        {countItems && <span className="tabular-nums opacity-70">{countItems.length}</span>}
       </button>
       {THEATER_QUEUE_TYPE_PILLS.map((pill) => {
         const pressed = theaterQueueTypePillState(selected, pill.types)
@@ -149,6 +160,12 @@ export function TheaterQueueFilter({
             key={pill.label}
             type="button"
             aria-pressed={pressed}
+            aria-label={pill.label}
+            aria-description={
+              countItems
+                ? `${pill.types.reduce((sum, type) => sum + (counts.get(type) ?? 0), 0)} posts`
+                : undefined
+            }
             onClick={() => {
               for (const type of theaterQueueTypePillToggleTargets(selected, pill.types)) {
                 onToggle(type)
@@ -160,6 +177,11 @@ export function TheaterQueueFilter({
             )}
           >
             {pill.label}
+            {countItems && (
+              <span className="tabular-nums opacity-70">
+                {pill.types.reduce((sum, type) => sum + (counts.get(type) ?? 0), 0)}
+              </span>
+            )}
           </button>
         )
       })}
