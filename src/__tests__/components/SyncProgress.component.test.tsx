@@ -46,6 +46,20 @@ describe('SyncProgress error UX', () => {
     vi.unstubAllGlobals()
   })
 
+  it('requests an uncapped sync and reports progress across pages', async () => {
+    render(<SyncProgress isOpen onClose={() => {}} />)
+    const es = MockEventSource.instances[0]
+    expect(es.url).toBe('/api/sync')
+    await act(async () => {
+      es.emit('start', { syncId: 'all-pages', total: null })
+      es.emit('page', { pageNumber: 1, tweetsFound: 100 })
+      es.emit('page', { pageNumber: 2, tweetsFound: 75 })
+    })
+    expect(screen.getByText('Fetching page 2...')).toBeInTheDocument()
+    expect(screen.getByText('175')).toBeInTheDocument()
+    expect(screen.queryByText('Sync Complete!')).not.toBeInTheDocument()
+  })
+
   it('shows a reconnect CTA for classified reauth errors, not a raw HTTP status', async () => {
     render(<SyncProgress isOpen onClose={() => {}} />)
 

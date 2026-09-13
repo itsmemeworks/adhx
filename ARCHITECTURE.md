@@ -338,9 +338,12 @@ failure updates include `(userId, syncId, status='running')`, so a stale worker
 cannot overwrite a reaper or replacement owner. Loss of lease stops processing;
 client disconnect marks the owned run failed.
 
-Incremental sync fetches 50 bookmarks. Full sync pages up to 100 at a time and
-clamps callers to 20 pages. The bookmark insert result—not a stale preloaded ID
-set—is authoritative for “new” counts, analytics, client events, and public
+Every sync pages through X bookmarks, requesting up to 100 at a time until X
+omits its next-page token. Short, empty, and duplicate-only pages do not end the
+scan. Legacy `all`/`maxPages` query flags are ignored, including from cached
+clients. Repeated pagination tokens fail the run instead of looping or claiming
+completion. This imports everything X exposes, not posts absent from its API.
+The bookmark insert result—not a stale preloaded ID set—is authoritative for “new” counts, analytics, client events, and public
 pulses. At most the freshest 25 new rows from one sync enter the public pulse,
 so a first-time backfill cannot flood Discover.
 

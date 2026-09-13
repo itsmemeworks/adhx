@@ -67,6 +67,123 @@ describe('GET /api/sync locking', () => {
     testInstance.close()
   })
 
+  it.each(['', '?all=false&maxPages=1', '?all=true&maxPages=20'])(
+    'imports older bookmarks past 50 saved items and the old page cap (%s)',
+    async (query) => {
+      const existing = Array.from({ length: 50 }, (_, i) => ({
+        id: `existing-${i}`,
+        text: 'Already saved',
+        authorId: 'alice',
+      }))
+      await testInstance.db.insert(schema.bookmarks).values(
+        existing.map((tweet) => ({
+          id: tweet.id,
+          userId: 'user-1',
+          platform: 'twitter',
+          author: 'alice',
+          text: tweet.text,
+          tweetUrl: `https://x.com/alice/status/${tweet.id}`,
+          processedAt: new Date().toISOString(),
+        })),
+      )
+      const older = { id: 'older', text: 'Older bookmark', authorId: 'alice' }
+      const { fetchBookmarks } = await import('@/lib/twitter/client')
+      vi.mocked(fetchBookmarks).mockReset()
+      vi.mocked(fetchBookmarks).mockResolvedValueOnce({
+        bookmarks: existing,
+        resultCount: 50,
+        nextToken: 'page-2',
+      })
+      // Short and empty pages with a cursor still lead to older history.
+      for (let page = 2; page <= 20; page++) {
+        vi.mocked(fetchBookmarks).mockResolvedValueOnce({
+          bookmarks: [],
+          resultCount: 0,
+          nextToken: `page-${page + 1}`,
+        })
+      }
+      vi.mocked(fetchBookmarks).mockResolvedValueOnce({ bookmarks: [older], resultCount: 1 })
+      const { saveBookmark } = await import('@/lib/sync/save-bookmark')
+      vi.mocked(saveBookmark).mockResolvedValue({
+        inserted: true,
+        bookmark: {
+          id: older.id,
+          author: 'alice',
+          authorName: 'Alice',
+          authorProfileImageUrl: null,
+          text: older.text,
+          tweetUrl: 'https://x.com/alice/status/older',
+          createdAt: null,
+          processedAt: new Date().toISOString(),
+          category: 'tweet',
+          isArchived: false,
+          isQuote: false,
+          isRetweet: false,
+          media: null,
+          articlePreview: null,
+          tags: [],
+        },
+      })
+      const { GET } = await import('@/app/api/sync/route')
+      const response = await GET(new NextRequest(`https://adhx.test/api/sync${query}`))
+      const body = await response.text()
+      expect(fetchBookmarks).toHaveBeenCalledTimes(21)
+      expect(fetchBookmarks).toHaveBeenNthCalledWith(1, 'user-1', {
+        maxResults: 100,
+        paginationToken: undefined,
+      })
+      expect(fetchBookmarks).toHaveBeenLastCalledWith('user-1', {
+        maxResults: 100,
+        paginationToken: 'page-21',
+      })
+      expect(saveBookmark).toHaveBeenCalledTimes(1)
+      expect(saveBookmark).toHaveBeenCalledWith(
+        older,
+        'user-1',
+        expect.any(Set),
+        expect.any(String),
+      )
+      expect(body).toContain('event: complete')
+      expect(body).toContain('"total":51,"new":1,"duplicates":50')
+      expect((await testInstance.db.select().from(schema.syncLogs))[0]).toMatchObject({
+        status: 'completed',
+        totalFetched: 51,
+        newBookmarks: 1,
+        duplicatesSkipped: 50,
+      })
+    },
+  )
+
+  it('fails rather than looping or claiming completion when X repeats a cursor', async () => {
+    const { fetchBookmarks } = await import('@/lib/twitter/client')
+    vi.mocked(fetchBookmarks).mockReset().mockResolvedValue({
+      bookmarks: [],
+      resultCount: 0,
+      nextToken: 'repeated-page',
+    })
+    const { GET } = await import('@/app/api/sync/route')
+    const response = await GET(new NextRequest('https://adhx.test/api/sync'))
+    const body = await response.text()
+    expect(fetchBookmarks).toHaveBeenCalledTimes(2)
+    expect(body).toContain('X repeated a bookmark page')
+    expect(body).not.toContain('event: complete')
+    expect((await testInstance.db.select().from(schema.syncLogs))[0].status).toBe('failed')
+  })
+
+  it('does not claim completion when a later X page fails', async () => {
+    const { fetchBookmarks } = await import('@/lib/twitter/client')
+    vi.mocked(fetchBookmarks)
+      .mockReset()
+      .mockResolvedValueOnce({ bookmarks: [], resultCount: 0, nextToken: 'page-2' })
+      .mockRejectedValueOnce(new Error('X is unavailable'))
+    const { GET } = await import('@/app/api/sync/route')
+    const response = await GET(new NextRequest('https://adhx.test/api/sync'))
+    const body = await response.text()
+    expect(body).toContain('event: error')
+    expect(body).not.toContain('event: complete')
+    expect((await testInstance.db.select().from(schema.syncLogs))[0].status).toBe('failed')
+  })
+
   it('observes live counts and completion without starting a second X fetch', async () => {
     vi.useFakeTimers()
     const startedAt = new Date().toISOString()

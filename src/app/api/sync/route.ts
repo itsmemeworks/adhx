@@ -85,11 +85,6 @@ export const GET = withAuth(async (request, userId) => {
     return terminalSyncErrorResponse(REAUTH_MESSAGE, 'reauth')
   }
 
-  const searchParams = request.nextUrl.searchParams
-  const all = searchParams.get('all') === 'true'
-  const maxPagesRaw = parseInt(searchParams.get('maxPages') || '10', 10)
-  const maxPages = Number.isNaN(maxPagesRaw) ? 10 : Math.min(20, Math.max(1, maxPagesRaw))
-
   // Claim before returning the streaming response. Reaping a stale claim and
   // inserting this running row happen in one transaction; the DB's partial
   // unique index makes the lock durable across requests and app processes.
@@ -152,8 +147,7 @@ export const GET = withAuth(async (request, userId) => {
 
         // Track sync start only after the durable claim exists. Any failure
         // from here on is caught below and releases the claim as failed.
-        const syncType = all ? 'full' : 'incremental'
-        metrics.syncStarted(syncType)
+        metrics.syncStarted('full')
 
         send('start', { syncId, total: null })
 
@@ -170,7 +164,7 @@ export const GET = withAuth(async (request, userId) => {
         // Track IDs we've inserted during this sync (for quote tweets that get saved separately)
         const insertedDuringSync = new Set<string>()
 
-        let allTweets: TwitterBookmark[] = []
+        const allTweets: TwitterBookmark[] = []
         let pageNumber = 0
         let duplicatesSkipped = 0
         let newBookmarks = 0
@@ -185,39 +179,36 @@ export const GET = withAuth(async (request, userId) => {
             leaseLost = true
         }
 
-        // Fetch bookmarks with pagination
-        if (all) {
-          // Fetch all with progress updates
-          let cursor: string | undefined
-          let hasMore = true
-
-          while (hasMore && pageNumber < maxPages && !aborted && !leaseLost) {
-            pageNumber++
-            const result = await fetchBookmarks(userId, {
-              maxResults: 100,
-              paginationToken: cursor,
-            })
-            if (leaseLost) break
-
-            send('page', {
-              pageNumber,
-              tweetsFound: result.bookmarks.length,
-              cursor: result.nextToken || null,
-            })
-
-            allTweets.push(...result.bookmarks)
-            publishProgress()
-            cursor = result.nextToken
-            hasMore = !!cursor
+        // A sync is complete only when X stops returning a next-page token.
+        // Keep going through short, empty, and already-saved pages: they can
+        // still lead to older bookmarks missing from this account. Ignore the
+        // legacy all/maxPages query flags so cached clients also get a full scan.
+        let cursor: string | undefined
+        const requestedCursors = new Set<string>()
+        while (!aborted && !leaseLost) {
+          if (cursor) {
+            if (requestedCursors.has(cursor)) {
+              throw new Error(
+                'X repeated a bookmark page. Sync could not finish; please try again later.',
+              )
+            }
+            requestedCursors.add(cursor)
           }
-        } else {
-          // Single fetch
-          const result = await fetchBookmarks(userId, { maxResults: 50 })
-          if (!leaseLost) {
-            allTweets = result.bookmarks
-            publishProgress()
-            send('page', { pageNumber: 1, tweetsFound: result.bookmarks.length, cursor: null })
-          }
+          const result = await fetchBookmarks(userId, {
+            maxResults: 100,
+            paginationToken: cursor,
+          })
+          if (aborted || leaseLost) break
+          pageNumber++
+          allTweets.push(...result.bookmarks)
+          publishProgress()
+          send('page', {
+            pageNumber,
+            tweetsFound: result.bookmarks.length,
+            cursor: result.nextToken || null,
+          })
+          cursor = result.nextToken
+          if (!cursor) break
         }
 
         // Process each bookmark
@@ -383,8 +374,6 @@ export const GET = withAuth(async (request, userId) => {
           captureException(error, {
             syncId,
             userId,
-            all,
-            maxPages,
             errorMessage: message,
           })
         }
