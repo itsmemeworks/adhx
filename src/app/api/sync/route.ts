@@ -14,7 +14,13 @@ import { getSyncCooldownMs } from '@/lib/sync/config'
 import { saveBookmark } from '@/lib/sync/save-bookmark'
 import { addedAtForIndex } from '@/lib/sync/added-at'
 import { recordAnalytic } from '@/lib/analytics/record'
-import { claimSync, finishOwnedSync, renewSyncLease } from '@/lib/sync/claim'
+import {
+  claimSync,
+  finishOwnedSync,
+  renewSyncLease,
+  updateOwnedSyncProgress,
+} from '@/lib/sync/claim'
+import { observeSync } from '@/lib/sync/observe'
 
 /**
  * Cap on how many newly-synced tweets feed the public pulse per sync. Bookmarks
@@ -89,7 +95,7 @@ export const GET = withAuth(async (request, userId) => {
   // unique index makes the lock durable across requests and app processes.
   const claim = claimSync(userId, nanoid())
   if (!claim.claimed) {
-    return terminalSyncErrorResponse(SYNC_IN_PROGRESS_MESSAGE, 'in_progress')
+    return observeSync(userId, claim.syncId, request.signal)
   }
   const { syncId } = claim
 
@@ -168,6 +174,16 @@ export const GET = withAuth(async (request, userId) => {
         let pageNumber = 0
         let duplicatesSkipped = 0
         let newBookmarks = 0
+        const publishProgress = () => {
+          if (
+            !updateOwnedSyncProgress(userId, syncId, {
+              totalFetched: allTweets.length,
+              newBookmarks,
+              duplicatesSkipped,
+            })
+          )
+            leaseLost = true
+        }
 
         // Fetch bookmarks with pagination
         if (all) {
@@ -190,6 +206,7 @@ export const GET = withAuth(async (request, userId) => {
             })
 
             allTweets.push(...result.bookmarks)
+            publishProgress()
             cursor = result.nextToken
             hasMore = !!cursor
           }
@@ -198,6 +215,7 @@ export const GET = withAuth(async (request, userId) => {
           const result = await fetchBookmarks(userId, { maxResults: 50 })
           if (!leaseLost) {
             allTweets = result.bookmarks
+            publishProgress()
             send('page', { pageNumber: 1, tweetsFound: result.bookmarks.length, cursor: null })
           }
         }
@@ -232,6 +250,7 @@ export const GET = withAuth(async (request, userId) => {
             // source of truth for stats, events, and the public save pulse.
             if (!inserted) {
               duplicatesSkipped++
+              publishProgress()
               send('duplicate', { tweetId: tweet.id, skipped: true })
               continue
             }
@@ -280,6 +299,7 @@ export const GET = withAuth(async (request, userId) => {
               await new Promise((resolve) => setTimeout(resolve, 150))
             }
           }
+          publishProgress()
         }
 
         if (leaseLost) {

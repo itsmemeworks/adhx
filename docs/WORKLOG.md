@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-13 — Reveal and follow an already-running X sync
+
+Settings now opens the Header-owned sync dialog, revealing a silent run without starting another.
+Additional SSE connections observe user-scoped durable progress and completion instead of an “already in progress” error.
+Only the lease owner writes counters; observer disconnects leave that run intact.
+Duplicate bookmarks now advance the displayed progress, including duplicate-only runs.
+Verified desktop/mobile SSE flows, isolation and failure recovery; all 3,660 unit tests pass.
+State: implemented for review; requires deployment. No schema changes.
+
 ## 2026-09-12 — Put watch history in the existing filters
 
 Removed the floating All / Unwatched navigation-style pill from desktop and mobile.

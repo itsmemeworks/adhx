@@ -320,7 +320,10 @@ run `pnpm db:migrate` before `pnpm dev`.
 `GET /api/sync` is an authenticated SSE stream. Before opening it, the route
 checks the configurable cooldown (one hour by default), confirms X credentials,
 and atomically claims a `sync_logs.status = 'running'` row. A partial unique
-index permits one running sync per user across processes.
+index permits one running sync per user across processes. A second connection
+observes that run through user-scoped persisted counters and its terminal result;
+closing an observer does not cancel the owner. Settings opens the Header-owned
+progress dialog, revealing an existing silent background sync when present.
 
 The stream renews `heartbeat_at` and emits an SSE ping every 10 seconds. A
 claim with no heartbeat for 30 minutes is reaped as failed. Completion and

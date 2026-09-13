@@ -11,7 +11,8 @@
  * "@tester" twice on screen (the X row in Sync and the username row).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
+import { Header } from '@/components/Header'
 import { SettingsClient } from '@/app/settings/SettingsClient'
 
 const preferenceMocks = vi.hoisted(() => ({
@@ -96,6 +97,47 @@ describe('SettingsClient — Email, Username, and Sync X', () => {
     preferenceMocks.loading = false
     sessionStorage.clear()
     localStorage.clear()
+  })
+
+  it('Sync now reveals the header’s background sync without opening a second stream', async () => {
+    const sources: EventTarget[] = []
+    class EventSourceMock extends EventTarget {
+      constructor(_url: string) {
+        super()
+        sources.push(this)
+      }
+      close() {}
+    }
+    vi.stubGlobal('EventSource', EventSourceMock)
+    localStorage.setItem('adhx-last-visible-at', String(Date.now() - 48 * 60 * 60 * 1000))
+    mockFetch(ME_BOTH)
+    render(
+      <>
+        <Header />
+        <SettingsClient />
+      </>,
+    )
+    await waitFor(() => expect(sources).toHaveLength(1))
+    await act(async () => sources[0].dispatchEvent(new MessageEvent('start', { data: '{}' })))
+    await act(async () =>
+      sources[0].dispatchEvent(
+        new MessageEvent('page', { data: JSON.stringify({ pageNumber: 1, tweetsFound: 10 }) }),
+      ),
+    )
+    expect(screen.queryByRole('dialog', { name: 'Bookmark sync' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Sync Now/i }))
+    expect(await screen.findByRole('dialog', { name: 'Bookmark sync' })).toBeInTheDocument()
+    expect(screen.getByText('Fetching page 1...')).toBeInTheDocument()
+    expect(sources).toHaveLength(1)
+    await act(async () =>
+      sources[0].dispatchEvent(
+        new MessageEvent('complete', {
+          data: JSON.stringify({ stats: { total: 10, new: 5, duplicates: 5, categorized: 0 } }),
+        }),
+      ),
+    )
+    expect(screen.getByText('Bookmarks synced successfully!')).toBeInTheDocument()
+    vi.unstubAllGlobals()
   })
 
   it('renders both identity rows as connected when X and email are linked', async () => {
