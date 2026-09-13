@@ -317,15 +317,24 @@ authedTest.describe('theater cross-tab add', () => {
       await page.goto('/live')
       await expectTheaterReady(page)
       const queue = await openTheaterQueue(page)
-      await queue
-        .locator('[data-theater-queue-item]')
-        .filter({ hasText: POST.preview.text })
-        .click()
-      await expect(visibleCaption(page, POST.preview.text)).toBeVisible()
+      await queue.getByRole('button', { name: 'Text', exact: true }).click()
+      await queue.locator('[data-theater-queue-item]').filter({ hasText: POST.alpha.text }).click()
+      // Assert the playing row: caption text can also match an upcoming card.
+      await expect(queue.locator('[data-theater-queue-item][aria-current="true"]')).toContainText(
+        POST.alpha.text,
+      )
       await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
       await pauseTheater(page)
+      const nextKey = await queue
+        .locator('[data-theater-queue-item]')
+        .filter({ has: page.getByText('next ↓', { exact: true }) })
+        .getAttribute('data-theater-item-key')
+      expect(nextKey).toBeTruthy()
       await goNext(page)
-      await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
+      await expect(queue.locator('[data-theater-queue-item][aria-current="true"]')).toHaveAttribute(
+        'data-theater-item-key',
+        nextKey!,
+      )
       await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
       await pauseTheater(page)
       await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible()
@@ -337,6 +346,10 @@ authedTest.describe('theater cross-tab add', () => {
 
       const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
       await expect(added).toBeVisible()
+      await expect(queue.locator('[data-theater-queue-item][aria-current="true"]')).toHaveAttribute(
+        'data-theater-item-key',
+        nextKey!,
+      )
       await expect(added).not.toHaveAttribute('aria-current', 'true')
       await expect(added.getByText('next ↓')).toBeVisible()
       await expect(visibleQueueCount(page)).toHaveText(`${remaining + 1} in queue`)

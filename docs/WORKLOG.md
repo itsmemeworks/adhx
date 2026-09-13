@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-13 — Stabilize the combined release's remote-add browser check
+
+The Live-after-Next scenario could navigate from Preview onto the quote-video fixture.
+Its caption assertion also matched upcoming queue cards, masking the wrong active post.
+Filter to text, select Alpha, then verify the advertised next row stays active after the remote add.
+This retains the playback/remaining-count checks and strengthens the no-stage-stealing assertion.
+State: in the launch PR; combined release CI must pass before merge and production deployment.
+
 ## 2026-09-13 — Compact desktop filters and unobstructed playlist controls
 
 Desktop Filter opens a small counted post-type menu; Queue continues to open the playlist.
