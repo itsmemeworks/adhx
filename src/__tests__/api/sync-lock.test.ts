@@ -3,7 +3,6 @@ import { NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
 import * as schema from '@/lib/db/schema'
 import { createTestDb, type TestDbInstance } from './setup'
-import { SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
 
 let testInstance: TestDbInstance
 
@@ -64,10 +63,12 @@ describe('GET /api/sync locking', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     testInstance.close()
   })
 
-  it('returns a terminal SSE error when this user has a fresh running sync', async () => {
+  it('observes live counts and completion without starting a second X fetch', async () => {
+    vi.useFakeTimers()
     const startedAt = new Date().toISOString()
     await testInstance.db.insert(schema.syncLogs).values({
       id: 'active-sync',
@@ -75,6 +76,9 @@ describe('GET /api/sync locking', () => {
       startedAt,
       status: 'running',
       triggerType: 'manual',
+      totalFetched: 10,
+      newBookmarks: 2,
+      duplicatesSkipped: 1,
     })
 
     const { GET } = await import('@/app/api/sync/route')
@@ -82,14 +86,68 @@ describe('GET /api/sync locking', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('content-type')).toContain('text/event-stream')
-    const body = await response.text()
-    expect(body).toContain('event: error')
-    expect(body).toContain(`"message":"${SYNC_IN_PROGRESS_MESSAGE}"`)
-    expect(body).toContain('"code":"in_progress"')
+    const reader = response.body!.getReader()
+    const decode = async () => new TextDecoder().decode((await reader.read()).value)
+    expect(await decode()).toContain('event: progress\ndata: {"total":10,"new":2,"duplicates":1')
+    await testInstance.db
+      .update(schema.syncLogs)
+      .set({ newBookmarks: 5 })
+      .where(eq(schema.syncLogs.id, 'active-sync'))
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(await decode()).toContain('"new":5')
+    await testInstance.db
+      .update(schema.syncLogs)
+      .set({ status: 'completed', duplicatesSkipped: 5 })
+      .where(eq(schema.syncLogs.id, 'active-sync'))
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(await decode()).toContain('event: complete')
+    expect((await reader.read()).done).toBe(true)
 
     const { fetchBookmarks } = await import('@/lib/twitter/client')
     expect(fetchBookmarks).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
+
+  it('does not expose another account’s sync and does not cancel the owner when an observer leaves', async () => {
+    await testInstance.db.insert(schema.syncLogs).values({
+      id: 'active-sync',
+      userId: 'user-2',
+      startedAt: new Date().toISOString(),
+      status: 'running',
+      newBookmarks: 7,
+    })
+    const { observeSync } = await import('@/lib/sync/observe')
+    const foreign = observeSync('user-1', 'active-sync', new AbortController().signal)
+    expect(await foreign.text()).not.toContain('"new":7')
+    const controller = new AbortController()
+    const owned = observeSync('user-2', 'active-sync', controller.signal)
+    const reader = owned.body!.getReader()
+    await reader.read()
+    controller.abort()
+    expect((await reader.read()).done).toBe(true)
+    expect((await testInstance.db.select().from(schema.syncLogs))[0].status).toBe('running')
+  })
+
+  it.each(['failed', 'stale'] as const)(
+    'closes an observer when its run is %s',
+    async (outcome) => {
+      await testInstance.db.insert(schema.syncLogs).values({
+        id: 'stopped-sync',
+        userId: 'user-1',
+        startedAt: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+        status: outcome === 'failed' ? 'failed' : 'running',
+        errorMessage: outcome === 'failed' ? 'X is temporarily unavailable' : null,
+      })
+      const { observeSync } = await import('@/lib/sync/observe')
+      const response = observeSync('user-1', 'stopped-sync', new AbortController().signal)
+      const body = await response.text()
+      expect(body).toContain('event: error')
+      expect(body).toContain(
+        outcome === 'failed' ? 'X is temporarily unavailable' : 'Sync timed out',
+      )
+      expect(body).not.toContain('event: complete')
+    },
+  )
 
   it('does not complete or overwrite state after heartbeat renewal loses ownership', async () => {
     vi.useFakeTimers()

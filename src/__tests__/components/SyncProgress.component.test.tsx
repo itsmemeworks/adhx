@@ -121,4 +121,32 @@ describe('SyncProgress error UX', () => {
     })
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('shows the existing background stream when promoted, including duplicate progress', async () => {
+    const close = vi.fn()
+    const { rerender } = render(<SyncProgress isOpen silent onClose={close} />)
+    await act(async () => {
+      MockEventSource.instances[0].emit('page', { pageNumber: 1, tweetsFound: 4 })
+      MockEventSource.instances[0].emit('duplicate', {})
+    })
+    rerender(<SyncProgress isOpen onClose={close} />)
+    expect(MockEventSource.instances).toHaveLength(1)
+    expect(screen.getByText('Processing 1 of 4')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25')
+  })
+
+  it('renders progress from another connection and its successful completion', async () => {
+    const complete = vi.fn()
+    render(<SyncProgress isOpen onClose={vi.fn()} onComplete={complete} />)
+    await act(async () =>
+      MockEventSource.instances[0].emit('progress', { total: 10, new: 3, duplicates: 2 }),
+    )
+    expect(screen.getByText('Processing 5 of 10')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50')
+    expect(screen.queryByText("Couldn't sync bookmarks")).not.toBeInTheDocument()
+    const stats = { total: 10, new: 8, duplicates: 2, categorized: 0 }
+    await act(async () => MockEventSource.instances[0].emit('complete', { stats }))
+    expect(complete).toHaveBeenCalledWith(stats)
+    expect(screen.getByText('Sync Complete!')).toBeInTheDocument()
+  })
 })
