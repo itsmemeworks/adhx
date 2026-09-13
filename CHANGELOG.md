@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.72.0](https://github.com/itsmemeworks/adhx/compare/v1.71.2...v1.72.0) (2026-09-13)
+
+
+### Features
+
+* simplify theater filters and launch onboarding ([#515](https://github.com/itsmemeworks/adhx/issues/515)) ([99e9f6b](https://github.com/itsmemeworks/adhx/commit/99e9f6bf632a62228b5b79f1b25e96e5c5555af9))
+
+
+### Bug Fixes
+
+* reveal progress for an already-running bookmark sync ([#516](https://github.com/itsmemeworks/adhx/issues/516)) ([a8de210](https://github.com/itsmemeworks/adhx/commit/a8de21071f42f0991ea679979b01e3630a2ce5e0))
+* sync all available x bookmark pages ([#518](https://github.com/itsmemeworks/adhx/issues/518)) ([c87fb26](https://github.com/itsmemeworks/adhx/commit/c87fb26719baa21553a89630058d2e0bc721c1e0))
+
 ## [1.71.2](https://github.com/itsmemeworks/adhx/compare/v1.71.1...v1.71.2) (2026-09-12)
 
 
