@@ -528,7 +528,7 @@ function SyncBookmarksCard({
   }
 
   return (
-    <SCard icon={RefreshCw} title="Sync X bookmarks" sub="Pull your latest posts on demand">
+    <SCard icon={RefreshCw} title="Sync X bookmarks" sub="Import all bookmarks available from X">
       {xIdentity && (
         <div className="mb-4">
           <div className="flex items-center gap-[13px]">

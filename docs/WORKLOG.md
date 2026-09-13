@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-13 — Sync all X bookmark pages by default
+
+The normal dialog used all=false, repeatedly fetching only the latest 50 bookmarks.
+Every sync now follows X pagination to exhaustion, including short/empty/duplicate-only pages.
+Removed the silent 20-page cutoff and ignore legacy truncation flags from cached clients.
+Repeated cursors fail visibly rather than loop or report an incomplete scan as completed.
+Settings and docs describe importing all bookmarks X exposes, with its availability limits.
+Validated 3,677 unit tests plus desktop/mobile sync progress browser checks.
+State: implemented for review; requires deployment and a new sync to backfill older saves.
+
 ## 2026-09-13 — Stabilize the combined release's remote-add browser check
 
 The Live-after-Next scenario could navigate from Preview onto the quote-video fixture.

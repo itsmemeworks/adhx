@@ -165,6 +165,8 @@ See [`.env.example`](.env.example) for all configuration and [CONTRIBUTING.md](C
 
 X is not used to sign in to ADHX. After email sign-in, you can optionally link X in Settings to sync your existing X bookmarks.
 
+Each sync follows every page X makes available, including older bookmarks beyond the first 50. Existing saves are skipped without stopping the scan. Keep the app open until sync completes; X may omit unavailable posts or older history from its API.
+
 To enable sync locally:
 
 1. Create an app in the [X Developer Portal](https://developer.twitter.com) and enable OAuth 2.0 with PKCE.

@@ -23,7 +23,6 @@ interface CurrentTweet {
 interface SyncProgressProps {
   isOpen: boolean
   onClose: () => void
-  fetchAll?: boolean
   onComplete?: (stats: SyncStats) => void
   /** Run the sync without showing the modal unless it fails. */
   silent?: boolean
@@ -31,13 +30,7 @@ interface SyncProgressProps {
 
 type SyncState = 'idle' | 'connecting' | 'fetching' | 'processing' | 'complete' | 'error'
 
-export function SyncProgress({
-  isOpen,
-  onClose,
-  fetchAll = false,
-  onComplete,
-  silent = false,
-}: SyncProgressProps) {
+export function SyncProgress({ isOpen, onClose, onComplete, silent = false }: SyncProgressProps) {
   const [state, setState] = useState<SyncState>('idle')
   const [progress, setProgress] = useState(0)
   const [totalTweets, setTotalTweets] = useState(0)
@@ -75,8 +68,7 @@ export function SyncProgress({
     setStats(null)
 
     try {
-      const url = `/api/sync?all=${fetchAll}&maxPages=20`
-      const eventSource = new EventSource(url)
+      const eventSource = new EventSource('/api/sync')
 
       eventSource.onopen = () => {
         setState('fetching')
@@ -162,7 +154,7 @@ export function SyncProgress({
       setErrorCode('generic')
       setState('error')
     }
-  }, [fetchAll, onComplete])
+  }, [onComplete])
 
   // Start sync when modal opens
   useEffect(() => {
