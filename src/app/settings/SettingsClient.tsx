@@ -22,7 +22,6 @@ import {
   AtSign,
   Volume2,
 } from 'lucide-react'
-import { SyncProgress } from '@/components/sync/SyncProgress'
 import { usePreferences, FONT_OPTIONS, type BodyFont } from '@/lib/preferences-context'
 import { ConnectWithX } from '@/components/matter'
 import { notifyStatsUpdated } from '@/lib/client-events'
@@ -672,7 +671,6 @@ function SettingsPage() {
   const [meLoading, setMeLoading] = useState(true)
 
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [showSyncModal, setShowSyncModal] = useState(false)
   const [cooldown, setCooldown] = useState<CooldownStatus>({
     canSync: true,
     cooldownRemaining: 0,
@@ -852,15 +850,15 @@ function SettingsPage() {
     return `${seconds}s`
   }
 
-  function handleSyncComplete() {
-    setShowSyncModal(false)
-    fetchSyncHistory()
-    fetchCooldown()
-    setMessage({ type: 'success', text: 'Bookmarks synced successfully!' })
-    // Notify Header to refresh stats and cooldown
-    notifyStatsUpdated()
-    window.dispatchEvent(new CustomEvent('sync-complete'))
-  }
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      fetchSyncHistory()
+      fetchCooldown()
+      setMessage({ type: 'success', text: 'Bookmarks synced successfully!' })
+    }
+    window.addEventListener('sync-complete', handleSyncComplete)
+    return () => window.removeEventListener('sync-complete', handleSyncComplete)
+  }, [])
 
   function getTimeSince(dateStr: string) {
     const diffMs = Date.now() - new Date(dateStr).getTime()
@@ -989,7 +987,7 @@ function SettingsPage() {
             cooldown={cooldown}
             displayedCooldown={displayedCooldown}
             formatCooldown={formatCooldown}
-            onSyncClick={() => setShowSyncModal(true)}
+            onSyncClick={() => window.dispatchEvent(new CustomEvent('open-sync'))}
             lastSyncAt={syncHistory.lastSyncAt}
             xSynced={syncHistory.xSynced}
             xOnAdhx={syncHistory.xOnAdhx}
@@ -1190,13 +1188,6 @@ function SettingsPage() {
           </p>
         </div>
       </div>
-
-      {/* Sync Progress Modal */}
-      <SyncProgress
-        isOpen={showSyncModal}
-        onClose={() => setShowSyncModal(false)}
-        onComplete={handleSyncComplete}
-      />
 
       {/* Clear Data Confirmation Modal */}
       {showClearDataModal && (

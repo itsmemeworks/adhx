@@ -18,6 +18,22 @@ export interface OwnedSyncTerminalUpdate {
   errorMessage?: string | null
 }
 
+/** Live counters are written only by the current lease owner. */
+export function updateOwnedSyncProgress(
+  userId: string,
+  syncId: string,
+  progress: { totalFetched: number; newBookmarks: number; duplicatesSkipped: number },
+): boolean {
+  const result = db
+    .update(syncLogs)
+    .set(progress)
+    .where(
+      and(eq(syncLogs.userId, userId), eq(syncLogs.id, syncId), eq(syncLogs.status, 'running')),
+    )
+    .run()
+  return result.changes === 1
+}
+
 function isUniqueConstraintError(error: unknown): boolean {
   return (
     error instanceof Error &&
@@ -32,7 +48,7 @@ function isUniqueConstraintError(error: unknown): boolean {
  *
  * The partial unique index on sync_logs(user_id) WHERE status = 'running' is
  * the durable cross-process backstop. The explicit lookup provides the current
- * claim details for a useful 409 response and keeps this helper correct in test
+ * claim details so additional connections can observe the existing run and keeps this helper correct in test
  * databases while their DDL is being upgraded.
  */
 export function claimSync(userId: string, syncId: string, now = new Date()): SyncClaimResult {

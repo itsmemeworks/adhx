@@ -103,14 +103,29 @@ export function SyncProgress({
       })
 
       eventSource.addEventListener('duplicate', () => {
+        setState('processing')
         setDuplicates((prev) => prev + 1)
         setProcessedTweets((prev) => prev + 1)
+      })
+
+      // A second tab observes the same durable run instead of launching another sync.
+      eventSource.addEventListener('progress', (e) => {
+        const data: SyncStats = JSON.parse(e.data)
+        setState(data.new + data.duplicates > 0 ? 'processing' : 'fetching')
+        setTotalTweets(data.total)
+        setProcessedTweets(data.new + data.duplicates)
+        setNewBookmarks(data.new)
+        setDuplicates(data.duplicates)
       })
 
       eventSource.addEventListener('complete', (e) => {
         terminalRef.current = true
         const data = JSON.parse(e.data)
         setStats(data.stats)
+        setTotalTweets(data.stats.total)
+        setNewBookmarks(data.stats.new)
+        setDuplicates(data.stats.duplicates)
+        setProcessedTweets(data.stats.new + data.stats.duplicates)
         onComplete?.(data.stats)
         eventSource.close()
 
@@ -163,6 +178,12 @@ export function SyncProgress({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (state === 'processing' && totalTweets > 0) {
+      setProgress(Math.min(100, Math.round((processedTweets / totalTweets) * 100)))
+    }
+  }, [state, processedTweets, totalTweets])
+
   if (!isOpen) return null
   // Background/resume sync: stay invisible unless we need the user (reconnect).
   if (silent && state !== 'error') return null
@@ -174,7 +195,12 @@ export function SyncProgress({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Bookmark sync"
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+    >
       <div className="bg-card rounded-lg border shadow-lg w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
@@ -203,14 +229,24 @@ export function SyncProgress({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">
                     {state === 'connecting' && 'Connecting...'}
-                    {state === 'fetching' && `Fetching page ${pageNumber}...`}
+                    {state === 'fetching' &&
+                      (pageNumber > 0 ? `Fetching page ${pageNumber}...` : 'Fetching bookmarks...')}
                     {state === 'processing' && `Processing ${processedTweets} of ${totalTweets}`}
                     {state === 'complete' && 'Complete!'}
                     {state === 'error' && 'Stopped'}
                   </span>
                   <span className="text-sm font-medium">{progress}%</span>
                 </div>
-                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div
+                  role="progressbar"
+                  aria-label="Sync progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={
+                    state === 'processing' || state === 'complete' ? progress : undefined
+                  }
+                  className="h-2 bg-secondary rounded-full overflow-hidden"
+                >
                   <div
                     className={cn(
                       'h-full transition-all duration-300',

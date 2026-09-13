@@ -126,13 +126,13 @@ export function Header() {
   // Separate effect for sync shortcut to track cooldown state
   useEffect(() => {
     const handleOpenSync = () => {
-      if (cooldown.canSync && xConnected) {
+      if (xConnected && (cooldown.canSync || silentSync || showSync)) {
         setShowSync(true)
       }
     }
     window.addEventListener('open-sync', handleOpenSync)
     return () => window.removeEventListener('open-sync', handleOpenSync)
-  }, [cooldown.canSync, xConnected])
+  }, [cooldown.canSync, xConnected, silentSync, showSync])
 
   // Refresh stats and cooldown when auth status changes to authenticated
   useEffect(() => {
