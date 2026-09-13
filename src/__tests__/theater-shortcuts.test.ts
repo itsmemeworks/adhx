@@ -125,10 +125,10 @@ describe('resolveTheaterShortcut', () => {
     expect(actions?.rows.find((r) => r.label === 'Read / Watch')?.keys).toEqual(['F'])
   })
 
-  it('lists My videos, Discover, Queue, and the desktop Filter shortcut on theater help', () => {
+  it('lists Saved, Discover, Queue, and the desktop Filter shortcut on theater help', () => {
     const theater = THEATER_SHORTCUT_HELP.find((s) => s.title === 'Theater')
     expect(theater?.rows).toEqual([
-      { keys: ['1'], label: 'My videos' },
+      { keys: ['1'], label: 'Saved' },
       { keys: ['2'], label: 'Discover' },
       { keys: ['Q'], label: 'Queue' },
       { keys: ['⇧Q'], label: 'Filter (desktop)' },

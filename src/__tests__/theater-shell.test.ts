@@ -123,9 +123,7 @@ describe('theaterQueueEmptyHeadline', () => {
     expect(theaterQueueEmptyHeadline(['video', 'text', 'article'])).toBe(
       'No videos or text in Discover right now',
     )
-    expect(theaterQueueEmptyHeadline(['video'], 'My videos')).toBe(
-      'No videos in My videos right now',
-    )
+    expect(theaterQueueEmptyHeadline(['video'], 'Saved')).toBe('No videos in Saved right now')
   })
 })
 

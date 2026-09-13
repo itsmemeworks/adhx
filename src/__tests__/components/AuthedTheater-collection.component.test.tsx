@@ -173,7 +173,7 @@ describe('AuthedTheater collection load', () => {
         })
       }
       render(<AuthedTheater seed={emptySeed} tab="collection" />)
-      await waitFor(() => expect(screen.getByText(/couldn.t load My videos/i)).toBeInTheDocument())
+      await waitFor(() => expect(screen.getByText(/couldn.t load Saved/i)).toBeInTheDocument())
       expect(screen.queryByTestId('theater-shell')).not.toBeInTheDocument()
       expect(feedRequests).toHaveLength(2)
     },
@@ -204,7 +204,7 @@ describe('AuthedTheater collection load', () => {
   it('shows an error — not all-clear — when the feed request fails', async () => {
     feedImpl = () => jsonResponse({ error: 'nope' }, false)
     render(<AuthedTheater seed={emptySeed} tab="collection" />)
-    await waitFor(() => expect(screen.getByText(/couldn.t load My videos/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/couldn.t load Saved/i)).toBeInTheDocument())
     expect(screen.queryByTestId('theater-shell')).not.toBeInTheDocument()
   })
 

@@ -179,6 +179,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     resetClientEventBridgeForTests()
     setClientEventAccount('account-a')
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
     window.sessionStorage.clear()
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -192,7 +193,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     }) as never
   })
 
-  it('My videos defaults to All, including watched saves, and Unwatched never deletes them', async () => {
+  it('Saved defaults to All, including watched saves, and Unwatched never deletes them', async () => {
     localStorage.setItem('adhx-seen-v1', JSON.stringify(['twitter:1']))
     localStorage.setItem('adhx-theater-repeat-saved', 'off')
     await act(async () => {
@@ -242,7 +243,7 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(queueIds()).toEqual(['1', '3'])
   })
 
-  it('My videos repeat-off plays all saves once without hiding the watched rows', async () => {
+  it('Saved repeat-off plays all saves once without hiding the watched rows', async () => {
     localStorage.setItem('adhx-theater-repeat-saved', 'off')
     await act(async () => {
       render(
@@ -654,12 +655,12 @@ describe('TheaterShell: cross-tab add + filters', () => {
     expect(chromeProps().currentKey).toBe(theaterItemKey(video))
 
     await tapType('text')
-    expect(chromeProps().queueTypes).toEqual(['text'])
+    expect(chromeProps().queueTypes).toEqual(['text', 'article'])
     expect(chromeProps().currentKey).toBe(theaterItemKey(video))
     expect(screen.queryByText('Nothing playing')).not.toBeInTheDocument()
     expect(screen.getByText('No text in Discover right now')).toBeInTheDocument()
 
-    await tapType('text')
+    await act(async () => screen.getByRole('button', { name: 'Show every post' }).click())
     expect(chromeProps().queueTypes).toEqual([])
     expect(chromeProps().currentKey).toBe(theaterItemKey(video))
     expect(screen.queryByText('Nothing playing')).not.toBeInTheDocument()

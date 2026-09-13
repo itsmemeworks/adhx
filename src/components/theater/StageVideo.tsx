@@ -30,6 +30,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { usePostPlayback } from './usePostPlayback'
 import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import {
@@ -135,6 +136,7 @@ export function StageVideo({
   // load-failure state (retry is worth offering).
   const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
+  const recordPlayback = usePostPlayback(item)
   // Mirrors the live element's `.muted`. Initialized from the `muted` prop,
   // which is only the extern/initial signal from here on — once the user
   // (or a fallback below) changes the element's mute state directly, this is
@@ -627,6 +629,7 @@ export function StageVideo({
   // play() or any later play() path) clears the gesture overlay.
   const handleVideoPlaying = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     if (!isCurrentLifecycleEvent(event.currentTarget)) return
+    if (!covered) recordPlayback()
     setPlaying(true)
     setNeedsGesture(false)
     // A playing element is by definition not at its end — clears any stale

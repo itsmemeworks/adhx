@@ -265,7 +265,7 @@ export const THEATER_SHORTCUT_HELP: TheaterHelpSection[] = [
   {
     title: 'Theater',
     rows: [
-      { keys: ['1'], label: 'My videos' },
+      { keys: ['1'], label: 'Saved' },
       { keys: ['2'], label: 'Discover' },
       { keys: ['Q'], label: 'Queue' },
       { keys: ['⇧Q'], label: 'Filter (desktop)' },

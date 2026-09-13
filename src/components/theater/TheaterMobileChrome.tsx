@@ -63,7 +63,7 @@ import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
-import { TheaterWatchFilter } from './TheaterWatchFilter'
+import { TheaterWatchFilter, type TheaterWatchFilterProps } from './TheaterWatchFilter'
 import {
   isTheaterQueueFilterActive,
   theaterQueueFilterLabel,
@@ -171,6 +171,7 @@ export interface TheaterMobileChromeProps {
   articleMode?: boolean
   onToggleArticleMode?: () => void
   /** Live and Saved — omit on playlists. Empty `queueTypes` is All. */
+  watchFilter?: TheaterWatchFilterProps
   queueTypes?: ContentType[]
   /** Unfiltered queue used only to count the quick type choices. */
   typeFilterItems?: TheaterItem[]
@@ -225,6 +226,7 @@ export function TheaterMobileChrome({
   onPastePost,
   articleMode = false,
   onToggleArticleMode,
+  watchFilter: filterPreference,
   queueTypes = [],
   typeFilterItems,
   onToggleQueueType,
@@ -448,9 +450,10 @@ export function TheaterMobileChrome({
   // repeat`).
   const queueIndex = currentKey ? items.findIndex((it) => theaterItemKey(it) === currentKey) : -1
   const watchFilter =
-    collection?.tab === 'collection' && collection.onWatchFilterChange
+    filterPreference ??
+    (collection?.onWatchFilterChange
       ? { value: collection.watchFilter ?? 'all', onChange: collection.onWatchFilterChange }
-      : undefined
+      : undefined)
   const typeFilterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
   const watchFilterOn = watchFilter?.value === 'unwatched'
   const filterOn = typeFilterOn || watchFilterOn
@@ -538,7 +541,7 @@ export function TheaterMobileChrome({
             {current ? <FlameChip trendCount={trendCount} /> : null}
             {/* Same paste flow as desktop: save in place, with a preview fallback
                 if metadata cannot be saved. */}
-            <PasteLinkButton iconOnly onPastePost={onPastePost} />
+            <PasteLinkButton appearance="theater" onPastePost={onPastePost} />
             {/* Live ⇄ Saved lives in this menu on mobile, as two
                 sub-options under Theater (owner: a tab pill up here "is
                 going to definitely cause overlap with the logo, the play
@@ -554,7 +557,7 @@ export function TheaterMobileChrome({
           </div>
           <div className="pointer-events-auto absolute left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] top-[calc(max(0.75rem,env(safe-area-inset-top))+3.5rem)] flex items-center justify-between gap-3">
             <span className="rounded-full bg-black/35 px-3 py-2 text-sm font-semibold text-white backdrop-blur-md">
-              {collection.tab === 'collection' ? 'My videos' : 'Discover'}
+              {collection.tab === 'collection' ? 'Saved' : 'Discover'}
             </span>
           </div>
         </div>
@@ -609,7 +612,7 @@ export function TheaterMobileChrome({
                 paste gesture, so this covers the signed-out home theater and
                 shared preview pages (collection/collection top scrims above
                 have their own chrome and skip this). */}
-            <PasteLinkButton iconOnly onPastePost={onPastePost} />
+            <PasteLinkButton appearance="theater" onPastePost={onPastePost} />
             {/* Signed-out visitors here (the home theater + shared preview
                 pages) get a burger fallback in this same slot — Theater /
                 Leaderboard / Sign in — instead of no navigation at all.
@@ -726,10 +729,8 @@ export function TheaterMobileChrome({
             ref={actionRailRef}
             className={cn(
               'pointer-events-none fixed right-[calc(0.75rem+env(safe-area-inset-right))] z-[30] flex w-12 flex-col items-center gap-1.5 bottom-[calc(13rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:bottom-[calc(11rem+env(safe-area-inset-bottom))]',
-              // In a short personal theater, 6rem = the 4.25rem dock,
-              // the slider's 1.5rem reach above it, and a 0.25rem gap.
-              collection &&
-                '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-[calc(7rem+env(safe-area-inset-right))]',
+              // Leave room for the labelled Paste action and the swipe controls.
+              '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))] [@media(max-height:520px)]:right-[calc(11.5rem+env(safe-area-inset-right))]',
               actionRailHidden && 'hidden',
             )}
             aria-hidden={actionRailHidden}
@@ -939,7 +940,7 @@ export function TheaterMobileChrome({
             }}
             onKeyDown={(event) => event.stopPropagation()}
             className={cn(
-              'inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
+              'inline-flex min-h-11 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
               queueTypes.length === 0
                 ? 'bg-clay text-white'
                 : 'bg-white/10 text-white/80 hover:bg-white/15',
@@ -969,7 +970,7 @@ export function TheaterMobileChrome({
                 }}
                 onKeyDown={(event) => event.stopPropagation()}
                 className={cn(
-                  'inline-flex min-h-9 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
+                  'inline-flex min-h-11 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-colors',
                   selected ? 'bg-clay text-white' : 'bg-white/10 text-white/80 hover:bg-white/15',
                 )}
               >
@@ -1102,11 +1103,14 @@ export function TheaterMobileChrome({
                   title={filterOn ? filterLabel : 'Filter posts'}
                   className={cn(
                     PEEK_ICON_BTN,
-                    'relative',
+                    'relative w-auto gap-1 px-2',
                     filterOn && 'text-clay hover:text-clay active:text-clay',
                   )}
                 >
-                  <ListFilter size={19} aria-hidden />
+                  <ListFilter size={15} aria-hidden />
+                  <span className="max-w-20 truncate text-[11px] font-semibold">
+                    {typeFilterOn ? theaterQueueFilterLabel(queueTypes) : 'All posts'}
+                  </span>
                   {filterOn ? (
                     <span
                       className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-clay"

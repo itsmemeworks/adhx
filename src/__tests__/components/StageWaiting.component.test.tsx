@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * Round 8 (owner request): "Start from the beginning" — a deliberate
+ * Round 8 (owner request): "Watch again" — a deliberate
  * navigation back to the top of the queue instead of waiting for new sends.
  * `onReplay` is omitted entirely when there's nothing to replay (an empty
  * queue), in which case the button must not render at all.
@@ -14,7 +14,7 @@ describe('StageWaiting', () => {
   it('shows the caught-up headline and waiting copy', () => {
     render(<StageWaiting />)
     expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
-    expect(screen.getByText('waiting for new sends…')).toBeInTheDocument()
+    expect(screen.getByText('Paste a link, or watch these posts again.')).toBeInTheDocument()
   })
 
   it('shows the saved-today count only when provided and non-zero', () => {
@@ -27,15 +27,15 @@ describe('StageWaiting', () => {
     expect(screen.queryByText(/saved today/)).not.toBeInTheDocument()
   })
 
-  it('renders no "Start from the beginning" button when onReplay is omitted', () => {
+  it('renders no "Watch again" button when onReplay is omitted', () => {
     render(<StageWaiting />)
-    expect(screen.queryByText('Start from the beginning')).not.toBeInTheDocument()
+    expect(screen.queryByText('Watch again')).not.toBeInTheDocument()
   })
 
-  it('renders and wires the "Start from the beginning" button when onReplay is provided', () => {
+  it('renders and wires the "Watch again" button when onReplay is provided', () => {
     const onReplay = vi.fn()
     render(<StageWaiting onReplay={onReplay} />)
-    const button = screen.getByText('Start from the beginning')
+    const button = screen.getByText('Watch again')
     expect(button).toBeInTheDocument()
     fireEvent.click(button)
     expect(onReplay).toHaveBeenCalledTimes(1)
@@ -45,7 +45,7 @@ describe('StageWaiting', () => {
     const onReplay = vi.fn()
     const onKeepPlaying = vi.fn()
     render(<StageWaiting onReplay={onReplay} replayCount={15} onKeepPlaying={onKeepPlaying} />)
-    expect(screen.getByText('Re-watch all 15')).toBeInTheDocument()
+    expect(screen.getByText('Watch again · 15')).toBeInTheDocument()
     fireEvent(window, new Event('theater-replay'))
     fireEvent(window, new Event('theater-keep-playing'))
     expect(onReplay).toHaveBeenCalledTimes(1)

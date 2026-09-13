@@ -126,7 +126,14 @@ describe('useSendFile', () => {
   })
 
   it('exposes an explicit browser download action for contextual menus', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
+    vi.stubGlobal('fetch', mockFetchResolvingVideo())
+    vi.stubGlobal(
+      'URL',
+      class extends URL {
+        static createObjectURL = vi.fn(() => 'blob:verified')
+        static revokeObjectURL = vi.fn()
+      },
+    )
     let downloaded: { href: string; filename: string } | null = null
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
       this: HTMLAnchorElement,
@@ -136,14 +143,13 @@ describe('useSendFile', () => {
     const { useSendFile } = await import('@/components/theater/useSendFile')
     const { result } = renderHook(() => useSendFile(videoItem()))
 
-    act(() => result.current.download())
+    await act(async () => {
+      await result.current.download()
+    })
 
     expect(click).toHaveBeenCalledTimes(1)
     expect(downloaded).toEqual({
-      href: new URL(
-        '/api/media/video/download?author=alice&tweetId=1&quality=hd',
-        window.location.origin,
-      ).toString(),
+      href: 'blob:verified',
       filename: 'adhx-twitter-1.mp4',
     })
     expect(document.querySelector('a[download="adhx-twitter-1.mp4"]')).toBeNull()
@@ -162,6 +168,22 @@ describe('useSendFile', () => {
     expect(result.current.supported).toBe(false)
     await advance(3_000)
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('does not download an error response or report it as a successful send', async () => {
+    const fetchMock = vi.fn(async () => new Response('unavailable', { status: 503 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const { useSendFile } = await import('@/components/theater/useSendFile')
+    const { result } = renderHook(() => useSendFile(videoItem()))
+    await act(async () => {
+      expect(await result.current.download()).toBe(false)
+    })
+    expect(result.current.error).toContain("Couldn't get the file")
+    expect(result.current.sending).toBe(false)
+    expect(click).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    click.mockRestore()
   })
 
   it('re-fetches when the item changes to a different post (cache is keyed per item)', async () => {
@@ -315,6 +337,29 @@ describe('useSendFile — an early tap waits for the file instead of sharing a l
     expect(payload.files[0].type).toBe('video/mp4')
     expect(payload.url).toBeUndefined()
     expect(payload.text).toMatch(/^via https?:\/\//)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/analytics',
+      expect.objectContaining({
+        body: expect.stringContaining('"name":"post.send"'),
+      }),
+    )
+  })
+
+  it('does not record a successful send when the native share sheet is cancelled', async () => {
+    const fetchMock = mockFetchResolvingVideo()
+    vi.stubGlobal('fetch', fetchMock)
+    const share = vi.fn(async () => {
+      throw new DOMException('cancelled', 'AbortError')
+    })
+    stubShare(share)
+    const useSendFile = await importOnMobile()
+    const { result } = renderHook(() => useSendFile(videoItem()))
+    await act(async () => {
+      expect(await result.current.send()).toBe(false)
+    })
+    expect(share).toHaveBeenCalledTimes(1)
+    expect(result.current.sending).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('keeps `sending` up for the whole fetch, so the spinner can stay on', async () => {

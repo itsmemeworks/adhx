@@ -195,3 +195,10 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* The playlist covers the stage action area; keep those controls out of view
+   and keyboard navigation until the playlist closes. */
+.theater-shell-viewport:has([data-theater-queue-panel], [data-theater-quick-filter-panel])
+  [data-theater-desktop-actions] {
+  display: none;
+}

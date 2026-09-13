@@ -88,7 +88,7 @@ describe('TheaterAvatarMenu', () => {
     fireEvent.click(button)
 
     expect(screen.getByText('Library')).toBeInTheDocument()
-    expect(screen.getByText('My videos')).toBeInTheDocument()
+    expect(screen.getByText('Saved')).toBeInTheDocument()
     expect(screen.getByText('Tags')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
@@ -140,10 +140,10 @@ describe('TheaterAvatarMenu', () => {
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveAttribute('href', '/saved')
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveAttribute('href', '/saved')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveAttribute('href', '/live')
     expect(screen.queryByRole('menuitem', { name: 'Theater' })).not.toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: 'My videos' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
   })
 
@@ -153,10 +153,7 @@ describe('TheaterAvatarMenu', () => {
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
   })
 
@@ -237,7 +234,7 @@ describe('TheaterAvatarMenu', () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveFocus())
     pressMenuKey('ArrowDown')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveFocus()
     pressMenuKey('j')
@@ -247,9 +244,9 @@ describe('TheaterAvatarMenu', () => {
     pressMenuKey('End')
     expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus()
     pressMenuKey('ArrowDown')
-    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveFocus()
     pressMenuKey('Home')
-    expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveFocus()
     pressMenuKey('ArrowDown')
     const discover = screen.getByRole('menuitem', { name: 'Discover' })
     const click = vi.fn((e: Event) => e.preventDefault())
@@ -406,20 +403,20 @@ describe('TheaterAvatarMenu — personal destinations', () => {
     return onTabChange
   }
 
-  it('puts My videos first, followed by Discover and Library', async () => {
+  it('puts Saved first, followed by Discover and Library', async () => {
     await openWith('collection')
     expect(
       screen
         .getAllByRole('menuitem')
         .slice(0, 3)
         .map((item) => item.textContent),
-    ).toEqual(['My videos', 'Discover', 'Library'])
+    ).toEqual(['Saved', 'Discover', 'Library'])
     expect(screen.queryByRole('menuitem', { name: 'Theater' })).not.toBeInTheDocument()
   })
 
   it.each([
-    ['live', 'Discover', 'My videos'],
-    ['collection', 'My videos', 'Discover'],
+    ['live', 'Discover', 'Saved'],
+    ['collection', 'Saved', 'Discover'],
   ] as const)('highlights only the %s destination', async (tab, selected, other) => {
     await openWith(tab)
     const current = screen.getByRole('menuitem', { name: selected })
@@ -430,20 +427,20 @@ describe('TheaterAvatarMenu — personal destinations', () => {
 
   it('marks neither destination on a shared preview', async () => {
     await openWith()
-    expect(screen.getByRole('menuitem', { name: 'My videos' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
   })
 
   it('switches through the tab callback and closes the menu', async () => {
     const onTabChange = await openWith('live')
-    fireEvent.click(screen.getByRole('menuitem', { name: 'My videos' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Saved' }))
     expect(onTabChange).toHaveBeenCalledWith('collection')
-    await waitFor(() => expect(screen.queryByText('My videos')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Saved')).not.toBeInTheDocument())
   })
 
   it('keyboard navigation follows the same personal-first order', async () => {
     const onTabChange = await openWith('live')
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'My videos' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveFocus())
     pressMenuKey('ArrowDown')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveFocus()
     pressMenuKey('Enter')

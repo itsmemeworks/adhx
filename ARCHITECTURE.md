@@ -31,7 +31,7 @@ flowchart LR
 
 The product separates personal saves from community discovery:
 
-- **My videos** is one user's complete, non-archived saved-post theater at
+- **Saved** is one user's complete, non-archived saved-post theater at
   `/saved`, and the default destination for signed-in visitors.
 - **Discover** is the secondary community theater at `/live`.
 - **Library** is the grid at `/library` used to browse, search, filter, and
@@ -40,7 +40,7 @@ The product separates personal saves from community discovery:
   `/t/{username}/{tag}`. Database and API names that predate this terminology
   may still say “collection.”
 
-Archive is private removal from the My videos queue. It is not a public
+Archive is private removal from the Saved queue. It is not a public
 activity signal and does not delete the bookmark.
 
 The visible timestamp answers a different question on each surface:
@@ -48,36 +48,36 @@ The visible timestamp answers a different question on each surface:
 | Surface             | Timestamp                                                              |
 | ------------------- | ---------------------------------------------------------------------- |
 | Discover / Trending | When the post first entered ADHX through any saver or public activity. |
-| My videos / Library | When this user saved it (`bookmarks.processed_at`).                    |
+| Saved / Library     | When this user saved it (`bookmarks.processed_at`).                    |
 | Playlist            | When the curator added it to that tag (`bookmark_tags.created_at`).    |
 
 ## Product routes
 
-| Route                       | Role                                                                                                                    |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/saved`.           |
-| `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                                |
-| `/saved`                    | Signed-in My videos: all non-archived saves, with an All / Unwatched filter. Library links select a post with `?open=`. |
-| `/library`                  | Signed-in grid over saved posts: search, platform/type/tag filters, archived view, and grid/list/bento layouts.         |
-| `/{user}/status/{id}`       | X post preview.                                                                                                         |
-| `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                       |
-| `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                               |
-| `/@{user}/video/{id}`       | TikTok video preview.                                                                                                   |
-| `/shorts/{id}`              | YouTube Shorts preview; regular YouTube videos are intentionally unsupported.                                           |
-| `/trending`                 | Public dark ranked list with the Latest membership lens initially selected.                                             |
-| `/trending/{filter}`        | Crawlable `popular`, `videos`, `photos`, `text`, or `articles` lens.                                                    |
-| `/trending/archive`         | Index of permanent ISO-week snapshots.                                                                                  |
-| `/trending/archive/{week}`  | Frozen weekly ranked snapshot, capped to 50 posts.                                                                      |
-| `/leaderboard`              | Public playlist leaderboard for this week.                                                                              |
-| `/leaderboard/{window}`     | `today`, `month`, or `all-time` playlist ranking.                                                                       |
-| `/tags`                     | Signed-in playlist/tag management and sharing controls.                                                                 |
-| `/settings`                 | Account, reading, appearance, X connection, install, and deletion settings.                                             |
-| `/admin`                    | Persisted-admin-only analytics and moderation console.                                                                  |
-| `/share`                    | PWA/extension/share-sheet URL router; it does not store content itself.                                                 |
-| `/welcome`                  | One-shot, noindex username choice after a new email account is created.                                                 |
-| `/t/{username}`             | Public curator hub containing that account's public playlists.                                                          |
-| `/t/{username}/{tag}`       | Public playlist theater, cloneable as “Save playlist.”                                                                  |
-| `/{username}`               | Public X-author hub built from posts ADHX already knows publicly.                                                       |
+| Route                       | Role                                                                                                                                |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/saved`.                       |
+| `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                                            |
+| `/saved`                    | Signed-in Saved: all non-archived saves, with independent type and Hide watched filters. Library links select a post with `?open=`. |
+| `/library`                  | Signed-in grid over saved posts: search, platform/type/tag filters, archived view, and grid/list/bento layouts.                     |
+| `/{user}/status/{id}`       | X post preview.                                                                                                                     |
+| `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                                   |
+| `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                                           |
+| `/@{user}/video/{id}`       | TikTok video preview.                                                                                                               |
+| `/shorts/{id}`              | YouTube Shorts preview; regular YouTube videos are intentionally unsupported.                                                       |
+| `/trending`                 | Public dark ranked list with the Latest membership lens initially selected.                                                         |
+| `/trending/{filter}`        | Crawlable `popular`, `videos`, `photos`, `text`, or `articles` lens.                                                                |
+| `/trending/archive`         | Index of permanent ISO-week snapshots.                                                                                              |
+| `/trending/archive/{week}`  | Frozen weekly ranked snapshot, capped to 50 posts.                                                                                  |
+| `/leaderboard`              | Public playlist leaderboard for this week.                                                                                          |
+| `/leaderboard/{window}`     | `today`, `month`, or `all-time` playlist ranking.                                                                                   |
+| `/tags`                     | Signed-in playlist/tag management and sharing controls.                                                                             |
+| `/settings`                 | Account, reading, appearance, X connection, install, and deletion settings.                                                         |
+| `/admin`                    | Persisted-admin-only analytics and moderation console.                                                                              |
+| `/share`                    | PWA/extension/share-sheet URL router; it does not store content itself.                                                             |
+| `/welcome`                  | One-shot, noindex username choice after a new email account is created.                                                             |
+| `/t/{username}`             | Public curator hub containing that account's public playlists.                                                                      |
+| `/t/{username}/{tag}`       | Public playlist theater, cloneable as “Save playlist.”                                                                              |
+| `/{username}`               | Public X-author hub built from posts ADHX already knows publicly.                                                                   |
 
 Legacy routes stay as redirects: `/collection` → `/saved`, `/discover` →
 `/trending`, `/collections` → `/leaderboard`, and `/trending/play` → `/live`.
@@ -106,11 +106,11 @@ flowchart TD
   P -->|new signed-in open| A[Autosave lead]
   P -->|explicit Save| ADD[/api/bookmarks/add]
   A --> ADD
-  IP[Paste inside Discover or My videos] --> ADD
+  IP[Paste inside Discover or Saved] --> ADD
   XS[X bookmark sync] --> SSE[/api/sync SSE]
   ADD --> DB[(bookmarks + media + links)]
   SSE --> DB
-  DB --> F[/api/feed: Library and My videos]
+  DB --> F[/api/feed: Library and Saved]
   DB --> L[Discover / Trending / playlist seeds]
 ```
 
@@ -144,14 +144,14 @@ required for manually saving or viewing any supported platform.
 
 `TheaterShell` is the orchestrator shared by four modes:
 
-| Mode       | Feed and end behavior                                                                                       |
-| ---------- | ----------------------------------------------------------------------------------------------------------- |
-| `home`     | Signed-out discovery feed from the anonymous activity query.                                                |
-| `shared`   | Opened preview pinned as the lead, followed by community items.                                             |
-| `personal` | Signed-in Discover or My videos route. My videos defaults to All; its watch filter is separate from Repeat. |
-| `playlist` | One public tag ordered by curator-add time and looping at the boundary.                                     |
+| Mode       | Feed and end behavior                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `home`     | Signed-out discovery feed from the anonymous activity query.                                                              |
+| `shared`   | Opened preview pinned as the lead, followed by community items.                                                           |
+| `personal` | Signed-in Discover or Saved route. Saved defaults to All posts; Discover to Videos + Hide watched. Repeat is independent. |
+| `playlist` | One public tag ordered by curator-add time and looping at the boundary.                                                   |
 
-Discover and My videos are ordered newest first by the time a post entered that
+Discover and Saved are ordered newest first by the time a post entered that
 surface, not by source publication time. `AuthedTheater` loads every page of
 `/api/feed?filter=all&hideArchived=true`, at 100 posts per request, before
 mounting the personal queue. This is a page size, not a collection cap. An
@@ -159,20 +159,27 @@ incomplete or inconsistent page fails the load rather than silently presenting
 a partial collection. The library's `?open=` links can still open an archived
 post explicitly.
 
-My videos starts with **All** selected on each mount, including posts watched
-on previous visits. The Queue/filter panels group **Post type** and **Watch history**;
-there is no separate watch-filter bar over the stage. **Unwatched** filters against the existing
-browser-local seen history, independent of Repeat. Leaving a saved post marks
-it seen; these marks retain up to 500 recent identities in this browser, do not
-create server-side watched statuses, and do not emit public activity. The
-filter is not a cross-device viewing record.
+`useTheaterQueueTypes` owns independent destination filters. New Discover visitors get
+Videos + Hide watched; Saved starts with All posts and Hide watched off. The labelled
+control beside Queue opens single-choice Post type controls and one Hide watched switch.
+`filter-preferences.ts` reads and validates the versioned per-destination localStorage
+records, retaining an explicit empty type list as All. Legacy type choices migrate;
+blocked or malformed storage falls back to destination defaults.
 
-Repeat off completes one run and stops. In All, the queue still offers previously
-played items under **Seen**; choosing Unwatched excludes historical seen items
-from the selected list. Repeat all loops the selected list, and repeat one loops
-the current post. Discover retains its community unseen/caught-up behavior.
-Queue type lenses remain persisted. Public playlists omit the personal filters
-and always loop.
+Hide watched uses the browser-local seen history, independent of Repeat. Leaving a saved
+post marks it seen without a public activity event. History retains up to 500 recent
+identities and is not a cross-device viewing record. Repeat off completes one pass;
+Discover also tracks departures within that pass when historical watched posts are
+included. Repeat all loops only the selected list. **Watch again** explicitly includes
+watched posts and restarts without deleting history. Public playlists omit these filters;
+shared previews use an independent unfiltered type selection and preserve the opened lead.
+
+The first-visit hint and empty-account actions teach paste → watch → send. Media sharing
+has a direct action (icon-only on mobile), with Share link retained separately. Browser
+downloads verify nonempty media bytes before reporting a successful handoff; OS-level
+file saving cannot be observed. `post.play` is recorded from confirmed native or trusted
+YouTube playing events, deduplicated across pause/resume and looping the same post.
+`post.view` remains a preview/dwell signal, not proof that a video played.
 
 Shared previews optimize first paint without sacrificing crawler output:
 
@@ -200,7 +207,7 @@ Seen state is browser-local to avoid per-user server cost. Immutable V2
 operations form per-post last-writer-wins registers and converge through
 `storage` events. The readable `adhx-seen-v1` array is only a compatibility
 projection. Compaction keeps the newest 500 marks and 500 tombstones; bulk
-Re-watch writes one batch. `adhx-last-visit` is recorded only when a page hides
+unmark operations write one batch. Watch again preserves these records. `adhx-last-visit` is recorded only when a page hides
 or unloads.
 
 One persistent `<video>` slot is retained across X, TikTok, ready Instagram

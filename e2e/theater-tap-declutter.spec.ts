@@ -16,7 +16,7 @@ test.describe('tap video to declutter, not pause', () => {
     await page.goto(quotedPath)
     await expectTheaterReady(page)
 
-    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Paste link' })).toBeVisible()
     await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
 
@@ -29,7 +29,7 @@ test.describe('tap video to declutter, not pause', () => {
 
     await tapStageVideo(page)
 
-    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Paste link' })).toBeVisible()
     await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Show controls' })).toHaveCount(0)
   })
@@ -43,7 +43,7 @@ test.describe('tap video to declutter on a phone', () => {
     await page.goto(quotedPath)
     await expectTheaterReady(page)
 
-    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Paste link' })).toBeVisible()
     await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
 
@@ -55,7 +55,7 @@ test.describe('tap video to declutter on a phone', () => {
 
     await tapStageVideo(page)
 
-    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Paste link' })).toBeVisible()
     await expect(readToggle(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Hide controls' })).toBeVisible()
   })

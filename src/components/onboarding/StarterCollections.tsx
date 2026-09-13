@@ -51,7 +51,9 @@ export function StarterCollections({
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/collections/trending?window=all-time&limit=12')
+    fetch('/api/collections/trending?window=all-time&limit=12', {
+      signal: AbortSignal.timeout(10_000),
+    })
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { items?: StarterEntry[] } | null) => {
         if (!cancelled) setEntries(data?.items ?? [])
@@ -149,7 +151,7 @@ function StarterCard({ entry }: { entry: StarterEntry }) {
             disabled={state === 'cloning'}
             className={SURFACE_BUTTON}
           >
-            {state === 'cloning' ? 'Adding…' : 'Add to My videos'}
+            {state === 'cloning' ? 'Adding…' : 'Add to Saved'}
           </button>
           {state === 'error' && (
             <span className="text-[10.5px] text-red-600 dark:text-red-400">

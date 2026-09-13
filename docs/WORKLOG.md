@@ -6,6 +6,34 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-13 — Stabilize the combined release's remote-add browser check
+
+The Live-after-Next scenario could navigate from Preview onto the quote-video fixture.
+Its caption assertion also matched upcoming queue cards, masking the wrong active post.
+Filter to text, select Alpha, then verify the advertised next row stays active after the remote add.
+This retains the playback/remaining-count checks and strengthens the no-stage-stealing assertion.
+State: in the launch PR; combined release CI must pass before merge and production deployment.
+
+## 2026-09-13 — Compact desktop filters and unobstructed playlist controls
+
+Desktop Filter opens a small counted post-type menu; Queue continues to open the playlist.
+Both use 32px desktop pills, while mobile keeps its 44px touch targets.
+Open desktop panels sit above stage shading and hide the underlying post actions until closed.
+Counts use the full type-filter source so choosing a type does not erase other type counts.
+Keyboard regression coverage retains Shift+Q, arrows, Enter, Escape, and focus restoration.
+State: implemented for review in the launch UX PR; not deployed.
+
+## 2026-09-13 — Make the launch theater easier to understand
+
+Discover defaults to Videos + Hide watched; Saved defaults to All posts with history visible.
+Each destination remembers its filters independently; shared targets and authored playlists stay intact.
+Replaced the watch pills with one switch, labelled the content filter, and separated Repeat from watch exclusion.
+Added first-visit and empty-account paste/watch/send guidance plus direct verified media actions.
+Theater Paste link uses an orange outline; phone media actions remain icon-only with 44px targets.
+Added confirmed playback analytics and failure/cancel checks for successful file-send metrics.
+Prepared a verified public clip shortlist and three playlist candidates in `docs/launch-content.md`.
+State: implemented for review; launch spec records validation. Deployment and final playlist curation remain separate.
+
 ## 2026-09-13 — Reveal and follow an already-running X sync
 
 Settings now opens the Header-owned sync dialog, revealing a silent run without starting another.

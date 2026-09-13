@@ -388,6 +388,29 @@ describe('TheaterShell: collection tab has the repeat control', () => {
     await act(async () => tabs.onTabChange('collection'))
     expect(chromeProps().repeatMode).toBe('all')
   })
+
+  it('restores the full Play once count when returning to Saved', async () => {
+    window.localStorage.setItem('adhx-theater-repeat-saved', 'off')
+    await act(async () => {
+      render(
+        <TheaterShell
+          seed={{ items: [liveText('live1')], savedToday: 0, recentActivity: 0 }}
+          mode="personal"
+          initialPersonalTab="collection"
+          personalItems={[feedItem('1'), feedItem('2'), feedItem('3')]}
+          onClose={vi.fn()}
+        />,
+      )
+    })
+    expect(chromeProps().queueTotal).toBe(3)
+    await act(async () => (chromeProps().onNext as () => void)())
+    expect(chromeProps().queueTotal).toBe(2)
+    const tabs = chromeProps().collection as { onTabChange: (tab: 'live' | 'collection') => void }
+    await act(async () => tabs.onTabChange('live'))
+    await act(async () => tabs.onTabChange('collection'))
+    expect(chromeProps().currentKey).toBe('twitter:1')
+    expect(chromeProps().queueTotal).toBe(3)
+  })
 })
 
 function liveText(bookmarkId: string): TheaterItem {

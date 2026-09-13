@@ -88,7 +88,7 @@ describe('FeedGrid empty states', () => {
     expect(screen.queryByRole('link', { name: /connect with/i })).not.toBeInTheDocument()
   })
 
-  it('still shows a "Paste a link" action and a link to /trending in the onboarding panel', async () => {
+  it('still shows a "Paste link" action and a link to Discover in the onboarding panel', async () => {
     mockAuthMe(EMAIL_ONLY_ME)
     render(<FeedGrid {...baseProps} items={[]} hideArchived stats={{ total: 0, active: 0 }} />)
 
@@ -96,9 +96,9 @@ describe('FeedGrid empty states', () => {
     // jsdom regardless of their `hidden sm:*`/`sm:hidden` classes — jsdom
     // doesn't evaluate media-query-gated visibility, so both are present at
     // once. Assert there's at least one rather than picking a single match.
-    expect((await screen.findAllByText('Paste a link')).length).toBeGreaterThan(0)
-    const trendingLink = await screen.findByRole('link', { name: /explore what.?s trending/i })
-    expect(trendingLink).toHaveAttribute('href', '/trending')
+    expect(await screen.findByRole('button', { name: 'Paste link' })).toBeInTheDocument()
+    const trendingLink = await screen.findByRole('link', { name: /watch discover/i })
+    expect(trendingLink).toHaveAttribute('href', '/live')
   })
 
   it('shows "All caught up" (not onboarding) when the account has bookmarks but none are unread', async () => {

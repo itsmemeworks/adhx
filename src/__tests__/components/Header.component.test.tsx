@@ -142,7 +142,7 @@ describe('Header', () => {
     })
   })
 
-  it('shows My videos · Discover · Library · Tags · Leaderboard nav as links, with no Add button', async () => {
+  it('shows Saved · Discover · Library · Tags · Leaderboard nav as links, with no Add button', async () => {
     mockFetch(true)
     render(<Header />)
 
@@ -152,7 +152,7 @@ describe('Header', () => {
     // has its own (`/` = Live, `/saved` = Saved, `/library` = the
     // grid). Theater used to be a button dispatching `open-theater`.
     expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
-    expect(screen.getByRole('link', { name: 'My videos' })).toHaveAttribute('href', '/saved')
+    expect(screen.getByRole('link', { name: 'Saved' })).toHaveAttribute('href', '/saved')
     expect(screen.getByRole('link', { name: 'Discover' })).toHaveAttribute('href', '/live')
     expect(screen.getByRole('link', { name: 'Tags' })).toHaveAttribute('href', '/tags')
     expect(screen.getByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
@@ -170,13 +170,13 @@ describe('Header', () => {
     expect(screen.queryByRole('button', { name: /add link/i })).not.toBeInTheDocument()
   })
 
-  it('points My videos at `/saved` — the live theater is a route, not an overlay event', async () => {
+  it('points Saved at `/saved` — the live theater is a route, not an overlay event', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    const theaterLink = screen.getByRole('link', { name: 'My videos' })
+    const theaterLink = screen.getByRole('link', { name: 'Saved' })
     expect(theaterLink).toHaveAttribute('href', '/saved')
     theaterLink.click()
 
@@ -186,7 +186,7 @@ describe('Header', () => {
     expect(liveEvent).toBeUndefined()
   })
 
-  it('carries Library + My videos as links in the avatar menu too', async () => {
+  it('carries Library + Saved as links in the avatar menu too', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
@@ -196,7 +196,7 @@ describe('Header', () => {
     fireEvent.click(avatarButton)
     expect(avatarButton).toHaveAttribute('aria-expanded', 'true')
 
-    const theaterLinks = screen.getAllByRole('link', { name: 'My videos' })
+    const theaterLinks = screen.getAllByRole('link', { name: 'Saved' })
     expect(theaterLinks.some((l) => l.getAttribute('href') === '/saved')).toBe(true)
     const libraryLinks = screen.getAllByRole('link', { name: 'Library' })
     expect(libraryLinks.some((l) => l.getAttribute('href') === '/library')).toBe(true)
@@ -250,7 +250,7 @@ describe('Header', () => {
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
   })
 
-  it('keeps My videos pointing at `/saved` from any route (no ?live=1 hand-off)', async () => {
+  it('keeps Saved pointing at `/saved` from any route (no ?live=1 hand-off)', async () => {
     // The theater used to be an overlay the feed page owned, so reaching it
     // from elsewhere meant `router.push('/?live=1')`. It's a route now, so the
     // same plain link works from anywhere.
@@ -259,7 +259,7 @@ describe('Header', () => {
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    expect(screen.getByRole('link', { name: 'My videos' })).toHaveAttribute('href', '/saved')
+    expect(screen.getByRole('link', { name: 'Saved' })).toHaveAttribute('href', '/saved')
     expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
   })
 
@@ -271,13 +271,13 @@ describe('Header', () => {
 
     // `/saved` is the theater's Saved tab, so the Theater entry —
     // not Library — is the active one there.
-    expect(screen.getByRole('link', { name: 'My videos' }).className).toContain('text-clay')
+    expect(screen.getByRole('link', { name: 'Saved' }).className).toContain('text-clay')
     expect(screen.getByRole('link', { name: 'Library' }).className).not.toContain('bg-clay')
 
     mockPathname = '/live'
     rerender(<Header />)
     expect(screen.getByRole('link', { name: 'Discover' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: 'My videos' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('link', { name: 'Saved' })).not.toHaveAttribute('aria-current')
   })
 
   it('on /tags: search is an icon that expands to "Tags"; typing dispatches "tags-search" instead of navigating', async () => {

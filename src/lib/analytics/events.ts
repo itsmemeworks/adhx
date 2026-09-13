@@ -11,6 +11,7 @@ export const ANALYTIC_EVENTS = [
   'post.save',
   'post.share',
   'post.send',
+  'post.play',
   'post.copy',
   'post.open',
   'post.tag',
@@ -36,6 +37,7 @@ export type AnalyticEventName = (typeof ANALYTIC_EVENTS)[number]
 /** Events a browser is allowed to POST. Server mutations write themselves. */
 export const CLIENT_ANALYTIC_EVENTS = [
   'post.send',
+  'post.play',
   'post.copy',
   'post.open',
   'shortcut.install',

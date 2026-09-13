@@ -49,7 +49,7 @@ test.describe('public pages', () => {
   test('paste-to-preview on Live opens the shared post', async ({ page }) => {
     await page.goto('/')
     await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Paste a link' }).click()
+    await page.getByRole('button', { name: 'Paste link' }).click()
     const input = page.getByLabel('Paste a link to preview')
     await input.fill(`https://x.com/${POST.alpha.author}/status/${POST.alpha.id}`)
     await input.press('Enter')

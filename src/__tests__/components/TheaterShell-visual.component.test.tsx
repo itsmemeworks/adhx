@@ -106,7 +106,7 @@ async function tapType(type: ContentType) {
   await act(async () => toggle(type))
 }
 
-const STORAGE_KEY = 'adhx-theater-types'
+const STORAGE_KEY = 'adhx-theater-filters-discover-v1'
 
 describe('TheaterShell: live queue type filter', () => {
   beforeEach(() => {
@@ -149,7 +149,7 @@ describe('TheaterShell: live queue type filter', () => {
     }
   })
 
-  it('lets the viewer pick videos and photos independently', async () => {
+  it('lets the viewer choose Videos or Photos', async () => {
     render(
       <TheaterShell
         seed={seed([
@@ -163,11 +163,11 @@ describe('TheaterShell: live queue type filter', () => {
     await tapType('video')
     expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2'])
     await tapType('photo')
-    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2', '4'])
-    expect(chromeProps().queueTypes).toEqual(['video', 'photo'])
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['4'])
+    expect(chromeProps().queueTypes).toEqual(['photo'])
   })
 
-  it('filters to articles only', async () => {
+  it('groups articles and posts under Text', async () => {
     render(
       <TheaterShell
         seed={seed([
@@ -178,7 +178,7 @@ describe('TheaterShell: live queue type filter', () => {
       />,
     )
     await tapType('article')
-    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['3'])
+    expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['1', '3'])
   })
 
   it('remembers the selection across visits', async () => {
@@ -188,7 +188,9 @@ describe('TheaterShell: live queue type filter', () => {
       />,
     )
     await tapType('video')
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('["video"]')
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(
+      JSON.stringify({ types: ['video'], watch: 'unwatched' }),
+    )
 
     unmount()
     mockMobileChrome.mockClear()
@@ -218,8 +220,10 @@ describe('TheaterShell: live queue type filter', () => {
     })
     expect((chromeProps().items as TheaterItem[]).map((it) => it.bookmarkId)).toEqual(['2', '3'])
     expect(chromeProps().queueTypes).toEqual(['video', 'photo'])
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('["video","photo"]')
-    expect(window.localStorage.getItem('adhx-theater-visual')).toBeNull()
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(
+      JSON.stringify({ types: ['video', 'photo'], watch: 'unwatched' }),
+    )
+    expect(window.localStorage.getItem('adhx-theater-visual')).toBe('1')
   })
 
   it('keeps a text shared lead and filters the rest', async () => {
@@ -266,7 +270,7 @@ describe('TheaterShell: live queue type filter', () => {
     expect(chromeProps().currentKey).toBe('twitter:2')
   })
 
-  it('1 preserves Discover while the My videos route loads', async () => {
+  it('1 preserves Discover while the Saved route loads', async () => {
     const onPersonalTabChange = vi.fn()
     render(
       <TheaterShell
@@ -285,7 +289,7 @@ describe('TheaterShell: live queue type filter', () => {
     expect(screen.queryByText('Nothing to review')).not.toBeInTheDocument()
   })
 
-  it('1 and 2 flip My videos ⇄ Discover on the personal theater', async () => {
+  it('1 and 2 flip Saved ⇄ Discover on the personal theater', async () => {
     const onPersonalTabChange = vi.fn()
     render(
       <TheaterShell
@@ -345,11 +349,12 @@ describe('TheaterShell: live queue type filter', () => {
       />,
     )
     await tapType('video')
-    expect(screen.getByText('No videos in My videos right now')).toBeInTheDocument()
+    expect(screen.getByText('No videos in Saved right now')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Show every post' })).toBeInTheDocument()
   })
 
   it('jumps off a text post onto the next matching type', async () => {
+    localStorage.setItem('adhx-theater-types', '[]')
     render(
       <TheaterShell
         seed={seed([

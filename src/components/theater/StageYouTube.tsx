@@ -1,5 +1,7 @@
 'use client'
 
+import { usePostPlayback } from './usePostPlayback'
+
 /**
  * Official youtube-nocookie iframe (spec §3/§6), driven by the *raw* YouTube
  * IFrame postMessage protocol — not the `iframe_api` script, which
@@ -418,6 +420,7 @@ export function StageYouTube({
   // `playerState: 1` reports a second while a video just plays normally).
   const lastLoggedStateRef = useRef<number | null>(null)
   const [playing, setPlaying] = useState(false)
+  const recordPlayback = usePostPlayback(item)
   const [effectiveMuted, setEffectiveMuted] = useState(muted)
   const [clientOrigin, setClientOrigin] = useState<string | null>(null)
   // Round 2: a pinned shared/collection post (`repeat`) whose stall
@@ -908,6 +911,7 @@ export function StageYouTube({
       logStageVerbose('message', data.event, data.info)
 
       const applyPlayerState = (state: number | null) => {
+        if (state === 1 && !coveredRef.current) recordPlayback()
         if (state !== null && state !== lastLoggedStateRef.current) {
           lastLoggedStateRef.current = state
           logStage(`state -> ${describeYtPlayerState(state)}`)
@@ -1217,6 +1221,7 @@ export function StageYouTube({
     startProgressClock,
     freezeProgressClock,
     publishEstimatedProgress,
+    recordPlayback,
   ])
 
   // Round 9: while playing, interpolate the clay bar from duration + the

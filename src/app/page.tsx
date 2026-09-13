@@ -10,7 +10,7 @@ import { collectionPath } from '@/lib/theater/collection-href'
 /**
  * `/` — signed-out public live theater + crawlable static list.
  *
- * Signed IN this redirects to My videos at `/saved`. An explicit add (`?added=success|duplicate`) still opens
+ * Signed IN this redirects to Saved at `/saved`. An explicit add (`?added=success|duplicate`) still opens
  * the saved post on `/saved`.
  *
  * force-dynamic: session cookie + runtime SQLite (migrated at container start).

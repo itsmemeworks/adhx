@@ -1,16 +1,22 @@
 import { expect } from '@playwright/test'
 import { POST } from './constants'
-import { authedTest, caption, expectTheaterReady, goNext, visibleQueueCount } from './helpers'
+import {
+  authedTest,
+  caption,
+  expectTheaterReady,
+  goNext,
+  pauseTheater,
+  visibleQueueCount,
+} from './helpers'
 
 authedTest.describe('signed-in Live vs Saved URLs', () => {
   authedTest('Live rewrites the address bar to the current post', async ({ page }) => {
     await page.goto('/live')
     await expectTheaterReady(page)
-    await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`), {
-      timeout: 15_000,
-    })
+    await expect(page).toHaveURL(/\/(status\/|reels\/|reel\/|shorts\/|video\/)/)
+    const firstPostUrl = page.url()
     await goNext(page)
-    await expect(page).not.toHaveURL(new RegExp(`/status/${POST.preview.id}`))
+    await expect(page).not.toHaveURL(firstPostUrl)
     // LIFO newest-first: the next pulse row may be TikTok / Reels / Shorts,
     // not another tweet. Any preview path is a Live rewrite.
     await expect(page).toHaveURL(/\/(status\/|reels\/|reel\/|shorts\/|video\/)/)
@@ -30,7 +36,7 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await expectTheaterReady(page)
     await page.getByRole('button', { name: 'Discover', exact: true }).click()
     await expect(page).toHaveURL(/\/status\//, { timeout: 15_000 })
-    await page.getByRole('button', { name: 'My videos', exact: true }).click()
+    await page.getByRole('button', { name: 'Saved', exact: true }).click()
     await expect(page).toHaveURL(/\/saved/)
     await expect(page).not.toHaveURL(/\/status\//)
     await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
@@ -48,13 +54,14 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
   })
 
-  authedTest('My videos starts with all saves again after a Discover visit', async ({ page }) => {
+  authedTest('Saved starts with all saves again after a Discover visit', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('adhx-theater-repeat-saved', 'off')
     })
     await page.goto('/saved')
     await expectTheaterReady(page)
     const initialCount = await visibleQueueCount(page).innerText()
+    await pauseTheater(page)
     await goNext(page)
     await expect(caption(page, POST.bravo.text)).toBeVisible()
     const before = await visibleQueueCount(page).innerText()
@@ -65,9 +72,10 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
       'aria-current',
       'true',
     )
-    await page.getByRole('button', { name: 'My videos', exact: true }).click()
+    await page.getByRole('button', { name: 'Saved', exact: true }).click()
     await expect(page).toHaveURL(/\/saved/)
     await expect(caption(page, POST.alpha.text)).toBeVisible()
+    await pauseTheater(page)
     await expect(visibleQueueCount(page)).toHaveText(initialCount)
     await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
   })

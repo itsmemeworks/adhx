@@ -13,8 +13,10 @@ export {
   THEATER_SOUND_DEFAULT_STORAGE_KEY,
 } from '@/lib/theater/sound-preference'
 
-/** localStorage JSON ContentType[]. Empty / missing = All. */
+/** Retired cross-destination preference, read only for migration. */
 export const THEATER_QUEUE_TYPES_STORAGE_KEY = 'adhx-theater-types'
 
-/** Retired Videos+Photos flag — migrated once into THEATER_QUEUE_TYPES_STORAGE_KEY. */
+/** Retired Videos+Photos flag, read only for migration. */
 export const THEATER_QUEUE_TYPES_LEGACY_VISUAL = 'adhx-theater-visual'
+
+export { FILTER_STORAGE_KEYS } from '@/lib/theater/filter-preferences'

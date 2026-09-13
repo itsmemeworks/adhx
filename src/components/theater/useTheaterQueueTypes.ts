@@ -1,67 +1,91 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type SetStateAction } from 'react'
 import type { ContentType } from '@/components/matter'
+import { isTheaterQueueFilterActive } from './theater-math'
 import {
-  isTheaterQueueFilterActive,
-  parseTheaterQueueTypes,
-  serializeTheaterQueueTypes,
-  toggleTheaterQueueType,
-} from './theater-math'
-import {
-  THEATER_QUEUE_TYPES_LEGACY_VISUAL,
-  THEATER_QUEUE_TYPES_STORAGE_KEY,
-} from './theater-storage'
+  defaultTheaterFilters,
+  readTheaterFilters,
+  FILTER_STORAGE_KEYS,
+  type FilterDestination,
+  type TheaterFilters,
+  type WatchFilter,
+} from '@/lib/theater/filter-preferences'
 
-export function useTheaterQueueTypes(queueFilterAvailable: boolean) {
-  const [queueTypes, setQueueTypes] = useState<ContentType[]>([])
+type FilterState = Record<FilterDestination, TheaterFilters>
+
+/** Each destination owns its filters; shared links start unfiltered and never rewrite them. */
+export function useTheaterQueueTypes(
+  queueFilterAvailable: boolean,
+  destination: FilterDestination = 'discover',
+) {
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    discover: defaultTheaterFilters('discover'),
+    saved: defaultTheaterFilters('saved'),
+    shared: defaultTheaterFilters('shared'),
+  }))
   const [queuePrefReady, setQueuePrefReady] = useState(false)
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(THEATER_QUEUE_TYPES_STORAGE_KEY)
-      if (stored != null) {
-        setQueueTypes(parseTheaterQueueTypes(stored))
-      } else if (localStorage.getItem(THEATER_QUEUE_TYPES_LEGACY_VISUAL) === '1') {
-        setQueueTypes(['video', 'photo'])
-      }
+      setFilters({
+        discover: readTheaterFilters('discover', localStorage),
+        saved: readTheaterFilters('saved', localStorage),
+        shared: defaultTheaterFilters('shared'),
+      })
     } catch {
-      // Storage unavailable — keep All.
+      // Accessing localStorage itself can throw in restricted browsers.
     }
     setQueuePrefReady(true)
   }, [])
 
   useEffect(() => {
-    if (!queuePrefReady || !queueFilterAvailable) return
+    if (!queuePrefReady || !queueFilterAvailable || destination === 'shared') return
     try {
-      const serialized = serializeTheaterQueueTypes(queueTypes)
-      if (serialized) localStorage.setItem(THEATER_QUEUE_TYPES_STORAGE_KEY, serialized)
-      else localStorage.removeItem(THEATER_QUEUE_TYPES_STORAGE_KEY)
-      localStorage.removeItem(THEATER_QUEUE_TYPES_LEGACY_VISUAL)
+      localStorage.setItem(FILTER_STORAGE_KEYS[destination], JSON.stringify(filters[destination]))
     } catch {
       // Never let a storage failure break playback.
     }
-  }, [queueTypes, queuePrefReady, queueFilterAvailable])
+  }, [filters, queuePrefReady, queueFilterAvailable, destination])
 
-  const typeFilterActive = queueFilterAvailable && isTheaterQueueFilterActive(queueTypes)
+  const setQueueTypes = useCallback(
+    (next: SetStateAction<ContentType[]>) => {
+      setFilters((current) => ({
+        ...current,
+        [destination]: {
+          ...current[destination],
+          types: typeof next === 'function' ? next(current[destination].types) : next,
+        },
+      }))
+    },
+    [destination],
+  )
+  const setWatchFilter = useCallback(
+    (watch: WatchFilter) => {
+      setFilters((current) => ({ ...current, [destination]: { ...current[destination], watch } }))
+    },
+    [destination],
+  )
   const toggleQueueType = useCallback(
     (type: ContentType) => {
       if (!queueFilterAvailable) return
-      setQueueTypes((cur) => toggleTheaterQueueType(cur, type))
+      setQueueTypes(type === 'text' || type === 'article' ? ['text', 'article'] : [type])
     },
-    [queueFilterAvailable],
+    [queueFilterAvailable, setQueueTypes],
   )
   const clearQueueTypes = useCallback(() => {
-    if (!queueFilterAvailable) return
-    setQueueTypes([])
-  }, [queueFilterAvailable])
+    if (queueFilterAvailable) setQueueTypes([])
+  }, [queueFilterAvailable, setQueueTypes])
 
+  const { types: queueTypes, watch: watchFilter } = filters[destination]
   return {
     queueTypes,
     setQueueTypes,
     queuePrefReady,
-    typeFilterActive,
+    typeFilterActive: queueFilterAvailable && isTheaterQueueFilterActive(queueTypes),
     toggleQueueType,
     clearQueueTypes,
+    watchFilter,
+    setWatchFilter,
   }
 }

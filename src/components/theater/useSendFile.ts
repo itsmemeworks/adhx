@@ -57,7 +57,8 @@ export interface SendFile {
   /** Open the native share sheet (or fall back to the link). Call from a tap. */
   send: () => Promise<boolean>
   /** Force a browser download, even on touch devices that can share files. */
-  download: () => boolean
+  download: () => boolean | Promise<boolean>
+  error?: string | null
 }
 
 /** Delay before prefetching starts — aligned with the seen-dwell threshold so
@@ -215,6 +216,7 @@ export function useSendFile(
 ): SendFile {
   const [ready, setReady] = useState(false)
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   // SSR-safe default: 'share' until the client effect below settles it. This
   // only drives a label/icon, so a brief mismatch on desktop's first paint is
   // harmless (and avoided in practice — Rail/mobile chrome only render the
@@ -258,6 +260,7 @@ export function useSendFile(
     // bounded by its own 30s timeout anyway.
     setReady(false)
     setPrimed(false)
+    setError(null)
     blobRef.current = null
 
     if (!source || !key) return
@@ -297,25 +300,41 @@ export function useSendFile(
     }
   }, [key, source?.src, eager])
 
-  const download = useCallback(() => {
-    if (!item || !source) return false
-    const link = document.createElement('a')
-    link.href = source.downloadSrc
-    link.download = source.filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    pingSharePulse(item.platform, item.bookmarkId || '')
-    pingAnalytic('post.send', {
-      platform: item.platform,
-      id: item.bookmarkId || undefined,
-      source: 'download',
-    })
-    return true
-  }, [item, source])
+  const download = useCallback(async () => {
+    if (!item || !source || !key) return false
+    setSending(true)
+    setError(null)
+    try {
+      // Verify the file before reporting success. An attachment URL can return
+      // an error page after an anchor click, which the page cannot observe.
+      const blob = blobRef.current ?? (await prefetchBlob(key, source.src))
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = source.filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1_000)
+      pingSharePulse(item.platform, item.bookmarkId || '')
+      pingAnalytic('post.send', {
+        platform: item.platform,
+        id: item.bookmarkId || undefined,
+        source: 'download',
+      })
+      return true
+    } catch {
+      setError("Couldn't get the file. Try again or use Share link.")
+      return false
+    } finally {
+      setSending(false)
+    }
+  }, [item, source, key])
 
   const send = useCallback(async () => {
     if (!item || !source) return false
+    if (mode === 'download') return download()
+    setError(null)
     setSending(true)
     try {
       const canonicalUrl = canonicalUrlFor(item)
@@ -334,11 +353,8 @@ export function useSendFile(
        * through to the link paths below.
        */
       let blob = blobRef.current
-      // Only the SHARE path needs the bytes in hand — `navigator.share` can't
-      // be handed a URL to fetch. Download mode keeps its old streaming
-      // anchor (below): waiting on a full in-memory buffer of a 1080p video
-      // behind a spinner is strictly worse than the browser's own download
-      // progress, and this fix was only ever about the share sheet.
+      // Native file sharing requires the bytes before opening the sheet.
+      // Download mode is handled by the verified-file action above.
       if (!blob && key && wantsShare) {
         try {
           blob = await prefetchBlob(key, source.src)
@@ -391,19 +407,13 @@ export function useSendFile(
         try {
           await navigator.share({ url: canonicalUrl })
           pingSharePulse(item.platform, item.bookmarkId || '')
-          pingAnalytic('post.send', {
-            platform: item.platform,
-            id: item.bookmarkId || undefined,
-            source: 'share',
-          })
           return true
         } catch (err) {
           if (err instanceof DOMException && err.name === 'AbortError') return false
         }
       }
 
-      // No Web Share API at all (desktop Chrome/Firefox): download the blob
-      // directly if we have it, mirroring `handleShareMedia`'s desktop path.
+      // A failed native share can still hand the verified file to the browser.
       if (blob) {
         const blobUrl = URL.createObjectURL(blob)
         const link = document.createElement('a')
@@ -422,23 +432,10 @@ export function useSendFile(
         return true
       }
 
-      // Download mode with no blob yet (early click): stream the same-origin
-      // proxy URL through an anchor download instead of leaving the click
-      // dead — the browser saves the file as it streams.
+      // If the sharing API disappeared after mode detection, use the same
+      // verified download path; an anchor URL alone cannot prove success.
       if (!wantsShare) {
-        const link = document.createElement('a')
-        link.href = source.src
-        link.download = source.filename
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        pingSharePulse(item.platform, item.bookmarkId || '')
-        pingAnalytic('post.send', {
-          platform: item.platform,
-          id: item.bookmarkId || undefined,
-          source: 'download',
-        })
-        return true
+        return await download()
       }
 
       // Last resort (share mode, share failed, no blob): copy the link so
@@ -455,7 +452,7 @@ export function useSendFile(
     } finally {
       setSending(false)
     }
-  }, [item, source, mode, key])
+  }, [item, source, mode, key, download])
 
-  return { supported, ready, sending, primed, mode, send, download }
+  return { supported, ready, sending, primed, mode, send, download, error }
 }

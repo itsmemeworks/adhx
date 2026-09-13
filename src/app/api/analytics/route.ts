@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       return new NextResponse(null, { status: 204 })
     }
 
-    recordPostAnalytic(name as 'post.send' | 'post.copy' | 'post.open', {
+    recordPostAnalytic(name as 'post.send' | 'post.play' | 'post.copy' | 'post.open', {
       userId,
       platform,
       bookmarkId,

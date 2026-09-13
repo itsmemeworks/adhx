@@ -198,7 +198,7 @@ test.describe('mobile viewport', () => {
 
     const menu = page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]')
     await expect(menu).toBeInViewport()
-    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Paste link' })).toBeInViewport()
     await menu.click()
     await expect(page.getByRole('menu')).toBeVisible()
     await page.keyboard.press('Escape')
@@ -222,7 +222,7 @@ test.describe('mobile viewport', () => {
     ).toBeNull()
 
     await page.getByRole('button', { name: 'Show controls' }).click()
-    await page.getByRole('button', { name: 'Paste a link' }).click()
+    await page.getByRole('button', { name: 'Paste link' }).click()
   })
 
   test('media caption stays above the dock when the paint layer is taller', async ({ page }) => {
@@ -293,7 +293,7 @@ test.describe('mobile viewport', () => {
     expect(homeBox).not.toBeNull()
     expect(playbackBox).not.toBeNull()
     expect(viewportWidth - (swipeBox!.x + swipeBox!.width)).toBeCloseTo(44, 0)
-    expect(viewportWidth - (actionsBox!.x + actionsBox!.width)).toBeCloseTo(56, 0)
+    expect(viewportWidth - (actionsBox!.x + actionsBox!.width)).toBeCloseTo(228, 0)
     expect(queueBox!.x).toBeCloseTo(34, 0)
     expect(homeBox!.x).toBeCloseTo(34, 0)
     expect(viewportWidth - (menuBox!.x + menuBox!.width)).toBeCloseTo(44, 0)
@@ -352,7 +352,7 @@ test.describe('mobile viewport', () => {
       viewportWidth - 44,
     )
     expect(firstQueueRowBox!.x + firstQueueRowBox!.width).toBeLessThanOrEqual(viewportWidth - 44)
-    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Paste link' })).toBeInViewport()
     await expect(
       page.locator('.theater-mobile-top-chrome [data-theater-action="menu"]'),
     ).toBeInViewport()
@@ -437,7 +437,7 @@ authedTest.describe('mobile personal controls', () => {
       await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
 
       const postActions = page.getByTestId('mobile-control-actions')
-      const paste = page.getByRole('button', { name: 'Paste a link' })
+      const paste = page.getByRole('button', { name: 'Paste link' })
       const account = page.getByRole('button', { name: 'Account menu' })
       const swipe = page.locator('[data-theater-swipe-control]')
       const slider = page.locator('[data-theater-progress-slider]')
@@ -466,7 +466,7 @@ authedTest.describe('mobile personal controls', () => {
       expect(sliderBox).not.toBeNull()
       expect(queueBox).not.toBeNull()
       expect(playbackBox).not.toBeNull()
-      expect(page.viewportSize()!.width - (actionsBox!.x + actionsBox!.width)).toBeCloseTo(156, 0)
+      expect(page.viewportSize()!.width - (actionsBox!.x + actionsBox!.width)).toBeCloseTo(228, 0)
       expect(page.viewportSize()!.width - (accountBox!.x + accountBox!.width)).toBeCloseTo(44, 0)
       expect(queueBox!.x).toBeCloseTo(34, 0)
       expect(page.viewportSize()!.width - (playbackBox!.x + playbackBox!.width)).toBeCloseTo(44, 0)
@@ -493,7 +493,7 @@ authedTest.describe('mobile personal controls', () => {
       await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
 
       const postActions = page.getByTestId('mobile-control-actions')
-      const paste = page.getByRole('button', { name: 'Paste a link' })
+      const paste = page.getByRole('button', { name: 'Paste link' })
       const swipe = page.locator('[data-theater-swipe-control]')
       const dock = page.getByTestId('mobile-theater-dock')
       const slider = page.locator('[data-theater-progress-slider]')

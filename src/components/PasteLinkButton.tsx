@@ -23,6 +23,7 @@ export interface PasteLinkButtonProps {
    * most Matter controls — see the "icons over text" rule).
    */
   iconOnly?: boolean
+  appearance?: 'default' | 'theater'
   /**
    * Handle the pasted post HERE instead of navigating to its preview page.
    * Personal Live / Saved pass this so a paste saves in place and
@@ -98,6 +99,7 @@ function useVisibleViewport(active: boolean): { top: number; height: number } | 
 export function PasteLinkButton({
   className,
   iconOnly = false,
+  appearance = 'default',
   onPastePost,
 }: PasteLinkButtonProps) {
   const [ios, setIos] = useState(false)
@@ -263,14 +265,19 @@ export function PasteLinkButton({
         type="button"
         onClick={handleTap}
         disabled={resolving}
-        aria-label={iconOnly ? 'Paste a link' : 'Paste link'}
+        aria-label="Paste link"
         aria-haspopup="dialog"
         aria-expanded={overlayOpen}
         className={cn(
           'transition-colors disabled:opacity-70',
           iconOnly
             ? 'flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md hover:bg-white/20'
-            : 'inline-flex min-h-[40px] w-full flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-clay-grad px-4 text-[13.5px] font-semibold text-white shadow-glow',
+            : cn(
+                'inline-flex min-h-11 w-full flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[13.5px] font-semibold text-white',
+                appearance === 'theater'
+                  ? 'border border-clay bg-black/20 backdrop-blur-md hover:bg-white/10'
+                  : 'bg-clay-grad shadow-glow',
+              ),
         )}
       >
         {resolving ? (

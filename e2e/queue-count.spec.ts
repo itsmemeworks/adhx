@@ -14,6 +14,10 @@ test.describe('queue count — Live LIFO', () => {
     page,
   }) => {
     await page.addInitScript(() => {
+      localStorage.setItem(
+        'adhx-theater-filters-discover-v1',
+        JSON.stringify({ types: [], watch: 'all' }),
+      )
       localStorage.removeItem('adhx-theater-repeat')
       localStorage.removeItem('adhx-seen-v1')
     })

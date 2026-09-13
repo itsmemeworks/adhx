@@ -42,7 +42,7 @@ export function TheaterCollectionActions({
       as="button"
       type="button"
       onClick={collection.onDone}
-      title="Archive — remove from My videos"
+      title="Archive — remove from Saved"
       className={DESKTOP_OUTLINE}
       data-theater-action="archive"
     >

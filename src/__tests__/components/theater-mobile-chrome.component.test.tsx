@@ -129,7 +129,7 @@ describe('TheaterMobileChrome: iOS viewport anchoring', () => {
     const { container } = render(<TheaterMobileChrome {...base} current={videoItem()} />)
 
     expect(container.firstElementChild).toHaveClass('absolute')
-    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const paste = screen.getByRole('button', { name: 'Paste link' })
     expect(paste.closest('.theater-mobile-top-chrome')).toHaveClass(
       'pointer-events-none',
       'pl-[max(1rem,env(safe-area-inset-left))]',
@@ -373,7 +373,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     expect(screen.queryByRole('button', { name: 'Later' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste link' })).toBeInTheDocument()
     openShareOptions()
     expect(screen.getByRole('menuitem', { name: 'Download the video' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
@@ -455,7 +455,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       onClose: vi.fn(),
     }
     render(<TheaterMobileChrome {...base} current={videoItem()} collection={collection} />)
-    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste link' })).toBeInTheDocument()
   })
 
   it('puts type pills in the up-next sheet, not the top bar', () => {
@@ -472,7 +472,7 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
     )
     fireEvent.click(document.querySelector<HTMLButtonElement>('[data-theater-action="show-all"]')!)
     const videos = screen.getByRole('button', { name: 'Videos' })
-    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const paste = screen.getByRole('button', { name: 'Paste link' })
     const text = screen.getByRole('button', { name: 'Text' })
     expect(videos).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: 'All post types' })).toHaveAttribute(
@@ -538,13 +538,13 @@ describe('TheaterMobileChrome: Save/Download button hierarchy', () => {
       <TheaterMobileChrome {...base} current={videoItem({ trendCount: 12 })} />,
     )
     let flame = screen.getByLabelText('12 trending')
-    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const paste = screen.getByRole('button', { name: 'Paste link' })
     expect(flame.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     rerender(<TheaterMobileChrome {...base} current={textItem({ trendCount: 12 })} />)
     flame = screen.getByLabelText('12 trending')
     expect(
-      flame.compareDocumentPosition(screen.getByRole('button', { name: 'Paste a link' })) &
+      flame.compareDocumentPosition(screen.getByRole('button', { name: 'Paste link' })) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
   })
@@ -762,7 +762,7 @@ describe('TheaterMobileChrome: de-clutter icon', () => {
   it('makes the pointer-enabled top control islands inert while hidden', () => {
     render(<TheaterMobileChrome {...base} current={videoItem()} />)
     const top = screen
-      .getByRole('button', { name: 'Paste a link' })
+      .getByRole('button', { name: 'Paste link' })
       .closest('.theater-mobile-top-chrome')
     expect(top).not.toHaveAttribute('inert')
 
@@ -895,10 +895,10 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(capsule.className).toContain('w-12')
     expect(actions.className).not.toContain('[@media(max-height:520px)]:w-auto')
     expect(actions.className).not.toContain('[@media(max-height:520px)]:flex-row')
-    expect(actions.className).not.toContain(
-      '[@media(max-height:520px)]:right-[calc(7rem+env(safe-area-inset-right))]',
+    expect(actions.className).toContain(
+      '[@media(max-height:520px)]:right-[calc(11.5rem+env(safe-area-inset-right))]',
     )
-    expect(actions.className).not.toContain(
+    expect(actions.className).toContain(
       '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))]',
     )
     expect(capsule.className).toContain('[@media(max-height:520px)]:h-20')
@@ -916,7 +916,7 @@ describe('TheaterMobileChrome: bottom transport and swipe capsule', () => {
     expect(actions).toHaveClass(
       'flex-col',
       '[@media(max-height:520px)]:bottom-[calc(6rem+env(safe-area-inset-bottom))]',
-      '[@media(max-height:520px)]:right-[calc(7rem+env(safe-area-inset-right))]',
+      '[@media(max-height:520px)]:right-[calc(11.5rem+env(safe-area-inset-right))]',
     )
     expect(screen.getByRole('link', { name: 'Open on X' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument()

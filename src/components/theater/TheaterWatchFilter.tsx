@@ -7,32 +7,39 @@ export interface TheaterWatchFilterProps {
   onChange: (value: 'all' | 'unwatched') => void
 }
 
-/** A filter-panel row, independent of navigation and playback repeat. */
+/** Watch filtering controls membership; Repeat only controls playback. */
 export function TheaterWatchFilter({ value, onChange }: TheaterWatchFilterProps) {
+  const checked = value === 'unwatched'
   return (
-    <div
-      role="group"
-      aria-label="Watch history"
-      className="flex w-full flex-wrap items-center gap-1.5 border-t border-hairline pt-2"
-    >
-      <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-        Watch history
-      </span>
-      {(['all', 'unwatched'] as const).map((filter) => (
-        <button
-          key={filter}
-          type="button"
-          aria-pressed={value === filter}
-          data-quick-filter-option
-          onClick={() => onChange(filter)}
+    <div className="w-full border-t border-hairline pt-2">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label="Hide watched"
+        data-quick-filter-option
+        onClick={() => onChange(checked ? 'all' : 'unwatched')}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-1 text-left text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-clay"
+      >
+        <span>
+          <span className="block text-xs font-semibold">Hide watched</span>
+          <span className="block text-[10px] text-ink-3">On this device</span>
+        </span>
+        <span
+          aria-hidden
           className={cn(
-            'min-h-9 rounded-full px-3 text-[11px] font-semibold transition-colors',
-            value === filter ? 'bg-clay text-white' : 'bg-inset text-ink-2 hover:text-ink',
+            'flex h-6 w-10 shrink-0 items-center rounded-full p-0.5 transition-colors',
+            checked ? 'bg-clay' : 'bg-white/20',
           )}
         >
-          {filter === 'all' ? 'All' : 'Unwatched'}
-        </button>
-      ))}
+          <span
+            className={cn(
+              'h-5 w-5 rounded-full bg-white shadow-sm transition-transform',
+              checked && 'translate-x-4',
+            )}
+          />
+        </span>
+      </button>
     </div>
   )
 }

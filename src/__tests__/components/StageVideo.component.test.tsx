@@ -637,7 +637,7 @@ describe('StageVideo source supersession', () => {
     expect(playCallsAfterStaleEvents).toBe(2)
     expect(mutedAfterStaleEvents).toBe(false)
     expect(onEnded).not.toHaveBeenCalled()
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock.mock.calls.filter(([url]) => url !== '/api/analytics')).toHaveLength(0)
     expect(queryByText("This video couldn't load.")).toBeNull()
     // Only B's own passive startup added a play call.
     expect(playMock).toHaveBeenCalledTimes(3)
@@ -680,7 +680,7 @@ describe('StageVideo source supersession', () => {
     })
 
     expect(onEnded).not.toHaveBeenCalled()
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock.mock.calls.filter(([url]) => url !== '/api/analytics')).toHaveLength(0)
     expect(playMock).toHaveBeenCalledTimes(callsAfterBPlay)
     expect(video.muted).toBe(false)
     expect(queryByText("This video couldn't load.")).toBeNull()
