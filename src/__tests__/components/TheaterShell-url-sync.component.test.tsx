@@ -78,6 +78,7 @@ describe('TheaterShell URL sync', () => {
 
   beforeEach(() => {
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
     global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ items: [] }) })) as never
     replaceSpy = vi.spyOn(window.history, 'replaceState')
   })

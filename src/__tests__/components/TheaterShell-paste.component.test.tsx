@@ -126,6 +126,7 @@ describe('TheaterShell: personal paste adds in place', () => {
     mockStage.mockClear()
     navigateToAppPath.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
     global.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.includes('/api/bookmarks/add')) {

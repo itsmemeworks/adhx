@@ -207,7 +207,7 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     Object.assign(navigator, { clipboard: undefined })
 
     render(<PasteLinkButton iconOnly />)
-    const button = screen.getByRole('button', { name: 'Paste a link' })
+    const button = screen.getByRole('button', { name: 'Paste link' })
     expect(button).not.toHaveTextContent('Paste link')
 
     fireEvent.click(button)
@@ -305,7 +305,7 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
 
   it('icon-only variant still autofocuses the input with no retry button', async () => {
     render(<PasteLinkButton iconOnly />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const input = await screen.findByPlaceholderText('Paste a link…')
     await waitFor(() => expect(input).toHaveFocus())
@@ -356,7 +356,7 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
   it('renders outside the button subtree, so no transformed ancestor can trap it', async () => {
     stubVisualViewport(844)
     const { container } = render(<PasteLinkButton iconOnly />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toBeInTheDocument()
@@ -369,7 +369,7 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
     // 844-tall screen with a ~420px keyboard open.
     stubVisualViewport(424, 0)
     render(<PasteLinkButton iconOnly />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const dialog = await screen.findByRole('dialog')
     const box = dialog.parentElement!
@@ -382,7 +382,7 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
   it('follows the viewport when Safari scrolls the page under the keyboard', async () => {
     stubVisualViewport(424, 130)
     render(<PasteLinkButton iconOnly />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const box = (await screen.findByRole('dialog')).parentElement!
     // Offset, not pinned to 0 — this is what kept the panel on screen.
@@ -392,7 +392,7 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
   it('falls back to the full screen where visualViewport is unavailable', async () => {
     Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
     render(<PasteLinkButton iconOnly />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const box = (await screen.findByRole('dialog')).parentElement!
     expect(box).toHaveStyle({ top: '0px' })
@@ -401,7 +401,7 @@ describe('PasteLinkButton — the helper is a centred dialog, not an anchored po
   it('keeps a tap inside the dialog from dismissing it', async () => {
     stubVisualViewport(424)
     render(<PasteLinkButton iconOnly />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const dialog = await screen.findByRole('dialog')
     // The panel lives outside containerRef now, so the outside-click handler
@@ -423,7 +423,7 @@ describe('PasteLinkButton — onPastePost (add in place)', () => {
     const onPastePost = vi.fn().mockResolvedValue(true)
 
     render(<PasteLinkButton iconOnly onPastePost={onPastePost} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     await waitFor(() => {
       expect(onPastePost).toHaveBeenCalledWith('https://x.com/naval/status/2064012969239859490')

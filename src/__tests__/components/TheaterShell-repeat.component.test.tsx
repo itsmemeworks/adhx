@@ -103,6 +103,7 @@ describe('TheaterShell: repeat is a remembered switch', () => {
     mockMobileChrome.mockClear()
     mockStage.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
   })
 
   it('remembers "keep playing" across visits', async () => {
@@ -144,6 +145,10 @@ describe('TheaterShell: repeat is a remembered switch', () => {
   })
 
   it('counts Now playing + Next off-repeat, and the full pile once repeat is on', async () => {
+    localStorage.setItem(
+      'adhx-theater-filters-discover-v1',
+      JSON.stringify({ types: [], watch: 'all' }),
+    )
     // Nothing seen, so all three are pending: the off-repeat count IS the pile.
     render(<TheaterShell seed={seed([textItem('1'), textItem('2'), textItem('3')])} />)
     expect(chromeProps().queuePlayed).toBe(0)
@@ -219,9 +224,9 @@ describe('TheaterShell: repeat is a remembered switch', () => {
     expect(chromeProps().queueLooping).toBe(false)
     expect(chromeProps().queueTotal).toBe(1)
 
-    await cycleRepeat() // -> all: the watched ones are back in play
-    expect(chromeProps().queueLooping).toBe(true)
-    expect(chromeProps().queueTotal).toBe(3)
+    await cycleRepeat() // Repeat does not change the watch filter.
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(1)
   })
 
   it('rotates a curated playlist so Now playing stays first', async () => {
@@ -256,6 +261,7 @@ describe('TheaterShell: shared preview keeps the opened post', () => {
   beforeEach(() => {
     mockMobileChrome.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
   })
 
   const shared = textItem('shared')

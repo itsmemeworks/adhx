@@ -121,6 +121,7 @@ describe('TheaterShell: waiting-stage fixes', () => {
     pushArrival = null
     mockMobileChrome.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
   })
 
   it('keeps the Stage mounted (not swapped for StageWaiting) once the queue reaches the end, and pauses it', async () => {
@@ -181,6 +182,7 @@ describe('TheaterShell: finishing a fresh arrival lands on the caught-up stage',
     pushArrival = null
     mockMobileChrome.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
   })
 
   /** Fire the video-ended handler the Stage stub was given. */
@@ -226,6 +228,7 @@ describe('TheaterShell: Live caught-up resumes Saved but stays caught up', () =>
   beforeEach(() => {
     mockMobileChrome.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
   })
 
   it('resumes Saved without forgetting Live was caught up', async () => {

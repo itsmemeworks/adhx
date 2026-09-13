@@ -25,7 +25,7 @@ describe('TheaterShortcutsHelp', () => {
     expect(screen.getByText('Repeat')).toBeInTheDocument()
     expect(screen.getByText('Theater')).toBeInTheDocument()
     expect(screen.getByText('Discover')).toBeInTheDocument()
-    expect(screen.getByText('My videos')).toBeInTheDocument()
+    expect(screen.getByText('Saved')).toBeInTheDocument()
     expect(screen.getByText('Queue')).toBeInTheDocument()
     const readWatch = screen.getByText('Read / Watch')
     const archive = screen.getByText('Archive')

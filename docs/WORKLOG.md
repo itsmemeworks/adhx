@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-13 — Make the launch theater easier to understand
+
+Discover defaults to Videos + Hide watched; Saved defaults to All posts with history visible.
+Each destination remembers its filters independently; shared targets and authored playlists stay intact.
+Replaced the watch pills with one switch, labelled the content filter, and separated Repeat from watch exclusion.
+Added first-visit and empty-account paste/watch/send guidance plus direct verified media actions.
+Theater Paste link uses an orange outline; phone media actions remain icon-only with 44px targets.
+Added confirmed playback analytics and failure/cancel checks for successful file-send metrics.
+Prepared a verified public clip shortlist and three playlist candidates in `docs/launch-content.md`.
+State: implemented for review; launch spec records validation. Deployment and final playlist curation remain separate.
+
 ## 2026-09-12 — Put watch history in the existing filters
 
 Removed the floating All / Unwatched navigation-style pill from desktop and mobile.

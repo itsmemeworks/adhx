@@ -94,7 +94,7 @@ export type TheaterMode = 'home' | 'shared' | 'playlist' | 'personal'
 /** Collection mode's Collection ↔ Live sub-tab (unified-theater-collection.md §2).
  * Internal values are unchanged (plumbed through TheaterShell, AuthedHome,
  * and the Header's `open-theater` dispatches) — only display order/label
- * changed: My videos reads first and is the default landing tab; Discover
+ * changed: Saved reads first and is the default landing tab; Discover
  * contains community activity.
  * See `PERSONAL_TAB_ORDER`/`PERSONAL_TAB_LABEL` below for the chrome's
  * single source of truth for both. */
@@ -164,7 +164,7 @@ export const PERSONAL_TAB_ORDER: readonly PersonalTab[] = ['collection', 'live']
 /** Display labels for the tab switcher (desktop top bar + mobile peek bar). */
 export const PERSONAL_TAB_LABEL: Record<PersonalTab, string> = {
   live: 'Discover',
-  collection: 'My videos',
+  collection: 'Saved',
 }
 
 /** Identity + loop metadata for a public playlist theater (a shared tag — mode `'playlist'`). */

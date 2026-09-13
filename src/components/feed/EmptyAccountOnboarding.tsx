@@ -21,18 +21,24 @@ export function EmptyAccountOnboarding(): React.ReactElement {
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <h3 className="font-serif text-2xl font-semibold text-ink mb-2">Nothing saved yet</h3>
       <p className="text-ink-2 max-w-md mb-8">
-        My videos is empty for now — connect X, paste a link, or see what everyone else is saving
-        right now.
+        Your favourite clips, ready to watch and share. Start with a link or find something in
+        Discover.
       </p>
 
       <div className="grid gap-3 w-full max-w-md">
+        <OnboardingAction
+          icon={<Clipboard className="w-5 h-5" />}
+          title="Paste. Watch. Send."
+          description="Paste an X, Instagram, TikTok, or YouTube link. Watch it here, then send the video or share a playlist with your mates."
+          primary
+          actionSlot={<PasteLinkButton className="mt-3 w-full justify-center" />}
+        />
         {xConnected ? (
           <OnboardingAction
             icon={<RefreshCw className="w-5 h-5" />}
             title="Sync your X bookmarks"
             description="Pull in everything you've already bookmarked on X."
             onClick={() => window.dispatchEvent(new CustomEvent('open-sync'))}
-            primary
           />
         ) : (
           <OnboardingAction
@@ -40,36 +46,14 @@ export function EmptyAccountOnboarding(): React.ReactElement {
             title={<ConnectWithX size={15} />}
             description="Import your existing X bookmarks in one click."
             href="/api/auth/twitter"
-            primary
           />
         )}
 
-        {/* Desktop: ⌘V/Ctrl+V paste-to-preview (global listener, see
-            PasteToPreview). Mobile Safari has no paste gesture, so the
-            mobile build swaps this for the actual one-tap Paste link
-            button instead of a description of a shortcut that doesn't
-            apply there. */}
-        <div className="hidden sm:block">
-          <OnboardingAction
-            icon={<Clipboard className="w-5 h-5" />}
-            title="Paste a link"
-            description="Copy an X, Instagram, TikTok, or YouTube link, then paste it (⌘V / Ctrl+V) anywhere on this page — we'll show a preview to save."
-          />
-        </div>
-        <div className="sm:hidden">
-          <OnboardingAction
-            icon={<Clipboard className="w-5 h-5" />}
-            title="Paste a link"
-            description="Copy an X, Instagram, TikTok, or YouTube link from any share sheet, then tap below."
-            actionSlot={<PasteLinkButton className="mt-3 w-full justify-center" />}
-          />
-        </div>
-
         <OnboardingAction
           icon={<TrendingUp className="w-5 h-5" />}
-          title="Explore what's trending"
+          title="Watch Discover"
           description="See what the community is saving and sending right now."
-          href="/trending"
+          href="/live"
         />
       </div>
 

@@ -81,6 +81,7 @@ import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
+import type { TheaterWatchFilterProps } from './TheaterWatchFilter'
 import {
   currentFirstQueue,
   isTheaterQueueFilterActive,
@@ -203,6 +204,7 @@ export interface DesktopDockProps {
    * handlers so the pills never mount. Shown in the Queue playlist
    * panel. Empty `queueTypes` is All.
    */
+  watchFilter?: TheaterWatchFilterProps
   queueTypes?: ContentType[]
   onToggleQueueType?: (type: ContentType) => void
   onClearQueueTypes?: () => void
@@ -528,12 +530,13 @@ export function DesktopStageChrome({
               ) : (
                 <button
                   type="button"
-                  aria-label="Paste a link"
+                  aria-label="Paste link"
                   aria-expanded={false}
                   onClick={() => setPasteOpen(true)}
-                  className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                  className="inline-flex min-h-11 flex-none items-center justify-center gap-2 rounded-full border border-clay bg-black/20 px-4 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20"
                 >
                   <Clipboard size={16} />
+                  <span>Paste link</span>
                 </button>
               )}
             </div>
@@ -794,6 +797,7 @@ export function DesktopDock({
   repeatMode,
   onCycleRepeat,
   articleMode = false,
+  watchFilter: filterPreference,
   queueTypes = [],
   onToggleQueueType,
   onClearQueueTypes,
@@ -843,9 +847,10 @@ export function DesktopDock({
   }, [currentKey])
 
   const watchFilter =
-    collection?.tab === 'collection' && collection.onWatchFilterChange
+    filterPreference ??
+    (collection?.onWatchFilterChange
       ? { value: collection.watchFilter ?? 'all', onChange: collection.onWatchFilterChange }
-      : undefined
+      : undefined)
   const typeFilterOn = Boolean(onToggleQueueType) && isTheaterQueueFilterActive(queueTypes)
   const watchFilterOn = watchFilter?.value === 'unwatched'
   const filterOn = typeFilterOn || watchFilterOn
@@ -1241,11 +1246,14 @@ export function DesktopDock({
                   setShowAll(true)
                 }}
                 className={cn(
-                  'relative inline-flex h-11 w-11 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-inset hover:text-ink',
+                  'relative inline-flex h-11 items-center justify-center gap-1.5 rounded-full px-3 text-ink-3 transition-colors hover:bg-inset hover:text-ink',
                   filterOn && 'text-clay hover:text-clay',
                 )}
               >
-                <ListFilter size={19} aria-hidden />
+                <ListFilter size={16} aria-hidden />
+                <span className="text-xs font-semibold">
+                  {typeFilterOn ? theaterQueueFilterLabel(queueTypes) : 'All posts'}
+                </span>
                 {filterOn ? (
                   <>
                     <span

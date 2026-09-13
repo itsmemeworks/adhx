@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { deleteLivePulse, expectTheaterReady, insertLivePulse } from './helpers'
+import { deleteLivePulse, expectTheaterReady, insertLivePulse, pauseTheater } from './helpers'
 
 const PULSE_TEXT_ID = '9000000000000000888'
 const PULSE_VIDEO_ID = '9000000000000000889'
@@ -16,6 +16,7 @@ test.describe('Discover type filter vs preview pulses', () => {
     test.setTimeout(90_000)
     await page.goto('/')
     await expectTheaterReady(page)
+    await pauseTheater(page)
     await page.evaluate(() => {
       localStorage.removeItem('adhx-theater-types')
       localStorage.removeItem('adhx-theater-visual')
@@ -32,13 +33,11 @@ test.describe('Discover type filter vs preview pulses', () => {
       'aria-pressed',
       'true',
     )
-    await expect(
-      page.getByRole('button', { name: 'Queue', exact: true }).locator('[data-theater-play-count]'),
-    ).toHaveText('0')
     const filter = page.getByRole('button', { name: 'Filter posts' })
     await expect(filter).toHaveAttribute('data-theater-queue-filter')
-    await expect(filter).toHaveAccessibleDescription('Filtered to Videos.')
-    await expect(page.getByText('No videos in Discover right now')).toBeVisible()
+    await expect(filter).toHaveAccessibleDescription('Filtered to Unwatched · Videos.')
+    // Earlier preview tests may enrich seeded quoted posts into videos. Assert
+    // type membership for these new pulses without assuming the feed is empty.
 
     insertLivePulse({
       id: PULSE_TEXT_ID,
@@ -59,7 +58,6 @@ test.describe('Discover type filter vs preview pulses', () => {
 
     // Server trending cache is 12s; the theater poll is another 12s.
     await expect(queue.getByText('E2E-PULSE-VIDEO')).toBeVisible({ timeout: 40_000 })
-    await expect(page.getByText('No videos in Discover right now')).toHaveCount(0)
     await expect(queue.getByText('E2E-PULSE-TEXT')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'All post types', exact: true }).click()

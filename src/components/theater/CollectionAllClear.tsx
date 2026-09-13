@@ -10,6 +10,7 @@
 
 import { PartyPopper, Repeat } from 'lucide-react'
 import { useRef } from 'react'
+import { PasteLinkButton } from '@/components/PasteLinkButton'
 import { StageHeadline } from './stage-primitives'
 import { useTheaterActionHotkeys } from './useTheaterActionHotkeys'
 
@@ -40,7 +41,7 @@ export function CollectionAllClear({
       <PartyPopper className="h-10 w-10 text-clay" />
       <StageHeadline>
         {total === 0
-          ? 'Your collection starts here'
+          ? 'Save your first favourite'
           : unwatched
             ? 'All caught up'
             : 'End of your queue'}
@@ -48,11 +49,24 @@ export function CollectionAllClear({
       {total > 0 ? (
         <p className="text-sm text-white/60">
           {unwatched
-            ? 'Your watched saves are still in All.'
+            ? 'Turn off Hide watched to see your watched saves.'
             : 'Your saves are still here. Play them again whenever you like.'}
         </p>
       ) : (
-        <p className="text-sm text-white/60">Paste a link above to save your first post.</p>
+        <p className="text-sm text-white/60">
+          Paste a social link. Watch it here. Send the video to your mates.
+        </p>
+      )}
+      {total === 0 && (
+        <div className="flex flex-col items-center gap-3">
+          <PasteLinkButton />
+          <a
+            href="/live"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-white underline underline-offset-4"
+          >
+            Watch Discover
+          </a>
+        </div>
       )}
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
         {unwatched && total > 0 && onShowAll ? (

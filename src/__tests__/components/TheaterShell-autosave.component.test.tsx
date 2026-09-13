@@ -98,6 +98,7 @@ describe('TheaterShell shared-lead autosave', () => {
     resetSharedAutoSaveAttempts()
     sessionStorage.clear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
     authMe = {
       me: { authenticated: true, user: { username: 'owner' } },
       loading: false,

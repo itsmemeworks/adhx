@@ -414,7 +414,7 @@ export function Header() {
                 {[
                   {
                     href: '/saved',
-                    label: 'My videos',
+                    label: 'Saved',
                     active: pathname === '/' || isSavedPath(pathname),
                   },
                   { href: '/live', label: 'Discover', active: pathname === '/live' },
@@ -576,7 +576,7 @@ export function Header() {
                         {[
                           {
                             href: '/saved',
-                            label: 'My videos',
+                            label: 'Saved',
                             Icon: Inbox,
                             active: pathname === '/' || isSavedPath(pathname),
                           },

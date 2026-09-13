@@ -379,7 +379,7 @@ export function theaterQueueFilterLabel(selected: readonly ContentType[]): strin
 
 export function theaterQueueEmptyHeadline(
   selected: readonly ContentType[],
-  surface: 'Live' | 'Saved' | 'Discover' | 'My videos' = 'Discover',
+  surface: 'Live' | 'Saved' | 'Discover' | 'Saved' = 'Discover',
 ): string {
   const labels = selectedQueueTypeLabels(selected).map((label) => label.toLowerCase())
   if (labels.length === 0) return `Nothing in ${surface} right now`

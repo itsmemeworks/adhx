@@ -136,7 +136,7 @@ function TheaterMenuEntry({
 }
 
 /**
- * Personal destinations are top-level rows, ordered My videos then Discover.
+ * Personal destinations are top-level rows, ordered Saved then Discover.
  * The callback preserves in-place selection before route navigation. A shared
  * preview omits `tab`, so neither destination is incorrectly marked current.
  */
@@ -213,7 +213,7 @@ export interface TheaterAvatarMenuProps {
   /**
    * Personal destination callbacks, with an optional current destination.
    * Shared previews omit the current tab. Without callbacks, signed-in
-   * visitors get ordinary links to My videos and Discover.
+   * visitors get ordinary links to Saved and Discover.
    */
   theaterTabs?: { tab?: PersonalTab; onTabChange: (tab: PersonalTab) => void }
 }
@@ -498,7 +498,7 @@ export function TheaterAvatarMenu({
             <>
               <MenuLink href="/saved" onClick={close} current={isSavedPath(pathname)}>
                 <Inbox size={15} />
-                <span>My videos</span>
+                <span>Saved</span>
               </MenuLink>
               <MenuLink href="/live" onClick={close} current={pathname === '/live'}>
                 <Activity size={15} />

@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * The signed-in theater. Default landing is My videos (`/saved`) — all
+ * The signed-in theater. Default landing is Saved (`/saved`) — all
  * your active saves, newest first. Discover (`/live`) is community activity.
  *
- * The My videos ⇄ Discover switch is a pair of ROUTES rather than local state:
+ * The Saved ⇄ Discover switch is a pair of ROUTES rather than local state:
  *
- *   `/saved`    My videos — your complete active queue (signed-in home)
+ *   `/saved`    Saved — your complete active queue (signed-in home)
  *   `/live`     Discover — the community's last 24 hours
  *   `/library`  the grid (filters, search, views) — `AuthedHome`
  *
@@ -38,7 +38,7 @@ import {
   parseTheaterQueueTypes,
   sortFeedNewestFirst,
 } from '@/components/theater/theater-math'
-import { THEATER_QUEUE_TYPES_STORAGE_KEY } from '@/components/theater/theater-storage'
+import { readTheaterFilters } from '@/lib/theater/filter-preferences'
 import { theaterTabNavAction } from '@/components/theater/theater-math'
 
 /** Which route each side of the switch lives on. */
@@ -115,7 +115,7 @@ async function loadCollectionQueue(
   if (!openId) {
     let types: ReturnType<typeof parseTheaterQueueTypes> = []
     try {
-      types = parseTheaterQueueTypes(localStorage.getItem(THEATER_QUEUE_TYPES_STORAGE_KEY))
+      types = readTheaterFilters('saved', localStorage).types
     } catch {
       types = []
     }
@@ -204,7 +204,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#08070a] px-6">
         <p className="text-center text-white/70">
-          <span>Couldn&apos;t load My videos.</span>
+          <span>Couldn&apos;t load Saved.</span>
         </p>
         <button
           type="button"
@@ -220,7 +220,7 @@ export default function AuthedTheater({ seed, tab, openId, openPlatform }: Authe
   if (needsCollection && load.status !== 'ready') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#08070a]">
-        <PostLoader variant="dark" size={72} caption="grabbing it…" label="Loading My videos" />
+        <PostLoader variant="dark" size={72} caption="grabbing it…" label="Loading Saved" />
       </div>
     )
   }

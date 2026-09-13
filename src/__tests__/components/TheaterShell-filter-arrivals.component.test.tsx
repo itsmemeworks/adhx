@@ -99,6 +99,7 @@ describe('TheaterShell: Live filter vs preview pulses', () => {
     pushArrival = null
     mockMobileChrome.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
   })
 
   it('drops a text preview from a Videos queue and keeps the current post', async () => {

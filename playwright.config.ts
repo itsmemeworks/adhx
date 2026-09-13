@@ -14,6 +14,14 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: E2E_ORIGIN,
+    // Most regression scenarios use the existing all-posts preference. The
+    // launch-ux suite clears this to exercise genuinely new visitors.
+    storageState: {
+      cookies: [],
+      origins: [
+        { origin: E2E_ORIGIN, localStorage: [{ name: 'adhx-theater-types', value: '[]' }] },
+      ],
+    },
     viewport: { width: 1440, height: 900 },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

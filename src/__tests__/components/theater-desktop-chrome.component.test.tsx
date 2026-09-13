@@ -673,7 +673,7 @@ describe('DesktopDock: end cap restructure', () => {
     expect(filter.className).toContain('text-clay')
     expect(filter.querySelector('.lucide-list-filter')).toBeInTheDocument()
     expect(filter).toHaveAccessibleDescription('Filtered to Videos.')
-    expect(screen.queryByText('Videos')).not.toBeInTheDocument()
+    expect(screen.getByText('Videos')).toBeInTheDocument()
     fireEvent.click(filter)
     const dialog = screen.getByRole('dialog', { name: 'Playlist' })
     expect(dialog).toBeInTheDocument()
@@ -1129,7 +1129,7 @@ describe('DesktopStageChrome', () => {
 
     expect(container.querySelector('[data-theater-progress-slider]')).toHaveClass('z-[70]')
     expect(
-      container.querySelector('button[aria-label="Paste a link"]')?.closest('.lg\\:block'),
+      container.querySelector('button[aria-label="Paste link"]')?.closest('.lg\\:block'),
     ).toHaveClass('z-[71]')
     expect(container.querySelector('[data-theater-scrub-time]')?.parentElement).toHaveClass(
       'z-[74]',
@@ -1157,7 +1157,7 @@ describe('DesktopStageChrome', () => {
     render(<DesktopStageChrome {...stageBase} current={item} />)
 
     const flame = screen.getByLabelText('12 trending')
-    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const paste = screen.getByRole('button', { name: 'Paste link' })
     expect(flame.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText('Alice').closest('a')?.contains(flame)).toBe(false)
     expect(screen.getByText('Alice').parentElement?.contains(flame)).toBe(false)
@@ -1181,7 +1181,7 @@ describe('DesktopStageChrome', () => {
       <DesktopStageChrome {...stageBase} current={videoItem({ trendCount: 12 })} articleMode />,
     )
     const flame = screen.getByLabelText('12 trending')
-    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const paste = screen.getByRole('button', { name: 'Paste link' })
     expect(flame.compareDocumentPosition(paste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
@@ -1260,7 +1260,7 @@ describe('DesktopStageChrome', () => {
     })
 
     render(<DesktopStageChrome {...stageBase} current={null} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     const input = screen.getByLabelText('Paste a link to preview')
     fireEvent.change(input, { target: { value: 'https://x.com/alice/status/123' } })
     fireEvent.submit(input.closest('form')!)
@@ -1306,14 +1306,14 @@ describe('DesktopStageChrome', () => {
   it('keeps the paste field collapsed until the paste button is clicked', () => {
     render(<DesktopStageChrome {...stageBase} current={null} />)
     expect(screen.queryByLabelText('Paste a link to preview')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     expect(screen.getByLabelText('Paste a link to preview')).toBeInTheDocument()
   })
 
   it('keeps the expanded paste field the same height as the icon cluster', () => {
     const { rerender } = render(<DesktopStageChrome {...stageBase} current={null} />)
-    expect(screen.getByRole('button', { name: 'Paste a link' }).className).toContain('h-10')
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    expect(screen.getByRole('button', { name: 'Paste link' }).className).toContain('min-h-11')
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     expect(screen.getByLabelText('Paste a link to preview').closest('form')?.className).toContain(
       'h-10',
     )
@@ -1323,16 +1323,16 @@ describe('DesktopStageChrome', () => {
 
   it('collapses the paste field on Escape', () => {
     render(<DesktopStageChrome {...stageBase} current={null} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     expect(screen.getByLabelText('Paste a link to preview')).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByLabelText('Paste a link to preview')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste link' })).toBeInTheDocument()
   })
 
   it('shows "Not a supported link" for a garbage paste', () => {
     render(<DesktopStageChrome {...stageBase} current={null} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     const input = screen.getByLabelText('Paste a link to preview')
     fireEvent.change(input, { target: { value: 'not a link at all' } })
     fireEvent.submit(input.closest('form')!)
@@ -1362,7 +1362,7 @@ describe('DesktopStageChrome', () => {
         onPastePost={vi.fn()}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste link' })).toBeInTheDocument()
   })
 
   it('shows the paste control on Saved', () => {
@@ -1375,14 +1375,14 @@ describe('DesktopStageChrome', () => {
         onPastePost={vi.fn()}
       />,
     )
-    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste link' })).toBeInTheDocument()
   })
 
   it('does not put the type filter in the top bar', () => {
     render(<DesktopStageChrome {...stageBase} current={videoItem({ trendCount: 12 })} />)
     expect(screen.queryByRole('group', { name: 'Playlist filter' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Videos' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Paste a link' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste link' })).toBeInTheDocument()
   })
 
   it('adds in place on the personal theater and does not navigate away', async () => {
@@ -1402,7 +1402,7 @@ describe('DesktopStageChrome', () => {
         onPastePost={onPastePost}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     const input = screen.getByLabelText('Paste a link to preview')
     fireEvent.change(input, { target: { value: 'https://x.com/alice/status/123' } })
     fireEvent.submit(input.closest('form')!)
@@ -1428,7 +1428,7 @@ describe('DesktopStageChrome', () => {
         collection={personalCollection}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Paste a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
     const input = screen.getByLabelText('Paste a link to preview')
     fireEvent.change(input, { target: { value: 'https://x.com/alice/status/123' } })
     fireEvent.submit(input.closest('form')!)
@@ -1446,7 +1446,7 @@ describe('DesktopStageChrome', () => {
         playlist={{ tag: 'claude-code', curator: 'weedauwl', count: 12 }}
       />,
     )
-    expect(screen.queryByRole('button', { name: 'Paste a link' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Paste link' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Make your own' })).toBeInTheDocument()
   })
 
@@ -1478,7 +1478,7 @@ describe('DesktopStageChrome', () => {
 
     // The far-right cluster (outside the tab pill) holds paste + avatar —
     // no stray close button, and de-clutter lives in the dock.
-    const paste = screen.getByRole('button', { name: 'Paste a link' })
+    const paste = screen.getByRole('button', { name: 'Paste link' })
     const rightCluster = paste.parentElement!.parentElement!
     expect(rightCluster.querySelector('[aria-label="Close"]')).toBeNull()
     expect(screen.queryByLabelText('Hide controls')).not.toBeInTheDocument()
@@ -1682,10 +1682,10 @@ describe('DesktopStageChrome: Save/Share button hierarchy', () => {
       />,
     )
     expect(screen.getByRole('button', { name: 'Discover' })).not.toHaveAttribute('aria-current')
-    expect(screen.getByRole('button', { name: 'My videos' })).not.toHaveAttribute('aria-current')
+    expect(screen.getByRole('button', { name: 'Saved' })).not.toHaveAttribute('aria-current')
     fireEvent.click(screen.getByRole('button', { name: 'Discover' }))
     expect(onTabChange).toHaveBeenCalledWith('live')
-    fireEvent.click(screen.getByRole('button', { name: 'My videos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Saved' }))
     expect(onTabChange).toHaveBeenCalledWith('collection')
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(onClose).toHaveBeenCalled()
@@ -1792,7 +1792,7 @@ describe('DesktopStageChrome: Save/Share button hierarchy', () => {
     expect(screen.getByRole('menuitem', { name: 'Share link' })).toBeInTheDocument()
   })
 
-  it('renders My videos before Discover', () => {
+  it('renders Saved before Discover', () => {
     const collection = {
       tab: 'live' as const,
       onTabChange: vi.fn(),
@@ -1808,7 +1808,7 @@ describe('DesktopStageChrome: Save/Share button hierarchy', () => {
 
     expect(screen.queryByText('Collection')).not.toBeInTheDocument()
     const liveTab = screen.getByText('Discover', { selector: 'button' })
-    const collectionTab = screen.getByText('My videos')
+    const collectionTab = screen.getByText('Saved')
     expect(
       collectionTab.compareDocumentPosition(liveTab) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
@@ -2243,7 +2243,7 @@ describe('DesktopStageChrome: theaterTabs prop wiring', () => {
         theaterTabs: { tab: 'live', onTabChange: collection.onTabChange },
       }),
     )
-    expect(screen.getByRole('button', { name: 'My videos' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument()
   })
 
   it('passes Live / Saved into the avatar menu from signed-in shared tabs', () => {

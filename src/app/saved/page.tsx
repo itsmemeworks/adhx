@@ -6,7 +6,7 @@ import { recordAnalytic } from '@/lib/analytics/record'
 import AuthedTheater from '../AuthedTheater'
 
 /**
- * `/saved` — My videos, the default signed-in theater (Discover
+ * `/saved` — Saved, the default signed-in theater (Discover
  * is `/live`). Signed-in `/` redirects here; this route is all active saves
  * (library card taps, `?open=`). The grid with filters and search is `/library`.
  *

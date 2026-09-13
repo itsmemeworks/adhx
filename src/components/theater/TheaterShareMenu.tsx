@@ -162,7 +162,61 @@ export function TheaterShareMenu({
   }
 
   return (
-    <div ref={rootRef} className={cn('relative', !desktop && 'order-3')}>
+    <div
+      ref={rootRef}
+      className={cn(
+        'relative flex items-center gap-2',
+        !desktop &&
+          'order-3 flex-col [@media(max-height:520px)]:flex-row [@media(max-height:520px)]:self-end',
+      )}
+    >
+      {sendFile.supported && (
+        <button
+          type="button"
+          disabled={sendFile.sending}
+          aria-label={
+            sendFile.sending
+              ? `Getting ${mediaLabel}`
+              : sendFile.primed
+                ? `Send ${mediaLabel} — tap again`
+                : sendFile.mode === 'share'
+                  ? `Send ${mediaLabel}`
+                  : `Download ${mediaLabel}`
+          }
+          onClick={() => void run(sendFile.send)}
+          className={cn(
+            'pointer-events-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/15 text-white disabled:opacity-60',
+            desktop
+              ? 'px-3 text-xs font-semibold'
+              : 'h-11 w-11 border-white/15 bg-black/20 text-white/90 backdrop-blur-md',
+          )}
+        >
+          {sendFile.sending ? (
+            <Loader2 size={17} className="animate-spin" />
+          ) : sendFile.mode === 'share' ? (
+            <Send size={17} />
+          ) : (
+            <Download size={17} />
+          )}
+          <span className={desktop ? undefined : 'sr-only'}>
+            {sendFile.sending
+              ? 'Getting…'
+              : sendFile.primed
+                ? 'Tap again'
+                : sendFile.mode === 'share'
+                  ? `Send ${mediaLabel}`
+                  : 'Download'}
+          </span>
+        </button>
+      )}
+      {sendFile.error && (
+        <span
+          role="status"
+          className="absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-[#121117] p-3 text-xs text-white"
+        >
+          {sendFile.error}
+        </span>
+      )}
       <button
         ref={triggerRef}
         type="button"

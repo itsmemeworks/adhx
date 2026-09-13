@@ -60,7 +60,7 @@ export function StageWaiting({
     >
       <LiveDot />
       <StageHeadline>You&rsquo;re all caught up</StageHeadline>
-      <p className="text-sm text-white/50">waiting for new sends&hellip;</p>
+      <p className="text-sm text-white/50">Paste a link, or watch these posts again.</p>
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
         {onReplay && (
           <button
@@ -70,7 +70,7 @@ export function StageWaiting({
             className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/[0.14] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-white/20"
           >
             <RotateCcw size={15} />
-            <span>{replayCount ? `Re-watch all ${replayCount}` : 'Start from the beginning'}</span>
+            <span>{replayCount ? `Watch again · ${replayCount}` : 'Watch again'}</span>
           </button>
         )}
         {onKeepPlaying && (

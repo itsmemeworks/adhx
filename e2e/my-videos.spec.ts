@@ -16,18 +16,15 @@ for (const mobile of [false, true]) {
       await expectTheaterReady(page)
       if (mobile) await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' })
       await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
-      const filter = page.getByRole('group', { name: 'Watch history' }).filter({ visible: true })
+      const filter = page.getByRole('switch', { name: 'Hide watched' }).filter({ visible: true })
       const trigger = page.getByRole('button', {
         name: mobile ? 'Quick filter posts' : 'Filter posts',
         exact: true,
       })
       await expect(filter).toHaveCount(0)
       await trigger.click()
-      await expect(filter.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-      await filter.getByRole('button', { name: 'Unwatched', exact: true }).click()
+      await expect(filter).toHaveAttribute('aria-checked', 'false')
+      await filter.click()
       await expect(visibleCaption(page, POST.bravo.text)).toBeVisible()
       await expect(trigger).toHaveAttribute('title', 'Unwatched')
       if ((await trigger.getAttribute('aria-expanded')) === 'true') {
@@ -39,17 +36,14 @@ for (const mobile of [false, true]) {
       if (mobile) await page.getByRole('button', { name: 'Collapse up next' }).click()
       else await page.keyboard.press('Escape')
       await trigger.click()
-      await filter.getByRole('button', { name: 'All', exact: true }).click()
+      await filter.click()
       await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
       await expect(trigger).toHaveAttribute('title', 'Filter posts')
       await page.reload()
       await expectTheaterReady(page)
       await expect(filter).toHaveCount(0)
       await trigger.click()
-      await expect(filter.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
+      await expect(filter).toHaveAttribute('aria-checked', 'false')
       await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
       await page.screenshot({
         path: `/tmp/adhx-watch-filter-${mobile ? 'mobile' : 'desktop'}-open.png`,

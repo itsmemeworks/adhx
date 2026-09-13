@@ -7,7 +7,7 @@ import AuthedTheater from '../AuthedTheater'
 
 /**
  * `/live` — signed-in Discover tab (community pulse). Signed-out visitors go to
- * `/`, which is the public live theater. Signed-in `/` opens My videos at `/saved`.
+ * `/`, which is the public live theater. Signed-in `/` opens Saved at `/saved`.
  *
  * force-dynamic: session cookie + runtime SQLite.
  */

@@ -112,6 +112,7 @@ describe('TheaterShell LIFO queue', () => {
     mockMobileChrome.mockClear()
     mockStage.mockClear()
     window.localStorage.clear()
+    localStorage.setItem('adhx-theater-types', '[]')
   })
 
   it('loads newest-first and only unseen posts', async () => {
@@ -184,6 +185,10 @@ describe('TheaterShell LIFO queue', () => {
   })
 
   it('repeat-all Next walks every post, not a two-item bounce', async () => {
+    localStorage.setItem(
+      'adhx-theater-filters-discover-v1',
+      JSON.stringify({ types: [], watch: 'all' }),
+    )
     await act(async () => {
       render(
         <TheaterShell
@@ -209,6 +214,10 @@ describe('TheaterShell LIFO queue', () => {
   })
 
   it('repeat-all inserts a poll arrival after Now playing and keeps traversal order', async () => {
+    localStorage.setItem(
+      'adhx-theater-filters-discover-v1',
+      JSON.stringify({ types: [], watch: 'all' }),
+    )
     window.localStorage.setItem('adhx-theater-repeat', 'all')
     await act(async () => {
       render(<TheaterShell seed={seed([textItem('1', 1), textItem('2', 2), textItem('3', 3)])} />)
@@ -223,6 +232,10 @@ describe('TheaterShell LIFO queue', () => {
   })
 
   it('repeat-all counts the whole playlist; repeat-one is 1', async () => {
+    localStorage.setItem(
+      'adhx-theater-filters-discover-v1',
+      JSON.stringify({ types: [], watch: 'all' }),
+    )
     await act(async () => {
       render(<TheaterShell seed={seed([textItem('1', 1), textItem('2', 2), textItem('3', 3)])} />)
     })
@@ -237,7 +250,7 @@ describe('TheaterShell LIFO queue', () => {
     expect(chromeProps().queueTotal).toBe(1)
   })
 
-  it('Re-watch all marks the playlist unseen and starts the newest post', async () => {
+  it('Watch again includes history without erasing it and starts the newest post', async () => {
     const items = [textItem('1', 1), textItem('2', 2), textItem('3', 3)]
     markWatched(items)
     await act(async () => {
@@ -245,14 +258,14 @@ describe('TheaterShell LIFO queue', () => {
     })
     expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /re-watch all/i }))
+      fireEvent.click(screen.getByRole('button', { name: /watch again/i }))
     })
     expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
     expect(chromeProps().currentKey).toBe('twitter:1')
     expect(chromeProps().queueLooping).toBe(false)
     expect(chromeProps().queueToPlay).toBe(3)
     expect(chromeProps().items.map((i) => i.bookmarkId)).toEqual(['1', '2', '3'])
-    expect(chromeProps().isSeen?.('twitter:1')).toBe(false)
+    expect(chromeProps().isSeen?.('twitter:1')).toBe(true)
 
     await endCurrent()
     expect(chromeProps().currentKey).toBe('twitter:2')
@@ -261,19 +274,16 @@ describe('TheaterShell LIFO queue', () => {
     expect(chromeProps().items.map((i) => i.bookmarkId)).toEqual(['2', '3', '1'])
   })
 
-  it('Keep playing from caught-up at mount starts on the newest parked post', async () => {
+  it('Repeat alone cannot override Hide watched at the caught-up boundary', async () => {
     const items = [textItem('1', 1), textItem('2', 2), textItem('3', 3)]
     markWatched(items)
     await act(async () => {
       render(<TheaterShell seed={seed(items)} />)
     })
     expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /keep playing/i }))
-    })
-    expect(screen.queryByText('You’re all caught up')).not.toBeInTheDocument()
-    expect(chromeProps().currentKey).toBe('twitter:1')
-    expect(chromeProps().queueLooping).toBe(true)
-    expect(chromeProps().queueTotal).toBe(3)
+    await act(async () => chromeProps().onCycleRepeat?.())
+    expect(screen.getByText('You’re all caught up')).toBeInTheDocument()
+    expect(chromeProps().queueLooping).toBe(false)
+    expect(chromeProps().queueTotal).toBe(0)
   })
 })

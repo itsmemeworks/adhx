@@ -356,7 +356,7 @@ export async function openTheaterQueue(page: Page) {
 }
 
 export async function pasteTheaterLink(page: Page, url: string): Promise<void> {
-  await page.getByRole('button', { name: 'Paste a link' }).click()
+  await page.getByRole('button', { name: 'Paste link' }).click()
   const field = page.getByRole('textbox', { name: /Paste a link/i })
   await field.fill(url)
   await field.press('Enter')

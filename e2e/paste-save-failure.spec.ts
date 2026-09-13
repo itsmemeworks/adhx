@@ -24,7 +24,7 @@ for (const mobile of [false, true]) {
         await page.goto(`/${tab}`)
         await expectTheaterReady(page)
         if (mobile) {
-          await page.getByRole('button', { name: 'Paste a link', exact: true }).click()
+          await page.getByRole('button', { name: 'Paste link', exact: true }).click()
           const input = page.getByPlaceholder('Paste a link…')
           await input.fill(reelUrl)
           await input.press('Enter')

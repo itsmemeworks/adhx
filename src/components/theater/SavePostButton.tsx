@@ -218,7 +218,7 @@ export function SavePostButton({
       {status === 'tag' && iconOnly && <TheaterTagCount count={tagCount} variant="badge" />}
       {status === 'saved' && (
         <span className="sr-only" aria-live="polite">
-          Added to My videos
+          Added to Saved
         </span>
       )}
     </StageGlass>

@@ -1,11 +1,6 @@
 'use client'
 
-/**
- * Live and Saved type multi-select. Lives in the playlist (Queue /
- * up-next sheet), not the top bar. Empty selection is All — tap any mix
- * of videos, photos, or text (including articles). Playlists do not mount this.
- * Persists as `adhx-theater-types`.
- */
+/** Single-choice post types and watch filtering, shared by the desktop and mobile Queue. */
 
 import { cn } from '@/lib/utils'
 import type { ContentType } from '@/components/matter'
@@ -19,7 +14,7 @@ import {
 } from './theater-math'
 
 const PILL =
-  'inline-flex min-h-9 items-center rounded-full px-3 py-1 text-[11px] font-semibold transition-colors duration-150'
+  'inline-flex min-h-11 items-center rounded-full px-3 py-1 text-[11px] font-semibold transition-colors duration-150'
 
 export function TheaterQueueFilter({
   selected,

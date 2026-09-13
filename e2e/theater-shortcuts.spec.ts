@@ -42,7 +42,7 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(help.getByText('Repeat')).toBeVisible()
     await expect(help.getByText('Theater')).toBeVisible()
     await expect(help.getByText('Discover', { exact: true })).toBeVisible()
-    await expect(help.getByText('My videos', { exact: true })).toBeVisible()
+    await expect(help.getByText('Saved', { exact: true })).toBeVisible()
     await expect(help.getByText('Queue', { exact: true })).toBeVisible()
     await expect(help.getByText('Scroll text')).toBeVisible()
 
@@ -133,7 +133,7 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(repeat).toHaveAttribute('aria-label', 'Stop when caught up')
   })
 
-  test('Queue type pills are a multi-select', async ({ page }) => {
+  test('Queue type pills select one content type at a time', async ({ page }) => {
     await page.goto('/')
     await expectTheaterReady(page)
     await page.evaluate(() => {
@@ -143,7 +143,7 @@ test.describe('theater shortcuts (signed out)', () => {
     await page.goto('/')
     await expectTheaterReady(page)
 
-    await expect(page.getByRole('button', { name: 'Paste a link' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Paste link' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Videos', exact: true })).toHaveCount(0)
 
     await page.getByRole('button', { name: 'Queue', exact: true }).click()
@@ -157,7 +157,7 @@ test.describe('theater shortcuts (signed out)', () => {
     await expect(all).toHaveAttribute('aria-pressed', 'false')
     await photos.click()
     await expect(photos).toHaveAttribute('aria-pressed', 'true')
-    await expect(videos).toHaveAttribute('aria-pressed', 'true')
+    await expect(videos).toHaveAttribute('aria-pressed', 'false')
     await all.click()
     await expect(all).toHaveAttribute('aria-pressed', 'true')
     await expect(videos).toHaveAttribute('aria-pressed', 'false')
@@ -288,7 +288,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('menu')).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Library' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Discover' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'My videos' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Saved' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
   })
 
@@ -298,7 +298,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'My videos' })).toBeFocused()
+    await expect(page.getByRole('menuitem', { name: 'Saved' })).toBeFocused()
     await page.keyboard.press('ArrowDown')
     await expect(page.getByRole('menuitem', { name: 'Discover' })).toBeFocused()
     await page.keyboard.press('Enter')
@@ -315,7 +315,7 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
     await page.keyboard.press('.')
     await expect(page.getByRole('menu')).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'My videos' })).toBeFocused()
+    await expect(page.getByRole('menuitem', { name: 'Saved' })).toBeFocused()
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
@@ -325,11 +325,11 @@ authedTest.describe('theater shortcuts (signed in)', () => {
     await expect(page).toHaveURL(/\/leaderboard/)
   })
 
-  authedTest('1 opens My videos and 2 opens Discover', async ({ page }) => {
+  authedTest('1 opens Saved and 2 opens Discover', async ({ page }) => {
     await page.goto('/live')
     await expectTheaterReady(page)
     const liveTab = page.getByRole('button', { name: 'Discover', exact: true })
-    const savedTab = page.getByRole('button', { name: 'My videos', exact: true })
+    const savedTab = page.getByRole('button', { name: 'Saved', exact: true })
     await expect(liveTab).toHaveAttribute('aria-current', 'true')
 
     await page.keyboard.press('1')

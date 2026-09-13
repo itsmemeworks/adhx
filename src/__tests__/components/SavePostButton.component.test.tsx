@@ -63,7 +63,7 @@ describe('SavePostButton — save to tag', () => {
       )
     })
     expect(screen.getByText('Saved')).toBeInTheDocument()
-    expect(screen.getByText('Added to My videos')).toBeInTheDocument()
+    expect(screen.getByText('Added to Saved')).toBeInTheDocument()
 
     await act(async () => {
       vi.advanceTimersByTime(SAVE_TO_TAG_MS)
