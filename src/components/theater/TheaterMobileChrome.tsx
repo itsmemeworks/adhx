@@ -62,6 +62,7 @@ import { TheaterTagCount } from './TheaterTagCount'
 import { tagActionLabel } from '@/lib/utils/tag'
 import { TheaterCollectionActions } from './TheaterCollectionActions'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { TheaterPictureInPictureButton } from './TheaterPictureInPictureButton'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
 import { TheaterWatchFilter, type TheaterWatchFilterProps } from './TheaterWatchFilter'
 import {
@@ -744,6 +745,7 @@ export function TheaterMobileChrome({
                 className={cn(RAIL_ACTION_BTN, 'order-2 border-clay')}
               />
             )}
+            <TheaterPictureInPictureButton className={cn(RAIL_ACTION_BTN, 'order-1')} />
             {playlist && isPlaylistOwner ? (
               <StageIconButton
                 href={`/library?tag=${encodeURIComponent(playlist.tag)}`}

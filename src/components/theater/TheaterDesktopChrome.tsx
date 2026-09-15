@@ -80,6 +80,7 @@ import { progressKindFor } from './TheaterProgressLine'
 import { UpNextList, TYPE_TILE, warmOnHover } from './UpNextList'
 import { SavePlaylistButton } from './SavePlaylistButton'
 import { TheaterAvatarMenu } from './TheaterAvatarMenu'
+import { TheaterPictureInPictureButton } from './TheaterPictureInPictureButton'
 import { TheaterQueueFilter } from './TheaterQueueFilter'
 import type { TheaterWatchFilterProps } from './TheaterWatchFilter'
 import {
@@ -395,24 +396,10 @@ export function DesktopStageChrome({
         )}
         style={{ background: 'linear-gradient(rgba(8,7,10,.62), transparent)' }}
       >
-        <div
-          className={cn(
-            'pointer-events-auto flex min-w-0 gap-3.5',
-            // Collection mode: the wordmark, tag name and curator line sit on
-            // one shared text baseline (per live review) — other modes keep
-            // vertical centering for their pill controls.
-            playlist && !collection ? 'items-baseline' : 'items-center',
-          )}
-        >
-          {playlist && !collection ? (
-            <a href="/" aria-label="ADHX home" className="flex-none">
-              <MatterLogo size={19} surface="dark" />
-            </a>
-          ) : (
-            <a href="/" aria-label="ADHX home" className="flex-none">
-              <MatterLogo size={19} surface="dark" />
-            </a>
-          )}
+        <div className="pointer-events-auto flex min-w-0 items-center gap-3.5">
+          <a href="/" aria-label="ADHX home" className="flex flex-none items-center">
+            <MatterLogo size={19} surface="dark" />
+          </a>
           {tabs ? (
             <>
               <span className="h-5 w-px flex-none bg-white/20" aria-hidden />
@@ -449,7 +436,7 @@ export function DesktopStageChrome({
           ) : playlist ? (
             <>
               <span className="h-5 w-px flex-none self-center bg-white/20" aria-hidden />
-              <span className="flex-none truncate text-[19px] font-bold leading-none text-white">
+              <span className="min-w-0 shrink truncate text-[19px] font-bold leading-none text-white">
                 #{playlist.tag}
               </span>
               <span className="min-w-0 truncate font-mono text-[11px] leading-none text-white/55">
@@ -465,7 +452,7 @@ export function DesktopStageChrome({
                   {' '}
                   · {playlist.count} {playlist.count === 1 ? 'post' : 'posts'} ·{' '}
                 </span>
-                <Repeat size={10} className="inline" aria-hidden />
+                <Repeat size={10} className="inline align-middle" aria-hidden />
                 <span> loops</span>
               </span>
             </>
@@ -983,6 +970,7 @@ export function DesktopDock({
             {displayMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </button>
         </div>
+        <TheaterPictureInPictureButton className={TRANSPORT_BTN} />
         <span className="mx-1 h-16 w-px flex-none bg-hairline" />
       </div>
 
