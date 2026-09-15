@@ -59,7 +59,7 @@ Repeat controls looping independently: turning it on never brings back posts exc
 
 The first useful loop is **paste → watch → send**. Paste link is visible in theater chrome; sendable media has a direct Download action on desktop or a Send/Download icon on mobile. Share keeps the share-link alternative, including YouTube posts that use an official embed rather than a downloadable file.
 
-**Picture-in-picture** pops directly played videos into a floating window so you can watch while using other tabs. Look beside the desktop playback controls or in the mobile action rail. The button appears where the browser supports it, including Safari's video presentation mode. Keep the ADHX tab open; moving to a non-video post or an embedded player closes the floating video. YouTube embeds use their own player/browser controls.
+**Picture-in-picture** pops directly played videos into a floating window so you can watch while using other tabs. Look in the bottom playback controls on desktop and mobile. The button appears where the browser supports it, including Safari's video presentation mode. Keep the ADHX tab open; moving to a non-video post or an embedded player closes the floating video. YouTube embeds use their own player/browser controls.
 
 Watched history stays in this browser, with up to 500 recent marks retained. It does not sync between devices or create public activity. Saved loads the full collection in pages of 100; the first page is not a collection limit.
 

@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-15 — Move mobile PiP into bottom playback controls
+
+Moved picture-in-picture from the right post-action rail to the bottom playback group, beside expand.
+Preserved 44px playback targets; the filter becomes icon-only when its group has little space.
+Kept PiP failure feedback visible above the dock and removed the old rail ordering from its wrapper.
+Verified 360px/430px layouts, 3,686 unit tests, and 12 mobile/playlist browser regressions.
+State: implemented for review; requires merge and deployment.
+
 ## 2026-09-15 — Center playlist identity and add picture-in-picture
 
 Centered the desktop logo, tag, and curator/count line; removed the logo link's inline baseline gap.

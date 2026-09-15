@@ -25,7 +25,7 @@ export function TheaterPictureInPictureButton({ className }: { className: string
   if (!state.supported && !state.active) return null
   const label = state.active ? 'Exit picture-in-picture' : 'Picture-in-picture'
   return (
-    <div className="pointer-events-auto relative order-1 flex-none lg:order-none">
+    <div className="pointer-events-auto relative flex-none">
       <button
         type="button"
         aria-label={label}
@@ -44,7 +44,7 @@ export function TheaterPictureInPictureButton({ className }: { className: string
       {state.error && (
         <span
           role="status"
-          className="absolute bottom-full right-0 z-50 mb-2 w-52 rounded-lg bg-black/90 p-3 text-xs text-white lg:left-0 lg:right-auto"
+          className="absolute bottom-full left-1/2 z-50 mb-2 w-52 -translate-x-1/2 rounded-lg bg-black/90 p-3 text-xs text-white lg:left-0 lg:translate-x-0"
         >
           {state.error}
         </span>
