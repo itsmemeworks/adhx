@@ -745,7 +745,6 @@ export function TheaterMobileChrome({
                 className={cn(RAIL_ACTION_BTN, 'order-2 border-clay')}
               />
             )}
-            <TheaterPictureInPictureButton className={cn(RAIL_ACTION_BTN, 'order-1')} />
             {playlist && isPlaylistOwner ? (
               <StageIconButton
                 href={`/library?tag=${encodeURIComponent(playlist.tag)}`}
@@ -1039,11 +1038,11 @@ export function TheaterMobileChrome({
             the visible window and the peek content one and the same. */}
         <div
           data-testid="mobile-theater-peek"
-          className="flex-none overflow-hidden pt-3"
+          className="flex-none overflow-visible pt-3"
           style={{ height: PEEK_H }}
         >
           <div className="relative flex items-center justify-between gap-1 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))]">
-            <div className="flex items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 [container-name:mobile-queue-controls] [container-type:inline-size]">
               <button
                 ref={queueToggleRef}
                 type="button"
@@ -1105,12 +1104,12 @@ export function TheaterMobileChrome({
                   title={filterOn ? filterLabel : 'Filter posts'}
                   className={cn(
                     PEEK_ICON_BTN,
-                    'relative w-auto gap-1 px-2',
+                    'relative min-w-11 w-auto flex-initial gap-1 px-2',
                     filterOn && 'text-clay hover:text-clay active:text-clay',
                   )}
                 >
-                  <ListFilter size={15} aria-hidden />
-                  <span className="max-w-20 truncate text-[11px] font-semibold">
+                  <ListFilter size={15} className="flex-none" aria-hidden />
+                  <span className="min-w-0 max-w-20 truncate text-[11px] font-semibold [@container_mobile-queue-controls_(max-width:150px)]:hidden">
                     {typeFilterOn ? theaterQueueFilterLabel(queueTypes) : 'All posts'}
                   </span>
                   {filterOn ? (
@@ -1124,11 +1123,12 @@ export function TheaterMobileChrome({
             </div>
 
             <div
-              className="flex items-center gap-0.5"
+              className="flex flex-none items-center gap-0.5"
               data-testid="mobile-playback-controls"
               role="group"
               aria-label="Playback controls"
             >
+              <TheaterPictureInPictureButton className={PEEK_ICON_BTN} />
               <button
                 type="button"
                 onClick={(event) => {

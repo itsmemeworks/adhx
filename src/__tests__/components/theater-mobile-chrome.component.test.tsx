@@ -1249,7 +1249,8 @@ describe('TheaterMobileChrome: Up-next playlist toggle', () => {
     expect(wrapper).toHaveStyle({
       height: 'calc(4.25rem + env(safe-area-inset-bottom))',
     })
-    expect(wrapper).toHaveClass('flex-none', 'overflow-hidden', 'pt-3')
+    // PiP feedback can extend above the fixed-height transport row.
+    expect(wrapper).toHaveClass('flex-none', 'overflow-visible', 'pt-3')
   })
 
   it('uses a straight viewport-fixed dock with a visible seek rail on its top edge', () => {
