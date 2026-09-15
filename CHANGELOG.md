@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.73.0](https://github.com/itsmemeworks/adhx/compare/v1.72.0...v1.73.0) (2026-09-15)
+
+
+### Features
+
+* add theater picture-in-picture and align playlist headers ([#521](https://github.com/itsmemeworks/adhx/issues/521)) ([38fdecb](https://github.com/itsmemeworks/adhx/commit/38fdecb33287b98100caba64d118bde0d01cbc3a))
+
 ## [1.72.0](https://github.com/itsmemeworks/adhx/compare/v1.71.2...v1.72.0) (2026-09-13)
 
 
