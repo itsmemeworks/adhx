@@ -31,6 +31,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePostPlayback } from './usePostPlayback'
+import { useVideoPictureInPicture } from './useVideoPictureInPicture'
 import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './YtDebugOverlay'
 import {
@@ -111,6 +112,7 @@ export function StageVideo({
   onAlbumIndexChange,
 }: StageVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  useVideoPictureInPicture(videoRef, covered)
   // The element intentionally survives source swaps, so every asynchronous
   // operation must carry the source generation it started under. A settled
   // play()/probe from the previous MP4 must never mutate the new item's

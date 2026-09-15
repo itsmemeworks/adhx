@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-09-15 — Center playlist identity and add picture-in-picture
+
+Centered the desktop logo, tag, and curator/count line; removed the logo link's inline baseline gap.
+Added a PiP button beside desktop transport and in the mobile action rail for direct video playback.
+The stage owns standard/Safari PiP requests, readiness, native close events, and retryable failures.
+Consecutive video sources retain their element; covered/unmounted stages exit and late requests clean up.
+Verified native Chrome PiP, mobile/header geometry, 3,686 unit tests, and 17 browser regressions.
+State: implemented for review; requires merge and deployment. Embedded-player PiP remains browser-owned.
+
 ## 2026-09-13 — Sync all X bookmark pages by default
 
 The normal dialog used all=false, repeatedly fetching only the latest 50 bookmarks.
