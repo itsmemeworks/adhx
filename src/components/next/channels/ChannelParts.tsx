@@ -1,5 +1,6 @@
 'use client'
 
+import { AccountMenu } from '../AccountMenu'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Play } from 'lucide-react'
@@ -289,6 +290,7 @@ export function NxHeader({ children }: { children?: React.ReactNode }) {
         <span className="hidden md:inline">Describe it…</span>
         <span className="sr-only md:hidden">Search</span>
       </Link>
+      <AccountMenu />
     </header>
   )
 }

@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { withoutGone } from './gone'
 import { db } from '@/lib/db'
 import {
   archivedPosts,
@@ -56,6 +57,7 @@ export async function loadSearchItems(
   hits: SearchHit[],
   viewerUserId: string,
 ): Promise<SearchItem[]> {
+  hits = await withoutGone(hits) // channels pass keys straight here
   if (hits.length === 0) return []
   const ids = [...new Set(hits.map((h) => h.postId))]
   const wanted = new Set(hits.map((h) => h.key))

@@ -45,7 +45,7 @@ describe('learning progress', () => {
     expect(learningSummary(null)).toMatchObject({ remaining: 0, focus: null })
   })
 
-  it('stays quiet when done, but keeps failures reachable', () => {
+  it('stays quiet when done, even if some couldn’t be learned', () => {
     const done = status({
       groups: [{ id: 'words', done: 10, total: 10, failed: 0 }],
       failed: 0,
@@ -54,20 +54,14 @@ describe('learning progress', () => {
     const { container, rerender } = render(<LearningPill status={done} onOpen={() => {}} />)
     expect(container).toBeEmptyDOMElement()
     rerender(<LearningPill status={{ ...done, failed: 3 }} onOpen={() => {}} />)
-    expect(screen.getByRole('button', { name: /3 couldn’t be learned/ })).toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
   })
 
-  it('says only true things and retries failures', async () => {
-    const fetchMock = vi.fn(async () => new Response('{}'))
-    vi.stubGlobal('fetch', fetchMock)
-    const onRetried = vi.fn()
-    render(<LearningSheet status={status()} onClose={() => {}} onRetried={onRetried} />)
+  it('says only true things and never mentions failures', () => {
+    render(<LearningSheet status={status()} onClose={() => {}} />)
     expect(screen.getByText('Watched, a frame every two seconds')).toBeInTheDocument()
-    expect(document.body.textContent).not.toMatch(/audio|outside AI/i)
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    await waitFor(() => expect(onRetried).toHaveBeenCalled())
-    expect(fetchMock).toHaveBeenCalledWith('/api/understanding/retry', { method: 'POST' })
-    vi.unstubAllGlobals()
+    expect(document.body.textContent).not.toMatch(/audio|outside AI|couldn’t be learned/i)
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
 })
 

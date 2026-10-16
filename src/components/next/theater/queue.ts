@@ -8,6 +8,7 @@ import {
   resultKey,
   stateFromParams,
   type MatchSignal,
+  type QueueVia,
   type SearchResultItem,
   type SearchState,
 } from '../search/model'
@@ -196,4 +197,49 @@ export function clock(seconds: number): string {
   const s = Math.floor(seconds)
   const m = Math.floor(s / 60)
   return `${m}:${String(s % 60).padStart(2, '0')}`
+}
+
+/** Mark posts as found from `from`, so the theater can say why they're playing. */
+export function addedVia(more: SearchResultItem[], from: SearchResultItem): SearchResultItem[] {
+  const via: QueueVia = {
+    key: resultKey(from),
+    author: from.post.author,
+    kind: nextPostKind(from.post),
+  }
+  return more.map((m) => ({ ...m, via }))
+}
+
+const KIND_NOUN: Record<QueueVia['kind'], string> = {
+  video: 'video',
+  gif: 'GIF',
+  photo: 'photo',
+  post: 'post',
+  article: 'article',
+}
+
+/** "More like @ana’s video". */
+export function viaLabel(via: QueueVia): string {
+  return `More like @${via.author}’s ${KIND_NOUN[via.kind]}`
+}
+
+/**
+ * Where the current post sits. The source's own posts count among
+ * themselves ("2 of 4" stays 4 when similar posts are added); an added
+ * post counts within its run of posts found from the same one.
+ */
+export function queuePosition(
+  items: SearchResultItem[],
+  index: number,
+): { via: QueueVia | null; n: number; of: number } {
+  const current = items[index]
+  const via = current?.via ?? null
+  if (!via) {
+    const own = items.filter((i) => !i.via)
+    return { via: null, n: items.slice(0, index + 1).filter((i) => !i.via).length, of: own.length }
+  }
+  let start = index
+  while (start > 0 && items[start - 1].via?.key === via.key) start--
+  let end = index
+  while (end < items.length - 1 && items[end + 1].via?.key === via.key) end++
+  return { via, n: index - start + 1, of: end - start + 1 }
 }

@@ -334,3 +334,16 @@ describe('status and ownership', () => {
     expect(owned).toEqual([{ platform: 'twitter', postId: '20' }])
   })
 })
+
+describe('gone posts are never shown', () => {
+  it('drops posts whose media was deleted upstream, keeping the order', async () => {
+    const { withoutGone } = await import('@/lib/semantic/gone')
+    testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_A, '20')).run()
+    addMedia(USER_A, '20', 'video')
+    sampleVideoFrames.mockRejectedValueOnce(new MediaGoneError('Video is gone: 410'))
+    await enqueuePosts([{ platform: 'twitter', postId: '20' }], PRIORITY.urgent, ['video'])
+    await processJob((await nextJob(new Date(Date.now() + 1000)))!)
+    const items = [{ key: 'twitter:21' }, { key: 'twitter:20' }, { key: 'twitter:22' }]
+    expect((await withoutGone(items)).map((i) => i.key)).toEqual(['twitter:21', 'twitter:22'])
+  })
+})

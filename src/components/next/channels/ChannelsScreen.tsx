@@ -260,11 +260,7 @@ export function ChannelsScreen() {
       )}
       {paste.toast}
       {learningOpen && (
-        <LearningSheet
-          status={learning.status}
-          onClose={() => setLearningOpen(false)}
-          onRetried={learning.refresh}
-        />
+        <LearningSheet status={learning.status} onClose={() => setLearningOpen(false)} />
       )}
     </div>
   )

@@ -24,6 +24,15 @@ export interface SearchResultItem {
   strength?: MatchStrength
   /** Its picture or video isn't understood yet: matched on its words only. */
   learning?: boolean
+  /** Theater only: not from the search itself, added as more like this post. */
+  via?: QueueVia
+}
+
+/** The post a queued item was found from ("More like this", "Stick to this vibe"). */
+export interface QueueVia {
+  key: string
+  author: string
+  kind: NextPostKind
 }
 
 export interface SearchResponse {

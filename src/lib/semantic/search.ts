@@ -4,6 +4,7 @@ import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings, userBans } fro
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
 import { SEMANTIC_MODEL_VERSION, type UnderstandingKind } from './config'
 import { queryPrompt } from './documents'
+import { withoutGone } from './gone'
 import { keywordSearch } from './keywords'
 import { embedQuery } from './supervisor'
 import { nearest, refreshIndex } from './vector-index'
@@ -296,12 +297,12 @@ export async function searchPosts(
   }
 }
 
-/** Scope (everyone: bans + moderation) and content-type filters, in rank order. */
+/** Gone posts out, then scope (everyone: bans + moderation) and content-type filters, in rank order. */
 async function allowedOnly<T extends { key: string }>(
   ranked: T[],
   opts: { mine: boolean; type: SearchType },
 ): Promise<T[]> {
-  let out = ranked
+  let out = await withoutGone(ranked)
   if (!opts.mine && out.length > 0) {
     const allowed = await publishable(out.map((r) => r.key))
     out = out.filter((r) => allowed.has(r.key))

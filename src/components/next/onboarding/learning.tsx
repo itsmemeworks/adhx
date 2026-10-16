@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, RotateCcw, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -153,9 +153,10 @@ export function LearningPill({
   className?: string
 }) {
   const summary = learningSummary(status)
-  if (!summary.focus && summary.failed === 0) return null
-  // Everything else is done: keep a way to see and retry what failed.
-  const label = summary.focus ? pillLabel(summary.focus) : `${summary.failed} couldn’t be learned`
+  // Gone once everything is understood. Failures aren't shown: the worker
+  // already retried them, and there's nothing useful for people to do.
+  if (!summary.focus) return null
+  const label = pillLabel(summary.focus)
   return (
     <button
       type="button"
@@ -166,7 +167,7 @@ export function LearningPill({
         className,
       )}
     >
-      <Ring progress={summary.focus ? summary.focus.done / Math.max(1, summary.focus.total) : 1} />
+      <Ring progress={summary.focus.done / Math.max(1, summary.focus.total)} />
       <span className="hidden sm:inline">{label}</span>
     </button>
   )
@@ -175,30 +176,17 @@ export function LearningPill({
 export function LearningSheet({
   status,
   onClose,
-  onRetried,
 }: {
   status: LearningStatus | null
   onClose: () => void
-  onRetried?: () => void
 }) {
   const summary = learningSummary(status)
-  const [retry, setRetry] = useState<'idle' | 'busy' | 'done'>('idle')
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const doRetry = async () => {
-    setRetry('busy')
-    try {
-      await fetch('/api/understanding/retry', { method: 'POST' })
-      setRetry('done')
-      onRetried?.()
-    } catch {
-      setRetry('idle')
-    }
-  }
   const now = currentLine(status?.current ?? null)
 
   return (
@@ -279,24 +267,6 @@ export function LearningSheet({
         <p className="m-0 text-[13px] text-white/60">
           Up next and new saves jump the line, so what you’re about to watch gets learned first.
         </p>
-        {summary.failed > 0 && (
-          <div className="flex items-center gap-3 rounded-2xl bg-black px-3.5 py-3">
-            <span className="flex-1 text-sm">
-              {summary.failed === 1
-                ? '1 couldn’t be learned'
-                : `${summary.failed} couldn’t be learned`}
-            </span>
-            <button
-              type="button"
-              onClick={() => void doRetry()}
-              disabled={retry !== 'idle'}
-              className="flex h-9 items-center gap-1.5 rounded-full bg-white/10 px-3 text-[13px] font-bold disabled:opacity-60"
-            >
-              <RotateCcw aria-hidden className="h-3.5 w-3.5" />
-              <span>{retry === 'done' ? 'Trying again' : 'Retry'}</span>
-            </button>
-          </div>
-        )}
         <p className="m-0 text-xs text-white/45">
           Pictures and videos are understood on ADHX’s own servers.
         </p>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { goneKeys } from '@/lib/semantic/gone'
 import { db } from '@/lib/db'
 import {
   bookmarks,
@@ -558,8 +559,14 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     }
     metrics.trackUser(userId)
 
+    // Posts deleted upstream have nothing left to show.
+    const gone = await goneKeys(items.map((i) => `${i.platform ?? 'twitter'}:${i.id}`))
+    const shown = gone.size
+      ? items.filter((i) => !gone.has(`${i.platform ?? 'twitter'}:${i.id}`))
+      : items
+
     return NextResponse.json({
-      items,
+      items: shown,
       pagination: {
         page,
         limit,

@@ -1,5 +1,6 @@
 'use client'
 
+import { AccountMenu } from '../AccountMenu'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -292,6 +293,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
           </form>
           <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
           <PasteButton onClick={paste.pasteFromClipboard} className="hidden md:flex" />
+          <AccountMenu className="hidden md:block" />
           <button
             type="button"
             onClick={() => router.back()}
@@ -487,11 +489,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
       )}
       {paste.toast}
       {learningOpen && (
-        <LearningSheet
-          status={learning.status}
-          onClose={() => setLearningOpen(false)}
-          onRetried={learning.refresh}
-        />
+        <LearningSheet status={learning.status} onClose={() => setLearningOpen(false)} />
       )}
     </div>
   )

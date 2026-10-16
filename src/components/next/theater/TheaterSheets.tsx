@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Bookmark, Check, Plus, X } from 'lucide-react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Bookmark, Check, Plus, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { articleHeadline, postCoverSrc, postText } from '../post'
 import { NxImage } from '../primitives'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
-import { isVideoItem } from './queue'
+import { isVideoItem, viaLabel } from './queue'
 import { channelTitle } from '../channels/ChannelParts'
 
 /**
@@ -126,34 +126,49 @@ export function UpNextSheet({
         <p className="m-0 py-6 text-center text-sm text-white/60">Nothing else queued.</p>
       ) : (
         <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0">
-          {upcoming.map(({ item, index }) => {
+          {upcoming.map(({ item, index }, at) => {
             const cover = postCoverSrc(item.post)
             const kind = kindOf(item)
             const text = kind === 'article' ? articleHeadline(item.post) : postText(item.post)
+            const prevVia = at > 0 ? upcoming[at - 1].item.via?.key : items[current]?.via?.key
+            // A heading where the queue moves on to posts found from another one.
+            const heading = item.via && item.via.key !== prevVia ? viaLabel(item.via) : null
             return (
-              <li key={resultKey(item)}>
-                <button
-                  type="button"
-                  onClick={() => onPlay(index)}
-                  aria-label={`Play ${text || item.post.author}`}
-                  className="relative block aspect-[3/4] w-full overflow-hidden rounded-xl bg-nx-surface text-left"
-                >
-                  {cover ? (
-                    <NxImage
-                      src={cover}
-                      alt=""
-                      className="absolute inset-0 h-full w-full object-cover"
+              <Fragment key={resultKey(item)}>
+                {heading && (
+                  <li className="col-span-2 flex items-center gap-2 pt-2 text-[13px] font-bold text-white/80">
+                    <Sparkles
+                      aria-hidden
+                      className="h-3.5 w-3.5 text-nx-accent"
+                      fill="currentColor"
                     />
-                  ) : (
-                    <span className="absolute inset-0 overflow-hidden bg-nx-cream p-3 font-nx-serif text-[15px] leading-[1.15] text-nx-ink">
-                      {text}
+                    <span>{heading}</span>
+                  </li>
+                )}
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => onPlay(index)}
+                    aria-label={`Play ${text || item.post.author}`}
+                    className="relative block aspect-[3/4] w-full overflow-hidden rounded-xl bg-nx-surface text-left"
+                  >
+                    {cover ? (
+                      <NxImage
+                        src={cover}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="absolute inset-0 overflow-hidden bg-nx-cream p-3 font-nx-serif text-[15px] leading-[1.15] text-nx-ink">
+                        {text}
+                      </span>
+                    )}
+                    <span className="nx-plate absolute bottom-1.5 left-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-bold">
+                      {String(index + 1)}
                     </span>
-                  )}
-                  <span className="nx-plate absolute bottom-1.5 left-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-bold">
-                    {String(index + 1)}
-                  </span>
-                </button>
-              </li>
+                  </button>
+                </li>
+              </Fragment>
             )
           })}
         </ul>

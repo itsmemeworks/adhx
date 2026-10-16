@@ -29,6 +29,7 @@ vi.mock('@/components/theater/useSendFile', () => ({
 import { TheaterV2 } from '@/components/next/theater/TheaterV2'
 import { SaveSheet } from '@/components/next/theater/TheaterSheets'
 import {
+  addedVia,
   appendUnique,
   autoPlayHref,
   backHref,
@@ -39,9 +40,11 @@ import {
   nextIndex,
   playHref,
   prevIndex,
+  queuePosition,
   queueUrl,
   sourceFromParams,
   upcomingSavedKeys,
+  viaLabel,
 } from '@/components/next/theater/queue'
 import type { SearchResultItem } from '@/components/next/search/model'
 
@@ -135,6 +138,14 @@ describe('theater queue', () => {
     expect(appendUnique([v1, p2], [p2, v3]).map((i) => i.post.id)).toEqual(['1', '2', '3'])
   })
 
+  it('counts the source on its own and labels posts added after it', () => {
+    const added = addedVia([result('7'), result('8')], v3)
+    const queue = [v1, p2, v3, ...added]
+    expect(viaLabel(added[0].via!)).toBe('More like @author3’s video')
+    expect(queuePosition(queue, 2)).toEqual({ via: null, n: 3, of: 3 })
+    expect(queuePosition(queue, 4)).toEqual({ via: added[0].via, n: 2, of: 2 })
+  })
+
   it('times posts without a player and lists saved posts coming up', () => {
     expect(dwellSeconds(result('5', { text: 'hi' }))).toBe(5)
     expect(dwellSeconds(result('6', { text: 'word '.repeat(200) }))).toBe(15)
@@ -198,6 +209,28 @@ describe('TheaterV2', () => {
   it('plays only the chosen group', async () => {
     render(<TheaterV2 source={{ ...source, group: 'video' }} />)
     await waitFor(() => expect(screen.getByText('1 of 2')).toBeInTheDocument())
+  })
+
+  it('says when it moves on from the search to similar posts', async () => {
+    const similar = [result('9', { video: true, matched: ['video'] })]
+    fetchMock.mockImplementation(async (url: string) => {
+      const items = url.startsWith('/api/search/similar') ? similar : [v1, p2, v3]
+      return new Response(
+        JSON.stringify({ items, total: items.length, understood: true, refined: true }),
+      )
+    })
+    render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
+    await waitFor(() => expect(screen.getByText('3 of 3')).toBeInTheDocument())
+    await act(async () => {
+      stageProps.mock.calls.at(-1)?.[0].onEnded?.()
+    })
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('9'))
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'That’s everything from “frogs”. Now: more like the last one',
+    )
+    expect(screen.getByRole('note')).toHaveTextContent('More like @author3’s video')
+    expect(screen.getByRole('note')).toHaveTextContent('Not from “frogs” · 1 of 1')
+    expect(screen.queryByText(/of 4/)).toBeNull()
   })
 
   it('skips with the keyboard and ends when nothing similar is left', async () => {

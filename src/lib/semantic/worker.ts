@@ -1,8 +1,9 @@
 import { sql } from 'drizzle-orm'
+import { repairUnloadedArticles } from '@/lib/sync/repair-articles'
 import { db } from '@/lib/db'
 import type { UnderstandingJob } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
-import { VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
+import { PRIORITY, VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
 import { buildPostDocument, hashFor, type PostDocument } from './documents'
 import { indexPostText } from './keywords'
 import {
@@ -14,7 +15,7 @@ import {
 } from './media'
 import { embedImageBytes, embedTexts, embedVideoFrames } from './model'
 import { loadPostItem } from './posts'
-import { completeJob, enqueueBackfill, failJob, nextJob } from './queue'
+import { completeJob, enqueueBackfill, enqueuePosts, failJob, nextJob } from './queue'
 import { getEmbedding, isCurrent, saveEmbedding } from './store'
 
 /**
@@ -247,6 +248,13 @@ async function loop(): Promise<void> {
     await clearWordlessText()
   } catch (error) {
     captureException(error, { endpoint: 'semantic.backfill' })
+  }
+  // Network work, so after the local passes; the posts it fixes get re-read.
+  try {
+    const repaired = await repairUnloadedArticles()
+    if (repaired.length) await enqueuePosts(repaired, PRIORITY.sync, ['text', 'image'])
+  } catch (error) {
+    captureException(error, { endpoint: 'semantic.repair-articles' })
   }
   while (state.running) {
     let job: UnderstandingJob | undefined

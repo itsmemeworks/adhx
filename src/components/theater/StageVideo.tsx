@@ -729,6 +729,10 @@ export function StageVideo({
         if (!isCurrentSource(generation, operationSrc)) return
         if (body && typeof body.reason === 'string') {
           setUnavailableReason(body.reason)
+          // Lets the theater skip a post that's gone for good.
+          window.dispatchEvent(
+            new CustomEvent('theater-media-gone', { detail: { src: operationSrc } }),
+          )
         }
       })
       .catch(() => {

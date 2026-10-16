@@ -1,5 +1,6 @@
 'use client'
 
+import { AccountMenu } from '../AccountMenu'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -44,6 +45,7 @@ import {
   type SearchResultItem,
 } from '../search/model'
 import {
+  addedVia,
   appendUnique,
   clock,
   dwellSeconds,
@@ -54,9 +56,11 @@ import {
   REPEAT_LABELS,
   REPEAT_ORDER,
   backHref,
+  queuePosition,
   queueUrl,
   searchHref,
   upcomingSavedKeys,
+  viaLabel,
   type PlaySource,
   type RepeatMode,
 } from './queue'
@@ -260,10 +264,20 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const send = useSendFile(theaterItem)
   const saved = !!current && (current.saved || savedNow.has(currentKey))
 
-  const flash = useCallback((message: string) => {
+  const flash = useCallback((message: string, ms = 2200) => {
     setToast(message)
-    window.setTimeout(() => setToast((t) => (t === message ? null : t)), 2200)
+    window.setTimeout(() => setToast((t) => (t === message ? null : t)), ms)
   }, [])
+
+  /** What this session plays, in words: “goat”, a channel's name, "your saves". */
+  const sourceName = source.recent
+    ? 'your saves'
+    : title
+      ? title
+      : source.search.q.trim()
+        ? `“${source.search.q.trim()}”`
+        : 'this search'
+  const position = queuePosition(items, index)
 
   // Saved posts coming up get understood first.
   useEffect(() => {
@@ -293,6 +307,19 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     setItems(list)
   }, [])
 
+  // A video turned out to be deleted upstream: drop it and play what's next.
+  useEffect(() => {
+    const onGone = () => {
+      const at = indexRef.current
+      const list = itemsRef.current.filter((_, i) => i !== at)
+      replaceItems(list)
+      if (at >= list.length) setEnded(true)
+      else setIndex(at)
+    }
+    window.addEventListener('theater-media-gone', onGone)
+    return () => window.removeEventListener('theater-media-gone', onGone)
+  }, [replaceItems])
+
   /** "Stick to this vibe": append posts like `from`. Returns the new queue. */
   const extendWithVibe = useCallback(
     async (from: SearchResultItem): Promise<SearchResultItem[] | null> => {
@@ -300,7 +327,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
       extendingRef.current = true
       try {
         const more = await fetchResults(similarUrl(from, source, videosOnly))
-        const list = appendUnique(itemsRef.current, more)
+        const list = appendUnique(itemsRef.current, addedVia(more, from))
         if (list.length === itemsRef.current.length) return null
         replaceItems(list)
         return list
@@ -318,9 +345,13 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     if (i !== null) return goTo(i)
     const extended = stick && current ? await extendWithVibe(current) : null
     const after = extended ? nextIndex(extended, index, { repeat: 'off', videosOnly }) : null
-    if (after !== null) return goTo(after)
+    if (after !== null) {
+      // Say so: otherwise "4 of 4" quietly becomes "5 of 24".
+      flash(`That’s everything from ${sourceName}. Now: more like the last one`, 5000)
+      return goTo(after)
+    }
     setEnded(true)
-  }, [items, index, repeat, videosOnly, stick, current, goTo, extendWithVibe])
+  }, [items, index, repeat, videosOnly, stick, current, goTo, extendWithVibe, flash, sourceName])
 
   const prev = useCallback(() => {
     if (isVideo && video.progress > 0.1) return stage.seek(0)
@@ -363,7 +394,12 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         flash('Nothing like this yet. Try again once more is learned.')
         return false
       }
-      replaceItems(insertAfter(itemsRef.current, index, more))
+      // Posts already in the queue from the source stay counted as the source's.
+      const own = new Set(itemsRef.current.filter((i) => !i.via).map(resultKey))
+      const tagged = addedVia(more, current).map((m) =>
+        own.has(resultKey(m)) ? { ...m, via: undefined } : m,
+      )
+      replaceItems(insertAfter(itemsRef.current, index, tagged))
       flash(`${more.length} more like this, up next`)
       return true
     } catch {
@@ -744,15 +780,18 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
         </Link>
         <span className="flex-1" />
-        <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
-          {`${index + 1} of ${items.length}`}
-        </span>
+        {!position.via && (
+          <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
+            {`${position.n} of ${position.of}`}
+          </span>
+        )}
         <LearningPill
           status={learning.status}
           onOpen={() => setLearningOpen(true)}
           className="pointer-events-auto hidden md:flex"
         />
         <PasteButton onClick={paste.pasteFromClipboard} className="pointer-events-auto" />
+        <AccountMenu className="pointer-events-auto hidden md:block" />
         <Link
           href={back}
           aria-label="Search"
@@ -774,6 +813,22 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           )}
         </ControlButton>
       </header>
+
+      {position.via && (
+        // Not from the source: say what it is and why it's playing.
+        <div
+          role="note"
+          className="nx-plate absolute left-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 flex max-w-[calc(100vw-96px)] items-center gap-2.5 rounded-2xl py-2 pl-3 pr-4 md:left-7 md:max-w-[420px]"
+        >
+          <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-nx-accent" fill="currentColor" />
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
+            <span className="truncate text-xs text-white/65">
+              {`Not from ${sourceName} · ${position.n} of ${position.of}`}
+            </span>
+          </span>
+        </div>
+      )}
 
       <nav
         aria-label="Post actions"
@@ -1021,11 +1076,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
       )}
       {paste.toast}
       {learningOpen && (
-        <LearningSheet
-          status={learning.status}
-          onClose={() => setLearningOpen(false)}
-          onRetried={learning.refresh}
-        />
+        <LearningSheet status={learning.status} onClose={() => setLearningOpen(false)} />
       )}
       {toast && (
         <div
