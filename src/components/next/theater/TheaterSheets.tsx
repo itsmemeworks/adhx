@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { Bookmark, Check, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { sanitizeTag } from '@/lib/utils/tag'
 import { articleHeadline, postCoverSrc, postText } from '../post'
 import { NxImage } from '../primitives'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { isVideoItem } from './queue'
+import { channelTitle } from '../channels/ChannelParts'
 
 /**
  * A panel over the stage: a side panel on wide screens, a bottom sheet on
@@ -201,6 +203,167 @@ export function MoreSheet({ rows, onClose }: { rows: MenuRow[]; onClose: () => v
           </button>
         ))}
       </div>
+    </Sheet>
+  )
+}
+
+export interface ChannelOption {
+  tag: string
+  count: number
+  isPublic: boolean
+}
+
+/**
+ * "Saved · add to a channel": tick channels this post belongs in, or make a
+ * new one (public by default, with its link ready to share).
+ */
+export function SaveSheet({
+  channels,
+  selected,
+  busy,
+  created,
+  onToggle,
+  onCreate,
+  onCopy,
+  onClose,
+}: {
+  channels: ChannelOption[] | null
+  selected: ReadonlySet<string>
+  busy: string | null
+  /** Set right after creating a channel: shows its link. */
+  created: { tag: string; shareUrl: string | null } | null
+  onToggle: (tag: string, on: boolean) => void
+  onCreate: (name: string) => void
+  onCopy: (url: string) => void
+  onClose: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const needle = sanitizeTag(query)
+  const shown = (channels ?? []).filter((c) => !needle || c.tag.includes(needle))
+  const exact = (channels ?? []).some((c) => c.tag === needle)
+
+  if (created) {
+    const url = created.shareUrl ? `${window.location.origin}${created.shareUrl}` : null
+    return (
+      <Sheet label="Channel created" onClose={onClose}>
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <span className="text-xs font-extrabold uppercase tracking-[1.4px] text-nx-accent">
+            It’s live
+          </span>
+          <span className="font-nx-serif text-[34px] leading-none">
+            {channelTitle(created.tag)}
+          </span>
+          <span className="text-sm text-white/70">Public · anyone with the link can watch</span>
+          {url && (
+            <>
+              <span className="max-w-full truncate rounded-full bg-white/10 px-3 py-1.5 text-[13px]">
+                {url.replace(/^https?:\/\//, '')}
+              </span>
+              <button
+                type="button"
+                onClick={() => onCopy(url)}
+                className="h-12 rounded-full bg-nx-accent px-6 text-[15px] font-extrabold text-black"
+              >
+                Copy link
+              </button>
+            </>
+          )}
+        </div>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Sheet label="Saved. Add to a channel" onClose={onClose}>
+      <div className="flex items-center gap-2">
+        <Bookmark aria-hidden className="h-[18px] w-[18px] text-nx-accent" fill="currentColor" />
+        <h2 className="m-0 flex-1 text-[15px] font-bold">Saved · add to a channel</h2>
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"
+        >
+          <X aria-hidden className="h-4 w-4" />
+        </button>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (needle && !exact) onCreate(query)
+        }}
+      >
+        <label htmlFor="nx-channel-find" className="sr-only">
+          Find or create a channel
+        </label>
+        <input
+          id="nx-channel-find"
+          type="text"
+          value={query}
+          maxLength={50}
+          autoComplete="off"
+          placeholder="Find or create a channel"
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3.5 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-nx-accent"
+        />
+      </form>
+      {channels === null ? (
+        <p className="m-0 py-4 text-center text-sm text-white/60">Loading your channels…</p>
+      ) : (
+        <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+          {shown.map((c) => {
+            const on = selected.has(c.tag)
+            return (
+              <li key={c.tag}>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  disabled={busy === c.tag}
+                  onClick={() => onToggle(c.tag, !on)}
+                  className="flex min-h-[52px] w-full items-center gap-3 rounded-xl px-2 text-left hover:bg-white/[0.06] disabled:opacity-60"
+                >
+                  <span
+                    aria-hidden
+                    className="flex h-[42px] w-[42px] shrink-0 items-end overflow-hidden rounded-[9px] bg-nx-cream p-1.5 font-nx-serif text-[13px] leading-none text-nx-ink"
+                  >
+                    {c.tag}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-semibold">{channelTitle(c.tag)}</span>
+                    <span className="text-xs text-white/55">
+                      {`${c.isPublic ? 'Public' : 'Private'} · ${c.count === 1 ? '1 post' : `${c.count} posts`}`}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px]',
+                      on ? 'bg-nx-accent text-black' : 'border-2 border-white/40',
+                    )}
+                  >
+                    {on && <Check className="h-3.5 w-3.5" strokeWidth={3.2} />}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {needle && !exact && (
+        <button
+          type="button"
+          onClick={() => onCreate(query)}
+          disabled={busy === needle}
+          className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-left text-[15px] font-bold text-nx-accent hover:bg-white/[0.06]"
+        >
+          <Plus aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.4} />
+          <span>{`New channel “${needle}”`}</span>
+        </button>
+      )}
+      {!needle && channels !== null && channels.length === 0 && (
+        <p className="m-0 text-sm text-white/60">Type a name to start your first channel.</p>
+      )}
     </Sheet>
   )
 }

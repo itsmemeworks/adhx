@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Channels (phase 5 of the redesign)
+
+Channels are tags: theater Save opens "add to a channel" (tick, find or create; new channels are public), `/channels` shows Made for you, yours and Top channels, and `/t/{user}/{tag}` renders the new channel page under `next_ui`.
+Made for you: saves grouped by meaning (k-means, big groups split) and named from `CHANNEL_NAMES` via Jev `choice` among the closest names; stored in `auto_channels`, recomputed only when stale; Keep makes it a public tag channel.
+On 448 local saves: 8 groups of 24–51 posts (Memes, Reaction memes, Automation, Dev tools, Prompts and tricks, Coding with AI, Internet lore, AI agents); first compute ~2–8 s. Removed "Cringe" from the names (judgy). Plain k-means gave catch-alls of 78–95 posts, hence the splitting.
+New public `GET /api/channels/by/{user}/{tag}` lets anyone play a public channel; the tag visibility logic moved to `src/lib/tags/visibility.ts`; Jev calls share `src/lib/semantic/jev.ts`.
+State: local, not pushed. Next: onboarding (phase 6). Top channels is empty locally (no public views in this DB).
+
 ## 2026-10-16 — Theater v2 (phase 4 of the redesign)
 
 `/play` behind `next_ui` plays a search's results as the queue (Play all, Play this group, any tile). It reuses the current `Stage` for media and adds the approved chrome: rail, seek, transport, volume, repeat, PiP, full screen, Up next and ⋯ sheets, keys and swipes.

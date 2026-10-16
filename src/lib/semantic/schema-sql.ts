@@ -14,6 +14,9 @@
  * `understanding_queue` is the durable work list. Higher `priority` runs
  * first (fresh saves and up-next posts jump the line), then oldest first.
  *
+ * `auto_channels` is the one per-user table here: a user's saves grouped by
+ * meaning and named ("Made for you"). Private, derived, recomputed when stale.
+ *
  * `post_text_fts` is the keyword side of hybrid search: the same post text the
  * model reads (never tags), one row per post, written by the text job.
  */
@@ -46,6 +49,19 @@ export const UNDERSTANDING_DDL = `
     PRIMARY KEY (platform, post_id, kind)
   );
   CREATE INDEX IF NOT EXISTS understanding_queue_next_idx ON understanding_queue(next_attempt_at, priority);
+
+  CREATE TABLE IF NOT EXISTS auto_channels (
+    user_id TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    post_keys TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    model TEXT NOT NULL,
+    saves_at_compute INTEGER NOT NULL,
+    computed_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, slug)
+  );
 
   CREATE VIRTUAL TABLE IF NOT EXISTS post_text_fts USING fts5(
     platform UNINDEXED,

@@ -6,7 +6,9 @@ import { sourceFromParams } from '@/components/next/theater/queue'
 
 /**
  * `/play` — the redesigned theater (phase 4, behind `next_ui`), playing a
- * search's results as its queue: `/play?q=&scope=&type=&words=1&group=&start=`.
+ * search's results as its queue: `/play?q=&scope=&type=&words=1&group=&start=`,
+ * a channel (`?channel=user/tag`, public ones for anyone) or one of your
+ * "Made for you" channels (`?auto=slug`).
  * With the flag off it falls back to Saved.
  */
 export const dynamic = 'force-dynamic'
@@ -20,8 +22,9 @@ export default async function PlayPage({
 }) {
   const params = await searchParams
   if (!(await isNextUiEnabled(params))) redirect('/saved')
-  if (!(await getCurrentUserId())) redirect('/')
   const source = sourceFromParams(params)
-  if (!source.search.q.trim()) redirect('/search')
+  // Anyone can watch a public channel; everything else is your own.
+  if (!source.channel && !(await getCurrentUserId())) redirect('/')
+  if (!source.channel && !source.auto && !source.search.q.trim()) redirect('/search')
   return <TheaterV2 source={source} />
 }

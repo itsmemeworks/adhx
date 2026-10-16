@@ -12,6 +12,8 @@ import {
   type SearchState,
 } from '../search/model'
 
+import { searchHref } from '../search/model'
+
 export { playHref, searchHref } from '../search/model'
 import { nextPostKind, postText } from '../post'
 
@@ -24,15 +26,53 @@ export const REPEAT_LABELS: Record<RepeatMode, string> = {
 }
 
 /** A play session: a search (optionally one of its groups) and where to start. */
+/**
+ * A play session: a search (optionally one of its groups), a channel
+ * (`channel=user/tag`, anyone can watch a public one) or one of your "Made
+ * for you" channels (`auto=slug`), and where to start.
+ */
 export interface PlaySource {
   search: Omit<SearchState, 'view'>
   group: MatchSignal | null
+  channel: { username: string; tag: string } | null
+  auto: string | null
   /** `platform:id` of the post to start on. */
   start: string | null
 }
 
 const SIGNALS: readonly MatchSignal[] = ['words', 'picture', 'video', 'keywords']
 const KEY = /^[a-z]{1,16}:[A-Za-z0-9_-]{1,64}$/
+const CHANNEL = /^([A-Za-z0-9_]{1,40})\/([a-z0-9-]{1,64})$/
+const SLUG = /^[a-z0-9-]{1,64}$/
+
+export function channelPlayHref(username: string, tag: string, start?: string | null): string {
+  const params = new URLSearchParams({ channel: `${username}/${tag}` })
+  if (start) params.set('start', start)
+  return `/play?${params}`
+}
+
+export function autoPlayHref(slug: string, start?: string | null): string {
+  const params = new URLSearchParams({ auto: slug })
+  if (start) params.set('start', start)
+  return `/play?${params}`
+}
+
+/** Where the theater's queue comes from, as an API URL. */
+export function queueUrl(source: PlaySource, searchUrl: () => string): string {
+  if (source.channel) {
+    const { username, tag } = source.channel
+    return `/api/channels/by/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
+  }
+  if (source.auto) return `/api/channels/auto/${encodeURIComponent(source.auto)}`
+  return searchUrl()
+}
+
+/** Where "back" goes: the channel's page, your channels, or the search. */
+export function backHref(source: PlaySource): string {
+  if (source.channel) return `/t/${source.channel.username}/${source.channel.tag}`
+  if (source.auto) return '/channels'
+  return searchHref(source.search)
+}
 
 export function sourceFromParams(
   params: URLSearchParams | Record<string, string | undefined>,
@@ -42,9 +82,14 @@ export function sourceFromParams(
   const { view: _view, ...search } = stateFromParams(params)
   const group = get('group')
   const start = get('start')
+  const channel = CHANNEL.exec(get('channel') ?? '')
+  const auto = get('auto')
   return {
-    search,
+    // A channel's "more like this" looks across everyone's saves.
+    search: channel ? { ...search, scope: 'everyone' } : search,
     group: SIGNALS.includes(group as MatchSignal) ? (group as MatchSignal) : null,
+    channel: channel ? { username: channel[1], tag: channel[2] } : null,
+    auto: !channel && auto && SLUG.test(auto) ? auto : null,
     start: start && KEY.test(start) ? start : null,
   }
 }

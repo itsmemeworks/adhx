@@ -60,6 +60,7 @@ The visible timestamp answers a different question on each surface:
 | `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/saved`.                       |
 | `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                                            |
 | `/saved`                    | Signed-in Saved: all non-archived saves, with independent type and Hide watched filters. Library links select a post with `?open=`. |
+| `/channels`                 | Redesign (`next_ui` only): your channels, "Made for you" channels and Top channels.                                                 |
 | `/play`                     | Redesign (`next_ui` only): the new theater, playing a search's results as its queue.                                                |
 | `/search`                   | Redesign (`next_ui` only): search saves by meaning, with bento, groups and queue layouts.                                           |
 | `/library`                  | Signed-in grid over saved posts: search, platform/type/tag filters, archived view, and grid/list/bento layouts.                     |
@@ -430,6 +431,17 @@ flowchart LR
   (TypeSafe), sending only the query and public post words. Jev reads text,
   so visual matches keep more of their fused rank. With it hit@1 rose from
   0.58 to 0.77 on the labelled queries; any failure keeps the fused order.
+
+## Channels (redesign)
+
+A channel is a tag: its posts are the tagged saves, its public page is
+`/t/{username}/{tag}`, and Top channels is the existing collection
+leaderboard, so publishing, cloning and ranking keep their audited rules.
+"Made for you" channels are private and derived: a user's saves are grouped
+by meaning (k-means over each save's averaged vectors, oversized groups split
+again) and each group is named from a fixed list of plain names (the closest
+few by meaning, Jev picks among them). Keeping one turns it into a normal,
+public tag channel. Anyone can watch a public channel at `/play?channel=…`.
 
 ## Discovery and measurement planes
 

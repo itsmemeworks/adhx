@@ -221,6 +221,12 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
             </span>
             <span className="font-nx-serif text-[26px] leading-none">adhx</span>
           </Link>
+          <Link
+            href="/channels"
+            className="hidden shrink-0 rounded-full px-3 py-2 text-sm text-nx-soft hover:text-nx-cream md:block"
+          >
+            Channels
+          </Link>
           <form
             role="search"
             onSubmit={(e) => {
@@ -346,6 +352,13 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 ))}
               </section>
             )}
+            <Link
+              href="/channels"
+              className="flex min-h-12 items-center justify-between rounded-2xl bg-nx-surface px-4 text-[15px]"
+            >
+              <span className="font-bold">Your channels</span>
+              <span className="text-[13px] text-nx-muted">Made for you, yours and top</span>
+            </Link>
             <section aria-labelledby="nx-try" className="flex flex-col gap-2.5">
               <h2 id="nx-try" className="m-0 text-[15px] font-bold">
                 Try

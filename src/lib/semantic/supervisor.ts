@@ -34,14 +34,14 @@ export interface JobActivity {
 export type ChildMessage =
   | { type: 'ready' }
   | { type: 'activity'; current: JobActivity | null }
-  | { type: 'vector'; id: number; vector: number[] }
+  | { type: 'vectors'; id: number; vectors: number[][] }
   | { type: 'error'; id?: number; message: string }
 
 /** Messages the supervisor sends to a child. */
-export type ParentMessage = { type: 'wake' } | { type: 'embed'; id: number; text: string }
+export type ParentMessage = { type: 'wake' } | { type: 'embed'; id: number; texts: string[] }
 
 type Pending = {
-  resolve: (v: Float32Array) => void
+  resolve: (v: Float32Array[]) => void
   reject: (e: Error) => void
   timer: NodeJS.Timeout
 }
@@ -122,13 +122,13 @@ function spawn(role: ChildRole): void {
 function onMessage(role: ChildRole, message: ChildMessage): void {
   if (message.type === 'activity') {
     state.activity = message.current
-  } else if (message.type === 'vector') {
+  } else if (message.type === 'vectors') {
     const pending = state.pending.get(message.id)
     if (!pending) return
     state.pending.delete(message.id)
     clearTimeout(pending.timer)
     try {
-      pending.resolve(normalize(message.vector))
+      pending.resolve(message.vectors.map((v) => normalize(v)))
     } catch (error) {
       pending.reject(error as Error)
     }
@@ -181,42 +181,58 @@ export function jobActivity(): JobActivity | null {
 
 let queriesAnswered = 0
 
-/**
- * Turn search text (already formatted with `queryPrompt`) into a vector.
- * Rejects when the pipeline is off, the query process is down, or it takes
- * too long; callers fall back to keyword-only results.
- */
-export function embedQuery(prompt: string): Promise<Float32Array> {
-  const cached = state.cache.get(prompt)
-  if (cached) {
-    state.cache.delete(prompt)
-    state.cache.set(prompt, cached)
-    return Promise.resolve(cached)
-  }
+/** Send prompts to the query process; resolves with one vector per prompt. */
+function requestVectors(prompts: string[], timeoutMs: number): Promise<Float32Array[]> {
   startSemanticProcesses()
   const child = state.children.query
   if (!child?.connected) return Promise.reject(new Error('Query process unavailable'))
   const id = state.nextId++
-  return new Promise<Float32Array>((resolve, reject) => {
+  return new Promise<Float32Array[]>((resolve, reject) => {
     const timer = setTimeout(
       () => {
         state.pending.delete(id)
         reject(new Error('Query embedding timed out'))
       },
-      queriesAnswered === 0 ? FIRST_QUERY_TIMEOUT_MS : QUERY_TIMEOUT_MS,
+      queriesAnswered === 0 ? FIRST_QUERY_TIMEOUT_MS : timeoutMs,
     )
     state.pending.set(id, {
-      resolve: (vector) => {
+      resolve: (vectors) => {
         queriesAnswered++
-        state.cache.set(prompt, vector)
-        if (state.cache.size > QUERY_CACHE_SIZE) {
-          state.cache.delete(state.cache.keys().next().value as string)
-        }
-        resolve(vector)
+        resolve(vectors)
       },
       reject,
       timer,
     })
-    child.send({ type: 'embed', id, text: prompt } satisfies ParentMessage)
+    child.send({ type: 'embed', id, texts: prompts } satisfies ParentMessage)
   })
+}
+
+function remember(prompt: string, vector: Float32Array): void {
+  state.cache.set(prompt, vector)
+  if (state.cache.size > QUERY_CACHE_SIZE) {
+    state.cache.delete(state.cache.keys().next().value as string)
+  }
+}
+
+/**
+ * Turn search text (already formatted with `queryPrompt`) into a vector.
+ * Rejects when the pipeline is off, the query process is down, or it takes
+ * too long; callers fall back to keyword-only results.
+ */
+export async function embedQuery(prompt: string): Promise<Float32Array> {
+  const cached = state.cache.get(prompt)
+  if (cached) {
+    state.cache.delete(prompt)
+    state.cache.set(prompt, cached)
+    return cached
+  }
+  const [vector] = await requestVectors([prompt], QUERY_TIMEOUT_MS)
+  remember(prompt, vector)
+  return vector
+}
+
+/** Many prompts at once (e.g. naming channels). Not cached. */
+export function embedQueries(prompts: string[]): Promise<Float32Array[]> {
+  if (prompts.length === 0) return Promise.resolve([])
+  return requestVectors(prompts, Math.max(QUERY_TIMEOUT_MS, prompts.length * 200))
 }

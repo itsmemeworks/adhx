@@ -1,5 +1,6 @@
 import type { FeedItemResponse } from '@/lib/feed/build-item'
 import { buildPostDocument } from './documents'
+import { askJev, jevAvailable } from './jev'
 
 /**
  * Optional second pass over the best few results with Jev (TypeSafe's
@@ -8,7 +9,6 @@ import { buildPostDocument } from './documents'
  * never who saved it). Any failure or timeout returns the fused order.
  */
 
-const ENDPOINT = 'https://api.typesafe.ai/v1/systemone'
 const TIMEOUT_MS = 3_000
 const CACHE_SIZE = 200
 const DESCRIPTION_CHARS = 600
@@ -35,14 +35,11 @@ export interface RerankCandidate {
   visual: boolean
 }
 
-type JevAnswer = { score?: number }
-type JevResponse = { answers?: Record<string, JevAnswer> }
-
 const g = globalThis as unknown as { __adhxRerankCache?: Map<string, Map<string, number>> }
 const cache = (g.__adhxRerankCache ??= new Map())
 
 export function rerankAvailable(): boolean {
-  return Boolean(process.env['TYPESAFE_API_KEY'])
+  return jevAvailable()
 }
 
 /** What Jev is told about one post: its own public words and what kind of post it is. */
@@ -63,36 +60,28 @@ export function describe(item: FeedItemResponse): string {
   return `This is ${kind}. ${words || '(no words)'}`
 }
 
-async function askJev(query: string, candidates: RerankCandidate[]): Promise<Map<string, number>> {
+async function scoreWithJev(
+  query: string,
+  candidates: RerankCandidate[],
+): Promise<Map<string, number>> {
   const ids = candidates.map((_, i) => `p${i + 1}`)
-  const response = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env['TYPESAFE_API_KEY']}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'jev-latest',
-      state: { query: query.toWellFormed() },
-      questions: Object.fromEntries(
-        candidates.map((c, i) => [
-          ids[i],
-          {
-            type: 'score',
-            instructions: `How well does this saved post match what the person is searching for? Post: ${describe(c.item)}`,
-            criteria: LEVELS,
-          },
-        ]),
-      ),
-    }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-    redirect: 'error',
-  })
-  if (!response.ok) throw new Error(`Jev returned ${response.status}`)
-  const body = (await response.json()) as JevResponse
+  const answers = await askJev(
+    { query },
+    Object.fromEntries(
+      candidates.map((c, i) => [
+        ids[i],
+        {
+          type: 'score' as const,
+          instructions: `How well does this saved post match what the person is searching for? Post: ${describe(c.item)}`,
+          criteria: LEVELS,
+        },
+      ]),
+    ),
+    TIMEOUT_MS,
+  )
   const scores = new Map<string, number>()
   candidates.forEach((c, i) => {
-    const score = body.answers?.[ids[i]]?.score
+    const score = answers[ids[i]]?.score
     if (typeof score === 'number' && Number.isFinite(score)) scores.set(c.key, score)
   })
   if (scores.size === 0) throw new Error('Jev returned no scores')
@@ -132,7 +121,7 @@ export async function rerank(
   let scores = cache.get(cacheKey)
   if (!scores) {
     try {
-      scores = await askJev(query.trim(), top)
+      scores = await scoreWithJev(query.trim(), top)
     } catch {
       return null
     }

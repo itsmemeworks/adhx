@@ -31,12 +31,24 @@ async function runJobs(): Promise<void> {
   send({ type: 'ready' })
 }
 
+/** Short prompts in modest batches: fast, and memory stays flat for long lists. */
+async function embedBatched(
+  embed: (texts: string[]) => Promise<Float32Array[]>,
+  texts: string[],
+): Promise<Float32Array[]> {
+  const out: Float32Array[] = []
+  for (let i = 0; i < texts.length; i += 32) out.push(...(await embed(texts.slice(i, i + 32))))
+  return out
+}
+
 async function runQuery(): Promise<void> {
   const { embedTexts } = await import('./model')
   process.on('message', (message: ParentMessage) => {
     if (message.type !== 'embed') return
-    embedTexts([message.text])
-      .then(([vector]) => send({ type: 'vector', id: message.id, vector: Array.from(vector) }))
+    embedBatched(embedTexts, message.texts)
+      .then((vectors) =>
+        send({ type: 'vectors', id: message.id, vectors: vectors.map((v) => Array.from(v)) }),
+      )
       .catch((error: unknown) =>
         send({
           type: 'error',

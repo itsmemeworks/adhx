@@ -1,0 +1,241 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { Bookmark, Link2, Play } from 'lucide-react'
+import type { FeedItem } from '@/components/feed/types'
+import { useNextUi } from '@/lib/next-ui/useNextUi'
+import { postCoverSrc } from '../post'
+import { resultKey, type SearchResultItem } from '../search/model'
+import { Masonry } from '../search/ResultViews'
+import { channelPlayHref } from '../theater/queue'
+import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
+
+/**
+ * A channel's page in the redesign (`/t/{username}/{tag}` with `next_ui`):
+ * collage hero, Play, Save channel (copies it into your saves), the public
+ * link, and its posts. Anyone can open a public channel.
+ */
+export function ChannelPage({
+  username,
+  tag,
+  count,
+  mine,
+  signedIn,
+}: {
+  username: string
+  tag: string
+  count: number
+  mine: boolean
+  signedIn: boolean
+}) {
+  useNextUi()
+  const [items, setItems] = useState<SearchResultItem[] | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
+  const path = `/t/${username}/${tag}`
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`/api/channels/by/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`, {
+      signal: controller.signal,
+      credentials: 'same-origin',
+    })
+      .then((r) => (r.ok ? (r.json() as Promise<{ items: SearchResultItem[] }>) : { items: [] }))
+      .then((d) => setItems(d.items))
+      .catch(() => {
+        if (!controller.signal.aborted) setItems([])
+      })
+    return () => controller.abort()
+  }, [username, tag])
+
+  const posts: FeedItem[] = (items ?? []).map((i) => i.post)
+  const heroImage = posts.map(postCoverSrc).find(Boolean) ?? null
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${path}`)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard blocked: the link is visible on the button to copy by hand.
+    }
+  }
+
+  const saveChannel = async () => {
+    setSaved('saving')
+    try {
+      const res = await fetch(
+        `/api/share/tag/by-name/${encodeURIComponent(username)}/${encodeURIComponent(tag)}/clone`,
+        { method: 'POST' },
+      )
+      setSaved(res.ok ? 'done' : 'error')
+    } catch {
+      setSaved('error')
+    }
+  }
+
+  return (
+    <div className="min-h-dvh bg-black font-nx-sans text-white">
+      <NxHeader />
+      <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-0 pb-16 md:px-7 lg:flex-row lg:items-start">
+        <section aria-label="Channel" className="flex min-w-0 flex-1 flex-col gap-4 md:gap-[18px]">
+          <div className="relative h-[430px] overflow-hidden md:h-[340px] md:rounded-[22px]">
+            {heroImage && (
+              <img
+                src={heroImage}
+                alt=""
+                aria-hidden
+                className="absolute -inset-14 h-[calc(100%+112px)] w-[calc(100%+112px)] object-cover blur-[40px] brightness-[0.55] saturate-[1.2]"
+              />
+            )}
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/30 md:bg-gradient-to-r md:from-black/75 md:via-black/25 md:to-transparent"
+            />
+            <ChannelCover
+              tiles={tilesFromPosts(posts.slice(0, 3))}
+              label={channelTitle(tag)}
+              className="absolute right-6 top-8 hidden h-[270px] w-[360px] bg-transparent md:block"
+            />
+            <div className="nx-text-shadow absolute inset-x-[18px] bottom-[18px] flex flex-col gap-2.5 md:inset-y-8 md:left-8 md:right-[46%]">
+              <span className="text-xs font-extrabold uppercase tracking-[1.4px] text-nx-accent">
+                Channel
+              </span>
+              <h1 className="m-0 font-nx-serif text-[44px] font-normal leading-none md:text-[60px] md:leading-[0.95]">
+                {channelTitle(tag)}
+              </h1>
+              <span className="flex items-center gap-2 text-[15px]">
+                <span
+                  aria-hidden
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-nx-accent text-xs font-extrabold text-black [text-shadow:none]"
+                >
+                  {username.charAt(0).toUpperCase()}
+                </span>
+                <span>{`@${username} · ${count === 1 ? '1 post' : `${count} posts`}`}</span>
+              </span>
+              <span className="mt-2 hidden flex-wrap gap-2.5 [text-shadow:none] md:mt-auto md:flex">
+                <PlayButton username={username} tag={tag} />
+                {!mine && (
+                  <SaveChannelButton
+                    signedIn={signedIn}
+                    state={saved}
+                    onSave={() => void saveChannel()}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => void copy()}
+                  className="flex h-[50px] items-center gap-2 rounded-full bg-white/15 px-[18px] text-sm font-semibold"
+                >
+                  <Link2 aria-hidden className="h-4 w-4" />
+                  <span>{copied ? 'Copied' : `adhx.com${path}`}</span>
+                </button>
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2.5 px-[18px] md:hidden">
+            <PlayButton username={username} tag={tag} className="flex-1 justify-center" />
+            {!mine && (
+              <SaveChannelButton
+                signedIn={signedIn}
+                state={saved}
+                onSave={() => void saveChannel()}
+                className="flex-1 justify-center"
+              />
+            )}
+            <button
+              type="button"
+              aria-label={copied ? 'Link copied' : 'Copy link'}
+              onClick={() => void copy()}
+              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-white/15"
+            >
+              <Link2 aria-hidden className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="px-1 md:px-0">
+            {items === null ? (
+              <div aria-hidden className="grid grid-cols-2 gap-1 md:grid-cols-4 md:gap-2.5">
+                {[0, 1, 2, 3].map((i) => (
+                  <span
+                    key={i}
+                    className="nx-shimmer animate-nx-shimmer block h-[172px] md:h-[300px] md:rounded-[14px]"
+                  />
+                ))}
+              </div>
+            ) : (
+              <Masonry
+                items={items}
+                columns="columns-2 md:columns-3 xl:columns-4"
+                hrefFor={(item) => channelPlayHref(username, tag, resultKey(item))}
+              />
+            )}
+          </div>
+        </section>
+        <TopChannels
+          highlight={`${username}/${tag}`}
+          className="mx-4 lg:sticky lg:top-24 lg:mx-0 lg:w-[400px] lg:shrink-0"
+        />
+      </main>
+    </div>
+  )
+}
+
+function PlayButton({
+  username,
+  tag,
+  className,
+}: {
+  username: string
+  tag: string
+  className?: string
+}) {
+  return (
+    <Link
+      href={channelPlayHref(username, tag)}
+      className={`flex h-[50px] items-center gap-2 rounded-full bg-nx-accent px-[22px] text-base font-extrabold text-black md:h-[50px] ${className ?? ''}`}
+    >
+      <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />
+      <span>Play</span>
+    </Link>
+  )
+}
+
+function SaveChannelButton({
+  signedIn,
+  state,
+  onSave,
+  className,
+}: {
+  signedIn: boolean
+  state: 'idle' | 'saving' | 'done' | 'error'
+  onSave: () => void
+  className?: string
+}) {
+  const base = `flex h-[50px] items-center gap-2 rounded-full border-[1.5px] border-white bg-black/30 px-5 text-[15px] font-bold ${className ?? ''}`
+  if (!signedIn) {
+    return (
+      <Link href="/" className={base}>
+        <Bookmark aria-hidden className="h-4 w-4" />
+        <span>Sign in to save</span>
+      </Link>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={state === 'saving' || state === 'done'}
+      className={base}
+    >
+      <Bookmark aria-hidden className="h-4 w-4" fill={state === 'done' ? 'currentColor' : 'none'} />
+      <span>
+        {state === 'done'
+          ? 'Saved to your channels'
+          : state === 'error'
+            ? 'Try again'
+            : 'Save channel'}
+      </span>
+    </button>
+  )
+}

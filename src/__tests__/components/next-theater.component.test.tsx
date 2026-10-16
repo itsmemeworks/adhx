@@ -27,14 +27,19 @@ vi.mock('@/components/theater/useSendFile', () => ({
 }))
 
 import { TheaterV2 } from '@/components/next/theater/TheaterV2'
+import { SaveSheet } from '@/components/next/theater/TheaterSheets'
 import {
   appendUnique,
+  autoPlayHref,
+  backHref,
+  channelPlayHref,
   clock,
   dwellSeconds,
   insertAfter,
   nextIndex,
   playHref,
   prevIndex,
+  queueUrl,
   sourceFromParams,
   upcomingSavedKeys,
 } from '@/components/next/theater/queue'
@@ -97,10 +102,14 @@ describe('theater queue', () => {
     expect(source).toEqual({
       search: { q: 'frogs', scope: 'everyone', type: 'all', wordsOnly: false },
       group: 'video',
+      channel: null,
+      auto: null,
       start: 'twitter:1',
     })
     expect(sourceFromParams({ q: 'x', group: 'nope', start: '../etc' })).toMatchObject({
       group: null,
+      channel: null,
+      auto: null,
       start: null,
     })
   })
@@ -171,6 +180,8 @@ describe('TheaterV2', () => {
   const source = {
     search: { q: 'frogs', scope: 'mine' as const, type: 'all' as const, wordsOnly: false },
     group: null,
+    channel: null,
+    auto: null,
     start: null,
   }
 
@@ -204,5 +215,56 @@ describe('TheaterV2', () => {
         String(u).includes('/api/search/similar?platform=twitter&id=3'),
       ),
     ).toBe(true)
+  })
+})
+
+describe('channels in the theater', () => {
+  it('reads channel and made-for-you play links', () => {
+    const channel = sourceFromParams(
+      new URLSearchParams('channel=alice/synth-gear&start=twitter:1'),
+    )
+    expect(channel.channel).toEqual({ username: 'alice', tag: 'synth-gear' })
+    expect(channel.search.scope).toBe('everyone')
+    expect(queueUrl(channel, () => '/api/search')).toBe('/api/channels/by/alice/synth-gear')
+    expect(backHref(channel)).toBe('/t/alice/synth-gear')
+    expect(channelPlayHref('alice', 'synth-gear', 'twitter:1')).toBe(
+      '/play?channel=alice%2Fsynth-gear&start=twitter%3A1',
+    )
+    const auto = sourceFromParams({ auto: 'cute-animals' })
+    expect(queueUrl(auto, () => '/api/search')).toBe('/api/channels/auto/cute-animals')
+    expect(backHref(auto)).toBe('/channels')
+    expect(autoPlayHref('cute-animals')).toBe('/play?auto=cute-animals')
+    expect(sourceFromParams({ channel: '../etc', auto: 'Bad Slug' })).toMatchObject({
+      channel: null,
+      auto: null,
+    })
+  })
+
+  it('ticks channels and creates one from the save sheet', () => {
+    const onToggle = vi.fn()
+    const onCreate = vi.fn()
+    render(
+      <SaveSheet
+        channels={[
+          { tag: 'synth-gear', count: 3, isPublic: true },
+          { tag: 'cats', count: 1, isPublic: false },
+        ]}
+        selected={new Set(['cats'])}
+        busy={null}
+        created={null}
+        onToggle={onToggle}
+        onCreate={onCreate}
+        onCopy={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('checkbox', { name: /Cats/ })).toHaveAttribute('aria-checked', 'true')
+    fireEvent.click(screen.getByRole('checkbox', { name: /Synth gear/ }))
+    expect(onToggle).toHaveBeenCalledWith('synth-gear', true)
+    const input = screen.getByLabelText('Find or create a channel')
+    fireEvent.change(input, { target: { value: 'Phone farms' } })
+    expect(screen.queryByRole('checkbox', { name: /Cats/ })).toBeNull()
+    fireEvent.submit(input.closest('form')!)
+    expect(onCreate).toHaveBeenCalledWith('Phone farms')
   })
 })

@@ -23,6 +23,7 @@ import {
   VolumeX,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { sanitizeTag } from '@/lib/utils/tag'
 import { Stage } from '@/components/theater/Stage'
 import { feedItemToTheaterItem } from '@/components/theater/collection-item'
 import { useSendFile } from '@/components/theater/useSendFile'
@@ -50,21 +51,36 @@ import {
   prevIndex,
   REPEAT_LABELS,
   REPEAT_ORDER,
+  backHref,
+  queueUrl,
   searchHref,
   upcomingSavedKeys,
   type PlaySource,
   type RepeatMode,
 } from './queue'
-import { MoreSheet, UpNextSheet, type MenuRow } from './TheaterSheets'
+import {
+  MoreSheet,
+  SaveSheet,
+  UpNextSheet,
+  type ChannelOption,
+  type MenuRow,
+} from './TheaterSheets'
 import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
+import { channelTitle } from '../channels/ChannelParts'
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready' }
-type Panel = null | 'queue' | 'more'
+type Panel = null | 'queue' | 'more' | 'save'
 
-async function fetchResults(url: string, signal?: AbortSignal): Promise<SearchResultItem[]> {
+type QueueResponse = SearchResponse & { name?: string; channel?: { tag: string } }
+
+async function fetchQueue(url: string, signal?: AbortSignal): Promise<QueueResponse> {
   const response = await fetch(url, { signal, credentials: 'same-origin' })
   if (!response.ok) throw new Error(`queue ${response.status}`)
-  return ((await response.json()) as SearchResponse).items
+  return (await response.json()) as QueueResponse
+}
+
+async function fetchResults(url: string, signal?: AbortSignal): Promise<SearchResultItem[]> {
+  return (await fetchQueue(url, signal)).items
 }
 
 /**
@@ -148,6 +164,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const router = useRouter()
   const rootRef = useRef<HTMLDivElement>(null)
   const [load, setLoad] = useState<Load>({ status: 'loading' })
+  /** A channel's name, once its queue loads. */
+  const [title, setTitle] = useState<string | null>(null)
   const [items, setItems] = useState<SearchResultItem[]>([])
   const [index, setIndex] = useState(0)
   const [muted, setMuted] = useState(true)
@@ -159,6 +177,11 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const [panel, setPanel] = useState<Panel>(null)
   const [ended, setEnded] = useState(false)
   const [savedNow, setSavedNow] = useState<Set<string>>(new Set())
+  const [channels, setChannels] = useState<ChannelOption[] | null>(null)
+  /** Channels each post is in, as changed here (else the post's own tags). */
+  const [postTags, setPostTags] = useState<Map<string, Set<string>>>(new Map())
+  const [channelBusy, setChannelBusy] = useState<string | null>(null)
+  const [created, setCreated] = useState<{ tag: string; shareUrl: string | null } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const extendingRef = useRef(false)
@@ -167,11 +190,13 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   useEffect(() => {
     const controller = new AbortController()
     setLoad({ status: 'loading' })
-    fetchResults(
-      searchUrl({ ...source.search, view: 'bento' }, { refine: true }),
+    fetchQueue(
+      queueUrl(source, () => searchUrl({ ...source.search, view: 'bento' }, { refine: true })),
       controller.signal,
     )
-      .then((results) => {
+      .then((response) => {
+        const results = response.items
+        setTitle(response.name ?? (response.channel ? channelTitle(response.channel.tag) : null))
         const list = source.group
           ? (groupResults(results).find((g) => g.signal === source.group)?.items ?? [])
           : results
@@ -330,30 +355,129 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   }, [])
 
   // ——— Actions ———
-  const save = useCallback(async () => {
-    if (!current) return
-    if (saved) return flash('In your saves. Channels are coming next.')
+  const ensureSaved = useCallback(async (): Promise<boolean> => {
+    if (!current) return false
+    if (saved) return true
     const url = sourceUrl(
       current.post.platform ?? 'twitter',
       current.post.author,
       current.post.id,
       kind === 'photo' ? 'photo' : null,
     )
-    if (!url) return
+    if (!url) return false
     try {
       const res = await fetch('/api/bookmarks/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       })
+      if (res.status === 401) {
+        flash('Sign in to save posts and make channels')
+        return false
+      }
       const data = (await res.json().catch(() => null)) as { error?: string } | null
       if (!res.ok || data?.error) throw new Error(data?.error || 'save failed')
       setSavedNow((s) => new Set(s).add(currentKey))
-      flash('Saved')
+      return true
     } catch {
       flash('Couldn’t save that. Try again.')
+      return false
     }
   }, [current, saved, kind, currentKey, flash])
+
+  /** Save (if needed) and open "add to a channel". */
+  const save = useCallback(async () => {
+    if (!(await ensureSaved())) return
+    setCreated(null)
+    setPanel('save')
+    if (channels === null) {
+      fetch('/api/tags', { credentials: 'same-origin' })
+        .then((r) => (r.ok ? (r.json() as Promise<{ tags: ChannelOption[] }>) : { tags: [] }))
+        .then((d) =>
+          setChannels(d.tags.map((t) => ({ tag: t.tag, count: t.count, isPublic: t.isPublic }))),
+        )
+        .catch(() => setChannels([]))
+    }
+  }, [ensureSaved, channels])
+
+  const currentTags = useMemo(
+    () => postTags.get(currentKey) ?? new Set(current?.saved ? current.post.tags : []),
+    [postTags, currentKey, current],
+  )
+
+  const tagRequest = useCallback(
+    async (tag: string, on: boolean) => {
+      if (!current) return false
+      const res = await fetch(
+        `/api/bookmarks/${encodeURIComponent(current.post.id)}/tags?platform=${encodeURIComponent(current.post.platform ?? 'twitter')}`,
+        {
+          method: on ? 'POST' : 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tag }),
+        },
+      )
+      const data = (await res.json().catch(() => null)) as { error?: string } | null
+      if (!res.ok) {
+        flash(data?.error ?? 'Couldn’t change that channel')
+        return false
+      }
+      setPostTags((m) => {
+        const next = new Map(m)
+        const set = new Set(m.get(currentKey) ?? currentTags)
+        if (on) set.add(tag)
+        else set.delete(tag)
+        next.set(currentKey, set)
+        return next
+      })
+      setChannels((list) => {
+        const rows = list ?? []
+        const known = rows.some((c) => c.tag === tag)
+        const updated = rows.map((c) =>
+          c.tag === tag ? { ...c, count: Math.max(0, c.count + (on ? 1 : -1)) } : c,
+        )
+        return known || !on ? updated : [{ tag, count: 1, isPublic: false }, ...updated]
+      })
+      return true
+    },
+    [current, currentKey, currentTags, flash],
+  )
+
+  const toggleChannel = useCallback(
+    async (tag: string, on: boolean) => {
+      setChannelBusy(tag)
+      try {
+        await tagRequest(tag, on)
+      } finally {
+        setChannelBusy(null)
+      }
+    },
+    [tagRequest],
+  )
+
+  const createChannel = useCallback(
+    async (name: string) => {
+      const tag = sanitizeTag(name)
+      if (!tag) return
+      setChannelBusy(tag)
+      try {
+        if (!(await tagRequest(tag, true))) return
+        // New channels are public by default, so the link works right away.
+        const res = await fetch('/api/tags', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tag, isPublic: true }),
+        })
+        const data = (await res.json().catch(() => null)) as { shareUrl?: string } | null
+        setChannels((list) =>
+          (list ?? []).map((c) => (c.tag === tag ? { ...c, isPublic: res.ok } : c)),
+        )
+        setCreated({ tag, shareUrl: res.ok ? (data?.shareUrl ?? null) : null })
+      } finally {
+        setChannelBusy(null)
+      }
+    },
+    [tagRequest],
+  )
 
   const publicUrl = useCallback(
     () =>
@@ -437,7 +561,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   })
 
   // ——— Render ———
-  const back = searchHref(source.search)
+  const back = backHref(source)
   if (load.status !== 'ready' || !current) {
     return (
       <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-5 bg-nx-stage px-6 text-center font-nx-sans text-nx-cream">
@@ -473,6 +597,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           label: 'Copy text',
           onSelect: () => void navigator.clipboard?.writeText(caption).then(() => flash('Copied')),
         },
+    { label: 'Add to a channel', onSelect: () => void save() },
     { label: 'Copy link', onSelect: () => void copyLink() },
     {
       label: 'Repeat',
@@ -551,7 +676,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           className="nx-plate pointer-events-auto flex h-10 min-w-0 max-w-[60vw] items-center gap-1.5 rounded-full pl-2 pr-4 text-sm md:max-w-[420px]"
         >
           <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
-          <span className="truncate">{source.search.q || 'Search'}</span>
+          <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
         </Link>
         <span className="flex-1" />
         <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
@@ -592,7 +717,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           />
         </RailButton>
         <RailButton
-          label={saved ? 'In your saves' : 'Save'}
+          label={saved ? 'Saved. Add to a channel' : 'Save'}
           onClick={() => void save()}
           active={saved}
         >
@@ -789,6 +914,26 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             setPanel(null)
           }}
           onClose={() => setPanel(null)}
+        />
+      )}
+      {panel === 'save' && (
+        <SaveSheet
+          channels={channels}
+          selected={currentTags}
+          busy={channelBusy}
+          created={created}
+          onToggle={(tag, on) => void toggleChannel(tag, on)}
+          onCreate={(name) => void createChannel(name)}
+          onCopy={(url) =>
+            void navigator.clipboard
+              ?.writeText(url)
+              .then(() => flash('Link copied'))
+              .catch(() => flash('Couldn’t copy the link'))
+          }
+          onClose={() => {
+            setPanel(null)
+            setCreated(null)
+          }}
         />
       )}
       {panel === 'more' && (

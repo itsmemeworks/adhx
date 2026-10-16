@@ -15,6 +15,8 @@ import { recordCollectionEvent } from '@/lib/discovery/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { isNextUiEnabled } from '@/lib/next-ui/server'
+import { ChannelPage } from '@/components/next/channels/ChannelPage'
 
 /**
  * `/t/{username}/{tag}` — public playlist page (a playlist IS one shared tag).
@@ -35,6 +37,7 @@ export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ username: string; tag: string }>
+  searchParams?: Promise<Record<string, string | undefined>>
 }
 
 const BASE_URL = PUBLIC_BASE_URL
@@ -179,16 +182,31 @@ function SignedOutNav() {
   )
 }
 
-export default async function SharedTagPage({ params }: Props) {
+export default async function SharedTagPage({ params, searchParams }: Props) {
   const { username, tag } = await params
-  const [result, viewerUserId] = await Promise.all([
+  const [result, viewerUserId, nextUi] = await Promise.all([
     loadCollection(username, tag),
     getCurrentUserId(),
+    isNextUiEnabled(searchParams ? await searchParams : undefined),
   ])
   if (result.status === 'redirect') permanentRedirect(`/t/${result.username}/${result.tag}`)
   if (result.status === 'not_found') notFound()
 
   const signedOut = !viewerUserId
+
+  // Redesign (next_ui): the owner also sees their private channel here.
+  if (nextUi && result.status === 'private' && viewerUserId) {
+    let decoded: { username: string; tag: string } | null = null
+    try {
+      decoded = { username: decodeURIComponent(username), tag: decodeURIComponent(tag) }
+    } catch {
+      decoded = null
+    }
+    const ownerId = decoded ? await getUserIdForUsername(decoded.username) : null
+    if (decoded && ownerId === viewerUserId) {
+      return <ChannelPage username={decoded.username} tag={decoded.tag} count={0} mine signedIn />
+    }
+  }
 
   if (result.status === 'private') {
     return (
@@ -243,6 +261,19 @@ export default async function SharedTagPage({ params }: Props) {
     }
   } catch {
     // Stats must never break the page.
+  }
+
+  if (nextUi) {
+    const ownerId = await getUserIdForUsername(data.username)
+    return (
+      <ChannelPage
+        username={data.username}
+        tag={data.tag}
+        count={data.tweetCount}
+        mine={!!viewerUserId && ownerId === viewerUserId}
+        signedIn={!signedOut}
+      />
+    )
   }
 
   const canonicalUrl = `${BASE_URL}/t/${data.username}/${data.tag}`
