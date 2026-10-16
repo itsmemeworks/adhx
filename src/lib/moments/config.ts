@@ -40,8 +40,13 @@ export const MAX_POSTS = 2000
 export const JOIN_SIMILARITY = 0.48
 /** Members kept when a cluster is cut (looser than joining, tighter than k-means). */
 export const KEEP_SIMILARITY = 0.46
-/** A forming group gathers posts this close to its centre. */
-export const FORM_SIMILARITY = 0.4
+/**
+ * A forming group gathers posts this close to its centre. Looser than
+ * joining a moment: a new group's centre is a single post, and two posts on
+ * one topic can sit as low as ~0.3 apart (0.4 split four frog videos into
+ * two groups of 3 and 1). Just above unrelated posts' p99 (~0.31).
+ */
+export const FORM_SIMILARITY = 0.33
 /** Clusters of this cohesion or better can be moments. */
 export const MIN_COHESION = 0.6
 /** Old moment ↔ new cluster with this similarity keep the same slug, name and colour. */

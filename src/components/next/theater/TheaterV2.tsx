@@ -1,5 +1,6 @@
 'use client'
 
+import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
 import { AccountMenu } from '../AccountMenu'
 import Link from 'next/link'
@@ -79,6 +80,14 @@ import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
 import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { channelTitle } from '../channels/ChannelParts'
+
+/** X articles carry their whole body; other links only have a preview. */
+function hasFullArticle(post: FeedItem): boolean {
+  if ((post.platform ?? 'twitter') !== 'twitter') return false
+  if (post.articleContent?.blocks?.length) return true
+  const url = post.articlePreview?.url ?? ''
+  return /^https:\/\/(x|twitter)\.com\/[^/]+\/article\//.test(url)
+}
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready' }
 type Panel = null | 'queue' | 'more' | 'save'
@@ -207,6 +216,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const [created, setCreated] = useState<{ tag: string; shareUrl: string | null } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  /** The article reader is open over the stage. */
+  const [readingOpen, setReadingOpen] = useState(false)
   const extendingRef = useRef(false)
   // Tune in (a live moment): its colour, who's watching, new saves arriving.
   const [momentHue, setMomentHue] = useState('#ffd23f')
@@ -325,6 +336,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
 
   // ——— Moving through the queue ———
   const goTo = useCallback((i: number) => {
+    setReadingOpen(false)
     setEnded(false)
     setWaiting(false)
     setArrivals(0)
@@ -752,7 +764,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof Element ? e.target : null
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (t && (t.closest('input, textarea, select, [contenteditable="true"]') || panel)) return
+      if (panel || readingOpen) return
+      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return
       const k = e.key
       if (k === ' ' || k === 'k') {
         e.preventDefault()
@@ -773,7 +786,17 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [panel, togglePlay, next, prev, toggleMute, toggleFullscreen, router, source.search])
+  }, [
+    panel,
+    readingOpen,
+    togglePlay,
+    next,
+    prev,
+    toggleMute,
+    toggleFullscreen,
+    router,
+    source.search,
+  ])
 
   const swipe = useMobileSwipeNavigation({
     disabled: panel !== null,
@@ -886,7 +909,11 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         )}
         {kind === 'article' && (
           <div className="absolute inset-0 bg-nx-ink pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16">
-            <ArticleStage item={current.post} onSkip={() => void next()} />
+            <ArticleStage
+              item={current.post}
+              onSkip={() => void next()}
+              onRead={hasFullArticle(current.post) ? () => setReadingOpen(true) : undefined}
+            />
           </div>
         )}
       </div>
@@ -1345,6 +1372,13 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             },
           }))}
           onClose={() => setPanel(null)}
+        />
+      )}
+      {readingOpen && kind === 'article' && current && (
+        <ArticleReader
+          item={current.post}
+          onClose={() => setReadingOpen(false)}
+          onNext={() => void next()}
         />
       )}
       {paste.toast}

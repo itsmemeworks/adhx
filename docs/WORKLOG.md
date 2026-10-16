@@ -26,6 +26,12 @@ Follow-ups: the published iCloud shortcut may still offer YouTube (it now lands 
 E2E has no model, so `e2e/seed.ts` writes synthetic 768-dim `text` vectors into `post_embeddings` (6 frog posts on one axis saved by two seeded people, 40 background posts, two unsaved frog posts the spec saves) and `MOMENT_MIN_SAVERS=2` is set in `e2e/env.ts`. Naming falls back to the shared word, hence "Frog".
 The engine keeps its state for the server's lifetime, so each attempt saves as a fresh account and asserts the count relative to before (passes with `--repeat-each=4`). Pre-existing, unrelated failures in the full Chromium run: `nav.spec.ts` (j advances Live) and `theater-tap-declutter.spec.ts` (desktop), both failing on the base commit too. State: local, not pushed.
 
+## 2026-10-16 — Full articles in the theater; second two-browser pass
+
+Owner asked for a full re-test once Settings landed. Articles: the new theater only showed the title and six lines ("Read it here" went to X); added `ArticleReader`, the whole body in the reading font with Bionic Reading. Settings (new design) saves sound, Bionic Reading and font, and the theater and reader follow them (checked, then restored). Right now and Tune in re-tested with five more local accounts: saves land in under 3 s, watching 1→2→1, "1 new save just landed" then Play now with "Just saved".
+Fixed: four frog saves split into forming groups of 3 and 1 (pairs of same-topic posts can sit ~0.3 apart) → `FORM_SIMILARITY` 0.33 and close forming groups merge; the name fallback ignored 3-letter words ("cat"); in dev the engine timer kept running pre-reload code (now rebinds per module copy); Settings had a generic tab title and sent signed-out visitors to `/`.
+The built-in browser pane drops its cookie whenever the local server stops; sessions themselves survive restarts (an hours-old curl session kept working).
+
 ## 2026-10-16 — Right now: live moments and Tune in
 
 What people are saving, grouped by meaning, live: `/channels` gets Right now (Just saved strip, moment cards that glow when a save lands, forming groups that pop into new moments), `/moments/{slug}` is a live page, and `/play?moment=slug` is Tune in (new saves play next, caught-up waits for the next one, Stay close / Wander, LIVE · N watching). Engine in `src/lib/moments/`, SSE at `/api/moments/stream`.

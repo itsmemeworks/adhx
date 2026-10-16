@@ -195,6 +195,44 @@ describe('grouping recent saves', () => {
     })
   })
 
+  it('merges forming groups that turn out to be about the same thing', () => {
+    const forming: Forming[] = []
+    let n = 0
+    const id = () => `f${++n}`
+    // Two groups that each started from one post, then a save between them.
+    const a = addToForming(
+      forming,
+      'p1',
+      normalize(Float32Array.from([1, 0, 0, 0])),
+      'u1',
+      1,
+      id,
+      '#fff',
+    )
+    const b = addToForming(
+      forming,
+      'p2',
+      normalize(Float32Array.from([0.3, 1, 0, 0])),
+      'u2',
+      2,
+      id,
+      '#fff',
+    )
+    expect(forming).toHaveLength(2)
+    const merged = addToForming(
+      forming,
+      'p3',
+      normalize(Float32Array.from([1, 1, 0, 0])),
+      'u3',
+      3,
+      id,
+      '#fff',
+    )
+    expect(forming).toHaveLength(1)
+    expect([a, b]).toContain(merged)
+    expect([...merged.members.keys()].sort()).toEqual(['p1', 'p2', 'p3'])
+  })
+
   it('counts saves per minute, spots a rising moment, and makes stable slugs and colours', () => {
     const now = Date.parse('2026-10-16T12:00:00Z')
     const times = [now - 30_000, now - 90_000, now - 95_000, now - 5_000_000]
@@ -215,6 +253,10 @@ describe('naming a moment', () => {
       share: 1,
     })
     expect(tellingWord(['one', 'two'])).toBeNull()
+    // Short words count too ("cat"), common ones don't.
+    expect(tellingWord(['a cat on a roof', 'the cat and the dog', 'you and the shelf'])?.word).toBe(
+      'Cat',
+    )
     const name = await nameMoment(new Float32Array(256), ['frog one', 'frog two'], new Set())
     expect(name).toBe('Frog')
   })

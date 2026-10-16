@@ -266,7 +266,37 @@ export function addToForming(
   }
   normalize(best.centroid)
   normalize(best.raw)
+  mergeClose(forming, best)
   return best
+}
+
+/**
+ * Fold other forming groups into `into` when their centres are close enough:
+ * a group started from one post can miss its siblings (two posts on one
+ * topic may sit ~0.3 apart), and two halves of the same thing should fill
+ * one card, not two.
+ */
+function mergeClose(forming: Forming[], into: Forming): void {
+  for (let i = forming.length - 1; i >= 0; i--) {
+    const other = forming[i]
+    if (other === into || dot(other.centroid, into.centroid) < FORM_SIMILARITY) continue
+    const a = into.members.size
+    const b = other.members.size
+    for (const [key, m] of other.members) {
+      const mine = into.members.get(key)
+      if (mine) for (const saver of m.savers) mine.savers.add(saver)
+      else into.members.set(key, { lastAt: m.lastAt, savers: new Set(m.savers) })
+    }
+    for (let d = 0; d < into.centroid.length; d++) {
+      into.centroid[d] = (into.centroid[d] * a + other.centroid[d] * b) / (a + b)
+      into.raw[d] = (into.raw[d] * a + other.raw[d] * b) / (a + b)
+    }
+    normalize(into.centroid)
+    normalize(into.raw)
+    into.firstAt = Math.min(into.firstAt, other.firstAt)
+    into.lastAt = Math.max(into.lastAt, other.lastAt)
+    forming.splice(i, 1)
+  }
 }
 
 /** How close a forming group is to being a moment. */

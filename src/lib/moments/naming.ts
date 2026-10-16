@@ -17,9 +17,10 @@ const SAMPLE_POSTS = 6
 const NAMING_TIMEOUT_MS = 4_000
 
 const STOP = new Set(
-  'about after again also been before being both could does doing down each even ever every from have here into just like look made make many more most much must only other over really same should since some such than that their them then there these they this those through very want were what when where which while with would your yours just thats dont cant wont youre im ive its it’s http https www com status video photo post posts thread today going gonna watch every still never always thing things people time year years good great best first last know need think right make well back'.split(
-    ' ',
-  ),
+  'the and for you are but not was all any can had her his one our out get has him how its may new now old see two way who did let say she too use lol omg wtf idk yes why got put own off via per lot bit big day man men guy ' +
+    'about after again also been before being both could does doing down each even ever every from have here into just like look made make many more most much must only other over really same should since some such than that their them then there these they this those through very want were what when where which while with would your yours just thats dont cant wont youre im ive its it’s http https www com status video photo post posts thread today going gonna watch every still never always thing things people time year years good great best first last know need think right make well back'.split(
+      ' ',
+    ),
 )
 
 export interface NamingDeps {
@@ -51,7 +52,7 @@ export function tellingWord(texts: string[]): { word: string; share: number } | 
         .replace(/https?:\/\/\S+/g, ' ')
         .replace(/[#@]/g, ' ')
         .split(/[^\p{L}\p{N}]+/u)
-        .filter((w) => w.length >= 4 && !STOP.has(w) && !/^\d+$/.test(w)),
+        .filter((w) => w.length >= 3 && !STOP.has(w) && !/^\d+$/.test(w)),
     )
     for (const w of words) counts.set(w, (counts.get(w) ?? 0) + 1)
   }

@@ -134,7 +134,7 @@ export function WideMediaStage({
  * applies to reading-sized text, so short posts keep the poster serif unless
  * Bionic Reading is on (the serif has no bold to show it with).
  */
-function useReadingSettings(): { bionic: boolean; font: string | undefined } {
+export function useReadingSettings(): { bionic: boolean; font: string | undefined } {
   const preferences = usePreferencesOptional()?.preferences
   return {
     bionic: !!preferences?.bionicReading,

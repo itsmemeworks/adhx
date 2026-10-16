@@ -134,6 +134,8 @@ type State = {
   listeners: number
   lastListenerAt: number
   timer: ReturnType<typeof setInterval> | null
+  /** Which copy of this module started `timer` (dev reloads load a new copy). */
+  timerOwner: symbol | null
   ticking: boolean
   posts: Map<string, FeedItem>
   stats: { today: number; lastHour: number }
@@ -162,6 +164,7 @@ function fresh(): State {
     listeners: 0,
     lastListenerAt: 0,
     timer: null,
+    timerOwner: null,
     ticking: false,
     posts: new Map(),
     stats: { today: 0, lastHour: 0 },
@@ -662,12 +665,22 @@ async function tick(): Promise<void> {
   }
 }
 
+const MODULE = Symbol('moments-engine')
+
 function ensureRunning(): void {
   const s = state()
   s.lastListenerAt = Date.now()
-  if (!s.timer && process.env['NODE_ENV'] !== 'test') {
+  if (process.env['NODE_ENV'] === 'test') return
+  // State lives on globalThis, so after a dev reload the old timer would keep
+  // running the old code; replace it with this copy's.
+  if (s.timer && s.timerOwner !== MODULE) {
+    clearInterval(s.timer)
+    s.timer = null
+  }
+  if (!s.timer) {
     s.timer = setInterval(() => void tick(), TICK_MS)
     s.timer.unref?.()
+    s.timerOwner = MODULE
   }
 }
 
