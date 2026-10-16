@@ -84,12 +84,12 @@ describe('TheaterAvatarMenu', () => {
     render(<TheaterAvatarMenu />)
     const button = await screen.findByLabelText('Account menu')
 
-    expect(screen.queryByText('Library')).not.toBeInTheDocument()
+    expect(screen.queryByText('Search')).not.toBeInTheDocument()
     fireEvent.click(button)
 
-    expect(screen.getByText('Library')).toBeInTheDocument()
+    expect(screen.getByText('Search')).toBeInTheDocument()
     expect(screen.getByText('Saved')).toBeInTheDocument()
-    expect(screen.getByText('Tags')).toBeInTheDocument()
+    expect(screen.getByText('Channels')).toBeInTheDocument()
     expect(screen.getByText('Leaderboard')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
     expect(screen.queryByText(/mode$/)).not.toBeInTheDocument()
@@ -120,16 +120,16 @@ describe('TheaterAvatarMenu', () => {
     expect(screen.queryByText(/pete\.cheyne@gmail\.com/)).not.toBeInTheDocument()
   })
 
-  it('matches the authed Header avatar menu’s nav hrefs — Library/Tags/Leaderboard/Settings', async () => {
+  it('matches the authed Header avatar menu’s nav hrefs — Search/Channels/Leaderboard/Settings', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
     // `/` is the theater now, so the grid entry points at the library — and
-    // it's LABELLED "Library" since the Theater group gained a "Saved"
+    // it's LABELLED "Search" since the Theater group gained a "Saved"
     // sub-tab, which made "Your collection" read as the same destination.
-    expect(screen.getByText('Library').closest('a')).toHaveAttribute('href', '/library')
-    expect(screen.getByText('Tags').closest('a')).toHaveAttribute('href', '/tags')
+    expect(screen.getByText('Search').closest('a')).toHaveAttribute('href', '/search')
+    expect(screen.getByText('Channels').closest('a')).toHaveAttribute('href', '/channels')
     expect(screen.getByText('Leaderboard').closest('a')).toHaveAttribute('href', '/leaderboard')
     expect(screen.getByText('Settings').closest('a')).toHaveAttribute('href', '/settings')
   })
@@ -140,20 +140,13 @@ describe('TheaterAvatarMenu', () => {
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveAttribute('href', '/saved')
+    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveAttribute(
+      'href',
+      '/play?recent=1',
+    )
     expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveAttribute('href', '/live')
     expect(screen.queryByRole('menuitem', { name: 'Theater' })).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Saved' })).not.toHaveAttribute('aria-current')
-    expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
-  })
-
-  it('marks the personal destination when mounted without theater tabs', async () => {
-    mockPathname = '/saved'
-    mockAuthMe(AUTHED_ME)
-    render(<TheaterAvatarMenu />)
-    fireEvent.click(await screen.findByLabelText('Account menu'))
-
-    expect(screen.getByRole('menuitem', { name: 'Saved' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).not.toHaveAttribute('aria-current')
   })
 
@@ -185,13 +178,13 @@ describe('TheaterAvatarMenu', () => {
     })
   })
 
-  it('marks Tags as current (clay dot + aria-current) when on /tags', async () => {
-    mockPathname = '/tags'
+  it('marks Channels as current (clay dot + aria-current) when on /tags', async () => {
+    mockPathname = '/channels'
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
 
-    const tagsLink = screen.getByText('Tags').closest('a')!
+    const tagsLink = screen.getByText('Channels').closest('a')!
     expect(tagsLink).toHaveAttribute('aria-current', 'page')
     expect(tagsLink.querySelector('[data-testid="menu-current-dot"]')).toBeInTheDocument()
 
@@ -214,20 +207,20 @@ describe('TheaterAvatarMenu', () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
-    expect(screen.getByText('Library')).toBeInTheDocument()
+    expect(screen.getByText('Search')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByText('Library')).not.toBeInTheDocument()
+    expect(screen.queryByText('Search')).not.toBeInTheDocument()
   })
 
   it('closes the menu on outside click', async () => {
     mockAuthMe(AUTHED_ME)
     render(<TheaterAvatarMenu />)
     fireEvent.click(await screen.findByLabelText('Account menu'))
-    expect(screen.getByText('Library')).toBeInTheDocument()
+    expect(screen.getByText('Search')).toBeInTheDocument()
 
     fireEvent.mouseDown(document.body)
-    expect(screen.queryByText('Library')).not.toBeInTheDocument()
+    expect(screen.queryByText('Search')).not.toBeInTheDocument()
   })
 
   it('moves focus through destinations and activates the focused link with Enter', async () => {
@@ -238,7 +231,7 @@ describe('TheaterAvatarMenu', () => {
     pressMenuKey('ArrowDown')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveFocus()
     pressMenuKey('j')
-    expect(screen.getByRole('menuitem', { name: 'Library' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Search' })).toHaveFocus()
     pressMenuKey('k')
     expect(screen.getByRole('menuitem', { name: 'Discover' })).toHaveFocus()
     pressMenuKey('End')
@@ -403,14 +396,14 @@ describe('TheaterAvatarMenu — personal destinations', () => {
     return onTabChange
   }
 
-  it('puts Saved first, followed by Discover and Library', async () => {
+  it('puts Saved first, followed by Discover and Search', async () => {
     await openWith('collection')
     expect(
       screen
         .getAllByRole('menuitem')
         .slice(0, 3)
         .map((item) => item.textContent),
-    ).toEqual(['Saved', 'Discover', 'Library'])
+    ).toEqual(['Saved', 'Discover', 'Search'])
     expect(screen.queryByRole('menuitem', { name: 'Theater' })).not.toBeInTheDocument()
   })
 

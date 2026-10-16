@@ -1,8 +1,9 @@
 import { permanentRedirect } from 'next/navigation'
+import { savedToPlay } from '@/lib/next-ui/routes'
 
 /**
- * `/collection` used to be the Saved theater. It moved to `/saved`. This stub
- * keeps old links working (bookmarks, in-app copies, leftover `?open=`).
+ * `/collection` used to be the Saved theater. This stub keeps old links
+ * working (bookmarks, in-app copies, leftover `?open=`).
  */
 export default async function CollectionSavedRedirect({
   searchParams,
@@ -10,9 +11,5 @@ export default async function CollectionSavedRedirect({
   searchParams: Promise<{ open?: string; platform?: string }>
 }) {
   const { open, platform } = await searchParams
-  const params = new URLSearchParams()
-  if (open) params.set('open', open)
-  if (platform) params.set('platform', platform)
-  const q = params.toString()
-  permanentRedirect(q ? `/saved?${q}` : '/saved')
+  permanentRedirect(savedToPlay(open, platform))
 }

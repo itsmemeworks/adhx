@@ -1,8 +1,4 @@
-/**
- * next_ui — the redesign's visual foundations (phase 0). Nothing here is
- * mounted by the current UI; pages opt in behind `useNextUi()` /
- * `isNextUiEnabled()` (src/lib/next-ui). Preview: /dev/next-ui.
- */
+/** The design's visual foundations: cards, stages, loader, primitives. Preview: /dev/next-ui. */
 export * from './cards'
 export * from './stages'
 export * from './loader'

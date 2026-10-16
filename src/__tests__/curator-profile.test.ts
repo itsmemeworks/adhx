@@ -261,10 +261,10 @@ describe('Curator profile route: /t/[username]', () => {
 
       expect(html).toContain('Make your own')
       expect(html).toContain('Start saving')
-      expect(html).not.toContain('Manage playlists')
+      expect(html).not.toContain('Manage channels')
     })
 
-    it("signed in, own profile: top pill becomes 'Manage playlists' → /tags, footer pitch is gone", async () => {
+    it("signed in, own profile: top pill becomes 'Manage channels' → /channels, footer pitch is gone", async () => {
       const { getPublicProfile: mocked } = await import('@/lib/users/profile')
       vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
       const { getCurrentUserId } = await import('@/lib/auth/session')
@@ -276,8 +276,8 @@ describe('Curator profile route: /t/[username]', () => {
       })
       const html = renderToStaticMarkup(result as React.ReactElement)
 
-      expect(html).toContain('Manage playlists')
-      expect(html).toContain('href="/tags"')
+      expect(html).toContain('Manage channels')
+      expect(html).toContain('href="/channels"')
       expect(html).not.toContain('Make your own')
       expect(html).not.toContain('Start saving')
       expect(html).not.toContain('Save it. Lose it.')
@@ -296,7 +296,7 @@ describe('Curator profile route: /t/[username]', () => {
       const html = renderToStaticMarkup(result as React.ReactElement)
 
       expect(html).not.toContain('Make your own')
-      expect(html).not.toContain('Manage playlists')
+      expect(html).not.toContain('Manage channels')
       expect(html).not.toContain('Start saving')
       expect(html).not.toContain('Save it. Lose it.')
     })

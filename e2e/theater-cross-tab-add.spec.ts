@@ -10,9 +10,7 @@ import {
   fetchFeedItem,
   goNext,
   openTheaterQueue,
-  pasteTheaterLink,
   pauseTheater,
-  readQueueProgress,
   visibleCaption,
   visibleQueueCount,
 } from './helpers'
@@ -54,69 +52,6 @@ authedTest.describe('theater cross-tab add', () => {
       deleteUserBookmark(id, 'tiktok')
     }
   })
-
-  authedTest(
-    'Saved: a second window add prepends and leaves the current post + Keep playing',
-    async ({ page, context }) => {
-      await page.goto('/saved')
-      await expectTheaterReady(page)
-      await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
-      const queue = await openTheaterQueue(page)
-
-      const actor = await context.newPage()
-      await actor.goto('/live')
-      await expectTheaterReady(actor)
-      await pasteTheaterLink(actor, tweetUrl(ADD_TEXT))
-
-      await expect(queue.getByText(ADD_TEXT.text)).toBeVisible({ timeout: 20_000 })
-      await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
-      await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
-      await expect(queue.getByText('New since you opened')).toHaveCount(0)
-      const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
-      await expect(added).toBeVisible()
-      await expect(added.getByTitle('Watched')).toHaveCount(0)
-      await actor.close()
-    },
-  )
-
-  authedTest('Saved: Videos + a text add from another window resets to All', async ({ page }) => {
-    await page.goto('/saved')
-    await expectTheaterReady(page)
-    const queue = await openTheaterQueue(page)
-    await queue.getByRole('button', { name: 'Videos', exact: true }).click()
-    await expect(queue.getByRole('button', { name: 'Videos', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-
-    await addAndBroadcast(page, tweetUrl(ADD_TEXT))
-
-    await expect(
-      queue.getByRole('button', { name: 'All post types', exact: true }),
-    ).toHaveAttribute('aria-pressed', 'true')
-    await expect(queue.getByText(ADD_TEXT.text)).toBeVisible()
-    await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
-  })
-
-  authedTest(
-    'Saved: Videos + a matching video add keeps the filter and stages the new save',
-    async ({ page }) => {
-      await page.goto('/saved')
-      await expectTheaterReady(page)
-      const queue = await openTheaterQueue(page)
-      await queue.getByRole('button', { name: 'Videos', exact: true }).click()
-
-      await addAndBroadcast(page, tiktokUrl(ADD_VIDEO))
-
-      await expect(queue.getByRole('button', { name: 'Videos', exact: true })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-      await expect(queue.getByText(ADD_VIDEO.text)).toBeVisible()
-      await expect(visibleCaption(page, ADD_VIDEO.text)).toBeVisible()
-    },
-  )
 
   authedTest('Live: caught-up + a second-window add plays immediately', async ({ page }) => {
     await page.goto('/live')
@@ -216,76 +151,6 @@ authedTest.describe('theater cross-tab add', () => {
   )
 
   authedTest(
-    'Saved: Next then a second-window add marks the left post Watched, not the arrival',
-    async ({ page }) => {
-      await page.goto('/saved')
-      await expectTheaterReady(page)
-      await goNext(page)
-      await expect(visibleCaption(page, POST.bravo.text)).toBeVisible()
-      const queue = await openTheaterQueue(page)
-
-      await addAndBroadcast(page, tweetUrl(ADD_TEXT))
-
-      const added = queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text })
-      await expect(added).toBeVisible()
-      await expect(added.getByTitle('Watched')).toHaveCount(0)
-      await expect(
-        queue
-          .locator('[data-theater-queue-item]')
-          .filter({ hasText: POST.alpha.text })
-          .getByTitle('Watched'),
-      ).toBeVisible()
-      await expect(visibleCaption(page, POST.bravo.text)).toBeVisible()
-      await expect(queue.getByText('New since you opened')).toHaveCount(0)
-    },
-  )
-
-  authedTest(
-    'Saved: Videos + a second matching add stays on the playing video',
-    async ({ page }) => {
-      await page.goto('/saved')
-      await expectTheaterReady(page)
-      const queue = await openTheaterQueue(page)
-      await queue.getByRole('button', { name: 'Videos', exact: true }).click()
-      await addAndBroadcast(page, tiktokUrl(ADD_VIDEO))
-      await expect(visibleCaption(page, ADD_VIDEO.text)).toBeVisible()
-
-      await addAndBroadcast(page, tiktokUrl(ADD_VIDEO_B))
-
-      await expect(queue.getByRole('button', { name: 'Videos', exact: true })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-      await expect(visibleCaption(page, ADD_VIDEO.text)).toBeVisible()
-      const arrival = queue
-        .locator('[data-theater-queue-item]')
-        .filter({ hasText: ADD_VIDEO_B.text })
-      await expect(arrival).toBeVisible()
-      await expect(arrival).not.toHaveAttribute('aria-current', 'true')
-      await expect(arrival.getByTitle('Watched')).toHaveCount(0)
-    },
-  )
-
-  authedTest('Saved Play once: a remote add keeps Play once', async ({ page }) => {
-    await page.goto('/saved')
-    await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Keep playing' }).click()
-    await page.getByRole('button', { name: 'Repeat this post' }).click()
-    await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
-    // Cycling all → one → off restarts the timed dwell, so pause only after
-    // Play once is active.
-    await pauseTheater(page)
-    const start = await readQueueProgress(page)
-    expect(start.played).toBe(0)
-
-    await addAndBroadcast(page, tweetUrl(ADD_TEXT))
-
-    await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
-    await expect(visibleCaption(page, POST.alpha.text)).toBeVisible()
-    await expect(visibleQueueCount(page)).toHaveText(`${start.toPlay + 1} in queue`)
-  })
-
-  authedTest(
     'Live: a second-window add grows the queue without leaving the current post',
     async ({ page }) => {
       await page.addInitScript(() => {
@@ -356,25 +221,4 @@ authedTest.describe('theater cross-tab add', () => {
       await expect(page.getByRole('button', { name: 'Stop when caught up' })).toBeVisible()
     },
   )
-
-  authedTest('Live paste in a second window keeps the Saved cursor', async ({ page, context }) => {
-    await page.goto('/saved')
-    await expectTheaterReady(page)
-    await goNext(page)
-    await expect(visibleCaption(page, POST.bravo.text)).toBeVisible()
-    const queue = await openTheaterQueue(page)
-
-    const actor = await context.newPage()
-    await actor.goto('/live')
-    await expectTheaterReady(actor)
-    await pasteTheaterLink(actor, tweetUrl(ADD_TEXT))
-
-    await expect(visibleCaption(page, POST.bravo.text)).toBeVisible({ timeout: 20_000 })
-    await expect(queue.getByText(ADD_TEXT.text)).toBeVisible({ timeout: 20_000 })
-    await expect(
-      queue.locator('[data-theater-queue-item]').filter({ hasText: ADD_TEXT.text }),
-    ).not.toHaveAttribute('aria-current', 'true')
-    await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
-    await actor.close()
-  })
 })

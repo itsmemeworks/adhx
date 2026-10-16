@@ -33,12 +33,11 @@ flowchart LR
 
 The product separates personal saves from community discovery:
 
-- **Saved** is one user's complete, non-archived saved-post theater at
-  `/saved`, and the default destination for signed-in visitors.
+- **Saved** is the theater on one user's newest saves at `/play?recent=1`,
+  and the default destination for signed-in visitors.
 - **Discover** is the secondary community theater at `/live`.
-- **Library** is the grid at `/library` used to browse, search, filter, and
-  tag saved posts.
-- A **playlist** is exactly one public tag, viewed as a looping theater at
+- **Search** (`/search`) finds saves by what's in them.
+- A **channel** is exactly one tag, public ones viewable at
   `/t/{username}/{tag}`. Database and API names that predate this terminology
   may still say “collection.”
 
@@ -57,14 +56,14 @@ The visible timestamp answers a different question on each surface:
 
 | Route                       | Role                                                                                                                                |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/saved`.                       |
+| `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/play?recent=1`.               |
 | `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                                            |
-| `/saved`                    | Signed-in Saved: all non-archived saves, with independent type and Hide watched filters. Library links select a post with `?open=`. |
-| `/start`                    | Redesign (`next_ui` only): sign up/in with an email link, then import X bookmarks with live progress.                               |
-| `/channels`                 | Redesign (`next_ui` only): your channels, "Made for you" channels and Top channels.                                                 |
-| `/play`                     | Redesign (`next_ui` only): the new theater, playing a search's results as its queue.                                                |
-| `/search`                   | Redesign (`next_ui` only): search saves by meaning, with bento, groups and queue layouts.                                           |
-| `/library`                  | Signed-in grid over saved posts: search, platform/type/tag filters, archived view, and grid/list/bento layouts.                     |
+| `/saved`, `/collection`     | Old Saved links: redirect to `/play?recent=1` (`?open=` becomes `&start=`).                                                         |
+| `/start`                    | Sign up/in with an email link, then import X bookmarks with live progress.                               |
+| `/channels`                 | Your channels, "Made for you" channels and Top channels.                                                 |
+| `/play`                     | The theater, playing a search's results as its queue.                                                |
+| `/search`                   | Search saves by meaning, with bento, groups and queue layouts.                                           |
+| `/library`, `/tags`         | Old links: redirect to `/search` and `/channels`.                                                                                   |
 | `/{user}/status/{id}`       | X post preview.                                                                                                                     |
 | `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                                   |
 | `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                                           |
@@ -76,13 +75,12 @@ The visible timestamp answers a different question on each surface:
 | `/trending/archive/{week}`  | Frozen weekly ranked snapshot, capped to 50 posts.                                                                                  |
 | `/leaderboard`              | Public playlist leaderboard for this week.                                                                                          |
 | `/leaderboard/{window}`     | `today`, `month`, or `all-time` playlist ranking.                                                                                   |
-| `/tags`                     | Signed-in playlist/tag management and sharing controls.                                                                             |
 | `/settings`                 | Account, reading, appearance, X connection, install, and deletion settings.                                                         |
 | `/admin`                    | Persisted-admin-only analytics and moderation console.                                                                              |
 | `/share`                    | PWA/extension/share-sheet URL router; it does not store content itself.                                                             |
 | `/welcome`                  | One-shot, noindex username choice after a new email account is created.                                                             |
 | `/t/{username}`             | Public curator hub containing that account's public playlists.                                                                      |
-| `/t/{username}/{tag}`       | Public playlist theater, cloneable as “Save playlist.”                                                                              |
+| `/t/{username}/{tag}`       | A channel's page (public, or private to its owner), playable and saveable.                                                          |
 | `/{username}`               | Public X-author hub built from posts ADHX already knows publicly.                                                                   |
 
 Legacy routes stay as redirects: `/collection` → `/saved`, `/discover` →

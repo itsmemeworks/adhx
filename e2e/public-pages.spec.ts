@@ -25,7 +25,7 @@ test.describe('public pages', () => {
     await expect(page.getByText(`#${PLAYLIST_TAG}`).first()).toBeVisible()
     await page.getByRole('link', { name: `View #${PLAYLIST_TAG}` }).click()
     await expect(page).toHaveURL(new RegExp(`/t/${E2E_USERNAME}/${PLAYLIST_TAG}`))
-    await expectTheaterReady(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'E2e pl' })).toBeVisible()
   })
 
   test('legacy discovery URLs redirect', async ({ page }) => {

@@ -1,13 +1,5 @@
 import { expect } from '@playwright/test'
-import { POST } from './constants'
-import {
-  authedTest,
-  caption,
-  expectTheaterReady,
-  goNext,
-  pauseTheater,
-  visibleQueueCount,
-} from './helpers'
+import { authedTest, expectTheaterReady, goNext } from './helpers'
 
 authedTest.describe('signed-in Live vs Saved URLs', () => {
   authedTest('Live rewrites the address bar to the current post', async ({ page }) => {
@@ -22,26 +14,6 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await expect(page).toHaveURL(/\/(status\/|reels\/|reel\/|shorts\/|video\/)/)
   })
 
-  authedTest('Saved keeps /saved while advancing', async ({ page }) => {
-    await page.goto('/saved')
-    await expectTheaterReady(page)
-    await expect(page).toHaveURL(/\/saved/)
-    await goNext(page)
-    await expect(page).toHaveURL(/\/saved/)
-    await expect(page).not.toHaveURL(/\/status\//)
-  })
-
-  authedTest('clicking Saved after Live restores /saved', async ({ page }) => {
-    await page.goto('/saved')
-    await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Discover', exact: true }).click()
-    await expect(page).toHaveURL(/\/status\//, { timeout: 15_000 })
-    await page.getByRole('button', { name: 'Saved', exact: true }).click()
-    await expect(page).toHaveURL(/\/saved/)
-    await expect(page).not.toHaveURL(/\/status\//)
-    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible()
-  })
-
   authedTest('Keep playing persists across reload on Live', async ({ page }) => {
     await page.goto('/live')
     await expectTheaterReady(page)
@@ -52,31 +24,5 @@ authedTest.describe('signed-in Live vs Saved URLs', () => {
     await page.goto('/live')
     await expectTheaterReady(page)
     await expect(page.getByRole('button', { name: 'Keep playing' })).toBeVisible()
-  })
-
-  authedTest('Saved starts with all saves again after a Discover visit', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('adhx-theater-repeat-saved', 'off')
-    })
-    await page.goto('/saved')
-    await expectTheaterReady(page)
-    const initialCount = await visibleQueueCount(page).innerText()
-    await pauseTheater(page)
-    await goNext(page)
-    await expect(caption(page, POST.bravo.text)).toBeVisible()
-    const before = await visibleQueueCount(page).innerText()
-    expect(before).toMatch(/\d+ in queue/)
-
-    await page.getByRole('button', { name: 'Discover', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Discover', exact: true })).toHaveAttribute(
-      'aria-current',
-      'true',
-    )
-    await page.getByRole('button', { name: 'Saved', exact: true }).click()
-    await expect(page).toHaveURL(/\/saved/)
-    await expect(caption(page, POST.alpha.text)).toBeVisible()
-    await pauseTheater(page)
-    await expect(visibleQueueCount(page)).toHaveText(initialCount)
-    await expect(page.getByRole('button', { name: 'Play once' })).toBeVisible()
   })
 })

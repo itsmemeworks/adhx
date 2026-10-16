@@ -3,18 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import {
-  Search,
-  Settings,
-  X,
-  RefreshCw,
-  Bookmark,
-  Inbox,
-  Compass,
-  LogOut,
-  Tag,
-  Trophy,
-} from 'lucide-react'
+import { Settings, RefreshCw, Bookmark, Inbox, Compass, LogOut, Tag, Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
 import { usePreferences } from '@/lib/preferences-context'
@@ -63,20 +52,6 @@ export function Header() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const { preferences } = usePreferences()
-  // Search lives only on /library (collection) and /tags. On /tags it filters
-  // the tag list via the same cross-component custom-event pattern documented
-  // in CLAUDE.md ("Cross-Component Keyboard Feedback") — TagsClient owns the
-  // filtering; Header re-broadcasts every keystroke and never writes `search`
-  // into the URL. Everywhere else the control is hidden so the bar stays
-  // logo-left / avatar-right without a center field throwing it off.
-  const onLibraryPage = pathname === '/library'
-  const onTagsPage = pathname === '/tags'
-  const showSearch = onLibraryPage || onTagsPage
-  const searchLabel = onTagsPage ? 'Tags' : 'Search'
-  const [searchValue, setSearchValue] = useState(searchParams.get('search') || '')
-  const [searchOpen, setSearchOpen] = useState(
-    () => onLibraryPage && Boolean(searchParams.get('search')),
-  )
   const [showSync, setShowSync] = useState(false)
   const [silentSync, setSilentSync] = useState(false)
   const [cooldownReady, setCooldownReady] = useState(false)
@@ -202,60 +177,6 @@ export function Header() {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [authStatus?.authenticated, cooldown.canSync, searchParams, showSync, silentSync, xConnected])
 
-  // Update search from the library URL. Depend on the `search` string, not the
-  // searchParams object: a new object identity on every render would reset
-  // in-progress typing back to the still-empty URL and cancel the debounce.
-  // On /tags the query never lives in the URL, so we must not clobber typing.
-  const urlSearch = onLibraryPage ? searchParams.get('search') || '' : ''
-  useEffect(() => {
-    if (!onLibraryPage) return
-    setSearchValue(urlSearch)
-    if (urlSearch) setSearchOpen(true)
-  }, [urlSearch, onLibraryPage])
-
-  // Collapse / reset when leaving a search surface (Header stays mounted).
-  useEffect(() => {
-    if (onTagsPage) {
-      setSearchValue('')
-      setSearchOpen(false)
-      return
-    }
-    if (!onLibraryPage) setSearchOpen(false)
-  }, [pathname, onTagsPage, onLibraryPage])
-
-  // Real-time search with debounce. Deliberately does NOT depend on `searchParams`:
-  // this component is the sole owner of writing `search` into the URL, and
-  // AuthedHome issues its own router.replace calls for its own filters
-  // (filter/platform/sort/etc). If `searchParams` were a dependency here, every one
-  // of those unrelated navigations would reset this debounce timer mid-keystroke,
-  // delaying or dropping the search push. `window.location.search` is read fresh
-  // inside the timeout callback, so the comparison still reflects the current URL.
-  //
-  // Only /library writes the URL (stay on /library, never bounce to `/`). On
-  // /tags, search is routed to TagsClient via `tags-search` and this effect
-  // is skipped.
-  useEffect(() => {
-    if (!onLibraryPage) return
-    const debounceTimer = setTimeout(() => {
-      const currentParams = new URLSearchParams(window.location.search)
-      const currentSearch = currentParams.get('search') || ''
-      const newSearch = searchValue.trim()
-
-      // Only update if different from current URL
-      if (newSearch !== currentSearch) {
-        if (newSearch) {
-          currentParams.set('search', newSearch)
-        } else {
-          currentParams.delete('search')
-        }
-        const queryString = currentParams.toString()
-        router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
-      }
-    }, 300) // 300ms debounce
-
-    return () => clearTimeout(debounceTimer)
-  }, [searchValue, router, onLibraryPage, pathname])
-
   async function fetchAuthStatus() {
     try {
       // /api/auth/me (not the X-only /api/auth/twitter/status) so email-only
@@ -339,17 +260,6 @@ export function Header() {
     return () => clearInterval(interval)
   }, [cooldown.canSync, cooldown.cooldownRemaining, cooldown.fetchedAt])
 
-  const handleSearchChange = (value: string) => {
-    setSearchValue(value)
-    if (onTagsPage) {
-      window.dispatchEvent(new CustomEvent('tags-search', { detail: value }))
-    }
-  }
-
-  const clearSearch = () => {
-    handleSearchChange('')
-  }
-
   const handleSyncComplete = () => {
     fetchStats()
     fetchCooldown()
@@ -413,12 +323,12 @@ export function Header() {
               <nav className="hidden lg:flex items-center gap-1 text-[13.5px]">
                 {[
                   {
-                    href: '/saved',
+                    href: '/play?recent=1',
                     label: 'Saved',
                     active: pathname === '/' || isSavedPath(pathname),
                   },
                   { href: '/live', label: 'Discover', active: pathname === '/live' },
-                  { href: '/library', label: 'Library', active: pathname === '/library' },
+                  { href: '/search', label: 'Search', active: pathname === '/search' },
                 ].map(({ href, label, active }) => (
                   <Link
                     key={href}
@@ -433,13 +343,15 @@ export function Header() {
                   </Link>
                 ))}
                 <Link
-                  href="/tags"
+                  href="/channels"
                   className={cn(
                     'rounded-full px-3 py-1.5 font-semibold transition-colors',
-                    pathname === '/tags' ? 'bg-clay/[0.12] text-clay' : 'text-ink-2 hover:text-ink',
+                    pathname === '/channels'
+                      ? 'bg-clay/[0.12] text-clay'
+                      : 'text-ink-2 hover:text-ink',
                   )}
                 >
-                  Tags
+                  Channels
                 </Link>
                 <Link
                   href="/leaderboard"
@@ -456,59 +368,9 @@ export function Header() {
             )}
           </div>
 
-          {/* Right section - Search (library + tags) then avatar */}
+          {/* Right section - avatar */}
           {authStatus?.authenticated && (
-            <div
-              className={cn(
-                'flex items-center gap-1.5 sm:gap-2 min-w-0',
-                showSearch && searchOpen ? 'flex-1 justify-end' : 'flex-shrink-0',
-              )}
-            >
-              {showSearch &&
-                (searchOpen ? (
-                  <div className="relative min-w-0 flex-1 max-w-[20rem]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-3 pointer-events-none" />
-                    <input
-                      type="text"
-                      autoFocus
-                      value={searchValue}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          e.currentTarget.blur()
-                          setSearchOpen(false)
-                        }
-                      }}
-                      placeholder={searchLabel}
-                      aria-label={searchLabel}
-                      className="w-full h-9 pl-9 pr-9 bg-inset rounded-full text-base sm:text-[13.5px] text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        clearSearch()
-                        setSearchOpen(false)
-                      }}
-                      aria-label="Close search"
-                      className="absolute right-2 inset-y-0 my-auto h-6 w-6 flex items-center justify-center hover:bg-hairline rounded-full transition-colors"
-                    >
-                      <X className="w-4 h-4 text-ink-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setSearchOpen(true)}
-                    aria-label={searchLabel}
-                    aria-expanded={false}
-                    className={cn(
-                      'w-9 h-9 flex items-center justify-center rounded-full hover:bg-inset transition-colors',
-                      searchValue ? 'text-clay' : 'text-ink-2',
-                    )}
-                  >
-                    <Search className="w-[18px] h-[18px]" />
-                  </button>
-                ))}
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-shrink-0">
               {/* Sync is a secondary action in the avatar menu (all viewports),
                   not the main nav bar. Adding by URL is paste-first now
                   (PasteToPreview) — no Add button. */}
@@ -575,7 +437,7 @@ export function Header() {
                       <div className="py-1">
                         {[
                           {
-                            href: '/saved',
+                            href: '/play?recent=1',
                             label: 'Saved',
                             Icon: Inbox,
                             active: pathname === '/' || isSavedPath(pathname),
@@ -602,30 +464,30 @@ export function Header() {
                           </Link>
                         ))}
                         <Link
-                          href="/library"
+                          href="/search"
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/library'
+                            pathname === '/search'
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}
                         >
                           <Bookmark className="w-4 h-4" />
-                          Library
+                          Search
                         </Link>
                         <Link
-                          href="/tags"
+                          href="/channels"
                           onClick={() => setShowUserMenu(false)}
                           className={cn(
                             'flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-inset transition-colors',
-                            pathname === '/tags'
+                            pathname === '/channels'
                               ? 'font-semibold text-clay'
                               : 'text-ink-2 hover:text-ink',
                           )}
                         >
                           <Tag className="w-4 h-4" />
-                          Tags
+                          Channels
                         </Link>
                         <Link
                           href="/leaderboard"

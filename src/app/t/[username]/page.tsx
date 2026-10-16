@@ -173,8 +173,8 @@ export default async function CuratorProfilePage({ params }: Props) {
             Make your own
           </MakeYourOwnButton>
         ) : isOwnProfile ? (
-          <Link href="/tags" className={TOP_PILL_CLASS}>
-            Manage playlists
+          <Link href="/channels" className={TOP_PILL_CLASS}>
+            Manage channels
           </Link>
         ) : null}
       </nav>

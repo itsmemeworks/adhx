@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Clock, LayoutGrid, List, Play, Rows3, Search, Users, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NEXT_UI_PARAM } from '@/lib/next-ui/flag'
-import { useNextUi } from '@/lib/next-ui/useNextUi'
 import {
   countLabel,
   orderByStrength,
@@ -141,8 +139,6 @@ function Skeleton() {
 
 export function SearchScreen({ initial }: { initial: SearchState }) {
   const router = useRouter()
-  // Persists a `?next_ui=1` opt-in so links from here keep the redesign.
-  useNextUi()
   const [state, setState] = useState<SearchState>(initial)
   const [recent, setRecent] = useState<string[]>([])
   const [learningOpen, setLearningOpen] = useState(false)
@@ -164,12 +160,10 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
   useEffect(() => setRecent(readRecent()), [])
 
   // Keep the URL shareable and reload-safe without a history entry or a
-  // server render per keystroke. The flag parameter, if any, stays put.
+  // server render per keystroke.
   useEffect(() => {
     const timer = setTimeout(() => {
       const params = paramsFromState(state)
-      const flag = new URLSearchParams(window.location.search).get(NEXT_UI_PARAM)
-      if (flag !== null) params.set(NEXT_UI_PARAM, flag)
       const query = params.toString()
       const next = query ? `/search?${query}` : '/search'
       if (next !== `${window.location.pathname}${window.location.search}`) {
@@ -213,7 +207,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
       <header className="sticky top-0 z-20 border-b border-nx-hairline bg-nx-ink/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-3 md:gap-5 md:px-8">
           <Link
-            href="/saved"
+            href="/"
             className="hidden shrink-0 items-center gap-3 md:flex"
             aria-label="adhx home"
           >
@@ -387,9 +381,6 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
               <Link href="/settings" className="underline hover:text-nx-cream">
                 Settings
               </Link>
-              <a href="/api/next-ui?value=0&to=%2Fsaved" className="underline hover:text-nx-cream">
-                Use the previous look
-              </a>
             </p>
           </div>
         )}

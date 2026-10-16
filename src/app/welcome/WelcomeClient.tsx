@@ -36,7 +36,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
 
   function finish(toCollection = false) {
     // The primary CTA says "Continue to Saved" — `/` is the Live theater.
-    window.location.assign(toCollection ? '/saved' : returnTo)
+    window.location.assign(toCollection ? '/play?recent=1' : returnTo)
   }
 
   const onStarterStep = claimedUsername !== null

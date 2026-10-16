@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Lock, Play, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from '@/components/feed/types'
-import { useNextUi } from '@/lib/next-ui/useNextUi'
 import { autoPlayHref, channelPlayHref, recentPlayHref } from '../theater/queue'
 import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
@@ -48,8 +47,6 @@ function countLabel(n: number): string {
 }
 
 export function ChannelsScreen() {
-  // Persists a `?next_ui=1` opt-in so links from here keep the redesign.
-  useNextUi()
   const [data, setData] = useState<ChannelsResponse | null>(null)
   const [error, setError] = useState(false)
   const [keeping, setKeeping] = useState<string | null>(null)
@@ -244,9 +241,6 @@ export function ChannelsScreen() {
         <Link href="/settings" className="underline hover:text-white">
           Settings
         </Link>
-        <a href="/api/next-ui?value=0&to=%2Ftags" className="underline hover:text-white">
-          Use the previous look
-        </a>
       </footer>
       {toast && (
         <div

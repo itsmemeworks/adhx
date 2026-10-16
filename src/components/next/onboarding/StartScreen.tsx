@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { Check, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useNextUi } from '@/lib/next-ui/useNextUi'
 import { AdhxFace } from '../loader'
 import { NxImage } from '../primitives'
 import { postCoverSrc } from '../post'
@@ -408,7 +407,6 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
 }
 
 export function StartScreen({ returnTo, autoSync }: { returnTo: string; autoSync: boolean }) {
-  useNextUi()
   const [account, setAccount] = useState<Account | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
 

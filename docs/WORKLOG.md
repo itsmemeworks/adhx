@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Previous look removed; theater says when it leaves your results
+
+Owner: "remove everything to do with the old design". The `next_ui` flag, `NEXT_UI_FORCE`, `/api/next-ui` and "Use the previous look" are gone; the library grid (`AuthedHome`, `FeedGrid`, `FilterBar`), Tags page and playlist theater were deleted. `/saved`, `/collection`, `/library`, `/tags` are now redirects; `/t/{user}/{tag}` always renders `ChannelPage` (private → owner only). No runtime rollback any more: runbook rewritten (rollback = redeploy previous release).
+Still on the previous look, awaiting the owner's call: signed-out `/`, `/live`, `/trending`, `/leaderboard`, `/settings`, `/admin`, previews, `/welcome`. Their nav now points at Search/Channels/`/play?recent=1`.
+Same day: posts added after a search's results (stick to this vibe / more like this) are labelled "More like @x’s video · Not from “q”" and don't change the "n of N" count; "couldn't be learned" is never shown; posts deleted upstream are hidden everywhere; X articles whose content never loaded are re-fetched at worker start; account menu (Sync X / Settings / Sign out) in the new headers.
+State: local, not pushed.
+
 ## 2026-10-16 — Match strength in search, plus fixes from a full local sweep
 
 Search results now say how close they are: a three-bar meter on every tile (Strong match / Good match / Related), strong first, and the rest under "Related to “frog”" explaining they're close in meaning but not what you described — so the chameleon and the seal under "frog" make sense.

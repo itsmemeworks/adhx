@@ -23,22 +23,23 @@ test.describe('signed out', () => {
     await expect(page).not.toHaveURL(/\/saved/)
   })
 
-  test('public playlist is watchable; private playlist stays locked', async ({ page }) => {
+  test('public channel is watchable; private channel stays locked', async ({ page }) => {
     await page.goto(`/t/${E2E_USERNAME}/${PLAYLIST_TAG}`)
-    await expectTheaterReady(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'E2e pl' })).toBeVisible()
     await expect(page.getByText(POST.charlie.text).first()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Make your own' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Play' }).first()).toBeVisible()
 
     await page.goto(`/t/${E2E_USERNAME}/${PRIVATE_TAG}`)
-    await expect(page.getByRole('heading', { name: 'Private playlist' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Next post' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Private channel' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Play' })).toHaveCount(0)
   })
 
-  test('Save playlist opens sign-in instead of cloning', async ({ page }) => {
+  test('Save channel asks a signed-out viewer to sign in, then comes back', async ({ page }) => {
     await page.goto(`/t/${E2E_USERNAME}/${ONE_ITEM_TAG}`)
-    await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Make your own' }).click()
-    await expectSignInModal(page)
+    await page.getByRole('link', { name: 'Sign in to save' }).first().click()
+    await expect(page).toHaveURL(
+      new RegExp(`/start\\?returnTo=${encodeURIComponent(`/t/${E2E_USERNAME}/${ONE_ITEM_TAG}`)}`),
+    )
   })
 
   test('preview Save opens sign-in', async ({ page }) => {

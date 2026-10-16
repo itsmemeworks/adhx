@@ -258,7 +258,7 @@ export function TopChannels({
 export function NxHeader({ children }: { children?: React.ReactNode }) {
   return (
     <header className="sticky top-0 z-20 flex items-center gap-4 bg-black/90 px-4 py-3 backdrop-blur md:px-7 md:py-[18px]">
-      <Link href="/saved" aria-label="adhx home" className="flex items-center gap-2.5">
+      <Link href="/" aria-label="adhx home" className="flex items-center gap-2.5">
         <span
           aria-hidden
           className="flex h-7 w-7 items-center justify-center gap-1 rounded-[9px] bg-nx-accent"

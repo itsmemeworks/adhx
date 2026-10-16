@@ -142,7 +142,7 @@ describe('Header', () => {
     })
   })
 
-  it('shows Saved · Discover · Library · Tags · Leaderboard nav as links, with no Add button', async () => {
+  it('shows Saved · Discover · Search · Channels · Leaderboard nav as links, with no Add button', async () => {
     mockFetch(true)
     render(<Header />)
 
@@ -151,10 +151,10 @@ describe('Header', () => {
     // Desktop primary nav — every entry is a real route now that the theater
     // has its own (`/` = Live, `/saved` = Saved, `/library` = the
     // grid). Theater used to be a button dispatching `open-theater`.
-    expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
-    expect(screen.getByRole('link', { name: 'Saved' })).toHaveAttribute('href', '/saved')
+    expect(screen.getByRole('link', { name: 'Search' })).toHaveAttribute('href', '/search')
+    expect(screen.getByRole('link', { name: 'Saved' })).toHaveAttribute('href', '/play?recent=1')
     expect(screen.getByRole('link', { name: 'Discover' })).toHaveAttribute('href', '/live')
-    expect(screen.getByRole('link', { name: 'Tags' })).toHaveAttribute('href', '/tags')
+    expect(screen.getByRole('link', { name: 'Channels' })).toHaveAttribute('href', '/channels')
     expect(screen.getByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
       'href',
       '/leaderboard',
@@ -162,7 +162,7 @@ describe('Header', () => {
 
     // "Live" is gone — renamed to "Theater" (the mode contains both the live
     // pulse and the collection-as-theater tabs, so it's not just "Live"), and
-    // "Collection" is gone — the grid is "Library" now.
+    // "Collection" is gone — the grid is "Search" now.
     expect(screen.queryByRole('button', { name: 'Live' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Collection' })).not.toBeInTheDocument()
 
@@ -177,7 +177,7 @@ describe('Header', () => {
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
     const theaterLink = screen.getByRole('link', { name: 'Saved' })
-    expect(theaterLink).toHaveAttribute('href', '/saved')
+    expect(theaterLink).toHaveAttribute('href', '/play?recent=1')
     theaterLink.click()
 
     const liveEvent = dispatchSpy.mock.calls
@@ -186,7 +186,7 @@ describe('Header', () => {
     expect(liveEvent).toBeUndefined()
   })
 
-  it('carries Library + Saved as links in the avatar menu too', async () => {
+  it('carries Search + Saved as links in the avatar menu too', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
@@ -197,9 +197,9 @@ describe('Header', () => {
     expect(avatarButton).toHaveAttribute('aria-expanded', 'true')
 
     const theaterLinks = screen.getAllByRole('link', { name: 'Saved' })
-    expect(theaterLinks.some((l) => l.getAttribute('href') === '/saved')).toBe(true)
-    const libraryLinks = screen.getAllByRole('link', { name: 'Library' })
-    expect(libraryLinks.some((l) => l.getAttribute('href') === '/library')).toBe(true)
+    expect(theaterLinks.some((l) => l.getAttribute('href') === '/play?recent=1')).toBe(true)
+    const libraryLinks = screen.getAllByRole('link', { name: 'Search' })
+    expect(libraryLinks.some((l) => l.getAttribute('href') === '/search')).toBe(true)
   })
 
   it('shows a Leaderboard link in the avatar menu too, pointing at /leaderboard', async () => {
@@ -215,16 +215,16 @@ describe('Header', () => {
     expect(menuLeaderboardLinks.some((l) => l.getAttribute('href') === '/leaderboard')).toBe(true)
   })
 
-  it('shows a Tags nav link (top bar + avatar menu)', async () => {
+  it('shows a Channels nav link (top bar + avatar menu)', async () => {
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     // Desktop primary nav
-    const navTagsLink = screen.getByRole('link', { name: 'Tags' })
-    expect(navTagsLink).toHaveAttribute('href', '/tags')
+    const navTagsLink = screen.getByRole('link', { name: 'Channels' })
+    expect(navTagsLink).toHaveAttribute('href', '/channels')
 
-    // Avatar menu also carries a Tags entry
+    // Avatar menu also carries a Channels entry
     // Distinguish from the Collection entry and mobile search icon, which also
     // carry `rounded-full` — the avatar toggle is the only 33px round button.
     // Use fireEvent (not a raw `.click()`) so the resulting setState is
@@ -233,8 +233,8 @@ describe('Header', () => {
     const avatarButton = avatarButtons.find((btn) => btn.className.includes('w-[33px]'))
     fireEvent.click(avatarButton!)
 
-    const menuTagsLinks = screen.getAllByRole('link', { name: 'Tags' })
-    expect(menuTagsLinks.some((l) => l.getAttribute('href') === '/tags')).toBe(true)
+    const menuTagsLinks = screen.getAllByRole('link', { name: 'Channels' })
+    expect(menuTagsLinks.some((l) => l.getAttribute('href') === '/channels')).toBe(true)
   })
 
   // The Collection entry is gone with the concept it was named for (owner: "remove
@@ -254,73 +254,22 @@ describe('Header', () => {
     // The theater used to be an overlay the feed page owned, so reaching it
     // from elsewhere meant `router.push('/?live=1')`. It's a route now, so the
     // same plain link works from anywhere.
-    mockPathname = '/tags'
+    mockPathname = '/channels'
     mockFetch(true)
     render(<Header />)
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
-    expect(screen.getByRole('link', { name: 'Saved' })).toHaveAttribute('href', '/saved')
-    expect(screen.getByRole('link', { name: 'Library' })).toHaveAttribute('href', '/library')
+    expect(screen.getByRole('link', { name: 'Saved' })).toHaveAttribute('href', '/play?recent=1')
+    expect(screen.getByRole('link', { name: 'Search' })).toHaveAttribute('href', '/search')
   })
 
   it('marks only the destination matching the current route', async () => {
-    mockPathname = '/saved'
-    mockFetch(true)
-    const { rerender } = render(<Header />)
-    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
-
-    // `/saved` is the theater's Saved tab, so the Theater entry —
-    // not Library — is the active one there.
-    expect(screen.getByRole('link', { name: 'Saved' }).className).toContain('text-clay')
-    expect(screen.getByRole('link', { name: 'Library' }).className).not.toContain('bg-clay')
-
     mockPathname = '/live'
-    rerender(<Header />)
+    mockFetch(true)
+    render(<Header />)
+    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
     expect(screen.getByRole('link', { name: 'Discover' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Saved' })).not.toHaveAttribute('aria-current')
-  })
-
-  it('on /tags: search is an icon that expands to "Tags"; typing dispatches "tags-search" instead of navigating', async () => {
-    mockPathname = '/tags'
-    mockFetch(true)
-    render(<Header />)
-    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
-
-    expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument()
-    fireEvent.click(await screen.findByRole('button', { name: 'Tags' }))
-
-    const input = screen.getByPlaceholderText('Tags')
-    expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument()
-
-    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
-    fireEvent.change(input, { target: { value: 'work' } })
-
-    const tagsSearchEvent = dispatchSpy.mock.calls
-      .map((call) => call[0] as CustomEvent)
-      .find((e) => e.type === 'tags-search')
-    expect(tagsSearchEvent?.detail).toBe('work')
-
-    // No navigation should follow — /tags search never touches the URL.
-    await new Promise((r) => setTimeout(r, 350))
-    expect(pushSpy).not.toHaveBeenCalled()
-  })
-
-  it('on /library: search is an icon that expands to "Search" and writes /library?search=', async () => {
-    mockPathname = '/library'
-    mockFetch(true)
-    render(<Header />)
-    await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
-    const input = screen.getByPlaceholderText('Search')
-    fireEvent.change(input, { target: { value: 'rust' } })
-
-    await waitFor(() => {
-      expect(pushSpy).toHaveBeenCalled()
-      const url = pushSpy.mock.calls[pushSpy.mock.calls.length - 1][0] as string
-      expect(url).toMatch(/^\/library\?/)
-      expect(url).toContain('search=rust')
-    })
   })
 
   it('hides search on pages that are not library or tags', async () => {
@@ -330,9 +279,9 @@ describe('Header', () => {
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Tags' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Channels' })).not.toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Search')).not.toBeInTheDocument()
-    expect(screen.queryByPlaceholderText('Tags')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Channels')).not.toBeInTheDocument()
   })
 
   it('hides "Sync bookmarks" in the avatar menu for an email-only account (no X connected)', async () => {

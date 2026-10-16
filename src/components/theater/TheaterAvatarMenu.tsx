@@ -348,7 +348,7 @@ export function TheaterAvatarMenu({
   // Current-screen markers for the other nav entries (round 8). Prefix match
   // so /leaderboard/[window] etc. still count.
   const isLeaderboard = pathname === '/leaderboard' || pathname?.startsWith('/leaderboard/')
-  const isTags = pathname === '/tags' || pathname?.startsWith('/tags/')
+  const isTags = pathname === '/channels'
   const isSettings = pathname === '/settings' || pathname?.startsWith('/settings/')
   const close = () => setOpen(false)
 
@@ -496,7 +496,7 @@ export function TheaterAvatarMenu({
             />
           ) : (
             <>
-              <MenuLink href="/saved" onClick={close} current={isSavedPath(pathname)}>
+              <MenuLink href="/play?recent=1" onClick={close} current={isSavedPath(pathname)}>
                 <Inbox size={15} />
                 <span>Saved</span>
               </MenuLink>
@@ -506,17 +506,13 @@ export function TheaterAvatarMenu({
               </MenuLink>
             </>
           )}
-          <MenuLink href="/library" onClick={close}>
+          <MenuLink href="/search" onClick={close}>
             <Bookmark size={15} />
-            {/* "Library" (the grid over your saves — repo terminology) rather
-                than "Your collection", which became ambiguous the moment the
-                Theater group gained a "Saved" tab: two rows reading
-                as the same destination, going to different screens. */}
-            <span>Library</span>
+            <span>Search</span>
           </MenuLink>
-          <MenuLink href="/tags" onClick={close} current={isTags}>
+          <MenuLink href="/channels" onClick={close} current={isTags}>
             <Tag size={15} />
-            <span>Tags</span>
+            <span>Channels</span>
           </MenuLink>
           <MenuLink href="/leaderboard" onClick={close} current={isLeaderboard}>
             <Trophy size={15} />

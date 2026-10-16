@@ -4,16 +4,16 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Bookmark, Link2, Play } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
-import { useNextUi } from '@/lib/next-ui/useNextUi'
 import { postCoverSrc } from '../post'
 import { resultKey, type SearchResultItem } from '../search/model'
 import { Masonry } from '../search/ResultViews'
 import { channelPlayHref, recentPlayHref } from '../theater/queue'
+import { startHref } from '@/lib/next-ui/routes'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
 
 /**
- * A channel's page in the redesign (`/t/{username}/{tag}` with `next_ui`):
+ * A channel's page (`/t/{username}/{tag}`):
  * collage hero, Play, Save channel (copies it into your saves), the public
  * link, and its posts. Anyone can open a public channel.
  */
@@ -30,7 +30,6 @@ export function ChannelPage({
   mine: boolean
   signedIn: boolean
 }) {
-  useNextUi()
   const [items, setItems] = useState<SearchResultItem[] | null>(null)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
@@ -129,6 +128,7 @@ export function ChannelPage({
                 {!mine && (
                   <SaveChannelButton
                     signedIn={signedIn}
+                    path={path}
                     state={saved}
                     onSave={() => void saveChannel()}
                   />
@@ -149,6 +149,7 @@ export function ChannelPage({
             {!mine && (
               <SaveChannelButton
                 signedIn={signedIn}
+                path={path}
                 state={saved}
                 onSave={() => void saveChannel()}
                 className="flex-1 justify-center"
@@ -215,11 +216,14 @@ function PlayButton({
 
 function SaveChannelButton({
   signedIn,
+  path,
   state,
   onSave,
   className,
 }: {
   signedIn: boolean
+  /** This channel's address, to come back to after signing in. */
+  path: string
   state: 'idle' | 'saving' | 'done' | 'error'
   onSave: () => void
   className?: string
@@ -227,7 +231,7 @@ function SaveChannelButton({
   const base = `flex h-[50px] items-center gap-2 rounded-full border-[1.5px] border-white bg-black/30 px-5 text-[15px] font-bold ${className ?? ''}`
   if (!signedIn) {
     return (
-      <Link href="/" className={base}>
+      <Link href={startHref(path)} className={base}>
         <Bookmark aria-hidden className="h-4 w-4" />
         <span>Sign in to save</span>
       </Link>

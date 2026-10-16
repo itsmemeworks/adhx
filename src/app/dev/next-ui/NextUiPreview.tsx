@@ -24,7 +24,6 @@ import {
   postCoverSrc,
   type NextPostKind,
 } from '@/components/next'
-import { setNextUiOverride, useNextUi } from '@/lib/next-ui/useNextUi'
 import { SAMPLE_ITEMS } from './samples'
 
 type LoadState =
@@ -97,30 +96,6 @@ function Missing({ what }: { what: string }) {
     <p className="m-0 rounded-xl border border-dashed border-nx-hairline px-4 py-3 text-[13px] text-nx-muted">
       {`No saved ${what} to show yet.`}
     </p>
-  )
-}
-
-function FlagPanel() {
-  const on = useNextUi()
-  const button =
-    'h-9 rounded-full border border-nx-hairline px-3.5 text-[13px] font-semibold text-nx-cream hover:border-nx-muted'
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-nx-surface px-4 py-3 text-[13px]">
-      <span className="text-nx-muted">next_ui in this browser:</span>
-      <span className={on ? 'font-bold text-nx-accent' : 'font-bold text-nx-cream'}>
-        {on ? 'on' : 'off'}
-      </span>
-      <span className="flex-1" />
-      <button type="button" className={button} onClick={() => setNextUiOverride(true)}>
-        Turn on
-      </button>
-      <button type="button" className={button} onClick={() => setNextUiOverride(false)}>
-        Turn off
-      </button>
-      <button type="button" className={button} onClick={() => setNextUiOverride(null)}>
-        Use default
-      </button>
-    </div>
   )
 }
 
@@ -213,7 +188,6 @@ export function NextUiPreview() {
               Showing sample posts — sign in to see your own saves here.
             </p>
           )}
-          <FlagPanel />
         </header>
 
         {state.status === 'loading' ? (

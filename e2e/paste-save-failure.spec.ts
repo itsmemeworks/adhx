@@ -4,7 +4,7 @@ import { authedTest, caption, expectTheaterReady, pasteTheaterLink } from './hel
 const reelUrl = 'https://www.instagram.com/reel/Dc5ATuiiS0V/?igsi=dm9jdTR5cTN0dDg4'
 
 for (const mobile of [false, true]) {
-  for (const tab of ['live', 'saved']) {
+  for (const tab of ['live']) {
     authedTest(
       `${mobile ? 'mobile' : 'desktop'} ${tab}: a failed save still opens the pasted Reel`,
       async ({ page }) => {

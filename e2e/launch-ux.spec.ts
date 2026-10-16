@@ -1,12 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
-import { ADD_VIDEO, POST } from './constants'
-import {
-  addSessionCookie,
-  deleteLivePulse,
-  expectTheaterReady,
-  insertLivePulse,
-  pauseTheater,
-} from './helpers'
+import { ADD_VIDEO } from './constants'
+import { deleteLivePulse, expectTheaterReady, insertLivePulse, pauseTheater } from './helpers'
 
 async function freshVisitor(page: Page) {
   await page.addInitScript(() => {
@@ -83,50 +77,3 @@ for (const viewport of [
     }
   })
 }
-
-test('Saved remembers Hide watched while Discover keeps its own defaults', async ({ page }) => {
-  await freshVisitor(page)
-  await addSessionCookie(page)
-  await page.goto('/saved')
-  await expectTheaterReady(page)
-  await pauseTheater(page)
-  const filter = page.getByRole('button', { name: 'Filter posts', exact: true })
-  await expect(filter).toContainText('All posts')
-  await filter.click()
-  const hide = page.getByRole('switch', { name: 'Hide watched' }).filter({ visible: true })
-  await expect(hide).toHaveAttribute('aria-checked', 'false')
-  await hide.click()
-  await page.reload()
-  await expectTheaterReady(page)
-  await filter.click()
-  await expect(hide).toHaveAttribute('aria-checked', 'true')
-  await page.keyboard.press('Escape')
-  await page.goto('/live')
-  await expect(filter).toContainText('Videos')
-  await filter.click()
-  await expect(hide).toHaveAttribute('aria-checked', 'true')
-  await page.keyboard.press('Escape')
-  // Use an already-owned post: an unsaved signed-in preview starts an async
-  // save, which would mutate the next navigation test's baseline collection.
-  await page.goto(`/${POST.alpha.author}/status/${POST.alpha.id}`)
-  await expectTheaterReady(page)
-  await expect(
-    page.getByTestId('theater-stage').getByText(POST.alpha.text, { exact: true }),
-  ).toBeVisible()
-})
-
-test('an empty account has an actionable paste path and discovery link', async ({ page }) => {
-  await freshVisitor(page)
-  await addSessionCookie(page)
-  await page.route('**/api/feed?**', (route) =>
-    route.fulfill({
-      json: { items: [], pagination: { page: 1, limit: 100, total: 0, totalPages: 0 } },
-    }),
-  )
-  await page.goto('/saved')
-  await expect(page.getByText('Save your first favourite')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Watch Discover' })).toHaveAttribute('href', '/live')
-  await expect(
-    page.getByTestId('theater-stage').getByRole('button', { name: 'Paste link', exact: true }),
-  ).toBeVisible()
-})
