@@ -25,14 +25,12 @@ describe('GET /api/next-ui', () => {
   it('remembers an opt-out with a cookie and goes where asked', () => {
     const res = call('value=0&to=%2Ftags')
     expect(res.status).toBe(307)
-    expect(res.headers.get('location')).toBe('http://localhost/tags')
+    expect(res.headers.get('location')).toBe('/tags')
     expect(res.headers.get('set-cookie')).toMatch(/adhx_next_ui=0/)
   })
 
   it('never redirects off-site, and clears the choice without a value', () => {
-    expect(call('value=1&to=https%3A%2F%2Fevil.example').headers.get('location')).toBe(
-      'http://localhost/',
-    )
+    expect(call('value=1&to=https%3A%2F%2Fevil.example').headers.get('location')).toBe('/')
     expect(call('').headers.get('set-cookie')).toMatch(/adhx_next_ui=;/)
   })
 })

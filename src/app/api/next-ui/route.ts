@@ -13,7 +13,9 @@ export function GET(request: NextRequest) {
   const value = parseFlagValue(params.get('value'))
   const to = params.get('to')
   const target = isSafeReturnUrl(to) ? to : value === false ? '/saved' : '/'
-  const response = NextResponse.redirect(new URL(target, request.url))
+  // A relative Location keeps the host the person is on (behind the proxy,
+  // or 127.0.0.1 vs localhost in dev, `request.url` can name another origin).
+  const response = new NextResponse(null, { status: 307, headers: { Location: target } })
   if (value === null) {
     response.cookies.delete(NEXT_UI_COOKIE)
   } else {
