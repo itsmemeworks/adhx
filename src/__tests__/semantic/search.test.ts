@@ -156,6 +156,7 @@ describe('searchPosts', () => {
 
     const result = await searchPosts(request())
     expect(result.understood).toBe(true)
+    expect(result.close).toBe(true)
     expect(result.hits[0].key).toBe('twitter:mine')
     expect(result.hits.map((h) => h.key)).not.toContain('twitter:theirs')
   })

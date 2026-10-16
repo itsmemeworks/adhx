@@ -50,6 +50,8 @@ export interface SearchResult {
   total: number
   /** False when meaning could not be used (model warming up or down): keywords only. */
   understood: boolean
+  /** The best hit is a real match, not just the nearest thing. */
+  close: boolean
 }
 
 export interface SearchDeps {
@@ -76,6 +78,8 @@ export const TUNING = {
    * queries the wanted post never scored under 2.2; rank 30 sits near 1–1.8.
    */
   minScore: 1.5,
+  /** A best hit at or above this counts as a close match (the wanted post never scored under 2.2). */
+  closeScore: 2.2,
 }
 
 type VectorList = { hits: { key: string; score: number }[]; mean: number; std: number }
@@ -219,7 +223,7 @@ export async function searchPosts(
   deps: SearchDeps = {},
 ): Promise<SearchResult> {
   const q = request.q.trim()
-  if (!q) return { hits: [], total: 0, understood: true }
+  if (!q) return { hits: [], total: 0, understood: true, close: false }
   const pool = request.type === 'all' ? TUNING.pool : TUNING.typedPool
   const mine = request.scope === 'mine' ? await savedKeys(request.userId) : undefined
 
@@ -259,5 +263,7 @@ export async function searchPosts(
     hits: page.map((r) => ({ ...r, ...split(r.key) })),
     total: ranked.length,
     understood: vector !== null,
+    // Without meaning, keyword hits are exact words: close by definition.
+    close: ranked.length > 0 && (vector === null || ranked[0].score >= TUNING.closeScore),
   }
 }

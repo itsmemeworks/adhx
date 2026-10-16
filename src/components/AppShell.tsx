@@ -124,13 +124,17 @@ export function AppShell({
     // /welcome is the one-shot username chooser: a full-screen dark card with
     // no app chrome — a mounted (visually hidden) Header would leave its
     // search input focusable underneath the overlay.
-    pathname === '/welcome'
+    pathname === '/welcome' ||
+    // next_ui search (redesign) draws its own header; the page redirects to
+    // /library when the flag is off, so this never strands the old UI.
+    pathname === '/search'
   // One-shot username / starter-playlist screen — the banner covers the card.
   const hideInstallBanner = pathname === '/welcome'
   const isAccountOwnedPage =
     pathname === '/live' ||
     isSavedPath(pathname) ||
     pathname === '/library' ||
+    pathname === '/search' ||
     pathname === '/tags' ||
     pathname === '/settings' ||
     pathname === '/welcome' ||

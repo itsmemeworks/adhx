@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Search screen (phase 3 of the redesign)
+
+Merged phase 0 (`feat/next-ui-foundations`) into `feat/find-by-context`. Added `/search` behind `next_ui`: search bar with My saves / Everyone, type pills, Words only, Bento / Groups / Queue, Play all.
+Bento autoplays the best match muted (own media proxies; off under reduced motion) beside a masonry; Groups split results by how they matched; Queue explains "Why this one".
+The API now reports `close` (best hit ≥ 2.2) so a far-off query reads "Nearest …" instead of claiming matches. URL sync uses `history.replaceState` (router.replace re-rendered the server page per keystroke and lost the flag).
+Verified on 448 local saves at desktop and 375px. State: local, not pushed. Next: theater v2 (phase 4) takes the result list as its queue; Play opens the first result in today's theater until then.
+
 ## 2026-10-16 — Search API by meaning (phase 2 of the redesign)
 
 `GET /api/search`: words/picture/video vectors plus FTS5 keywords, `mine`/`everyone` scope, feed type filters, words only, optional Jev rerank (`refine=1`).
