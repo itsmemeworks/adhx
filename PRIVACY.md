@@ -50,6 +50,13 @@ Display text and images on the pulse are copied server-side from the post. Clien
 - **Cookie:** `adhx_session` (httpOnly, `Secure` in production, `SameSite=Lax`).
 - **localStorage (this browser only):** theme, “seen” posts in the theater, install/shortcut dismiss flags. Not sent to our servers.
 
+Optional Library **By meaning** search downloads public EmbeddingGemma 2 model files
+from Hugging Face, which receives the download request and normal connection information.
+Your saved text and search queries are processed on your device, not sent to an AI provider.
+The browser caches public model files and account-specific content hashes and numerical
+search vectors. Search does not persist raw bookmark text or result lists in its own cache.
+Clear ADHX site data in your browser to remove these local caches.
+
 ### Third parties
 
 | Service       | What it sees                                           | Notes                                                                                                     |

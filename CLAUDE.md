@@ -841,6 +841,18 @@ Centralized type definitions including:
 - `StreamedBookmark` - Lighter type for sync SSE events
 - `streamedBookmarkToFeedItem()` - Conversion helper
 
+### Contextual text search
+
+Library's opt-in **By meaning** mode uses a dedicated browser worker and the pinned
+EmbeddingGemma 2 text-only ONNX model in `src/lib/search/model.ts`. It reads all feed pages,
+checks each response's immutable `accountId`, and filters the corpus before retrieval.
+Keep `platform:id` identities, account-specific vector caches, request-generation guards,
+and worker termination on auth changes. Never send corpus text or search queries to the
+model host. `dev`/`build` copy executable runtime assets from the installed package; do not
+load remote executable scripts or add JavaScript `unsafe-eval` to production CSP.
+See ARCHITECTURE.md for passages, ranking, caches, and evaluation. Images/video remain
+text-metadata-only; no Jev, transcription, or generated descriptions in this milestone.
+
 ### Feed API Performance
 
 The feed API (`/api/feed/route.ts`) uses optimized SQL queries to avoid N+1 problems:

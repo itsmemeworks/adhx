@@ -202,6 +202,13 @@ export function Header() {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [authStatus?.authenticated, cooldown.canSync, searchParams, showSync, silentSync, xConnected])
 
+  useEffect(() => {
+    if (!onLibraryPage) return
+    const focusSearch = () => setSearchOpen(true)
+    window.addEventListener('library-search-focus', focusSearch)
+    return () => window.removeEventListener('library-search-focus', focusSearch)
+  }, [onLibraryPage])
+
   // Update search from the library URL. Depend on the `search` string, not the
   // searchParams object: a new object identity on every render would reset
   // in-progress typing back to the still-empty URL and cancel the debounce.
@@ -479,7 +486,7 @@ export function Header() {
                           setSearchOpen(false)
                         }
                       }}
-                      placeholder={searchLabel}
+                      placeholder={onLibraryPage ? 'Describe what you remember…' : searchLabel}
                       aria-label={searchLabel}
                       className="w-full h-9 pl-9 pr-9 bg-inset rounded-full text-base sm:text-[13.5px] text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-clay/40"
                     />

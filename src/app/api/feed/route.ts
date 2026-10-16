@@ -221,6 +221,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       const activeCount = totalCount - (archivedCount[0]?.count || 0)
 
       return NextResponse.json({
+        accountId: userId,
         items: [],
         pagination: { page, limit, total: 0, totalPages: 0 },
         stats: { total: totalCount, active: Math.max(0, activeCount) },
@@ -559,6 +560,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     metrics.trackUser(userId)
 
     return NextResponse.json({
+      accountId: userId,
       items,
       pagination: {
         page,

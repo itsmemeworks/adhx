@@ -5,8 +5,8 @@
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev": "next dev -p 3001",
-    "build": "next build",
+    "dev": "node scripts/copy-search-runtime.mjs && next dev -p 3001",
+    "build": "node scripts/copy-search-runtime.mjs && next build",
     "start": "next start",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -23,7 +23,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "email:dev": "email dev --dir src/emails --port 3003",
-    "prepare": "husky"
+    "prepare": "husky",
+    "search:evaluate": "tsx scripts/evaluate-search.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -50,6 +51,7 @@
     "url": "https://github.com/itsmemeworks/adhx/issues"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.1",
     "@sentry/node": "^10.72.0",
     "better-sqlite3": "^13.0.3",
     "clsx": "^2.1.1",
@@ -62,8 +64,8 @@
     "react-dom": "^19.2.8",
     "react-email": "^6.9.3",
     "tailwind-merge": "^3.6.0",
-    "twitter-api-v2": "^1.29.1",
-    "tsx": "^4.23.13"
+    "tsx": "^4.23.13",
+    "twitter-api-v2": "^1.29.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",

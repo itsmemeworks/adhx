@@ -107,7 +107,7 @@ beforeEach(() => {
 
 describe('AuthedHome ?live=1 handling', () => {
   it('navigates to `/live` and does not mount a theater overlay', async () => {
-    const { queryByTestId } = render(<FeedPage />)
+    const { queryByTestId } = render(<FeedPage accountId="test-user" />)
 
     await waitFor(() => expect(replaceSpy).toHaveBeenCalledWith('/live'))
     expect(queryByTestId('theater-shell')).not.toBeInTheDocument()

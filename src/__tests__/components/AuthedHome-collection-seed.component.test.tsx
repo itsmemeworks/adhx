@@ -101,7 +101,7 @@ beforeEach(() => {
 
 describe('AuthedHome leaves the personal theater to /saved', () => {
   it('navigates to /saved on leftover open-theater, and never mounts an overlay', async () => {
-    const { queryByTestId } = render(<FeedPage />)
+    const { queryByTestId } = render(<FeedPage accountId="test-user" />)
 
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
     window.dispatchEvent(new CustomEvent('open-theater', { detail: { tab: 'personal' } }))
@@ -117,7 +117,7 @@ describe('AuthedHome collection deep link', () => {
     currentParamsObj = new URLSearchParams(query)
     feedRequests = []
     replaceSpy.mockClear()
-    const { unmount, queryByTestId } = render(<FeedPage />)
+    const { unmount, queryByTestId } = render(<FeedPage accountId="test-user" />)
     try {
       await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
       const hit = replaceSpy.mock.calls.some(([url]) => String(url).startsWith('/saved'))
