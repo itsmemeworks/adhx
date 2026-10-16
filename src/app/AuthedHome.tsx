@@ -16,6 +16,7 @@ import {
   streamedBookmarkToFeedItem,
   parseFilterType,
 } from '@/components/feed'
+import { ContextSearch } from '@/components/feed/ContextSearch'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Loader2, CheckCircle2, MessageSquare } from 'lucide-react'
 import { PasteToPreview } from '@/components/PasteToPreview'
@@ -27,7 +28,7 @@ import { useSyncListener } from './useSyncListener'
 import { collectionPath } from '@/lib/theater/collection-href'
 import { clientEventMatchesCurrentAccount, notifyCollectionChanged } from '@/lib/client-events'
 
-export default function AuthedHome(): React.ReactElement {
+export default function AuthedHome({ accountId }: { accountId: string }): React.ReactElement {
   return (
     <Suspense
       fallback={
@@ -36,12 +37,12 @@ export default function AuthedHome(): React.ReactElement {
         </div>
       }
     >
-      <FeedPageContent />
+      <FeedPageContent accountId={accountId} />
     </Suspense>
   )
 }
 
-function FeedPageContent(): React.ReactElement {
+function FeedPageContent({ accountId }: { accountId: string }): React.ReactElement {
   const router = useRouter()
   const searchParams = useSearchParams()
   // The grid lives at `/library` (the theater took `/`), and every URL sync
@@ -77,6 +78,7 @@ function FeedPageContent(): React.ReactElement {
   )
   const [hideArchived, setHideArchived] = useState(searchParams.get('hideArchived') !== 'false')
   const [view, setView] = useState<'grid' | 'list' | 'bento'>('grid')
+  const [contextSearch, setContextSearch] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   // Tag-select plumbing (unified-theater-collection.md §4, built by a parallel
   // agent) — FilterBar owns entering/exiting select mode; FeedGrid reads it
@@ -946,25 +948,44 @@ function FeedPageContent(): React.ReactElement {
         <PasteLinkButton className="w-full justify-center" />
       </div>
 
-      <div className="px-4 sm:px-[26px] py-4">
-        <ErrorBoundary componentName="FeedGrid">
-          <FeedGrid
-            items={items}
-            loading={loading}
-            hasMore={hasMore}
-            lastSyncAt={lastSyncAt}
-            sortField={sort === 'posted' ? 'createdAt' : 'processedAt'}
-            hideArchived={hideArchived}
-            stats={stats}
-            view={view}
-            onExpand={goToCollectionFromItem}
-            onLoadMore={loadMore}
-            onShowAll={() => setHideArchived(false)}
-            tagSelectTag={tagSelectTag}
-            justAddedKey={justAddedKey}
-          />
-        </ErrorBoundary>
-      </div>
+      <ContextSearch
+        accountId={accountId}
+        enabled={contextSearch}
+        onEnabledChange={setContextSearch}
+        query={search}
+        filter={filter}
+        platform={platformFilter}
+        hideArchived={hideArchived}
+        tags={selectedTags}
+        tagSelectTag={tagSelectTag}
+        view={view}
+        sort={sort}
+        sortDirection={sortDirection}
+        stats={stats}
+        onShowAll={() => setHideArchived(false)}
+      />
+      {!contextSearch && (
+        <div className="px-4 sm:px-[26px] py-4">
+          <ErrorBoundary componentName="FeedGrid">
+            <FeedGrid
+              items={items}
+              searchQuery={search}
+              loading={loading}
+              hasMore={hasMore}
+              lastSyncAt={lastSyncAt}
+              sortField={sort === 'posted' ? 'createdAt' : 'processedAt'}
+              hideArchived={hideArchived}
+              stats={stats}
+              view={view}
+              onExpand={goToCollectionFromItem}
+              onLoadMore={loadMore}
+              onShowAll={() => setHideArchived(false)}
+              tagSelectTag={tagSelectTag}
+              justAddedKey={justAddedKey}
+            />
+          </ErrorBoundary>
+        </div>
+      )}
     </div>
   )
 }

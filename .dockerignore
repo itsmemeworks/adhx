@@ -6,6 +6,10 @@ node_modules
 out
 
 # Local data
+.state/
+public/search-runtime/
+.next-*/
+test-results/
 data/
 *.db
 

@@ -61,3 +61,6 @@ playwright/.cache/
 # Design handoff prototype bundles (reference only, not production code)
 design_handoff_adhx_matter/
 design_handoff_knowledge_graph/
+
+# Generated browser inference runtime (copied before dev/build)
+public/search-runtime/

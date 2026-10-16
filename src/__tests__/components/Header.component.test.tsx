@@ -312,7 +312,7 @@ describe('Header', () => {
     await waitFor(() => expect(screen.getByLabelText('ADHX home')).toBeInTheDocument())
 
     fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
-    const input = screen.getByPlaceholderText('Search')
+    const input = screen.getByPlaceholderText('Describe what you remember…')
     fireEvent.change(input, { target: { value: 'rust' } })
 
     await waitFor(() => {

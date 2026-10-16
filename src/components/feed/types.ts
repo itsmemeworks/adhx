@@ -3,6 +3,7 @@
  */
 
 export interface MediaItem {
+  altText?: string | null
   id: string
   mediaType: string
   width?: number | null
@@ -16,6 +17,8 @@ export interface MediaItem {
 }
 
 export interface LinkItem {
+  previewTitle?: string | null
+  previewDescription?: string | null
   id: number
   bookmarkId: string
   originalUrl?: string | null
@@ -116,6 +119,7 @@ export type Platform = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
  * field to both types.
  */
 export interface FeedItem {
+  searchMatch?: { source: string; text: string }
   id: string
   platform?: Platform // 'twitter' (default) | 'instagram' | 'tiktok' | 'youtube'
   author: string

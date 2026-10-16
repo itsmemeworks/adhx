@@ -6,6 +6,18 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Add opt-in contextual text search
+
+Library By meaning runs pinned EmbeddingGemma 2 q4 text inference in a browser worker.
+Search includes overlapping article passages, quotes, previews, alt text, authors, and tags.
+Ranked matches combine semantic retrieval with a bounded lexical boost; Jev is deferred.
+All feed pages are account-checked; filters, stale-request guards, and auth teardown stay local.
+Model files and account-scoped vectors cache on-device; executable runtime assets are self-hosted.
+Validated 3,699 tests, 8 Library browser checks, type/lint/format/build, and local WebGPU search.
+Private 448-save evaluation: chosen targets in top 5 for 18/20 development queries (literal 2/20).
+State: implemented for review; production deployment remains separate.
+Follow-ups: image/video understanding and broader human-labelled search evaluation.
+
 ## 2026-09-15 — Move mobile PiP into bottom playback controls
 
 Moved picture-in-picture from the right post-action rail to the bottom playback group, beside expand.

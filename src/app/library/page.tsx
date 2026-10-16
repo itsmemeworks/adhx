@@ -17,5 +17,5 @@ export default async function LibraryPage() {
   const userId = await getCurrentUserId()
   if (!userId) redirect('/')
 
-  return <AuthedHome />
+  return <AuthedHome accountId={userId} />
 }

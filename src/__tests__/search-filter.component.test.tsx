@@ -169,7 +169,7 @@ describe('Header search -> feed filtering (regression)', () => {
     render(
       <>
         <Header />
-        <FeedPage />
+        <FeedPage accountId="test-user" />
       </>,
     )
 
@@ -205,7 +205,7 @@ describe('Header search -> feed filtering (regression)', () => {
     currentQuery = 'search=kept'
     currentParamsObj = new URLSearchParams(currentQuery)
 
-    render(<FeedPage />)
+    render(<FeedPage accountId="test-user" />)
 
     await waitFor(() => expect(feedRequests.length).toBeGreaterThan(0))
     expect(feedRequests[feedRequests.length - 1]).toContain('search=kept')

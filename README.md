@@ -73,6 +73,26 @@ Tagging is private until you choose to publish a tag. A published tag becomes a 
 - a **Save playlist** action that lets another signed-in person clone its posts and tag into their own account; and
 - a place on the public [`/leaderboard`](https://adhx.com/leaderboard), where playlists are ranked by views and clones across today, this week, this month, or all time.
 
+### Find a save by meaning
+
+In Library, choose **By meaning** and describe what you remember in Search — for
+example, “animated effects for a website background.” EmbeddingGemma 2 runs in a
+background worker on your device and combines meaning matches with keyword relevance.
+It searches saved text, available article bodies, quotes, link previews, image alt text,
+and tags. Results open the original saved post; grid and list views also show the matching passage.
+
+The first search downloads about 200 MB of public model files and prepares your collection.
+Later searches reuse cached model files and account-specific passage vectors. No API key,
+AI subscription, or per-search AI service is required. WebGPU is used when available,
+with a slower WebAssembly option on other supported browsers. Keywords remain available
+if your device cannot run the model. Photos and videos are searched through their saved
+text in this milestone; there is no image analysis, transcription, or Jev integration.
+
+To evaluate locally, provide a private `FeedItem` corpus (`{ "items": [...] }`) and a JSON
+array of `{ "query": "...", "expected": ["twitter:post-id"] }` labels, then run
+`pnpm search:evaluate /path/to/corpus.json /path/to/queries.json /path/to/report.json`.
+Keep personal corpora, labels, reports, and local databases outside Git.
+
 ## Discover and Trending
 
 ADHX also turns anonymous community activity into ways to discover what people are watching:

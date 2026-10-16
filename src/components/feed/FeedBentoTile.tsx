@@ -48,6 +48,9 @@ export function FeedBentoTile({
   if (isMedia && thumb) {
     return (
       <button
+        data-search-result-key={
+          item.searchMatch ? `${item.platform || 'twitter'}:${item.id}` : undefined
+        }
         type="button"
         onClick={selectionMode ? onToggleSelect : onClick}
         aria-label={
@@ -130,6 +133,9 @@ export function FeedBentoTile({
   const isQuote = !!item.isQuote
   return (
     <button
+      data-search-result-key={
+        item.searchMatch ? `${item.platform || 'twitter'}:${item.id}` : undefined
+      }
       type="button"
       onClick={selectionMode ? onToggleSelect : onClick}
       aria-label={selectionMode ? feedItemSelectionLabel(item, selected, selectionName) : undefined}

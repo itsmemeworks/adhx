@@ -84,6 +84,9 @@ export function FeedListRow({
 
   return (
     <button
+      data-search-result-key={
+        item.searchMatch ? `${item.platform || 'twitter'}:${item.id}` : undefined
+      }
       type="button"
       onClick={selectionMode ? onToggleSelect : onClick}
       aria-label={selectionMode ? feedItemSelectionLabel(item, selected, selectionName) : undefined}
@@ -144,16 +147,22 @@ export function FeedListRow({
           {!compact && <span className="font-mono text-ink-3 truncate">@{item.author}</span>}
           {compact && <span className="flex-none">· {time}</span>}
         </span>
+        {item.searchMatch && (
+          <span className="mt-2 block text-sm text-ink-2">
+            <span className="block text-xs font-semibold text-clay">{item.searchMatch.source}</span>
+            <span className="mt-1 line-clamp-3 whitespace-pre-line">{item.searchMatch.text}</span>
+          </span>
+        )}
       </span>
 
       {/* desktop-only trailing columns: type chip, duration/time, chevron */}
       {!compact && (
         <>
-          <TypeBadge type={type} className="flex-none" />
-          <span className="flex-none w-12 text-right font-mono text-[12.5px] text-ink-3">
+          <TypeBadge type={type} className="hidden sm:inline-flex flex-none" />
+          <span className="hidden sm:block flex-none w-12 text-right font-mono text-[12.5px] text-ink-3">
             {time}
           </span>
-          <ChevronRight className="flex-none w-[17px] h-[17px] text-ink-3" />
+          <ChevronRight className="hidden sm:block flex-none w-[17px] h-[17px] text-ink-3" />
         </>
       )}
     </button>

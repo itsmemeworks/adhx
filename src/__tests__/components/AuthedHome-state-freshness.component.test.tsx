@@ -186,7 +186,7 @@ beforeEach(() => {
 })
 
 async function mountGrid() {
-  render(<FeedPage />)
+  render(<FeedPage accountId="test-user" />)
   await waitFor(() => expect(renderedItems.length).toBeGreaterThan(0))
 }
 
@@ -352,7 +352,7 @@ describe('AuthedHome: pasting a link adds the post in place', () => {
   it('clears the glow so it does not become permanent decoration', async () => {
     vi.useFakeTimers()
     try {
-      render(<FeedPage />)
+      render(<FeedPage accountId="test-user" />)
       await vi.waitFor(() => expect(renderedItems.length).toBeGreaterThan(0))
       feedPages = [[feedItem('new')], feedPages[0]]
 
@@ -387,7 +387,7 @@ describe('AuthedHome: sync error UX', () => {
     currentParamsObj = new URLSearchParams(currentQuery)
 
     try {
-      render(<FeedPage />)
+      render(<FeedPage accountId="test-user" />)
       await waitFor(() => expect(MockEventSource.instances).toHaveLength(1), { timeout: 2000 })
 
       act(() => {

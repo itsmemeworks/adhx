@@ -221,6 +221,38 @@ Theater navigation, actions, queue overlays, album controls, Read/Watch mode,
 and keyboard shortcuts are detailed in the
 [theater-first specification](docs/specs/theater-first.md).
 
+## Contextual text search
+
+Library offers opt-in **By meaning** search alongside its existing keyword feed.
+`ContextSearch` reads all authenticated `/api/feed` pages (100 per request, including
+archived saves), verifies the response `accountId` on every page against the server-rendered
+immutable account scope, and applies the current platform/type/tag/archive filters before
+retrieval. Missing pages and mixed-account responses fail closed. Auth-scope changes
+terminate the worker and prevent previous-account results from rendering.
+
+`src/lib/search/documents.ts` extracts overlapping passages from saved text, actual article
+bodies, quote/retweet text, previews, alt text, authors, and tags. It never indexes raw debug
+JSON or fetches external article pages. A dedicated worker uses the pinned
+`onnx-community/embeddinggemma-2-ONNX` revision in `model.ts` (q4, 768 dimensions,
+text component only). Retrieval uses the model's query/document prefixes, normalized dot
+products, and a bounded BM25/phrase boost. Passages collapse to bookmark identities
+`platform:id`, with at most 40 closest results. Relevance is approximate; scores are not
+shown as confidence. Grid/list cards show verbatim matching passages.
+
+Public model files download from Hugging Face; executable ONNX runtime files are copied
+from the lockfile-installed package into `public/search-runtime` before dev/build. CSP
+permits WebAssembly compilation (`wasm-unsafe-eval`, not JavaScript `unsafe-eval` in production),
+same-origin workers, and model-host connections. The model runs entirely on the client;
+no user text or query is sent to an AI provider. GPU input lengths are bucketed to avoid
+compiling a new shader shape for every passage. Unsupported devices keep keyword search.
+
+IndexedDB caches only content hashes and vectors in an account/model/revision-specific
+hashed namespace. Text and result lists remain in memory. Edits/deletions are removed from
+the active cache at the next search; unavailable/quota-limited storage falls back to memory.
+Public model weights use the browser's model cache. Device storage can be removed by
+clearing ADHX site data. The reusable local evaluation script runs the same model and
+ranking code against supplied private corpora; private evidence never belongs in a PR.
+
 ## Accounts and authentication
 
 Email is the account and sign-in source of truth. X is an optional linked

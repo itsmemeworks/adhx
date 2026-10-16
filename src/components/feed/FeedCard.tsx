@@ -104,7 +104,12 @@ export function FeedCard({
     : `Open ${feedItemAccessibleDescription(item)}`
 
   return (
-    <div className="mb-4 break-inside-avoid transition-all duration-300">
+    <div
+      data-search-result-key={
+        item.searchMatch ? `${item.platform || 'twitter'}:${item.id}` : undefined
+      }
+      className="mb-4 break-inside-avoid transition-all duration-300"
+    >
       <div
         className={cn(
           'group pointer-events-none relative bg-surface border rounded-card shadow-m-sm overflow-hidden cursor-pointer focus-within:ring-2 focus-within:ring-clay [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1] [&_input]:pointer-events-auto [&_input]:relative [&_input]:z-[1] [&_select]:pointer-events-auto [&_select]:relative [&_select]:z-[1] [&_textarea]:pointer-events-auto [&_textarea]:relative [&_textarea]:z-[1]',
@@ -176,6 +181,12 @@ export function FeedCard({
           />
         )}
       </div>
+      {item.searchMatch && (
+        <div className="mt-2 px-2 pb-2 text-sm text-ink-2">
+          <span className="text-xs font-semibold text-clay">{item.searchMatch.source}</span>
+          <p className="mt-1 line-clamp-4 whitespace-pre-line">{item.searchMatch.text}</p>
+        </div>
+      )}
     </div>
   )
 }

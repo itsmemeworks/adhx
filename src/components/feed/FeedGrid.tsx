@@ -8,11 +8,14 @@ import { FeedListRow } from './FeedListRow'
 import { FeedBentoTile, BENTO_SPANS } from './FeedBentoTile'
 import { EmptyAccountOnboarding } from './EmptyAccountOnboarding'
 import type { FeedItem } from './types'
+import type { SearchMatch } from '@/lib/search/engine'
 import { notifyTagsChanged } from '@/lib/client-events'
 
 export type FeedView = 'grid' | 'list' | 'bento'
 
 interface FeedGridProps {
+  searchQuery?: string
+  searchMatches?: Map<string, SearchMatch>
   items: FeedItem[]
   loading: boolean
   hasMore: boolean
@@ -66,6 +69,8 @@ export function FeedGrid({
   hideArchived,
   stats,
   view = 'grid',
+  searchQuery = '',
+  searchMatches,
   onExpand,
   onLoadMore,
   onShowAll,
@@ -114,6 +119,10 @@ export function FeedGrid({
     },
     [tagSelectTag, tagOverlay],
   )
+
+  const displayItems = searchMatches
+    ? items.map((item) => ({ ...item, searchMatch: searchMatches.get(cardKey(item)) }))
+    : items
 
   const selectedCount = tagSelectTag
     ? items.filter(
@@ -166,6 +175,14 @@ export function FeedGrid({
     if (stats.total === 0) {
       return <EmptyAccountOnboarding />
     }
+    if (searchQuery.trim()) {
+      return (
+        <div className="py-16 text-center">
+          <h3 className="font-serif text-xl text-ink">No matches</h3>
+          <p className="mt-2 text-ink-3">Try a different description or adjust your filters.</p>
+        </div>
+      )
+    }
     return <EmptyState hideArchived={hideArchived} stats={stats} onShowAll={onShowAll} />
   }
 
@@ -173,7 +190,7 @@ export function FeedGrid({
     <>
       {view === 'grid' && (
         <div className={GRID_CLASS}>
-          {items.map((item, index) => {
+          {displayItems.map((item, index) => {
             const selected = tagSelectTag
               ? (tagOverlay.get(tagOverlayKey(item)) ?? item.tags.includes(tagSelectTag))
               : false
@@ -198,7 +215,7 @@ export function FeedGrid({
       {view === 'list' && (
         // List / Inbox — dense rows in a bordered surface.
         <div className="rounded-card border border-hairline bg-surface shadow-m-sm overflow-hidden [&>*:last-child]:border-b-0">
-          {items.map((item, index) => {
+          {displayItems.map((item, index) => {
             const selected = tagSelectTag
               ? (tagOverlay.get(tagOverlayKey(item)) ?? item.tags.includes(tagSelectTag))
               : false
@@ -221,7 +238,7 @@ export function FeedGrid({
       {view === 'bento' && (
         // Bento mosaic — mixed-size tiles; 2-col mobile → 4-col desktop.
         <div className="grid grid-cols-2 [@media(min-width:820px)]:grid-cols-4 gap-3 sm:gap-4 [grid-auto-rows:108px] sm:[grid-auto-rows:168px]">
-          {items.map((item, index) => {
+          {displayItems.map((item, index) => {
             const [cs, rs] = BENTO_SPANS[index % BENTO_SPANS.length]
             const selected = tagSelectTag
               ? (tagOverlay.get(tagOverlayKey(item)) ?? item.tags.includes(tagSelectTag))
