@@ -194,3 +194,34 @@ export const ADD_VIDEO_B: E2ePost = {
   authorName: 'E2E Add Vid B',
   text: 'E2E-ADD-VIDEO-B',
 }
+
+/*
+ * "Right now" (live moments). Two seeded people saved frog posts in the last
+ * day, so the engine groups them into one moment named after their shared
+ * word. Every post here has a seeded vector (no model runs in e2e).
+ */
+export const FROG_SAVER_IDS = ['e2e-frog-1', 'e2e-frog-2'] as const
+export const FROG_TITLE = 'Frog'
+
+function frogPost(n: number, text: string): E2ePost {
+  return {
+    id: `900000000000000600${n}`,
+    author: `e2efrog${n}`,
+    authorName: `E2E Frog ${n}`,
+    text,
+  }
+}
+
+/** Saved by the seeded frog savers. */
+export const FROG_POSTS: E2ePost[] = [
+  frogPost(1, 'Tiny frog on a lily pad'),
+  frogPost(2, 'This frog sings at midnight'),
+  frogPost(3, 'Glass frog with a see-through belly'),
+  frogPost(4, 'Rain brought every frog out tonight'),
+  frogPost(5, 'Poison dart frog in bright blue'),
+  frogPost(6, 'A frog nap on a warm stone'),
+]
+
+/** Vectors seeded but nobody has saved them yet: the e2e saves them live. */
+export const FROG_LIVE: E2ePost = frogPost(7, 'Frog catches a fly mid-jump')
+export const FROG_TUNE_IN: E2ePost = frogPost(8, 'Frog chorus after the storm')

@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Right now: Playwright spec across two accounts
+
+`e2e/right-now.spec.ts`: one account watches `/channels` while another saves a frog post through `POST /api/bookmarks/add`; without a reload the watcher sees the strip chip "→ Frog", the card's people count +1 and its "Just saved" overlay. Second test: Tune in skipped to "You’re all caught up", watching 1→2 when the saver opens `/moments/{slug}`, then the next save auto-plays with "Just saved · just now".
+E2E has no model, so `e2e/seed.ts` writes synthetic 768-dim `text` vectors into `post_embeddings` (6 frog posts on one axis saved by two seeded people, 40 background posts, two unsaved frog posts the spec saves) and `MOMENT_MIN_SAVERS=2` is set in `e2e/env.ts`. Naming falls back to the shared word, hence "Frog".
+The engine keeps its state for the server's lifetime, so each attempt saves as a fresh account and asserts the count relative to before (passes with `--repeat-each=4`). Pre-existing, unrelated failures in the full Chromium run: `nav.spec.ts` (j advances Live) and `theater-tap-declutter.spec.ts` (desktop), both failing on the base commit too. State: local, not pushed.
+
 ## 2026-10-16 — Right now: live moments and Tune in
 
 What people are saving, grouped by meaning, live: `/channels` gets Right now (Just saved strip, moment cards that glow when a save lands, forming groups that pop into new moments), `/moments/{slug}` is a live page, and `/play?moment=slug` is Tune in (new saves play next, caught-up waits for the next one, Stay close / Wander, LIVE · N watching). Engine in `src/lib/moments/`, SSE at `/api/moments/stream`.

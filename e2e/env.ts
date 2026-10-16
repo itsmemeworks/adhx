@@ -42,6 +42,8 @@ export function e2eProcessEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
     NEXT_DIST_DIR: '.next-e2e',
     // Browser tests must not download models or run background inference.
     SEMANTIC_SEARCH: 'off',
+    // "Right now" e2e seeds two savers per moment (e2e/seed.ts).
+    MOMENT_MIN_SAVERS: '2',
     ...extra,
   }
 }

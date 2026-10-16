@@ -230,6 +230,29 @@ export function deleteUserBookmark(id: string, platform = 'twitter', userId = E2
   })
 }
 
+/** A fresh account the session cookie can sign in as (`users` row + email identity). */
+export function insertUser(id: string, username: string): void {
+  withDb((sqlite) => {
+    const email = `${username}@example.com`
+    sqlite
+      .prepare(
+        `INSERT INTO users (id, username, display_name, email, username_chosen, username_change_count)
+         VALUES (?, ?, ?, ?, 1, 0)`,
+      )
+      .run(id, username, username, email)
+    sqlite
+      .prepare('INSERT INTO user_identities (provider, provider_id, user_id) VALUES (?, ?, ?)')
+      .run('email', email, id)
+  })
+}
+
+export function deleteUser(id: string): void {
+  withDb((sqlite) => {
+    sqlite.prepare('DELETE FROM user_identities WHERE user_id = ?').run(id)
+    sqlite.prepare('DELETE FROM users WHERE id = ?').run(id)
+  })
+}
+
 export function deleteUserTag(tag: string, userId = E2E_USER_ID): void {
   withDb((sqlite) => {
     sqlite.prepare('DELETE FROM bookmark_tags WHERE user_id = ? AND tag = ?').run(userId, tag)

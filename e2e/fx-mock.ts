@@ -3,6 +3,8 @@ import {
   ADD_TEXT,
   ADD_VIDEO,
   ADD_VIDEO_B,
+  FROG_LIVE,
+  FROG_TUNE_IN,
   POST,
   PREVIEW_IG,
   PREVIEW_IG_PHOTO,
@@ -12,7 +14,14 @@ import {
 } from './constants'
 
 function tweetPayload(author: string, id: string) {
-  const known = [...Object.values(POST), ADD_TEXT, ADD_VIDEO, ADD_VIDEO_B].find((p) => p.id === id)
+  const known = [
+    ...Object.values(POST),
+    ADD_TEXT,
+    ADD_VIDEO,
+    ADD_VIDEO_B,
+    FROG_LIVE,
+    FROG_TUNE_IN,
+  ].find((p) => p.id === id)
   const text = known?.text ?? `E2E tweet ${id}`
   const name = known?.authorName ?? author
   const tweet: Record<string, unknown> = {
