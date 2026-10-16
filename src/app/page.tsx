@@ -6,6 +6,8 @@ import { TheaterShell } from '@/components/theater/TheaterShell'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { collectionPath } from '@/lib/theater/collection-href'
+import { isNextUiEnabled } from '@/lib/next-ui/server'
+import { savedToPlay } from '@/lib/next-ui/routes'
 
 /**
  * `/` — signed-out public live theater + crawlable static list.
@@ -31,6 +33,11 @@ export default async function HomePage({
   const params = await searchParams
   const addedId = params.id ?? params.tweetId
   if (userId) {
+    // Redesign (default since phase 7): signed-in home opens the theater on
+    // your newest saves, starting on a just-added post when there is one.
+    if (await isNextUiEnabled(params as Record<string, string | undefined>)) {
+      redirect(savedToPlay(params.added ? addedId : null, params.platform))
+    }
     if ((params.added === 'success' || params.added === 'duplicate') && addedId) {
       redirect(collectionPath({ open: addedId, platform: params.platform }))
     }

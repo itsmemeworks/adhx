@@ -375,6 +375,14 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 ))}
               </div>
             </section>
+            <p className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-nx-muted">
+              <Link href="/settings" className="underline hover:text-nx-cream">
+                Settings
+              </Link>
+              <a href="/api/next-ui?value=0&to=%2Fsaved" className="underline hover:text-nx-cream">
+                Use the previous look
+              </a>
+            </p>
           </div>
         )}
 

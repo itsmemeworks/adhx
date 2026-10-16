@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { NEXT_UI_COOKIE, NEXT_UI_PARAM, resolveNextUi } from './flag'
+import { NEXT_UI_COOKIE, NEXT_UI_PARAM, parseFlagValue, resolveNextUi } from './flag'
 
 type SearchParamsLike =
   URLSearchParams | Record<string, string | string[] | undefined> | null | undefined
@@ -18,6 +18,10 @@ function queryValue(searchParams: SearchParamsLike): string | null {
  * `NEXT_PUBLIC_NEXT_UI` decide.
  */
 export async function isNextUiEnabled(searchParams?: SearchParamsLike): Promise<boolean> {
+  // Emergency switch: read at runtime (not inlined), so `fly secrets set
+  // NEXT_UI_FORCE=off` rolls everyone back without a rebuild.
+  const forced = parseFlagValue(process.env['NEXT_UI_FORCE'])
+  if (forced !== null) return forced
   let stored: string | null = null
   try {
     stored = (await cookies()).get(NEXT_UI_COOKIE)?.value ?? null

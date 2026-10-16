@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Cutover (phase 7 of the redesign)
+
+`next_ui` is on by default. Signed-in `/` and `/saved` open `/play?recent=1` (keeping `open=`), `/library` → `/search`, `/tags` → `/channels`; with it off the new routes bounce to the old ones. Signed-out `/`, `/live`, trending, leaderboard and settings are unchanged.
+Rollback without a rebuild: runtime `NEXT_UI_FORCE=off` beats every browser choice. `/api/next-ui?value=0|1` persists a per-browser choice server-side ("Use the previous look" links on search and channels).
+The supervisor now starts the query child first and jobs once it's ready (both would race the same model download on an empty volume). Privacy page updated for search by meaning, Everyone search and TypeSafe/Hugging Face (it claimed "no metered AI") — needs owner review.
+Runbook with staged production rollout: `docs/rollout/next-ui-cutover.md`. State: local, not pushed; production unchanged.
+
 ## 2026-10-16 — Onboarding (phase 6 of the redesign)
 
 `/start`: email link sign up/in (same box), "Check your inbox" that signs the tab in by itself once the link is opened, then Connect X and import with live counts (existing `/api/sync` stream) plus a "making them searchable" bar.

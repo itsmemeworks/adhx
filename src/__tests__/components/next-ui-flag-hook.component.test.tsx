@@ -25,9 +25,9 @@ afterEach(() => {
 })
 
 describe('useNextUi', () => {
-  it('is off by default', () => {
+  it('is on by default since the cutover', () => {
     render(<Probe />)
-    expect(screen.getByTestId('flag')).toHaveTextContent('off')
+    expect(screen.getByTestId('flag')).toHaveTextContent('on')
   })
 
   it('turns on from ?next_ui=1 and persists it for later pages', () => {
@@ -52,10 +52,10 @@ describe('useNextUi', () => {
 
   it('re-renders when the override changes', () => {
     render(<Probe />)
-    act(() => setNextUiOverride(true))
-    expect(screen.getByTestId('flag')).toHaveTextContent('on')
-    act(() => setNextUiOverride(null))
+    act(() => setNextUiOverride(false))
     expect(screen.getByTestId('flag')).toHaveTextContent('off')
+    act(() => setNextUiOverride(null))
+    expect(screen.getByTestId('flag')).toHaveTextContent('on')
     expect(window.localStorage.getItem(NEXT_UI_STORAGE_KEY)).toBeNull()
   })
 

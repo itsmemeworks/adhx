@@ -56,7 +56,7 @@ export default function PrivacyPage() {
           <span> exist only for moderation. No public query selects them.</span>
         </li>
         <li>
-          <span>We do not sell data, run ads, or run metered AI on your library.</span>
+          <span>We do not sell data or run ads.</span>
         </li>
       </ul>
 
@@ -67,6 +67,18 @@ export default function PrivacyPage() {
           and a signed httpOnly session cookie (30 days). X tokens are encrypted at rest. Bookmarks,
           tags, archive, and preferences are keyed by your account — other users cannot read them.
           Archive never writes a public pulse. A tag is private until you make it a public playlist.
+        </span>
+      </p>
+
+      <h2 className="font-serif mt-10 text-xl">Search by meaning</h2>
+      <p className="mt-3 text-ink-2">
+        <span>
+          So you can find saves by what is in them, each post’s words, picture and video frames are
+          turned into numbers by a model that runs on our own servers. These describe the post,
+          never who saved it. “Everyone” search covers posts anyone has saved and never shows who
+          saved them. “Made for you” channels are private to you. When a search is refined, your
+          search text and the public words of the top results are sent to TypeSafe (Jev) to put them
+          in a better order; your tags and who saved a post are never sent.
         </span>
       </p>
 
@@ -83,8 +95,9 @@ export default function PrivacyPage() {
       <p className="mt-3 text-ink-2">
         <span>
           X (if you connect it), Resend (magic-link email), Sentry in production (user ids hashed
-          before metrics), Fly.io (host + volume), and platform CDNs via allowlisted media proxies.
-          No advertising pixels.
+          before metrics), Fly.io (host + volume), TypeSafe (search refinement, as above), Hugging
+          Face (where our search model is downloaded from; nothing about you is sent), and platform
+          CDNs via allowlisted media proxies. No advertising pixels.
         </span>
       </p>
 

@@ -2,10 +2,13 @@
  * `next_ui` — the redesign's feature flag (phase 0 of the strangler rebuild).
  *
  * Resolution order, first decided value wins:
+ *   0. `NEXT_UI_FORCE=on|off` (server only, runtime): the emergency switch
+ *      for everyone, ignoring every per-browser choice (see `./server`)
  *   1. `?next_ui=1|0` on the current URL (also persisted, see below)
  *   2. the per-browser override (localStorage, mirrored to a cookie so the
  *      server helper sees the same answer)
- *   3. `NEXT_PUBLIC_NEXT_UI` (build-time env, default off)
+ *   3. `NEXT_PUBLIC_NEXT_UI` (build-time env), else ON — the redesign is the
+ *      default since the phase 7 cutover; `?next_ui=0` opts a browser out.
  *
  * This module is pure and isomorphic. The client hook lives in
  * `./useNextUi`, the server helper in `./server`.
@@ -29,9 +32,12 @@ export function parseFlagValue(value: string | null | undefined): boolean | null
   return null
 }
 
+/** On unless the build says otherwise (phase 7 cutover). */
+export const NEXT_UI_DEFAULT = true
+
 /** The build-time default. Inlined by Next for client bundles. */
 export function envNextUiDefault(): boolean {
-  return parseFlagValue(process.env.NEXT_PUBLIC_NEXT_UI) ?? false
+  return parseFlagValue(process.env.NEXT_PUBLIC_NEXT_UI) ?? NEXT_UI_DEFAULT
 }
 
 export interface NextUiSignals {
@@ -48,6 +54,6 @@ export function resolveNextUi(signals: NextUiSignals = {}): boolean {
   if (fromQuery !== null) return fromQuery
   const fromStored = parseFlagValue(signals.stored)
   if (fromStored !== null) return fromStored
-  if (signals.env !== undefined) return parseFlagValue(signals.env) ?? false
+  if (signals.env !== undefined) return parseFlagValue(signals.env) ?? NEXT_UI_DEFAULT
   return envNextUiDefault()
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import HomePage from '@/app/page'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getTheaterFeed } from '@/lib/theater/feed'
@@ -19,7 +19,12 @@ vi.mock('next/navigation', () => ({
 }))
 
 describe('home destination', () => {
-  beforeEach(() => vi.clearAllMocks())
+  // These cover the previous UI; the redesign's destinations are below.
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv('NEXT_UI_FORCE', 'off')
+  })
+  afterEach(() => vi.unstubAllEnvs())
 
   it('opens personal videos for signed-in viewers without fetching community posts', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('u1')
@@ -44,5 +49,31 @@ describe('home destination', () => {
     await HomePage({ searchParams: Promise.resolve({}) })
     expect(redirect).not.toHaveBeenCalled()
     expect(getTheaterFeed).toHaveBeenCalledOnce()
+  })
+})
+
+describe('home destination (redesign, the default)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('opens the theater on your newest saves', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    await expect(HomePage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      'REDIRECT:/play?recent=1',
+    )
+  })
+
+  it('starts on a just-added post', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
+    await expect(
+      HomePage({
+        searchParams: Promise.resolve({ added: 'success', id: 'reel123', platform: 'instagram' }),
+      }),
+    ).rejects.toThrow('REDIRECT:/play?recent=1&start=instagram%3Areel123')
+  })
+
+  it('keeps the public theater for signed-out visitors', async () => {
+    vi.mocked(getCurrentUserId).mockResolvedValue(null)
+    await HomePage({ searchParams: Promise.resolve({}) })
+    expect(redirect).not.toHaveBeenCalled()
   })
 })

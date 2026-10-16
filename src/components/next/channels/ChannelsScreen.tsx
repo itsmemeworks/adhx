@@ -240,6 +240,14 @@ export function ChannelsScreen() {
         </div>
         <TopChannels className="w-full lg:sticky lg:top-24 lg:w-[400px] lg:shrink-0" />
       </main>
+      <footer className="mx-auto flex max-w-[1600px] flex-wrap gap-x-4 gap-y-1 px-4 pb-10 text-[13px] text-white/50 md:px-7">
+        <Link href="/settings" className="underline hover:text-white">
+          Settings
+        </Link>
+        <a href="/api/next-ui?value=0&to=%2Ftags" className="underline hover:text-white">
+          Use the previous look
+        </a>
+      </footer>
       {toast && (
         <div
           role="status"

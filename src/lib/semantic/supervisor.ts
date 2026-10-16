@@ -120,7 +120,9 @@ function spawn(role: ChildRole): void {
 }
 
 function onMessage(role: ChildRole, message: ChildMessage): void {
-  if (message.type === 'activity') {
+  if (message.type === 'ready' && role === 'query') {
+    startJobs()
+  } else if (message.type === 'activity') {
     state.activity = message.current
   } else if (message.type === 'vectors') {
     const pending = state.pending.get(message.id)
@@ -153,11 +155,27 @@ function failPending(error: Error): void {
 }
 
 /** Start both children once per server process. No-op when the pipeline is off. */
+/**
+ * Start both children once per server process. No-op when the pipeline is off.
+ * The query child goes first and the jobs child follows once it is ready: on
+ * a fresh volume both would otherwise download the same model files into the
+ * same cache at the same time. A timeout starts jobs anyway if query stalls.
+ */
 export function startSemanticProcesses(): void {
   if (state.started || !semanticEnabled()) return
   state.started = true
-  spawn('jobs')
   spawn('query')
+  jobsFallback = setTimeout(startJobs, JOBS_START_FALLBACK_MS)
+  jobsFallback.unref?.()
+}
+
+const JOBS_START_FALLBACK_MS = 3 * 60_000
+let jobsFallback: NodeJS.Timeout | null = null
+
+function startJobs(): void {
+  if (jobsFallback) clearTimeout(jobsFallback)
+  jobsFallback = null
+  if (state.started && !state.children.jobs) spawn('jobs')
 }
 
 export function stopSemanticProcesses(): void {

@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
 import AuthedHome from '../AuthedHome'
+import { isNextUiEnabled } from '@/lib/next-ui/server'
+import { libraryToSearch } from '@/lib/next-ui/routes'
 
 /**
  * `/library` — the Collection GRID: masonry/list/bento views, the FilterBar
@@ -13,9 +15,16 @@ import AuthedHome from '../AuthedHome'
  */
 export const dynamic = 'force-dynamic'
 
-export default async function LibraryPage() {
+export default async function LibraryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>
+}) {
   const userId = await getCurrentUserId()
   if (!userId) redirect('/')
+  // Redesign (default since phase 7): the library grid became search.
+  const params = await searchParams
+  if (await isNextUiEnabled(params)) redirect(libraryToSearch(params.search))
 
   return <AuthedHome />
 }

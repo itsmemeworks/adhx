@@ -42,6 +42,10 @@ export function e2eProcessEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
     NEXT_DIST_DIR: '.next-e2e',
     // Browser tests must not download models or run background inference.
     SEMANTIC_SEARCH: 'off',
+    // These suites cover the previous UI; the redesign has its own component
+    // tests. Pin it off server-side (and in the client bundle).
+    NEXT_UI_FORCE: 'off',
+    NEXT_PUBLIC_NEXT_UI: '0',
     ...extra,
   }
 }

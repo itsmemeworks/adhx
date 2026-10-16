@@ -655,9 +655,9 @@ The UI is the **"Matter"** warm editorial direction (light + dark). Shared primi
 
 ### next_ui redesign foundations (phase 0, behind a flag)
 
-The find-by-meaning redesign is a strangler rebuild behind the **`next_ui`** flag. Phase 0 adds visual foundations only; nothing mounts them in the current UI yet.
+The find-by-meaning redesign is a strangler rebuild behind the **`next_ui`** flag, **on by default since phase 7** (rollout runbook: `docs/rollout/next-ui-cutover.md`). Phase 0 is the visual foundations; later phases (below) mount them.
 
-- **Flag** (`src/lib/next-ui/`): `?next_ui=1|0` beats the per-browser override (localStorage `adhx:next_ui`, mirrored to cookie `adhx_next_ui`) which beats `NEXT_PUBLIC_NEXT_UI` (default off). Client: `useNextUi()` / `setNextUiOverride()` (`useNextUi.ts`); server: `await isNextUiEnabled(searchParams)` (`server.ts`).
+- **Flag** (`src/lib/next-ui/`): server runtime `NEXT_UI_FORCE=on|off` (the emergency switch, ignores every browser choice) beats `?next_ui=1|0`, which beats the per-browser override (localStorage `adhx:next_ui`, mirrored to cookie `adhx_next_ui`; `/api/next-ui?value=0|1&to=` sets it server-side for pages that never run the hook), which beats `NEXT_PUBLIC_NEXT_UI` (build-time), else ON (`NEXT_UI_DEFAULT`). Client: `useNextUi()` / `setNextUiOverride()` (`useNextUi.ts`); server: `await isNextUiEnabled(searchParams)` (`server.ts`). Old entry points redirect when it's on (`src/lib/next-ui/routes.ts`: signed-in `/` and `/saved` → `/play?recent=1[&start=]`, `/library` → `/search`, `/tags` → `/channels`); new routes redirect to the old ones when it's off. Tests of the previous UI pin `vi.stubEnv('NEXT_UI_FORCE','off')`; Playwright pins it in `e2e/env.ts`.
 - **Tokens** live _alongside_ Matter: `--nx-*` RGB vars in `globals.css`, Tailwind `nx-ink` (#0f0e0c warm black), `nx-stage` (#000), `nx-cream`, `nx-accent` (#ffd23f), `nx-muted`, `nx-hairline`, …; fonts `font-nx-serif` (Instrument Serif) and `font-nx-sans` (Hanken Grotesk), loaded in `layout.tsx` with `preload: false`.
 - **Legibility rule**: text over media sits on `.nx-scrim` (transparent → black .9) **and** `.nx-text-shadow`; chips/controls over media use `.nx-plate` (black .38 + shadow + blur). Motion is `animate-nx-*` and is disabled under `prefers-reduced-motion`.
 - **Primitives** (`src/components/next/`): tiles `VideoTile` / `PhotoTile` / `PostTile` / `ArticleTile` / `GifTile` (+ `NextTile` dispatcher; row height via `--nx-tile-h`, default 340px), stages `TallVideoStage` / `WideMediaStage` / `PostStage` / `ArticleStage`, loader `AdhxFace` / `AdhxLoader` / `Shimmer` / `StageSkeleton` / `PasteToast`. All take `FeedItem`; view helpers are in `post.ts`.
@@ -1113,7 +1113,8 @@ ADMIN_USER_IDS=           # Immutable account IDs to persist as admins on startu
 ADMIN_USERNAMES=          # Strict all-match legacy bootstrap; rejected lists fail startup
 TWITTER_OAUTH_REDIRECT_URI= # Overrides the OAuth callback URL (see "OAuth callback host" below). Prod only.
 TRUST_PROXY_IP_HEADERS=   # Set true only behind a proxy that overwrites X-Forwarded-For/X-Real-IP; Fly uses Fly-Client-IP.
-NEXT_PUBLIC_NEXT_UI=      # 1 = redesigned UI on by default (build-time); browsers can still override with ?next_ui=0|1
+NEXT_PUBLIC_NEXT_UI=      # build-time default for the redesign (unset = on); browsers override with ?next_ui=0|1
+NEXT_UI_FORCE=            # runtime emergency switch: off|on for everyone, ignoring browser choices (fly secrets set NEXT_UI_FORCE=off)
 ```
 
 ### OAuth callback host (the `adhx.com` → `adhtwitter.com` bug)

@@ -33,10 +33,16 @@ describe('parseFlagValue', () => {
 })
 
 describe('resolveNextUi', () => {
-  it('is off by default', () => {
+  it('is on by default since the cutover', () => {
     vi.stubEnv('NEXT_PUBLIC_NEXT_UI', '')
-    expect(envNextUiDefault()).toBe(false)
+    expect(envNextUiDefault()).toBe(true)
+    expect(resolveNextUi()).toBe(true)
+  })
+
+  it('can still be turned off for a build', () => {
+    vi.stubEnv('NEXT_PUBLIC_NEXT_UI', '0')
     expect(resolveNextUi()).toBe(false)
+    expect(resolveNextUi({ stored: '1' })).toBe(true)
   })
 
   it('follows NEXT_PUBLIC_NEXT_UI when nothing overrides it', () => {
@@ -54,7 +60,7 @@ describe('resolveNextUi', () => {
 
   it('ignores unrecognised values at each level', () => {
     expect(resolveNextUi({ env: '1', stored: 'x', query: 'y' })).toBe(true)
-    expect(resolveNextUi({ env: 'garbage' })).toBe(false)
+    expect(resolveNextUi({ env: 'garbage' })).toBe(true)
   })
 })
 
@@ -69,5 +75,15 @@ describe('isNextUiEnabled (server)', () => {
     expect(await isNextUiEnabled({ next_ui: '0' })).toBe(false)
     expect(await isNextUiEnabled(new URLSearchParams('next_ui=0'))).toBe(false)
     expect(await isNextUiEnabled({ next_ui: ['1', '0'] })).toBe(true)
+  })
+
+  it('obeys NEXT_UI_FORCE over every per-browser choice', async () => {
+    const { isNextUiEnabled } = await import('@/lib/next-ui/server')
+    cookieJar.set('adhx_next_ui', '1')
+    vi.stubEnv('NEXT_UI_FORCE', 'off')
+    expect(await isNextUiEnabled({ next_ui: '1' })).toBe(false)
+    vi.stubEnv('NEXT_UI_FORCE', 'on')
+    cookieJar.set('adhx_next_ui', '0')
+    expect(await isNextUiEnabled({ next_ui: '0' })).toBe(true)
   })
 })

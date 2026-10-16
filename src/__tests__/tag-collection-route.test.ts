@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 let mockCurrentUserId: string | null = null
@@ -116,10 +116,13 @@ const SAMPLE_COLLECTION = {
 }
 
 describe('Shared tag route: /t/[username]/[tag]', () => {
+  // The previous playlist page; the redesign's ChannelPage has its own tests.
   beforeEach(() => {
     vi.clearAllMocks()
     mockCurrentUserId = null
+    vi.stubEnv('NEXT_UI_FORCE', 'off')
   })
+  afterEach(() => vi.unstubAllEnvs())
 
   describe('generateMetadata', () => {
     it('falls back to default metadata when the tag is not found', async () => {
