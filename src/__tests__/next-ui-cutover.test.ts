@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { NextRequest } from 'next/server'
-import { libraryToSearch, savedToPlay, TAGS_TO_CHANNELS } from '@/lib/next-ui/routes'
+import { libraryToSearch, savedToPlay, startHref, TAGS_TO_CHANNELS } from '@/lib/next-ui/routes'
+import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { GET as switchLook } from '@/app/api/next-ui/route'
 
 describe('old entry points → new screens', () => {
@@ -15,6 +16,16 @@ describe('old entry points → new screens', () => {
     expect(libraryToSearch(' frogs ')).toBe('/search?q=frogs')
     expect(libraryToSearch(undefined)).toBe('/search')
     expect(TAGS_TO_CHANNELS).toBe('/channels')
+  })
+})
+
+describe('sign-in keeps where you were', () => {
+  it('returns to the same search, not a bare /search', () => {
+    const href = startHref('/search', { q: 'frog', scope: 'everyone', next_ui: '1', x: ['a'] })
+    const returnTo = new URL(href, 'https://adhx.test').searchParams.get('returnTo')
+    expect(returnTo).toBe('/search?q=frog&scope=everyone')
+    expect(isSafeReturnUrl(returnTo)).toBe(true)
+    expect(startHref('/channels')).toBe('/start?returnTo=%2Fchannels')
   })
 })
 

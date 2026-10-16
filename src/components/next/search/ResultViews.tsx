@@ -15,10 +15,13 @@ import {
   openHref,
   previewVideoSrc,
   resultKey,
+  splitByStrength,
+  STRENGTH_LABEL,
+  strengthOfItem,
   type MatchSignal,
   type SearchResultItem,
 } from './model'
-import { EveryoneBadge, mediaBadge, ResultTile } from './ResultTile'
+import { EveryoneBadge, mediaBadge, ResultTile, StrengthMeter } from './ResultTile'
 
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false)
@@ -37,7 +40,12 @@ function useReducedMotion(): boolean {
 function queueMeta(item: SearchResultItem): string {
   const kindWord = KIND_WORD[kindOf(item)]
   const badge = mediaBadge(item)
-  return [kindWord, badge && badge !== kindWord ? badge : null, matchShort(item)]
+  return [
+    STRENGTH_LABEL[strengthOfItem(item)],
+    kindWord,
+    badge && badge !== kindWord ? badge : null,
+    matchShort(item),
+  ]
     .filter(Boolean)
     .join(' · ')
 }
@@ -85,6 +93,12 @@ export function BestMatch({
         <MediaChip tone="accent" className="left-3.5 top-3.5">
           Best match
         </MediaChip>
+        <StrengthMeter
+          strength={strengthOfItem(item)}
+          withLabel
+          tone="cream"
+          className="absolute left-3.5 top-12"
+        />
         <span className="text-sm font-bold">{author.handle || author.name}</span>
         <span className="line-clamp-[8] font-nx-serif text-[30px] leading-[1.08] md:text-[40px]">
           {text}
@@ -139,6 +153,11 @@ export function BestMatch({
       <MediaChip tone="accent" className="left-3.5 top-3.5">
         {playing ? `Playing${badge ? ` · ${badge}` : ''}` : 'Best match'}
       </MediaChip>
+      <StrengthMeter
+        strength={strengthOfItem(item)}
+        withLabel
+        className="absolute left-3.5 top-12"
+      />
       {!item.saved && <EveryoneBadge className="right-3.5 top-3.5" />}
       {!playing && kind !== 'photo' && kind !== 'article' && (
         <span
@@ -164,51 +183,88 @@ export function Masonry({
   columns = 'columns-2 md:columns-3 2xl:columns-4',
   onOpen,
   hrefFor,
+  showStrength = true,
 }: {
   items: SearchResultItem[]
   columns?: string
   onOpen?: (item: SearchResultItem) => void
   hrefFor?: HrefFor
+  showStrength?: boolean
 }) {
   return (
     <ul className={cn('list-none gap-2 p-0 md:gap-3', columns)}>
       {items.map((item) => (
         <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3">
-          <ResultTile item={item} onOpen={onOpen} href={hrefFor?.(item)} />
+          <ResultTile
+            item={item}
+            onOpen={onOpen}
+            href={hrefFor?.(item)}
+            showStrength={showStrength}
+          />
         </li>
       ))}
     </ul>
   )
 }
 
+/**
+ * The heading over results that are only related: why a chameleon shows up
+ * for "frog". Plain words, no scores.
+ */
+export function RelatedHeading({ query, count }: { query: string; count: number }) {
+  return (
+    <div className="flex flex-col gap-1 border-t border-nx-hairline pt-5">
+      <h2 className="m-0 flex items-center gap-2.5 font-nx-serif text-[24px] font-normal md:text-[28px]">
+        <StrengthMeter strength="related" />
+        <span>{query.trim() ? `Related to “${query.trim()}”` : 'Related'}</span>
+      </h2>
+      <p className="m-0 text-[13px] text-nx-muted">
+        {`${count === 1 ? 'This one is' : `These ${count} are`} close in meaning, but not exactly what you described.`}
+      </p>
+    </div>
+  )
+}
+
 /** Bento: the best match large beside a masonry of the rest (stacked on phones). */
 export function BentoView({
   items,
+  query = '',
   onOpen,
   hrefFor,
 }: {
   items: SearchResultItem[]
+  /** For the "Related to …" heading. */
+  query?: string
   onOpen?: (item: SearchResultItem) => void
   hrefFor?: HrefFor
 }) {
-  const [lead, ...rest] = items
+  const { matches, related } = splitByStrength(items)
+  const [lead, ...rest] = matches
   if (!lead) return null
   return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-      <BestMatch
-        item={lead}
-        href={hrefFor?.(lead)}
-        className="h-[min(62vh,560px)] w-full shrink-0 lg:sticky lg:top-4 lg:h-[640px] lg:w-[46%]"
-      />
-      {rest.length > 0 && (
-        <div className="min-w-0 flex-1">
-          <Masonry
-            items={rest}
-            columns="columns-2 md:columns-3 lg:columns-2 xl:columns-3"
-            onOpen={onOpen}
-            hrefFor={hrefFor}
-          />
-        </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+        <BestMatch
+          item={lead}
+          href={hrefFor?.(lead)}
+          className="h-[min(62vh,560px)] w-full shrink-0 lg:sticky lg:top-4 lg:h-[640px] lg:w-[46%]"
+        />
+        {rest.length > 0 && (
+          <div className="min-w-0 flex-1">
+            <Masonry
+              items={rest}
+              columns="columns-2 md:columns-3 lg:columns-2 xl:columns-3"
+              onOpen={onOpen}
+              hrefFor={hrefFor}
+            />
+          </div>
+        )}
+      </div>
+      {related.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <RelatedHeading query={query} count={related.length} />
+          <Masonry items={related} onOpen={onOpen} hrefFor={hrefFor} />
+        </section>
       )}
     </div>
   )
@@ -291,8 +347,17 @@ export function QueueView({
         {items.map((item, i) => {
           const cover = postCoverSrc(item.post)
           const kind = kindOf(item)
+          const firstRelated =
+            strengthOfItem(item) === 'related' &&
+            (i === 0 || strengthOfItem(items[i - 1]) !== 'related')
           return (
             <li key={resultKey(item)}>
+              {firstRelated && i > 0 && (
+                <span className="flex items-center gap-2 px-1 pb-1.5 pt-3 text-[13px] text-nx-muted">
+                  <StrengthMeter strength="related" tone="plate" />
+                  <span>Related: close in meaning, not exactly it</span>
+                </span>
+              )}
               <Link
                 href={hrefFor?.(item) ?? openHref(item)}
                 onClick={onOpen ? () => onOpen(item) : undefined}

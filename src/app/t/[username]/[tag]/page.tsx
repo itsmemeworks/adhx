@@ -77,17 +77,22 @@ async function loadCollection(
   return result
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { username, tag } = await params
-  const result = await loadCollection(username, tag)
+  const [result, nextUi] = await Promise.all([
+    loadCollection(username, tag),
+    isNextUiEnabled(searchParams ? await searchParams : undefined),
+  ])
+  // The redesign calls these channels; the previous look calls them playlists.
+  const noun = nextUi ? 'channel' : 'playlist'
 
   if (result.status === 'redirect') {
     const redirectCardUrl = playlistSocialCardUrl(result.username, result.tag)
     return {
       title: `#${tag} — ADHX`,
-      description: 'A curated playlist on ADHX.',
+      description: `A curated ${noun} on ADHX.`,
       openGraph: {
-        images: [{ url: redirectCardUrl, width: 1200, height: 630, alt: 'ADHX playlist' }],
+        images: [{ url: redirectCardUrl, width: 1200, height: 630, alt: `ADHX ${noun}` }],
       },
       twitter: { card: 'summary_large_image', images: [redirectCardUrl] },
     }
@@ -95,8 +100,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (result.status === 'private') {
     return {
-      title: 'Private playlist — ADHX',
-      description: 'This playlist is private.',
+      title: `Private ${noun} — ADHX`,
+      description: `This ${noun} is private.`,
       robots: { index: false, follow: false },
       openGraph: {
         images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
@@ -107,7 +112,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (result.status === 'not_found') {
     return {
-      title: 'ADHX playlist',
+      title: `ADHX ${noun}`,
       description: 'Save it. Lose it. Find it.',
       openGraph: {
         images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
@@ -123,7 +128,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .slice(0, 2)
     .join(' · ')
 
-  const title = `#${data.tag} — @${data.username}'s playlist on ADHX`
+  const title = `#${data.tag} — @${data.username}'s ${noun} on ADHX`
   const description = previewTexts
     ? `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}. ${truncate(previewTexts, 200)}`
     : `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}.`
@@ -145,7 +150,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           url: socialCardUrl,
           width: 1200,
           height: 630,
-          alt: `#${data.tag} playlist by @${data.username}`,
+          alt: `#${data.tag} ${noun} by @${data.username}`,
         },
       ],
     },
@@ -279,7 +284,7 @@ export default async function SharedTagPage({ params, searchParams }: Props) {
   const canonicalUrl = `${BASE_URL}/t/${data.username}/${data.tag}`
 
   const jsonLd = buildCollectionPageLd({
-    name: `#${data.tag} — @${data.username}'s playlist on ADHX`,
+    name: `#${data.tag} — @${data.username}'s ${nextUi ? 'channel' : 'playlist'} on ADHX`,
     description: `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username} on ADHX.`,
     url: canonicalUrl,
     baseUrl: BASE_URL,

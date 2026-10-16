@@ -9,6 +9,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 import { SearchScreen } from '@/components/next/search/SearchScreen'
+import { BentoView } from '@/components/next/search/ResultViews'
 import {
   DEFAULT_STATE,
   countLabel,
@@ -16,7 +17,9 @@ import {
   matchReason,
   openHref,
   paramsFromState,
+  orderByStrength,
   previewVideoSrc,
+  splitByStrength,
   stateFromParams,
   type SearchResponse,
   type SearchResultItem,
@@ -118,6 +121,35 @@ describe('search model', () => {
         post({ platform: 'youtube', media: [media({ url: 'https://www.youtube.com/shorts/x' })] }),
       ),
     ).toBeNull()
+  })
+})
+
+describe('match strength in results', () => {
+  const frog = { ...squirrel, strength: 'strong' as const }
+  const chameleon: SearchResultItem = { ...community, post: post({ id: '3003' }), strength: 'good' }
+  const robocop: SearchResultItem = {
+    ...community,
+    post: post({ id: '4004', text: 'RoboCop' }),
+    strength: 'related',
+  }
+
+  it('puts close matches first and keeps the rest as related', () => {
+    expect(orderByStrength([robocop, frog, chameleon]).map((i) => i.post.id)).toEqual([
+      '1001',
+      '3003',
+      '4004',
+    ])
+    expect(splitByStrength([robocop]).matches.map((i) => i.post.id)).toEqual(['4004'])
+  })
+
+  it('explains related results under their own heading, with a meter on each tile', () => {
+    render(<BentoView items={[frog, chameleon, robocop]} query="frog" />)
+    expect(screen.getByRole('heading', { name: /Related to “frog”/ })).toBeInTheDocument()
+    expect(
+      screen.getByText('This one is close in meaning, but not exactly what you described.'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: 'Strong match' }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: /related/ })).toBeInTheDocument()
   })
 })
 

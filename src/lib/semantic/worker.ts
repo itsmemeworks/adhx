@@ -5,7 +5,13 @@ import { captureException } from '@/lib/sentry'
 import { VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
 import { buildPostDocument, hashFor, type PostDocument } from './documents'
 import { indexPostText } from './keywords'
-import { fetchImageBytes, MediaUnavailableError, NotAVideoError, sampleVideoFrames } from './media'
+import {
+  fetchImageBytes,
+  MediaUnavailableError,
+  MediaGoneError,
+  NotAVideoError,
+  sampleVideoFrames,
+} from './media'
 import { embedImageBytes, embedTexts, embedVideoFrames } from './model'
 import { loadPostItem } from './posts'
 import { completeJob, enqueueBackfill, failJob, nextJob } from './queue'
@@ -144,13 +150,16 @@ export async function processJob(
       await completeJob(job)
       return 'done'
     } catch (error) {
-      if (error instanceof NotAVideoError) {
+      // A photo labelled as a video, or media deleted upstream: nothing to
+      // learn, and retrying can't help, so it isn't counted as a failure.
+      if (error instanceof NotAVideoError || error instanceof MediaGoneError) {
         await saveEmbedding({
           platform: job.platform,
           postId: job.postId,
           kind,
           contentHash: hash,
           status: 'none',
+          error: error instanceof MediaGoneError ? error.message : undefined,
         })
         await completeJob(job)
         return 'skipped'
@@ -202,10 +211,40 @@ export async function backfillKeywordIndex(): Promise<number> {
   return done
 }
 
+/**
+ * Posts understood as words before "no words of its own" became 'none'
+ * (`PostDocument.hasWords`): mark them so they stop matching on an author
+ * line. Short keyword rows are the only candidates, so this stays cheap.
+ * Exported for tests.
+ */
+export async function clearWordlessText(): Promise<number> {
+  const rows = db.all<{ platform: string; post_id: string }>(sql`
+    SELECT e.platform AS platform, e.post_id AS post_id
+    FROM post_embeddings e
+    JOIN post_text_fts f ON f.platform = e.platform AND f.post_id = e.post_id
+    WHERE e.kind = 'text' AND e.status = 'ok' AND length(f.body) < 200
+  `)
+  let cleared = 0
+  for (const row of rows) {
+    const item = await loadPostItem(row.platform, row.post_id)
+    if (!item || buildPostDocument(item).hasWords) continue
+    await saveEmbedding({
+      platform: row.platform,
+      postId: row.post_id,
+      kind: 'text',
+      contentHash: null,
+      status: 'none',
+    })
+    cleared++
+  }
+  return cleared
+}
+
 async function loop(): Promise<void> {
   try {
     await enqueueBackfill()
     await backfillKeywordIndex()
+    await clearWordlessText()
   } catch (error) {
     captureException(error, { endpoint: 'semantic.backfill' })
   }

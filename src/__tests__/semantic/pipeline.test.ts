@@ -49,7 +49,7 @@ import { enqueuePosts, enqueueBackfill, nextJob, failJob } from '@/lib/semantic/
 import { processJob } from '@/lib/semantic/worker'
 import { getUnderstandingStatus } from '@/lib/semantic/status'
 import { ownedKeys, retryFailed } from '@/lib/semantic'
-import { MediaUnavailableError, NotAVideoError } from '@/lib/semantic/media'
+import { MediaGoneError, MediaUnavailableError, NotAVideoError } from '@/lib/semantic/media'
 import { PRIORITY, SEMANTIC_MODEL_VERSION } from '@/lib/semantic/config'
 
 function feedItem(overrides: Partial<FeedItemResponse> = {}): FeedItemResponse {
@@ -264,6 +264,19 @@ describe('worker', () => {
     await enqueuePosts([{ platform: 'twitter', postId: '4' }], PRIORITY.urgent, ['video'])
     expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('skipped')
     expect(sampleVideoFrames).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('media deleted upstream', () => {
+  it('records it as nothing to understand, not as a failure to retry', async () => {
+    testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_A, '5')).run()
+    addMedia(USER_A, '5', 'video')
+    sampleVideoFrames.mockRejectedValueOnce(new MediaGoneError('Video is gone: 410'))
+    await enqueuePosts([{ platform: 'twitter', postId: '5' }], PRIORITY.urgent, ['video'])
+    expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('skipped')
+    const [row] = testInstance.db.select().from(schema.postEmbeddings).all()
+    expect(row).toMatchObject({ kind: 'video', status: 'none', error: 'Video is gone: 410' })
+    expect(await nextJob(new Date(Date.now() + 2 * 60 * 60_000))).toBeUndefined()
   })
 })
 

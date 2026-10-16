@@ -30,10 +30,18 @@ vi.mock('@/lib/semantic/supervisor', () => ({
 
 import { saveEmbedding } from '@/lib/semantic/store'
 import { indexPostText, ftsQuery, keywordSearch } from '@/lib/semantic/keywords'
-import { searchPosts, similarPosts, fuse, type SearchRequest } from '@/lib/semantic/search'
+import {
+  searchPosts,
+  similarPosts,
+  fuse,
+  strengthOf,
+  type SearchRequest,
+} from '@/lib/semantic/search'
+import { buildPostDocument, hashFor } from '@/lib/semantic/documents'
+import { clearWordlessText } from '@/lib/semantic/worker'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { stillLearning } from '@/lib/semantic/status'
-import { blend, describe as describePost, rerank } from '@/lib/semantic/rerank'
+import { blend, describe as describePost, jevStrength, rerank } from '@/lib/semantic/rerank'
 import { __resetVectorIndex } from '@/lib/semantic/vector-index'
 import { __resetRateLimitState } from '@/lib/rate-limit'
 import type { UnderstandingKind } from '@/lib/semantic/config'
@@ -163,7 +171,7 @@ describe('searchPosts', () => {
   })
 
   it('searches everyone but hides banned-only and moderated posts', async () => {
-    await background(USER_A)
+    await background(USER_A, 24)
     save(USER_B, 'public')
     save(USER_C, 'banned-only')
     save(USER_B, 'hidden')
@@ -278,6 +286,68 @@ describe('similarPosts', () => {
   })
 })
 
+describe('match strength', () => {
+  it('reads strong, good and related off the fused score', () => {
+    expect(strengthOf(4.5)).toBe('strong')
+    expect(strengthOf(2.9)).toBe('good')
+    expect(strengthOf(2.0)).toBe('related')
+    // Keyword-only results used the exact words.
+    expect(strengthOf(1.0, false)).toBe('good')
+    expect(strengthOf(1.8, false)).toBe('strong')
+  })
+
+  it('gives every hit a strength', async () => {
+    await background(USER_A)
+    save(USER_A, 'mine')
+    await understood('mine', 'text', CLOSE)
+    const { hits } = await searchPosts(request())
+    expect(hits[0].strength).toMatch(/strong|good|related/)
+  })
+})
+
+describe('jevStrength', () => {
+  it('lets Jev raise a words-only match, but lower it by one level at most', () => {
+    expect(jevStrength(3.5, 'related')).toBe('strong')
+    expect(jevStrength(1.2, 'strong')).toBe('good')
+    expect(jevStrength(1.2, 'good')).toBe('related')
+    expect(jevStrength(2.4)).toBe('good')
+  })
+})
+
+describe('posts without words of their own', () => {
+  const base = {
+    id: '9',
+    platform: 'twitter',
+    author: 'someone',
+    authorName: 'Someone',
+    media: null,
+    links: null,
+    articlePreview: null,
+    articleContent: null,
+    quoteContext: null,
+  }
+  const doc = (text: string) =>
+    buildPostDocument({ ...base, text } as unknown as Parameters<typeof buildPostDocument>[0])
+
+  it('are not understood as words (author line, bare links and emoji do not count)', () => {
+    expect(doc('').hasWords).toBe(false)
+    expect(doc('https://t.co/abc').hasWords).toBe(false)
+    expect(doc('😱😱😱').hasWords).toBe(false)
+    expect(doc('Kinell 🤣').hasWords).toBe(true)
+    expect(hashFor(doc(''), 'text')).toBeNull()
+    expect(hashFor(doc('frog mug'), 'text')).not.toBeNull()
+  })
+
+  it('stop matching on words after the cleanup pass', async () => {
+    save(USER_A, 'empty', { text: '' })
+    await understood('empty', 'text', CLOSE)
+    indexPostText('twitter', 'empty', 'Test Author @testauthor')
+    expect(await clearWordlessText()).toBe(1)
+    const [row] = testInstance.db.select().from(schema.postEmbeddings).all()
+    expect(row).toMatchObject({ postId: 'empty', status: 'none' })
+  })
+})
+
 describe('stillLearning', () => {
   it('flags posts whose picture or video is not understood yet', async () => {
     for (const id of ['vid', 'pic', 'words']) save(USER_A, id)
@@ -339,8 +409,16 @@ describe('loadSearchItems', () => {
           postId: 'theirs',
           score: 3,
           matched: ['words'],
+          strength: 'good',
         },
-        { key: 'twitter:mine', platform: 'twitter', postId: 'mine', score: 2, matched: ['words'] },
+        {
+          key: 'twitter:mine',
+          platform: 'twitter',
+          postId: 'mine',
+          score: 2,
+          matched: ['words'],
+          strength: 'related',
+        },
       ],
       USER_A,
     )
@@ -403,11 +481,12 @@ describe('rerank', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
     const broken = 'x'.repeat(595) + '😀😀'
-    const order = await rerank('frogs \uD83D', [
+    const reranked = await rerank('frogs \uD83D', [
       { key: 'a', item: item('a', broken), visual: false },
       { key: 'b', item: item('b', 'frog mug'), visual: false },
     ])
-    expect(order?.map((c) => c.key)).toEqual(['b', 'a'])
+    expect(reranked?.order.map((c) => c.key)).toEqual(['b', 'a'])
+    expect(reranked?.scores.get('b')).toBe(3)
     const sent = String(fetchMock.mock.calls[0][1].body)
     expect(sent).not.toContain('private-tag')
     expect(sent.isWellFormed()).toBe(true)

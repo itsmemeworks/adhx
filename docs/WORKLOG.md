@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Match strength in search, plus fixes from a full local sweep
+
+Search results now say how close they are: a three-bar meter on every tile (Strong match / Good match / Related), strong first, and the rest under "Related to “frog”" explaining they're close in meaning but not what you described — so the chameleon and the seal under "frog" make sense.
+Strength comes from the fused score; words-only matches take Jev's grade, which may lower them one level at most, and Jev drops words-only items it rates unrelated (< 0.5). Posts with no words of their own no longer get a words vector (they matched everything weakly).
+Sweep fixes: deleted media (404/410) is "nothing to learn", not a failure (local pill went 14 → 2); signed-out sign-in returns to the exact search; channel pages say "channel" in their title and share card.
+Eval unchanged: fused hit@5 0.81 / MRR 0.70, refined 0.90 / 0.83. State: local, not pushed.
+
 ## 2026-10-16 — Cutover (phase 7 of the redesign)
 
 `next_ui` is on by default. Signed-in `/` and `/saved` open `/play?recent=1` (keeping `open=`), `/library` → `/search`, `/tags` → `/channels`; with it off the new routes bounce to the old ones. Signed-out `/`, `/live`, trending, leaderboard and settings are unchanged.

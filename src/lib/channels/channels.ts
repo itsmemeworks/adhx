@@ -22,7 +22,14 @@ const OWNER_LIMIT = 200
 export function keysToHits(keys: string[]): SearchHit[] {
   return keys.map((key) => {
     const at = key.indexOf(':')
-    return { key, platform: key.slice(0, at), postId: key.slice(at + 1), score: 0, matched: [] }
+    return {
+      key,
+      platform: key.slice(0, at),
+      postId: key.slice(at + 1),
+      score: 0,
+      matched: [],
+      strength: 'strong' as const,
+    }
   })
 }
 

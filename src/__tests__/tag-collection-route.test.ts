@@ -172,6 +172,19 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       expect(JSON.stringify(metadata)).toContain('/api/og/playlist/curator/cool-stuff')
       expect(JSON.stringify(metadata)).not.toContain('https://example.com/thumb.jpg')
     })
+
+    it('calls it a channel in the redesign', async () => {
+      vi.stubEnv('NEXT_UI_FORCE', 'on')
+      const { getPublicTagCollection } = await import('@/lib/tags/query')
+      vi.mocked(getPublicTagCollection).mockResolvedValue(SAMPLE_COLLECTION)
+
+      const { generateMetadata } = await import('@/app/t/[username]/[tag]/page')
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ username: 'curator', tag: 'cool-stuff' }),
+      })
+
+      expect(metadata.title).toBe("#cool-stuff — @curator's channel on ADHX")
+    })
   })
 
   describe('page rendering', () => {

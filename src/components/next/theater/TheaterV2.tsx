@@ -36,6 +36,7 @@ import { AdhxLoader } from '../loader'
 import { ArticleStage, PostStage } from '../stages'
 import {
   groupResults,
+  orderByStrength,
   kindOf,
   resultKey,
   searchUrl,
@@ -205,7 +206,9 @@ export function TheaterV2({ source }: { source: PlaySource }) {
               saved: true,
               matched: [],
             }))
-          : response.items
+          : source.channel || source.auto
+            ? response.items
+            : orderByStrength(response.items)
         setTitle(
           source.recent
             ? 'Your saves'

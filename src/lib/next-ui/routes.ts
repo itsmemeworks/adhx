@@ -21,3 +21,21 @@ export function libraryToSearch(search?: string | null): string {
 }
 
 export const TAGS_TO_CHANNELS = '/channels'
+
+/**
+ * Sign-in that comes back to exactly where you were: `/search?q=frog`
+ * signed out → `/start?returnTo=%2Fsearch%3Fq%3Dfrog`. Only string params
+ * are kept (Next's searchParams); `next_ui` is dropped since it has done its job.
+ */
+export function startHref(
+  path: string,
+  params: Record<string, string | string[] | undefined> = {},
+): string {
+  const kept = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string' && key !== 'next_ui') kept.set(key, value)
+  }
+  const query = kept.toString()
+  const returnTo = (query ? `${path}?${query}` : path).slice(0, 1000)
+  return `/start?${new URLSearchParams({ returnTo })}`
+}

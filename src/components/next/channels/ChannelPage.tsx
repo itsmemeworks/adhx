@@ -178,6 +178,7 @@ export function ChannelPage({
                 items={items}
                 columns="columns-2 md:columns-3 xl:columns-4"
                 hrefFor={(item) => channelPlayHref(username, tag, resultKey(item))}
+                showStrength={false}
               />
             )}
           </div>

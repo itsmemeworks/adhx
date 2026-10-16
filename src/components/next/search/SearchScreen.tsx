@@ -9,8 +9,10 @@ import { NEXT_UI_PARAM } from '@/lib/next-ui/flag'
 import { useNextUi } from '@/lib/next-ui/useNextUi'
 import {
   countLabel,
+  orderByStrength,
   playHref,
   resultKey,
+  strengthOfItem,
   paramsFromState,
   readRecent,
   rememberRecent,
@@ -178,7 +180,9 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
 
   const key = JSON.stringify([state.q, state.scope, state.type, state.wordsOnly])
   const data = results.data
-  const items = useMemo(() => data?.items ?? [], [data])
+  // Close matches first, then related — the order every layout shows and the theater plays.
+  const items = useMemo(() => orderByStrength(data?.items ?? []), [data])
+  const relatedCount = items.filter((i) => strengthOfItem(i) === 'related').length
   const stale = results.answered !== key
   const typed = state.q.trim().length > 0
   const remaining = state.scope === 'mine' ? learningSummary(learning.status).remaining : 0
@@ -196,6 +200,8 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
     if (!data.understood) return 'Matching words for now. Meaning comes back in a moment.'
     if (data.total === 0) return null
     if (!data.close) return 'Nothing close to that. These are the nearest.'
+    if (relatedCount > 0 && relatedCount < items.length)
+      return `${items.length - relatedCount} close, ${relatedCount} related`
     if (remaining > 0)
       return `Still learning ${remaining} of your saves. “Words only” results were matched on their text and get better on their own.`
     return state.scope === 'everyone' ? 'Across everyone’s saves' : 'In your saves'
@@ -450,7 +456,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
             {items.length > 0 && (
               <div className={cn('transition-opacity duration-150', stale && 'opacity-60')}>
                 {state.view === 'bento' && (
-                  <BentoView items={items} onOpen={onOpen} hrefFor={hrefFor} />
+                  <BentoView items={items} query={state.q} onOpen={onOpen} hrefFor={hrefFor} />
                 )}
                 {state.view === 'groups' && (
                   <GroupsView

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { isNextUiEnabled } from '@/lib/next-ui/server'
+import { startHref } from '@/lib/next-ui/routes'
 import { TheaterV2 } from '@/components/next/theater/TheaterV2'
 import { sourceFromParams } from '@/components/next/theater/queue'
 
@@ -24,7 +25,7 @@ export default async function PlayPage({
   if (!(await isNextUiEnabled(params))) redirect('/saved')
   const source = sourceFromParams(params)
   // Anyone can watch a public channel; everything else is your own.
-  if (!source.channel && !(await getCurrentUserId())) redirect('/start?returnTo=%2Fsearch')
+  if (!source.channel && !(await getCurrentUserId())) redirect(startHref('/play', params))
   if (!source.channel && !source.auto && !source.recent && !source.search.q.trim())
     redirect('/search')
   return <TheaterV2 source={source} />

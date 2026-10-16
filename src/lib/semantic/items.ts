@@ -11,7 +11,7 @@ import {
   type BookmarkLink,
 } from '@/lib/db/schema'
 import { buildFeedItem, type FeedItemResponse } from '@/lib/feed/build-item'
-import type { MatchSignal, SearchHit } from './search'
+import type { MatchSignal, MatchStrength, SearchHit } from './search'
 
 /**
  * Turn search hits into feed-shaped posts.
@@ -28,6 +28,7 @@ export interface SearchItem {
   /** The viewer has this post in their own saves. */
   saved: boolean
   matched: MatchSignal[]
+  strength: MatchStrength
   /** Its picture or video isn't understood yet (matched on words only). */
   learning?: boolean
 }
@@ -164,6 +165,7 @@ export async function loadSearchItems(
       post: owned.viewer ? item : anonymize(item),
       saved: owned.viewer,
       matched: hit.matched,
+      strength: hit.strength,
     })
   }
   return items

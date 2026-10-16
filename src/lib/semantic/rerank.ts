@@ -110,11 +110,25 @@ export function blend(
     .map((x) => x.c)
 }
 
+const LEVELS_UP = ['related', 'good', 'strong'] as const
+type Strength = (typeof LEVELS_UP)[number]
+
+/**
+ * Jev's 0–4 relevance as a match strength, for matches made on words alone.
+ * It may raise a match freely but lower it by one level at most: a short
+ * caption like "#nibs #squirrel" can read as weak to Jev while being exactly it.
+ */
+export function jevStrength(score: number, fused: Strength = 'related'): Strength {
+  const jev: Strength = score >= 3 ? 'strong' : score >= 2 ? 'good' : 'related'
+  const floor = Math.max(0, LEVELS_UP.indexOf(fused) - 1)
+  return LEVELS_UP[Math.max(LEVELS_UP.indexOf(jev), floor)]
+}
+
 /** Rerank the first `RERANK_TOP` candidates. Returns null when Jev is unavailable or fails. */
 export async function rerank(
   query: string,
   candidates: RerankCandidate[],
-): Promise<RerankCandidate[] | null> {
+): Promise<{ order: RerankCandidate[]; scores: Map<string, number> } | null> {
   if (!rerankAvailable() || candidates.length < 2) return null
   const top = candidates.slice(0, RERANK_TOP)
   const cacheKey = `${query.trim().toLowerCase()}\n${top.map((c) => c.key).join(',')}`
@@ -128,5 +142,5 @@ export async function rerank(
     cache.set(cacheKey, scores)
     if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value as string)
   }
-  return [...blend(top, scores), ...candidates.slice(RERANK_TOP)]
+  return { order: [...blend(top, scores), ...candidates.slice(RERANK_TOP)], scores }
 }

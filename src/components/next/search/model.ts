@@ -12,12 +12,16 @@ export type SearchScope = 'mine' | 'everyone'
 export type SearchType = 'all' | 'videos' | 'photos' | 'text' | 'articles'
 export type SearchView = 'bento' | 'groups' | 'queue'
 export type MatchSignal = 'words' | 'picture' | 'video' | 'keywords'
+/** How sure a match is: it's the thing / very likely / close in meaning only. */
+export type MatchStrength = 'strong' | 'good' | 'related'
 
 export interface SearchResultItem {
   post: FeedItem
   /** In the viewer's own saves (otherwise someone else saved it). */
   saved: boolean
   matched: MatchSignal[]
+  /** Missing on older responses: treated as a good match. */
+  strength?: MatchStrength
   /** Its picture or video isn't understood yet: matched on its words only. */
   learning?: boolean
 }
@@ -230,6 +234,35 @@ export function searchHref(
 ): string {
   const query = paramsFromState({ ...DEFAULT_STATE, ...search }).toString()
   return query ? `/search?${query}` : '/search'
+}
+
+export const STRENGTH_LABEL: Record<MatchStrength, string> = {
+  strong: 'Strong match',
+  good: 'Good match',
+  related: 'Related',
+}
+
+export function strengthOfItem(item: SearchResultItem): MatchStrength {
+  return item.strength ?? 'good'
+}
+
+/** Close matches first, then the ones that are only related (each in rank order). */
+export function splitByStrength(items: SearchResultItem[]): {
+  matches: SearchResultItem[]
+  related: SearchResultItem[]
+} {
+  const matches: SearchResultItem[] = []
+  const related: SearchResultItem[] = []
+  for (const item of items) (strengthOfItem(item) === 'related' ? related : matches).push(item)
+  // With nothing close, the best of the related still leads.
+  if (matches.length === 0 && related.length > 0) matches.push(related.shift()!)
+  return { matches, related }
+}
+
+/** The order everything shows and plays in: close matches, then related. */
+export function orderByStrength(items: SearchResultItem[]): SearchResultItem[] {
+  const { matches, related } = splitByStrength(items)
+  return [...matches, ...related]
 }
 
 const RECENT_KEY = 'adhx:search:recent'

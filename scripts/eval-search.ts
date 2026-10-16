@@ -57,7 +57,7 @@ for (const file of files) {
     let refinedRank = fusedRank
     if (rerankAvailable()) {
       const items = await loadSearchItems(hits, userId)
-      const order = await rerank(
+      const reranked = await rerank(
         q.query,
         items.map((i) => ({
           key: `${i.post.platform}:${i.post.id}`,
@@ -65,7 +65,7 @@ for (const file of files) {
           visual: i.matched[0] === 'picture' || i.matched[0] === 'video',
         })),
       )
-      if (order) refinedRank = order.findIndex((c) => q.expected.includes(c.key)) + 1
+      if (reranked) refinedRank = reranked.order.findIndex((c) => q.expected.includes(c.key)) + 1
       tally(totals.refined, refinedRank)
     }
     console.log(

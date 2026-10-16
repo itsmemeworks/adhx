@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { isNextUiEnabled } from '@/lib/next-ui/server'
+import { startHref } from '@/lib/next-ui/routes'
 import { SearchScreen } from '@/components/next/search/SearchScreen'
 import { stateFromParams } from '@/components/next/search/model'
 
@@ -19,6 +20,6 @@ export default async function SearchPage({
 }) {
   const params = await searchParams
   if (!(await isNextUiEnabled(params))) redirect('/library')
-  if (!(await getCurrentUserId())) redirect('/start?returnTo=%2Fsearch')
+  if (!(await getCurrentUserId())) redirect(startHref('/search', params))
   return <SearchScreen initial={stateFromParams(params)} />
 }

@@ -16,7 +16,14 @@ import {
   postText,
 } from '../post'
 import { MediaChip, NxImage } from '../primitives'
-import { kindOf, openHref, type SearchResultItem } from './model'
+import {
+  kindOf,
+  openHref,
+  STRENGTH_LABEL,
+  strengthOfItem,
+  type MatchStrength,
+  type SearchResultItem,
+} from './model'
 
 /** Masonry tiles keep each post's shape, within limits so a column stays readable. */
 function tileAspect(item: SearchResultItem): number {
@@ -42,6 +49,65 @@ export function EveryoneBadge({ className }: { className?: string }) {
     >
       <Users aria-hidden className="h-3 w-3" />
       <span>Everyone</span>
+    </span>
+  )
+}
+
+/**
+ * How sure the match is, as three bars (like signal strength): 3 strong,
+ * 2 good, 1 related. The label is spoken and shown on hover.
+ */
+export function StrengthMeter({
+  strength,
+  className,
+  tone = 'plate',
+  withLabel = false,
+}: {
+  strength: MatchStrength
+  className?: string
+  tone?: 'plate' | 'cream'
+  withLabel?: boolean
+}) {
+  const bars = strength === 'strong' ? 3 : strength === 'good' ? 2 : 1
+  return (
+    <span
+      role="img"
+      aria-label={STRENGTH_LABEL[strength]}
+      title={STRENGTH_LABEL[strength]}
+      className={cn(
+        'pointer-events-auto flex h-6 shrink-0 items-end gap-[3px] rounded-full px-2 pb-[7px] pt-1.5',
+        tone === 'plate' ? 'nx-plate' : 'bg-nx-ink/10',
+        className,
+      )}
+    >
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          aria-hidden
+          className={cn(
+            'w-[3px] rounded-sm',
+            ['h-[5px]', 'h-[8px]', 'h-[11px]'][i],
+            i < bars
+              ? tone === 'plate'
+                ? 'bg-nx-accent'
+                : 'bg-nx-ink'
+              : tone === 'plate'
+                ? 'bg-white/35'
+                : 'bg-nx-ink/25',
+          )}
+        />
+      ))}
+      {withLabel && (
+        <span
+          aria-hidden
+          className={cn(
+            'ml-1 self-center text-[11px] font-bold leading-none',
+            tone === 'plate' ? 'text-white' : 'text-nx-ink',
+          )}
+        >
+          {STRENGTH_LABEL[strength]}
+        </span>
+      )}
     </span>
   )
 }
@@ -82,6 +148,7 @@ export function ResultTile({
   className,
   onOpen,
   href,
+  showStrength = true,
 }: {
   item: SearchResultItem
   /** The top match gets the yellow ring. */
@@ -90,11 +157,13 @@ export function ResultTile({
   onOpen?: (item: SearchResultItem) => void
   /** Where the tile goes; defaults to the post's own address. */
   href?: string
+  /** The confidence meter (off where results aren't a search, e.g. channels). */
+  showStrength?: boolean
 }) {
   const kind = kindOf(item)
   const { post } = item
   const author = postAuthor(post)
-  const label = `${feedItemAccessibleDescription(post)}${item.saved ? '' : ', saved by someone else'}`
+  const label = `${feedItemAccessibleDescription(post)}${item.saved ? '' : ', saved by someone else'}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}` : ''}`
   const frame = cn(
     'group relative block w-full overflow-hidden rounded-nx-tile bg-nx-surface text-left font-nx-sans',
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent',
@@ -103,13 +172,20 @@ export function ResultTile({
   )
   const cover = postCoverSrc(post)
   const badge = mediaBadge(item)
+  const strength = strengthOfItem(item)
+  const onCream = kind === 'post' || (kind === 'article' && !cover)
 
   let body
   if (kind === 'post' || (kind === 'article' && !cover)) {
     const text = kind === 'article' ? articleHeadline(post) : postText(post)
     body = (
       <span className="flex flex-col gap-2 bg-nx-cream p-4 text-nx-ink">
-        <span className="truncate text-[11px] font-bold">{author.handle || author.name}</span>
+        <span className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
+            {author.handle || author.name}
+          </span>
+          {showStrength && <StrengthMeter strength={strength} tone="cream" />}
+        </span>
         <span className={cn('line-clamp-[7] font-nx-serif', postTextSize(text.length))}>
           {text || 'Post'}
         </span>
@@ -148,6 +224,9 @@ export function ResultTile({
       {body}
       {!item.saved && <EveryoneBadge className="right-2 top-2" />}
       {item.learning && <WordsOnlyBadge className="left-2 top-2" />}
+      {showStrength && !onCream && (
+        <StrengthMeter strength={strength} className="absolute bottom-2 left-2" />
+      )}
     </Link>
   )
 }

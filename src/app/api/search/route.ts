@@ -4,10 +4,12 @@ import { handleRouteError } from '@/lib/api/response'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { stillLearning } from '@/lib/semantic/status'
-import { rerank, RERANK_TOP } from '@/lib/semantic/rerank'
+import { jevStrength, rerank, RERANK_TOP } from '@/lib/semantic/rerank'
 import { searchPosts, TUNING, type SearchScope, type SearchType } from '@/lib/semantic/search'
 
 const MAX_QUERY = 200
+/** Jev's 0–4 relevance under this means "unrelated" (its lowest level). */
+const UNRELATED_JEV = 0.5
 const DEFAULT_LIMIT = 30
 const MAX_LIMIT = 60
 const SCOPES: readonly SearchScope[] = ['mine', 'everyone']
@@ -83,8 +85,10 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     const result = await searchPosts({ q, scope, type, wordsOnly, userId, limit, offset })
     let items = await loadSearchItems(result.hits, userId)
     let refined = false
+    let dropped = 0
     if (refine && items.length > 1) {
-      const order = await rerank(
+      const before = items.length
+      const reranked = await rerank(
         q,
         items.slice(0, RERANK_TOP).map((item) => ({
           key: `${item.post.platform}:${item.post.id}`,
@@ -92,9 +96,23 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
           visual: item.matched[0] === 'picture' || item.matched[0] === 'video',
         })),
       )
-      if (order) {
+      if (reranked) {
         const byKey = new Map(items.map((i) => [`${i.post.platform}:${i.post.id}`, i]))
-        items = [...order.map((c) => byKey.get(c.key)!), ...items.slice(RERANK_TOP)]
+        items = [...reranked.order.map((c) => byKey.get(c.key)!), ...items.slice(RERANK_TOP)]
+        // Jev reads words, so it judges only matches made on words alone (never
+        // one its picture or video also matched): it sets their strength, and
+        // drops the ones it calls unrelated.
+        const lead = items[0]
+        items = items
+          .map((i) => {
+            const jev = reranked.scores.get(`${i.post.platform}:${i.post.id}`)
+            const wordsOnly = i.matched.every((m) => m === 'words' || m === 'keywords')
+            if (jev === undefined || !wordsOnly) return i
+            if (jev < UNRELATED_JEV && i !== lead) return null
+            return { ...i, strength: jevStrength(jev, i.strength) }
+          })
+          .filter((i): i is (typeof items)[number] => i !== null)
+        dropped = before - items.length
         refined = true
       }
     }
@@ -107,7 +125,7 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     return noStore(
       NextResponse.json({
         items,
-        total: result.total,
+        total: result.total - dropped,
         understood: result.understood,
         close: result.close,
         refined,

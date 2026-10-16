@@ -36,6 +36,13 @@ export interface SearchRequest {
   offset: number
 }
 
+/**
+ * How sure the match is, in words people get: `strong` (it's the thing),
+ * `good` (very likely), `related` (close in meaning, not exactly it — e.g. a
+ * chameleon for "frog").
+ */
+export type MatchStrength = 'strong' | 'good' | 'related'
+
 export interface SearchHit {
   key: string
   platform: string
@@ -43,6 +50,19 @@ export interface SearchHit {
   score: number
   /** Which signals put this post in the results, strongest first. */
   matched: MatchSignal[]
+  strength: MatchStrength
+}
+
+/**
+ * Strength from the fused score. On real saves the wanted post scored 2.2–8;
+ * frogs for "frog" scored 4.2–5.0 and a chameleon 2.9. Without meaning
+ * (keywords only) every hit used the exact words, so it is at least good.
+ */
+export function strengthOf(score: number, understood = true): MatchStrength {
+  if (!understood) return score >= TUNING.keywordStrongScore ? 'strong' : 'good'
+  if (score >= TUNING.strongScore) return 'strong'
+  if (score >= TUNING.goodScore) return 'good'
+  return 'related'
 }
 
 export interface SearchResult {
@@ -81,6 +101,15 @@ export const TUNING = {
   minScore: 1.5,
   /** A best hit at or above this counts as a close match (the wanted post never scored under 2.2). */
   closeScore: 2.2,
+  /**
+   * A result led by words alone needs more: short meme captions otherwise
+   * match any query a little. The wanted post never scored under 2.2.
+   */
+  minWordsScore: 1.9,
+  /** Match strength cut-offs (see `strengthOf`). */
+  strongScore: 3.5,
+  goodScore: 2.6,
+  keywordStrongScore: 1.6,
 }
 
 type VectorList = { hits: { key: string; score: number }[]; mean: number; std: number }
@@ -246,12 +275,20 @@ export async function searchPosts(
   }
 
   let ranked = fuse(vectors, keywords)
-  if (vector) ranked = ranked.filter((r) => r.score >= TUNING.minScore)
+  if (vector) {
+    ranked = ranked.filter(
+      (r) => r.score >= (r.matched[0] === 'words' ? TUNING.minWordsScore : TUNING.minScore),
+    )
+  }
   ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
 
   const page = ranked.slice(request.offset, request.offset + request.limit)
   return {
-    hits: page.map((r) => ({ ...r, ...split(r.key) })),
+    hits: page.map((r) => ({
+      ...r,
+      ...split(r.key),
+      strength: strengthOf(r.score, vector !== null),
+    })),
     total: ranked.length,
     understood: vector !== null,
     // Without meaning, keyword hits are exact words: close by definition.
@@ -325,7 +362,9 @@ export async function similarPosts(request: SimilarRequest): Promise<SearchResul
   let ranked = fuse(vectors, []).filter((r) => r.score >= TUNING.minScore)
   ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
   return {
-    hits: ranked.slice(0, request.limit).map((r) => ({ ...r, ...split(r.key) })),
+    hits: ranked
+      .slice(0, request.limit)
+      .map((r) => ({ ...r, ...split(r.key), strength: strengthOf(r.score) })),
     total: ranked.length,
     understood: true,
     close: ranked.length > 0 && ranked[0].score >= TUNING.closeScore,

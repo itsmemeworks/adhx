@@ -15,6 +15,12 @@ export interface PostDocument {
   textHash: string
   /** The same words without prompt labels, for the keyword index. */
   keywords: string
+  /**
+   * The post says something beyond who posted it. Without this (empty, a bare
+   * link, emoji only) its words are not understood: an author line alone
+   * matched everything a little and buried real results.
+   */
+  hasWords: boolean
   /** One picture: the first photo, a video poster, or an article cover. */
   image: { url: string; hash: string } | null
   /** One playable video stream (a same-origin proxy path). */
@@ -79,6 +85,13 @@ export function buildPostDocument(item: FeedItemResponse): PostDocument {
     ...(item.media ?? []).map((m) => (m.altText ? `Image description: ${clean(m.altText)}` : '')),
   ].filter(Boolean)
   const body = [...new Set(parts)].join('\n').slice(0, MAX_TEXT_CHARS)
+  const ownWords = [
+    title === 'none' ? '' : title,
+    ...parts.filter((p) => !p.startsWith('Posted by ')),
+  ]
+    .join(' ')
+    .replace(/https?:\/\/\S+/g, '')
+  const hasWords = /[\p{L}\p{N}]/u.test(ownWords)
   const text = `title: ${title} | text: ${body || 'none'}`
   const keywords = [
     title === 'none' ? '' : title,
@@ -103,6 +116,7 @@ export function buildPostDocument(item: FeedItemResponse): PostDocument {
     text,
     textHash: sha(text),
     keywords,
+    hasWords,
     image: imageUrl ? { url: imageUrl, hash: sha(imageUrl) } : null,
     video: videoPath ? { url: videoPath, hash: sha(`${videoPath}|${VIDEO_SAMPLING}`) } : null,
   }
@@ -110,7 +124,7 @@ export function buildPostDocument(item: FeedItemResponse): PostDocument {
 
 /** The content hash for one kind, or null when the post has nothing of that kind. */
 export function hashFor(doc: PostDocument, kind: UnderstandingKind): string | null {
-  if (kind === 'text') return doc.textHash
+  if (kind === 'text') return doc.hasWords ? doc.textHash : null
   if (kind === 'image') return doc.image?.hash ?? null
   return doc.video?.hash ?? null
 }
