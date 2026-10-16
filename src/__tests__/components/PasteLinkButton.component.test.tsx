@@ -102,7 +102,7 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     const readText = vi
       .fn()
       .mockResolvedValueOnce('')
-      .mockResolvedValueOnce('https://youtube.com/shorts/Y9aytLYBajw')
+      .mockResolvedValueOnce('https://www.instagram.com/reels/DXVsqQ7CSXw')
     Object.assign(navigator, { clipboard: { readText } })
 
     render(<PasteLinkButton />)
@@ -112,7 +112,7 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
 
     expect(readText).toHaveBeenCalledTimes(2)
-    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/shorts/Y9aytLYBajw'))
+    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/reels/DXVsqQ7CSXw'))
   })
 
   it('the overlay Paste retry button shows an error only when the retry itself finds non-link text', async () => {
@@ -137,9 +137,9 @@ describe('PasteLinkButton — non-iOS (readText flow, unchanged)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Paste link' }))
 
     const input = await screen.findByPlaceholderText('Paste a link…')
-    fireEvent.change(input, { target: { value: 'https://youtube.com/shorts/Y9aytLYBajw' } })
+    fireEvent.change(input, { target: { value: 'https://www.instagram.com/reels/DXVsqQ7CSXw' } })
 
-    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/shorts/Y9aytLYBajw'))
+    await waitFor(() => expect(pushSpy).toHaveBeenCalledWith('/reels/DXVsqQ7CSXw'))
   })
 
   it('manual submit of unsupported text shows an error', async () => {
@@ -271,10 +271,10 @@ describe('PasteLinkButton — iOS (input-paste flow)', () => {
     const input = await screen.findByPlaceholderText('Paste a link…')
 
     fireEvent.paste(input, {
-      clipboardData: { getData: () => 'https://youtube.com/shorts/Y9aytLYBajw' },
+      clipboardData: { getData: () => 'https://www.instagram.com/reels/DXVsqQ7CSXw' },
     })
 
-    expect(pushSpy).toHaveBeenCalledWith('/shorts/Y9aytLYBajw')
+    expect(pushSpy).toHaveBeenCalledWith('/reels/DXVsqQ7CSXw')
     expect(screen.queryByText(/not a supported link/i)).not.toBeInTheDocument()
   })
 

@@ -118,7 +118,10 @@ describe('search model', () => {
     )
     expect(
       previewVideoSrc(
-        post({ platform: 'youtube', media: [media({ url: 'https://www.youtube.com/shorts/x' })] }),
+        post({
+          platform: 'instagram',
+          media: [media({ url: 'https://scontent.cdninstagram.com/v/clip.mp4' })],
+        }),
       ),
     ).toBeNull()
   })

@@ -289,7 +289,7 @@ describe('loader', () => {
 
     rerender(<PasteToast state="failed" />)
     expect(screen.getByText('That link isn’t a post we can save')).toBeInTheDocument()
-    expect(screen.getByText('X, Instagram, TikTok and YouTube Shorts work')).toBeInTheDocument()
+    expect(screen.getByText('X, Instagram and TikTok work')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveAttribute('data-state', 'failed')
   })
 

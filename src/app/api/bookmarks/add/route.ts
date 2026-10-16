@@ -8,7 +8,6 @@ import { handleRouteError } from '@/lib/api/response'
 import { fetchInstagramMetadata } from '@/lib/media/instafix'
 import { fetchTikTokMetadata, resolveTikTokUrl, isTikTokShortLink } from '@/lib/media/tnktok'
 import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
-import { fetchYouTubeMetadata, youtubeThumbnail, youtubeShortUrl } from '@/lib/media/youtube'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { detectPlatformPost } from '@/lib/platform/url'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
@@ -68,11 +67,6 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
       )
     }
 
-    // YouTube Shorts only — watch / youtu.be / embed are regular videos.
-    if (detected?.platform === 'youtube') {
-      return await addYouTubeShort(userId, detected.id, source)
-    }
-
     if (detected?.platform === 'instagram') {
       return await addInstagramPost(
         userId,
@@ -95,7 +89,7 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
     return NextResponse.json(
       {
         error:
-          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/p or /reels, tiktok.com/@user/video, youtube.com/shorts.',
+          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/p or /reels, tiktok.com/@user/video.',
       },
       { status: 400 },
     )
@@ -448,118 +442,5 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     platform: 'tiktok',
     bookmark: result.bookmark,
     message: 'TikTok added to Saved.',
-  })
-}
-
-async function addYouTubeShort(userId: string, videoId: string, source: string) {
-  const [existing] = await db
-    .select()
-    .from(bookmarks)
-    .where(
-      and(
-        eq(bookmarks.userId, userId),
-        eq(bookmarks.platform, 'youtube'),
-        eq(bookmarks.id, videoId),
-      ),
-    )
-    .limit(1)
-
-  const now = new Date().toISOString()
-  let bookmarkValues: typeof bookmarks.$inferInsert
-  if (existing) {
-    bookmarkValues = { ...existing, processedAt: now, source }
-  } else {
-    const meta = await fetchYouTubeMetadata(videoId)
-    if (!meta) {
-      return NextResponse.json({ error: 'YouTube video not available' }, { status: 404 })
-    }
-    const handle = (meta.author || '').replace(/^@/, '') || meta.authorName || 'youtube'
-    bookmarkValues = {
-      id: videoId,
-      userId,
-      platform: 'youtube',
-      author: handle,
-      authorName: meta.authorName || null,
-      authorProfileImageUrl: null,
-      text: meta.title || '',
-      tweetUrl: youtubeShortUrl(videoId),
-      processedAt: now,
-      category: 'video',
-      source,
-    }
-  }
-
-  const result = runInTransaction(() => {
-    const bookmarkInsert = db.insert(bookmarks).values(bookmarkValues).onConflictDoNothing().run()
-
-    // Playback is the official iframe embed, so this deterministic media row
-    // stores the poster and is reconciled on every retry.
-    db.insert(bookmarkMedia)
-      .values({
-        id: `${videoId}_video_0`,
-        userId,
-        platform: 'youtube',
-        bookmarkId: videoId,
-        mediaType: 'video',
-        originalUrl: youtubeShortUrl(videoId),
-        previewUrl: youtubeThumbnail(videoId),
-      })
-      .onConflictDoUpdate({
-        target: [bookmarkMedia.userId, bookmarkMedia.platform, bookmarkMedia.id],
-        set: {
-          bookmarkId: videoId,
-          mediaType: 'video',
-          originalUrl: youtubeShortUrl(videoId),
-          previewUrl: youtubeThumbnail(videoId),
-        },
-      })
-      .run()
-
-    return {
-      inserted: bookmarkInsert.changes > 0,
-      bookmark: db
-        .select()
-        .from(bookmarks)
-        .where(
-          and(
-            eq(bookmarks.userId, userId),
-            eq(bookmarks.platform, 'youtube'),
-            eq(bookmarks.id, videoId),
-          ),
-        )
-        .limit(1)
-        .all()[0],
-    }
-  })
-
-  if (!result.inserted) {
-    return NextResponse.json(
-      { success: false, isDuplicate: true, platform: 'youtube', bookmark: result.bookmark },
-      { status: 200 },
-    )
-  }
-
-  metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
-  noteSaved([{ platform: 'youtube', postId: videoId }])
-
-  recordActivity({
-    action: 'save',
-    platform: 'youtube',
-    bookmarkId: videoId,
-    author: bookmarkValues.author,
-    authorName: bookmarkValues.authorName || null,
-    text: bookmarkValues.text || null,
-    thumbnailUrl: youtubeThumbnail(videoId),
-    url: previewPath('youtube', bookmarkValues.author, videoId),
-    userId,
-    source: source as 'manual' | 'url_prefix' | 'pwa_share',
-  })
-
-  return NextResponse.json({
-    success: true,
-    isDuplicate: false,
-    platform: 'youtube',
-    bookmark: result.bookmark,
-    message: 'YouTube Short added to Saved.',
   })
 }

@@ -217,10 +217,7 @@ export function PasteLinkButton({
   const handleManualChange = (value: string) => {
     setManualValue(value)
     setManualError('')
-    if (
-      !onPastePost &&
-      /(?:x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)\//i.test(value)
-    ) {
+    if (!onPastePost && /(?:x\.com|twitter\.com|instagram\.com|tiktok\.com)\//i.test(value)) {
       navigateToPastedLink(router, value)
     }
   }
@@ -352,7 +349,7 @@ export function PasteLinkButton({
                     iconOnly ? 'text-[#b8ac99]' : 'text-ink-2',
                   )}
                 >
-                  Copy a link to a post on X, Instagram, TikTok, or YouTube,{' '}
+                  Copy a link to a post on X, Instagram, or TikTok,{' '}
                   {ios ? 'then tap Paste above the box.' : 'then come back and tap Paste.'}
                 </p>
 
@@ -365,7 +362,6 @@ export function PasteLinkButton({
                   <PlatformGlyph platform="twitter" size={14} />
                   <PlatformGlyph platform="instagram" size={14} />
                   <PlatformGlyph platform="tiktok" size={14} />
-                  <PlatformGlyph platform="youtube" size={14} />
                 </div>
 
                 {/* Non-iOS only — see the component doc comment for why iOS drops

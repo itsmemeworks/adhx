@@ -64,8 +64,4 @@ describe('feedHoverSrc — gallery hover-to-play', () => {
       '/api/media/instagram/video?id=abc',
     )
   })
-
-  it('YouTube → null (iframe only, no MP4 to hover-play)', () => {
-    expect(feedHoverSrc(withVideo('youtube', 'irrelevant'))).toBeNull()
-  })
 })

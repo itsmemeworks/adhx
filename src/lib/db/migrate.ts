@@ -8,6 +8,7 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 import { renameReadStatusToArchivedPosts } from './rename-read-status'
+import { deleteYouTubePosts } from './drop-youtube'
 import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
@@ -964,6 +965,21 @@ try {
   console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
 } catch (error) {
   console.error('[migrate] FAILED ensuring admin moderation tables', error)
+  db.close()
+  process.exit(1)
+}
+
+// YouTube Shorts are no longer supported (iframe-only, so they can't be
+// understood); delete every saved Short and its derived rows. Idempotent and
+// transactional — see drop-youtube.ts. Must run after the understanding and
+// moderation tables are ensured above.
+try {
+  const deleted = deleteYouTubePosts(db)
+  if (Object.keys(deleted).length > 0) {
+    console.log('[migrate] Deleted YouTube posts', deleted)
+  }
+} catch (error) {
+  console.error('[migrate] FAILED deleting YouTube posts', error)
   db.close()
   process.exit(1)
 }

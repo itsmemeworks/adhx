@@ -7,7 +7,7 @@ import type { ContentType } from '@/components/matter'
  *
  * Priority:
  *   1. an already-resolved `contentType` (server-enriched pulse items)
- *   2. single-format platforms (TikTok / YouTube) → video
+ *   2. single-format platforms (TikTok) → video
  *   3. Instagram's persisted resolved media category
  *   4. article (X Article, `category === 'article'`, article blocks, or a
  *      link-preview with no first-class media)
@@ -24,7 +24,7 @@ import type { ContentType } from '@/components/matter'
 
 export const CONTENT_TYPES = new Set<string>(['video', 'photo', 'text', 'article'])
 
-const SINGLE_FORMAT = new Set(['tiktok', 'youtube'])
+const SINGLE_FORMAT = new Set(['tiktok'])
 
 const VIDEO_THUMB_RE = /(ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)/
 

@@ -23,7 +23,7 @@ import { CollectionAllClear } from './CollectionAllClear'
 import { StageVisualEmpty } from './StageVisualEmpty'
 import { DesktopStageChrome, DesktopDock } from './TheaterDesktopChrome'
 import { TheaterMobileChrome } from './TheaterMobileChrome'
-import { YtDebugOverlay } from './YtDebugOverlay'
+import { AvDebugOverlay } from './AvDebugOverlay'
 import { useTheaterFeed } from './useTheaterFeed'
 import { useSeenSet } from './useSeenSet'
 import { useTheaterKeyboard } from './useTheaterKeyboard'
@@ -213,8 +213,8 @@ export interface TheaterShellProps {
    * dwell, exactly like any other timed item.
    *
    * `sharedUnavailableReason` distinguishes a gone source (`source`, the
-   * default) from an admin hide (`hidden`) so the stage does not claim a
-   * YouTube Short "is no longer available on X".
+   * default) from an admin hide (`hidden`) so the stage does not claim an
+   * Instagram or TikTok post "is no longer available on X".
    */
   sharedUnavailable?: boolean
   sharedUnavailableReason?: 'source' | 'hidden'
@@ -3022,12 +3022,10 @@ export function TheaterShell({
         onToggleQueueType={queueFilterAvailable ? toggleQueueType : undefined}
         onClearQueueTypes={queueFilterAvailable ? clearQueueTypes : undefined}
       />
-      {/* `?ytdebug=1`/`?avdebug=1` diagnostics overlay (YtDebugOverlay.tsx) —
-          mounted ONCE here so it serves every stage (StageVideo/StageYouTube/
-          the chrome's audio button), not just the YouTube branches that used
-          to embed it directly. Renders null with zero footprint when neither
-          param is present. */}
-      <YtDebugOverlay />
+      {/* `?avdebug=1` diagnostics overlay (AvDebugOverlay.tsx) — mounted ONCE
+          here so it serves every stage and the chrome's audio button. Renders
+          null with zero footprint when the param is absent. */}
+      <AvDebugOverlay />
       {liveTagTarget && (
         <TagQuickPicker
           platform={liveTagTarget.platform}

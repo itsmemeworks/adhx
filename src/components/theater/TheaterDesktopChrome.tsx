@@ -493,8 +493,8 @@ export function DesktopStageChrome({
                     aria-label="Paste a link to preview"
                     placeholder={
                       onPastePost
-                        ? 'Paste a link to save — X, Instagram, TikTok, YouTube'
-                        : 'Paste a link to preview — X, Instagram, TikTok, YouTube'
+                        ? 'Paste a link to save — X, Instagram, TikTok'
+                        : 'Paste a link to preview — X, Instagram, TikTok'
                     }
                     spellCheck={false}
                     value={pasteValue}

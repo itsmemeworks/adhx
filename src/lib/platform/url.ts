@@ -3,7 +3,7 @@
  *
  * Replaces the duplicated regexes scattered across `parse-share-url`,
  * the bookmark-add route, etc. Detects which platform a link belongs to
- * (X/Twitter, Instagram, TikTok, YouTube), pulls out its canonical id (and
+ * (X/Twitter, Instagram, TikTok), pulls out its canonical id (and
  * author where the platform exposes one), and returns the on-ADHX preview
  * path to redirect to.
  *
@@ -15,15 +15,13 @@
  *   - Instagram accepts `reel`, `reels`, and `p`
  *   - Twitter usernames are `\w{1,15}`; TikTok handles `[A-Za-z0-9._]{1,30}`
  *   - TikTok video ids are `\d{6,25}`; tweet ids are `\d+`
- *   - YouTube is resolved via `extractYouTubeId` (Shorts URLs only)
  *   - TikTok `@handle` may arrive URL-encoded as `%40handle` (Next.js params),
  *     so the first pathname segment is decoded before matching
  */
 
-import { extractYouTubeId } from '@/lib/media/youtube'
 import { isHostOrSubdomainOf } from '@/lib/utils/url-host'
 
-export type PlatformId = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
+export type PlatformId = 'twitter' | 'instagram' | 'tiktok'
 
 export interface PlatformPost {
   platform: PlatformId
@@ -44,13 +42,11 @@ export const PLATFORM_PATTERNS = {
   twitter: /^\/(\w{1,15})\/status\/(\d+)(?:\/|$)/i,
   instagram: /^\/(?:reels?|p)\/([A-Za-z0-9_-]+)(?:\/|$)/i,
   tiktok: /^\/((?:@|%40)[A-Za-z0-9._]{1,30})\/video\/(\d{6,25})(?:\/|$)/i,
-  youtube: /^\/shorts\/[A-Za-z0-9_-]{11}(?:\/|$)/i,
 } as const
 
 const TWITTER_HOSTS = ['x.com', 'twitter.com', 'vxtwitter.com', 'fxtwitter.com']
 const INSTAGRAM_HOSTS = ['instagram.com']
 const TIKTOK_HOSTS = ['tiktok.com']
-const YOUTUBE_HOSTS = ['youtube.com']
 
 function parseHttpUrl(input: string): URL | null {
   const trimmed = input.trim()
@@ -111,14 +107,6 @@ export function detectPlatformPost(url: string): PlatformPost | null {
 
     const id = tiktok[2]
     return { platform: 'tiktok', id, author, previewPath: `/@${author}/video/${id}` }
-  }
-
-  if (
-    PLATFORM_PATTERNS.youtube.test(parsed.pathname) &&
-    isHostOrSubdomainOf(parsed.href, YOUTUBE_HOSTS)
-  ) {
-    const id = extractYouTubeId(parsed.href)
-    if (id) return { platform: 'youtube', id, previewPath: `/shorts/${id}` }
   }
 
   return null

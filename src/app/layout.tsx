@@ -164,7 +164,7 @@ const jsonLd = {
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
   description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
+    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel and TikTok in one place. The ADHD-friendly bookmark manager.",
   url: 'https://adhx.com',
   offers: {
     '@type': 'Offer',
@@ -177,7 +177,7 @@ const jsonLd = {
     'Full-text search across everything you save',
     'One post at a time — archive what you are done with',
     'Text-to-speech for any post or article',
-    'Save Reels, TikToks and Shorts alongside tweets',
+    'Save Reels and TikToks alongside tweets',
     'Bionic reading and reader-friendly fonts',
   ],
 }

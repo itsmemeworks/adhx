@@ -1839,8 +1839,8 @@ describe('TheaterMobileChrome: Collection-tab progress line', () => {
 
 /**
  * Gesture-unmute fix: the audio button must dispatch a SYNCHRONOUS
- * `theater-set-muted` window event (the gesture-context fast path StageVideo/
- * StageYouTube listen for) in the same click handler that calls `onSetMuted`
+ * `theater-set-muted` window event (the gesture-context fast path StageVideo
+ * listens for) in the same click handler that calls `onSetMuted`
  * (the persistence path) — and both must move toward the DISPLAYED state's
  * opposite, not blindly toggle the (possibly stale) `muted` prop.
  */

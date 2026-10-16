@@ -343,19 +343,16 @@ describe('Proxy: URL Normalization', () => {
     })
   })
 
-  describe('Pasted YouTube URLs', () => {
-    it('redirects https:/youtube.com/shorts/{id} to /shorts/{id}', () => {
-      const response = proxy(createRequest('/https:/youtube.com/shorts/Y9aytLYBajw'))
-      expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
-    })
-
-    it('handles www. and m. subdomains and a trailing ?si tracking param', () => {
-      const response = proxy(
-        createRequest('/https:/www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC'),
-      )
-      expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toBe('https://adhx.com/shorts/Y9aytLYBajw')
+  describe('Pasted YouTube URLs (unsupported)', () => {
+    it('does not rewrite a pasted youtube.com/shorts URL to /shorts/{id}', () => {
+      expect(
+        proxy(createRequest('/https:/youtube.com/shorts/Y9aytLYBajw')).headers.get('location'),
+      ).toBeNull()
+      expect(
+        proxy(
+          createRequest('/https:/www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC'),
+        ).headers.get('location'),
+      ).toBeNull()
     })
 
     it('does not rewrite youtu.be or watch?v= — those are regular videos', () => {

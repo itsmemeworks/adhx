@@ -29,7 +29,6 @@ const PLATFORM_LABEL: Record<string, string> = {
   twitter: 'X',
   tiktok: 'TikTok',
   instagram: 'Instagram',
-  youtube: 'YouTube',
 }
 
 const BASE_URL = PUBLIC_BASE_URL
@@ -51,7 +50,7 @@ export function TheaterStaticList({
   const jsonLd = buildCollectionPageLd({
     name: 'ADHX — save it, lose it, find it',
     description:
-      'A live theater of what people are watching and sending across X, TikTok, Instagram and YouTube right now — save any post to your own collection in one tap and find it again later.',
+      'A live theater of what people are watching and sending across X, TikTok and Instagram right now — save any post to your own collection in one tap and find it again later.',
     url: BASE_URL,
     baseUrl: BASE_URL,
     items: items.map((item) => ({
@@ -64,10 +63,10 @@ export function TheaterStaticList({
     <section aria-label="ADHX" className="sr-only">
       <h1>ADHX — Save it. Lose it. Find it.</h1>
       <p>
-        ADHX is a bookmark manager for X (Twitter), Instagram Reels, TikTok videos, and YouTube
-        Shorts. Watch what the community is saving and sending right now, then save anything you
-        like straight to your own collection so it&apos;s there when you actually want it — no more
-        scrolling back through your feed trying to find that one post.
+        ADHX is a bookmark manager for X (Twitter), Instagram Reels, and TikTok videos. Watch what
+        the community is saving and sending right now, then save anything you like straight to your
+        own collection so it&apos;s there when you actually want it — no more scrolling back through
+        your feed trying to find that one post.
       </p>
       <p>
         No app needed to preview a post first: replace the host in any link with adhx.com — for

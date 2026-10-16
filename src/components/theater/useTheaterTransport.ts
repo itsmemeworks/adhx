@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { formatQueueCount, type QueueCount } from './theater-math'
-import { logAV } from './YtDebugOverlay'
+import { logAV } from './AvDebugOverlay'
 import { dispatchTheaterUserPlaybackState, useTheaterStageEvents } from './useTheaterStageEvents'
 import type { ProgressKind } from './TheaterProgressLine'
 

@@ -16,7 +16,7 @@ import {
 } from './config'
 
 /** Hosts the worker may fetch pictures from directly. Everything else is skipped (SSRF). */
-const IMAGE_HOSTS = ['d.fixupx.com', ...TWITTER_MEDIA_HOSTS, 'i.ytimg.com']
+const IMAGE_HOSTS = ['d.fixupx.com', ...TWITTER_MEDIA_HOSTS]
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 const IMAGE_TIMEOUT_MS = 20_000
 const VIDEO_TIMEOUT_MS = 120_000

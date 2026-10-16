@@ -9,7 +9,6 @@ import {
   PREVIEW_IG,
   PREVIEW_IG_PHOTO,
   PREVIEW_TT,
-  PREVIEW_YT,
   QUOTED_INNER,
 } from './constants'
 
@@ -164,27 +163,11 @@ function tiktokOg(username: string, id: string): string {
 </head><body></body></html>`
 }
 
-function youtubeOembed(videoId: string) {
-  const title = videoId === PREVIEW_YT.id ? PREVIEW_YT.text : `E2E short ${videoId}`
-  return {
-    title,
-    author_name: PREVIEW_YT.authorName,
-    author_url: `https://www.youtube.com/@${PREVIEW_YT.author}`,
-  }
-}
-
-/** FxTwitter + IG OG + TikTok OG + YouTube oEmbed stand-in for isolated e2e. */
+/** FxTwitter + IG OG + TikTok OG stand-in for isolated e2e. */
 export function startFxMock(port: number, host = '127.0.0.1'): Server {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? '/', `http://${host}`)
     const pathOnly = url.pathname
-
-    if (pathOnly === '/oembed') {
-      const watch = url.searchParams.get('url') ?? ''
-      const id = new URL(watch).searchParams.get('v') ?? ''
-      json(res, 200, youtubeOembed(id))
-      return
-    }
 
     const ig = pathOnly.match(/^\/(?:reel|p)\/([^/]+)\/?$/)
     if (ig) {

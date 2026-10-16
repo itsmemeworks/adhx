@@ -14,9 +14,10 @@ import { relations, sql } from 'drizzle-orm'
 // ===========================================
 
 // Main bookmarks table - PK: (userId, platform, id)
-// `platform` is one of 'twitter' | 'instagram' | 'tiktok' | 'youtube' — added so
-// a TikTok video id (numeric, 19 digits) can't collide with a tweet id (also
-// numeric, 18-19 digits), and YouTube's 11-char id stays in its own namespace.
+// `platform` is one of 'twitter' | 'instagram' | 'tiktok' — added so a TikTok
+// video id (numeric, 19 digits) can't collide with a tweet id (also numeric,
+// 18-19 digits). YouTube Shorts were supported until 2026-10 and deleted by
+// `deleteYouTubePosts` (src/lib/db/drop-youtube.ts).
 // All bookmark-derived tables (tags/media/links/archived_posts)
 // carry platform too so the foreign-key tuple matches. It's a free-text column
 // (no enum/migration needed to add a platform).
@@ -25,7 +26,7 @@ export const bookmarks = sqliteTable(
   {
     id: text('id').notNull(), // Source-native ID (tweet id, reel shortcode, tiktok video id)
     userId: text('user_id').notNull(), // Owner of the bookmark
-    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok' | 'youtube'
+    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok'
     author: text('author').notNull(),
     authorName: text('author_name'),
     authorProfileImageUrl: text('author_profile_image_url'),

@@ -171,9 +171,6 @@ function resolveTileThumbnail(
   if (item.platform === 'instagram') {
     return `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.id)}`
   }
-  if (item.platform === 'youtube') {
-    return `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
-  }
   if (!firstMedia) return undefined
   const mediaType = firstMedia.mediaType as 'photo' | 'video' | 'animated_gif'
   return getThumbnailUrl({

@@ -71,7 +71,7 @@ describe('PWAInstallPrompt', () => {
     expect(install).toHaveAttribute('href', IOS_SHORTCUT_URL)
     expect(install).toHaveAttribute('target', '_blank')
     expect(
-      screen.getByText(/Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap\./),
+      screen.getByText(/Share posts to ADHX from X, Instagram, and TikTok in one tap\./),
     ).toBeInTheDocument()
   })
 
@@ -86,9 +86,7 @@ describe('PWAInstallPrompt', () => {
     mockPlatform = 'android'
     render(<PWAInstallPrompt />)
     expect(await screen.findByText('Share a post directly to ADHX')).toBeInTheDocument()
-    expect(
-      screen.getByText(/From X, Instagram, TikTok, or YouTube: Share → ADHX\./),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/From X, Instagram, or TikTok: Share → ADHX\./)).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'How' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()

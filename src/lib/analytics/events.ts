@@ -45,7 +45,7 @@ export const CLIENT_ANALYTIC_EVENTS = [
 
 export type ClientAnalyticEventName = (typeof CLIENT_ANALYTIC_EVENTS)[number]
 
-export const ANALYTIC_PLATFORMS = ['twitter', 'instagram', 'tiktok', 'youtube'] as const
+export const ANALYTIC_PLATFORMS = ['twitter', 'instagram', 'tiktok'] as const
 export type AnalyticPlatform = (typeof ANALYTIC_PLATFORMS)[number]
 
 export const ANALYTIC_CONTENT_TYPES = ['video', 'photo', 'text', 'article'] as const

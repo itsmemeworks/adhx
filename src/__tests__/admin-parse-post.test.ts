@@ -16,9 +16,12 @@ describe('parseAdminPostRef', () => {
     expect(parseAdminPostRef('twitter:999')).toEqual(
       expect.objectContaining({ platform: 'twitter', id: '999' }),
     )
-    expect(parseAdminPostRef('/shorts/abcdefghijk')).toEqual(
-      expect.objectContaining({ platform: 'youtube', id: 'abcdefghijk' }),
-    )
+  })
+
+  it('no longer recognises YouTube Shorts paths or shorthand', () => {
+    expect(parseAdminPostRef('/shorts/abcdefghijk')).toBeNull()
+    expect(parseAdminPostRef('https://www.youtube.com/shorts/abcdefghijk')).toBeNull()
+    expect(parseAdminPostRef('youtube:abcdefghijk')).toBeNull()
   })
 
   it('returns null for junk', () => {

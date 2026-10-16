@@ -67,7 +67,7 @@ export function mediaAspect(item: FeedItem): number | null {
   return m.width / m.height
 }
 
-const VERTICAL_PLATFORMS = new Set(['tiktok', 'youtube', 'instagram'])
+const VERTICAL_PLATFORMS = new Set(['tiktok', 'instagram'])
 
 /** Portrait (or square-ish) media → tall layouts. Unknown size on a vertical-first platform counts as tall. */
 export function isTallMedia(item: FeedItem): boolean {

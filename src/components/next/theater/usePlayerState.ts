@@ -16,8 +16,8 @@ import {
 
 /**
  * The next_ui theater's view of the shared stage. The stage (reused from the
- * current theater: one persistent <video>, the Instagram probe, the YouTube
- * iframe) owns the media; this hook only listens to what it announces and
+ * current theater: one persistent <video>, the Instagram probe) owns the
+ * media; this hook only listens to what it announces and
  * sends commands as synchronous window events, so browser user activation
  * survives the click (iOS unmute and picture-in-picture need that).
  */

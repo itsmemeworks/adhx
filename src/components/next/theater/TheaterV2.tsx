@@ -31,6 +31,8 @@ import { sanitizeTag } from '@/lib/utils/tag'
 import { Stage } from '@/components/theater/Stage'
 import { feedItemToTheaterItem } from '@/components/theater/collection-item'
 import { useSendFile } from '@/components/theater/useSendFile'
+import { useTheaterSoundPreference } from '@/components/theater/useTheaterSoundPreference'
+import { usePreferencesOptional } from '@/lib/preferences-context'
 import { useMobileSwipeNavigation } from '@/components/theater/useMobileSwipeNavigation'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { postAuthor, postText } from '../post'
@@ -183,7 +185,13 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const [title, setTitle] = useState<string | null>(null)
   const [items, setItems] = useState<SearchResultItem[]>([])
   const [index, setIndex] = useState(0)
-  const [muted, setMuted] = useState(true)
+  const preferenceContext = usePreferencesOptional()
+  // Settings' "Sound on by default", then the viewer's latest mute choice
+  // (shared with the other theater, across tabs and reloads).
+  const [muted, setMuted] = useTheaterSoundPreference({
+    soundOnByDefault: preferenceContext?.preferences.soundOn ?? false,
+    ready: !preferenceContext || !preferenceContext.loading,
+  })
   const [volume, setVolume] = useState(1)
   const [repeat, setRepeat] = useState<RepeatMode>('off')
   const [videosOnly, setVideosOnly] = useState(source.search.type === 'videos')
@@ -837,9 +845,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           ? 'Open on Instagram'
           : current.post.platform === 'tiktok'
             ? 'Open on TikTok'
-            : current.post.platform === 'youtube'
-              ? 'Open on YouTube'
-              : 'Open on X',
+            : 'Open on X',
       onSelect: () => {
         const url = sourceUrl(
           current.post.platform ?? 'twitter',

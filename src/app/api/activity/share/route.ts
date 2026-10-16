@@ -4,7 +4,7 @@ import { isAllowedActivityOrigin } from '@/lib/activity/origin'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { activityWriteLimit } from '@/lib/rate-limit'
 
-const PLATFORMS = new Set(['twitter', 'instagram', 'tiktok', 'youtube'])
+const PLATFORMS = new Set(['twitter', 'instagram', 'tiktok'])
 const ID_MAX = 80
 
 /**

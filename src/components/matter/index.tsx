@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
  */
 
 export type ContentType = 'video' | 'photo' | 'text' | 'article'
-export type PlatformId = 'twitter' | 'instagram' | 'tiktok' | 'youtube'
+export type PlatformId = 'twitter' | 'instagram' | 'tiktok'
 
 /** content-type label + dot color (the dot is the only color in the label). */
 export const TYPE_META: Record<ContentType, { label: string; dot: string }> = {
@@ -117,12 +117,6 @@ export function PlatformGlyph({
         <rect x="3" y="3" width="18" height="18" rx="5" />
         <circle cx="12" cy="12" r="4" />
         <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-      </svg>
-    )
-  if (p === 'youtube')
-    return (
-      <svg {...common} fill="currentColor">
-        <path d="M23 12s0-3.2-.41-4.73a2.49 2.49 0 00-1.75-1.76C19.07 5 12 5 12 5s-7.07 0-8.84.51a2.49 2.49 0 00-1.75 1.76C1 8.8 1 12 1 12s0 3.2.41 4.73a2.49 2.49 0 001.75 1.76C4.93 19 12 19 12 19s7.07 0 8.84-.51a2.49 2.49 0 001.75-1.76C23 15.2 23 12 23 12zM9.75 15.3V8.7L16 12l-6.25 3.3z" />
       </svg>
     )
   return null

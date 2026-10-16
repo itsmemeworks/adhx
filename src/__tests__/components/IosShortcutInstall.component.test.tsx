@@ -43,9 +43,7 @@ describe('IosShortcutSettingsCard', () => {
   it('shows the iCloud shortcut on iOS', () => {
     render(<IosShortcutSettingsCard />)
     expect(screen.getByText('Add to the iOS share menu')).toBeInTheDocument()
-    expect(
-      screen.getByText('Then from X, Instagram, TikTok, or YouTube: Share → ADHX.'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Then from X, Instagram, or TikTok: Share → ADHX.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /add to share sheet/i })).toHaveAttribute(
       'href',
       IOS_SHORTCUT_URL,

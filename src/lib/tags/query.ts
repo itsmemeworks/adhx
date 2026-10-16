@@ -133,9 +133,6 @@ function resolveThumbnail(
   if (item.platform === 'instagram') {
     return `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.id)}`
   }
-  if (item.platform === 'youtube') {
-    return `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
-  }
   // Twitter: use FxEmbed URLs, which need media type + preview url.
   if (!firstMedia) return null
   const mediaType = firstMedia.mediaType as 'photo' | 'video' | 'animated_gif'

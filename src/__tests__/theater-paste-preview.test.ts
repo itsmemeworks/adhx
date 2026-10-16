@@ -20,10 +20,6 @@ describe('resolvePastedLink', () => {
     )
   })
 
-  it('maps a YouTube short URL', () => {
-    expect(resolvePastedLink('https://youtube.com/shorts/aqz-KE-bpKQ')).toBe('/shorts/aqz-KE-bpKQ')
-  })
-
   it('routes a TikTok short link through the resolver redirect', () => {
     const path = resolvePastedLink('https://vm.tiktok.com/ZMabc123/')
     expect(path).toMatch(/^\/api\/tiktok\/resolve\?url=/)
@@ -36,9 +32,10 @@ describe('resolvePastedLink', () => {
     )
   })
 
-  it('returns null for plain text, unsupported links, and regular YouTube videos', () => {
+  it('returns null for plain text, unsupported links, and any YouTube URL', () => {
     expect(resolvePastedLink('the modern struggle')).toBeNull()
     expect(resolvePastedLink('https://example.com/watch?v=abc')).toBeNull()
+    expect(resolvePastedLink('https://youtube.com/shorts/aqz-KE-bpKQ')).toBeNull()
     expect(resolvePastedLink('https://youtu.be/Y9aytLYBajw')).toBeNull()
     expect(resolvePastedLink('https://www.youtube.com/watch?v=Y9aytLYBajw')).toBeNull()
     expect(resolvePastedLink('')).toBeNull()
@@ -56,7 +53,6 @@ describe('pastedPostResolvingStub', () => {
       '7648011069385919752',
       'video',
     ],
-    ['https://youtube.com/shorts/aqz-KE-bpKQ', 'youtube', 'aqz-KE-bpKQ', 'video'],
   ])('builds an immediate %s stage stub', (url, platform, id, contentType) => {
     expect(pastedPostResolvingStub(url)).toMatchObject({
       platform,
@@ -72,5 +68,9 @@ describe('pastedPostResolvingStub', () => {
       bookmarkId: null,
       contentType: 'video',
     })
+  })
+
+  it('returns null for a YouTube Shorts URL', () => {
+    expect(pastedPostResolvingStub('https://youtube.com/shorts/aqz-KE-bpKQ')).toBeNull()
   })
 })

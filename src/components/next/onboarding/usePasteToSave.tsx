@@ -9,7 +9,7 @@ import { PasteToast } from '../loader'
 /**
  * Paste a post link anywhere (outside a text field) — or tap Paste — and it
  * is saved: the face "grabs it", then the toast offers to play it. X,
- * Instagram, TikTok and YouTube Shorts links work (whatever
+ * Instagram and TikTok links work (whatever
  * `/api/bookmarks/add` accepts).
  */
 

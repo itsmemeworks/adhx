@@ -32,7 +32,7 @@ function parsePlatform(value: string | null): PlatformId | undefined {
   if (!value) return undefined
   const v = value.toLowerCase()
   if (v === 'x' || v === 'twitter') return 'twitter'
-  if (v === 'instagram' || v === 'tiktok' || v === 'youtube') return v
+  if (v === 'instagram' || v === 'tiktok') return v
   return undefined
 }
 

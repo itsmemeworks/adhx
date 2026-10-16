@@ -131,7 +131,7 @@ export interface SendSource {
 
 /**
  * Resolve the sendable file for an item, or null when there's nothing to send
- * (text/article/quote posts, YouTube — no free MP4 mirror exists there).
+ * (text/article/quote posts).
  * Pure, no fetch — video always goes through the video-src SSOT
  * (`reelVideoSrc`), never an inline per-platform URL (the regression that
  * made Instagram fall through to the Twitter proxy repeatedly). Twitter
@@ -141,10 +141,6 @@ export interface SendSource {
  */
 export function resolveSendSource(item: SendableItem | null): SendSource | null {
   if (!item || !item.bookmarkId) return null
-
-  // YouTube has no MP4 mirror at all — official iframe embed only, a
-  // deliberate product decision (no compliant zero-cost source exists).
-  if (item.platform === 'youtube') return null
 
   if (item.platform === 'instagram' && item.contentType === 'photo') {
     return {

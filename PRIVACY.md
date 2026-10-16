@@ -66,7 +66,7 @@ We do not use advertising or analytics pixels.
 
 These URLs are meant to be crawled and shared:
 
-- preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`, `/shorts/{id}`)
+- preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`)
 - `/` (Live theater), `/trending`, `/leaderboard`
 - public playlists `/t/{username}/{tag}` and curator profiles `/t/{username}`
 - public JSON (`/api/share/…`, `/api/trending`, `/api/activity`, `/api/collections/trending`) — **no `userId`**

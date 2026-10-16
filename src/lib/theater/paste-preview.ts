@@ -75,13 +75,7 @@ function platformPostResolvingStub(post: PlatformPost, source: string): TheaterI
       : post.platform === 'instagram' && post.previewPath.startsWith('/p/')
         ? 'photo'
         : 'video'
-  const author =
-    post.author ||
-    (post.platform === 'instagram'
-      ? 'instagram'
-      : post.platform === 'youtube'
-        ? 'youtube'
-        : post.platform)
+  const author = post.author || post.platform
 
   return {
     action: 'preview',

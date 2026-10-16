@@ -60,7 +60,7 @@ describe('AndroidSettingsCard', () => {
     setStandalone(true)
     render(<AndroidSettingsCard />)
     expect(
-      screen.getByText(/Installed. From X, Instagram, TikTok, or YouTube: Share → ADHX/),
+      screen.getByText(/Installed. From X, Instagram, or TikTok: Share → ADHX/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'How' })).not.toBeInTheDocument()
   })
@@ -92,9 +92,7 @@ describe('AndroidSettingsCard', () => {
 describe('AndroidLandingPromo', () => {
   it('leads with Share → ADHX after install', () => {
     render(<AndroidLandingPromo />)
-    expect(
-      screen.getByText(/Share a post from X, Instagram, TikTok, or YouTube/),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Share a post from X, Instagram, or TikTok/)).toBeInTheDocument()
     expect(screen.getByText('Add to Home')).toBeInTheDocument()
   })
 })

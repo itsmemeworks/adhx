@@ -1013,7 +1013,7 @@ describe('DesktopDock: shared-post-repeat cue', () => {
 /**
  * Gesture-unmute fix, desktop counterpart of the mobile chrome's tests: the
  * transport's audio button must dispatch a SYNCHRONOUS `theater-set-muted`
- * window event (the gesture-context fast path StageVideo/StageYouTube listen
+ * window event (the gesture-context fast path StageVideo listens
  * for) alongside calling `onSetMuted` (persistence) — both moving toward the
  * DISPLAYED state's opposite, not a blind toggle of the `muted` prop.
  */
@@ -2103,16 +2103,16 @@ describe('DesktopStageChrome: tappable author row', () => {
     expect(link).toHaveAttribute('target', '_blank')
   })
 
-  it('resolves the profile URL per-platform (youtube)', () => {
+  it('resolves the profile URL per-platform (tiktok)', () => {
     render(
       <DesktopStageChrome
         {...stageBase}
-        current={videoItem({ platform: 'youtube', author: 'dana' })}
+        current={videoItem({ platform: 'tiktok', author: 'dana' })}
       />,
     )
-    expect(screen.getByTitle('View @dana on YouTube')).toHaveAttribute(
+    expect(screen.getByTitle('View @dana on TikTok')).toHaveAttribute(
       'href',
-      'https://www.youtube.com/@dana',
+      'https://www.tiktok.com/@dana',
     )
   })
 

@@ -5,12 +5,7 @@ import type { TrendingItem } from '@/lib/trending/query'
 /**
  * Pure item -> progress-treatment mapping backing the mobile theater's
  * stories-style auto-advance (docs/specs/theater-first.md): a video plays out
- * on its own timeline, a non-video post gets a fixed 10s dwell. YouTube also
- * gets the video treatment — StageYouTube drives real play/pause/ended/mute
- * via the raw postMessage protocol — so the dock/peek-bar transport + audio
- * buttons render for it (they're gated on this kind). The clay line fills
- * from StageYouTube's `theater-video-progress` events (payload time, or a
- * play-start clock when YouTube withholds `currentTime`).
+ * on its own timeline, a non-video post gets a fixed 10s dwell.
  */
 
 function make(
@@ -29,10 +24,6 @@ function make(
 describe('progressKindFor', () => {
   it('returns none for a null item', () => {
     expect(progressKindFor(null)).toBe('none')
-  })
-
-  it('returns video for youtube (StageYouTube drives real play/pause/ended/mute)', () => {
-    expect(progressKindFor(make({ platform: 'youtube' }))).toBe('video')
   })
 
   it('returns video for tiktok', () => {
@@ -91,8 +82,8 @@ describe('progressKindFor', () => {
  * demoted to 'none', which stops both the ticking line and the
  * `theater-advance` dispatch that would otherwise fire when it fills.
  * 'video' items are untouched: their auto-advance is already blocked at the
- * player level (StageVideo's `loop` attribute / StageYouTube's seek-to-0
- * replay), so their progress line keeps behaving normally.
+ * player level (StageVideo's `loop` attribute), so their progress line keeps
+ * behaving normally.
  */
 describe('progressKindForPin', () => {
   it('demotes timed to none while pinned', () => {

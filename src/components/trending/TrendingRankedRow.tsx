@@ -18,7 +18,6 @@ const PLATFORM_LABEL: Record<string, string> = {
   twitter: 'X',
   tiktok: 'TikTok',
   instagram: 'Instagram',
-  youtube: 'YouTube',
 }
 
 export function trendingItemKey(item: TheaterItem): string {

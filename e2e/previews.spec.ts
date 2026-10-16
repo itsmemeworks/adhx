@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { PREVIEW_IG, PREVIEW_IG_PHOTO, PREVIEW_TT, PREVIEW_YT } from './constants'
+import { PREVIEW_IG, PREVIEW_IG_PHOTO, PREVIEW_TT } from './constants'
 import { caption, expectTheaterReady } from './helpers'
 
 test.describe('preview pages for every platform', () => {
@@ -44,13 +44,6 @@ test.describe('preview pages for every platform', () => {
     await page.goto(`/@${PREVIEW_TT.author}/video/${PREVIEW_TT.id}`)
     await expectTheaterReady(page)
     await expect(caption(page, PREVIEW_TT.text)).toBeVisible()
-  })
-
-  test('YouTube Shorts preview mounts the theater', async ({ page }) => {
-    test.setTimeout(90_000)
-    await page.goto(`/shorts/${PREVIEW_YT.id}`)
-    await expectTheaterReady(page)
-    await expect(caption(page, PREVIEW_YT.text)).toBeVisible()
   })
 })
 

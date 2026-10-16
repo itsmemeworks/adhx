@@ -115,6 +115,11 @@ describe('POST /api/activity/share', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects youtube (YouTube Shorts support was removed)', async () => {
+    const res = await post({ platform: 'youtube', id: 'abc' })
+    expect(res.status).toBe(400)
+  })
+
   it('rejects a cross-site Origin', async () => {
     const res = await post({ platform: 'twitter', id: '1' }, 'https://evil.example')
     expect(res.status).toBe(403)
@@ -124,12 +129,12 @@ describe('POST /api/activity/share', () => {
     mockUserId = 'secret-user'
     recordActivity({
       action: 'preview',
-      platform: 'youtube',
-      bookmarkId: 'abc',
-      author: 'yt',
-      url: '/shorts/abc',
+      platform: 'tiktok',
+      bookmarkId: '7300000000000000001',
+      author: 'tt',
+      url: '/@tt/video/7300000000000000001',
     })
-    const res = await post({ platform: 'youtube', id: 'abc' })
+    const res = await post({ platform: 'tiktok', id: '7300000000000000001' })
     expect(res.status).toBe(204)
     expect(res.headers.get('content-type')).toBeNull()
     const shares = testInstance.db

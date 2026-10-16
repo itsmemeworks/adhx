@@ -25,20 +25,20 @@ export const metadata: Metadata = {
   // (The OG/Twitter titles below keep it: unfurls don't get the template.)
   title: 'Trending Archive',
   description:
-    'A permanent, week-by-week archive of what people saved and previewed across X, TikTok, Instagram and YouTube on ADHX.',
+    'A permanent, week-by-week archive of what people saved and previewed across X, TikTok and Instagram on ADHX.',
   alternates: { canonical: '/trending/archive' },
   openGraph: {
     type: 'website',
     url: `${BASE_URL}/trending/archive`,
     title: 'Trending Archive — ADHX',
     description:
-      'A permanent, week-by-week archive of what people saved and previewed across X, TikTok, Instagram and YouTube on ADHX.',
+      'A permanent, week-by-week archive of what people saved and previewed across X, TikTok and Instagram on ADHX.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Trending Archive — ADHX',
     description:
-      'A permanent, week-by-week archive of what people saved and previewed across X, TikTok, Instagram and YouTube on ADHX.',
+      'A permanent, week-by-week archive of what people saved and previewed across X, TikTok and Instagram on ADHX.',
   },
 }
 

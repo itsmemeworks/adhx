@@ -9,7 +9,7 @@
 
 Stop saying "wait, I had the perfect meme for this." Save your favorites, build shareable playlists, and become the meme lord your group chat deserves.
 
-Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram images and Reels, TikTok, or YouTube Shorts** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
+Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram images and Reels, or TikTok** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
 
 ADHX is for the links you meant to come back to: one place to watch them, search them, tag them, archive them, or turn a tag into a public playlist. It is open source and self-hostable, with your saves stored in a SQLite file you own.
 
@@ -25,7 +25,7 @@ Social links are easy to save and hard to revisit. ADHX turns them into a watcha
 
 - **Watch before signing up.** Every supported link has a clean, shareable preview page with theater playback.
 - **Save with email.** Sign-in uses an email magic link. An X account is not required.
-- **Bring four platforms together.** X posts, photos, videos, quotes, and Articles sit beside Instagram image posts and Reels, TikToks, and YouTube Shorts.
+- **Bring three platforms together.** X posts, photos, videos, quotes, and Articles sit beside Instagram image posts and Reels, and TikToks.
 - **Choose how you revisit things.** Watch all your saves, newest first, in **Saved**, browse and search them in the **library**, or group them into tagged **playlists**.
 - **Keep control.** Run ADHX yourself and keep the SQLite database on your own machine or volume.
 
@@ -39,7 +39,6 @@ Replace the source host with `adhx.com`, paste a link into ADHX, or use one of t
 | Instagram posts | `/p/{id}`                     | Full-resolution images and ordered carousels   |
 | Instagram Reels | `/reels/{id}` or `/reel/{id}` | Inline Reel video with an official fallback    |
 | TikTok          | `/@{user}/video/{id}`         | Inline video                                   |
-| YouTube Shorts  | `/shorts/{id}`                | Official privacy-enhanced YouTube player       |
 
 For example, `x.com/user/status/123` becomes `adhx.com/user/status/123`. You can also paste the full original URL after `adhx.com/`.
 
@@ -86,7 +85,7 @@ Public activity is anonymous. ADHX never exposes the user ID attached to an acti
 
 ### On a phone
 
-- **Paste a link:** Copy Link in X, Instagram, TikTok, or YouTube Shorts, open ADHX, and tap **Paste link**.
+- **Paste a link:** Copy Link in X, Instagram, or TikTok, open ADHX, and tap **Paste link**.
 - **iPhone or iPad:** Install the [ADHX iOS Shortcut](https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b), then use **Share → ADHX** from the source app.
 - **Android:** Install ADHX as a PWA with **Add to Home Screen**, then use **Share → ADHX**. Android apps put links in different share fields; ADHX accepts the common forms.
 
@@ -94,7 +93,7 @@ The URL-prefix trick remains available on every platform.
 
 ### On a desktop
 
-The extension in [`extension/`](extension/) adds a toolbar action, a **Save to ADHX** context-menu item, and the `⌘⇧A` / `Ctrl+Shift+A` shortcut. It supports X, Instagram, TikTok, and YouTube Shorts links and opens the same ADHX preview flow as paste and mobile sharing.
+The extension in [`extension/`](extension/) adds a toolbar action, a **Save to ADHX** context-menu item, and the `⌘⇧A` / `Ctrl+Shift+A` shortcut. It supports X, Instagram, and TikTok links and opens the same ADHX preview flow as paste and mobile sharing.
 
 The extension is not in the Chrome Web Store yet. See [`extension/README.md`](extension/README.md) for the unpacked-install walkthrough.
 
@@ -105,12 +104,10 @@ ADHX keeps these actions distinct:
 - **Send** prepares the video or photo file and includes a short `via` link to the ADHX preview when the device supports file sharing. On desktop, it falls back to a download.
 - **Share link** shares the stable ADHX preview URL instead of the media file.
 
-YouTube Shorts use the official YouTube player, so ADHX does not download or send a Shorts video file.
-
 ## How it fits together
 
 ```text
-X · Instagram posts and Reels · TikTok · YouTube Shorts
+X · Instagram posts and Reels · TikTok
                     │
      URL prefix · paste · share · extension
                     ▼

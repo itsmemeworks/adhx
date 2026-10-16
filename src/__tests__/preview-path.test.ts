@@ -18,11 +18,11 @@ describe('authorProfileUrl', () => {
     expect(authorProfileUrl('tiktok', '@dancer')).toBe('https://www.tiktok.com/@dancer')
   })
 
-  it('builds the YouTube channel URL', () => {
-    expect(authorProfileUrl('youtube', 'channelname')).toBe('https://www.youtube.com/@channelname')
+  it('falls back to the X profile URL for an unknown platform (YouTube is no longer supported)', () => {
+    expect(authorProfileUrl('youtube', 'channelname')).toBe('https://x.com/channelname')
   })
 
-  it('strips a leading "@" for X/Instagram/YouTube too, not just TikTok', () => {
+  it('strips a leading "@" for X/Instagram too, not just TikTok', () => {
     expect(authorProfileUrl('twitter', '@naval')).toBe('https://x.com/naval')
   })
 

@@ -37,12 +37,11 @@ function base(overrides: Partial<SharedAutoSaveInput> = {}): SharedAutoSaveInput
 }
 
 describe('isPreviewPath', () => {
-  it('accepts the four preview routes', () => {
+  it('accepts the three preview routes', () => {
     expect(isPreviewPath('/naval/status/123')).toBe(true)
     expect(isPreviewPath('/reels/DaigXfxAkrE')).toBe(true)
     expect(isPreviewPath('/reel/DaigXfxAkrE')).toBe(true)
     expect(isPreviewPath('/@sophieraiin/video/7619017281691045134')).toBe(true)
-    expect(isPreviewPath('/shorts/Y9aytLYBajw')).toBe(true)
   })
 
   it('rejects app chrome, playlists, share, and the resolver', () => {
@@ -55,6 +54,7 @@ describe('isPreviewPath', () => {
     expect(isPreviewPath('/settings')).toBe(false)
     expect(isPreviewPath('/api/tiktok/resolve')).toBe(false)
     expect(isPreviewPath('/naval/status/abc')).toBe(false)
+    expect(isPreviewPath('/shorts/Y9aytLYBajw')).toBe(false)
   })
 })
 
@@ -84,14 +84,6 @@ describe('sharedAutoSaveReason', () => {
         base({
           documentPath: '/@user/video/7619017281691045134',
           currentPath: '/@user/video/7619017281691045134',
-        }),
-      ),
-    ).toBe('document-open')
-    expect(
-      sharedAutoSaveReason(
-        base({
-          documentPath: '/shorts/Y9aytLYBajw',
-          currentPath: '/shorts/Y9aytLYBajw',
         }),
       ),
     ).toBe('document-open')

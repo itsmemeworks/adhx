@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — YouTube removed; saved Shorts deleted; any-site study
+
+Owner decision: ADHX only proxies public media it can understand, and YouTube Shorts play only through YouTube's iframe (no frames to sample), so YouTube is gone: no `youtube` platform, no StageYouTube/oEmbed adapter, no `youtube.com/shorts` detection in paste/share/prefix/extension/bookmarklet, no YouTube CSP frame-src. `/shorts/{id}` redirects home and stays reserved. `YtDebugOverlay` became `AvDebugOverlay` (`?avdebug=1` only).
+Data: `src/lib/db/drop-youtube.ts` (called from migrate.ts) deletes every `platform = 'youtube'` row from bookmarks and its children, activity, moderation, analytics, understanding tables and FTS, plus auto channels that held a Short. Idempotent, one transaction, **irreversible on deploy**. Tested on the full test schema.
+e2e: `theater-sound.spec.ts` now drives a TikTok preview with a local WebM (`e2e/fixtures/sound.webm`) instead of the faked YouTube player; the iOS reject-second-unmute case went with it.
+Also: `docs/specs/any-site-links.md` measures proxy-only support for 12 more sites (yt-dlp rejected). Go: Bluesky, Streamable, LinkedIn, Pinterest, Reddit via vxreddit.
+Follow-ups: the published iCloud shortcut may still offer YouTube (it now lands on "not supported"). State: local, not pushed.
+
 ## 2026-10-16 — Right now: Playwright spec across two accounts
 
 `e2e/right-now.spec.ts`: one account watches `/channels` while another saves a frog post through `POST /api/bookmarks/add`; without a reload the watcher sees the strip chip "→ Frog", the card's people count +1 and its "Just saved" overlay. Second test: Tune in skipped to "You’re all caught up", watching 1→2 when the saver opens `/moments/{slug}`, then the next save auto-plays with "Just saved · just now".

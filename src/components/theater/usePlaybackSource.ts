@@ -4,11 +4,10 @@
  * Per-platform playback resolution for a theater item (spec §6). Twitter +
  * tiktok MP4 via `reelVideoSrc` (the video-src SSOT — never inline a
  * per-platform URL here, that's the regression that made Instagram fall
- * through to the Twitter proxy repeatedly); instagram/youtube resolve to
- * `poster` here — instagram's real playback is a Range-probe-gated `<video>`
- * that only `StageInstagram` renders (never attach `<video src>` on the
- * mirror before the probe confirms 200/206, spec §6/§11), and youtube has no
- * MP4 at all (official iframe only).
+ * through to the Twitter proxy repeatedly); instagram resolves to `poster`
+ * here — its real playback is a Range-probe-gated `<video>` that only
+ * `StageInstagram` renders (never attach `<video src>` on the mirror before
+ * the probe confirms 200/206, spec §6/§11).
  *
  * The resolution itself is exported as a pure function (`resolvePlaybackSource`)
  * so it's unit-testable without React; the hook is a thin `useMemo` wrapper.
@@ -38,7 +37,7 @@ export function resolvePlaybackSource(item: TheaterItem | null): PlaybackSource 
   if (isTwitterOrTiktok && isVideoLike) {
     return { kind: 'video', src: reelVideoSrc(item), poster }
   }
-  if (item.platform === 'instagram' || item.platform === 'youtube') {
+  if (item.platform === 'instagram') {
     return { kind: 'poster', src: null, poster }
   }
   return { kind: 'none', src: null, poster }

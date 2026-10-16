@@ -8,7 +8,7 @@ import { THEATER_SEEK } from '@/components/theater/useTheaterStageEvents'
 
 describe('TheaterProgressLine', () => {
   it('video kind paints the fill from theater-video-progress', () => {
-    const { container } = render(<TheaterProgressLine itemKey="youtube:1" kind="video" />)
+    const { container } = render(<TheaterProgressLine itemKey="video:1" kind="video" />)
     const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
     expect(fill).toBeTruthy()
     expect(fill.style.width).toBe('0%')
@@ -20,7 +20,7 @@ describe('TheaterProgressLine', () => {
   })
 
   it('exposes the dock line as a seekable slider with a larger hit area above it', () => {
-    const { container } = render(<TheaterProgressLine itemKey="youtube:1" kind="video" />)
+    const { container } = render(<TheaterProgressLine itemKey="video:1" kind="video" />)
     const slider = container.querySelector('[data-theater-progress-slider]') as HTMLInputElement
     const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
     const seek = vi.fn()
@@ -133,7 +133,7 @@ describe('TheaterProgressLine', () => {
   })
 
   it('resumes progress updates after a pointer or touch scrub is canceled', () => {
-    const { container } = render(<TheaterProgressLine itemKey="youtube:1" kind="video" />)
+    const { container } = render(<TheaterProgressLine itemKey="video:1" kind="video" />)
     const slider = container.querySelector('[data-theater-progress-slider]') as HTMLInputElement
     const fill = container.querySelector('[data-theater-progress-fill]') as HTMLElement
 
@@ -173,7 +173,7 @@ describe('TheaterProgressLine', () => {
   })
 
   it('renders nothing for kind none', () => {
-    const { container } = render(<TheaterProgressLine itemKey="youtube:1" kind="none" />)
+    const { container } = render(<TheaterProgressLine itemKey="video:1" kind="none" />)
     expect(container.querySelector('[data-theater-progress-fill]')).toBeNull()
   })
 
@@ -202,7 +202,7 @@ describe('TheaterProgressLine', () => {
   })
 
   it('does not treat Space as a timed pause when the kind is video', () => {
-    render(<TheaterProgressLine itemKey="youtube:1" kind="video" />)
+    render(<TheaterProgressLine itemKey="video:1" kind="video" />)
     const paused = vi.fn()
     window.addEventListener('theater-pause', paused)
     try {

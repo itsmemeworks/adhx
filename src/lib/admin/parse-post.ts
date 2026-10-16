@@ -31,10 +31,9 @@ const PREVIEW_PATHS: Array<{
     id: (m) => m[2],
     author: (m) => m[1],
   },
-  { re: /^\/shorts\/([A-Za-z0-9_-]{11})\/?$/i, platform: 'youtube', id: (m) => m[1] },
 ]
 
-const SHORTHAND = /^(twitter|instagram|tiktok|youtube)\s*[:/]\s*(\S+)$/i
+const SHORTHAND = /^(twitter|instagram|tiktok)\s*[:/]\s*(\S+)$/i
 
 function pathFromInput(raw: string): string | null {
   const trimmed = raw.trim()

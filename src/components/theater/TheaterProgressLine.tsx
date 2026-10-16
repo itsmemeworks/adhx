@@ -7,13 +7,7 @@
  * top-edge tab gesture:
  * - kind 'video': fill mirrors the current video's playback — driven by
  *   `theater-video-progress` window CustomEvents (detail: { progress: 0..1 })
- *   dispatched by StageVideo on timeupdate. YouTube also gets this kind
- *   (StageYouTube drives real play/pause/ended/mute via the raw postMessage
- *   protocol — see that file) and, since round 5, dispatches the same event
- *   itself from the protocol's `infoDelivery` `currentTime`/`duration`
- *   fields, so the fill tracks YouTube playback too. When YouTube
- *   withholds `currentTime` until an in-iframe gesture, StageYouTube
- *   interpolates from duration + play-start and still dispatches here.
+ *   dispatched by StageVideo on timeupdate.
  * - kind 'timed': a 10s countdown fill; when it completes, dispatches a
  *   `theater-advance` window CustomEvent (the shell listens and goes next).
  *   Pauses while a `theater-pause` event is active and resumes (from the same
@@ -54,7 +48,7 @@ export function progressKindFor(item: TheaterItem | null, _articleMode = false):
   // article mode — the same element keeps playing above the reader.
   // `_articleMode` is kept so existing call sites don't churn.
   if (isQuoteReader(item, false)) return 'timed'
-  if (item.platform === 'youtube' || item.platform === 'tiktok' || item.contentType === 'video') {
+  if (item.platform === 'tiktok' || item.contentType === 'video') {
     return 'video'
   }
   return 'timed'
@@ -70,7 +64,7 @@ export function progressKindFor(item: TheaterItem | null, _articleMode = false):
  * `theater-advance` dispatch) rather than visibly counting toward an advance
  * that will never happen. 'video' and 'none' pass through unchanged — video
  * auto-advance is independently blocked at the player level (StageVideo's
- * `loop` attribute / StageYouTube's seek-to-0 replay), so its progress line
+ * `loop` attribute), so its progress line
  * stays honest.
  */
 export function progressKindForPin(kind: ProgressKind, pinned: boolean): ProgressKind {

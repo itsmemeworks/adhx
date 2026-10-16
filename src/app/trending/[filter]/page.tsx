@@ -39,13 +39,13 @@ function copy(label: string): { title: string; description: string } {
     return {
       title: 'Popular — what people are sending most',
       description:
-        'The most-watched and most-sent posts across X, TikTok, Instagram and YouTube on ADHX right now. A live, anonymous feed — preview any of them and send it on.',
+        'The most-watched and most-sent posts across X, TikTok and Instagram on ADHX right now. A live, anonymous feed — preview any of them and send it on.',
     }
   }
   const lower = label.toLowerCase()
   return {
     title: `Trending ${lower} — what people are sending`,
-    description: `Trending ${lower} across X, TikTok, Instagram and YouTube right now. A live, anonymous feed — preview any of them and send it on, no app needed.`,
+    description: `Trending ${lower} across X, TikTok and Instagram right now. A live, anonymous feed — preview any of them and send it on, no app needed.`,
   }
 }
 

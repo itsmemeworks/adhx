@@ -42,8 +42,8 @@ export const dynamic = 'force-dynamic'
 
 const baseUrl = PUBLIC_BASE_URL
 
-/** The four content platforms whose saved/previewed posts map to preview URLs. */
-const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok', 'youtube']
+/** The content platforms whose saved/previewed posts map to preview URLs. */
+const PLATFORMS: PlatformId[] = ['twitter', 'instagram', 'tiktok']
 
 /** Backstop so a runaway table can't produce an oversized sitemap (limit 50k). */
 const URL_CAP = 45_000

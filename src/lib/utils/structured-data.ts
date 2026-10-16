@@ -65,8 +65,6 @@ export interface VideoObjectInput {
   uploadDate?: string
   /** Direct media URL (MP4 etc.). */
   contentUrl?: string
-  /** Embeddable player URL (e.g. a YouTube embed). */
-  embedUrl?: string
   /** ISO 8601 duration, e.g. "PT0M45S". */
   duration?: string
   /** Author of the video. */
@@ -197,8 +195,8 @@ export function buildSocialMediaPostingLd(input: SocialMediaPostingInput): Recor
 }
 
 /**
- * Standalone VideoObject for Reels / Shorts / TikTok previews. Use `contentUrl`
- * for a direct MP4 (TikTok/Reels) or `embedUrl` for an iframe player (YouTube).
+ * Standalone VideoObject for Reels / TikTok previews. `contentUrl` is the
+ * direct MP4 when one is known.
  */
 export function buildVideoObjectLd(input: VideoObjectInput): Record<string, unknown> {
   const ld: Record<string, unknown> = {
@@ -210,7 +208,6 @@ export function buildVideoObjectLd(input: VideoObjectInput): Record<string, unkn
   if (input.thumbnailUrl) ld.thumbnailUrl = input.thumbnailUrl
   if (input.uploadDate) ld.uploadDate = input.uploadDate
   if (input.contentUrl) ld.contentUrl = input.contentUrl
-  if (input.embedUrl) ld.embedUrl = input.embedUrl
   if (input.duration) ld.duration = input.duration
   if (input.author) ld.author = buildAuthorLd(input.author)
   return ld

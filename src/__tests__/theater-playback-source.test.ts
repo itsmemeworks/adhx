@@ -4,7 +4,7 @@ import type { TrendingItem } from '@/lib/trending/query'
 
 /**
  * Per-platform playback resolution matrix (spec §6, PR-1 scope). Twitter/TikTok
- * video → MP4 via the video-src SSOT; Instagram/YouTube → poster-only for now
+ * video → MP4 via the video-src SSOT; Instagram → poster-only for now
  * (their real stages land in PR 2); everything else → no media pipeline.
  *
  * The Instagram case is a deliberate regression test: Instagram must NOT fall
@@ -67,17 +67,6 @@ describe('resolvePlaybackSource', () => {
     expect(result.src).toBe(null)
   })
 
-  it('youtube → poster only (no MP4 exists; official iframe only)', () => {
-    const result = resolvePlaybackSource(
-      item({ platform: 'youtube', bookmarkId: 'Y9aytLYBajw', contentType: 'video' }),
-    )
-    expect(result).toEqual({
-      kind: 'poster',
-      src: null,
-      poster: 'https://pbs.twimg.com/thumb.jpg',
-    })
-  })
-
   it('unknown platforms/types → none, but poster still carries the thumbnail', () => {
     const result = resolvePlaybackSource(
       item({ platform: 'twitter', contentType: 'article', thumbnailUrl: 'https://x/img.jpg' }),
@@ -111,7 +100,6 @@ describe('instagramWarmSrc', () => {
   it('returns null for non-instagram platforms', () => {
     expect(instagramWarmSrc(item({ platform: 'twitter', bookmarkId: '123' }))).toBe(null)
     expect(instagramWarmSrc(item({ platform: 'tiktok', bookmarkId: '123' }))).toBe(null)
-    expect(instagramWarmSrc(item({ platform: 'youtube', bookmarkId: '123' }))).toBe(null)
   })
 
   it('returns null when there is no source id, or no item at all', () => {

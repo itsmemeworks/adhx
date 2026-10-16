@@ -37,7 +37,7 @@ Use org `your-org` and project `your-project`.
 
 **Save it. Lose it. Find it.**
 
-A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and saves Instagram image posts/carousels and Reels, TikTok videos, and YouTube Shorts via the same URL-prefix trick (Instagram images and TikTok/Reels offer file send/download; YouTube plays via the official iframe embed).
+A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and saves Instagram image posts/carousels and Reels, and TikTok videos via the same URL-prefix trick (Instagram images and TikTok/Reels offer file send/download). YouTube Shorts were supported until 2026-10 and then removed: they only play through YouTube's iframe, so they can't be understood like the other platforms (`src/lib/db/drop-youtube.ts` deletes saved Shorts at migrate time; `/shorts/{id}` redirects home and stays a reserved route).
 
 ## Agent Context Protocol
 
@@ -367,7 +367,6 @@ Users can preview tweets, Instagram posts/Reels, and TikToks by replacing the ho
 | `instagram.com/reels/{id}`      | `adhx.com/reels/{id}`         | `src/app/reels/[id]/page.tsx`             |
 | `instagram.com/reel/{id}`       | `adhx.com/reel/{id}`          | `src/app/reel/[id]/page.tsx`              |
 | `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` | `src/app/[username]/video/[id]/page.tsx`  |
-| `youtube.com/shorts/{id}`       | `adhx.com/shorts/{id}`        | `src/app/shorts/[id]/page.tsx`            |
 
 Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts` (Next.js middleware) rewrites these via 307 redirect:
 
@@ -375,9 +374,8 @@ Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts
 - `adhx.com/https://www.instagram.com/p/{id}` → `/p/{id}`
 - `adhx.com/https://www.instagram.com/reels/{id}` → `/reels/{id}`
 - `adhx.com/https://www.tiktok.com/@{user}/video/{id}` → `/@{user}/video/{id}`
-- `adhx.com/https://youtube.com/shorts/{id}` → `/shorts/{id}`
 
-All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`, `m.youtube.com`).
+All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`).
 
 All preview routes render the shared-mode theater (`SharedPostStatic` + `<TheaterShell mode="shared">` — see "Preview pages ARE the theater" under the Theater section). The per-platform media-resolution notes below still apply.
 
@@ -401,16 +399,7 @@ All preview routes render the shared-mode theater (`SharedPostStatic` + `<Theate
 - Custom inline SVG glyph for the TikTok logo (lucide doesn't ship one).
 - Note: Next.js URL-encodes `@` in dynamic params, so `params.username` arrives as `%40user`. Decode before validation.
 
-**YouTube Shorts preview** (media resolution):
-
-- Unlike TikTok/Instagram there's **no free MP4 mirror** — and stream extraction is fragile + against ToS. So YouTube uses the _official_ path: metadata via YouTube's free **oEmbed** API and playback via the official **iframe embed** (`src/lib/media/youtube.ts`).
-  - oEmbed: `https://www.youtube.com/oembed?url=<watch url>&format=json` → title, channel name, channel handle (parsed from `author_url`'s `/@handle`).
-  - Thumbnail: `https://i.ytimg.com/vi/{id}/hqdefault.jpg`. Embed: `https://www.youtube-nocookie.com/embed/{id}` (privacy-enhanced).
-  - **No download** (that was a deliberate product decision — there's no compliant zero-cost MP4 source).
-- `extractYouTubeId()` accepts **Shorts URLs only** (`youtube.com/shorts/{id}`, www/m, with/without protocol, `?si=` tracking params). `youtu.be`, `/watch?v=`, `/embed/`, `/live/`, and bare ids are rejected — those forms cover regular (non-Short) videos.
-- **CSP**: YouTube iframe needs `frame-src https://www.youtube-nocookie.com https://www.youtube.com`; Instagram Reel fallback embed needs `https://www.instagram.com`. `img-src` allows `https:` so off-site OG/link-preview images (Substack, Medium, …) can render on stage and in the library. All in `next.config.js`.
-- The gallery `FeedCard` shows the poster + a play overlay (no hover-autoplay; there's no MP4). `StageYouTube` renders the iframe directly for `platform === 'youtube'` — **give the iframe container a concrete height** (e.g. `h-[60vh] lg:h-[82vh] aspect-[9/16]`); an `aspect-[9/16]` box around an `absolute` iframe collapses to zero otherwise.
-- Saved Shorts store a poster as a `mediaType: 'video'` row (the embed is resolved from platform+id, so there's no MP4 to store).
+**CSP**: the Instagram Reel fallback embed needs `frame-src https://www.instagram.com`. `img-src` allows `https:` so off-site OG/link-preview images (Substack, Medium, …) can render on stage and in the library. Both in `next.config.js`.
 
 **Send** is the file (video or photo); **Share link** is the preview URL. Touch **Send** prefetches the MP4 and shares `files` + `text: "via <canonical url>"` — never `url` alongside `files` (WhatsApp concatenates them into `via URL URL`). iOS needs the file ready before the tap so `navigator.share` stays a user gesture (implemented by `useSendFile` in the theater).
 
@@ -464,7 +453,7 @@ Archive (`POST /api/bookmarks/[id]/read`) is private — it does **not** write a
 
 **`GET /api/activity` enriches each item server-side** — the recorded `activity` row is intentionally sparse, so the API joins the saved bookmark to fill in display data (this is why Discover cards look right even though the raw row doesn't carry the media):
 
-- `contentType` (video/photo/text/article) — from the saved bookmark's media kinds + `category`; TikTok/YouTube are always video, while Instagram distinguishes `/p/` photos/carousels from Reels. For **preview-only** posts (no saved bookmark) it falls back to the **server-resolved `activity.content_type`** recorded at preview time, so an article still renders as an article (cover + headline) instead of a bare "Saved post" — only if that's also absent does the client guess from platform/thumbnail. `content_type` was added via guarded `ALTER TABLE` in `migrate.ts` (like `author_avatar_url`); new `activity` columns must also be added to the in-memory test DDL.
+- `contentType` (video/photo/text/article) — from the saved bookmark's media kinds + `category`; TikTok is always video, while Instagram distinguishes `/p/` photos/carousels from Reels. For **preview-only** posts (no saved bookmark) it falls back to the **server-resolved `activity.content_type`** recorded at preview time, so an article still renders as an article (cover + headline) instead of a bare "Saved post" — only if that's also absent does the client guess from platform/thumbnail. `content_type` was added via guarded `ALTER TABLE` in `migrate.ts` (like `author_avatar_url`); new `activity` columns must also be added to the in-memory test DDL.
 - `thumbnailUrl` — **Instagram** images/posters are derived as `/api/media/instagram/thumbnail?id=`, and **TikTok** posters as `/api/media/tiktok/thumbnail?username=&id=`. Both are stable same-origin URLs that re-resolve expiring/signed CDN media and work even when an activity row has no thumbnail; **article** covers come from `bookmark_links.preview_image_url`; everything else keeps the recorded thumbnail. Mirrors how `/api/feed` builds thumbnails for the collection.
 - article `text` is overridden with `bookmark_links.preview_title` (the recorded text is usually just the wrapper tweet's `t.co` link) so the card shows the real headline.
 - `authorAvatarUrl` — the post author's avatar for tweet-style text/quote cards: the saved bookmark's `author_profile_image_url`, else the recorded `activity.author_avatar_url` (populated for preview-only items, server-resolved like `thumbnailUrl`).
@@ -564,7 +553,7 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 | Platform | Primary Method                                                                    | Fallback                                 |
 | -------- | --------------------------------------------------------------------------------- | ---------------------------------------- |
-| iOS      | One-tap iCloud shortcut — adds ADHX to the share menu (X / IG / TikTok / YouTube) | URL prefix + paste                       |
+| iOS      | One-tap iCloud shortcut — adds ADHX to the share menu (X / IG / TikTok)           | URL prefix + paste                       |
 | Desktop  | Extension (`extension/` — toolbar / right-click / ⌘⇧A → `/share?url=`)            | Bookmarklet + URL prefix + theater paste |
 | Android  | Add to Home Screen, then Share → ADHX (PWA Share Target)                          | Paste link + URL prefix                  |
 
@@ -578,8 +567,8 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 
 **iOS Shortcut:**
 
-- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — opens `/share?url=` for **X, Instagram, TikTok, and YouTube**. Not in this repo. One tap adds ADHX to the iOS share menu; from those apps, Share → ADHX. Surfaces: iOS banner (`PWAInstallPrompt` — tap away or X dismisses it), landing hero + promo, **Settings** (`IosShortcutSettingsCard`, always on iOS so the link is never lost), preview CTA nudge (`IosShortcutNudge`). Dismiss key `adhx-shortcut-dismissed`.
-- URL-prefix (`x.com` → `adhx.com`) still works as a fallback. A DIY Share Sheet recipe that opens `https://adhx.com/share?url=` lives in `src/components/IosShareRecipe.tsx` if the iCloud link is ever lost. Settings and landing show a 3-step icon strip (`IosHow`). `/share` maps X / IG / TikTok / YouTube (and TikTok short links).
+- Published iCloud shortcut ID: `0d187480099b4d34a745ec8750a4587b` — opens `/share?url=` for **X, Instagram, and TikTok** (the published shortcut may still list YouTube; `/share` now reports those links as unsupported). Not in this repo. One tap adds ADHX to the iOS share menu; from those apps, Share → ADHX. Surfaces: iOS banner (`PWAInstallPrompt` — tap away or X dismisses it), landing hero + promo, **Settings** (`IosShortcutSettingsCard`, always on iOS so the link is never lost), preview CTA nudge (`IosShortcutNudge`). Dismiss key `adhx-shortcut-dismissed`.
+- URL-prefix (`x.com` → `adhx.com`) still works as a fallback. A DIY Share Sheet recipe that opens `https://adhx.com/share?url=` lives in `src/components/IosShareRecipe.tsx` if the iCloud link is ever lost. Settings and landing show a 3-step icon strip (`IosHow`). `/share` maps X / IG / TikTok (and TikTok short links).
 
 **Android install** (`src/components/AndroidInstall.tsx`):
 
@@ -590,7 +579,7 @@ The app offers multiple ways to save tweets, shown contextually based on the use
 **Bookmarklet** (desktop):
 
 ```
-javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok|youtube)\.com/,'adhx.com'))
+javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tiktok)\.com/,'adhx.com'))
 ```
 
 - One-click URL rewrite from x.com/twitter.com to adhx.com
@@ -602,7 +591,7 @@ javascript:void(location.href=location.href.replace(/(?:x|twitter|instagram|tikt
 - `public/manifest.json` includes `share_target` config: `action: "/share"`, `method: "GET"`, `params: { url, text, title }`. **All three params are captured** because apps disagree on which field carries the link — a clean share sets `url`, but TikTok (and others) drop it into `text` alongside a caption.
 - `src/app/share/page.tsx` — client component that extracts the link from the shared payload and redirects to the matching preview path
 - `extractSharedUrl(...candidates)` (`src/lib/utils/parse-share-url.ts`) returns the first http(s) URL across `url`/`text`/`title`, pulling a URL embedded in caption text when the whole field isn't one.
-- `parseShareUrl()` maps **all four platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram `/p/` → `/p/{id}`, Instagram Reel → `/reels/{id}`, TikTok → `/@{user}/video/{id}`, YouTube Shorts (`youtube.com/shorts/{id}` only) → `/shorts/{id}`. **TikTok short links** (`vm.`/`vt.tiktok.com/{code}`, `tiktok.com/t/{code}` — the native share format) can't be resolved client-side, so it returns the `/api/tiktok/resolve?url=…&go=1` resolver path instead, which 307s to the preview. The share page does a full `window.location.replace` for `/api/` paths (the client router can't follow a cross-route redirect) and `router.replace` for app routes.
+- `parseShareUrl()` maps **all three platforms** to their preview path and returns `{ path }`: X → `/{user}/status/{id}`, Instagram `/p/` → `/p/{id}`, Instagram Reel → `/reels/{id}`, TikTok → `/@{user}/video/{id}`. **TikTok short links** (`vm.`/`vt.tiktok.com/{code}`, `tiktok.com/t/{code}` — the native share format) can't be resolved client-side, so it returns the `/api/tiktok/resolve?url=…&go=1` resolver path instead, which 307s to the preview. The share page does a full `window.location.replace` for `/api/` paths (the client router can't follow a cross-route redirect) and `router.replace` for app routes.
 - Shows a "Not a supported link" error for unrecognised URLs with a link back to homepage
 
 **Add to Home Screen (PWA install)**:
@@ -878,7 +867,7 @@ Search by meaning is backed by server-side EmbeddingGemma 2 vectors (see ARCHITE
 
 - **Tables**: `post_embeddings` `(platform, post_id, kind)` and `understanding_queue` `(platform, post_id, kind)` — both keyed by POST, not saver, with no `user_id`. DDL lives in `src/lib/semantic/schema-sql.ts` and is shared by `migrate.ts` and the test DB. Never put tags or anything user-private into a document (`documents.ts`).
 - **Kinds**: `text` (post words, article body, link previews, quote, alt text), `image` (first photo, video poster or article cover), `video` (ffmpeg one frame every 2 s over the first 32 s, max 16 frames, 448px wide, 70 vision tokens per frame, from the same-origin video proxy; `VIDEO_SAMPLING` is folded into the video content hash so changing it re-queues only videos). `status` is `ok`, `none` (nothing of that kind, including a "video" that is really a photo and media deleted upstream — `MediaGoneError` on 404/410, kept with its `error`; `gone.ts` `withoutGone`/`goneKeys` keep those posts out of search, similar, channels and `/api/feed`) or `failed`. X articles whose content never loaded (sync gave up on FxTwitter) are re-fetched by `repairUnloadedArticles()` (`src/lib/sync/repair-articles.ts`) when the worker starts, then re-understood. `SEMANTIC_MODEL_VERSION` is stored on every row; bump it to re-understand everything.
-- **Enqueue** with `noteSaved(keys, priority)` from `@/lib/semantic` — fire-and-forget, never throws. Already wired into `/api/tweets/add`, `/api/bookmarks/add` (IG/TikTok/YouTube), `/api/sync` (sync priority) and playlist clone.
+- **Enqueue** with `noteSaved(keys, priority)` from `@/lib/semantic` — fire-and-forget, never throws. Already wired into `/api/tweets/add`, `/api/bookmarks/add` (IG/TikTok), `/api/sync` (sync priority) and playlist clone.
 - **Processes**: the model NEVER runs in the web server (inference blocks the event loop — one video froze all requests for ~15s). `src/instrumentation.ts` calls `startSemanticProcesses()` (`supervisor.ts`), which forks `child.ts` via `node --import tsx` twice: `jobs` (the worker, full model, nice 10) and `query` (words-only model for `embedQuery`, ~60ms). Web code talks to them only through `supervisor.ts` (`wakeJobs`, `jobActivity`, `embedQuery`); never import `model.ts` or `worker.ts` from a route. The Docker image ships `tsconfig.json` so tsx resolves `@/`. One job at a time with pond-style rests. Disabled when `SEMANTIC_SEARCH=off` and always under Vitest. E2E sets it off.
 - **Env**: `SEMANTIC_CACHE_DIR` (model weights; `/data/models` on Fly), `SEMANTIC_THREADS` (ONNX intra-op threads; 1 on Fly), `SEMANTIC_INTERNAL_ORIGIN` (loopback origin for media proxies; defaults to `http://127.0.0.1:$PORT`), `FFMPEG_PATH` (override the bundled binary).
 - **Routes**: `GET /api/understanding/status`, `POST /api/understanding/retry`, `POST /api/understanding/prioritize { posts: [{ platform, id }] }` (max 20, only the caller's own saves).

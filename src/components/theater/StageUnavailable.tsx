@@ -5,10 +5,10 @@
  *
  * Two reasons, do not collapse them:
  *  - `source` — the origin network couldn't resolve it (FxTwitter 401/404:
- *    deleted, private, or suspended). Platform-named so a Short never
+ *    deleted, private, or suspended). Platform-named so a Reel never
  *    claims it was "on X".
  *  - `hidden` — an admin removed it from ADHX. The source may still exist
- *    on YouTube / Instagram / TikTok / X; we just won't show it here.
+ *    on Instagram / TikTok / X; we just won't show it here.
  *
  * Replaces the legacy off-brand `QuickAddLanding` "Connect with X to save"
  * dead end. No retry, no save CTA, no X-connect CTA — there is nothing
@@ -27,7 +27,6 @@ export type UnavailableReason = 'source' | 'hidden'
 
 const SOURCE_NETWORK: Record<string, string> = {
   twitter: 'X',
-  youtube: 'YouTube',
   instagram: 'Instagram',
   tiktok: 'TikTok',
 }

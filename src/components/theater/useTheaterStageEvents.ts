@@ -56,7 +56,7 @@ export function useTheaterStageTapDeclutter(
 }
 
 /**
- * StageVideo / StageYouTube broadcast playing + mute on window. Desktop dock
+ * StageVideo broadcasts playing + mute on window. Desktop dock
  * and mobile bottom bar both mirror those events for pause/audio buttons.
  */
 export function useTheaterStageEvents() {

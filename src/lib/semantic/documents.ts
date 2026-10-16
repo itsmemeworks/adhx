@@ -57,7 +57,6 @@ function articleBody(content: unknown): string {
 
 function videoStreamPath(item: FeedItemResponse, mediaIndex: number): string | null {
   const platform = item.platform || 'twitter'
-  if (platform === 'youtube') return null // iframe-only: no compliant MP4 source
   if (platform === 'instagram' || platform === 'tiktok') {
     const media = item.media?.[mediaIndex]
     return media?.url?.startsWith('/api/media/') ? media.url : null

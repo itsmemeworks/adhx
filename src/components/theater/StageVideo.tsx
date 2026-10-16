@@ -20,7 +20,7 @@
  * "sound" on every single video. Reusing the element lets an unmute survive
  * across items rendered by the same StageVideo instance (Stage.tsx renders
  * this component for both twitter and tiktok, so X→TikTok→X keeps it;
- * swapping to a non-video item — text/article/YouTube/a re-probing
+ * swapping to a non-video item — text/article/a re-probing
  * Instagram reel — unmounts this component entirely, an accepted gap).
  *
  * `src`/`muted` are applied imperatively (not as controlled JSX attributes)
@@ -33,7 +33,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePostPlayback } from './usePostPlayback'
 import { useVideoPictureInPicture } from './useVideoPictureInPicture'
 import { Play, RotateCcw } from 'lucide-react'
-import { logSV } from './YtDebugOverlay'
+import { logSV } from './AvDebugOverlay'
 import {
   dispatchTheaterStageTap,
   dispatchTheaterUserPlaybackState,
@@ -615,7 +615,7 @@ export function StageVideo({
   // but vetoed going unmuted without a gesture, signalled ONLY by an
   // unexpected `pause` while `catchUpPendingRef` is armed — never a timer
   // (the same evidence-only discipline as this file's `theater-pause`
-  // handlers and StageYouTube's `fallBackToMuted`: a successful, silent
+  // handlers: a successful, silent
   // unmute produces no event at all, so silence can never mean rejection).
   // Drops back to muted and resumes, exactly like the mount effect's own
   // rejected-unmuted-continuation fallback above.

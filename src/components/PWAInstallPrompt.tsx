@@ -44,7 +44,6 @@ function isTheaterPath(pathname: string): boolean {
     pathname.startsWith('/t/') ||
     /^\/\w+\/status\/\d+$/.test(pathname) ||
     /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
-    /^\/shorts\/[A-Za-z0-9_-]{11}$/.test(pathname) ||
     /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
   )
 }
@@ -141,7 +140,7 @@ export function PWAInstallPrompt() {
             >
               <p className="text-sm font-semibold text-ink">Install the iOS shortcut</p>
               <p className="text-xs leading-snug text-ink-3">
-                Share posts to ADHX from X, Instagram, TikTok, and YouTube in one tap.
+                Share posts to ADHX from X, Instagram, and TikTok in one tap.
               </p>
             </a>
             <button

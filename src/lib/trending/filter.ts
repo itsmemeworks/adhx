@@ -54,7 +54,7 @@ export function filterLabel(filter: FilterId): string {
  * The post's type for the badge/filtering. Prefer the real `contentType`
  * resolved server-side from the saved bookmark; otherwise fall back to a
  * heuristic:
- *   TikTok / YouTube → video (single-format platforms)
+ *   TikTok → video (single-format platform)
  *   Instagram uses its resolved photo/video type
  *   an avatar/profile image is NOT real media → text
  *   a Twitter video poster (ext_tw_video_thumb / amplify / tweet_video_thumb) → video
@@ -73,8 +73,7 @@ export function inferType(item: TrendingItem): ContentType {
  * Supports the platforms that expose a clean MP4 stream + a native `ended` event
  * we can chain on: **TikTok** (`/api/media/tiktok/video`), **X video**
  * (`/api/media/video`), and **Instagram** (`/api/media/instagram/video`, via the
- * mirror registry). YouTube (iframe embed, no MP4) is excluded until its
- * playback path supports inline auto-advance. Requires a `bookmarkId` (the
+ * mirror registry). Requires a `bookmarkId` (the
  * source video id) to build the stream URL.
  */
 export function isReelPlayable(item: TrendingItem): boolean {

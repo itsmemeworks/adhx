@@ -244,15 +244,12 @@ describe('theaterUrlSyncPath', () => {
     )
   })
 
-  it('builds the canonical preview path for instagram, tiktok, and youtube', () => {
+  it('builds the canonical preview path for instagram and tiktok', () => {
     expect(
       theaterUrlSyncPath({ platform: 'instagram', bookmarkId: 'abc', author: 'someuser' }),
     ).toBe('/reels/abc')
     expect(theaterUrlSyncPath({ platform: 'tiktok', bookmarkId: '999', author: '@someuser' })).toBe(
       '/@someuser/video/999',
-    )
-    expect(theaterUrlSyncPath({ platform: 'youtube', bookmarkId: 'xyz', author: 'someuser' })).toBe(
-      '/shorts/xyz',
     )
   })
 
@@ -376,8 +373,7 @@ describe('computeCanPrev / computeCanNext', () => {
  * shared-post-repeat (owner rationale: a visitor lands on a shared preview
  * link and a 5s auto-advance carries them into the live pulse before they
  * can Save/tag/copy the link): `isSharedPostPinned` is the pure gate behind
- * both the player-level repeat (StageVideo's `loop` / StageYouTube's
- * seek-to-0 replay) and the 'timed' auto-advance suppression
+ * both the player-level repeat (StageVideo's `loop`) and the 'timed' auto-advance suppression
  * (`progressKindForPin`). It's true only in shared mode, only while the pin
  * hasn't been cleared by a deliberate nav, and only while the shared post is
  * actually the item on stage.

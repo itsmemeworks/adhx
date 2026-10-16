@@ -7,16 +7,19 @@ import {
 } from './share-url'
 
 describe('isSupportedShareUrl', () => {
-  it('accepts the four platforms the share page already routes', () => {
+  it('accepts the platforms the share page already routes', () => {
     expect(isSupportedShareUrl('https://x.com/naval/status/1002103360646823936')).toBe(true)
     expect(isSupportedShareUrl('https://www.instagram.com/reels/DXVsqQ7CSXw')).toBe(true)
     expect(
       isSupportedShareUrl('https://www.tiktok.com/@sophieraiin/video/7619017281691045134'),
     ).toBe(true)
-    expect(isSupportedShareUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(true)
+    expect(isSupportedShareUrl('https://vm.tiktok.com/ZMABcd123')).toBe(true)
+  })
+
+  it('rejects YouTube, which ADHX no longer saves', () => {
+    expect(isSupportedShareUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(false)
     expect(isSupportedShareUrl('https://youtu.be/dQw4w9WgXcQ')).toBe(false)
     expect(isSupportedShareUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe(false)
-    expect(isSupportedShareUrl('https://vm.tiktok.com/ZMABcd123')).toBe(true)
   })
 
   it('accepts a host with no protocol (typed / copied path)', () => {

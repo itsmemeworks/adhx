@@ -311,7 +311,7 @@ export function rememberRecent(q: string): string[] {
 
 /**
  * A muted preview stream for the best match, or null when the post has no
- * video the app can stream itself (YouTube plays through its embed only).
+ * video the app can stream itself.
  */
 export function previewVideoSrc(post: FeedItem): string | null {
   const media = post.media ?? []

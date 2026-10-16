@@ -26,7 +26,6 @@ flowchart LR
   N --> X[X API and FxTwitter]
   N --> I[Instagram metadata and mirror]
   N --> T[tnktok and TikTok CDN]
-  N --> Y[YouTube oEmbed / iframe]
   N --> R[Resend]
   N --> S[Sentry]
 ```
@@ -69,7 +68,6 @@ The visible timestamp answers a different question on each surface:
 | `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                                   |
 | `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                                           |
 | `/@{user}/video/{id}`       | TikTok video preview.                                                                                                               |
-| `/shorts/{id}`              | YouTube Shorts preview; regular YouTube videos are intentionally unsupported.                                                       |
 | `/trending`                 | Public dark ranked list with the Latest membership lens initially selected.                                                         |
 | `/trending/{filter}`        | Crawlable `popular`, `videos`, `photos`, `text`, or `articles` lens.                                                                |
 | `/trending/archive`         | Index of permanent ISO-week snapshots.                                                                                              |
@@ -97,7 +95,6 @@ The source preview shapes are first-class public pages, not modals:
 | `instagram.com/p/{id}`          | `adhx.com/p/{id}`             |
 | `instagram.com/reel(s)/{id}`    | `adhx.com/reels/{id}`         |
 | `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` |
-| `youtube.com/shorts/{id}`       | `adhx.com/shorts/{id}`        |
 
 `src/proxy.ts` also recognizes a complete source URL pasted after
 `adhx.com/` and issues a 307 to the clean route. TikTok short links go through
@@ -121,7 +118,7 @@ flowchart TD
 
 `POST /api/bookmarks/add` is the platform-neutral save boundary. X delegates
 over loopback to `/api/tweets/add` for article, quote, media, and link
-enrichment. Instagram, TikTok, and YouTube use their own metadata adapters but
+enrichment. Instagram and TikTok use their own metadata adapters but
 write the same bookmark/media model.
 
 A signed-in **new open** of a preview autosaves its lead. “New open” means a
@@ -182,8 +179,7 @@ shared previews use an independent unfiltered type selection and preserve the op
 The first-visit hint and empty-account actions teach paste → watch → send. Media sharing
 has a direct action (icon-only on mobile), with Share link retained separately. Browser
 downloads verify nonempty media bytes before reporting a successful handoff; OS-level
-file saving cannot be observed. `post.play` is recorded from confirmed native or trusted
-YouTube playing events, deduplicated across pause/resume and looping the same post.
+file saving cannot be observed. `post.play` is recorded from confirmed native playing events, deduplicated across pause/resume and looping the same post.
 `post.view` remains a preview/dwell signal, not proof that a video played.
 
 Shared previews optimize first paint without sacrificing crawler output:
@@ -219,8 +215,7 @@ One persistent `<video>` slot is retained across X, TikTok, ready Instagram
 MP4s, and intervening non-video stages. Mobile browsers grant audible autoplay
 to the element the user touched, so remounting per item would lose sound.
 Source generations and lifecycle guards prevent a stale `play()` result,
-`ended`, `error`, or `pause` from mutating the replacement clip. YouTube is an
-iframe and therefore outside this native-video continuity.
+`ended`, `error`, or `pause` from mutating the replacement clip.
 
 Theater navigation, actions, queue overlays, album controls, Read/Watch mode,
 and keyboard shortcuts are detailed in the
@@ -390,7 +385,7 @@ flowchart LR
   pattern pond uses). Model weights download once to `SEMANTIC_CACHE_DIR` on
   the volume.
 - **Media.** Pictures come from the app's own proxies over loopback or from
-  allowlisted X/YouTube CDN hosts; anything else is skipped. Video frames are
+  allowlisted X CDN hosts; anything else is skipped. Video frames are
   sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.
 - **Status.** `/api/understanding/status` reports words / photos / videos
   progress for the signed-in user. "Photos" includes video posters, so every
@@ -518,7 +513,6 @@ Playback adapters reflect what each platform safely exposes:
 | X              | FxTwitter; X API only for the owner's bookmark sync                    | Range-aware MP4/image proxy over allowlisted `twimg.com`; HLS routes remain for long streams.                                |
 | Instagram      | Crawler Relay payload (ordered image/carousel media), with OG fallback | Images and Reels use signed-CDN proxies; Reels resolve Relay MP4 URLs first, then the mirror, with official iframe fallback. |
 | TikTok         | tnktok/fxTikTok metadata                                               | Proxy follows the mirror's signed redirect to allowlisted TikTok CDN hosts.                                                  |
-| YouTube Shorts | Official oEmbed                                                        | Privacy-enhanced `youtube-nocookie.com` iframe. No MP4 extraction or download.                                               |
 
 User-controlled media parameters are validated before interpolation. Media
 URLs require HTTPS and exact hosts or dot-prefixed suffix matches—never

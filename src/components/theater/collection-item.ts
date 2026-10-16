@@ -1,7 +1,7 @@
 /**
  * Converts Saved (`FeedItem`) rows into `TheaterItem`s so TheaterShell
  * can reuse the read-only theater stage components
- * (`StageText`/`StageArticle`/`StageInstagram`/`StageYouTube`) without those
+ * (`StageText`/`StageArticle`/`StageInstagram`) without those
  * components needing to know anything about the richer `FeedItem` shape.
  *
  * `TheaterItem` (== `TrendingItem`) is deliberately narrower than `FeedItem` —

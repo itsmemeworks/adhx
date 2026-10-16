@@ -1,15 +1,27 @@
-import { expect, test } from '@playwright/test'
-import { PREVIEW_YT } from './constants'
+import { readFileSync } from 'node:fs'
+import { expect, test, type Page } from '@playwright/test'
+import { PREVIEW_TT } from './constants'
 import { expectTheaterReady } from './helpers'
-import { stubYouTubeEmbed } from './yt-embed-stub'
+
+/** A 4s VP8/Opus clip with a tone, so the stage's real <video> has audio to mute. */
+const SOUND_CLIP = readFileSync(new URL('./fixtures/sound.webm', import.meta.url))
+
+/** Serve the TikTok preview's stream from the local clip instead of the CDN. */
+async function stubTikTokVideo(page: Page) {
+  await page.route('**/api/media/tiktok/video?**', (route) =>
+    route.fulfill({ status: 200, contentType: 'video/webm', body: SOUND_CLIP }),
+  )
+}
+
+const TIKTOK_PREVIEW = `/@${PREVIEW_TT.author}/video/${PREVIEW_TT.id}`
 
 test('desktop M restores a persisted sound choice after media falls back to muted', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.addInitScript(() => localStorage.setItem('adhx-theater-sound', 'on'))
-  await stubYouTubeEmbed(page)
-  await page.goto(`/shorts/${PREVIEW_YT.id}`)
+  await stubTikTokVideo(page)
+  await page.goto(TIKTOK_PREVIEW)
   await expectTheaterReady(page)
   await expect(page.getByRole('button', { name: 'Mute' })).toBeVisible()
 
@@ -37,8 +49,8 @@ test('the last sound choice follows links and synchronizes mobile and desktop ta
   test.setTimeout(90_000)
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await stubYouTubeEmbed(page)
-  await page.goto(`/shorts/${PREVIEW_YT.id}`)
+  await stubTikTokVideo(page)
+  await page.goto(TIKTOK_PREVIEW)
   await expectTheaterReady(page)
 
   // The muted affordance intentionally pulses, so Playwright never considers
@@ -52,8 +64,8 @@ test('the last sound choice follows links and synchronizes mobile and desktop ta
   // A separately opened link gets the same localStorage preference even
   // though it has its own TheaterShell and media player.
   const desktopPage = await context.newPage()
-  await stubYouTubeEmbed(desktopPage, 20, { rejectSecondUnmute: true })
-  await desktopPage.goto(`/shorts/${PREVIEW_YT.id}`)
+  await stubTikTokVideo(desktopPage)
+  await desktopPage.goto(TIKTOK_PREVIEW)
   await expectTheaterReady(desktopPage)
   await expect(desktopPage.getByRole('button', { name: 'Mute' })).toBeVisible()
 
@@ -64,12 +76,10 @@ test('the last sound choice follows links and synchronizes mobile and desktop ta
     .toBe('off')
   await expect(page.getByRole('button', { name: 'Unmute' })).toBeVisible()
 
-  // The next mobile choice synchronizes back in the other direction. This
-  // desktop embed accepts that gesture-less unmute, then emits iOS's observed
-  // policy shape (confirmation followed by pause); ADHX must recover to muted
-  // playback without forgetting that the viewer still prefers sound.
+  // The next mobile choice synchronizes back in the other direction.
   await page.getByRole('button', { name: 'Unmute' }).click({ force: true })
   await expect(page.getByRole('button', { name: 'Mute' })).toBeVisible()
-  await expect(desktopPage.getByRole('button', { name: 'Unmute' })).toBeVisible()
-  expect(await desktopPage.evaluate(() => localStorage.getItem('adhx-theater-sound'))).toBe('on')
+  await expect
+    .poll(() => desktopPage.evaluate(() => localStorage.getItem('adhx-theater-sound')))
+    .toBe('on')
 })

@@ -5,8 +5,7 @@ import type { TrendingItem } from '@/lib/trending/query'
 /**
  * `resolveSendSource` matrix (Send-the-file flow, spec §2/§8). Twitter photo
  * → the `/api/media/image` proxy's download variant; Twitter/TikTok/Instagram
- * video → the video-src SSOT (`reelVideoSrc`); YouTube → null (no MP4 mirror
- * exists — official iframe only); text/article → null (nothing
+ * video → the video-src SSOT (`reelVideoSrc`); text/article → null (nothing
  * sendable). The Instagram case is a deliberate regression test: Instagram
  * must resolve its own mirror, never fall through to the Twitter FxTwitter
  * proxy (a bug that's bitten this repo before).
@@ -135,9 +134,5 @@ describe('resolveSendSource', () => {
     expect(photoSource).not.toBeNull()
     expect(videoSource).not.toBeNull()
     expect(sendSourceKey(photo, photoSource!)).not.toBe(sendSourceKey(video, videoSource!))
-  })
-
-  it('youtube → null (no MP4 mirror exists — official iframe only)', () => {
-    expect(resolveSendSource(item({ platform: 'youtube', contentType: 'video' }))).toBe(null)
   })
 })

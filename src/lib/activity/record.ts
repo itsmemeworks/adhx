@@ -22,7 +22,7 @@ import { readPostModeration, readUserBan } from '@/lib/admin/moderation'
 
 export type ActivityAction = 'preview' | 'save' | 'read' | 'share'
 
-const PULSE_PLATFORMS = new Set(['twitter', 'instagram', 'tiktok', 'youtube'])
+const PULSE_PLATFORMS = new Set(['twitter', 'instagram', 'tiktok'])
 
 /** Post types the pulse understands. Used to type preview-only cards. */
 export type ActivityContentType = 'video' | 'photo' | 'text' | 'article'

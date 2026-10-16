@@ -11,7 +11,7 @@ export const SHORTCUT_DISMISS_KEY = 'adhx-shortcut-dismissed'
 
 const HOW_STEPS: { icon: LucideIcon; label: string; hint: string }[] = [
   { icon: Plus, label: 'Add shortcut', hint: 'Puts it in Share' },
-  { icon: Smartphone, label: 'Open a post', hint: 'X, IG, TikTok, YouTube' },
+  { icon: Smartphone, label: 'Open a post', hint: 'X, IG, TikTok' },
   { icon: Share, label: 'Share → ADHX', hint: 'Saves it here' },
 ]
 
@@ -119,7 +119,7 @@ export function IosShortcutSettingsCard() {
           Add to the iOS share menu
         </h2>
         <p className="m-0 text-sm text-white/65">
-          Then from X, Instagram, TikTok, or YouTube: Share → ADHX.
+          Then from X, Instagram, or TikTok: Share → ADHX.
         </p>
       </div>
       <IosHow tone="next" className="mt-0" />
@@ -168,7 +168,7 @@ export function IosShortcutNudge() {
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm text-ink mb-0.5">Next time, skip this page</div>
           <p className="text-[13px] text-ink-2 leading-snug mb-3">
-            Add ADHX to the iOS share menu. From X, Instagram, TikTok, or YouTube: Share → ADHX.
+            Add ADHX to the iOS share menu. From X, Instagram, or TikTok: Share → ADHX.
           </p>
           <IosShortcutInstallButton className="w-full rounded-xl" />
         </div>

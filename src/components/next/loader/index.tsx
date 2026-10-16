@@ -198,7 +198,7 @@ export function PasteToast({
         : null
       : state === 'saved'
         ? (savedDetail ?? null)
-        : 'X, Instagram, TikTok and YouTube Shorts work'
+        : 'X, Instagram and TikTok work'
 
   return (
     <div

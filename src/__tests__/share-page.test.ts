@@ -134,14 +134,10 @@ describe('extractSharedUrl — picks the link out of the share payload', () => {
   })
 })
 
-describe('parseShareUrl — YouTube', () => {
-  it('maps a Shorts URL to /shorts/{id}', () => {
-    expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toEqual({
-      path: '/shorts/Y9aytLYBajw',
-    })
-  })
-
-  it('rejects watch / youtu.be — those are regular videos', () => {
+describe('parseShareUrl — YouTube (unsupported)', () => {
+  it('rejects every YouTube URL, Shorts included', () => {
+    expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toBeNull()
+    expect(parseShareUrl('https://m.youtube.com/shorts/Y9aytLYBajw')).toBeNull()
     expect(parseShareUrl('https://youtu.be/Y9aytLYBajw')).toBeNull()
     expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toBeNull()
   })
@@ -181,9 +177,6 @@ describe('parseShareUrl — rejections', () => {
     expect(parseShareUrl('//x.com/user/status/111')).toBeNull()
     expect(parseShareUrl('https://mobile.twitter.com/user/status/111')).toEqual({
       path: '/user/status/111',
-    })
-    expect(parseShareUrl('https://m.youtube.com/shorts/Y9aytLYBajw')).toEqual({
-      path: '/shorts/Y9aytLYBajw',
     })
   })
 })
@@ -255,14 +248,9 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
     expect(router.push).toHaveBeenCalledWith('/@sophieraiin/video/7619017281691045134')
   })
 
-  it('navigates a YouTube Short URL via the router', () => {
+  it('does not navigate any YouTube URL (Shorts, watch, youtu.be)', () => {
     const router = makeRouter()
-    expect(navigateToPastedLink(router, 'https://youtube.com/shorts/Y9aytLYBajw')).toBe(true)
-    expect(router.push).toHaveBeenCalledWith('/shorts/Y9aytLYBajw')
-  })
-
-  it('does not navigate a watch or youtu.be URL', () => {
-    const router = makeRouter()
+    expect(navigateToPastedLink(router, 'https://youtube.com/shorts/Y9aytLYBajw')).toBe(false)
     expect(navigateToPastedLink(router, 'https://youtu.be/Y9aytLYBajw')).toBe(false)
     expect(navigateToPastedLink(router, 'https://www.youtube.com/watch?v=Y9aytLYBajw')).toBe(false)
     expect(router.push).not.toHaveBeenCalled()

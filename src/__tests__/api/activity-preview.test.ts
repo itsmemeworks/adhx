@@ -126,6 +126,11 @@ describe('POST /api/activity/preview', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects youtube (YouTube Shorts support was removed)', async () => {
+    const res = await post({ platform: 'youtube', id: 'abc' })
+    expect(res.status).toBe(400)
+  })
+
   it('rejects a malformed body', async () => {
     const res = await post(null)
     expect(res.status).toBe(400)
@@ -164,12 +169,12 @@ describe('POST /api/activity/preview', () => {
     mockUserId = 'secret-user'
     recordActivity({
       action: 'save',
-      platform: 'youtube',
-      bookmarkId: 'abc',
-      author: 'yt',
-      url: '/shorts/abc',
+      platform: 'tiktok',
+      bookmarkId: '7300000000000000001',
+      author: 'tt',
+      url: '/@tt/video/7300000000000000001',
     })
-    const res = await post({ platform: 'youtube', id: 'abc' })
+    const res = await post({ platform: 'tiktok', id: '7300000000000000001' })
     expect(res.status).toBe(204)
     expect(res.headers.get('content-type')).toBeNull()
     const previews = testInstance.db

@@ -8,8 +8,8 @@ Status: study, measured 2026-10-16. No code wired yet.
   kept for an hour. ADHX won't run a downloader. It only **proxies**: a hand-written adapter per site finds a fresh
   public media URL, and the existing same-origin `/api/media/*` routes stream it. Nothing is stored.
 - **Drop YouTube.** Shorts can only play through the official iframe. ADHX can't sample frames from it, so it can't
-  understand Shorts the way it understands X, Instagram and TikTok. Saved Shorts are deleted too. That's a separate
-  change and isn't in this doc.
+  understand Shorts the way it understands X, Instagram and TikTok. Saved Shorts are deleted too, by
+  `src/lib/db/drop-youtube.ts` at migrate time.
 
 That gives a rule for adding any site:
 
@@ -17,7 +17,7 @@ That gives a rule for adding any site:
 2. The media is unencrypted MP4, HLS or an image, so the browser can play it through the proxy and ffmpeg can sample it.
 3. It loads from London. Fly runs in `lhr`, and this test ran from a UK home connection (BT).
 
-A site that only offers an iframe embed fails rule 2, for the same reason YouTube is being dropped.
+A site that only offers an iframe embed fails rule 2, for the same reason YouTube was dropped.
 
 ## Measured results
 
@@ -66,7 +66,7 @@ Other findings:
 
 Hold Facebook, Twitch and Threads until there's demand. They work today, but they rely on scraped or undocumented endpoints.
 **Don't add** Vimeo, Dailymotion or SoundCloud: they're embed-only or audio-only, so they fail the understanding rule that
-YouTube is being removed under. Don't add Imgur either, while it blocks the UK.
+YouTube was removed under. Don't add Imgur either, while it blocks the UK.
 
 ## Integration sketch
 

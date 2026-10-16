@@ -30,8 +30,6 @@ const IMAGE_HOSTS = [
   'd.fxtwitter.com',
   'pbs.twimg.com',
   '.twimg.com',
-  'i.ytimg.com',
-  '.ytimg.com',
   '.cdninstagram.com',
   '.tiktokcdn.com',
   '.tiktokcdn-us.com',
@@ -95,7 +93,6 @@ function platformChip(item: TagItem): string {
   if (item.contentType === 'article') return 'ARTICLE'
   if (item.platform === 'instagram') return 'IG'
   if (item.platform === 'tiktok') return 'TT'
-  if (item.platform === 'youtube') return 'YT'
   return 'X'
 }
 

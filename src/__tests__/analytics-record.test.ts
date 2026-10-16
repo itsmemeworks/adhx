@@ -153,11 +153,11 @@ describe('recordActivity dual-write', () => {
   it('writes post.save into the growth log with platform and type', () => {
     recordActivity({
       action: 'save',
-      platform: 'youtube',
-      bookmarkId: 'dQw4w9wgXcQ',
+      platform: 'tiktok',
+      bookmarkId: '7300000000000000001',
       author: 'rick',
       text: 'never',
-      url: '/shorts/dQw4w9wgXcQ',
+      url: '/@rick/video/7300000000000000001',
       contentType: 'video',
       userId: 'u1',
       source: 'url_prefix',
@@ -166,10 +166,10 @@ describe('recordActivity dual-write', () => {
     expect(growth).toHaveLength(1)
     expect(growth[0]).toMatchObject({
       name: 'post.save',
-      platform: 'youtube',
+      platform: 'tiktok',
       contentType: 'video',
       source: 'url_prefix',
-      bookmarkId: 'dQw4w9wgXcQ',
+      bookmarkId: '7300000000000000001',
     })
   })
 })

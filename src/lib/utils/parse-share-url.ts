@@ -7,7 +7,7 @@ import { markPreviewOpenIntent } from '@/lib/theater/autosave-shared'
  * not the canonical `/@user/video/<id>` URL that {@link detectPlatformPost}
  * matches. We can't resolve it in the browser (cross-origin redirect), so we
  * route it through `/api/tiktok/resolve`, which follows it server-side and
- * 307s to the preview. (Instagram/X/YouTube share canonical-ish links that the
+ * 307s to the preview. (Instagram/X share canonical-ish links that the
  * detector already handles.)
  */
 /**
@@ -32,8 +32,8 @@ export function extractSharedUrl(...candidates: (string | null | undefined)[]): 
  * Parse a shared link (Android PWA share target) into the destination to
  * redirect to.
  *
- * Returns the clean on-ADHX preview path for X/Twitter, Instagram, TikTok, and
- * YouTube post/video links; for a TikTok short link it returns the resolver
+ * Returns the clean on-ADHX preview path for X/Twitter, Instagram, and TikTok
+ * post/video links; for a TikTok short link it returns the resolver
  * endpoint (which 307s to the preview). `null` when the URL isn't recognised.
  *
  * Thin adapter over the shared {@link detectPlatformPost} detector — the

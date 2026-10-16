@@ -1,6 +1,6 @@
 # Save to ADHX (desktop extension)
 
-Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on an **X, Instagram, TikTok, or YouTube Short** opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
+Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on an **X, Instagram, or TikTok post** opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
 
 When you invoke it, the extension transmits the selected or active source post URL to the
 configured ADHX origin by navigating the tab. Firefox therefore declares the required
@@ -104,7 +104,6 @@ Supported URLs (same set `/share` already routes):
 - X / Twitter status (`x.com/…/status/…`, `twitter.com`, vx/fx mirrors)
 - Instagram Reels / posts (`instagram.com/reel/`, `/reels/`, `/p/`)
 - TikTok videos and short links (`vm.` / `vt.` / `tiktok.com/t/`)
-- YouTube Shorts (`youtube.com/shorts/…` only — not `youtu.be` or `watch?v=`)
 
 **Signed in** on that ADHX origin: a new open of the preview autosaves the lead (Save pill → Saved → Tag). Refresh / back / in-app hops do not.
 

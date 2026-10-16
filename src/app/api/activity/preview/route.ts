@@ -6,7 +6,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { activityWriteLimit } from '@/lib/rate-limit'
 import { metrics } from '@/lib/sentry'
 
-const PLATFORMS = new Set(['twitter', 'instagram', 'tiktok', 'youtube'])
+const PLATFORMS = new Set(['twitter', 'instagram', 'tiktok'])
 const ID_MAX = 80
 
 /**

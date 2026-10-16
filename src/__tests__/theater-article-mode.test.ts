@@ -55,15 +55,11 @@ describe('offerArticleMode', () => {
     expect(isArticleReader(photo, true)).toBe(true)
   })
 
-  it('is on for Instagram and YouTube video once article mode is set', () => {
+  it('is on for Instagram video once article mode is set', () => {
     const ig = item({ platform: 'instagram', contentType: 'video', text: 'reel caption' })
-    const yt = item({ platform: 'youtube', contentType: 'video', text: 'short caption' })
     expect(offerArticleMode(ig, true)).toBe(true)
-    expect(offerArticleMode(yt, true)).toBe(true)
     expect(isArticleReader(ig, true)).toBe(true)
-    expect(isArticleReader(yt, true)).toBe(true)
     expect(isQuoteReader(ig, false)).toBe(false)
-    expect(isQuoteReader(yt, false)).toBe(false)
   })
 })
 

@@ -154,6 +154,6 @@ describe('getSavedPreviewDisplay', () => {
   })
 
   it('returns null when nobody has saved that platform+id', () => {
-    expect(getSavedPreviewDisplay('youtube', 'missing')).toBeNull()
+    expect(getSavedPreviewDisplay('tiktok', 'missing')).toBeNull()
   })
 })

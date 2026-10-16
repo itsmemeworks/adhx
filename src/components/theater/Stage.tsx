@@ -25,7 +25,6 @@ import {
 import { StageVideo } from './StageVideo'
 import { StageText } from './StageText'
 import { StageInstagram, useInstagramStage } from './StageInstagram'
-import { StageYouTube } from './StageYouTube'
 import { StageArticle } from './StageArticle'
 import { isArticleReader, isQuoteReader, type TheaterItem } from './types'
 import { isExternalLinkPreview } from '@/lib/theater/link-preview'
@@ -47,8 +46,7 @@ export interface StageProps {
   photoCaption?: boolean
   /**
    * shared-post-repeat: while the pinned shared post is on stage, the
-   * player-level loop path (StageVideo's `loop` attribute / StageYouTube's
-   * seek-to-0 replay) takes over instead of ever firing `onEnded` — see
+   * player-level loop path (StageVideo's `loop` attribute) takes over instead of ever firing `onEnded` — see
    * TheaterShell's `isSharedPostPinned`. Ignored for non-video stages (their
    * own 'timed' auto-advance is suppressed one level up, at the progress-line
    * kind, since they have no player to loop).
@@ -88,14 +86,11 @@ export function Stage({
   const isInstagramVideo = !!item && item.platform === 'instagram' && item.contentType === 'video'
   const instagram = useInstagramStage({ item, active: isInstagramVideo, onEnded, repeat })
 
-  // Does THIS item render through the shared <video> element? YouTube never
-  // does — it's an iframe, which is a genuine platform ceiling for the grant.
-  // Article mode keeps this true for parent video so the same element
+  // Does THIS item render through the shared <video> element? Article mode keeps this true for parent video so the same element
   // (and unmute grant) keeps playing above the reader.
   const isStageVideoItem =
     !!item &&
     !isQuoteReader(item, false) &&
-    item.platform !== 'youtube' &&
     (isInstagramVideo ? instagram.status === 'ready' : playback.kind === 'video' && !!playback.src)
   const twitterAlbum =
     !!item && item.platform === 'twitter' && item.contentType === 'video' && videoAlbum.count > 1
@@ -134,18 +129,13 @@ export function Stage({
     )
   }
 
-  const isYouTube = item.platform === 'youtube'
-  const articleWithLiveVideo = articleMode && isStageVideoItem
-  const articleWithYouTube = articleMode && isYouTube
-  const keepPlayingInArticle = articleWithLiveVideo || articleWithYouTube
+  const keepPlayingInArticle = articleMode && isStageVideoItem
 
   // What goes ON TOP of the video layer — null when the video IS the stage.
-  // YouTube lives in the video layer (same slot as StageVideo) so Read does
-  // not remount the iframe. Overlay is only the article pane.
   let overlay: React.ReactNode = null
   if (keepPlayingInArticle) {
     overlay = <StageText item={item} omitParentVideo flushTop underBand />
-  } else if (!isStageVideoItem && !isYouTube) {
+  } else if (!isStageVideoItem) {
     const type = inferType(item)
     if (isInstagramVideo && instagram.status === 'photo') {
       overlay = (
@@ -186,7 +176,7 @@ export function Stage({
   return (
     <div className={STAGE_ARTICLE_ROOT}>
       {isStageVideoItem && videoSrc ? (
-        <div className={articleWithLiveVideo ? STAGE_ARTICLE_VIDEO_BAND : 'absolute inset-0'}>
+        <div className={keepPlayingInArticle ? STAGE_ARTICLE_VIDEO_BAND : 'absolute inset-0'}>
           <StageVideo
             item={item}
             src={videoSrc}
@@ -199,17 +189,6 @@ export function Stage({
             albumIndex={videoAlbum.index}
             albumPosters={videoAlbum.posters}
             onAlbumIndexChange={twitterAlbum ? videoAlbum.setIndex : undefined}
-            covered={covered}
-          />
-        </div>
-      ) : isYouTube ? (
-        <div className={articleWithYouTube ? STAGE_ARTICLE_VIDEO_BAND : 'absolute inset-0'}>
-          <StageYouTube
-            item={item}
-            muted={muted}
-            onRequestUnmute={onRequestUnmute}
-            onEnded={onEnded}
-            repeat={repeat}
             covered={covered}
           />
         </div>

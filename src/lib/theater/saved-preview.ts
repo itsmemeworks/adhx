@@ -16,7 +16,7 @@ export interface SavedPreviewDisplay {
  * row's userId is used only for the indexed media count and is never returned.
  */
 export function getSavedPreviewDisplay(
-  platform: 'instagram' | 'tiktok' | 'youtube',
+  platform: 'instagram' | 'tiktok',
   id: string,
 ): SavedPreviewDisplay | null {
   const row = db

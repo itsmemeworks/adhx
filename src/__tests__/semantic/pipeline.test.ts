@@ -151,30 +151,6 @@ describe('documents', () => {
     expect(doc.video?.url).toBe('/api/media/video?author=alice&tweetId=111&quality=preview')
     expect(hashFor(doc, 'video')).toBe(doc.video?.hash)
   })
-
-  it('has no video stream for YouTube (iframe only)', () => {
-    const doc = buildPostDocument(
-      feedItem({
-        platform: 'youtube',
-        media: [
-          {
-            id: 'y',
-            mediaType: 'video',
-            width: null,
-            height: null,
-            durationMs: null,
-            altText: null,
-            url: 'https://www.youtube.com/shorts/abc',
-            thumbnailUrl: 'https://i.ytimg.com/vi/abc/hqdefault.jpg',
-            shareUrl: '',
-            originalUrl: null,
-          },
-        ],
-      }),
-    )
-    expect(doc.video).toBeNull()
-    expect(doc.image?.url).toContain('i.ytimg.com')
-  })
 })
 
 describe('queue', () => {

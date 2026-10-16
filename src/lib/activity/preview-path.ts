@@ -17,7 +17,6 @@ export function previewPath(
   const handle = author.replace(/^@+/, '')
   if (platform === 'instagram') return contentType === 'photo' ? `/p/${id}` : `/reels/${id}`
   if (platform === 'tiktok') return `/@${handle}/video/${id}`
-  if (platform === 'youtube') return `/shorts/${id}`
   return `/${handle}/status/${id}`
 }
 
@@ -39,7 +38,6 @@ export function sourceUrl(
     return `https://www.instagram.com/${path}/${id}/`
   }
   if (platform === 'tiktok') return `https://www.tiktok.com/@${handle}/video/${id}`
-  if (platform === 'youtube') return `https://www.youtube.com/shorts/${id}`
   // X accepts any handle (and `i` when unknown) and redirects to the canonical URL.
   return `https://x.com/${handle || 'i'}/status/${id}`
 }
@@ -55,6 +53,5 @@ export function authorProfileUrl(platform: string, author: string): string | nul
   if (!handle) return null
   if (platform === 'instagram') return `https://www.instagram.com/${handle}/`
   if (platform === 'tiktok') return `https://www.tiktok.com/@${handle}`
-  if (platform === 'youtube') return `https://www.youtube.com/@${handle}`
   return `https://x.com/${handle}`
 }

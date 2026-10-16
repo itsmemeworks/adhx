@@ -15,7 +15,6 @@ const PLATFORM_LABEL: Record<string, string> = {
   twitter: 'X',
   tiktok: 'TikTok',
   instagram: 'Instagram',
-  youtube: 'YouTube',
 }
 
 /** Map an item to its on-ADHX preview path (keeps clicks on-site). */

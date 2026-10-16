@@ -32,21 +32,21 @@ const BASE_URL = PUBLIC_BASE_URL
 export const metadata: Metadata = {
   title: 'Trending now — what people are sending',
   description:
-    'What people are watching and sending across X, TikTok, Instagram and YouTube right now. A live, anonymous feed — preview any post and send it on, no app needed.',
+    'What people are watching and sending across X, TikTok and Instagram right now. A live, anonymous feed — preview any post and send it on, no app needed.',
   alternates: { canonical: '/trending' },
   openGraph: {
     type: 'website',
     url: `${BASE_URL}/trending`,
     title: 'Trending now — what people are sending',
     description:
-      'A live, anonymous feed of what people are watching and sending across X, TikTok, Instagram and YouTube right now.',
+      'A live, anonymous feed of what people are watching and sending across X, TikTok and Instagram right now.',
     // OG image inherited from the app's default opengraph-image.tsx.
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Trending now — what people are sending',
     description:
-      'A live, anonymous feed of what people are watching and sending across X, TikTok, Instagram and YouTube right now.',
+      'A live, anonymous feed of what people are watching and sending across X, TikTok and Instagram right now.',
   },
 }
 
@@ -69,8 +69,7 @@ export default async function TrendingPage() {
 
   const jsonLd = buildCollectionPageLd({
     name: 'Trending now on ADHX',
-    description:
-      'What people are watching and sending across X, TikTok, Instagram and YouTube right now.',
+    description: 'What people are watching and sending across X, TikTok and Instagram right now.',
     url: `${BASE_URL}/trending`,
     baseUrl: BASE_URL,
     items: items.map((item) => ({
@@ -85,7 +84,7 @@ export default async function TrendingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
-      <h1 className="sr-only">What people are sending across X, TikTok, Instagram and YouTube</h1>
+      <h1 className="sr-only">What people are sending across X, TikTok and Instagram</h1>
       <TrendingStaticList items={items} heading="Latest posts" />
       <TrendingRankedList seed={seed} initialFilter="latest" />
       <nav aria-label="Trending archive" className="bg-[#08070a] pb-10 pt-2 text-center">

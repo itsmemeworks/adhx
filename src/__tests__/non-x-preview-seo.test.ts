@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   getInstagramMetadataStatus: vi.fn(),
   getTikTokMetadataStatus: vi.fn(),
-  getYouTubeMetadataStatus: vi.fn(),
   getSavedPreviewDisplay: vi.fn(),
   readPostModeration: vi.fn(),
+  redirect: vi.fn(),
 }))
 
 vi.mock('@/lib/media/instafix', () => ({
@@ -17,12 +17,6 @@ vi.mock('@/lib/media/tnktok', () => ({
   getTikTokMetadataStatus: mocks.getTikTokMetadataStatus,
   isValidUsername: (username: string) => /^[A-Za-z0-9._]{1,30}$/.test(username),
   isValidVideoId: (id: string) => /^\d{6,25}$/.test(id),
-}))
-
-vi.mock('@/lib/media/youtube', () => ({
-  getYouTubeMetadataStatus: mocks.getYouTubeMetadataStatus,
-  isValidVideoId: (id: string) => /^[A-Za-z0-9_-]{11}$/.test(id),
-  youtubeThumbnail: (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
 }))
 
 vi.mock('@/lib/theater/saved-preview', () => ({
@@ -38,20 +32,18 @@ vi.mock('@/lib/auth/session', () => ({
 }))
 
 vi.mock('next/navigation', () => ({
-  redirect: vi.fn(),
+  redirect: mocks.redirect,
 }))
 
 vi.mock('@/lib/theater/shared-seed', () => ({
   stubReelTheaterItem: vi.fn(),
   stubInstagramPostTheaterItem: vi.fn(),
   stubTikTokTheaterItem: vi.fn(),
-  stubYouTubeTheaterItem: vi.fn(),
 }))
 
 vi.mock('@/lib/theater/resolve-shared-preview', () => ({
   resolveInstagramShared: vi.fn(),
   resolveTikTokShared: vi.fn(),
-  resolveYouTubeShared: vi.fn(),
 }))
 
 vi.mock('@/lib/theater/shared-preview', () => ({
@@ -70,7 +62,6 @@ vi.mock('@/lib/routes/base-url', () => ({
 
 const REEL_ID = 'Cwnj8o6pKbn'
 const TIKTOK_ID = '7619017281691045134'
-const YOUTUBE_ID = 'Y9aytLYBajw'
 
 describe('non-X preview metadata status', () => {
   beforeEach(() => {
@@ -288,75 +279,13 @@ describe('non-X preview metadata status', () => {
     })
   })
 
-  describe('YouTube Short', () => {
-    it('noindexes a confirmed oEmbed 400/404/410 miss without media claims', async () => {
-      mocks.getYouTubeMetadataStatus.mockResolvedValue({ kind: 'permanent-miss' })
-      const { generateMetadata } = await import('@/app/shorts/[id]/page')
+  describe('retired /shorts route', () => {
+    it('redirects home and publishes no preview metadata', async () => {
+      const page = await import('@/app/shorts/[id]/page')
 
-      const metadata = await generateMetadata({ params: Promise.resolve({ id: YOUTUBE_ID }) })
-
-      expect(metadata).toMatchObject({
-        title: 'YouTube Short unavailable - ADHX',
-        robots: { index: false },
-        alternates: { canonical: `https://adhx.com/shorts/${YOUTUBE_ID}` },
-      })
-      expect(metadata.openGraph).toBeNull()
-      expect(metadata.twitter).toBeNull()
-    })
-
-    it('noindexes a transient failure without claiming unresolved media', async () => {
-      mocks.getYouTubeMetadataStatus.mockResolvedValue({ kind: 'transient-failure' })
-      const { generateMetadata } = await import('@/app/shorts/[id]/page')
-
-      const metadata = await generateMetadata({ params: Promise.resolve({ id: YOUTUBE_ID }) })
-
-      expect(metadata.robots).toEqual({ index: false })
-      expect(metadata.openGraph).toBeNull()
-      expect(metadata.twitter).toBeNull()
-      expect(metadata.alternates).toEqual({
-        canonical: `https://adhx.com/shorts/${YOUTUBE_ID}`,
-      })
-    })
-
-    it('indexes resolved YouTube metadata with rich preview claims', async () => {
-      mocks.getYouTubeMetadataStatus.mockResolvedValue({
-        kind: 'resolved',
-        metadata: {
-          videoId: YOUTUBE_ID,
-          title: 'Resolved Short',
-          author: '@creator',
-          thumbnailUrl: `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg`,
-        },
-      })
-      const { generateMetadata } = await import('@/app/shorts/[id]/page')
-
-      const metadata = await generateMetadata({ params: Promise.resolve({ id: YOUTUBE_ID }) })
-
-      expect(metadata.robots).toBeUndefined()
-      expect(metadata.openGraph).toMatchObject({
-        type: 'video.other',
-        description: metadata.description,
-        images: [{ url: `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg` }],
-      })
-      expect(metadata.description).not.toContain('Resolved Short')
-    })
-
-    it('uses saved content as a rich fallback without calling YouTube', async () => {
-      mocks.getSavedPreviewDisplay.mockReturnValue({
-        author: '@creator',
-        authorName: 'Creator',
-        text: 'Saved Short',
-      })
-      const { generateMetadata } = await import('@/app/shorts/[id]/page')
-
-      const metadata = await generateMetadata({ params: Promise.resolve({ id: YOUTUBE_ID }) })
-
-      expect(metadata.robots).toBeUndefined()
-      expect(metadata.openGraph).toMatchObject({
-        type: 'video.other',
-        images: [{ url: `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg` }],
-      })
-      expect(mocks.getYouTubeMetadataStatus).not.toHaveBeenCalled()
+      expect(page).not.toHaveProperty('generateMetadata')
+      page.default()
+      expect(mocks.redirect).toHaveBeenCalledWith('/')
     })
   })
 })

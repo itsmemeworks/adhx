@@ -143,13 +143,6 @@ export const PREVIEW_TT = {
   text: 'E2E-TT-PREV',
 }
 
-export const PREVIEW_YT = {
-  id: 'e2eShorts01',
-  author: 'e2eyt',
-  authorName: 'E2E YT',
-  text: 'E2E-SHORT',
-}
-
 export const COLLECTION_POSTS: E2ePost[] = [
   POST.alpha,
   POST.bravo,

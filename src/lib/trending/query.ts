@@ -714,8 +714,8 @@ async function fetchTrendingWindow(
       textLinks: textLinksByPost.get(key) ?? safeParse<TextLinkRef[]>(i.textLinks),
       // Quoted-post reference. Precedence: the recorded `activity.quote_json`
       // (server-resolved at preview time) → for saved twitter posts, derived
-      // from the bookmark's legacy `quoteContext` JSON → absent. IG/TikTok/
-      // YouTube have no quote concept, so this only ever applies to twitter.
+      // from the bookmark's legacy `quoteContext` JSON → absent. IG/TikTok
+      // have no quote concept, so this only ever applies to twitter.
       quote:
         safeParse<TheaterQuoteRef>(i.quoteJson) ??
         (i.platform === 'twitter' ? quoteFromBookmarkContext(quoteContexts.get(key)) : undefined),

@@ -11,7 +11,6 @@ import type { TrendingItem } from '@/lib/trending/query'
  *   `preview` tier for hover).
  * - **TikTok / Instagram** → their own proxy. The feed (`/api/feed`) already
  *   built the correct stream URL into the media row, so we use `media[0].url`.
- * - **YouTube** → no MP4 (official iframe embed only); not handled here.
  */
 
 const twitterProxy = (item: FeedItem, quality: 'hd' | 'preview') =>
@@ -28,7 +27,7 @@ export function feedVideoSrc(item: FeedItem): string {
 
 /**
  * Hover-to-play src for the gallery card, or null when hover-play isn't
- * supported (YouTube has no MP4; a video row missing its proxy URL).
+ * supported (a video row missing its proxy URL).
  */
 export function feedHoverSrc(item: FeedItem): string | null {
   if (item.platform === 'twitter' || !item.platform) return twitterProxy(item, 'preview')
@@ -40,8 +39,7 @@ export function feedHoverSrc(item: FeedItem): string | null {
 
 /**
  * Full-quality inline MP4 stream for a `TrendingItem` (the trending Reel and
- * the theater's video stage). Twitter/TikTok/Instagram only — YouTube has no
- * MP4 (see the module note above); resolved from `bookmarkId`+`author`
+ * the theater's video stage). Twitter/TikTok/Instagram; resolved from `bookmarkId`+`author`
  * because trending items don't carry a pre-built media row like `FeedItem`.
  */
 export function reelVideoSrc(item: TrendingItem, videoIndex = 1): string {
