@@ -28,6 +28,8 @@ export interface SearchItem {
   /** The viewer has this post in their own saves. */
   saved: boolean
   matched: MatchSignal[]
+  /** Its picture or video isn't understood yet (matched on words only). */
+  learning?: boolean
 }
 
 type Owned = { row: Bookmark; viewer: boolean }

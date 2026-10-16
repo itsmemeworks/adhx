@@ -3,6 +3,7 @@ import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { loadSearchItems } from '@/lib/semantic/items'
+import { stillLearning } from '@/lib/semantic/status'
 import { rerank, RERANK_TOP } from '@/lib/semantic/rerank'
 import { searchPosts, TUNING, type SearchScope, type SearchType } from '@/lib/semantic/search'
 
@@ -97,6 +98,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
         refined = true
       }
     }
+    // Results whose picture/video isn't understood yet were matched on words alone.
+    const learning = await stillLearning(items.map((i) => `${i.post.platform}:${i.post.id}`))
+    items = items.map((i) =>
+      learning.has(`${i.post.platform}:${i.post.id}`) ? { ...i, learning: true } : i,
+    )
     const next = offset + result.hits.length
     return noStore(
       NextResponse.json({

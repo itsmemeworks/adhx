@@ -24,6 +24,14 @@ import {
 } from './model'
 import { BentoView, GroupsView, QueueView } from './ResultViews'
 import { useSearch } from './useSearch'
+import {
+  LearningPill,
+  LearningSheet,
+  learningSummary,
+  useLearningStatus,
+} from '../onboarding/learning'
+import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
+import { recentPlayHref } from '../theater/queue'
 
 const TYPES: SearchType[] = ['all', 'videos', 'photos', 'text', 'articles']
 const VIEWS: { id: SearchView; label: string; icon: typeof LayoutGrid }[] = [
@@ -38,11 +46,6 @@ const SUGGESTIONS = [
   'a synth you play by typing',
 ]
 const URL_SYNC_MS = 300
-
-interface LearningStatus {
-  enabled: boolean
-  groups: { id: string; done: number; total: number }[]
-}
 
 function Pill({
   on,
@@ -133,18 +136,20 @@ function Skeleton() {
   )
 }
 
-function remainingToLearn(status: LearningStatus | null): number {
-  if (!status?.enabled) return 0
-  return status.groups.reduce((n, g) => n + Math.max(0, g.total - g.done), 0)
-}
-
 export function SearchScreen({ initial }: { initial: SearchState }) {
   const router = useRouter()
   // Persists a `?next_ui=1` opt-in so links from here keep the redesign.
   useNextUi()
   const [state, setState] = useState<SearchState>(initial)
   const [recent, setRecent] = useState<string[]>([])
-  const [learning, setLearning] = useState<LearningStatus | null>(null)
+  const [learningOpen, setLearningOpen] = useState(false)
+  const learning = useLearningStatus({ fast: learningOpen })
+  const paste = usePasteToSave({
+    savedAction: (post) => ({
+      label: 'Play',
+      onClick: () => router.push(recentPlayHref(post.key)),
+    }),
+  })
   const inputRef = useRef<HTMLInputElement>(null)
   const results = useSearch(state)
   const set = (patch: Partial<SearchState>) => setState((s) => ({ ...s, ...patch }))
@@ -154,15 +159,6 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
   }
 
   useEffect(() => setRecent(readRecent()), [])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/understanding/status', { signal: controller.signal, credentials: 'same-origin' })
-      .then((r) => (r.ok ? (r.json() as Promise<LearningStatus>) : null))
-      .then((s) => s && setLearning(s))
-      .catch(() => {})
-    return () => controller.abort()
-  }, [])
 
   // Keep the URL shareable and reload-safe without a history entry or a
   // server render per keystroke. The flag parameter, if any, stays put.
@@ -185,7 +181,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
   const items = useMemo(() => data?.items ?? [], [data])
   const stale = results.answered !== key
   const typed = state.q.trim().length > 0
-  const remaining = state.scope === 'mine' ? remainingToLearn(learning) : 0
+  const remaining = state.scope === 'mine' ? learningSummary(learning.status).remaining : 0
 
   // Every way into the theater plays this search's results as the queue.
   const play = (opts: { group?: MatchSignal; start?: string } = {}) => {
@@ -198,8 +194,10 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
   const note = (() => {
     if (!data || stale) return null
     if (!data.understood) return 'Matching words for now. Meaning comes back in a moment.'
+    if (data.total === 0) return null
     if (!data.close) return 'Nothing close to that. These are the nearest.'
-    if (remaining > 0) return `Still learning ${remaining} of your saves. More will show up.`
+    if (remaining > 0)
+      return `Still learning ${remaining} of your saves. “Words only” results were matched on their text and get better on their own.`
     return state.scope === 'everyone' ? 'Across everyone’s saves' : 'In your saves'
   })()
 
@@ -286,6 +284,8 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
               ]}
             />
           </form>
+          <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
+          <PasteButton onClick={paste.pasteFromClipboard} className="hidden md:flex" />
           <button
             type="button"
             onClick={() => router.back()}
@@ -352,6 +352,10 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 ))}
               </section>
             )}
+            <div className="flex min-h-12 items-center justify-between gap-3 rounded-2xl bg-nx-surface px-4 py-2 md:hidden">
+              <span className="text-[15px]">Copied a link? Save it here.</span>
+              <PasteButton onClick={paste.pasteFromClipboard} />
+            </div>
             <Link
               href="/channels"
               className="flex min-h-12 items-center justify-between rounded-2xl bg-nx-surface px-4 text-[15px]"
@@ -382,7 +386,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 className="m-0 font-nx-serif text-[22px] font-normal md:text-[30px]"
               >
                 {data && !stale
-                  ? `${data.close ? '' : 'Nearest '}${countLabel(data.total, state.type)}`
+                  ? `${data.close || data.total === 0 ? '' : 'Nearest '}${countLabel(data.total, state.type)}`
                   : 'Searching…'}
               </h1>
               {note && <span className="text-[13px] text-nx-muted">{note}</span>}
@@ -466,6 +470,14 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
           <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />
           <span>{`Play ${items.length}`}</span>
         </button>
+      )}
+      {paste.toast}
+      {learningOpen && (
+        <LearningSheet
+          status={learning.status}
+          onClose={() => setLearningOpen(false)}
+          onRetried={learning.refresh}
+        />
       )}
     </div>
   )

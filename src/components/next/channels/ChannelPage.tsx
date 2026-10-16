@@ -8,7 +8,8 @@ import { useNextUi } from '@/lib/next-ui/useNextUi'
 import { postCoverSrc } from '../post'
 import { resultKey, type SearchResultItem } from '../search/model'
 import { Masonry } from '../search/ResultViews'
-import { channelPlayHref } from '../theater/queue'
+import { channelPlayHref, recentPlayHref } from '../theater/queue'
+import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
 
 /**
@@ -34,6 +35,12 @@ export function ChannelPage({
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
   const path = `/t/${username}/${tag}`
+  const paste = usePasteToSave({
+    savedAction: (post) => ({
+      label: 'Play',
+      onClick: () => window.location.assign(recentPlayHref(post.key)),
+    }),
+  })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -77,7 +84,10 @@ export function ChannelPage({
 
   return (
     <div className="min-h-dvh bg-black font-nx-sans text-white">
-      <NxHeader />
+      <NxHeader>
+        <span className="flex-1" />
+        {signedIn && <PasteButton onClick={paste.pasteFromClipboard} />}
+      </NxHeader>
       <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-0 pb-16 md:px-7 lg:flex-row lg:items-start">
         <section aria-label="Channel" className="flex min-w-0 flex-1 flex-col gap-4 md:gap-[18px]">
           <div className="relative h-[430px] overflow-hidden md:h-[340px] md:rounded-[22px]">
@@ -177,6 +187,7 @@ export function ChannelPage({
           className="mx-4 lg:sticky lg:top-24 lg:mx-0 lg:w-[400px] lg:shrink-0"
         />
       </main>
+      {paste.toast}
     </div>
   )
 }

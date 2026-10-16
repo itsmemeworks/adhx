@@ -18,6 +18,8 @@ export interface SearchResultItem {
   /** In the viewer's own saves (otherwise someone else saved it). */
   saved: boolean
   matched: MatchSignal[]
+  /** Its picture or video isn't understood yet: matched on its words only. */
+  learning?: boolean
 }
 
 export interface SearchResponse {

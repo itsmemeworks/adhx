@@ -36,6 +36,8 @@ export interface PlaySource {
   group: MatchSignal | null
   channel: { username: string; tag: string } | null
   auto: string | null
+  /** Your newest saves (`recent=1`): where a pasted or just-synced post plays. */
+  recent: boolean
   /** `platform:id` of the post to start on. */
   start: string | null
 }
@@ -47,6 +49,12 @@ const SLUG = /^[a-z0-9-]{1,64}$/
 
 export function channelPlayHref(username: string, tag: string, start?: string | null): string {
   const params = new URLSearchParams({ channel: `${username}/${tag}` })
+  if (start) params.set('start', start)
+  return `/play?${params}`
+}
+
+export function recentPlayHref(start?: string | null): string {
+  const params = new URLSearchParams({ recent: '1' })
   if (start) params.set('start', start)
   return `/play?${params}`
 }
@@ -64,6 +72,7 @@ export function queueUrl(source: PlaySource, searchUrl: () => string): string {
     return `/api/channels/by/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
   }
   if (source.auto) return `/api/channels/auto/${encodeURIComponent(source.auto)}`
+  if (source.recent) return '/api/feed?limit=100&hideArchived=true'
   return searchUrl()
 }
 
@@ -71,6 +80,7 @@ export function queueUrl(source: PlaySource, searchUrl: () => string): string {
 export function backHref(source: PlaySource): string {
   if (source.channel) return `/t/${source.channel.username}/${source.channel.tag}`
   if (source.auto) return '/channels'
+  if (source.recent) return '/search'
   return searchHref(source.search)
 }
 
@@ -90,6 +100,7 @@ export function sourceFromParams(
     group: SIGNALS.includes(group as MatchSignal) ? (group as MatchSignal) : null,
     channel: channel ? { username: channel[1], tag: channel[2] } : null,
     auto: !channel && auto && SLUG.test(auto) ? auto : null,
+    recent: !channel && !auto && get('recent') === '1',
     start: start && KEY.test(start) ? start : null,
   }
 }

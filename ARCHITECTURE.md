@@ -60,6 +60,7 @@ The visible timestamp answers a different question on each surface:
 | `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/saved`.                       |
 | `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                                            |
 | `/saved`                    | Signed-in Saved: all non-archived saves, with independent type and Hide watched filters. Library links select a post with `?open=`. |
+| `/start`                    | Redesign (`next_ui` only): sign up/in with an email link, then import X bookmarks with live progress.                               |
 | `/channels`                 | Redesign (`next_ui` only): your channels, "Made for you" channels and Top channels.                                                 |
 | `/play`                     | Redesign (`next_ui` only): the new theater, playing a search's results as its queue.                                                |
 | `/search`                   | Redesign (`next_ui` only): search saves by meaning, with bento, groups and queue layouts.                                           |

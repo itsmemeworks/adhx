@@ -6,7 +6,9 @@ import { Lock, Play, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from '@/components/feed/types'
 import { useNextUi } from '@/lib/next-ui/useNextUi'
-import { autoPlayHref, channelPlayHref } from '../theater/queue'
+import { autoPlayHref, channelPlayHref, recentPlayHref } from '../theater/queue'
+import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
+import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
 
 interface CoverItem {
@@ -52,6 +54,14 @@ export function ChannelsScreen() {
   const [error, setError] = useState(false)
   const [keeping, setKeeping] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [learningOpen, setLearningOpen] = useState(false)
+  const learning = useLearningStatus({ fast: learningOpen })
+  const paste = usePasteToSave({
+    savedAction: (post) => ({
+      label: 'Play',
+      onClick: () => window.location.assign(recentPlayHref(post.key)),
+    }),
+  })
 
   const load = useCallback(() => {
     fetch('/api/channels', { credentials: 'same-origin' })
@@ -92,6 +102,9 @@ export function ChannelsScreen() {
         <h1 className="m-0 hidden font-nx-serif text-2xl font-normal text-white/70 md:block">
           Channels
         </h1>
+        <span className="flex-1" />
+        <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
+        <PasteButton onClick={paste.pasteFromClipboard} />
       </NxHeader>
       <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-4 pb-16 pt-2 md:px-7 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-9">
@@ -236,6 +249,14 @@ export function ChannelsScreen() {
         >
           {toast}
         </div>
+      )}
+      {paste.toast}
+      {learningOpen && (
+        <LearningSheet
+          status={learning.status}
+          onClose={() => setLearningOpen(false)}
+          onRetried={learning.refresh}
+        />
       )}
     </div>
   )

@@ -32,6 +32,7 @@ import { saveEmbedding } from '@/lib/semantic/store'
 import { indexPostText, ftsQuery, keywordSearch } from '@/lib/semantic/keywords'
 import { searchPosts, similarPosts, fuse, type SearchRequest } from '@/lib/semantic/search'
 import { loadSearchItems } from '@/lib/semantic/items'
+import { stillLearning } from '@/lib/semantic/status'
 import { blend, describe as describePost, rerank } from '@/lib/semantic/rerank'
 import { __resetVectorIndex } from '@/lib/semantic/vector-index'
 import { __resetRateLimitState } from '@/lib/rate-limit'
@@ -274,6 +275,37 @@ describe('similarPosts', () => {
       limit: 10,
     })
     expect(result).toMatchObject({ hits: [], understood: false })
+  })
+})
+
+describe('stillLearning', () => {
+  it('flags posts whose picture or video is not understood yet', async () => {
+    for (const id of ['vid', 'pic', 'words']) save(USER_A, id)
+    testInstance.db
+      .insert(schema.bookmarkMedia)
+      .values([
+        {
+          id: 'vid_m1',
+          userId: USER_A,
+          platform: 'twitter',
+          bookmarkId: 'vid',
+          mediaType: 'video',
+          originalUrl: 'x',
+        },
+        {
+          id: 'pic_m1',
+          userId: USER_A,
+          platform: 'twitter',
+          bookmarkId: 'pic',
+          mediaType: 'photo',
+          originalUrl: 'x',
+        },
+      ])
+      .run()
+    await understood('vid', 'image', CLOSE) // poster done, video not yet
+    await understood('pic', 'image', CLOSE)
+    const learning = await stillLearning(['twitter:vid', 'twitter:pic', 'twitter:words'])
+    expect([...learning]).toEqual(['twitter:vid'])
   })
 })
 

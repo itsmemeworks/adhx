@@ -148,3 +148,50 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
     current,
   }
 }
+
+/**
+ * Of these posts (`platform:id`), the ones with a picture or video that
+ * isn't understood yet: search can only have matched them on their words.
+ * Content is the same for every saver, so any copy's media decides.
+ */
+export async function stillLearning(keys: string[]): Promise<Set<string>> {
+  if (keys.length === 0) return new Set()
+  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
+  const wanted = new Set(keys)
+  const needs = new Map<string, Set<UnderstandingKind>>()
+  const have = new Set<string>()
+  for (const part of chunks(ids)) {
+    const media = await db
+      .selectDistinct({
+        platform: bookmarkMedia.platform,
+        id: bookmarkMedia.bookmarkId,
+        type: bookmarkMedia.mediaType,
+      })
+      .from(bookmarkMedia)
+      .where(inArray(bookmarkMedia.bookmarkId, part))
+    for (const m of media) {
+      const key = `${m.platform}:${m.id}`
+      if (!wanted.has(key)) continue
+      const kinds = needs.get(key) ?? new Set<UnderstandingKind>()
+      kinds.add('image')
+      if (m.type === 'video' || m.type === 'animated_gif') kinds.add('video')
+      needs.set(key, kinds)
+    }
+    const rows = await db
+      .select({
+        platform: postEmbeddings.platform,
+        id: postEmbeddings.postId,
+        kind: postEmbeddings.kind,
+      })
+      .from(postEmbeddings)
+      .where(
+        and(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION), inArray(postEmbeddings.postId, part)),
+      )
+    for (const r of rows) have.add(`${r.platform}:${r.id}:${r.kind}`)
+  }
+  const out = new Set<string>()
+  for (const [key, kinds] of needs) {
+    if ([...kinds].some((kind) => !have.has(`${key}:${kind}`))) out.add(key)
+  }
+  return out
+}

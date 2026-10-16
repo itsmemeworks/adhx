@@ -23,6 +23,7 @@ import {
   VolumeX,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { FeedItem } from '@/components/feed/types'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { Stage } from '@/components/theater/Stage'
 import { feedItemToTheaterItem } from '@/components/theater/collection-item'
@@ -66,6 +67,8 @@ import {
   type MenuRow,
 } from './TheaterSheets'
 import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
+import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
+import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { channelTitle } from '../channels/ChannelParts'
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready' }
@@ -195,15 +198,46 @@ export function TheaterV2({ source }: { source: PlaySource }) {
       controller.signal,
     )
       .then((response) => {
-        const results = response.items
-        setTitle(response.name ?? (response.channel ? channelTitle(response.channel.tag) : null))
+        // The recent queue is the feed: plain posts, all the viewer's own.
+        const results = source.recent
+          ? (response.items as unknown as FeedItem[]).map((post) => ({
+              post,
+              saved: true,
+              matched: [],
+            }))
+          : response.items
+        setTitle(
+          source.recent
+            ? 'Your saves'
+            : (response.name ?? (response.channel ? channelTitle(response.channel.tag) : null)),
+        )
         const list = source.group
           ? (groupResults(results).find((g) => g.signal === source.group)?.items ?? [])
           : results
-        setItems(list)
         const start = source.start ? list.findIndex((i) => resultKey(i) === source.start) : -1
-        setIndex(Math.max(0, start))
-        setLoad({ status: 'ready' })
+        if (start >= 0 || !source.recent || !source.start) {
+          setItems(list)
+          setIndex(Math.max(0, start))
+          setLoad({ status: 'ready' })
+          return
+        }
+        // A pasted or older save isn't among the newest: play it first anyway.
+        const at = source.start.indexOf(':')
+        const params = new URLSearchParams({
+          id: source.start.slice(at + 1),
+          idPlatform: source.start.slice(0, at),
+          hideArchived: 'false',
+        })
+        return fetch(`/api/feed?${params}`, {
+          signal: controller.signal,
+          credentials: 'same-origin',
+        })
+          .then((r) => (r.ok ? (r.json() as Promise<{ items: FeedItem[] }>) : { items: [] }))
+          .then(({ items: found }) => {
+            setItems(found[0] ? [{ post: found[0], saved: true, matched: [] }, ...list] : list)
+            setIndex(0)
+            setLoad({ status: 'ready' })
+          })
       })
       .catch(() => {
         if (!controller.signal.aborted) setLoad({ status: 'error' })
@@ -249,6 +283,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   // The queue as of now, for async steps that must not act on a stale render.
   const itemsRef = useRef(items)
   itemsRef.current = items
+  const indexRef = useRef(index)
+  indexRef.current = index
   const replaceItems = useCallback((list: SearchResultItem[]) => {
     itemsRef.current = list
     setItems(list)
@@ -288,6 +324,32 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     const i = prevIndex(items, index, { videosOnly })
     if (i !== null) goTo(i)
   }, [isVideo, video.progress, items, index, videosOnly, goTo])
+
+  // Paste a link while watching: it's saved and plays next.
+  const paste = usePasteToSave({
+    onSaved: (post) => {
+      const params = new URLSearchParams({
+        id: post.id,
+        idPlatform: post.platform,
+        hideArchived: 'false',
+      })
+      fetch(`/api/feed?${params}`, { credentials: 'same-origin' })
+        .then((r) => (r.ok ? (r.json() as Promise<{ items: FeedItem[] }>) : { items: [] }))
+        .then(({ items: found }) => {
+          const [post0] = found
+          if (!post0) return
+          const pasted: SearchResultItem = { post: post0, saved: true, matched: [] }
+          const at = indexRef.current
+          replaceItems(insertAfter(itemsRef.current, at, [pasted]))
+          setSavedNow((s) => new Set(s).add(post.key))
+          goTo(at + 1)
+        })
+        .catch(() => {})
+    },
+    savedAction: () => ({ label: 'Add to channel', onClick: () => void save() }),
+  })
+  const [learningOpen, setLearningOpen] = useState(false)
+  const learning = useLearningStatus({ fast: learningOpen })
 
   const moreLikeThis = useCallback(async (): Promise<boolean> => {
     if (!current) return false
@@ -682,6 +744,12 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
           {`${index + 1} of ${items.length}`}
         </span>
+        <LearningPill
+          status={learning.status}
+          onOpen={() => setLearningOpen(true)}
+          className="pointer-events-auto hidden md:flex"
+        />
+        <PasteButton onClick={paste.pasteFromClipboard} className="pointer-events-auto" />
         <Link
           href={back}
           aria-label="Search"
@@ -946,6 +1014,14 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             },
           }))}
           onClose={() => setPanel(null)}
+        />
+      )}
+      {paste.toast}
+      {learningOpen && (
+        <LearningSheet
+          status={learning.status}
+          onClose={() => setLearningOpen(false)}
+          onRetried={learning.refresh}
         />
       )}
       {toast && (

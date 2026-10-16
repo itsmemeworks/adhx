@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Onboarding (phase 6 of the redesign)
+
+`/start`: email link sign up/in (same box), "Check your inbox" that signs the tab in by itself once the link is opened, then Connect X and import with live counts (existing `/api/sync` stream) plus a "making them searchable" bar.
+Paste a post link anywhere (or the Paste pill) to save it with the grabbing-it toast; it plays in a new recent-saves queue (`/play?recent=1`), or next in the theater. Learning ring + sheet on search, theater and channels; search badges "Words only" results.
+Verified locally end to end, including a real magic-link sign-up with a throwaway test address (link from the dev log). Copy from the design was corrected: no audio is heard, and Jev sees text, so "nothing goes to outside AI companies" became "pictures and videos are understood on ADHX's own servers".
+Fixed while verifying: "Nearest 0 matches" headline, a recent-queue start post older than the newest 100 now plays first, the ring stays reachable when only failures remain.
+Search eval re-run now that every picture and video is understood: fused hit@5 0.81 / MRR 0.70, with Jev 0.90 / 0.83 (unchanged) — phase 2 tuning holds.
+State: local, not pushed. Next: cutover (phase 7).
+
 ## 2026-10-16 — Channels (phase 5 of the redesign)
 
 Channels are tags: theater Save opens "add to a channel" (tick, find or create; new channels are public), `/channels` shows Made for you, yours and Top channels, and `/t/{user}/{tag}` renders the new channel page under `next_ui`.

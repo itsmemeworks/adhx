@@ -104,6 +104,7 @@ describe('theater queue', () => {
       group: 'video',
       channel: null,
       auto: null,
+      recent: false,
       start: 'twitter:1',
     })
     expect(sourceFromParams({ q: 'x', group: 'nope', start: '../etc' })).toMatchObject({
@@ -182,6 +183,7 @@ describe('TheaterV2', () => {
     group: null,
     channel: null,
     auto: null,
+    recent: false,
     start: null,
   }
 

@@ -46,6 +46,20 @@ export function EveryoneBadge({ className }: { className?: string }) {
   )
 }
 
+/** "Words only": matched on the post's text while its picture/video is still being learned. */
+export function WordsOnlyBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        'nx-plate pointer-events-none absolute flex h-6 items-center rounded-full px-2 text-[11px] font-bold text-white',
+        className,
+      )}
+    >
+      Words only
+    </span>
+  )
+}
+
 /** The chip a media tile shows: duration, album count or GIF. */
 export function mediaBadge(item: SearchResultItem): string | null {
   const kind = kindOf(item)
@@ -133,6 +147,7 @@ export function ResultTile({
     >
       {body}
       {!item.saved && <EveryoneBadge className="right-2 top-2" />}
+      {item.learning && <WordsOnlyBadge className="left-2 top-2" />}
     </Link>
   )
 }

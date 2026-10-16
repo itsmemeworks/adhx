@@ -17,6 +17,6 @@ export default async function ChannelsPage({
   searchParams: Promise<Record<string, string | undefined>>
 }) {
   if (!(await isNextUiEnabled(await searchParams))) redirect('/tags')
-  if (!(await getCurrentUserId())) redirect('/')
+  if (!(await getCurrentUserId())) redirect('/start?returnTo=%2Fchannels')
   return <ChannelsScreen />
 }

@@ -178,7 +178,7 @@ describe('SearchScreen', () => {
     expect(searches.some((u) => !u.includes('refine=1'))).toBe(true)
     expect(searches.some((u) => u.includes('refine=1'))).toBe(true)
     expect(
-      screen.getByText('Still learning 3 of your saves. More will show up.'),
+      screen.getByText(/^Still learning 3 of your saves\. “Words only” results/),
     ).toBeInTheDocument()
     // Every result opens the theater with this search as its queue.
     expect(screen.getByRole('link', { name: /Best match: James Melville/ })).toHaveAttribute(

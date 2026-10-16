@@ -19,6 +19,6 @@ export default async function SearchPage({
 }) {
   const params = await searchParams
   if (!(await isNextUiEnabled(params))) redirect('/library')
-  if (!(await getCurrentUserId())) redirect('/')
+  if (!(await getCurrentUserId())) redirect('/start?returnTo=%2Fsearch')
   return <SearchScreen initial={stateFromParams(params)} />
 }

@@ -24,7 +24,8 @@ export default async function PlayPage({
   if (!(await isNextUiEnabled(params))) redirect('/saved')
   const source = sourceFromParams(params)
   // Anyone can watch a public channel; everything else is your own.
-  if (!source.channel && !(await getCurrentUserId())) redirect('/')
-  if (!source.channel && !source.auto && !source.search.q.trim()) redirect('/search')
+  if (!source.channel && !(await getCurrentUserId())) redirect('/start?returnTo=%2Fsearch')
+  if (!source.channel && !source.auto && !source.recent && !source.search.q.trim())
+    redirect('/search')
   return <TheaterV2 source={source} />
 }
