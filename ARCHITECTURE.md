@@ -347,6 +347,41 @@ The bookmark insert result—not a stale preloaded ID set—is authoritative for
 pulses. At most the freshest 25 new rows from one sync enter the public pulse,
 so a first-time backfill cannot flood Discover.
 
+## Understanding pipeline (search by meaning)
+
+`src/lib/semantic/` turns every save into vectors that power search by
+meaning. It runs EmbeddingGemma 2 on the server (text q4 + vision q8; no
+audio yet) through `@huggingface/transformers` on `onnxruntime-node`.
+
+```mermaid
+flowchart LR
+  S[Save / paste / X sync / clone] -->|noteSaved| Q[(understanding_queue)]
+  B[Startup + status backfill] --> Q
+  Q --> W[Worker: one job at a time]
+  W -->|words| T[Text vector]
+  W -->|poster / photo| I[Image vector]
+  W -->|ffmpeg 1 fps, 32 s, 32 frames| V[Video vector]
+  T --> E[(post_embeddings)]
+  I --> E
+  V --> E
+```
+
+- **Keyed by post, not saver.** Only public post content is read (never tags
+  or who saved it), so one row serves everyone who saved the post. Per-user
+  reads join `bookmarks`, which is the isolation boundary.
+- **Durable priority queue.** Fresh saves and Up next jump the line; within a
+  priority, words run before pictures before videos so cheap results land
+  first. Failures back off and give up after three attempts; Retry re-queues.
+- **Pacing.** The worker shares the web server's CPU, so it runs one job at a
+  time and rests about half the last run's duration between jobs (the pattern
+  pond uses). Model weights download once to `SEMANTIC_CACHE_DIR` on the volume.
+- **Media.** Pictures come from the app's own proxies over loopback or from
+  allowlisted X/YouTube CDN hosts; anything else is skipped. Video frames are
+  sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.
+- **Status.** `/api/understanding/status` reports words / photos / videos
+  progress for the signed-in user. The item being worked on is only shown when
+  it is one of that user's own saves.
+
 ## Discovery and measurement planes
 
 These are intentionally separate logs with different privacy contracts.

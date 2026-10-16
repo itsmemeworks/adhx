@@ -862,6 +862,18 @@ const tagsSubquery = db
   .as('tags_agg')
 ```
 
+### Understanding pipeline (`src/lib/semantic/`)
+
+Search by meaning is backed by server-side EmbeddingGemma 2 vectors (see ARCHITECTURE.md → Understanding pipeline).
+
+- **Tables**: `post_embeddings` `(platform, post_id, kind)` and `understanding_queue` `(platform, post_id, kind)` — both keyed by POST, not saver, with no `user_id`. DDL lives in `src/lib/semantic/schema-sql.ts` and is shared by `migrate.ts` and the test DB. Never put tags or anything user-private into a document (`documents.ts`).
+- **Kinds**: `text` (post words, article body, link previews, quote, alt text), `image` (first photo, video poster or article cover), `video` (ffmpeg 1 fps, first 32 s, max 32 frames, 448px wide, from the same-origin video proxy). `status` is `ok`, `none` (nothing of that kind) or `failed`. `SEMANTIC_MODEL_VERSION` is stored on every row; bump it to re-understand everything.
+- **Enqueue** with `noteSaved(keys, priority)` from `@/lib/semantic` — fire-and-forget, never throws. Already wired into `/api/tweets/add`, `/api/bookmarks/add` (IG/TikTok/YouTube), `/api/sync` (sync priority) and playlist clone.
+- **Worker** starts from `src/instrumentation.ts`; one job at a time with pond-style rests. Disabled when `SEMANTIC_SEARCH=off` and always under Vitest. E2E sets it off.
+- **Env**: `SEMANTIC_CACHE_DIR` (model weights; `/data/models` on Fly), `SEMANTIC_THREADS` (ONNX intra-op threads; 1 on Fly), `SEMANTIC_INTERNAL_ORIGIN` (loopback origin for media proxies; defaults to `http://127.0.0.1:$PORT`), `FFMPEG_PATH` (override the bundled binary).
+- **Routes**: `GET /api/understanding/status`, `POST /api/understanding/retry`, `POST /api/understanding/prioritize { posts: [{ platform, id }] }` (max 20, only the caller's own saves).
+- **Memory**: ~850MB resident with the model loaded, which is why both Fly apps run 2GB VMs.
+
 ### Media Handling
 
 FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS issues).

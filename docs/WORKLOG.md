@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Understanding pipeline for search by meaning (phase 1 of the redesign)
+
+Owner approved a phased rebuild around search by meaning, a content-first theater, and channels (design canvas linked in the PR).
+Added `src/lib/semantic/`: EmbeddingGemma 2 on the server (text q4, vision q8, no audio) understands words, one picture, and video frames.
+Results are keyed by post (no user id, no tags) in `post_embeddings`; a durable `understanding_queue` puts fresh saves and Up next first.
+The worker starts from instrumentation and rests between jobs; ffmpeg-static samples 1 fps of the first 32 s.
+New `/api/understanding/{status,retry,prioritize}`; saves, sync and clone enqueue. Fly VMs raised to 2GB.
+State: implemented locally on `feat/find-by-context`, not pushed (GitHub account setup pending). Next: search API (phase 2).
+
 ## 2026-09-15 — Move mobile PiP into bottom playback controls
 
 Moved picture-in-picture from the right post-action rail to the bottom playback group, beside expand.
