@@ -63,6 +63,7 @@ The visible timestamp answers a different question on each surface:
 | `/channels`                 | Your channels, "Made for you" channels and Top channels.                                                 |
 | `/play`                     | The theater, playing a search's results as its queue.                                                |
 | `/search`                   | Search saves by meaning, with bento, groups and queue layouts.                                           |
+| `/moments/{slug}`           | A live "Right now" moment: what people are saving on one theme, newest first; Tune in plays it (`/play?moment=`). |
 | `/library`, `/tags`         | Old links: redirect to `/search` and `/channels`.                                                                                   |
 | `/{user}/status/{id}`       | X post preview.                                                                                                                     |
 | `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                                   |

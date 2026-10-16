@@ -39,6 +39,8 @@ export interface PlaySource {
   auto: string | null
   /** Your newest saves (`recent=1`): where a pasted or just-synced post plays. */
   recent: boolean
+  /** A live "Right now" moment (`moment=slug`): Tune in. */
+  moment: string | null
   /** `platform:id` of the post to start on. */
   start: string | null
 }
@@ -60,6 +62,13 @@ export function recentPlayHref(start?: string | null): string {
   return `/play?${params}`
 }
 
+/** Tune in to a moment. */
+export function momentPlayHref(slug: string, start?: string | null): string {
+  const params = new URLSearchParams({ moment: slug })
+  if (start) params.set('start', start)
+  return `/play?${params}`
+}
+
 export function autoPlayHref(slug: string, start?: string | null): string {
   const params = new URLSearchParams({ auto: slug })
   if (start) params.set('start', start)
@@ -73,6 +82,7 @@ export function queueUrl(source: PlaySource, searchUrl: () => string): string {
     return `/api/channels/by/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
   }
   if (source.auto) return `/api/channels/auto/${encodeURIComponent(source.auto)}`
+  if (source.moment) return `/api/moments/${encodeURIComponent(source.moment)}?limit=100`
   if (source.recent) return '/api/feed?limit=100&hideArchived=true'
   return searchUrl()
 }
@@ -81,6 +91,7 @@ export function queueUrl(source: PlaySource, searchUrl: () => string): string {
 export function backHref(source: PlaySource): string {
   if (source.channel) return `/t/${source.channel.username}/${source.channel.tag}`
   if (source.auto) return '/channels'
+  if (source.moment) return `/moments/${source.moment}`
   if (source.recent) return '/search'
   return searchHref(source.search)
 }
@@ -95,6 +106,7 @@ export function sourceFromParams(
   const start = get('start')
   const channel = CHANNEL.exec(get('channel') ?? '')
   const auto = get('auto')
+  const moment = get('moment')
   return {
     // A channel's "more like this" looks across everyone's saves.
     search: channel ? { ...search, scope: 'everyone' } : search,
@@ -102,6 +114,7 @@ export function sourceFromParams(
     channel: channel ? { username: channel[1], tag: channel[2] } : null,
     auto: !channel && auto && SLUG.test(auto) ? auto : null,
     recent: !channel && !auto && get('recent') === '1',
+    moment: !channel && !auto && moment && SLUG.test(moment) ? moment : null,
     start: start && KEY.test(start) ? start : null,
   }
 }

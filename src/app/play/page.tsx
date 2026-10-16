@@ -7,8 +7,9 @@ import { sourceFromParams } from '@/components/next/theater/queue'
 /**
  * `/play` — the redesigned theater, playing a
  * search's results as its queue: `/play?q=&scope=&type=&words=1&group=&start=`,
- * a channel (`?channel=user/tag`, public ones for anyone) or one of your
- * "Made for you" channels (`?auto=slug`).
+ * a channel (`?channel=user/tag`, public ones for anyone), one of your
+ * "Made for you" channels (`?auto=slug`) or a live moment (`?moment=slug`,
+ * Tune in; anyone).
  */
 export const dynamic = 'force-dynamic'
 
@@ -21,9 +22,9 @@ export default async function PlayPage({
 }) {
   const params = await searchParams
   const source = sourceFromParams(params)
-  // Anyone can watch a public channel; everything else is your own.
-  if (!source.channel && !(await getCurrentUserId())) redirect(startHref('/play', params))
-  if (!source.channel && !source.auto && !source.recent && !source.search.q.trim())
-    redirect('/search')
+  // Anyone can watch a public channel or tune in to a moment; everything else is your own.
+  const open = !!source.channel || !!source.moment
+  if (!open && !(await getCurrentUserId())) redirect(startHref('/play', params))
+  if (!open && !source.auto && !source.recent && !source.search.q.trim()) redirect('/search')
   return <TheaterV2 source={source} />
 }

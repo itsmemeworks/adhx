@@ -41,7 +41,8 @@ Unchanged: signed-out `/` (public theater), `/live`, `/trending`,
    deploy; staging is shared-cpu-2x, production performance-1x.
 5. **Volume space**: the model cache is ~1.3GB at `/data/models`, plus a few KB
    per post for vectors. Check free space: `fly ssh console -a <app> -C "df -h /data"`.
-6. **Email**: production needs `RESEND_API_KEY` (already used by the current
+6. **Right now**: `MOMENT_MIN_SAVERS` (default 3) is how many different people must save the same kind of thing before it's a moment; lower it while the user base is small. Moments only appear once posts are understood, so they fill in as the backfill runs.
+7. **Email**: production needs `RESEND_API_KEY` (already used by the current
    magic link). Locally the link is only printed to the dev log.
 
 ## Stage 1 — staging

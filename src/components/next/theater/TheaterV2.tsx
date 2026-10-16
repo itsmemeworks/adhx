@@ -1,5 +1,6 @@
 'use client'
 
+import { timeAgo, useMomentStream } from '../moments/live'
 import { AccountMenu } from '../AccountMenu'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -19,6 +20,7 @@ import {
   Send,
   SkipBack,
   SkipForward,
+  Radio,
   Sparkles,
   Volume2,
   VolumeX,
@@ -79,7 +81,12 @@ import { channelTitle } from '../channels/ChannelParts'
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready' }
 type Panel = null | 'queue' | 'more' | 'save'
 
-type QueueResponse = SearchResponse & { name?: string; channel?: { tag: string } }
+type QueueResponse = SearchResponse & {
+  name?: string
+  channel?: { tag: string }
+  /** A moment's detail (Tune in): its items carry when they were saved. */
+  moment?: { title: string; hue: string; watching: number }
+}
 
 async function fetchQueue(url: string, signal?: AbortSignal): Promise<QueueResponse> {
   const response = await fetch(url, { signal, credentials: 'same-origin' })
@@ -193,6 +200,14 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const [toast, setToast] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const extendingRef = useRef(false)
+  // Tune in (a live moment): its colour, who's watching, new saves arriving.
+  const [momentHue, setMomentHue] = useState('#ffd23f')
+  const [watching, setWatching] = useState(0)
+  const [arrivals, setArrivals] = useState(0)
+  const [waiting, setWaiting] = useState(false)
+  const [wander, setWander] = useState(false)
+  const waitingRef = useRef(false)
+  waitingRef.current = waiting
 
   // ——— Load the queue from the search this session came from ———
   useEffect(() => {
@@ -210,13 +225,23 @@ export function TheaterV2({ source }: { source: PlaySource }) {
               saved: true,
               matched: [],
             }))
-          : source.channel || source.auto
-            ? response.items
-            : orderByStrength(response.items)
+          : source.moment
+            ? (response.items as unknown as { post: FeedItem; savedAt: string }[]).map(
+                ({ post, savedAt }) => ({ post, saved: false, matched: [], savedAt }),
+              )
+            : source.channel || source.auto
+              ? response.items
+              : orderByStrength(response.items)
+        if (response.moment) {
+          setMomentHue(response.moment.hue)
+          setWatching(response.moment.watching)
+        }
         setTitle(
           source.recent
             ? 'Your saves'
-            : (response.name ?? (response.channel ? channelTitle(response.channel.tag) : null)),
+            : (response.moment?.title ??
+                response.name ??
+                (response.channel ? channelTitle(response.channel.tag) : null)),
         )
         const list = source.group
           ? (groupResults(results).find((g) => g.signal === source.group)?.items ?? [])
@@ -293,6 +318,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   // ——— Moving through the queue ———
   const goTo = useCallback((i: number) => {
     setEnded(false)
+    setWaiting(false)
+    setArrivals(0)
     setTimedPaused(false)
     setIndex(i)
   }, [])
@@ -320,6 +347,70 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     return () => window.removeEventListener('theater-media-gone', onGone)
   }, [replaceItems])
 
+  // ——— Tune in: new saves in this moment play next ———
+  useMomentStream(
+    (event) => {
+      if (event.type === 'watching' && event.slug === source.moment) setWatching(event.watching)
+      if (event.type !== 'save' || event.item.to?.kind !== 'moment') return
+      if (event.item.to.slug !== source.moment) return
+      const key = event.item.key
+      const at = indexRef.current
+      const existing = itemsRef.current.findIndex((i) => resultKey(i) === key)
+      // Already watched: only worth replaying when there's nothing else to watch.
+      if (existing !== -1 && existing <= at && !waitingRef.current) return
+      const arrived: SearchResultItem = {
+        post: event.item.post as unknown as FeedItem,
+        saved: false,
+        matched: [],
+        savedAt: event.item.at,
+      }
+      if (waitingRef.current) {
+        // Caught up: it plays now, at the end of the queue (moved there if it was earlier).
+        const list = [...itemsRef.current.filter((_, i) => i !== existing), arrived]
+        replaceItems(list)
+        goTo(list.length - 1)
+        return
+      }
+      replaceItems(insertAfter(itemsRef.current, at, [arrived]))
+      setArrivals((n) => n + 1)
+    },
+    source.moment,
+    !!source.moment,
+  )
+
+  /** "Wander": add posts near the moment that aren't in it. True if any were added. */
+  const addWander = useCallback(async (): Promise<boolean> => {
+    if (!source.moment) return false
+    try {
+      const response = await fetch(`/api/moments/${encodeURIComponent(source.moment)}/near`, {
+        credentials: 'same-origin',
+      })
+      if (!response.ok) return false
+      const { items: near } = (await response.json()) as { items: FeedItem[] }
+      const extra = near.map((post) => ({ post, saved: false, matched: [], wander: true }))
+      const list = appendUnique(itemsRef.current, extra)
+      if (list.length === itemsRef.current.length) return false
+      replaceItems(list)
+      return true
+    } catch {
+      return false
+    }
+  }, [source.moment, replaceItems])
+
+  const toggleWander = useCallback(
+    (on: boolean) => {
+      setWander(on)
+      if (on) {
+        void addWander()
+        return
+      }
+      // Back to the moment only: drop wandering posts that haven't played yet.
+      const at = indexRef.current
+      replaceItems(itemsRef.current.filter((item, i) => i <= at || !item.wander))
+    },
+    [addWander, replaceItems],
+  )
+
   /** "Stick to this vibe": append posts like `from`. Returns the new queue. */
   const extendWithVibe = useCallback(
     async (from: SearchResultItem): Promise<SearchResultItem[] | null> => {
@@ -343,6 +434,15 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const next = useCallback(async () => {
     const i = nextIndex(items, index, { repeat, videosOnly })
     if (i !== null) return goTo(i)
+    if (source.moment) {
+      // Tuned in: wander further, or wait here for the next save.
+      if (wander && (await addWander())) {
+        const after = nextIndex(itemsRef.current, index, { repeat: 'off', videosOnly })
+        if (after !== null) return goTo(after)
+      }
+      setWaiting(true)
+      return
+    }
     const extended = stick && current ? await extendWithVibe(current) : null
     const after = extended ? nextIndex(extended, index, { repeat: 'off', videosOnly }) : null
     if (after !== null) {
@@ -351,7 +451,21 @@ export function TheaterV2({ source }: { source: PlaySource }) {
       return goTo(after)
     }
     setEnded(true)
-  }, [items, index, repeat, videosOnly, stick, current, goTo, extendWithVibe, flash, sourceName])
+  }, [
+    items,
+    index,
+    repeat,
+    videosOnly,
+    stick,
+    current,
+    goTo,
+    extendWithVibe,
+    flash,
+    sourceName,
+    source.moment,
+    wander,
+    addWander,
+  ])
 
   const prev = useCallback(() => {
     if (isVideo && video.progress > 0.1) return stage.seek(0)
@@ -780,10 +894,24 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
         </Link>
         <span className="flex-1" />
-        {!position.via && (
-          <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
-            {`${position.n} of ${position.of}`}
+        {source.moment ? (
+          <span className="nx-plate flex h-8 items-center gap-2 rounded-full px-3 text-xs font-extrabold">
+            <span
+              aria-hidden
+              className="block h-2 w-2 rounded-full animate-nx-live-pulse"
+              style={{ background: momentHue }}
+            />
+            <span>LIVE</span>
+            {watching > 0 && (
+              <span className="font-medium text-white/80">{`${watching} watching`}</span>
+            )}
           </span>
+        ) : (
+          !position.via && (
+            <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
+              {`${position.n} of ${position.of}`}
+            </span>
+          )
         )}
         <LearningPill
           status={learning.status}
@@ -814,7 +942,120 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         </ControlButton>
       </header>
 
-      {position.via && (
+      {source.moment && (kind === 'post' || kind === 'article') && (
+        // Words on a cream stage: a small chip, so nothing covers the text.
+        <button
+          type="button"
+          onClick={() => toggleWander(!wander)}
+          aria-pressed={wander}
+          className="nx-plate absolute left-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 hidden h-9 items-center gap-2 rounded-full px-3.5 text-[13px] font-bold md:left-7 md:flex"
+        >
+          <Radio aria-hidden className="h-4 w-4" style={{ color: momentHue }} strokeWidth={2.4} />
+          <span>{wander ? 'Tuned in · Wandering' : 'Tuned in · Staying close'}</span>
+        </button>
+      )}
+      {source.moment && (kind === 'post' || kind === 'article') && current?.savedAt && (
+        <span
+          className={cn(
+            'absolute top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 hidden h-9 items-center rounded-full px-3.5 text-[13px] font-extrabold md:left-[300px] md:flex',
+            Date.now() - Date.parse(current.savedAt) < 3_600_000 ? 'text-black' : 'nx-plate',
+          )}
+          style={
+            Date.now() - Date.parse(current.savedAt) < 3_600_000
+              ? { background: momentHue }
+              : undefined
+          }
+        >
+          {Date.now() - Date.parse(current.savedAt) < 3_600_000
+            ? `Just saved · ${timeAgo(current.savedAt)}`
+            : `Saved ${timeAgo(current.savedAt)}`}
+        </span>
+      )}
+      {source.moment && kind !== 'post' && kind !== 'article' && (
+        <div
+          role="note"
+          className="nx-plate absolute left-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 hidden w-[330px] flex-col gap-2.5 rounded-2xl px-4 py-3.5 md:left-7 md:flex"
+        >
+          <span className="flex items-center gap-2 text-sm font-extrabold">
+            <Radio aria-hidden className="h-4 w-4" style={{ color: momentHue }} strokeWidth={2.4} />
+            <span>Tuned in</span>
+          </span>
+          <span className="text-[13px] leading-[1.4] text-white/75">
+            Playing what people are saving like this, newest first. It keeps going as new saves
+            land.
+          </span>
+          <div
+            role="group"
+            aria-label="How close to stay"
+            className="flex gap-1 rounded-full bg-white/10 p-[3px]"
+          >
+            {[
+              { on: !wander, label: 'Stay close', pick: () => toggleWander(false) },
+              { on: wander, label: 'Wander', pick: () => toggleWander(true) },
+            ].map((b) => (
+              <button
+                key={b.label}
+                type="button"
+                aria-pressed={b.on}
+                onClick={b.pick}
+                className={cn(
+                  'h-8 flex-1 rounded-full text-[13px] font-bold',
+                  b.on ? 'bg-white text-black' : 'text-white',
+                )}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-white/60">
+            {wander
+              ? 'This moment first, then drifting to posts near it.'
+              : 'Only this moment. New saves play as they land.'}
+          </span>
+        </div>
+      )}
+
+      {source.moment && arrivals > 0 && (
+        <div
+          role="status"
+          className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in"
+        >
+          <span
+            aria-hidden
+            className="block h-2 w-2 rounded-full"
+            style={{ background: momentHue }}
+          />
+          <span>
+            <b>{arrivals === 1 ? '1 new save' : `${arrivals} new saves`}</b>
+            {arrivals === 1 ? ' just landed. It’s up next.' : ' just landed. They’re up next.'}
+          </span>
+          <button
+            type="button"
+            onClick={() => goTo(index + 1)}
+            className="h-8 rounded-full px-3 text-[13px] font-extrabold text-black"
+            style={{ background: momentHue }}
+          >
+            Play now
+          </button>
+        </div>
+      )}
+
+      {source.moment && waiting && (
+        <div
+          role="status"
+          className="nx-plate absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 rounded-3xl px-6 py-5 text-center"
+        >
+          <span
+            aria-hidden
+            className="block h-3 w-3 rounded-full animate-nx-live-pulse"
+            style={{ background: momentHue }}
+          />
+          <span className="font-nx-serif text-[28px]">You’re all caught up</span>
+          <span className="text-sm text-white/75">New saves play here as they land.</span>
+        </div>
+      )}
+
+      {!source.moment && position.via && (
         // Not from the source: say what it is and why it's playing.
         <div
           role="note"
@@ -877,7 +1118,33 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           <div className="nx-text-shadow flex max-w-[calc(100%-64px)] items-end gap-3 md:max-w-[760px]">
             <NxAvatar author={author} size={40} className="border-2 border-white" />
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-[15px] font-bold">{author.handle || author.name}</span>
+              <span className="flex flex-wrap items-center gap-2 text-[15px] font-bold">
+                <span>{author.handle || author.name}</span>
+                {current.savedAt && (
+                  <span
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 text-xs font-extrabold [text-shadow:none]',
+                      Date.now() - Date.parse(current.savedAt) < 3_600_000
+                        ? 'text-black'
+                        : 'nx-plate',
+                    )}
+                    style={
+                      Date.now() - Date.parse(current.savedAt) < 3_600_000
+                        ? { background: momentHue }
+                        : undefined
+                    }
+                  >
+                    {Date.now() - Date.parse(current.savedAt) < 3_600_000
+                      ? `Just saved · ${timeAgo(current.savedAt)}`
+                      : `Saved ${timeAgo(current.savedAt)}`}
+                  </span>
+                )}
+                {current.wander && (
+                  <span className="nx-plate rounded-full px-2.5 py-0.5 text-xs font-bold">
+                    Wandering
+                  </span>
+                )}
+              </span>
               {caption && (
                 <span className="line-clamp-2 text-[15px] leading-[1.35] md:text-[17px]">
                   {caption}

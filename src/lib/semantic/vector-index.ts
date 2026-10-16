@@ -252,6 +252,54 @@ async function rescore(
     .sort((a, b) => b.score - a.score)
 }
 
+/**
+ * One `INDEX_DIMS` vector per post: its words, picture and video vectors
+ * averaged (whatever is understood), unit length. Null when nothing is.
+ */
+export function postVector(key: string): Float32Array | null {
+  const s = state()
+  let sum: Float32Array | null = null
+  for (const kind of ['text', 'image', 'video'] as const) {
+    const index = s.kinds[kind]
+    const slot = index.slots.get(key)
+    if (slot === undefined || !index.alive[slot]) continue
+    sum ??= new Float32Array(INDEX_DIMS)
+    const offset = slot * INDEX_DIMS
+    for (let i = 0; i < INDEX_DIMS; i++) sum[i] += index.data[offset + i]
+  }
+  if (!sum) return null
+  let norm = 0
+  for (let i = 0; i < INDEX_DIMS; i++) norm += sum[i] * sum[i]
+  norm = Math.sqrt(norm) || 1
+  for (let i = 0; i < INDEX_DIMS; i++) sum[i] /= norm
+  return sum
+}
+
+/**
+ * Posts nearest a centre in `postVector` space (e.g. a moment's), best
+ * first, skipping `exclude`. Scans every post with any understood kind.
+ */
+export function nearestPosts(
+  centre: Float32Array,
+  k: number,
+  exclude: ReadonlySet<string> = new Set(),
+): VectorHit[] {
+  const keys = new Set<string>()
+  for (const kind of ['text', 'image', 'video'] as const) {
+    for (const key of state().kinds[kind].keys) keys.add(key)
+  }
+  const hits: VectorHit[] = []
+  for (const key of keys) {
+    if (exclude.has(key)) continue
+    const v = postVector(key)
+    if (!v) continue
+    let score = 0
+    for (let i = 0; i < INDEX_DIMS; i++) score += centre[i] * v[i]
+    hits.push({ key, score })
+  }
+  return hits.sort((a, b) => b.score - a.score).slice(0, k)
+}
+
 /** Test-only: drop the in-memory index. */
 export function __resetVectorIndex(): void {
   g.__adhxVectorIndex = undefined

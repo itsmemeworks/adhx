@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Right now: live moments and Tune in
+
+What people are saving, grouped by meaning, live: `/channels` gets Right now (Just saved strip, moment cards that glow when a save lands, forming groups that pop into new moments), `/moments/{slug}` is a live page, and `/play?moment=slug` is Tune in (new saves play next, caught-up waits for the next one, Stay close / Wander, LIVE · N watching). Engine in `src/lib/moments/`, SSE at `/api/moments/stream`.
+Tested end to end with two browsers as two accounts (the second via Playwright pasting real links): saves appeared on the other screen within ~1 s, people counts rose, a forming "Frogs?" filled 2→3→4 and became a moment, watching went 1→2→1, a brand-new post was understood and sorted in ~2 s, Tune in auto-played a save while caught up.
+Tuning: similarities are centred (raw cosines ~0.72 for any pair). Fixed while testing: quoted posts counted as saves, first start re-streamed the last minute, label widened needlessly, strip thumbnails' shimmer covered the heading.
+Prod: `MOMENT_MIN_SAVERS` (default 3). Follow-ups: a Playwright spec seeding vectors (e2e runs with understanding off), signed-out landing using Right now. State: local, not pushed.
+
 ## 2026-10-16 — Previous look removed; theater says when it leaves your results
 
 Owner: "remove everything to do with the old design". The `next_ui` flag, `NEXT_UI_FORCE`, `/api/next-ui` and "Use the previous look" are gone; the library grid (`AuthedHome`, `FeedGrid`, `FilterBar`), Tags page and playlist theater were deleted. `/saved`, `/collection`, `/library`, `/tags` are now redirects; `/t/{user}/{tag}` always renders `ChannelPage` (private → owner only). No runtime rollback any more: runbook rewritten (rollback = redeploy previous release).

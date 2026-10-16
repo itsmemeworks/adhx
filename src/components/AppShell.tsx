@@ -129,14 +129,16 @@ export function AppShell({
     // /library when the flag is off, so this never strands the old UI.
     pathname === '/search' ||
     pathname === '/play' ||
-    pathname === '/channels'
+    pathname === '/channels' ||
+    pathname.startsWith('/moments/')
   // One-shot username / starter-playlist screen — the banner covers the card.
   // The next_ui search and theater put their own controls at the top edge.
   const hideInstallBanner =
     pathname === '/welcome' ||
     pathname === '/search' ||
     pathname === '/play' ||
-    pathname === '/channels'
+    pathname === '/channels' ||
+    pathname.startsWith('/moments/')
   const isAccountOwnedPage =
     pathname === '/live' ||
     isSavedPath(pathname) ||

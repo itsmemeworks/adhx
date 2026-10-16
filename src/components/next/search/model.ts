@@ -26,6 +26,10 @@ export interface SearchResultItem {
   learning?: boolean
   /** Theater only: not from the search itself, added as more like this post. */
   via?: QueueVia
+  /** Tune in: when someone last saved it. */
+  savedAt?: string
+  /** Tune in: added by "Wander" (near the moment, not in it). */
+  wander?: boolean
 }
 
 /** The post a queued item was found from ("More like this", "Stick to this vibe"). */

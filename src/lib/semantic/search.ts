@@ -143,7 +143,7 @@ async function savedKeys(userId: string): Promise<Set<string>> {
 }
 
 /** Posts allowed in `everyone` results. Fails closed if moderation can't be read. */
-async function publishable(keys: string[]): Promise<Set<string>> {
+export async function publishable(keys: string[]): Promise<Set<string>> {
   const moderated = readModeratedPostKeys()
   if (!moderated.ok) throw moderated.error
   const wanted = new Set(keys)
