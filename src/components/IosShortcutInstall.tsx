@@ -16,7 +16,14 @@ const HOW_STEPS: { icon: LucideIcon; label: string; hint: string }[] = [
 ]
 
 /** Chrome-style 3-step strip — same tiles as AndroidHow. */
-export function IosHow({ className }: { className?: string }) {
+export function IosHow({
+  className,
+  tone = 'matter',
+}: {
+  className?: string
+  /** `next` = the redesign's dark cards (Settings). */
+  tone?: 'matter' | 'next'
+}) {
   return (
     <div className={cn('mt-3', className)}>
       <ol className="grid grid-cols-3 gap-2">
@@ -24,16 +31,38 @@ export function IosHow({ className }: { className?: string }) {
           const Icon = step.icon
           return (
             <li key={step.label} className="flex flex-col items-center px-0.5 text-center">
-              <span className="relative flex h-11 w-11 items-center justify-center rounded-[14px] bg-clay text-white">
+              <span
+                className={cn(
+                  'relative flex h-11 w-11 items-center justify-center rounded-[14px]',
+                  tone === 'next' ? 'bg-nx-accent text-black' : 'bg-clay text-white',
+                )}
+              >
                 <Icon className="h-5 w-5" aria-hidden />
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-[9px] font-semibold text-surface">
+                <span
+                  className={cn(
+                    'absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold',
+                    tone === 'next' ? 'bg-white text-black' : 'bg-ink text-surface',
+                  )}
+                >
                   {i + 1}
                 </span>
               </span>
-              <span className="mt-2 text-[12px] font-semibold leading-tight text-ink">
+              <span
+                className={cn(
+                  'mt-2 text-[12px] font-semibold leading-tight',
+                  tone === 'next' ? 'text-white' : 'text-ink',
+                )}
+              >
                 {step.label}
               </span>
-              <span className="mt-0.5 text-[11px] leading-snug text-ink-3">{step.hint}</span>
+              <span
+                className={cn(
+                  'mt-0.5 text-[11px] leading-snug',
+                  tone === 'next' ? 'text-white/55' : 'text-ink-3',
+                )}
+              >
+                {step.hint}
+              </span>
             </li>
           )
         })}
@@ -76,7 +105,7 @@ export function IosShortcutInstallButton({
   )
 }
 
-/** Always-available install path in Settings — iOS only. */
+/** Always-available install path in Settings — iOS only, in the redesign's card look. */
 export function IosShortcutSettingsCard() {
   const [show, setShow] = useState(false)
   useEffect(() => {
@@ -84,25 +113,27 @@ export function IosShortcutSettingsCard() {
   }, [])
   if (!show) return null
   return (
-    <div className="overflow-hidden rounded-card border border-hairline bg-surface shadow-m-sm">
-      <div className="flex items-center gap-3 px-5 pt-[18px]">
-        <div className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-clay/10">
-          <Share className="h-[19px] w-[19px] text-clay" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-serif text-base font-semibold text-ink">
-            Add to the iOS share menu
-          </div>
-          <div className="mt-0.5 text-[13px] text-ink-3">
-            Then from X, Instagram, TikTok, or YouTube: Share → ADHX.
-          </div>
-        </div>
+    <section className="flex flex-col gap-4 rounded-[22px] bg-nx-surface p-4 font-nx-sans text-white md:p-6">
+      <div className="flex flex-col gap-1">
+        <h2 className="m-0 font-nx-serif text-[26px] font-normal leading-none">
+          Add to the iOS share menu
+        </h2>
+        <p className="m-0 text-sm text-white/65">
+          Then from X, Instagram, TikTok, or YouTube: Share → ADHX.
+        </p>
       </div>
-      <div className="px-5 pb-5 pt-4">
-        <IosHow className="mt-0" />
-        <IosShortcutInstallButton className="mt-4 w-full rounded-xl" />
-      </div>
-    </div>
+      <IosHow tone="next" className="mt-0" />
+      <a
+        href={IOS_SHORTCUT_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => pingAnalytic('shortcut.install', { source: 'shortcut' })}
+        className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-nx-accent px-5 text-[15px] font-extrabold text-black"
+      >
+        <Share className="h-4 w-4" aria-hidden />
+        <span>Add to Share Sheet</span>
+      </a>
+    </section>
   )
 }
 

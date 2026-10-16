@@ -8,7 +8,7 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
 ]) {
-  test(`Settings reveals an active sync at ${viewport.width}px`, async ({ page }) => {
+  test(`Settings shows a sync's live progress at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport)
     const db = new Database(E2E_DB_PATH)
     const syncId = `e2e-sync-progress-${viewport.width}`
@@ -19,6 +19,8 @@ for (const viewport of [
         `INSERT INTO oauth_tokens (user_id, access_token, refresh_token, expires_at)
          VALUES (?, 'e2e-unused', 'e2e-unused', ?)`,
       ).run(E2E_USER_ID, now)
+      // Already running (another tab, or /start): Sync attaches to it
+      // instead of starting a second one, and no X request is made.
       db.prepare(
         `INSERT INTO sync_logs (id, user_id, status, started_at, heartbeat_at, total_fetched, new_bookmarks, duplicates_skipped)
          VALUES (?, ?, 'running', ?, ?, 10, 2, 1)`,
@@ -35,31 +37,35 @@ for (const viewport of [
           },
         })
       })
-      await page.addInitScript(() => {
-        localStorage.setItem('adhx-last-visible-at', String(Date.now() - 48 * 60 * 60 * 1000))
-      })
       let streams = 0
       page.on('request', (request) => {
         if (new URL(request.url()).pathname === '/api/sync') streams++
       })
       await page.goto('/settings')
-      await expect.poll(() => streams).toBe(1)
-      const dialog = page.getByRole('dialog', { name: 'Bookmark sync' })
-      await expect(dialog).not.toBeVisible()
-      await page.getByRole('button', { name: /sync now/i }).click()
-      await expect(dialog.getByText('Processing 3 of 10')).toBeVisible()
-      await expect(dialog.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30')
+      const card = page.locator('#sync')
+      await expect(card.getByText('@e2esync')).toBeVisible()
+      expect(streams).toBe(0)
+
+      await card.getByRole('button', { name: 'Sync X bookmarks' }).click()
+      const bar = card.getByRole('progressbar', { name: 'Bringing in your X bookmarks' })
+      await expect(card.getByText('3 of 10')).toBeVisible()
+      await expect(bar).toHaveAttribute('aria-valuenow', '30')
       db.prepare(
-        'UPDATE sync_logs SET new_bookmarks = 5, duplicates_skipped = 2 WHERE id = ? AND user_id = ?',
-      ).run(syncId, E2E_USER_ID)
-      await expect(dialog.getByText('Processing 7 of 10')).toBeVisible()
-      await expect(dialog.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '70')
+        'UPDATE sync_logs SET new_bookmarks = 5, duplicates_skipped = 2, heartbeat_at = ? WHERE id = ? AND user_id = ?',
+      ).run(new Date().toISOString(), syncId, E2E_USER_ID)
+      await expect(card.getByText('7 of 10')).toBeVisible()
+      await expect(bar).toHaveAttribute('aria-valuenow', '70')
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      )
+      expect(overflow).toBeLessThanOrEqual(0)
       await page.screenshot({ path: test.info().outputPath('active-sync.png') })
       db.prepare(
         "UPDATE sync_logs SET status = 'completed', completed_at = ?, new_bookmarks = 8 WHERE id = ? AND user_id = ?",
       ).run(new Date().toISOString(), syncId, E2E_USER_ID)
-      await expect(dialog.getByText('Sync Complete!')).toBeVisible()
-      await expect(page.getByText('Bookmarks synced successfully!')).toBeVisible()
+      await expect(card.getByText('Done. 8 new bookmarks.')).toBeVisible()
+      await expect(card.getByText(/You can sync again in/)).toBeVisible()
+      await expect(page.locator('#sync-history').getByText('+8 new')).toBeVisible()
       expect(streams).toBe(1)
     } finally {
       await page.close()

@@ -32,7 +32,14 @@ const HOW_STEPS: { icon: LucideIcon; label: string; hint: string }[] = [
 ]
 
 /** Chrome / Samsung / Firefox steps — share sheet only works after install. */
-export function AndroidHow({ className }: { className?: string }) {
+export function AndroidHow({
+  className,
+  tone = 'matter',
+}: {
+  className?: string
+  /** `next` = the redesign's dark cards (Settings). */
+  tone?: 'matter' | 'next'
+}) {
   return (
     <div className={cn('mt-3', className)}>
       <ol className="grid grid-cols-3 gap-2">
@@ -40,21 +47,48 @@ export function AndroidHow({ className }: { className?: string }) {
           const Icon = step.icon
           return (
             <li key={step.label} className="flex flex-col items-center px-0.5 text-center">
-              <span className="relative flex h-11 w-11 items-center justify-center rounded-[14px] bg-clay text-white">
+              <span
+                className={cn(
+                  'relative flex h-11 w-11 items-center justify-center rounded-[14px]',
+                  tone === 'next' ? 'bg-nx-accent text-black' : 'bg-clay text-white',
+                )}
+              >
                 <Icon className="h-5 w-5" aria-hidden />
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-[9px] font-semibold text-surface">
+                <span
+                  className={cn(
+                    'absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold',
+                    tone === 'next' ? 'bg-white text-black' : 'bg-ink text-surface',
+                  )}
+                >
                   {i + 1}
                 </span>
               </span>
-              <span className="mt-2 text-[12px] font-semibold leading-tight text-ink">
+              <span
+                className={cn(
+                  'mt-2 text-[12px] font-semibold leading-tight',
+                  tone === 'next' ? 'text-white' : 'text-ink',
+                )}
+              >
                 {step.label}
               </span>
-              <span className="mt-0.5 text-[11px] leading-snug text-ink-3">{step.hint}</span>
+              <span
+                className={cn(
+                  'mt-0.5 text-[11px] leading-snug',
+                  tone === 'next' ? 'text-white/55' : 'text-ink-3',
+                )}
+              >
+                {step.hint}
+              </span>
             </li>
           )
         })}
       </ol>
-      <p className="mt-3 text-center text-[11px] leading-snug text-ink-3">
+      <p
+        className={cn(
+          'mt-3 text-center text-[11px] leading-snug',
+          tone === 'next' ? 'text-white/55' : 'text-ink-3',
+        )}
+      >
         <span>Paste link still works if Share → ADHX is missing.</span>
       </p>
     </div>
@@ -172,12 +206,15 @@ export function AndroidInstallBanner({
   )
 }
 
-/** Always-available install path in Settings — Android only. Same chrome as the nudge. */
+/** Always-available install path in Settings — Android only, in the redesign's card look. */
 export function AndroidSettingsCard() {
   const [show, setShow] = useState(false)
+  const [standalone, setStandalone] = useState(false)
+  const { deferred, install } = useAndroidInstallPrompt()
 
   useEffect(() => {
     setShow(getPlatformType() === 'android')
+    setStandalone(isStandaloneDisplay())
   }, [])
 
   useEffect(() => {
@@ -188,7 +225,34 @@ export function AndroidSettingsCard() {
 
   if (!show) return null
 
-  return <AndroidInstallBanner id="android-install" alwaysHow />
+  return (
+    <section
+      id="android-install"
+      className="flex flex-col gap-4 rounded-[22px] bg-nx-surface p-4 font-nx-sans text-white md:p-6"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h2 className="m-0 font-nx-serif text-[26px] font-normal leading-none">
+            {ANDROID_INSTALL_TITLE}
+          </h2>
+          <p className="m-0 text-sm text-white/65">
+            {standalone ? ANDROID_INSTALL_STANDALONE : ANDROID_INSTALL_BODY}
+          </p>
+        </div>
+        {!standalone && deferred && (
+          <button
+            type="button"
+            onClick={() => void install()}
+            className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full bg-nx-accent px-4 text-[15px] font-extrabold text-black"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            <span>Add</span>
+          </button>
+        )}
+      </div>
+      {!standalone && !deferred && <AndroidHow tone="next" className="mt-0" />}
+    </section>
+  )
 }
 
 /** Landing-card copy — Android first, bookmarklet is desktop. */

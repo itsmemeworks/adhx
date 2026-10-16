@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdhxFace } from '../loader'
-import { NxImage } from '../primitives'
+import { NxImage, XLogo } from '../primitives'
 import { postCoverSrc } from '../post'
 import type { FeedItem } from '@/components/feed/types'
 import { autoPlayHref } from '../theater/queue'
@@ -26,14 +26,6 @@ interface Account {
 }
 
 const RESEND_SECONDS = 60
-
-function XLogo({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M18.2 2h3.4l-7.4 8.5L23 22h-6.8l-5.3-6.9L4.8 22H1.4l7.9-9.1L1 2h7l4.8 6.3zM17 20h1.9L7.1 3.9H5.1z" />
-    </svg>
-  )
-}
 
 function Card({ label, children }: { label: string; children: React.ReactNode }) {
   return (

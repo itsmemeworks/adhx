@@ -130,6 +130,21 @@ describe('AppShell theater surfaces', () => {
     expect(screen.queryByTestId('pwa-banner')).not.toBeInTheDocument()
   })
 
+  it.each(['/channels', '/settings'])(
+    'draws %s full-width with its own header and no install banner',
+    (path) => {
+      mockPathname = path
+      render(
+        <AppShell serverAccountId="account-a">
+          <div>page</div>
+        </AppShell>,
+      )
+      expect(screen.getByText('page')).toBeInTheDocument()
+      expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('pwa-banner')).not.toBeInTheDocument()
+    },
+  )
+
   it('keeps the install banner on /trending and /library', () => {
     mockPathname = '/trending'
     const { rerender } = render(

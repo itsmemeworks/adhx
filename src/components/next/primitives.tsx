@@ -115,6 +115,15 @@ export function NxAvatar({
   )
 }
 
+/** The X logo, sized and coloured by the caller. Decorative. */
+export function XLogo({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M18.2 2h3.4l-7.4 8.5L23 22h-6.8l-5.3-6.9L4.8 22H1.4l7.9-9.1L1 2h7l4.8 6.3zM17 20h1.9L7.1 3.9H5.1z" />
+    </svg>
+  )
+}
+
 /** Bottom gradient that every run of text over media sits on. */
 export function Scrim({ className, children }: { className?: string; children: ReactNode }) {
   return (

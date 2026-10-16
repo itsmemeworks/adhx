@@ -130,14 +130,17 @@ export function AppShell({
     pathname === '/search' ||
     pathname === '/play' ||
     pathname === '/channels' ||
+    pathname === '/settings' ||
     pathname.startsWith('/moments/')
   // One-shot username / starter-playlist screen — the banner covers the card.
   // The next_ui search and theater put their own controls at the top edge.
+  // Settings has its own phone install card.
   const hideInstallBanner =
     pathname === '/welcome' ||
     pathname === '/search' ||
     pathname === '/play' ||
     pathname === '/channels' ||
+    pathname === '/settings' ||
     pathname.startsWith('/moments/')
   const isAccountOwnedPage =
     pathname === '/live' ||

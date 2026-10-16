@@ -13,8 +13,8 @@ interface Me {
   xConnected: boolean
 }
 
-/** Where "Sync" goes: `/start` connects X if needed, then imports. */
-export const SYNC_HREF = '/start?sync=1'
+/** Where "Sync" goes: Settings' X card, which connects X if needed, then syncs. */
+export const SYNC_HREF = '/settings?sync=1'
 
 /**
  * Your avatar in the header, opening Sync X bookmarks, Settings and Sign out.
