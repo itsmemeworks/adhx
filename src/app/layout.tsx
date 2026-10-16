@@ -7,6 +7,8 @@ import {
   Indie_Flower,
   Newsreader,
   Roboto_Mono,
+  Instrument_Serif,
+  Hanken_Grotesk,
 } from 'next/font/google'
 import './globals.css'
 import { AppShell } from '@/components/AppShell'
@@ -56,6 +58,24 @@ const robotoMono = Roboto_Mono({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
   variable: '--font-roboto-mono',
+})
+
+// next_ui redesign — Instrument Serif (display) + Hanken Grotesk (body).
+// Not preloaded: only pages behind the `next_ui` flag use them, so the
+// current UI never downloads these files.
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-instrument-serif',
+  preload: false,
+})
+
+const hankenGrotesk = Hanken_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-hanken-grotesk',
+  preload: false,
 })
 
 const siteUrl = PUBLIC_BASE_URL
@@ -201,7 +221,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body
-        className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable}`}
+        className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable} ${instrumentSerif.variable} ${hankenGrotesk.variable}`}
       >
         <AppShell serverAccountId={serverAccountId}>{children}</AppShell>
       </body>

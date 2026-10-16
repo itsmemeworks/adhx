@@ -16,6 +16,8 @@ vi.mock('next/font/google', () => {
     Indie_Flower: font,
     Newsreader: font,
     Roboto_Mono: font,
+    Instrument_Serif: font,
+    Hanken_Grotesk: font,
   }
 })
 
