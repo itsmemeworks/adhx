@@ -15,6 +15,7 @@ import {
   openHref,
   previewVideoSrc,
   resultKey,
+  type MatchSignal,
   type SearchResultItem,
 } from './model'
 import { EveryoneBadge, mediaBadge, ResultTile } from './ResultTile'
@@ -50,7 +51,15 @@ function headlineFor(item: SearchResultItem): string {
  * The best match, large. A video plays muted on a loop (search by meaning,
  * then it plays); anything else shows its cover or its words.
  */
-export function BestMatch({ item, className }: { item: SearchResultItem; className?: string }) {
+export function BestMatch({
+  item,
+  className,
+  href,
+}: {
+  item: SearchResultItem
+  className?: string
+  href?: string
+}) {
   const kind = kindOf(item)
   const cover = postCoverSrc(item.post)
   const reduced = useReducedMotion()
@@ -66,7 +75,7 @@ export function BestMatch({ item, className }: { item: SearchResultItem; classNa
   if (kind === 'post' || !cover) {
     return (
       <Link
-        href={openHref(item)}
+        href={href ?? openHref(item)}
         aria-label={`Best match: ${author.name}. ${text}`}
         className={cn(
           'relative flex flex-col justify-center gap-4 overflow-hidden rounded-[18px] bg-nx-cream p-8 text-nx-ink outline outline-2 outline-offset-[3px] outline-nx-accent md:p-12',
@@ -87,7 +96,7 @@ export function BestMatch({ item, className }: { item: SearchResultItem; classNa
 
   return (
     <Link
-      href={openHref(item)}
+      href={href ?? openHref(item)}
       aria-label={`Best match: ${author.name}. ${text}`}
       className={cn(
         'relative block overflow-hidden rounded-[18px] bg-nx-stage outline outline-2 outline-offset-[3px] outline-nx-accent',
@@ -148,20 +157,24 @@ export function BestMatch({ item, className }: { item: SearchResultItem; classNa
 }
 
 /** Masonry columns: 2 on phones, 3 on tablets, 4 on wide screens. */
+type HrefFor = (item: SearchResultItem) => string
+
 export function Masonry({
   items,
   columns = 'columns-2 md:columns-3 2xl:columns-4',
   onOpen,
+  hrefFor,
 }: {
   items: SearchResultItem[]
   columns?: string
   onOpen?: (item: SearchResultItem) => void
+  hrefFor?: HrefFor
 }) {
   return (
     <ul className={cn('list-none gap-2 p-0 md:gap-3', columns)}>
       {items.map((item) => (
         <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3">
-          <ResultTile item={item} onOpen={onOpen} />
+          <ResultTile item={item} onOpen={onOpen} href={hrefFor?.(item)} />
         </li>
       ))}
     </ul>
@@ -172,9 +185,11 @@ export function Masonry({
 export function BentoView({
   items,
   onOpen,
+  hrefFor,
 }: {
   items: SearchResultItem[]
   onOpen?: (item: SearchResultItem) => void
+  hrefFor?: HrefFor
 }) {
   const [lead, ...rest] = items
   if (!lead) return null
@@ -182,6 +197,7 @@ export function BentoView({
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
       <BestMatch
         item={lead}
+        href={hrefFor?.(lead)}
         className="h-[min(62vh,560px)] w-full shrink-0 lg:sticky lg:top-4 lg:h-[640px] lg:w-[46%]"
       />
       {rest.length > 0 && (
@@ -190,6 +206,7 @@ export function BentoView({
             items={rest}
             columns="columns-2 md:columns-3 lg:columns-2 xl:columns-3"
             onOpen={onOpen}
+            hrefFor={hrefFor}
           />
         </div>
       )}
@@ -200,12 +217,14 @@ export function BentoView({
 /** Groups: rows of results by how they matched, each playable on its own. */
 export function GroupsView({
   items,
-  onPlay,
+  onPlayGroup,
   onOpen,
+  hrefFor,
 }: {
   items: SearchResultItem[]
-  onPlay: (items: SearchResultItem[]) => void
+  onPlayGroup: (signal: MatchSignal) => void
   onOpen?: (item: SearchResultItem) => void
+  hrefFor?: HrefFor
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -227,7 +246,7 @@ export function GroupsView({
             </span>
             <button
               type="button"
-              onClick={() => onPlay(group.items)}
+              onClick={() => onPlayGroup(group.signal)}
               className="ml-auto flex h-10 items-center gap-1.5 rounded-full border border-nx-hairline px-3.5 text-[13px] text-nx-cream hover:border-nx-muted"
             >
               <Play aria-hidden className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
@@ -237,7 +256,7 @@ export function GroupsView({
           <ul className="-mx-3 flex list-none gap-2.5 overflow-x-auto px-3 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
             {group.items.map((item) => (
               <li key={resultKey(item)} className="w-[150px] shrink-0 md:w-[220px]">
-                <ResultTile item={item} onOpen={onOpen} />
+                <ResultTile item={item} onOpen={onOpen} href={hrefFor?.(item)} />
               </li>
             ))}
           </ul>
@@ -251,16 +270,18 @@ export function GroupsView({
 export function QueueView({
   items,
   onOpen,
+  hrefFor,
 }: {
   items: SearchResultItem[]
   onOpen?: (item: SearchResultItem) => void
+  hrefFor?: HrefFor
 }) {
   const [lead] = items
   if (!lead) return null
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       <div className="flex min-w-0 flex-1 flex-col gap-2.5 lg:sticky lg:top-4">
-        <BestMatch item={lead} className="h-[min(56vh,420px)] w-full" />
+        <BestMatch item={lead} href={hrefFor?.(lead)} className="h-[min(56vh,420px)] w-full" />
         <p className="m-0 text-sm text-nx-soft">
           <span className="font-bold text-nx-cream">Why this one: </span>
           <span>{matchReason(lead)}</span>
@@ -273,7 +294,7 @@ export function QueueView({
           return (
             <li key={resultKey(item)}>
               <Link
-                href={openHref(item)}
+                href={hrefFor?.(item) ?? openHref(item)}
                 onClick={onOpen ? () => onOpen(item) : undefined}
                 className={cn(
                   'flex min-h-[72px] items-center gap-3 rounded-[14px] border px-2.5 py-2',

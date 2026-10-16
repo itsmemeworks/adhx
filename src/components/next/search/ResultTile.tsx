@@ -67,12 +67,15 @@ export function ResultTile({
   best = false,
   className,
   onOpen,
+  href,
 }: {
   item: SearchResultItem
   /** The top match gets the yellow ring. */
   best?: boolean
   className?: string
   onOpen?: (item: SearchResultItem) => void
+  /** Where the tile goes; defaults to the post's own address. */
+  href?: string
 }) {
   const kind = kindOf(item)
   const { post } = item
@@ -123,7 +126,7 @@ export function ResultTile({
 
   return (
     <Link
-      href={openHref(item)}
+      href={href ?? openHref(item)}
       aria-label={label}
       className={frame}
       onClick={onOpen ? () => onOpen(item) : undefined}

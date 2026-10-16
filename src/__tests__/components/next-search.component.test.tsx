@@ -180,10 +180,13 @@ describe('SearchScreen', () => {
     expect(
       screen.getByText('Still learning 3 of your saves. More will show up.'),
     ).toBeInTheDocument()
+    // Every result opens the theater with this search as its queue.
     expect(screen.getByRole('link', { name: /Best match: James Melville/ })).toHaveAttribute(
       'href',
-      '/saved?open=1001&platform=twitter',
+      '/play?q=squirrels+eating+biscuits&start=twitter%3A1001',
     )
+    fireEvent.click(screen.getByRole('button', { name: 'Play all 1' }))
+    expect(push).toHaveBeenCalledWith('/play?q=squirrels+eating+biscuits')
   })
 
   it('marks posts from other people’s saves when searching everyone', async () => {
@@ -197,7 +200,7 @@ describe('SearchScreen', () => {
     )
     expect(screen.getByRole('link', { name: /saved by someone else/ })).toHaveAttribute(
       'href',
-      '/itsCP666/status/2002',
+      '/play?q=synth&scope=everyone&start=twitter%3A2002',
     )
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('scope=everyone'))).toBe(true)
   })

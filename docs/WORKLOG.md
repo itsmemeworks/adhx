@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Theater v2 (phase 4 of the redesign)
+
+`/play` behind `next_ui` plays a search's results as the queue (Play all, Play this group, any tile). It reuses the current `Stage` for media and adds the approved chrome: rail, seek, transport, volume, repeat, PiP, full screen, Up next and ⋯ sheets, keys and swipes.
+New `GET /api/search/similar` (a post's own vectors per kind, same fusion and scope rules) powers More like this and Stick to this vibe, which carries on past the end of the queue.
+Fixes found while verifying: an extension flag read back from a state updater was always false (ended instead of continuing), cream text posts sat under the rail, the install banner hid the header, long links overflowed the text stage.
+Verified on 448 local saves at 1280px and 375px. State: local, not pushed. Next: channels (phase 5); Save currently saves only (adding to a channel comes with it).
+
 ## 2026-10-16 — Search screen (phase 3 of the redesign)
 
 Merged phase 0 (`feat/next-ui-foundations`) into `feat/find-by-context`. Added `/search` behind `next_ui`: search bar with My saves / Everyone, type pills, Words only, Bento / Groups / Queue, Play all.

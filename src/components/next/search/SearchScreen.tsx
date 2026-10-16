@@ -9,11 +9,13 @@ import { NEXT_UI_PARAM } from '@/lib/next-ui/flag'
 import { useNextUi } from '@/lib/next-ui/useNextUi'
 import {
   countLabel,
-  openHref,
+  playHref,
+  resultKey,
   paramsFromState,
   readRecent,
   rememberRecent,
   TYPE_LABELS,
+  type MatchSignal,
   type SearchResultItem,
   type SearchScope,
   type SearchState,
@@ -185,13 +187,12 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
   const typed = state.q.trim().length > 0
   const remaining = state.scope === 'mine' ? remainingToLearn(learning) : 0
 
-  const play = (list: SearchResultItem[]) => {
-    const [first] = list
-    if (!first) return
+  // Every way into the theater plays this search's results as the queue.
+  const play = (opts: { group?: MatchSignal; start?: string } = {}) => {
     rememberRecent(state.q)
-    // Theater v2 takes the whole list as its queue; today the first one opens.
-    router.push(openHref(first))
+    router.push(playHref(state, opts))
   }
+  const hrefFor = (item: SearchResultItem) => playHref(state, { start: resultKey(item) })
   const onOpen = () => setRecent(rememberRecent(state.q))
 
   const note = (() => {
@@ -383,7 +384,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
               {items.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => play(items)}
+                  onClick={() => play()}
                   className="ml-auto hidden h-11 items-center gap-2 rounded-full bg-nx-accent px-[18px] text-sm font-bold text-nx-ink md:flex"
                 >
                   <Play aria-hidden className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
@@ -423,11 +424,20 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
 
             {items.length > 0 && (
               <div className={cn('transition-opacity duration-150', stale && 'opacity-60')}>
-                {state.view === 'bento' && <BentoView items={items} onOpen={onOpen} />}
-                {state.view === 'groups' && (
-                  <GroupsView items={items} onPlay={play} onOpen={onOpen} />
+                {state.view === 'bento' && (
+                  <BentoView items={items} onOpen={onOpen} hrefFor={hrefFor} />
                 )}
-                {state.view === 'queue' && <QueueView items={items} onOpen={onOpen} />}
+                {state.view === 'groups' && (
+                  <GroupsView
+                    items={items}
+                    onPlayGroup={(group) => play({ group })}
+                    onOpen={onOpen}
+                    hrefFor={hrefFor}
+                  />
+                )}
+                {state.view === 'queue' && (
+                  <QueueView items={items} onOpen={onOpen} hrefFor={hrefFor} />
+                )}
               </div>
             )}
           </>
@@ -437,7 +447,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
       {typed && items.length > 0 && (
         <button
           type="button"
-          onClick={() => play(items)}
+          onClick={() => play()}
           className="fixed bottom-[calc(24px+env(safe-area-inset-bottom))] left-1/2 z-30 flex h-[52px] -translate-x-1/2 items-center gap-2 rounded-full bg-nx-accent px-6 text-base font-bold text-black shadow-[0_8px_30px_rgba(0,0,0,0.5)] md:hidden"
         >
           <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />

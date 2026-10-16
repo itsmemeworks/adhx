@@ -154,7 +154,10 @@ export function PostStage({ item, progress, children, className }: Omit<StagePro
             </span>
           </span>
           <p
-            className={cn('m-0 whitespace-pre-line font-nx-serif', postStageTypeScale(text.length))}
+            className={cn(
+              'm-0 whitespace-pre-line font-nx-serif [overflow-wrap:anywhere]',
+              postStageTypeScale(text.length),
+            )}
           >
             {text}
           </p>

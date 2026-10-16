@@ -195,9 +195,9 @@ export function kindOf(item: SearchResultItem): NextPostKind {
 }
 
 /**
- * Where tapping a result goes. Your own saves open in the theater at that
- * post; anyone else's open on its public page. (Theater v2 will take the
- * whole result list as its queue.)
+ * A result's public address: your saves at that post in Saved, anyone
+ * else's on its public page. The search screen links into `/play` instead
+ * (see `playHref`); this is the fallback outside a search.
  */
 export function openHref(item: SearchResultItem): string {
   const { post } = item
@@ -209,6 +209,25 @@ export function openHref(item: SearchResultItem): string {
     post.id,
     kind === 'photo' ? 'photo' : null,
   )
+}
+
+/** `/play?…` for a search, a group of it, or a post within it. */
+export function playHref(
+  search: Pick<SearchState, 'q' | 'scope' | 'type' | 'wordsOnly'>,
+  opts: { group?: MatchSignal | null; start?: string | null } = {},
+): string {
+  const params = paramsFromState({ ...DEFAULT_STATE, ...search })
+  if (opts.group) params.set('group', opts.group)
+  if (opts.start) params.set('start', opts.start)
+  return `/play?${params}`
+}
+
+/** Back to the search this session came from. */
+export function searchHref(
+  search: Pick<SearchState, 'q' | 'scope' | 'type' | 'wordsOnly'>,
+): string {
+  const query = paramsFromState({ ...DEFAULT_STATE, ...search }).toString()
+  return query ? `/search?${query}` : '/search'
 }
 
 const RECENT_KEY = 'adhx:search:recent'

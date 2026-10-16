@@ -265,6 +265,19 @@ export function StageVideo({
     return () => window.removeEventListener('theater-set-muted', handler)
   }, [])
 
+  // Volume (0–1) from the next_ui theater's slider. The element is persistent,
+  // so the level carries across posts like the mute state does.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const volume = (event as CustomEvent<{ volume?: unknown }>).detail?.volume
+      const video = videoRef.current
+      if (!video || typeof volume !== 'number' || !Number.isFinite(volume)) return
+      video.volume = Math.min(1, Math.max(0, volume))
+    }
+    window.addEventListener('theater-set-volume', handler)
+    return () => window.removeEventListener('theater-set-volume', handler)
+  }, [])
+
   // A render can commit before the passive source-loading effect below runs.
   // Invalidate A synchronously in the commit's layout phase so a queued media
   // event (or a settling play promise) cannot observe A as current while the

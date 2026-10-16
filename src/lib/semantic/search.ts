@@ -1,12 +1,13 @@
 import { and, eq, inArray, isNull, like, or } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { bookmarkLinks, bookmarkMedia, bookmarks, userBans } from '@/lib/db/schema'
+import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings, userBans } from '@/lib/db/schema'
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
-import type { UnderstandingKind } from './config'
+import { SEMANTIC_MODEL_VERSION, type UnderstandingKind } from './config'
 import { queryPrompt } from './documents'
 import { keywordSearch } from './keywords'
 import { embedQuery } from './supervisor'
 import { nearest, refreshIndex } from './vector-index'
+import { fromBlob } from './vectors'
 
 /**
  * Hybrid search over saved posts: the query's meaning is compared with each
@@ -246,17 +247,7 @@ export async function searchPosts(
 
   let ranked = fuse(vectors, keywords)
   if (vector) ranked = ranked.filter((r) => r.score >= TUNING.minScore)
-  if (!mine && ranked.length > 0) {
-    const allowed = await publishable(ranked.map((r) => r.key))
-    ranked = ranked.filter((r) => allowed.has(r.key))
-  }
-  if (request.type !== 'all' && ranked.length > 0) {
-    const allowed = await ofType(
-      ranked.map((r) => r.key),
-      request.type,
-    )
-    ranked = ranked.filter((r) => allowed.has(r.key))
-  }
+  ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
 
   const page = ranked.slice(request.offset, request.offset + request.limit)
   return {
@@ -265,5 +256,78 @@ export async function searchPosts(
     understood: vector !== null,
     // Without meaning, keyword hits are exact words: close by definition.
     close: ranked.length > 0 && (vector === null || ranked[0].score >= TUNING.closeScore),
+  }
+}
+
+/** Scope (everyone: bans + moderation) and content-type filters, in rank order. */
+async function allowedOnly<T extends { key: string }>(
+  ranked: T[],
+  opts: { mine: boolean; type: SearchType },
+): Promise<T[]> {
+  let out = ranked
+  if (!opts.mine && out.length > 0) {
+    const allowed = await publishable(out.map((r) => r.key))
+    out = out.filter((r) => allowed.has(r.key))
+  }
+  if (opts.type !== 'all' && out.length > 0) {
+    const allowed = await ofType(
+      out.map((r) => r.key),
+      opts.type,
+    )
+    out = out.filter((r) => allowed.has(r.key))
+  }
+  return out
+}
+
+export interface SimilarRequest {
+  platform: string
+  postId: string
+  scope: SearchScope
+  type: SearchType
+  userId: string
+  limit: number
+}
+
+/**
+ * Posts like this one ("More like this", "Stick to this vibe"): its own
+ * words, picture and video vectors are each compared with the same kind
+ * across posts, standardised and fused like a search. The post itself is
+ * never returned. Empty when the post has not been understood yet.
+ */
+export async function similarPosts(request: SimilarRequest): Promise<SearchResult> {
+  const self = `${request.platform}:${request.postId}`
+  const rows = await db
+    .select({ kind: postEmbeddings.kind, vector: postEmbeddings.vector })
+    .from(postEmbeddings)
+    .where(
+      and(
+        eq(postEmbeddings.platform, request.platform),
+        eq(postEmbeddings.postId, request.postId),
+        eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION),
+        eq(postEmbeddings.status, 'ok'),
+      ),
+    )
+  if (rows.length === 0) return { hits: [], total: 0, understood: false, close: false }
+  await refreshIndex()
+  const pool = request.type === 'all' ? TUNING.pool : TUNING.typedPool
+  const mine = request.scope === 'mine' ? await savedKeys(request.userId) : undefined
+  const vectors: Partial<Record<'words' | 'picture' | 'video', VectorList>> = {}
+  for (const row of rows) {
+    const vector = fromBlob(row.vector as Buffer | null)
+    const kind = row.kind as UnderstandingKind
+    if (!vector || !KIND_SIGNAL[kind]) continue
+    const found = await nearest(kind, vector, pool + 1, mine)
+    vectors[KIND_SIGNAL[kind] as 'words' | 'picture' | 'video'] = {
+      ...found,
+      hits: found.hits.filter((h) => h.key !== self),
+    }
+  }
+  let ranked = fuse(vectors, []).filter((r) => r.score >= TUNING.minScore)
+  ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
+  return {
+    hits: ranked.slice(0, request.limit).map((r) => ({ ...r, ...split(r.key) })),
+    total: ranked.length,
+    understood: true,
+    close: ranked.length > 0 && ranked[0].score >= TUNING.closeScore,
   }
 }

@@ -127,14 +127,18 @@ export function AppShell({
     pathname === '/welcome' ||
     // next_ui search (redesign) draws its own header; the page redirects to
     // /library when the flag is off, so this never strands the old UI.
-    pathname === '/search'
+    pathname === '/search' ||
+    pathname === '/play'
   // One-shot username / starter-playlist screen — the banner covers the card.
-  const hideInstallBanner = pathname === '/welcome'
+  // The next_ui search and theater put their own controls at the top edge.
+  const hideInstallBanner =
+    pathname === '/welcome' || pathname === '/search' || pathname === '/play'
   const isAccountOwnedPage =
     pathname === '/live' ||
     isSavedPath(pathname) ||
     pathname === '/library' ||
     pathname === '/search' ||
+    pathname === '/play' ||
     pathname === '/tags' ||
     pathname === '/settings' ||
     pathname === '/welcome' ||

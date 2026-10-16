@@ -30,7 +30,7 @@ vi.mock('@/lib/semantic/supervisor', () => ({
 
 import { saveEmbedding } from '@/lib/semantic/store'
 import { indexPostText, ftsQuery, keywordSearch } from '@/lib/semantic/keywords'
-import { searchPosts, fuse, type SearchRequest } from '@/lib/semantic/search'
+import { searchPosts, similarPosts, fuse, type SearchRequest } from '@/lib/semantic/search'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { blend, describe as describePost, rerank } from '@/lib/semantic/rerank'
 import { __resetVectorIndex } from '@/lib/semantic/vector-index'
@@ -237,6 +237,43 @@ describe('searchPosts', () => {
     })
     expect(result.understood).toBe(false)
     expect(result.hits.map((h) => h.key)).toEqual(['twitter:kw'])
+  })
+})
+
+describe('similarPosts', () => {
+  it('finds posts like this one, never itself, within the scope', async () => {
+    await background(USER_A)
+    save(USER_A, 'seed')
+    save(USER_A, 'twin')
+    save(USER_B, 'their-twin')
+    for (const id of ['seed', 'twin', 'their-twin']) await understood(id, 'text', CLOSE)
+    const base = {
+      platform: 'twitter',
+      postId: 'seed',
+      type: 'all' as const,
+      userId: USER_A,
+      limit: 10,
+    }
+
+    const mine = (await similarPosts({ ...base, scope: 'mine' })).hits.map((h) => h.key)
+    expect(mine[0]).toBe('twitter:twin')
+    expect(mine).not.toContain('twitter:seed')
+    expect(mine).not.toContain('twitter:their-twin')
+    const everyone = (await similarPosts({ ...base, scope: 'everyone' })).hits.map((h) => h.key)
+    expect(everyone).toContain('twitter:their-twin')
+  })
+
+  it('is empty for a post that is not understood yet', async () => {
+    save(USER_A, 'new')
+    const result = await similarPosts({
+      platform: 'twitter',
+      postId: 'new',
+      scope: 'mine',
+      type: 'all',
+      userId: USER_A,
+      limit: 10,
+    })
+    expect(result).toMatchObject({ hits: [], understood: false })
   })
 })
 
