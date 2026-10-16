@@ -46,6 +46,9 @@ COPY --from=builder /app/src/lib ./src/lib
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
+# tsx reads the `@/` path alias from here when it runs the semantic child
+# processes (src/lib/semantic/child.ts) at runtime.
+COPY --from=builder /app/tsconfig.json ./
 
 # Production stage - minimal runtime image
 FROM base AS runner

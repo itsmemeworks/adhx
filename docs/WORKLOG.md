@@ -11,7 +11,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 Owner approved a phased rebuild around search by meaning, a content-first theater, and channels (design canvas linked in the PR).
 Added `src/lib/semantic/`: EmbeddingGemma 2 on the server (text q4, vision q8, no audio) understands words, one picture, and video frames.
 Results are keyed by post (no user id, no tags) in `post_embeddings`; a durable `understanding_queue` puts fresh saves and Up next first.
-The worker starts from instrumentation and rests between jobs; ffmpeg-static samples 16 frames over the first 32 s at 70 vision tokens each (pond's 32 × 140 took ~42s and ~3GB per video on CPU; 16 × 70 takes ~11–15s and ~2GB with cosine ~0.95 to the full vector).
+The model runs only in two child processes forked at startup: a niced jobs worker and a words-only query embedder (in-process inference froze every request for up to 12.5 s). ffmpeg-static samples 16 frames over the first 32 s at 70 vision tokens each (pond's 32 × 140 took ~42s and ~3GB per video on CPU; 16 × 70 takes ~11–15s and ~2GB with cosine ~0.95 to the full vector).
 New `/api/understanding/{status,retry,prioritize}`; saves, sync and clone enqueue. Fly VMs raised to 4GB.
 State: implemented locally on `feat/find-by-context`, not pushed (GitHub account setup pending). Next: search API (phase 2).
 

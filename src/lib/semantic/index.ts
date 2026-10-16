@@ -4,10 +4,10 @@ import { bookmarks, postEmbeddings } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
 import { PRIORITY, semanticEnabled, type UnderstandingKind } from './config'
 import { enqueuePosts, enqueueBackfill, type PostKey } from './queue'
-import { startUnderstandingWorker, wakeWorker } from './worker'
+import { wakeJobs } from './supervisor'
 
 export { getUnderstandingStatus } from './status'
-export { startUnderstandingWorker } from './worker'
+export { startSemanticProcesses, embedQuery } from './supervisor'
 export { PRIORITY } from './config'
 export type { PostKey } from './queue'
 
@@ -19,10 +19,7 @@ export type { PostKey } from './queue'
 export function noteSaved(keys: PostKey[], priority: number = PRIORITY.urgent): void {
   if (!semanticEnabled() || keys.length === 0) return
   void enqueuePosts(keys, priority)
-    .then(() => {
-      startUnderstandingWorker()
-      wakeWorker()
-    })
+    .then(() => wakeJobs())
     .catch((error) => captureException(error, { endpoint: 'semantic.noteSaved' }))
 }
 
@@ -36,8 +33,7 @@ export async function ensureUserBackfill(userId: string): Promise<void> {
   if (Date.now() - last < BACKFILL_EVERY_MS) return
   lastBackfill.set(userId, Date.now())
   await enqueueBackfill(userId)
-  startUnderstandingWorker()
-  wakeWorker()
+  wakeJobs()
 }
 
 /** Only keys this user has actually saved. */
@@ -64,8 +60,7 @@ export async function prioritize(userId: string, keys: PostKey[]): Promise<numbe
   const owned = await ownedKeys(userId, keys)
   if (owned.length === 0) return 0
   await enqueuePosts(owned, PRIORITY.urgent)
-  startUnderstandingWorker()
-  wakeWorker()
+  wakeJobs()
   return owned.length
 }
 
@@ -97,9 +92,6 @@ export async function retryFailed(userId: string): Promise<number> {
       )
     await enqueuePosts([f], PRIORITY.urgent, [f.kind as UnderstandingKind])
   }
-  if (mine.length) {
-    startUnderstandingWorker()
-    wakeWorker()
-  }
+  if (mine.length) wakeJobs()
   return mine.length
 }

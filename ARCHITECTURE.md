@@ -12,7 +12,9 @@ and [`docs/specs/translation-safety.md`](docs/specs/translation-safety.md).
 ADHX is one Next.js 16 App Router application running React 19 and a Node
 runtime. The Next.js route handlers are the backend. They use Drizzle over one
 `better-sqlite3` connection and a persistent SQLite file; there is no separate
-API service, queue worker, Redis tier, or object store.
+API service, Redis tier, or object store. The one exception is the
+understanding pipeline below: the web server forks two child processes on the
+same machine that run the embedding model, because inference blocks its thread.
 
 ## System context
 
@@ -357,7 +359,7 @@ audio yet) through `@huggingface/transformers` on `onnxruntime-node`.
 flowchart LR
   S[Save / paste / X sync / clone] -->|noteSaved| Q[(understanding_queue)]
   B[Startup + status backfill] --> Q
-  Q --> W[Worker: one job at a time]
+  Q --> W[jobs child: one job at a time]
   W -->|words| T[Text vector]
   W -->|poster / photo| I[Image vector]
   W -->|ffmpeg: 16 frames over 32 s| V[Video vector]
@@ -372,9 +374,18 @@ flowchart LR
 - **Durable priority queue.** Fresh saves and Up next jump the line; within a
   priority, words run before pictures before videos so cheap results land
   first. Failures back off and give up after three attempts; Retry re-queues.
-- **Pacing.** The worker shares the web server's CPU, so it runs one job at a
-  time and rests about half the last run's duration between jobs (the pattern
-  pond uses). Model weights download once to `SEMANTIC_CACHE_DIR` on the volume.
+- **Two child processes.** ONNX inference is synchronous on its thread; run
+  inside the web server, one video froze every request for ~15 s. So
+  `supervisor.ts` forks `child.ts` twice (`node --import tsx`, which is why the
+  image ships `tsconfig.json`): `jobs` runs the worker with the full model at
+  nice 10, and `query` holds a words-only copy (~600MB, ~60 ms per query) so a
+  search never waits behind a video. Both restart with backoff; children exit
+  when the parent goes away. The web server talks to them over IPC (wake,
+  current activity, query vectors) and never loads the model.
+- **Pacing.** The jobs child shares the CPU with the web server, so it runs one
+  job at a time and rests about half the last run's duration between jobs (the
+  pattern pond uses). Model weights download once to `SEMANTIC_CACHE_DIR` on
+  the volume.
 - **Media.** Pictures come from the app's own proxies over loopback or from
   allowlisted X/YouTube CDN hosts; anything else is skipped. Video frames are
   sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.

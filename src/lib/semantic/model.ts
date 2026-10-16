@@ -10,8 +10,9 @@ import { normalize } from './vectors'
 /**
  * The one EmbeddingGemma 2 instance for this process (text + vision; no
  * audio). Loaded lazily on first use, then kept. Every call goes through a
- * single queue: inference is CPU-heavy and sharing the box with request
- * handling means one job at a time.
+ * single queue. Inference blocks the calling thread, so this module is only
+ * ever loaded inside the semantic child processes (`child.ts`), never by the
+ * web server.
  */
 type Loaded = {
   processor: (...inputs: unknown[]) => Promise<Record<string, unknown>>
@@ -41,7 +42,10 @@ async function load(): Promise<Loaded> {
     revision: SEMANTIC_MODEL_REVISION,
   })
   // Do not download or allocate the audio encoder (video frames only, for now).
-  Object.assign(config, { audio_config: null })
+  // The query process is words-only and skips the vision encoder too
+  // (identical text vectors, ~600MB instead of ~2GB).
+  const textOnly = process.env['SEMANTIC_TEXT_ONLY'] === '1'
+  Object.assign(config, { audio_config: null, ...(textOnly ? { vision_config: null } : {}) })
   const [processor, model] = await Promise.all([
     tf.AutoProcessor.from_pretrained(SEMANTIC_MODEL_ID, { revision: SEMANTIC_MODEL_REVISION }),
     tf.AutoModel.from_pretrained(SEMANTIC_MODEL_ID, {
@@ -59,10 +63,12 @@ async function load(): Promise<Loaded> {
       video_processor?: { frame_processor?: { max_soft_tokens?: number } }
     }
   ).video_processor?.frame_processor
-  if (!frames || typeof frames.max_soft_tokens !== 'number') {
-    throw new Error('EmbeddingGemma 2 video processor shape changed; check VIDEO_SOFT_TOKENS')
+  if (!textOnly) {
+    if (!frames || typeof frames.max_soft_tokens !== 'number') {
+      throw new Error('EmbeddingGemma 2 video processor shape changed; check VIDEO_SOFT_TOKENS')
+    }
+    frames.max_soft_tokens = VIDEO_SOFT_TOKENS
   }
-  frames.max_soft_tokens = VIDEO_SOFT_TOKENS
   return {
     processor: processor as unknown as Loaded['processor'],
     model: model as unknown as Loaded['model'],

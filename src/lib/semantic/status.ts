@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks, postEmbeddings, understandingQueue } from '@/lib/db/schema'
 import { SEMANTIC_MODEL_VERSION, semanticEnabled, type UnderstandingKind } from './config'
-import { currentActivity } from './worker'
+import { jobActivity } from './supervisor'
 
 export interface UnderstandingGroup {
   id: 'words' | 'photos' | 'videos'
@@ -126,7 +126,7 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
   let queuedForUser = 0
   for (const q of queued) if (savedKeys.has(q.slice(0, q.lastIndexOf(':')))) queuedForUser++
 
-  const activity = currentActivity()
+  const activity = jobActivity()
   const current =
     activity && savedKeys.has(`${activity.platform}:${activity.postId}`)
       ? {

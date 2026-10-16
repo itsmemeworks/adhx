@@ -34,10 +34,11 @@ export async function register(): Promise<void> {
   const { initSentry } = await import('@/lib/sentry')
   initSentry()
 
-  // Understanding pipeline: resume the durable queue and backfill older saves
-  // in the background. No-op when SEMANTIC_SEARCH=off or under test.
-  const { startUnderstandingWorker } = await import('@/lib/semantic/worker')
-  startUnderstandingWorker()
+  // Understanding pipeline: child processes resume the durable queue, backfill
+  // older saves and embed search queries. The model never runs in this
+  // process. No-op when SEMANTIC_SEARCH=off or under test.
+  const { startSemanticProcesses } = await import('@/lib/semantic/supervisor')
+  startSemanticProcesses()
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {

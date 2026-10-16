@@ -9,7 +9,8 @@ import { completeJob, enqueueBackfill, failJob, nextJob } from './queue'
 import { getEmbedding, isCurrent, saveEmbedding } from './store'
 
 /**
- * The in-process understanding worker: one job at a time, resting between
+ * The understanding worker, run inside the `jobs` child process (never the
+ * web server; see `supervisor.ts`): one job at a time, resting between
  * jobs so web requests on the same CPU stay snappy (pond's pacing: rest ≈ half
  * of the last run, clamped). The queue is durable, so a restart just resumes.
  */
@@ -197,6 +198,8 @@ async function loop(): Promise<void> {
     }
     state.lastRunMs = Date.now() - started
     if (job.kind !== 'text' && process.env.NODE_ENV !== 'production') {
+      // Dev-only timing line; production relies on Sentry for failures.
+      // eslint-disable-next-line no-console
       console.info(`[understanding] ${job.kind} ${job.platform}:${job.postId} ${state.lastRunMs}ms`)
     }
     const rest =
