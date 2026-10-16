@@ -1,4 +1,12 @@
-import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import {
+  sqliteTable,
+  text,
+  integer,
+  blob,
+  primaryKey,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { relations, sql } from 'drizzle-orm'
 
 // ===========================================
@@ -414,6 +422,52 @@ export const moderatedPosts = sqliteTable(
     pk: primaryKey({ columns: [table.platform, table.bookmarkId] }),
   }),
 )
+
+// Understanding pipeline (`src/lib/semantic/`): EmbeddingGemma 2 vectors
+// behind search-by-meaning, plus the durable work queue that produces them.
+// Keyed by the POST, not the saver — only public post content is understood,
+// so one row serves everyone who saved it. Per-user reads always join
+// `bookmarks`. DDL lives in `src/lib/semantic/schema-sql.ts`.
+export const postEmbeddings = sqliteTable(
+  'post_embeddings',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(), // 'text' | 'image' | 'video'
+    model: text('model').notNull(),
+    contentHash: text('content_hash').notNull(),
+    dims: integer('dims').notNull().default(0),
+    vector: blob('vector', { mode: 'buffer' }),
+    status: text('status').notNull().default('ok'), // 'ok' | 'none' | 'failed'
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+    statusIdx: index('post_embeddings_status_idx').on(table.kind, table.status),
+  }),
+)
+
+export const understandingQueue = sqliteTable(
+  'understanding_queue',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(),
+    priority: integer('priority').notNull().default(10),
+    attempts: integer('attempts').notNull().default(0),
+    enqueuedAt: text('enqueued_at').notNull(),
+    nextAttemptAt: text('next_attempt_at').notNull(),
+    lastError: text('last_error'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+    nextIdx: index('understanding_queue_next_idx').on(table.nextAttemptAt, table.priority),
+  }),
+)
+
+export type PostEmbedding = typeof postEmbeddings.$inferSelect
+export type UnderstandingJob = typeof understandingQueue.$inferSelect
 
 // Banned accounts — session + sign-in treated as signed-out. Public
 // profile / playlist pages 404; leaderboards skip the owner. Data is kept

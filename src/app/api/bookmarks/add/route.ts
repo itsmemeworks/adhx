@@ -12,6 +12,7 @@ import { fetchYouTubeMetadata, youtubeThumbnail, youtubeShortUrl } from '@/lib/m
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { detectPlatformPost } from '@/lib/platform/url'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import { noteSaved } from '@/lib/semantic'
 
 /**
  * Platform-agnostic bookmark add endpoint.
@@ -288,6 +289,7 @@ async function addInstagramPost(
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+  noteSaved([{ platform: 'instagram', postId }])
 
   recordActivity({
     action: 'save',
@@ -425,6 +427,7 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+  noteSaved([{ platform: 'tiktok', postId: videoId }])
 
   recordActivity({
     action: 'save',
@@ -537,6 +540,7 @@ async function addYouTubeShort(userId: string, videoId: string, source: string) 
   }
 
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+  noteSaved([{ platform: 'youtube', postId: videoId }])
 
   recordActivity({
     action: 'save',

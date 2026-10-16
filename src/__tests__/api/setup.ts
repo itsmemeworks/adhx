@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/lib/db/schema'
+import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
 
 /**
  * Shared test database setup for API tests.
@@ -306,6 +307,7 @@ export function createTestDb(): TestDbInstance {
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
   sqlite.exec(FULL_SCHEMA_SQL)
+  sqlite.exec(UNDERSTANDING_DDL)
 
   const db = drizzle(sqlite, { schema })
 

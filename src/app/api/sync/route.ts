@@ -21,6 +21,7 @@ import {
   updateOwnedSyncProgress,
 } from '@/lib/sync/claim'
 import { observeSync } from '@/lib/sync/observe'
+import { noteSaved, PRIORITY } from '@/lib/semantic'
 
 /**
  * Cap on how many newly-synced tweets feed the public pulse per sync. Bookmarks
@@ -247,6 +248,7 @@ export const GET = withAuth(async (request, userId) => {
             }
 
             newBookmarks++
+            noteSaved([{ platform: 'twitter', postId: savedBookmark.id }], PRIORITY.sync)
 
             // Feed the public pulse, same as a manual save — a newly-synced tweet
             // is a new save. Capped (freshest first) so a big backfill can't flood

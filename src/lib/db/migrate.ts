@@ -10,6 +10,7 @@ import fs from 'fs'
 import { renameReadStatusToArchivedPosts } from './rename-read-status'
 import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
+import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -911,6 +912,15 @@ try {
   console.log('[migrate] Ensured analytics_events table')
 } catch (error) {
   console.log('[migrate] Warning: failed to create analytics_events table', error)
+}
+
+// Understanding pipeline (src/lib/semantic/). Derived data: a failure here
+// only disables search-by-meaning, so warn instead of exiting.
+try {
+  db.exec(UNDERSTANDING_DDL)
+  console.log('[migrate] Ensured post_embeddings / understanding_queue tables')
+} catch (error) {
+  console.log('[migrate] Warning: failed to create understanding tables', error)
 }
 
 try {

@@ -10,6 +10,7 @@ import { extractUrlsFromFacets } from '@/lib/media/fxembed'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
+import { noteSaved } from '@/lib/semantic'
 
 // POST /api/tweets/add - Add a tweet by URL
 export const POST = withAuth(async (request, userId) => {
@@ -413,6 +414,7 @@ export const POST = withAuth(async (request, userId) => {
 
     // Track bookmark addition with source
     metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+    noteSaved([{ platform: 'twitter', postId: parsed.tweetId }])
 
     // Push to the public activity pulse (anonymous, server-resolved content).
     const saveAuthor = tweet.author?.screen_name || parsed.author

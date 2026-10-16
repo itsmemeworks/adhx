@@ -43,7 +43,16 @@ const nextConfig = {
   // copy of the SDK into both the server and SSR chunk graphs, producing two
   // independent instances that each wrap http.Server.emit (httpServerIntegration)
   // and recurse into each other — a stack-overflow crash in production.
-  serverExternalPackages: ['better-sqlite3', '@sentry/node', 'react-email'],
+  serverExternalPackages: [
+    'better-sqlite3',
+    '@sentry/node',
+    'react-email',
+    // Understanding pipeline: native ONNX runtime, sharp, and the ffmpeg binary path.
+    '@huggingface/transformers',
+    'onnxruntime-node',
+    'sharp',
+    'ffmpeg-static',
+  ],
 
   // Image optimization for Twitter media
   images: {

@@ -33,6 +33,11 @@ export async function register(): Promise<void> {
 
   const { initSentry } = await import('@/lib/sentry')
   initSentry()
+
+  // Understanding pipeline: resume the durable queue and backfill older saves
+  // in the background. No-op when SEMANTIC_SEARCH=off or under test.
+  const { startUnderstandingWorker } = await import('@/lib/semantic/worker')
+  startUnderstandingWorker()
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
