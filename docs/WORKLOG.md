@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Settings redesigned; /play follows its reading settings
+
+Settings (`src/components/next/settings/`) is in the new design, full-width with `NxHeader`. Your X bookmarks is the first card, with live sync via `useXSync`. `?sync=1` starts a sync; the account menu's Sync X bookmarks now points there. Sign out is on the Account card.
+Theater v2 now honors Watching and reading. Sound comes from `useTheaterSoundPreference`, shared with the old theater, so the latest mute choice wins across tabs. In `next/stages`, Bionic Reading applies to post, quote and article-summary text. The reading font applies only to reading-sized text (>200 chars, quotes, summary), so short posts keep the poster serif. The exception: with Bionic Reading on they switch too, because Instrument Serif has a single weight and its synthesized bold is invisible (owner chose "reading text only").
+Note: the TheaterV2 sound change landed inside 32c269b (another session's commit swept the file); d37cb50 has the stages and tests. State: local, not pushed.
+
 ## 2026-10-16 — YouTube removed; saved Shorts deleted; any-site study
 
 Owner decision: ADHX only proxies public media it can understand, and YouTube Shorts play only through YouTube's iframe (no frames to sample), so YouTube is gone: no `youtube` platform, no StageYouTube/oEmbed adapter, no `youtube.com/shorts` detection in paste/share/prefix/extension/bookmarklet, no YouTube CSP frame-src. `/shorts/{id}` redirects home and stays reserved. `YtDebugOverlay` became `AvDebugOverlay` (`?avdebug=1` only).
