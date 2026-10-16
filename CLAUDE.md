@@ -874,6 +874,14 @@ Search by meaning is backed by server-side EmbeddingGemma 2 vectors (see ARCHITE
 - **Routes**: `GET /api/understanding/status`, `POST /api/understanding/retry`, `POST /api/understanding/prioritize { posts: [{ platform, id }] }` (max 20, only the caller's own saves).
 - **Memory/time** (measured on real saves): words ~0.1s, pictures 3–7s, videos 11–15s. The process sits at ~0.7GB after words, ~1.1GB after a picture and plateaus near 2GB after videos (onnxruntime keeps its buffers), which is why both Fly apps run 4GB VMs. 32 frames × 140 tokens (pond's GPU settings) took ~42s and ~3GB per video on CPU.
 
+### Search by meaning (`GET /api/search`)
+
+- **Params**: `q` (≤200 chars; no trailing space = last word is also a prefix), `scope=mine|everyone`, `type=all|videos|photos|text|articles` (feed vocabulary), `wordsOnly=1`, `limit` (≤60), `offset`, `refine=1` (Jev pass, first page only). Signed-in only, per-user rate limits (240/min search, 30/min refine), `no-store`.
+- **Signals** (`search.ts`): query vector (from the `query` child) vs each post's `text`, `image` and `video` vectors through `vector-index.ts` (in-memory, first 256 Matryoshka dims, re-scored with full 768-dim vectors, refreshed from `post_embeddings` by `(created_at, rowid)` keyset every ~2s), plus FTS5 keywords (`keywords.ts`, `post_text_fts`, written by the text job; every user token is quoted so input can never use FTS syntax).
+- **Fusion**: each vector list is standardised against that query's similarity to every candidate of the kind (z-score), because raw cosines sit in a narrow 0.6–0.8 band whose level varies by query and modality. Plain RRF was tried and was far worse (hit@5 0.35 vs 0.84): every query gets a picture list, so weak picture matches earned rank points. Results under `TUNING.minScore` are dropped. Re-tune with `scripts/eval-search.ts` after large changes.
+- **Everyone scope**: post keys only, filtered to posts with ≥1 non-banned saver and not in `moderated_posts` (fails closed if moderation can't be read). `items.ts` builds another saver's copy with no tags, archive state, summary or save time (`processedAt` = post time), and link rows get `userId: ''`, `id: 0`. Never add saver-derived fields to `anonymize()` output.
+- **Rerank** (`rerank.ts`): top 20 sent to Jev as one graded `score` question each (query + public post words only, `toWellFormed()` — a half emoji makes Jev return 400). Blended with fused rank; visual matches keep more fused weight because Jev reads words only. Any failure returns the fused order (`refined: false`).
+
 ### Media Handling
 
 FxTwitter (`api.fxtwitter.com`) provides reliable media URLs (Twitter has CORS issues).

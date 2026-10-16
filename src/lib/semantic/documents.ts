@@ -13,6 +13,8 @@ export interface PostDocument {
   /** EmbeddingGemma 2 document prompt: `title: … | text: …`. */
   text: string
   textHash: string
+  /** The same words without prompt labels, for the keyword index. */
+  keywords: string
   /** One picture: the first photo, a video poster, or an article cover. */
   image: { url: string; hash: string } | null
   /** One playable video stream (a same-origin proxy path). */
@@ -78,6 +80,12 @@ export function buildPostDocument(item: FeedItemResponse): PostDocument {
   ].filter(Boolean)
   const body = [...new Set(parts)].join('\n').slice(0, MAX_TEXT_CHARS)
   const text = `title: ${title} | text: ${body || 'none'}`
+  const keywords = [
+    title === 'none' ? '' : title,
+    body.replace(/^(Posted by |Image description: |Quoting )/gm, ''),
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   const media = item.media ?? []
   const videoIndex = media.findIndex(
@@ -94,6 +102,7 @@ export function buildPostDocument(item: FeedItemResponse): PostDocument {
     postId: item.id,
     text,
     textHash: sha(text),
+    keywords,
     image: imageUrl ? { url: imageUrl, hash: sha(imageUrl) } : null,
     video: videoPath ? { url: videoPath, hash: sha(`${videoPath}|${VIDEO_SAMPLING}`) } : null,
   }

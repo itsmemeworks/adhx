@@ -9,6 +9,7 @@ vi.mock('@/lib/db', () => ({
   get db() {
     return testInstance.db
   },
+  runInTransaction: <R>(fn: () => R): R => testInstance.sqlite.transaction(fn)(),
 }))
 
 const embedTexts = vi.fn(async (texts: string[]) => texts.map(() => unit(768)))

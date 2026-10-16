@@ -394,6 +394,41 @@ flowchart LR
   visual save shows progress after its quick picture pass. The item being worked on is only shown when
   it is one of that user's own saves.
 
+## Search by meaning
+
+`GET /api/search` finds saved posts by what they mean, show, or say.
+
+```mermaid
+flowchart LR
+  Q[query text] --> C[query child: words-only model]
+  C --> V[(vector index: 256-dim, in memory)]
+  Q --> K[(post_text_fts)]
+  V -->|words / picture / video| F[standardise + fuse]
+  K -->|keywords| F
+  F --> P[scope + moderation + type filters]
+  P --> I[feed-shaped posts]
+  I -->|refine=1| J[Jev graded rerank, top 20]
+```
+
+- **Hybrid signals.** One query vector is compared with every post's words,
+  picture and video; keywords come from FTS5 over the same post text. Each
+  vector list is turned into z-scores against that query's similarity to all
+  candidates of its kind, so a picture match counts only when it stands out.
+  On the labelled queries this beat reciprocal-rank fusion by a wide margin
+  (hit@5 0.84 vs 0.35) and words alone (0.80).
+- **Scale.** The index keeps the first 256 of 768 Matryoshka dimensions
+  (~1KB per post per kind) and re-scores candidates with the full vectors
+  from SQLite. A linear scan stays in the tens of milliseconds into the
+  hundreds of thousands of posts; beyond that it would need an ANN index.
+- **Scopes.** `mine` scans only the viewer's saves. `everyone` covers every
+  post anyone saved but never who: posts must have a non-banned saver and must
+  not be moderated, and other savers' copies are anonymised (no tags, archive
+  state, summary, save time or link owner).
+- **Refine.** An optional second request reranks the first 20 with Jev
+  (TypeSafe), sending only the query and public post words. Jev reads text,
+  so visual matches keep more of their fused rank. With it hit@1 rose from
+  0.58 to 0.77 on the labelled queries; any failure keeps the fused order.
+
 ## Discovery and measurement planes
 
 These are intentionally separate logs with different privacy contracts.

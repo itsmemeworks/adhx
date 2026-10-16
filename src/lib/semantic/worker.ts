@@ -1,7 +1,10 @@
+import { sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
 import type { UnderstandingJob } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
 import { VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
 import { buildPostDocument, hashFor, type PostDocument } from './documents'
+import { indexPostText } from './keywords'
 import { fetchImageBytes, MediaUnavailableError, NotAVideoError, sampleVideoFrames } from './media'
 import { embedImageBytes, embedTexts, embedVideoFrames } from './model'
 import { loadPostItem } from './posts'
@@ -109,6 +112,8 @@ export async function processJob(
       return 'skipped'
     }
     const doc = buildPostDocument(item)
+    // Keywords are cheap and model-free: keep them current on every text job.
+    if (kind === 'text') indexPostText(job.platform, job.postId, doc.keywords)
     const hash = hashFor(doc, kind)
     const existing = await getEmbedding(job.platform, job.postId, kind)
     if (isCurrent(existing, hash)) {
@@ -173,9 +178,34 @@ export async function processJob(
   }
 }
 
+/**
+ * Posts understood before the keyword index existed have no keyword row.
+ * Fill them in without the model (no re-embedding). Exported for tests.
+ */
+export async function backfillKeywordIndex(): Promise<number> {
+  const rows = db.all<{ platform: string; post_id: string }>(sql`
+    SELECT e.platform AS platform, e.post_id AS post_id
+    FROM post_embeddings e
+    WHERE e.kind = 'text'
+      AND NOT EXISTS (
+        SELECT 1 FROM post_text_fts f WHERE f.platform = e.platform AND f.post_id = e.post_id
+      )
+  `)
+  let done = 0
+  for (const row of rows) {
+    const item = await loadPostItem(row.platform, row.post_id)
+    if (!item) continue
+    indexPostText(row.platform, row.post_id, buildPostDocument(item).keywords)
+    done++
+    if (done % 50 === 0) await new Promise((resolve) => setImmediate(resolve))
+  }
+  return done
+}
+
 async function loop(): Promise<void> {
   try {
     await enqueueBackfill()
+    await backfillKeywordIndex()
   } catch (error) {
     captureException(error, { endpoint: 'semantic.backfill' })
   }

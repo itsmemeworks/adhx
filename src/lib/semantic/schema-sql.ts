@@ -13,6 +13,9 @@
  *
  * `understanding_queue` is the durable work list. Higher `priority` runs
  * first (fresh saves and up-next posts jump the line), then oldest first.
+ *
+ * `post_text_fts` is the keyword side of hybrid search: the same post text the
+ * model reads (never tags), one row per post, written by the text job.
  */
 export const UNDERSTANDING_DDL = `
   CREATE TABLE IF NOT EXISTS post_embeddings (
@@ -29,6 +32,7 @@ export const UNDERSTANDING_DDL = `
     PRIMARY KEY (platform, post_id, kind)
   );
   CREATE INDEX IF NOT EXISTS post_embeddings_status_idx ON post_embeddings(kind, status);
+  CREATE INDEX IF NOT EXISTS post_embeddings_created_idx ON post_embeddings(created_at);
 
   CREATE TABLE IF NOT EXISTS understanding_queue (
     platform TEXT NOT NULL,
@@ -42,4 +46,12 @@ export const UNDERSTANDING_DDL = `
     PRIMARY KEY (platform, post_id, kind)
   );
   CREATE INDEX IF NOT EXISTS understanding_queue_next_idx ON understanding_queue(next_attempt_at, priority);
+
+  CREATE VIRTUAL TABLE IF NOT EXISTS post_text_fts USING fts5(
+    platform UNINDEXED,
+    post_id UNINDEXED,
+    body,
+    tokenize = 'unicode61 remove_diacritics 2',
+    prefix = '2 3'
+  );
 `

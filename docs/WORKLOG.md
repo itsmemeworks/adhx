@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Search API by meaning (phase 2 of the redesign)
+
+`GET /api/search`: words/picture/video vectors plus FTS5 keywords, `mine`/`everyone` scope, feed type filters, words only, optional Jev rerank (`refine=1`).
+Fusion standardises each vector list per query (z-scores); RRF scored hit@5 0.35 because every query gets a weak picture list. Fused hit@5 0.84 / MRR 0.68 on 31 labelled local queries; with Jev hit@1 0.77, hit@5 0.90, MRR 0.83 (~250ms). Weights were tuned while only ~60 posts had visuals: re-run `scripts/eval-search.ts` once backfill finishes.
+Everyone results are post keys filtered by bans and moderation; other savers' copies are anonymised in `items.ts`.
+Also fixed: inference blocked the web event loop (see phase 1 entry), Jev 400s from half emoji (`toWellFormed`).
+State: local on `feat/find-by-context`, not pushed. Next: search UI (phase 3), which needs phase 0's `feat/next-ui-foundations` merged in.
+
 ## 2026-10-16 — Understanding pipeline for search by meaning (phase 1 of the redesign)
 
 Owner approved a phased rebuild around search by meaning, a content-first theater, and channels (design canvas linked in the PR).
