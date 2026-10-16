@@ -1,4 +1,10 @@
-import { SEMANTIC_DTYPE, SEMANTIC_MODEL_ID, SEMANTIC_MODEL_REVISION, modelCacheDir } from './config'
+import {
+  SEMANTIC_DTYPE,
+  SEMANTIC_MODEL_ID,
+  SEMANTIC_MODEL_REVISION,
+  VIDEO_SOFT_TOKENS,
+  modelCacheDir,
+} from './config'
 import { normalize } from './vectors'
 
 /**
@@ -46,6 +52,17 @@ async function load(): Promise<Loaded> {
       session_options: { intraOpNumThreads: threads, interOpNumThreads: 1 },
     } as Parameters<typeof tf.AutoModel.from_pretrained>[1]),
   ])
+  // Video frames at 70 vision tokens instead of the default 140 (Gemma 4's
+  // smallest budget): half the cost per frame, near-identical vectors.
+  const frames = (
+    processor as unknown as {
+      video_processor?: { frame_processor?: { max_soft_tokens?: number } }
+    }
+  ).video_processor?.frame_processor
+  if (!frames || typeof frames.max_soft_tokens !== 'number') {
+    throw new Error('EmbeddingGemma 2 video processor shape changed; check VIDEO_SOFT_TOKENS')
+  }
+  frames.max_soft_tokens = VIDEO_SOFT_TOKENS
   return {
     processor: processor as unknown as Loaded['processor'],
     model: model as unknown as Loaded['model'],
@@ -84,13 +101,17 @@ export function embedImageBytes(bytes: Uint8Array): Promise<Float32Array> {
   })
 }
 
-/** Frames are JPEG files in time order, one per second. */
-export function embedVideoFrames(files: string[], duration: number): Promise<Float32Array> {
+/** Frames are JPEG files in time order, `secondsPerFrame` apart. */
+export function embedVideoFrames(
+  files: string[],
+  duration: number,
+  secondsPerFrame: number,
+): Promise<Float32Array> {
   return serialize(async () => {
     const m = await loaded()
     const frames = []
     for (let i = 0; i < files.length; i++) {
-      frames.push(new m.RawVideoFrame(await m.RawImage.read(files[i]), i))
+      frames.push(new m.RawVideoFrame(await m.RawImage.read(files[i]), i * secondsPerFrame))
     }
     const video = new m.RawVideo(frames, duration)
     const out = await m.model(await m.processor(null, null, null, video))

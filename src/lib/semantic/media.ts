@@ -75,13 +75,13 @@ export interface SampledFrames {
   dir: string
   /** JPEG frame files in time order. */
   files: string[]
-  /** Seconds covered (≈ number of frames at 1 fps). */
+  /** Seconds covered. */
   duration: number
   cleanup: () => Promise<void>
 }
 
 /**
- * Sample a video at 1 fps for its first 32 seconds, at most 32 frames,
+ * Sample a video's first 32 seconds at one frame every 2s (at most 16),
  * downscaled. ffmpeg reads the stream over HTTP with Range requests, so
  * only the sampled window (plus the index) is transferred.
  */

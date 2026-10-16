@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import type { FeedItemResponse } from '@/lib/feed/build-item'
-import type { UnderstandingKind } from './config'
+import { VIDEO_SAMPLING, type UnderstandingKind } from './config'
 
 /**
  * What the understanding pipeline reads for one post. Built from a feed item
@@ -54,7 +54,7 @@ function videoStreamPath(item: FeedItemResponse, mediaIndex: number): string | n
     const media = item.media?.[mediaIndex]
     return media?.url?.startsWith('/api/media/') ? media.url : null
   }
-  // X: the 360p preview stream is plenty for 1 fps frame sampling.
+  // X: the 360p preview stream is plenty for sparse frame sampling.
   const params = new URLSearchParams({ author: item.author, tweetId: item.id, quality: 'preview' })
   if (mediaIndex > 0) params.set('index', String(mediaIndex + 1))
   return `/api/media/video?${params}`
@@ -95,7 +95,7 @@ export function buildPostDocument(item: FeedItemResponse): PostDocument {
     text,
     textHash: sha(text),
     image: imageUrl ? { url: imageUrl, hash: sha(imageUrl) } : null,
-    video: videoPath ? { url: videoPath, hash: sha(videoPath) } : null,
+    video: videoPath ? { url: videoPath, hash: sha(`${videoPath}|${VIDEO_SAMPLING}`) } : null,
   }
 }
 

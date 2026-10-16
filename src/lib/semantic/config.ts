@@ -15,10 +15,18 @@ export const SEMANTIC_DTYPE = { model: 'q4', vision_encoder: 'q8' } as const
 export const SEMANTIC_MODEL_VERSION = `${SEMANTIC_MODEL_ID}@${SEMANTIC_MODEL_REVISION}:q4/q8:v1`
 export const SEMANTIC_DIMS = 768
 
-/** Video sampling, matching pond's proven limits: 1 fps, first 32 seconds, 32 frames. */
-export const VIDEO_FPS = 1
+/**
+ * Video sampling: the first 32 seconds (pond's window), one frame every 2s,
+ * 70 vision tokens per frame. pond takes 32 frames at 140 tokens on a GPU; on
+ * CPU that costs ~42s and ~3GB per video. 16 × 70 costs ~11–15s and ~2GB, and
+ * its vector stays at cosine ~0.95 to the full one on real saves. Part of the
+ * video content hash, so changing any of these re-queues videos.
+ */
+export const VIDEO_FPS = 0.5
 export const VIDEO_MAX_SECONDS = 32
-export const VIDEO_MAX_FRAMES = 32
+export const VIDEO_MAX_FRAMES = 16
+export const VIDEO_SOFT_TOKENS = 70
+export const VIDEO_SAMPLING = `fps${VIDEO_FPS}x${VIDEO_MAX_FRAMES}@${VIDEO_MAX_SECONDS}s/t${VIDEO_SOFT_TOKENS}`
 /** Frames are downscaled before embedding; the model resizes to its own patch grid anyway. */
 export const VIDEO_FRAME_WIDTH = 448
 

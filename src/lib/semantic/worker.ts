@@ -1,6 +1,6 @@
 import type { UnderstandingJob } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
-import { semanticEnabled, type UnderstandingKind } from './config'
+import { VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
 import { buildPostDocument, hashFor, type PostDocument } from './documents'
 import { fetchImageBytes, MediaUnavailableError, sampleVideoFrames } from './media'
 import { embedImageBytes, embedTexts, embedVideoFrames } from './model'
@@ -82,7 +82,7 @@ async function understand(job: UnderstandingJob, doc: PostDocument): Promise<Flo
   try {
     activity.frames = sampled.files.length
     activity.phase = 'understanding'
-    return await embedVideoFrames(sampled.files, sampled.duration)
+    return await embedVideoFrames(sampled.files, sampled.duration, 1 / VIDEO_FPS)
   } finally {
     await sampled.cleanup()
   }
@@ -185,6 +185,9 @@ async function loop(): Promise<void> {
       captureException(error, { endpoint: 'semantic.processJob', kind: job.kind })
     }
     state.lastRunMs = Date.now() - started
+    if (job.kind !== 'text' && process.env.NODE_ENV !== 'production') {
+      console.info(`[understanding] ${job.kind} ${job.platform}:${job.postId} ${state.lastRunMs}ms`)
+    }
     const rest =
       job.kind === 'text' ? 0 : Math.min(REST_MAX_MS, Math.max(REST_MIN_MS, state.lastRunMs * 0.5))
     if (rest) await sleep(rest)

@@ -43,10 +43,10 @@ primary_region = 'lhr'
 # 2GB: the understanding pipeline keeps EmbeddingGemma 2 (text q4 + vision q8,
 # ~850MB resident) loaded next to Next.js. Owner-approved 2026-10-16.
 [[vm]]
-  memory = '2gb'
+  memory = '4gb'
   cpu_kind = 'performance'
   cpus = 1
-  memory_mb = 2048
+  memory_mb = 4096
 
 [mounts]
   source = 'adhx_prod_data'

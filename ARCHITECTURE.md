@@ -360,7 +360,7 @@ flowchart LR
   Q --> W[Worker: one job at a time]
   W -->|words| T[Text vector]
   W -->|poster / photo| I[Image vector]
-  W -->|ffmpeg 1 fps, 32 s, 32 frames| V[Video vector]
+  W -->|ffmpeg: 16 frames over 32 s| V[Video vector]
   T --> E[(post_embeddings)]
   I --> E
   V --> E
