@@ -3,13 +3,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import type { FeedItem, MediaItem } from '@/components/feed/types'
 
+const prefs = vi.hoisted(() => ({
+  current: null as null | {
+    preferences: { soundOn: boolean; bionicReading: boolean; bodyFont: string }
+    loading: boolean
+  },
+}))
+vi.mock('@/lib/preferences-context', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/preferences-context')>()),
+  usePreferencesOptional: () => prefs.current,
+}))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
 }))
 // The media stage is the current theater's, tested on its own; stub it here.
 const stageProps = vi.fn()
 vi.mock('@/components/theater/Stage', () => ({
-  Stage: (props: { item: { bookmarkId: string } | null; onEnded?: () => void }) => {
+  Stage: (props: {
+    item: { bookmarkId: string } | null
+    muted?: boolean
+    onEnded?: () => void
+  }) => {
     stageProps(props)
     return <div data-testid="stage">{props.item?.bookmarkId}</div>
   },
@@ -188,7 +202,12 @@ describe('TheaterV2', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    prefs.current = null
+    localStorage.clear()
+    sessionStorage.clear()
+  })
 
   const source = {
     search: { q: 'frogs', scope: 'mine' as const, type: 'all' as const, wordsOnly: false },
@@ -206,6 +225,38 @@ describe('TheaterV2', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('refine=1')
     expect(screen.getByText('3 of 3')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /frogs/ })).toHaveAttribute('href', '/search?q=frogs')
+  })
+
+  it('starts muted unless Sound on by default is on', async () => {
+    const { unmount } = render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    expect(stageProps.mock.calls.at(-1)?.[0].muted).toBe(true)
+    unmount()
+
+    prefs.current = {
+      preferences: { soundOn: true, bionicReading: false, bodyFont: 'ibm-plex' },
+      loading: false,
+    }
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    expect(stageProps.mock.calls.at(-1)?.[0].muted).toBe(false)
+    expect(screen.getAllByRole('button', { name: 'Mute' }).length).toBeGreaterThan(0)
+  })
+
+  it('remembers a mute choice over the account default', async () => {
+    prefs.current = {
+      preferences: { soundOn: true, bionicReading: false, bodyFont: 'ibm-plex' },
+      loading: false,
+    }
+    const { unmount } = render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Mute' })[0])
+    expect(stageProps.mock.calls.at(-1)?.[0].muted).toBe(true)
+    unmount()
+
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    expect(stageProps.mock.calls.at(-1)?.[0].muted).toBe(true)
   })
 
   it('plays only the chosen group', async () => {
@@ -238,6 +289,8 @@ describe('TheaterV2', () => {
   it('skips with the keyboard and ends when nothing similar is left', async () => {
     render(<TheaterV2 source={source} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    // Let the keyboard listener re-attach with the loaded queue before pressing keys.
+    await act(async () => {})
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     expect(screen.getByTestId('stage')).toHaveTextContent('2')
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))

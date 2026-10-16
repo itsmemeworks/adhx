@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { usePreferencesOptional } from '@/lib/preferences-context'
+import { toBionicText } from '@/components/feed/text-rendering'
 import { feedItemAccessibleDescription } from '@/components/feed/feedItemMeta'
 import type { FeedItem } from '@/components/feed/types'
 import {
@@ -126,6 +128,28 @@ export function WideMediaStage({
   )
 }
 
+/**
+ * The viewer's reading settings (Settings → Watching and reading). Bionic
+ * Reading applies to post, quote and article-summary text; the reading font
+ * applies to reading-sized text, so short posts keep the poster serif unless
+ * Bionic Reading is on (the serif has no bold to show it with).
+ */
+function useReadingSettings(): { bionic: boolean; font: string | undefined } {
+  const preferences = usePreferencesOptional()?.preferences
+  return {
+    bionic: !!preferences?.bionicReading,
+    font: preferences ? `var(--font-${preferences.bodyFont})` : undefined,
+  }
+}
+
+/** Plain text, or Bionic Reading spans (never a bare text node beside an element). */
+function ReadingText({ text, bionic }: { text: string; bionic: boolean }) {
+  return <>{bionic ? toBionicText(text) : text}</>
+}
+
+/** Posts longer than this are read rather than glanced at: reading font, smaller type. */
+export const READING_LENGTH = 200
+
 /** Serif size for the post stage — short posts get poster-sized type. */
 export function postStageTypeScale(length: number): string {
   if (length <= 80) return 'text-[clamp(34px,6vw,64px)] leading-[1.05]'
@@ -139,6 +163,10 @@ export function PostStage({ item, progress, children, className }: Omit<StagePro
   const author = postAuthor(item)
   const text = postText(item) || item.quoteContext?.text || ''
   const quote = item.isQuote ? item.quoteContext : null
+  const reading = useReadingSettings()
+  // Bionic Reading needs real bold weights, which the poster serif lacks.
+  const readingFont =
+    reading.font && (text.length > READING_LENGTH || reading.bionic) ? reading.font : undefined
   return (
     <StageFrame item={item} className={cn('bg-nx-cream text-nx-ink', className)}>
       {/* Scroll box + min-h-full column: centres short posts without clipping the top of long ones. */}
@@ -155,16 +183,23 @@ export function PostStage({ item, progress, children, className }: Omit<StagePro
           </span>
           <p
             className={cn(
-              'm-0 whitespace-pre-line font-nx-serif [overflow-wrap:anywhere]',
+              'm-0 whitespace-pre-line [overflow-wrap:anywhere]',
+              !readingFont && 'font-nx-serif',
               postStageTypeScale(text.length),
             )}
+            style={readingFont ? { fontFamily: readingFont } : undefined}
           >
-            {text}
+            <ReadingText text={text} bionic={reading.bionic} />
           </p>
           {quote && (
             <span className="flex flex-col gap-1 rounded-2xl border border-nx-bone px-4 py-3">
               <span className="text-[12px] font-semibold text-nx-on-cream">{`@${quote.author}`}</span>
-              <span className="line-clamp-3 text-[14px] leading-[1.4]">{quote.text}</span>
+              <span
+                className="line-clamp-3 text-[14px] leading-[1.4]"
+                style={reading.font ? { fontFamily: reading.font } : undefined}
+              >
+                <ReadingText text={quote.text} bionic={reading.bionic} />
+              </span>
             </span>
           )}
           {progress !== undefined && <StageProgress value={progress} tone="dark" />}
@@ -196,6 +231,7 @@ export function ArticleStage({
 }) {
   const cover = postCoverSrc(item)
   const href = item.articlePreview?.url || item.tweetUrl
+  const reading = useReadingSettings()
   return (
     <StageFrame
       item={item}
@@ -217,8 +253,11 @@ export function ArticleStage({
         <h2 className="m-0 font-nx-serif text-[clamp(26px,3vw,40px)] font-normal leading-[1.08]">
           {articleHeadline(item)}
         </h2>
-        <p className="m-0 line-clamp-6 text-[14px] leading-[1.5] text-nx-soft sm:text-[15px]">
-          {articleLede(item)}
+        <p
+          className="m-0 line-clamp-6 text-[14px] leading-[1.5] text-nx-soft sm:text-[15px]"
+          style={reading.font ? { fontFamily: reading.font } : undefined}
+        >
+          <ReadingText text={articleLede(item)} bionic={reading.bionic} />
         </p>
         <span className="mt-auto flex flex-wrap gap-2 pt-2">
           {onRead ? (
