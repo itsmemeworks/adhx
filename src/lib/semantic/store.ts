@@ -29,7 +29,8 @@ export async function getEmbedding(
 export function isCurrent(row: PostEmbedding | undefined, contentHash: string | null): boolean {
   if (!row || row.model !== SEMANTIC_MODEL_VERSION) return false
   if (contentHash === null) return row.status === 'none'
-  return row.contentHash === contentHash && (row.status === 'ok' || row.status === 'failed')
+  // `none` with a hash: the media existed but turned out not to be that kind.
+  return row.contentHash === contentHash
 }
 
 export async function saveEmbedding(input: {

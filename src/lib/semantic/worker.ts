@@ -2,7 +2,7 @@ import type { UnderstandingJob } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
 import { VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
 import { buildPostDocument, hashFor, type PostDocument } from './documents'
-import { fetchImageBytes, MediaUnavailableError, sampleVideoFrames } from './media'
+import { fetchImageBytes, MediaUnavailableError, NotAVideoError, sampleVideoFrames } from './media'
 import { embedImageBytes, embedTexts, embedVideoFrames } from './model'
 import { loadPostItem } from './posts'
 import { completeJob, enqueueBackfill, failJob, nextJob } from './queue'
@@ -138,6 +138,17 @@ export async function processJob(
       await completeJob(job)
       return 'done'
     } catch (error) {
+      if (error instanceof NotAVideoError) {
+        await saveEmbedding({
+          platform: job.platform,
+          postId: job.postId,
+          kind,
+          contentHash: hash,
+          status: 'none',
+        })
+        await completeJob(job)
+        return 'skipped'
+      }
       const message = error instanceof Error ? error.message : String(error)
       const permanent =
         error instanceof MediaUnavailableError && /not allowed|must be/.test(message)

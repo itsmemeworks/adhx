@@ -45,6 +45,28 @@ export function resolveMediaUrl(
 
 export class MediaUnavailableError extends Error {}
 
+/** The post's "video" turned out not to be one (e.g. a legacy save mislabeled as a Reel). */
+export class NotAVideoError extends MediaUnavailableError {}
+
+/**
+ * After ffmpeg fails, ask the proxy why: it answers 409 for posts that are
+ * really photos. Only runs on failure so working videos cost no extra
+ * upstream lookup.
+ */
+async function isPhotoNotVideo(source: string): Promise<boolean> {
+  try {
+    const response = await fetch(source, {
+      headers: { Range: 'bytes=0-0' },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+    })
+    await response.body?.cancel()
+    return response.status === 409
+  } catch {
+    return false
+  }
+}
+
 /** Download one picture's bytes (bounded size and time). */
 export async function fetchImageBytes(url: string): Promise<Uint8Array> {
   const target = resolveMediaUrl(url)
@@ -125,6 +147,9 @@ export async function sampleVideoFrames(videoPath: string): Promise<SampledFrame
           else resolve()
         },
       )
+    }).catch(async (error) => {
+      if (await isPhotoNotVideo(source)) throw new NotAVideoError('Post is a photo, not a video')
+      throw error
     })
     const files = (await readdir(dir))
       .filter((f) => f.endsWith('.jpg'))

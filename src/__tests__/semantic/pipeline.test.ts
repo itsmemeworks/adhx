@@ -48,7 +48,7 @@ import { enqueuePosts, enqueueBackfill, nextJob, failJob } from '@/lib/semantic/
 import { processJob } from '@/lib/semantic/worker'
 import { getUnderstandingStatus } from '@/lib/semantic/status'
 import { ownedKeys, retryFailed } from '@/lib/semantic'
-import { MediaUnavailableError } from '@/lib/semantic/media'
+import { MediaUnavailableError, NotAVideoError } from '@/lib/semantic/media'
 import { PRIORITY, SEMANTIC_MODEL_VERSION } from '@/lib/semantic/config'
 
 function feedItem(overrides: Partial<FeedItemResponse> = {}): FeedItemResponse {
@@ -248,6 +248,21 @@ describe('worker', () => {
     await enqueuePosts([{ platform: 'twitter', postId: '3' }], PRIORITY.urgent, ['image'])
     expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('failed')
     expect(await nextJob(new Date(Date.now() + 2 * 60 * 60_000))).toBeUndefined()
+  })
+
+  it('records a "video" that is really a photo as nothing to understand', async () => {
+    testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_A, '4')).run()
+    addMedia(USER_A, '4', 'video')
+    sampleVideoFrames.mockRejectedValueOnce(new NotAVideoError('Post is a photo, not a video'))
+    await enqueuePosts([{ platform: 'twitter', postId: '4' }], PRIORITY.urgent, ['video'])
+    expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('skipped')
+    const [row] = testInstance.db.select().from(schema.postEmbeddings).all()
+    expect(row).toMatchObject({ kind: 'video', status: 'none' })
+    expect(await nextJob(new Date(Date.now() + 2 * 60 * 60_000))).toBeUndefined()
+    // A later save of the same content does not sample again.
+    await enqueuePosts([{ platform: 'twitter', postId: '4' }], PRIORITY.urgent, ['video'])
+    expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('skipped')
+    expect(sampleVideoFrames).toHaveBeenCalledTimes(1)
   })
 })
 
