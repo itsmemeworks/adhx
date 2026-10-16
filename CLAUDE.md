@@ -653,6 +653,17 @@ The UI is the **"Matter"** warm editorial direction (light + dark). Shared primi
 - **Caption/title clamp gotcha**: put the big padding on a wrapper and the `line-clamp-N` on a _child_ with no vertical padding. `-webkit-line-clamp` constrains box height but still paints overflow lines, so bottom padding on the clamped element lets a clipped extra line peek through.
 - **Theater media captions**: two clamped lines (`TheaterCaption`). Overflow (or a quote) uses **Read** by tapping the caption; there is no separate Read button. Never more than two lines on the overlay. **Watch** remains visible in Read mode (TV icon, not Film — Film is Download) and returns to full-bleed; the parent video stays the same playing element in a top band so you can read while it continues. Action pills use `StageGlass` — the same flat frost as the mobile paste button (`border-white/25 bg-white/10 backdrop-blur-md`). The Tag button shows a count of tags on the post (max 5); there are no name chips in the action row.
 
+### next_ui redesign foundations (phase 0, behind a flag)
+
+The find-by-meaning redesign is a strangler rebuild behind the **`next_ui`** flag. Phase 0 adds visual foundations only; nothing mounts them in the current UI yet.
+
+- **Flag** (`src/lib/next-ui/`): `?next_ui=1|0` beats the per-browser override (localStorage `adhx:next_ui`, mirrored to cookie `adhx_next_ui`) which beats `NEXT_PUBLIC_NEXT_UI` (default off). Client: `useNextUi()` / `setNextUiOverride()` (`useNextUi.ts`); server: `await isNextUiEnabled(searchParams)` (`server.ts`).
+- **Tokens** live _alongside_ Matter: `--nx-*` RGB vars in `globals.css`, Tailwind `nx-ink` (#0f0e0c warm black), `nx-stage` (#000), `nx-cream`, `nx-accent` (#ffd23f), `nx-muted`, `nx-hairline`, …; fonts `font-nx-serif` (Instrument Serif) and `font-nx-sans` (Hanken Grotesk), loaded in `layout.tsx` with `preload: false`.
+- **Legibility rule**: text over media sits on `.nx-scrim` (transparent → black .9) **and** `.nx-text-shadow`; chips/controls over media use `.nx-plate` (black .38 + shadow + blur). Motion is `animate-nx-*` and is disabled under `prefers-reduced-motion`.
+- **Primitives** (`src/components/next/`): tiles `VideoTile` / `PhotoTile` / `PostTile` / `ArticleTile` / `GifTile` (+ `NextTile` dispatcher; row height via `--nx-tile-h`, default 340px), stages `TallVideoStage` / `WideMediaStage` / `PostStage` / `ArticleStage`, loader `AdhxFace` / `AdhxLoader` / `Shimmer` / `StageSkeleton` / `PasteToast`. All take `FeedItem`; view helpers are in `post.ts`.
+- **Preview**: `/dev/next-ui` (dev only) renders every primitive with the signed-in user's saves (sample posts when signed out).
+- UI copy never names models or techniques — say "learning", "channels", "words only".
+
 ### Theme System (dark only)
 
 - Dark is the single product theme. `layout.tsx` server-renders `<html class="dark">` and a fixed `#08070a` browser theme color, so there is no preference lookup, system-theme branch, or FOUC script.
@@ -1078,6 +1089,7 @@ ADMIN_USER_IDS=           # Immutable account IDs to persist as admins on startu
 ADMIN_USERNAMES=          # Strict all-match legacy bootstrap; rejected lists fail startup
 TWITTER_OAUTH_REDIRECT_URI= # Overrides the OAuth callback URL (see "OAuth callback host" below). Prod only.
 TRUST_PROXY_IP_HEADERS=   # Set true only behind a proxy that overwrites X-Forwarded-For/X-Real-IP; Fly uses Fly-Client-IP.
+NEXT_PUBLIC_NEXT_UI=      # 1 = redesigned UI on by default (build-time); browsers can still override with ?next_ui=0|1
 ```
 
 ### OAuth callback host (the `adhx.com` → `adhtwitter.com` bug)

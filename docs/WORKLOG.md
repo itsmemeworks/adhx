@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-16 — Redesign phase 0: next_ui flag, tokens and visual primitives
+
+Started the find-by-meaning redesign as a strangler rebuild behind `next_ui` (env `NEXT_PUBLIC_NEXT_UI`, `?next_ui=1` persisted per browser).
+Added nx- tokens (warm black, cream, yellow #ffd23f) and Instrument Serif + Hanken Grotesk alongside Matter, not replacing it.
+New `src/components/next`: five tiles, four stages, the AdhxFace loader, shimmer skeleton and paste toast, all from `FeedItem`.
+Text over media always gets the black scrim plus text-shadow; controls get a dark translucent backplate; motion respects reduced-motion.
+`/dev/next-ui` previews everything with real saves; verified at 390px and 1440px. Tests cover the flag, rendering and translation safety.
+State: committed locally on `feat/next-ui-foundations`, not pushed. No schema or backend changes (phase 1 runs in parallel).
+Follow-ups: theater v2 should wire stages to real players via the `media` slot; GIF tiles still show a still cover, not a loop.
+
 ## 2026-09-15 — Move mobile PiP into bottom playback controls
 
 Moved picture-in-picture from the right post-action rail to the bottom playback group, beside expand.
