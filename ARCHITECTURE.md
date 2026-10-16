@@ -379,7 +379,8 @@ flowchart LR
   allowlisted X/YouTube CDN hosts; anything else is skipped. Video frames are
   sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.
 - **Status.** `/api/understanding/status` reports words / photos / videos
-  progress for the signed-in user. The item being worked on is only shown when
+  progress for the signed-in user. "Photos" includes video posters, so every
+  visual save shows progress after its quick picture pass. The item being worked on is only shown when
   it is one of that user's own saves.
 
 ## Discovery and measurement planes

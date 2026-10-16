@@ -280,7 +280,9 @@ describe('status and ownership', () => {
     expect(a.totalSaves).toBe(2)
     expect(a.groups.find((g) => g.id === 'words')).toMatchObject({ done: 2, total: 2 })
     expect(a.groups.find((g) => g.id === 'videos')).toMatchObject({ done: 1, total: 1 })
-    expect(a.groups.find((g) => g.id === 'photos')).toMatchObject({ total: 0 })
+    // The video's poster counts as a picture, so its failure is visible here.
+    expect(a.groups.find((g) => g.id === 'photos')).toMatchObject({ done: 1, total: 1, failed: 1 })
+    expect(a.failed).toBe(1)
     expect(a.current).toBeNull()
 
     const b = await getUnderstandingStatus(USER_B)

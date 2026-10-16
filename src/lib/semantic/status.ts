@@ -102,7 +102,9 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
   }
   const all = [...savedKeys]
   const videos = all.filter((k) => hasVideo.has(k))
-  const photos = all.filter((k) => !hasVideo.has(k) && hasPhoto.has(k))
+  // Pictures include video stills: every visual save gets a quick picture pass
+  // (searchable within seconds) before the slower full-video pass.
+  const photos = all.filter((k) => hasVideo.has(k) || hasPhoto.has(k))
   const groups = [
     tally('words', 'text', all),
     tally('photos', 'image', photos),
