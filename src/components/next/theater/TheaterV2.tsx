@@ -70,6 +70,7 @@ import {
   searchHref,
   upcomingSavedKeys,
   viaLabel,
+  viaReason,
   type PlaySource,
   type RepeatMode,
 } from './queue'
@@ -543,7 +544,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
       }
       // Posts already in the queue from the source stay counted as the source's.
       const own = new Set(itemsRef.current.filter((i) => !i.via).map(resultKey))
-      const tagged = addedVia(more, current).map((m) =>
+      const tagged = addedVia(more, current, 'more').map((m) =>
         own.has(resultKey(m)) ? { ...m, via: undefined } : m,
       )
       replaceItems(insertAfter(itemsRef.current, index, tagged))
@@ -1135,7 +1136,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
       )}
 
       {!source.moment && position.via && (
-        // Not from the source: say what it is and why it's playing.
+        // Not from the source: say what it is like and why it's playing.
         <div
           role="note"
           className="nx-plate absolute left-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 flex max-w-[calc(100vw-96px)] items-center gap-2.5 rounded-2xl py-2 pl-3 pr-4 md:left-7 md:max-w-[420px]"
@@ -1144,7 +1145,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
             <span className="truncate text-xs text-white/65">
-              {`Not from ${sourceName} · ${position.n} of ${position.of}`}
+              {`${viaReason(position.via, source.channel || source.auto ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
             </span>
           </span>
         </div>

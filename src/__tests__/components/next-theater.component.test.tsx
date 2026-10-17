@@ -296,7 +296,10 @@ describe('TheaterV2', () => {
       'That’s everything from “frogs”. Now: more like the last one',
     )
     expect(screen.getByRole('note')).toHaveTextContent('More like @author3’s video')
-    expect(screen.getByRole('note')).toHaveTextContent('Not from “frogs” · 1 of 1')
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'Your search finished, so similar posts play next · 1 of 1',
+    )
+    expect(screen.getByRole('note')).not.toHaveTextContent('Not from')
     expect(screen.queryByText(/of 4/)).toBeNull()
   })
 

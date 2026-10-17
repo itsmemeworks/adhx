@@ -37,6 +37,8 @@ export interface QueueVia {
   key: string
   author: string
   kind: NextPostKind
+  /** Why it's playing: the source ran out ("vibe") or the viewer asked ("more"). */
+  reason: 'vibe' | 'more'
 }
 
 export interface SearchResponse {

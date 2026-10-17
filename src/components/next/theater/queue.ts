@@ -213,11 +213,16 @@ export function clock(seconds: number): string {
 }
 
 /** Mark posts as found from `from`, so the theater can say why they're playing. */
-export function addedVia(more: SearchResultItem[], from: SearchResultItem): SearchResultItem[] {
+export function addedVia(
+  more: SearchResultItem[],
+  from: SearchResultItem,
+  reason: QueueVia['reason'] = 'vibe',
+): SearchResultItem[] {
   const via: QueueVia = {
     key: resultKey(from),
     author: from.post.author,
     kind: nextPostKind(from.post),
+    reason,
   }
   return more.map((m) => ({ ...m, via }))
 }
@@ -228,6 +233,14 @@ const KIND_NOUN: Record<QueueVia['kind'], string> = {
   photo: 'photo',
   post: 'post',
   article: 'article',
+}
+
+/** Why an added post is playing, in a few words. */
+export function viaReason(via: QueueVia, source: 'search' | 'channel' | 'saves'): string {
+  if (via.reason === 'more') return 'You asked for more like this'
+  if (source === 'channel') return 'The channel finished, so similar posts play next'
+  if (source === 'saves') return 'Your saves finished, so similar posts play next'
+  return 'Your search finished, so similar posts play next'
 }
 
 /** "More like @ana’s video". */
