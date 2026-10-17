@@ -260,8 +260,12 @@ export function queuePosition(
   const current = items[index]
   const via = current?.via ?? null
   if (!via) {
-    const own = items.filter((i) => !i.via)
-    return { via: null, n: items.slice(0, index + 1).filter((i) => !i.via).length, of: own.length }
+    const isOwn = (i: SearchResultItem) => !i.via || !!i.fromSource
+    return {
+      via: null,
+      n: items.slice(0, index + 1).filter(isOwn).length,
+      of: items.filter(isOwn).length,
+    }
   }
   let start = index
   while (start > 0 && items[start - 1].via?.key === via.key) start--

@@ -26,6 +26,12 @@ export interface SearchResultItem {
   learning?: boolean
   /** Theater only: not from the search itself, added as more like this post. */
   via?: QueueVia
+  /**
+   * Theater only: added with `via` but also part of the source (asked-for
+   * "more like this" that was already in your saves). Plays in the run, still
+   * counts toward the source's "n of m".
+   */
+  fromSource?: boolean
   /** Tune in: when someone last saved it. */
   savedAt?: string
   /** Tune in: added by "Wander" (near the moment, not in it). */

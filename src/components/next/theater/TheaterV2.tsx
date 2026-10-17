@@ -6,6 +6,7 @@ import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
 import { AccountMenu } from '../AccountMenu'
 import { BottomNav, NxLogo, PrimaryNav } from '../PrimaryNav'
+import { NxHeader } from '../channels/ChannelParts'
 import { HeaderSearch, focusHeaderSearch } from '../QuickSearch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -96,7 +97,7 @@ function hasFullArticle(post: FeedItem): boolean {
   return /^https:\/\/(x|twitter)\.com\/[^/]+\/article\//.test(url)
 }
 
-type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready' }
+type Load = { status: 'loading' } | { status: 'error'; missing?: boolean } | { status: 'ready' }
 type Panel = null | 'queue' | 'more' | 'save' | 'share'
 
 type QueueResponse = SearchResponse & {
@@ -104,6 +105,48 @@ type QueueResponse = SearchResponse & {
   channel?: { tag: string }
   /** A moment's detail (Tune in): its items carry when they were saved. */
   moment?: { title: string; hue: string; watching: number }
+}
+
+/** What to say when there's nothing to play, by where the queue came from. */
+function emptyState(
+  source: PlaySource,
+  load: Load,
+): { title: string; body: string; action: string; href: string } {
+  const missing = load.status === 'error' && load.missing
+  if (source.moment && missing)
+    return {
+      title: 'This moment has passed',
+      body: 'People have moved on. See what they’re saving now.',
+      action: 'Right now',
+      href: '/now',
+    }
+  if ((source.channel || source.auto) && missing)
+    return {
+      title: 'This channel isn’t here',
+      body: 'It may have been made private or removed.',
+      action: 'Channels',
+      href: '/channels',
+    }
+  if (load.status === 'error')
+    return {
+      title: 'That didn’t load',
+      body: 'Check your connection and try again.',
+      action: 'Go back',
+      href: backHref(source),
+    }
+  if (source.recent)
+    return {
+      title: 'Nothing saved yet',
+      body: 'Paste a link from X, Instagram or TikTok, or bring in your X bookmarks.',
+      action: 'Bring in X bookmarks',
+      href: '/settings?sync=1',
+    }
+  return {
+    title: 'Nothing to play here',
+    body: 'Nothing matches that yet. Try describing it another way.',
+    action: 'Back to search',
+    href: backHref(source),
+  }
 }
 
 async function fetchQueue(url: string, signal?: AbortSignal): Promise<QueueResponse> {
@@ -302,8 +345,10 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             setLoad({ status: 'ready' })
           })
       })
-      .catch(() => {
-        if (!controller.signal.aborted) setLoad({ status: 'error' })
+      .catch((e: unknown) => {
+        if (controller.signal.aborted) return
+        // 404: the moment has passed, or the channel is gone or private.
+        setLoad({ status: 'error', missing: e instanceof Error && e.message === 'queue 404' })
       })
     return () => controller.abort()
   }, [source])
@@ -544,10 +589,11 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         flash('Nothing like this yet. Try again once more is learned.')
         return false
       }
-      // Posts already in the queue from the source stay counted as the source's.
-      const own = new Set(itemsRef.current.filter((i) => !i.via).map(resultKey))
+      // All of them play as one "more like this" run; ones already in the
+      // source still count toward its "n of m".
+      const own = new Set(itemsRef.current.filter((i) => !i.via || i.fromSource).map(resultKey))
       const tagged = addedVia(more, current, 'more').map((m) =>
-        own.has(resultKey(m)) ? { ...m, via: undefined } : m,
+        own.has(resultKey(m)) ? { ...m, fromSource: true } : m,
       )
       replaceItems(insertAfter(itemsRef.current, index, tagged))
       flash(`${more.length} more like this, up next`)
@@ -600,6 +646,15 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     else if (timed) setTimedPaused((p) => !p)
   })
 
+  // Tuning in explains itself for 8 seconds, then folds into the small chip.
+  const [tuneIntro, setTuneIntro] = useState(true)
+  useEffect(() => {
+    if (!source.moment) return
+    setTuneIntro(true)
+    const t = window.setTimeout(() => setTuneIntro(false), 8000)
+    return () => window.clearTimeout(t)
+  }, [source.moment])
+
   // While the share sheet is up the video waits, so it can't end mid-send.
   const pausedForShare = useRef(false)
   useEffect(() => {
@@ -642,7 +697,10 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         body: JSON.stringify({ url }),
       })
       if (res.status === 401) {
-        flash('Sign in to save posts and make channels')
+        // Signed out: sign in, then come back to this exact spot.
+        window.location.assign(
+          `/start?${new URLSearchParams({ returnTo: `${window.location.pathname}${window.location.search}` })}`,
+        )
         return false
       }
       const data = (await res.json().catch(() => null)) as { error?: string } | null
@@ -872,27 +930,27 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         ? 'saves'
         : 'search'
   if (load.status !== 'ready' || !current) {
+    const empty = emptyState(source, load)
     return (
-      <>
-        <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] top-0 z-40 flex flex-col items-center justify-center gap-5 bg-nx-stage px-6 text-center font-nx-sans text-nx-cream md:bottom-0">
+      <div className="flex min-h-dvh flex-col bg-nx-stage font-nx-sans text-nx-cream">
+        <NxHeader current={navHere} />
+        <main className="flex flex-1 flex-col items-center justify-center gap-5 px-6 pb-24 text-center">
           {load.status === 'loading' ? (
             <AdhxLoader label="Lining them up…" />
           ) : (
             <>
-              <span className="font-nx-serif text-[30px]">
-                {load.status === 'error' ? 'That queue didn’t load' : 'Nothing to play here'}
-              </span>
+              <span className="font-nx-serif text-[34px] leading-tight">{empty.title}</span>
+              <span className="max-w-[440px] text-[15px] text-white/70">{empty.body}</span>
               <Link
-                href={back}
+                href={empty.href}
                 className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
               >
-                Go back
+                {empty.action}
               </Link>
             </>
           )}
-        </div>
-        <BottomNav current={navHere} />
-      </>
+        </main>
+      </div>
     )
   }
 
@@ -1009,8 +1067,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
               <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
             </Link>
           )}
-          {source.moment && (kind === 'post' || kind === 'article') && (
-            // Words on a cream stage: a small chip, so nothing covers the text.
+          {source.moment && (kind === 'post' || kind === 'article' || !tuneIntro) && (
+            // A small chip, so nothing covers the post (after the first few seconds on media).
             <button
               type="button"
               onClick={() => toggleWander(!wander)}
@@ -1043,7 +1101,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
                 : `Saved ${timeAgo(current.savedAt)}`}
             </span>
           )}
-          {source.moment && kind !== 'post' && kind !== 'article' && (
+          {source.moment && kind !== 'post' && kind !== 'article' && tuneIntro && (
             <div
               role="note"
               className="nx-plate pointer-events-auto hidden w-[330px] flex-col gap-2.5 rounded-2xl px-4 py-3.5 md:flex"
@@ -1137,6 +1195,13 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           </div>
         )}
 
+        {source.moment && waiting && (
+          // Dim what's behind, so the note doesn't read over the last post.
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-[5] bg-black/60 backdrop-blur-[2px]"
+          />
+        )}
         {source.moment && waiting && (
           <div
             role="status"

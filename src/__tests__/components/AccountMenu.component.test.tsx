@@ -38,4 +38,20 @@ describe('AccountMenu', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Your account' }))
     expect(screen.getByRole('menuitem', { name: 'Connect X' })).toHaveAttribute('href', SYNC_HREF)
   })
+
+  it('offers Sign in when signed out, coming back to this page', async () => {
+    window.history.replaceState(null, '', '/now')
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ authenticated: false }),
+      } as Response),
+    ) as unknown as typeof fetch
+    render(<AccountMenu />)
+    expect(await screen.findByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/start?returnTo=%2Fnow',
+    )
+    window.history.replaceState(null, '', '/')
+  })
 })

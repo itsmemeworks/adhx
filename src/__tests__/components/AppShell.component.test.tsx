@@ -310,12 +310,49 @@ describe('AppShell theater surfaces', () => {
   })
 
   it.each([
+    ['/search', '?q=frog', '/start?returnTo=%2Fsearch%3Fq%3Dfrog'],
+    ['/channels', '', '/start?returnTo=%2Fchannels'],
+    ['/settings', '', '/start?returnTo=%2Fsettings'],
+    ['/play', '?recent=1', '/start?returnTo=%2Fplay%3Frecent%3D1'],
+  ])('sends a signed-out visit to %s%s to sign in, then back', async (path, search, target) => {
+    mockPathname = path
+    window.history.replaceState(null, '', `${path}${search}`)
+    appShellMocks.auth.me = null
+    appShellMocks.auth.loading = false
+    render(
+      <AppShell serverAccountId={null}>
+        <StatefulChild />
+      </AppShell>,
+    )
+    expect(screen.queryByText(/account-child-/)).not.toBeInTheDocument()
+    await waitFor(() => expect(appShellMocks.router.replace).toHaveBeenCalledWith(target))
+    window.history.replaceState(null, '', '/')
+  })
+
+  it.each(['?moment=frogs-abc12', '?channel=alice/synths'])(
+    'plays Tune in and public channels (/play%s) for signed-out visitors',
+    async (search) => {
+      mockPathname = '/play'
+      window.history.replaceState(null, '', `/play${search}`)
+      appShellMocks.auth.me = null
+      appShellMocks.auth.loading = false
+      render(
+        <AppShell serverAccountId={null}>
+          <StatefulChild />
+        </AppShell>,
+      )
+      await waitFor(() => expect(screen.getByText(/account-child-/)).toBeInTheDocument())
+      expect(appShellMocks.router.replace).not.toHaveBeenCalled()
+      window.history.replaceState(null, '', '/')
+    },
+  )
+
+  it.each([
     '/live',
     '/saved',
     '/collection',
     '/library',
     '/tags',
-    '/settings',
     '/welcome',
     '/admin',
     '/admin/posts',

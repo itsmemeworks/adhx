@@ -116,7 +116,7 @@ describe('paste a link anywhere', () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith('twitter:123'))
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(JSON.parse(String(init.body))).toMatchObject({ url: 'https://x.com/a/status/123' })
-    expect(screen.getByText('@a · saved')).toBeInTheDocument()
+    expect(screen.getByText('@a')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument()
   })
 

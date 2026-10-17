@@ -376,7 +376,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
         </span>
       )}
       <Link
-        href={sync.status === 'idle' || sync.status === 'error' ? '/search' : '/play?recent=1'}
+        href={sync.status === 'idle' || sync.status === 'error' ? '/now' : '/play?recent=1'}
         className={cn(
           'flex h-12 items-center justify-center rounded-full text-[15px]',
           sync.status === 'done' ? 'bg-nx-accent font-extrabold text-black' : 'text-white/80',

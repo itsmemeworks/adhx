@@ -18,10 +18,11 @@ export const SYNC_HREF = '/settings?sync=1'
 
 /**
  * Your avatar in the header, opening Sync X bookmarks, Settings and Sign out.
- * Renders nothing while signed out.
+ * Signed out, a Sign in button instead.
  */
 export function AccountMenu({ className }: { className?: string }) {
   const [me, setMe] = useState<Me | null>(null)
+  const [signedOut, setSignedOut] = useState(false)
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
@@ -37,7 +38,10 @@ export function AccountMenu({ className }: { className?: string }) {
             user?: { username?: string; displayName?: string; avatarUrl?: string }
           } | null,
         ) => {
-          if (!data?.authenticated) return
+          if (!data?.authenticated) {
+            setSignedOut(!!data)
+            return
+          }
           setMe({
             username: data.user?.username ?? null,
             displayName: data.user?.displayName ?? null,
@@ -64,7 +68,21 @@ export function AccountMenu({ className }: { className?: string }) {
     }
   }, [open])
 
-  if (!me) return null
+  if (!me) {
+    if (!signedOut) return null
+    // Signed out: a way in that brings you back to where you are.
+    return (
+      <a
+        href={`/start?${new URLSearchParams({ returnTo: `${window.location.pathname}${window.location.search}` })}`}
+        className={cn(
+          'flex h-10 shrink-0 items-center rounded-full bg-nx-cream px-4 text-sm font-extrabold text-black',
+          className,
+        )}
+      >
+        Sign in
+      </a>
+    )
+  }
   const handle = me.username ?? 'you'
 
   return (

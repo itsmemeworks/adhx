@@ -5,7 +5,7 @@ import { Radio } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
 import { cn } from '@/lib/utils'
 import { NxImage } from '../primitives'
-import { nextPostKind, postCoverSrc, postText } from '../post'
+import { nextPostKind, postAuthor, postCoverSrc, postText } from '../post'
 import { momentPlayHref } from '../theater/queue'
 import {
   plural,
@@ -64,14 +64,25 @@ function Cover({ post, className, tiny }: { post: FeedItem; className?: string; 
       </span>
     )
   }
+  // Words on cream, from the top, like a post card: who, then what they said.
+  const author = postAuthor(post)
+  const text = postText(post)
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
   return (
     <span
       className={cn(
-        'flex h-full w-full items-end overflow-hidden bg-nx-cream p-2 font-nx-serif text-[13px] leading-tight text-nx-ink',
+        'flex h-full w-full flex-col gap-1.5 overflow-hidden bg-nx-cream p-3 text-nx-ink',
         className,
       )}
     >
-      {shortWhat(post)}
+      <span className="truncate font-nx-sans text-[11px] font-bold">
+        {author.handle || author.name}
+      </span>
+      <span className="line-clamp-[8] font-nx-serif text-[15px] leading-[1.15] md:text-[17px]">
+        {text || shortWhat(post)}
+      </span>
     </span>
   )
 }
@@ -362,7 +373,10 @@ export function RightNow() {
           </p>
         </div>
         <div className="flex gap-7">
-          <Stat value={stats.today.toLocaleString('en-GB')} label="saves today" />
+          <Stat
+            value={stats.today.toLocaleString('en-GB')}
+            label={stats.today === 1 ? 'save today' : 'saves today'}
+          />
           <Stat value={stats.lastHour.toLocaleString('en-GB')} label="in the last hour" />
           <Stat
             value={String(moments.length)}

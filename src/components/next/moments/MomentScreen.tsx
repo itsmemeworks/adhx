@@ -9,6 +9,7 @@ import { NxImage } from '../primitives'
 import { nextPostKind, postCoverSrc, postText } from '../post'
 import { momentPlayHref } from '../theater/queue'
 import { NxHeader } from '../channels/ChannelParts'
+import { SaveTools } from '../onboarding/SaveTools'
 import { plural, timeAgo, useMoment } from './live'
 
 /**
@@ -113,7 +114,9 @@ export function MomentScreen({ slug }: { slug: string }) {
 
   return (
     <div className="min-h-dvh bg-black font-nx-sans text-nx-cream">
-      <NxHeader current="now" />
+      <NxHeader current="now">
+        <SaveTools />
+      </NxHeader>
 
       <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-4 pb-16 md:px-7">
         <section className="flex flex-wrap items-stretch gap-7">

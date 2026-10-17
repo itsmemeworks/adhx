@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-17 — Full two-browser pass: live data, journeys, edge cases
+
+Second browser driven by a Playwright script signing in other local accounts. Live data verified both ways in ~2-3s: Right now counters, strip, card people +1, watching 1→2, Tune in auto-plays the next save when caught up. Fixed:
+- Signed-out `/channels`, `/search`, Tune in went to the old public theater (AppShell redirect): now `/start?returnTo=` and public `/play?moment|channel`. Sign in button, no Paste when signed out.
+- Making a channel private didn't reach the page for up to 30s (per-module caches; JSON-LD listed its posts). Owners can now switch Public/Private; Keep is private by default.
+- New accounts: one-step new-look `/welcome`; no starter-playlist dead end; old header hidden on `/start`; "Maybe later" → Right now.
+- More like this in My saves split into many "More like…" headings (`fromSource`).
+- Tune in note folds into a chip after 8s; caught-up dims only the post; moment page has Paste; clear empty/error screens with the header; new 404.
+- "1 saves today", blank text covers on moment cards, "@x · saved" toast, Top channels crash on a missing `items`.
+State: local, not pushed.
+
 ## 2026-10-17 — Right now is home; one nav everywhere
 
 Owner: Channels and Tune in felt hidden behind the theater and search. Right now moved off `/channels` to its own page, `/now`, which signed-in `/` now opens (live, changes as people save, and every Tune in starts there). `PrimaryNav.tsx` gives every new-design screen the same four places: Right now · Channels · My saves · Search. Desktop gets header tabs (also over the theater at xl+); phones get a bottom tab bar. The moment page uses `NxHeader`. The Right now quiet state links to Channels and My saves. `e2e/right-now.spec.ts` watches `/now` (2/2 pass).

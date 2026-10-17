@@ -1,5 +1,7 @@
 'use client'
 
+import { useAuthMe } from '@/components/auth'
+
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ClipboardPaste } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -185,7 +187,13 @@ export function usePasteToSave({
           {toast.state === 'saved' && (
             <PasteToast
               state="saved"
-              savedDetail={`${toast.post.author ? `@${toast.post.author} · ` : ''}${toast.post.duplicate ? 'already in your saves' : 'saved'}`}
+              savedDetail={
+                toast.post.duplicate
+                  ? `${toast.post.author ? `@${toast.post.author} · ` : ''}already in your saves`
+                  : toast.post.author
+                    ? `@${toast.post.author}`
+                    : undefined
+              }
               action={savedAction?.(toast.post)}
             />
           )}
@@ -216,6 +224,9 @@ export function usePasteToSave({
 
 /** The yellow Paste pill. */
 export function PasteButton({ onClick, className }: { onClick: () => void; className?: string }) {
+  // Saving needs an account; signed out, the header offers Sign in instead.
+  const { me, loading } = useAuthMe()
+  if (!loading && !me?.authenticated) return null
   return (
     <button
       type="button"

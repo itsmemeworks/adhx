@@ -42,7 +42,7 @@ vi.mock('@/components/theater/useSendFile', () => ({
 }))
 
 import { TheaterV2 } from '@/components/next/theater/TheaterV2'
-import { SaveSheet } from '@/components/next/theater/TheaterSheets'
+import { SaveSheet, UpNextSheet } from '@/components/next/theater/TheaterSheets'
 import {
   addedVia,
   appendUnique,
@@ -162,6 +162,20 @@ describe('theater queue', () => {
     expect(queuePosition(queue, 4)).toEqual({ via: added[0].via, n: 2, of: 2 })
   })
 
+  it('keeps asked-for posts in one run, still counting ones that were in the source', () => {
+    // "More like this" in your saves: p2 was already queued, 7 is new.
+    const run = addedVia([p2, result('7')], v1, 'more').map((m) =>
+      m.post.id === '2' ? { ...m, fromSource: true } : m,
+    )
+    const queue = [v1, ...run, v3]
+    expect(queuePosition(queue, 1)).toEqual({ via: run[0].via, n: 1, of: 2 })
+    expect(queuePosition(queue, 2)).toEqual({ via: run[0].via, n: 2, of: 2 })
+    // The source still counts p2: v1, p2, v3.
+    expect(queuePosition(queue, 3)).toEqual({ via: null, n: 3, of: 3 })
+    render(<UpNextSheet items={queue} current={0} onPlay={() => {}} onClose={() => {}} />)
+    expect(screen.getAllByText('More like @author1’s video')).toHaveLength(1)
+  })
+
   it('times posts without a player and lists saved posts coming up', () => {
     expect(dwellSeconds(result('5', { text: 'hi' }))).toBe(5)
     expect(dwellSeconds(result('6', { text: 'word '.repeat(200) }))).toBe(15)
@@ -223,7 +237,10 @@ describe('TheaterV2', () => {
   it('plays the search results in their refined order', async () => {
     render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
-    expect(String(fetchMock.mock.calls[0][0])).toContain('refine=1')
+    const queueCall = fetchMock.mock.calls
+      .map(([u]) => String(u))
+      .find((u) => u.startsWith('/api/search'))
+    expect(queueCall).toContain('refine=1')
     expect(screen.getByText('3 of 3')).toBeInTheDocument()
     // One back chip for phones (in the header), one for desktop (on the stage).
     for (const link of screen.getAllByRole('link', { name: /frogs/ })) {
@@ -305,6 +322,27 @@ describe('TheaterV2', () => {
     )
     expect((screen.getByLabelText('Link to this post') as HTMLInputElement).value).toContain(
       '/status/2',
+    )
+  })
+
+  it('says a moment has passed when Tune in finds it gone', async () => {
+    fetchMock.mockImplementation(async () => new Response('{}', { status: 404 }))
+    render(<TheaterV2 source={{ ...source, moment: 'frogs-abc12' }} />)
+    expect(await screen.findByText('This moment has passed')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('main')).getByRole('link', { name: 'Right now' }),
+    ).toHaveAttribute('href', '/now')
+  })
+
+  it('offers a way to bring saves in when My saves is empty', async () => {
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
+    )
+    render(<TheaterV2 source={{ ...source, recent: true }} />)
+    expect(await screen.findByText('Nothing saved yet')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Bring in X bookmarks' })).toHaveAttribute(
+      'href',
+      '/settings?sync=1',
     )
   })
 

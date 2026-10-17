@@ -1,6 +1,15 @@
 'use client'
 
-import { createContext, Fragment, Suspense, useContext, useEffect, useMemo, useRef } from 'react'
+import {
+  createContext,
+  Fragment,
+  Suspense,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Header } from './Header'
 import { PWAInstallPrompt } from './PWAInstallPrompt'
@@ -39,6 +48,14 @@ function HeaderSkeleton() {
       </div>
     </header>
   )
+}
+
+/** New-design pages that sign you in and bring you back, rather than going home. */
+const SIGN_IN_FIRST = new Set(['/search', '/play', '/channels', '/settings'])
+
+function isPublicPlay(search: string): boolean {
+  const params = new URLSearchParams(search)
+  return params.has('moment') || params.has('channel')
 }
 
 export function AppShell({
@@ -130,6 +147,7 @@ export function AppShell({
     pathname === '/play' ||
     pathname === '/channels' ||
     pathname === '/now' ||
+    pathname === '/start' ||
     pathname === '/settings' ||
     pathname.startsWith('/moments/')
   // One-shot username / starter-playlist screen — the banner covers the card.
@@ -141,6 +159,7 @@ export function AppShell({
     pathname === '/play' ||
     pathname === '/channels' ||
     pathname === '/now' ||
+    pathname === '/start' ||
     pathname === '/settings' ||
     pathname.startsWith('/moments/')
   const isAccountOwnedPage =
@@ -156,17 +175,33 @@ export function AppShell({
     pathname === '/admin' ||
     pathname.startsWith('/admin/')
 
+  // Tune in (`/play?moment=`) and a public channel (`/play?channel=`) play
+  // for anyone. The query is read on the client only: the root layout can't
+  // use useSearchParams without breaking static pages.
+  const [publicPlay, setPublicPlay] = useState(false)
   useEffect(() => {
-    // The server page throws redirect('/') for signed-out private routes, but
+    setPublicPlay(pathname === '/play' && isPublicPlay(window.location.search))
+  }, [pathname])
+
+  useEffect(() => {
+    // The server page throws a redirect for signed-out private routes, but
     // fail-closed rendering deliberately never mounts that untrusted RSC child.
     // Complete the same redirect from the independently verified client scope
     // so the redirect instruction cannot be hidden with the private payload.
     if (isAccountOwnedPage && trusted && serverAccountId === null) {
-      router.replace('/')
+      const search = window.location.search
+      if (pathname === '/play' && isPublicPlay(search)) return
+      // The new design signs you in and brings you back; older pages go home.
+      router.replace(
+        SIGN_IN_FIRST.has(pathname)
+          ? `/start?${new URLSearchParams({ returnTo: `${pathname}${search}` })}`
+          : '/',
+      )
     }
-  }, [isAccountOwnedPage, router, serverAccountId, trusted])
+  }, [isAccountOwnedPage, pathname, router, serverAccountId, trusted])
 
-  const accountChildrenVisible = !isAccountOwnedPage || (trusted && serverAccountId !== null)
+  const accountChildrenVisible =
+    !isAccountOwnedPage || publicPlay || (trusted && serverAccountId !== null)
   const scopedChildren = accountChildrenVisible ? children : null
   const scopeBlocked = !trusted
 

@@ -1,4 +1,3 @@
-import { getCurrentUserId } from '@/lib/auth/session'
 import { NowScreen } from '@/components/next/moments/NowScreen'
 
 /**
@@ -10,7 +9,6 @@ export const dynamic = 'force-dynamic'
 
 export const metadata = { title: 'Right now · adhx', robots: { index: false } }
 
-export default async function NowPage() {
-  const signedIn = !!(await getCurrentUserId())
-  return <NowScreen signedIn={signedIn} />
+export default function NowPage() {
+  return <NowScreen />
 }

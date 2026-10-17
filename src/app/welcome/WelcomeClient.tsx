@@ -2,113 +2,58 @@
 
 import { useState } from 'react'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
-import { StarterCollections } from '@/components/onboarding/StarterCollections'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
-import { cn } from '@/lib/utils'
-import { MatterLogo } from '@/components/matter'
-
-// Always dark, like the theater / SignInModal — this is a brand-new
-// account's very first screen, before any theme preference has loaded.
-const INK = '#f3ece0'
-const MUTED = '#857a69'
-const PANEL = '#201b16'
-const BORDER = '#322b23'
-const STAGE_BG = '#08070a'
 
 export interface WelcomeClientProps {
   suggestedUsername: string
   returnTo: string
 }
 
+/**
+ * A brand-new account's first screen: pick the name your public channels
+ * live under, then carry on to where you were going (usually /start, which
+ * brings in your X bookmarks). One step; there's nothing to pick before
+ * your own saves exist, and Made for you fills Channels once they do.
+ */
 export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProps) {
-  // Live-sanitized preview of the input, mirrored from the shared chooser so
-  // the description text below can show `adhx.com/t/{live value}` exactly as
-  // before the form itself was extracted into UsernameChooser.
   const [sanitized, setSanitized] = useState(sanitizeUsername(suggestedUsername))
-  // Second step: once the username is claimed, offer starter playlists
-  // instead of navigating straight to `returnTo` — a brand-new collection is
-  // otherwise empty on day one. `null` = still on step 1.
-  const [claimedUsername, setClaimedUsername] = useState<string | null>(null)
 
-  function handleSuccess(result: UsernameClaimSuccess) {
-    setClaimedUsername(result.username)
+  function handleSuccess(_result: UsernameClaimSuccess) {
+    window.location.assign(returnTo)
   }
-
-  function finish(toCollection = false) {
-    // The primary CTA says "Continue to Saved" — `/` is the Live theater.
-    window.location.assign(toCollection ? '/play?recent=1' : returnTo)
-  }
-
-  const onStarterStep = claimedUsername !== null
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto" style={{ backgroundColor: STAGE_BG }}>
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-black font-nx-sans text-white">
       <div className="flex min-h-full items-center justify-center p-4 py-6">
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={onStarterStep ? 'Go to Saved' : 'Choose your username'}
-          className={cn(
-            'w-full rounded-2xl border p-5 shadow-2xl transition-[max-width] sm:p-7',
-            onStarterStep ? 'max-w-[720px]' : 'max-w-[420px]',
-          )}
-          style={{ backgroundColor: PANEL, borderColor: BORDER }}
+          aria-label="Choose your username"
+          className="flex w-full max-w-[480px] flex-col gap-5 rounded-[26px] bg-[#1c1b19] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)] md:p-[30px]"
         >
-          <div className="mb-6 flex items-center">
-            <MatterLogo size={19} surface="dark" />
-          </div>
-
-          {onStarterStep ? (
-            <>
-              <h1 className="font-serif text-2xl leading-tight" style={{ color: INK }}>
-                You&rsquo;re in, @{claimedUsername}
-              </h1>
-              <p className="mt-2 text-[13.5px] leading-snug" style={{ color: MUTED }}>
-                Start with a full playlist someone else already built, or skip and add your own.
-              </p>
-
-              <div className="mt-6">
-                <StarterCollections />
-              </div>
-
-              <div className="mt-6 flex flex-col gap-3">
-                <button
-                  type="button"
-                  onClick={() => finish(true)}
-                  className="h-12 w-full rounded-full text-[14.5px] font-semibold text-white transition-transform hover:scale-[1.01]"
-                  style={{ background: 'linear-gradient(135deg,#e88a5e,#d26b40)' }}
-                >
-                  Continue to Saved
-                </button>
-                <button
-                  type="button"
-                  onClick={() => finish(false)}
-                  className="w-full text-center text-[13px] underline underline-offset-2"
-                  style={{ color: MUTED }}
-                >
-                  Skip — I&rsquo;ll add my own
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h1 className="font-serif text-2xl leading-tight" style={{ color: INK }}>
-                Choose your username
-              </h1>
-              <p className="mt-2 text-[13.5px] leading-snug" style={{ color: MUTED }}>
-                This is your public handle on shared playlists — adhx.com/t/
-                {sanitized || 'username'}. You can only set it once.
-              </p>
-
-              <UsernameChooser
-                suggestedUsername={suggestedUsername}
-                onSuccess={handleSuccess}
-                theme="dark"
-                showKeepSuggestion
-                onSanitizedChange={setSanitized}
-              />
-            </>
-          )}
+          <span className="flex items-center gap-3.5">
+            <span
+              aria-hidden
+              className="flex h-12 w-12 shrink-0 items-center justify-center gap-1.5 rounded-[14px] bg-nx-accent"
+            >
+              <span className="h-2 w-2 rounded-full bg-black" />
+              <span className="h-2 w-2 rounded-full bg-black" />
+            </span>
+            <h1 className="m-0 font-nx-serif text-[32px] font-normal leading-none">
+              Pick your name
+            </h1>
+          </span>
+          <p className="m-0 text-[15px] leading-snug text-white/70">
+            Channels you make public live at adhx.com/t/{sanitized || 'username'}. You can only set
+            it once.
+          </p>
+          <UsernameChooser
+            suggestedUsername={suggestedUsername}
+            onSuccess={handleSuccess}
+            theme="next"
+            showKeepSuggestion
+            onSanitizedChange={setSanitized}
+          />
         </div>
       </div>
     </div>
