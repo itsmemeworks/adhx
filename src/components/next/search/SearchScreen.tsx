@@ -36,9 +36,10 @@ import { recentPlayHref } from '../theater/queue'
 
 const TYPES: SearchType[] = ['all', 'videos', 'photos', 'text', 'articles']
 const VIEWS: { id: SearchView; label: string; icon: typeof LayoutGrid }[] = [
-  { id: 'bento', label: 'Bento', icon: LayoutGrid },
-  { id: 'groups', label: 'Groups', icon: Rows3 },
-  { id: 'queue', label: 'Queue', icon: List },
+  // Named for how results are arranged: best first, grouped by what matched, in play order.
+  { id: 'bento', label: 'Best first', icon: LayoutGrid },
+  { id: 'groups', label: 'By match', icon: Rows3 },
+  { id: 'queue', label: 'Play order', icon: List },
 ]
 const SUGGESTIONS = [
   'that video with the squirrel',

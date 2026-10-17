@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { Users } from 'lucide-react'
 import { feedItemAccessibleDescription } from '@/components/feed/feedItemMeta'
 import { cn } from '@/lib/utils'
@@ -19,11 +20,25 @@ import { MediaChip, NxImage } from '../primitives'
 import {
   kindOf,
   openHref,
+  previewVideoSrc,
   STRENGTH_LABEL,
   strengthOfItem,
   type MatchStrength,
   type SearchResultItem,
 } from './model'
+
+export function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    if (!query) return
+    setReduced(query.matches)
+    const onChange = () => setReduced(query.matches)
+    query.addEventListener?.('change', onChange)
+    return () => query.removeEventListener?.('change', onChange)
+  }, [])
+  return reduced
+}
 
 /** Masonry tiles keep each post's shape, within limits so a column stays readable. */
 function tileAspect(item: SearchResultItem): number {
@@ -173,6 +188,14 @@ export function ResultTile({
   const cover = postCoverSrc(post)
   const badge = mediaBadge(item)
   const strength = strengthOfItem(item)
+  const reduced = useReducedMotion()
+  const [hovering, setHovering] = useState(false)
+  const [previewPlaying, setPreviewPlaying] = useState(false)
+  const videoSrc = kind === 'video' || kind === 'gif' ? previewVideoSrc(post) : null
+  const preview = hovering && !reduced ? videoSrc : null
+  useEffect(() => {
+    if (!hovering) setPreviewPlaying(false)
+  }, [hovering])
   const onCream = kind === 'post' || (kind === 'article' && !cover)
 
   let body
@@ -209,6 +232,23 @@ export function ResultTile({
           alt=""
           className="absolute inset-0 h-full w-full object-cover"
         />
+        {preview && (
+          // Hovering plays the video, muted, over its cover.
+          <video
+            src={preview}
+            muted
+            playsInline
+            autoPlay
+            loop
+            preload="none"
+            aria-hidden
+            onPlaying={() => setPreviewPlaying(true)}
+            className={cn(
+              'absolute inset-0 h-full w-full object-cover transition-opacity duration-300',
+              previewPlaying ? 'opacity-100' : 'opacity-0',
+            )}
+          />
+        )}
         {badge && <MediaChip className="bottom-2 right-2">{badge}</MediaChip>}
       </span>
     )
@@ -220,6 +260,10 @@ export function ResultTile({
       aria-label={label}
       className={frame}
       onClick={onOpen ? () => onOpen(item) : undefined}
+      onPointerEnter={(e) => e.pointerType === 'mouse' && videoSrc && setHovering(true)}
+      onPointerLeave={() => setHovering(false)}
+      onFocus={() => videoSrc && setHovering(true)}
+      onBlur={() => setHovering(false)}
     >
       {body}
       {!item.saved && <EveryoneBadge className="right-2 top-2" />}

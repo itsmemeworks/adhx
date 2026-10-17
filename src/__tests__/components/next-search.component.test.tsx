@@ -258,3 +258,46 @@ describe('SearchScreen', () => {
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('scope=everyone'))).toBe(true)
   })
 })
+
+describe('result tiles', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as never
+  })
+
+  it('keeps a video tile still when reduced motion is on', async () => {
+    window.matchMedia = vi.fn(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })) as never
+    const { ResultTile } = await import('@/components/next/search/ResultTile')
+    const { container } = render(<ResultTile item={squirrel} />)
+    fireEvent.focusIn(container.querySelector('a') as HTMLAnchorElement)
+    expect(container.querySelector('video')).toBeNull()
+  })
+
+  it('plays a video tile while it is hovered or focused, and stops after', async () => {
+    const { ResultTile } = await import('@/components/next/search/ResultTile')
+    const { container } = render(<ResultTile item={squirrel} />)
+    const tile = container.querySelector('a') as HTMLAnchorElement
+    expect(container.querySelector('video')).toBeNull()
+    fireEvent.focusIn(tile)
+    const video = container.querySelector('video')
+    expect(video).not.toBeNull()
+    expect(video).toHaveAttribute('src', previewVideoSrc(squirrel.post) as string)
+    expect((video as HTMLVideoElement).muted).toBe(true)
+    fireEvent.focusOut(tile)
+    expect(container.querySelector('video')).toBeNull()
+  })
+
+  it('names the views after how they arrange results', () => {
+    render(<SearchScreen initial={{ ...DEFAULT_STATE, q: 'squirrels' }} />)
+    for (const name of ['Best first', 'By match', 'Play order']) {
+      expect(screen.getAllByRole('button', { name: new RegExp(name) }).length).toBeGreaterThan(0)
+    }
+  })
+})

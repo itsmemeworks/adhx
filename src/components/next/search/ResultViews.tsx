@@ -21,20 +21,13 @@ import {
   type MatchSignal,
   type SearchResultItem,
 } from './model'
-import { EveryoneBadge, mediaBadge, ResultTile, StrengthMeter } from './ResultTile'
-
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false)
-  useEffect(() => {
-    const query = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    if (!query) return
-    setReduced(query.matches)
-    const onChange = () => setReduced(query.matches)
-    query.addEventListener?.('change', onChange)
-    return () => query.removeEventListener?.('change', onChange)
-  }, [])
-  return reduced
-}
+import {
+  EveryoneBadge,
+  mediaBadge,
+  ResultTile,
+  StrengthMeter,
+  useReducedMotion,
+} from './ResultTile'
 
 /** "Video · 0:41 · in the video" (no repeated words when there is no duration). */
 function queueMeta(item: SearchResultItem): string {
