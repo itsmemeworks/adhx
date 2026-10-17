@@ -387,3 +387,74 @@ export function SaveSheet({
     </Sheet>
   )
 }
+
+/**
+ * Share: the post's link, a Copy link button and, where the device has one,
+ * its own share sheet. Always shows something, even when copying is blocked.
+ */
+export function ShareSheet({
+  url,
+  waiting = false,
+  onClose,
+}: {
+  url: string
+  /** Whether playback is held while this is open (says so). */
+  waiting?: boolean
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState<'yes' | 'blocked' | null>(null)
+  const field = useRef<HTMLInputElement>(null)
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied('yes')
+    } catch {
+      setCopied('blocked')
+      field.current?.select()
+    }
+  }
+  return (
+    <Sheet label="Share" onClose={onClose} side="menu">
+      <div className="flex flex-col gap-3 md:p-2.5">
+        <span className="text-[15px] font-bold">Share this post</span>
+        <label className="sr-only" htmlFor="nx-share-link">
+          Link to this post
+        </label>
+        <input
+          ref={field}
+          id="nx-share-link"
+          readOnly
+          value={url}
+          onFocus={(e) => e.currentTarget.select()}
+          className="h-11 w-full rounded-[10px] bg-white/[0.08] px-3 text-[13px] text-white/85 outline-none focus:ring-2 focus:ring-nx-accent"
+        />
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="flex h-11 items-center justify-center gap-2 rounded-full bg-nx-accent text-[15px] font-extrabold text-black"
+        >
+          {copied === 'yes' && <Check aria-hidden className="h-4 w-4" />}
+          <span>{copied === 'yes' ? 'Link copied' : 'Copy link'}</span>
+        </button>
+        {canShare && (
+          <button
+            type="button"
+            onClick={() => void navigator.share({ url }).catch(() => {})}
+            className="h-11 rounded-full border border-white/25 text-[15px] font-bold text-white"
+          >
+            More ways to share…
+          </button>
+        )}
+        {copied === 'blocked' && (
+          <span role="status" className="text-[13px] text-white/70">
+            This browser blocked copying. The link above is selected; copy it from there.
+          </span>
+        )}
+        {waiting && copied !== 'blocked' && (
+          <span className="text-[13px] text-white/55">Paused until you close this.</span>
+        )}
+      </div>
+    </Sheet>
+  )
+}

@@ -77,6 +77,7 @@ import {
 } from './queue'
 import {
   MoreSheet,
+  ShareSheet,
   SaveSheet,
   UpNextSheet,
   type ChannelOption,
@@ -96,7 +97,7 @@ function hasFullArticle(post: FeedItem): boolean {
 }
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready' }
-type Panel = null | 'queue' | 'more' | 'save'
+type Panel = null | 'queue' | 'more' | 'save' | 'share'
 
 type QueueResponse = SearchResponse & {
   name?: string
@@ -599,6 +600,20 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     else if (timed) setTimedPaused((p) => !p)
   })
 
+  // While the share sheet is up the video waits, so it can't end mid-send.
+  const pausedForShare = useRef(false)
+  useEffect(() => {
+    if (panel === 'share') {
+      if (isVideo && playingRef.current) {
+        stage.pause()
+        pausedForShare.current = true
+      }
+    } else if (pausedForShare.current) {
+      pausedForShare.current = false
+      stage.resume()
+    }
+  }, [panel, isVideo])
+
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
     else void rootRef.current?.requestFullscreen?.().catch(() => {})
@@ -752,22 +767,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   }, [publicUrl, flash])
 
   /** Share: always this post's page — the share sheet on phones, else the link is copied. */
-  const shareIt = useCallback(async () => {
-    const url = publicUrl()
-    const touch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
-    if (touch && navigator.share) {
-      await navigator.share({ url }).catch(() => {})
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(url)
-      flash('Link copied')
-    } catch {
-      // Clipboard blocked: the system share sheet still works where there is one.
-      if (navigator.share) await navigator.share({ url }).catch(() => {})
-      else flash('Couldn’t copy the link')
-    }
-  }, [publicUrl, flash])
+  /** Share opens the share sheet (link, Copy link, the device's own sheet). */
+  const shareIt = useCallback(() => setPanel('share'), [])
 
   /**
    * Download: the picture or video itself (on phones, the share sheet with
@@ -777,7 +778,10 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const downloadIt = useCallback(async () => {
     if (!current) return
     if (send.supported) {
+      const wasPlaying = isVideo && playingRef.current
+      if (wasPlaying) stage.pause()
       const ok = await send.send()
+      if (wasPlaying) stage.resume()
       if (!ok && send.primed) flash('Ready. Tap Download again to save it.')
       return
     }
@@ -792,7 +796,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     } catch {
       flash('Couldn’t copy the text')
     }
-  }, [current, send, kind, flash])
+  }, [current, send, kind, flash, isVideo])
 
   const archive = useCallback(async () => {
     if (!current?.saved) return
@@ -931,7 +935,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     <>
       <div
         ref={rootRef}
-        className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] top-0 z-40 overflow-hidden bg-nx-stage font-nx-sans text-white md:bottom-0"
+        className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] top-0 z-40 overflow-hidden bg-nx-stage font-nx-sans text-white md:bottom-0 md:top-20"
         onTouchStart={swipe.onTouchStart}
         onTouchMove={swipe.onTouchMove}
         onTouchEnd={swipe.onTouchEnd}
@@ -977,152 +981,131 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             ))}
         </div>
 
-        <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-black/70 to-transparent px-3 pb-8 pt-[max(12px,env(safe-area-inset-top))] md:gap-4 md:px-7 md:pt-[18px]">
-          {/* The same header as every other screen: logo, tabs, then this queue. */}
-          <NxLogo className="pointer-events-auto hidden md:flex" />
-          <PrimaryNav current={navHere} className="pointer-events-auto" />
-          <Link
-            href={back}
-            className={cn(
-              'nx-plate pointer-events-auto flex h-10 min-w-0 max-w-[60vw] items-center gap-1.5 rounded-full pl-2 pr-4 text-sm md:max-w-[320px]',
-              // "My saves" is already lit in the tabs; the chip only says it again.
-              source.recent && 'md:hidden',
-            )}
-          >
-            <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
-            <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
-          </Link>
-          <span className="flex-1" />
-          {source.moment ? (
-            <span className="nx-plate flex h-8 items-center gap-2 rounded-full px-3 text-xs font-extrabold">
-              <span
-                aria-hidden
-                className="block h-2 w-2 rounded-full animate-nx-live-pulse"
-                style={{ background: momentHue }}
-              />
-              <span>LIVE</span>
-              {watching > 0 && (
-                <span className="font-medium text-white/80">{`${watching} watching`}</span>
-              )}
-            </span>
-          ) : (
-            !position.via && (
-              <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
-                {`${position.n} of ${position.of}`}
-              </span>
-            )
+        {/* Where this queue is from and what's playing, in one row at the stage's top-left. */}
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-x-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 flex flex-wrap items-start gap-2 md:left-7 md:right-24 md:top-4',
+            // On a cream page see-through chips turn muddy grey; make them solid.
+            overlay &&
+              '[&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none',
           )}
-          <LearningPill
-            status={learning.status}
-            onOpen={() => setLearningOpen(true)}
-            className="pointer-events-auto hidden md:flex"
-          />
-          <PasteButton onClick={paste.pasteFromClipboard} className="pointer-events-auto" />
-          <Link
-            href={back}
-            aria-label="Search"
-            className="pointer-events-auto flex h-10 items-center gap-2 rounded-full bg-[#1c1b19] px-3 text-sm text-[#aaa] md:h-[42px] md:w-[300px] md:px-3.5"
-          >
-            <Search aria-hidden className="h-4 w-4 text-white" />
-            <span className="hidden flex-1 md:inline">Describe it…</span>
-            <span className="hidden rounded bg-white/15 px-1.5 text-xs md:inline">/</span>
-          </Link>
-          <AccountMenu className="pointer-events-auto hidden md:block" />
-          <ControlButton
-            label={shownMuted ? 'Unmute' : 'Mute'}
-            onClick={toggleMute}
-            className="nx-plate pointer-events-auto md:hidden"
-          >
-            {shownMuted ? (
-              <VolumeX aria-hidden className="h-5 w-5" />
-            ) : (
-              <Volume2 aria-hidden className="h-5 w-5" />
-            )}
-          </ControlButton>
-        </header>
-
-        {source.moment && (kind === 'post' || kind === 'article') && (
-          // Words on a cream stage: a small chip, so nothing covers the text.
-          <button
-            type="button"
-            onClick={() => toggleWander(!wander)}
-            aria-pressed={wander}
-            className="nx-plate absolute left-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 hidden h-9 items-center gap-2 rounded-full px-3.5 text-[13px] font-bold md:left-7 md:flex"
-          >
-            <Radio aria-hidden className="h-4 w-4" style={{ color: momentHue }} strokeWidth={2.4} />
-            <span>{wander ? 'Tuned in · Wandering' : 'Tuned in · Staying close'}</span>
-          </button>
-        )}
-        {source.moment && (kind === 'post' || kind === 'article') && current?.savedAt && (
-          <span
-            className={cn(
-              'absolute top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 hidden h-9 items-center rounded-full px-3.5 text-[13px] font-extrabold md:left-[300px] md:flex',
-              Date.now() - Date.parse(current.savedAt) < 3_600_000 ? 'text-black' : 'nx-plate',
-            )}
-            style={
-              Date.now() - Date.parse(current.savedAt) < 3_600_000
-                ? { background: momentHue }
-                : undefined
-            }
-          >
-            {Date.now() - Date.parse(current.savedAt) < 3_600_000
-              ? `Just saved · ${timeAgo(current.savedAt)}`
-              : `Saved ${timeAgo(current.savedAt)}`}
-          </span>
-        )}
-        {source.moment && kind !== 'post' && kind !== 'article' && (
-          <div
-            role="note"
-            className="nx-plate absolute left-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 hidden w-[330px] flex-col gap-2.5 rounded-2xl px-4 py-3.5 md:left-7 md:flex"
-          >
-            <span className="flex items-center gap-2 text-sm font-extrabold">
+        >
+          {!source.recent && (
+            <Link
+              href={back}
+              className="nx-plate pointer-events-auto hidden h-9 min-w-0 max-w-[320px] items-center gap-1.5 rounded-full pl-2 pr-4 text-[13px] font-bold md:flex"
+            >
+              <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
+              <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
+            </Link>
+          )}
+          {source.moment && (kind === 'post' || kind === 'article') && (
+            // Words on a cream stage: a small chip, so nothing covers the text.
+            <button
+              type="button"
+              onClick={() => toggleWander(!wander)}
+              aria-pressed={wander}
+              className="nx-plate pointer-events-auto hidden h-9 items-center gap-2 rounded-full px-3.5 text-[13px] font-bold md:flex"
+            >
               <Radio
                 aria-hidden
                 className="h-4 w-4"
                 style={{ color: momentHue }}
                 strokeWidth={2.4}
               />
-              <span>Tuned in</span>
-            </span>
-            <span className="text-[13px] leading-[1.4] text-white/75">
-              Playing what people are saving like this, newest first. It keeps going as new saves
-              land.
-            </span>
-            <div
-              role="group"
-              aria-label="How close to stay"
-              className="flex gap-1 rounded-full bg-white/10 p-[3px]"
+              <span>{wander ? 'Tuned in · Wandering' : 'Tuned in · Staying close'}</span>
+            </button>
+          )}
+          {source.moment && (kind === 'post' || kind === 'article') && current?.savedAt && (
+            <span
+              className={cn(
+                'hidden h-9 items-center rounded-full px-3.5 text-[13px] font-extrabold md:flex',
+                Date.now() - Date.parse(current.savedAt) < 3_600_000 ? 'text-black' : 'nx-plate',
+              )}
+              style={
+                Date.now() - Date.parse(current.savedAt) < 3_600_000
+                  ? { background: momentHue }
+                  : undefined
+              }
             >
-              {[
-                { on: !wander, label: 'Stay close', pick: () => toggleWander(false) },
-                { on: wander, label: 'Wander', pick: () => toggleWander(true) },
-              ].map((b) => (
-                <button
-                  key={b.label}
-                  type="button"
-                  aria-pressed={b.on}
-                  onClick={b.pick}
-                  className={cn(
-                    'h-8 flex-1 rounded-full text-[13px] font-bold',
-                    b.on ? 'bg-white text-black' : 'text-white',
-                  )}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-            <span className="text-xs text-white/60">
-              {wander
-                ? 'This moment first, then drifting to posts near it.'
-                : 'Only this moment. New saves play as they land.'}
+              {Date.now() - Date.parse(current.savedAt) < 3_600_000
+                ? `Just saved · ${timeAgo(current.savedAt)}`
+                : `Saved ${timeAgo(current.savedAt)}`}
             </span>
-          </div>
-        )}
+          )}
+          {source.moment && kind !== 'post' && kind !== 'article' && (
+            <div
+              role="note"
+              className="nx-plate pointer-events-auto hidden w-[330px] flex-col gap-2.5 rounded-2xl px-4 py-3.5 md:flex"
+            >
+              <span className="flex items-center gap-2 text-sm font-extrabold">
+                <Radio
+                  aria-hidden
+                  className="h-4 w-4"
+                  style={{ color: momentHue }}
+                  strokeWidth={2.4}
+                />
+                <span>Tuned in</span>
+              </span>
+              <span className="text-[13px] leading-[1.4] text-white/75">
+                Playing what people are saving like this, newest first. It keeps going as new saves
+                land.
+              </span>
+              <div
+                role="group"
+                aria-label="How close to stay"
+                className="flex gap-1 rounded-full bg-white/10 p-[3px]"
+              >
+                {[
+                  { on: !wander, label: 'Stay close', pick: () => toggleWander(false) },
+                  { on: wander, label: 'Wander', pick: () => toggleWander(true) },
+                ].map((b) => (
+                  <button
+                    key={b.label}
+                    type="button"
+                    aria-pressed={b.on}
+                    onClick={b.pick}
+                    className={cn(
+                      'h-8 flex-1 rounded-full text-[13px] font-bold',
+                      b.on ? 'bg-white text-black' : 'text-white',
+                    )}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+              <span className="text-xs text-white/60">
+                {wander
+                  ? 'This moment first, then drifting to posts near it.'
+                  : 'Only this moment. New saves play as they land.'}
+              </span>
+            </div>
+          )}
+          {!source.moment && position.via && (
+            // Not from the source: say what it is like and why it's playing.
+            <div
+              role="note"
+              className="nx-plate flex min-w-0 max-w-full items-center gap-2.5 rounded-2xl py-2 pl-3 pr-4 md:max-w-[420px]"
+            >
+              <Sparkles
+                aria-hidden
+                className="h-4 w-4 shrink-0 text-nx-accent"
+                fill="currentColor"
+              />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
+                <span className="truncate text-xs text-white/65">
+                  {`${viaReason(position.via, source.channel || source.auto ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
+                </span>
+              </span>
+            </div>
+          )}
+        </div>
 
         {source.moment && arrivals > 0 && (
           <div
             role="status"
-            className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in"
+            className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex md:top-16 -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in"
           >
             <span
               aria-hidden
@@ -1159,22 +1142,6 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           </div>
         )}
 
-        {!source.moment && position.via && (
-          // Not from the source: say what it is like and why it's playing.
-          <div
-            role="note"
-            className="nx-plate absolute left-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 flex max-w-[calc(100vw-96px)] items-center gap-2.5 rounded-2xl py-2 pl-3 pr-4 md:left-7 md:max-w-[420px]"
-          >
-            <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-nx-accent" fill="currentColor" />
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
-              <span className="truncate text-xs text-white/65">
-                {`${viaReason(position.via, source.channel || source.auto ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
-              </span>
-            </span>
-          </div>
-        )}
-
         <nav
           aria-label="Post actions"
           className="absolute bottom-[164px] right-3 z-10 flex flex-col gap-3 md:bottom-auto md:right-6 md:top-1/2 md:-translate-y-1/2"
@@ -1198,7 +1165,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
               fill={saved ? 'currentColor' : 'none'}
             />
           </RailButton>
-          <RailButton label="Share" onClick={() => void shareIt()}>
+          <RailButton label="Share" onClick={shareIt}>
             <Send aria-hidden className="h-[21px] w-[21px]" />
           </RailButton>
           <RailButton
@@ -1477,6 +1444,13 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             }}
           />
         )}
+        {panel === 'share' && (
+          <ShareSheet
+            url={publicUrl()}
+            waiting={pausedForShare.current || timed}
+            onClose={() => setPanel(null)}
+          />
+        )}
         {panel === 'more' && (
           <MoreSheet
             rows={menu.map((row) => ({
@@ -1502,6 +1476,66 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           </div>
         )}
       </div>
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2 bg-gradient-to-b from-black/70 to-transparent px-3 pb-8 pt-[max(12px,env(safe-area-inset-top))] md:h-20 md:gap-4 md:bg-black md:bg-none md:px-7 md:py-0">
+        {/* The same header as every other screen: logo and tabs, then tools. */}
+        <NxLogo className="pointer-events-auto hidden md:flex" />
+        <PrimaryNav current={navHere} className="pointer-events-auto" />
+        <Link
+          href={back}
+          // Phones only; on desktop it leads the row of chips on the stage.
+          className="nx-plate pointer-events-auto flex h-10 min-w-0 max-w-[60vw] items-center gap-1.5 rounded-full pl-2 pr-4 text-sm md:hidden"
+        >
+          <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
+          <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
+        </Link>
+        <span className="flex-1" />
+        {source.moment ? (
+          <span className="nx-plate flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-extrabold">
+            <span
+              aria-hidden
+              className="block h-2 w-2 rounded-full animate-nx-live-pulse"
+              style={{ background: momentHue }}
+            />
+            <span>LIVE</span>
+            {watching > 0 && (
+              <span className="hidden font-medium text-white/80 md:inline">{`${watching} watching`}</span>
+            )}
+          </span>
+        ) : (
+          !position.via && (
+            <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
+              {`${position.n} of ${position.of}`}
+            </span>
+          )
+        )}
+        <LearningPill
+          status={learning.status}
+          onOpen={() => setLearningOpen(true)}
+          className="pointer-events-auto hidden md:flex"
+        />
+        <PasteButton onClick={paste.pasteFromClipboard} className="pointer-events-auto" />
+        <Link
+          href={back}
+          aria-label="Search"
+          className="pointer-events-auto flex h-10 items-center gap-2 rounded-full bg-[#1c1b19] px-3 text-sm text-[#aaa] md:h-[42px] md:w-[300px] md:px-3.5"
+        >
+          <Search aria-hidden className="h-4 w-4 text-white" />
+          <span className="hidden flex-1 md:inline">Describe it…</span>
+          <span className="hidden rounded bg-white/15 px-1.5 text-xs md:inline">/</span>
+        </Link>
+        <AccountMenu className="pointer-events-auto hidden md:block" />
+        <ControlButton
+          label={shownMuted ? 'Unmute' : 'Mute'}
+          onClick={toggleMute}
+          className="nx-plate pointer-events-auto md:hidden"
+        >
+          {shownMuted ? (
+            <VolumeX aria-hidden className="h-5 w-5" />
+          ) : (
+            <Volume2 aria-hidden className="h-5 w-5" />
+          )}
+        </ControlButton>
+      </header>
       <BottomNav current={navHere} />
     </>
   )

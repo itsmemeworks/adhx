@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, within, fireEvent, waitFor, act } from '@testing-library/react'
 import type { FeedItem, MediaItem } from '@/components/feed/types'
 
 const prefs = vi.hoisted(() => ({
@@ -225,7 +225,10 @@ describe('TheaterV2', () => {
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
     expect(String(fetchMock.mock.calls[0][0])).toContain('refine=1')
     expect(screen.getByText('3 of 3')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /frogs/ })).toHaveAttribute('href', '/search?q=frogs')
+    // One back chip for phones (in the header), one for desktop (on the stage).
+    for (const link of screen.getAllByRole('link', { name: /frogs/ })) {
+      expect(link).toHaveAttribute('href', '/search?q=frogs')
+    }
   })
 
   it('starts muted unless Sound on by default is on', async () => {
@@ -266,12 +269,36 @@ describe('TheaterV2', () => {
     render(<TheaterV2 source={{ ...source, start: 'twitter:2' }} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('2'))
     fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    const sheet = screen.getByRole('dialog', { name: 'Share' })
+    expect((within(sheet).getByLabelText('Link to this post') as HTMLInputElement).value).toContain(
+      '/status/2',
+    )
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Copy link' }))
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/status/2')),
     )
+    expect(within(sheet).getByRole('button', { name: 'Link copied' })).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
     fireEvent.click(screen.getByRole('button', { name: 'Copy the text' }))
     await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('post 2'))
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
+  })
+
+  it('still shows the link to copy by hand when the browser blocks copying', async () => {
+    const writeText = vi.fn(async () => {
+      throw new Error('blocked')
+    })
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    render(<TheaterV2 source={{ ...source, start: 'twitter:2' }} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('2'))
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }))
+    await waitFor(() =>
+      expect(screen.getByText(/This browser blocked copying/)).toBeInTheDocument(),
+    )
+    expect((screen.getByLabelText('Link to this post') as HTMLInputElement).value).toContain(
+      '/status/2',
+    )
   })
 
   it('plays only the chosen group', async () => {
