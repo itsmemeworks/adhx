@@ -259,6 +259,20 @@ describe('TheaterV2', () => {
     expect(stageProps.mock.calls.at(-1)?.[0].muted).toBe(true)
   })
 
+  it('shares the page and copies the words of a text post', async () => {
+    const writeText = vi.fn(async () => {})
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    render(<TheaterV2 source={{ ...source, start: 'twitter:2' }} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('2'))
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/status/2')),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Copy the text' }))
+    await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('post 2'))
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
+  })
+
   it('plays only the chosen group', async () => {
     render(<TheaterV2 source={{ ...source, group: 'video' }} />)
     await waitFor(() => expect(screen.getByText('1 of 2')).toBeInTheDocument())

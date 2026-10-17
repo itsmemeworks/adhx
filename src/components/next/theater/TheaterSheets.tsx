@@ -27,13 +27,18 @@ export function Sheet({
   side?: 'right' | 'menu'
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  // Callers pass a new onClose on every render (the theater re-renders several
+  // times a second while a video plays). Focus must move in once, on open —
+  // re-running this per render stole focus from the channel search field.
+  const close = useRef(onClose)
+  close.current = onClose
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     ref.current?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
-        onClose()
+        close.current()
       }
     }
     window.addEventListener('keydown', onKey, true)
@@ -41,7 +46,7 @@ export function Sheet({
       window.removeEventListener('keydown', onKey, true)
       previous?.focus?.()
     }
-  }, [onClose])
+  }, [])
   return (
     <>
       <button

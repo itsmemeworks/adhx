@@ -1,5 +1,6 @@
 'use client'
 
+import { composeArticleCopy, fetchArticleMarkdown } from '@/lib/theater/article-body'
 import { RichText, postBody } from '../rich-text'
 import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
@@ -20,6 +21,8 @@ import {
   Repeat,
   Search,
   Send,
+  Copy,
+  Download,
   SkipBack,
   SkipForward,
   Radio,
@@ -37,7 +40,7 @@ import { useTheaterSoundPreference } from '@/components/theater/useTheaterSoundP
 import { usePreferencesOptional } from '@/lib/preferences-context'
 import { useMobileSwipeNavigation } from '@/components/theater/useMobileSwipeNavigation'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
-import { postAuthor, postText } from '../post'
+import { articleHeadline, postAuthor, postText } from '../post'
 import { NxAvatar } from '../primitives'
 import { AdhxLoader } from '../loader'
 import { ArticleStage, PostStage } from '../stages'
@@ -746,18 +749,48 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     }
   }, [publicUrl, flash])
 
-  const sendIt = useCallback(async () => {
+  /** Share: always this post's page — the share sheet on phones, else the link is copied. */
+  const shareIt = useCallback(async () => {
+    const url = publicUrl()
+    const touch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
+    if (touch && navigator.share) {
+      await navigator.share({ url }).catch(() => {})
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      flash('Link copied')
+    } catch {
+      // Clipboard blocked: the system share sheet still works where there is one.
+      if (navigator.share) await navigator.share({ url }).catch(() => {})
+      else flash('Couldn’t copy the link')
+    }
+  }, [publicUrl, flash])
+
+  /**
+   * Download: the picture or video itself (on phones, the share sheet with
+   * the file, which is how you save it); for words — posts and articles —
+   * the text is copied.
+   */
+  const downloadIt = useCallback(async () => {
+    if (!current) return
     if (send.supported) {
       const ok = await send.send()
-      if (!ok && send.primed) flash('Ready. Tap Send again to share it.')
+      if (!ok && send.primed) flash('Ready. Tap Download again to save it.')
       return
     }
-    if (navigator.share) {
-      await navigator.share({ url: publicUrl() }).catch(() => {})
-      return
+    let text = postBody(current.post)
+    if (kind === 'article' && hasFullArticle(current.post)) {
+      const markdown = await fetchArticleMarkdown(current.post.author, current.post.id)
+      if (markdown) text = composeArticleCopy(articleHeadline(current.post), markdown)
     }
-    await copyLink()
-  }, [send, publicUrl, copyLink, flash])
+    try {
+      await navigator.clipboard.writeText(text)
+      flash(kind === 'article' ? 'Article copied' : 'Text copied')
+    } catch {
+      flash('Couldn’t copy the text')
+    }
+  }, [current, send, kind, flash])
 
   const archive = useCallback(async () => {
     if (!current?.saved) return
@@ -841,16 +874,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const author = postAuthor(current.post)
   const caption = postText(current.post)
   const overlay = kind === 'post' || kind === 'article'
+  const textOnly = !send.supported
   const menu: MenuRow[] = [
-    send.supported
-      ? {
-          label: send.mode === 'download' ? 'Download' : 'Send the file',
-          onSelect: () => void sendIt(),
-        }
-      : {
-          label: 'Copy text',
-          onSelect: () => void navigator.clipboard?.writeText(caption).then(() => flash('Copied')),
-        },
     { label: 'Add to a channel', onSelect: () => void save() },
     { label: 'Copy link', onSelect: () => void copyLink() },
     {
@@ -1148,11 +1173,23 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             fill={saved ? 'currentColor' : 'none'}
           />
         </RailButton>
+        <RailButton label="Share" onClick={() => void shareIt()}>
+          <Send aria-hidden className="h-[21px] w-[21px]" />
+        </RailButton>
         <RailButton
-          label={send.supported && send.mode === 'download' ? 'Download' : 'Send'}
-          onClick={() => void sendIt()}
+          label={
+            textOnly ? (kind === 'article' ? 'Copy the article' : 'Copy the text') : 'Download'
+          }
+          onClick={() => void downloadIt()}
         >
-          <Send aria-hidden className={cn('h-[21px] w-[21px]', send.sending && 'animate-pulse')} />
+          {textOnly ? (
+            <Copy aria-hidden className="h-[21px] w-[21px]" />
+          ) : (
+            <Download
+              aria-hidden
+              className={cn('h-[21px] w-[21px]', send.sending && 'animate-pulse')}
+            />
+          )}
         </RailButton>
         <RailButton label="Up next" onClick={() => setPanel(panel === 'queue' ? null : 'queue')}>
           <ListVideo aria-hidden className="h-[22px] w-[22px]" />
