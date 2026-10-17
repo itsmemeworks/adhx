@@ -3,7 +3,10 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
 const nav = vi.hoisted(() => ({ pathname: '/now' }))
-vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }))
+vi.mock('next/navigation', () => ({
+  usePathname: () => nav.pathname,
+  useRouter: () => ({ push: vi.fn() }),
+}))
 
 import { BottomNav, PrimaryNav, navFor } from '@/components/next/PrimaryNav'
 

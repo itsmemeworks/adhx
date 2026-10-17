@@ -16,6 +16,7 @@ import {
   paramsFromState,
   readRecent,
   rememberRecent,
+  SEARCH_SUGGESTIONS,
   TYPE_LABELS,
   type MatchSignal,
   type SearchResultItem,
@@ -41,12 +42,6 @@ const VIEWS: { id: SearchView; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'bento', label: 'Best first', icon: LayoutGrid },
   { id: 'groups', label: 'By match', icon: Rows3 },
   { id: 'queue', label: 'Play order', icon: List },
-]
-const SUGGESTIONS = [
-  'that video with the squirrel',
-  'something about being tired after work',
-  'tiny animations that make an app feel nicer',
-  'a synth you play by typing',
 ]
 const URL_SYNC_MS = 300
 
@@ -367,7 +362,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
                 Try
               </h2>
               <div className="flex flex-wrap gap-2">
-                {SUGGESTIONS.map((s) => (
+                {SEARCH_SUGGESTIONS.map((s) => (
                   <Pill key={s} on={false} onClick={() => set({ q: s })}>
                     <span>{s}</span>
                   </Pill>
@@ -479,7 +474,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
       {learningOpen && (
         <LearningSheet status={learning.status} onClose={() => setLearningOpen(false)} />
       )}
-      <BottomNav current="search" />
+      <BottomNav current="search" searchSheet={false} />
     </div>
   )
 }

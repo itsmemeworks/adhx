@@ -284,6 +284,14 @@ const RECENT_KEY = 'adhx:search:recent'
 const RECENT_MAX = 6
 
 /** Recent searches (this browser only). Never throws. */
+/** Example searches, shown before anything is typed. */
+export const SEARCH_SUGGESTIONS = [
+  'that video with the squirrel',
+  'something about being tired after work',
+  'tiny animations that make an app feel nicer',
+  'a synth you play by typing',
+]
+
 export function readRecent(): string[] {
   try {
     const raw = window.localStorage.getItem(RECENT_KEY)

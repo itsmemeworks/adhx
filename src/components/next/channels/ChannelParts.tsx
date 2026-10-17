@@ -2,6 +2,7 @@
 
 import { AccountMenu } from '../AccountMenu'
 import { BottomNav, NxLogo, PrimaryNav, type NavId } from '../PrimaryNav'
+import { HeaderSearch } from '../QuickSearch'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Play } from 'lucide-react'
@@ -271,26 +272,7 @@ export function NxHeader({
         <PrimaryNav current={current} />
         <span className="flex-1" />
         {children}
-        <Link
-          href="/search"
-          className="flex h-[42px] items-center gap-2.5 rounded-full bg-[#1c1b19] px-3.5 text-sm text-[#aaa] md:w-[300px]"
-        >
-          <svg
-            aria-hidden
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#fff"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="M20 20l-3.5-3.5" />
-          </svg>
-          <span className="hidden md:inline">Describe it…</span>
-          <span className="sr-only md:hidden">Search</span>
-        </Link>
+        <HeaderSearch />
         <AccountMenu />
       </header>
       <BottomNav current={current} />

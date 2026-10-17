@@ -404,6 +404,11 @@ export function ShareSheet({
 }) {
   const [copied, setCopied] = useState<'yes' | 'blocked' | null>(null)
   const field = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (copied !== 'yes') return
+    const t = window.setTimeout(() => setCopied(null), 2000)
+    return () => window.clearTimeout(t)
+  }, [copied])
   const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
   const copy = async () => {
     try {

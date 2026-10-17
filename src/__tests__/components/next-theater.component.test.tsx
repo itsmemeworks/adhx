@@ -281,6 +281,13 @@ describe('TheaterV2', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
     fireEvent.click(screen.getByRole('button', { name: 'Copy the text' }))
     await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('post 2'))
+    // The copy button turns into a tick, then back after 2 seconds.
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    expect(screen.getByText('Text copied')).toBeInTheDocument()
+    await waitFor(
+      () => expect(screen.getByRole('button', { name: 'Copy the text' })).toBeInTheDocument(),
+      { timeout: 3000 },
+    )
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
   })
 

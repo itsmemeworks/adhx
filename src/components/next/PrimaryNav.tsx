@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Bookmark, LayoutGrid, Radio, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { QuickSearch, openQuickSearch } from './QuickSearch'
 
 /**
  * The four places in ADHX, the same on every screen: Right now (what people
@@ -109,37 +110,57 @@ export function PrimaryNav({
 /**
  * The bar along the bottom on phones. The page keeps clear of it through
  * `body:has([data-nx-bottom-nav])` in globals.css, wherever this is rendered.
+ * Every new-design page renders this once, so it also carries the search sheet.
  */
-export function BottomNav({ current }: { current?: NavId | null }) {
+export function BottomNav({
+  current,
+  searchSheet = true,
+}: {
+  current?: NavId | null
+  /** The Search page has its own field, so it leaves the sheet out. */
+  searchSheet?: boolean
+}) {
   const pathname = usePathname()
   const active = current === undefined ? navFor(pathname) : current
   return (
-    <nav
-      data-nx-bottom-nav
-      aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-white/10 bg-black/90 pb-[env(safe-area-inset-bottom)] font-nx-sans backdrop-blur md:hidden"
-    >
-      {NAV.map((n) => {
-        const Icon = ICON[n.id]
-        const on = active === n.id
-        return (
-          <Link
-            key={n.id}
-            href={n.href}
-            aria-current={on ? 'page' : undefined}
-            className={cn(
-              'flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-bold',
-              on ? 'text-nx-accent' : 'text-white/60',
-            )}
-          >
-            <span className="relative">
-              <Icon aria-hidden className="h-[22px] w-[22px]" strokeWidth={on ? 2.4 : 2} />
-              {n.id === 'now' && <LiveDot className="absolute -right-1 -top-0.5 h-1.5 w-1.5" />}
-            </span>
-            <span>{n.label}</span>
-          </Link>
-        )
-      })}
-    </nav>
+    <>
+      <nav
+        data-nx-bottom-nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-white/10 bg-black/90 pb-[env(safe-area-inset-bottom)] font-nx-sans backdrop-blur md:hidden"
+      >
+        {NAV.map((n) => {
+          const Icon = ICON[n.id]
+          const on = active === n.id
+          return (
+            <Link
+              key={n.id}
+              href={n.href}
+              aria-current={on ? 'page' : undefined}
+              onClick={
+                n.id === 'search'
+                  ? (e) => {
+                      // Type straight away: focusing inside the tap brings up the keyboard.
+                      e.preventDefault()
+                      openQuickSearch()
+                    }
+                  : undefined
+              }
+              className={cn(
+                'flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-bold',
+                on ? 'text-nx-accent' : 'text-white/60',
+              )}
+            >
+              <span className="relative">
+                <Icon aria-hidden className="h-[22px] w-[22px]" strokeWidth={on ? 2.4 : 2} />
+                {n.id === 'now' && <LiveDot className="absolute -right-1 -top-0.5 h-1.5 w-1.5" />}
+              </span>
+              <span>{n.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+      {searchSheet && <QuickSearch />}
+    </>
   )
 }

@@ -6,6 +6,7 @@ import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
 import { AccountMenu } from '../AccountMenu'
 import { BottomNav, NxLogo, PrimaryNav } from '../PrimaryNav'
+import { HeaderSearch, focusHeaderSearch } from '../QuickSearch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -20,8 +21,8 @@ import {
   PictureInPicture2,
   Play,
   Repeat,
-  Search,
   Send,
+  Check,
   Copy,
   Download,
   SkipBack,
@@ -68,7 +69,6 @@ import {
   backHref,
   queuePosition,
   queueUrl,
-  searchHref,
   upcomingSavedKeys,
   viaLabel,
   viaReason,
@@ -775,6 +775,15 @@ export function TheaterV2({ source }: { source: PlaySource }) {
    * the file, which is how you save it); for words — posts and articles —
    * the text is copied.
    */
+  // "Copy the text": a tick on the button for 2 seconds says it worked.
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const t = window.setTimeout(() => setCopied(false), 2000)
+    return () => window.clearTimeout(t)
+  }, [copied])
+  useEffect(() => setCopied(false), [currentKey])
+
   const downloadIt = useCallback(async () => {
     if (!current) return
     if (send.supported) {
@@ -792,7 +801,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     }
     try {
       await navigator.clipboard.writeText(text)
-      flash(kind === 'article' ? 'Article copied' : 'Text copied')
+      setCopied(true) // the copy icon turns into a tick for a moment
     } catch {
       flash('Couldn’t copy the text')
     }
@@ -838,7 +847,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
       else if (k === 'q') setPanel('queue')
       else if (k === '/') {
         e.preventDefault()
-        router.push(searchHref(source.search))
+        focusHeaderSearch()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -985,9 +994,10 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         <div
           className={cn(
             'pointer-events-none absolute inset-x-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 flex flex-wrap items-start gap-2 md:left-7 md:right-24 md:top-4',
-            // On a cream page see-through chips turn muddy grey; make them solid.
+            // On a cream page see-through chips turn muddy grey: make them solid,
+            // and on desktop join them into one pill split by thin lines.
             overlay &&
-              '[&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none',
+              '[&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none md:right-auto md:flex-nowrap md:items-stretch md:gap-0 md:divide-x md:divide-white/15 md:overflow-hidden md:rounded-[20px] md:bg-[#1c1b19] md:[&>*]:!rounded-none md:[&>*]:!bg-transparent md:[&>*]:!text-white',
           )}
         >
           {!source.recent && (
@@ -1165,17 +1175,32 @@ export function TheaterV2({ source }: { source: PlaySource }) {
               fill={saved ? 'currentColor' : 'none'}
             />
           </RailButton>
+          {copied && (
+            <span role="status" className="sr-only">
+              {kind === 'article' ? 'Article copied' : 'Text copied'}
+            </span>
+          )}
           <RailButton label="Share" onClick={shareIt}>
             <Send aria-hidden className="h-[21px] w-[21px]" />
           </RailButton>
           <RailButton
             label={
-              textOnly ? (kind === 'article' ? 'Copy the article' : 'Copy the text') : 'Download'
+              textOnly
+                ? copied
+                  ? 'Copied'
+                  : kind === 'article'
+                    ? 'Copy the article'
+                    : 'Copy the text'
+                : 'Download'
             }
             onClick={() => void downloadIt()}
           >
             {textOnly ? (
-              <Copy aria-hidden className="h-[21px] w-[21px]" />
+              copied ? (
+                <Check aria-hidden className="h-[22px] w-[22px] text-nx-accent" strokeWidth={2.6} />
+              ) : (
+                <Copy aria-hidden className="h-[21px] w-[21px]" />
+              )
             ) : (
               <Download
                 aria-hidden
@@ -1514,15 +1539,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           className="pointer-events-auto hidden md:flex"
         />
         <PasteButton onClick={paste.pasteFromClipboard} className="pointer-events-auto" />
-        <Link
-          href={back}
-          aria-label="Search"
-          className="pointer-events-auto flex h-10 items-center gap-2 rounded-full bg-[#1c1b19] px-3 text-sm text-[#aaa] md:h-[42px] md:w-[300px] md:px-3.5"
-        >
-          <Search aria-hidden className="h-4 w-4 text-white" />
-          <span className="hidden flex-1 md:inline">Describe it…</span>
-          <span className="hidden rounded bg-white/15 px-1.5 text-xs md:inline">/</span>
-        </Link>
+        <HeaderSearch shortcut className="pointer-events-auto" />
         <AccountMenu className="pointer-events-auto hidden md:block" />
         <ControlButton
           label={shownMuted ? 'Unmute' : 'Mute'}
