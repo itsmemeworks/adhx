@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-17 — Right now is home; one nav everywhere
+
+Owner: Channels and Tune in felt hidden behind the theater and search. Right now moved off `/channels` to its own page, `/now`, which signed-in `/` now opens (live, changes as people save, and every Tune in starts there). `PrimaryNav.tsx` gives every new-design screen the same four places: Right now · Channels · My saves · Search. Desktop gets header tabs (also over the theater at xl+); phones get a bottom tab bar. The moment page uses `NxHeader`. The Right now quiet state links to Channels and My saves. `e2e/right-now.spec.ts` watches `/now` (2/2 pass).
+Also: search result views renamed Best first / By match / Play order; video tiles play muted on hover or focus (not with reduced motion). State: local, not pushed.
+
 ## 2026-10-16 — Settings redesigned; /play follows its reading settings
 
 Settings (`src/components/next/settings/`) is in the new design, full-width with `NxHeader`. Your X bookmarks is the first card, with live sync via `useXSync`. `?sync=1` starts a sync; the account menu's Sync X bookmarks now points there. Sign out is on the Account card.

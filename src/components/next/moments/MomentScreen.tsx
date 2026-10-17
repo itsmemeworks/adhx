@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ChevronLeft, Link2, Radio } from 'lucide-react'
+import { Link2, Radio } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
 import { cn } from '@/lib/utils'
 import { NxImage } from '../primitives'
 import { nextPostKind, postCoverSrc, postText } from '../post'
 import { momentPlayHref } from '../theater/queue'
-import { AccountMenu } from '../AccountMenu'
+import { NxHeader } from '../channels/ChannelParts'
 import { plural, timeAgo, useMoment } from './live'
 
 /**
@@ -95,7 +95,7 @@ export function MomentScreen({ slug }: { slug: string }) {
         <h1 className="m-0 font-nx-serif text-[36px] font-normal">This moment has passed</h1>
         <p className="m-0 text-white/65">People have moved on. See what they’re saving now.</p>
         <Link
-          href="/channels"
+          href="/now"
           className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-black"
         >
           Right now
@@ -113,17 +113,7 @@ export function MomentScreen({ slug }: { slug: string }) {
 
   return (
     <div className="min-h-dvh bg-black font-nx-sans text-nx-cream">
-      <header className="flex items-center gap-3 px-4 py-3 md:px-7 md:py-[18px]">
-        <Link
-          href="/channels"
-          className="flex h-10 items-center gap-1.5 rounded-full bg-[#1c1b19] pl-2.5 pr-4 text-sm"
-        >
-          <ChevronLeft aria-hidden className="h-4 w-4" />
-          <span>Right now</span>
-        </Link>
-        <span className="flex-1" />
-        <AccountMenu />
-      </header>
+      <NxHeader current="now" />
 
       <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-4 pb-16 md:px-7">
         <section className="flex flex-wrap items-stretch gap-7">

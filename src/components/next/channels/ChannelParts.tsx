@@ -1,6 +1,7 @@
 'use client'
 
 import { AccountMenu } from '../AccountMenu'
+import { BottomNav, PrimaryNav, type NavId } from '../PrimaryNav'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Play } from 'lucide-react'
@@ -255,42 +256,53 @@ export function TopChannels({
   )
 }
 
-export function NxHeader({ children }: { children?: React.ReactNode }) {
+export function NxHeader({
+  children,
+  current,
+}: {
+  children?: React.ReactNode
+  /** Which tab is lit; by default, from the address. */
+  current?: NavId | null
+}) {
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-4 bg-black/90 px-4 py-3 backdrop-blur md:px-7 md:py-[18px]">
-      <Link href="/" aria-label="adhx home" className="flex items-center gap-2.5">
-        <span
-          aria-hidden
-          className="flex h-7 w-7 items-center justify-center gap-1 rounded-[9px] bg-nx-accent"
+    <>
+      <header className="sticky top-0 z-20 flex items-center gap-4 bg-black/90 px-4 py-3 backdrop-blur md:px-7 md:py-[18px]">
+        <Link href="/" aria-label="adhx home" className="flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="flex h-7 w-7 items-center justify-center gap-1 rounded-[9px] bg-nx-accent"
+          >
+            <span className="h-[5px] w-[5px] rounded-full bg-black" />
+            <span className="h-[5px] w-[5px] rounded-full bg-black" />
+          </span>
+          <span className="font-nx-serif text-2xl leading-none">adhx</span>
+        </Link>
+        <PrimaryNav current={current} />
+        <span className="flex-1" />
+        {children}
+        <Link
+          href="/search"
+          className="flex h-[42px] items-center gap-2.5 rounded-full bg-[#1c1b19] px-3.5 text-sm text-[#aaa] md:w-[300px]"
         >
-          <span className="h-[5px] w-[5px] rounded-full bg-black" />
-          <span className="h-[5px] w-[5px] rounded-full bg-black" />
-        </span>
-        <span className="font-nx-serif text-2xl leading-none">adhx</span>
-      </Link>
-      {children}
-      <span className="flex-1" />
-      <Link
-        href="/search"
-        className="flex h-[42px] items-center gap-2.5 rounded-full bg-[#1c1b19] px-3.5 text-sm text-[#aaa] md:w-[300px]"
-      >
-        <svg
-          aria-hidden
-          width="17"
-          height="17"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3.5-3.5" />
-        </svg>
-        <span className="hidden md:inline">Describe it…</span>
-        <span className="sr-only md:hidden">Search</span>
-      </Link>
-      <AccountMenu />
-    </header>
+          <svg
+            aria-hidden
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+          <span className="hidden md:inline">Describe it…</span>
+          <span className="sr-only md:hidden">Search</span>
+        </Link>
+        <AccountMenu />
+      </header>
+      <BottomNav current={current} />
+    </>
   )
 }

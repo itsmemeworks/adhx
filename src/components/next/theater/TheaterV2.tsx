@@ -5,6 +5,7 @@ import { RichText, postBody } from '../rich-text'
 import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
 import { AccountMenu } from '../AccountMenu'
+import { PrimaryNav } from '../PrimaryNav'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -974,6 +975,19 @@ export function TheaterV2({ source }: { source: PlaySource }) {
           <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
         </Link>
         <span className="flex-1" />
+        <PrimaryNav
+          plate
+          current={
+            source.moment
+              ? 'now'
+              : source.channel || source.auto
+                ? 'channels'
+                : source.recent
+                  ? 'saves'
+                  : 'search'
+          }
+          className="pointer-events-auto hidden xl:flex"
+        />
         {source.moment ? (
           <span className="nx-plate flex h-8 items-center gap-2 rounded-full px-3 text-xs font-extrabold">
             <span

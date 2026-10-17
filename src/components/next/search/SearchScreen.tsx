@@ -1,6 +1,7 @@
 'use client'
 
 import { AccountMenu } from '../AccountMenu'
+import { BottomNav, PrimaryNav } from '../PrimaryNav'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -209,7 +210,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-3 md:gap-5 md:px-8">
           <Link
             href="/"
-            className="hidden shrink-0 items-center gap-3 md:flex"
+            className="hidden shrink-0 items-center gap-3 xl:flex"
             aria-label="adhx home"
           >
             <span
@@ -221,12 +222,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
             </span>
             <span className="font-nx-serif text-[26px] leading-none">adhx</span>
           </Link>
-          <Link
-            href="/channels"
-            className="hidden shrink-0 rounded-full px-3 py-2 text-sm text-nx-soft hover:text-nx-cream md:block"
-          >
-            Channels
-          </Link>
+          <PrimaryNav current="search" />
           <form
             role="search"
             onSubmit={(e) => {
@@ -473,7 +469,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
         <button
           type="button"
           onClick={() => play()}
-          className="fixed bottom-[calc(24px+env(safe-area-inset-bottom))] left-1/2 z-30 flex h-[52px] -translate-x-1/2 items-center gap-2 rounded-full bg-nx-accent px-6 text-base font-bold text-black shadow-[0_8px_30px_rgba(0,0,0,0.5)] md:hidden"
+          className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] left-1/2 z-30 flex h-[52px] -translate-x-1/2 items-center gap-2 rounded-full bg-nx-accent px-6 text-base font-bold text-black shadow-[0_8px_30px_rgba(0,0,0,0.5)] md:hidden"
         >
           <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />
           <span>{`Play ${items.length}`}</span>
@@ -483,6 +479,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
       {learningOpen && (
         <LearningSheet status={learning.status} onClose={() => setLearningOpen(false)} />
       )}
+      <BottomNav current="search" />
     </div>
   )
 }

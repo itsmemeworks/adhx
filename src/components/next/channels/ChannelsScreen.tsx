@@ -1,6 +1,5 @@
 'use client'
 
-import { RightNow } from '../moments/RightNow'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { Lock, Play, Sparkles } from 'lucide-react'
@@ -97,19 +96,12 @@ export function ChannelsScreen() {
   return (
     <div className="min-h-dvh bg-black font-nx-sans text-white">
       <NxHeader>
-        <h1 className="m-0 hidden font-nx-serif text-2xl font-normal text-white/70 md:block">
-          Channels
-        </h1>
-        <span className="flex-1" />
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
         <PasteButton onClick={paste.pasteFromClipboard} />
       </NxHeader>
-      <div className="mx-auto max-w-[1600px] px-4 pb-10 pt-2 md:px-7">
-        <RightNow />
-      </div>
       <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-4 pb-16 pt-2 md:px-7 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-9">
-          <h1 className="m-0 font-nx-serif text-[36px] font-normal leading-none md:hidden">
+          <h1 className="m-0 font-nx-serif text-[36px] font-normal leading-none md:text-[52px]">
             Channels
           </h1>
           {error && (

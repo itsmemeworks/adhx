@@ -292,6 +292,11 @@
   50% { opacity: 1; }
 }
 .animate-nx-live-pulse { animation: nx-live-pulse 1.6s infinite; }
+
+/* Phones: keep the page clear of the bottom tab bar (BottomNav). */
+@media (max-width: 767px) {
+  body:has([data-nx-bottom-nav]) { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}
 .animate-nx-slide-in { animation: nx-slide-in 0.5s ease-out; }
 .animate-nx-drop-in { animation: nx-drop-in 0.55s ease-out; }
 .animate-nx-glow { animation: nx-fade-out 1.4s ease-out forwards; }

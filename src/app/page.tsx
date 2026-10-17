@@ -10,8 +10,8 @@ import { savedToPlay } from '@/lib/next-ui/routes'
 /**
  * `/` — signed-out public live theater + crawlable static list.
  *
- * Signed in, this opens the theater on your newest saves, starting on a
- * just-added post when there is one (`?added=success|duplicate&id=`).
+ * Signed in, this is Right now (`/now`), or the theater on a just-added
+ * post when there is one (`?added=success|duplicate&id=`).
  *
  * force-dynamic: session cookie + runtime SQLite (migrated at container start).
  */
@@ -31,7 +31,7 @@ export default async function HomePage({
   const params = await searchParams
   if (userId) {
     const addedId = params.added ? (params.id ?? params.tweetId) : null
-    redirect(savedToPlay(addedId, params.platform))
+    redirect(addedId ? savedToPlay(addedId, params.platform) : '/now')
   }
 
   const seed = await getTheaterFeed()

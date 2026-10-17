@@ -6,6 +6,7 @@ import type { FeedItem, MediaItem } from '@/components/feed/types'
 const push = vi.fn()
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push, replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/search',
 }))
 
 import { SearchScreen } from '@/components/next/search/SearchScreen'

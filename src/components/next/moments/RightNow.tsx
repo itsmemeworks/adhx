@@ -357,7 +357,8 @@ export function RightNow() {
             </h2>
           </div>
           <p className="m-0 text-[15px] text-nx-soft">
-            What people are saving, sorted into moments as it happens.
+            What people are saving, sorted into moments as it happens. Tune in to one and new saves
+            play the moment they arrive.
           </p>
         </div>
         <div className="flex gap-7">
@@ -388,9 +389,25 @@ export function RightNow() {
       )}
 
       {quiet ? (
-        <p className="m-0 rounded-[24px] bg-nx-surface px-5 py-8 text-center text-nx-soft">
-          Nothing’s trending yet. When a few people save the same kind of thing, it shows up here.
-        </p>
+        <div className="flex flex-col items-center gap-4 rounded-[24px] bg-nx-surface px-5 py-8 text-center">
+          <p className="m-0 text-nx-soft">
+            Nothing’s trending yet. When a few people save the same kind of thing, it shows up here.
+          </p>
+          <span className="flex flex-wrap justify-center gap-2">
+            <Link
+              href="/channels"
+              className="flex h-11 items-center rounded-full bg-nx-accent px-5 text-sm font-extrabold text-black"
+            >
+              Browse channels
+            </Link>
+            <Link
+              href="/play?recent=1"
+              className="flex h-11 items-center rounded-full border border-white/30 px-5 text-sm font-bold text-white"
+            >
+              Play my saves
+            </Link>
+          </span>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {moments.map((m, i) => (

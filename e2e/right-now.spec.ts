@@ -17,7 +17,7 @@ import {
  */
 
 test.describe.configure({ mode: 'serial' })
-// First visits compile /channels, /play and /moments in `next dev`.
+// First visits compile /now, /play and /moments in `next dev`.
 test.slow()
 
 async function signedInPage(
@@ -62,9 +62,9 @@ test.afterEach(async () => {
   deleteUser(saverId)
 })
 
-test('a save by someone else lands in the moment on Channels', async () => {
+test('a save by someone else lands in the moment on Right now', async () => {
   const opened = streamOpened(watcher)
-  await watcher.goto('/channels')
+  await watcher.goto('/now')
   const card = watcher.locator('article').filter({
     has: watcher.getByRole('heading', { name: FROG_TITLE, exact: true }),
   })
@@ -103,7 +103,7 @@ test('a save by someone else lands in the moment on Channels', async () => {
 
 test('Tune in waits when caught up, then plays the next save as it lands', async () => {
   const opened = streamOpened(watcher)
-  await watcher.goto('/channels')
+  await watcher.goto('/now')
   const tuneIn = watcher
     .locator('article')
     .filter({ has: watcher.getByRole('heading', { name: FROG_TITLE, exact: true }) })

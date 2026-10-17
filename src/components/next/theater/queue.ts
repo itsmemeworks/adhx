@@ -92,7 +92,7 @@ export function backHref(source: PlaySource): string {
   if (source.channel) return `/t/${source.channel.username}/${source.channel.tag}`
   if (source.auto) return '/channels'
   if (source.moment) return `/moments/${source.moment}`
-  if (source.recent) return '/search'
+  if (source.recent) return '/now'
   return searchHref(source.search)
 }
 

@@ -15,6 +15,7 @@ vi.mock('@/lib/preferences-context', async (importOriginal) => ({
 }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/play',
 }))
 // The media stage is the current theater's, tested on its own; stub it here.
 const stageProps = vi.fn()

@@ -188,7 +188,6 @@ export function SettingsScreen() {
   return (
     <div className="min-h-dvh bg-black font-nx-sans text-white">
       <NxHeader>
-        <span className="flex-1" />
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
       </NxHeader>
 

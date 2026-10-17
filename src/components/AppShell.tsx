@@ -129,6 +129,7 @@ export function AppShell({
     pathname === '/search' ||
     pathname === '/play' ||
     pathname === '/channels' ||
+    pathname === '/now' ||
     pathname === '/settings' ||
     pathname.startsWith('/moments/')
   // One-shot username / starter-playlist screen — the banner covers the card.
@@ -139,6 +140,7 @@ export function AppShell({
     pathname === '/search' ||
     pathname === '/play' ||
     pathname === '/channels' ||
+    pathname === '/now' ||
     pathname === '/settings' ||
     pathname.startsWith('/moments/')
   const isAccountOwnedPage =

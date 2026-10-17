@@ -185,6 +185,6 @@ describe('recent saves queue', () => {
     const source = sourceFromParams({ recent: '1', start: 'twitter:1' })
     expect(source).toMatchObject({ recent: true, start: 'twitter:1' })
     expect(queueUrl(source, () => '/api/search')).toBe('/api/feed?limit=100&hideArchived=true')
-    expect(backHref(source)).toBe('/search')
+    expect(backHref(source)).toBe('/now')
   })
 })
