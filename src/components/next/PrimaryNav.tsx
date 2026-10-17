@@ -43,19 +43,37 @@ function LiveDot({ className }: { className?: string }) {
 
 const ICON = { now: Radio, channels: LayoutGrid, saves: Bookmark, search: Search }
 
+/** The adhx mark and name, linking home; first in every header. */
+export function NxLogo({ className }: { className?: string }) {
+  return (
+    <Link
+      href="/"
+      aria-label="adhx home"
+      className={cn('flex shrink-0 items-center gap-2.5', className)}
+    >
+      <span
+        aria-hidden
+        className="flex h-7 w-7 items-center justify-center gap-1 rounded-[9px] bg-nx-accent"
+      >
+        <span className="h-[5px] w-[5px] rounded-full bg-black" />
+        <span className="h-[5px] w-[5px] rounded-full bg-black" />
+      </span>
+      <span className="font-nx-serif text-2xl leading-none text-white">adhx</span>
+    </Link>
+  )
+}
+
 /**
- * Header tabs (desktop). Search is left out where the header has its own
- * search field; `plate` is for the theater, over the picture.
+ * Header tabs (desktop), right after the logo on every screen, theater
+ * included. Search is left out where the header has its own search field.
  */
 export function PrimaryNav({
   current,
   withSearch = false,
-  plate = false,
   className,
 }: {
   current?: NavId | null
   withSearch?: boolean
-  plate?: boolean
   className?: string
 }) {
   const pathname = usePathname()
@@ -65,8 +83,7 @@ export function PrimaryNav({
     <nav
       aria-label="Main"
       className={cn(
-        'hidden shrink-0 items-center gap-1 rounded-full p-1 md:flex',
-        plate ? 'nx-plate' : 'bg-[#1c1b19]',
+        'hidden shrink-0 items-center gap-1 rounded-full bg-[#1c1b19] p-1 md:flex',
         className,
       )}
     >

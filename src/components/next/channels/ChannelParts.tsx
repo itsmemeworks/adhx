@@ -1,7 +1,7 @@
 'use client'
 
 import { AccountMenu } from '../AccountMenu'
-import { BottomNav, PrimaryNav, type NavId } from '../PrimaryNav'
+import { BottomNav, NxLogo, PrimaryNav, type NavId } from '../PrimaryNav'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Play } from 'lucide-react'
@@ -267,16 +267,7 @@ export function NxHeader({
   return (
     <>
       <header className="sticky top-0 z-20 flex items-center gap-4 bg-black/90 px-4 py-3 backdrop-blur md:px-7 md:py-[18px]">
-        <Link href="/" aria-label="adhx home" className="flex items-center gap-2.5">
-          <span
-            aria-hidden
-            className="flex h-7 w-7 items-center justify-center gap-1 rounded-[9px] bg-nx-accent"
-          >
-            <span className="h-[5px] w-[5px] rounded-full bg-black" />
-            <span className="h-[5px] w-[5px] rounded-full bg-black" />
-          </span>
-          <span className="font-nx-serif text-2xl leading-none">adhx</span>
-        </Link>
+        <NxLogo />
         <PrimaryNav current={current} />
         <span className="flex-1" />
         {children}
