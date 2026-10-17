@@ -19,8 +19,21 @@ export function nextPostKind(item: FeedItem): NextPostKind {
     return item.media?.[0]?.mediaType === 'animated_gif' ? 'gif' : 'video'
   }
   if (type === 'photo') return 'photo'
-  if (type === 'article') return 'article'
+  if (type === 'article') return isRealArticle(item) ? 'article' : 'post'
   return 'post'
+}
+
+/**
+ * Saves are filed as "article" when they link to one, but only a real
+ * article (an X article, or a link with a real preview) gets the article
+ * stage. A post that just links to a blog stays a post with its link card;
+ * otherwise it shows an invented "Article by @…" with nothing in it.
+ */
+export function isRealArticle(item: FeedItem): boolean {
+  if (item.articleContent?.blocks?.length) return true
+  if (/x\.com\/i\/article\//.test(item.text || '')) return true
+  const p = item.articlePreview
+  return !!p && !!(p.imageUrl || p.description) && !/^Article by @/.test(p.title || '')
 }
 
 /** Image src for the media at `index`. X photos go through the same-origin proxy (pbs.twimg.com 403s hotlinks). */

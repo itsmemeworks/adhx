@@ -224,7 +224,9 @@ describe('stages', () => {
   it('PostStage is cream with big serif type', () => {
     const { container } = render(<PostStage item={post} progress={0.2} />)
     expect(container.querySelector('section')).toHaveClass('bg-nx-cream')
-    expect(screen.getByText('How did I not know about transitions.dev?').tagName).toBe('P')
+    expect(
+      screen.getByText('How did I not know about transitions.dev?').closest('p'),
+    ).not.toBeNull()
   })
 
   it('ArticleStage offers Read it here (and Skip when asked)', () => {

@@ -26,6 +26,10 @@ Follow-ups: the published iCloud shortcut may still offer YouTube (it now lands 
 E2E has no model, so `e2e/seed.ts` writes synthetic 768-dim `text` vectors into `post_embeddings` (6 frog posts on one axis saved by two seeded people, 40 background posts, two unsaved frog posts the spec saves) and `MOMENT_MIN_SAVERS=2` is set in `e2e/env.ts`. Naming falls back to the shared word, hence "Frog".
 The engine keeps its state for the server's lifetime, so each attempt saves as a fresh account and asserts the count relative to before (passes with `--repeat-each=4`). Pre-existing, unrelated failures in the full Chromium run: `nav.spec.ts` (j advances Live) and `theater-tap-declutter.spec.ts` (desktop), both failing on the base commit too. State: local, not pushed.
 
+## 2026-10-17 — Post words in the new theater: paragraphs, links, link cards, full articles
+
+The owner's links were /author/status/id addresses copied from the new theater ("Copy link"), so their reports were about `/play`, not the older preview pages (which already rendered these). Fixed in the new theater: paragraphs run together (`postText` collapsed blank lines) → `postBody` + `RichText`; links/@mentions/#hashtags not clickable; no card or picture for linked pages → `LinkCard`; a tweet linking to a blog showed as an empty "Article by @…" → `isRealArticle`; X articles needed "Read it here" → shown in full on the stage; video/photo captions stuck at two lines → tap/More opens them; controls were a centred box for posts but full width for video → one full-width bar.
+
 ## 2026-10-16 — Full articles in the theater; second two-browser pass
 
 Owner asked for a full re-test once Settings landed. Articles: the new theater only showed the title and six lines ("Read it here" went to X); added `ArticleReader`, the whole body in the reading font with Bionic Reading. Settings (new design) saves sound, Bionic Reading and font, and the theater and reader follow them (checked, then restored). Right now and Tune in re-tested with five more local accounts: saves land in under 3 s, watching 1→2→1, "1 new save just landed" then Play now with "Just saved".

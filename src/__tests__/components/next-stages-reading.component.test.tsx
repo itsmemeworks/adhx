@@ -49,6 +49,11 @@ function choose(settings: { bionicReading?: boolean; bodyFont?: string }) {
   }
 }
 
+/** The post's words: paragraphs inside one block that carries the type. */
+function words(container: HTMLElement): HTMLElement {
+  return container.querySelector('p')!.parentElement as HTMLElement
+}
+
 describe('reading settings on the redesign stages', () => {
   beforeEach(() => {
     prefs.current = null
@@ -56,8 +61,9 @@ describe('reading settings on the redesign stages', () => {
 
   it('keeps the poster serif on short posts, whatever the font', () => {
     choose({ bodyFont: 'lexend' })
-    render(<PostStage item={item({ text: SHORT })} />)
-    const p = screen.getByText(SHORT)
+    const { container } = render(<PostStage item={item({ text: SHORT })} />)
+    const p = words(container)
+    expect(p).toHaveTextContent(SHORT)
     expect(p).toHaveClass('font-nx-serif')
     expect(p.style.fontFamily).toBe('')
   })
@@ -65,15 +71,16 @@ describe('reading settings on the redesign stages', () => {
   it('uses the reading font on long posts', () => {
     expect(LONG.length).toBeGreaterThan(READING_LENGTH)
     choose({ bodyFont: 'lexend' })
-    render(<PostStage item={item({ text: LONG })} />)
-    const p = screen.getByText(LONG)
+    const { container } = render(<PostStage item={item({ text: LONG })} />)
+    const p = words(container)
+    expect(p).toHaveTextContent(LONG)
     expect(p).not.toHaveClass('font-nx-serif')
     expect(p.style.fontFamily).toBe('var(--font-lexend)')
   })
 
   it('keeps the design fonts without a preferences provider', () => {
-    render(<PostStage item={item({ text: LONG })} />)
-    expect(screen.getByText(LONG)).toHaveClass('font-nx-serif')
+    const { container } = render(<PostStage item={item({ text: LONG })} />)
+    expect(words(container)).toHaveClass('font-nx-serif')
   })
 
   it('bolds the start of each word with Bionic Reading, quotes included', () => {
@@ -91,10 +98,8 @@ describe('reading settings on the redesign stages', () => {
     expect(bolds).toEqual(['Fr', 'si', 'a', 'ni', 'To', 'h', 't'])
     expect(container.querySelector('p')).toHaveTextContent(SHORT)
     // The poster serif has no bold, so Bionic Reading switches to the reading font.
-    expect(container.querySelector('p')).not.toHaveClass('font-nx-serif')
-    expect((container.querySelector('p') as HTMLElement).style.fontFamily).toBe(
-      'var(--font-atkinson)',
-    )
+    expect(words(container)).not.toHaveClass('font-nx-serif')
+    expect(words(container).style.fontFamily).toBe('var(--font-atkinson)')
     // Translation safety: no element mixes a text node with element children.
     for (const el of Array.from(container.querySelectorAll('*'))) {
       const nodes = Array.from(el.childNodes)

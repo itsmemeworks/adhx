@@ -13,6 +13,7 @@ import {
 } from '@/lib/theater/article-markdown'
 import { articleHeadline, articleLede, postAuthor, postCoverSrc } from '../post'
 import { NxAvatar, NxImage } from '../primitives'
+import { cn } from '@/lib/utils'
 import { useReadingSettings } from './index'
 
 /**
@@ -122,11 +123,15 @@ export function ArticleReader({
   item,
   onClose,
   onNext,
+  inline = false,
 }: {
   item: FeedItem
-  onClose: () => void
+  /** Overlay mode only: closes the reader (also on Escape). */
+  onClose?: () => void
   /** "Next" at the end of the article. */
   onNext?: () => void
+  /** Fill the parent (the theater's stage) instead of covering the screen. */
+  inline?: boolean
 }) {
   const reading = useReadingSettings()
   const [markdown, setMarkdown] = useState<string | null | undefined>(undefined)
@@ -148,6 +153,7 @@ export function ArticleReader({
   }, [item.author, item.id])
 
   useEffect(() => {
+    if (!onClose) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
@@ -169,10 +175,13 @@ export function ArticleReader({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
+      role={inline ? 'region' : 'dialog'}
+      aria-modal={inline ? undefined : true}
       aria-label={`Reading: ${headline}`}
-      className="absolute inset-0 z-40 flex flex-col bg-nx-ink font-nx-sans text-nx-soft"
+      className={cn(
+        'flex flex-col bg-nx-ink font-nx-sans text-nx-soft',
+        inline ? 'relative h-full w-full' : 'absolute inset-0 z-40',
+      )}
     >
       <div aria-hidden className="h-1 shrink-0 bg-white/10">
         <div
@@ -180,14 +189,16 @@ export function ArticleReader({
           style={{ width: `${progress * 100}%` }}
         />
       </div>
-      <button
-        type="button"
-        aria-label="Close the article"
-        onClick={onClose}
-        className="nx-plate absolute right-4 top-[max(16px,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full text-white"
-      >
-        <X aria-hidden className="h-5 w-5" />
-      </button>
+      {onClose && (
+        <button
+          type="button"
+          aria-label="Close the article"
+          onClick={onClose}
+          className="nx-plate absolute right-4 top-[max(16px,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full text-white"
+        >
+          <X aria-hidden className="h-5 w-5" />
+        </button>
+      )}
       <div
         ref={scroller}
         onScroll={(e) => {
@@ -198,7 +209,10 @@ export function ArticleReader({
         className="min-h-0 flex-1 overflow-y-auto"
       >
         <article
-          className="mx-auto w-full max-w-[720px] px-5 pb-28 pt-14 text-[18px] leading-[1.7] md:pt-20"
+          className={cn(
+            'mx-auto w-full max-w-[720px] px-5 text-[18px] leading-[1.7]',
+            inline ? 'pb-10 pt-8' : 'pb-28 pt-14 md:pt-20',
+          )}
           style={reading.font ? { fontFamily: reading.font } : undefined}
         >
           <span className="text-xs font-extrabold uppercase tracking-[1.4px] text-nx-accent">

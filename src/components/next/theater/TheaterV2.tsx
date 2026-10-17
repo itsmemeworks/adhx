@@ -1,5 +1,6 @@
 'use client'
 
+import { RichText, postBody } from '../rich-text'
 import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
 import { AccountMenu } from '../AccountMenu'
@@ -216,8 +217,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const [created, setCreated] = useState<{ tag: string; shareUrl: string | null } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  /** The article reader is open over the stage. */
-  const [readingOpen, setReadingOpen] = useState(false)
+  /** The caption over a video or photo is open in full. */
+  const [captionOpen, setCaptionOpen] = useState(false)
   const extendingRef = useRef(false)
   // Tune in (a live moment): its colour, who's watching, new saves arriving.
   const [momentHue, setMomentHue] = useState('#ffd23f')
@@ -299,6 +300,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const current = items[index] ?? null
   const currentKey = current ? resultKey(current) : ''
   const kind = current ? kindOf(current) : 'post'
+  const kindRef = useRef(kind)
+  kindRef.current = kind
   const isVideo = !!current && isVideoItem(current)
   const theaterItem = useMemo(
     () => (current ? feedItemToTheaterItem(current.post) : null),
@@ -336,7 +339,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
 
   // ——— Moving through the queue ———
   const goTo = useCallback((i: number) => {
-    setReadingOpen(false)
+    setCaptionOpen(false)
     setEnded(false)
     setWaiting(false)
     setArrivals(0)
@@ -545,7 +548,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   // ——— Playback ———
   const timed = !!current && !isVideo && kind !== 'article'
   const dwell = useDwell({
-    active: timed && !ended && panel === null,
+    active: timed && !ended && panel === null && !captionOpen,
     seconds: current ? dwellSeconds(current) : 6,
     paused: timedPaused,
     resetKey: currentKey,
@@ -764,12 +767,15 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof Element ? e.target : null
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (panel || readingOpen) return
+      if (panel) return
       if (t?.closest('input, textarea, select, [contenteditable="true"]')) return
       const k = e.key
       if (k === ' ' || k === 'k') {
         e.preventDefault()
         togglePlay()
+      } else if ((k === 'ArrowUp' || k === 'ArrowDown') && kindRef.current === 'article') {
+        // Up and down scroll the article being read.
+        return
       } else if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'j') {
         e.preventDefault()
         void next()
@@ -786,17 +792,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [
-    panel,
-    readingOpen,
-    togglePlay,
-    next,
-    prev,
-    toggleMute,
-    toggleFullscreen,
-    router,
-    source.search,
-  ])
+  }, [panel, togglePlay, next, prev, toggleMute, toggleFullscreen, router, source.search])
 
   const swipe = useMobileSwipeNavigation({
     disabled: panel !== null,
@@ -907,15 +903,17 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             <PostStage item={current.post} />
           </div>
         )}
-        {kind === 'article' && (
-          <div className="absolute inset-0 bg-nx-ink pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16">
-            <ArticleStage
-              item={current.post}
-              onSkip={() => void next()}
-              onRead={hasFullArticle(current.post) ? () => setReadingOpen(true) : undefined}
-            />
-          </div>
-        )}
+        {kind === 'article' &&
+          (hasFullArticle(current.post) ? (
+            // The whole article, right on the stage: scroll to read, Next or Skip to move on.
+            <div className="absolute inset-0 bg-nx-ink pb-24 pr-[68px] pt-14 md:pb-20 md:pr-24 md:pt-16">
+              <ArticleReader item={current.post} inline onNext={() => void next()} />
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-nx-ink pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16">
+              <ArticleStage item={current.post} onSkip={() => void next()} />
+            </div>
+          ))}
       </div>
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-2 bg-gradient-to-b from-black/60 to-transparent px-3 pb-8 pt-[max(12px,env(safe-area-inset-top))] md:gap-3 md:px-7">
@@ -1178,18 +1176,50 @@ export function TheaterV2({ source }: { source: PlaySource }) {
                   </span>
                 )}
               </span>
-              {caption && (
-                <span className="line-clamp-2 text-[15px] leading-[1.35] md:text-[17px]">
-                  {caption}
-                </span>
-              )}
+              {caption &&
+                (captionOpen ? (
+                  <span className="pointer-events-auto block max-h-[42vh] overflow-y-auto pr-2 text-[15px] leading-[1.45] md:text-[17px]">
+                    <RichText
+                      text={postBody(current.post)}
+                      platform={current.post.platform ?? 'twitter'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCaptionOpen(false)}
+                      className="mt-1.5 text-[13px] font-bold text-white/80 underline underline-offset-2"
+                    >
+                      Show less
+                    </button>
+                  </span>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setCaptionOpen(true)}
+                      aria-label="Show the full caption"
+                      className="pointer-events-auto line-clamp-2 text-left text-[15px] leading-[1.35] md:text-[17px]"
+                    >
+                      {caption}
+                    </button>
+                    {caption.length > 110 && (
+                      <button
+                        type="button"
+                        onClick={() => setCaptionOpen(true)}
+                        className="pointer-events-auto mt-0.5 self-start text-[13px] font-bold text-white/85 underline underline-offset-2"
+                      >
+                        More
+                      </button>
+                    )}
+                  </>
+                ))}
             </span>
           </div>
         )}
         <div
           className={cn(
             'pointer-events-auto flex flex-col gap-1',
-            overlay && 'nx-plate rounded-2xl px-3 py-2 md:mx-auto md:w-[min(760px,100%)]',
+            // Same full-width bar for every kind; a plate keeps it readable over words.
+            overlay && 'nx-plate rounded-2xl px-3 py-2',
           )}
         >
           <label htmlFor="nx-seek" className="sr-only">
@@ -1372,13 +1402,6 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             },
           }))}
           onClose={() => setPanel(null)}
-        />
-      )}
-      {readingOpen && kind === 'article' && current && (
-        <ArticleReader
-          item={current.post}
-          onClose={() => setReadingOpen(false)}
-          onNext={() => void next()}
         />
       )}
       {paste.toast}

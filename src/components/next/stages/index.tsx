@@ -1,5 +1,6 @@
 'use client'
 
+import { LinkCard, RichText, postBody, useLinkCard, withoutCardUrl } from '../rich-text'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { usePreferencesOptional } from '@/lib/preferences-context'
@@ -161,7 +162,9 @@ export function postStageTypeScale(length: number): string {
 /** A text post: cream, full-bleed, big serif type. Progress is the dark dwell bar. */
 export function PostStage({ item, progress, children, className }: Omit<StageProps, 'media'>) {
   const author = postAuthor(item)
-  const text = postText(item) || item.quoteContext?.text || ''
+  const body = postBody(item) || item.quoteContext?.text || ''
+  const card = useLinkCard(item, body)
+  const text = withoutCardUrl(body, card)
   const quote = item.isQuote ? item.quoteContext : null
   const reading = useReadingSettings()
   // Bionic Reading needs real bold weights, which the poster serif lacks.
@@ -181,16 +184,20 @@ export function PostStage({ item, progress, children, className }: Omit<StagePro
               )}
             </span>
           </span>
-          <p
-            className={cn(
-              'm-0 whitespace-pre-line [overflow-wrap:anywhere]',
-              !readingFont && 'font-nx-serif',
-              postStageTypeScale(text.length),
-            )}
-            style={readingFont ? { fontFamily: readingFont } : undefined}
-          >
-            <ReadingText text={text} bionic={reading.bionic} />
-          </p>
+          {text && (
+            <RichText
+              text={text}
+              bionic={reading.bionic}
+              platform={item.platform ?? 'twitter'}
+              className={cn(
+                '[overflow-wrap:anywhere]',
+                !readingFont && 'font-nx-serif',
+                postStageTypeScale(text.length),
+              )}
+              style={readingFont ? { fontFamily: readingFont } : undefined}
+            />
+          )}
+          {card && <LinkCard card={card} className="max-w-[560px]" />}
           {quote && (
             <span className="flex flex-col gap-1 rounded-2xl border border-nx-bone px-4 py-3">
               <span className="text-[12px] font-semibold text-nx-on-cream">{`@${quote.author}`}</span>
