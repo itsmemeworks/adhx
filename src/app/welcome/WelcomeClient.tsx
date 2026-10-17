@@ -44,8 +44,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
             </h1>
           </span>
           <p className="m-0 text-[15px] leading-snug text-white/70">
-            Channels you make public live at adhx.com/t/{sanitized || 'username'}. You can only set
-            it once.
+            {`Channels you make public live at adhx.com/t/${sanitized || 'username'}. You can only set it once.`}
           </p>
           <UsernameChooser
             suggestedUsername={suggestedUsername}

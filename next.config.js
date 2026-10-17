@@ -72,6 +72,19 @@ const nextConfig = {
     ],
   },
 
+  // Retired public pages: their old links (bookmarks, search results,
+  // sitemaps) land on what replaced them. Permanent, so search engines move on.
+  redirects: async () => [
+    { source: '/live', destination: '/now', permanent: true },
+    { source: '/discover', destination: '/now', permanent: true },
+    { source: '/trending', destination: '/now', permanent: true },
+    { source: '/trending/:path*', destination: '/now', permanent: true },
+    { source: '/leaderboard', destination: '/channels', permanent: true },
+    { source: '/leaderboard/:path*', destination: '/channels', permanent: true },
+    { source: '/collections', destination: '/channels', permanent: true },
+    { source: '/collections/:path*', destination: '/channels', permanent: true },
+  ],
+
   // Security headers for production
   headers: async () => [
     {

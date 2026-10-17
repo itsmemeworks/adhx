@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ClipboardPaste } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { detectPlatformPost } from '@/lib/platform/url'
+import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import { PasteToast } from '../loader'
 
 /**
@@ -26,7 +27,7 @@ export interface PastedPost {
 type Toast =
   | { state: 'grabbing'; url: string }
   | { state: 'saved'; post: PastedPost }
-  | { state: 'failed'; message?: string; signIn?: boolean }
+  | { state: 'failed'; message?: string; signIn?: boolean; watchPath?: string }
 
 const URL_IN_TEXT = /https?:\/\/[^\s<>"']+/i
 const FAILED_MS = 3_500
@@ -101,7 +102,11 @@ export function usePasteToSave({
         const id = data?.bookmark?.id ?? detected?.id
         const platform = data?.platform ?? detected?.platform
         if (!res.ok || !id || !platform || !(data?.success || data?.isDuplicate)) {
-          show({ state: 'failed', message: data?.error }, FAILED_MS)
+          // Saving failed, but the post may still play: offer it.
+          show(
+            { state: 'failed', message: data?.error, watchPath: detected?.previewPath },
+            FAILED_MS * 2,
+          )
           return
         }
         const post: PastedPost = {
@@ -114,7 +119,7 @@ export function usePasteToSave({
         show({ state: 'saved', post }, SAVED_MS)
         onSavedRef.current?.(post)
       } catch {
-        show({ state: 'failed' }, FAILED_MS)
+        show({ state: 'failed', watchPath: detectPlatformPost(url)?.previewPath }, FAILED_MS * 2)
       } finally {
         busy.current = false
       }
@@ -210,6 +215,22 @@ export function usePasteToSave({
                 >
                   Sign in
                 </a>
+              </div>
+            ) : toast.watchPath ? (
+              <div
+                role="status"
+                className="flex items-center gap-3 rounded-2xl bg-nx-surface/[.97] py-2.5 pl-4 pr-2.5 font-nx-sans text-white shadow-nx-toast"
+              >
+                <span className="flex-1 text-[15px] font-bold">
+                  {toast.message ? `Couldn’t save it: ${toast.message}` : 'Couldn’t save it'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => toast.watchPath && navigateToAppPath(toast.watchPath)}
+                  className="h-9 shrink-0 rounded-full bg-nx-accent px-3.5 text-[13px] font-extrabold text-black"
+                >
+                  Watch it anyway
+                </button>
               </div>
             ) : (
               <PasteToast state="failed" />

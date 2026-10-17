@@ -39,7 +39,8 @@ export function PublicHome() {
               id="nx-home-title"
               className="m-0 font-nx-serif text-[44px] font-normal leading-[0.98] md:text-[76px]"
             >
-              Save it. Lose it. <span className="text-nx-accent">Find it.</span>
+              <span>Save it. Lose it. </span>
+              <span className="text-nx-accent">Find it.</span>
             </h1>
             <p className="m-0 max-w-[600px] text-[17px] leading-snug text-white/75 md:text-[19px]">
               Keep posts from X, Instagram and TikTok in one place, then find them by describing

@@ -4,27 +4,23 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { getPublicProfile, type PublicProfileResult } from '@/lib/users/profile'
 import { resolveUsernameAlias } from '@/lib/users/lookup'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { CollectionPosterCard } from '@/components/tags'
-import { MakeYourOwnButton } from '@/components/auth/MakeYourOwnButton'
-import { AvatarImage } from '@/components/avatar/AvatarImage'
-import { MatterLogo } from '@/components/matter'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { Bookmark, Eye, Flame } from 'lucide-react'
+import { Play } from 'lucide-react'
+import { ChannelCover } from '@/components/next/channels/ChannelParts'
+import { channelTitle } from '@/components/next/channels/title'
+import { channelPlayHref } from '@/components/next/theater/queue'
+import {
+  ProfileHero,
+  ProfileLayout,
+  SECONDARY_ACTION,
+} from '@/components/next/profile/ProfileParts'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
-
-/** Ghost-pill styling shared by the top-right "Make your own"/"Manage
- * playlists" CTA, whichever of the two renders. */
-const TOP_PILL_CLASS =
-  'inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20'
-/** Clay CTA styling for the footer "Start saving" pitch block. */
-const FOOTER_CTA_CLASS =
-  'inline-flex items-center rounded-full bg-clay-grad px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90'
 
 /**
  * `/t/{username}` — public curator profile page.
  *
  * Reads the runtime SQLite DB (migrated at container startup, not present at
- * build time) — must stay dynamic, same reasoning as `/trending` and
+ * build time) — must stay dynamic, same reasoning as
  * `/t/{username}/{tag}`.
  *
  * Coexists with `/t/{username}/{tag}` — Next.js routing picks whichever
@@ -75,10 +71,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { profile } = result
   const collectionNames = profile.collections.map((c) => `#${c.tag}`).join(', ')
-  const title = `@${profile.username} — playlists on ADHX`
+  const title = `@${profile.username} — channels on ADHX`
   const description = collectionNames
-    ? `${profile.publicTagCount} public playlist${profile.publicTagCount === 1 ? '' : 's'} curated by @${profile.username}: ${collectionNames}.`
-    : `Public playlists curated by @${profile.username} on ADHX.`
+    ? `${profile.publicTagCount} public channel${profile.publicTagCount === 1 ? '' : 's'} by @${profile.username}: ${collectionNames}.`
+    : `Public channels by @${profile.username} on ADHX.`
   const canonicalUrl = `${BASE_URL}/t/${profile.username}`
 
   return {
@@ -130,8 +126,8 @@ export default async function CuratorProfilePage({ params }: Props) {
   const isOwnProfile = viewerId != null && viewerId === profile.userId
 
   const jsonLd = buildCollectionPageLd({
-    name: `@${profile.username} — playlists on ADHX`,
-    description: `${profile.publicTagCount} public playlist${profile.publicTagCount === 1 ? '' : 's'} curated by @${profile.username} on ADHX.`,
+    name: `@${profile.username} — channels on ADHX`,
+    description: `${profile.publicTagCount} public channel${profile.publicTagCount === 1 ? '' : 's'} by @${profile.username} on ADHX.`,
     url: canonicalUrl,
     baseUrl: BASE_URL,
     items: profile.collections.map((c) => ({ url: c.href, name: `#${c.tag}` })),
@@ -143,18 +139,18 @@ export default async function CuratorProfilePage({ params }: Props) {
   jsonLd['@type'] = 'ProfilePage'
 
   const stats = [
-    `${profile.publicTagCount} playlist${profile.publicTagCount === 1 ? '' : 's'}`,
-    `${profile.postCount} post${profile.postCount === 1 ? '' : 's'} shared`,
-    memberSince ? `curating since ${memberSince}` : null,
+    `${profile.publicTagCount} public channel${profile.publicTagCount === 1 ? '' : 's'}`,
+    `${profile.postCount} post${profile.postCount === 1 ? '' : 's'}`,
+    memberSince ? `since ${memberSince}` : null,
+    profile.stats.viewCount > 0 ? `${profile.stats.viewCount} views this week` : null,
   ].filter((s): s is string => Boolean(s))
 
   return (
-    <div className="min-h-screen" style={{ background: '#08070a' }}>
+    <ProfileLayout>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
-
       {/* Crawlable content for crawlers/no-JS clients. */}
       <ul className="sr-only">
         {profile.collections.map((c) => (
@@ -163,112 +159,60 @@ export default async function CuratorProfilePage({ params }: Props) {
           </li>
         ))}
       </ul>
-
-      <nav className="flex items-center justify-between px-5 pt-5 sm:px-11">
-        <a href="/" aria-label="ADHX home" className="flex-none">
-          <MatterLogo size={18} surface="dark" />
-        </a>
-        {isSignedOut ? (
-          <MakeYourOwnButton className={TOP_PILL_CLASS} returnTo="/">
-            Make your own
-          </MakeYourOwnButton>
-        ) : isOwnProfile ? (
-          <Link href="/channels" className={TOP_PILL_CLASS}>
-            Manage channels
-          </Link>
-        ) : null}
-      </nav>
-
-      <main className="mx-auto flex max-w-5xl flex-col items-center px-5 pb-16 pt-10 sm:px-11">
-        <header className="flex flex-col items-center gap-4 text-center">
-          <AvatarImage
-            src={profile.avatarUrl}
-            seed={profile.username}
-            className="h-[76px] w-[76px] rounded-full object-cover"
-          />
-          <h1 className="font-serif text-[34px] font-medium text-white">@{profile.username}</h1>
-          <p className="font-mono text-xs uppercase tracking-wide text-white/50">
-            {stats.join(' · ')}
-          </p>
-
-          {profile.stats.viewCount + profile.stats.cloneCount > 0 && (
-            <div className="flex items-center gap-5 rounded-full border border-white/10 bg-white/[0.03] px-5 py-2.5 font-mono text-[12.5px] text-white/75">
-              <span className="flex items-center gap-1.5">
-                <Eye size={13} />
-                <span>{profile.stats.viewCount} views this week</span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Bookmark size={13} />
-                <span>{profile.stats.cloneCount} saves</span>
-              </span>
-              {profile.stats.bestRank != null && (
+      <ProfileHero
+        avatarUrl={profile.avatarUrl}
+        handle={profile.username}
+        name={profile.displayName || `@${profile.username}`}
+        lines={stats}
+        actions={
+          isOwnProfile ? (
+            <Link href="/channels" className={SECONDARY_ACTION}>
+              Your channels
+            </Link>
+          ) : isSignedOut ? (
+            <Link href="/start" className={SECONDARY_ACTION}>
+              Make your own
+            </Link>
+          ) : undefined
+        }
+      />
+      <section aria-labelledby="nx-curator-channels" className="flex flex-col gap-4">
+        <h2
+          id="nx-curator-channels"
+          className="m-0 font-nx-serif text-[28px] font-normal md:text-[34px]"
+        >
+          Channels
+        </h2>
+        <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
+          {profile.collections.map((c) => (
+            <li key={c.tag} className="flex min-w-0 flex-col gap-2.5">
+              <Link href={c.href} aria-label={`${channelTitle(c.tag)}, ${c.count} posts`}>
+                <ChannelCover
+                  tiles={c.tiles.map((t) => ({ img: t.thumbnailUrl ?? null, text: t.text ?? '' }))}
+                  label={channelTitle(c.tag)}
+                  className="aspect-[5/4] w-full"
+                />
+              </Link>
+              <span className="flex items-center gap-3">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[17px] font-bold">{channelTitle(c.tag)}</span>
+                  <span className="text-[13px] text-white/55">
+                    {`${c.count} post${c.count === 1 ? '' : 's'}${c.stats?.viewCount ? ` · ${c.stats.viewCount} views this week` : ''}`}
+                  </span>
+                </span>
                 <Link
-                  href="/leaderboard"
-                  className="flex items-center gap-1.5 text-[#e88a5e] transition-opacity hover:opacity-80"
+                  href={channelPlayHref(profile.username, c.tag)}
+                  aria-label={`Play ${channelTitle(c.tag)}`}
+                  className="flex h-11 items-center gap-1.5 rounded-full bg-nx-accent px-4 text-sm font-extrabold text-black"
                 >
-                  <Flame size={13} fill="currentColor" />#{profile.stats.bestRank} on the
-                  leaderboard
+                  <Play aria-hidden className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
+                  <span>Play</span>
                 </Link>
-              )}
-            </div>
-          )}
-        </header>
-
-        {profile.collections.length === 1 ? (
-          // Single playlist: a showcase card, centered and scaled up so it
-          // fills a meaningful share of the viewport instead of floating
-          // small in a huge empty area.
-          // Rank renders ONCE per card, as the corner medallion — `stats.rank`
-          // is nulled below so the footer chip doesn't repeat it (owner call:
-          // keep the badge row for the other stats).
-          <div className="mt-10 w-full max-w-xl sm:mt-14 sm:max-w-2xl">
-            <CollectionPosterCard
-              tag={profile.collections[0].tag}
-              count={profile.collections[0].count}
-              tiles={profile.collections[0].tiles}
-              href={profile.collections[0].href}
-              wholeCardLink
-              featured
-              heightClass="h-[320px] sm:h-[420px] lg:h-[480px]"
-              className="w-full"
-              stats={
-                profile.collections[0].stats
-                  ? { ...profile.collections[0].stats, rank: null }
-                  : null
-              }
-              rank={profile.collections[0].stats?.rank ?? null}
-            />
-          </div>
-        ) : (
-          // Multiple playlists: wrap in a centered flex row rather than a
-          // fixed-column grid, so a partial last row (e.g. 3 of 4 columns)
-          // still centers as a group instead of packing left.
-          <div className="mt-10 flex w-full flex-wrap justify-center gap-4 sm:mt-14 sm:gap-5">
-            {profile.collections.map((c) => (
-              <CollectionPosterCard
-                key={c.tag}
-                tag={c.tag}
-                count={c.count}
-                tiles={c.tiles}
-                href={c.href}
-                wholeCardLink
-                className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(25%-15px)]"
-                stats={c.stats ? { ...c.stats, rank: null } : null}
-                rank={c.stats?.rank ?? null}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-
-      {isSignedOut && (
-        <footer className="mx-auto flex max-w-5xl flex-col items-center gap-4 border-t border-white/10 px-5 pb-14 pt-10 text-center sm:px-11">
-          <p className="text-sm text-white/40">Save it. Lose it. Find it.</p>
-          <MakeYourOwnButton className={FOOTER_CTA_CLASS} returnTo="/">
-            Start saving
-          </MakeYourOwnButton>
-        </footer>
-      )}
-    </div>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </ProfileLayout>
   )
 }

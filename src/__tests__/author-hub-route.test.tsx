@@ -23,6 +23,10 @@ vi.mock('@/lib/authors/query', async (importOriginal) => {
   }
 })
 
+vi.mock('@/components/next/channels/ChannelParts', () => ({
+  NxHeader: () => <header data-testid="nx-header" />,
+}))
+
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND')
@@ -150,10 +154,9 @@ describe('Author hub route: /[username]', () => {
       expect(result).not.toBeNull()
     })
 
-    it('renders signed-out chrome when validated auth rejects a stale session', async () => {
+    it('renders the profile in the new design: header, hero, posts and crawlable links', async () => {
       const { getAuthorProfile } = await import('@/lib/authors/query')
       vi.mocked(getAuthorProfile).mockResolvedValue(SAMPLE_PROFILE)
-      mockCurrentUserId = null
 
       const AuthorHubPage = (await import('@/app/[username]/page')).default
       const result = await AuthorHubPage({
@@ -161,23 +164,13 @@ describe('Author hub route: /[username]', () => {
       })
       const html = renderToStaticMarkup(result as React.ReactElement)
 
-      const { getCurrentUserId } = await import('@/lib/auth/session')
-      expect(getCurrentUserId).toHaveBeenCalledTimes(1)
-      expect(html).toContain('aria-label="ADHX home"')
-    })
-
-    it('omits signed-out chrome only for a validated live account', async () => {
-      const { getAuthorProfile } = await import('@/lib/authors/query')
-      vi.mocked(getAuthorProfile).mockResolvedValue(SAMPLE_PROFILE)
-      mockCurrentUserId = 'live-user'
-
-      const AuthorHubPage = (await import('@/app/[username]/page')).default
-      const result = await AuthorHubPage({
-        params: Promise.resolve({ username: 'testauthor' }),
-      })
-      const html = renderToStaticMarkup(result as React.ReactElement)
-
-      expect(html).not.toContain('aria-label="ADHX home"')
+      expect(html).toContain('data-testid="nx-header"')
+      expect(html).toContain('Test Author')
+      expect(html).toContain('@testauthor · 2 public posts on ADHX')
+      expect(html).toContain('href="https://x.com/testauthor"')
+      expect(html).toContain('Play the newest')
+      expect(html).toContain('application/ld+json')
+      expect(html).toContain('Hello world')
     })
 
     it('rejects a mismatched dynamic-route reserved-looking name with no data (404 rather than a crash)', async () => {

@@ -22,33 +22,12 @@ const appShellMocks = vi.hoisted(() => ({
     refresh: vi.fn(),
   },
   preferenceMounts: 0,
-  headerEffects: 0,
-  headerCleanups: 0,
 }))
 
 vi.mock('next/navigation', () => ({
   useRouter: () => appShellMocks.router,
   usePathname: () => mockPathname,
   useSearchParams: () => new URLSearchParams(),
-}))
-
-vi.mock('@/components/Header', async () => {
-  const { useEffect } = await import('react')
-  return {
-    Header: () => {
-      useEffect(() => {
-        appShellMocks.headerEffects += 1
-        return () => {
-          appShellMocks.headerCleanups += 1
-        }
-      }, [])
-      return <div data-testid="app-header" />
-    },
-  }
-})
-
-vi.mock('@/components/PWAInstallPrompt', () => ({
-  PWAInstallPrompt: () => <div data-testid="pwa-banner" />,
 }))
 
 vi.mock('@/components/auth', () => ({
@@ -96,8 +75,6 @@ describe('AppShell theater surfaces', () => {
     appShellMocks.router.replace.mockReset()
     appShellMocks.router.refresh.mockReset()
     appShellMocks.preferenceMounts = 0
-    appShellMocks.headerEffects = 0
-    appShellMocks.headerCleanups = 0
     childMounts = 0
   })
 
@@ -105,47 +82,8 @@ describe('AppShell theater surfaces', () => {
     vi.useRealTimers()
   })
 
-  it.each(['/', '/t/you/cats', '/alice/status/123', '/reels/DaigXfxAkrE'])(
-    'draws the new-design page %s without the old Header or install banner',
-    (path) => {
-      mockPathname = path
-      render(
-        <AppShell serverAccountId="account-a">
-          <div>stage</div>
-        </AppShell>,
-      )
-      expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('pwa-banner')).not.toBeInTheDocument()
-    },
-  )
-
-  it.each(['/live', '/saved', '/collection'])(
-    'hides Header on %s but still mounts the install banner',
-    (path) => {
-      mockPathname = path
-      render(
-        <AppShell serverAccountId="account-a">
-          <div>stage</div>
-        </AppShell>,
-      )
-      expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
-      expect(screen.getByTestId('pwa-banner')).toBeInTheDocument()
-    },
-  )
-
-  it('hides Header and the install banner on /welcome', () => {
-    mockPathname = '/welcome'
-    render(
-      <AppShell serverAccountId="account-a">
-        <div>chooser</div>
-      </AppShell>,
-    )
-    expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('pwa-banner')).not.toBeInTheDocument()
-  })
-
-  it.each(['/channels', '/settings'])(
-    'draws %s full-width with its own header and no install banner',
+  it.each(['/', '/now', '/alice/status/123', '/t/you/cats', '/privacy', '/admin', '/welcome'])(
+    'lets %s draw its own header: no old site header or install banner',
     (path) => {
       mockPathname = path
       render(
@@ -158,70 +96,6 @@ describe('AppShell theater surfaces', () => {
       expect(screen.queryByTestId('pwa-banner')).not.toBeInTheDocument()
     },
   )
-
-  it('keeps the install banner on /trending and /library', () => {
-    mockPathname = '/trending'
-    const { rerender } = render(
-      <AppShell serverAccountId="account-a">
-        <div>list</div>
-      </AppShell>,
-    )
-    expect(screen.getByTestId('app-header')).toBeInTheDocument()
-    expect(screen.getByTestId('pwa-banner')).toBeInTheDocument()
-
-    mockPathname = '/library'
-    rerender(
-      <AppShell serverAccountId="account-a">
-        <div>grid</div>
-      </AppShell>,
-    )
-    expect(screen.getByTestId('app-header')).toBeInTheDocument()
-    expect(screen.getByTestId('pwa-banner')).toBeInTheDocument()
-  })
-
-  it('does not mount effectful account Header chrome until a public route scope exactly matches', () => {
-    mockPathname = '/trending'
-    appShellMocks.auth.me = null
-    appShellMocks.auth.loading = true
-    const view = render(
-      <AppShell serverAccountId="account-a">
-        <div>public list</div>
-      </AppShell>,
-    )
-
-    expect(screen.getByText('public list')).toBeInTheDocument()
-    expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
-    expect(screen.getByRole('banner')).toHaveClass('pt-[env(safe-area-inset-top)]')
-    expect(appShellMocks.headerEffects).toBe(0)
-
-    appShellMocks.auth.me = signedIn('account-b')
-    appShellMocks.auth.loading = false
-    view.rerender(
-      <AppShell serverAccountId="account-a">
-        <div>public list</div>
-      </AppShell>,
-    )
-    expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
-    expect(appShellMocks.headerEffects).toBe(0)
-
-    view.rerender(
-      <AppShell serverAccountId="account-b">
-        <div>public list</div>
-      </AppShell>,
-    )
-    expect(screen.getByTestId('app-header')).toBeInTheDocument()
-    expect(appShellMocks.headerEffects).toBe(1)
-
-    appShellMocks.auth.me = null
-    appShellMocks.auth.loading = true
-    view.rerender(
-      <AppShell serverAccountId="account-b">
-        <div>public list</div>
-      </AppShell>,
-    )
-    expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
-    expect(appShellMocks.headerCleanups).toBe(1)
-  })
 
   it('cannot unlock A→B private children until the server scope is B', async () => {
     mockPathname = '/library'
@@ -361,29 +235,23 @@ describe('AppShell theater surfaces', () => {
     },
   )
 
-  it.each([
-    '/live',
-    '/saved',
-    '/collection',
-    '/library',
-    '/tags',
-    '/welcome',
-    '/admin',
-    '/admin/posts',
-  ])('redirects a trusted signed-out visit away from private route %s', async (path) => {
-    mockPathname = path
-    appShellMocks.auth.me = null
-    appShellMocks.auth.loading = false
+  it.each(['/saved', '/collection', '/library', '/tags', '/welcome', '/admin', '/admin/posts'])(
+    'redirects a trusted signed-out visit away from private route %s',
+    async (path) => {
+      mockPathname = path
+      appShellMocks.auth.me = null
+      appShellMocks.auth.loading = false
 
-    render(
-      <AppShell serverAccountId={null}>
-        <StatefulChild />
-      </AppShell>,
-    )
+      render(
+        <AppShell serverAccountId={null}>
+          <StatefulChild />
+        </AppShell>,
+      )
 
-    expect(screen.queryByText(/account-child-/)).not.toBeInTheDocument()
-    await waitFor(() => expect(appShellMocks.router.replace).toHaveBeenCalledWith('/'))
-  })
+      expect(screen.queryByText(/account-child-/)).not.toBeInTheDocument()
+      await waitFor(() => expect(appShellMocks.router.replace).toHaveBeenCalledWith('/'))
+    },
+  )
 
   it.each([
     '/',

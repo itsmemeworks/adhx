@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { requireAdmin } from '@/lib/admin/guard'
 import { AdminClient } from './AdminClient'
+import { NxHeader } from '@/components/next/channels/ChannelParts'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,5 +19,10 @@ export default async function AdminPage() {
   const gate = await requireAdmin(userId)
   if (!gate.ok) redirect('/settings')
 
-  return <AdminClient />
+  return (
+    <div className="min-h-dvh bg-paper">
+      <NxHeader current={null} />
+      <AdminClient />
+    </div>
+  )
 }

@@ -2,12 +2,12 @@
 
 This policy describes the **hosted** ADHX service at [adhx.com](https://adhx.com) (and staging at adhx.fly.dev). If you **self-host**, you are the data controller — this file is still the honest description of what the software stores.
 
-Last updated: 24 August 2026.
+Last updated: 17 October 2026.
 
 ## Short version
 
 - Your **collection** (saves, archive, private tags, sign-in) is private to your account.
-- **Preview pages**, the **Live / trending pulse**, **public playlists**, and the **leaderboard** are public by design. They show posts and curator usernames, never account IDs.
+- **Shared post pages**, **Right now**, **public channels**, and **Top channels** are public by design. They show posts and curator usernames, never account IDs. Right now shows how many people saved something, never who.
 - We store some identifiers **only for moderation and abuse-limiting**. Those fields are never selected on any public API or page.
 - We do not sell your data. We do not run ads. We do not run metered AI on your library.
 
@@ -28,11 +28,11 @@ OAuth tokens for X are **encrypted at rest**. Magic-link tokens are stored as a 
 
 Bookmarks, media rows, tags, archive state, and preferences are keyed by your account id. Other users cannot read them. Archive is private: it does **not** write a public pulse event.
 
-A tag stays private until you explicitly make it a **public playlist**.
+A channel (a tag) stays private until you explicitly make it **public**, and you can make it private again from its page. Keeping a “Made for you” channel keeps it private.
 
-### Community pulse and leaderboards (public, anonymous)
+### Community pulse, Right now and Top channels (public, anonymous)
 
-When someone previews, saves, or sends a post, we may record an `activity` event so `/`, `/trending`, and related public surfaces can show what the community is watching. When someone views or clones a public playlist, we may record a `collection_events` row for `/leaderboard`.
+When someone previews, saves, or sends a post, we may record an `activity` event for anonymous counts. **Right now** (`/now`) groups recent saves from everyone into moments by what they’re about; it counts the people who saved, and their account ids never leave the server. When someone views or saves a public channel, we may record a `collection_events` row for Top channels.
 
 Those logs may store:
 
@@ -40,8 +40,8 @@ Those logs may store:
 | -------------------------------------- | ---------------------------- | ------------------------------------------------------------- |
 | `activity.userId`                      | moderation and rate-limiting | **Never.** No public query selects it.                        |
 | `collection_events.viewerId`           | same                         | **Never.** Reads go through `src/lib/discovery/rank.ts` only. |
-| post identifiers, captions, thumbnails | render the pulse / playlist  | Yes — server-resolved, never accepted from the client         |
-| curator username                       | playlist and leaderboard     | Yes — a public username, not an account id                    |
+| post identifiers, captions, thumbnails | render the pulse / channel   | Yes — server-resolved, never accepted from the client         |
+| curator username                       | channels and Top channels    | Yes — a public username, not an account id                    |
 
 Display text and images on the pulse are copied server-side from the post. Clients cannot invent what shows on the front page.
 
@@ -67,20 +67,20 @@ We do not use advertising or analytics pixels.
 These URLs are meant to be crawled and shared:
 
 - preview pages (`/{user}/status/{id}`, `/reels/{id}`, `/@{user}/video/{id}`)
-- `/` (Live theater), `/trending`, `/leaderboard`
-- public playlists `/t/{username}/{tag}` and curator profiles `/t/{username}`
+- `/`, Right now (`/now`) and its moments (`/moments/{slug}`)
+- public channels `/t/{username}/{tag}`, curator profiles `/t/{username}`, and author pages `/{handle}`
 - public JSON (`/api/share/…`, `/api/trending`, `/api/activity`, `/api/collections/trending`) — **no `userId`**
 
 Viewing a preview does not require an account. Saving does.
 
 ## How long we keep it
 
-Until you clear Saved or delete your account (Settings). Pulse and leaderboard events that already happened stay in the anonymous logs; they still do not expose your account id.
+Until you clear Saved or delete your account (Settings). Pulse and channel-view events that already happened stay in the anonymous logs; they still do not expose your account id.
 
 ## Your choices
 
-- **Don’t sign in** — you can watch previews and the Live theater without an account.
-- **Keep tags private** — only “make public” publishes a playlist.
+- **Don’t sign in** — you can watch shared posts, Right now and Tune in without an account.
+- **Keep channels private** — only “Public” on a channel’s page publishes it, and “Private” takes it back.
 - **Archive** — removes a post from your active queue without a public pulse.
 - **Disconnect X** — Settings; blocked if it is your last sign-in method.
 - **Clear data** — deletes your bookmarks and related rows; keeps the account.

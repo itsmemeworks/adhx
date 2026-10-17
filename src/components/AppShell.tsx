@@ -1,18 +1,7 @@
 'use client'
 
-import {
-  createContext,
-  Fragment,
-  Suspense,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Header } from './Header'
-import { PWAInstallPrompt } from './PWAInstallPrompt'
 import { FontProvider } from './FontProvider'
 import { isSavedPath } from '@/lib/theater/collection-href'
 import { startClientEventBridge } from '@/lib/client-events'
@@ -36,18 +25,6 @@ const SCOPE_REFRESH_RETRY_CAP_MS = 30_000
  */
 export function useAppAccountScope(): AppAccountScope | null {
   return useContext(AppAccountScopeContext)
-}
-
-// Header loading skeleton
-function HeaderSkeleton() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-hairline bg-surface pt-[env(safe-area-inset-top)]">
-      <div className="px-4 sm:px-6 h-16 flex items-center justify-between">
-        <div className="w-24 h-8 bg-inset rounded-card animate-pulse" />
-        <div className="w-[33px] h-[33px] bg-inset rounded-full animate-pulse" />
-      </div>
-    </header>
-  )
 }
 
 /** New-design pages that sign you in and bring you back, rather than going home. */
@@ -118,56 +95,7 @@ export function AppShell({
     }
   }, [clientAccountId, router, serverScopeKey, trusted])
 
-  // Full-width pages without header (public share pages, URL prefix quick-add pages,
-  // the full-screen trending reel)
-  const isPreviewPage =
-    /^\/\w+\/status\/\d+$/.test(pathname) ||
-    /^\/reels?\/[A-Za-z0-9_-]+$/.test(pathname) ||
-    /^\/p\/[A-Za-z0-9_-]+$/.test(pathname) ||
-    /^\/@?[A-Za-z0-9._]+\/video\/\d+$/.test(pathname)
-  // TheaterShell is a full-viewport z-60 overlay and owns the chrome. Hide
-  // the Header; the install banner still mounts (z-70, under the top-left logo).
-  const isTheaterPage =
-    pathname === '/' ||
-    pathname === '/live' ||
-    isSavedPath(pathname) ||
-    pathname.startsWith('/t/') ||
-    isPreviewPage
-  const isFullWidth =
-    isTheaterPage ||
-    pathname === '/trending/play' ||
-    pathname.startsWith('/share/') ||
-    // /welcome is the one-shot username chooser: a full-screen dark card with
-    // no app chrome — a mounted (visually hidden) Header would leave its
-    // search input focusable underneath the overlay.
-    pathname === '/welcome' ||
-    // next_ui search (redesign) draws its own header; the page redirects to
-    // /library when the flag is off, so this never strands the old UI.
-    pathname === '/search' ||
-    pathname === '/play' ||
-    pathname === '/channels' ||
-    pathname === '/now' ||
-    pathname === '/start' ||
-    pathname === '/settings' ||
-    pathname.startsWith('/moments/')
-  // One-shot username / starter-playlist screen — the banner covers the card.
-  // The next_ui search and theater put their own controls at the top edge.
-  // Settings has its own phone install card.
-  const hideInstallBanner =
-    // New-design pages put their own controls along the top edge.
-    pathname === '/' ||
-    isPreviewPage ||
-    pathname.startsWith('/t/') ||
-    pathname === '/welcome' ||
-    pathname === '/search' ||
-    pathname === '/play' ||
-    pathname === '/channels' ||
-    pathname === '/now' ||
-    pathname === '/start' ||
-    pathname === '/settings' ||
-    pathname.startsWith('/moments/')
   const isAccountOwnedPage =
-    pathname === '/live' ||
     isSavedPath(pathname) ||
     pathname === '/library' ||
     pathname === '/search' ||
@@ -214,39 +142,15 @@ export function AppShell({
       <Fragment key={trustedScopeKeyRef.current}>
         <PreferencesProvider>
           <FontProvider>
-            {isFullWidth ? (
-              <>
-                <div
-                  className="contents"
-                  data-app-account-scope={scopeBlocked ? 'blocked' : 'trusted'}
-                  inert={scopeBlocked ? true : undefined}
-                  aria-busy={scopeBlocked || undefined}
-                >
-                  {scopedChildren}
-                </div>
-                {/* Theater owns the Header slot; the install banner still mounts and
-                    hangs under the top-left logo (see PWAInstallPrompt). */}
-                {!hideInstallBanner && <PWAInstallPrompt />}
-              </>
-            ) : (
-              <div
-                className="min-h-screen bg-paper"
-                data-app-account-scope={scopeBlocked ? 'blocked' : 'trusted'}
-                inert={scopeBlocked ? true : undefined}
-                aria-busy={scopeBlocked || undefined}
-              >
-                {trusted && accountChildrenVisible ? (
-                  <Suspense fallback={<HeaderSkeleton />}>
-                    <Header />
-                  </Suspense>
-                ) : loading || !trusted ? (
-                  <HeaderSkeleton />
-                ) : null}
-                {/* In-flow under the header so the callout doesn't cover Paste / filters. */}
-                <PWAInstallPrompt />
-                <main>{scopedChildren}</main>
-              </div>
-            )}
+            {/* Every page draws its own header (the new design's NxHeader). */}
+            <div
+              className="contents"
+              data-app-account-scope={scopeBlocked ? 'blocked' : 'trusted'}
+              inert={scopeBlocked ? true : undefined}
+              aria-busy={scopeBlocked || undefined}
+            >
+              {scopedChildren}
+            </div>
           </FontProvider>
         </PreferencesProvider>
       </Fragment>

@@ -38,14 +38,6 @@ vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: vi.fn(() => Promise.resolve(null)),
 }))
 
-// The real component opens a modal via client-side state; this route test
-// only needs to assert it's the CTA rendered (not the sign-in flow itself,
-// which is SignInModal's own concern), so render it as a plain identifiable
-// marker.
-vi.mock('@/components/auth/MakeYourOwnButton', () => ({
-  MakeYourOwnButton: ({ children }: { children: React.ReactNode }) => children,
-}))
-
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND')
@@ -55,10 +47,12 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
-const posterCardSpy = vi.fn()
-vi.mock('@/components/tags', () => ({
-  CollectionPosterCard: (props: unknown) => {
-    posterCardSpy(props)
+const coverSpy = vi.fn()
+vi.mock('@/components/next/channels/ChannelParts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/next/channels/ChannelParts')>()),
+  NxHeader: () => null,
+  ChannelCover: (props: unknown) => {
+    coverSpy(props)
     return null
   },
 }))
@@ -120,7 +114,7 @@ describe('Curator profile route: /t/[username]', () => {
         params: Promise.resolve({ username: 'curator' }),
       })
 
-      expect(metadata.title).toBe('@curator — playlists on ADHX')
+      expect(metadata.title).toBe('@curator — channels on ADHX')
       expect(metadata.description).toContain('#cool-stuff')
       expect(metadata.description).toContain('#more-stuff')
       expect(metadata.alternates?.canonical).toContain('/t/curator')
@@ -138,56 +132,34 @@ describe('Curator profile route: /t/[username]', () => {
       ).rejects.toThrow('NOT_FOUND')
     })
 
-    it('renders JSON-LD, the sr-only crawlable list, and a poster card per collection', async () => {
+    it('renders JSON-LD, the crawlable list, and a channel card per public channel', async () => {
       const { getPublicProfile: mocked } = await import('@/lib/users/profile')
       vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
+      coverSpy.mockClear()
 
       const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
       const result = await CuratorProfilePage({
         params: Promise.resolve({ username: 'curator' }),
       })
-
-      expect(result).not.toBeNull()
       const html = renderToStaticMarkup(result as React.ReactElement)
 
       expect(html).toContain('application/ld+json')
       expect(html).toContain('ProfilePage')
       expect(html).toContain('href="/t/curator/cool-stuff"')
       expect(html).toContain('href="/t/curator/more-stuff"')
-      expect(html).toContain('@curator')
-
-      expect(posterCardSpy).toHaveBeenCalledTimes(2)
-      const firstProps = posterCardSpy.mock.calls[0][0] as {
-        tag: string
-        count: number
-        href: string
-        stats: unknown
-        rank: number | null
-      }
-      expect(firstProps.tag).toBe('cool-stuff')
-      expect(firstProps.count).toBe(2)
-      expect(firstProps.href).toBe('/t/curator/cool-stuff')
-
-      // Discovery stats are forwarded through to the poster card (docs/specs/
-      // discovery-leaderboards.md §6) — rank renders ONCE, as the corner
-      // medallion (`rank` prop); `stats.rank` is nulled so the footer chip
-      // doesn't repeat it and the badge row keeps room for the other stats.
-      expect(firstProps.stats).toEqual({ viewCount: 42, cloneCount: 5, rank: null })
-      expect(firstProps.rank).toBe(3)
-      // The same rank is also forwarded as the top-level `rank` prop, which
-      // drives the non-interactive medallion now allowed with `wholeCardLink`.
-      expect(firstProps.rank).toBe(3)
-      const secondProps = posterCardSpy.mock.calls[1][0] as { stats: unknown; rank: number | null }
-      expect(secondProps.stats).toBeNull()
-      expect(secondProps.rank).toBeNull()
-
-      // Curator stat strip under the handle.
+      expect(html).toContain('The Curator')
+      expect(html).toContain('@curator · 2 public channels · 3 posts')
       expect(html).toContain('42 views this week')
-      expect(html).toContain('5 saves')
-      expect(html).toContain('#3 on the')
+      expect(html).toContain('Cool stuff')
+      expect(html).toContain('href="/play?channel=curator%2Fcool-stuff"')
+      expect(coverSpy).toHaveBeenCalledTimes(2)
+      expect(coverSpy.mock.calls[0][0]).toMatchObject({
+        tiles: [{ img: 'https://example.com/thumb.jpg', text: 'a post' }],
+        label: 'Cool stuff',
+      })
     })
 
-    it('omits the curator stat strip when there is no view/save activity yet', async () => {
+    it('leaves out views when there are none yet', async () => {
       const { getPublicProfile: mocked } = await import('@/lib/users/profile')
       vi.mocked(mocked).mockResolvedValue({
         ...SAMPLE_PROFILE,
@@ -247,58 +219,34 @@ describe('Curator profile route: /t/[username]', () => {
   // the viewer is signed out, viewing their own profile, or signed in as
   // someone else.
   describe('auth-aware CTAs', () => {
-    it('signed out: shows the sign-up CTA in both the top pill and the footer', async () => {
+    async function render(viewer: string | null) {
       const { getPublicProfile: mocked } = await import('@/lib/users/profile')
       vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
       const { getCurrentUserId } = await import('@/lib/auth/session')
-      vi.mocked(getCurrentUserId).mockResolvedValue(null)
-
+      vi.mocked(getCurrentUserId).mockResolvedValue(viewer)
       const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
-      const result = await CuratorProfilePage({
-        params: Promise.resolve({ username: 'curator' }),
-      })
-      const html = renderToStaticMarkup(result as React.ReactElement)
+      const result = await CuratorProfilePage({ params: Promise.resolve({ username: 'curator' }) })
+      return renderToStaticMarkup(result as React.ReactElement)
+    }
 
+    it('signed out: offers to make your own', async () => {
+      const html = await render(null)
       expect(html).toContain('Make your own')
-      expect(html).toContain('Start saving')
-      expect(html).not.toContain('Manage channels')
+      expect(html).toContain('href="/start"')
+      expect(html).not.toContain('Your channels')
     })
 
-    it("signed in, own profile: top pill becomes 'Manage channels' → /channels, footer pitch is gone", async () => {
-      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
-      vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
-      const { getCurrentUserId } = await import('@/lib/auth/session')
-      vi.mocked(getCurrentUserId).mockResolvedValue(SAMPLE_PROFILE.profile.userId)
-
-      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
-      const result = await CuratorProfilePage({
-        params: Promise.resolve({ username: 'curator' }),
-      })
-      const html = renderToStaticMarkup(result as React.ReactElement)
-
-      expect(html).toContain('Manage channels')
+    it('your own profile: links to your channels', async () => {
+      const html = await render(SAMPLE_PROFILE.profile.userId)
+      expect(html).toContain('Your channels')
       expect(html).toContain('href="/channels"')
       expect(html).not.toContain('Make your own')
-      expect(html).not.toContain('Start saving')
-      expect(html).not.toContain('Save it. Lose it.')
     })
 
-    it("signed in, someone else's profile: neither CTA renders", async () => {
-      const { getPublicProfile: mocked } = await import('@/lib/users/profile')
-      vi.mocked(mocked).mockResolvedValue(SAMPLE_PROFILE)
-      const { getCurrentUserId } = await import('@/lib/auth/session')
-      vi.mocked(getCurrentUserId).mockResolvedValue('some-other-user')
-
-      const CuratorProfilePage = (await import('@/app/t/[username]/page')).default
-      const result = await CuratorProfilePage({
-        params: Promise.resolve({ username: 'curator' }),
-      })
-      const html = renderToStaticMarkup(result as React.ReactElement)
-
+    it("someone else's profile, signed in: neither", async () => {
+      const html = await render('some-other-user')
       expect(html).not.toContain('Make your own')
-      expect(html).not.toContain('Manage channels')
-      expect(html).not.toContain('Start saving')
-      expect(html).not.toContain('Save it. Lose it.')
+      expect(html).not.toContain('Your channels')
     })
   })
 })

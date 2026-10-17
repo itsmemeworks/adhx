@@ -18,11 +18,8 @@ export interface CoverTile {
   text: string
 }
 
-/** A channel's display name: its tag with spaces, first letter up ("dev-tools" → "Dev tools"). */
-export function channelTitle(tag: string): string {
-  const words = tag.replace(/-+/g, ' ').trim()
-  return words ? words.charAt(0).toUpperCase() + words.slice(1) : tag
-}
+import { channelTitle } from './title'
+export { channelTitle }
 
 export function tilesFromPosts(posts: FeedItem[]): CoverTile[] {
   return posts.map((p) => ({ img: postCoverSrc(p), text: postText(p) }))

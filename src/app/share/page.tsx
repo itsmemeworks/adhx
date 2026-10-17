@@ -4,7 +4,9 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { parseShareUrl, extractSharedUrl } from '@/lib/utils/parse-share-url'
 import { markPreviewOpenIntent } from '@/lib/theater/autosave-shared'
-import { PostLoader } from '@/components/PostLoader'
+import Link from 'next/link'
+import { AdhxLoader } from '@/components/next/loader'
+import { NxLogo } from '@/components/next/PrimaryNav'
 
 function ShareRedirect() {
   const searchParams = useSearchParams()
@@ -34,7 +36,7 @@ function ShareRedirect() {
     // TikTok short links resolve via an /api route that 307s to the preview;
     // the client router can't follow a cross-route redirect, so do a real
     // navigation. App routes use the client router (no full reload). Stamp
-    // share-intent so a signed-in viewer autosaves the lead; /trending
+    // share-intent so a signed-in viewer autosaves the lead; in-app
     // clicks never set this flag.
     markPreviewOpenIntent('share')
     if (parsed.path.startsWith('/api/')) {
@@ -44,42 +46,47 @@ function ShareRedirect() {
     }
   }, [searchParams, router])
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-paper px-4">
-        <div className="text-center max-w-md">
-          <h1 className="text-2xl font-bold text-ink mb-3">Not a supported link</h1>
-          <p className="text-ink-2 mb-6">
-            The shared URL doesn&apos;t look like a post we can preview. Try an X, Instagram, or
-            TikTok link like x.com/user/status/123.
-          </p>
-          <a
-            href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 text-white font-medium rounded-full bg-clay-grad shadow-glow transition-all hover:scale-105"
-          >
-            Go to ADHX
-          </a>
-        </div>
-      </div>
-    )
-  }
+  if (error) return <NotSupported />
+  return <Grabbing />
+}
 
+/** While the shared link is worked out (a moment, usually). */
+function Grabbing() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-paper">
-      <PostLoader variant="auto" size={64} caption="grabbing it…" />
+    <div className="flex min-h-dvh items-center justify-center bg-black font-nx-sans text-white">
+      <AdhxLoader label="Grabbing it…" />
+    </div>
+  )
+}
+
+function NotSupported() {
+  return (
+    <div className="flex min-h-dvh flex-col bg-black font-nx-sans text-white">
+      <header className="px-4 py-3 md:px-7 md:py-[18px]">
+        <NxLogo />
+      </header>
+      <main className="flex flex-1 flex-col items-center justify-center gap-5 px-6 pb-24 text-center">
+        <h1 className="m-0 font-nx-serif text-[40px] font-normal leading-none md:text-[52px]">
+          Not a supported link
+        </h1>
+        <p className="m-0 max-w-[460px] text-[15px] text-white/70">
+          That doesn’t look like a post we can play. Try an X, Instagram or TikTok link, like
+          x.com/someone/status/123.
+        </p>
+        <Link
+          href="/"
+          className="flex h-12 items-center rounded-full bg-nx-accent px-6 text-[15px] font-extrabold text-black"
+        >
+          Go to ADHX
+        </Link>
+      </main>
     </div>
   )
 }
 
 export default function SharePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-paper">
-          <PostLoader variant="auto" size={64} caption="grabbing it…" />
-        </div>
-      }
-    >
+    <Suspense fallback={<Grabbing />}>
       <ShareRedirect />
     </Suspense>
   )
