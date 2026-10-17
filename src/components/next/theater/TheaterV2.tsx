@@ -219,6 +219,11 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   const [fullscreen, setFullscreen] = useState(false)
   /** The caption over a video or photo is open in full. */
   const [captionOpen, setCaptionOpen] = useState(false)
+  /** How far through the article on stage (0–1); the bottom bar shows and moves it. */
+  const [articleProgress, setArticleProgress] = useState(0)
+  /** The post on stage is taller than the screen. */
+  const [longPost, setLongPost] = useState(false)
+  const articleSeek = useRef<((p: number) => void) | null>(null)
   const extendingRef = useRef(false)
   // Tune in (a live moment): its colour, who's watching, new saves arriving.
   const [momentHue, setMomentHue] = useState('#ffd23f')
@@ -340,6 +345,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   // ——— Moving through the queue ———
   const goTo = useCallback((i: number) => {
     setCaptionOpen(false)
+    setArticleProgress(0)
+    setLongPost(false)
     setEnded(false)
     setWaiting(false)
     setArrivals(0)
@@ -546,7 +553,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   }, [current, source, index, flash, videosOnly, replaceItems])
 
   // ——— Playback ———
-  const timed = !!current && !isVideo && kind !== 'article'
+  // A long post is read like an article: no timer, the bar shows how far down you are.
+  const timed = !!current && !isVideo && kind !== 'article' && !longPost
   const dwell = useDwell({
     active: timed && !ended && panel === null && !captionOpen,
     seconds: current ? dwellSeconds(current) : 6,
@@ -558,7 +566,10 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     },
   })
   const paused = isVideo ? !video.playing : timedPaused
-  const progress = isVideo ? video.progress : timed ? dwell.progress : 0
+  const reading =
+    !!current &&
+    ((kind === 'article' && hasFullArticle(current.post)) || (kind === 'post' && longPost))
+  const progress = isVideo ? video.progress : timed ? dwell.progress : reading ? articleProgress : 0
   const shownMuted = video.muted ?? muted
 
   const togglePlay = useCallback(() => {
@@ -572,7 +583,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     setMuted(nextMuted)
   }, [shownMuted])
 
-  const seekTo = (p: number) => (isVideo ? stage.seek(p) : dwell.seek(p))
+  const seekTo = (p: number) =>
+    isVideo ? stage.seek(p) : reading ? articleSeek.current?.(p) : dwell.seek(p)
 
   // Tap the picture to pause (the stage itself only ever starts a stopped clip).
   const playingRef = useRef(video.playing)
@@ -900,14 +912,25 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         {kind === 'post' && (
           // Room on the right so the rail never sits on the words.
           <div className="absolute inset-0 bg-nx-cream pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16">
-            <PostStage item={current.post} />
+            <PostStage
+              item={current.post}
+              onLong={setLongPost}
+              onScrollProgress={setArticleProgress}
+              seekRef={articleSeek}
+            />
           </div>
         )}
         {kind === 'article' &&
           (hasFullArticle(current.post) ? (
             // The whole article, right on the stage: scroll to read, Next or Skip to move on.
             <div className="absolute inset-0 bg-nx-ink pb-24 pr-[68px] pt-14 md:pb-20 md:pr-24 md:pt-16">
-              <ArticleReader item={current.post} inline onNext={() => void next()} />
+              <ArticleReader
+                item={current.post}
+                inline
+                onNext={() => void next()}
+                onProgress={setArticleProgress}
+                seekRef={articleSeek}
+              />
             </div>
           ) : (
             <div className="absolute inset-0 bg-nx-ink pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16">
@@ -1141,8 +1164,9 @@ export function TheaterV2({ source }: { source: PlaySource }) {
 
       <div
         className={cn(
-          'absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2.5 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-20 md:gap-3 md:px-7 md:pb-5',
-          overlay ? 'pointer-events-none' : 'nx-scrim',
+          // One bar in one place for every kind: the same fade, padding and buttons.
+          // Taps fall through to the stage except on the controls and caption.
+          'nx-scrim pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2.5 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-20 md:gap-3 md:px-7 md:pb-5',
         )}
       >
         {!overlay && (
@@ -1215,13 +1239,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             </span>
           </div>
         )}
-        <div
-          className={cn(
-            'pointer-events-auto flex flex-col gap-1',
-            // Same full-width bar for every kind; a plate keeps it readable over words.
-            overlay && 'nx-plate rounded-2xl px-3 py-2',
-          )}
-        >
+        <div className={cn('pointer-events-auto flex flex-col gap-1')}>
           <label htmlFor="nx-seek" className="sr-only">
             Seek
           </label>
@@ -1232,7 +1250,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
             max={1000}
             value={Math.round(progress * 1000)}
             onChange={(e) => seekTo(Number(e.target.value) / 1000)}
-            disabled={kind === 'article'}
+            disabled={kind === 'article' && !reading}
             className="nx-seek h-3.5 w-full cursor-pointer accent-nx-accent"
           />
           <div className="flex items-center gap-0.5 md:gap-1">
@@ -1289,7 +1307,9 @@ export function TheaterV2({ source }: { source: PlaySource }) {
                 ? `${clock(video.progress * video.duration)} / ${clock(video.duration)}`
                 : timed
                   ? `${clock(dwell.progress * dwellSeconds(current))} / ${clock(dwellSeconds(current))}`
-                  : ''}
+                  : reading
+                    ? `${Math.round(articleProgress * 100)}% read`
+                    : ''}
             </span>
             <span className="flex-1" />
             <ControlButton

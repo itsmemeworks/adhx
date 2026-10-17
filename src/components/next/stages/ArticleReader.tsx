@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { ArrowRight, X } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
 import { toBionicText } from '@/components/feed/text-rendering'
@@ -124,6 +124,8 @@ export function ArticleReader({
   onClose,
   onNext,
   inline = false,
+  onProgress,
+  seekRef,
 }: {
   item: FeedItem
   /** Overlay mode only: closes the reader (also on Escape). */
@@ -132,11 +134,26 @@ export function ArticleReader({
   onNext?: () => void
   /** Fill the parent (the theater's stage) instead of covering the screen. */
   inline?: boolean
+  /** How far through the article the reader is (0–1), as they scroll. */
+  onProgress?: (progress: number) => void
+  /** Filled with a function that scrolls to a point (0–1), for an outside progress bar. */
+  seekRef?: MutableRefObject<((progress: number) => void) | null>
 }) {
   const reading = useReadingSettings()
   const [markdown, setMarkdown] = useState<string | null | undefined>(undefined)
   const [progress, setProgress] = useState(0)
   const scroller = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!seekRef) return
+    seekRef.current = (p) => {
+      const el = scroller.current
+      if (el) el.scrollTop = p * Math.max(0, el.scrollHeight - el.clientHeight)
+    }
+    return () => {
+      seekRef.current = null
+    }
+  }, [seekRef])
   const author = postAuthor(item)
   const cover = postCoverSrc(item)
   const original = item.articlePreview?.url || item.tweetUrl
@@ -183,12 +200,14 @@ export function ArticleReader({
         inline ? 'relative h-full w-full' : 'absolute inset-0 z-40',
       )}
     >
-      <div aria-hidden className="h-1 shrink-0 bg-white/10">
-        <div
-          className="h-1 bg-nx-accent transition-[width]"
-          style={{ width: `${progress * 100}%` }}
-        />
-      </div>
+      {!inline && (
+        <div aria-hidden className="h-1 shrink-0 bg-white/10">
+          <div
+            className="h-1 bg-nx-accent transition-[width]"
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+      )}
       {onClose && (
         <button
           type="button"
@@ -204,9 +223,15 @@ export function ArticleReader({
         onScroll={(e) => {
           const el = e.currentTarget
           const max = el.scrollHeight - el.clientHeight
-          setProgress(max > 0 ? Math.min(1, el.scrollTop / max) : 1)
+          const p = max > 0 ? Math.min(1, el.scrollTop / max) : 1
+          setProgress(p)
+          onProgress?.(p)
         }}
-        className="min-h-0 flex-1 overflow-y-auto"
+        className={cn(
+          'min-h-0 flex-1 overflow-y-auto',
+          // In the theater the bottom bar shows progress; no second scrollbar.
+          inline && '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        )}
       >
         <article
           className={cn(

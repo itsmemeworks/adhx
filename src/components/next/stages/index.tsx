@@ -1,7 +1,7 @@
 'use client'
 
 import { LinkCard, RichText, postBody, useLinkCard, withoutCardUrl } from '../rich-text'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type MutableRefObject, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { usePreferencesOptional } from '@/lib/preferences-context'
 import { toBionicText } from '@/components/feed/text-rendering'
@@ -160,7 +160,51 @@ export function postStageTypeScale(length: number): string {
 }
 
 /** A text post: cream, full-bleed, big serif type. Progress is the dark dwell bar. */
-export function PostStage({ item, progress, children, className }: Omit<StageProps, 'media'>) {
+export function PostStage({
+  item,
+  progress,
+  children,
+  className,
+  onLong,
+  onScrollProgress,
+  seekRef,
+}: Omit<StageProps, 'media'> & {
+  /** Whether the words are taller than the stage (they're read, not glanced at). */
+  onLong?: (long: boolean) => void
+  /** How far down a long post the reader is (0–1). */
+  onScrollProgress?: (progress: number) => void
+  /** Filled with a function that scrolls to a point (0–1), for an outside progress bar. */
+  seekRef?: MutableRefObject<((progress: number) => void) | null>
+}) {
+  const scroller = useRef<HTMLDivElement>(null)
+  const longRef = useRef<boolean | null>(null)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    longRef.current = null // a new post: report afresh
+    const check = () => {
+      const long = el.scrollHeight > el.clientHeight + 4
+      if (long !== longRef.current) {
+        longRef.current = long
+        onLong?.(long)
+      }
+    }
+    check()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null
+    ro?.observe(el)
+    if (el.firstElementChild) ro?.observe(el.firstElementChild)
+    return () => ro?.disconnect()
+  }, [onLong, item.id])
+  useEffect(() => {
+    if (!seekRef) return
+    seekRef.current = (p) => {
+      const el = scroller.current
+      if (el) el.scrollTop = p * Math.max(0, el.scrollHeight - el.clientHeight)
+    }
+    return () => {
+      seekRef.current = null
+    }
+  }, [seekRef])
   const author = postAuthor(item)
   const body = postBody(item) || item.quoteContext?.text || ''
   const card = useLinkCard(item, body)
@@ -173,7 +217,16 @@ export function PostStage({ item, progress, children, className }: Omit<StagePro
   return (
     <StageFrame item={item} className={cn('bg-nx-cream text-nx-ink', className)}>
       {/* Scroll box + min-h-full column: centres short posts without clipping the top of long ones. */}
-      <div className="h-full w-full overflow-y-auto">
+      <div
+        ref={scroller}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          const max = el.scrollHeight - el.clientHeight
+          onScrollProgress?.(max > 0 ? Math.min(1, el.scrollTop / max) : 1)
+        }}
+        // Long posts scroll; the theater's bottom bar shows how far, so no scrollbar here.
+        className="h-full w-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <div className="mx-auto flex min-h-full w-full max-w-[880px] flex-col justify-center gap-[18px] px-6 py-9 sm:px-11">
           <span className="flex items-center gap-2.5">
             <NxAvatar author={author} size={38} />
