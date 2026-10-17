@@ -2,13 +2,14 @@ import { redirect } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getTheaterFeed } from '@/lib/theater/feed'
 import { TheaterStaticList } from '@/components/theater/TheaterStaticList'
-import { TheaterShell } from '@/components/theater/TheaterShell'
+import { PublicHome } from '@/components/next/moments/PublicHome'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { savedToPlay } from '@/lib/next-ui/routes'
 
 /**
- * `/` — signed-out public live theater + crawlable static list.
+ * `/` — signed out: what ADHX is, a way in, and Right now live underneath,
+ * plus the crawlable static list of what's being saved.
  *
  * Signed in, this is Right now (`/now`), or the theater on a just-added
  * post when there is one (`?added=success|duplicate&id=`).
@@ -41,7 +42,7 @@ export default async function HomePage({
   return (
     <>
       <TheaterStaticList items={seed.items} savedToday={seed.savedToday} />
-      <TheaterShell seed={seed} />
+      <PublicHome />
     </>
   )
 }

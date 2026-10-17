@@ -1,5 +1,11 @@
 import { expect } from '@playwright/test'
-import { authedTest, caption, expectTheaterReady, pasteTheaterLink } from './helpers'
+import {
+  authedTest,
+  caption,
+  expectPreviewReady,
+  expectTheaterReady,
+  pasteTheaterLink,
+} from './helpers'
 
 const reelUrl = 'https://www.instagram.com/reel/Dc5ATuiiS0V/?igsi=dm9jdTR5cTN0dDg4'
 
@@ -32,7 +38,7 @@ for (const mobile of [false, true]) {
           await pasteTheaterLink(page, reelUrl)
         }
         await expect(page).toHaveURL(/\/reels\/Dc5ATuiiS0V$/)
-        await expectTheaterReady(page)
+        await expectPreviewReady(page)
         await expect(caption(page, 'E2E reel Dc5ATuiiS0V')).toBeVisible()
       },
     )

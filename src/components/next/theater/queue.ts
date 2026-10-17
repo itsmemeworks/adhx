@@ -43,6 +43,11 @@ export interface PlaySource {
   moment: string | null
   /** `platform:id` of the post to start on. */
   start: string | null
+  /**
+   * A shared post's own page (`/{user}/status/{id}` and friends): the post
+   * plays first, then posts like it from everyone's saves.
+   */
+  shared?: boolean
 }
 
 const SIGNALS: readonly MatchSignal[] = ['words', 'picture', 'video', 'keywords']
@@ -89,6 +94,7 @@ export function queueUrl(source: PlaySource, searchUrl: () => string): string {
 
 /** Where "back" goes: the channel's page, your channels, or the search. */
 export function backHref(source: PlaySource): string {
+  if (source.shared) return '/now'
   if (source.channel) return `/t/${source.channel.username}/${source.channel.tag}`
   if (source.auto) return '/channels'
   if (source.moment) return `/moments/${source.moment}`
@@ -236,8 +242,9 @@ const KIND_NOUN: Record<QueueVia['kind'], string> = {
 }
 
 /** Why an added post is playing, in a few words. */
-export function viaReason(via: QueueVia, source: 'search' | 'channel' | 'saves'): string {
+export function viaReason(via: QueueVia, source: 'search' | 'channel' | 'saves' | 'post'): string {
   if (via.reason === 'more') return 'You asked for more like this'
+  if (source === 'post') return 'Posts like the one you opened, from everyone’s saves'
   if (source === 'channel') return 'The channel finished, so similar posts play next'
   if (source === 'saves') return 'Your saves finished, so similar posts play next'
   return 'Your search finished, so similar posts play next'

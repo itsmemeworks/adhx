@@ -64,7 +64,7 @@ export function Sheet({
         className={cn(
           'fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col gap-3 overflow-y-auto rounded-t-[22px] bg-[#1c1b19]/[0.98] p-4 pb-[max(16px,env(safe-area-inset-bottom))] text-white shadow-[0_-10px_40px_rgba(0,0,0,0.5)] outline-none',
           side === 'right'
-            ? 'md:inset-y-4 md:left-auto md:right-24 md:max-h-none md:w-[360px] md:rounded-[20px]'
+            ? 'md:bottom-4 md:left-auto md:right-24 md:top-24 md:max-h-none md:w-[360px] md:rounded-[20px]'
             : 'md:inset-x-auto md:bottom-auto md:right-24 md:top-1/2 md:w-[280px] md:-translate-y-1/3 md:rounded-[14px] md:p-1.5',
         )}
       >

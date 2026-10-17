@@ -1,26 +1,14 @@
 import { test, expect } from '@playwright/test'
 import { E2E_USERNAME, ONE_ITEM_TAG, PLAYLIST_TAG, POST, PRIVATE_TAG } from './constants'
-import { expectSignInModal, expectTheaterReady } from './helpers'
+import { expectPreviewReady } from './helpers'
 
 test.describe('signed out', () => {
-  test('/saved and /library bounce to the public theater', async ({ page }) => {
-    // Signed-out `/` is the Live theater, which replaceStates the address bar
-    // to the current post. Assert the bounce (not still on the authed route)
-    // and that the theater mounted — not that the URL stays `/`.
-    await page.goto('/saved')
-    await expectTheaterReady(page)
-    await expect(page).not.toHaveURL(/\/saved/)
-    await expect(page).not.toHaveURL(/\/library/)
-
-    await page.goto('/collection')
-    await expectTheaterReady(page)
-    await expect(page).not.toHaveURL(/\/collection/)
-    await expect(page).not.toHaveURL(/\/saved/)
-
-    await page.goto('/library')
-    await expectTheaterReady(page)
-    await expect(page).not.toHaveURL(/\/library/)
-    await expect(page).not.toHaveURL(/\/saved/)
+  test('/saved and /library land on the home, with a way in', async ({ page }) => {
+    for (const path of ['/saved', '/collection', '/library']) {
+      await page.goto(path)
+      await expect(page).toHaveURL(/\/$/)
+      await expect(page.getByRole('link', { name: 'Start saving' })).toBeVisible()
+    }
   })
 
   test('public channel is watchable; private channel stays locked', async ({ page }) => {
@@ -42,12 +30,13 @@ test.describe('signed out', () => {
     )
   })
 
-  test('preview Save opens sign-in', async ({ page }) => {
-    await page.goto(`/${POST.preview.author}/status/${POST.preview.id}`)
-    await expectTheaterReady(page)
-    await expect(page.getByRole('button', { name: 'Saved', exact: true })).toHaveCount(0)
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expectSignInModal(page)
+  test('Save on a shared post signs you in, then saves that post', async ({ page }) => {
+    const path = `/${POST.preview.author}/status/${POST.preview.id}`
+    await page.goto(path)
+    await expectPreviewReady(page)
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page).toHaveURL(/\/start\?/)
+    expect(new URL(page.url()).searchParams.get('returnTo')).toBe(`${path}?save=1`)
   })
 
   test('X OAuth is a Settings link, not a sign-in', async ({ page }) => {
@@ -56,6 +45,9 @@ test.describe('signed out', () => {
     expect(res.status()).toBeLessThan(400)
     expect(res.headers()['location'] ?? '').toMatch(/auth_error=x_link_only/)
     await page.goto('/?auth_error=x_link_only')
-    await expectTheaterReady(page)
+    await expect(
+      page.getByText('Sign in with your email first, then connect X in Settings.'),
+    ).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Start saving' })).toBeVisible()
   })
 })

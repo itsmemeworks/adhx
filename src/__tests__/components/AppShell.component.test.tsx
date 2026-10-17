@@ -105,7 +105,21 @@ describe('AppShell theater surfaces', () => {
     vi.useRealTimers()
   })
 
-  it.each(['/', '/live', '/saved', '/collection', '/t/you/cats', '/alice/status/123'])(
+  it.each(['/', '/t/you/cats', '/alice/status/123', '/reels/DaigXfxAkrE'])(
+    'draws the new-design page %s without the old Header or install banner',
+    (path) => {
+      mockPathname = path
+      render(
+        <AppShell serverAccountId="account-a">
+          <div>stage</div>
+        </AppShell>,
+      )
+      expect(screen.queryByTestId('app-header')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('pwa-banner')).not.toBeInTheDocument()
+    },
+  )
+
+  it.each(['/live', '/saved', '/collection'])(
     'hides Header on %s but still mounts the install banner',
     (path) => {
       mockPathname = path

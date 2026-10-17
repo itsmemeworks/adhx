@@ -149,6 +149,9 @@ function emptyState(
   }
 }
 
+/** `CustomEvent<{ key }>`: a post (by `resultKey`) was saved outside the theater. */
+export const NX_POST_SAVED = 'nx-post-saved'
+
 async function fetchQueue(url: string, signal?: AbortSignal): Promise<QueueResponse> {
   const response = await fetch(url, { signal, credentials: 'same-origin' })
   if (!response.ok) throw new Error(`queue ${response.status}`)
@@ -236,7 +239,14 @@ function ControlButton({
  * group of them) as a queue, full-bleed, with the approved rail, transport
  * and sheets. Media playback is the current theater's `Stage`, unchanged.
  */
-export function TheaterV2({ source }: { source: PlaySource }) {
+export function TheaterV2({
+  source,
+  lead,
+}: {
+  source: PlaySource
+  /** A shared post's page: the post itself, already resolved (plays first). */
+  lead?: SearchResultItem
+}) {
   const router = useRouter()
   const rootRef = useRef<HTMLDivElement>(null)
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -252,7 +262,8 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     ready: !preferenceContext || !preferenceContext.loading,
   })
   const [volume, setVolume] = useState(1)
-  const [repeat, setRepeat] = useState<RepeatMode>('off')
+  // A shared post loops until you move on, like the old preview pages.
+  const [repeat, setRepeat] = useState<RepeatMode>(source.shared ? 'one' : 'off')
   const [videosOnly, setVideosOnly] = useState(source.search.type === 'videos')
   const [stick, setStick] = useState(true)
   const [timedPaused, setTimedPaused] = useState(false)
@@ -285,6 +296,16 @@ export function TheaterV2({ source }: { source: PlaySource }) {
 
   // ——— Load the queue from the search this session came from ———
   useEffect(() => {
+    if (source.shared) {
+      // The page resolved the post already; posts like it follow (Stick to this vibe).
+      if (lead) {
+        setItems([lead])
+        setIndex(0)
+        setTitle('Right now')
+        setLoad({ status: 'ready' })
+      }
+      return
+    }
     const controller = new AbortController()
     setLoad({ status: 'loading' })
     fetchQueue(
@@ -351,7 +372,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         setLoad({ status: 'error', missing: e instanceof Error && e.message === 'queue 404' })
       })
     return () => controller.abort()
-  }, [source])
+  }, [source, lead])
 
   const current = items[index] ?? null
   const currentKey = current ? resultKey(current) : ''
@@ -360,7 +381,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   kindRef.current = kind
   const isVideo = !!current && isVideoItem(current)
   const theaterItem = useMemo(
-    () => (current ? feedItemToTheaterItem(current.post) : null),
+    () => (current ? (current.stage ?? feedItemToTheaterItem(current.post)) : null),
     [current],
   )
   const video = useVideoState(currentKey)
@@ -373,13 +394,15 @@ export function TheaterV2({ source }: { source: PlaySource }) {
   }, [])
 
   /** What this session plays, in words: “goat”, a channel's name, "your saves". */
-  const sourceName = source.recent
-    ? 'your saves'
-    : title
-      ? title
-      : source.search.q.trim()
-        ? `“${source.search.q.trim()}”`
-        : 'this search'
+  const sourceName = source.shared
+    ? 'this post'
+    : source.recent
+      ? 'your saves'
+      : title
+        ? title
+        : source.search.q.trim()
+          ? `“${source.search.q.trim()}”`
+          : 'this search'
   const position = queuePosition(items, index)
 
   // Saved posts coming up get understood first.
@@ -528,7 +551,12 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     const after = extended ? nextIndex(extended, index, { repeat: 'off', videosOnly }) : null
     if (after !== null) {
       // Say so: otherwise "4 of 4" quietly becomes "5 of 24".
-      flash(`That’s everything from ${sourceName}. Now: more like the last one`, 5000)
+      flash(
+        source.shared
+          ? 'Now: more like this, from everyone’s saves'
+          : `That’s everything from ${sourceName}. Now: more like the last one`,
+        5000,
+      )
       return goTo(after)
     }
     setEnded(true)
@@ -544,6 +572,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     flash,
     sourceName,
     source.moment,
+    source.shared,
     wander,
     addWander,
   ])
@@ -646,6 +675,24 @@ export function TheaterV2({ source }: { source: PlaySource }) {
     else if (timed) setTimedPaused((p) => !p)
   })
 
+  // Leaving a shared post's loop: what follows plays through.
+  const leadReleased = useRef(false)
+  useEffect(() => {
+    if (!source.shared || leadReleased.current || index === 0) return
+    leadReleased.current = true
+    setRepeat((r) => (r === 'one' ? 'off' : r))
+  }, [source.shared, index])
+
+  // Saved outside the theater (a shared page saves its post on open).
+  useEffect(() => {
+    const onSaved = (e: Event) => {
+      const key = (e as CustomEvent<{ key?: string }>).detail?.key
+      if (key) setSavedNow((s) => new Set(s).add(key))
+    }
+    window.addEventListener(NX_POST_SAVED, onSaved)
+    return () => window.removeEventListener(NX_POST_SAVED, onSaved)
+  }, [])
+
   // Tuning in explains itself for 8 seconds, then folds into the small chip.
   const [tuneIntro, setTuneIntro] = useState(true)
   useEffect(() => {
@@ -697,10 +744,15 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         body: JSON.stringify({ url }),
       })
       if (res.status === 401) {
-        // Signed out: sign in, then come back to this exact spot.
-        window.location.assign(
-          `/start?${new URLSearchParams({ returnTo: `${window.location.pathname}${window.location.search}` })}`,
-        )
+        // Signed out: sign in, then land on this post's own page, which
+        // saves it (`?save=1`), whichever queue it was playing in.
+        const returnTo = `${previewPath(
+          current.post.platform ?? 'twitter',
+          current.post.author,
+          current.post.id,
+          kind === 'photo' ? 'photo' : null,
+        )}?save=1`
+        window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
         return false
       }
       const data = (await res.json().catch(() => null)) as { error?: string } | null
@@ -922,13 +974,15 @@ export function TheaterV2({ source }: { source: PlaySource }) {
 
   // ——— Render ———
   const back = backHref(source)
-  const navHere = source.moment
-    ? 'now'
-    : source.channel || source.auto
-      ? 'channels'
-      : source.recent
-        ? 'saves'
-        : 'search'
+  const navHere = source.shared
+    ? null
+    : source.moment
+      ? 'now'
+      : source.channel || source.auto
+        ? 'channels'
+        : source.recent
+          ? 'saves'
+          : 'search'
   if (load.status !== 'ready' || !current) {
     const empty = emptyState(source, load)
     return (
@@ -1058,7 +1112,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
               '[&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none md:right-auto md:flex-nowrap md:items-stretch md:gap-0 md:divide-x md:divide-white/15 md:overflow-hidden md:rounded-[20px] md:bg-[#1c1b19] md:[&>*]:!rounded-none md:[&>*]:!bg-transparent md:[&>*]:!text-white',
           )}
         >
-          {!source.recent && (
+          {!source.recent && !source.shared && (
             <Link
               href={back}
               className="nx-plate pointer-events-auto hidden h-9 min-w-0 max-w-[320px] items-center gap-1.5 rounded-full pl-2 pr-4 text-[13px] font-bold md:flex"
@@ -1163,7 +1217,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
                 <span className="truncate text-xs text-white/65">
-                  {`${viaReason(position.via, source.channel || source.auto ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
+                  {`${viaReason(position.via, source.shared ? 'post' : source.channel || source.auto ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
                 </span>
               </span>
             </div>
@@ -1605,7 +1659,7 @@ export function TheaterV2({ source }: { source: PlaySource }) {
         />
         <PasteButton onClick={paste.pasteFromClipboard} className="pointer-events-auto" />
         <HeaderSearch shortcut className="pointer-events-auto" />
-        <AccountMenu className="pointer-events-auto hidden md:block" />
+        <AccountMenu className="pointer-events-auto" avatarOnPhones={false} />
         <ControlButton
           label={shownMuted ? 'Unmute' : 'Mute'}
           onClick={toggleMute}

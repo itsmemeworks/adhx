@@ -11,7 +11,7 @@ vi.mock('@/lib/theater/feed', () => ({
 vi.mock('@/lib/sentry', () => ({ metrics: { theaterOpened: vi.fn() } }))
 vi.mock('@/lib/analytics/record', () => ({ recordAnalytic: vi.fn() }))
 vi.mock('@/components/theater/TheaterStaticList', () => ({ TheaterStaticList: () => null }))
-vi.mock('@/components/theater/TheaterShell', () => ({ TheaterShell: () => null }))
+vi.mock('@/components/next/moments/PublicHome', () => ({ PublicHome: () => null }))
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((path: string) => {
     throw new Error(`REDIRECT:${path}`)

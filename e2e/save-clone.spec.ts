@@ -4,7 +4,7 @@ import {
   apiDeleteBookmark,
   apiDeleteTag,
   authedTest,
-  expectTheaterReady,
+  expectPreviewReady,
   feedHasId,
 } from './helpers'
 
@@ -24,10 +24,9 @@ authedTest.describe('save and clone', () => {
   authedTest('signed-in landing on a preview writes the bookmark', async ({ page }) => {
     expect(await feedHasId(page, POST.preview.id)).toBe(false)
     await page.goto(`/${POST.preview.author}/status/${POST.preview.id}`)
-    await expectTheaterReady(page)
-    // The authoritative contract is the bookmark write. Shared resolution,
-    // autosave, and the 10-second stage timer are independent, so transient
-    // Save/Tag chrome may already belong to the next staged post.
+    await expectPreviewReady(page)
+    // The authoritative contract is the bookmark write.
     await expect.poll(() => feedHasId(page, POST.preview.id), { timeout: 30_000 }).toBe(true)
+    await expect(page.getByRole('button', { name: 'Saved. Add to a channel' })).toBeVisible()
   })
 })

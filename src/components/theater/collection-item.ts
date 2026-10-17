@@ -164,3 +164,89 @@ export function theaterItemsFromFeed(items: FeedItem[]): TheaterQueue {
   })
   return { theaterItems, byKey }
 }
+
+/**
+ * The other way: a shared preview's post (built from the source, maybe never
+ * saved) as a `FeedItem`, so the new theater can show it with its word,
+ * article and link-card stages and tell what kind of post it is. Media still
+ * plays from the original `TheaterItem` (`SearchResultItem.stage`), which keeps
+ * album counts and posters this shape can't.
+ */
+export function theaterItemToFeedItem(item: TheaterItem): FeedItem {
+  const platform = (item.platform ?? 'twitter') as FeedItem['platform']
+  const id = item.bookmarkId || item.url
+  const type = item.contentType
+  const thumb = item.thumbnailUrl ?? ''
+  const media: FeedItem['media'] = []
+  if (type === 'video') {
+    const posters = item.videoPosters?.length ? item.videoPosters : [thumb]
+    posters.slice(0, Math.max(1, item.videoCount ?? 1)).forEach((poster, i) =>
+      media.push({
+        id: `${id}-v${i}`,
+        mediaType: 'video',
+        url:
+          platform === 'twitter'
+            ? `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(id)}`
+            : '',
+        thumbnailUrl: poster || thumb,
+        shareUrl: '',
+      }),
+    )
+  } else if (type === 'photo') {
+    for (let i = 0; i < Math.max(1, item.photoCount ?? 1); i++) {
+      media.push({
+        id: `${id}-p${i}`,
+        mediaType: 'photo',
+        url: thumb,
+        thumbnailUrl: thumb,
+        shareUrl: '',
+      })
+    }
+  }
+  const xArticle = type === 'article' && !item.linkPreview
+  const quote = item.quote
+  return {
+    id,
+    platform,
+    author: item.author,
+    authorName: item.authorName ?? null,
+    authorProfileImageUrl: item.authorAvatarUrl ?? null,
+    text: item.text ?? '',
+    tweetUrl: item.url,
+    createdAt: item.createdAt,
+    processedAt: item.addedAt || item.createdAt,
+    category: type ?? null,
+    isArchived: false,
+    isXArticle: xArticle || undefined,
+    media: media.length ? media : null,
+    links:
+      item.textLinks?.map((link, i) => ({
+        id: i,
+        bookmarkId: id,
+        originalUrl: link.shortUrl,
+        expandedUrl: link.expandedUrl,
+        linkType: link.linkType ?? null,
+      })) ?? null,
+    articlePreview: item.linkPreview
+      ? { ...item.linkPreview }
+      : xArticle
+        ? {
+            title: item.text ?? null,
+            // Saved X articles link here; the theater reads the whole article inline.
+            url: platform === 'twitter' ? `https://x.com/${item.author}/article/${id}` : item.url,
+            imageUrl: thumb || null,
+          }
+        : null,
+    isQuote: !!quote,
+    quoteContext: quote
+      ? {
+          tweetId: quote.bookmarkId ?? '',
+          author: quote.author,
+          authorName: quote.authorName ?? undefined,
+          authorProfileImageUrl: quote.authorAvatarUrl ?? undefined,
+          text: quote.text ?? '',
+        }
+      : null,
+    tags: [],
+  }
+}

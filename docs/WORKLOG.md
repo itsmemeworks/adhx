@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-17 — Signed-out home and shared post pages in the new design
+
+Signed-out `/` is `PublicHome`: hero ("Save it. Lose it. Find it."), paste-a-link-to-watch (no account needed), Start saving, Right now live underneath; the sr-only static list stays for crawlers; `?auth_error=x_link_only` shows a hint. Post previews (`/{user}/status/{id}`, `/reels/{id}`, `/reel/{id}`, `/p/{id}`, `/@{user}/video/{id}`) render `PreviewTheater` → `TheaterV2` (`source.shared`, `lead`) instead of `TheaterShell`; server side unchanged (metadata, streamed resolve, JSON-LD, pulse). The post loops until you move on, then everyone's similar posts follow (`/api/search/similar` now answers `scope=everyone` signed out). Auto-save rules kept; signed-out Save anywhere returns to that post's page with `?save=1`. Unavailable posts offer the original. New `theaterItemToFeedItem`; `SearchResultItem.stage` keeps the exact media item. Desktop theater sheets start below the header bar.
+e2e: rewritten for the new pages (previews, signed-out, public-pages, save-clone, preview-repeat, theater-sound, paste-save-failure); removed specs for the old public Live theater and old preview chrome (desktop-filter-layout, launch-ux, live-queue-filter, mobile, queue-count, theater-read, theater-shortcuts, theater-tap-declutter). Not carried over: Read/Watch for a quoted video, the shortcuts help, tap-to-declutter.
+Still old-look: `/live`, `/trending` (+archive), `/leaderboard`, `/{user}`, `/t/{user}`, `/admin`, `/privacy`, `/share`'s error page — owner to decide redesign or remove. State: local, not pushed.
+
 ## 2026-10-17 — Full two-browser pass: live data, journeys, edge cases
 
 Second browser driven by a Playwright script signing in other local accounts. Live data verified both ways in ~2-3s: Right now counters, strip, card people +1, watching 1→2, Tune in auto-plays the next save when caught up. Fixed:

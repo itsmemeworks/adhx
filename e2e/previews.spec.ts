@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { PREVIEW_IG, PREVIEW_IG_PHOTO, PREVIEW_TT } from './constants'
-import { caption, expectTheaterReady } from './helpers'
+import { caption, expectPreviewReady } from './helpers'
 
 test.describe('preview pages for every platform', () => {
   test('Instagram reel preview mounts the theater', async ({ page }) => {
     test.setTimeout(90_000)
     await page.goto(`/reels/${PREVIEW_IG.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(caption(page, PREVIEW_IG.text)).toBeVisible()
   })
 
@@ -21,7 +21,7 @@ test.describe('preview pages for every platform', () => {
     )
 
     await page.goto(`/p/${PREVIEW_IG_PHOTO.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(caption(page, PREVIEW_IG_PHOTO.text)).toBeVisible()
 
     const slides = page
@@ -42,7 +42,7 @@ test.describe('preview pages for every platform', () => {
   test('TikTok preview mounts the theater', async ({ page }) => {
     test.setTimeout(90_000)
     await page.goto(`/@${PREVIEW_TT.author}/video/${PREVIEW_TT.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(caption(page, PREVIEW_TT.text)).toBeVisible()
   })
 })
@@ -66,7 +66,7 @@ for (const mobile of [false, true]) {
       }),
     )
     await page.goto(`/reels/${PREVIEW_IG.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     const slides = page.getByRole('region', { name: 'Photos, 2' }).locator('img')
     await expect(slides).toHaveCount(2)
     await expect(slides.first()).toBeVisible()
@@ -89,7 +89,7 @@ for (const mobile of [false, true]) {
       route.fulfill({ contentType: 'text/html', body: 'Post unavailable' }),
     )
     await page.goto(`/reels/${PREVIEW_IG.id}`)
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(
       page.getByText('We couldn’t load this video. Try the original post on Instagram.'),
     ).toBeVisible()

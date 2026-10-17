@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { E2E_USERNAME, PLAYLIST_TAG, POST } from './constants'
-import { expectTheaterReady } from './helpers'
+import { expectPreviewReady } from './helpers'
 
 test.describe('public pages', () => {
   test('/api/health reports healthy', async ({ request }) => {
@@ -16,7 +16,7 @@ test.describe('public pages', () => {
     await expect(page.getByText(POST.preview.text).first()).toBeVisible()
     await page.locator(`a[href="/${POST.preview.author}/status/${POST.preview.id}"]`).last().click()
     await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`))
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
   })
 
   test('/leaderboard ranks the public playlist', async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe('public pages', () => {
   test('/share maps an X URL onto the preview theater', async ({ page }) => {
     await page.goto(`/share?url=https://x.com/${POST.preview.author}/status/${POST.preview.id}`)
     await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`))
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
   })
 
   test('/share rejects an unsupported link', async ({ page }) => {
@@ -46,15 +46,20 @@ test.describe('public pages', () => {
     await expect(page.getByRole('heading', { name: 'Not a supported link' })).toBeVisible()
   })
 
-  test('paste-to-preview on Live opens the shared post', async ({ page }) => {
+  test('the signed-out home: paste a link to watch it, and Right now underneath', async ({
+    page,
+  }) => {
     await page.goto('/')
-    await expectTheaterReady(page)
-    await page.getByRole('button', { name: 'Paste link' }).click()
-    const input = page.getByLabel('Paste a link to preview')
+    await expect(page.locator('#nx-home-title')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+    const input = page.getByLabel('Paste a link to watch it')
+    await input.fill('https://example.com/not-a-post')
+    await input.press('Enter')
+    await expect(page.getByText('That isn’t a post link we can play yet.')).toBeVisible()
     await input.fill(`https://x.com/${POST.alpha.author}/status/${POST.alpha.id}`)
     await input.press('Enter')
     await expect(page).toHaveURL(new RegExp(`/${POST.alpha.author}/status/${POST.alpha.id}`))
-    await expectTheaterReady(page)
+    await expectPreviewReady(page)
     await expect(page.getByText(POST.alpha.text).first()).toBeVisible()
   })
 })

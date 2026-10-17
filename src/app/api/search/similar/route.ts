@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/api/with-auth'
+import { getCurrentUserId } from '@/lib/auth/session'
 import { handleRouteError } from '@/lib/api/response'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, publicReadRateLimit } from '@/lib/rate-limit'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { similarPosts, type SearchScope, type SearchType } from '@/lib/semantic/search'
 
@@ -20,8 +20,13 @@ function noStore(response: NextResponse): NextResponse {
  * GET /api/search/similar?platform=&id=&scope=&type=&limit= — posts like
  * this one, for the theater's "More like this" and "Stick to this vibe".
  * Same response shape and the same scope rules as `/api/search`.
+ *
+ * Signed out (a shared post's preview keeps going with posts like it):
+ * everyone's saves only, anonymised like public moments and channels, and
+ * rate-limited per address.
  */
-export const GET = withAuth(async (request: NextRequest, userId) => {
+export async function GET(request: NextRequest) {
+  const userId = await getCurrentUserId()
   const params = request.nextUrl.searchParams
   const platform = params.get('platform') ?? 'twitter'
   const postId = params.get('id') ?? ''
@@ -37,7 +42,16 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   }
   const limit = Math.min(60, Math.max(1, Number.parseInt(params.get('limit') ?? '30', 10) || 30))
 
-  const limited = checkRateLimit(`search-similar:${userId}`, LIMIT)
+  if (!userId) {
+    if (scope !== 'everyone') {
+      return noStore(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+    }
+    const blocked = publicReadRateLimit(request)
+    if (blocked) return noStore(blocked)
+  }
+  const limited = userId
+    ? checkRateLimit(`search-similar:${userId}`, LIMIT)
+    : { limited: false, resetMs: 0 }
   if (limited.limited) {
     return noStore(
       NextResponse.json(
@@ -48,8 +62,15 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
   }
 
   try {
-    const result = await similarPosts({ platform, postId, scope, type, userId, limit })
-    const items = await loadSearchItems(result.hits, userId)
+    const result = await similarPosts({
+      platform,
+      postId,
+      scope,
+      type,
+      userId: userId ?? '',
+      limit,
+    })
+    const items = await loadSearchItems(result.hits, userId ?? '')
     return noStore(
       NextResponse.json({
         items,
@@ -64,9 +85,9 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     return noStore(
       handleRouteError(error, {
         endpoint: '/api/search/similar',
-        userId,
+        userId: userId ?? undefined,
         message: 'Similar search failed',
       }),
     )
   }
-})
+}

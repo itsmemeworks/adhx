@@ -81,6 +81,16 @@ export async function pauseTheater(page: Page): Promise<void> {
 }
 
 /** Caption text is also in the dock / SEO list — never assert it as a singleton. */
+/** The new theater (search, channels, Tune in, shared posts) is up: its post rail shows. */
+export async function expectPreviewReady(page: Page): Promise<void> {
+  await expect(page.locator('[data-app-account-scope="trusted"]')).toHaveCount(1, {
+    timeout: 30_000,
+  })
+  await expect(page.getByRole('navigation', { name: 'Post actions' })).toBeVisible({
+    timeout: 30_000,
+  })
+}
+
 export function caption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).first()
 }

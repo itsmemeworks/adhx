@@ -20,7 +20,14 @@ export const SYNC_HREF = '/settings?sync=1'
  * Your avatar in the header, opening Sync X bookmarks, Settings and Sign out.
  * Signed out, a Sign in button instead.
  */
-export function AccountMenu({ className }: { className?: string }) {
+export function AccountMenu({
+  className,
+  avatarOnPhones = true,
+}: {
+  className?: string
+  /** False where phones have no room for the avatar (the theater); Sign in still shows. */
+  avatarOnPhones?: boolean
+}) {
   const [me, setMe] = useState<Me | null>(null)
   const [signedOut, setSignedOut] = useState(false)
   const [open, setOpen] = useState(false)
@@ -86,7 +93,10 @@ export function AccountMenu({ className }: { className?: string }) {
   const handle = me.username ?? 'you'
 
   return (
-    <div ref={root} className={cn('relative shrink-0', className)}>
+    <div
+      ref={root}
+      className={cn('relative shrink-0', !avatarOnPhones && 'hidden md:block', className)}
+    >
       <button
         type="button"
         aria-label="Your account"

@@ -323,7 +323,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       expect(result).not.toBeNull()
     })
 
-    it('renders the tombstone theater without starting upstream resolution when moderation is unavailable', async () => {
+    it('renders the removed-post page without starting upstream resolution when moderation is unavailable', async () => {
       const { fetchTweetData } = await import('@/lib/media/fxembed')
       moderationMocks.readPostModeration.mockReturnValueOnce({
         ok: false,
@@ -337,7 +337,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const element = result as React.ReactElement<any>
 
-      expect(element.props.sharedUnavailable).toBe(true)
+      expect(element.props.unavailable).toBe(true)
       expect(element.props.sharedResolve).toBeUndefined()
       expect(fetchTweetData).not.toHaveBeenCalled()
     })

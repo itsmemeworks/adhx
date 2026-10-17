@@ -154,6 +154,10 @@ export function AppShell({
   // The next_ui search and theater put their own controls at the top edge.
   // Settings has its own phone install card.
   const hideInstallBanner =
+    // New-design pages put their own controls along the top edge.
+    pathname === '/' ||
+    isPreviewPage ||
+    pathname.startsWith('/t/') ||
     pathname === '/welcome' ||
     pathname === '/search' ||
     pathname === '/play' ||

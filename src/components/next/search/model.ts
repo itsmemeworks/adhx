@@ -3,6 +3,7 @@
  * the client sees it, URL state, grouping and plain-language wording. No
  * React, so they are unit-testable.
  */
+import type { TheaterItem } from '@/components/theater/types'
 import type { FeedItem } from '@/components/feed/types'
 import { previewPath } from '@/lib/activity/preview-path'
 import { collectionPath } from '@/lib/theater/collection-href'
@@ -36,6 +37,12 @@ export interface SearchResultItem {
   savedAt?: string
   /** Tune in: added by "Wander" (near the moment, not in it). */
   wander?: boolean
+  /**
+   * The exact post for the media stage, when it came from the source rather
+   * than a save (a shared preview): album counts and posters a `FeedItem`
+   * round trip would lose.
+   */
+  stage?: TheaterItem
 }
 
 /** The post a queued item was found from ("More like this", "Stick to this vibe"). */
