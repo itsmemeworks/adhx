@@ -81,10 +81,10 @@ export function ChannelsScreen() {
       const res = await fetch(`/api/channels/auto/${encodeURIComponent(channel.slug)}/keep`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPublic: true }),
+        body: JSON.stringify({ isPublic: false }),
       })
       if (!res.ok) throw new Error('keep')
-      flash(`“${channel.name}” is now one of your channels, and it’s public`)
+      flash(`“${channel.name}” is one of your channels now. It’s private until you share it.`)
       load()
     } catch {
       flash('Couldn’t keep that channel. Try again.')

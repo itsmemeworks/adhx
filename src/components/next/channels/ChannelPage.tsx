@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Bookmark, Link2, Play } from 'lucide-react'
+import { Bookmark, Globe, Link2, Lock, Play } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { FeedItem } from '@/components/feed/types'
 import { postCoverSrc } from '../post'
 import { resultKey, type SearchResultItem } from '../search/model'
@@ -33,6 +34,10 @@ export function ChannelPage({
   const [items, setItems] = useState<SearchResultItem[] | null>(null)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
+  // From the posts API (the page's own count is 0 for a private channel).
+  const [isPublic, setIsPublic] = useState<boolean | null>(null)
+  const [total, setTotal] = useState(count)
+  const [visibility, setVisibility] = useState<'idle' | 'saving' | 'error'>('idle')
   const path = `/t/${username}/${tag}`
   const paste = usePasteToSave({
     savedAction: (post) => ({
@@ -47,8 +52,21 @@ export function ChannelPage({
       signal: controller.signal,
       credentials: 'same-origin',
     })
-      .then((r) => (r.ok ? (r.json() as Promise<{ items: SearchResultItem[] }>) : { items: [] }))
-      .then((d) => setItems(d.items))
+      .then((r) =>
+        r.ok
+          ? (r.json() as Promise<{
+              items: SearchResultItem[]
+              channel?: { count: number; isPublic: boolean }
+            }>)
+          : { items: [] as SearchResultItem[], channel: undefined },
+      )
+      .then((d) => {
+        setItems(d.items)
+        if (d.channel) {
+          setIsPublic(d.channel.isPublic)
+          setTotal(d.channel.count)
+        }
+      })
       .catch(() => {
         if (!controller.signal.aborted) setItems([])
       })
@@ -65,6 +83,25 @@ export function ChannelPage({
       window.setTimeout(() => setCopied(false), 1500)
     } catch {
       // Clipboard blocked: the link is visible on the button to copy by hand.
+    }
+  }
+
+  // Owners: make the channel public or private again.
+  const setPublic = async (next: boolean) => {
+    const before = isPublic
+    setIsPublic(next)
+    setVisibility('saving')
+    try {
+      const res = await fetch('/api/tags', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag, isPublic: next }),
+      })
+      if (!res.ok) throw new Error('visibility')
+      setVisibility('idle')
+    } catch {
+      setIsPublic(before)
+      setVisibility('error')
     }
   }
 
@@ -118,7 +155,7 @@ export function ChannelPage({
                 >
                   {username.charAt(0).toUpperCase()}
                 </span>
-                <span>{`@${username} · ${count === 1 ? '1 post' : `${count} posts`}`}</span>
+                <span>{`@${username} · ${total === 1 ? '1 post' : `${total} posts`}${mine && isPublic === false ? ' · Private' : ''}`}</span>
               </span>
               <span className="mt-2 hidden flex-wrap gap-2.5 [text-shadow:none] md:mt-auto md:flex">
                 <PlayButton username={username} tag={tag} />
@@ -130,15 +167,29 @@ export function ChannelPage({
                     onSave={() => void saveChannel()}
                   />
                 )}
-                <button
-                  type="button"
-                  onClick={() => void copy()}
-                  className="flex h-[50px] items-center gap-2 rounded-full bg-white/15 px-[18px] text-sm font-semibold"
-                >
-                  <Link2 aria-hidden className="h-4 w-4" />
-                  <span>{copied ? 'Copied' : `adhx.com${path}`}</span>
-                </button>
+                {isPublic !== false && (
+                  <button
+                    type="button"
+                    onClick={() => void copy()}
+                    className="flex h-[50px] items-center gap-2 rounded-full bg-white/15 px-[18px] text-sm font-semibold"
+                  >
+                    <Link2 aria-hidden className="h-4 w-4" />
+                    <span>{copied ? 'Copied' : `adhx.com${path}`}</span>
+                  </button>
+                )}
+                {mine && isPublic !== null && (
+                  <VisibilityToggle
+                    isPublic={isPublic}
+                    busy={visibility === 'saving'}
+                    onChange={(next) => void setPublic(next)}
+                  />
+                )}
               </span>
+              {mine && visibility === 'error' && (
+                <span role="alert" className="text-sm text-[#ff8a7a] [text-shadow:none]">
+                  Couldn’t change that. Try again.
+                </span>
+              )}
             </div>
           </div>
           <div className="flex gap-2.5 px-[18px] md:hidden">
@@ -152,14 +203,24 @@ export function ChannelPage({
                 className="flex-1 justify-center"
               />
             )}
-            <button
-              type="button"
-              aria-label={copied ? 'Link copied' : 'Copy link'}
-              onClick={() => void copy()}
-              className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-white/15"
-            >
-              <Link2 aria-hidden className="h-5 w-5" />
-            </button>
+            {isPublic !== false && (
+              <button
+                type="button"
+                aria-label={copied ? 'Link copied' : 'Copy link'}
+                onClick={() => void copy()}
+                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full bg-white/15"
+              >
+                <Link2 aria-hidden className="h-5 w-5" />
+              </button>
+            )}
+            {mine && isPublic !== null && (
+              <VisibilityToggle
+                isPublic={isPublic}
+                busy={visibility === 'saving'}
+                onChange={(next) => void setPublic(next)}
+                compact
+              />
+            )}
           </div>
           <div className="px-1 md:px-0">
             {items === null ? (
@@ -250,5 +311,49 @@ function SaveChannelButton({
             : 'Save channel'}
       </span>
     </button>
+  )
+}
+
+/** Owner only: Public (anyone with the link) or Private (only you). */
+function VisibilityToggle({
+  isPublic,
+  busy,
+  onChange,
+  compact = false,
+}: {
+  isPublic: boolean
+  busy: boolean
+  onChange: (isPublic: boolean) => void
+  compact?: boolean
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Who can see this channel"
+      className={cn(
+        'flex shrink-0 items-center gap-1 rounded-full bg-white/15 p-1 [text-shadow:none]',
+        compact ? 'h-[52px]' : 'h-[50px]',
+      )}
+    >
+      {[
+        { on: isPublic, value: true, label: 'Public', Icon: Globe },
+        { on: !isPublic, value: false, label: 'Private', Icon: Lock },
+      ].map(({ on, value, label, Icon }) => (
+        <button
+          key={label}
+          type="button"
+          aria-pressed={on}
+          disabled={busy}
+          onClick={() => !on && onChange(value)}
+          className={cn(
+            'flex h-full items-center gap-1.5 rounded-full px-3.5 text-sm font-bold disabled:opacity-70',
+            on ? 'bg-nx-cream text-black' : 'text-white/80',
+          )}
+        >
+          <Icon aria-hidden className="h-4 w-4" />
+          <span className={compact ? 'sr-only' : undefined}>{label}</span>
+        </button>
+      ))}
+    </div>
   )
 }

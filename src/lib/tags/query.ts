@@ -67,24 +67,29 @@ interface TagCacheEntry {
 }
 type TagCache = TtlLruCache<string, TagCacheEntry>
 const cachesByDb = new WeakMap<object, TagCache>()
+// Next runs route handlers and pages as separate module copies (each with its
+// own `db` object), so a visibility PATCH in /api/tags must reach the cache
+// the page reads from too. Every cache registers here, process-wide.
+const g = globalThis as unknown as { __adhxTagCollectionCaches?: Set<TagCache> }
+const allCaches = (g.__adhxTagCollectionCaches ??= new Set<TagCache>())
 
 function getCache(): TagCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
     c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
+    allCaches.add(c)
   }
   return c
 }
 
 /** Drop a cached playlist read so a visibility PATCH is visible immediately. */
 export function invalidateTagCollectionCache(username?: string, tag?: string): void {
-  const cache = getCache()
-  if (!username || !tag) {
-    cache.clear()
-    return
+  getCache()
+  for (const cache of allCaches) {
+    if (!username || !tag) cache.clear()
+    else cache.delete(`${username.toLowerCase()}:${tag}`)
   }
-  cache.delete(`${username.toLowerCase()}:${tag}`)
 }
 
 /**

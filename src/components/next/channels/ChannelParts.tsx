@@ -136,7 +136,7 @@ export function TopChannels({
     setRows(null)
     fetch(`/api/collections/trending?window=${window}&limit=10`, { signal: controller.signal })
       .then((r) => (r.ok ? (r.json() as Promise<{ items: LeaderboardEntry[] }>) : { items: [] }))
-      .then((d) => setRows(d.items))
+      .then((d) => setRows(d.items ?? []))
       .catch(() => {
         if (!controller.signal.aborted) setRows([])
       })
