@@ -1,6 +1,6 @@
 # Privacy
 
-ADHX is made to be **self-hosted**, for you and the people you invite. Whoever runs an ADHX server is responsible for the data on it. This file is the honest description of what the software stores and sends, for the hosted copy at [adhx.com](https://adhx.com) and for every self-hosted one.
+ADHX is made to be **self-hosted**, for you and the people you invite. Whoever runs an ADHX server is responsible for the data on it. This file is the honest description of what the software stores and sends on every ADHX server. [adhx.com](https://adhx.com) is only the project's website (a static page on GitHub Pages); it runs no ADHX and stores nothing about you.
 
 Last updated: 18 October 2026.
 

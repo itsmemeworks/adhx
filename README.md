@@ -245,7 +245,7 @@ mkdir -p "$SKILLS_DIR/adhx" && curl -sL \
   -o "$SKILLS_DIR/adhx/SKILL.md"
 ```
 
-Also set `ADHX_URL` to your server's address, e.g. `https://adhx.example.com` (the skill falls back to `https://adhx.com`). Then ask things like "find my saved videos with a frog in them". Keys can only read their owner's saves, and you can remove them at any time.
+Also set `ADHX_URL` to your server's address, e.g. `https://adhx.example.com`. Then ask things like "find my saved videos with a frog in them". Keys can only read their owner's saves, and you can remove them at any time.
 
 ## Develop locally
 
@@ -268,6 +268,10 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) for how it fits together, and [CONTRIBUT
 ## Use it kindly
 
 ADHX is for keeping posts for yourself and the people you share your server with. It isn't a way to republish other people's work. Keep the creator's name with what you save, which ADHX does on every post. Bear in mind that each network has its own terms about downloading.
+
+## The website
+
+[adhx.com](https://adhx.com) is a static site in [`site/`](site/), published to GitHub Pages by `.github/workflows/site.yml`. Run it with `pnpm site:dev`. It's separate from the app: your ADHX doesn't serve it.
 
 ## Contributing
 

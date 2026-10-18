@@ -61,3 +61,8 @@ playwright/.cache/
 # Design handoff prototype bundles (reference only, not production code)
 design_handoff_adhx_matter/
 design_handoff_knowledge_graph/
+
+# Product site (adhx.com) build output
+site/.next/
+site/out/
+site/next-env.d.ts

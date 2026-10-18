@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react'
-import { Gob } from '@/components/next/Gob'
-import { NetworkIcon } from '@/components/next/NetworkIcon'
-import { ALL_PLATFORMS, networkLabel } from '@/lib/platform/networks'
-import { cn } from '@/lib/utils'
+import { Gob } from './Gob'
+import { NetworkIcon } from './NetworkIcon'
+import { ALL_PLATFORMS, networkLabel } from './networks'
+import { cn } from './cn'
 import { Art, type ArtId } from './art'
 import { CopyCommand } from './CopyCommand'
 import { HeroReel } from './HeroReel'
 
 /**
- * adhx.com: the product site (ADHX_PRODUCT_SITE=1). What ADHX does, shown in
+ * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown in
  * its own design with illustrated posts, and how to run your own.
  */
 
@@ -437,7 +437,7 @@ export function ProductSite() {
           <div className="flex flex-col gap-2">
             <HeroReel />
             <a
-              href="/site/adhx-reel.mp4"
+              href="/adhx-reel.mp4"
               download
               className="self-center text-[14px] font-bold text-nx-soft underline underline-offset-4 hover:text-white"
             >

@@ -23,7 +23,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "email:dev": "email dev --dir src/emails --port 3003",
-    "prepare": "husky"
+    "prepare": "husky",
+    "site:dev": "cd site && next dev --webpack -p 3040",
+    "site:build": "cd site && next build --webpack"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

@@ -547,6 +547,10 @@ without this GSC reports "Thumbnail blocked by robots.txt") while keeping `/api/
 for authenticated endpoints. Longer Allow prefixes beat `Disallow: /api/` under Google's
 longest-match rule.
 
+### adhx.com is the product site, not an ADHX (2026-10-18)
+
+`site/` is a separate static Next.js app (webpack, `output: 'export'`) published to GitHub Pages by `.github/workflows/site.yml` (`pnpm site:dev` / `pnpm site:build`). It reuses the repo's installed packages but imports nothing from `src/`: Gob, the network marks and the network list are copies in `site/components/`. The app never serves it. "adhx.com" in older notes below means "your ADHX's address".
+
 ### Kept media and link networks (self-hosted, 2026-10-18)
 
 ADHX is self-hosted: every saved post's files are downloaded once (yt-dlp, fxtwitter for X) into `MEDIA_DIR` and served by `/api/files/{platform}/{id}/{slot}`. Build every client media URL with `keptSrc()` (`src/lib/keep/src.ts`). Never hand-write an `/api/media/*` URL; those proxies are now only the fallback until a file is kept. Fourteen networks: X, Instagram and TikTok plus the link networks in `src/lib/platform/networks.ts` (previews at `/s/{network}/{id}`). Locally, run with `KEEP_BACKFILL=off` unless you want the whole library downloaded. Details: ARCHITECTURE.md → Kept media.

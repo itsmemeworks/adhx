@@ -2,17 +2,17 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Pause, Play } from 'lucide-react'
-import { Gob } from '@/components/next/Gob'
-import { NetworkIcon } from '@/components/next/NetworkIcon'
-import { ALL_PLATFORMS } from '@/lib/platform/networks'
-import { cn } from '@/lib/utils'
+import { Gob } from './Gob'
+import { NetworkIcon } from './NetworkIcon'
+import { ALL_PLATFORMS } from './networks'
+import { cn } from './cn'
 import { Art, type ArtId } from './art'
 import s from './reel.module.css'
 
 /**
  * The product site's hero: a ~30 second reel of what ADHX does, played as
  * live markup (sharp at any size, nothing to download). Each scene restarts
- * its CSS animations when it comes on. `/showreel` shows it alone, which is
+ * its CSS animations when it comes on. `/showreel/` shows it alone, which is
  * what the MP4 is recorded from.
  */
 

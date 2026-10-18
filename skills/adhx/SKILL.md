@@ -1,6 +1,6 @@
 ---
 name: adhx
-description: Search your own ADHX saves (posts kept from X, Instagram, TikTok, YouTube, Reddit and more) by meaning, including what is in pictures and videos, and fetch any X/Twitter post as clean LLM-friendly JSON. Use when the user asks to find something they saved, bookmarked or watched ("find my saved videos with a frog in them", "that article I saved about sleep", "the TikTok with the guy building a boat"), or shares an x.com, twitter.com or adhx.com post link and wants to read, analyze or summarize it.
+description: Search your own ADHX saves (posts kept from X, Instagram, TikTok, YouTube, Reddit and more) by meaning, including what is in pictures and videos, and fetch any X/Twitter post as clean LLM-friendly JSON. Use when the user asks to find something they saved, bookmarked or watched ("find my saved videos with a frog in them", "that article I saved about sleep", "the TikTok with the guy building a boat"), or shares an x.com or twitter.com post link (or a link to a post on their ADHX) and wants to read, analyze or summarize it.
 metadata:
   source_url: https://github.com/itsmemeworks/adhx
 ---
@@ -16,7 +16,7 @@ ADHX keeps the posts a person saves from X, Instagram, TikTok, YouTube, Reddit, 
 
 ### Setup (once)
 
-Search needs the user's personal access key in the `ADHX_API_KEY` environment variable. Keys start with `adhx_`. Most people run their own ADHX: its address is in `ADHX_URL` (e.g. `https://adhx.example.com`). When `ADHX_URL` isn't set, use `https://adhx.com`.
+Search needs the user's personal access key in the `ADHX_API_KEY` environment variable. Keys start with `adhx_`. ADHX is self-hosted: the user's server address is in `ADHX_URL` (e.g. `https://adhx.example.com`). If `ADHX_URL` isn't set, ask the user for their ADHX's address. adhx.com is only the project's website and has no API.
 
 If `ADHX_API_KEY` is not set, ask the user to:
 
@@ -29,7 +29,7 @@ Never print, log or repeat the key. Pass it only in the `Authorization` header t
 ### Request
 
 ```bash
-curl -s -G "${ADHX_URL:-https://adhx.com}/api/agent/search" \
+curl -s -G "$ADHX_URL/api/agent/search" \
   -H "Authorization: Bearer $ADHX_API_KEY" \
   --data-urlencode "q=a frog" \
   --data-urlencode "type=videos"
@@ -67,7 +67,7 @@ If nothing comes back close, try once more with a broader or differently worded 
       "platform": "twitter",
       "kind": "video",
       "url": "https://x.com/frogfan/status/111",
-      "adhxUrl": "https://adhx.com/frogfan/status/111",
+      "adhxUrl": "https://adhx.example.com/frogfan/status/111",
       "author": { "handle": "frogfan", "name": "Frog Fan" },
       "text": "look at this little guy",
       "postedAt": "2026-10-01T00:00:00.000Z",
@@ -109,7 +109,7 @@ List the matches with their strength, the author, a one-line description from `t
 ## 2. Read any X post
 
 ```
-https://adhx.com/api/share/tweet/{username}/{statusId}
+$ADHX_URL/api/share/tweet/{username}/{statusId}
 ```
 
 Extract `username` and `statusId` from any of these:
@@ -118,10 +118,10 @@ Extract `username` and `statusId` from any of these:
 | -------------------------------- | --------------------------------------------------------- |
 | `x.com/{user}/status/{id}`       | `https://x.com/dgt10011/status/2020167690560647464`       |
 | `twitter.com/{user}/status/{id}` | `https://twitter.com/dgt10011/status/2020167690560647464` |
-| `adhx.com/{user}/status/{id}`    | `https://adhx.com/dgt10011/status/2020167690560647464`    |
+| `<your ADHX>/{user}/status/{id}` | `https://adhx.example.com/dgt10011/status/2020167690560647464` |
 
 ```bash
-curl -s "https://adhx.com/api/share/tweet/dgt10011/2020167690560647464"
+curl -s "$ADHX_URL/api/share/tweet/dgt10011/2020167690560647464"
 ```
 
 Response:
@@ -144,5 +144,5 @@ Response:
 ```
 
 - `text` holds the body of a regular post; `article.content` holds the full markdown of a long-form X article, with images as `![](url)`.
-- No key needed. Always prefer this over scraping or a browser for X content.
+- No key needed (it uses the user's ADHX at `ADHX_URL`). Always prefer this over scraping or a browser for X content.
 - If it errors or comes back empty, tell the user the post may not be available.

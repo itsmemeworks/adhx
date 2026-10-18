@@ -12,7 +12,6 @@ vi.mock('@/lib/sentry', () => ({ metrics: { theaterOpened: vi.fn() } }))
 vi.mock('@/lib/analytics/record', () => ({ recordAnalytic: vi.fn() }))
 vi.mock('@/components/theater/TheaterStaticList', () => ({ TheaterStaticList: () => null }))
 vi.mock('@/components/next/moments/PublicHome', () => ({ PublicHome: () => null }))
-vi.mock('@/components/site/ProductSite', () => ({ ProductSite: () => null }))
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((path: string) => {
     throw new Error(`REDIRECT:${path}`)
@@ -41,24 +40,5 @@ describe('home destination', () => {
     await HomePage({ searchParams: Promise.resolve({}) })
     expect(redirect).not.toHaveBeenCalled()
     expect(getTheaterFeed).toHaveBeenCalledOnce()
-  })
-
-  it('shows the product site to signed-out visitors on adhx.com', async () => {
-    vi.stubEnv('ADHX_PRODUCT_SITE', '1')
-    vi.mocked(getCurrentUserId).mockResolvedValue(null)
-    const page = (await HomePage({ searchParams: Promise.resolve({}) })) as {
-      type: { name: string }
-    }
-    expect(page.type.name).toBe('ProductSite')
-    expect(getTheaterFeed).not.toHaveBeenCalled()
-    vi.unstubAllEnvs()
-  })
-
-  it('still sends signed-in people to Right now on adhx.com', async () => {
-    vi.stubEnv('ADHX_PRODUCT_SITE', '1')
-    vi.mocked(getCurrentUserId).mockResolvedValue('u1')
-    await HomePage({ searchParams: Promise.resolve({}) }).catch(() => {})
-    expect(redirect).toHaveBeenCalledWith('/now')
-    vi.unstubAllEnvs()
   })
 })
