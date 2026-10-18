@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Copy, RefreshCw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -70,11 +70,25 @@ export function SignInLinks() {
     void load()
   }
 
+  // Arriving from the account menu's "sign-in links waiting": the card only
+  // exists once loaded, after the browser has tried to jump to it.
+  const section = useRef<HTMLElement>(null)
+  const jumped = useRef(false)
+  useEffect(() => {
+    if (mode !== 'admin' || jumped.current) return
+    jumped.current = true
+    if (window.location.hash === '#sign-in-links') {
+      section.current?.scrollIntoView({ block: 'start' })
+    }
+  }, [mode])
+
   if (mode !== 'admin') return null
   return (
     <section
+      ref={section}
+      id="sign-in-links"
       aria-labelledby="admin-sign-in-links"
-      className="bg-surface rounded-card border border-hairline shadow-m-sm p-5"
+      className="bg-surface rounded-card border border-hairline shadow-m-sm p-5 scroll-mt-24"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>

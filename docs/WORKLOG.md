@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Admins see when a sign-in link is waiting
+
+- With `EMAIL_LINKS_TO_ADMIN`, a friend asking for a link waited until the admin happened to open the admin page. `/api/auth/me` now has `waitingSignIns` for admins (only when links are held; never for anyone else).
+- The account menu shows the count on the avatar and a "N sign-in links waiting" item to `/admin#sign-in-links`; an admin's menu looks again every 30s. The card scrolls itself into view once loaded.
+- **Not covered:** phones in the theater and search hide the avatar, so there's no badge there.
+
 ## 2026-10-18 — End-to-end run: owner, friends, iPhone and Android
 
 - **Run:** fresh server with no email (links handed over), `ALLOWED_EMAILS=@friends.test`, no X app. Desktop (Playwright) for an owner and two friends; the iOS app on two simulators; the Android app on an emulator; a stranger. Pairing by typed code and by the QR link, shares from Safari and the Android share menu, already saved, not a post, offline then back, removing a phone.

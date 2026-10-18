@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { AccountMenu, SYNC_HREF } from '@/components/next/AccountMenu'
+import { AccountMenu, SIGN_IN_LINKS_HREF, SYNC_HREF } from '@/components/next/AccountMenu'
 
 function mockMe(xConnected: boolean, xAvailable = true) {
   global.fetch = vi.fn(() =>
@@ -46,6 +46,38 @@ describe('AccountMenu', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Your account' }))
     expect(screen.queryByRole('menuitem', { name: 'Connect X' })).not.toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument()
+  })
+
+  it('shows an admin how many sign-in links are waiting, and where', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            authenticated: true,
+            isAdmin: true,
+            waitingSignIns: 2,
+            user: { username: 'owner', displayName: 'Owner', avatarUrl: '' },
+          }),
+      } as Response),
+    ) as unknown as typeof fetch
+    render(<AccountMenu />)
+    const button = await screen.findByRole('button', {
+      name: 'Your account, 2 sign-in links waiting',
+    })
+    expect(button).toHaveTextContent('2')
+    fireEvent.click(button)
+    expect(screen.getByRole('menuitem', { name: '2 sign-in links waiting' })).toHaveAttribute(
+      'href',
+      SIGN_IN_LINKS_HREF,
+    )
+  })
+
+  it('shows no count when nobody is waiting', async () => {
+    mockMe(true)
+    render(<AccountMenu />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Your account' }))
+    expect(screen.queryByRole('menuitem', { name: /sign-in link/ })).not.toBeInTheDocument()
   })
 
   it('offers Sign in when signed out, coming back to this page', async () => {
