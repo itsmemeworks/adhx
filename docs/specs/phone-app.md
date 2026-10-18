@@ -138,13 +138,19 @@ width, height, durationMs }], article }`
 
 ## The player and search (both platforms)
 
-- **Home is My saves**: full screen, one post at a time, swipe up for the
-  next; pages of 20 load as you near the end. Videos loop, start muted with a
-  speaker button, and pause on tap. Photo albums swipe sideways. Text and
-  articles show as a card. Bottom left: the @handle and the first
-  lines of text. Bottom right, like the web player's bar: a column of round
-  buttons (Sound for video and sound, Share, and **Original**, which is the
-  network's own logo and opens the post there). No network logo by the name.
+- **Home is My saves**: full screen, one post at a time. Swipe up for the
+  next, down for the previous; tap to pause (a play mark shows) or, with the
+  buttons hidden, to bring them back. Pages of 20 load as you near the end.
+  Videos start muted. Photo albums swipe sideways. Text and articles fill the
+  page like a video: short ones centred, long ones fading above the caption.
+- **Over the post**: bottom left the @handle and the first lines of text;
+  bottom right a column of round buttons: Sound and Repeat (video and sound),
+  Save (to Photos / the gallery, from `?download=1`), Share, and **Original**,
+  which is the network's own logo. Repeat is off by default: a video that ends
+  plays the next save; on (yellow), it loops. A short note says which
+  ("Repeating this one" / "Plays the next save when this ends"). Along the
+  bottom: the time, a line to drag through the video, and Hide, which leaves
+  only the picture and a thin progress line. Shadows only on words over media.
 - **Search**: a field ("Describe what you're looking for") with the TRY
   DESCRIBING prompts, a two-column grid of posters, then the player on those
   results from the one you tapped.

@@ -6,17 +6,18 @@ struct LibraryHome: View {
     @StateObject private var library = LibraryModel()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    @State private var clean = false
 
     var body: some View {
         ZStack(alignment: .top) {
             if let server = model.server, !library.saves.isEmpty {
-                PlayerView(posts: library.saves, server: server) { index in
+                PlayerView(posts: library.saves, server: server, clean: $clean) { index in
                     library.loadMoreIfNeeded(at: index)
                 }
             } else {
                 nothingToPlay
             }
-            topBar
+            if !clean { topBar }
         }
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)

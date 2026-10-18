@@ -139,10 +139,12 @@ struct PlayerScreen: View {
     let server: URL
     let start: String
     @Environment(\.dismiss) private var dismiss
+    @State private var clean = false
 
     var body: some View {
-        PlayerView(posts: posts, server: server, start: start)
+        PlayerView(posts: posts, server: server, clean: $clean, start: start)
             .overlay(alignment: .topLeading) {
+                if !clean {
                 Button {
                     dismiss()
                 } label: {
@@ -155,6 +157,7 @@ struct PlayerScreen: View {
                 .accessibilityLabel("Close")
                 .padding(.leading, 16)
                 .padding(.top, 8)
+                }
             }
     }
 }

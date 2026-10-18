@@ -15,6 +15,14 @@ final class Playback: ObservableObject {
     /// Why it can't play, in the server's words when it gave any.
     @Published private(set) var problem: String?
     @Published private(set) var currentURL: URL?
+    /// On: the video loops. Off (the default): the next save plays when it ends.
+    @Published var repeatOne = false
+    /// Where it is and how long it is, in seconds (0 until known).
+    @Published private(set) var time: Double = 0
+    @Published private(set) var duration: Double = 0
+    /// A video finished with Repeat off.
+    var onEnded: () -> Void = {}
+    private var timeWatch: Any?
 
     private var statusWatch: NSKeyValueObservation?
     private var endWatch: NSObjectProtocol?
@@ -25,6 +33,23 @@ final class Playback: ObservableObject {
         player.automaticallyWaitsToMinimizeStalling = true
         // Sound plays with the ring/silent switch off, like other video apps.
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+        timeWatch = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.25, preferredTimescale: 600), queue: .main
+        ) { [weak self] now in
+            Task { @MainActor in
+                guard let self else { return }
+                self.time = now.seconds.isFinite ? now.seconds : 0
+                if let length = self.player.currentItem?.duration.seconds, length.isFinite {
+                    self.duration = length
+                }
+            }
+        }
+    }
+
+    func seek(to seconds: Double) {
+        player.seek(to: CMTime(seconds: seconds, preferredTimescale: 600),
+                    toleranceBefore: .zero, toleranceAfter: .zero)
+        time = seconds
     }
 
     /// Play this file, or stop when nothing on screen plays.
@@ -37,6 +62,8 @@ final class Playback: ObservableObject {
         problem = nil
         ready = false
         paused = false
+        time = 0
+        duration = 0
         statusWatch = nil
         if let endWatch { NotificationCenter.default.removeObserver(endWatch) }
         if let stallWatch { NotificationCenter.default.removeObserver(stallWatch) }
@@ -53,8 +80,13 @@ final class Playback: ObservableObject {
             forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.player.seek(to: .zero)
-                self?.player.play()
+                guard let self else { return }
+                if self.repeatOne {
+                    self.player.seek(to: .zero)
+                    self.player.play()
+                } else {
+                    self.onEnded()
+                }
             }
         }
         player.replaceCurrentItem(with: item)
