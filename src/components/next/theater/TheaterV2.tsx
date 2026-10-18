@@ -97,7 +97,10 @@ function hasFullArticle(post: FeedItem): boolean {
   return /^https:\/\/(x|twitter)\.com\/[^/]+\/article\//.test(url)
 }
 
-type Load = { status: 'loading' } | { status: 'error'; missing?: boolean } | { status: 'ready' }
+type Load =
+  | { status: 'loading' }
+  | { status: 'error'; missing?: boolean; busy?: boolean }
+  | { status: 'ready' }
 type Panel = null | 'queue' | 'more' | 'save' | 'share'
 
 type QueueResponse = SearchResponse & {
@@ -111,7 +114,7 @@ type QueueResponse = SearchResponse & {
 function emptyState(
   source: PlaySource,
   load: Load,
-): { title: string; body: string; action: string; href: string } {
+): { title: string; body: string; action: string; href: string; retry?: boolean } {
   const missing = load.status === 'error' && load.missing
   if (source.moment && missing)
     return {
@@ -130,9 +133,12 @@ function emptyState(
   if (load.status === 'error')
     return {
       title: 'That didn’t load',
-      body: 'Check your connection and try again.',
+      body: load.busy
+        ? 'Lots of requests from here just now. Give it a moment, then try again.'
+        : 'It might be a blip. Try again.',
       action: 'Go back',
       href: backHref(source),
+      retry: true,
     }
   if (source.recent)
     return {
@@ -369,7 +375,12 @@ export function TheaterV2({
       .catch((e: unknown) => {
         if (controller.signal.aborted) return
         // 404: the moment has passed, or the channel is gone or private.
-        setLoad({ status: 'error', missing: e instanceof Error && e.message === 'queue 404' })
+        const message = e instanceof Error ? e.message : ''
+        setLoad({
+          status: 'error',
+          missing: message === 'queue 404',
+          busy: message === 'queue 429',
+        })
       })
     return () => controller.abort()
   }, [source, lead])
@@ -995,12 +1006,27 @@ export function TheaterV2({
             <>
               <span className="font-nx-serif text-[34px] leading-tight">{empty.title}</span>
               <span className="max-w-[440px] text-[15px] text-white/70">{empty.body}</span>
-              <Link
-                href={empty.href}
-                className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
-              >
-                {empty.action}
-              </Link>
+              <span className="flex flex-wrap justify-center gap-2.5">
+                {empty.retry && (
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
+                  >
+                    Try again
+                  </button>
+                )}
+                <Link
+                  href={empty.href}
+                  className={
+                    empty.retry
+                      ? 'rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white'
+                      : 'rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink'
+                  }
+                >
+                  {empty.action}
+                </Link>
+              </span>
             </>
           )}
         </main>

@@ -334,6 +334,14 @@ describe('TheaterV2', () => {
     ).toHaveAttribute('href', '/now')
   })
 
+  it('offers Try again when a queue fails to load', async () => {
+    fetchMock.mockImplementation(async () => new Response('{}', { status: 429 }))
+    render(<TheaterV2 source={{ ...source, moment: 'frogs-abc12' }} />)
+    expect(await screen.findByText('That didn’t load')).toBeInTheDocument()
+    expect(screen.getByText(/Lots of requests from here/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
   it('offers a way to bring saves in when My saves is empty', async () => {
     fetchMock.mockImplementation(
       async () => new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
