@@ -89,6 +89,8 @@ fun SavesHome(
             startIndex = vm.savesPage,
             onPage = vm::onSavesPage,
             topBar = topBar,
+            newOnTop = ui.newOnTop,
+            onTop = vm::seenTop,
         )
         return
     }

@@ -50,6 +50,8 @@ data class SavesUi(
     val loading: Boolean = false,
     val loadedOnce: Boolean = false,
     val error: String? = null,
+    /** Saves that arrived above the one on screen since the last reload (the "N new saves" pill). */
+    val newOnTop: Int = 0,
 )
 
 data class SearchUi(
@@ -182,9 +184,14 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Back in the app at the top of My saves: show anything saved meanwhile. */
+    /**
+     * Back in the app: put anything saved meanwhile on top. At the top, the
+     * player shows it; further down, it counts them for the "new saves" pill
+     * and the post on screen stays put.
+     */
     fun refreshSaves() {
         val now = _saves.value
-        if (now.loading || savesPage > 0) return
+        if (now.loading) return
         if (now.error != null || !now.loadedOnce) {
             reloadSaves()
             return
@@ -192,20 +199,28 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         val connection = store.current() ?: return
         savesJob = viewModelScope.launch {
             val result = AdhxApi(connection).saves(0)
-            if (result is ApiResult.Ok && savesPage == 0 && !_saves.value.loading) {
-                val first = result.value.items.map { it.key }
-                if (first != _saves.value.items.take(first.size).map { it.key }) {
-                    _saves.value = SavesUi(
-                        items = result.value.items,
-                        total = result.value.total,
-                        nextOffset = result.value.nextOffset,
-                        loadedOnce = true,
-                    )
-                }
+            val current = _saves.value
+            if (result is ApiResult.Ok && !current.loading) {
+                val had = current.items.mapTo(HashSet()) { it.key }
+                val firstHad = current.items.firstOrNull()?.key
+                val above = result.value.items.takeWhile { it.key != firstHad }.filter { it.key !in had }
+                if (above.isEmpty()) return@launch
+                _saves.value = current.copy(
+                    items = above + current.items,
+                    total = result.value.total,
+                    // The server's offsets moved down by as many as arrived.
+                    nextOffset = current.nextOffset?.plus(above.size),
+                    newOnTop = if (savesPage == 0) 0 else current.newOnTop + above.size,
+                )
             } else if (result is ApiResult.Failed) {
                 signedOut(result, connection)
             }
         }
+    }
+
+    /** The top of My saves was reached: nothing new is waiting above. */
+    fun seenTop() {
+        if (_saves.value.newOnTop != 0) _saves.value = _saves.value.copy(newOnTop = 0)
     }
 
     fun reloadSaves() {

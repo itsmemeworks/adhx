@@ -43,6 +43,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -64,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -156,6 +158,8 @@ fun PlayerScreen(
     startIndex: Int,
     onPage: (Int) -> Unit,
     topBar: @Composable BoxScope.() -> Unit,
+    newOnTop: Int = 0,
+    onTop: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -205,13 +209,15 @@ fun PlayerScreen(
     LaunchedEffect(settled) {
         scrub = null
         onPage(settled)
+        if (settled == 0) onTop()
     }
 
-    // Something new on top (saved while the app was away): show it.
+    // Something new on top (saved while the app was away): at the top, show it;
+    // further down the "new saves" pill offers it instead.
     val firstKey = posts.firstOrNull()?.key
     val initialFirst = remember { firstKey }
     LaunchedEffect(firstKey) {
-        if (firstKey != initialFirst && pager.currentPage <= 1) pager.scrollToPage(0)
+        if (firstKey != initialFirst && newOnTop == 0) pager.scrollToPage(0)
     }
 
     LaunchedEffect(player, muted) {
@@ -386,6 +392,13 @@ fun PlayerScreen(
         if (!hidden && !inPip) {
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) { topBar() }
         }
+        if (newOnTop > 0 && !hidden && !inPip && scrub == null) {
+            NewSavesPill(
+                count = newOnTop,
+                onClick = { scope.launch { pager.animateScrollToPage(0) } },
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        }
         if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
         reading?.let { Reader(it, onClose = { reading = null }) }
         if (!inPip) {
@@ -414,6 +427,26 @@ private val MOVIE = AudioAttributes.Builder()
     .setUsage(C.USAGE_MEDIA)
     .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
     .build()
+
+/** Under the top bar: "1 new save" / "3 new saves" with an up arrow; tapping goes to the top. */
+@Composable
+private fun NewSavesPill(count: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val label = if (count == 1) "1 new save" else "$count new saves"
+    Row(
+        modifier
+            .statusBarsPadding()
+            .padding(top = 64.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(AdhxColors.Accent)
+            .clickable(onClickLabel = "Go to the newest", onClick = onClick)
+            .padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AdhxColors.Black, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Black)
+    }
+}
 
 @Composable
 private fun NoticePill(text: String, modifier: Modifier = Modifier) {
@@ -586,12 +619,13 @@ private fun MediaPage(
 ) {
     val media = post.media.firstOrNull()
     val poster = media?.posterUrl?.let { AdhxApi.resolve(server, it)?.toString() }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    // The page's own size, clipped: a sound's cover fills it (cropped) and never pushes past it.
+    Box(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
         if (poster != null) {
             AsyncImage(
                 model = poster,
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
+                contentScale = if (post.kind == PostKind.AUDIO) ContentScale.Crop else ContentScale.Fit,
                 modifier = Modifier.fillMaxSize(),
             )
         }
