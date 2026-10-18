@@ -258,37 +258,45 @@ private struct Album: View {
     }
 }
 
-/// A post that's words (or an article): read it.
+/// A post that's words (or an article), full bleed like a video: the words sit
+/// straight on the page under the top bar and fade out above the caption.
 private struct WordsCard: View {
     let post: PhonePost
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             if let article = post.article {
                 if let title = article.title, !title.isEmpty {
                     Text(title)
-                        .font(Theme.serif(30))
+                        .font(Theme.serif(34))
                         .foregroundStyle(.white)
                 }
                 if let description = article.description, !description.isEmpty {
                     Text(description)
-                        .font(Theme.sans(16))
+                        .font(Theme.sans(17))
                         .foregroundStyle(Theme.muted)
                 }
             }
             if !post.text.isEmpty {
                 Text(post.text)
-                    .font(Theme.sans(post.article == nil ? 20 : 15))
+                    .font(post.article == nil ? Theme.serif(30) : Theme.sans(16))
                     .foregroundStyle(Theme.cream)
-                    .lineSpacing(4)
-                    .lineLimit(14)
+                    .lineSpacing(post.article == nil ? 2 : 4)
             }
         }
-        .padding(22)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
-        .padding(.horizontal, 18)
-        .padding(.bottom, 120)
-        .frame(maxHeight: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.top, 120)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // Longer than the page: it fades out above the caption, never scrolls.
+        .mask(
+            LinearGradient(stops: [.init(color: .black, location: 0.62),
+                                   .init(color: .clear, location: 0.8)],
+                           startPoint: .top, endPoint: .bottom)
+        )
+        .background(
+            LinearGradient(colors: [Theme.raised, Theme.app], startPoint: .top, endPoint: .bottom)
+        )
+        .clipped()
+        .accessibilityElement(children: .combine)
     }
 }
