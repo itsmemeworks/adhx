@@ -83,7 +83,9 @@ function childEntry(): string {
 
 function spawn(role: ChildRole): void {
   const startedAt = Date.now()
-  const child = fork(childEntry(), [], {
+  // The child runs from source with tsx at runtime (the Docker image keeps
+  // src/lib); tell Turbopack not to bundle or resolve it at build time.
+  const child = fork(/* turbopackIgnore: true */ childEntry(), [], {
     execArgv: ['--import', 'tsx'],
     env: {
       ...process.env,
