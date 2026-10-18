@@ -8,7 +8,7 @@ struct RootView: View {
             Theme.app.ignoresSafeArea()
             if model.isConnected {
                 NavigationStack {
-                    HomeView()
+                    LibraryHome()
                 }
                 .transition(.opacity)
             } else {

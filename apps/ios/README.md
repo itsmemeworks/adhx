@@ -2,13 +2,16 @@
 
 ADHX Share puts **ADHX** in your phone’s share menu. Share a post from TikTok,
 Instagram, YouTube, X or any other app, pick ADHX, and the link goes to your
-own ADHX. Your ADHX reads the post and keeps a copy of its media. The phone
-only sends links.
+own ADHX. Your ADHX reads the post and keeps a copy of its media. The app
+also plays your saves and searches them by meaning; your ADHX does the work
+(downloading, understanding, streaming) and the phone plays what it streams.
+The app only ever talks to your own ADHX.
 
 It has two parts:
 
-- **The app** (`App/`): connects to your ADHX, lists what you’ve shared lately
-  and how each copy is coming along, and has Settings.
+- **The app** (`App/`): connects to your ADHX, plays your saves full screen
+  (swipe up for the next, `App/Library/`), searches them by meaning, lists what
+  you’ve shared lately and how each copy is coming along, and has Settings.
 - **The Share Extension** (`ShareExtension/`): the sheet you see after picking
   ADHX in the share menu: Saving, Saved, Already in your saves, That’s not one
   post, Saved for later, Connect the app first.
@@ -108,8 +111,9 @@ Share Extension can’t see the connection.
    `adhx://` link opens ADHX Share and connects straight away). Or tap “Type
    the address instead” and type both.
 3. The app sends the code to `POST /api/app/pair` with the phone’s model
-   name, and gets back a phone key. That key can only save links and read
-   their status.
+   name, and gets back a phone key. That key can save links, read their
+   status, and read and search your own saves (`/api/app/saves`,
+   `/api/app/search`); nothing else.
 4. The Home screen checks the key with `GET /api/app/me` when it opens. If you
    removed the phone on your ADHX, the app forgets the key and goes back to
    Connect.

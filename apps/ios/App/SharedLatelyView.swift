@@ -1,25 +1,29 @@
 import SwiftUI
 
-/// Shared lately: the connection, recent shares and how their copies are coming along.
-struct HomeView: View {
+/// Shared lately: the connection, recent shares and how their copies are
+/// coming along. A row opens that post in the player.
+struct SharedLatelyView: View {
     @EnvironmentObject private var model: AppModel
+    @ObservedObject var library: LibraryModel
     @Environment(\.openURL) private var openURL
+    @Environment(\.dismiss) private var dismiss
+    @State private var playing: PhonePost?
+    @State private var opening: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 10) {
-                Wordmark()
-                Spacer(minLength: 0)
-                NavigationLink {
-                    SettingsView()
+                Button {
+                    dismiss()
                 } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 19, weight: .medium))
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
                         .background(Circle().fill(Theme.surface))
                 }
-                .accessibilityLabel("Settings")
+                .accessibilityLabel("Back")
+                Spacer(minLength: 0)
             }
 
             ConnectionPill(host: Links.displayHost(model.server), state: model.connection)
@@ -36,8 +40,8 @@ struct HomeView: View {
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(model.records) { record in
-                            ShareRow(record: record) {
-                                if let url = model.openURL(for: record) { openURL(url) }
+                            ShareRow(record: record, opening: opening == record.id) {
+                                Task { await open(record) }
                             }
                         }
                     }
@@ -57,12 +61,33 @@ struct HomeView: View {
         .padding(.bottom, 12)
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
-        .onAppear { model.startPolling() }
-        .onDisappear { model.stopPolling() }
+        .fullScreenCover(item: $playing) { post in
+            if let server = model.server {
+                PlayerScreen(posts: [post], server: server, start: post.key)
+            }
+        }
+    }
+
+    /// In the player when it's in your saves, else on your ADHX in the browser.
+    private func open(_ record: ShareRecord) async {
+        if let platform = record.platform, let id = record.postId, record.stage == .saved {
+            opening = record.id
+            let post = await library.post(platform: platform, id: id)
+            opening = nil
+            if let post {
+                playing = post
+                return
+            }
+        }
+        if let url = model.openURL(for: record) { openURL(url) }
     }
 }
 
-private struct ConnectionPill: View {
+extension PhonePost: Identifiable {
+    var id: String { key }
+}
+
+struct ConnectionPill: View {
     let host: String
     let state: AppModel.Connection
 
@@ -102,6 +127,7 @@ private struct ConnectionPill: View {
 
 private struct ShareRow: View {
     let record: ShareRecord
+    var opening = false
     let open: () -> Void
 
     var body: some View {
@@ -120,10 +146,14 @@ private struct ShareRow: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    Text(Format.ago(record.createdAt, now: context.date))
-                        .font(Theme.sans(12))
-                        .foregroundStyle(Theme.faint)
+                if opening {
+                    RingSpinner().frame(width: 18, height: 18)
+                } else {
+                    TimelineView(.periodic(from: .now, by: 30)) { context in
+                        Text(Format.ago(record.createdAt, now: context.date))
+                            .font(Theme.sans(12))
+                            .foregroundStyle(Theme.faint)
+                    }
                 }
             }
             .padding(.vertical, 12)
@@ -132,13 +162,13 @@ private struct ShareRow: View {
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(record.openPath == nil)
+        .disabled(record.openPath == nil && record.postId == nil)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(Network.name(record.platform)), \(Format.title(record)), \(status)")
     }
 }
 
-private struct EmptyShares: View {
+struct EmptyShares: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Nothing yet.")

@@ -61,7 +61,7 @@ struct ConnectView: View {
                 }
                 .buttonStyle(PillButtonStyle(kind: .outline, height: 48, fullWidth: false))
 
-                Text("The app only sends links to your ADHX. Nothing else leaves your phone.")
+                Text("The app only talks to your ADHX.")
                     .font(Theme.sans(12))
                     .foregroundStyle(Theme.faint)
                     .multilineTextAlignment(.center)

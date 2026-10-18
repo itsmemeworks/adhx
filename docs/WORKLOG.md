@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — iPhone app plays and searches your saves
+
+- **Home is My saves** (`apps/ios/App/Library/`): a vertical paging `ScrollView` with one `AVPlayer` that follows the post on screen, loops, starts muted (speaker button), and pauses on tap. Albums swipe sideways; words read as a card; "Open original". Errors show the server's 404/410 `reason`.
+- **Search** (`SearchView`): debounced at 350 ms, TRY DESCRIBING prompts, a poster grid with match strength, "Still learning…" and "Nothing close" notes; a result opens the player there.
+- **Shared lately** (was `HomeView`) is behind the clock button; a row opens the post in the player (`/api/app/saves?platform&id`).
+- **Posters:** Reddit/Bluesky videos had none, so tiles were blank. `src/lib/keep/poster.ts` takes a still on download, and `/api/files/…/poster` makes one once for videos kept before.
+- **Verified** on the iPhone 18 Pro simulator against the e2e server: the Reddit video plays (Range 206s), the X album pages, "baby" finds and plays it.
+- **Not yet:** Android (its own session), preloading the next video, background audio.
+
 ## 2026-10-18 — Phone API for playing and searching your saves
 
 - **Owner decision:** the apps play your saves natively and search them by meaning; the server keeps doing the heavy lifting (downloads, understanding, streaming).

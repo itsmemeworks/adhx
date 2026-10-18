@@ -60,6 +60,84 @@ struct StatusResult: Decodable, Equatable {
     }
 }
 
+// MARK: - Your saves, for the player and search (spec → PhonePost)
+
+struct PhoneMedia: Decodable, Hashable {
+    /// "video" or "photo". A sound-only post's sound is its video.
+    let kind: String
+    let url: String
+    let posterUrl: String?
+    let width: Int?
+    let height: Int?
+    let durationMs: Int?
+}
+
+struct PhoneAuthor: Decodable, Hashable {
+    let handle: String
+    let name: String?
+    let avatarUrl: String?
+}
+
+struct PhoneArticle: Decodable, Hashable {
+    let title: String?
+    let description: String?
+    let url: String
+}
+
+struct PhoneMatch: Decodable, Hashable {
+    /// strong · good · related
+    let strength: String
+    let on: [String]
+}
+
+/// One of your saves, ready to play. Addresses are relative to the server.
+struct PhonePost: Decodable, Hashable {
+    let platform: String
+    let postId: String
+    /// video · audio · photo · article · text
+    let kind: String
+    let author: PhoneAuthor
+    let text: String
+    let postedAt: String?
+    let savedAt: String?
+    let sourceUrl: String?
+    let openPath: String
+    let media: [PhoneMedia]
+    let article: PhoneArticle?
+    let match: PhoneMatch?
+    let learning: Bool?
+
+    /// Unique across networks (the same number can be an X and a TikTok id).
+    var key: String { "\(platform):\(postId)" }
+    var plays: Bool { kind == "video" || kind == "audio" }
+    var posterUrl: String? { media.first?.posterUrl }
+
+    private enum CodingKeys: String, CodingKey {
+        case platform, postId = "id", kind, author, text, postedAt, savedAt, sourceUrl, openPath,
+             media, article, match, learning
+    }
+}
+
+struct SavesPage: Decodable {
+    let items: [PhonePost]
+    let total: Int
+    let nextOffset: Int?
+}
+
+struct OneSave: Decodable {
+    let item: PhonePost
+}
+
+struct SearchPage: Decodable {
+    let items: [PhonePost]
+    let total: Int
+    /// False: meaning isn't ready on the server; these matched on exact words.
+    let understood: Bool
+    /// False: nothing matched closely; these are the nearest.
+    let close: Bool
+    let nextOffset: Int?
+}
+
 /// Keep states that won't change any more.
 enum KeepStatus {
     static let final: Set<String> = ["kept", "unavailable", "off", "gone"]
@@ -143,6 +221,28 @@ struct ADHXClient {
         try await send("GET", "/api/app/status", query: [
             URLQueryItem(name: "platform", value: platform),
             URLQueryItem(name: "id", value: id),
+        ])
+    }
+
+    func saves(offset: Int, limit: Int = 20) async throws -> SavesPage {
+        try await send("GET", "/api/app/saves", query: [
+            URLQueryItem(name: "offset", value: String(offset)),
+            URLQueryItem(name: "limit", value: String(limit)),
+        ])
+    }
+
+    func post(platform: String, id: String) async throws -> PhonePost {
+        let one: OneSave = try await send("GET", "/api/app/saves", query: [
+            URLQueryItem(name: "platform", value: platform),
+            URLQueryItem(name: "id", value: id),
+        ])
+        return one.item
+    }
+
+    func search(_ q: String, offset: Int = 0) async throws -> SearchPage {
+        try await send("GET", "/api/app/search", query: [
+            URLQueryItem(name: "q", value: q),
+            URLQueryItem(name: "offset", value: String(offset)),
         ])
     }
 
