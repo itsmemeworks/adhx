@@ -24,6 +24,7 @@ const ACCOUNT_GUARDS: AccountGuard[] = [
   { table: 'username_aliases', references: [{ column: 'user_id' }] },
   { table: 'login_tokens', references: [{ column: 'user_id', nullable: true }] },
   { table: 'access_keys', references: [{ column: 'user_id' }] },
+  { table: 'app_pair_codes', references: [{ column: 'user_id' }] },
   { table: 'activity', references: [{ column: 'user_id', nullable: true }] },
   { table: 'analytics_events', references: [{ column: 'user_id', nullable: true }] },
   {

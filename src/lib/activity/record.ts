@@ -64,7 +64,7 @@ export interface ActivityInput {
   /** Private — for abuse handling only, never surfaced publicly. */
   userId?: string | null
   /** Growth-log source only — not displayed on the pulse. */
-  source?: 'manual' | 'url_prefix' | 'pwa_share' | 'sync' | 'clone'
+  source?: 'manual' | 'url_prefix' | 'pwa_share' | 'phone_app' | 'sync' | 'clone'
 }
 
 const TEXT_CAP = 500

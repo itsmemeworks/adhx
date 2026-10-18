@@ -28,6 +28,8 @@ export interface KeepTarget {
   author: string
   /** The saved post's type, when known (`video`, `photo`, `text`, `article`). */
   category?: string | null
+  /** Told how far a yt-dlp download is, 0–100. */
+  onProgress?: (percent: number) => void
 }
 
 interface Collected {
@@ -98,7 +100,9 @@ async function collectInstagram(target: KeepTarget, dir: string): Promise<Collec
 
   if (hasVideo) {
     try {
-      const got = await ytdlpDownload(`https://www.instagram.com/p/${target.postId}/`, dir)
+      const got = await ytdlpDownload(`https://www.instagram.com/p/${target.postId}/`, dir, {
+        onProgress: target.onProgress,
+      })
       for (const d of got) out.push({ kind: 'video', file: d.file, poster: d.poster })
     } catch (error) {
       // Instagram often wants a login from servers; the public CDN and mirrors still work.
@@ -164,7 +168,7 @@ async function collectGeneric(target: KeepTarget, dir: string): Promise<Collecte
     try {
       const info = await ytdlpInfo(start)
       const audio = isAudioOnly(info)
-      const got = await ytdlpDownload(start, dir, { audio })
+      const got = await ytdlpDownload(start, dir, { audio, onProgress: target.onProgress })
       for (const d of got)
         out.push({ kind: audio ? 'audio' : 'video', file: d.file, poster: d.poster })
       if (out.length) return out

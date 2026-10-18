@@ -308,11 +308,22 @@ export const accessKeys = sqliteTable(
     hint: text('hint').notNull(),
     createdAt: text('created_at').notNull(),
     lastUsedAt: text('last_used_at'),
+    /** `search` (the adhx skill: read-only search) or `phone` (the phone app: save + status). */
+    scope: text('scope').notNull().default('search'),
   },
   (table) => ({
     userIdIdx: index('access_keys_user_id_idx').on(table.userId),
   }),
 )
+
+/** One-time codes that connect the phone app (Settings → Phone app). */
+export const appPairCodes = sqliteTable('app_pair_codes', {
+  codeHash: text('code_hash').primaryKey(),
+  userId: text('user_id').notNull(),
+  expiresAt: integer('expires_at').notNull(), // epoch ms
+  usedAt: text('used_at'),
+  createdAt: text('created_at').notNull(),
+})
 
 // Sync logs - PK: id (includes userId for filtering)
 export const syncLogs = sqliteTable(

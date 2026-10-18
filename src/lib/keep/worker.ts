@@ -6,6 +6,7 @@ import { captureException } from '@/lib/sentry'
 import { noteSaved, PRIORITY } from '@/lib/semantic'
 import { keepBackfill, keepConcurrency, keepEnabled, keepMinFreeBytes, mediaDir } from './config'
 import { keepPost, NothingToKeep } from './download'
+import { clearKeepProgress, reportKeepProgress } from './progress'
 import { forgetPost, recordKept } from './store'
 import { YtdlpError } from './ytdlp'
 
@@ -135,12 +136,15 @@ export async function runJob(platform: string, postId: string): Promise<void> {
       postId,
       author: saved.author,
       category: saved.category,
+      onProgress: (percent) => reportKeepProgress(platform, postId, percent),
     })
     await recordKept(platform, postId, files)
     // Understand it again from the kept files (unchanged parts are skipped).
     if (files.length) noteSaved([{ platform, postId }], PRIORITY.sync)
   } catch (error) {
     fail(platform, postId, error)
+  } finally {
+    clearKeepProgress(platform, postId)
   }
 }
 

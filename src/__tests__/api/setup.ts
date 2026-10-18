@@ -300,9 +300,17 @@ export const FULL_SCHEMA_SQL = `
       key_hash TEXT NOT NULL UNIQUE,
       hint TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      last_used_at TEXT
+      last_used_at TEXT,
+      scope TEXT NOT NULL DEFAULT 'search'
     );
     CREATE INDEX access_keys_user_id_idx ON access_keys(user_id);
+  CREATE TABLE app_pair_codes (
+    code_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL
+  );
   CREATE TABLE admin_sign_in_links (
     token_hash TEXT PRIMARY KEY,
     email TEXT NOT NULL,

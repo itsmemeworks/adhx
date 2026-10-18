@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Phone app server side (ADHX Share)
+
+- **Phone keys**: `access_keys.scope` (`search` | `phone`, migration adds it, old rows are `search`). Phone keys work only on `/api/app/save|status|me`; search keys only on `/api/agent/search`. Up to 10 phones.
+- **Pairing** (`src/lib/auth/phone-pairing.ts`, table `app_pair_codes`): Settings → Phone app (`PhoneAppCard`) makes an 8-character code, single use, 10 minutes, shown as a QR code holding `adhx://pair?server=<origin>&code=…`. `POST /api/app/pair` spends it for a key; the card polls `/api/app/phones` and lists/removes phones.
+- **Save** (`POST /api/app/save`): the add logic moved out of the routes into `src/lib/bookmarks/add.ts` (`addBookmark`) and `add-tweet.ts` (`addTweet`), so the X branch no longer loops back over HTTP with the cookie. Answers `{ platform, network, id, author, text, posterUrl, openPath, alreadySaved, savedAt }`, 422 `not_a_post`, 404 `unavailable`.
+- **Status** (`GET /api/app/status`): keep job state plus a live percent from yt-dlp's progress lines (`src/lib/keep/progress.ts`, in memory, never goes backwards).
+- Contract for the apps: `docs/specs/phone-app.md`. Apps live in `apps/ios` and `apps/android`.
+- Follow-up: "Add to a channel" from the sheet needs a channel scope for phone keys.
+
 ## 2026-10-18 — Sign-in without Resend
 
 - **Three ways to deliver links** (`src/lib/email/magic-link.ts`, `signInDelivery()`): Resend; your own mail server (`SMTP_URL`, nodemailer, `smtpOptions` parses `smtp://`/`smtps://`); or `EMAIL_LINKS_TO_ADMIN=1`.

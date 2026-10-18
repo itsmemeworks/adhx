@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
 import { maxFileSize, mediaDir, ytdlpPath } from './config'
+import { parseProgressLine, PROGRESS_TEMPLATE } from './progress'
 
 /**
  * yt-dlp, the downloader linktokeep-style tools use: one extractor per site,
@@ -69,9 +70,19 @@ const PERMANENT = [
   /drm protected/i,
 ]
 
-function run(args: string[], timeoutMs: number): Promise<string> {
+/** Call `onLine` for each whole line yt-dlp writes, as it writes it. */
+function eachLine(onLine: (line: string) => void): (chunk: Buffer | string) => void {
+  let rest = ''
+  return (chunk) => {
+    const lines = (rest + chunk.toString()).split(/\r?\n|\r/)
+    rest = lines.pop() ?? ''
+    for (const line of lines) onLine(line)
+  }
+}
+
+function run(args: string[], timeoutMs: number, onLine?: (line: string) => void): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(
+    const child = execFile(
       ytdlpPath(),
       args,
       { timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, windowsHide: true },
@@ -96,6 +107,11 @@ function run(args: string[], timeoutMs: number): Promise<string> {
         )
       },
     )
+    if (onLine) {
+      // Progress goes to stderr in quiet mode (`--print` implies it), stdout otherwise.
+      child.stdout?.on('data', eachLine(onLine))
+      child.stderr?.on('data', eachLine(onLine))
+    }
   })
 }
 
@@ -152,11 +168,20 @@ export interface Downloaded {
 export async function ytdlpDownload(
   target: string,
   dir: string,
-  { audio = false }: { audio?: boolean } = {},
+  { audio = false, onProgress }: { audio?: boolean; onProgress?: (percent: number) => void } = {},
 ): Promise<Downloaded[]> {
   const prefix = audio ? 'a' : 'v'
+  const common = await commonArgs()
   const args = [
-    ...(await commonArgs()),
+    ...(onProgress
+      ? [
+          ...common.filter((a) => a !== '--no-progress'),
+          '--progress',
+          '--newline',
+          '--progress-template',
+          PROGRESS_TEMPLATE,
+        ]
+      : common),
     '--yes-playlist',
     '--no-mtime',
     '--max-filesize',
@@ -177,7 +202,15 @@ export async function ytdlpDownload(
     args.push('-f', VIDEO_FORMAT, '-S', VIDEO_SORT, '--merge-output-format', 'mp4')
   }
   args.push('--', target)
-  const out = await run(args, DOWNLOAD_TIMEOUT_MS)
+  const out = await run(
+    args,
+    DOWNLOAD_TIMEOUT_MS,
+    onProgress &&
+      ((line) => {
+        const percent = parseProgressLine(line)
+        if (percent !== null) onProgress(percent)
+      }),
+  )
   const files = out
     .split('\n')
     .map((l) => l.trim())

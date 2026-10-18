@@ -134,9 +134,18 @@ try {
       key_hash TEXT NOT NULL UNIQUE,
       hint TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      last_used_at TEXT
+      last_used_at TEXT,
+      scope TEXT NOT NULL DEFAULT 'search'
     );
     CREATE INDEX IF NOT EXISTS access_keys_user_id_idx ON access_keys(user_id);
+    CREATE TABLE IF NOT EXISTS app_pair_codes (
+      code_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS app_pair_codes_user_id_idx ON app_pair_codes(user_id);
     CREATE TABLE IF NOT EXISTS admin_sign_in_links (
       token_hash TEXT PRIMARY KEY,
       email TEXT NOT NULL,
@@ -302,6 +311,20 @@ try {
   }
 } catch (error) {
   console.log('[migrate] FAILED installing durable OAuth refresh lease', error)
+  db.close()
+  process.exit(1)
+}
+
+// Phone app keys share access_keys with the search keys; `scope` tells them
+// apart. Keys made before the column existed are all search keys.
+try {
+  const keyColumns = db.prepare('PRAGMA table_info(access_keys)').all() as Array<{ name: string }>
+  if (!keyColumns.some((column) => column.name === 'scope')) {
+    db.exec("ALTER TABLE access_keys ADD COLUMN scope TEXT NOT NULL DEFAULT 'search'")
+    console.log('[migrate] Added access_keys.scope')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED adding access_keys.scope', error)
   db.close()
   process.exit(1)
 }
