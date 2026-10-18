@@ -23,7 +23,8 @@ Append-only context log for agents and contributors. **Newest entries first.** A
   - Facebook and Twitch kept at 1080p, X at 4K.
   - Vimeo's own videos are DRM (picture only); Threads gives a preview-sized picture only; Imgur is blocked in the UK.
 - **Self-hosting**: `ALLOWED_EMAILS` sign-up allowlist; iOS Settings card explains making your own Shortcut for a non-adhx.com origin; skill takes `ADHX_URL`; README rewritten for self-hosters.
-- **Not verified**: the Docker image build (no Docker here), any server outside the UK, and a full-library backfill (this Mac had 11 GB free).
+- **Disk safety** (found when a test backfill filled this Mac's disk): downloads pause below `KEEP_MIN_FREE_GB` (default 2) free, and `KEEP_BACKFILL=off` now also skips older jobs that were already queued.
+- **Not verified**: the Docker image build (no Docker here), any server outside the UK, and a full-library backfill.
 
 ## 2026-10-18 — Hourly X bookmark sync; search your saves from the adhx skill
 

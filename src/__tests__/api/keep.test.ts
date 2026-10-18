@@ -165,6 +165,27 @@ describe('kept media', () => {
       expect(scanForNewSaves(1000, new Date(Date.now() - 60_000).toISOString())).toBe(1)
     })
 
+    it('skips older queued jobs once the backfill is turned off', async () => {
+      save('youtube', 'old', 'a', '2026-01-01T00:00:00.000Z')
+      save('youtube', 'fresh', 'a', now())
+      const { scanForNewSaves, claimNext } = await import('@/lib/keep/worker')
+      scanForNewSaves()
+      const since = new Date(Date.now() - 60_000).toISOString()
+      expect(claimNext(new Date(), since)).toEqual({ platform: 'youtube', postId: 'fresh' })
+      expect(claimNext(new Date(), since)).toBeNull()
+    })
+
+    it('pauses while the media disk is nearly full', async () => {
+      const { diskHasRoom } = await import('@/lib/keep/worker')
+      vi.stubEnv('KEEP_MIN_FREE_GB', '0')
+      expect(await diskHasRoom()).toBe(true)
+      vi.stubEnv('KEEP_MIN_FREE_GB', '1000000')
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      expect(await diskHasRoom()).toBe(false)
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('[keep] Paused'))
+      warn.mockRestore()
+    })
+
     it('records the files and marks the job done', async () => {
       save('youtube', 'abc')
       const file = path.join(mediaRoot, 'v.mp4')

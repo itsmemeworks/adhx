@@ -12,6 +12,8 @@ import path from 'path'
  * - `KEEP_CONCURRENCY`: posts downloaded at once (default 2).
  * - `KEEP_BACKFILL=off`: only download posts saved from now on (leave the
  *   existing library on the proxies; useful on a small disk).
+ * - `KEEP_MIN_FREE_GB`: pause downloading while the media disk has less than
+ *   this much free space (default 2).
  * - `KEEP_H264=off`: keep videos in whatever codec the source sent. By default
  *   a VP9, AV1 or HEVC download is re-encoded to H.264 at the same size so
  *   Safari, Chrome and Firefox all play it.
@@ -54,4 +56,9 @@ export function keepH264(): boolean {
 export function keepBackfill(): boolean {
   const flag = process.env['KEEP_BACKFILL']
   return !(flag === 'off' || flag === '0' || flag === 'false')
+}
+
+export function keepMinFreeBytes(): number {
+  const n = Number.parseFloat(process.env['KEEP_MIN_FREE_GB'] ?? '')
+  return (Number.isFinite(n) && n >= 0 ? n : 2) * 1024 ** 3
 }

@@ -108,9 +108,9 @@ Kept media is most of the space ADHX uses. As a rough guide:
 - Photos are 0.1–1 MB each.
 - The search model is about 1.5 GB, downloaded once on first start.
 
-So 1,000 mixed saves come to roughly 10–30 GB. When you first run ADHX on an existing library, it downloads everything already saved, newest first. If your disk is small, start with `KEEP_BACKFILL=off`.
+So 1,000 mixed saves come to roughly 10–30 GB. When you first run ADHX on an existing library, it downloads everything already saved, newest first. If your disk is small, start with `KEEP_BACKFILL=off`, which also stops any older downloads already waiting.
 
-Files are deleted when nobody on your server has the post saved any more. That check runs once an hour.
+Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_FREE_GB`). They carry on once there's room. Files are deleted when nobody on your server has the post saved any more; that check runs once an hour.
 
 ### Video formats
 

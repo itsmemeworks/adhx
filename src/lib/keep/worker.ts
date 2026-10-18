@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { bookmarks, keepJobs } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
 import { noteSaved, PRIORITY } from '@/lib/semantic'
-import { keepBackfill, keepConcurrency, keepEnabled, mediaDir } from './config'
+import { keepBackfill, keepConcurrency, keepEnabled, keepMinFreeBytes, mediaDir } from './config'
 import { keepPost, NothingToKeep } from './download'
 import { forgetPost, recordKept } from './store'
 import { YtdlpError } from './ytdlp'
@@ -57,14 +57,24 @@ export function scanForNewSaves(limit = 1000, since: string | null = null): numb
   return result.changes
 }
 
-/** Claim the next job, newest save first. */
-export function claimNext(now = new Date()): { platform: string; postId: string } | null {
+/**
+ * Claim the next job, newest save first (only posts saved since `since`, when
+ * given — so turning the backfill off also skips older jobs already queued).
+ */
+export function claimNext(
+  now = new Date(),
+  since: string | null = null,
+): { platform: string; postId: string } | null {
   const iso = now.toISOString()
   const [next] = db.all<{ platform: string; postId: string }>(sql`
     SELECT j.platform AS platform, j.post_id AS postId
     FROM keep_jobs j
     WHERE j.status IN ('pending', 'failed')
       AND (j.next_attempt_at IS NULL OR j.next_attempt_at <= ${iso})
+      AND (${since} IS NULL OR EXISTS (
+        SELECT 1 FROM bookmarks b
+        WHERE b.platform = j.platform AND b.id = j.post_id AND b.processed_at >= ${since}
+      ))
     ORDER BY j.status = 'failed',
       (SELECT MAX(b.processed_at) FROM bookmarks b WHERE b.platform = j.platform AND b.id = j.post_id) DESC
     LIMIT 1
@@ -159,8 +169,9 @@ async function tick(): Promise<void> {
       s.lastScan = now
       scanForNewSaves(1000, s.since)
     }
+    if (!(await diskHasRoom())) return
     while (s.running < keepConcurrency()) {
-      const job = claimNext()
+      const job = claimNext(new Date(), s.since)
       if (!job) break
       s.running++
       void runJob(job.platform, job.postId)
@@ -171,6 +182,27 @@ async function tick(): Promise<void> {
     }
   } catch (error) {
     captureException(error, { endpoint: 'keep.tick' })
+  }
+}
+
+let warnedFull = 0
+
+/** Pause downloading while the media disk is nearly full (KEEP_MIN_FREE_GB). */
+export async function diskHasRoom(): Promise<boolean> {
+  try {
+    await fs.mkdir(mediaDir(), { recursive: true })
+    const stats = await fs.statfs(mediaDir())
+    const free = stats.bavail * stats.bsize
+    if (free >= keepMinFreeBytes()) return true
+    if (Date.now() - warnedFull > 60 * 60_000) {
+      warnedFull = Date.now()
+      console.warn(
+        `[keep] Paused: ${(free / 1024 ** 3).toFixed(1)} GB free in ${mediaDir()} (KEEP_MIN_FREE_GB)`,
+      )
+    }
+    return false
+  } catch {
+    return true
   }
 }
 
