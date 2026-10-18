@@ -6,6 +6,19 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Gob is back; adhx.com becomes the product site
+
+- **Gob** (`src/components/next/Gob.tsx`, CSS `.gob` in globals.css) replaces the yellow square with dots, per brand/BRAND.md. The serif "adhx" wordmark stays.
+  - Moods: `idle` (blinks, glances), `busy` (bob, look around, "o" mouth), `shut` (eyes closed).
+  - Inside `.gob-host`, hover or focus makes Gob look around.
+  - `AdhxFace` now renders Gob.
+  - The header Gob goes busy through `logo-busy.ts` (`useBusyLogo`) while the player loads, search runs, a paste is grabbed or X syncs.
+- **Product site** (`src/components/site/`), shown at "/" to signed-out visitors when `ADHX_PRODUCT_SITE=1` (set in fly.production.toml).
+  - **Hero:** `HeroReel`, a ~31 s scripted reel as live markup at 1280×720, scaled to fit.
+  - **Sections:** networks, search (EmbeddingGemma 2), kept originals, player, Right now, channels, X sync, phone apps, Claude, self-hosting.
+  - **Illustrations:** illustrated posts (`art.tsx`) instead of anyone's real content.
+  - **Video:** `/showreel` shows the reel alone. `public/site/adhx-reel.mp4` (1.9 MB) and `.jpg` were recorded from it with Playwright and encoded with ffmpeg. Re-record after changing the reel.
+
 ## 2026-10-18 — ADHX Share apps (iOS + Android)
 
 - **iOS** (`apps/ios`): hand-written Xcode project (objectVersion 77, synced folders), SwiftUI host app (QR/typed pairing, `adhx://pair` link, Shared lately, Settings) + Share Extension running saving → saved / already / not a post / offline / not connected. Address, history and queue in the App Group; key in the Keychain. Bundle prefix and team in `Config/Base.xcconfig`. Builds with `xcodebuild … CODE_SIGNING_ALLOWED=NO`; paired against a real local server in the simulator. iOS 27 shows share extensions inside the system card, so there is no see-through backdrop.

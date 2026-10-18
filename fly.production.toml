@@ -14,6 +14,8 @@ primary_region = 'lhr'
   SEMANTIC_CACHE_DIR = '/data/models'
   SEMANTIC_THREADS = '1'
   SENTRY_ENVIRONMENT = 'production'
+  # adhx.com shows the product site at "/" to signed-out visitors.
+  ADHX_PRODUCT_SITE = '1'
   # OAuth callback host. adhx.com ends in "x.com", which X's logged-out login
   # flow rewrites to "twitter.com" (→ adhtwitter.com), breaking login for users
   # not already signed into X. The Fly host has no "x.com", so X leaves it alone;

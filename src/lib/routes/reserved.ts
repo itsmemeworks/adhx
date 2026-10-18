@@ -23,6 +23,7 @@ export const RESERVED_TOP_LEVEL_SEGMENTS = new Set<string>([
   'settings',
   'share',
   'shorts',
+  'showreel',
   't',
   'tags',
   'trending',
