@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
-import { PUBLIC_HOST } from '@/lib/routes/base-url'
+import { useSiteHost } from '@/lib/routes/use-host'
 
 // Colors for the `dark` theme — matches the /welcome full-bleed modal (always
 // dark, like the theater / SignInModal, since it's a brand-new account's very
@@ -54,6 +54,7 @@ export function UsernameChooser({
   submitLabel = 'claim',
   onCancel,
 }: UsernameChooserProps) {
+  const host = useSiteHost()
   const [value, setValue] = useState(suggestedUsername)
   const [availability, setAvailability] = useState<UsernameAvailability>('idle')
   const [submitting, setSubmitting] = useState(false)
@@ -146,7 +147,7 @@ export function UsernameChooser({
           style={{ backgroundColor: INPUT_BG }}
         >
           <span className="whitespace-nowrap font-mono text-[13px]" style={{ color: SUBTLE }}>
-            {`${PUBLIC_HOST}/t/`}
+            {`${host}/t/`}
           </span>
           <input
             type="text"
@@ -206,7 +207,7 @@ export function UsernameChooser({
   return (
     <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-2.5 font-nx-sans">
       <div className="flex h-12 min-w-0 items-center rounded-[14px] border-[1.5px] border-nx-accent bg-black pl-4 pr-2">
-        <span className="whitespace-nowrap text-[14px] text-white/50">{`${PUBLIC_HOST}/t/`}</span>
+        <span className="whitespace-nowrap text-[14px] text-white/50">{`${host}/t/`}</span>
         <input
           type="text"
           autoFocus={autoFocus}

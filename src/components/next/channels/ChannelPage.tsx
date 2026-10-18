@@ -12,7 +12,7 @@ import { channelPlayHref, recentPlayHref } from '../theater/queue'
 import { startHref } from '@/lib/next-ui/routes'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
-import { PUBLIC_HOST } from '@/lib/routes/base-url'
+import { useSiteHost } from '@/lib/routes/use-host'
 
 /**
  * A channel's page (`/t/{username}/{tag}`):
@@ -32,6 +32,7 @@ export function ChannelPage({
   mine: boolean
   signedIn: boolean
 }) {
+  const host = useSiteHost()
   const [items, setItems] = useState<SearchResultItem[] | null>(null)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
@@ -175,7 +176,7 @@ export function ChannelPage({
                     className="flex h-[50px] items-center gap-2 rounded-full bg-white/15 px-[18px] text-sm font-semibold"
                   >
                     <Link2 aria-hidden className="h-4 w-4" />
-                    <span>{copied ? 'Copied' : `${PUBLIC_HOST}${path}`}</span>
+                    <span>{copied ? 'Copied' : `${host}${path}`}</span>
                   </button>
                 )}
                 {mine && isPublic !== null && (

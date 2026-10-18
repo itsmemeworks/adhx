@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
-import { PUBLIC_HOST } from '@/lib/routes/base-url'
+import { useSiteHost } from '@/lib/routes/use-host'
 
 export interface WelcomeClientProps {
   suggestedUsername: string
@@ -17,6 +17,7 @@ export interface WelcomeClientProps {
  * your own saves exist, and Made for you fills Channels once they do.
  */
 export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProps) {
+  const host = useSiteHost()
   const [sanitized, setSanitized] = useState(sanitizeUsername(suggestedUsername))
 
   function handleSuccess(_result: UsernameClaimSuccess) {
@@ -45,7 +46,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
             </h1>
           </span>
           <p className="m-0 text-[15px] leading-snug text-white/70">
-            {`Channels you make public live at ${PUBLIC_HOST}/t/${sanitized || 'username'}. You can only set it once.`}
+            {`Channels you make public live at ${host}/t/${sanitized || 'username'}. You can only set it once.`}
           </p>
           <UsernameChooser
             suggestedUsername={suggestedUsername}
