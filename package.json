@@ -64,6 +64,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-email": "^6.9.3",
+    "simple-icons": "^16.35.0",
     "tailwind-merge": "^3.6.0",
     "tsx": "^4.23.13",
     "twitter-api-v2": "^1.29.1"

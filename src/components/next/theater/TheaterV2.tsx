@@ -1,6 +1,7 @@
 'use client'
 
 import { networkLabel } from '@/lib/platform/networks'
+import { NetworkIcon } from '../NetworkIcon'
 
 import { composeArticleCopy, fetchArticleMarkdown } from '@/lib/theater/article-body'
 import { RichText, postBody } from '../rich-text'
@@ -1060,20 +1061,17 @@ export function TheaterV2({
       checked: stick,
       onSelect: () => setStick((v) => !v),
     },
-    {
-      label: `Open on ${networkLabel(current.post.platform)}`,
-      onSelect: () => {
-        const url = sourceUrl(
-          current.post.platform ?? 'twitter',
-          current.post.author,
-          current.post.id,
-          kind === 'photo' ? 'photo' : null,
-        )
-        if (url) window.open(url, '_blank', 'noopener,noreferrer')
-      },
-    },
     ...(current.saved ? [{ label: 'Archive', danger: true, onSelect: () => void archive() }] : []),
   ]
+
+  // Where the post came from: its network's mark on the rail opens the original.
+  const originalUrl = sourceUrl(
+    current.post.platform ?? 'twitter',
+    current.post.author,
+    current.post.id,
+    kind === 'photo' ? 'photo' : null,
+  )
+  const networkName = networkLabel(current.post.platform)
 
   return (
     <>
@@ -1298,6 +1296,19 @@ export function TheaterV2({
           aria-label="Post actions"
           className="absolute bottom-[164px] right-3 z-10 flex flex-col gap-3 md:bottom-auto md:right-6 md:top-1/2 md:-translate-y-1/2"
         >
+          {originalUrl && (
+            <a
+              href={originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open on ${networkName}`}
+              title={`Open on ${networkName}`}
+              data-network={current.post.platform ?? 'twitter'}
+              className="nx-plate flex h-12 w-12 items-center justify-center rounded-full text-white md:h-[52px] md:w-[52px]"
+            >
+              <NetworkIcon platform={current.post.platform} className="h-[20px] w-[20px]" />
+            </a>
+          )}
           <RailButton label="More like this" onClick={() => void moreLikeThis()} active>
             <Sparkles
               aria-hidden
