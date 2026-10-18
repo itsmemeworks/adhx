@@ -138,6 +138,49 @@ describe('kept media', () => {
       expect((await gone.json()).reason).toMatch(/couldn’t be downloaded/)
     })
 
+    it('makes a poster for a video kept without one, once', async () => {
+      const { execFile } = await import('child_process')
+      const { ffmpegPath } = await import('@/lib/media/ffmpeg')
+      const bin = await ffmpegPath()
+      const rel = path.join('reddit', 'clip', 'video-1.mp4')
+      fs.mkdirSync(path.join(mediaRoot, 'reddit', 'clip'), { recursive: true })
+      await new Promise<void>((resolve, reject) =>
+        execFile(
+          bin,
+          [
+            '-loglevel',
+            'error',
+            '-y',
+            '-f',
+            'lavfi',
+            '-i',
+            'testsrc=size=64x96:rate=10',
+            '-t',
+            '1',
+            '-pix_fmt',
+            'yuv420p',
+            path.join(mediaRoot, rel),
+          ],
+          (e) => (e ? reject(e) : resolve()),
+        ),
+      )
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO kept_files (platform, post_id, slot, path, mime, bytes, duration_ms, created_at) VALUES ('reddit', 'clip', 'video-1', ?, 'video/mp4', 1, 1000, ?)`,
+        )
+        .run(rel, now())
+
+      const poster = await get('/api/files/reddit/clip/poster')
+      expect(poster.status).toBe(200)
+      expect(poster.headers.get('content-type')).toBe('image/jpeg')
+      const row = testInstance.sqlite
+        .prepare(`SELECT path FROM kept_files WHERE post_id = 'clip' AND slot = 'poster'`)
+        .get() as { path: string }
+      expect(row.path).toBe(path.join('reddit', 'clip', 'poster.jpg'))
+      // Nothing to make one from: still a plain 404.
+      expect((await get('/api/files/reddit/none/poster')).status).toBe(404)
+    }, 30_000)
+
     it('rejects bad slots, ids and hidden posts', async () => {
       expect((await get('/api/files/youtube/abc/video-x')).status).toBe(404)
       expect((await get('/api/files/YouTube/abc/video-1')).status).toBe(404)

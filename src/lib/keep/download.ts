@@ -10,6 +10,7 @@ import { resolveInstagramVideo } from '@/lib/media/instagram-video'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { keepH264, mediaDir } from './config'
 import { downloadTo, imageExt, MEDIA_HOSTS, openGraph } from './fetch'
+import { posterFrame } from './poster'
 import { probeMedia, type Probed } from './probe'
 import { execFile } from 'child_process'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
@@ -323,6 +324,9 @@ export async function keepPost(target: KeepTarget): Promise<NewKeptFile[]> {
         height: probed.height,
         durationMs: kind === 'photo' ? null : probed.durationMs,
       })
+      if (!posterSet && kind === 'video' && !c.poster) {
+        c.poster = await posterFrame(c.file, probed.durationMs, path.join(scratch, 'frame.jpg'))
+      }
       if (!posterSet && c.poster && kind !== 'photo') {
         const posterProbe = await probeMedia(c.poster)
         moves.push([c.poster, path.join(finalDir, 'poster.jpg')])

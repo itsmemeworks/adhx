@@ -9,6 +9,7 @@ import { absolutePath, isSlot, keptFile, type KeptFile, type Slot } from '@/lib/
 import { keepJobs } from '@/lib/db/schema'
 import { proxySrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
+import { ensurePoster } from '@/lib/keep/poster'
 
 const PLATFORM = /^[a-z]{1,16}$/
 const ID = /^[A-Za-z0-9._~:@-]{1,200}$/
@@ -140,6 +141,8 @@ export async function GET(
     wakeKeep()
     kept = await waitForKept(platform, id, slot, request.signal)
   }
+  // A video kept before stills were taken on download: make its poster now.
+  if (!kept && slot === 'poster') kept = await ensurePoster(platform, id)
   if (kept) {
     let file: string
     let size: number
