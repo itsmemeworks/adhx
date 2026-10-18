@@ -115,5 +115,7 @@ Background `#0f0e0c` (app) / `#000000` (behind sheets), surface `#1a1814`,
 raised `#2a2620`, placeholder `#2a2825`, hairline `#4a453c`, accent `#ffd23f`,
 cream `#f2ead9`, muted `#c9bfab`, faint `#a89f8d`, good `#7ddc8a`, warn
 `#ffb59a`. Headings are Instrument Serif, everything else Hanken Grotesk
-(system font is fine where bundling isn't). The mark is a yellow rounded
-square with two black dots; the wordmark is "adhx" in the serif.
+(system font is fine where bundling isn't). The mark is Gob
+(`src/components/next/Gob.tsx`): a yellow body tilted −4°, mismatched eyes
+(r7, and r11 with a highlight) and a mouth tilted −7°. App icons come from
+`public/icon-512.png`. The wordmark is "adhx" in the serif.

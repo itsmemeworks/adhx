@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — ADHX Share apps (iOS + Android)
+
+- **iOS** (`apps/ios`): hand-written Xcode project (objectVersion 77, synced folders), SwiftUI host app (QR/typed pairing, `adhx://pair` link, Shared lately, Settings) + Share Extension running saving → saved / already / not a post / offline / not connected. Address, history and queue in the App Group; key in the Keychain. Bundle prefix and team in `Config/Base.xcconfig`. Builds with `xcodebuild … CODE_SIGNING_ALLOWED=NO`; paired against a real local server in the simulator. iOS 27 shows share extensions inside the system card, so there is no see-through backdrop.
+- **Android** (`apps/android`): Kotlin + Compose, translucent `ShareActivity` bottom sheet, ZXing scanner (no Google services), WorkManager offline queue, EncryptedSharedPreferences. **Never compiled** (no JDK/SDK on the build Mac), and `gradle-wrapper.jar` is missing: run `gradle wrapper --gradle-version 8.11.1` once and commit it.
+- Both use Gob (from `src/components/next/Gob.tsx`) and `public/icon-512.png` for the icons. README → Phone app covers installing.
+- Follow-ups: compile and test Android, CI builds/releases for the APK, TestFlight, and channels from the sheet.
+
 ## 2026-10-18 — Phone app server side (ADHX Share)
 
 - **Phone keys**: `access_keys.scope` (`search` | `phone`, migration adds it, old rows are `search`). Phone keys work only on `/api/app/save|status|me`; search keys only on `/api/agent/search`. Up to 10 phones.

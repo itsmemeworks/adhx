@@ -23,6 +23,7 @@ It's built to run for yourself and a few friends: one Docker container, one fold
 - **Channels.** ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
 - **Right now.** See what the people on your server are saving, grouped into moments, and **Tune in** to watch along. Savers are only ever counted, never named.
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
+- **A phone app.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android, from any app.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
 
 ## Supported networks
@@ -107,6 +108,8 @@ To give yourself the admin page (sign-in links, numbers, hiding posts, banning a
 | `SEMANTIC_SEARCH=off`                        | Turn search by meaning off (keyword search still works).                                                                       |
 | `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `1`.                                                                             |
 | `TYPESAFE_API_KEY`                           | Optional: reorders the top search results by their words. Only the search text and the public words of those results are sent. |
+| `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                          |
+| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                      |
 
 Every setting is in [`.env.example`](.env.example).
 
@@ -171,12 +174,56 @@ X charges the developer app for every post its API returns, so automatic syncing
 ## Saving posts
 
 - **Paste a link** in ADHX (the Paste button, or just paste anywhere in the app).
+- **The phone app:** [ADHX Share](#phone-app-adhx-share) adds ADHX to the share menu on iPhone and Android.
 - **iPhone and iPad:** Settings → _Add to the iOS share menu_ shows how to make a three-step Shortcut that points at your server. Then use Share → ADHX in any app.
 - **Android:** add ADHX to your home screen. It then appears in the share menu.
 - **Desktop:** the extension in [`extension/`](extension/) adds a toolbar button, a right-click item and `⌘⇧A` / `Ctrl+Shift+A`. Build it with `EXTENSION_PUBLIC_APP_ORIGIN` set to your server (see [`extension/README.md`](extension/README.md)).
 - **Put your address in front of any link:** `https://adhx.example.com/https://www.youtube.com/watch?v=…`.
 
 Short share links (`pin.it`, Reddit's `/s/` links, `on.soundcloud.com`, `youtu.be`, TikTok's `vm.` links) work too.
+
+## Phone app (ADHX Share)
+
+ADHX Share puts ADHX in the share menu of every app on your phone. Share a post from X, Instagram, TikTok, YouTube or any of the other networks and a small sheet slides up: it saves the post to your ADHX, shows what was saved, and shows the copy being made. If your ADHX can't be reached, the link waits on the phone and goes when it can.
+
+The phone only sends links to your ADHX. Your server does the downloading. The code is in [`apps/ios`](apps/ios) and [`apps/android`](apps/android); the API it uses is in [`docs/specs/phone-app.md`](docs/specs/phone-app.md).
+
+### Connect it
+
+1. On your computer, open your ADHX and go to **Settings → Phone app**. Press **Show the code**.
+2. Open ADHX Share on your phone and scan the code. Or scan it with the phone's own camera, or tap **Type the address instead** and type your ADHX's address and the 8-character code.
+
+The code works once, for 10 minutes. Open ADHX at an address your phone can reach when you make it: `localhost` won't work from a phone. Your connected phones are listed under the code, and **Remove** stops a phone from saving straight away.
+
+### iPhone
+
+There's no App Store version. Install it one of two ways:
+
+- **TestFlight.** If whoever runs your ADHX has set up TestFlight, use their invite link (it's on Settings → Phone app when `NEXT_PUBLIC_IOS_APP_URL` is set).
+- **Build it yourself** with a Mac, Xcode 16 or newer and an Apple account (a free one works, but the app then stops opening after 7 days until you build it again):
+  1. Open `apps/ios/Config/Base.xcconfig`. Set `ADHX_BUNDLE_PREFIX` to something only you use, like `com.yourname.adhxshare`, and `DEVELOPMENT_TEAM` to your team ID (Xcode → Settings → Accounts).
+  2. Open `apps/ios/ADHXShare.xcodeproj`, plug in your phone, pick it at the top, and press Run.
+  3. On the phone, trust your developer profile in Settings → General → VPN & Device Management.
+
+To check it builds without a phone:
+
+```bash
+xcodebuild -project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Share" -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+```
+
+More in [`apps/ios/README.md`](apps/ios/README.md), including TestFlight.
+
+### Android
+
+Download the APK from this project's [GitHub releases](https://github.com/itsmemeworks/adhx/releases) and open it (allow installing from your browser or files app when asked). [Obtainium](https://github.com/ImranR98/Obtainium) can watch the releases and keep it up to date: add the repository's address.
+
+To build it yourself you need JDK 17 or newer and the Android SDK (Android Studio has both). Opening `apps/android` in Android Studio is simplest. From a terminal, make the Gradle wrapper once (it isn't in the repository yet), then build:
+
+```bash
+cd apps/android && gradle wrapper --gradle-version 8.11.1 && ./gradlew assembleDebug
+```
+
+The APK lands in `app/build/outputs/apk/debug/`. Signing a release build is in [`apps/android/README.md`](apps/android/README.md).
 
 ## Search from Claude
 

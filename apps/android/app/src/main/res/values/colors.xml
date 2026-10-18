@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="adhx_bg">#FF0F0E0C</color>
+    <color name="adhx_accent">#FFFFD23F</color>
+    <!-- Dark, so the yellow Gob stands out on the adaptive icon. -->
+    <color name="ic_launcher_background">#FF0F0E0C</color>
+</resources>
