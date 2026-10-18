@@ -113,22 +113,6 @@ private struct PostPage: View {
             .onTapGesture { playback.togglePause() }
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(playback.paused ? "Play" : "Pause")
-            .overlay(alignment: .topTrailing) {
-                if onScreen {
-                    Button {
-                        playback.muted.toggle()
-                    } label: {
-                        Image(systemName: playback.muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
-                            .background(Circle().fill(.black.opacity(0.5)))
-                    }
-                    .accessibilityLabel(playback.muted ? "Sound on" : "Sound off")
-                    .padding(.top, 110)
-                    .padding(.trailing, 16)
-                }
-            }
         case "photo":
             Album(urls: post.media.compactMap { ADHXClient.resolve($0.url, against: server) })
         default:
@@ -136,39 +120,94 @@ private struct PostPage: View {
         }
     }
 
+    /// Left: who posted it and the first lines. Right: the actions, like the
+    /// web player's bar. The network's own mark is the button to the original.
     private var caption: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                NetworkMark(platform: post.platform, size: 16)
+        HStack(alignment: .bottom, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(handle)
-                    .font(Theme.sans(15, .heavy))
+                    .font(Theme.sans(17, .heavy))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Spacer(minLength: 0)
-                if let source = post.sourceUrl.flatMap(URL.init(string:)) {
-                    Button("Open original") { openURL(source) }
-                        .font(Theme.sans(13, .bold))
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Capsule().fill(.white.opacity(0.16)))
+                if post.kind != "text" && post.kind != "article", !post.text.isEmpty {
+                    Text(post.text)
+                        .font(Theme.sans(15))
+                        .foregroundStyle(Theme.cream)
+                        .lineLimit(2)
                 }
             }
-            if post.kind != "text" && post.kind != "article", !post.text.isEmpty {
-                Text(post.text)
-                    .font(Theme.sans(14))
-                    .foregroundStyle(Theme.cream)
-                    .lineLimit(3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+
+            VStack(spacing: 12) {
+                if post.plays && onScreen {
+                    RailButton(label: "Sound",
+                               accessibility: playback.muted ? "Turn sound on" : "Turn sound off") {
+                        playback.muted.toggle()
+                    } icon: {
+                        Image(systemName: playback.muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.system(size: 19, weight: .semibold))
+                    }
+                }
+                if let source = post.sourceUrl.flatMap(URL.init(string:)) {
+                    ShareLink(item: source) {
+                        RailFace(label: "Share") {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 19, weight: .semibold))
+                        }
+                    }
+                    .accessibilityLabel("Share link")
+                    RailButton(label: "Original",
+                               accessibility: "Open original on \(Network.name(post.platform))") {
+                        openURL(source)
+                    } icon: {
+                        NetworkMark(platform: post.platform, size: 22)
+                    }
+                }
             }
+            .frame(width: 64)
         }
-        .padding(.horizontal, 18)
+        .padding(.leading, 18)
+        .padding(.trailing, 12)
         .padding(.bottom, 34)
-        .accessibilityElement(children: .contain)
     }
 
     private var handle: String {
         let name = post.author.handle
         return name.hasPrefix("@") || name.isEmpty ? name : "@\(name)"
+    }
+}
+
+/// A round button in the player's action column, with its label under it.
+private struct RailButton<Icon: View>: View {
+    let label: String
+    let accessibility: String
+    let action: () -> Void
+    @ViewBuilder let icon: () -> Icon
+
+    var body: some View {
+        Button(action: action) { RailFace(label: label, icon: icon) }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibility)
+    }
+}
+
+private struct RailFace<Icon: View>: View {
+    let label: String
+    @ViewBuilder let icon: () -> Icon
+
+    var body: some View {
+        VStack(spacing: 4) {
+            icon()
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(.black.opacity(0.55)))
+                .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+            Text(label)
+                .font(Theme.sans(11, .bold))
+                .foregroundStyle(Theme.cream)
+                .accessibilityHidden(true)
+        }
     }
 }
 

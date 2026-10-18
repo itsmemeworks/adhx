@@ -141,8 +141,10 @@ width, height, durationMs }], article }`
 - **Home is My saves**: full screen, one post at a time, swipe up for the
   next; pages of 20 load as you near the end. Videos loop, start muted with a
   speaker button, and pause on tap. Photo albums swipe sideways. Text and
-  articles show as a card. Over the bottom: author, network mark, the first
-  lines of text, **Open original**.
+  articles show as a card. Bottom left: the @handle and the first
+  lines of text. Bottom right, like the web player's bar: a column of round
+  buttons (Sound for video and sound, Share, and **Original**, which is the
+  network's own logo and opens the post there). No network logo by the name.
 - **Search**: a field ("Describe what you're looking for") with the TRY
   DESCRIBING prompts, a two-column grid of posters, then the player on those
   results from the one you tapped.
