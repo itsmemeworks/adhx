@@ -647,8 +647,9 @@ private fun MediaPage(
                     lineHeight = 21.sp,
                     color = AdhxColors.Cream,
                     textAlign = TextAlign.Center,
+                    // Centred in the space left of the right column, like the caption.
                     modifier = Modifier
-                        .padding(32.dp)
+                        .padding(start = 24.dp, end = 88.dp, top = 32.dp, bottom = 32.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.Black.copy(alpha = 0.7f))
                         .padding(16.dp),
@@ -938,7 +939,8 @@ private fun ActionButton(
         ) {
             icon()
         }
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+        // The label sits on the media itself, so it gets the caption's soft shadow.
+        Text(label, style = OverMedia, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
     }
 }
 
