@@ -474,15 +474,24 @@ export function StartScreen({ returnTo, autoSync }: { returnTo: string; autoSync
       fetch('/api/auth/me', { credentials: 'same-origin' })
         .then((r) => (r.ok ? (r.json() as Promise<Account>) : null))
         .then((a) => {
-          if (a?.authenticated) {
-            setAccount(a)
-            setSentTo(null)
-          }
+          if (!a?.authenticated) return
+          // Signing in again with saves already here: straight to them.
+          return fetch('/api/feed?limit=1', { credentials: 'same-origin' })
+            .then((r) => (r.ok ? (r.json() as Promise<{ stats?: { total?: number } }>) : null))
+            .catch(() => null)
+            .then((feed) => {
+              if (feed?.stats?.total) {
+                window.location.replace(returnTo.startsWith('/start') ? '/' : returnTo)
+                return
+              }
+              setAccount(a)
+              setSentTo(null)
+            })
         })
         .catch(() => {})
     }, 3000)
     return () => window.clearInterval(t)
-  }, [sentTo])
+  }, [sentTo, returnTo])
 
   const resend = (email: string) =>
     void fetch('/api/auth/email/request', {

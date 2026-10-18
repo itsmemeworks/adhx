@@ -179,6 +179,56 @@ describe('getting started', () => {
   })
 })
 
+describe('signing in again', () => {
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }))
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('goes straight to your saves when you already have some', async () => {
+    let signedIn = false
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        if (url === '/api/auth/me') {
+          return new Response(
+            JSON.stringify(
+              signedIn
+                ? { authenticated: true, user: { username: 'pat' } }
+                : { authenticated: false },
+            ),
+          )
+        }
+        if (url === '/api/feed?limit=1')
+          return new Response(JSON.stringify({ stats: { total: 12 } }))
+        return new Response(JSON.stringify({ ok: true }))
+      }),
+    )
+    const replace = vi.fn()
+    const realLocation = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...realLocation, replace },
+    })
+    try {
+      render(<StartScreen returnTo="/start" autoSync={false} />)
+      const input = await screen.findByLabelText('Your email. We’ll send a link, no password.')
+      fireEvent.change(input, { target: { value: 'pat@example.test' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Send me a link' }))
+      await screen.findByText('Check your inbox')
+      signedIn = true
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3_100)
+      })
+      await waitFor(() => expect(replace).toHaveBeenCalledWith('/'))
+      expect(screen.queryByText('Save your first post')).not.toBeInTheDocument()
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: realLocation })
+    }
+  })
+})
+
 describe('setting up a new ADHX', () => {
   afterEach(() => vi.unstubAllGlobals())
 
