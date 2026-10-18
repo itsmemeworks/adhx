@@ -158,13 +158,17 @@ fun PlayerScreen(
     var saving by remember { mutableStateOf<String?>(null) }
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     val playback = remember { Playback() }
+    var reading by remember { mutableStateOf<PhonePost?>(null) }
+    val pip = LocalPip.current
+    val inPip = pip?.inPip == true
 
-    // Only while the app is in front: the decoder is let go as soon as it isn't.
+    // While the app can be seen (full screen or as a small window): the
+    // decoder is let go once it can't.
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> if (player == null) player = buildPlayer(context)
-                Lifecycle.Event.ON_PAUSE -> {
+                Lifecycle.Event.ON_START -> if (player == null) player = buildPlayer(context)
+                Lifecycle.Event.ON_STOP -> {
                     player?.release()
                     player = null
                 }
@@ -229,12 +233,52 @@ fun PlayerScreen(
         }
     }
 
+    // In the small window only videos are played, so its buttons skip the rest.
+    fun step(by: Int): Int? {
+        var i = pager.settledPage + by
+        while (i in posts.indices) {
+            if (!inPip || posts[i].kind == PostKind.VIDEO) return i
+            i += by
+        }
+        return null
+    }
+
+    fun togglePlay() {
+        val p = player ?: return
+        if (playback.problem != null) return
+        if (p.playbackState == Player.STATE_ENDED) {
+            p.seekTo(0)
+            p.play()
+            playback.paused = false
+        } else {
+            playback.paused = !playback.paused
+            p.playWhenReady = !playback.paused
+        }
+    }
+
     // With Repeat off, a video that ends moves on to the next save.
     var ended by remember { mutableIntStateOf(0) }
     LaunchedEffect(ended) {
-        if (ended > 0 && !repeat && pager.settledPage + 1 < posts.size) {
-            pager.animateScrollToPage(pager.settledPage + 1)
-        }
+        if (ended > 0 && !repeat) step(1)?.let { pager.animateScrollToPage(it) }
+    }
+
+    // A video on screen can go in a small window.
+    val video = current?.takeIf { it.kind == PostKind.VIDEO && player != null && playback.problem == null }
+    val playingNow = video != null && !playback.paused
+    DisposableEffect(pip, video?.key, playingNow, inPip, posts.size) {
+        pip?.offer(
+            video?.let { post ->
+                val media = post.media.firstOrNull()
+                PipControls(
+                    aspect = PipHost.aspect(media?.width, media?.height),
+                    playing = playingNow,
+                    previous = { step(-1)?.let { scope.launch { pager.scrollToPage(it) } } },
+                    next = { step(1)?.let { scope.launch { pager.scrollToPage(it) } } },
+                    togglePlay = { togglePlay() },
+                )
+            },
+        )
+        onDispose { pip?.offer(null) }
     }
 
     var failedUrl by remember { mutableStateOf<String?>(null) }
@@ -286,21 +330,18 @@ fun PlayerScreen(
                 repeat = repeat,
                 hidden = hidden,
                 saving = saving == post.key,
+                pip = inPip,
                 onTap = {
-                    val p = player
                     when {
                         hidden -> hidden = false
-                        !PostKind.plays(post.kind) || p == null || playback.problem != null -> Unit
-                        p.playbackState == Player.STATE_ENDED -> {
-                            p.seekTo(0)
-                            p.play()
-                            playback.paused = false
-                        }
-                        else -> {
-                            playback.paused = !playback.paused
-                            p.playWhenReady = !playback.paused
-                        }
+                        PostKind.plays(post.kind) -> togglePlay()
                     }
+                },
+                onRead = { reading = post },
+                onPip = if (pip?.supported == true && post.kind == PostKind.VIDEO) {
+                    { pip.enter() }
+                } else {
+                    null
                 },
                 onToggleMute = { muted = !muted },
                 onToggleRepeat = {
@@ -321,8 +362,9 @@ fun PlayerScreen(
                 onHide = { hidden = true },
             )
         }
-        if (!hidden) topBar()
-        notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (!hidden && !inPip) topBar()
+        if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        reading?.let { Reader(it, onClose = { reading = null }) }
     }
 }
 
@@ -375,7 +417,10 @@ private fun PostPage(
     repeat: Boolean,
     hidden: Boolean,
     saving: Boolean,
+    pip: Boolean,
     onTap: () -> Unit,
+    onRead: () -> Unit,
+    onPip: (() -> Unit)?,
     onToggleMute: () -> Unit,
     onToggleRepeat: () -> Unit,
     onSave: (url: String, name: String) -> Unit,
@@ -422,11 +467,13 @@ private fun PostPage(
             ),
     ) {
         when {
-            plays -> MediaPage(post, server, onScreen, player, playback)
-            post.kind == PostKind.PHOTO && photos.isNotEmpty() -> Album(photos, album, hidden)
-            else -> WordsCard(post)
+            plays -> MediaPage(post, server, onScreen, player, playback, pip)
+            post.kind == PostKind.PHOTO && photos.isNotEmpty() -> Album(photos, album, hidden || pip)
+            else -> WordsCard(post, onRead)
         }
-        if (hidden) {
+        if (pip) {
+            // The small window shows only the video.
+        } else if (hidden) {
             if (onScreen && plays) {
                 ProgressLine(
                     playback,
@@ -458,6 +505,7 @@ private fun PostPage(
                     playback = if (onScreen && plays) playback else null,
                     onSeek = onSeek,
                     onHide = onHide,
+                    onPip = onPip.takeIf { onScreen },
                 )
             }
         }
@@ -472,6 +520,7 @@ private fun MediaPage(
     onScreen: Boolean,
     player: ExoPlayer?,
     playback: Playback,
+    pip: Boolean,
 ) {
     val media = post.media.firstOrNull()
     val poster = media?.posterUrl?.let { AdhxApi.resolve(server, it)?.toString() }
@@ -492,7 +541,7 @@ private fun MediaPage(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (onScreen) {
+        if (onScreen && !pip) {
             val problem = playback.problem
             when {
                 problem != null -> Text(
@@ -587,7 +636,7 @@ private fun Dots(count: Int, current: Int) {
  * doesn't scroll (Original has the rest).
  */
 @Composable
-private fun WordsCard(post: PhonePost) {
+private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
     val article = post.article
     val title = article?.title?.takeIf { it.isNotBlank() }
     val short = (title.orEmpty().length + post.text.length) < SHORT_WORDS
@@ -643,6 +692,21 @@ private fun WordsCard(post: PhonePost) {
             article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
                 Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
             }
+        }
+        // Too long to show: the whole of it is a button away (taps on the words don't open it).
+        if (scroll.maxValue > 0) {
+            Text(
+                "Read all",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = AdhxColors.White,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(AdhxColors.Raised)
+                    .clickable(onClickLabel = "Read all of it", onClick = onRead)
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+            )
         }
     }
 }
@@ -769,10 +833,10 @@ private fun ActionButton(
     }
 }
 
-/** "0:14 / 0:41", the scrub bar and Hide; just Hide for photos and words. */
+/** "0:14 / 0:41", the scrub bar, the small window and Hide; just Hide for photos and words. */
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BottomRow(playback: Playback?, onSeek: (Long) -> Unit, onHide: () -> Unit) {
+private fun BottomRow(playback: Playback?, onSeek: (Long) -> Unit, onHide: () -> Unit, onPip: (() -> Unit)?) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -833,6 +897,18 @@ private fun BottomRow(playback: Playback?, onSeek: (Long) -> Unit, onHide: () ->
             Spacer(Modifier.weight(1f))
         }
         Spacer(Modifier.width(8.dp))
+        if (onPip != null) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .clickable(onClickLabel = "Keep playing in a small window", onClick = onPip)
+                    .semantics { contentDescription = "Keep playing in a small window" },
+                contentAlignment = Alignment.Center,
+            ) {
+                ActionIcon(painterResource(R.drawable.ic_pip))
+            }
+        }
         Box(
             Modifier
                 .size(40.dp)

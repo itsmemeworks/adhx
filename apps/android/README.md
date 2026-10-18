@@ -152,7 +152,11 @@ video, sound or photo on screen into the phone's gallery under ADHX; Android
 10 and up), **Share** and **Original** (the network's logo; opens the post
 there). Along the bottom: the author and the first lines of text, the time, a
 bar to seek, and **Hide**, which clears everything but a thin progress line
-until the next tap. A video that can't play says why, in the server's words.
+until the next tap. Next to Hide, a video can **keep playing in a small window**
+(picture-in-picture), with buttons for the previous and next save; it also
+goes there by itself when you leave the app while a video plays. A text post
+too long for the page fades out with **Read all**, which opens it as a
+scrolling page. A video that can't play says why, in the server's words.
 
 **Search** (`GET /api/app/search`) finds your saves by what you describe, not
 only by the exact words: type, and after a moment a two-column grid of posters

@@ -2,6 +2,7 @@ package com.adhx.share.main
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
 import android.widget.Toast
@@ -12,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +28,8 @@ import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.ShareState
 import com.adhx.share.library.BackBar
 import com.adhx.share.library.LibraryViewModel
+import com.adhx.share.library.LocalPip
+import com.adhx.share.library.PipHost
 import com.adhx.share.library.PlayerScreen
 import com.adhx.share.library.Route
 import com.adhx.share.library.SavesHome
@@ -42,6 +46,7 @@ class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
     private val library: LibraryViewModel by viewModels()
+    private val pip by lazy { PipHost(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -50,12 +55,30 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) handlePairLink(intent)
+        pip.start()
 
         setContent {
             AdhxTheme {
-                MainApp(vm, library)
+                CompositionLocalProvider(LocalPip provides pip) {
+                    MainApp(vm, library)
+                }
             }
         }
+    }
+
+    override fun onDestroy() {
+        pip.stop()
+        super.onDestroy()
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        pip.onUserLeaveHint()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        pip.onModeChanged(isInPictureInPictureMode)
     }
 
     override fun onNewIntent(intent: Intent) {
