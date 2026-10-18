@@ -163,6 +163,13 @@ export async function startUrl(target: KeepTarget): Promise<string> {
   return url
 }
 
+/**
+ * Networks whose posts are always a video or a sound. When yt-dlp can't get
+ * one, the page's preview image isn't the post: report the failure instead of
+ * keeping "a photo" of it.
+ */
+export const MEDIA_ONLY: ReadonlySet<string> = new Set(['youtube', 'vimeo', 'twitch', 'soundcloud'])
+
 async function collectGeneric(target: KeepTarget, dir: string): Promise<Collected[]> {
   const start = await startUrl(target)
   const out: Collected[] = []
@@ -179,6 +186,8 @@ async function collectGeneric(target: KeepTarget, dir: string): Promise<Collecte
       ytError = error
     }
   }
+
+  if (ytError && MEDIA_ONLY.has(target.platform)) throw ytError
 
   // Picture posts: the images the page shows link previews.
   const hosts = MEDIA_HOSTS[target.platform] ?? []

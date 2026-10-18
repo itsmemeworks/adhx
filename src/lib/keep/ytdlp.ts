@@ -60,7 +60,7 @@ export interface YtdlpInfo {
 const PERMANENT = [
   /no video formats found/i,
   /unsupported url/i,
-  /video unavailable/i,
+  /video (?:is )?unavailable/i,
   /private video/i,
   /this video (?:has been|is) (?:removed|deleted|no longer available)/i,
   /does not exist/i,
@@ -69,6 +69,11 @@ const PERMANENT = [
   /not a video/i,
   /drm protected/i,
 ]
+
+/** yt-dlp's error says there's nothing to download here (gone, private, no video, DRM). */
+export function isPermanent(message: string): boolean {
+  return PERMANENT.some((re) => re.test(message))
+}
 
 /** Call `onLine` for each whole line yt-dlp writes, as it writes it. */
 function eachLine(onLine: (line: string) => void): (chunk: Buffer | string) => void {
@@ -99,12 +104,7 @@ function run(args: string[], timeoutMs: number, onLine?: (line: string) => void)
           stderr.trim().split('\n').pop() ||
           error.message
         const message = line.replace(/^ERROR:\s*/, '').slice(0, 500)
-        reject(
-          new YtdlpError(
-            message,
-            PERMANENT.some((re) => re.test(message)),
-          ),
-        )
+        reject(new YtdlpError(message, isPermanent(message)))
       },
     )
     if (onLine) {

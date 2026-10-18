@@ -1,6 +1,6 @@
 import type { LinkNetwork } from '@/lib/platform/networks'
 import { decodeEntities } from './fetch'
-import { pageOpenGraph, startUrl } from './download'
+import { MEDIA_ONLY, pageOpenGraph, startUrl } from './download'
 import { isAudioOnly, YtdlpError, ytdlpInfo, type YtdlpInfo } from './ytdlp'
 
 /**
@@ -84,7 +84,6 @@ function fromInfo(info: YtdlpInfo, fallbackAuthor: string): NetworkPostDescripti
  * right now, the page's preview picture is not the post: it stays a video and
  * the download tries again later. When yt-dlp says it's gone, it's gone.
  */
-const MEDIA_ONLY: ReadonlySet<LinkNetwork> = new Set(['youtube', 'vimeo', 'twitch', 'soundcloud'])
 
 /** Threads titles read "Name (@handle) on Threads". */
 function nameFromTitle(title: string | undefined): string | null {

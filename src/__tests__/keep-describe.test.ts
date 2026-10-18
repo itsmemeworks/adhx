@@ -15,6 +15,7 @@ vi.mock('@/lib/keep/ytdlp', async (importOriginal) => ({
 }))
 
 vi.mock('@/lib/keep/download', () => ({
+  MEDIA_ONLY: new Set(['youtube', 'vimeo', 'twitch', 'soundcloud']),
   startUrl: async ({ platform, postId }: { platform: string; postId: string }) =>
     `https://${platform}.test/${postId}`,
   pageOpenGraph: (...args: unknown[]) => pageOpenGraph(...args),

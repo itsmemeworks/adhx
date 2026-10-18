@@ -32,8 +32,8 @@ const WAIT_MS = 25_000
 
 /**
  * Why a post's video isn't here, for the player to say: the download gave up
- * (410, so a playlist skips it), or nobody has saved it, so it was never
- * downloaded (404: saving it fixes that).
+ * (410, so a playlist skips it), it failed and will be tried again (404), or
+ * nobody has saved it, so it was never downloaded (404: saving it fixes that).
  */
 function notKeptReason(platform: string, id: string): { status: 404 | 410; reason: string } | null {
   const [job] = db
@@ -44,6 +44,9 @@ function notKeptReason(platform: string, id: string): { status: 404 | 410; reaso
     .all()
   if (job?.status === 'unavailable') {
     return { status: 410, reason: 'This one couldn’t be downloaded. The original may still play.' }
+  }
+  if (job?.status === 'failed') {
+    return { status: 404, reason: 'This one couldn’t be downloaded yet. ADHX will try again.' }
   }
   if (job) return null
   const [saved] = db

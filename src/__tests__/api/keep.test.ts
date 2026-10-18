@@ -136,6 +136,16 @@ describe('kept media', () => {
       const gone = await get('/api/files/vimeo/2/video-1')
       expect(gone.status).toBe(410)
       expect((await gone.json()).reason).toMatch(/couldn’t be downloaded/)
+
+      save('vimeo', '3')
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO keep_jobs (platform, post_id, status, attempts, updated_at) VALUES ('vimeo', '3', 'failed', 1, ?)`,
+        )
+        .run(now())
+      const later = await get('/api/files/vimeo/3/video-1')
+      expect(later.status).toBe(404)
+      expect((await later.json()).reason).toMatch(/will try again/)
     })
 
     it('makes a poster for a video kept without one, once', async () => {
