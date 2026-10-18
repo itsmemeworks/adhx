@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -44,6 +45,33 @@ object SaveToPhone {
             }
         } catch (e: IOException) {
             false
+        }
+    }
+
+    /**
+     * Fetch [url] with `download=1` into the app's cache (cache/shared, which
+     * the FileProvider hands out) for the share sheet. Earlier ones are cleared
+     * first, so only one copy is ever kept.
+     */
+    suspend fun fetchToShare(context: Context, url: String, name: String): Pair<File, String>? = withContext(Dispatchers.IO) {
+        val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
+            ?: return@withContext null
+        val folder = File(context.cacheDir, "shared").apply {
+            deleteRecursively()
+            mkdirs()
+        }
+        try {
+            client.newCall(Request.Builder().url(address).build()).execute().use { response ->
+                val body = response.body
+                if (!response.isSuccessful || body == null) return@withContext null
+                val type = body.contentType()?.let { "${it.type}/${it.subtype}" } ?: "video/mp4"
+                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "mp4"
+                val file = File(folder, "$name.$extension")
+                file.outputStream().use { out -> body.byteStream().copyTo(out) }
+                file to type
+            }
+        } catch (e: IOException) {
+            null
         }
     }
 

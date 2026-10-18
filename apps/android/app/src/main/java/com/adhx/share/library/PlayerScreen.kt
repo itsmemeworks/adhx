@@ -43,6 +43,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
@@ -168,6 +169,7 @@ fun PlayerScreen(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     val playback = remember { Playback() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
+    var more by remember { mutableStateOf<PhonePost?>(null) }
     // Where the scrub line is being dragged to (0–1), or null: the controls fade out meanwhile.
     var scrub by remember { mutableStateOf<Float?>(null) }
     val chrome by animateFloatAsState(if (scrub == null) 1f else 0f, label = "chrome")
@@ -356,6 +358,7 @@ fun PlayerScreen(
                     }
                 },
                 onRead = { reading = post },
+                onMore = { more = post },
                 onPip = if (pip?.supported == true && post.kind == PostKind.VIDEO) {
                     { pip.enter() }
                 } else {
@@ -385,6 +388,9 @@ fun PlayerScreen(
         }
         if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
         reading?.let { Reader(it, onClose = { reading = null }) }
+        if (!inPip) {
+            more?.let { MoreSheet(it, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { more = null }) }
+        }
     }
 }
 
@@ -443,6 +449,7 @@ private fun PostPage(
     onScrub: (Float?) -> Unit,
     onTap: () -> Unit,
     onRead: () -> Unit,
+    onMore: () -> Unit,
     onPip: (() -> Unit)?,
     onToggleMute: () -> Unit,
     onToggleRepeat: () -> Unit,
@@ -506,30 +513,42 @@ private fun PostPage(
                 )
             }
         } else {
-            // The caption and the column sit 64dp above the bottom (plus the gesture bar),
-            // and fade out while the scrub line is dragged.
+            // The caption and the column sit 64dp above the bottom (Android adds 12dp for the
+            // gesture bar), and fade out while the scrub line is dragged.
+            val gestureBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() > 0.dp
+            val lift = if (gestureBar) 76.dp else 64.dp
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .height(lift + 200.dp)
+                    .graphicsLayer { alpha = chrome }
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)))),
+            )
             Column(
                 Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .graphicsLayer { alpha = chrome }
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))))
-                    .padding(top = 36.dp)
-                    .navigationBarsPadding()
-                    .padding(bottom = 64.dp),
+                    .padding(bottom = lift),
             ) {
                 if (photos.size > 1) Dots(count = photos.size, current = album.currentPage)
-                Caption(
-                    post = post,
-                    muted = if (plays) muted else null,
-                    repeat = if (plays) repeat else null,
-                    saving = saving,
-                    onToggleMute = onToggleMute,
-                    onToggleRepeat = onToggleRepeat,
-                    onSave = save,
-                )
+                CaptionText(post, Modifier.padding(start = 16.dp, end = 88.dp))
             }
-            val gestureBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() > 0.dp
+            ActionColumn(
+                post = post,
+                muted = if (plays) muted else null,
+                repeat = if (plays) repeat else null,
+                saving = saving,
+                onToggleMute = onToggleMute,
+                onToggleRepeat = onToggleRepeat,
+                onSave = save,
+                onMore = onMore,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .graphicsLayer { alpha = chrome }
+                    .padding(end = 16.dp, bottom = lift),
+            )
             BottomRow(
                 playback = if (onScreen && plays) playback else null,
                 scrub = scrub,
@@ -602,12 +621,12 @@ private fun MediaPage(
                 !playback.ready -> Spinner(size = 34.dp, stroke = 3.dp)
                 playback.paused -> Box(
                     Modifier
-                        .size(88.dp)
+                        .size(76.dp)
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.55f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(52.dp))
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(44.dp))
                 }
             }
         }
@@ -691,7 +710,7 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
             .fillMaxSize()
             .background(AdhxColors.Background)
             .navigationBarsPadding()
-            .padding(start = 24.dp, end = 24.dp, top = 110.dp, bottom = 200.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 110.dp, bottom = 280.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         Column(
@@ -757,12 +776,45 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
 /** Posts shorter than this (in characters) get the biggest type. */
 private const val SHORT_WORDS = 140
 
+/** Bottom left, over the post: the @handle and the first lines of text (words posts show them in the page). */
+@Composable
+private fun CaptionText(post: PhonePost, modifier: Modifier = Modifier) {
+    val words = post.kind == PostKind.TEXT || post.kind == PostKind.ARTICLE
+    val handle = Copy.handle(post.author.handle)
+        ?: post.author.name?.takeIf { it.isNotBlank() }
+        ?: Networks.name(post.platform)
+        ?: ""
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            handle,
+            style = OverMedia,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = AdhxColors.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (!words && post.text.isNotBlank()) {
+            Text(
+                post.text,
+                style = OverMedia,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = AdhxColors.Cream,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
 /**
- * Over the bottom: on the left the @handle and the first lines of text; on the
- * right a column of round buttons (Sound, Repeat, Save, Share, Original).
+ * The column of round buttons on the right: Sound, Repeat, Save, Share,
+ * Original (the network's logo), More. Words posts get Share, Original, More.
+ * 56dp wide, so its buttons sit centred over the Hide glyph.
  */
 @Composable
-private fun Caption(
+private fun ActionColumn(
     post: PhonePost,
     muted: Boolean?,
     repeat: Boolean?,
@@ -770,73 +822,50 @@ private fun Caption(
     onToggleMute: () -> Unit,
     onToggleRepeat: () -> Unit,
     onSave: (() -> Unit)?,
+    onMore: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val words = post.kind == PostKind.TEXT || post.kind == PostKind.ARTICLE
-    val handle = Copy.handle(post.author.handle)
-        ?: post.author.name?.takeIf { it.isNotBlank() }
-        ?: Networks.name(post.platform)
-        ?: ""
     val source = post.sourceUrl?.takeIf { it.isNotBlank() }
-    Row(
-        Modifier.padding(start = 18.dp, end = 12.dp),
-        verticalAlignment = Alignment.Bottom,
+    Column(
+        modifier.width(56.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                handle,
-                style = OverMedia,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = AdhxColors.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (!words && post.text.isNotBlank()) {
-                Text(
-                    post.text,
-                    style = OverMedia,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    color = AdhxColors.Cream,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        if (muted != null) {
+            ActionButton(label = "Sound", description = if (muted) "Sound on" else "Sound off", onClick = onToggleMute) {
+                ActionIcon(painterResource(if (muted) R.drawable.ic_sound_off else R.drawable.ic_sound_on))
             }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            if (muted != null) {
-                ActionButton(label = "Sound", description = if (muted) "Sound on" else "Sound off", onClick = onToggleMute) {
-                    ActionIcon(painterResource(if (muted) R.drawable.ic_sound_off else R.drawable.ic_sound_on))
-                }
+        if (repeat != null) {
+            ActionButton(
+                label = "Repeat",
+                description = if (repeat) "Repeat off" else "Repeat this one",
+                on = repeat,
+                onClick = onToggleRepeat,
+            ) {
+                ActionIcon(painterResource(R.drawable.ic_repeat_one), tint = if (repeat) AdhxColors.Black else AdhxColors.White)
             }
-            if (repeat != null) {
-                ActionButton(
-                    label = "Repeat",
-                    description = if (repeat) "Repeat off" else "Repeat this one",
-                    on = repeat,
-                    onClick = onToggleRepeat,
-                ) {
-                    ActionIcon(painterResource(R.drawable.ic_repeat_one), tint = if (repeat) AdhxColors.Black else AdhxColors.White)
-                }
+        }
+        if (onSave != null) {
+            ActionButton(label = "Save", description = "Save to your phone", onClick = { if (!saving) onSave() }) {
+                if (saving) Spinner(size = 20.dp, stroke = 2.dp) else ActionIcon(painterResource(R.drawable.ic_save_to_phone))
             }
-            if (onSave != null) {
-                ActionButton(label = "Save", description = "Save to your phone", onClick = { if (!saving) onSave() }) {
-                    if (saving) Spinner(size = 20.dp, stroke = 2.dp) else ActionIcon(painterResource(R.drawable.ic_save_to_phone))
-                }
+        }
+        if (source != null) {
+            ActionButton(label = "Share", description = "Share", onClick = { shareLink(context, source) }) {
+                ActionIcon(rememberVectorPainter(Icons.Filled.Share), size = 21)
             }
-            if (source != null) {
-                ActionButton(label = "Share", description = "Share", onClick = { shareLink(context, source) }) {
-                    ActionIcon(rememberVectorPainter(Icons.Filled.Share), size = 21)
-                }
-                ActionButton(
-                    label = "Original",
-                    description = "Open on ${Networks.name(post.platform) ?: "its site"}",
-                    onClick = { openUrl(context, source) },
-                ) {
-                    NetworkMark(post.platform, size = 20.dp)
-                }
+            ActionButton(
+                label = "Original",
+                description = "Open on ${Networks.name(post.platform) ?: "its site"}",
+                onClick = { openUrl(context, source) },
+            ) {
+                NetworkMark(post.platform, size = 20.dp)
             }
+        }
+        ActionButton(label = "More", description = "More", onClick = onMore) {
+            ActionIcon(rememberVectorPainter(Icons.Filled.MoreVert))
         }
     }
 }
@@ -865,7 +894,7 @@ private fun ActionButton(
     ) {
         Box(
             Modifier
-                .size(46.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(if (on) AdhxColors.Accent else Color.Black.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center,
@@ -893,7 +922,7 @@ private fun BottomRow(
     Row(
         modifier
             .fillMaxWidth()
-            .padding(start = 14.dp, end = 6.dp),
+            .padding(start = 14.dp, end = 22.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (playback != null) {

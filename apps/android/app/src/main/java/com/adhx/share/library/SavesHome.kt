@@ -76,8 +76,8 @@ fun SavesHome(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AdhxBrand(markSize = 28.dp, modifier = Modifier.weight(1f))
-            BarButton(Icons.Filled.Search, "Search your saves", onSearch)
             BarButton(painterResource(R.drawable.ic_history), "Shared lately", onSharedLately)
+            BarButton(Icons.Filled.Search, "Search your saves", onSearch)
             BarButton(Icons.Filled.Settings, "Settings", onSettings)
         }
     }
@@ -136,8 +136,10 @@ fun SavesHome(
 fun BoxScope.BackBar(onBack: () -> Unit) {
     Box(
         Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
             .statusBarsPadding()
-            .padding(start = 16.dp, top = 6.dp),
+            .padding(start = 16.dp, top = 6.dp, bottom = 20.dp),
     ) {
         BarButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
     }
