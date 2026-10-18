@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +19,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,12 +51,11 @@ import com.adhx.share.ui.Copy
 import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.openInAdhx
-import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.delay
 
-/** "Shared lately" (Home.dc.html). */
+/** "Shared lately" (Home.dc.html): what this phone shared. A row opens the post in the player. */
 @Composable
-fun HomeScreen(vm: MainViewModel, connection: Connection, onSettings: () -> Unit) {
+fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> Unit, onOpen: (HistoryItem) -> Unit) {
     val context = LocalContext.current
     val items by vm.items.collectAsStateWithLifecycle()
     val reach by vm.reach.collectAsStateWithLifecycle()
@@ -94,17 +94,18 @@ fun HomeScreen(vm: MainViewModel, connection: Connection, onSettings: () -> Unit
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AdhxBrand(markSize = 30.dp, modifier = Modifier.weight(1f))
             Box(
                 Modifier
                     .size(44.dp)
                     .clip(CircleShape)
                     .background(AdhxColors.Surface)
-                    .clickable(onClick = onSettings),
+                    .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = AdhxColors.White, modifier = Modifier.size(22.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = AdhxColors.White, modifier = Modifier.size(22.dp))
             }
+            Spacer(Modifier.weight(1f))
+            AdhxBrand(markSize = 26.dp)
         }
 
         ConnectedPill(host = Links.host(connection.server), reach = reach)
@@ -134,13 +135,7 @@ fun HomeScreen(vm: MainViewModel, connection: Connection, onSettings: () -> Unit
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(items, key = { it.id }) { item ->
-                    HistoryRow(item, now) {
-                        if (item.openPath != null) {
-                            openInAdhx(context, connection.server, item.openPath)
-                        } else {
-                            openUrl(context, item.link)
-                        }
-                    }
+                    HistoryRow(item, now) { onOpen(item) }
                 }
             }
         }
@@ -154,7 +149,7 @@ fun HomeScreen(vm: MainViewModel, connection: Connection, onSettings: () -> Unit
 }
 
 @Composable
-private fun ConnectedPill(host: String, reach: Reach) {
+fun ConnectedPill(host: String, reach: Reach) {
     val (dot, label) = when (reach) {
         Reach.Connected -> AdhxColors.Good to "$host · connected"
         Reach.Checking -> AdhxColors.Faint to host

@@ -66,6 +66,36 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), StatusResponse.serializer())
     }
 
+    /** A page of your saves for the player, newest first. */
+    suspend fun saves(offset: Int, limit: Int = PAGE): ApiResult<SavesResponse> {
+        val base = url("api/app/saves") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("offset", offset.toString())
+            .addQueryParameter("limit", limit.toString())
+            .build()
+        return send(authed(url).get().build(), SavesResponse.serializer())
+    }
+
+    /** One of your saves, archived or not (Shared lately opens it in the player). */
+    suspend fun post(platform: String, id: String): ApiResult<SavedPostResponse> {
+        val base = url("api/app/saves") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("platform", platform)
+            .addQueryParameter("id", id)
+            .build()
+        return send(authed(url).get().build(), SavedPostResponse.serializer())
+    }
+
+    /** Search your saves by meaning. */
+    suspend fun search(q: String, offset: Int = 0): ApiResult<SearchResponse> {
+        val base = url("api/app/search") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("q", q)
+            .addQueryParameter("offset", offset.toString())
+            .build()
+        return send(authed(url).get().build(), SearchResponse.serializer())
+    }
+
     private fun url(path: String): HttpUrl? = resolve(server, path)
 
     private fun authed(url: HttpUrl): Request.Builder {
@@ -105,6 +135,7 @@ class AdhxApi(private val server: String, private val key: String?) {
     }
 
     companion object {
+        const val PAGE = 20
         private val JSON = "application/json; charset=utf-8".toMediaType()
         private const val NOT_ADHX = "That address didn’t answer like an ADHX."
 
@@ -122,6 +153,31 @@ class AdhxApi(private val server: String, private val key: String?) {
             .writeTimeout(15, TimeUnit.SECONDS)
             .callTimeout(15, TimeUnit.SECONDS)
             .build()
+
+        /**
+         * Why a file won't play: a video the server can't serve answers 404 or
+         * 410 with `{ reason }` in plain words. Null when it didn't say.
+         */
+        suspend fun reason(url: String): String? = withContext(Dispatchers.IO) {
+            val request = try {
+                Request.Builder().url(url).header("Range", "bytes=0-1").build()
+            } catch (e: IllegalArgumentException) {
+                return@withContext null
+            }
+            try {
+                client.newCall(request).await().use { response ->
+                    if (response.code != 404 && response.code != 410) return@use null
+                    val text = response.body?.string().orEmpty()
+                    try {
+                        json.decodeFromString(ReasonBody.serializer(), text).reason?.takeIf { it.isNotBlank() }
+                    } catch (e: IllegalArgumentException) {
+                        null
+                    }
+                }
+            } catch (e: IOException) {
+                null
+            }
+        }
 
         /**
          * Resolve a path (or an absolute URL) against the server address, as

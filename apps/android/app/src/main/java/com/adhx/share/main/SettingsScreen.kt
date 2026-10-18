@@ -119,7 +119,7 @@ fun SettingsScreen(vm: MainViewModel, connection: Connection, onBack: () -> Unit
         )
 
         Text(
-            "The app only sends links to your ADHX. Nothing else leaves your phone.",
+            "The app only talks to your ADHX.",
             fontSize = 12.sp,
             color = AdhxColors.Faint,
             textAlign = TextAlign.Center,

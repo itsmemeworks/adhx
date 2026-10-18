@@ -60,7 +60,7 @@ import com.adhx.share.ui.Spinner
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
-private const val FOOTER = "The app only sends links to your ADHX. Nothing else leaves your phone."
+private const val FOOTER = "The app only talks to your ADHX."
 
 /** Connect to your ADHX (Pair.dc.html): scan the code, or type the address and code. */
 @Composable

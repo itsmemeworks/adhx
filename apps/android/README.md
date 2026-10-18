@@ -1,11 +1,14 @@
 # ADHX Share for Android
 
 The phone app for your own ADHX. Share a post from any app, pick **ADHX** in
-the share menu, and it lands in your saves. The phone only sends the link;
-your ADHX reads the post and keeps a copy of its media.
+the share menu, and it lands in your saves. The app also plays your saves full
+screen (swipe up for the next one) and searches them by meaning. Your ADHX
+does the work: it reads each post, keeps a copy of its media and streams it
+back; the phone only sends links and plays what comes back.
 
-Kotlin, Jetpack Compose and Material 3. Works on Android 8.0 (API 26) and up,
-and doesn't need Google services (the QR scanner is ZXing, not ML Kit).
+Kotlin, Jetpack Compose and Material 3, with Media3 ExoPlayer for video and
+Coil for pictures. Works on Android 8.0 (API 26) and up, and doesn't need
+Google services (the QR scanner is ZXing, not ML Kit).
 
 The API, pairing flow and copy are in [`docs/specs/phone-app.md`](../../docs/specs/phone-app.md).
 
@@ -96,8 +99,8 @@ The signed APK is `app/build/outputs/apk/release/app-release.apk`.
 The app calls `POST /api/app/pair` with the code and the phone's model name,
 and gets back a **phone key**. The key and the address are kept in
 EncryptedSharedPreferences (the encryption key lives in the Android
-Keystore). The key can only save links and read how saving is going; it can't
-search or read anything else.
+Keystore). The key can save links, read how saving is going, and list, search
+and play your own saves; it can't read anyone else's or change your account.
 
 Plain `http://` addresses are allowed, for an ADHX on your home network. Use
 `https://` for anything on the internet.
@@ -130,15 +133,33 @@ the server turns the link down (a 4xx, like "not a post"), the job stops and
 the list shows why. **Settings → Send waiting links now** starts them all
 again without waiting.
 
-**Shared lately** on the app's home screen lists the last 50 shares (kept on
-the phone only) and keeps unfinished copies up to date while it's open.
+**Shared lately** (the clock button on the home screen) lists the last 50
+shares (kept on the phone only) and keeps unfinished copies up to date while
+it's open. Tap one to watch it in the player.
+
+## Your saves: the player and search
+
+The home screen is **My saves** (`GET /api/app/saves`): full screen, newest
+first, one post at a time. Swipe up for the next; pages of 20 load as you near
+the end. Videos loop, start muted (the speaker button turns the sound on) and
+pause on tap; one Media3 ExoPlayer plays whichever post is on screen and is
+let go when the app goes to the background. Photo albums swipe sideways, text
+posts and articles show as a card, and SoundCloud plays its sound over the
+artwork. Along the bottom: the author, the network's mark, the first lines of
+text and **Open original**. A video that can't play says why, in the server's
+words.
+
+**Search** (`GET /api/app/search`) finds your saves by what you describe, not
+only by the exact words: type, and after a moment a two-column grid of posters
+shows how close each one is. Tap one to play the results from there.
 
 ## Layout
 
 ```
 app/src/main/java/com/adhx/share/
   share/   ShareActivity (share target), the sheet, its view model
-  main/    MainActivity: Connect, Shared lately, Settings
+  main/    MainActivity (the screens and back), Connect, Shared lately, Settings
+  library/ My saves: the player, search by meaning, their view model
   work/    SaveWorker and SaveQueue (the offline queue)
   net/     AdhxApi (OkHttp + kotlinx.serialization) and the JSON shapes
   data/    ConnectionStore (server + key), HistoryStore (recent shares)

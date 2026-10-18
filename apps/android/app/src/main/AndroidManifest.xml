@@ -12,6 +12,7 @@
     <!-- usesCleartextTraffic: a self-hosted ADHX on a home network is often
          plain http://192.168.x.x:3000. -->
     <application
+        android:name=".AdhxApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
