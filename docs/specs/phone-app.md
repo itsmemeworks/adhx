@@ -2,8 +2,10 @@
 
 The companion app for sharing posts to your own ADHX from any app's share menu.
 Native on both platforms: `apps/ios` (SwiftUI app + Share Extension) and
-`apps/android` (Kotlin + Compose). The phone only sends links; the server reads
-the post and downloads its media (`src/lib/keep`).
+`apps/android` (Kotlin + Compose). The phone sends links in, and plays and
+searches your saves; the server does the work: it reads each post, downloads
+its media (`src/lib/keep`), understands it for search by meaning, and streams
+the files back. The phone only ever talks to your own ADHX.
 
 Design: https://claude.ai/artifact/MWLsYCwfbzraTTbAz6aftC (boards: Settings →
 Phone app, Connect, Share sheet, Saving, Saved, Already saved / Not a post /
@@ -29,9 +31,11 @@ Offline, Shared lately, Android sheet).
 Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
-accepted by `/api/app/save`, `/api/app/status` and `/api/app/me` only; a search
-key is not accepted there, and a phone key is not accepted by
-`/api/agent/search`. Removing a phone in Settings deletes its key.
+accepted by `/api/app/save`, `/api/app/status`, `/api/app/me`,
+`/api/app/saves` and `/api/app/search` only; a search key is not accepted
+there, and a phone key is not accepted by `/api/agent/search`. A phone key
+only ever reads its own account's saves. Removing a phone in Settings deletes
+its key.
 
 ## API
 
@@ -92,6 +96,59 @@ How the copy of a saved post is coming along.
   - `kept`: `{ videos, photos, audio }` counts of kept files
 - `404 { code: 'not_saved' }` not in this account's saves
 
+### `GET /api/app/saves?offset&limit`
+
+Your saves for the player, newest first, without archived ones (like My saves
+on the web). `limit` 1–50 (default 20).
+
+- `200 { items: PhonePost[], total, nextOffset }` (`nextOffset` null at the end)
+- `?platform=…&id=…` instead: `200 { item: PhonePost }` for one of your saves,
+  archived or not (Shared lately opens it in the player), or
+  `404 { code: 'not_saved' }`.
+
+### `GET /api/app/search?q&type&offset&limit`
+
+Search your saves by meaning: words, pictures and video frames
+(`src/lib/semantic/find.ts`). `type`: `all` · `videos` · `photos` · `text` ·
+`articles`; `limit` 1–40 (default 30). 120 searches a minute per account.
+
+- `200 { items: PhonePost[], total, understood, close, nextOffset }`
+  - `understood: false`: meaning isn't ready on this server; these matched on
+    exact words. Say "Still learning your saves: exact words only for now".
+  - `close: false`: nothing matched closely; these are the nearest.
+  - each item has `match: { strength: strong|good|related, on: [...] }`, and
+    `learning: true` when its picture or video isn't understood yet.
+- `400 no_query` · `400 bad_type` · `429 busy` (with `Retry-After`)
+
+### `PhonePost` (`src/lib/app/phone-post.ts`)
+
+`{ platform, id, kind, author: { handle, name, avatarUrl }, text, postedAt,
+savedAt, sourceUrl, openPath, media: [{ kind: video|photo, url, posterUrl,
+width, height, durationMs }], article }`
+
+- `kind`: `video` · `audio` (SoundCloud: play `media[0].url`, it's the sound)
+  · `photo` (swipe `media` sideways) · `article` · `text`
+- `url`, `posterUrl` and `openPath` are relative: resolve them against the
+  server. Files stream from `/api/files/…` with byte ranges. Until a file is
+  kept, X, Instagram and TikTok play through their proxies; other networks wait
+  for the download. A video that can't play answers 404 or 410 with
+  `{ reason }` to show ("Nobody here has saved this yet", "This one couldn't
+  be downloaded. The original may still play.").
+- `sourceUrl` is the post on its own network ("Open original").
+
+## The player and search (both platforms)
+
+- **Home is My saves**: full screen, one post at a time, swipe up for the
+  next; pages of 20 load as you near the end. Videos loop, start muted with a
+  speaker button, and pause on tap. Photo albums swipe sideways. Text and
+  articles show as a card. Over the bottom: author, network mark, the first
+  lines of text, **Open original**.
+- **Search**: a field ("Describe what you're looking for") with the TRY
+  DESCRIBING prompts, a two-column grid of posters, then the player on those
+  results from the one you tapped.
+- **Shared lately** (the old home) is a list behind a button; its rows open the
+  post in the player.
+
 ## The share sheet (both platforms)
 
 1. **Open**: read the shared link (or the first link in shared text); show the
@@ -111,8 +168,8 @@ How the copy of a saved post is coming along.
 7. **Not connected**: "Connect the app first" / "Open ADHX Share and scan the
    code in Settings → Phone app on your ADHX."
 
-Channels ("Add to a channel") are in the design but not in this version: phone
-keys can only save and read status.
+Channels ("Add to a channel"), Right now and saving for offline are not in
+this version.
 
 ## Colours and type
 

@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Phone API for playing and searching your saves
+
+- **Owner decision:** the apps play your saves natively and search them by meaning; the server keeps doing the heavy lifting (downloads, understanding, streaming).
+- `GET /api/app/saves` (newest first, no archived, `offset`/`limit`; or `?platform&id` for one) and `GET /api/app/search` (`findPosts` with `scope: 'mine'`, Jev refine on page one, 120/min) take a phone key and only read that key's own saves.
+- Both answer `PhonePost` (`src/lib/app/phone-post.ts`): kind (video, audio, photo, article, text), author, text, relative `/api/files` media and poster addresses, `sourceUrl`, `openPath`, and on search `match` and `learning`.
+- Spec updated (`docs/specs/phone-app.md`: API, the player and search). App READMEs and the "only sends links" copy change with the app work.
+- **Next:** iOS and Android player and search screens; the design artifact gets the new boards.
+
 ## 2026-10-18 — Admins see when a sign-in link is waiting
 
 - With `EMAIL_LINKS_TO_ADMIN`, a friend asking for a link waited until the admin happened to open the admin page. `/api/auth/me` now has `waitingSignIns` for admins (only when links are held; never for anyone else).
