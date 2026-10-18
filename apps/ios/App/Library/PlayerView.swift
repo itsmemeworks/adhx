@@ -69,7 +69,11 @@ struct PlayerView: View {
             showCurrent(self.current)
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { playback.resume() } else { playback.stop() }
+            if phase == .active {
+                playback.resume()
+            } else if !playback.keepsPlayingOutside {
+                playback.stop()
+            }
         }
         .onAppear {
             playback.onEnded = { next() }
@@ -117,6 +121,7 @@ private struct PostPage: View {
     @Environment(\.openURL) private var openURL
     @State private var photo = 0
     @State private var saving = false
+    @State private var reading = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -126,9 +131,11 @@ private struct PostPage: View {
             Color.black
             stage
             if !clean {
-                LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 300)
-                    .allowsHitTesting(false)
+                if overMedia {
+                    LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 300)
+                        .allowsHitTesting(false)
+                }
                 VStack(spacing: 14) {
                     caption
                     bottomRow
@@ -151,7 +158,7 @@ private struct PostPage: View {
                 Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: post.kind == "audio")
                 if onScreen {
                     if post.kind == "video" {
-                        PlayerLayerView(player: playback.player)
+                        PlayerLayerView(player: playback.player) { playback.attach($0) }
                     }
                     if let problem = playback.problem {
                         Text(problem)
@@ -181,9 +188,10 @@ private struct PostPage: View {
             Album(urls: post.media.compactMap { ADHXClient.resolve($0.url, against: server) }, page: $photo)
                 .onTapGesture { if clean { clean = false } }
         default:
-            WordsCard(post: post)
+            WordsCard(post: post) { reading = true }
                 .contentShape(Rectangle())
                 .onTapGesture { if clean { clean = false } }
+                .sheet(isPresented: $reading) { ReaderView(post: post) }
         }
     }
 
@@ -279,6 +287,22 @@ private struct PostPage: View {
                     .accessibilityLabel("Position in the video")
             } else {
                 Spacer(minLength: 0)
+            }
+            if post.kind == "video", onScreen, playback.pipSupported {
+                Button {
+                    if playback.pipPossible {
+                        playback.startSmallWindow()
+                    } else {
+                        say("The small window isn’t ready yet. Try again in a moment.")
+                    }
+                } label: {
+                    Image(systemName: "pip.enter")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(.black.opacity(0.5)))
+                }
+                .accessibilityLabel("Keep playing in a small window")
             }
             Button {
                 clean = true
@@ -428,10 +452,65 @@ private struct Album: View {
     }
 }
 
-/// A post that's words (or an article), full bleed like a video: the words sit
-/// straight on the page under the top bar and fade out above the caption.
+/// A post that's words (or an article), full bleed like a video. Short words
+/// sit in the middle; long ones start at the top and fade out above the
+/// caption, with Read all to open them in the reader. Words never scroll in the
+/// feed, so a swipe always means the next save.
 private struct WordsCard: View {
     let post: PhonePost
+    var onRead: () -> Void = {}
+    @State private var wordsHeight: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { box in
+            let overflows = wordsHeight > box.size.height + 1
+            Words(post: post)
+                .fixedSize(horizontal: false, vertical: true)
+                .background(GeometryReader { words in
+                    Color.clear.preference(key: WordsHeight.self, value: words.size.height)
+                })
+                .frame(width: box.size.width, height: box.size.height,
+                       alignment: overflows ? .topLeading : .leading)
+                .mask(
+                    LinearGradient(stops: [.init(color: .black, location: overflows ? 0.7 : 1),
+                                           .init(color: .clear, location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                )
+                .overlay(alignment: .bottomLeading) {
+                    if overflows {
+                        Button(action: onRead) {
+                            Text("Read all")
+                                .font(Theme.sans(15, .heavy))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 18)
+                                .frame(height: 40)
+                                .background(Capsule().fill(Theme.cream))
+                        }
+                        .accessibilityHint("Opens the whole post to read")
+                    }
+                }
+        }
+        .onPreferenceChange(WordsHeight.self) { wordsHeight = $0 }
+        .padding(.horizontal, 24)
+        .padding(.top, 110)
+        .padding(.bottom, 150)
+        .background(
+            LinearGradient(colors: [Theme.raised, Theme.app], startPoint: .top, endPoint: .bottom)
+        )
+        .clipped()
+        .accessibilityElement(children: .contain)
+    }
+}
+
+private struct WordsHeight: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+/// The words of a text post or article, as the feed and the reader show them.
+private struct Words: View {
+    let post: PhonePost
+    var reading = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -449,26 +528,80 @@ private struct WordsCard: View {
             }
             if !post.text.isEmpty {
                 Text(post.text)
-                    .font(post.article == nil ? Theme.serif(post.text.count < 140 ? 38 : 28) : Theme.sans(16))
+                    .font(font)
                     .foregroundStyle(Theme.cream)
-                    .lineSpacing(post.article == nil ? 2 : 4)
+                    .lineSpacing(post.article == nil && !reading ? 2 : 5)
             }
         }
-        .padding(.horizontal, 24)
-        // Between the top bar and the caption: short words sit in the middle,
-        // long ones fill it and fade out just above the caption. No scrolling.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .mask(
-            LinearGradient(stops: [.init(color: .black, location: 0.86),
-                                   .init(color: .clear, location: 1)],
-                           startPoint: .top, endPoint: .bottom)
-        )
-        .padding(.top, 110)
-        .padding(.bottom, 150)
-        .background(
-            LinearGradient(colors: [Theme.raised, Theme.app], startPoint: .top, endPoint: .bottom)
-        )
-        .clipped()
-        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var font: Font {
+        if post.article != nil { return Theme.sans(reading ? 18 : 16) }
+        if reading { return Theme.serif(26) }
+        return Theme.serif(post.text.count < 140 ? 38 : 28)
     }
 }
+
+/// A long post, to read from top to bottom. The yellow line shows how far.
+struct ReaderView: View {
+    let post: PhonePost
+    @Environment(\.dismiss) private var dismiss
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        GeometryReader { viewport in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 8) {
+                        NetworkMark(platform: post.platform, size: 16)
+                        Text(post.author.handle.hasPrefix("@") ? post.author.handle : "@\(post.author.handle)")
+                            .font(Theme.sans(15, .heavy))
+                            .foregroundStyle(Theme.muted)
+                    }
+                    Words(post: post, reading: true)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 76)
+                .padding(.bottom, 60)
+                .background(GeometryReader { content in
+                    let top = content.frame(in: .named("reader")).minY
+                    Color.clear.onChange(of: top, initial: true) { _, y in
+                        let scrollable = content.size.height - viewport.size.height
+                        progress = scrollable > 0 ? min(max(-y / scrollable, 0), 1) : 1
+                    }
+                })
+            }
+            .coordinateSpace(name: "reader")
+        }
+        .background(Theme.app.ignoresSafeArea())
+        .overlay(alignment: .top) {
+            // Words scroll away under a soft fade, not under the button.
+            LinearGradient(colors: [Theme.app, Theme.app.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 72)
+                .allowsHitTesting(false)
+        }
+        .overlay(alignment: .top) {
+            GeometryReader { bar in
+                Rectangle().fill(Theme.accent).frame(width: bar.size.width * progress, height: 3)
+            }
+            .frame(height: 3)
+            .accessibilityHidden(true)
+        }
+        .overlay(alignment: .topLeading) {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Theme.surface))
+            }
+            .accessibilityLabel("Back to your saves")
+            .padding(.leading, 16)
+            .padding(.top, 14)
+        }
+        .presentationDragIndicator(.hidden)
+        .presentationBackground(Theme.app)
+    }
+}
+

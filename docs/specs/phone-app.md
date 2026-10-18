@@ -151,6 +151,15 @@ width, height, durationMs }], article }`
   ("Repeating this one" / "Plays the next save when this ends"). Along the
   bottom: the time, a line to drag through the video, and Hide, which leaves
   only the picture and a thin progress line. Shadows only on words over media.
+- **Reading**: words never scroll in the feed, so a swipe always changes save.
+  A post that doesn't fit fades out with **Read all**, which opens the reader:
+  the whole post on a scrolling page, a thin yellow line at the top for how far
+  you've read, and a down arrow (or swipe down) back to the same save.
+- **Small window**: videos have a picture-in-picture button next to Hide, and
+  the small window also starts by itself when you leave the app mid-video.
+  Sound carries on. On Android the window has Previous and Next save. Photos
+  and words don't get one. (The iPhone Simulator has no small window; check
+  it on a phone.)
 - **Search**: a field ("Describe what you're looking for") with the TRY
   DESCRIBING prompts, a two-column grid of posters, then the player on those
   results from the one you tapped.

@@ -1,4 +1,5 @@
 import AVFoundation
+import AVKit
 import SwiftUI
 import UIKit
 
@@ -24,6 +25,16 @@ final class Playback: ObservableObject {
     var onEnded: () -> Void = {}
     private var timeWatch: Any?
 
+    /// The phone's own small window (picture-in-picture): from the button, or
+    /// by itself when you leave the app while a video plays.
+    @Published private(set) var pipPossible = false
+    /// False where the phone has no small window (and in the Simulator).
+    let pipSupported = AVPictureInPictureController.isPictureInPictureSupported()
+    @Published private(set) var inPip = false
+    private var pip: AVPictureInPictureController?
+    private var pipWatches: [NSKeyValueObservation] = []
+    private let pipDelegate = PipDelegate()
+
     private var statusWatch: NSKeyValueObservation?
     private var endWatch: NSObjectProtocol?
     private var stallWatch: NSObjectProtocol?
@@ -45,6 +56,31 @@ final class Playback: ObservableObject {
             }
         }
     }
+
+    /// The on-screen video's layer, for the small window to take over.
+    func attach(_ layer: AVPlayerLayer) {
+        guard AVPictureInPictureController.isPictureInPictureSupported(),
+              pip?.playerLayer !== layer,
+              let controller = AVPictureInPictureController(playerLayer: layer) else { return }
+        controller.canStartPictureInPictureAutomaticallyFromInline = true
+        controller.delegate = pipDelegate
+        pipWatches = [
+            controller.observe(\.isPictureInPicturePossible, options: [.initial, .new]) { [weak self] c, _ in
+                Task { @MainActor in self?.pipPossible = c.isPictureInPicturePossible }
+            },
+            controller.observe(\.isPictureInPictureActive, options: [.new]) { [weak self] c, _ in
+                Task { @MainActor in self?.inPip = c.isPictureInPictureActive }
+            },
+        ]
+        pip = controller
+    }
+
+    func startSmallWindow() {
+        pip?.startPictureInPicture()
+    }
+
+    /// Leaving the app: a playing video carries on in the small window.
+    var keepsPlayingOutside: Bool { inPip || (pipPossible && !paused && currentURL != nil) }
 
     func seek(to seconds: Double) {
         player.seek(to: CMTime(seconds: seconds, preferredTimescale: 600),
@@ -141,12 +177,16 @@ final class Playback: ObservableObject {
 struct PlayerLayerView: UIViewRepresentable {
     let player: AVPlayer
     var fill = false
+    /// Called with the layer once it's made (the small window needs it).
+    var onLayer: (AVPlayerLayer) -> Void = { _ in }
 
     func makeUIView(context: Context) -> LayerHost {
         let view = LayerHost()
         view.playerLayer.player = player
         view.playerLayer.videoGravity = fill ? .resizeAspectFill : .resizeAspect
         view.backgroundColor = .clear
+        let layer = view.playerLayer
+        DispatchQueue.main.async { onLayer(layer) }
         return view
     }
 
@@ -157,5 +197,15 @@ struct PlayerLayerView: UIViewRepresentable {
     final class LayerHost: UIView {
         override class var layerClass: AnyClass { AVPlayerLayer.self }
         var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    }
+}
+
+/// Coming back from the small window lands on the same video.
+private final class PipDelegate: NSObject, AVPictureInPictureControllerDelegate {
+    func pictureInPictureController(
+        _ controller: AVPictureInPictureController,
+        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completion: @escaping (Bool) -> Void
+    ) {
+        completion(true)
     }
 }
