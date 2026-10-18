@@ -46,4 +46,14 @@ describe('instant search', () => {
     fireEvent.submit(field.closest('form')!)
     expect(push).toHaveBeenCalledWith('/search?q=synth')
   })
+
+  it('still searches if someone presses Enter before the page script starts', () => {
+    render(<HeaderSearch />)
+    const field = document.getElementById('nx-header-search') as HTMLInputElement
+    const form = field.closest('form')!
+    // A plain GET form to /search with the text as ?q= is the no-script path.
+    expect(form).toHaveAttribute('action', '/search')
+    expect(form).toHaveAttribute('method', 'get')
+    expect(field).toHaveAttribute('name', 'q')
+  })
 })

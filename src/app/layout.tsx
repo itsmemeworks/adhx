@@ -80,7 +80,7 @@ const hankenGrotesk = Hanken_Grotesk({
 
 const siteUrl = PUBLIC_BASE_URL
 const siteDescription =
-  'Stop saying "wait, I had the perfect meme for this." Save your favorites, build shareable playlists, and become the meme lord your group chat deserves.'
+  'Save posts from X, Instagram and TikTok, then find them by describing what you remember. Watch what everyone is saving right now.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -164,7 +164,7 @@ const jsonLd = {
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
   description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel and TikTok in one place. The ADHD-friendly bookmark manager.",
+    'Save X posts, Reels and TikToks in one place, find any of them by describing what you remember, and watch what everyone is saving right now. The ADHD-friendly bookmark manager.',
   url: 'https://adhx.com',
   offers: {
     '@type': 'Offer',

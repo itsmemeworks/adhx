@@ -12,7 +12,7 @@ export function NowScreen() {
         <SaveTools />
       </NxHeader>
       <main className="mx-auto max-w-[1600px] px-4 pb-16 pt-2 md:px-7 md:pt-4">
-        <RightNow />
+        <RightNow headingLevel="h1" />
       </main>
     </div>
   )

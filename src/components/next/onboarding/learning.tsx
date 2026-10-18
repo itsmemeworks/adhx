@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuthMe } from '@/components/auth'
 
 /**
  * "Getting to know your saves": how far the understanding pipeline has got
@@ -95,6 +96,9 @@ export function useLearningStatus(opts: { fast?: boolean } = {}): {
   refresh: () => void
 } {
   const [status, setStatus] = useState<LearningStatus | null>(null)
+  // Only an account has saves being learned; signed out, don't ask (it's a 401).
+  const { me, loading } = useAuthMe()
+  const signedIn = !loading && !!me?.authenticated
   const timer = useRef<number | null>(null)
   const fastRef = useRef(opts.fast)
   fastRef.current = opts.fast
@@ -115,6 +119,7 @@ export function useLearningStatus(opts: { fast?: boolean } = {}): {
   }, [])
 
   useEffect(() => {
+    if (!signedIn) return
     void load()
     const onVisible = () => {
       if (!document.hidden) void load()
@@ -124,7 +129,7 @@ export function useLearningStatus(opts: { fast?: boolean } = {}): {
       if (timer.current) window.clearTimeout(timer.current)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [load])
+  }, [load, signedIn])
 
   return { status, refresh: () => void load() }
 }

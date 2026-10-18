@@ -172,13 +172,13 @@ export function ResultTile({
   onOpen?: (item: SearchResultItem) => void
   /** Where the tile goes; defaults to the post's own address. */
   href?: string
-  /** The confidence meter (off where results aren't a search, e.g. channels). */
+  /** Search-only marks: the confidence meter and "Everyone" (off on channels). */
   showStrength?: boolean
 }) {
   const kind = kindOf(item)
   const { post } = item
   const author = postAuthor(post)
-  const label = `${feedItemAccessibleDescription(post)}${item.saved ? '' : ', saved by someone else'}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}` : ''}`
+  const label = `${feedItemAccessibleDescription(post)}${item.saved || !showStrength ? '' : ', saved by someone else'}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}` : ''}`
   const frame = cn(
     'group relative block w-full overflow-hidden rounded-nx-tile bg-nx-surface text-left font-nx-sans',
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent',
@@ -266,7 +266,8 @@ export function ResultTile({
       onBlur={() => setHovering(false)}
     >
       {body}
-      {!item.saved && <EveryoneBadge className="right-2 top-2" />}
+      {/* "Saved by someone else" only means something in a search across everyone. */}
+      {!item.saved && showStrength && <EveryoneBadge className="right-2 top-2" />}
       {item.learning && <WordsOnlyBadge className="left-2 top-2" />}
       {showStrength && !onCream && (
         <StrengthMeter strength={strength} className="absolute bottom-2 left-2" />

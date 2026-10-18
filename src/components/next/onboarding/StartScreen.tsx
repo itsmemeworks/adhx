@@ -68,9 +68,9 @@ function EmailStep({ returnTo, onSent }: { returnTo: string; onSent: (email: str
       <div className="flex items-center gap-3.5">
         <AdhxFace size={56} />
         <span className="flex flex-col gap-1">
-          <span className="font-nx-serif text-[28px] leading-none md:text-[34px]">
+          <h1 className="m-0 font-nx-serif text-[28px] font-normal leading-none md:text-[34px]">
             Keep this forever
-          </span>
+          </h1>
           <span className="text-sm text-white/65">Save it. Lose it. Find it.</span>
         </span>
       </div>

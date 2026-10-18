@@ -332,7 +332,13 @@ function Stat({ value, label }: { value: string; label: string }) {
   )
 }
 
-export function RightNow() {
+export function RightNow({
+  headingLevel = 'h2',
+}: {
+  /** h1 where Right now is the page itself (/now); h2 under another page's title. */
+  headingLevel?: 'h1' | 'h2'
+} = {}) {
+  const Heading = headingLevel
   const { snapshot, flashes, popped } = useMoments()
 
   if (!snapshot) {
@@ -360,12 +366,12 @@ export function RightNow() {
         <div className="flex min-w-[260px] flex-1 flex-col gap-1.5">
           <div className="flex items-center gap-3">
             <LiveDot />
-            <h2
+            <Heading
               id="nx-rightnow"
               className="m-0 font-nx-serif text-[40px] font-normal leading-none md:text-[52px]"
             >
               {label}
-            </h2>
+            </Heading>
           </div>
           <p className="m-0 text-[15px] text-nx-soft">
             What people are saving, sorted into moments as it happens. Tune in to one and new saves

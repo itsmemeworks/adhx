@@ -181,7 +181,10 @@ export function HeaderSearch({
   shortcut?: boolean
 }) {
   const router = useRouter()
-  const [q, setQ] = useState('')
+  // Uncontrolled, and a real GET form to /search: whatever someone types
+  // before the page's script starts survives, and Enter still searches.
+  const field = useRef<HTMLInputElement>(null)
+  const [hasText, setHasText] = useState(false)
   return (
     <>
       <button
@@ -197,9 +200,12 @@ export function HeaderSearch({
       </button>
       <form
         role="search"
+        action="/search"
+        method="get"
         onSubmit={(e) => {
           e.preventDefault()
-          if (!q.trim()) return
+          const q = field.current?.value.trim() ?? ''
+          if (!q) return
           rememberRecent(q)
           router.push(searchUrl(q))
         }}
@@ -213,23 +219,25 @@ export function HeaderSearch({
           Describe what you’re looking for
         </label>
         <input
+          ref={field}
           id="nx-header-search"
+          name="q"
           type="search"
-          value={q}
           autoComplete="off"
           enterKeyHint="search"
           maxLength={200}
           placeholder="Describe it…"
-          onChange={(e) => setQ(e.target.value)}
+          onInput={(e) => setHasText(!!e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
-              setQ('')
+              e.currentTarget.value = ''
+              setHasText(false)
               e.currentTarget.blur()
             }
           }}
           className="h-full min-w-0 flex-1 appearance-none bg-transparent text-sm text-white outline-none placeholder:text-[#aaa] [&::-webkit-search-cancel-button]:hidden"
         />
-        {shortcut && !q && (
+        {shortcut && !hasText && (
           <span aria-hidden className="rounded bg-white/15 px-1.5 text-xs text-white/70">
             /
           </span>

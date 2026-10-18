@@ -9,6 +9,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/search',
 }))
 
+vi.mock('@/components/auth', () => ({
+  useAuthMe: () => ({ me: { authenticated: true }, loading: false, refresh: vi.fn() }),
+}))
+
 import { SearchScreen } from '@/components/next/search/SearchScreen'
 import { BentoView } from '@/components/next/search/ResultViews'
 import {

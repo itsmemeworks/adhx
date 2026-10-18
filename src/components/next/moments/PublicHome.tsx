@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClipboardPaste } from 'lucide-react'
 import { detectPlatformPost } from '@/lib/platform/url'
 import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
@@ -71,13 +71,17 @@ export function PublicHome() {
 
 /** Paste any X, Instagram or TikTok link to watch it here, no account needed. */
 function WatchALink() {
-  const [url, setUrl] = useState('')
+  // Uncontrolled, and a real GET form to /share (which opens any post link):
+  // a link pasted before the page's script starts still works.
+  const field = useRef<HTMLInputElement>(null)
   const [bad, setBad] = useState(false)
   return (
     <form
+      action="/share"
+      method="get"
       onSubmit={(e) => {
         e.preventDefault()
-        const post = detectPlatformPost(url.trim())
+        const post = detectPlatformPost((field.current?.value ?? '').trim())
         if (!post) return setBad(true)
         navigateToAppPath(post.previewPath)
       }}
@@ -89,16 +93,14 @@ function WatchALink() {
           Paste a link to watch it
         </label>
         <input
+          ref={field}
           id="nx-watch-link"
+          name="url"
           type="url"
           inputMode="url"
           autoComplete="off"
           placeholder="Paste a link from X, Instagram or TikTok"
-          value={url}
-          onChange={(e) => {
-            setUrl(e.target.value)
-            setBad(false)
-          }}
+          onInput={() => setBad(false)}
           className="h-full min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/45"
         />
         <button

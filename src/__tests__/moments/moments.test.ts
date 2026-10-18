@@ -440,3 +440,17 @@ describe('the Right now client', () => {
     expect(momentPlayHref('frogs-abc')).toBe('/play?moment=frogs-abc')
   })
 })
+
+describe('moment names', () => {
+  it('never names a moment after a common word', () => {
+    // "for", "get", "just", "about" are stopwords; the shared real word wins.
+    expect(
+      tellingWord([
+        'modules for it. you can get the synth just about anywhere',
+        'for the synth, get one just for fun',
+        'about to get a synth for real',
+      ]),
+    ).toMatchObject({ word: 'Synth' })
+    expect(tellingWord(['for it', 'for you', 'get it for me'])).toBeNull()
+  })
+})
