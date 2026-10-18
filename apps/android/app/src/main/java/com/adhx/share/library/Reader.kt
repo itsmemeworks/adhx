@@ -43,13 +43,15 @@ fun Reader(post: PhonePost, onClose: () -> Unit) {
             .fillMaxSize()
             .background(AdhxColors.Background),
     ) {
+        // The words scroll below the down arrow, never under it or the status bar.
         Column(
             Modifier
                 .fillMaxSize()
-                .verticalScroll(scroll)
                 .statusBarsPadding()
+                .padding(top = 64.dp)
+                .verticalScroll(scroll)
                 .navigationBarsPadding()
-                .padding(start = 24.dp, end = 24.dp, top = 72.dp, bottom = 48.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Copy.handle(post.author.handle)?.let {
