@@ -20,8 +20,9 @@
  */
 
 import { isHostOrSubdomainOf } from '@/lib/utils/url-host'
+import { detectNetworkPost, type LinkNetwork } from './networks'
 
-export type PlatformId = 'twitter' | 'instagram' | 'tiktok'
+export type PlatformId = 'twitter' | 'instagram' | 'tiktok' | LinkNetwork
 
 export interface PlatformPost {
   platform: PlatformId
@@ -109,5 +110,5 @@ export function detectPlatformPost(url: string): PlatformPost | null {
     return { platform: 'tiktok', id, author, previewPath: `/@${author}/video/${id}` }
   }
 
-  return null
+  return detectNetworkPost(parsed)
 }

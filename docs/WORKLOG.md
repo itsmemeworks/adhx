@@ -6,6 +6,25 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Self-hosted: kept media and fourteen networks
+
+- **Decision (owner)**: ADHX is for self-hosting with friends, never commercial. Save each post's media locally in the best quality and serve it; support linktokeep.com's networks. Reverses the 2026-10-16 "proxy only, no yt-dlp, drop YouTube" call (`docs/specs/any-site-links.md` marked superseded).
+- **Kept media** (`src/lib/keep`, tables `keep_jobs` + `kept_files`):
+  - in-process queue, newest save first, with backoff
+  - downloads from fxtwitter for X, otherwise yt-dlp plus og:image
+  - non-H.264 video is re-encoded to H.264 at the same size
+  - served by `/api/files/...` with Range support, and a relative 307 to the old proxies until kept
+  - hourly orphan clean-up
+  - the understanding worker reads kept files from disk; its hash gains `:kept`
+  - Docker installs Python and a pinned yt-dlp in `/opt/yt-dlp`
+- **Link networks**: YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky.
+  - Code: `networks.ts`, `describeNetworkPost`, `/s/{network}/{id}`, `/api/links/resolve`, plus paste-after-the-address support in `proxy.ts`.
+  - Measured live: all ten saved and downloaded in 1–4 s each.
+  - Facebook and Twitch kept at 1080p, X at 4K.
+  - Vimeo's own videos are DRM (picture only); Threads gives a preview-sized picture only; Imgur is blocked in the UK.
+- **Self-hosting**: `ALLOWED_EMAILS` sign-up allowlist; iOS Settings card explains making your own Shortcut for a non-adhx.com origin; skill takes `ADHX_URL`; README rewritten for self-hosters.
+- **Not verified**: the Docker image build (no Docker here), any server outside the UK, and a full-library backfill (this Mac had 11 GB free).
+
 ## 2026-10-18 — Hourly X bookmark sync; search your saves from the adhx skill
 
 - **Hourly sync**: `src/lib/sync/auto.ts`, started from `instrumentation.ts`. Every 5 minutes it syncs people with X connected, at least one finished sync, `autoSync` not `'false'` in `user_preferences`, not banned, and no sync started in the last `AUTO_SYNC_EVERY_MINUTES` (default 50, so the gap stays under an hour). Mode `'new'`: 100 per page, stops after the first page holding a post already saved (X serves the newest 800 at most). Pauses 6h on X 402 (no credits), 15m on 429. Rows carry `trigger_type='auto'`; only manual rows count toward the Sync button's hour wait. The sync loop moved from the route to `src/lib/sync/run.ts` (`runBookmarkSync`), shared by both.
@@ -32,13 +51,14 @@ Still old-look: `/live`, `/trending` (+archive), `/leaderboard`, `/{user}`, `/t/
 ## 2026-10-17 — Full two-browser pass: live data, journeys, edge cases
 
 Second browser driven by a Playwright script signing in other local accounts. Live data verified both ways in ~2-3s: Right now counters, strip, card people +1, watching 1→2, Tune in auto-plays the next save when caught up. Fixed:
+
 - Signed-out `/channels`, `/search`, Tune in went to the old public theater (AppShell redirect): now `/start?returnTo=` and public `/play?moment|channel`. Sign in button, no Paste when signed out.
 - Making a channel private didn't reach the page for up to 30s (per-module caches; JSON-LD listed its posts). Owners can now switch Public/Private; Keep is private by default.
 - New accounts: one-step new-look `/welcome`; no starter-playlist dead end; old header hidden on `/start`; "Maybe later" → Right now.
 - More like this in My saves split into many "More like…" headings (`fromSource`).
 - Tune in note folds into a chip after 8s; caught-up dims only the post; moment page has Paste; clear empty/error screens with the header; new 404.
 - "1 saves today", blank text covers on moment cards, "@x · saved" toast, Top channels crash on a missing `items`.
-State: local, not pushed.
+  State: local, not pushed.
 
 ## 2026-10-17 — Right now is home; one nav everywhere
 

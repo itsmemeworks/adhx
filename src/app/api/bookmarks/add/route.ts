@@ -12,6 +12,16 @@ import { recordActivity, previewPath } from '@/lib/activity/record'
 import { detectPlatformPost } from '@/lib/platform/url'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
 import { noteSaved } from '@/lib/semantic'
+import {
+  isLinkNetwork,
+  networkLabel,
+  networkSourceUrl,
+  type NetworkPost,
+} from '@/lib/platform/networks'
+import { describeNetworkPost } from '@/lib/keep/describe'
+import { expandShortLink, isShortLink } from '@/lib/keep/shortlinks'
+import { keptSrc } from '@/lib/keep/src'
+import { wakeKeep } from '@/lib/keep/worker'
 
 /**
  * Platform-agnostic bookmark add endpoint.
@@ -37,8 +47,10 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
     }
 
     // Detect the platform/id once via the shared detector (single source of
-    // truth for the per-platform URL patterns).
-    const detected = detectPlatformPost(url)
+    // truth for the per-platform URL patterns). Short share links are
+    // followed to the post first.
+    const expanded = isShortLink(url) ? await expandShortLink(url) : null
+    const detected = detectPlatformPost(expanded ?? url)
 
     // Dispatch based on detected platform
     if (detected?.platform === 'twitter') {
@@ -86,10 +98,14 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
       }
     }
 
+    if (detected && isLinkNetwork(detected.platform)) {
+      return await addNetworkPost(userId, detected as NetworkPost, source)
+    }
+
     return NextResponse.json(
       {
         error:
-          'Unsupported URL. Supported: x.com, twitter.com, instagram.com/p or /reels, tiktok.com/@user/video.',
+          'That link isn’t a post ADHX can keep. Try a link to one post on X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur or Bluesky.',
       },
       { status: 400 },
     )
@@ -442,5 +458,138 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     platform: 'tiktok',
     bookmark: result.bookmark,
     message: 'TikTok added to Saved.',
+  })
+}
+
+/**
+ * Save a post from one of the link networks (YouTube, Reddit, Vimeo …). Reads
+ * what it is once, stores the words and a media row per file, and queues the
+ * download: ADHX keeps and serves these files itself.
+ */
+async function addNetworkPost(userId: string, post: NetworkPost, source: string) {
+  const platform = post.platform
+  const existing = db
+    .select()
+    .from(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.platform, platform),
+        eq(bookmarks.id, post.id),
+      ),
+    )
+    .limit(1)
+    .all()[0]
+  if (existing) {
+    return NextResponse.json(
+      { success: false, isDuplicate: true, platform, bookmark: existing },
+      { status: 200 },
+    )
+  }
+
+  const described = await describeNetworkPost(platform, post.id, post.author)
+  if (!described) {
+    return NextResponse.json(
+      { error: `${networkLabel(platform)} post not available` },
+      { status: 404 },
+    )
+  }
+
+  const now = new Date().toISOString()
+  const author = (post.author || described.author || platform).slice(0, 100)
+  // The page the file came from; ADHX serves its own copy (see /api/files).
+  const page = networkSourceUrl(platform, post.id, author) ?? ''
+  const mediaRows: Array<typeof bookmarkMedia.$inferInsert> = []
+  for (let i = 0; i < described.videos; i++) {
+    mediaRows.push({
+      id: `${post.id}_video_${i}`,
+      userId,
+      platform,
+      bookmarkId: post.id,
+      mediaType: 'video',
+      originalUrl: page,
+      durationMs: i === 0 ? described.durationMs : null,
+    })
+  }
+  for (let i = 0; i < described.photos; i++) {
+    mediaRows.push({
+      id: `${post.id}_photo_${i}`,
+      userId,
+      platform,
+      bookmarkId: post.id,
+      mediaType: 'photo',
+      originalUrl: page,
+    })
+  }
+
+  const result = runInTransaction(() => {
+    const insert = db
+      .insert(bookmarks)
+      .values({
+        id: post.id,
+        userId,
+        platform,
+        author,
+        authorName: described.authorName,
+        authorProfileImageUrl: null,
+        text: described.text,
+        tweetUrl: page,
+        createdAt: described.createdAt,
+        processedAt: now,
+        category: described.category,
+        source,
+      })
+      .onConflictDoNothing()
+      .run()
+    if (insert.changes > 0 && mediaRows.length) {
+      db.insert(bookmarkMedia).values(mediaRows).onConflictDoNothing().run()
+    }
+    return {
+      inserted: insert.changes > 0,
+      bookmark: db
+        .select()
+        .from(bookmarks)
+        .where(
+          and(
+            eq(bookmarks.userId, userId),
+            eq(bookmarks.platform, platform),
+            eq(bookmarks.id, post.id),
+          ),
+        )
+        .limit(1)
+        .all()[0],
+    }
+  })
+
+  if (!result.inserted) {
+    return NextResponse.json(
+      { success: false, isDuplicate: true, platform, bookmark: result.bookmark },
+      { status: 200 },
+    )
+  }
+
+  metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
+  wakeKeep()
+  noteSaved([{ platform, postId: post.id }])
+  recordActivity({
+    action: 'save',
+    platform,
+    bookmarkId: post.id,
+    author,
+    authorName: described.authorName,
+    text: described.text || null,
+    thumbnailUrl: described.category === 'text' ? null : keptSrc(platform, post.id, 'poster'),
+    contentType: described.category,
+    url: previewPath(platform, author, post.id),
+    userId,
+    source: source as 'manual' | 'url_prefix' | 'pwa_share',
+  })
+
+  return NextResponse.json({
+    success: true,
+    isDuplicate: false,
+    platform,
+    bookmark: result.bookmark,
+    message: `${networkLabel(platform)} post added to Saved.`,
   })
 }

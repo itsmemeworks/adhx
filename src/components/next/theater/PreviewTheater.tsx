@@ -1,5 +1,8 @@
 'use client'
 
+import { networkLabel } from '@/lib/platform/networks'
+import { detectPlatformPost } from '@/lib/platform/url'
+
 import Link from 'next/link'
 import { Suspense, use, useEffect, useMemo, useRef } from 'react'
 import { useAuthMe } from '@/components/auth'
@@ -129,10 +132,9 @@ function useSaveOnOpen(item: TheaterItem | null, lead: SearchResultItem | null) 
 function siteName(url: string): string {
   try {
     const host = new URL(url).hostname.replace(/^www\./, '')
-    if (host.endsWith('instagram.com')) return 'Instagram'
-    if (host.endsWith('tiktok.com')) return 'TikTok'
     if (host === 'x.com' || host === 'twitter.com') return 'X'
-    return host
+    const detected = detectPlatformPost(url)
+    return detected ? networkLabel(detected.platform) : host
   } catch {
     return 'its site'
   }

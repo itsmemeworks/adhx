@@ -32,7 +32,7 @@ function media(partial: Partial<MediaItem> = {}): MediaItem {
     width: 720,
     height: 1280,
     durationMs: 41_000,
-    url: '/api/media/video?author=a&tweetId=1',
+    url: '/api/files/twitter/1/video-1?a=a',
     thumbnailUrl: 'https://pbs.twimg.com/thumb.jpg',
     shareUrl: '',
     ...partial,
@@ -112,10 +112,8 @@ describe('post helpers', () => {
     expect(isTallMedia(tiktok)).toBe(true)
   })
 
-  it('proxies X photos per index and keeps video thumbnails as-is', () => {
-    expect(mediaImageSrc(album, 1)).toBe(
-      '/api/media/image?author=JamesMelville&tweetId=1004&index=2',
-    )
+  it('routes X photos per index through kept files and keeps video thumbnails as-is', () => {
+    expect(mediaImageSrc(album, 1)).toBe('/api/files/twitter/1004/photo-2?a=JamesMelville')
     expect(mediaImageSrc(tallVideo)).toBe('https://pbs.twimg.com/thumb.jpg')
   })
 
@@ -291,7 +289,7 @@ describe('loader', () => {
 
     rerender(<PasteToast state="failed" />)
     expect(screen.getByText('That link isn’t a post we can save')).toBeInTheDocument()
-    expect(screen.getByText('X, Instagram and TikTok work')).toBeInTheDocument()
+    expect(screen.getByText('Links from most social apps work')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveAttribute('data-state', 'failed')
   })
 

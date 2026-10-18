@@ -13,6 +13,13 @@ const TIKTOK =
   /(?:https?:\/\/)?(?:www\.|vm\.|m\.)?tiktok\.com\/@[A-Za-z0-9._]{1,30}\/video\/\d{6,25}/i
 const TIKTOK_SHORT =
   /https?:\/\/(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|(?:www\.)?tiktok\.com\/t\/[A-Za-z0-9]+)/i
+/**
+ * The other networks ADHX keeps (YouTube, Facebook, Reddit, LinkedIn, Vimeo,
+ * SoundCloud, Pinterest, Twitch, Threads, Imgur, Bluesky). The app works out
+ * whether the page is one post; the extension only checks the site.
+ */
+const OTHER_NETWORKS =
+  /^https?:\/\/(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be|facebook\.com|fb\.watch|reddit\.com|redd\.it|linkedin\.com|vimeo\.com|soundcloud\.com|pinterest\.[a-z.]{2,6}|pin\.it|twitch\.tv|threads\.(?:net|com)|imgur\.com|bsky\.app)\/\S+/i
 
 export const DEFAULT_APP_ORIGIN = 'https://adhx.com'
 
@@ -20,7 +27,13 @@ export function isSupportedShareUrl(raw: string): boolean {
   if (/\s/.test(raw.trim())) return false
   const url = normalizeHttpUrl(raw)
   if (!url) return false
-  return TWITTER.test(url) || INSTAGRAM.test(url) || TIKTOK.test(url) || TIKTOK_SHORT.test(url)
+  return (
+    TWITTER.test(url) ||
+    INSTAGRAM.test(url) ||
+    TIKTOK.test(url) ||
+    TIKTOK_SHORT.test(url) ||
+    OTHER_NETWORKS.test(url)
+  )
 }
 
 /** First supported http(s) URL across tab / link / selected text. */

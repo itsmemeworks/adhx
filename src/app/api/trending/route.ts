@@ -1,3 +1,4 @@
+import { ALL_PLATFORMS } from '@/lib/platform/networks'
 import { NextRequest, type NextResponse } from 'next/server'
 import { ok, handleRouteError } from '@/lib/api/response'
 import { getTrendingItems } from '@/lib/trending/query'
@@ -32,8 +33,7 @@ function parsePlatform(value: string | null): PlatformId | undefined {
   if (!value) return undefined
   const v = value.toLowerCase()
   if (v === 'x' || v === 'twitter') return 'twitter'
-  if (v === 'instagram' || v === 'tiktok') return v
-  return undefined
+  return (ALL_PLATFORMS as readonly string[]).includes(v) ? (v as PlatformId) : undefined
 }
 
 export async function GET(request: NextRequest) {

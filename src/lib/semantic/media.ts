@@ -1,5 +1,5 @@
 import { execFile } from 'child_process'
-import { mkdtemp, readdir, rm } from 'fs/promises'
+import { mkdtemp, readdir, readFile, rm, stat } from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import {
@@ -7,6 +7,7 @@ import {
   readResponseBodyWithLimit,
   TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
+import { ffmpegPath } from '@/lib/media/ffmpeg'
 import {
   internalOrigin,
   VIDEO_FPS,
@@ -28,7 +29,7 @@ const VIDEO_TIMEOUT_MS = 120_000
 export function resolveMediaUrl(
   url: string,
 ): { url: string; hosts: string[]; loopback: boolean } | null {
-  if (url.startsWith('/api/media/')) {
+  if (url.startsWith('/api/media/') || url.startsWith('/api/files/')) {
     return { url: internalOrigin() + url, hosts: [], loopback: true }
   }
   let parsed: URL
@@ -72,34 +73,69 @@ async function proxyStatus(source: string): Promise<number | null> {
   }
 }
 
+/**
+ * The kept file behind an `/api/files/…` path, when it's on disk. Reading it
+ * directly skips the HTTP round trip and gives the original quality.
+ */
+export async function keptLocalFile(url: string): Promise<string | null> {
+  const m = url.match(/^\/api\/files\/([a-z]{1,16})\/([^/?]+)\/([a-z0-9-]+)/)
+  if (!m) return null
+  const { keptFile, absolutePath, isSlot } = await import('@/lib/keep/store')
+  const slot = m[3]
+  if (!isSlot(slot)) return null
+  const id = decodeURIComponent(m[2])
+  const kept =
+    keptFile(m[1], id, slot) ?? (slot === 'poster' ? keptFile(m[1], id, 'photo-1') : null)
+  return kept ? absolutePath(kept.path) : null
+}
+
+async function proxyStatusFollowing(source: string): Promise<number | null> {
+  try {
+    const response = await fetch(source, {
+      headers: { Range: 'bytes=0-0' },
+      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+    })
+    await response.body?.cancel()
+    return response.status
+  } catch {
+    return null
+  }
+}
+
 /** Download one picture's bytes (bounded size and time). */
 export async function fetchImageBytes(url: string): Promise<Uint8Array> {
+  const local = await keptLocalFile(url)
+  if (local) {
+    if ((await stat(local)).size > MAX_IMAGE_BYTES * 4) {
+      throw new MediaUnavailableError('Kept image is too large to read')
+    }
+    return new Uint8Array(await readFile(local))
+  }
   const target = resolveMediaUrl(url)
   if (!target) throw new MediaUnavailableError(`Image host not allowed: ${url}`)
   const response = target.loopback
-    ? await fetch(target.url, { redirect: 'error', signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS) })
+    ? await fetch(target.url, {
+        // /api/files hands off to a same-origin proxy (or X's CDN) until the
+        // file is kept.
+        redirect: url.startsWith('/api/files/') ? 'follow' : 'error',
+        signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+      })
     : await fetchWithAllowlistedRedirects(target.url, {
         hosts: target.hosts,
         timeoutMs: IMAGE_TIMEOUT_MS,
       })
   if (!response.ok) {
+    // Not downloaded yet, and no proxy for this network: try again later.
+    if (url.startsWith('/api/files/') && response.status === 404) {
+      throw new MediaUnavailableError('Not downloaded yet')
+    }
     const Failure = GONE.has(response.status) ? MediaGoneError : MediaUnavailableError
     throw new Failure(`Image fetch failed: ${response.status}`)
   }
   return readResponseBodyWithLimit(response, MAX_IMAGE_BYTES)
 }
 
-export async function ffmpegPath(): Promise<string> {
-  const fromEnv = process.env['FFMPEG_PATH']
-  if (fromEnv) return fromEnv
-  try {
-    const bundled = (await import('ffmpeg-static')).default as unknown as string | null
-    if (bundled) return bundled
-  } catch {
-    // fall back to ffmpeg on PATH
-  }
-  return 'ffmpeg'
-}
+export { ffmpegPath }
 
 export interface SampledFrames {
   dir: string
@@ -116,10 +152,11 @@ export interface SampledFrames {
  * only the sampled window (plus the index) is transferred.
  */
 export async function sampleVideoFrames(videoPath: string): Promise<SampledFrames> {
-  if (!videoPath.startsWith('/api/media/')) {
+  if (!videoPath.startsWith('/api/media/') && !videoPath.startsWith('/api/files/')) {
     throw new MediaUnavailableError('Video must be a same-origin media proxy path')
   }
-  const source = internalOrigin() + videoPath
+  const local = await keptLocalFile(videoPath)
+  const source = local ?? internalOrigin() + videoPath
   const dir = await mkdtemp(path.join(os.tmpdir(), 'adhx-frames-'))
   const cleanup = () => rm(dir, { recursive: true, force: true })
   try {
@@ -156,7 +193,20 @@ export async function sampleVideoFrames(videoPath: string): Promise<SampledFrame
         },
       )
     }).catch(async (error) => {
+      if (local) throw error
       const status = await proxyStatus(source)
+      if (videoPath.startsWith('/api/files/') && status === 404) {
+        throw new MediaUnavailableError('Not downloaded yet')
+      }
+      if (status === 307 || status === 302) {
+        // Handed off to a proxy: ask the proxy itself.
+        const followed = await proxyStatusFollowing(source)
+        if (followed === 409) throw new NotAVideoError('Post is a photo, not a video')
+        if (followed !== null && GONE.has(followed)) {
+          throw new MediaGoneError(`Video is gone: ${followed}`)
+        }
+        throw error
+      }
       if (status === 409) throw new NotAVideoError('Post is a photo, not a video')
       if (status !== null && GONE.has(status)) throw new MediaGoneError(`Video is gone: ${status}`)
       throw error
@@ -165,7 +215,8 @@ export async function sampleVideoFrames(videoPath: string): Promise<SampledFrame
       .filter((f) => f.endsWith('.jpg'))
       .sort()
       .map((f) => path.join(dir, f))
-    if (files.length === 0) throw new MediaUnavailableError('ffmpeg produced no frames')
+    // ffmpeg read the file fine but found no picture track (a sound-only post).
+    if (files.length === 0) throw new NotAVideoError('No picture track to sample')
     return { dir, files, duration: files.length / VIDEO_FPS, cleanup }
   } catch (error) {
     await cleanup()

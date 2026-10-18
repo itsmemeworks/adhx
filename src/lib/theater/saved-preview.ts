@@ -8,6 +8,8 @@ export interface SavedPreviewDisplay {
   text: string | null
   category: string | null
   mediaCount: number
+  /** Picture count (an album's length). */
+  photoCount: number
 }
 
 /**
@@ -15,10 +17,7 @@ export interface SavedPreviewDisplay {
  * of saver — one row is enough to skip the upstream scrape/oEmbed. The chosen
  * row's userId is used only for the indexed media count and is never returned.
  */
-export function getSavedPreviewDisplay(
-  platform: 'instagram' | 'tiktok',
-  id: string,
-): SavedPreviewDisplay | null {
+export function getSavedPreviewDisplay(platform: string, id: string): SavedPreviewDisplay | null {
   const row = db
     .select({
       userId: bookmarks.userId,
@@ -39,7 +38,10 @@ export function getSavedPreviewDisplay(
     .get()
   if (!row) return null
   const media = db
-    .select({ mediaCount: count() })
+    .select({
+      mediaCount: count(),
+      photoCount: sql<number>`sum(${bookmarkMedia.mediaType} = 'photo')`,
+    })
     .from(bookmarkMedia)
     .where(
       and(
@@ -55,5 +57,6 @@ export function getSavedPreviewDisplay(
     text: row.text,
     category: row.category,
     mediaCount: Number(media?.mediaCount) || 0,
+    photoCount: Number(media?.photoCount) || 0,
   }
 }

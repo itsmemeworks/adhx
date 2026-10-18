@@ -10,6 +10,7 @@
  * - Embed:  https://fxtwitter.com/{author}/status/{tweetId}
  */
 
+import { keptSrc } from '@/lib/keep/src'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
 
@@ -38,7 +39,7 @@ export function getPhotoUrl(author: string, tweetId: string, index: number = 1):
 
 /** Same-origin photo proxy — Twitter's CDN often 403s hotlinks from localhost / Safari. */
 export function proxiedPhotoSrc(author: string, tweetId: string, index: number = 1): string {
-  return `/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=${index}`
+  return keptSrc('twitter', tweetId, `photo-${index}`, author)
 }
 
 /**

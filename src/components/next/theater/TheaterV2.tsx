@@ -1,5 +1,7 @@
 'use client'
 
+import { networkLabel } from '@/lib/platform/networks'
+
 import { composeArticleCopy, fetchArticleMarkdown } from '@/lib/theater/article-body'
 import { RichText, postBody } from '../rich-text'
 import { ArticleReader } from '../stages/ArticleReader'
@@ -143,7 +145,7 @@ function emptyState(
   if (source.recent)
     return {
       title: 'Nothing saved yet',
-      body: 'Paste a link from X, Instagram or TikTok, or bring in your X bookmarks.',
+      body: 'Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or bring in your X bookmarks.',
       action: 'Bring in X bookmarks',
       href: '/settings?sync=1',
     }
@@ -1059,12 +1061,7 @@ export function TheaterV2({
       onSelect: () => setStick((v) => !v),
     },
     {
-      label:
-        current.post.platform === 'instagram'
-          ? 'Open on Instagram'
-          : current.post.platform === 'tiktok'
-            ? 'Open on TikTok'
-            : 'Open on X',
+      label: `Open on ${networkLabel(current.post.platform)}`,
       onSelect: () => {
         const url = sourceUrl(
           current.post.platform ?? 'twitter',

@@ -8,7 +8,7 @@ const SOUND_CLIP = readFileSync(new URL('./fixtures/sound.webm', import.meta.url
 
 /** Serve the TikTok preview's stream from the local clip instead of the CDN. */
 async function stubTikTokVideo(page: Page) {
-  await page.route('**/api/media/tiktok/video?**', (route) =>
+  await page.route(/\/api\/files\/tiktok\/[^/]+\/video-1/, (route) =>
     route.fulfill({ status: 200, contentType: 'video/webm', body: SOUND_CLIP }),
   )
 }

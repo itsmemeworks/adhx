@@ -3,278 +3,221 @@
 [![CI](https://github.com/itsmemeworks/adhx/actions/workflows/ci.yml/badge.svg)](https://github.com/itsmemeworks/adhx/actions/workflows/ci.yml)
 [![Release](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml/badge.svg)](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-> **Save it. Lose it. Find it.**
+> **Save it. Lose it. Find it.** On your own server.
 
-Stop saying "wait, I had the perfect meme for this." Save your favorites, build shareable playlists, and become the meme lord your group chat deserves.
+ADHX keeps the posts you love from X, Instagram, TikTok, YouTube, Reddit and nine more networks. It downloads each post's video, pictures and sound in the best quality the network offers. It stores them on your own server and plays them from there. Find any of them later by describing what you remember, like "the video with the frog".
 
-Open an ADHX link and start watching. You do not need an account to view posts from **X, Instagram images and Reels, or TikTok** in the full-screen theater. When something is worth keeping, sign in with an email magic link and save it.
-
-ADHX is for the links you meant to come back to: one place to watch them, search them, tag them, archive them, or turn a tag into a public playlist. It is open source and self-hostable, with your saves stored in a SQLite file you own.
+It's built to run for yourself and a few friends: one Docker container, one folder of data. ADHX isn't a hosted service. Posts can't disappear behind a deleted account or a dead link, because the files are yours.
 
 <p align="center">
-  <img src="public/og-logo.png" alt="ADHX — save it, lose it, find it" width="640" />
+  <img src="public/og-logo.png" alt="ADHX — save it, lose it, find it" width="560" />
 </p>
 
-> **Building, extending, or self-hosting ADHX?** Read the human-facing [architecture guide](ARCHITECTURE.md) for the routes, data flow, authentication, media handling, and security model.
+## What you get
 
-## Why use ADHX?
+- **Your own copies.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing is streamed from the networks at watch time.
+- **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
+- **Search by meaning.** Describe what you remember and ADHX finds it. It matches the words, what's in the pictures, and what happens in the videos (a frame every 2 seconds). This all runs on your server: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
+- **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button.
+- **Channels.** ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
+- **Right now.** See what the people on your server are saving, grouped into moments, and **Tune in** to watch along. Savers are only ever counted, never named.
+- **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
+- **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
 
-Social links are easy to save and hard to revisit. ADHX turns them into a watchable queue instead of another forgotten list.
+## Supported networks
 
-- **Watch before signing up.** Every supported link has a clean, shareable preview page with theater playback.
-- **Save with email.** Sign-in uses an email magic link. An X account is not required.
-- **Bring three platforms together.** X posts, photos, videos, quotes, and Articles sit beside Instagram image posts and Reels, and TikToks.
-- **Choose how you revisit things.** Watch all your saves, newest first, in **Saved**, browse and search them in the **library**, or group them into tagged **playlists**.
-- **Keep control.** Run ADHX yourself and keep the SQLite database on your own machine or volume.
+| Network    | What ADHX keeps                          | Good to know                                                                    |
+| ---------- | ---------------------------------------- | ------------------------------------------------------------------------------- |
+| X          | Video (up to 4K), photos, text, Articles | Bookmarks can sync automatically                                                |
+| Instagram  | Reels, photos and carousels              | Instagram sometimes asks servers to log in; ADHX falls back to public mirrors   |
+| TikTok     | Video                                    | Photo posts keep their cover picture                                            |
+| YouTube    | Video, Shorts                            | 4K is kept when the upload has it (see [Video formats](#video-formats))         |
+| Facebook   | Videos and Reels                         |                                                                                 |
+| Reddit     | Video with sound, pictures, text         | Reddit blocks servers from its own pages; ADHX finds the video through vxreddit |
+| LinkedIn   | Video and pictures from public posts     |                                                                                 |
+| Vimeo      | Video                                    | Videos protected with DRM can't be kept; ADHX keeps their picture and link      |
+| SoundCloud | The track and its artwork                | Plays in the same player, artwork on screen                                     |
+| Pinterest  | Video Pins and picture Pins              |                                                                                 |
+| Twitch     | Clips                                    |                                                                                 |
+| Threads    | Text and the post's picture              | Threads only shares a preview-sized picture without logging in                  |
+| Imgur      | Images and albums                        | Imgur blocks the UK; a server there can't keep Imgur posts                      |
+| Bluesky    | Video and pictures                       |                                                                                 |
 
-## From a link to something useful
+Downloads run through [yt-dlp](https://github.com/yt-dlp/yt-dlp), plus each network's public link-preview data for picture posts. ADHX never asks for your passwords on any of these networks.
 
-Replace the source host with `adhx.com`, paste a link into ADHX, or use one of the save tools:
+## Run your own
 
-| Source          | Example preview route         | Playback                                       |
-| --------------- | ----------------------------- | ---------------------------------------------- |
-| X               | `/{user}/status/{id}`         | Text, photos, video, quotes, and full Articles |
-| Instagram posts | `/p/{id}`                     | Full-resolution images and ordered carousels   |
-| Instagram Reels | `/reels/{id}` or `/reel/{id}` | Inline Reel video with an official fallback    |
-| TikTok          | `/@{user}/video/{id}`         | Inline video                                   |
+You need:
 
-For example, `x.com/user/status/123` becomes `adhx.com/user/status/123`. You can also paste the full original URL after `adhx.com/`.
-
-Preview pages are useful even if you never save anything: they are readable, linkable pages that keep viewing inside ADHX. Saving adds the post to your account and makes it available in Saved and the library.
-
-## Saved, library, and playlists
-
-These names describe different parts of ADHX:
-
-- **Saved** at `/saved` is your signed-in home. It includes all your non-archived saves, newest first, including posts you have already watched.
-- **The library** is the searchable, filterable grid over those saves at `/library`.
-- **A playlist** is one tag you have made public. It plays as a looping theater at `/t/{username}/{tag}`.
-
-Discover starts with **Videos** and **Hide watched** on. Saved starts with **All posts** and Hide watched off. The labelled filter beside Queue opens post type choices and one **Hide watched** switch on both desktop and mobile. Each destination remembers your choices, including an explicit All posts selection.
-
-Repeat controls looping independently: turning it on never brings back posts excluded by Hide watched. When Discover is caught up, **Watch again** turns off Hide watched and starts from the newest matching post without erasing your history. Shared links still open the exact post, and public playlists keep their authored contents.
-
-The first useful loop is **paste → watch → send**. Paste link is visible in theater chrome; sendable media has a direct Download action on desktop or a Send/Download icon on mobile. Share keeps the share-link alternative, including YouTube posts that use an official embed rather than a downloadable file.
-
-**Picture-in-picture** pops directly played videos into a floating window so you can watch while using other tabs. Look in the bottom playback controls on desktop and mobile. The button appears where the browser supports it, including Safari's video presentation mode. Keep the ADHX tab open; moving to a non-video post or an embedded player closes the floating video. YouTube embeds use their own player/browser controls.
-
-Watched history stays in this browser, with up to 500 recent marks retained. It does not sync between devices or create public activity. Saved loads the full collection in pages of 100; the first page is not a collection limit.
-
-Archive removes a post from your Saved queue without deleting it. Archive is private: it never creates a public activity event or tells other people what you archived. Use **Show archived** in the library to find those posts again.
-
-Tagging is private until you choose to publish a tag. A published tag becomes a playlist with:
-
-- a shareable looping theater;
-- a branded mosaic social card that previews the playlist when its URL is shared;
-- a public curator profile;
-- a **Save playlist** action that lets another signed-in person clone its posts and tag into their own account; and
-- a place on the public [`/leaderboard`](https://adhx.com/leaderboard), where playlists are ranked by views and clones across today, this week, this month, or all time.
-
-## Discover and Trending
-
-ADHX also turns anonymous community activity into ways to discover what people are watching:
-
-- **Discover** is the secondary, full-screen community theater at `/live`. It shows recent community activity, rather than your personal collection. Signed-out visitors see the public theater at `/`; signed-in visits to `/` open Saved at `/saved`.
-- **Trending** at [`/trending`](https://adhx.com/trending) is the public ranked view. It orders active posts by momentum rather than simply showing the newest one first, with filters for videos, photos, text, and Articles.
-
-Public activity is anonymous. ADHX never exposes the user ID attached to an activity record, and private Archive actions do not enter the public pulse.
-
-## Save from the device you already use
-
-### On a phone
-
-- **Paste a link:** Copy Link in X, Instagram, or TikTok, open ADHX, and tap **Paste link**.
-- **iPhone or iPad:** Install the [ADHX iOS Shortcut](https://www.icloud.com/shortcuts/0d187480099b4d34a745ec8750a4587b), then use **Share → ADHX** from the source app.
-- **Android:** Install ADHX as a PWA with **Add to Home Screen**, then use **Share → ADHX**. Android apps put links in different share fields; ADHX accepts the common forms.
-
-The URL-prefix trick remains available on every platform.
-
-### On a desktop
-
-The extension in [`extension/`](extension/) adds a toolbar action, a **Save to ADHX** context-menu item, and the `⌘⇧A` / `Ctrl+Shift+A` shortcut. It supports X, Instagram, and TikTok links and opens the same ADHX preview flow as paste and mobile sharing.
-
-The extension is not in the Chrome Web Store yet. See [`extension/README.md`](extension/README.md) for the unpacked-install walkthrough.
-
-## Send a file or share a page
-
-ADHX keeps these actions distinct:
-
-- **Send** prepares the video or photo file and includes a short `via` link to the ADHX preview when the device supports file sharing. On desktop, it falls back to a download.
-- **Share link** shares the stable ADHX preview URL instead of the media file.
-
-## How it fits together
-
-```text
-X · Instagram posts and Reels · TikTok
-                    │
-     URL prefix · paste · share · extension
-                    ▼
-        ADHX preview theater (no account)
-                    │ email sign-in + Save
-                    ▼
-       Saved ─────── library
-            │               │
-          Archive         tag + publish
-          (private)          ▼
-                     playlist theater
-                      curator · clones
-                         leaderboard
-```
-
-Underneath, ADHX is one Next.js 16 + React 19 app backed by SQLite and Drizzle. Email magic links create the account; optional X OAuth links an existing account for bookmark sync. Media uses platform-appropriate embeds or tightly limited proxy routes.
-
-For the complete explanation, see **[ARCHITECTURE.md](ARCHITECTURE.md)**. Machine readers and agents can start with [`llms.txt`](https://adhx.com/llms.txt).
-
-## Run it locally
-
-No API keys are needed to try the core app. In development, email sign-in prints the magic link to the server console when Resend is not configured.
-
-```bash
-git clone https://github.com/itsmemeworks/adhx
-cd adhx
-pnpm install
-cp .env.example .env
-pnpm db:migrate
-pnpm dev
-```
-
-Local development runs at [http://localhost:3001](http://localhost:3001). This is intentionally different from the Docker examples below, which expose port **3000**.
-
-Open the local app, sign in with any email, copy the magic link from the terminal, and paste a supported post URL. Local setup needs `pnpm db:migrate` because Docker performs migration automatically at startup.
-
-Set a distinct `SESSION_SECRET` before any real deployment. Generate one with:
-
-```bash
-openssl rand -base64 32
-```
-
-```bash
-pnpm typecheck
-pnpm test
-pnpm lint
-pnpm format:check
-pnpm build
-```
-
-See [`.env.example`](.env.example) for all configuration and [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow. Coding agents should also read [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
-
-### Optional X bookmark sync
-
-X is not used to sign in to ADHX. After email sign-in, you can optionally link X in Settings to sync your existing X bookmarks.
-
-Each sync follows every page X makes available, including older bookmarks beyond the first 50. Existing saves are skipped without stopping the scan. Keep the app open until sync completes; X may omit unavailable posts or older history from its API.
-
-To enable sync locally:
-
-1. Create an app in the [X Developer Portal](https://developer.twitter.com) and enable OAuth 2.0 with PKCE.
-2. Register `http://localhost:3001/api/auth/twitter/callback`.
-3. Set `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`, and `NEXT_PUBLIC_APP_URL=http://localhost:3001` in `.env`.
-
-### Build the desktop extension locally
-
-With the app already running at `http://localhost:3001`:
-
-```bash
-pnpm --dir extension install
-cp extension/.env.example extension/.env
-pnpm --dir extension build
-```
-
-Set `EXTENSION_PUBLIC_APP_ORIGIN=http://localhost:3001` in `extension/.env`, then load `extension/dist/chromium` from Chrome's `chrome://extensions` page with Developer mode enabled. Full instructions are in [`extension/README.md`](extension/README.md).
-
-Browser sessions are origin-specific: signing in at `adhx.com` does not sign you in at `localhost:3001`.
-
-## Self-hosting
-
-Self-hosting keeps account data, saves, tags, and settings in your SQLite database. Mount `/data` on persistent storage and back up that volume like any other database.
-
-### Docker
-
-Every release publishes a public multi-platform image for AMD64 and ARM64 at
-[`ghcr.io/itsmemeworks/adhx`](https://github.com/itsmemeworks/adhx/pkgs/container/adhx).
-It runs database migrations automatically at startup and exposes ADHX on port 3000:
-
-```bash
-docker pull ghcr.io/itsmemeworks/adhx:latest
-export RESEND_API_KEY=re_your_key
-export EMAIL_FROM='ADHX <login@your-verified-domain.example>'
-docker run -d -p 3000:3000 -v adhx_data:/data \
-  -e DATABASE_PATH=/data/adhx.db \
-  -e SESSION_SECRET=$(openssl rand -base64 32) \
-  -e NEXT_PUBLIC_APP_URL=http://localhost:3000 \
-  -e RESEND_API_KEY \
-  -e EMAIL_FROM \
-  ghcr.io/itsmemeworks/adhx:latest
-```
-
-For reproducible deployments, replace `latest` with a release tag such as `1.66.2`.
-You can still build from source with `docker build -t adhx .`.
-
-`RESEND_API_KEY` and a verified `EMAIL_FROM` sender are required for magic-link sign-in in
-the production image. Add `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET` to enable X sync,
-with `<your-url>/api/auth/twitter/callback` registered in the X Developer Portal.
-`DATABASE_PATH` defaults to `/data/adhx.db` in the image.
+- **Somewhere to run a container** with a persistent folder: a home server, a NAS, a small VPS, or [Fly.io](#flyio).
+- **A [Resend](https://resend.com) account** to send sign-in emails. ADHX has no passwords; people sign in with a link sent to their email. The free tier is plenty for a group of friends.
+- **Disk space.** See [Disk space](#disk-space).
 
 ### Docker Compose
 
-[`docker-compose.yml`](docker-compose.yml) pulls the GHCR image, publishes port 3000, and creates the persistent volume:
-
 ```bash
-docker compose pull
+git clone https://github.com/itsmemeworks/adhx && cd adhx
+export SESSION_SECRET=$(openssl rand -base64 32)
+export RESEND_API_KEY=re_your_key
+export EMAIL_FROM='ADHX <login@your-verified-domain.example>'
+export NEXT_PUBLIC_APP_URL=https://adhx.your-domain.example
+export ALLOWED_EMAILS='you@example.com, @your-family.example'
 docker compose up -d
 ```
 
-Export `SESSION_SECRET`, `RESEND_API_KEY`, and `EMAIL_FROM` before starting Compose; it refuses
-to start without them. Set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>` to pin Compose to
-a release.
+ADHX listens on port 3000. Put it behind your usual reverse proxy for HTTPS; sign-in needs HTTPS outside `localhost`. The [`docker-compose.yml`](docker-compose.yml) keeps everything in one volume mounted at `/data`: the database, the search model and every kept file. Migrations run on start.
+
+To pin a release, set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>`. You can also build the image yourself with `docker build -t adhx .`.
+
+### Who can sign up
+
+By default, anyone who can reach your server can make an account. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in.
+
+To give yourself the admin page (numbers, hiding posts, banning accounts), sign up first. Then set `ADMIN_USERNAMES=yourname` and restart once.
+
+### Settings
+
+| Setting                                      | What it does                                                                                                                   |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_APP_URL`                        | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here.                                             |
+| `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                     |
+| `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                     |
+| `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                   |
+| `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.      |
+| `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                       |
+| `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                         |
+| `KEEP_H264=off`                              | Keep videos in whatever format the network sent (see [Video formats](#video-formats)).                                         |
+| `KEEP_MAX_FILESIZE`                          | Largest single download, default `4G`.                                                                                         |
+| `KEEP_CONCURRENCY`                           | Posts downloaded at once, default `2`.                                                                                         |
+| `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                    |
+| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                      |
+| `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                         |
+| `SEMANTIC_SEARCH=off`                        | Turn search by meaning off (keyword search still works).                                                                       |
+| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `1`.                                                                             |
+| `TYPESAFE_API_KEY`                           | Optional: reorders the top search results by their words. Only the search text and the public words of those results are sent. |
+
+Every setting is in [`.env.example`](.env.example).
+
+### Disk space
+
+Kept media is most of the space ADHX uses. As a rough guide:
+
+- A short phone video (TikTok, Reel, Short) is 5–30 MB.
+- A minute of 1080p is 15–40 MB; a minute of 4K is 40–100 MB.
+- Photos are 0.1–1 MB each.
+- The search model is about 1.5 GB, downloaded once on first start.
+
+So 1,000 mixed saves come to roughly 10–30 GB. When you first run ADHX on an existing library, it downloads everything already saved, newest first. If your disk is small, start with `KEEP_BACKFILL=off`.
+
+Files are deleted when nobody on your server has the post saved any more. That check runs once an hour.
+
+### Video formats
+
+ADHX picks the highest resolution a network offers. If that video isn't H.264, ADHX re-encodes it to H.264 at the same size so it plays everywhere. Some networks send their best quality only as VP9, AV1 or HEVC, and Safari and Firefox can't play all of those. Re-encoding takes CPU time, especially for long 4K videos. Set `KEEP_H264=off` to keep the original files untouched.
+
+### Keeping downloads working
+
+Networks change their pages often, and yt-dlp releases fixes within days. Each ADHX release pins the latest yt-dlp. To update a running container without waiting for a release:
+
+```bash
+docker compose exec adhx /opt/yt-dlp/bin/pip install -U yt-dlp
+```
+
+Downloads that fail are retried with growing waits over about a day. Until a post is kept, X, Instagram and TikTok posts still play straight from the network.
+
+### Backups
+
+Back up the `/data` volume. It holds `adhx.db`, the `media/` folder and the `models/` folder. The models are re-downloaded if missing, so you can skip them.
 
 ### Fly.io
 
-A starter [`fly.toml`](fly.toml) is included:
+A starter [`fly.toml`](fly.toml) is included. Size the volume for your media:
 
 ```bash
-fly apps create your-app
-fly volumes create adhx_data --region lhr --size 1 --app your-app
-fly secrets set --app your-app \
+fly apps create your-adhx
+fly volumes create adhx_data --region lhr --size 50 --app your-adhx
+fly secrets set --app your-adhx \
   SESSION_SECRET=$(openssl rand -base64 32) \
-  NEXT_PUBLIC_APP_URL=https://your-app.fly.dev
-fly deploy --app your-app
+  NEXT_PUBLIC_APP_URL=https://your-adhx.fly.dev \
+  RESEND_API_KEY=re_your_key \
+  EMAIL_FROM='ADHX <login@your-verified-domain.example>' \
+  ALLOWED_EMAILS='you@example.com'
+fly deploy --app your-adhx
 ```
 
-Add the optional X and Resend secrets in the same way. For deployment structure, database migration behavior, health checks, and production OAuth notes, follow [ARCHITECTURE.md](ARCHITECTURE.md) and [CLAUDE.md](CLAUDE.md).
+Keep `min_machines_running = 1`. The download queue, the hourly X sync and Right now all run inside the app.
 
-## For agents and machine readers
+### X bookmark sync (optional)
 
-[`https://adhx.com/llms.txt`](https://adhx.com/llms.txt) is the compact map of ADHX's public, machine-readable surfaces. The architecture guide explains where those surfaces get their data and which privacy boundaries they enforce.
+People sign in with email. Connecting X is optional; it brings in their bookmarks and then keeps checking for new ones about every hour.
 
-### Agent skill
+1. Create an app in the [X Developer Portal](https://developer.x.com) with OAuth 2.0 (PKCE) and the bookmark read scope.
+2. Register `<your NEXT_PUBLIC_APP_URL>/api/auth/twitter/callback` as a callback.
+3. Set `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET`.
 
-ADHX ships an [Agent Skill](https://agentskills.io) that searches your own saves by meaning ("my saved videos with a frog in them"), pictures and videos included, and turns an X, Twitter, or ADHX post link into clean structured data, including full X Article content. It works with skills-compatible tools such as Claude Code, Cursor, Gemini CLI, Codex, and Copilot.
+X charges the developer app for every post its API returns, so automatic syncing uses API credits. Each sync asks for up to 100 recent bookmarks and stops at the first page that holds one already saved. X only ever returns someone's newest 800 bookmarks. If X runs out of credits, ADHX pauses automatic syncing for six hours and tries again.
 
-Searching your saves needs a personal access key: make one in Settings → Search from Claude and set it as `ADHX_API_KEY`. Keys can only read your own saves, and you can remove them at any time.
+## Saving posts
+
+- **Paste a link** in ADHX (the Paste button, or just paste anywhere in the app).
+- **iPhone and iPad:** Settings → _Add to the iOS share menu_ shows how to make a three-step Shortcut that points at your server. Then use Share → ADHX in any app.
+- **Android:** add ADHX to your home screen. It then appears in the share menu.
+- **Desktop:** the extension in [`extension/`](extension/) adds a toolbar button, a right-click item and `⌘⇧A` / `Ctrl+Shift+A`. Build it with `EXTENSION_PUBLIC_APP_ORIGIN` set to your server (see [`extension/README.md`](extension/README.md)).
+- **Put your address in front of any link:** `https://adhx.example.com/https://www.youtube.com/watch?v=…`.
+
+Short share links (`pin.it`, Reddit's `/s/` links, `on.soundcloud.com`, `youtu.be`, TikTok's `vm.` links) work too.
+
+## Search from Claude
+
+ADHX ships an [Agent Skill](https://agentskills.io) that searches your saves by meaning, pictures and videos included. It can also read any X post as clean JSON.
+
+1. In ADHX, open Settings → _Search from Claude_ and make a key.
+2. Set it as `ADHX_API_KEY` where your agent runs.
+3. Install the skill:
 
 ```bash
 # Claude Code
 /plugin marketplace add itsmemeworks/adhx
 /plugin install adhx
 
-# Other skills-compatible agents
+# Other skills-compatible agents (Cursor, Gemini CLI, Codex, Copilot …)
 SKILLS_DIR="$HOME/.cursor/skills" # change this for your agent
 mkdir -p "$SKILLS_DIR/adhx" && curl -sL \
   https://raw.githubusercontent.com/itsmemeworks/adhx/main/skills/adhx/SKILL.md \
   -o "$SKILLS_DIR/adhx/SKILL.md"
 ```
 
-Skill source: [`skills/adhx/SKILL.md`](skills/adhx/SKILL.md)
+Also set `ADHX_URL` to your server's address, e.g. `https://adhx.example.com` (the skill falls back to `https://adhx.com`). Then ask things like "find my saved videos with a frog in them". Keys can only read their owner's saves, and you can remove them at any time.
+
+## Develop locally
+
+```bash
+git clone https://github.com/itsmemeworks/adhx && cd adhx
+pnpm install
+cp .env.example .env
+pnpm db:migrate
+pnpm dev
+```
+
+The dev server runs at [http://localhost:3001](http://localhost:3001). Without Resend, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install yt-dlp`, `uv tool install yt-dlp` or `brew install yt-dlp`). With little disk space, run with `KEEP_BACKFILL=off`.
+
+```bash
+pnpm typecheck && pnpm test && pnpm lint && pnpm format:check && pnpm build
+```
+
+Read [ARCHITECTURE.md](ARCHITECTURE.md) for how it fits together, and [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow. Coding agents should also read [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
+
+## Use it kindly
+
+ADHX is for keeping posts for yourself and the people you share your server with. It isn't a way to republish other people's work. Keep the creator's name with what you save, which ADHX does on every post. Bear in mind that each network has its own terms about downloading.
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, formatting, and commit conventions.
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- [Privacy](PRIVACY.md) — what the hosted service stores and what remains private
-- [Security](SECURITY.md) — how to report vulnerabilities privately
+- [Privacy](PRIVACY.md): what an ADHX server stores
+- [Security](SECURITY.md): how to report vulnerabilities privately
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## License

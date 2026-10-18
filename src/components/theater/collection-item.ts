@@ -1,3 +1,4 @@
+import { keptSrc } from '@/lib/keep/src'
 /**
  * Converts Saved (`FeedItem`) rows into `TheaterItem`s so TheaterShell
  * can reuse the read-only theater stage components
@@ -184,10 +185,7 @@ export function theaterItemToFeedItem(item: TheaterItem): FeedItem {
       media.push({
         id: `${id}-v${i}`,
         mediaType: 'video',
-        url:
-          platform === 'twitter'
-            ? `/api/media/video?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(id)}`
-            : '',
+        url: keptSrc(platform ?? 'twitter', id, `video-${i + 1}`, item.author),
         thumbnailUrl: poster || thumb,
         shareUrl: '',
       }),

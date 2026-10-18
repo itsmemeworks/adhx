@@ -1,4 +1,5 @@
 import { detectPlatformPost } from '@/lib/platform/url'
+import { isNetworkShortLink } from '@/lib/platform/networks'
 import { markPreviewOpenIntent } from '@/lib/theater/autosave-shared'
 
 /**
@@ -32,7 +33,7 @@ export function extractSharedUrl(...candidates: (string | null | undefined)[]): 
  * Parse a shared link (Android PWA share target) into the destination to
  * redirect to.
  *
- * Returns the clean on-ADHX preview path for X/Twitter, Instagram, and TikTok
+ * Returns the clean on-ADHX preview path for any recognised network's
  * post/video links; for a TikTok short link it returns the resolver
  * endpoint (which 307s to the preview). `null` when the URL isn't recognised.
  *
@@ -46,6 +47,10 @@ export function parseShareUrl(url: string): { path: string } | null {
   const short = matchTikTokShortLink(url)
   if (short) {
     return { path: `/api/tiktok/resolve?url=${encodeURIComponent(short)}&go=1` }
+  }
+
+  if (isNetworkShortLink(url)) {
+    return { path: `/api/links/resolve?url=${encodeURIComponent(url.trim())}` }
   }
 
   return null

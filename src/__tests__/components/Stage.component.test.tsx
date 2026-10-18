@@ -174,9 +174,9 @@ describe('Stage: the granted <video> element survives a non-video item', () => {
     } as TheaterItem
     const { container } = render(<Stage item={item} muted onRequestUnmute={vi.fn()} articleMode />)
     const srcs = [...container.querySelectorAll('img')].map((el) => el.getAttribute('src') ?? '')
-    expect(srcs.some((s) => s.includes('index=1'))).toBe(true)
-    expect(srcs.some((s) => s.includes('index=2'))).toBe(true)
-    expect(srcs.some((s) => s.includes('index=3'))).toBe(true)
+    for (const n of [1, 2, 3]) {
+      expect(srcs).toContain(`/api/files/twitter/2091475617438957808/photo-${n}?a=StreetFashion01`)
+    }
     expect(container.querySelector('[aria-label="Photos, 3"]')).toBeNull()
   })
 

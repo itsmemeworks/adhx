@@ -1,5 +1,6 @@
 'use client'
 
+import { keptSrc } from '@/lib/keep/src'
 /**
  * Dark stage dispatcher (spec §3/§6): renders the right variant for the
  * current item. The stage background is ALWAYS near-black (#08070a) in both
@@ -144,7 +145,7 @@ export function Stage({
             ...item,
             contentType: 'photo',
             photoCount: instagram.photoCount,
-            thumbnailUrl: `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId || '')}`,
+            thumbnailUrl: keptSrc('instagram', item.bookmarkId || '', 'photo-1'),
           }}
           photo={!articleMode}
           photoCaption={photoCaption}

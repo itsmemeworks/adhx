@@ -1,3 +1,4 @@
+import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
   activity,
@@ -655,13 +656,15 @@ async function fetchTrendingWindow(
     key: string,
     type: ContentType | undefined,
   ): string | null => {
-    if (i.platform === 'instagram' && i.bookmarkId) {
-      return `/api/media/instagram/thumbnail?id=${encodeURIComponent(i.bookmarkId)}`
-    }
-    if (i.platform === 'tiktok' && i.author && i.bookmarkId) {
-      return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(i.author)}&id=${encodeURIComponent(i.bookmarkId)}`
-    }
     if (type === 'article') return articleCovers.get(key) ?? i.thumbnailUrl ?? null
+    // Saved posts (and Instagram/TikTok, whose proxies re-resolve) use ADHX's
+    // own kept poster.
+    if (
+      i.bookmarkId &&
+      (i.platform === 'instagram' || i.platform === 'tiktok' || (counts.get(key) ?? 0) > 0)
+    ) {
+      return keptSrc(i.platform || 'twitter', i.bookmarkId, 'poster', i.author)
+    }
     return i.thumbnailUrl ?? null
   }
 

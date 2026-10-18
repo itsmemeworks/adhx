@@ -22,6 +22,10 @@ function ShareRedirect() {
       searchParams.get('title'),
     )
 
+    if (searchParams.get('error') === 'unsupported') {
+      setError(true)
+      return
+    }
     if (!shared) {
       router.replace('/')
       return
@@ -70,8 +74,9 @@ function NotSupported() {
           Not a supported link
         </h1>
         <p className="m-0 max-w-[460px] text-[15px] text-white/70">
-          That doesn’t look like a post we can play. Try an X, Instagram or TikTok link, like
-          x.com/someone/status/123.
+          That doesn’t look like a link to one post. ADHX keeps posts from X, Instagram, TikTok,
+          YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur
+          and Bluesky.
         </p>
         <Link
           href="/"

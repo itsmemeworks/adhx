@@ -80,7 +80,7 @@ const hankenGrotesk = Hanken_Grotesk({
 
 const siteUrl = PUBLIC_BASE_URL
 const siteDescription =
-  'Save posts from X, Instagram and TikTok, then find them by describing what you remember. Watch what everyone is saving right now.'
+  'Keep posts from X, Instagram, TikTok, YouTube, Reddit and more on your own server, then find them by describing what you remember.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

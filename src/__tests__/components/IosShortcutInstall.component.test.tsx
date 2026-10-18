@@ -40,16 +40,29 @@ describe('IosShortcutInstallButton', () => {
 })
 
 describe('IosShortcutSettingsCard', () => {
-  it('shows the iCloud shortcut on iOS', () => {
-    render(<IosShortcutSettingsCard />)
+  it('shows the iCloud shortcut on iOS at adhx.com', () => {
+    vi.stubGlobal('location', { ...window.location, origin: 'https://adhx.com' })
+    try {
+      render(<IosShortcutSettingsCard />)
+    } finally {
+      vi.unstubAllGlobals()
+    }
     expect(screen.getByText('Add to the iOS share menu')).toBeInTheDocument()
-    expect(screen.getByText('Then from X, Instagram, or TikTok: Share → ADHX.')).toBeInTheDocument()
+    expect(screen.getByText('Then from any app: Share → ADHX.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /add to share sheet/i })).toHaveAttribute(
       'href',
       IOS_SHORTCUT_URL,
     )
     expect(screen.getByText('Add shortcut')).toBeInTheDocument()
     expect(screen.getByText('Share → ADHX')).toBeInTheDocument()
+  })
+
+  it('shows a make-your-own shortcut card on a self-hosted origin', () => {
+    render(<IosShortcutSettingsCard />)
+    expect(screen.getByText('Add to the iOS share menu')).toBeInTheDocument()
+    expect(screen.getByText(`${window.location.origin}/share?url=`)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy the address' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /add to share sheet/i })).not.toBeInTheDocument()
   })
 
   it('stays hidden on non-iOS', () => {

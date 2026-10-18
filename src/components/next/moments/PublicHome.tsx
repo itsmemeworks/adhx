@@ -14,19 +14,26 @@ import { RightNow } from './RightNow'
  */
 export function PublicHome() {
   // "Connect X" needs an account first (the X sign-in sends you back here).
-  const [xFirst, setXFirst] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   useEffect(() => {
-    setXFirst(new URLSearchParams(window.location.search).get('auth_error') === 'x_link_only')
+    const error = new URLSearchParams(window.location.search).get('auth_error')
+    setNotice(
+      error === 'x_link_only'
+        ? 'Sign in with your email first, then connect X in Settings.'
+        : error === 'not_invited'
+          ? 'This ADHX is for invited people. Ask whoever runs it to add your email.'
+          : null,
+    )
   }, [])
   return (
     <div className="min-h-dvh bg-black font-nx-sans text-white">
       <NxHeader current="now" />
-      {xFirst && (
+      {notice && (
         <p
           role="alert"
           className="mx-4 mt-2 rounded-2xl bg-[#2a1d14] px-4 py-3 text-[15px] text-[#ffb59a] md:mx-7"
         >
-          Sign in with your email first, then connect X in Settings.
+          {notice}
         </p>
       )}
       <main className="mx-auto flex max-w-[1600px] flex-col gap-10 px-4 pb-16 pt-4 md:px-7 md:pt-8">
@@ -43,8 +50,9 @@ export function PublicHome() {
               <span className="text-nx-accent">Find it.</span>
             </h1>
             <p className="m-0 max-w-[600px] text-[17px] leading-snug text-white/75 md:text-[19px]">
-              Keep posts from X, Instagram and TikTok in one place, then find them by describing
-              what you remember. Below, what everyone’s saving, live.
+              Keep the posts you love from X, Instagram, TikTok, YouTube, Reddit and more, on your
+              own server, then find them by describing what you remember. Below, what everyone here
+              is saving, live.
             </p>
             <WatchALink />
           </div>
@@ -69,7 +77,7 @@ export function PublicHome() {
   )
 }
 
-/** Paste any X, Instagram or TikTok link to watch it here, no account needed. */
+/** Paste a link to a post to watch it here, no account needed. */
 function WatchALink() {
   // Uncontrolled, and a real GET form to /share (which opens any post link):
   // a link pasted before the page's script starts still works.
@@ -99,7 +107,7 @@ function WatchALink() {
           type="url"
           inputMode="url"
           autoComplete="off"
-          placeholder="Paste a link from X, Instagram or TikTok"
+          placeholder="Paste a link to a post"
           onInput={() => setBad(false)}
           className="h-full min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/45"
         />

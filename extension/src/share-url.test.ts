@@ -16,10 +16,28 @@ describe('isSupportedShareUrl', () => {
     expect(isSupportedShareUrl('https://vm.tiktok.com/ZMABcd123')).toBe(true)
   })
 
-  it('rejects YouTube, which ADHX no longer saves', () => {
-    expect(isSupportedShareUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(false)
-    expect(isSupportedShareUrl('https://youtu.be/dQw4w9WgXcQ')).toBe(false)
-    expect(isSupportedShareUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe(false)
+  it('accepts YouTube (Shorts, watch, youtu.be)', () => {
+    expect(isSupportedShareUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ')).toBe(true)
+    expect(isSupportedShareUrl('https://youtu.be/dQw4w9WgXcQ')).toBe(true)
+    expect(isSupportedShareUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe(true)
+  })
+
+  it('accepts the other link networks ADHX keeps', () => {
+    for (const url of [
+      'https://www.facebook.com/reel/1234567890',
+      'https://www.reddit.com/r/pics/comments/abc123/title/',
+      'https://www.linkedin.com/feed/update/urn:li:activity:7123456789012345678/',
+      'https://vimeo.com/76979871',
+      'https://soundcloud.com/artist/track-name',
+      'https://www.pinterest.com/pin/123456789012/',
+      'https://pin.it/abc123',
+      'https://clips.twitch.tv/SomeClipSlug',
+      'https://www.threads.net/@zuck/post/C1a2B3c4D5e',
+      'https://imgur.com/a/AbCdE12',
+      'https://bsky.app/profile/jay.bsky.team/post/3kabc123def45',
+    ]) {
+      expect(isSupportedShareUrl(url), url).toBe(true)
+    }
   })
 
   it('accepts a host with no protocol (typed / copied path)', () => {

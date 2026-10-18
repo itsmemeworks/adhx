@@ -31,14 +31,13 @@ export function resolvePlaybackSource(item: TheaterItem | null): PlaybackSource 
   if (!item) return { kind: 'none', src: null, poster: null }
 
   const poster = item.thumbnailUrl ?? null
-  const isTwitterOrTiktok = item.platform === 'twitter' || item.platform === 'tiktok'
-  const isVideoLike = item.contentType === 'video' || item.platform === 'tiktok'
-
-  if (isTwitterOrTiktok && isVideoLike) {
-    return { kind: 'video', src: reelVideoSrc(item), poster }
-  }
+  // Instagram plays through StageInstagram's probe (see above).
   if (item.platform === 'instagram') {
     return { kind: 'poster', src: null, poster }
+  }
+  const isVideoLike = item.contentType === 'video' || item.platform === 'tiktok'
+  if (isVideoLike && item.bookmarkId) {
+    return { kind: 'video', src: reelVideoSrc(item), poster }
   }
   return { kind: 'none', src: null, poster }
 }

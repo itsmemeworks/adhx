@@ -3,12 +3,13 @@ import { resolveSendSource, sendSourceKey } from '@/components/theater/useSendFi
 import type { TrendingItem } from '@/lib/trending/query'
 
 /**
- * `resolveSendSource` matrix (Send-the-file flow, spec §2/§8). Twitter photo
- * → the `/api/media/image` proxy's download variant; Twitter/TikTok/Instagram
- * video → the video-src SSOT (`reelVideoSrc`); text/article → null (nothing
- * sendable). The Instagram case is a deliberate regression test: Instagram
- * must resolve its own mirror, never fall through to the Twitter FxTwitter
- * proxy (a bug that's bitten this repo before).
+ * `resolveSendSource` matrix (Send-the-file flow, spec §2/§8). Every source
+ * is the same-origin kept-file route (`/api/files/<platform>/<id>/<slot>`):
+ * photo → `photo-1` with `download=1`; Twitter/TikTok/Instagram video → the
+ * video-src SSOT (`reelVideoSrc`) plus a `video-1` download variant;
+ * text/article → null (nothing sendable). The Instagram case is a deliberate
+ * regression test: Instagram must resolve its own route, never fall through
+ * to the Twitter one (a bug that's bitten this repo before).
  */
 
 const base: TrendingItem = {
@@ -33,11 +34,11 @@ describe('resolveSendSource', () => {
     expect(resolveSendSource(item({ bookmarkId: undefined }))).toBe(null)
   })
 
-  it('twitter video → the FxTwitter MP4 proxy', () => {
+  it('twitter video → the twitter kept-file video route', () => {
     const result = resolveSendSource(item({ platform: 'twitter', contentType: 'video' }))
     expect(result).toEqual({
-      src: '/api/media/video?author=jack&tweetId=123&quality=hd',
-      downloadSrc: '/api/media/video/download?author=jack&tweetId=123&quality=hd',
+      src: '/api/files/twitter/123/video-1?a=jack',
+      downloadSrc: '/api/files/twitter/123/video-1?a=jack&download=1',
       filename: 'adhx-twitter-123.mp4',
       kind: 'video',
     })
@@ -47,15 +48,14 @@ describe('resolveSendSource', () => {
     const result = resolveSendSource(
       item({ platform: 'twitter', contentType: 'video', videoCount: 3 }),
     )
-    expect(result?.src).toBe('/api/media/video?author=jack&tweetId=123&quality=hd')
-    expect(result?.src).not.toContain('index=')
+    expect(result?.src).toBe('/api/files/twitter/123/video-1?a=jack')
   })
 
-  it('twitter photo → the image proxy download variant, first/primary photo', () => {
+  it('twitter photo → the kept-file download variant, first/primary photo', () => {
     const result = resolveSendSource(item({ platform: 'twitter', contentType: 'photo' }))
     expect(result).toEqual({
-      src: '/api/media/image?author=jack&tweetId=123&index=1&download=1',
-      downloadSrc: '/api/media/image?author=jack&tweetId=123&index=1&download=1',
+      src: '/api/files/twitter/123/photo-1?a=jack&download=1',
+      downloadSrc: '/api/files/twitter/123/photo-1?a=jack&download=1',
       filename: 'adhx-twitter-123.jpg',
       kind: 'photo',
     })
@@ -79,39 +79,39 @@ describe('resolveSendSource', () => {
     )
   })
 
-  it('tiktok → its own MP4 proxy, regardless of recorded contentType (single-format platform)', () => {
+  it('tiktok → its own kept-file video route, regardless of recorded contentType (single-format platform)', () => {
     const result = resolveSendSource(
       item({ platform: 'tiktok', author: '@bob', bookmarkId: '7', contentType: undefined }),
     )
     expect(result).toEqual({
-      src: '/api/media/tiktok/video?username=%40bob&id=7',
-      downloadSrc: '/api/media/tiktok/video/download?username=%40bob&id=7',
+      src: '/api/files/tiktok/7/video-1?a=bob',
+      downloadSrc: '/api/files/tiktok/7/video-1?a=bob&download=1',
       filename: 'adhx-tiktok-7.mp4',
       kind: 'video',
     })
   })
 
-  it('instagram → its own mirror, never the Twitter proxy (regression guard)', () => {
+  it('instagram → its own kept-file route, never the Twitter one (regression guard)', () => {
     const result = resolveSendSource(
       item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw', contentType: undefined }),
     )
     expect(result).toEqual({
-      src: '/api/media/instagram/video?id=DXVsqQ7CSXw',
-      downloadSrc: '/api/media/instagram/video/download?id=DXVsqQ7CSXw',
+      src: '/api/files/instagram/DXVsqQ7CSXw/video-1',
+      downloadSrc: '/api/files/instagram/DXVsqQ7CSXw/video-1?download=1',
       filename: 'adhx-instagram-DXVsqQ7CSXw.mp4',
       kind: 'video',
     })
-    expect(result?.src).not.toContain('/api/media/video?')
+    expect(result?.src).not.toContain('/api/files/twitter/')
   })
 
-  it('Instagram photo → the downloadable same-origin image proxy', () => {
+  it('Instagram photo → the downloadable same-origin kept-file photo', () => {
     expect(
       resolveSendSource(
         item({ platform: 'instagram', bookmarkId: 'DcHXej3lt5W', contentType: 'photo' }),
       ),
     ).toEqual({
-      src: '/api/media/instagram/thumbnail?id=DcHXej3lt5W&index=1&download=1',
-      downloadSrc: '/api/media/instagram/thumbnail?id=DcHXej3lt5W&index=1&download=1',
+      src: '/api/files/instagram/DcHXej3lt5W/photo-1?download=1',
+      downloadSrc: '/api/files/instagram/DcHXej3lt5W/photo-1?download=1',
       filename: 'adhx-instagram-DcHXej3lt5W.jpg',
       kind: 'photo',
     })

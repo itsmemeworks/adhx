@@ -3,7 +3,7 @@
  * joined media/links/tags) into the shape the feed API returns to the client.
  */
 import type { Bookmark, BookmarkLink, BookmarkMedia } from '@/lib/db/schema'
-import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
+import { keptSrc } from '@/lib/keep/src'
 import { expandUrls } from '@/lib/utils/url-expander'
 import {
   selectArticleLink,
@@ -66,74 +66,35 @@ export function buildFeedItem(
   isArchived: boolean,
   isArticle: boolean,
 ): FeedItemResponse {
-  // Build media URLs — platform-aware. Twitter uses FxEmbed; Instagram and
-  // TikTok stream through our own proxy routes (CDN URLs require referer/sig
-  // headers that only the proxy adds).
+  // Every file comes from /api/files: ADHX's own kept copy, or (until it's
+  // downloaded) the network's proxy. Slots count per kind, so a post with two
+  // photos and a video has photo-1, photo-2 and video-1.
   const orderedMedia = [...bookmarkMediaList].sort(
     (a, b) => mediaOrdinal(a.id) - mediaOrdinal(b.id),
   )
-  const mediaWithUrls = orderedMedia.map((m, index) => {
-    const mediaType = m.mediaType as 'photo' | 'video' | 'animated_gif'
-
-    if (bookmark.platform === 'instagram') {
-      // Reels play inline via the IG video proxy; photos and ordered carousel
-      // children re-resolve fresh signed CDN URLs through the image proxy.
-      const mediaIndex = index + 1
-      const indexQuery = mediaIndex === 1 ? '' : `&index=${mediaIndex}`
-      const thumbnailUrl = `/api/media/instagram/thumbnail?id=${encodeURIComponent(bookmark.id)}${indexQuery}`
-      const isVideo = m.mediaType === 'video'
-      const streamUrl = `/api/media/instagram/video?id=${encodeURIComponent(bookmark.id)}`
-      const downloadUrl = `/api/media/instagram/video/download?id=${encodeURIComponent(bookmark.id)}`
-      return {
-        id: m.id,
-        mediaType: m.mediaType,
-        width: m.width,
-        height: m.height,
-        durationMs: isVideo ? m.durationMs : null,
-        altText: m.altText,
-        url: isVideo ? streamUrl : thumbnailUrl,
-        thumbnailUrl,
-        shareUrl: isVideo ? downloadUrl : `${thumbnailUrl}&download=1`,
-        originalUrl: null,
-      }
-    }
-
-    if (bookmark.platform === 'tiktok') {
-      const streamUrl = `/api/media/tiktok/video?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
-      const downloadUrl = `/api/media/tiktok/video/download?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
-      const thumbnailUrl = `/api/media/tiktok/thumbnail?username=${encodeURIComponent(bookmark.author)}&id=${encodeURIComponent(bookmark.id)}`
-      return {
-        id: m.id,
-        mediaType: m.mediaType,
-        width: m.width,
-        height: m.height,
-        durationMs: m.durationMs,
-        altText: m.altText,
-        url: streamUrl,
-        thumbnailUrl,
-        shareUrl: downloadUrl,
-        originalUrl: null,
-      }
-    }
-
-    // Twitter / default — existing FxEmbed flow
-    const urlOptions = {
-      tweetId: bookmark.id,
-      author: bookmark.author,
-      mediaType,
-      mediaIndex: index + 1,
-    }
+  const counts = { video: 0, photo: 0 }
+  const mediaWithUrls = orderedMedia.map((m) => {
+    const kind = m.mediaType === 'photo' ? 'photo' : 'video'
+    const n = ++counts[kind]
+    const slot = `${kind}-${n}` as const
+    const url = keptSrc(bookmark.platform, bookmark.id, slot, bookmark.author)
+    const thumbnailUrl =
+      kind === 'photo'
+        ? url
+        : n === 1
+          ? keptSrc(bookmark.platform, bookmark.id, 'poster', bookmark.author)
+          : m.previewUrl || keptSrc(bookmark.platform, bookmark.id, 'poster', bookmark.author)
     return {
       id: m.id,
       mediaType: m.mediaType,
       width: m.width,
       height: m.height,
-      durationMs: m.durationMs,
+      durationMs: kind === 'video' ? m.durationMs : null,
       altText: m.altText,
-      url: resolveMediaUrl(urlOptions),
-      thumbnailUrl: getThumbnailUrl({ ...urlOptions, previewUrl: m.previewUrl || undefined }),
-      shareUrl: getShareableUrl(urlOptions),
-      originalUrl: m.originalUrl ?? null,
+      url,
+      thumbnailUrl,
+      shareUrl: keptSrc(bookmark.platform, bookmark.id, slot, bookmark.author, { download: true }),
+      originalUrl: bookmark.platform === 'twitter' ? (m.originalUrl ?? null) : null,
     }
   })
 

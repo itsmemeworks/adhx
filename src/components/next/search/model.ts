@@ -1,3 +1,4 @@
+import { keptSrc } from '@/lib/keep/src'
 /**
  * Pure helpers for the next_ui search screen: the `/api/search` contract as
  * the client sees it, URL state, grouping and plain-language wording. No
@@ -338,18 +339,7 @@ export function rememberRecent(q: string): string[] {
  */
 export function previewVideoSrc(post: FeedItem): string | null {
   const media = post.media ?? []
-  const index = media.findIndex((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif')
-  if (index < 0) return null
+  if (!media.some((m) => m.mediaType === 'video' || m.mediaType === 'animated_gif')) return null
   const platform = post.platform ?? 'twitter'
-  if (platform === 'twitter') {
-    // The proxy's first video is the post's first video.
-    const params = new URLSearchParams({
-      author: post.author,
-      tweetId: post.id,
-      quality: 'preview',
-    })
-    return `/api/media/video?${params}`
-  }
-  const url = media[index].url
-  return url?.startsWith('/api/media/') ? url : null
+  return keptSrc(platform, post.id, 'video-1', post.author)
 }

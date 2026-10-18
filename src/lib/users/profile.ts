@@ -1,3 +1,4 @@
+import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
   tagShares,
@@ -10,7 +11,6 @@ import {
 } from '@/lib/db/schema'
 import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
-import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
 import {
   moderationStateFingerprint,
@@ -139,21 +139,9 @@ function resolveThumbnail(
   articleCover: string | undefined,
 ): string | undefined {
   if (articleCover) return articleCover
-  if (item.platform === 'tiktok') {
-    return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(item.author)}&id=${encodeURIComponent(item.id)}`
-  }
-  if (item.platform === 'instagram') {
-    return `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.id)}`
-  }
-  if (!firstMedia) return undefined
-  const mediaType = firstMedia.mediaType as 'photo' | 'video' | 'animated_gif'
-  return getThumbnailUrl({
-    tweetId: item.id,
-    author: item.author,
-    mediaType,
-    mediaIndex: 1,
-    previewUrl: firstMedia.previewUrl || undefined,
-  })
+  // ADHX's own kept poster (an X post with no media has none).
+  if (item.platform === 'twitter' && !firstMedia) return undefined
+  return keptSrc(item.platform, item.id, 'poster', item.author)
 }
 
 async function fetchPublicProfile(

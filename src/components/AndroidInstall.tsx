@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils'
 export const ANDROID_A2HS_DISMISS_KEY = 'adhx-a2hs-dismissed'
 
 export const ANDROID_INSTALL_TITLE = 'Share a post directly to ADHX'
-export const ANDROID_INSTALL_BODY = 'From X, Instagram, or TikTok: Share → ADHX.'
-export const ANDROID_INSTALL_STANDALONE = 'Installed. From X, Instagram, or TikTok: Share → ADHX.'
+export const ANDROID_INSTALL_BODY = 'From any app: Share → ADHX.'
+export const ANDROID_INSTALL_STANDALONE = 'Installed. From any app: Share → ADHX.'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -259,7 +259,7 @@ export function AndroidLandingPromo() {
   return (
     <>
       <p className="mb-4 text-[14px] leading-[1.5] text-ink-2">
-        <span>Share a post from X, Instagram, or TikTok and it opens here.</span>
+        <span>Share a post from any app and it opens here.</span>
       </p>
       <AndroidHow className="mb-1" />
     </>

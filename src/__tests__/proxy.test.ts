@@ -343,30 +343,23 @@ describe('Proxy: URL Normalization', () => {
     })
   })
 
-  describe('Pasted YouTube URLs (unsupported)', () => {
-    it('does not rewrite a pasted youtube.com/shorts URL to /shorts/{id}', () => {
-      expect(
-        proxy(createRequest('/https:/youtube.com/shorts/Y9aytLYBajw')).headers.get('location'),
-      ).toBeNull()
-      expect(
-        proxy(
-          createRequest('/https:/www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC'),
-        ).headers.get('location'),
-      ).toBeNull()
+  describe('Pasted YouTube URLs', () => {
+    const target = 'https://adhx.com/s/youtube/Y9aytLYBajw'
+    const loc = (path: string) => proxy(createRequest(path)).headers.get('location')
+
+    it('rewrites a pasted youtube.com/shorts URL to /s/youtube/{id}', () => {
+      expect(loc('/https:/youtube.com/shorts/Y9aytLYBajw')).toBe(target)
+      expect(loc('/https:/www.youtube.com/shorts/Y9aytLYBajw?si=Ns240PHC8T7l5ZZC')).toBe(target)
     })
 
-    it('does not rewrite youtu.be or watch?v= — those are regular videos', () => {
-      expect(
-        proxy(createRequest('/https:/youtu.be/Y9aytLYBajw')).headers.get('location'),
-      ).toBeNull()
-      expect(
-        proxy(
-          createRequest('/https:/www.youtube.com/watch?v=Y9aytLYBajw&feature=share'),
-        ).headers.get('location'),
-      ).toBeNull()
-      expect(
-        proxy(createRequest('/https:/www.youtube.com/embed/Y9aytLYBajw')).headers.get('location'),
-      ).toBeNull()
+    it('rewrites youtu.be, watch?v= and embed links to /s/youtube/{id}', () => {
+      expect(loc('/https:/youtu.be/Y9aytLYBajw')).toBe(target)
+      expect(loc('/https:/www.youtube.com/watch?v=Y9aytLYBajw&feature=share')).toBe(target)
+      expect(loc('/https:/www.youtube.com/embed/Y9aytLYBajw')).toBe(target)
+    })
+
+    it('passes through the clean /s/youtube/{id} path (no loop)', () => {
+      expect(loc('/s/youtube/Y9aytLYBajw')).toBeNull()
     })
 
     it('passes through the clean /shorts/{id} path (no loop)', () => {

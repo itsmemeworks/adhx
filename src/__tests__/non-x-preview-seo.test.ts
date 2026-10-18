@@ -279,12 +279,14 @@ describe('non-X preview metadata status', () => {
     })
   })
 
-  describe('retired /shorts route', () => {
-    it('redirects home and publishes no preview metadata', async () => {
+  describe('old /shorts route', () => {
+    it('sends a Short to its YouTube post page, and anything else home', async () => {
       const page = await import('@/app/shorts/[id]/page')
 
       expect(page).not.toHaveProperty('generateMetadata')
-      page.default()
+      await page.default({ params: Promise.resolve({ id: 'Y9aytLYBajw' }) }).catch(() => {})
+      expect(mocks.redirect).toHaveBeenCalledWith('/s/youtube/Y9aytLYBajw')
+      await page.default({ params: Promise.resolve({ id: 'bad' }) }).catch(() => {})
       expect(mocks.redirect).toHaveBeenCalledWith('/')
     })
   })

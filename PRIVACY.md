@@ -1,8 +1,8 @@
 # Privacy
 
-This policy describes the **hosted** ADHX service at [adhx.com](https://adhx.com) (and staging at adhx.fly.dev). If you **self-host**, you are the data controller — this file is still the honest description of what the software stores.
+ADHX is made to be **self-hosted**, for you and the people you invite. Whoever runs an ADHX server is responsible for the data on it. This file is the honest description of what the software stores and sends, for the hosted copy at [adhx.com](https://adhx.com) and for every self-hosted one.
 
-Last updated: 17 October 2026.
+Last updated: 18 October 2026.
 
 ## Short version
 
@@ -10,6 +10,10 @@ Last updated: 17 October 2026.
 - **Shared post pages**, **Right now**, **public channels**, and **Top channels** are public by design. They show posts and curator usernames, never account IDs. Right now shows how many people saved something, never who.
 - We store some identifiers **only for moderation and abuse-limiting**. Those fields are never selected on any public API or page.
 - We do not sell your data. We do not run ads. We do not run metered AI on your library.
+
+## Kept media
+
+When a post is saved, the server downloads its video, pictures and sound once, from the network the post came from, and keeps them in its media folder. One copy is kept per post, however many people saved it. The files are deleted once nobody on the server has the post saved. Kept files play for anyone who can open the post's page on that server, the same as before ADHX kept copies. Kept files of hidden (moderated) posts are not served.
 
 ## What we store
 
@@ -56,13 +60,13 @@ Display text and images on the pulse are copied server-side from the post. Clien
 
 ### Third parties
 
-| Service       | What it sees                                           | Notes                                                                                                     |
-| ------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| X / Twitter   | OAuth if you connect X; we fetch your bookmarks        | You can disconnect X in Settings. The account remains if you still have email.                            |
-| Resend        | your email, when we send a magic link                  | Unset in local dev — the link is printed to the server console instead.                                   |
-| Sentry        | error reports in production                            | User ids are **hashed** before they are sent as metric attributes. We do not send raw `userId` to Sentry. |
-| Fly.io        | hosts the app and the SQLite volume                    | Production is `adhx.com`.                                                                                 |
-| Platform CDNs | our media proxies fetch video/images to play a preview | Domain-allowlisted; see `CLAUDE.md`.                                                                      |
+| Service         | What it sees                                                                                                                                                                                                                                            | Notes                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| X / Twitter     | OAuth if you connect X; we fetch your bookmarks                                                                                                                                                                                                         | You can disconnect X in Settings. The account remains if you still have email.                            |
+| Resend          | your email, when we send a magic link                                                                                                                                                                                                                   | Unset in local dev — the link is printed to the server console instead.                                   |
+| Sentry          | error reports in production                                                                                                                                                                                                                             | User ids are **hashed** before they are sent as metric attributes. We do not send raw `userId` to Sentry. |
+| Fly.io          | hosts the app and the SQLite volume                                                                                                                                                                                                                     | Production is `adhx.com`.                                                                                 |
+| Social networks | the server downloads each saved post's media from the network it came from (through yt-dlp, the networks' public link-preview data, and the fixers fxtwitter and vxreddit); previews of posts nobody saved yet still stream through allowlisted proxies | Never your account or password on those networks; domain-allowlisted.                                     |
 
 We do not use advertising or analytics pixels.
 

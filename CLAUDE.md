@@ -37,7 +37,7 @@ Use org `your-org` and project `your-project`.
 
 **Save it. Lose it. Find it.**
 
-A Twitter/X bookmark manager for people who bookmark everything and read nothing. Built with Next.js 16. Also previews and saves Instagram image posts/carousels and Reels, and TikTok videos via the same URL-prefix trick (Instagram images and TikTok/Reels offer file send/download). YouTube Shorts were supported until 2026-10 and then removed: they only play through YouTube's iframe, so they can't be understood like the other platforms (`src/lib/db/drop-youtube.ts` deletes saved Shorts at migrate time; `/shorts/{id}` redirects home and stays a reserved route).
+A self-hosted keeper for the posts you and your friends love, built with Next.js 16. It saves posts from X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky. It downloads their media once in the best quality and serves it itself (see "Kept media and link networks" below). `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
 
 ## Agent Context Protocol
 
@@ -547,15 +547,19 @@ without this GSC reports "Thumbnail blocked by robots.txt") while keeping `/api/
 for authenticated endpoints. Longer Allow prefixes beat `Disallow: /api/` under Google's
 longest-match rule.
 
+### Kept media and link networks (self-hosted, 2026-10-18)
+
+ADHX is self-hosted: every saved post's files are downloaded once (yt-dlp, fxtwitter for X) into `MEDIA_DIR` and served by `/api/files/{platform}/{id}/{slot}`. Build every client media URL with `keptSrc()` (`src/lib/keep/src.ts`). Never hand-write an `/api/media/*` URL; those proxies are now only the fallback until a file is kept. Fourteen networks: X, Instagram and TikTok plus the link networks in `src/lib/platform/networks.ts` (previews at `/s/{network}/{id}`). Locally, run with `KEEP_BACKFILL=off` unless you want the whole library downloaded. Details: ARCHITECTURE.md → Kept media.
+
 ### Save Methods (Platform-Aware)
 
 The app offers multiple ways to save tweets, shown contextually based on the user's platform:
 
-| Platform | Primary Method                                                                    | Fallback                                 |
-| -------- | --------------------------------------------------------------------------------- | ---------------------------------------- |
-| iOS      | One-tap iCloud shortcut — adds ADHX to the share menu (X / IG / TikTok)           | URL prefix + paste                       |
-| Desktop  | Extension (`extension/` — toolbar / right-click / ⌘⇧A → `/share?url=`)            | Bookmarklet + URL prefix + theater paste |
-| Android  | Add to Home Screen, then Share → ADHX (PWA Share Target)                          | Paste link + URL prefix                  |
+| Platform | Primary Method                                                          | Fallback                                 |
+| -------- | ----------------------------------------------------------------------- | ---------------------------------------- |
+| iOS      | One-tap iCloud shortcut — adds ADHX to the share menu (X / IG / TikTok) | URL prefix + paste                       |
+| Desktop  | Extension (`extension/` — toolbar / right-click / ⌘⇧A → `/share?url=`)  | Bookmarklet + URL prefix + theater paste |
+| Android  | Add to Home Screen, then Share → ADHX (PWA Share Target)                | Paste link + URL prefix                  |
 
 **Mobile paste-first save (Tier 1)**: "Copy Link" in any share sheet → open ADHX → tap **Paste link**. `PasteLinkButton` (`src/components/PasteLinkButton.tsx`) reads the clipboard via a user-gesture-gated `navigator.clipboard.readText()` (must fire directly inside the click handler, never on mount) and navigates through the shared `navigateToPastedLink` helper (`src/lib/utils/parse-share-url.ts`) — the same CodeQL-hardened navigation shape (TikTok short links → hard nav to `/api/tiktok/resolve?url=…&go=1` built from a constant prefix + `encodeURIComponent`; everything else → `router.push` guarded by `isSafeInternalPath`) shared with `LandingPage`'s hero input. States: idle / resolving / a brief self-clearing "not a supported link" error; when the Clipboard API is unavailable, denied, or the clipboard is empty, it expands an inline URL input instead of dead-ending. Mounted mobile-only (`sm:hidden`) above the Collection feed (`src/app/AuthedHome.tsx`) and in the empty-state onboarding (`EmptyAccountOnboarding.tsx`), and icon-only (`iconOnly`) in the theater's mobile top bar (`TheaterMobileChrome.tsx`) — the touch equivalent of desktop's ⌘V paste-to-preview, which has no paste gesture on mobile Safari.
 
@@ -733,18 +737,17 @@ Owner rule: on a user-owned surface the user's own timestamp always wins, even w
 
 **Routes:**
 
-| Route         | What renders                                                                                         |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| `/`           | signed-out: public live theater + crawlable static list. Signed-in: **redirects to `/live`**         |
-| `/live`       | signed-in Discover tab (community pulse) — unseen newest-first. Signed-out: redirects to `/`         |
-| `/saved`      | redirects to `/play?recent=1` (`?open=` → `&start=`)                                                 |
-| `/collection` | 308 → `/play?recent=1` (legacy URL)                                                                  |
-| `/library`    | redirects to `/search` (`?search=` → `?q=`)                                                          |
+| Route         | What renders                                                                                 |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| `/`           | signed-out: public live theater + crawlable static list. Signed-in: **redirects to `/live`** |
+| `/live`       | signed-in Discover tab (community pulse) — unseen newest-first. Signed-out: redirects to `/` |
+| `/saved`      | redirects to `/play?recent=1` (`?open=` → `&start=`)                                         |
+| `/collection` | 308 → `/play?recent=1` (legacy URL)                                                          |
+| `/library`    | redirects to `/search` (`?search=` → `?q=`)                                                  |
 
 The Live ⇄ Saved switch is a pair of ROUTES (`/live` ⇄ `/saved`), not local state, so each side is linkable and survives a reload — `TheaterShell`'s `onPersonalTabChange` flips the tab locally (instant) then the page navigates. A Live caught-up stay (`waiting`) survives that flip so coming back does not keep playing the Saved clip on the shared `<video>`. `theater-resume` still fires for Saved, but StageVideo no-ops while `covered` (Live waiting / Saved All Clear / a non-video stage). Live auto-advance (`onEnded` / `theater-advance`) marks the leaving post seen — clips shorter than the 2s dwell used to stay unseen. Saved All Clear is a z-10 overlay; `<Stage/>` stays mounted (`covered`) so the iOS unmute grant survives. A Saved add after All Clear jumps to index 0; while a post is playing, an add is inserted immediately after its cursor so Queue and transport agree on Next. Live Save prepends with `idPlatform`, same as paste. Read (`articleMode`) resets on the staged identity, not `personalIndex`. Live poll runs as soon as `live` becomes true. Repeat/queue-type prefs, membership lookup, and transport live in dedicated hooks. Live and Saved begin newest-first, then preserve a current-first circular session order: arrivals are Next unless already caught up, advancing rotates the departed row to the tail, and Previous wraps by promoting to Repeat all when needed. Queue headings are Now playing / Next, plus Seen when Repeat is off. Live `replaceState`s the address bar onto the staged post (same as signed-out `/`); Saved stays on `/saved`, and flipping back writes `/saved` even if Live left a preview path in the bar. `TheaterShell` snapshots `personalItems` at mount, so `/saved` fetches the queue BEFORE mounting the shell; `/live` never waits on it. Saved opens newest-first (`?open=` still wins via `preserveSavedStart`). Signed-in `/` opens Saved at `/saved`; community Discover at `/live` is secondary.
 
 **Launch UX (2026-09-13):** Visible destinations are **Saved** (`/saved`, signed-in default) and **Discover** (`/live`, community feed). Internal `collection` / `live` identifiers remain compatible. Saved loads all non-archived saves via paginated `/api/feed`; incomplete loads show Retry. New Discover visitors get Videos + Hide watched; Saved gets All posts + Hide watched off. `useTheaterQueueTypes` and `filter-preferences.ts` remember each destination independently under `adhx-theater-filters-{discover,saved}-v1`, including explicit All (`types: []`). Legacy type choices migrate; shared links use separate ephemeral type choices, and playlists remain unfiltered. The labelled filter beside Queue groups single-choice Post type controls and one Hide watched switch. No second navigation row. Watch history remains browser-local with the existing 500-mark bound. Repeat does not override Hide watched. Discover's **Watch again** includes watched posts and restarts without erasing history. A pass-local departure set lets All + Repeat off finish once. Paste link has a dark fill and orange edge in theater chrome; mobile media actions stay 44px and icon-only, desktop actions have labels. The first-visit hint and empty-account copy teach paste → watch → send. Downloads verify media bytes before emitting `post.send`; native cancellation emits no success. `post.play` comes only from confirmed media playing events; `post.view` is still preview/dwell. See `docs/specs/launch-ux.md`.
-
 
 `src/app/page.tsx` is a **server component** (`force-dynamic` — reads cookies + SQLite). The theater spec is `docs/specs/theater-first.md`. The theater is a full-bleed near-black stage (`#08070a`, both themes) + viewport-responsive chrome, built from `src/components/theater/`:
 
@@ -827,7 +830,7 @@ sanitizeTag('AI/ML') // → 'ai-ml'
 
 ### Landing Page Optimization
 
-Signed-out `/` now renders the theater (see "Home routing & the Theater" above);  Unauthenticated visitors still trigger no authenticated API calls:
+Signed-out `/` now renders the theater (see "Home routing & the Theater" above); Unauthenticated visitors still trigger no authenticated API calls:
 
 - `page.tsx` branches on `getCurrentUserId()` server-side, so the feed fetch never runs signed-out
 - `Header.tsx` only fetches stats/cooldown after auth is confirmed

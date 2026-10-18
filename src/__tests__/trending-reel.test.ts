@@ -52,29 +52,27 @@ describe('isReelPlayable', () => {
 })
 
 describe('reelVideoSrc — per-platform stream URL in the reel', () => {
-  it('TikTok → the TikTok proxy (username + id)', () => {
+  it('TikTok → the tiktok kept-file route (id + author)', () => {
     expect(reelVideoSrc(item({ platform: 'tiktok', author: 'bob', bookmarkId: '7' }))).toBe(
-      '/api/media/tiktok/video?username=bob&id=7',
+      '/api/files/tiktok/7/video-1?a=bob',
     )
   })
 
-  it('Instagram → the IG proxy (id only)', () => {
+  it('Instagram → the instagram kept-file route, never the Twitter one', () => {
     expect(reelVideoSrc(item({ platform: 'instagram', bookmarkId: 'DXVsqQ7CSXw' }))).toBe(
-      '/api/media/instagram/video?id=DXVsqQ7CSXw',
+      '/api/files/instagram/DXVsqQ7CSXw/video-1',
     )
   })
 
-  it('X → the FxTwitter proxy (author + tweetId, hd)', () => {
+  it('X → the twitter kept-file route (tweetId + author)', () => {
     expect(reelVideoSrc(item({ platform: 'twitter', author: 'jack', bookmarkId: '99' }))).toBe(
-      '/api/media/video?author=jack&tweetId=99&quality=hd',
+      '/api/files/twitter/99/video-1?a=jack',
     )
   })
 
-  it('X album clip 2 adds a 1-based index (clip 1 stays the bare URL)', () => {
+  it('X album clip 2 maps to the video-2 slot', () => {
     const twitter = item({ platform: 'twitter', author: 'jack', bookmarkId: '99' })
-    expect(reelVideoSrc(twitter, 1)).toBe('/api/media/video?author=jack&tweetId=99&quality=hd')
-    expect(reelVideoSrc(twitter, 2)).toBe(
-      '/api/media/video?author=jack&tweetId=99&quality=hd&index=2',
-    )
+    expect(reelVideoSrc(twitter, 1)).toBe('/api/files/twitter/99/video-1?a=jack')
+    expect(reelVideoSrc(twitter, 2)).toBe('/api/files/twitter/99/video-2?a=jack')
   })
 })

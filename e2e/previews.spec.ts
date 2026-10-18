@@ -13,7 +13,7 @@ test.describe('preview pages for every platform', () => {
   test('Instagram image carousel mounts every ordered slide without a video player', async ({
     page,
   }) => {
-    await page.route('**/api/media/instagram/thumbnail**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/(photo-\d+|poster)/, (route) =>
       route.fulfill({
         contentType: 'image/svg+xml',
         body: '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350"><rect width="100%" height="100%" fill="#e8795b"/></svg>',
@@ -31,7 +31,7 @@ test.describe('preview pages for every platform', () => {
     for (let index = 0; index < PREVIEW_IG_PHOTO.imageCount; index += 1) {
       await expect(slides.nth(index)).toHaveAttribute(
         'src',
-        `/api/media/instagram/thumbnail?id=${PREVIEW_IG_PHOTO.id}&index=${index + 1}`,
+        `/api/files/instagram/${PREVIEW_IG_PHOTO.id}/photo-${index + 1}`,
       )
     }
     await expect(slides.first()).toBeVisible()
@@ -52,14 +52,14 @@ for (const mobile of [false, true]) {
     page,
   }) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 })
-    await page.route('**/api/media/instagram/video?**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/video-1/, (route) =>
       route.fulfill({
         status: 409,
         contentType: 'application/json',
         body: JSON.stringify({ contentType: 'photo', photoCount: 2 }),
       }),
     )
-    await page.route('**/api/media/instagram/thumbnail**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/(photo-\d+|poster)/, (route) =>
       route.fulfill({
         contentType: 'image/svg+xml',
         body: '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350"><rect width="100%" height="100%" fill="#e8795b"/></svg>',
@@ -78,7 +78,7 @@ for (const mobile of [false, true]) {
     page,
   }) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 })
-    await page.route('**/api/media/instagram/video?**', (route) =>
+    await page.route(/\/api\/files\/instagram\/[^/]+\/video-1/, (route) =>
       route.fulfill({
         status: 502,
         contentType: 'application/json',

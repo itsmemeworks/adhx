@@ -55,16 +55,10 @@ function articleBody(content: unknown): string {
     .join('\n')
 }
 
+/** The post's video as served by /api/files (kept copy, or the proxy until it's downloaded). */
 function videoStreamPath(item: FeedItemResponse, mediaIndex: number): string | null {
-  const platform = item.platform || 'twitter'
-  if (platform === 'instagram' || platform === 'tiktok') {
-    const media = item.media?.[mediaIndex]
-    return media?.url?.startsWith('/api/media/') ? media.url : null
-  }
-  // X: the 360p preview stream is plenty for sparse frame sampling.
-  const params = new URLSearchParams({ author: item.author, tweetId: item.id, quality: 'preview' })
-  if (mediaIndex > 0) params.set('index', String(mediaIndex + 1))
-  return `/api/media/video?${params}`
+  const url = item.media?.[mediaIndex]?.url
+  return url?.startsWith('/api/files/') ? url : null
 }
 
 export function buildPostDocument(item: FeedItemResponse): PostDocument {

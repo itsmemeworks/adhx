@@ -1,5 +1,7 @@
 'use client'
 
+import { keptSrc } from '@/lib/keep/src'
+
 /**
  * Send-the-file flow for the theater (spec §2/§8): prefetches the current
  * item's file (video MP4 or, for Twitter photo posts, the primary image)
@@ -141,48 +143,23 @@ export interface SendSource {
  */
 export function resolveSendSource(item: SendableItem | null): SendSource | null {
   if (!item || !item.bookmarkId) return null
+  const platform = item.platform || 'twitter'
+  const id = item.bookmarkId
+  if ((platform === 'twitter' || platform === 'tiktok') && !item.author) return null
 
-  if (item.platform === 'instagram' && item.contentType === 'photo') {
-    return {
-      src: `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
-      downloadSrc: `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
-      filename: `adhx-instagram-${item.bookmarkId}.jpg`,
-      kind: 'photo',
-    }
+  if (item.contentType === 'photo') {
+    const src = keptSrc(platform, id, 'photo-1', item.author, { download: true })
+    return { src, downloadSrc: src, filename: `adhx-${platform}-${id}.jpg`, kind: 'photo' }
   }
-
-  if (item.platform === 'tiktok' && !item.author) return null
-  if (item.platform === 'tiktok' || item.platform === 'instagram') {
-    const encodedId = encodeURIComponent(item.bookmarkId)
+  const isVideo = item.contentType === 'video' || platform === 'tiktok' || platform === 'instagram'
+  if (isVideo) {
     return {
       src: reelVideoSrc(item as TheaterItem),
-      downloadSrc:
-        item.platform === 'instagram'
-          ? `/api/media/instagram/video/download?id=${encodedId}`
-          : `/api/media/tiktok/video/download?username=${encodeURIComponent(item.author || '')}&id=${encodedId}`,
-      filename: `adhx-${item.platform}-${item.bookmarkId}.mp4`,
+      downloadSrc: keptSrc(platform, id, 'video-1', item.author, { download: true }),
+      filename: `adhx-${platform}-${id}.mp4`,
       kind: 'video',
     }
   }
-
-  // Twitter carries text/photo/video/article.
-  if (item.platform === 'twitter' && item.contentType === 'video' && item.author) {
-    return {
-      src: reelVideoSrc(item as TheaterItem),
-      downloadSrc: `/api/media/video/download?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.bookmarkId)}&quality=hd`,
-      filename: `adhx-twitter-${item.bookmarkId}.mp4`,
-      kind: 'video',
-    }
-  }
-  if (item.platform === 'twitter' && item.contentType === 'photo' && item.author) {
-    return {
-      src: `/api/media/image?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
-      downloadSrc: `/api/media/image?author=${encodeURIComponent(item.author)}&tweetId=${encodeURIComponent(item.bookmarkId)}&index=1&download=1`,
-      filename: `adhx-twitter-${item.bookmarkId}.jpg`,
-      kind: 'photo',
-    }
-  }
-
   return null
 }
 

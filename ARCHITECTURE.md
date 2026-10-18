@@ -53,34 +53,34 @@ The visible timestamp answers a different question on each surface:
 
 ## Product routes
 
-| Route                       | Role                                                                                                                                |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/play?recent=1`.               |
-| `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                                            |
-| `/saved`, `/collection`     | Old Saved links: redirect to `/play?recent=1` (`?open=` becomes `&start=`).                                                         |
-| `/start`                    | Sign up/in with an email link, then import X bookmarks with live progress.                               |
-| `/channels`                 | Your channels, "Made for you" channels and Top channels.                                                 |
-| `/play`                     | The theater, playing a search's results as its queue.                                                |
-| `/search`                   | Search saves by meaning, with bento, groups and queue layouts.                                           |
-| `/moments/{slug}`           | A live "Right now" moment: what people are saving on one theme, newest first; Tune in plays it (`/play?moment=`). |
-| `/library`, `/tags`         | Old links: redirect to `/search` and `/channels`.                                                                                   |
-| `/{user}/status/{id}`       | X post preview.                                                                                                                     |
-| `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                                   |
-| `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                                           |
-| `/@{user}/video/{id}`       | TikTok video preview.                                                                                                               |
-| `/trending`                 | Public dark ranked list with the Latest membership lens initially selected.                                                         |
-| `/trending/{filter}`        | Crawlable `popular`, `videos`, `photos`, `text`, or `articles` lens.                                                                |
-| `/trending/archive`         | Index of permanent ISO-week snapshots.                                                                                              |
-| `/trending/archive/{week}`  | Frozen weekly ranked snapshot, capped to 50 posts.                                                                                  |
-| `/leaderboard`              | Public playlist leaderboard for this week.                                                                                          |
-| `/leaderboard/{window}`     | `today`, `month`, or `all-time` playlist ranking.                                                                                   |
-| `/settings`                 | Account, reading, appearance, X connection, install, and deletion settings.                                                         |
-| `/admin`                    | Persisted-admin-only analytics and moderation console.                                                                              |
-| `/share`                    | PWA/extension/share-sheet URL router; it does not store content itself.                                                             |
-| `/welcome`                  | One-shot, noindex username choice after a new email account is created.                                                             |
-| `/t/{username}`             | Public curator hub containing that account's public playlists.                                                                      |
-| `/t/{username}/{tag}`       | A channel's page (public, or private to its owner), playable and saveable.                                                          |
-| `/{username}`               | Public X-author hub built from posts ADHX already knows publicly.                                                                   |
+| Route                       | Role                                                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/play?recent=1`. |
+| `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                              |
+| `/saved`, `/collection`     | Old Saved links: redirect to `/play?recent=1` (`?open=` becomes `&start=`).                                           |
+| `/start`                    | Sign up/in with an email link, then import X bookmarks with live progress.                                            |
+| `/channels`                 | Your channels, "Made for you" channels and Top channels.                                                              |
+| `/play`                     | The theater, playing a search's results as its queue.                                                                 |
+| `/search`                   | Search saves by meaning, with bento, groups and queue layouts.                                                        |
+| `/moments/{slug}`           | A live "Right now" moment: what people are saving on one theme, newest first; Tune in plays it (`/play?moment=`).     |
+| `/library`, `/tags`         | Old links: redirect to `/search` and `/channels`.                                                                     |
+| `/{user}/status/{id}`       | X post preview.                                                                                                       |
+| `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                     |
+| `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                             |
+| `/@{user}/video/{id}`       | TikTok video preview.                                                                                                 |
+| `/trending`                 | Public dark ranked list with the Latest membership lens initially selected.                                           |
+| `/trending/{filter}`        | Crawlable `popular`, `videos`, `photos`, `text`, or `articles` lens.                                                  |
+| `/trending/archive`         | Index of permanent ISO-week snapshots.                                                                                |
+| `/trending/archive/{week}`  | Frozen weekly ranked snapshot, capped to 50 posts.                                                                    |
+| `/leaderboard`              | Public playlist leaderboard for this week.                                                                            |
+| `/leaderboard/{window}`     | `today`, `month`, or `all-time` playlist ranking.                                                                     |
+| `/settings`                 | Account, reading, appearance, X connection, install, and deletion settings.                                           |
+| `/admin`                    | Persisted-admin-only analytics and moderation console.                                                                |
+| `/share`                    | PWA/extension/share-sheet URL router; it does not store content itself.                                               |
+| `/welcome`                  | One-shot, noindex username choice after a new email account is created.                                               |
+| `/t/{username}`             | Public curator hub containing that account's public playlists.                                                        |
+| `/t/{username}/{tag}`       | A channel's page (public, or private to its owner), playable and saveable.                                            |
+| `/{username}`               | Public X-author hub built from posts ADHX already knows publicly.                                                     |
 
 Legacy routes stay as redirects: `/collection` → `/saved`, `/discover` →
 `/trending`, `/collections` → `/leaderboard`, and `/trending/play` → `/live`.
@@ -504,15 +504,36 @@ Admin authorization is `users.role = 'admin'` on immutable account IDs, never
 a runtime username allowlist. Startup verifies required moderation storage and
 terminates if it cannot enforce this boundary.
 
+## Kept media
+
+Every saved post's media is downloaded once and served by ADHX itself (`src/lib/keep`):
+
+- **Queue.** `keep_jobs` holds one row per post (not per saver). The in-process worker (`startKeeping`, started from `instrumentation.ts`) scans for saved posts without a job every 30 s and runs `KEEP_CONCURRENCY` jobs at a time, newest save first. Failures back off (1 min → 24 h), then the job is marked `unavailable`. Saves wake it immediately.
+- **Download.** X uses fxtwitter's original files (photos `name=orig`, the best MP4 variant, up to 4K). Instagram uses yt-dlp, then instafix images and the public mirror. Everything else uses yt-dlp (`-S res,fps,vcodec:h264`), with the page's `og:image` for picture posts. Special cases: Vimeo goes through `player.vimeo.com`; Reddit finds its v.redd.it playlist through vxreddit; Threads only uses link-preview tags.
+- **Re-encoding.** Non-H.264 video is re-encoded to H.264 at the same size (CRF 20) unless `KEEP_H264=off`.
+- **Recording.** Files land in a scratch folder, are probed with ffmpeg, then moved into `MEDIA_DIR/{platform}/{id}-{hash}/` as slots `video-N`, `photo-N`, `audio-N` and `poster`. `kept_files` records each one.
+- **Serving.** `/api/files/{platform}/{id}/{slot}` serves the kept file with Range support. `poster` falls back to `photo-1`, and `video-1` to `audio-1`. Until a file is kept, X, Instagram and TikTok hand off (307, relative) to the old proxies; other networks wait up to 25 s for a running download. Every client media URL is built by `keptSrc()` (`src/lib/keep/src.ts`).
+- **Clean-up.** An hourly pass deletes files for posts nobody has saved any more.
+- **Understanding.** The understanding worker reads kept files straight from disk. Its content hash gains `:kept` once a file is kept, so posts are learned again from the original.
+
+### Link networks
+
+YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky live in `src/lib/platform/networks.ts`:
+
+- **Recognising links.** That file holds link detection, canonical links and labels. `detectPlatformPost` falls through to it.
+- **Saving.** `/api/bookmarks/add` calls `describeNetworkPost`: yt-dlp metadata, or link-preview tags for picture posts. It stores the words and one media row per file.
+- **Previews.** Preview pages are `/s/{network}/{id}`, with `?by=author` where the network needs it.
+- **Short links.** `/api/links/resolve` follows short share links.
+
 ## Media and outbound-network boundaries
 
-Playback adapters reflect what each platform safely exposes:
+Playback adapters for posts nobody has saved yet (previews) and for saves still downloading reflect what each platform safely exposes:
 
-| Platform       | Metadata                                                               | Playback/download                                                                                                            |
-| -------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| X              | FxTwitter; X API only for the owner's bookmark sync                    | Range-aware MP4/image proxy over allowlisted `twimg.com`; HLS routes remain for long streams.                                |
-| Instagram      | Crawler Relay payload (ordered image/carousel media), with OG fallback | Images and Reels use signed-CDN proxies; Reels resolve Relay MP4 URLs first, then the mirror, with official iframe fallback. |
-| TikTok         | tnktok/fxTikTok metadata                                               | Proxy follows the mirror's signed redirect to allowlisted TikTok CDN hosts.                                                  |
+| Platform  | Metadata                                                               | Playback/download                                                                                                            |
+| --------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| X         | FxTwitter; X API only for the owner's bookmark sync                    | Range-aware MP4/image proxy over allowlisted `twimg.com`; HLS routes remain for long streams.                                |
+| Instagram | Crawler Relay payload (ordered image/carousel media), with OG fallback | Images and Reels use signed-CDN proxies; Reels resolve Relay MP4 URLs first, then the mirror, with official iframe fallback. |
+| TikTok    | tnktok/fxTikTok metadata                                               | Proxy follows the mirror's signed redirect to allowlisted TikTok CDN hosts.                                                  |
 
 User-controlled media parameters are validated before interpolation. Media
 URLs require HTTPS and exact hosts or dot-prefixed suffix matches—never

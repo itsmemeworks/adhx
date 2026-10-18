@@ -11,6 +11,7 @@ import {
   MediaUnavailableError,
   MediaGoneError,
   NotAVideoError,
+  keptLocalFile,
   sampleVideoFrames,
 } from './media'
 import { embedImageBytes, embedTexts, embedVideoFrames } from './model'
@@ -121,7 +122,7 @@ export async function processJob(
     const doc = buildPostDocument(item)
     // Keywords are cheap and model-free: keep them current on every text job.
     if (kind === 'text') indexPostText(job.platform, job.postId, doc.keywords)
-    const hash = hashFor(doc, kind)
+    const hash = await withKeptState(hashFor(doc, kind), kind, doc)
     const existing = await getEmbedding(job.platform, job.postId, kind)
     if (isCurrent(existing, hash)) {
       await completeJob(job)
@@ -186,6 +187,23 @@ export async function processJob(
   } finally {
     state.current = null
   }
+}
+
+/**
+ * A picture or video is learned again once ADHX has its own copy: the hash
+ * says whether the file was kept, so the switch from proxy to kept file (or
+ * from "not downloaded yet") counts as new content.
+ */
+async function withKeptState(
+  hash: string | null,
+  kind: string,
+  doc: PostDocument,
+): Promise<string | null> {
+  if (!hash) return hash
+  const url = kind === 'video' ? doc.video?.url : kind === 'image' ? doc.image?.url : null
+  if (!url) return hash
+  const kept = await keptLocalFile(url)
+  return kept ? `${hash}:kept` : hash
 }
 
 /**

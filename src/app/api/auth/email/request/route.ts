@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/lib/auth/account'
 import { sendMagicLinkEmail } from '@/lib/email/magic-link'
 import { isValidEmail } from '@/lib/utils/email'
+import { mayUseEmail } from '@/lib/auth/allowlist'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { recordAnalytic } from '@/lib/analytics/record'
 
@@ -20,6 +21,13 @@ export async function POST(request: NextRequest) {
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
   if (!isValidEmail(email)) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
+  }
+
+  if (!mayUseEmail(email)) {
+    return NextResponse.json(
+      { error: 'This ADHX is for invited people. Ask whoever runs it to add your email.' },
+      { status: 403 },
+    )
   }
 
   const returnTo =

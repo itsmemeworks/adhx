@@ -18,9 +18,18 @@ describe('parseAdminPostRef', () => {
     )
   })
 
-  it('no longer recognises YouTube Shorts paths or shorthand', () => {
+  it('recognises a YouTube source URL via detectPlatformPost', () => {
+    expect(parseAdminPostRef('https://www.youtube.com/shorts/abcdefghijk')).toEqual(
+      expect.objectContaining({
+        platform: 'youtube',
+        id: 'abcdefghijk',
+        previewPath: '/s/youtube/abcdefghijk',
+      }),
+    )
+  })
+
+  it('does not treat the old /shorts/ path or youtube: shorthand as a post ref', () => {
     expect(parseAdminPostRef('/shorts/abcdefghijk')).toBeNull()
-    expect(parseAdminPostRef('https://www.youtube.com/shorts/abcdefghijk')).toBeNull()
     expect(parseAdminPostRef('youtube:abcdefghijk')).toBeNull()
   })
 

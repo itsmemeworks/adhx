@@ -134,12 +134,13 @@ describe('extractSharedUrl — picks the link out of the share payload', () => {
   })
 })
 
-describe('parseShareUrl — YouTube (unsupported)', () => {
-  it('rejects every YouTube URL, Shorts included', () => {
-    expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toBeNull()
-    expect(parseShareUrl('https://m.youtube.com/shorts/Y9aytLYBajw')).toBeNull()
-    expect(parseShareUrl('https://youtu.be/Y9aytLYBajw')).toBeNull()
-    expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toBeNull()
+describe('parseShareUrl — YouTube', () => {
+  it('routes every YouTube video link to /s/youtube/{id}, Shorts included', () => {
+    const yt = { path: '/s/youtube/Y9aytLYBajw' }
+    expect(parseShareUrl('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toEqual(yt)
+    expect(parseShareUrl('https://m.youtube.com/shorts/Y9aytLYBajw')).toEqual(yt)
+    expect(parseShareUrl('https://youtu.be/Y9aytLYBajw')).toEqual(yt)
+    expect(parseShareUrl('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toEqual(yt)
   })
 })
 
@@ -248,12 +249,14 @@ describe('navigateToPastedLink — the shared paste-a-link navigation sink', () 
     expect(router.push).toHaveBeenCalledWith('/@sophieraiin/video/7619017281691045134')
   })
 
-  it('does not navigate any YouTube URL (Shorts, watch, youtu.be)', () => {
+  it('navigates YouTube URLs (Shorts, watch, youtu.be) to /s/youtube/{id}', () => {
     const router = makeRouter()
-    expect(navigateToPastedLink(router, 'https://youtube.com/shorts/Y9aytLYBajw')).toBe(false)
-    expect(navigateToPastedLink(router, 'https://youtu.be/Y9aytLYBajw')).toBe(false)
-    expect(navigateToPastedLink(router, 'https://www.youtube.com/watch?v=Y9aytLYBajw')).toBe(false)
-    expect(router.push).not.toHaveBeenCalled()
+    expect(navigateToPastedLink(router, 'https://youtube.com/shorts/Y9aytLYBajw')).toBe(true)
+    expect(navigateToPastedLink(router, 'https://youtu.be/Y9aytLYBajw')).toBe(true)
+    expect(navigateToPastedLink(router, 'https://www.youtube.com/watch?v=Y9aytLYBajw')).toBe(true)
+    expect(router.push).toHaveBeenCalledTimes(3)
+    expect(router.push).toHaveBeenNthCalledWith(1, '/s/youtube/Y9aytLYBajw')
+    expect(router.push).toHaveBeenNthCalledWith(3, '/s/youtube/Y9aytLYBajw')
   })
 
   it('rebuilds a TikTok short link into a hard navigation instead of router.push', () => {

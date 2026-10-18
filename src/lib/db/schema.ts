@@ -14,10 +14,9 @@ import { relations, sql } from 'drizzle-orm'
 // ===========================================
 
 // Main bookmarks table - PK: (userId, platform, id)
-// `platform` is one of 'twitter' | 'instagram' | 'tiktok' — added so a TikTok
-// video id (numeric, 19 digits) can't collide with a tweet id (also numeric,
-// 18-19 digits). YouTube Shorts were supported until 2026-10 and deleted by
-// `deleteYouTubePosts` (src/lib/db/drop-youtube.ts).
+// `platform` is 'twitter' | 'instagram' | 'tiktok' or one of the link networks
+// in src/lib/platform/networks.ts — so a TikTok video id (numeric, 19 digits)
+// can't collide with a tweet id (also numeric, 18-19 digits).
 // All bookmark-derived tables (tags/media/links/archived_posts)
 // carry platform too so the foreign-key tuple matches. It's a free-text column
 // (no enum/migration needed to add a platform).
@@ -238,6 +237,49 @@ export const userPreferences = sqliteTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.key] }),
+  }),
+)
+
+// Kept media: every saved post's files, downloaded once per post (not per
+// saver) into MEDIA_DIR and served by /api/files. See src/lib/keep.
+export const keepJobs = sqliteTable(
+  'keep_jobs',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    /** pending · running · done · failed (retrying) · unavailable (gave up) */
+    status: text('status').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: text('next_attempt_at'),
+    lastError: text('last_error'),
+    /** Total bytes on disk for this post. */
+    bytes: integer('bytes').notNull().default(0),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId] }),
+    statusIdx: index('keep_jobs_status_idx').on(table.status, table.nextAttemptAt),
+  }),
+)
+
+export const keptFiles = sqliteTable(
+  'kept_files',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    /** `video-1`, `photo-2`, `audio-1`, `poster` */
+    slot: text('slot').notNull(),
+    /** Path under MEDIA_DIR. */
+    path: text('path').notNull(),
+    mime: text('mime').notNull(),
+    bytes: integer('bytes').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    durationMs: integer('duration_ms'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.slot] }),
   }),
 )
 

@@ -198,7 +198,7 @@ export function PasteToast({
         : null
       : state === 'saved'
         ? (savedDetail ?? null)
-        : 'X, Instagram and TikTok work'
+        : 'Links from most social apps work'
 
   return (
     <div

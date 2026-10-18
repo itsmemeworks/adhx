@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { detectNetworkPost, isNetworkShortLink } from '@/lib/platform/networks'
 
 /**
  * Proxy to handle pasted social URLs.
@@ -72,7 +73,34 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(resolveUrl, { status: 307 })
   }
 
+  // The other networks (YouTube, Reddit, Vimeo …): rebuild the pasted URL
+  // and use the shared detector.
+  const pasted = pastedUrl(pathname, request.nextUrl.search)
+  if (pasted) {
+    const post = detectNetworkPost(pasted)
+    if (post) {
+      return NextResponse.redirect(new URL(post.previewPath, request.url), { status: 307 })
+    }
+    if (isNetworkShortLink(pasted.toString())) {
+      const resolveUrl = new URL('/api/links/resolve', request.url)
+      resolveUrl.searchParams.set('url', pasted.toString())
+      return NextResponse.redirect(resolveUrl, { status: 307 })
+    }
+  }
+
   return NextResponse.next()
+}
+
+/** `/https:/www.youtube.com/watch?v=…` or `/youtu.be/…` back into a URL. */
+function pastedUrl(pathname: string, search: string): URL | null {
+  const stripped = pathname.replace(/^\/(?:https?:\/?\/?)?/i, '')
+  const host = stripped.split('/')[0]
+  if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i.test(host)) return null
+  try {
+    return new URL(`https://${stripped}${search}`)
+  } catch {
+    return null
+  }
 }
 
 // Run proxy on paths that might be pasted URLs

@@ -11,7 +11,13 @@ services:
       TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET:-}
       RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY for magic-link sign-in}
       EMAIL_FROM: ${EMAIL_FROM:?Set EMAIL_FROM to a verified sender}
+      # Only these emails (or @domains) can make an account. Leave empty for open sign-up.
+      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
+      # 1 when it's just you; 2 or 3 for a group of friends.
+      MOMENT_MIN_SAVERS: ${MOMENT_MIN_SAVERS:-2}
     volumes:
+      # The database, the search model and every kept picture and video.
+      # Give it room: video adds up (see README → Disk space).
       - adhx_data:/data
 
 volumes:

@@ -8,7 +8,6 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 import { renameReadStatusToArchivedPosts } from './rename-read-status'
-import { deleteYouTubePosts } from './drop-youtube'
 import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
@@ -138,8 +137,33 @@ try {
       last_used_at TEXT
     );
     CREATE INDEX IF NOT EXISTS access_keys_user_id_idx ON access_keys(user_id);
+    CREATE TABLE IF NOT EXISTS keep_jobs (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT,
+      last_error TEXT,
+      bytes INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id)
+    );
+    CREATE INDEX IF NOT EXISTS keep_jobs_status_idx ON keep_jobs(status, next_attempt_at);
+    CREATE TABLE IF NOT EXISTS kept_files (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id, slot)
+    );
   `)
-  console.log('[migrate] Ensured users/user_identities/login_tokens/access_keys tables')
+  console.log('[migrate] Ensured users/user_identities/login_tokens/access_keys/keep tables')
 } catch (error) {
   console.log('[migrate] FAILED creating account tables', error)
   db.close()
@@ -975,21 +999,6 @@ try {
   console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
 } catch (error) {
   console.error('[migrate] FAILED ensuring admin moderation tables', error)
-  db.close()
-  process.exit(1)
-}
-
-// YouTube Shorts are no longer supported (iframe-only, so they can't be
-// understood); delete every saved Short and its derived rows. Idempotent and
-// transactional — see drop-youtube.ts. Must run after the understanding and
-// moderation tables are ensured above.
-try {
-  const deleted = deleteYouTubePosts(db)
-  if (Object.keys(deleted).length > 0) {
-    console.log('[migrate] Deleted YouTube posts', deleted)
-  }
-} catch (error) {
-  console.error('[migrate] FAILED deleting YouTube posts', error)
   db.close()
   process.exit(1)
 }

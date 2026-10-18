@@ -128,7 +128,31 @@ describe('documents', () => {
     expect(queryPrompt(' biscuits ')).toBe('task: search result | query: biscuits')
   })
 
-  it('uses the poster for pictures and the 360p proxy for X video frames', () => {
+  it('uses the poster for pictures and the kept-file route for X video frames', () => {
+    const doc = buildPostDocument(
+      feedItem({
+        media: [
+          {
+            id: 'm',
+            mediaType: 'video',
+            width: 1,
+            height: 1,
+            durationMs: 1000,
+            altText: null,
+            url: '/api/files/twitter/111/video-1?a=alice',
+            thumbnailUrl: 'https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg',
+            shareUrl: '',
+            originalUrl: null,
+          },
+        ],
+      }),
+    )
+    expect(doc.image?.url).toBe('https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg')
+    expect(doc.video?.url).toBe('/api/files/twitter/111/video-1?a=alice')
+    expect(hashFor(doc, 'video')).toBe(doc.video?.hash)
+  })
+
+  it('never samples video frames from a raw off-site URL', () => {
     const doc = buildPostDocument(
       feedItem({
         media: [
@@ -147,9 +171,7 @@ describe('documents', () => {
         ],
       }),
     )
-    expect(doc.image?.url).toBe('https://pbs.twimg.com/amplify_video_thumb/1/img/a.jpg')
-    expect(doc.video?.url).toBe('/api/media/video?author=alice&tweetId=111&quality=preview')
-    expect(hashFor(doc, 'video')).toBe(doc.video?.hash)
+    expect(doc.video).toBeNull()
   })
 })
 
@@ -210,9 +232,7 @@ describe('worker', () => {
     addMedia(USER_A, '2', 'video')
     await enqueuePosts([{ platform: 'twitter', postId: '2' }], PRIORITY.urgent, ['video'])
     expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('done')
-    expect(sampleVideoFrames).toHaveBeenCalledWith(
-      '/api/media/video?author=testauthor&tweetId=2&quality=preview',
-    )
+    expect(sampleVideoFrames).toHaveBeenCalledWith('/api/files/twitter/2/video-1?a=testauthor')
     await enqueuePosts([{ platform: 'twitter', postId: '2' }], PRIORITY.urgent, ['video'])
     expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('skipped')
     expect(embedVideoFrames).toHaveBeenCalledTimes(1)

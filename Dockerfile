@@ -53,11 +53,23 @@ COPY --from=builder /app/tsconfig.json ./
 # Production stage - minimal runtime image
 FROM base AS runner
 
-# Install sqlite3 CLI and runtime dependencies
+# Install sqlite3 CLI and runtime dependencies. Python runs yt-dlp, which
+# downloads each saved post's media (see src/lib/keep).
 RUN apt-get update && apt-get install -y \
     libsqlite3-0 \
     sqlite3 \
+    python3 \
+    python3-venv \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# yt-dlp in its own virtualenv, pinned. Sites change often: bump this with
+# each release, or update a running container with
+#   /opt/yt-dlp/bin/pip install -U yt-dlp
+ARG YTDLP_VERSION=2026.8.19
+RUN python3 -m venv /opt/yt-dlp \
+    && /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp==${YTDLP_VERSION}"
+ENV YTDLP_PATH=/opt/yt-dlp/bin/yt-dlp
 
 WORKDIR /app
 
@@ -93,7 +105,7 @@ COPY --from=runtime-files --chown=nextjs:nodejs /runtime ./
 #   fly ssh console --app adhx -C "tsx /app/scripts/<name>.ts"
 
 # Create data directory for SQLite (will be mounted as volume)
-RUN mkdir -p /data && chown nextjs:nodejs /data
+RUN mkdir -p /data && chown nextjs:nodejs /data && chown -R nextjs:nodejs /opt/yt-dlp
 
 USER nextjs
 

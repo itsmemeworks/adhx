@@ -1,3 +1,4 @@
+import { NETWORK_LABELS } from '@/lib/platform/networks'
 import type { TheaterItem } from './types'
 import { PlatformGlyph, TypeBadge } from '@/components/matter'
 import { inferType } from '@/lib/trending/filter'
@@ -25,11 +26,7 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
  * identity is rendered here.
  */
 
-const PLATFORM_LABEL: Record<string, string> = {
-  twitter: 'X',
-  tiktok: 'TikTok',
-  instagram: 'Instagram',
-}
+const PLATFORM_LABEL: Record<string, string> = NETWORK_LABELS
 
 const BASE_URL = PUBLIC_BASE_URL
 

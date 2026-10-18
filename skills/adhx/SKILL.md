@@ -1,13 +1,13 @@
 ---
 name: adhx
-description: Search your own ADHX saves by meaning (including what is in pictures and videos), and fetch any X/Twitter post as clean LLM-friendly JSON. Use when the user asks to find something they saved, bookmarked or watched ("find my saved videos with a frog in them", "that article I saved about sleep", "the TikTok with the guy building a boat"), or shares an x.com, twitter.com or adhx.com post link and wants to read, analyze or summarize it.
+description: Search your own ADHX saves (posts kept from X, Instagram, TikTok, YouTube, Reddit and more) by meaning, including what is in pictures and videos, and fetch any X/Twitter post as clean LLM-friendly JSON. Use when the user asks to find something they saved, bookmarked or watched ("find my saved videos with a frog in them", "that article I saved about sleep", "the TikTok with the guy building a boat"), or shares an x.com, twitter.com or adhx.com post link and wants to read, analyze or summarize it.
 metadata:
   source_url: https://github.com/itsmemeworks/adhx
 ---
 
 # ADHX
 
-ADHX keeps the posts a person saves from X, Instagram and TikTok (including X bookmarks, which sync about every hour) and understands them: what they say, what is in their pictures, and what happens in their videos. This skill does two things:
+ADHX keeps the posts a person saves from X, Instagram, TikTok, YouTube, Reddit, Facebook, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky (X bookmarks sync about every hour), and understands them: what they say, what is in their pictures, and what happens in their videos. This skill does two things:
 
 1. **Search the user's own saves** by meaning, with their access key.
 2. **Read any X post** as structured JSON, no key needed.
@@ -16,20 +16,20 @@ ADHX keeps the posts a person saves from X, Instagram and TikTok (including X bo
 
 ### Setup (once)
 
-Search needs the user's personal access key in the `ADHX_API_KEY` environment variable. Keys start with `adhx_`.
+Search needs the user's personal access key in the `ADHX_API_KEY` environment variable. Keys start with `adhx_`. Most people run their own ADHX: its address is in `ADHX_URL` (e.g. `https://adhx.example.com`). When `ADHX_URL` isn't set, use `https://adhx.com`.
 
 If `ADHX_API_KEY` is not set, ask the user to:
 
-1. Open https://adhx.com/settings#access-keys
+1. Open their ADHX's Settings page (`$ADHX_URL/settings#access-keys`)
 2. Under **Search from Claude**, name a key and press **Make a key**, then copy it (it is shown once)
-3. Set it in their shell profile (`export ADHX_API_KEY=adhx_...`) or the agent's environment settings
+3. Set it in their shell profile (`export ADHX_API_KEY=adhx_...`, plus `export ADHX_URL=https://their-adhx.example` for their own server) or the agent's environment settings
 
-Never print, log or repeat the key. Pass it only in the `Authorization` header to adhx.com.
+Never print, log or repeat the key. Pass it only in the `Authorization` header to the user's ADHX.
 
 ### Request
 
 ```bash
-curl -s -G "https://adhx.com/api/agent/search" \
+curl -s -G "${ADHX_URL:-https://adhx.com}/api/agent/search" \
   -H "Authorization: Bearer $ADHX_API_KEY" \
   --data-urlencode "q=a frog" \
   --data-urlencode "type=videos"
@@ -89,7 +89,8 @@ If nothing comes back close, try once more with a broader or differently worded 
 - Results are best first. `match.strength` is `strong` (it's the thing), `good` (very likely) or `related` (close in meaning, not exactly it). `match.on` says what matched: `video`, `picture`, `words` or `keywords`.
 - `closest` appears when nothing matched closely: say so, and offer the nearest results as maybes.
 - `note` appears when search fell back to exact words, or when a post's picture or video isn't understood yet.
-- `kind` is one of `video`, `photo`, `text`, `article`. `platform` is `twitter`, `instagram` or `tiktok`.
+- `kind` is one of `video`, `photo`, `text`, `article` (a SoundCloud track is a `video` with sound only). `platform` is `twitter`, `instagram`, `tiktok`, `youtube`, `facebook`, `reddit`, `linkedin`, `vimeo`, `soundcloud`, `pinterest`, `twitch`, `threads`, `imgur` or `bluesky`.
+- `media[].url` is the file on the user's ADHX, in the best quality it kept.
 - `links` are the outside web pages the post points to. To read one, fetch it with your normal web tools.
 - For an X post with an `article`, or to read a whole X thread or article, use the post reader below with the `url`.
 

@@ -126,9 +126,10 @@ describe('POST /api/activity/preview', () => {
     expect(res.status).toBe(400)
   })
 
-  it('rejects youtube (YouTube Shorts support was removed)', async () => {
-    const res = await post({ platform: 'youtube', id: 'abc' })
-    expect(res.status).toBe(400)
+  it('accepts youtube (a 204 no-op for an unknown post)', async () => {
+    const res = await post({ platform: 'youtube', id: 'Y9aytLYBajw' })
+    expect(res.status).toBe(204)
+    expect(testInstance.db.select().from(activity).all()).toHaveLength(0)
   })
 
   it('rejects a malformed body', async () => {

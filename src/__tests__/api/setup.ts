@@ -303,6 +303,32 @@ export const FULL_SCHEMA_SQL = `
       last_used_at TEXT
     );
     CREATE INDEX access_keys_user_id_idx ON access_keys(user_id);
+  CREATE TABLE keep_jobs (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT,
+      last_error TEXT,
+      bytes INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id)
+    );
+    CREATE INDEX keep_jobs_status_idx ON keep_jobs(status, next_attempt_at);
+    CREATE TABLE kept_files (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id, slot)
+    );
+
 `
 
 export interface TestDbInstance {

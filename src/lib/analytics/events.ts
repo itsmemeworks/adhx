@@ -1,3 +1,5 @@
+import { ALL_PLATFORMS } from '@/lib/platform/networks'
+
 /**
  * Allowlisted analytics event names and dimensions.
  *
@@ -46,7 +48,7 @@ export const CLIENT_ANALYTIC_EVENTS = [
 
 export type ClientAnalyticEventName = (typeof CLIENT_ANALYTIC_EVENTS)[number]
 
-export const ANALYTIC_PLATFORMS = ['twitter', 'instagram', 'tiktok'] as const
+export const ANALYTIC_PLATFORMS = ALL_PLATFORMS
 export type AnalyticPlatform = (typeof ANALYTIC_PLATFORMS)[number]
 
 export const ANALYTIC_CONTENT_TYPES = ['video', 'photo', 'text', 'article'] as const

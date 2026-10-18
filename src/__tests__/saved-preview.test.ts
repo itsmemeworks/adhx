@@ -39,6 +39,7 @@ describe('getSavedPreviewDisplay', () => {
       text: 'A pasta reel',
       category: 'video',
       mediaCount: 0,
+      photoCount: 0,
     })
     expect(row).not.toHaveProperty('userId')
   })
@@ -70,6 +71,7 @@ describe('getSavedPreviewDisplay', () => {
       text: 'Same caption',
       category: 'video',
       mediaCount: 0,
+      photoCount: 0,
     })
   })
 
@@ -150,6 +152,33 @@ describe('getSavedPreviewDisplay', () => {
       text: 'Six slides',
       category: 'photo',
       mediaCount: 6,
+      photoCount: 6,
+    })
+  })
+
+  it('counts photos separately from videos and accepts a link-network platform', () => {
+    testInstance.db
+      .insert(bookmarks)
+      .values(createTestBookmark(USER_A, 'a-AbCdE12', { platform: 'imgur', category: 'photo' }))
+      .run()
+    testInstance.db
+      .insert(bookmarkMedia)
+      .values(
+        (['photo', 'photo', 'video'] as const).map((mediaType, index) => ({
+          id: `a-AbCdE12_${index}`,
+          userId: USER_A,
+          platform: 'imgur',
+          bookmarkId: 'a-AbCdE12',
+          mediaType,
+          originalUrl: 'https://imgur.com/a/AbCdE12',
+        })),
+      )
+      .run()
+
+    expect(getSavedPreviewDisplay('imgur', 'a-AbCdE12')).toMatchObject({
+      category: 'photo',
+      mediaCount: 3,
+      photoCount: 2,
     })
   })
 

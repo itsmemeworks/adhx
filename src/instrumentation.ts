@@ -44,6 +44,11 @@ export async function register(): Promise<void> {
   // Off with AUTO_SYNC_EVERY_MINUTES=0, and under test.
   const { startAutoSync } = await import('@/lib/sync/auto')
   startAutoSync()
+
+  // Download every saved post's media (best quality) so ADHX serves its own
+  // copies. Off with KEEP_MEDIA=off, and under test.
+  const { startKeeping } = await import('@/lib/keep/worker')
+  startKeeping()
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {

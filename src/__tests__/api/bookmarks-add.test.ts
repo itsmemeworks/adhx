@@ -11,8 +11,8 @@ import { metrics } from '@/lib/sentry'
  *
  * Verifies the platform-agnostic add endpoint resolves Instagram and TikTok
  * URLs via mocked metadata, stores the bookmark + media rows atomically,
- * pushes an anonymous activity-pulse event, and rejects YouTube URLs
- * (YouTube is no longer a supported platform).
+ * pushes an anonymous activity-pulse event, and saves link-network posts
+ * (YouTube etc.) via a mocked describeNetworkPost.
  */
 
 let testInstance: TestDbInstance
@@ -61,6 +61,13 @@ vi.mock('@/lib/media/tnktok', async () => {
     fetchTikTokMetadata: (...args: unknown[]) => mockFetchTikTokMetadata(...args),
   }
 })
+
+const mockDescribeNetworkPost = vi.fn()
+vi.mock('@/lib/keep/describe', () => ({
+  describeNetworkPost: (...args: unknown[]) => mockDescribeNetworkPost(...args),
+}))
+
+vi.mock('@/lib/keep/worker', () => ({ wakeKeep: vi.fn() }))
 
 import { POST } from '@/app/api/bookmarks/add/route'
 
@@ -477,13 +484,27 @@ describe('POST /api/bookmarks/add — Instagram', () => {
   })
 })
 
-describe('POST /api/bookmarks/add — YouTube (unsupported)', () => {
+describe('POST /api/bookmarks/add — YouTube (link network)', () => {
+  const VIDEO_ID = 'Y9aytLYBajw'
+
   beforeEach(() => {
     testInstance = createTestDb()
     mockUserId = 'user-123'
     beforeTransaction = null
     vi.clearAllMocks()
     mockFetch.mockReset()
+    mockDescribeNetworkPost.mockReset()
+    mockDescribeNetworkPost.mockResolvedValue({
+      author: 'somechannel',
+      authorName: 'Some Channel',
+      text: 'a video',
+      createdAt: '2026-01-02T00:00:00.000Z',
+      category: 'video',
+      videos: 1,
+      photos: 0,
+      durationMs: 42_000,
+      audioOnly: false,
+    })
   })
   afterEach(() => testInstance.close())
 
@@ -491,13 +512,43 @@ describe('POST /api/bookmarks/add — YouTube (unsupported)', () => {
     'https://youtube.com/shorts/Y9aytLYBajw?si=abc',
     'https://youtu.be/Y9aytLYBajw',
     'https://www.youtube.com/watch?v=Y9aytLYBajw',
-  ])('rejects %s as an unsupported URL without writing anything', async (url) => {
+  ])('saves %s as a youtube post with one video row', async (url) => {
     const res = await POST(createRequest({ url }))
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining('Unsupported URL') })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      success: true,
+      isDuplicate: false,
+      platform: 'youtube',
+    })
+    expect(mockDescribeNetworkPost).toHaveBeenCalledWith('youtube', VIDEO_ID, undefined)
+
+    const saved = testInstance.db.select().from(schema.bookmarks).all()
+    expect(saved).toHaveLength(1)
+    expect(saved[0]).toMatchObject({
+      id: VIDEO_ID,
+      platform: 'youtube',
+      author: 'somechannel',
+      category: 'video',
+      tweetUrl: `https://www.youtube.com/watch?v=${VIDEO_ID}`,
+    })
+    const media = testInstance.db.select().from(schema.bookmarkMedia).all()
+    expect(media).toHaveLength(1)
+    expect(media[0]).toMatchObject({ mediaType: 'video', durationMs: 42_000 })
+    expect(metrics.bookmarkAdded).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports a duplicate on a second save without describing again', async () => {
+    await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    expect(await res.json()).toMatchObject({ success: false, isDuplicate: true })
+    expect(mockDescribeNetworkPost).toHaveBeenCalledTimes(1)
+  })
+
+  it('404s without writing when the post cannot be described', async () => {
+    mockDescribeNetworkPost.mockResolvedValue(null)
+    const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    expect(res.status).toBe(404)
     expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
-    expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(0)
-    expect(metrics.bookmarkAdded).not.toHaveBeenCalled()
   })
 })
 

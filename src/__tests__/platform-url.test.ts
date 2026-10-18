@@ -148,12 +148,13 @@ describe('detectPlatformPost — TikTok', () => {
   })
 })
 
-describe('detectPlatformPost — YouTube (unsupported)', () => {
-  it('does not recognise YouTube URLs, Shorts included', () => {
-    expect(detectPlatformPost('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toBeNull()
-    expect(detectPlatformPost('https://m.youtube.com/shorts/Y9aytLYBajw')).toBeNull()
-    expect(detectPlatformPost('https://youtu.be/Y9aytLYBajw')).toBeNull()
-    expect(detectPlatformPost('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toBeNull()
+describe('detectPlatformPost — YouTube (via the link networks)', () => {
+  it('recognises Shorts, youtu.be and watch?v= links as /s/youtube/{id}', () => {
+    const yt = { platform: 'youtube', id: 'Y9aytLYBajw', previewPath: '/s/youtube/Y9aytLYBajw' }
+    expect(detectPlatformPost('https://youtube.com/shorts/Y9aytLYBajw?si=abc')).toMatchObject(yt)
+    expect(detectPlatformPost('https://m.youtube.com/shorts/Y9aytLYBajw')).toMatchObject(yt)
+    expect(detectPlatformPost('https://youtu.be/Y9aytLYBajw')).toMatchObject(yt)
+    expect(detectPlatformPost('https://www.youtube.com/watch?v=Y9aytLYBajw&t=5s')).toMatchObject(yt)
   })
 })
 
