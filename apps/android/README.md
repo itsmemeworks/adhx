@@ -21,16 +21,12 @@ Run with a phone plugged in (USB debugging on) or an emulator.
 
 ```sh
 cd apps/android
-gradle wrapper --gradle-version 8.11.1   # first time only, see below
 ./gradlew assembleDebug                  # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease                # app/build/outputs/apk/release/
 ```
 
-The repo has `gradlew`, `gradlew.bat` and `gradle/wrapper/gradle-wrapper.properties`
-but not `gradle/wrapper/gradle-wrapper.jar` (a binary that has to come from
-Gradle itself). Run `gradle wrapper` once with any Gradle 8.x installed
-(`brew install gradle`, `sdk install gradle`), or open the project in Android
-Studio, which fills it in. Commit the jar after that so nobody else needs to.
+The Gradle wrapper (8.11.1) is committed, so no separate Gradle install is
+needed: `./gradlew` downloads it the first time.
 
 Tell Gradle where the SDK is, either with `ANDROID_HOME` or a
 `local.properties` file (not committed):

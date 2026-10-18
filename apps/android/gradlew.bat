@@ -21,9 +21,6 @@
 @rem
 @rem  Gradle startup script for Windows
 @rem
-@rem  Needs gradle\wrapper\gradle-wrapper.jar next to it. If it's missing, run
-@rem  `gradle wrapper` once (see README.md).
-@rem
 @rem ##########################################################################
 
 @rem Set local scope for the variables with windows NT shell
@@ -41,18 +38,6 @@ for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
 @rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
 set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
 
-set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
-
-if exist "%CLASSPATH%" goto findJava
-
-echo. 1>&2
-echo ERROR: %CLASSPATH% is missing. 1>&2
-echo. 1>&2
-echo Run 'gradle wrapper' once in this folder, or open the project in Android Studio. 1>&2
-
-goto fail
-
-:findJava
 @rem Find java.exe
 if defined JAVA_HOME goto findJavaFromJavaHome
 
@@ -84,6 +69,9 @@ goto fail
 
 :execute
 @rem Setup the command line
+
+set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
+
 
 @rem Execute Gradle
 "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %*
