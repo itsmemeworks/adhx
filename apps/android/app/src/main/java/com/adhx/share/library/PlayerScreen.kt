@@ -124,6 +124,9 @@ import kotlinx.coroutines.launch
 /** How the post on screen is playing. */
 private class Playback {
     var ready by mutableStateOf(false)
+    // The shared player's surface keeps the last picture it drew, so the
+    // video is only shown once this post's own first frame is in.
+    var drawn by mutableStateOf(false)
     var paused by mutableStateOf(false)
     var problem by mutableStateOf<String?>(null)
     var positionMs by mutableLongStateOf(0L)
@@ -131,6 +134,7 @@ private class Playback {
 
     fun reset() {
         ready = false
+        drawn = false
         paused = false
         problem = null
         positionMs = 0L
@@ -313,6 +317,10 @@ fun PlayerScreen(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) playback.ready = true
                 if (playbackState == Player.STATE_ENDED) ended++
+            }
+
+            override fun onRenderedFirstFrame() {
+                playback.drawn = true
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -635,7 +643,10 @@ private fun MediaPage(
                 factory = { ctx -> LayoutInflater.from(ctx).inflate(R.layout.player_view, null) as PlayerView },
                 update = { view -> if (view.player !== player) view.player = player },
                 onRelease = { view -> view.player = null },
-                modifier = Modifier.fillMaxSize(),
+                // Hidden (the poster or black shows) until this post's first frame, and when it fails.
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = if (playback.drawn && playback.problem == null) 1f else 0f },
             )
         }
         if (onScreen && !pip) {
