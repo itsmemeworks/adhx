@@ -5,6 +5,18 @@ import android.content.Intent
 import android.view.LayoutInflater
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -33,10 +45,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -159,6 +168,9 @@ fun PlayerScreen(
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     val playback = remember { Playback() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
+    // Where the scrub line is being dragged to (0–1), or null: the controls fade out meanwhile.
+    var scrub by remember { mutableStateOf<Float?>(null) }
+    val chrome by animateFloatAsState(if (scrub == null) 1f else 0f, label = "chrome")
     val pip = LocalPip.current
     val inPip = pip?.inPip == true
 
@@ -188,7 +200,10 @@ fun PlayerScreen(
     val mediaUrl = current?.takeIf { PostKind.plays(it.kind) }?.media?.firstOrNull()?.url
         ?.let { AdhxApi.resolve(server, it)?.toString() }
 
-    LaunchedEffect(settled) { onPage(settled) }
+    LaunchedEffect(settled) {
+        scrub = null
+        onPage(settled)
+    }
 
     // Something new on top (saved while the app was away): show it.
     val firstKey = posts.firstOrNull()?.key
@@ -331,6 +346,9 @@ fun PlayerScreen(
                 hidden = hidden,
                 saving = saving == post.key,
                 pip = inPip,
+                scrub = if (page == settled) scrub else null,
+                chrome = chrome,
+                onScrub = { scrub = it },
                 onTap = {
                     when {
                         hidden -> hidden = false
@@ -362,7 +380,9 @@ fun PlayerScreen(
                 onHide = { hidden = true },
             )
         }
-        if (!hidden && !inPip) topBar()
+        if (!hidden && !inPip) {
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) { topBar() }
+        }
         if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
         reading?.let { Reader(it, onClose = { reading = null }) }
     }
@@ -418,6 +438,9 @@ private fun PostPage(
     hidden: Boolean,
     saving: Boolean,
     pip: Boolean,
+    scrub: Float?,
+    chrome: Float,
+    onScrub: (Float?) -> Unit,
     onTap: () -> Unit,
     onRead: () -> Unit,
     onPip: (() -> Unit)?,
@@ -483,13 +506,17 @@ private fun PostPage(
                 )
             }
         } else {
+            // The caption and the column sit 64dp above the bottom (plus the gesture bar),
+            // and fade out while the scrub line is dragged.
             Column(
                 Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
+                    .graphicsLayer { alpha = chrome }
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))))
+                    .padding(top = 36.dp)
                     .navigationBarsPadding()
-                    .padding(top = 36.dp, bottom = 16.dp),
+                    .padding(bottom = 64.dp),
             ) {
                 if (photos.size > 1) Dots(count = photos.size, current = album.currentPage)
                 Caption(
@@ -501,11 +528,27 @@ private fun PostPage(
                     onToggleRepeat = onToggleRepeat,
                     onSave = save,
                 )
-                BottomRow(
-                    playback = if (onScreen && plays) playback else null,
-                    onSeek = onSeek,
-                    onHide = onHide,
-                    onPip = onPip.takeIf { onScreen },
+            }
+            val gestureBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() > 0.dp
+            BottomRow(
+                playback = if (onScreen && plays) playback else null,
+                scrub = scrub,
+                onScrub = onScrub,
+                onSeek = onSeek,
+                onHide = onHide,
+                onPip = onPip.takeIf { onScreen },
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(bottom = if (gestureBar) 26.dp else 14.dp),
+            )
+            if (scrub != null && onScreen && plays) {
+                ScrubTime(
+                    elapsedMs = (scrub * playback.durationMs).toLong(),
+                    totalMs = playback.durationMs,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 84.dp),
                 )
             }
         }
@@ -829,96 +872,142 @@ private fun ActionButton(
         ) {
             icon()
         }
-        Text(label, style = OverMedia, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
     }
 }
 
-/** "0:14 / 0:41", the scrub bar, the small window and Hide; just Hide for photos and words. */
-@kotlin.OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The scrub line, then the small window and Hide as plain glyphs. Photos and
+ * words get just the glyphs. No time at rest: it shows large while dragging.
+ */
 @Composable
-private fun BottomRow(playback: Playback?, onSeek: (Long) -> Unit, onHide: () -> Unit, onPip: (() -> Unit)?) {
+private fun BottomRow(
+    playback: Playback?,
+    scrub: Float?,
+    onScrub: (Float?) -> Unit,
+    onSeek: (Long) -> Unit,
+    onHide: () -> Unit,
+    onPip: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
-            .padding(start = 18.dp, end = 12.dp, top = 10.dp),
+            .padding(start = 14.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (playback != null) {
-            var dragging by remember { mutableStateOf<Float?>(null) }
             val duration = playback.durationMs
             val fraction = if (duration > 0) (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
-            val shown = dragging ?: fraction
-            Text(
-                "${clock((shown * duration).toLong())} / ${clock(duration)}",
-                style = OverMedia,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = AdhxColors.White,
-            )
-            Spacer(Modifier.width(10.dp))
-            val colors = SliderDefaults.colors(
-                thumbColor = AdhxColors.Accent,
-                activeTrackColor = AdhxColors.Accent,
-                inactiveTrackColor = AdhxColors.White.copy(alpha = 0.3f),
-            )
-            Slider(
-                value = shown,
-                onValueChange = { dragging = it },
-                onValueChangeFinished = {
-                    dragging?.let { if (duration > 0) onSeek((it * duration).toLong()) }
-                    dragging = null
-                },
+            ScrubLine(
+                fraction = scrub ?: fraction,
+                dragging = scrub != null,
                 enabled = duration > 0,
-                colors = colors,
-                thumb = {
-                    Box(
-                        Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(AdhxColors.Accent),
-                    )
+                onDrag = onScrub,
+                onRelease = { at ->
+                    onSeek((at * duration).toLong())
+                    onScrub(null)
                 },
-                track = { state ->
-                    SliderDefaults.Track(
-                        sliderState = state,
-                        colors = colors,
-                        enabled = duration > 0,
-                        thumbTrackGapSize = 0.dp,
-                        drawStopIndicator = null,
-                        modifier = Modifier.height(4.dp),
-                    )
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(32.dp)
-                    .semantics { contentDescription = "Seek" },
+                modifier = Modifier.weight(1f),
             )
         } else {
             Spacer(Modifier.weight(1f))
         }
-        Spacer(Modifier.width(8.dp))
-        if (onPip != null) {
-            Box(
-                Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .clickable(onClickLabel = "Keep playing in a small window", onClick = onPip)
-                    .semantics { contentDescription = "Keep playing in a small window" },
-                contentAlignment = Alignment.Center,
-            ) {
-                ActionIcon(painterResource(R.drawable.ic_pip))
+        Spacer(Modifier.width(4.dp))
+        if (onPip != null) Glyph(painterResource(R.drawable.ic_pip), "Keep playing in a small window", onPip)
+        Glyph(painterResource(R.drawable.ic_hide_overlay), "Hide controls", onHide)
+    }
+}
+
+/**
+ * A full-width line to seek with: 3dp with a 12dp dot at rest, 6dp with a
+ * 20dp thumb while dragged. Tapping it seeks there.
+ */
+@Composable
+private fun ScrubLine(
+    fraction: Float,
+    dragging: Boolean,
+    enabled: Boolean,
+    onDrag: (Float) -> Unit,
+    onRelease: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val drag by rememberUpdatedState(onDrag)
+    val release by rememberUpdatedState(onRelease)
+    val track = AdhxColors.White.copy(alpha = 0.3f)
+    Canvas(
+        modifier
+            .height(44.dp)
+            .semantics { contentDescription = "Seek" }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures { at -> release((at.x / size.width).coerceIn(0f, 1f)) }
             }
-        }
-        Box(
-            Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .clickable(onClickLabel = "Hide controls", onClick = onHide)
-                .semantics { contentDescription = "Hide controls" },
-            contentAlignment = Alignment.Center,
-        ) {
-            ActionIcon(painterResource(R.drawable.ic_hide_overlay))
-        }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                var at = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { start ->
+                        at = (start.x / size.width).coerceIn(0f, 1f)
+                        drag(at)
+                    },
+                    onHorizontalDrag = { change, _ ->
+                        change.consume()
+                        // Follow the finger itself, so the thumb stays under it.
+                        at = (change.position.x / size.width).coerceIn(0f, 1f)
+                        drag(at)
+                    },
+                    onDragEnd = { release(at) },
+                    onDragCancel = { release(at) },
+                )
+            },
+    ) {
+        val thickness = (if (dragging) 6.dp else 3.dp).toPx()
+        val radius = (if (dragging) 10.dp else 6.dp).toPx()
+        val y = size.height / 2
+        val x = (fraction * size.width).coerceIn(radius, size.width - radius)
+        drawLine(track, Offset(0f, y), Offset(size.width, y), thickness, StrokeCap.Round)
+        drawLine(AdhxColors.Accent, Offset(0f, y), Offset(x, y), thickness, StrokeCap.Round)
+        drawCircle(AdhxColors.Accent, radius, Offset(x, y))
+    }
+}
+
+/** A plain white glyph with a soft shadow, no circle, so it reads apart from the column buttons. */
+@Composable
+private fun Glyph(painter: Painter, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(44.dp)
+            .clickable(onClickLabel = label, onClick = onClick)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter,
+            contentDescription = null,
+            tint = Color.Black.copy(alpha = 0.5f),
+            modifier = Modifier
+                .size(24.dp)
+                .offset(y = 1.dp)
+                .blur(3.dp, BlurredEdgeTreatment.Unbounded),
+        )
+        Icon(painter, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(24.dp))
+    }
+}
+
+/** The time while scrubbing, large and centred: "0:14" then "/ 0:41". */
+@Composable
+private fun ScrubTime(elapsedMs: Long, totalMs: Long, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.Bottom) {
+        Text(clock(elapsedMs), style = OverMedia, fontSize = 34.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "/ ${clock(totalMs)}",
+            style = OverMedia,
+            fontSize = 17.sp,
+            color = AdhxColors.Cream,
+            modifier = Modifier.padding(bottom = 5.dp),
+        )
     }
 }
 
