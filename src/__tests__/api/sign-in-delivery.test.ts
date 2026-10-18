@@ -37,6 +37,20 @@ async function ask(email: string) {
   return { status: res.status, body: await res.json() }
 }
 
+async function open(url: string) {
+  const { GET } = await import('@/app/api/auth/email/callback/route')
+  return GET(new NextRequest(url))
+}
+
+const roleOf = (email: string) =>
+  (
+    testInstance.sqlite
+      .prepare(
+        `SELECT u.role FROM users u JOIN user_identities i ON i.user_id = u.id WHERE i.provider = 'email' AND i.provider_id = ?`,
+      )
+      .get(email) as { role: string } | undefined
+  )?.role
+
 function makeAdmin(email: string) {
   testInstance.sqlite
     .prepare(`INSERT INTO users (id, username, role, email) VALUES ('admin1', 'owner', 'admin', ?)`)
@@ -113,7 +127,7 @@ describe('getting sign-in links to people without Resend', () => {
     it('holds the owner’s first link and prints it in the server log', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const { body } = await ask('owner@home.example')
-      expect(body).toEqual({ ok: true, delivery: 'admin' })
+      expect(body).toEqual({ ok: true, delivery: 'admin', setup: true })
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('owner@home.example'))
       const { pendingAdminSignInLinks } = await import('@/lib/email/magic-link')
       const [held] = pendingAdminSignInLinks()
@@ -122,11 +136,46 @@ describe('getting sign-in links to people without Resend', () => {
       warn.mockRestore()
     })
 
+    it('lets the owner in before there’s an admin, even off the invite list, and makes them the admin', async () => {
+      vi.stubEnv('ALLOWED_EMAILS', '@friends.example')
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      expect((await ask('owner@home.example')).body).toEqual({
+        ok: true,
+        delivery: 'admin',
+        setup: true,
+      })
+      expect((await ask('sam@friends.example')).body.delivery).toBe('admin')
+      const { pendingAdminSignInLinks } = await import('@/lib/email/magic-link')
+      const links = pendingAdminSignInLinks()
+      const link = (email: string) => links.find((l) => l.email === email)!.url
+
+      const res = await open(link('owner@home.example'))
+      expect(res.headers.get('location')).toContain('/welcome')
+      expect(roleOf('owner@home.example')).toBe('admin')
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('is now the admin'))
+
+      // The next person in is a friend, not a second admin.
+      await open(link('sam@friends.example'))
+      expect(roleOf('sam@friends.example')).toBe('user')
+      // And with an admin, the invite list applies again.
+      expect((await ask('someone@home.example')).status).toBe(403)
+      warn.mockRestore()
+    })
+
+    it('makes nobody admin when links are emailed', async () => {
+      vi.stubEnv('EMAIL_LINKS_TO_ADMIN', '')
+      vi.stubEnv('SMTP_URL', 'smtp://mail.example.com')
+      const { createLoginToken } = await import('@/lib/auth/account')
+      const token = await createLoginToken({ email: 'first@home.example', intent: 'signin' })
+      await open(`http://localhost:3000/api/auth/email/callback?token=${token}`)
+      expect(roleOf('first@home.example')).toBe('user')
+    })
+
     it('once there’s an admin, holds links for invited people without logging them', async () => {
       makeAdmin('owner@home.example')
       vi.stubEnv('ALLOWED_EMAILS', '@friends.example')
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      expect((await ask('sam@friends.example')).body.delivery).toBe('admin')
+      expect((await ask('sam@friends.example')).body).toEqual({ ok: true, delivery: 'admin' })
       expect(warn).not.toHaveBeenCalled()
       warn.mockRestore()
     })

@@ -37,6 +37,8 @@ export async function GET() {
     },
     identities: account.identities,
     xConnected: account.xConnected,
+    // Whoever runs this ADHX may not have set up an X app.
+    xAvailable: !!process.env.TWITTER_CLIENT_ID,
     isAdmin: await isAdminUserId(userId),
   })
 }

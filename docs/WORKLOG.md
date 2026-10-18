@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — End-to-end run: owner, friends, iPhone and Android
+
+- **Run:** fresh server with no email (links handed over), `ALLOWED_EMAILS=@friends.test`, no X app. Desktop (Playwright) for an owner and two friends; the iOS app on two simulators; the Android app on an emulator; a stranger. Pairing by typed code and by the QR link, shares from Safari and the Android share menu, already saved, not a post, offline then back, removing a phone.
+- **Owner setup:** before there's an admin, held links follow `mayGetHeldLink`, so the owner gets in even off the invite list. Opening a link while nobody is admin makes you the admin (`claimOwnership`); only someone with the server log could have it. The waiting screen says the link is in the log (`setup: true`). Email delivery still needs `ADMIN_USERNAMES`.
+- **No X app:** `/api/auth/me` has `xAvailable`. Start, Settings and the account menu stop offering Connect X (it was a bare 500). Start offers "Save your first post" instead.
+- **Search on small libraries:** z-scores used only the library's own spread, and with n posts nothing can score over √(n−1), so a new friend's search by meaning found nothing. `background()` blends in a measured prior (465 posts, 25 queries) worth 20 posts. Filler words ("a", "the", "at") are left out of the keyword query.
+- **adhx.com in the app:** username, channel links, the OG card, the email logo, privacy and admin copy now use this server's address (`PUBLIC_HOST`).
+- **Unsaved link-network preview:** `/api/files` answers 404 with a reason ("Nobody here has saved this yet") and the player shows it without dropping the post. A download that gave up is 410.
+- **Apps:** Android typed `10.0.2.2:3020` as https (iOS used http for local addresses, now both do). Both re-check "can't be reached" every few seconds. iOS: the share card no longer leaves an empty half-screen when iOS shows it as a card; the Connect screen scrolls instead of pushing the logo under the clock.
+- **Follow-ups:** no notice to the admin that a link is waiting; Android "download" link in Settings needs a published APK; Reddit videos have no poster frame.
+
 ## 2026-10-18 — Android app builds; phone API gaps fixed
 
 - **Android:** first real build (JDK 17 + SDK 35, wrapper jar committed) and an emulator run against a local ADHX. Fixed a crash on the first API call (body read on the main thread), new shares landing above the fold in Shared lately, and "Kept · saved" for words-only posts.

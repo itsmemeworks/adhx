@@ -3,7 +3,7 @@ import { Readable } from 'stream'
 import { NextRequest, NextResponse } from 'next/server'
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { bookmarkMedia } from '@/lib/db/schema'
+import { bookmarkMedia, bookmarks } from '@/lib/db/schema'
 import { readPostModeration } from '@/lib/admin/moderation'
 import { absolutePath, isSlot, keptFile, type KeptFile, type Slot } from '@/lib/keep/store'
 import { keepJobs } from '@/lib/db/schema'
@@ -28,6 +28,33 @@ function notFound(): NextResponse {
 }
 
 const WAIT_MS = 25_000
+
+/**
+ * Why a post's video isn't here, for the player to say: the download gave up
+ * (410, so a playlist skips it), or nobody has saved it, so it was never
+ * downloaded (404: saving it fixes that).
+ */
+function notKeptReason(platform: string, id: string): { status: 404 | 410; reason: string } | null {
+  const [job] = db
+    .select({ status: keepJobs.status })
+    .from(keepJobs)
+    .where(and(eq(keepJobs.platform, platform), eq(keepJobs.postId, id)))
+    .limit(1)
+    .all()
+  if (job?.status === 'unavailable') {
+    return { status: 410, reason: 'This one couldn’t be downloaded. The original may still play.' }
+  }
+  if (job) return null
+  const [saved] = db
+    .select({ id: bookmarks.id })
+    .from(bookmarks)
+    .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
+    .limit(1)
+    .all()
+  return saved
+    ? null
+    : { status: 404, reason: 'Nobody here has saved this yet. Save it to watch it here.' }
+}
 
 function findKept(platform: string, id: string, slot: Slot): KeptFile | null {
   return (
@@ -172,6 +199,10 @@ export async function GET(
     }
     const photo = proxySrc(platform, id, 'photo-1', AUTHOR.test(author) ? author : '')
     if (photo) return handOff(photo)
+  }
+  if (/^(video|audio)-/.test(slot)) {
+    const why = notKeptReason(platform, id)
+    if (why) return NextResponse.json({ reason: why.reason }, { status: why.status })
   }
   return notFound()
 }

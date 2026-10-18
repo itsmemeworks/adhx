@@ -468,7 +468,7 @@ export function AdminClient() {
             <div>
               <h2 className="font-serif font-semibold text-base text-ink">Inspect a post</h2>
               <p className="text-[13px] text-ink-3">
-                Paste an x.com / adhx.com URL or <code>platform:id</code>.
+                Paste a post link or <code>platform:id</code>.
               </p>
             </div>
           </div>

@@ -14,6 +14,14 @@ describe('MagicLinkEmail', () => {
     expect(html).toContain('Save it. Lose it. Find it.')
     expect(html).toContain(URL)
     expect(html).toContain('#08070a')
+    // A self-hosted ADHX's mail loads the logo from itself.
+    const own = await render(
+      MagicLinkEmail({
+        url: 'https://adhx.home.example/api/auth/email/callback?token=x',
+        intent: 'signin',
+      }),
+    )
+    expect(own).toContain('https://adhx.home.example/logo-dark.png')
     expect(html).toContain('#201b16')
     expect(html).toContain('#e88a5e')
     expect(html).not.toContain('<script')

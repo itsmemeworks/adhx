@@ -28,6 +28,8 @@ export interface AuthMe {
     email: { email: string } | null
   }
   xConnected: boolean
+  /** This ADHX can connect X (it has an X app). */
+  xAvailable?: boolean
   isAdmin?: boolean
 }
 

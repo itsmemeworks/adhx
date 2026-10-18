@@ -18,8 +18,8 @@ export default function PrivacyPage() {
           Privacy
         </h1>
         <p className="m-0">
-          This is the hosted service at adhx.com (and staging). If you self-host, you are the data
-          controller. The software still stores the same kinds of rows.
+          Whoever runs this ADHX is the data controller for it. Every ADHX stores the same kinds of
+          rows, on its own server.
         </p>
         <p className="m-0 text-[14px] text-white/55">
           <span>Last updated 17 October 2026. The canonical copy is </span>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/lib/auth/account'
 import { sendMagicLinkEmail, signInDelivery } from '@/lib/email/magic-link'
 import { isValidEmail } from '@/lib/utils/email'
-import { mayGetHeldLink, mayUseEmail } from '@/lib/auth/allowlist'
+import { hasAdmin, mayGetHeldLink, mayUseEmail } from '@/lib/auth/allowlist'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { recordAnalytic } from '@/lib/analytics/record'
 
@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
   }
 
-  if (!mayUseEmail(email) || (signInDelivery() === 'admin' && !mayGetHeldLink(email))) {
+  // Held links follow mayGetHeldLink, which also lets the owner in before
+  // there's an admin, even when their own email isn't on ALLOWED_EMAILS.
+  if (signInDelivery() === 'admin' ? !mayGetHeldLink(email) : !mayUseEmail(email)) {
     return NextResponse.json(
       { error: 'This ADHX is for invited people. Ask whoever runs it to add your email.' },
       { status: 403 },
@@ -40,6 +42,9 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Nobody runs this ADHX yet: the link goes to the server log, and whoever
+  // opens it becomes the admin.
+  const setup = signInDelivery() === 'admin' && !hasAdmin()
   const token = await createLoginToken({ email, intent: 'signin', returnTo })
   const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const url = new URL('/api/auth/email/callback', base)
@@ -58,5 +63,9 @@ export async function POST(request: NextRequest) {
 
   recordAnalytic({ name: 'auth.start', source: 'email' })
   // `admin`: the link waits for whoever runs this ADHX to hand it over.
-  return NextResponse.json({ ok: true, delivery: result.delivery ?? 'email' })
+  return NextResponse.json({
+    ok: true,
+    delivery: result.delivery ?? 'email',
+    ...(setup ? { setup: true } : {}),
+  })
 }

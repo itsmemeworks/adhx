@@ -164,21 +164,19 @@ const jsonLd = {
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
   description:
-    'Save X posts, Reels and TikToks in one place, find any of them by describing what you remember, and watch what everyone is saving right now. The ADHD-friendly bookmark manager.',
-  url: 'https://adhx.com',
+    'Save posts from X, Instagram, TikTok, YouTube and ten more networks, with their videos and photos kept on your own server, and find any of them by describing what you remember.',
+  url: PUBLIC_BASE_URL,
   offers: {
     '@type': 'Offer',
     price: '0',
     priceCurrency: 'USD',
   },
   featureList: [
-    'Sync hundreds of X/Twitter bookmarks',
-    'Discover what people are watching and sending in real time',
-    'Full-text search across everything you save',
-    'One post at a time — archive what you are done with',
-    'Text-to-speech for any post or article',
-    'Save Reels and TikToks alongside tweets',
-    'Bionic reading and reader-friendly fonts',
+    'Save posts from 14 networks, with their media kept in the best quality',
+    'Sync X bookmarks every hour',
+    'Find posts by describing what you remember',
+    'See what your friends are saving right now',
+    'Share from your phone with the ADHX Share app',
   ],
 }
 
@@ -189,11 +187,11 @@ const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'ADHX',
-  url: 'https://adhx.com',
+  url: PUBLIC_BASE_URL,
   publisher: {
     '@type': 'Organization',
     name: 'ADHX',
-    logo: 'https://adhx.com/logo-paper.png',
+    logo: `${PUBLIC_BASE_URL}/logo-paper.png`,
   },
 }
 

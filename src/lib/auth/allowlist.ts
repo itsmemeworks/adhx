@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { userIdentities, users } from '@/lib/db/schema'
 
@@ -38,13 +38,30 @@ export function mayGetHeldLink(email: string): boolean {
   const list = signupAllowlist()
   if (list && emailOnAllowlist(email, list)) return true
   if (hasEmailAccount(email)) return true
+  return !hasAdmin()
+}
+
+export function hasAdmin(): boolean {
   const [admin] = db
     .select({ id: users.id })
     .from(users)
     .where(eq(users.role, 'admin'))
     .limit(1)
     .all()
-  return !admin
+  return !!admin
+}
+
+/**
+ * With links handed over by an admin, nobody can see the admin page until
+ * there is one, so a link opened before then was read from the server log:
+ * whoever opens it runs this ADHX. Make them the admin, unless someone beat
+ * them to it. True when they became it.
+ */
+export function claimOwnership(userId: string): boolean {
+  const result = db.run(
+    sql`UPDATE users SET role = 'admin' WHERE id = ${userId} AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`,
+  )
+  return result.changes === 1
 }
 
 function hasEmailAccount(email: string): boolean {

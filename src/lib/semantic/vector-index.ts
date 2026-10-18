@@ -203,9 +203,48 @@ export async function nearest(
     }
   }
   if (best.length < k) best.sort((a, b) => b.score - a.score)
-  const mean = count ? sum / count : 0
-  const std = count > 1 ? Math.sqrt(Math.max(0, sumSq / count - mean * mean)) : 0
-  return { hits: await rescore(kind, query, best), mean, std }
+  return { hits: await rescore(kind, query, best), ...background(kind, count, sum, sumSq) }
+}
+
+/**
+ * How a query's similarity to a kind is usually spread, measured over 465
+ * saved posts and 25 everyday queries (the mean moved ±0.02 between queries,
+ * the spread ±0.004). Stands in for the posts a small library doesn't have yet.
+ */
+export const BACKGROUND_PRIOR: Record<UnderstandingKind, { mean: number; std: number }> = {
+  text: { mean: 0.586, std: 0.043 },
+  image: { mean: 0.578, std: 0.036 },
+  video: { mean: 0.615, std: 0.033 },
+}
+
+let priorOverride: { mean: number; std: number } | null = null
+
+/** Tests with made-up vectors: a prior that fits them. Null puts the real one back. */
+export function __setBackgroundPrior(prior: { mean: number; std: number } | null): void {
+  priorOverride = prior
+}
+
+/** The prior counts as this many posts. */
+export const PRIOR_WEIGHT = 20
+
+/**
+ * Mean and spread of a query's similarity over the candidates, blended with
+ * `BACKGROUND_PRIOR`. With a handful of saves the library's own spread says
+ * little (with n posts no score can stand more than √(n−1) above the rest,
+ * so nothing would ever clear the bar). With hundreds the prior hardly moves it.
+ */
+export function background(
+  kind: UnderstandingKind,
+  count: number,
+  sum: number,
+  sumSq: number,
+): { mean: number; std: number } {
+  const prior = priorOverride ?? BACKGROUND_PRIOR[kind]
+  const n = count + PRIOR_WEIGHT
+  const mean = (sum + PRIOR_WEIGHT * prior.mean) / n
+  // Pooled second moment of the library and the prior, around the blended mean.
+  const second = (sumSq + PRIOR_WEIGHT * (prior.std ** 2 + prior.mean ** 2)) / n
+  return { mean, std: Math.sqrt(Math.max(0, second - mean * mean)) }
 }
 
 /** Replace truncated scores with full-vector cosines and re-sort. */

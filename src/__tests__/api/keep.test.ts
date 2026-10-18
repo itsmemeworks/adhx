@@ -120,8 +120,22 @@ describe('kept media', () => {
       )
     })
 
-    it('is a 404 for a network with no proxy when nothing is kept or on its way', async () => {
-      expect((await get('/api/files/vimeo/1/video-1')).status).toBe(404)
+    it('tells the player why a video isn’t here on a network with no proxy', async () => {
+      const unsaved = await get('/api/files/vimeo/1/video-1')
+      expect(unsaved.status).toBe(404)
+      expect((await unsaved.json()).reason).toMatch(/Nobody here has saved this yet/)
+      // Pictures are plain 404s: an <img> can't show a reason.
+      expect((await get('/api/files/vimeo/1/poster')).status).toBe(404)
+
+      save('vimeo', '2')
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO keep_jobs (platform, post_id, status, attempts, updated_at) VALUES ('vimeo', '2', 'unavailable', 9, ?)`,
+        )
+        .run(now())
+      const gone = await get('/api/files/vimeo/2/video-1')
+      expect(gone.status).toBe(410)
+      expect((await gone.json()).reason).toMatch(/couldn’t be downloaded/)
     })
 
     it('rejects bad slots, ids and hidden posts', async () => {

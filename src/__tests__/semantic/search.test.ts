@@ -42,7 +42,11 @@ import { clearWordlessText } from '@/lib/semantic/worker'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { stillLearning } from '@/lib/semantic/status'
 import { blend, describe as describePost, jevStrength, rerank } from '@/lib/semantic/rerank'
-import { __resetVectorIndex } from '@/lib/semantic/vector-index'
+import {
+  __resetVectorIndex,
+  __setBackgroundPrior,
+  background as backgroundOf,
+} from '@/lib/semantic/vector-index'
 import { __resetRateLimitState } from '@/lib/rate-limit'
 import type { UnderstandingKind } from '@/lib/semantic/config'
 import type { FeedItemResponse } from '@/lib/feed/build-item'
@@ -106,6 +110,8 @@ beforeEach(() => {
   testInstance = createTestDb()
   mockUserId = USER_A
   __resetVectorIndex()
+  // These vectors are made up (unrelated posts sit near 0.05, not ~0.6).
+  __setBackgroundPrior({ mean: 0.05, std: 0.01 })
   __resetRateLimitState()
   vi.clearAllMocks()
   embedQuery.mockImplementation(async () => QUERY)
@@ -120,7 +126,12 @@ describe('keywords', () => {
   it('quotes every token so input can never use FTS syntax', () => {
     expect(ftsQuery('frog mugs ')).toBe('"frog" OR "mugs"')
     expect(ftsQuery('frog mu')).toBe('"frog" OR "mu"*')
-    expect(ftsQuery('foo" OR bar* NEAR(')).toBe('"foo" OR "or" OR "bar" OR "near"*')
+    expect(ftsQuery('foo" OR bar* NEAR(')).toBe('"foo" OR "bar" OR "near"*')
+    // Filler words match nearly every post, so they're left out…
+    expect(ftsQuery('a man at the zoo ')).toBe('"man" OR "zoo"')
+    // …unless that's all there is.
+    expect(ftsQuery('the who ')).toBe('"who"')
+    expect(ftsQuery('it is ')).toBe('"it" OR "is"')
     expect(ftsQuery('  ...  ')).toBeNull()
   })
 
@@ -152,6 +163,34 @@ describe('fuse', () => {
     expect(ranked.map((r) => r.key)).toEqual(['a', 'b'])
     expect(ranked[0].matched).toEqual(['words'])
     expect(ranked[1].matched).toEqual(['keywords'])
+  })
+})
+
+describe('background', () => {
+  // Real cosines from the model: unrelated posts sit near 0.6, a match ~0.7.
+  const z = (score: number, bg: { mean: number; std: number }, weight = 0.9) =>
+    (weight * (score - bg.mean)) / bg.std
+
+  it('lets a new library with two saves find the one that matches', () => {
+    __setBackgroundPrior(null)
+    // A baby-and-hamster video (0.70) and an unrelated one (0.60).
+    const bg = backgroundOf('video', 2, 0.7 + 0.6, 0.7 ** 2 + 0.6 ** 2)
+    expect(z(0.7, bg)).toBeGreaterThan(1.5)
+    expect(z(0.6, bg)).toBeLessThan(1.5)
+    // Their own spread alone could never clear the bar: two posts are always ±1.
+    const mean = 0.65
+    const own = Math.sqrt((0.7 ** 2 + 0.6 ** 2) / 2 - mean ** 2)
+    expect(z(0.7, { mean, std: own })).toBeLessThan(1.5)
+  })
+
+  it('hardly moves a big library', () => {
+    __setBackgroundPrior(null)
+    const n = 500
+    const mean = 0.55
+    const std = 0.05
+    const bg = backgroundOf('text', n, n * mean, n * (std ** 2 + mean ** 2))
+    expect(bg.mean).toBeCloseTo(mean, 2)
+    expect(bg.std).toBeCloseTo(std, 2)
   })
 })
 

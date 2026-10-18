@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { AccountMenu, SYNC_HREF } from '@/components/next/AccountMenu'
 
-function mockMe(xConnected: boolean) {
+function mockMe(xConnected: boolean, xAvailable = true) {
   global.fetch = vi.fn(() =>
     Promise.resolve({
       ok: true,
@@ -13,6 +13,7 @@ function mockMe(xConnected: boolean) {
         Promise.resolve({
           authenticated: true,
           xConnected,
+          xAvailable,
           user: { username: 'tester', displayName: 'Tester', avatarUrl: '' },
         }),
     } as Response),
@@ -37,6 +38,14 @@ describe('AccountMenu', () => {
     render(<AccountMenu />)
     fireEvent.click(await screen.findByRole('button', { name: 'Your account' }))
     expect(screen.getByRole('menuitem', { name: 'Connect X' })).toHaveAttribute('href', SYNC_HREF)
+  })
+
+  it('leaves X out on an ADHX without an X app', async () => {
+    mockMe(false, false)
+    render(<AccountMenu />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Your account' }))
+    expect(screen.queryByRole('menuitem', { name: 'Connect X' })).not.toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument()
   })
 
   it('offers Sign in when signed out, coming back to this page', async () => {

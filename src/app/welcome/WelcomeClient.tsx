@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { UsernameChooser, type UsernameClaimSuccess } from '@/components/auth/UsernameChooser'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
+import { PUBLIC_HOST } from '@/lib/routes/base-url'
 
 export interface WelcomeClientProps {
   suggestedUsername: string
@@ -44,7 +45,7 @@ export function WelcomeClient({ suggestedUsername, returnTo }: WelcomeClientProp
             </h1>
           </span>
           <p className="m-0 text-[15px] leading-snug text-white/70">
-            {`Channels you make public live at adhx.com/t/${sanitized || 'username'}. You can only set it once.`}
+            {`Channels you make public live at ${PUBLIC_HOST}/t/${sanitized || 'username'}. You can only set it once.`}
           </p>
           <UsernameChooser
             suggestedUsername={suggestedUsername}

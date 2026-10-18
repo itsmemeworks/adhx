@@ -4,7 +4,8 @@ import { setSessionCookie } from '@/lib/auth/session'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { isUserBanned } from '@/lib/admin/moderation'
-import { mayUseEmail } from '@/lib/auth/allowlist'
+import { claimOwnership, mayGetHeldLink, mayUseEmail } from '@/lib/auth/allowlist'
+import { signInDelivery } from '@/lib/email/magic-link'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -35,12 +36,16 @@ export async function GET(request: NextRequest) {
   }
 
   // The allowlist can change between asking for a link and using it.
-  if (!mayUseEmail(row.email)) {
+  const heldLinks = signInDelivery() === 'admin'
+  if (heldLinks ? !mayGetHeldLink(row.email) : !mayUseEmail(row.email)) {
     return NextResponse.redirect(new URL('/?auth_error=not_invited', BASE_URL))
   }
   const { userId, username, created } = await findOrCreateUserForEmail(row.email)
   if (isUserBanned(userId)) {
     return NextResponse.redirect(new URL('/?auth_error=banned', BASE_URL))
+  }
+  if (heldLinks && claimOwnership(userId)) {
+    console.warn(`[sign-in] ${row.email} is now the admin of this ADHX`)
   }
   recordAnalytic({ name: 'auth.complete', userId, source: 'email' })
   const destination = row.returnTo && isSafeReturnUrl(row.returnTo) ? row.returnTo : '/'

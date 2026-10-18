@@ -714,25 +714,31 @@ export function StageVideo({
   // the same src: our video routes serve GET (no HEAD), so a 2-byte Range
   // request is the cheapest way to read the real status without pulling
   // the whole file. A 410 body carries `{ error: 'unavailable', reason }`;
-  // anything else (including a non-410 error) leaves the generic
-  // load-failure state with its retry button in place.
+  // a 404 may carry a `reason` too (a post nobody here has saved yet);
+  // anything else leaves the generic load-failure state with its retry
+  // button in place.
   const handleVideoError = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     if (!isCurrentLifecycleEvent(event.currentTarget)) return
     const { generation, src: operationSrc } = captureSource()
     setErrored(true)
     fetch(operationSrc, { headers: { Range: 'bytes=0-1' } })
-      .then((res) => {
+      .then(async (res) => {
         if (!isCurrentSource(generation, operationSrc)) return null
-        return res.status === 410 ? res.json() : null
+        if (res.status !== 410 && res.status !== 404) return null
+        const body = (await res.json().catch(() => null)) as { reason?: unknown } | null
+        return { gone: res.status === 410, reason: body?.reason }
       })
-      .then((body) => {
+      .then((probe) => {
         if (!isCurrentSource(generation, operationSrc)) return
-        if (body && typeof body.reason === 'string') {
-          setUnavailableReason(body.reason)
-          // Lets the theater skip a post that's gone for good.
-          window.dispatchEvent(
-            new CustomEvent('theater-media-gone', { detail: { src: operationSrc } }),
-          )
+        if (probe && typeof probe.reason === 'string') {
+          setUnavailableReason(probe.reason)
+          // Lets the theater skip a post that's gone for good. A 404 with a
+          // reason (nobody here has saved it yet) stays: saving it fixes it.
+          if (probe.gone) {
+            window.dispatchEvent(
+              new CustomEvent('theater-media-gone', { detail: { src: operationSrc } }),
+            )
+          }
         }
       })
       .catch(() => {

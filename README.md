@@ -80,13 +80,13 @@ People sign in with a link that works once, for 15 minutes. Choose how links rea
 | Resend               | `RESEND_API_KEY` and `EMAIL_FROM` on a domain you verified there                       | Sending from your own domain without running mail                                                |
 | No email             | `EMAIL_LINKS_TO_ADMIN=1`                                                               | A handful of friends. Links wait on the admin page and you pass them on, by message or in person |
 
-With no email, the first time you sign in, your link is printed in the server log: `docker compose logs adhx | grep sign-in`. Once you're an admin (see below), links show up under **Sign-in links** on the admin page. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get one, so strangers can't fill the list.
+With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and opening it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get one, so strangers can't fill the list.
 
 ### Who can sign up
 
 By default, anyone who can reach your server can make an account. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in.
 
-To give yourself the admin page (sign-in links, numbers, hiding posts, banning accounts), sign up first. Then set `ADMIN_USERNAMES=yourname` and restart once.
+The admin page has sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
 
 ### Settings
 

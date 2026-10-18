@@ -199,7 +199,7 @@ export function SettingsScreen() {
             Settings
           </h1>
           <p className="m-0 text-[15px] text-white/60">
-            Your account, your X bookmarks, and how you watch and read.
+            Your account, your phone, and how you watch and read.
           </p>
         </div>
 
@@ -238,17 +238,21 @@ export function SettingsScreen() {
           </div>
         ) : (
           <>
-            <SyncCard
-              xConnected={me.xConnected}
-              xIdentity={me.identities.x}
-              refreshMe={() => void fetchMe()}
-              sync={sync}
-              learning={learning.status}
-              canSync={cooldown.canSync}
-              waitMs={waitMs}
-              counts={counts}
-            />
-            <SyncHistoryCard syncs={history} loading={historyLoading} />
+            {(me.xConnected || me.xAvailable !== false) && (
+              <>
+                <SyncCard
+                  xConnected={me.xConnected}
+                  xIdentity={me.identities.x}
+                  refreshMe={() => void fetchMe()}
+                  sync={sync}
+                  learning={learning.status}
+                  canSync={cooldown.canSync}
+                  waitMs={waitMs}
+                  counts={counts}
+                />
+                <SyncHistoryCard syncs={history} loading={historyLoading} />
+              </>
+            )}
             <AccountCard me={me} refresh={() => void fetchMe()} />
             <PhoneAppCard />
             <AccessKeysCard />

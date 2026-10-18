@@ -11,6 +11,8 @@ interface Me {
   displayName: string | null
   avatarUrl: string | null
   xConnected: boolean
+  /** This ADHX can connect X. */
+  xAvailable: boolean
 }
 
 /** Where "Sync" goes: Settings' X card, which connects X if needed, then syncs. */
@@ -42,6 +44,7 @@ export function AccountMenu({
           data: {
             authenticated?: boolean
             xConnected?: boolean
+            xAvailable?: boolean
             user?: { username?: string; displayName?: string; avatarUrl?: string }
           } | null,
         ) => {
@@ -54,6 +57,7 @@ export function AccountMenu({
             displayName: data.user?.displayName ?? null,
             avatarUrl: data.user?.avatarUrl ?? null,
             xConnected: !!data.xConnected,
+            xAvailable: data.xAvailable !== false,
           })
         },
       )
@@ -117,10 +121,12 @@ export function AccountMenu({
           className="absolute right-0 top-12 z-50 flex w-[240px] flex-col gap-0.5 rounded-2xl bg-[#1c1b19] p-1.5 font-nx-sans text-sm text-white shadow-nx-toast"
         >
           <span className="truncate px-3 pb-1.5 pt-2 text-xs text-white/55">{`@${handle}`}</span>
-          <Link role="menuitem" href={SYNC_HREF} className={ROW} onClick={() => setOpen(false)}>
-            <RefreshCw aria-hidden className="h-4 w-4" />
-            <span>{me.xConnected ? 'Sync X bookmarks' : 'Connect X'}</span>
-          </Link>
+          {(me.xConnected || me.xAvailable) && (
+            <Link role="menuitem" href={SYNC_HREF} className={ROW} onClick={() => setOpen(false)}>
+              <RefreshCw aria-hidden className="h-4 w-4" />
+              <span>{me.xConnected ? 'Sync X bookmarks' : 'Connect X'}</span>
+            </Link>
+          )}
           <Link role="menuitem" href="/settings" className={ROW} onClick={() => setOpen(false)}>
             <Settings aria-hidden className="h-4 w-4" />
             <span>Settings</span>

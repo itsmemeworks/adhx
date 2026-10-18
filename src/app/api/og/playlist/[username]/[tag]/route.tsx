@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import type { NextRequest } from 'next/server'
 import { getPublicTagCollection, type TagCollection, type TagItem } from '@/lib/tags/query'
-import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { PUBLIC_BASE_URL, PUBLIC_HOST } from '@/lib/routes/base-url'
 import { fetchWithAllowlistedRedirects, readResponseBodyWithLimit } from '@/lib/media/proxy'
 
 export const runtime = 'nodejs'
@@ -182,7 +182,7 @@ function privateCard(fontData: ArrayBuffer | null): ImageResponse {
           color: '#b3a893',
         }}
       >
-        adhx.com
+        {PUBLIC_HOST}
       </div>
     </div>,
     fontData,

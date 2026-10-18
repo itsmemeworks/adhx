@@ -179,6 +179,48 @@ describe('getting started', () => {
   })
 })
 
+describe('setting up a new ADHX', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('points the owner at the server log for their first link', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url === '/api/auth/email/request'
+          ? new Response(JSON.stringify({ ok: true, delivery: 'admin', setup: true }))
+          : new Response(JSON.stringify({ authenticated: false })),
+      ),
+    )
+    render(<StartScreen returnTo="/" autoSync={false} />)
+    const input = await screen.findByLabelText('Your email. We’ll send a link, no password.')
+    fireEvent.change(input, { target: { value: 'me@home.test' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send me a link' }))
+    expect(await screen.findByText(/is in the server log/)).toBeInTheDocument()
+    expect(screen.queryByText(/Ask whoever runs it/)).not.toBeInTheDocument()
+  })
+
+  it('starts people on saving a post when this ADHX can’t connect X', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              authenticated: true,
+              user: { username: 'pat' },
+              xConnected: false,
+              xAvailable: false,
+            }),
+          ),
+      ),
+    )
+    render(<StartScreen returnTo="/" autoSync={false} />)
+    expect(await screen.findByText('Save your first post')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Connect/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Let’s go' })).toHaveAttribute('href', '/now')
+  })
+})
+
 describe('recent saves queue', () => {
   it('plays a pasted post from your newest saves', () => {
     expect(recentPlayHref('twitter:1')).toBe('/play?recent=1&start=twitter%3A1')

@@ -24,6 +24,7 @@ interface Account {
   authenticated: boolean
   user?: { username: string }
   xConnected?: boolean
+  xAvailable?: boolean
 }
 
 const RESEND_SECONDS = 60
@@ -41,8 +42,11 @@ function Card({ label, children }: { label: string; children: React.ReactNode })
   )
 }
 
-/** `admin`: no email service here; whoever runs this ADHX passes the link on. */
-type Delivery = 'email' | 'admin' | 'log'
+/**
+ * `admin`: no email service here; whoever runs this ADHX passes the link on.
+ * `setup`: the same, before anyone runs it: the link is in the server log.
+ */
+type Delivery = 'email' | 'admin' | 'log' | 'setup'
 
 function EmailStep({
   returnTo,
@@ -67,9 +71,10 @@ function EmailStep({
       const data = (await res.json().catch(() => null)) as {
         error?: string
         delivery?: Delivery
+        setup?: boolean
       } | null
       if (!res.ok) throw new Error(data?.error ?? 'Couldn’t send the link. Try again.')
-      onSent(email.trim(), data?.delivery ?? 'email')
+      onSent(email.trim(), data?.setup ? 'setup' : (data?.delivery ?? 'email'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Couldn’t send the link. Try again.')
     } finally {
@@ -132,7 +137,7 @@ function SentStep({
   onChange: () => void
   onResend: () => void
 }) {
-  const handed = delivery === 'admin'
+  const handed = delivery === 'admin' || delivery === 'setup'
   const [left, setLeft] = useState(RESEND_SECONDS)
   useEffect(() => {
     if (left <= 0) return
@@ -151,7 +156,17 @@ function SentStep({
         <span className="font-nx-serif text-[32px] leading-none md:text-[36px]">
           {handed ? 'Ask for your link' : 'Check your inbox'}
         </span>
-        {handed ? (
+        {delivery === 'setup' ? (
+          <span className="text-[15px] leading-[1.45] text-white/80">
+            <span>Nobody runs this ADHX yet. If it’s yours, the link for </span>
+            <span className="font-bold text-white">{email}</span>
+            <span>
+              {' '}
+              is in the server log, on the line starting “[sign-in]”. Opening it makes you the
+              admin.
+            </span>
+          </span>
+        ) : handed ? (
           <span className="text-[15px] leading-[1.45] text-white/80">
             <span>This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for </span>
             <span className="font-bold text-white">{email}</span>
@@ -234,8 +249,11 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
   const total = sync.total ?? Math.max(sync.found, imported)
   const pct = (n: number, of: number) => `${Math.round((n / Math.max(1, of)) * 100)}%`
 
+  // This ADHX has no X app, so there's nothing to import: start by saving.
+  const noX = !account.xConnected && account.xAvailable === false
+
   return (
-    <Card label="Bring your X bookmarks">
+    <Card label={noX ? 'Save your first post' : 'Bring your X bookmarks'}>
       <div className="flex items-center gap-3">
         <span className="flex h-[34px] w-[34px] animate-nx-pop items-center justify-center rounded-full bg-nx-accent text-black">
           <Check aria-hidden className="h-4 w-4" strokeWidth={3.2} />
@@ -244,7 +262,17 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
       </div>
 
       <div className="flex flex-col gap-3.5 rounded-[18px] bg-black p-4 md:p-5">
-        {sync.status === 'idle' && (
+        {noX && (
+          <>
+            <span className="font-nx-serif text-[28px] leading-[1.05]">Save your first post</span>
+            <span className="text-sm leading-[1.45] text-white/65">
+              Paste a link from X, Instagram, TikTok, YouTube or another network anywhere in ADHX.
+              On your phone, share it to the ADHX Share app: Settings has a code to pair it.
+            </span>
+          </>
+        )}
+
+        {!noX && sync.status === 'idle' && (
           <>
             <span className="font-nx-serif text-[28px] leading-[1.05]">Bring your X bookmarks</span>
             <span className="text-sm leading-[1.45] text-white/65">
@@ -403,7 +431,9 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
         href={sync.status === 'idle' || sync.status === 'error' ? '/now' : '/play?recent=1'}
         className={cn(
           'flex h-12 items-center justify-center rounded-full text-[15px]',
-          sync.status === 'done' ? 'bg-nx-accent font-extrabold text-black' : 'text-white/80',
+          sync.status === 'done' || noX
+            ? 'bg-nx-accent font-extrabold text-black'
+            : 'text-white/80',
           sync.status === 'running' && 'border border-[#555] font-bold text-white',
         )}
       >
@@ -411,7 +441,9 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
           ? 'Start watching'
           : sync.status === 'running'
             ? 'Start watching now'
-            : 'Maybe later'}
+            : noX
+              ? 'Let’s go'
+              : 'Maybe later'}
       </Link>
       {sync.status === 'done' && (
         <span className="text-center text-xs text-white/45">

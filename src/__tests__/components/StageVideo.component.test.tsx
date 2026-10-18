@@ -1279,6 +1279,25 @@ describe('StageVideo stage tap enters focus and resumes playback', () => {
     fetchMock.mockRestore()
   })
 
+  it('says why a video nobody saved yet isn’t here, without dropping the post', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ reason: 'Nobody here has saved this yet.' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    const gone = vi.fn()
+    window.addEventListener('theater-media-gone', gone)
+    const { container, findByText } = renderVideo()
+    const video = container.querySelector('video') as HTMLVideoElement
+    activateVideo(video, '/api/media/video?a=1')
+    fireEvent.error(video)
+    expect(await findByText('Nobody here has saved this yet.')).toBeInTheDocument()
+    expect(gone).not.toHaveBeenCalled()
+    window.removeEventListener('theater-media-gone', gone)
+    fetchMock.mockRestore()
+  })
+
   it('does not unmute on tap — sound stays on the chrome audio button', () => {
     const { container, onRequestUnmute } = renderVideo()
     fireEvent.click(container.firstElementChild as Element)

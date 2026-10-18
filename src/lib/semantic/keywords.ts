@@ -28,16 +28,30 @@ export function hasPostText(platform: string, postId: string): boolean {
 }
 
 /**
+ * Little words that are in almost every post. OR-ed in, they let a post that
+ * shares only "a" or "the" with the query come back as a match (in a small
+ * library it's often the best keyword hit there is).
+ */
+const FILLER = new Set(
+  'a an the and or but of to in on at by for with from about into as is are was were be been being it its this that these those i me my you your we our they their he she his her some something any thing one'.split(
+    ' ',
+  ),
+)
+
+/**
  * Build an FTS5 query from free text. Every token is quoted (so user input
  * can never use FTS syntax) and OR-ed; bm25 already favours posts matching
  * more of them. The last token is a prefix while the person is still typing.
+ * Filler words are left out unless that's all there is.
  */
 export function ftsQuery(input: string): string | null {
-  const tokens =
+  const all =
     input
       .toLowerCase()
       .match(/[\p{L}\p{N}]+/gu)
       ?.slice(0, MAX_TOKENS) ?? []
+  const meaningful = all.filter((t) => !FILLER.has(t))
+  const tokens = meaningful.length ? meaningful : all
   if (tokens.length === 0) return null
   const typing = !/\s$/.test(input)
   return tokens
