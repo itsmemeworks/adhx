@@ -6,6 +6,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Cross-device run: who sees what, everywhere
+
+- **Setup:** e2e server on :3020. Ana on the iPhone 18 Pro, the owner on the iPhone 16, Ben on the Android emulator (fresh install, paired by `adhx://pair` link), and all three on the desktop.
+- **Passed:**
+  - Ana's share from Safari (SoundCloud) reached her saves on the server, desktop and phone, and nobody else's.
+  - Ana's desktop paste (Threads) showed on her phone as a "1 new save" pill that jumps to it.
+  - The owner saved Ana's Reddit video: one download job, kept files shared, a pill on his phone.
+  - Ben's Android share (the Threads post Ana also has) reached his phone with a pill.
+  - Search stayed per person ("baby" found nothing for Ben, "space jellyfish" found the Threads post for both).
+  - Ana's desktop archive removed the post from her phone feed; it still opens by id.
+  - Right now's stream named nobody.
+- **Fixed on the way:** a sound post's filled cover pushed the caption and buttons off-screen (iOS); new saves arriving above the post on screen now show a pill (both apps).
+- **Known:** sounds are found only by their words (no audio processing). Right now forms no group from this small mixed set.
+
 ## 2026-10-18 — Phone player: design v22–23 on iPhone and Android
 
 - **Player** (both apps, from the design artifact): swipe up/down between saves, tap to pause; right column Sound, Repeat (off by default: a video that ends plays the next save), Save (Photos / MediaStore, from `?download=1`), Share, Original (the network's logo); bottom row time, scrub line, small window, Hide. Shadows only on words over media.
