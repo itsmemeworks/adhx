@@ -10,6 +10,9 @@ final class LibraryModel: ObservableObject {
     @Published private(set) var loadedOnce = false
     @Published private(set) var loading = false
     @Published private(set) var loadError: String?
+    /// Saves that arrived at the top since you last looked (from a share, the
+    /// web, or a sync), shown as a pill that jumps to them.
+    @Published var newAtTop = 0
     private var nextOffset: Int? = 0
 
     // Search
@@ -46,6 +49,10 @@ final class LibraryModel: ObservableObject {
         do {
             let page = try await client.saves(offset: offset)
             if replacing {
+                if loadedOnce, let firstOld = saves.first?.key {
+                    let fresh = page.items.prefix { $0.key != firstOld }.count
+                    if fresh > 0, fresh < page.items.count { newAtTop = fresh }
+                }
                 saves = page.items
             } else {
                 let have = Set(saves.map(\.key))

@@ -10,6 +10,8 @@ struct PlayerView: View {
     @Binding var clean: Bool
     /// Dragging through the video (the top bar outside hides too).
     @Binding var scrubbing: Bool
+    /// Set to a post's key to go straight to it (new saves at the top).
+    @Binding var jumpTo: String?
     /// Called with the index on screen, so the list can load more near the end.
     var onShow: (Int) -> Void = { _ in }
 
@@ -20,12 +22,13 @@ struct PlayerView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
-         scrubbing: Binding<Bool> = .constant(false), start: String? = nil,
-         onShow: @escaping (Int) -> Void = { _ in }) {
+         scrubbing: Binding<Bool> = .constant(false), jumpTo: Binding<String?> = .constant(nil),
+         start: String? = nil, onShow: @escaping (Int) -> Void = { _ in }) {
         self.posts = posts
         self.server = server
         _clean = clean
         _scrubbing = scrubbing
+        _jumpTo = jumpTo
         self.onShow = onShow
         _current = State(initialValue: start ?? posts.first?.key)
     }
@@ -83,6 +86,11 @@ struct PlayerView: View {
             playback.onEnded = { next() }
         }
         .onChange(of: playback.scrubTime != nil) { _, now in scrubbing = now }
+        .onChange(of: jumpTo) { _, key in
+            guard let key else { return }
+            withAnimation(.easeInOut(duration: 0.35)) { current = key }
+            jumpTo = nil
+        }
         .onDisappear { playback.stop() }
     }
 
@@ -663,16 +671,20 @@ private struct Poster: View {
     var fill = false
 
     var body: some View {
-        AsyncImage(url: url) { phase in
-            if let image = phase.image {
-                image.resizable().aspectRatio(contentMode: fill ? .fill : .fit)
-            } else {
-                Color.black
+        // The picture fills a fixed box: a filled image would otherwise size
+        // the whole page past the screen and push the caption off it.
+        Color.black
+            .overlay {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: fill ? .fill : .fit)
+                    } else {
+                        Color.black
+                    }
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
-        .accessibilityHidden(true)
+            .clipped()
+            .accessibilityHidden(true)
     }
 }
 

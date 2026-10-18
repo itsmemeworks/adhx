@@ -8,17 +8,40 @@ struct LibraryHome: View {
     @Environment(\.openURL) private var openURL
     @State private var clean = false
     @State private var scrubbing = false
+    @State private var jumpTo: String?
+    @State private var onFirst = true
 
     var body: some View {
         ZStack(alignment: .top) {
             if let server = model.server, !library.saves.isEmpty {
-                PlayerView(posts: library.saves, server: server, clean: $clean, scrubbing: $scrubbing) { index in
+                PlayerView(posts: library.saves, server: server, clean: $clean, scrubbing: $scrubbing,
+                           jumpTo: $jumpTo) { index in
                     library.loadMoreIfNeeded(at: index)
+                    onFirst = index == 0
+                    if index < library.newAtTop { library.newAtTop = 0 }
                 }
             } else {
                 nothingToPlay
             }
-            if !clean && !scrubbing { topBar }
+            if !clean && !scrubbing {
+                topBar
+                if library.newAtTop > 0 && !onFirst {
+                    Button {
+                        jumpTo = library.saves.first?.key
+                        library.newAtTop = 0
+                    } label: {
+                        Label(library.newAtTop == 1 ? "1 new save" : "\(library.newAtTop) new saves",
+                              systemImage: "arrow.up")
+                            .font(Theme.sans(14, .heavy))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 40)
+                            .background(Capsule().fill(Theme.accent))
+                    }
+                    .padding(.top, 64)
+                    .transition(.opacity)
+                }
+            }
         }
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
