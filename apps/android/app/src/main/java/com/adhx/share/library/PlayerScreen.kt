@@ -26,6 +26,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -50,7 +52,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
@@ -445,49 +446,74 @@ private fun Dots(count: Int, current: Int) {
 }
 
 /**
- * A text post or an article, full bleed like a video: the words sit on the dark
- * page under the top bar and fade out above the caption and the buttons.
+ * A text post or an article, full bleed like a video: the words sit centred
+ * between the top bar and the caption, in a large serif when they're short.
+ * A long post fills the space and fades out just above the caption; it
+ * doesn't scroll (Original has the rest).
  */
 @Composable
 private fun WordsCard(post: PhonePost) {
     val article = post.article
-    Column(
+    val title = article?.title?.takeIf { it.isNotBlank() }
+    val short = (title.orEmpty().length + post.text.length) < SHORT_WORDS
+    val type = if (short) 38.sp else 28.sp
+    val line = if (short) 44.sp else 34.sp
+    val scroll = rememberScrollState()
+    Box(
         Modifier
             .fillMaxSize()
             .background(AdhxColors.Background)
-            .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(start = 24.dp, end = 24.dp, top = 72.dp, bottom = 184.dp)
-            .clipToBounds()
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithContent {
-                drawContent()
-                val fade = 120.dp.toPx().coerceAtMost(size.height / 2)
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        0f to Color.Black,
-                        (size.height - fade) / size.height to Color.Black,
-                        1f to Color.Transparent,
-                    ),
-                    blendMode = BlendMode.DstIn,
-                )
-            },
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 110.dp, bottom = 160.dp),
+        contentAlignment = Alignment.CenterStart,
     ) {
-        article?.title?.takeIf { it.isNotBlank() }?.let {
-            Text(it, fontFamily = SerifFamily, fontSize = 30.sp, lineHeight = 33.sp, color = AdhxColors.White)
-        }
-        article?.url?.takeIf { it.isNotBlank() }?.let {
-            Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (post.text.isNotBlank()) {
-            Text(post.text, fontSize = 19.sp, lineHeight = 28.sp, color = AdhxColors.Cream)
-        }
-        article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-            Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    if (scroll.maxValue > 0) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0f to Color.Black,
+                                0.86f to Color.Black,
+                                1f to Color.Transparent,
+                                startY = 0f,
+                                endY = size.height,
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+                }
+                // Measured at full length, so it shows whether it overflows; not scrollable.
+                .verticalScroll(scroll, enabled = false),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            title?.let {
+                Text(it, fontFamily = SerifFamily, fontSize = type, lineHeight = line, color = AdhxColors.White)
+            }
+            article?.url?.takeIf { it.isNotBlank() }?.let {
+                Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (post.text.isNotBlank()) {
+                Text(
+                    post.text,
+                    fontFamily = SerifFamily,
+                    fontSize = if (title != null) 22.sp else type,
+                    lineHeight = if (title != null) 30.sp else line,
+                    color = if (title != null) AdhxColors.Cream else AdhxColors.White,
+                )
+            }
+            article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
+                Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+            }
         }
     }
 }
+
+/** Posts shorter than this (in characters) get the biggest type. */
+private const val SHORT_WORDS = 140
 
 /**
  * Over the bottom: on the left the @handle and the first lines of text; on the
