@@ -186,7 +186,7 @@ Short share links (`pin.it`, Reddit's `/s/` links, `on.soundcloud.com`, `youtu.b
 
 ADHX Share puts ADHX in the share menu of every app on your phone. Share a post from X, Instagram, TikTok, YouTube or any of the other networks and a small sheet slides up: it saves the post to your ADHX, shows what was saved, and shows the copy being made. If your ADHX can't be reached, the link waits on the phone and goes when it can.
 
-The phone only sends links to your ADHX. Your server does the downloading. The code is in [`apps/ios`](apps/ios) and [`apps/android`](apps/android); the API it uses is in [`docs/specs/phone-app.md`](docs/specs/phone-app.md).
+The apps also play your saves full screen (swipe up for the next, Repeat, Save to your phone, a small window that keeps playing in other apps) and search them by meaning, with a reader for long posts. Your server does the work: downloading, understanding and streaming. The phone only ever talks to your own ADHX. The code is in [`apps/ios`](apps/ios) and [`apps/android`](apps/android); the API it uses is in [`docs/specs/phone-app.md`](docs/specs/phone-app.md).
 
 ### Connect it
 

@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Phone player: design v22–23 on iPhone and Android
+
+- **Player** (both apps, from the design artifact): swipe up/down between saves, tap to pause; right column Sound, Repeat (off by default: a video that ends plays the next save), Save (Photos / MediaStore, from `?download=1`), Share, Original (the network's logo); bottom row time, scrub line, small window, Hide. Shadows only on words over media.
+- **Text posts** are full bleed: short ones centred in a large serif, long ones fade with **Read all**, which opens a scrolling reader with a reading line.
+- **Small window**: picture-in-picture, also automatic when leaving the app mid-video. Android adds Previous/Next save in the window.
+- **Verified:** iPhone simulator (Repeat, auto-advance, Save to Photos, toast, Hide, reader). Android emulator (column, playback, seek, Repeat, Hide, Save of a 4K video). Not verified: the iPhone small window (the Simulator has none) and the Android reader and small window on screen.
+- **Notes:** each 4K Save is ~0.5 GB on the phone; the emulator crashed once when the Mac was low on disk.
+
 ## 2026-10-18 — iPhone app plays and searches your saves
 
 - **Home is My saves** (`apps/ios/App/Library/`): a vertical paging `ScrollView` with one `AVPlayer` that follows the post on screen, loops, starts muted (speaker button), and pauses on tap. Albums swipe sideways; words read as a card; "Open original". Errors show the server's 404/410 `reason`.
