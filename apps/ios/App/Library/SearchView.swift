@@ -140,11 +140,12 @@ struct PlayerScreen: View {
     let start: String
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
+    @State private var scrubbing = false
 
     var body: some View {
-        PlayerView(posts: posts, server: server, clean: $clean, start: start)
+        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start)
             .overlay(alignment: .topLeading) {
-                if !clean {
+                if !clean && !scrubbing {
                 Button {
                     dismiss()
                 } label: {

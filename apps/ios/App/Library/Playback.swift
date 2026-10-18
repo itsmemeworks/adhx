@@ -21,6 +21,8 @@ final class Playback: ObservableObject {
     /// Where it is and how long it is, in seconds (0 until known).
     @Published private(set) var time: Double = 0
     @Published private(set) var duration: Double = 0
+    /// Where you're dragging the line to, in seconds (nil when not dragging).
+    @Published var scrubTime: Double?
     /// A video finished with Repeat off.
     var onEnded: () -> Void = {}
     private var timeWatch: Any?

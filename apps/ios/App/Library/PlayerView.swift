@@ -8,6 +8,8 @@ struct PlayerView: View {
     let server: URL
     /// Buttons and captions hidden (the top bar outside follows it too).
     @Binding var clean: Bool
+    /// Dragging through the video (the top bar outside hides too).
+    @Binding var scrubbing: Bool
     /// Called with the index on screen, so the list can load more near the end.
     var onShow: (Int) -> Void = { _ in }
 
@@ -17,11 +19,13 @@ struct PlayerView: View {
     @State private var toastTask: Task<Void, Never>?
     @Environment(\.scenePhase) private var scenePhase
 
-    init(posts: [PhonePost], server: URL, clean: Binding<Bool>, start: String? = nil,
+    init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
+         scrubbing: Binding<Bool> = .constant(false), start: String? = nil,
          onShow: @escaping (Int) -> Void = { _ in }) {
         self.posts = posts
         self.server = server
         _clean = clean
+        _scrubbing = scrubbing
         self.onShow = onShow
         _current = State(initialValue: start ?? posts.first?.key)
     }
@@ -78,6 +82,7 @@ struct PlayerView: View {
         .onAppear {
             playback.onEnded = { next() }
         }
+        .onChange(of: playback.scrubTime != nil) { _, now in scrubbing = now }
         .onDisappear { playback.stop() }
     }
 
@@ -122,6 +127,7 @@ private struct PostPage: View {
     @State private var photo = 0
     @State private var saving = false
     @State private var reading = false
+    @State private var more = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -131,16 +137,30 @@ private struct PostPage: View {
             Color.black
             stage
             if !clean {
-                if overMedia {
+                let scrubbing = onScreen && playback.scrubTime != nil
+                if overMedia && !scrubbing {
                     LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .top, endPoint: .bottom)
                         .frame(height: 300)
                         .allowsHitTesting(false)
                 }
-                VStack(spacing: 14) {
+                if !scrubbing {
                     caption
-                    bottomRow
+                        .padding(.bottom, 64)
+                        .transition(.opacity)
                 }
-                .padding(.bottom, 26)
+                if scrubbing, let at = playback.scrubTime {
+                    // Big and centred: a bubble under the finger would be hidden by it.
+                    (Text(clock(at)).font(Theme.sans(34, .bold).monospacedDigit())
+                        + Text("  / \(clock(playback.duration))").font(Theme.sans(17, .bold).monospacedDigit())
+                            .foregroundColor(Theme.cream))
+                        .foregroundStyle(.white)
+                        .overMediaShadow(true)
+                        .padding(.bottom, 84)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityHidden(true)
+                }
+                bottomRow
+                    .padding(.bottom, 14)
             } else if post.kind == "video" && onScreen {
                 ProgressLine(fraction: playback.duration > 0 ? playback.time / playback.duration : 0)
                     .padding(.horizontal, 20)
@@ -148,6 +168,13 @@ private struct PostPage: View {
             }
         }
         .clipped()
+        .sheet(isPresented: $more) {
+            MoreSheet(post: post, server: server, say: say)
+                .presentationDetents([.height(post.kind == "video" ? 400 : 330)])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Theme.surface)
+                .presentationCornerRadius(28)
+        }
     }
 
     @ViewBuilder
@@ -266,6 +293,12 @@ private struct PostPage: View {
                         NetworkMark(platform: post.platform, size: 22)
                     }
                 }
+                RailButton(label: "More", shadow: overMedia, accessibility: "More for this post") {
+                    more = true
+                } icon: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 19, weight: .bold))
+                }
             }
             .frame(width: 64)
         }
@@ -273,50 +306,32 @@ private struct PostPage: View {
         .padding(.trailing, 12)
     }
 
-    /// Time, a line to drag through the video, and Hide.
+    /// The line to drag through the video, then the small window and Hide as
+    /// plain glyphs (not round buttons like the column).
     private var bottomRow: some View {
-        HStack(spacing: 10) {
-            if post.kind == "video" || post.kind == "audio", onScreen, playback.duration > 0 {
-                Text("\(clock(playback.time)) / \(clock(playback.duration))")
-                    .font(Theme.sans(12, .bold).monospacedDigit())
-                    .foregroundStyle(Theme.cream)
-                    .overMediaShadow(true)
-                Slider(value: Binding(get: { playback.time }, set: { playback.seek(to: $0) }),
-                       in: 0...max(playback.duration, 0.1))
-                    .tint(Theme.accent)
-                    .accessibilityLabel("Position in the video")
+        HStack(spacing: 2) {
+            if post.plays, onScreen, playback.duration > 0 {
+                Scrubber(playback: playback)
             } else {
                 Spacer(minLength: 0)
             }
             if post.kind == "video", onScreen, playback.pipSupported {
-                Button {
+                Glyph(name: "pip.enter", label: "Keep playing in a small window") {
                     if playback.pipPossible {
                         playback.startSmallWindow()
                     } else {
                         say("The small window isn’t ready yet. Try again in a moment.")
                     }
-                } label: {
-                    Image(systemName: "pip.enter")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 40, height: 40)
-                        .background(Circle().fill(.black.opacity(0.5)))
                 }
-                .accessibilityLabel("Keep playing in a small window")
             }
-            Button {
+            Glyph(name: "arrow.up.left.and.arrow.down.right", label: "Hide buttons and caption") {
                 clean = true
-            } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Circle().fill(.black.opacity(0.5)))
             }
-            .accessibilityLabel("Hide buttons and caption")
         }
         .padding(.leading, 20)
-        .padding(.trailing, 16)
+        // Hide sits centred under the column's buttons.
+        .padding(.trailing, 22)
+        .animation(.easeOut(duration: 0.15), value: playback.scrubTime != nil)
     }
 
     /// The file the Save button keeps: the video, or the photo on screen.
@@ -341,6 +356,243 @@ private struct PostPage: View {
     private func clock(_ seconds: Double) -> String {
         let s = Int(seconds.rounded(.down))
         return "\(s / 60):" + String(format: "%02d", s % 60)
+    }
+}
+
+/// More for a post: share the kept video itself, copy the link or the words,
+/// or open it on your ADHX.
+private struct MoreSheet: View {
+    let post: PhonePost
+    let server: URL
+    let say: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @State private var sharing: SharedFile?
+    @State private var preparing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                if let poster = ADHXClient.resolve(post.posterUrl, against: server) {
+                    AsyncImage(url: poster) { phase in
+                        if let image = phase.image { image.resizable().scaledToFill() } else { Theme.placeholder }
+                    }
+                    .frame(width: 40, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 7) {
+                        NetworkMark(platform: post.platform, size: 14)
+                        Text(networkLine)
+                            .font(Theme.sans(13, .bold))
+                            .foregroundStyle(Theme.muted)
+                    }
+                    Text(post.author.handle.hasPrefix("@") ? post.author.handle : "@\(post.author.handle)")
+                        .font(Theme.sans(16, .heavy))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(Theme.raised))
+                }
+                .accessibilityLabel("Close")
+            }
+            VStack(spacing: 4) {
+                if post.kind == "video", let file = ADHXClient.resolve(post.media.first?.url, against: server) {
+                    row(icon: "play.rectangle", title: "Share the video",
+                        detail: "Sends the copy your ADHX kept, not just the link", busy: preparing) {
+                        Task { await shareVideo(file) }
+                    }
+                }
+                if let source = post.sourceUrl {
+                    row(icon: "link", title: "Copy link", detail: "The original post on \(Network.name(post.platform))") {
+                        UIPasteboard.general.string = source
+                        dismiss()
+                        say("Link copied")
+                    }
+                }
+                if !post.text.isEmpty {
+                    row(icon: "doc.on.doc", title: "Copy the words",
+                        detail: String(post.text.prefix(80)).replacingOccurrences(of: "\n", with: " ")) {
+                        UIPasteboard.general.string = post.text
+                        dismiss()
+                        say("Words copied")
+                    }
+                }
+                if let open = ADHXClient.resolve(post.openPath, against: server) {
+                    Button {
+                        openURL(open)
+                        dismiss()
+                    } label: {
+                        rowFace(title: "Open in my ADHX", detail: "This post on your ADHX, in the browser") {
+                            Gob(size: 24)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .sheet(item: $sharing) { file in
+            ActivitySheet(items: [file.url])
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    /// "YouTube · 1080p". X's name is its mark, so it isn't spelled out again.
+    private var networkLine: String {
+        let name = Network.name(post.platform)
+        var parts = name.count > 1 ? [name] : []
+        if post.kind == "video", let height = post.media.first?.height, height > 0 {
+            parts.append("\(height)p")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func row(icon: String, title: String, detail: String, busy: Bool = false,
+                     action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            rowFace(title: title, detail: detail) {
+                if busy {
+                    RingSpinner().frame(width: 20, height: 20)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(busy)
+    }
+
+    private func rowFace<Icon: View>(title: String, detail: String,
+                                     @ViewBuilder icon: () -> Icon) -> some View {
+        HStack(spacing: 14) {
+            icon()
+                .frame(width: 40, height: 40)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.raised))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(Theme.sans(16, .bold))
+                    .foregroundStyle(.white)
+                Text(detail)
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.muted)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .frame(minHeight: 60)
+        .contentShape(Rectangle())
+    }
+
+    /// The kept file itself, downloaded from your ADHX, for the share sheet.
+    private func shareVideo(_ url: URL) async {
+        preparing = true
+        defer { preparing = false }
+        guard var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        let query = comps.queryItems ?? []
+        comps.queryItems = query + [URLQueryItem(name: "download", value: "1")]
+        guard let from = comps.url,
+              let (file, response) = try? await URLSession.shared.download(from: from),
+              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            say("That isn’t on your ADHX yet. Try again in a bit.")
+            return
+        }
+        let name = response.suggestedFilename ?? "\(post.platform)-\(post.postId).mp4"
+        let named = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        try? FileManager.default.removeItem(at: named)
+        guard (try? FileManager.default.moveItem(at: file, to: named)) != nil else { return }
+        sharing = SharedFile(url: named)
+    }
+}
+
+private struct SharedFile: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+
+/// The system share sheet, for a file.
+private struct ActivitySheet: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+/// A plain icon you can press: no circle, a soft shadow so it reads on video.
+private struct Glyph: View {
+    let name: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: name)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.6), radius: 3, y: 1)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// The line to drag through a video. At rest a thin line with a small dot;
+/// while dragging it thickens and the time shows big in the middle.
+private struct Scrubber: View {
+    @ObservedObject var playback: Playback
+
+    var body: some View {
+        GeometryReader { box in
+            let length = max(playback.duration, 0.1)
+            let at = playback.scrubTime ?? playback.time
+            let fraction = CGFloat(min(max(at / length, 0), 1))
+            let dragging = playback.scrubTime != nil
+            let thickness: CGFloat = dragging ? 6 : 3
+            let thumb: CGFloat = dragging ? 20 : 12
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.3)).frame(height: thickness)
+                Capsule().fill(Theme.accent).frame(width: box.size.width * fraction, height: thickness)
+                Circle().fill(Theme.accent)
+                    .frame(width: thumb, height: thumb)
+                    .offset(x: box.size.width * fraction - thumb / 2)
+            }
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { drag in
+                        let x = min(max(drag.location.x / max(box.size.width, 1), 0), 1)
+                        playback.scrubTime = Double(x) * length
+                    }
+                    .onEnded { _ in
+                        if let to = playback.scrubTime { playback.seek(to: to) }
+                        playback.scrubTime = nil
+                    }
+            )
+        }
+        .frame(height: 44)
+        .accessibilityElement()
+        .accessibilityLabel("Position in the video")
+        .accessibilityValue("\(Int(playback.time)) of \(Int(playback.duration)) seconds")
+        .accessibilityAdjustableAction { direction in
+            let step: Double = direction == .increment ? 5 : -5
+            playback.seek(to: min(max(playback.time + step, 0), playback.duration))
+        }
     }
 }
 

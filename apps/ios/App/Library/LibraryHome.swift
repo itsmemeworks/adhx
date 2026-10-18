@@ -7,17 +7,18 @@ struct LibraryHome: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @State private var clean = false
+    @State private var scrubbing = false
 
     var body: some View {
         ZStack(alignment: .top) {
             if let server = model.server, !library.saves.isEmpty {
-                PlayerView(posts: library.saves, server: server, clean: $clean) { index in
+                PlayerView(posts: library.saves, server: server, clean: $clean, scrubbing: $scrubbing) { index in
                     library.loadMoreIfNeeded(at: index)
                 }
             } else {
                 nothingToPlay
             }
-            if !clean { topBar }
+            if !clean && !scrubbing { topBar }
         }
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
@@ -38,6 +39,12 @@ struct LibraryHome: View {
         HStack(spacing: 8) {
             Wordmark(markSize: 28, textSize: 24)
             Spacer(minLength: 0)
+            NavigationLink {
+                SharedLatelyView(library: library)
+            } label: {
+                BarIcon(name: "clock.arrow.circlepath")
+            }
+            .accessibilityLabel("Shared lately")
             if let server = model.server {
                 NavigationLink {
                     SearchView(library: library, server: server)
@@ -46,12 +53,6 @@ struct LibraryHome: View {
                 }
                 .accessibilityLabel("Search your saves")
             }
-            NavigationLink {
-                SharedLatelyView(library: library)
-            } label: {
-                BarIcon(name: "clock.arrow.circlepath")
-            }
-            .accessibilityLabel("Shared lately")
             NavigationLink {
                 SettingsView()
             } label: {
