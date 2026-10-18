@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -115,7 +116,16 @@ fun HomeScreen(vm: MainViewModel, connection: Connection, onSettings: () -> Unit
                 modifier = Modifier.weight(1f),
             )
         } else {
+            // A new share goes on top. LazyColumn keeps the old first row in
+            // place, which would leave the new one just above the fold, so
+            // follow it when the list was already at the top.
+            val listState = rememberLazyListState()
+            val firstId = items.first().id
+            LaunchedEffect(firstId) {
+                if (listState.firstVisibleItemIndex <= 1) listState.scrollToItem(0)
+            }
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {

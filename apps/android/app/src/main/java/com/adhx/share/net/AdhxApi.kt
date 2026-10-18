@@ -1,7 +1,9 @@
 package com.adhx.share.net
 
 import com.adhx.share.data.Connection
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -72,8 +74,12 @@ class AdhxApi(private val server: String, private val key: String?) {
         return builder
     }
 
-    private suspend fun <T> send(request: Request, serializer: KSerializer<T>): ApiResult<T> {
-        return try {
+    // On the IO dispatcher: reading the body blocks, and callers are on Main.
+    private suspend fun <T> send(
+        request: Request,
+        serializer: KSerializer<T>,
+    ): ApiResult<T> = withContext(Dispatchers.IO) {
+        try {
             client.newCall(request).await().use { response ->
                 val text = response.body?.string().orEmpty()
                 when {

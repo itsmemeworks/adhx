@@ -68,21 +68,22 @@ object Copy {
             KeepStatus.KEEPING, KeepStatus.WAITING, null ->
                 (item.percent?.let { "Keeping a copy · $it%" } ?: "Keeping a copy") to AdhxColors.Accent
             KeepStatus.RETRYING -> "Keeping a copy · trying again" to AdhxColors.Accent
-            KeepStatus.KEPT -> "Kept · ${keptWhat(item)}" to AdhxColors.Muted
+            // A post with only words has no files to keep: it's simply saved.
+            KeepStatus.KEPT -> (keptWhat(item)?.let { "Kept · $it" } ?: "Saved") to AdhxColors.Muted
             KeepStatus.UNAVAILABLE -> "Couldn’t keep a copy" to AdhxColors.Warn
             KeepStatus.NOT_SAVED -> "Not in your saves any more" to AdhxColors.Faint
             else -> "Saved" to AdhxColors.Muted
         }
     }
 
-    private fun keptWhat(item: HistoryItem): String = when {
+    private fun keptWhat(item: HistoryItem): String? = when {
         item.quality != null -> "${item.quality} video"
         item.videos > 1 -> "${item.videos} videos"
         item.videos == 1 -> "video"
         item.photos > 1 -> "${item.photos} photos"
         item.photos == 1 -> "photo"
         item.audio > 0 -> "audio"
-        else -> "saved"
+        else -> null
     }
 
     /** The title of a share: the author, or else the post's words, or else the link. */
