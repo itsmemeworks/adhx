@@ -5,6 +5,7 @@ import android.content.Intent
 import android.view.LayoutInflater
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -930,7 +931,9 @@ private fun ActionButton(
             Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(if (on) AdhxColors.Accent else Color.Black.copy(alpha = 0.5f)),
+                .background(if (on) AdhxColors.Accent else Color.Black.copy(alpha = 0.5f))
+                // A faint ring, so the dark circle still reads on a black page (not on yellow Repeat).
+                .then(if (on) Modifier else Modifier.border(1.dp, AdhxColors.White.copy(alpha = 0.18f), CircleShape)),
             contentAlignment = Alignment.Center,
         ) {
             icon()
