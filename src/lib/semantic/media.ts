@@ -89,6 +89,36 @@ export async function keptLocalFile(url: string): Promise<string | null> {
   return kept ? absolutePath(kept.path) : null
 }
 
+/**
+ * Why there's no video to sample at a kept-files path, when the download is
+ * over: it kept a sound or pictures instead (nothing to watch), or it gave up.
+ * Null while there's still a video to wait for.
+ */
+async function noVideoToSample(videoPath: string): Promise<Error | null> {
+  const m = videoPath.match(/^\/api\/files\/([a-z]{1,16})\/([^/?]+)\/(video-\d+)/)
+  if (!m) return null
+  const [, platform, rawId, slot] = m
+  const id = decodeURIComponent(rawId)
+  const { keptFile, keptFilesFor } = await import('@/lib/keep/store')
+  if (keptFile(platform, id, slot as `video-${number}`)) return null
+  const files = keptFilesFor(platform, id)
+  if (files.some((f) => f.slot.startsWith('audio-')))
+    return new NotAVideoError('A sound, not a video')
+  const { db } = await import('@/lib/db')
+  const { keepJobs } = await import('@/lib/db/schema')
+  const { and, eq } = await import('drizzle-orm')
+  const [job] = db
+    .select({ status: keepJobs.status })
+    .from(keepJobs)
+    .where(and(eq(keepJobs.platform, platform), eq(keepJobs.postId, id)))
+    .limit(1)
+    .all()
+  if (job?.status === 'unavailable') return new MediaGoneError('Its video couldn’t be downloaded')
+  if (job?.status === 'done' && files.length)
+    return new NotAVideoError('Kept as pictures, not a video')
+  return null
+}
+
 async function proxyStatusFollowing(source: string): Promise<number | null> {
   try {
     const response = await fetch(source, {
@@ -156,6 +186,10 @@ export async function sampleVideoFrames(videoPath: string): Promise<SampledFrame
     throw new MediaUnavailableError('Video must be a same-origin media proxy path')
   }
   const local = await keptLocalFile(videoPath)
+  if (!local) {
+    const none = await noVideoToSample(videoPath)
+    if (none) throw none
+  }
   const source = local ?? internalOrigin() + videoPath
   const dir = await mkdtemp(path.join(os.tmpdir(), 'adhx-frames-'))
   const cleanup = () => rm(dir, { recursive: true, force: true })
