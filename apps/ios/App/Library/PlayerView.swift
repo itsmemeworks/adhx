@@ -279,20 +279,22 @@ private struct WordsCard: View {
             }
             if !post.text.isEmpty {
                 Text(post.text)
-                    .font(post.article == nil ? Theme.serif(30) : Theme.sans(16))
+                    .font(post.article == nil ? Theme.serif(post.text.count < 140 ? 38 : 28) : Theme.sans(16))
                     .foregroundStyle(Theme.cream)
                     .lineSpacing(post.article == nil ? 2 : 4)
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 120)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // Longer than the page: it fades out above the caption, never scrolls.
+        // Between the top bar and the caption: short words sit in the middle,
+        // long ones fill it and fade out just above the caption. No scrolling.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .mask(
-            LinearGradient(stops: [.init(color: .black, location: 0.62),
-                                   .init(color: .clear, location: 0.8)],
+            LinearGradient(stops: [.init(color: .black, location: 0.86),
+                                   .init(color: .clear, location: 1)],
                            startPoint: .top, endPoint: .bottom)
         )
+        .padding(.top, 110)
+        .padding(.bottom, 150)
         .background(
             LinearGradient(colors: [Theme.raised, Theme.app], startPoint: .top, endPoint: .bottom)
         )
