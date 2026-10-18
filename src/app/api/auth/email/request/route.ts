@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/lib/auth/account'
-import { sendMagicLinkEmail } from '@/lib/email/magic-link'
+import { sendMagicLinkEmail, signInDelivery } from '@/lib/email/magic-link'
 import { isValidEmail } from '@/lib/utils/email'
-import { mayUseEmail } from '@/lib/auth/allowlist'
+import { mayGetHeldLink, mayUseEmail } from '@/lib/auth/allowlist'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { recordAnalytic } from '@/lib/analytics/record'
 
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
   }
 
-  if (!mayUseEmail(email)) {
+  if (!mayUseEmail(email) || (signInDelivery() === 'admin' && !mayGetHeldLink(email))) {
     return NextResponse.json(
       { error: 'This ADHX is for invited people. Ask whoever runs it to add your email.' },
       { status: 403 },
@@ -57,5 +57,6 @@ export async function POST(request: NextRequest) {
   }
 
   recordAnalytic({ name: 'auth.start', source: 'email' })
-  return NextResponse.json({ ok: true })
+  // `admin`: the link waits for whoever runs this ADHX to hand it over.
+  return NextResponse.json({ ok: true, delivery: result.delivery ?? 'email' })
 }

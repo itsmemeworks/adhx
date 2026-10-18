@@ -40,7 +40,16 @@ function Card({ label, children }: { label: string; children: React.ReactNode })
   )
 }
 
-function EmailStep({ returnTo, onSent }: { returnTo: string; onSent: (email: string) => void }) {
+/** `admin`: no email service here; whoever runs this ADHX passes the link on. */
+type Delivery = 'email' | 'admin' | 'log'
+
+function EmailStep({
+  returnTo,
+  onSent,
+}: {
+  returnTo: string
+  onSent: (email: string, delivery: Delivery) => void
+}) {
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,9 +63,12 @@ function EmailStep({ returnTo, onSent }: { returnTo: string; onSent: (email: str
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, returnTo }),
       })
-      const data = (await res.json().catch(() => null)) as { error?: string } | null
+      const data = (await res.json().catch(() => null)) as {
+        error?: string
+        delivery?: Delivery
+      } | null
       if (!res.ok) throw new Error(data?.error ?? 'Couldn’t send the link. Try again.')
-      onSent(email.trim())
+      onSent(email.trim(), data?.delivery ?? 'email')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Couldn’t send the link. Try again.')
     } finally {
@@ -110,13 +122,16 @@ function EmailStep({ returnTo, onSent }: { returnTo: string; onSent: (email: str
 
 function SentStep({
   email,
+  delivery,
   onChange,
   onResend,
 }: {
   email: string
+  delivery: Delivery
   onChange: () => void
   onResend: () => void
 }) {
+  const handed = delivery === 'admin'
   const [left, setLeft] = useState(RESEND_SECONDS)
   useEffect(() => {
     if (left <= 0) return
@@ -124,7 +139,7 @@ function SentStep({
     return () => window.clearTimeout(t)
   }, [left])
   return (
-    <Card label="Check your email">
+    <Card label={handed ? 'Ask for your link' : 'Check your email'}>
       <div className="flex flex-col items-center gap-3 pt-1.5 text-center">
         <span
           aria-hidden
@@ -133,13 +148,21 @@ function SentStep({
           <Mail className="h-8 w-8" strokeWidth={2} />
         </span>
         <span className="font-nx-serif text-[32px] leading-none md:text-[36px]">
-          Check your inbox
+          {handed ? 'Ask for your link' : 'Check your inbox'}
         </span>
-        <span className="text-[15px] leading-[1.45] text-white/80">
-          <span>We sent a link to </span>
-          <span className="font-bold text-white">{email}</span>
-          <span>. Open it in this browser and this page signs you in.</span>
-        </span>
+        {handed ? (
+          <span className="text-[15px] leading-[1.45] text-white/80">
+            <span>This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for </span>
+            <span className="font-bold text-white">{email}</span>
+            <span>. Open it in this browser and this page signs you in.</span>
+          </span>
+        ) : (
+          <span className="text-[15px] leading-[1.45] text-white/80">
+            <span>We sent a link to </span>
+            <span className="font-bold text-white">{email}</span>
+            <span>. Open it in this browser and this page signs you in.</span>
+          </span>
+        )}
       </div>
       <span
         role="status"
@@ -156,7 +179,7 @@ function SentStep({
           Use a different email
         </button>
         {left > 0 ? (
-          <span>{`Resend in 0:${String(left).padStart(2, '0')}`}</span>
+          <span>{`${handed ? 'New link' : 'Resend'} in 0:${String(left).padStart(2, '0')}`}</span>
         ) : (
           <button
             type="button"
@@ -166,7 +189,7 @@ function SentStep({
             }}
             className="py-2 text-white/80 underline"
           >
-            Send it again
+            {handed ? 'Make a new link' : 'Send it again'}
           </button>
         )}
       </div>
@@ -401,6 +424,7 @@ function SyncStep({ account, autoStart }: { account: Account; autoStart: boolean
 export function StartScreen({ returnTo, autoSync }: { returnTo: string; autoSync: boolean }) {
   const [account, setAccount] = useState<Account | null>(null)
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [delivery, setDelivery] = useState<Delivery>('email')
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'same-origin' })
@@ -457,9 +481,20 @@ export function StartScreen({ returnTo, autoSync }: { returnTo: string; autoSync
       ) : account.authenticated ? (
         <SyncStep account={account} autoStart={autoSync} />
       ) : sentTo ? (
-        <SentStep email={sentTo} onChange={() => setSentTo(null)} onResend={() => resend(sentTo)} />
+        <SentStep
+          email={sentTo}
+          delivery={delivery}
+          onChange={() => setSentTo(null)}
+          onResend={() => resend(sentTo)}
+        />
       ) : (
-        <EmailStep returnTo={returnTo} onSent={setSentTo} />
+        <EmailStep
+          returnTo={returnTo}
+          onSent={(email, how) => {
+            setDelivery(how)
+            setSentTo(email)
+          }}
+        />
       )}
     </div>
   )

@@ -240,6 +240,18 @@ export const userPreferences = sqliteTable(
   }),
 )
 
+// Sign-in links waiting for an admin to hand over (EMAIL_LINKS_TO_ADMIN, for
+// a self-hosted ADHX with no email service). Holds the link itself, so rows
+// live only as long as the login token (15 minutes) and go once it's used.
+export const adminSignInLinks = sqliteTable('admin_sign_in_links', {
+  tokenHash: text('token_hash').primaryKey(),
+  email: text('email').notNull(),
+  url: text('url').notNull(),
+  intent: text('intent').notNull(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+})
+
 // Kept media: every saved post's files, downloaded once per post (not per
 // saver) into MEDIA_DIR and served by /api/files. See src/lib/keep.
 export const keepJobs = sqliteTable(

@@ -4,13 +4,17 @@ services:
     ports:
       - '3000:3000'
     environment:
-      # The production image requires email delivery for magic-link sign-in.
+      # Sign-in links need one way to reach people: Resend, your own mail
+      # server (SMTP_URL), or EMAIL_LINKS_TO_ADMIN=1 (you pass links on from
+      # the admin page; your own first link is printed in the logs).
       SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET before starting ADHX}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       TWITTER_CLIENT_ID: ${TWITTER_CLIENT_ID:-}
       TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET:-}
-      RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY for magic-link sign-in}
-      EMAIL_FROM: ${EMAIL_FROM:?Set EMAIL_FROM to a verified sender}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      SMTP_URL: ${SMTP_URL:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_LINKS_TO_ADMIN: ${EMAIL_LINKS_TO_ADMIN:-}
       # Only these emails (or @domains) can make an account. Leave empty for open sign-up.
       ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
       # 1 when it's just you; 2 or 3 for a group of friends.

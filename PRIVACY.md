@@ -28,6 +28,8 @@ When you sign in (magic-link email; X is optional later in Settings, for bookmar
 
 OAuth tokens for X are **encrypted at rest**. Magic-link tokens are stored as a hash and expire after 15 minutes.
 
+On a server set up without email (`EMAIL_LINKS_TO_ADMIN`), the sign-in link itself is kept for up to 15 minutes so the server's admins can see it and pass it on. Before anyone is an admin, and for admins' own links, it is also printed in the server's log. Sign-in emails sent through your own mail server (`SMTP_URL`) go only through that server.
+
 If you connect X, we check your X bookmarks for new ones about every hour, so they arrive without pressing Sync. You can turn this off in Settings.
 
 If you make an access key (Settings → Search from Claude), we store only a hash of it, its name, its last four characters and when it was last used. A key can only search your own saves. Removing it stops it working straight away.

@@ -303,6 +303,14 @@ export const FULL_SCHEMA_SQL = `
       last_used_at TEXT
     );
     CREATE INDEX access_keys_user_id_idx ON access_keys(user_id);
+  CREATE TABLE admin_sign_in_links (
+    token_hash TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    url TEXT NOT NULL,
+    intent TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
   CREATE TABLE keep_jobs (
       platform TEXT NOT NULL,
       post_id TEXT NOT NULL,

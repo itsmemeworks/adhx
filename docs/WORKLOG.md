@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Sign-in without Resend
+
+- **Three ways to deliver links** (`src/lib/email/magic-link.ts`, `signInDelivery()`): Resend; your own mail server (`SMTP_URL`, nodemailer, `smtpOptions` parses `smtp://`/`smtps://`); or `EMAIL_LINKS_TO_ADMIN=1`.
+- **Admin hand-over**: links wait in `admin_sign_in_links` (raw link, lives as long as the 15-minute token; hidden once used) and show on the admin page's "Sign-in links" card (`/api/admin/sign-in-links`).
+- **Who gets a held link** (`mayGetHeldLink`): invited emails, existing accounts, or anyone while no admin exists. The owner's first link (and admins' own) also prints to the server log.
+- **UI**: the start screen says "Ask whoever runs it for the sign-in link".
+- **Compose**: no longer requires Resend.
+
 ## 2026-10-18 — Self-hosted: kept media and fourteen networks
 
 - **Decision (owner)**: ADHX is for self-hosting with friends, never commercial. Save each post's media locally in the best quality and serve it; support linktokeep.com's networks. Reverses the 2026-10-16 "proxy only, no yt-dlp, drop YouTube" call (`docs/specs/any-site-links.md` marked superseded).

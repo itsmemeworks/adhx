@@ -51,7 +51,7 @@ Downloads run through [yt-dlp](https://github.com/yt-dlp/yt-dlp), plus each netw
 You need:
 
 - **Somewhere to run a container** with a persistent folder: a home server, a NAS, a small VPS, or [Fly.io](#flyio).
-- **A [Resend](https://resend.com) account** to send sign-in emails. ADHX has no passwords; people sign in with a link sent to their email. The free tier is plenty for a group of friends.
+- **A way to get sign-in links to people.** ADHX has no passwords; people sign in with a one-time link. Pick one (see [Sign-in links](#sign-in-links)): your own mail server, a [Resend](https://resend.com) account, or no email at all, where you pass links on yourself.
 - **Disk space.** See [Disk space](#disk-space).
 
 ### Docker Compose
@@ -59,10 +59,9 @@ You need:
 ```bash
 git clone https://github.com/itsmemeworks/adhx && cd adhx
 export SESSION_SECRET=$(openssl rand -base64 32)
-export RESEND_API_KEY=re_your_key
-export EMAIL_FROM='ADHX <login@your-verified-domain.example>'
 export NEXT_PUBLIC_APP_URL=https://adhx.your-domain.example
 export ALLOWED_EMAILS='you@example.com, @your-family.example'
+export EMAIL_LINKS_TO_ADMIN=1   # or SMTP_URL / RESEND_API_KEY, see Sign-in links
 docker compose up -d
 ```
 
@@ -70,11 +69,23 @@ ADHX listens on port 3000. Put it behind your usual reverse proxy for HTTPS; sig
 
 To pin a release, set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>`. You can also build the image yourself with `docker build -t adhx .`.
 
+### Sign-in links
+
+People sign in with a link that works once, for 15 minutes. Choose how links reach them:
+
+| Option               | Set                                                                                    | Good for                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Your own mail server | `SMTP_URL=smtps://user:pass@mail.example.com:465` (or `smtp://…:587`) and `EMAIL_FROM` | Any mail account that allows SMTP, e.g. Fastmail or your domain's mail                           |
+| Resend               | `RESEND_API_KEY` and `EMAIL_FROM` on a domain you verified there                       | Sending from your own domain without running mail                                                |
+| No email             | `EMAIL_LINKS_TO_ADMIN=1`                                                               | A handful of friends. Links wait on the admin page and you pass them on, by message or in person |
+
+With no email, the first time you sign in, your link is printed in the server log: `docker compose logs adhx | grep sign-in`. Once you're an admin (see below), links show up under **Sign-in links** on the admin page. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get one, so strangers can't fill the list.
+
 ### Who can sign up
 
 By default, anyone who can reach your server can make an account. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in.
 
-To give yourself the admin page (numbers, hiding posts, banning accounts), sign up first. Then set `ADMIN_USERNAMES=yourname` and restart once.
+To give yourself the admin page (sign-in links, numbers, hiding posts, banning accounts), sign up first. Then set `ADMIN_USERNAMES=yourname` and restart once.
 
 ### Settings
 
@@ -140,13 +151,12 @@ fly volumes create adhx_data --region lhr --size 50 --app your-adhx
 fly secrets set --app your-adhx \
   SESSION_SECRET=$(openssl rand -base64 32) \
   NEXT_PUBLIC_APP_URL=https://your-adhx.fly.dev \
-  RESEND_API_KEY=re_your_key \
-  EMAIL_FROM='ADHX <login@your-verified-domain.example>' \
+  EMAIL_LINKS_TO_ADMIN=1 \
   ALLOWED_EMAILS='you@example.com'
 fly deploy --app your-adhx
 ```
 
-Keep `min_machines_running = 1`. The download queue, the hourly X sync and Right now all run inside the app.
+Keep `min_machines_running = 1`. The download queue, the hourly X sync and Right now all run inside the app. For your first sign-in link without email, run `fly logs --app your-adhx | grep sign-in`.
 
 ### X bookmark sync (optional)
 
@@ -200,7 +210,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-The dev server runs at [http://localhost:3001](http://localhost:3001). Without Resend, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install yt-dlp`, `uv tool install yt-dlp` or `brew install yt-dlp`). With little disk space, run with `KEEP_BACKFILL=off`.
+The dev server runs at [http://localhost:3001](http://localhost:3001). With no email set up, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install yt-dlp`, `uv tool install yt-dlp` or `brew install yt-dlp`). With little disk space, run with `KEEP_BACKFILL=off`.
 
 ```bash
 pnpm typecheck && pnpm test && pnpm lint && pnpm format:check && pnpm build

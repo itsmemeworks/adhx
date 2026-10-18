@@ -42,6 +42,7 @@ type SendMagicLinkArgs = { email: string; url: string; intent: string }
 const mockSendMagicLinkEmail = vi.fn((_args: SendMagicLinkArgs) => Promise.resolve({ ok: true }))
 vi.mock('@/lib/email/magic-link', () => ({
   sendMagicLinkEmail: (args: SendMagicLinkArgs) => mockSendMagicLinkEmail(args),
+  signInDelivery: () => 'email',
 }))
 
 vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')

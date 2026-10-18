@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { userIdentities } from '@/lib/db/schema'
+import { userIdentities, users } from '@/lib/db/schema'
 
 /**
  * Who may make an account on this ADHX. A self-hosted ADHX is usually for you
@@ -26,6 +26,28 @@ export function emailOnAllowlist(email: string, list: string[]): boolean {
 export function mayUseEmail(email: string): boolean {
   const list = signupAllowlist()
   if (!list || emailOnAllowlist(email, list)) return true
+  return hasEmailAccount(email)
+}
+
+/**
+ * With links handed over by an admin (no email service), only people the
+ * owner expects get one: invited emails, existing accounts, and, before
+ * anyone is an admin, the owner's own first sign-in.
+ */
+export function mayGetHeldLink(email: string): boolean {
+  const list = signupAllowlist()
+  if (list && emailOnAllowlist(email, list)) return true
+  if (hasEmailAccount(email)) return true
+  const [admin] = db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, 'admin'))
+    .limit(1)
+    .all()
+  return !admin
+}
+
+function hasEmailAccount(email: string): boolean {
   const [existing] = db
     .select({ userId: userIdentities.userId })
     .from(userIdentities)

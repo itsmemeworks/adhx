@@ -9,6 +9,7 @@ import {
   syncLogs,
   userPreferences,
   accessKeys,
+  adminSignInLinks,
   oauthTokens,
   tagShares,
   users,
@@ -87,6 +88,7 @@ export const DELETE = withAuth(async (_req, userId) => {
         db.delete(loginTokens)
           .where(or(eq(loginTokens.userId, userId), eq(loginTokens.email, email)))
           .run()
+        db.delete(adminSignInLinks).where(eq(adminSignInLinks.email, email)).run()
       } else {
         db.delete(loginTokens).where(eq(loginTokens.userId, userId)).run()
       }

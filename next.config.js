@@ -47,6 +47,7 @@ const nextConfig = {
     'better-sqlite3',
     '@sentry/node',
     'react-email',
+    'nodemailer',
     // Understanding pipeline: native ONNX runtime, sharp, and the ffmpeg binary path.
     '@huggingface/transformers',
     'onnxruntime-node',
