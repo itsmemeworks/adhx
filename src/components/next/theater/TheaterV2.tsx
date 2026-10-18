@@ -91,6 +91,7 @@ import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
 import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { channelTitle } from '../channels/ChannelParts'
+import { useBusyLogo } from '../logo-busy'
 
 /** X articles carry their whole body; other links only have a preview. */
 function hasFullArticle(post: FeedItem): boolean {
@@ -259,6 +260,7 @@ export function TheaterV2({
   const router = useRouter()
   const rootRef = useRef<HTMLDivElement>(null)
   const [load, setLoad] = useState<Load>({ status: 'loading' })
+  useBusyLogo('theater', load.status === 'loading')
   /** A channel's name, once its queue loads. */
   const [title, setTitle] = useState<string | null>(null)
   const [items, setItems] = useState<SearchResultItem[]>([])

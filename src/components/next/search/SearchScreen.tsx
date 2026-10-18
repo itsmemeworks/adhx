@@ -1,7 +1,7 @@
 'use client'
 
 import { AccountMenu } from '../AccountMenu'
-import { BottomNav, PrimaryNav } from '../PrimaryNav'
+import { BottomNav, NxLogo, PrimaryNav } from '../PrimaryNav'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -35,6 +35,7 @@ import {
 } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { recentPlayHref } from '../theater/queue'
+import { useBusyLogo } from '../logo-busy'
 
 const TYPES: SearchType[] = ['all', 'videos', 'photos', 'text', 'articles']
 const VIEWS: { id: SearchView; label: string; icon: typeof LayoutGrid }[] = [
@@ -148,6 +149,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
   })
   const inputRef = useRef<HTMLInputElement>(null)
   const results = useSearch(state)
+  useBusyLogo('search', results.status === 'loading')
   const set = (patch: Partial<SearchState>) => setState((s) => ({ ...s, ...patch }))
   const setView = (view: SearchView) => {
     set({ view })
@@ -203,20 +205,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
     <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <header className="sticky top-0 z-20 border-b border-nx-hairline bg-nx-ink/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-3 md:gap-5 md:px-8">
-          <Link
-            href="/"
-            className="hidden shrink-0 items-center gap-3 xl:flex"
-            aria-label="adhx home"
-          >
-            <span
-              aria-hidden
-              className="flex h-[30px] w-[30px] items-center justify-center gap-1 rounded-[10px] bg-nx-accent"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-nx-ink" />
-              <span className="h-1.5 w-1.5 rounded-full bg-nx-ink" />
-            </span>
-            <span className="font-nx-serif text-[26px] leading-none">adhx</span>
-          </Link>
+          <NxLogo className="hidden xl:flex" busy={results.status === 'loading'} />
           <PrimaryNav current="search" />
           <form
             role="search"

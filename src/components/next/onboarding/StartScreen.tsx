@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdhxFace } from '../loader'
+import { Gob } from '../Gob'
 import { NxImage, XLogo } from '../primitives'
 import { postCoverSrc } from '../post'
 import type { FeedItem } from '@/components/feed/types'
@@ -465,14 +466,10 @@ export function StartScreen({ returnTo, autoSync }: { returnTo: string; autoSync
         className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,210,63,0.12),transparent_55%),radial-gradient(ellipse_at_80%_70%,rgba(242,234,217,0.08),transparent_50%)]"
       />
       <header className="relative flex items-center gap-2.5 px-4 pt-[max(16px,env(safe-area-inset-top))] md:px-7 md:pt-5">
-        <span
-          aria-hidden
-          className="flex h-7 w-7 items-center justify-center gap-1 rounded-[9px] bg-nx-accent"
-        >
-          <span className="h-[5px] w-[5px] rounded-full bg-black" />
-          <span className="h-[5px] w-[5px] rounded-full bg-black" />
+        <span className="gob-host flex items-center gap-2.5">
+          <Gob size={32} />
+          <span className="font-nx-serif text-2xl leading-none">adhx</span>
         </span>
-        <span className="font-nx-serif text-2xl leading-none">adhx</span>
       </header>
       {account === null ? (
         <div className="absolute inset-0 flex items-center justify-center">

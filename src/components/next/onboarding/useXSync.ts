@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { parseSyncErrorEvent, type SyncErrorCode } from '@/lib/sync/messages'
+import { useBusyLogo } from '../logo-busy'
 
 /**
  * Drives `GET /api/sync` (server-sent events) for the onboarding screen:
@@ -54,6 +55,7 @@ function thumbOf(bookmark: Bookmark | undefined): SyncThumb | null {
 
 export function useXSync(): XSyncState & { start: () => void } {
   const [state, setState] = useState<XSyncState>(INITIAL)
+  useBusyLogo('x-sync', state.status === 'running')
   const sourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => () => sourceRef.current?.close(), [])

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Bookmark, LayoutGrid, Radio, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Gob } from './Gob'
+import { useLogoBusy } from './logo-busy'
 import { QuickSearch, openQuickSearch } from './QuickSearch'
 
 /**
@@ -45,20 +47,15 @@ function LiveDot({ className }: { className?: string }) {
 const ICON = { now: Radio, channels: LayoutGrid, saves: Bookmark, search: Search }
 
 /** The adhx mark and name, linking home; first in every header. */
-export function NxLogo({ className }: { className?: string }) {
+export function NxLogo({ className, busy = false }: { className?: string; busy?: boolean }) {
+  const working = useLogoBusy()
   return (
     <Link
       href="/"
       aria-label="adhx home"
-      className={cn('flex shrink-0 items-center gap-2.5', className)}
+      className={cn('gob-host flex shrink-0 items-center gap-2.5', className)}
     >
-      <span
-        aria-hidden
-        className="flex h-7 w-7 items-center justify-center gap-1 rounded-[9px] bg-nx-accent"
-      >
-        <span className="h-[5px] w-[5px] rounded-full bg-black" />
-        <span className="h-[5px] w-[5px] rounded-full bg-black" />
-      </span>
+      <Gob size={32} mood={busy || working ? 'busy' : 'idle'} />
       <span className="font-nx-serif text-2xl leading-none text-white">adhx</span>
     </Link>
   )

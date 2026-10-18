@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { detectPlatformPost } from '@/lib/platform/url'
 import { navigateToAppPath } from '@/lib/theater/navigate-app-path'
 import { PasteToast } from '../loader'
+import { useBusyLogo } from '../logo-busy'
 
 /**
  * Paste a post link anywhere (outside a text field) — or tap Paste — and it
@@ -63,6 +64,7 @@ export function usePasteToSave({
   savedAction?: (post: PastedPost) => { label: string; onClick: () => void }
 }): { toast: ReactNode; pasteFromClipboard: () => void; save: (url: string) => void } {
   const [toast, setToast] = useState<Toast | null>(null)
+  useBusyLogo('paste', toast?.state === 'grabbing')
   const [prompt, setPrompt] = useState(false)
   const hideTimer = useRef<number | null>(null)
   const busy = useRef(false)

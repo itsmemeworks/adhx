@@ -4,9 +4,10 @@ import type { CSSProperties } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NxImage } from '../primitives'
+import { Gob } from '../Gob'
 
 /**
- * The ADHX loader family: the yellow face, shimmer skeletons and paste toasts.
+ * The ADHX loader family: Gob (the mark), shimmer skeletons and paste toasts.
  * All motion is CSS keyframes (`animate-nx-*`, tailwind.config.ts) and is
  * switched off under `prefers-reduced-motion` (globals.css).
  */
@@ -21,39 +22,17 @@ export interface AdhxFaceProps {
   className?: string
 }
 
-/** Yellow rounded square with two black eyes. Decorative. */
+/**
+ * Gob, the ADHX mark, as the loader face. Decorative. `bounce` (loading)
+ * bobs and looks around; `shut` closes its eyes; otherwise it blinks.
+ */
 export function AdhxFace({ size = 110, bounce = false, mood = 'look', className }: AdhxFaceProps) {
-  const eyeW = Math.round(size * 0.145)
-  const eyeH = mood === 'shut' ? Math.max(3, Math.round(size * 0.07)) : Math.round(size * 0.2)
-  const gap = Math.round(size * 0.164)
-  const style = {
-    width: size,
-    height: size,
-    borderRadius: Math.round(size * 0.31),
-  } as CSSProperties
-  const eyesStyle = { gap, '--nx-look': `${Math.max(2, size * 0.045)}px` } as CSSProperties
   return (
-    <span
-      aria-hidden
-      data-mood={mood}
-      style={style}
-      className={cn(
-        'flex shrink-0 items-center justify-center',
-        mood === 'shut' ? 'bg-[#2e2c29]' : 'bg-nx-accent',
-        bounce && 'origin-bottom animate-nx-bounce',
-        className,
-      )}
-    >
-      <span style={eyesStyle} className={cn('flex', mood === 'look' && 'animate-nx-look')}>
-        {[0, 1].map((i) => (
-          <span
-            key={i}
-            style={{ width: eyeW, height: eyeH, borderRadius: eyeW / 2 }}
-            className={cn('block', mood === 'shut' ? 'bg-nx-accent' : 'animate-nx-blink bg-black')}
-          />
-        ))}
-      </span>
-    </span>
+    <Gob
+      size={size}
+      mood={mood === 'shut' ? 'shut' : bounce ? 'busy' : 'idle'}
+      className={className}
+    />
   )
 }
 

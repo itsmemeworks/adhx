@@ -244,15 +244,18 @@ describe('stages', () => {
 })
 
 describe('loader', () => {
-  it('AdhxFace animates bounce, look and blink; shut eyes are still', () => {
+  it('AdhxFace is Gob: busy while loading, blinking at rest, eyes shut when it can’t help', () => {
     const { container } = render(<AdhxFace bounce />)
-    const face = container.firstElementChild as HTMLElement
-    expect(face).toHaveClass('animate-nx-bounce', 'bg-nx-accent')
-    expect(face.querySelector('.animate-nx-look')).not.toBeNull()
-    expect(face.querySelectorAll('.animate-nx-blink')).toHaveLength(2)
+    const face = container.querySelector('svg.gob') as SVGElement
+    expect(face).toHaveAttribute('data-mood', 'busy')
+    expect(face.querySelectorAll('.gob-eye')).toHaveLength(2)
+
+    const { container: idle } = render(<AdhxFace />)
+    expect(idle.querySelector('svg.gob')).toHaveAttribute('data-mood', 'idle')
 
     const { container: shut } = render(<AdhxFace mood="shut" />)
-    expect(shut.querySelector('.animate-nx-look, .animate-nx-blink')).toBeNull()
+    expect(shut.querySelector('svg.gob')).toHaveAttribute('data-mood', 'shut')
+    expect(shut.querySelector('.gob-eye')).toBeNull()
   })
 
   it('AdhxLoader announces "grabbing it" with three animated dots and a shadow', () => {
