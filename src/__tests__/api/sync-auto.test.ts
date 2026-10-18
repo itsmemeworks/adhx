@@ -152,7 +152,7 @@ describe('hourly X bookmark sync', () => {
     expect(dueForAutoSync()).toEqual([])
   })
 
-  it('brings in only the newest bookmarks, stopping at a page that ends on one already saved', async () => {
+  it('brings in only the newest bookmarks, stopping after the first page holding one already saved', async () => {
     connect('user-1', 2 * HOUR)
     saved('user-1', 'old-1')
     const { fetchBookmarks } = await import('@/lib/twitter/client')
@@ -163,8 +163,8 @@ describe('hourly X bookmark sync', () => {
         nextToken: 'page-2',
       })
       .mockResolvedValueOnce({
-        bookmarks: [tweet('new-3'), tweet('old-1')],
-        resultCount: 2,
+        bookmarks: [tweet('new-3'), tweet('old-1'), tweet('new-4')],
+        resultCount: 3,
         nextToken: 'page-3',
       })
     const saveBookmark = await mockSave()
@@ -172,19 +172,37 @@ describe('hourly X bookmark sync', () => {
     const { autoSyncTick } = await import('@/lib/sync/auto')
     const result = await autoSyncTick()
 
-    expect(result).toEqual({ synced: 1, added: 3 })
+    expect(result).toEqual({ synced: 1, added: 4 })
     expect(fetchBookmarks).toHaveBeenCalledTimes(2)
     expect(fetchBookmarks).toHaveBeenNthCalledWith(1, 'user-1', {
-      maxResults: 25,
+      maxResults: 100,
       paginationToken: undefined,
     })
-    expect(saveBookmark).toHaveBeenCalledTimes(3)
+    expect(saveBookmark).toHaveBeenCalledTimes(4)
     const logs = await testInstance.db.select().from(schema.syncLogs)
     expect(logs.find((l) => l.triggerType === 'auto')).toMatchObject({
       status: 'completed',
-      newBookmarks: 3,
+      newBookmarks: 4,
       duplicatesSkipped: 1,
     })
+  })
+
+  it('keeps going through all-new pages until X has no more (its newest 800)', async () => {
+    connect('user-1', 2 * HOUR)
+    saved('user-1', 'old-1')
+    const { fetchBookmarks } = await import('@/lib/twitter/client')
+    for (let page = 1; page <= 8; page++) {
+      vi.mocked(fetchBookmarks).mockResolvedValueOnce({
+        bookmarks: [tweet(`p${page}-a`), tweet(`p${page}-b`)],
+        resultCount: 2,
+        nextToken: page < 8 ? `page-${page + 1}` : undefined,
+      })
+    }
+    await mockSave()
+
+    const { autoSyncTick } = await import('@/lib/sync/auto')
+    expect(await autoSyncTick()).toEqual({ synced: 1, added: 16 })
+    expect(fetchBookmarks).toHaveBeenCalledTimes(8)
   })
 
   it('skips anyone with a sync already running', async () => {

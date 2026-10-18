@@ -12,8 +12,8 @@ import { runBookmarkSync } from '@/lib/sync/run'
  * synced at least once, who haven't turned "Bring in new bookmarks
  * automatically" off, and whose last sync started at least
  * `AUTO_SYNC_EVERY_MINUTES` ago (default 50). Each one gets a `'new'` sync:
- * newest bookmarks only, stopping at the first page that ends on a post
- * already saved. With a 5-minute check the gap between two syncs stays under
+ * newest bookmarks only, 100 a page, stopping after the first page that
+ * holds a post already saved (X serves the newest 800 at most). With a 5-minute check the gap between two syncs stays under
  * an hour, so a bookmark made on X is here within the hour.
  *
  * Runs in the web process (one Fly machine, like the moments engine). The

@@ -19,13 +19,10 @@ import { noteSaved, PRIORITY } from '@/lib/semantic'
  */
 const SYNC_PULSE_CAP = 25
 
-/** Page size for the automatic sync: most hours bring a handful of bookmarks. */
-const AUTO_PAGE_SIZE = 25
-
 export type SyncMode =
   /** Every page until X stops returning a next-page token (the Sync button). */
   | 'full'
-  /** Newest bookmarks only: stop once a page ends on one already saved (the hourly sync). */
+  /** Newest bookmarks only: stop after the first page holding one already saved (the hourly sync). */
   | 'new'
 
 export interface SyncOutcome {
@@ -119,8 +116,9 @@ export async function runBookmarkSync(
     // A full sync is complete only when X stops returning a next-page token.
     // Keep going through short, empty, and already-saved pages: they can
     // still lead to older bookmarks missing from this account. The hourly
-    // sync stops at the first page that ends on a bookmark already here:
-    // X lists newest bookmarks first, so everything after it was seen before.
+    // sync stops after the first page holding a bookmark already here: X
+    // lists newest bookmarks first, so everything after it was seen before.
+    // Either way X serves only the newest 800 (8 pages of 100).
     let cursor: string | undefined
     const requestedCursors = new Set<string>()
     while (!stopped()) {
@@ -133,7 +131,7 @@ export async function runBookmarkSync(
         requestedCursors.add(cursor)
       }
       const result = await fetchBookmarks(userId, {
-        maxResults: mode === 'full' ? 100 : AUTO_PAGE_SIZE,
+        maxResults: 100,
         paginationToken: cursor,
       })
       if (stopped()) break
@@ -147,8 +145,7 @@ export async function runBookmarkSync(
       })
       cursor = result.nextToken
       if (!cursor) break
-      const last = result.bookmarks[result.bookmarks.length - 1]
-      if (mode === 'new' && (!last || existingIds.has(last.id))) break
+      if (mode === 'new' && result.bookmarks.some((b) => existingIds.has(b.id))) break
     }
 
     // Process each bookmark
