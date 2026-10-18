@@ -140,14 +140,19 @@ it's open. Tap one to watch it in the player.
 ## Your saves: the player and search
 
 The home screen is **My saves** (`GET /api/app/saves`): full screen, newest
-first, one post at a time. Swipe up for the next; pages of 20 load as you near
-the end. Videos loop, start muted (the speaker button turns the sound on) and
-pause on tap; one Media3 ExoPlayer plays whichever post is on screen and is
-let go when the app goes to the background. Photo albums swipe sideways, text
-posts and articles show as a card, and SoundCloud plays its sound over the
-artwork. Along the bottom: the author, the network's mark, the first lines of
-text and **Open original**. A video that can't play says why, in the server's
-words.
+first, one post at a time. Swipe up for the next save and down for the one
+before; pages of 20 load as you near the end. Tap to pause or play. One Media3
+ExoPlayer plays whichever post is on screen and is let go when the app goes to
+the background. Photo albums swipe sideways, text posts and articles fill the
+page in a large serif, and SoundCloud plays its sound over the artwork.
+
+On the right, top to bottom: **Sound** (videos start muted), **Repeat** (off,
+a video that ends moves on to the next save; on, it loops), **Save** (puts the
+video, sound or photo on screen into the phone's gallery under ADHX; Android
+10 and up), **Share** and **Original** (the network's logo; opens the post
+there). Along the bottom: the author and the first lines of text, the time, a
+bar to seek, and **Hide**, which clears everything but a thin progress line
+until the next tap. A video that can't play says why, in the server's words.
 
 **Search** (`GET /api/app/search`) finds your saves by what you describe, not
 only by the exact words: type, and after a moment a two-column grid of posters

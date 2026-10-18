@@ -27,33 +27,41 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -62,6 +70,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -97,27 +106,38 @@ import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /** How the post on screen is playing. */
 private class Playback {
     var ready by mutableStateOf(false)
     var paused by mutableStateOf(false)
     var problem by mutableStateOf<String?>(null)
-    var progress by mutableFloatStateOf(0f)
+    var positionMs by mutableLongStateOf(0L)
+    var durationMs by mutableLongStateOf(0L)
 
     fun reset() {
         ready = false
         paused = false
         problem = null
-        progress = 0f
+        positionMs = 0L
+        durationMs = 0L
     }
 }
 
+/** A short line near the top ("Repeating this one", "Saved to your phone"). */
+private data class Notice(val text: String, val at: Long = System.nanoTime())
+
+/** A soft dark shadow, only for words laid over a picture or video. */
+private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
+
 /**
- * The player: one post at a time, full screen, swipe up for the next. One
- * ExoPlayer is shared by every page and plays the page the pager settled on.
- * Videos loop, start muted and pause on tap; photo albums swipe sideways;
- * words show as a card. [posts] must not be empty.
+ * The player: one post at a time, full screen. Swipe up for the next save,
+ * down for the previous; tap to pause or play. One ExoPlayer is shared by
+ * every page and plays the page the pager settled on. Videos start muted; with
+ * Repeat off a video that ends moves on to the next save, with Repeat on it
+ * loops. Hide clears everything but a thin progress line until the next tap.
+ * [posts] must not be empty.
  */
 @Composable
 fun PlayerScreen(
@@ -128,9 +148,14 @@ fun PlayerScreen(
     topBar: @Composable BoxScope.() -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val pager = rememberPagerState(initialPage = startIndex.coerceIn(0, (posts.size - 1).coerceAtLeast(0))) { posts.size }
     var muted by rememberSaveable { mutableStateOf(true) }
+    var repeat by rememberSaveable { mutableStateOf(false) }
+    var hidden by rememberSaveable { mutableStateOf(false) }
+    var notice by remember { mutableStateOf<Notice?>(null) }
+    var saving by remember { mutableStateOf<String?>(null) }
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     val playback = remember { Playback() }
 
@@ -175,6 +200,17 @@ fun PlayerScreen(
         p.setAudioAttributes(MOVIE, !muted)
     }
 
+    LaunchedEffect(player, repeat) {
+        player?.repeatMode = if (repeat) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
+    LaunchedEffect(notice) {
+        if (notice != null) {
+            delay(2_200)
+            notice = null
+        }
+    }
+
     LaunchedEffect(player, mediaUrl) {
         playback.reset()
         val p = player ?: return@LaunchedEffect
@@ -187,9 +223,17 @@ fun PlayerScreen(
         p.prepare()
         p.playWhenReady = true
         while (isActive) {
-            val duration = p.duration
-            playback.progress = if (duration > 0) (p.currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f
+            playback.positionMs = p.currentPosition.coerceAtLeast(0L)
+            playback.durationMs = p.duration.takeIf { it != C.TIME_UNSET }?.coerceAtLeast(0L) ?: 0L
             delay(250)
+        }
+    }
+
+    // With Repeat off, a video that ends moves on to the next save.
+    var ended by remember { mutableIntStateOf(0) }
+    LaunchedEffect(ended) {
+        if (ended > 0 && !repeat && pager.settledPage + 1 < posts.size) {
+            pager.animateScrollToPage(pager.settledPage + 1)
         }
     }
 
@@ -200,6 +244,7 @@ fun PlayerScreen(
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) playback.ready = true
+                if (playbackState == Player.STATE_ENDED) ended++
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -238,17 +283,46 @@ fun PlayerScreen(
                 player = player,
                 playback = playback,
                 muted = muted,
-                onToggleMute = { muted = !muted },
-                onTogglePause = {
+                repeat = repeat,
+                hidden = hidden,
+                saving = saving == post.key,
+                onTap = {
                     val p = player
-                    if (p != null && playback.problem == null) {
-                        playback.paused = !playback.paused
-                        p.playWhenReady = !playback.paused
+                    when {
+                        hidden -> hidden = false
+                        !PostKind.plays(post.kind) || p == null || playback.problem != null -> Unit
+                        p.playbackState == Player.STATE_ENDED -> {
+                            p.seekTo(0)
+                            p.play()
+                            playback.paused = false
+                        }
+                        else -> {
+                            playback.paused = !playback.paused
+                            p.playWhenReady = !playback.paused
+                        }
                     }
                 },
+                onToggleMute = { muted = !muted },
+                onToggleRepeat = {
+                    repeat = !repeat
+                    notice = Notice(if (repeat) "Repeating this one" else "Plays the next save when this ends")
+                },
+                onSave = { url, name ->
+                    if (saving == null) {
+                        saving = post.key
+                        scope.launch {
+                            val ok = SaveToPhone.save(context, url, name)
+                            saving = null
+                            notice = Notice(if (ok) "Saved to your phone" else "Couldn’t save this to your phone")
+                        }
+                    }
+                },
+                onSeek = { ms -> player?.seekTo(ms) },
+                onHide = { hidden = true },
             )
         }
-        topBar()
+        if (!hidden) topBar()
+        notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
     }
 }
 
@@ -263,7 +337,7 @@ private fun buildPlayer(context: Context): ExoPlayer {
         .setMediaSourceFactory(source)
         .build()
         .apply {
-            repeatMode = Player.REPEAT_MODE_ONE
+            repeatMode = Player.REPEAT_MODE_OFF
             volume = 0f
         }
 }
@@ -274,6 +348,23 @@ private val MOVIE = AudioAttributes.Builder()
     .build()
 
 @Composable
+private fun NoticePill(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        color = AdhxColors.Black,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+            .statusBarsPadding()
+            .padding(top = 64.dp, start = 24.dp, end = 24.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(AdhxColors.Cream)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
+}
+
+@Composable
 private fun PostPage(
     post: PhonePost,
     server: String,
@@ -281,8 +372,15 @@ private fun PostPage(
     player: ExoPlayer?,
     playback: Playback,
     muted: Boolean,
+    repeat: Boolean,
+    hidden: Boolean,
+    saving: Boolean,
+    onTap: () -> Unit,
     onToggleMute: () -> Unit,
-    onTogglePause: () -> Unit,
+    onToggleRepeat: () -> Unit,
+    onSave: (url: String, name: String) -> Unit,
+    onSeek: (Long) -> Unit,
+    onHide: () -> Unit,
 ) {
     val photos = remember(post.key, server) {
         if (post.kind == PostKind.PHOTO) {
@@ -292,28 +390,76 @@ private fun PostPage(
         }
     }
     val album = rememberPagerState { photos.size }
+    val plays = PostKind.plays(post.kind)
 
-    Box(Modifier.fillMaxSize()) {
+    // What Save keeps: the video (or sound), or the photo on screen.
+    val save: (() -> Unit)? = when {
+        !SaveToPhone.supported -> null
+        plays -> post.media.firstOrNull()?.url?.let { AdhxApi.resolve(server, it)?.toString() }?.let { url ->
+            { onSave(url, SaveToPhone.fileName(post.platform, post.id)) }
+        }
+        photos.isNotEmpty() -> {
+            {
+                val index = album.currentPage.coerceIn(0, photos.lastIndex)
+                onSave(photos[index], SaveToPhone.fileName(post.platform, post.id, index.takeIf { photos.size > 1 }))
+            }
+        }
+        else -> null
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClickLabel = when {
+                    hidden -> "Show controls"
+                    plays -> if (playback.paused) "Play" else "Pause"
+                    else -> null
+                },
+                onClick = onTap,
+            ),
+    ) {
         when {
-            PostKind.plays(post.kind) -> MediaPage(
-                post = post,
-                server = server,
-                onScreen = onScreen,
-                player = player,
-                playback = playback,
-                onTogglePause = onTogglePause,
-            )
-            post.kind == PostKind.PHOTO && photos.isNotEmpty() -> Album(photos, album)
+            plays -> MediaPage(post, server, onScreen, player, playback)
+            post.kind == PostKind.PHOTO && photos.isNotEmpty() -> Album(photos, album, hidden)
             else -> WordsCard(post)
         }
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth()) {
-            if (photos.size > 1) Dots(count = photos.size, current = album.currentPage)
-            Caption(
-                post = post,
-                progress = if (onScreen && PostKind.plays(post.kind)) playback.progress else null,
-                muted = if (PostKind.plays(post.kind)) muted else null,
-                onToggleMute = onToggleMute,
-            )
+        if (hidden) {
+            if (onScreen && plays) {
+                ProgressLine(
+                    playback,
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .navigationBarsPadding(),
+                )
+            }
+        } else {
+            Column(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))))
+                    .navigationBarsPadding()
+                    .padding(top = 36.dp, bottom = 16.dp),
+            ) {
+                if (photos.size > 1) Dots(count = photos.size, current = album.currentPage)
+                Caption(
+                    post = post,
+                    muted = if (plays) muted else null,
+                    repeat = if (plays) repeat else null,
+                    saving = saving,
+                    onToggleMute = onToggleMute,
+                    onToggleRepeat = onToggleRepeat,
+                    onSave = save,
+                )
+                BottomRow(
+                    playback = if (onScreen && plays) playback else null,
+                    onSeek = onSeek,
+                    onHide = onHide,
+                )
+            }
         }
     }
 }
@@ -326,21 +472,10 @@ private fun MediaPage(
     onScreen: Boolean,
     player: ExoPlayer?,
     playback: Playback,
-    onTogglePause: () -> Unit,
 ) {
     val media = post.media.firstOrNull()
     val poster = media?.posterUrl?.let { AdhxApi.resolve(server, it)?.toString() }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClickLabel = if (playback.paused) "Play" else "Pause",
-                onClick = onTogglePause,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (poster != null) {
             AsyncImage(
                 model = poster,
@@ -375,12 +510,12 @@ private fun MediaPage(
                 !playback.ready -> Spinner(size = 34.dp, stroke = 3.dp)
                 playback.paused -> Box(
                     Modifier
-                        .size(72.dp)
+                        .size(88.dp)
                         .clip(CircleShape)
                         .background(Color.Black.copy(alpha = 0.55f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(40.dp))
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(52.dp))
                 }
             }
         }
@@ -388,7 +523,7 @@ private fun MediaPage(
 }
 
 @Composable
-private fun Album(photos: List<String>, state: PagerState) {
+private fun Album(photos: List<String>, state: PagerState, hidden: Boolean) {
     Box(Modifier.fillMaxSize()) {
         HorizontalPager(state = state, modifier = Modifier.fillMaxSize()) { index ->
             var failed by remember { mutableStateOf(false) }
@@ -409,7 +544,7 @@ private fun Album(photos: List<String>, state: PagerState) {
                 if (failed) Text("This photo couldn’t load.", fontSize = 15.sp, color = AdhxColors.Muted)
             }
         }
-        if (photos.size > 1) {
+        if (photos.size > 1 && !hidden) {
             Text(
                 "${state.currentPage + 1} / ${photos.size}",
                 fontSize = 13.sp,
@@ -430,7 +565,7 @@ private fun Album(photos: List<String>, state: PagerState) {
 @Composable
 private fun Dots(count: Int, current: Int) {
     Row(
-        Modifier.fillMaxWidth().padding(bottom = 4.dp),
+        Modifier.fillMaxWidth().padding(bottom = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
         repeat(count.coerceAtMost(12)) { i ->
@@ -464,7 +599,7 @@ private fun WordsCard(post: PhonePost) {
             .fillMaxSize()
             .background(AdhxColors.Background)
             .navigationBarsPadding()
-            .padding(start = 24.dp, end = 24.dp, top = 110.dp, bottom = 160.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 110.dp, bottom = 200.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         Column(
@@ -517,10 +652,18 @@ private const val SHORT_WORDS = 140
 
 /**
  * Over the bottom: on the left the @handle and the first lines of text; on the
- * right a column of round buttons (Sound, Share, Original), like the web player.
+ * right a column of round buttons (Sound, Repeat, Save, Share, Original).
  */
 @Composable
-private fun Caption(post: PhonePost, progress: Float?, muted: Boolean?, onToggleMute: () -> Unit) {
+private fun Caption(
+    post: PhonePost,
+    muted: Boolean?,
+    repeat: Boolean?,
+    saving: Boolean,
+    onToggleMute: () -> Unit,
+    onToggleRepeat: () -> Unit,
+    onSave: (() -> Unit)?,
+) {
     val context = LocalContext.current
     val words = post.kind == PostKind.TEXT || post.kind == PostKind.ARTICLE
     val handle = Copy.handle(post.author.handle)
@@ -528,86 +671,83 @@ private fun Caption(post: PhonePost, progress: Float?, muted: Boolean?, onToggle
         ?: Networks.name(post.platform)
         ?: ""
     val source = post.sourceUrl?.takeIf { it.isNotBlank() }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))))
-            .navigationBarsPadding()
-            .padding(start = 18.dp, end = 12.dp, top = 36.dp, bottom = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    Row(
+        Modifier.padding(start = 18.dp, end = 12.dp),
+        verticalAlignment = Alignment.Bottom,
     ) {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                handle,
+                style = OverMedia,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = AdhxColors.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!words && post.text.isNotBlank()) {
                 Text(
-                    handle,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = AdhxColors.White,
-                    maxLines = 1,
+                    post.text,
+                    style = OverMedia,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = AdhxColors.Cream,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (!words && post.text.isNotBlank()) {
-                    Text(
-                        post.text,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        color = AdhxColors.Cream,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                if (muted != null) {
-                    ActionButton(
-                        label = "Sound",
-                        description = if (muted) "Sound on" else "Sound off",
-                        onClick = onToggleMute,
-                    ) {
-                        Icon(
-                            painterResource(if (muted) R.drawable.ic_sound_off else R.drawable.ic_sound_on),
-                            contentDescription = null,
-                            tint = AdhxColors.White,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                }
-                if (source != null) {
-                    ActionButton(label = "Share", description = "Share", onClick = { shareLink(context, source) }) {
-                        Icon(Icons.Filled.Share, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(21.dp))
-                    }
-                    ActionButton(
-                        label = "Original",
-                        description = "Open on ${Networks.name(post.platform) ?: "its site"}",
-                        onClick = { openUrl(context, source) },
-                    ) {
-                        NetworkMark(post.platform, size = 20.dp)
-                    }
-                }
             }
         }
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(if (progress != null) AdhxColors.White.copy(alpha = 0.2f) else Color.Transparent),
-        ) {
-            if (progress != null) {
-                Box(
-                    Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(progress)
-                        .background(AdhxColors.Accent),
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            if (muted != null) {
+                ActionButton(label = "Sound", description = if (muted) "Sound on" else "Sound off", onClick = onToggleMute) {
+                    ActionIcon(painterResource(if (muted) R.drawable.ic_sound_off else R.drawable.ic_sound_on))
+                }
+            }
+            if (repeat != null) {
+                ActionButton(
+                    label = "Repeat",
+                    description = if (repeat) "Repeat off" else "Repeat this one",
+                    on = repeat,
+                    onClick = onToggleRepeat,
+                ) {
+                    ActionIcon(painterResource(R.drawable.ic_repeat_one), tint = if (repeat) AdhxColors.Black else AdhxColors.White)
+                }
+            }
+            if (onSave != null) {
+                ActionButton(label = "Save", description = "Save to your phone", onClick = { if (!saving) onSave() }) {
+                    if (saving) Spinner(size = 20.dp, stroke = 2.dp) else ActionIcon(painterResource(R.drawable.ic_save_to_phone))
+                }
+            }
+            if (source != null) {
+                ActionButton(label = "Share", description = "Share", onClick = { shareLink(context, source) }) {
+                    ActionIcon(rememberVectorPainter(Icons.Filled.Share), size = 21)
+                }
+                ActionButton(
+                    label = "Original",
+                    description = "Open on ${Networks.name(post.platform) ?: "its site"}",
+                    onClick = { openUrl(context, source) },
+                ) {
+                    NetworkMark(post.platform, size = 20.dp)
+                }
             }
         }
     }
 }
 
+@Composable
+private fun ActionIcon(painter: Painter, tint: Color = AdhxColors.White, size: Int = 22) {
+    Icon(painter, contentDescription = null, tint = tint, modifier = Modifier.size(size.dp))
+}
+
 /** A round dark button with a small label underneath, in the column on the right. */
 @Composable
-private fun ActionButton(label: String, description: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
+private fun ActionButton(
+    label: String,
+    description: String,
+    onClick: () -> Unit,
+    on: Boolean = false,
+    icon: @Composable () -> Unit,
+) {
     Column(
         Modifier
             .clip(RoundedCornerShape(12.dp))
@@ -620,13 +760,119 @@ private fun ActionButton(label: String, description: String, onClick: () -> Unit
             Modifier
                 .size(46.dp)
                 .clip(CircleShape)
-                .background(Color.Black.copy(alpha = 0.5f)),
+                .background(if (on) AdhxColors.Accent else Color.Black.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center,
         ) {
             icon()
         }
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+        Text(label, style = OverMedia, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
     }
+}
+
+/** "0:14 / 0:41", the scrub bar and Hide; just Hide for photos and words. */
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BottomRow(playback: Playback?, onSeek: (Long) -> Unit, onHide: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 18.dp, end = 12.dp, top = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (playback != null) {
+            var dragging by remember { mutableStateOf<Float?>(null) }
+            val duration = playback.durationMs
+            val fraction = if (duration > 0) (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
+            val shown = dragging ?: fraction
+            Text(
+                "${clock((shown * duration).toLong())} / ${clock(duration)}",
+                style = OverMedia,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = AdhxColors.White,
+            )
+            Spacer(Modifier.width(10.dp))
+            val colors = SliderDefaults.colors(
+                thumbColor = AdhxColors.Accent,
+                activeTrackColor = AdhxColors.Accent,
+                inactiveTrackColor = AdhxColors.White.copy(alpha = 0.3f),
+            )
+            Slider(
+                value = shown,
+                onValueChange = { dragging = it },
+                onValueChangeFinished = {
+                    dragging?.let { if (duration > 0) onSeek((it * duration).toLong()) }
+                    dragging = null
+                },
+                enabled = duration > 0,
+                colors = colors,
+                thumb = {
+                    Box(
+                        Modifier
+                            .size(14.dp)
+                            .clip(CircleShape)
+                            .background(AdhxColors.Accent),
+                    )
+                },
+                track = { state ->
+                    SliderDefaults.Track(
+                        sliderState = state,
+                        colors = colors,
+                        enabled = duration > 0,
+                        thumbTrackGapSize = 0.dp,
+                        drawStopIndicator = null,
+                        modifier = Modifier.height(4.dp),
+                    )
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp)
+                    .semantics { contentDescription = "Seek" },
+            )
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .clickable(onClickLabel = "Hide controls", onClick = onHide)
+                .semantics { contentDescription = "Hide controls" },
+            contentAlignment = Alignment.Center,
+        ) {
+            ActionIcon(painterResource(R.drawable.ic_hide_overlay))
+        }
+    }
+}
+
+/** The thin line left at the bottom while the controls are hidden. */
+@Composable
+private fun ProgressLine(playback: Playback, modifier: Modifier = Modifier) {
+    val duration = playback.durationMs
+    val fraction = if (duration > 0) (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(3.dp)
+            .background(AdhxColors.White.copy(alpha = 0.2f)),
+    ) {
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction)
+                .background(AdhxColors.Accent),
+        )
+    }
+}
+
+/** 0:14, 12:03, 1:02:45 */
+private fun clock(ms: Long): String {
+    val total = (ms / 1000).coerceAtLeast(0)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val s = total % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
 
 /** The system share sheet, with the post's own link. */
