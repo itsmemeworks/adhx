@@ -6,6 +6,28 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — From scratch on a production build: web, iPhone, Android, 14 networks
+
+- **Setup:** `next build` standalone, run like the container (migrate, then `node server.js`) on an empty database with `EMAIL_LINKS_TO_ADMIN=1`, `ALLOWED_EMAILS=@friends.test` and the Jev key.
+- **Passed:**
+  - Owner bootstrap from the server log; the admin card's waiting links for two friends; a stranger refused.
+  - Fresh pairing of three phones.
+  - One post from each of 13 networks kept at best quality and indexed (picture, words, video), including a 4K YouTube video (508 MB) that the phones played as soon as it was kept.
+  - Search by meaning plus the Jev refine, per user, on web and phone keys.
+  - New saves reached the right phone as a pill; a cross-user save shared the kept file.
+- **Fixed:**
+  - Name and channel screens showed adhx.com (inlined at build time); they now use the page's own address.
+  - A DRM Vimeo video was kept as its thumbnail.
+  - Sounds and picture-only posts retried video frames forever.
+  - "This video is unavailable" was retried instead of being treated as final.
+  - A download waiting to retry gave the player no reason.
+  - Returning sign-ins were shown "Save your first post".
+  - `.dockerignore` now leaves out apps, site and build output.
+- **Known:**
+  - Imgur blocks UK addresses (403).
+  - X sync needs the owner's own X developer app.
+  - Web sign-ins end when `SESSION_SECRET` changes (phone keys survive), so keep it fixed in the NAS `.env`.
+
 ## 2026-10-18 — Cross-device run: who sees what, everywhere
 
 - **Setup:** e2e server on :3020. Ana on the iPhone 18 Pro, the owner on the iPhone 16, Ben on the Android emulator (fresh install, paired by `adhx://pair` link), and all three on the desktop.
