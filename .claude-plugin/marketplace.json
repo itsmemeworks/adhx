@@ -4,17 +4,17 @@
     "name": "ADHX"
   },
   "metadata": {
-    "description": "X/Twitter post reader for LLMs",
-    "version": "1.0.0"
+    "description": "Search your ADHX saves and read X/Twitter posts from your agent",
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "adhx",
       "source": "./",
-      "description": "Fetch X/Twitter posts as clean LLM-friendly JSON via the ADHX API",
-      "version": "1.0.0",
+      "description": "Search your ADHX saves by meaning and fetch X/Twitter posts as clean JSON",
+      "version": "1.1.0",
       "license": "MIT",
-      "keywords": ["twitter", "x", "tweets", "llm", "api"],
+      "keywords": ["twitter", "x", "tweets", "bookmarks", "search", "llm", "api"],
       "category": "integrations",
       "tags": ["social-media", "twitter", "reading"]
     }

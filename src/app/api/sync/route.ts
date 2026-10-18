@@ -1,34 +1,15 @@
 import { NextResponse } from 'next/server'
-import { fetchBookmarks, TwitterBookmark } from '@/lib/twitter/client'
 import { db } from '@/lib/db'
-import { bookmarks, syncLogs } from '@/lib/db/schema'
+import { syncLogs } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { withAuth } from '@/lib/api/with-auth'
 import { hasExistingTokens } from '@/lib/auth/oauth'
-import { captureException, captureMessage, metrics } from '@/lib/sentry'
-import { REAUTH_MESSAGE, SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
-import { isReauthError, toTwitterCallError } from '@/lib/twitter/errors'
-import { recordActivity, previewPath } from '@/lib/activity/record'
+import { REAUTH_MESSAGE } from '@/lib/sync/messages'
 import { getSyncCooldownMs } from '@/lib/sync/config'
-import { saveBookmark } from '@/lib/sync/save-bookmark'
-import { addedAtForIndex } from '@/lib/sync/added-at'
-import { recordAnalytic } from '@/lib/analytics/record'
-import {
-  claimSync,
-  finishOwnedSync,
-  renewSyncLease,
-  updateOwnedSyncProgress,
-} from '@/lib/sync/claim'
+import { claimSync, MANUAL_SYNC } from '@/lib/sync/claim'
 import { observeSync } from '@/lib/sync/observe'
-import { noteSaved, PRIORITY } from '@/lib/semantic'
-
-/**
- * Cap on how many newly-synced tweets feed the public pulse per sync. Bookmarks
- * arrive most-recently-bookmarked first, so the freshest saves are recorded and
- * a large first-time backfill can't flood the shared, anonymous Discover feed.
- */
-const SYNC_PULSE_CAP = 25
+import { runBookmarkSync } from '@/lib/sync/run'
 
 function terminalSyncErrorResponse(message: string, code: string): Response {
   const encoder = new TextEncoder()
@@ -61,7 +42,7 @@ export const GET = withAuth(async (request, userId) => {
   const [lastSync] = await db
     .select()
     .from(syncLogs)
-    .where(and(eq(syncLogs.status, 'completed'), eq(syncLogs.userId, userId)))
+    .where(and(eq(syncLogs.status, 'completed'), eq(syncLogs.userId, userId), MANUAL_SYNC()))
     .orderBy(desc(syncLogs.completedAt))
     .limit(1)
 
@@ -100,11 +81,8 @@ export const GET = withAuth(async (request, userId) => {
   // enqueuing on a torn-down controller instead of running the full sync to
   // completion against a socket nobody's reading.
   let aborted = false
-  let leaseLost = false
-  let keepAliveInterval: ReturnType<typeof setInterval> | undefined
   const onAbort = () => {
     aborted = true
-    if (keepAliveInterval) clearInterval(keepAliveInterval)
   }
   request.signal.addEventListener('abort', onAbort)
 
@@ -121,268 +99,9 @@ export const GET = withAuth(async (request, userId) => {
         }
       }
 
-      const syncStartTime = Date.now()
-
       try {
-        // Keep-alive interval to prevent connection drops (defined outside try so finally can clear it)
-        keepAliveInterval = setInterval(() => {
-          if (aborted) {
-            clearInterval(keepAliveInterval)
-            return
-          }
-          try {
-            if (!renewSyncLease(userId, syncId)) {
-              leaseLost = true
-              clearInterval(keepAliveInterval)
-              return
-            }
-          } catch {
-            // A failed renewal cannot prove ownership. Stop safely and leave
-            // the row for stale recovery rather than continuing unlocked.
-            leaseLost = true
-            clearInterval(keepAliveInterval)
-            return
-          }
-          send('ping', { timestamp: Date.now() })
-        }, 10000) // Send ping every 10 seconds
-
-        // Track sync start only after the durable claim exists. Any failure
-        // from here on is caught below and releases the claim as failed.
-        metrics.syncStarted('full')
-
-        send('start', { syncId, total: null })
-
-        // Get existing bookmark IDs for this user (strict userId check)
-        const existingIds = new Set(
-          (
-            await db
-              .select({ id: bookmarks.id })
-              .from(bookmarks)
-              .where(and(eq(bookmarks.userId, userId), eq(bookmarks.platform, 'twitter')))
-          ).map((b) => b.id),
-        )
-
-        // Track IDs we've inserted during this sync (for quote tweets that get saved separately)
-        const insertedDuringSync = new Set<string>()
-
-        const allTweets: TwitterBookmark[] = []
-        let pageNumber = 0
-        let duplicatesSkipped = 0
-        let newBookmarks = 0
-        const publishProgress = () => {
-          if (
-            !updateOwnedSyncProgress(userId, syncId, {
-              totalFetched: allTweets.length,
-              newBookmarks,
-              duplicatesSkipped,
-            })
-          )
-            leaseLost = true
-        }
-
-        // A sync is complete only when X stops returning a next-page token.
-        // Keep going through short, empty, and already-saved pages: they can
-        // still lead to older bookmarks missing from this account. Ignore the
-        // legacy all/maxPages query flags so cached clients also get a full scan.
-        let cursor: string | undefined
-        const requestedCursors = new Set<string>()
-        while (!aborted && !leaseLost) {
-          if (cursor) {
-            if (requestedCursors.has(cursor)) {
-              throw new Error(
-                'X repeated a bookmark page. Sync could not finish; please try again later.',
-              )
-            }
-            requestedCursors.add(cursor)
-          }
-          const result = await fetchBookmarks(userId, {
-            maxResults: 100,
-            paginationToken: cursor,
-          })
-          if (aborted || leaseLost) break
-          pageNumber++
-          allTweets.push(...result.bookmarks)
-          publishProgress()
-          send('page', {
-            pageNumber,
-            tweetsFound: result.bookmarks.length,
-            cursor: result.nextToken || null,
-          })
-          cursor = result.nextToken
-          if (!cursor) break
-        }
-
-        // Process each bookmark
-        const total = allTweets.length
-        for (let i = 0; i < allTweets.length; i++) {
-          if (aborted || leaseLost) break
-
-          const tweet = allTweets[i]
-          const isDuplicate = existingIds.has(tweet.id)
-
-          if (isDuplicate) {
-            duplicatesSkipped++
-            send('duplicate', { tweetId: tweet.id, skipped: true })
-          } else {
-            // Count the "added" stamp backwards from the sync start so X's
-            // newest-bookmarked-first order survives the Collection's
-            // `added desc` sort — see addedAtForIndex.
-            const { bookmark: savedBookmark, inserted } = await saveBookmark(
-              tweet,
-              userId,
-              insertedDuringSync,
-              addedAtForIndex(syncStartTime, i),
-            )
-            if (leaseLost) break
-            insertedDuringSync.add(tweet.id)
-            existingIds.add(tweet.id)
-
-            // The preloaded ID set is only an optimization. Another writer can
-            // insert after that snapshot, so the bookmark INSERT result is the
-            // source of truth for stats, events, and the public save pulse.
-            if (!inserted) {
-              duplicatesSkipped++
-              publishProgress()
-              send('duplicate', { tweetId: tweet.id, skipped: true })
-              continue
-            }
-
-            newBookmarks++
-            noteSaved([{ platform: 'twitter', postId: savedBookmark.id }], PRIORITY.sync)
-
-            // Feed the public pulse, same as a manual save — a newly-synced tweet
-            // is a new save. Capped (freshest first) so a big backfill can't flood
-            // the shared feed. getTrendingItems derives type/counts from the
-            // bookmark we just wrote; we still pass title/cover so articles read
-            // rich. Fire-and-forget (recordActivity swallows errors).
-            if (newBookmarks <= SYNC_PULSE_CAP) {
-              recordActivity({
-                action: 'save',
-                platform: 'twitter',
-                bookmarkId: savedBookmark.id,
-                author: savedBookmark.author,
-                authorName: savedBookmark.authorName,
-                text: savedBookmark.articlePreview?.title || savedBookmark.text || null,
-                thumbnailUrl:
-                  savedBookmark.articlePreview?.imageUrl ||
-                  savedBookmark.media?.[0]?.thumbnailUrl ||
-                  null,
-                contentType: savedBookmark.category,
-                url: previewPath('twitter', savedBookmark.author, savedBookmark.id),
-                userId,
-                source: 'sync',
-              })
-            }
-
-            send('processing', {
-              current: i + 1,
-              total,
-              tweet: {
-                id: tweet.id,
-                author: tweet.author?.username || 'unknown',
-                text: tweet.text.slice(0, 100) + (tweet.text.length > 100 ? '...' : ''),
-              },
-              // Include full bookmark data for real-time gallery updates
-              bookmark: savedBookmark,
-            })
-
-            // Rate limit: wait 150ms between bookmarks to avoid overwhelming FxTwitter API
-            // This ensures article enrichment data is fetched reliably
-            if (i < allTweets.length - 1) {
-              await new Promise((resolve) => setTimeout(resolve, 150))
-            }
-          }
-          publishProgress()
-        }
-
-        if (leaseLost) {
-          send('error', { message: SYNC_IN_PROGRESS_MESSAGE, code: 'in_progress' })
-          return
-        }
-
-        if (aborted) {
-          // Client disconnected mid-sync — record what we actually got through
-          // rather than leaving the row stuck at 'running' (that's what the
-          // stale-row reaper above cleans up for crashed processes, but we can
-          // just mark it directly here since we're still running).
-          finishOwnedSync(userId, syncId, {
-            completedAt: new Date().toISOString(),
-            status: 'failed',
-            errorMessage: 'Client disconnected',
-            totalFetched: total,
-            newBookmarks,
-            duplicatesSkipped,
-          })
-          return
-        }
-
-        // Update sync log
-        const completedAt = new Date().toISOString()
-        const completed = finishOwnedSync(userId, syncId, {
-          completedAt,
-          status: 'completed',
-          totalFetched: total,
-          newBookmarks,
-          duplicatesSkipped,
-        })
-        if (!completed) {
-          send('error', { message: SYNC_IN_PROGRESS_MESSAGE, code: 'in_progress' })
-          return
-        }
-
-        // Track sync completion
-        const syncDuration = Date.now() - syncStartTime
-        metrics.syncCompleted(newBookmarks, pageNumber, syncDuration)
-        metrics.trackUser(userId)
-        recordAnalytic({ name: 'sync.complete', userId, source: 'sync' })
-
-        send('complete', {
-          stats: {
-            total,
-            new: newBookmarks,
-            duplicates: duplicatesSkipped,
-            categorized: 0, // Will be populated if AI categorization runs
-          },
-        })
-      } catch (error) {
-        const classified = toTwitterCallError(error)
-        const message = classified.message
-
-        const failed = finishOwnedSync(userId, syncId, {
-          completedAt: new Date().toISOString(),
-          status: 'failed',
-          errorMessage: message,
-        })
-        if (!failed) {
-          send('error', { message: SYNC_IN_PROGRESS_MESSAGE, code: 'in_progress' })
-          return
-        }
-
-        // Track sync failure only while this stream still owns the claim.
-        metrics.syncFailed(classified.code)
-
-        // Auth-loss is expected and user-recoverable — record it on the sync
-        // log + tell the client to reconnect. 402 is the developer app being
-        // out of X API credits: warn in Sentry (with X's body) but do *not*
-        // send the user back through OAuth — that loops.
-        if (classified.httpStatus === 402) {
-          captureMessage('X bookmarks returned 402 (no API credits)', 'warning', {
-            syncId,
-            userId,
-            twitterStatus: 402,
-            twitterBody: classified.twitterBody,
-          })
-        } else if (!isReauthError(classified)) {
-          captureException(error, {
-            syncId,
-            userId,
-            errorMessage: message,
-          })
-        }
-
-        send('error', { message, code: classified.code })
+        await runBookmarkSync(userId, syncId, { mode: 'full', send, isAborted: () => aborted })
       } finally {
-        clearInterval(keepAliveInterval)
         request.signal.removeEventListener('abort', onAbort)
         try {
           controller.close()

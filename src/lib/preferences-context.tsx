@@ -36,6 +36,8 @@ interface Preferences {
   bodyFont: BodyFont
   avatarSource: AvatarSource
   soundOn: boolean
+  /** Bring in new X bookmarks about every hour (on unless turned off). */
+  autoSync: boolean
 }
 
 interface PreferencesContextType {
@@ -49,6 +51,7 @@ const defaultPreferences: Preferences = {
   bodyFont: 'ibm-plex',
   avatarSource: 'x',
   soundOn: false,
+  autoSync: true,
 }
 
 const PreferencesContext = createContext<PreferencesContextType | undefined>(undefined)
@@ -89,6 +92,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
             bodyFont: (data.bodyFont as BodyFont) || 'ibm-plex',
             avatarSource: data.avatarSource === 'generated' ? 'generated' : 'x',
             soundOn,
+            autoSync: data.autoSync !== 'false',
           })
         } else if (localSoundOn !== null) {
           setPreferences((current) => ({ ...current, soundOn: localSoundOn }))

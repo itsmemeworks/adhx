@@ -241,6 +241,25 @@ export const userPreferences = sqliteTable(
   }),
 )
 
+// Personal access keys — read-only search from outside the browser (the adhx
+// skill). Only a SHA-256 of the key is stored; the key itself is shown once.
+export const accessKeys = sqliteTable(
+  'access_keys',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    name: text('name').notNull(),
+    keyHash: text('key_hash').notNull().unique(),
+    /** Last four characters, so people can tell their keys apart. */
+    hint: text('hint').notNull(),
+    createdAt: text('created_at').notNull(),
+    lastUsedAt: text('last_used_at'),
+  },
+  (table) => ({
+    userIdIdx: index('access_keys_user_id_idx').on(table.userId),
+  }),
+)
+
 // Sync logs - PK: id (includes userId for filtering)
 export const syncLogs = sqliteTable(
   'sync_logs',

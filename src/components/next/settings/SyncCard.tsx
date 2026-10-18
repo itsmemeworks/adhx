@@ -7,7 +7,16 @@ import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
 import { NxImage, XLogo } from '../primitives'
 import { learningSummary, type LearningStatus } from '../onboarding/learning'
 import type { XSyncState } from '../onboarding/useXSync'
-import { PRIMARY, SECONDARY, SettingsCard, formatWait, timeSince } from './parts'
+import { usePreferences } from '@/lib/preferences-context'
+import {
+  PRIMARY,
+  SECONDARY,
+  SettingRow,
+  SettingsCard,
+  Switch,
+  formatWait,
+  timeSince,
+} from './parts'
 
 /** Connecting X comes back here and starts the import straight away. */
 export const CONNECT_X_URL = `/api/auth/twitter?returnUrl=${encodeURIComponent('/settings?sync=1')}`
@@ -28,6 +37,8 @@ export interface SyncHistoryEntry {
   status: string
   newBookmarks: number
   totalFetched: number
+  /** `auto` for the hourly sync; `manual` (or null on older rows) for the button. */
+  triggerType?: string | null
 }
 
 const pct = (n: number, of: number) => Math.round((n / Math.max(1, of)) * 100)
@@ -163,6 +174,8 @@ export function SyncCard({
   waitMs: number
   counts: SyncCounts
 }) {
+  const { preferences, updatePreference, loading: prefsLoading } = usePreferences()
+  const [autoSaving, setAutoSaving] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
   const [disconnectError, setDisconnectError] = useState<string | null>(null)
 
@@ -186,6 +199,17 @@ export function SyncCard({
   }
 
   const running = sync.status === 'running'
+  const auto = preferences.autoSync
+
+  async function toggleAuto() {
+    if (prefsLoading || autoSaving) return
+    setAutoSaving(true)
+    try {
+      await updatePreference('autoSync', !auto)
+    } finally {
+      setAutoSaving(false)
+    }
+  }
 
   return (
     <SettingsCard
@@ -193,7 +217,7 @@ export function SyncCard({
       title="Your X bookmarks"
       sub={
         xConnected
-          ? 'Bring in new bookmarks from X whenever you like.'
+          ? 'Bookmark something on X and it shows up here.'
           : 'Connect X and we’ll bring in your bookmarks, so you can watch and search them here.'
       }
       tone="accent"
@@ -251,6 +275,19 @@ export function SyncCard({
         </div>
       ) : (
         <>
+          <SettingRow
+            label="Bring in new bookmarks automatically"
+            hint="We check X about every hour, so anything you bookmark there is here within the hour."
+          >
+            <Switch
+              label="Bring in new bookmarks automatically"
+              checked={auto}
+              onChange={() => void toggleAuto()}
+              disabled={prefsLoading || autoSaving}
+              busy={autoSaving}
+            />
+          </SettingRow>
+
           {running && <SyncProgressBlock sync={sync} learning={learning} />}
 
           {sync.status === 'done' && (
@@ -302,7 +339,7 @@ export function SyncCard({
             ))}
 
           <p className="m-0 text-[13px] text-white/55">
-            {`${counts.lastSyncAt ? `Last synced ${timeSince(counts.lastSyncAt)}.` : 'Not synced yet.'} You can sync once an hour.`}
+            {`${counts.lastSyncAt ? `Last synced ${timeSince(counts.lastSyncAt)}.` : 'Not synced yet.'} You can sync everything by hand once an hour.`}
           </p>
         </>
       )}
@@ -348,7 +385,12 @@ export function SyncHistoryCard({
               key={log.id}
               className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm"
             >
-              <span className="min-w-0 flex-1 truncate font-bold">{formatWhen(log.startedAt)}</span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate font-bold">{formatWhen(log.startedAt)}</span>
+                <span className="text-xs text-white/55">
+                  {log.triggerType === 'auto' ? 'Automatic' : 'By hand'}
+                </span>
+              </span>
               <span className="whitespace-nowrap font-bold text-nx-accent">{`+${log.newBookmarks} new`}</span>
               <span className="whitespace-nowrap text-white/55">{`${log.totalFetched} checked`}</span>
             </li>

@@ -27,6 +27,7 @@ export const ANALYTIC_EVENTS = [
   'auth.complete',
   'auth.fail',
   'sync.complete',
+  'sync.auto',
   'theater.open',
   'shortcut.install',
   'welcome.complete',

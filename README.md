@@ -251,7 +251,9 @@ Add the optional X and Resend secrets in the same way. For deployment structure,
 
 ### Agent skill
 
-ADHX ships an [Agent Skill](https://agentskills.io) that turns an X, Twitter, or ADHX post link into clean structured data, including full X Article content. It works with skills-compatible tools such as Claude Code, Cursor, Gemini CLI, Codex, and Copilot.
+ADHX ships an [Agent Skill](https://agentskills.io) that searches your own saves by meaning ("my saved videos with a frog in them"), pictures and videos included, and turns an X, Twitter, or ADHX post link into clean structured data, including full X Article content. It works with skills-compatible tools such as Claude Code, Cursor, Gemini CLI, Codex, and Copilot.
+
+Searching your saves needs a personal access key: make one in Settings → Search from Claude and set it as `ADHX_API_KEY`. Keys can only read your own saves, and you can remove them at any time.
 
 ```bash
 # Claude Code

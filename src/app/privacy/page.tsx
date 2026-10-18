@@ -56,7 +56,9 @@ export default function PrivacyPage() {
           channels, archive and preferences are keyed by your account, and other people cannot read
           them. Archive never writes a public pulse. A channel stays private until you make it
           public on its page, and you can make it private again there. Keeping a “Made for you”
-          channel keeps it private.
+          channel keeps it private. If X is connected, we check it for new bookmarks about every
+          hour. An access key (for searching from Claude) is stored only as a hash, can only search
+          your own saves, and stops working as soon as you remove it.
         </Section>
 
         <Section title="Search by meaning">
@@ -86,8 +88,8 @@ export default function PrivacyPage() {
 
         <Section title="Your choices">
           Watch shared posts, Right now and Tune in without an account. Keep channels private.
-          Archive without a public pulse. Disconnect X, clear data, or delete the account in
-          Settings.
+          Archive without a public pulse. Turn off automatic X sync, remove access keys, disconnect
+          X, clear data, or delete the account in Settings.
         </Section>
 
         <p className="m-0 mt-2">

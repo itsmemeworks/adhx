@@ -292,6 +292,17 @@ export const FULL_SCHEMA_SQL = `
     used_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE access_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      hint TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT
+    );
+    CREATE INDEX access_keys_user_id_idx ON access_keys(user_id);
 `
 
 export interface TestDbInstance {

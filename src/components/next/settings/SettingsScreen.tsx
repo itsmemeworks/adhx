@@ -15,6 +15,7 @@ import { AccountCard, type AuthMe } from './AccountCard'
 import { DangerZone } from './DangerZone'
 import { PreferencesCard } from './PreferencesCard'
 import { SECONDARY, SettingsCard } from './parts'
+import { AccessKeysCard } from './AccessKeysCard'
 import { SyncCard, SyncHistoryCard, type SyncCounts, type SyncHistoryEntry } from './SyncCard'
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
@@ -248,6 +249,7 @@ export function SettingsScreen() {
             />
             <SyncHistoryCard syncs={history} loading={historyLoading} />
             <AccountCard me={me} refresh={() => void fetchMe()} />
+            <AccessKeysCard />
           </>
         )}
 

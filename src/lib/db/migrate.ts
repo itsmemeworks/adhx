@@ -128,8 +128,18 @@ try {
       used_at TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS access_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      hint TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS access_keys_user_id_idx ON access_keys(user_id);
   `)
-  console.log('[migrate] Ensured users/user_identities/login_tokens tables')
+  console.log('[migrate] Ensured users/user_identities/login_tokens/access_keys tables')
 } catch (error) {
   console.log('[migrate] FAILED creating account tables', error)
   db.close()

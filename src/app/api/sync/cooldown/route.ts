@@ -4,13 +4,14 @@ import { syncLogs } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
 import { withAuth } from '@/lib/api/with-auth'
 import { getSyncCooldownMs } from '@/lib/sync/config'
+import { MANUAL_SYNC } from '@/lib/sync/claim'
 
 // GET /api/sync/cooldown - Check if user can sync
 export const GET = withAuth(async (_request, userId) => {
   const [lastSync] = await db
     .select()
     .from(syncLogs)
-    .where(and(eq(syncLogs.status, 'completed'), eq(syncLogs.userId, userId)))
+    .where(and(eq(syncLogs.status, 'completed'), eq(syncLogs.userId, userId), MANUAL_SYNC()))
     .orderBy(desc(syncLogs.completedAt))
     .limit(1)
 

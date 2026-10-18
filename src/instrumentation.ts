@@ -39,6 +39,11 @@ export async function register(): Promise<void> {
   // process. No-op when SEMANTIC_SEARCH=off or under test.
   const { startSemanticProcesses } = await import('@/lib/semantic/supervisor')
   startSemanticProcesses()
+
+  // New X bookmarks arrive within the hour without pressing Sync.
+  // Off with AUTO_SYNC_EVERY_MINUTES=0, and under test.
+  const { startAutoSync } = await import('@/lib/sync/auto')
+  startAutoSync()
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {

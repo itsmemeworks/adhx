@@ -24,6 +24,10 @@ When you sign in (magic-link email; X is optional later in Settings, for bookmar
 
 OAuth tokens for X are **encrypted at rest**. Magic-link tokens are stored as a hash and expire after 15 minutes.
 
+If you connect X, we check your X bookmarks for new ones about every hour, so they arrive without pressing Sync. You can turn this off in Settings.
+
+If you make an access key (Settings → Search from Claude), we store only a hash of it, its name, its last four characters and when it was last used. A key can only search your own saves. Removing it stops it working straight away.
+
 ### Your collection (private)
 
 Bookmarks, media rows, tags, archive state, and preferences are keyed by your account id. Other users cannot read them. Archive is private: it does **not** write a public pulse event.
@@ -83,8 +87,10 @@ Until you clear Saved or delete your account (Settings). Pulse and channel-view 
 - **Keep channels private** — only “Public” on a channel’s page publishes it, and “Private” takes it back.
 - **Archive** — removes a post from your active queue without a public pulse.
 - **Disconnect X** — Settings; blocked if it is your last sign-in method.
+- **Automatic X sync** — on while X is connected; turn it off in Settings.
+- **Access keys** — remove any key in Settings.
 - **Clear data** — deletes your bookmarks and related rows; keeps the account.
-- **Delete account** — removes the account, identities, tokens, and Saved.
+- **Delete account** — removes the account, identities, tokens, access keys, and Saved.
 
 To ask a question about this policy, email [security@adhx.com](mailto:security@adhx.com).
 

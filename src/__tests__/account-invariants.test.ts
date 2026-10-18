@@ -91,7 +91,7 @@ describe('account-reference write guards', () => {
          WHERE type = 'trigger' AND name LIKE 'guard_%_account_%'`,
       )
       .get() as { count: number }
-    expect(row.count).toBe(38)
+    expect(row.count).toBe(40)
   })
 
   it('enforces the persisted trigger from a separate database connection', () => {
