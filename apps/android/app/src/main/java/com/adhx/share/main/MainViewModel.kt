@@ -156,7 +156,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val api = AdhxApi(connection)
                 for (item in pending) {
                     when (val result = api.status(item.platform!!, item.postId!!)) {
-                        is ApiResult.Ok -> history.update(item.id) { it.withStatus(result.value) }
+                        is ApiResult.Ok -> {
+                            _reach.value = Reach.Connected
+                            history.update(item.id) { it.withStatus(result.value) }
+                        }
                         is ApiResult.Failed -> if (result.status == 404) {
                             history.update(item.id) { it.copy(keep = KeepStatus.NOT_SAVED) }
                         }

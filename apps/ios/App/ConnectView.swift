@@ -9,6 +9,24 @@ struct ConnectView: View {
     @State private var scanNote: String?
 
     var body: some View {
+        // Scrolls once the keyboard leaves too little room, rather than
+        // pushing the top under the status bar.
+        GeometryReader { geo in
+            ScrollView {
+                page.frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .topLeading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .background(Theme.app.ignoresSafeArea())
+        .task {
+            if camera == .undetermined {
+                camera = await QRScannerView.requestAccess() ? .ready : .denied
+            }
+        }
+    }
+
+    private var page: some View {
         VStack(alignment: .leading, spacing: 22) {
             Wordmark(markSize: 34, textSize: 30)
 
@@ -53,13 +71,6 @@ struct ConnectView: View {
         .padding(.horizontal, 24)
         .padding(.top, 20)
         .padding(.bottom, 16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Theme.app.ignoresSafeArea())
-        .task {
-            if camera == .undetermined {
-                camera = await QRScannerView.requestAccess() ? .ready : .denied
-            }
-        }
     }
 
     // MARK: Camera

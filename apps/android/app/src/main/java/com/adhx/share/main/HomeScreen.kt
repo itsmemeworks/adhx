@@ -66,9 +66,13 @@ fun HomeScreen(vm: MainViewModel, connection: Connection, onSettings: () -> Unit
     LaunchedEffect(resumed, connection.server, connection.key) {
         if (resumed) {
             vm.checkMe()
+            var tick = 0
             while (true) {
                 vm.refreshStatuses()
                 delay(3_000)
+                // Can't be reached: look again every few seconds, so it says
+                // connected once the phone or the server is back.
+                if (vm.reach.value == Reach.Unreachable && ++tick % 3 == 0) vm.checkMe()
             }
         }
     }

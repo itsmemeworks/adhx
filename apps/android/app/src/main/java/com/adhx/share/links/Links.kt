@@ -62,13 +62,20 @@ object Links {
     }
 
     /**
-     * Tidy a typed server address into an origin: adds https:// when there's
-     * no scheme and drops any trailing slash. Null when it can't be a URL.
+     * Tidy a typed server address into an origin: adds a scheme when there's
+     * none (http:// for addresses on your own network, like 192.168.1.20,
+     * localhost or name.local, which rarely have a certificate; https://
+     * otherwise) and drops any trailing slash. Null when it can't be a URL.
      */
     fun normalizeServer(input: String): String? {
         var text = input.trim()
         if (text.isEmpty()) return null
-        if (!text.contains("://")) text = "https://$text"
+        if (!text.contains("://")) {
+            val host = text.substringBefore('/').substringBefore(':').lowercase()
+            val local = host == "localhost" || host.endsWith(".local") ||
+                (host.isNotEmpty() && host.all { it.isDigit() || it == '.' })
+            text = (if (local) "http://" else "https://") + text
+        }
         val url = text.toHttpUrlOrNull() ?: return null
         val path = url.encodedPath.trimEnd('/')
         val defaultPort = if (url.isHttps) 443 else 80

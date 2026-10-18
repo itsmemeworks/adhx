@@ -8,7 +8,9 @@ struct ShareSheetScreen: View {
     @State private var drag: CGFloat = 0
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        // iOS may show the extension as its own card. Then the content sits at
+        // the card's top on one surface, instead of a sheet inside a sheet.
+        ZStack(alignment: flow.presentedInCard ? .top : .bottom) {
             backdrop
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
@@ -19,7 +21,7 @@ struct ShareSheetScreen: View {
             if shown {
                 sheet
                     .offset(y: drag)
-                    .transition(.move(edge: .bottom))
+                    .transition(flow.presentedInCard ? .opacity : .move(edge: .bottom))
             }
         }
         .onAppear {
@@ -34,7 +36,7 @@ struct ShareSheetScreen: View {
     }
 
     private var backdrop: Color {
-        if flow.presentedInCard { return Color(hex: 0x141311) }
+        if flow.presentedInCard { return Theme.surface }
         return Color.black.opacity(shown ? 0.55 : 0)
     }
 

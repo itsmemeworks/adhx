@@ -64,12 +64,13 @@ final class AppModel: ObservableObject {
     // MARK: Connection
 
     /// Checks the key still works; on 401 bad_key goes back to Connect.
-    func checkConnection() async {
+    /// `quietly` keeps showing the current state until there's an answer.
+    func checkConnection(quietly: Bool = false) async {
         guard let client = Store.client() else {
             reload()
             return
         }
-        connection = .checking
+        if !quietly { connection = .checking }
         do {
             let me = try await client.me()
             if let name = me.username { Store.username = name }
@@ -106,9 +107,16 @@ final class AppModel: ObservableObject {
     func startPolling() {
         pollTask?.cancel()
         pollTask = Task { [weak self] in
+            var tick = 0
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 guard let self, !Task.isCancelled else { return }
+                // Can't reach it: look again every few seconds, so it says
+                // connected once the phone or the server is back.
+                tick += 1
+                if self.connection == .unreachable, tick % 3 == 0 {
+                    await self.checkConnection(quietly: true)
+                }
                 self.reload()
                 let busy = self.records.contains { $0.needsStatus || $0.stage == .saving }
                 if busy || self.waiting > 0 { await self.refresh() }
