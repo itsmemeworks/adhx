@@ -1,9 +1,18 @@
 # Dependencies
 node_modules
 
-# Build output
-.next
+# Build output (every Next build folder: .next, .next-e2e, …)
+.next*
 out
+tsconfig.tsbuildinfo
+
+# Not part of the server: the phone apps, the adhx.com site, the browser
+# extension and end-to-end tests
+apps/
+site/
+extension/
+e2e/
+test/
 
 # Local data
 data/
