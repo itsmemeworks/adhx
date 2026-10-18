@@ -77,12 +77,17 @@ is queued on the phone and sent when the server can be reached.
 
 How the copy of a saved post is coming along.
 
-- `200 { platform, id, status, percent, quality, kept }`
+- `200 { platform, id, status, percent, step, quality, kept }`
   - `status`: `waiting` (queued) · `keeping` (downloading) · `kept` ·
     `retrying` (failed, will try again) · `unavailable` (gave up) · `off`
-    (this server doesn't download media)
+    (this server doesn't download media, or not this post: with
+    `KEEP_BACKFILL=off` a post nobody saved since the server started is never
+    kept, so it reads `off` rather than `waiting` forever)
   - `percent`: 0–100 while `keeping` when the download reports it, 100 when
-    `kept`, otherwise null
+    `kept`, otherwise null. It is null again while a downloaded video is
+    re-encoded to H.264 (minutes for a long 4K video), so it never sits at 99%.
+  - `step`: while `keeping`, `downloading` or `converting` (re-encoding);
+    otherwise null. Apps may say "converting" instead of showing a moving bar.
   - `quality`: "720p", "1080p", "4K" … for a kept video, else null
   - `kept`: `{ videos, photos, audio }` counts of kept files
 - `404 { code: 'not_saved' }` not in this account's saves

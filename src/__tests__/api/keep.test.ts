@@ -207,6 +207,35 @@ describe('kept media', () => {
       expect(keptFile('youtube', 'abc', 'video-1')).toMatchObject({ width: 1920, path: 'v.mp4' })
     })
 
+    it('drops the percent while a downloaded video is re-encoded, so it never sits at 99%', async () => {
+      save('youtube', 'vp9')
+      const { keepPost } = await import('@/lib/keep/download')
+      const progress = await import('@/lib/keep/progress')
+      const seen: Array<{ percent: number | null; converting: boolean }> = []
+      const look = () =>
+        seen.push({
+          percent: progress.keepProgress('youtube', 'vp9'),
+          converting: progress.isKeepConverting('youtube', 'vp9'),
+        })
+      vi.mocked(keepPost).mockImplementation(async (t) => {
+        t.onProgress?.(100)
+        look()
+        t.onConverting?.()
+        look()
+        return []
+      })
+      const { scanForNewSaves, claimNext, runJob } = await import('@/lib/keep/worker')
+      scanForNewSaves()
+      const job = claimNext()!
+      await runJob(job.platform, job.postId)
+      look()
+      expect(seen).toEqual([
+        { percent: 99, converting: false },
+        { percent: null, converting: true },
+        { percent: null, converting: false },
+      ])
+    })
+
     it('retries a failure later, and gives up at once when there is nothing to keep', async () => {
       save('youtube', 'flaky')
       save('vimeo', 'drm')

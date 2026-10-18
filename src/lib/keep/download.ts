@@ -30,6 +30,8 @@ export interface KeepTarget {
   category?: string | null
   /** Told how far a yt-dlp download is, 0–100. */
   onProgress?: (percent: number) => void
+  /** Called when a downloaded video starts being re-encoded to H.264. */
+  onConverting?: () => void
 }
 
 interface Collected {
@@ -238,8 +240,9 @@ export function pageHosts(platform: string): string[] {
  * same size, visually lossless (CRF 20), keeping the sound as it is. Returns the
  * new file, or null when the video is already H.264.
  */
-async function toH264(file: string, probed: Probed): Promise<string | null> {
+async function toH264(file: string, probed: Probed, onStart?: () => void): Promise<string | null> {
   if (!probed.videoCodec || probed.videoCodec === 'h264') return null
+  onStart?.()
   const out = file.replace(/\.[^.]+$/, '') + '.h264.mp4'
   const bin = await ffmpegPath()
   await new Promise<void>((resolve, reject) => {
@@ -300,7 +303,7 @@ export async function keepPost(target: KeepTarget): Promise<NewKeptFile[]> {
     for (const c of collected) {
       let probed = await probeMedia(c.file)
       if (c.kind === 'video' && probed.hasVideo && keepH264()) {
-        const converted = await toH264(c.file, probed)
+        const converted = await toH264(c.file, probed, target.onConverting)
         if (converted) {
           c.file = converted
           probed = await probeMedia(converted)

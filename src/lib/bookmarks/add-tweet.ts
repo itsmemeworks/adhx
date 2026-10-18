@@ -4,8 +4,8 @@ import { bookmarks, bookmarkMedia, type NewBookmarkLink } from '@/lib/db/schema'
 import { upsertBookmarkLinks } from '@/lib/db/bookmark-link-merge'
 import { eq, and } from 'drizzle-orm'
 import { metrics, captureException } from '@/lib/sentry'
-import { parseTweetUrl, fetchTweetFromFxTwitter, determineCategory } from '@/lib/tweets/processor'
-import { extractUrlsFromFacets } from '@/lib/media/fxembed'
+import { parseTweetUrl, determineCategory } from '@/lib/tweets/processor'
+import { extractUrlsFromFacets, fetchTweetResult } from '@/lib/media/fxembed'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
@@ -95,11 +95,18 @@ export async function addTweet(
     }
 
     // Fetch tweet data from fxtwitter
-    const fxResponse = await fetchTweetFromFxTwitter(parsed.author, parsed.tweetId)
-    if (!fxResponse?.tweet) {
+    const fx = await fetchTweetResult(parsed.author, parsed.tweetId)
+    if (!fx.ok && fx.gone) {
+      // Deleted, private or suspended: saying so beats a "try again" that never works.
+      return NextResponse.json(
+        { error: 'This tweet is no longer available. It may be private or deleted.' },
+        { status: 404 },
+      )
+    }
+    if (!fx.ok || !fx.data.tweet) {
       return NextResponse.json({ error: 'Failed to fetch tweet data' }, { status: 500 })
     }
-    const tweet = fxResponse.tweet
+    const tweet = fx.data.tweet
 
     // Determine category based on content
     const category = determineCategory(tweet)

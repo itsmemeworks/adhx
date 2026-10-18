@@ -4,7 +4,8 @@ import { bookmarkMedia, bookmarks, keepJobs, keptFiles } from '@/lib/db/schema'
 import { previewPath } from '@/lib/activity/preview-path'
 import { isLinkNetwork, networkLabel } from '@/lib/platform/networks'
 import { keepEnabled } from '@/lib/keep/config'
-import { keepProgress } from '@/lib/keep/progress'
+import { keepCutoff } from '@/lib/keep/worker'
+import { isKeepConverting, keepProgress } from '@/lib/keep/progress'
 import { keptSrc } from '@/lib/keep/src'
 
 /**
@@ -35,6 +36,8 @@ export interface AppKeepStatus {
   id: string
   status: KeepState
   percent: number | null
+  /** While keeping: `converting` once the download is done and the video is re-encoded. */
+  step: 'downloading' | 'converting' | null
   quality: string | null
   kept: { videos: number; photos: number; audio: number }
 }
@@ -122,6 +125,23 @@ export function savedPost(userId: string, platform: string, id: string): Bookmar
   return row ?? null
 }
 
+/**
+ * With KEEP_BACKFILL=off the worker only takes posts someone saved after it
+ * started, so an older save that isn't kept yet never will be: that reads as
+ * "off" (this server doesn't keep it), not as "waiting" forever.
+ */
+function willNeverStart(platform: string, id: string, jobStatus: string | undefined): boolean {
+  if (jobStatus && jobStatus !== 'pending' && jobStatus !== 'failed') return false
+  const cutoff = keepCutoff()
+  if (!cutoff) return false
+  const [newest] = db
+    .select({ at: sql<string | null>`MAX(${bookmarks.processedAt})` })
+    .from(bookmarks)
+    .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, id)))
+    .all()
+  return !newest?.at || newest.at < cutoff
+}
+
 /** How the kept copy of a post is coming along (keep jobs are shared by everyone who saved it). */
 export function keepStatus(platform: string, id: string): AppKeepStatus {
   const [job] = db
@@ -147,7 +167,10 @@ export function keepStatus(platform: string, id: string): AppKeepStatus {
   }
 
   let status: KeepState
-  switch (job?.status) {
+  switch (willNeverStart(platform, id, job?.status) ? 'off' : job?.status) {
+    case 'off':
+      status = 'off'
+      break
     case 'running':
       status = 'keeping'
       break
@@ -173,6 +196,8 @@ export function keepStatus(platform: string, id: string): AppKeepStatus {
     id,
     status,
     percent: status === 'kept' ? 100 : status === 'keeping' ? keepProgress(platform, id) : null,
+    step:
+      status !== 'keeping' ? null : isKeepConverting(platform, id) ? 'converting' : 'downloading',
     quality: video ? qualityLabel(video.width, video.height) : null,
     kept,
   }

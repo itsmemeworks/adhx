@@ -6,7 +6,7 @@ import { captureException } from '@/lib/sentry'
 import { noteSaved, PRIORITY } from '@/lib/semantic'
 import { keepBackfill, keepConcurrency, keepEnabled, keepMinFreeBytes, mediaDir } from './config'
 import { keepPost, NothingToKeep } from './download'
-import { clearKeepProgress, reportKeepProgress } from './progress'
+import { clearKeepProgress, reportKeepConverting, reportKeepProgress } from './progress'
 import { forgetPost, recordKept } from './store'
 import { YtdlpError } from './ytdlp'
 
@@ -137,6 +137,7 @@ export async function runJob(platform: string, postId: string): Promise<void> {
       author: saved.author,
       category: saved.category,
       onProgress: (percent) => reportKeepProgress(platform, postId, percent),
+      onConverting: () => reportKeepConverting(platform, postId),
     })
     await recordKept(platform, postId, files)
     // Understand it again from the kept files (unchanged parts are skipped).
@@ -208,6 +209,15 @@ export async function diskHasRoom(): Promise<boolean> {
   } catch {
     return true
   }
+}
+
+/**
+ * With KEEP_BACKFILL=off, the save time before which posts are left alone
+ * (null when everything is kept, or when the worker isn't running here).
+ */
+export function keepCutoff(): string | null {
+  const s = state()
+  return s.timer ? s.since : null
 }
 
 /** A save just happened: look for it now instead of on the next scan. */

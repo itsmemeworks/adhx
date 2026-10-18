@@ -4,8 +4,13 @@
  * isn't downloading right now has none.
  */
 
-const g = globalThis as unknown as { __adhxKeepProgress?: Map<string, number> }
+const g = globalThis as unknown as {
+  __adhxKeepProgress?: Map<string, number>
+  __adhxKeepConverting?: Set<string>
+}
 const progress = () => (g.__adhxKeepProgress ??= new Map())
+/** Posts whose download is done and whose video is being re-encoded. */
+const converting = () => (g.__adhxKeepConverting ??= new Set())
 const keyOf = (platform: string, postId: string) => `${platform}:${postId}`
 
 /**
@@ -20,12 +25,29 @@ export function reportKeepProgress(platform: string, postId: string, percent: nu
   if (clamped > (progress().get(key) ?? -1)) progress().set(key, clamped)
 }
 
+/**
+ * The download percent, or null when there is none — including while the
+ * video is re-encoded afterwards, which can take minutes for a long 4K video
+ * and would otherwise sit at 99%.
+ */
 export function keepProgress(platform: string, postId: string): number | null {
-  return progress().get(keyOf(platform, postId)) ?? null
+  const key = keyOf(platform, postId)
+  if (converting().has(key)) return null
+  return progress().get(key) ?? null
+}
+
+/** The download is done and the video is being re-encoded to H.264. */
+export function reportKeepConverting(platform: string, postId: string): void {
+  converting().add(keyOf(platform, postId))
+}
+
+export function isKeepConverting(platform: string, postId: string): boolean {
+  return converting().has(keyOf(platform, postId))
 }
 
 export function clearKeepProgress(platform: string, postId: string): void {
   progress().delete(keyOf(platform, postId))
+  converting().delete(keyOf(platform, postId))
 }
 
 /** The percent in one line of yt-dlp output made with `PROGRESS_TEMPLATE`, or null. */

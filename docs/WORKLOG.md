@@ -6,6 +6,23 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-18 — Android app builds; phone API gaps fixed
+
+- **Android:** first real build (JDK 17 + SDK 35, wrapper jar committed) and an emulator run against a local ADHX. Fixed a crash on the first API call (body read on the main thread), new shares landing above the fold in Shared lately, and "Kept · saved" for words-only posts.
+- **Gone tweets:** `fetchTweetResult` (fxembed) tells "gone" (FxTwitter 404/401) from "couldn't ask". `addTweet` now answers 404, so `/api/app/save` says `unavailable` instead of a 500 "try again".
+- **Status `off` with KEEP_BACKFILL=off:** an older save nobody re-saved since the server started is never kept; `/api/app/status` said `waiting` forever (and apps polled forever). It now says `off`. `keepCutoff()` in the keep worker exposes the cut-off.
+- **Re-encoding:** `percent` is null and the new `step` is `converting` while ffmpeg turns a VP9/AV1 download into H.264 (was a stuck 99% for minutes).
+- **Video-only networks** (YouTube, Vimeo, Twitch, SoundCloud): when yt-dlp says the post is gone, the save is `unavailable`; when it fails for now, the post stays a video and the download retries. Before, both became a "photo" of the page's thumbnail.
+- **Follow-up:** apps could show `step: converting` as words; an explicit phone re-share of an old post could queue it despite the backfill cut-off.
+
+## 2026-10-18 — adhx.com moves to GitHub Pages
+
+- **Owner decision:** adhx.com is only the website, served by GitHub Pages. The self-hosted app doesn't serve it.
+- **What moved:** the product site, reel, art and video are now in `site/`, a static Next.js export built with webpack. Turbopack picks up the app's `src/instrumentation.ts` through the shared lockfile. Gob, NetworkIcon and the network list are copied in `site/components/`.
+- **Deploy:** `.github/workflows/site.yml` deploys `site/out`. `CNAME` is `adhx.com`. Pages must be enabled with source "GitHub Actions".
+- **Removed from the app:** `ADHX_PRODUCT_SITE`, `/showreel`, the old iCloud shortcut (it opened adhx.com) and the adhx.com share-target defaults.
+- **Skill:** now requires `ADHX_URL`.
+
 ## 2026-10-18 — Gob is back; adhx.com becomes the product site
 
 - **Gob** (`src/components/next/Gob.tsx`, CSS `.gob` in globals.css) replaces the yellow square with dots, per brand/BRAND.md. The serif "adhx" wordmark stays.

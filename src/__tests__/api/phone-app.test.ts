@@ -39,7 +39,15 @@ vi.mock('@/lib/keep/describe', () => ({
 }))
 
 const wakeKeep = vi.fn()
-vi.mock('@/lib/keep/worker', () => ({ wakeKeep: () => wakeKeep() }))
+/** KEEP_BACKFILL=off: saves before this are never kept (null = everything is). */
+let cutoff: string | null = null
+vi.mock('@/lib/keep/worker', () => ({ wakeKeep: () => wakeKeep(), keepCutoff: () => cutoff }))
+/** Media keeping is off under test unless a test turns it on. */
+let keepOn = false
+vi.mock('@/lib/keep/config', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/keep/config')>()),
+  keepEnabled: () => keepOn,
+}))
 
 const VIDEO_ID = 'Y9aytLYBajw'
 const BASE = 'https://adhx.test'
@@ -95,6 +103,8 @@ async function status(platform: string, id: string, key: string) {
 beforeEach(async () => {
   testInstance = createTestDb()
   sessionUser = 'user-1'
+  cutoff = null
+  keepOn = false
   vi.clearAllMocks()
   await testInstance.db.insert(schema.users).values([
     { id: 'user-1', username: 'one' },
@@ -115,6 +125,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   testInstance.close()
+  vi.unstubAllGlobals()
 })
 
 describe('pairing', () => {
@@ -357,6 +368,23 @@ describe('POST /api/app/save', () => {
     expect(res.body.code).toBe('unavailable')
   })
 
+  it('answers unavailable for a deleted X post, and failed when X can’t be asked', async () => {
+    const key = await phoneKey()
+    const fxtwitter = vi.fn()
+    vi.stubGlobal('fetch', fxtwitter)
+
+    fxtwitter.mockResolvedValueOnce(new Response('{"code":404,"tweet":null}', { status: 404 }))
+    const gone = await save({ url: 'https://x.com/someone/status/1588116111222755329' }, key)
+    expect(gone.status).toBe(404)
+    expect(gone.body.code).toBe('unavailable')
+
+    fxtwitter.mockResolvedValueOnce(new Response('busy', { status: 503 }))
+    const busy = await save({ url: 'https://x.com/someone/status/1588116111222755329' }, key)
+    expect(busy.status).toBe(500)
+    expect(busy.body.code).toBe('failed')
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+  })
+
   it('needs a phone key', async () => {
     const { POST } = await import('@/app/api/app/save/route')
     const res = await POST(json('/api/app/save', { url: `https://youtu.be/${VIDEO_ID}` }))
@@ -395,15 +423,26 @@ describe('GET /api/app/status', () => {
     })
 
     job('running')
-    const { reportKeepProgress, clearKeepProgress } = await import('@/lib/keep/progress')
+    const { reportKeepProgress, reportKeepConverting, clearKeepProgress } =
+      await import('@/lib/keep/progress')
     expect((await status('youtube', VIDEO_ID, key)).body).toMatchObject({
       status: 'keeping',
       percent: null,
+      step: 'downloading',
     })
     reportKeepProgress('youtube', VIDEO_ID, 42.4)
     expect((await status('youtube', VIDEO_ID, key)).body).toMatchObject({
       status: 'keeping',
       percent: 42,
+      step: 'downloading',
+    })
+    // Downloaded; re-encoding has no percent rather than a 99% that looks stuck.
+    reportKeepProgress('youtube', VIDEO_ID, 100)
+    reportKeepConverting('youtube', VIDEO_ID)
+    expect((await status('youtube', VIDEO_ID, key)).body).toMatchObject({
+      status: 'keeping',
+      percent: null,
+      step: 'converting',
     })
     clearKeepProgress('youtube', VIDEO_ID)
 
@@ -443,12 +482,60 @@ describe('GET /api/app/status', () => {
       id: VIDEO_ID,
       status: 'kept',
       percent: 100,
+      step: null,
       quality: '4K',
       kept: { videos: 1, photos: 0, audio: 0 },
     })
 
     job('unavailable')
     expect((await status('youtube', VIDEO_ID, key)).body.status).toBe('unavailable')
+  })
+
+  it('says off, not waiting forever, for an older save the server won’t keep (KEEP_BACKFILL=off)', async () => {
+    const key = await phoneKey()
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values({
+        id: '20',
+        userId: 'user-1',
+        platform: 'twitter',
+        author: 'jack',
+        text: 'just setting up my twttr',
+        tweetUrl: 'https://x.com/jack/status/20',
+        processedAt: '2026-10-01T00:00:00.000Z',
+        category: 'text',
+      })
+      .run()
+    keepOn = true
+
+    // Keeping everything: the next scan queues it.
+    expect((await status('twitter', '20', key)).body.status).toBe('waiting')
+
+    // Only saves since the server started are kept, and this one is older.
+    cutoff = '2026-10-18T00:00:00.000Z'
+    expect((await status('twitter', '20', key)).body.status).toBe('off')
+    // A job queued before the backfill was turned off isn't taken either.
+    testInstance.db
+      .insert(schema.keepJobs)
+      .values({ platform: 'twitter', postId: '20', status: 'pending', updatedAt: cutoff })
+      .run()
+    expect((await status('twitter', '20', key)).body.status).toBe('off')
+
+    // Someone saving it again after the cutoff brings it back into the queue.
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values({
+        id: '20',
+        userId: 'user-2',
+        platform: 'twitter',
+        author: 'jack',
+        text: 'just setting up my twttr',
+        tweetUrl: 'https://x.com/jack/status/20',
+        processedAt: '2026-10-18T09:00:00.000Z',
+        category: 'text',
+      })
+      .run()
+    expect((await status('twitter', '20', key)).body.status).toBe('waiting')
   })
 
   it('only answers for your own saves', async () => {
