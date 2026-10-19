@@ -167,28 +167,28 @@ export function FromEveryoneRow({
             const tiles = tilesFromPosts(c.covers.map((i) => i.post))
             const who = whoSavedInto(c.members, c.savers)
             return (
-              <li key={c.slug} className="w-[240px] shrink-0 md:w-auto">
+              <li key={c.slug} className="w-[160px] shrink-0 md:w-auto">
                 <Link
                   href={groupPlayHref(c.slug)}
                   aria-label={`Play ${c.name}, ${savesLabel(c.size)}${who ? `, ${who}` : ''}${c.newCount ? `, ${c.newCount} new` : ''}`}
                   className="flex flex-col gap-2.5 text-nx-cream"
                 >
-                  <span className="relative grid h-[182px] grid-cols-2 grid-rows-2 gap-[3px] overflow-hidden rounded-[22px] bg-nx-surface">
+                  <span className="relative grid h-[150px] grid-cols-2 grid-rows-2 gap-[3px] overflow-hidden rounded-[20px] bg-nx-surface md:h-[182px] md:rounded-[22px]">
                     {[0, 1, 2, 3].map((i) => (
                       <Tile key={i} tile={tiles[i] ?? tiles[i % Math.max(1, tiles.length)]} />
                     ))}
                     <NewPill count={c.newCount} className="left-2.5 top-2.5" />
-                    <span className="absolute bottom-2.5 right-2.5 flex h-7 items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md">
+                    <span className="absolute bottom-2.5 right-2.5 hidden h-7 items-center gap-1.5 rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md md:flex">
                       <Play aria-hidden className="h-3 w-3" fill="currentColor" strokeWidth={0} />
                       <span>Play all</span>
                     </span>
                   </span>
-                  <span className="truncate text-lg font-extrabold">{c.name}</span>
-                  <span className="flex min-w-0 items-center gap-2.5 text-sm text-nx-soft">
+                  <span className="truncate text-[15px] font-extrabold md:text-lg">{c.name}</span>
+                  <span className="flex min-w-0 items-center gap-2 text-xs text-nx-soft md:gap-2.5 md:text-sm">
                     {c.savers.length > 0 && (
                       <SaverFaces savers={c.savers} size={22} compact linked tone="scrim" />
                     )}
-                    <span className="truncate">
+                    <span className="line-clamp-2 md:truncate">
                       {who ? `${savesLabel(c.size)} · ${who}` : savesLabel(c.size)}
                     </span>
                   </span>
@@ -229,7 +229,58 @@ export function YourPeopleRow({
             </p>
           )}
           {(friends.length > 0 || canInvite) && (
-            <ul className={cn(ROW, 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5')}>
+            // Phones: a row of faces, as on the phone app.
+            <ul className="-mx-4 flex list-none gap-3.5 overflow-x-auto px-4 pb-1 pt-1 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden">
+              {friends.map((f) => (
+                <li key={f.username} className="shrink-0">
+                  <Link
+                    href={friendChannelHref(f.username)}
+                    aria-label={`${savesOf({ ...f, isYou: false })}, ${savesLabel(f.size)}${f.newCount ? `, ${f.newCount} new` : ''}`}
+                    className="relative flex w-16 flex-col items-center gap-1.5 text-nx-cream"
+                  >
+                    <NxAvatar
+                      author={{
+                        avatarUrl: f.avatarUrl,
+                        handle: f.username,
+                        name: f.name ?? f.username,
+                      }}
+                      size={64}
+                      className={cn(
+                        f.newCount > 0 &&
+                          'shadow-[0_0_0_2px_rgb(var(--nx-ink)),0_0_0_4px_rgb(var(--nx-accent))]',
+                      )}
+                    />
+                    <span className="max-w-full truncate text-[13px] font-semibold">
+                      {f.name?.trim() || f.username}
+                    </span>
+                    {f.newCount > 0 && (
+                      <span className="absolute -right-1.5 -top-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-nx-accent px-1.5 text-[11px] font-extrabold text-black shadow-[0_0_0_2px_rgb(var(--nx-ink))]">
+                        {f.newCount > 99 ? '99+' : String(f.newCount)}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+              {canInvite && (
+                <li className="shrink-0">
+                  <Link
+                    href="/settings#people"
+                    className="flex w-16 flex-col items-center gap-1.5 text-nx-accent"
+                  >
+                    <span
+                      aria-hidden
+                      className="flex h-16 w-16 items-center justify-center rounded-full border-[1.5px] border-dashed border-nx-accent/60"
+                    >
+                      <Plus className="h-6 w-6" />
+                    </span>
+                    <span className="text-[13px] font-extrabold">Invite</span>
+                  </Link>
+                </li>
+              )}
+            </ul>
+          )}
+          {(friends.length > 0 || canInvite) && (
+            <ul className={cn(ROW, 'hidden md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5')}>
               {friends.map((f) => {
                 const tiles = tilesFromPosts(f.covers.map((i) => i.post))
                 const title = savesOf({ ...f, isYou: false })

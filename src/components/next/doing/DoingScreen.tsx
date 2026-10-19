@@ -143,7 +143,7 @@ function Row({
     <li
       data-status={item.status}
       className={cn(
-        'grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 rounded-[18px] p-2.5 pr-4 lg:grid-cols-[52px_minmax(0,1fr)_minmax(0,420px)_150px]',
+        'grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 rounded-[18px] p-2.5 pr-4 lg:grid-cols-[52px_minmax(0,1fr)_minmax(0,420px)_150px] lg:gap-y-2',
         item.status === 'ready' ? 'bg-[#151310]' : 'bg-[#1a1814]',
         item.status === 'needs_you' && 'border border-[#ff5a3c]/45',
         item.status === 'waiting' && 'border border-[#ff5a3c]/25',
@@ -156,14 +156,14 @@ function Row({
           referrerPolicy="no-referrer"
           onError={() => setBroken(true)}
           className={cn(
-            'h-[52px] w-[52px] rounded-xl object-cover',
+            'row-span-2 h-[52px] w-[52px] rounded-xl object-cover lg:row-span-1',
             item.status === 'ready' && 'opacity-85',
           )}
         />
       ) : (
         <span
           aria-hidden
-          className="flex h-[52px] w-[52px] items-center justify-center rounded-xl bg-[#262320] text-[#c9bfab]"
+          className="row-span-2 flex h-[52px] w-[52px] items-center justify-center rounded-xl bg-[#262320] text-[#c9bfab] lg:row-span-1"
         >
           {problem ? <CloudOff className="h-5 w-5" /> : <ImageOff className="h-5 w-5" />}
         </span>
@@ -174,13 +174,13 @@ function Row({
       </a>
       <span
         className={cn(
-          'justify-self-end whitespace-nowrap text-[13px] font-extrabold lg:order-last',
+          'col-start-2 justify-self-start whitespace-nowrap text-[13px] font-extrabold lg:order-last lg:col-start-auto lg:justify-self-end',
           TONE[status.tone],
         )}
       >
         {status.text}
       </span>
-      <span className="col-span-3 flex min-w-0 flex-col gap-2 lg:col-span-1">
+      <span className="col-span-2 flex min-w-0 flex-col gap-2 lg:col-span-1">
         {item.status === 'needs_you' && (item.retry || item.keepLinkOnly) ? (
           <span className="flex flex-wrap items-center gap-2">
             {item.retry && (

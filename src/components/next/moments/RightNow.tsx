@@ -243,12 +243,31 @@ function LeadMoment({
             </span>
           </span>
         )}
-        <span className="absolute bottom-2.5 right-2.5 flex h-[30px] items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md">
+        {/* Phones: live and who's watching sit on the pictures, as on the phone app. */}
+        <span className="absolute left-2.5 top-2.5 flex h-[30px] items-center gap-2 whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold tracking-[0.06em] text-white backdrop-blur-md lg:hidden">
+          <span
+            aria-hidden
+            className="block h-2 w-2 rounded-full bg-[#ff5a3c] shadow-[0_0_0_3px_rgba(255,90,60,0.3)]"
+          />
+          <span>{moment.rising ? 'RISING' : 'LIVE'}</span>
+        </span>
+        {watchers.length > 0 ? (
+          <span className="absolute bottom-2.5 right-2.5 flex h-[34px] items-center gap-2 whitespace-nowrap rounded-full bg-black/55 pl-1 pr-3 text-xs font-extrabold text-white backdrop-blur-md lg:hidden">
+            <Faces people={watchers} size={24} live ring="#000" />
+            <span>{`${watchers.length} watching`}</span>
+          </span>
+        ) : null}
+        <span
+          className={cn(
+            'absolute bottom-2.5 right-2.5 h-[30px] items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md',
+            watchers.length > 0 ? 'hidden lg:flex' : 'flex',
+          )}
+        >
           {`${moment.posts.toLocaleString('en-GB')} in this moment`}
         </span>
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-3.5 px-1 pb-1 lg:px-0 lg:py-3 lg:pr-3.5">
-        <p className="relative m-0 flex h-8 items-center gap-2 self-start whitespace-nowrap rounded-full border border-[#ff5a3c]/40 bg-[#ff5a3c]/[0.14] pl-3 pr-3.5 text-[13px]">
+        <p className="relative m-0 hidden h-8 items-center gap-2 self-start whitespace-nowrap rounded-full border border-[#ff5a3c]/40 bg-[#ff5a3c]/[0.14] pl-3 pr-3.5 text-[13px] lg:flex">
           <span
             aria-hidden
             className="block h-[9px] w-[9px] shrink-0 rounded-full bg-[#ff5a3c] shadow-[0_0_0_4px_rgba(255,90,60,0.25),0_0_0_8px_rgba(255,90,60,0.1)]"
@@ -277,9 +296,13 @@ function LeadMoment({
             {moment.title}
           </Title>
         </Link>
+        {/* Phones: one short line instead of the LIVE pill and the faces. */}
+        <p className="-mt-1.5 m-0 truncate text-[13px] text-nx-soft lg:hidden">
+          {`${plural(moment.people, 'person', 'people')} · ${plural(moment.posts, 'save')}${savers.length ? ` · ${namesOf(savers.map(saverName), moment.people)}` : ''}`}
+        </p>
         {savers.length > 0 && (
           // Members only: the server sends `savers` to signed-in members alone.
-          <p className="m-0 flex min-w-0 items-center gap-3 text-sm text-nx-soft lg:text-base">
+          <p className="m-0 hidden min-w-0 items-center gap-3 text-base text-nx-soft lg:flex">
             <Faces people={savers} size={32} />
             <span className="truncate">{savingLine(savers, moment.people)}</span>
           </p>
@@ -319,7 +342,7 @@ function LeadMoment({
             <span className="truncate">{tuneInLabel(watchers)}</span>
           </Link>
           {watchers.length > 0 ? (
-            <span className="flex min-w-0 items-center gap-2.5 text-sm text-nx-soft">
+            <span className="hidden min-w-0 items-center gap-2.5 text-sm text-nx-soft lg:flex">
               <Faces people={watchers} size={28} live />
               <span className="truncate">{watchingLine(watchers)}</span>
             </span>
@@ -542,7 +565,7 @@ export function RightNow({
           >
             {page ? intoTitle(label) : label}
           </Heading>
-          <p className="m-0 text-[15px] text-nx-soft md:text-base">
+          <p className={cn('m-0 text-[15px] text-nx-soft md:text-base', page && 'hidden md:block')}>
             {page
               ? 'When a few of you save the same kind of thing at once, it goes live. Tune in and watch it together.'
               : 'What people are saving, sorted into moments as it happens. Tune in to one and new saves play the moment they arrive.'}
@@ -550,7 +573,7 @@ export function RightNow({
         </div>
         {page ? (
           on.length > 0 && (
-            <p className="m-0 flex items-center gap-2.5 pb-0.5 text-sm text-nx-soft">
+            <p className="m-0 hidden items-center gap-2.5 pb-0.5 text-sm text-nx-soft md:flex">
               <Faces people={on} size={30} ring="#0f0e0c" />
               <span className="whitespace-nowrap">
                 {on.length === 1

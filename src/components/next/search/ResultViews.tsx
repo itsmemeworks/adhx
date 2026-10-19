@@ -461,22 +461,28 @@ export function BentoView({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
-        <LeadResult
-          item={lead}
-          query={query}
-          href={hrefFor?.(lead) ?? openHref(lead)}
-          onOpen={onOpen}
-        />
-        {(rest.length > 0 || extra) && (
+        {/* Wide screens: the best match large. Phones: it leads the grid. */}
+        <div className="hidden lg:contents">
+          <LeadResult
+            item={lead}
+            query={query}
+            href={hrefFor?.(lead) ?? openHref(lead)}
+            onOpen={onOpen}
+          />
+        </div>
+        {
           <ul className="m-0 grid min-w-0 flex-1 list-none grid-cols-2 gap-2 p-0 md:grid-cols-3 md:gap-4 lg:auto-rows-[268px] lg:grid-cols-2 2xl:grid-cols-3">
+            <li className="h-[260px] min-w-0 md:h-[268px] lg:hidden">
+              <ResultTile item={lead} best onOpen={onOpen} href={hrefFor?.(lead)} fill />
+            </li>
             {rest.map((item) => (
-              <li key={resultKey(item)} className="h-[240px] min-w-0 md:h-[268px] lg:h-auto">
+              <li key={resultKey(item)} className="h-[260px] min-w-0 md:h-[268px] lg:h-auto">
                 <ResultTile item={item} onOpen={onOpen} href={hrefFor?.(item)} fill />
               </li>
             ))}
             {extra && <li className="col-span-2 min-w-0 md:col-span-1 lg:row-span-2">{extra}</li>}
           </ul>
-        )}
+        }
       </div>
       {related.length > 0 && (
         <section className="flex flex-col gap-3">

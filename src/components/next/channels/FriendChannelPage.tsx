@@ -140,45 +140,56 @@ export function FriendChannelPage({
         {/* Desktop pastes anywhere on the page (⌘V); phones need the button. */}
         <PasteButton onClick={paste.pasteFromClipboard} className="md:hidden" />
       </NxHeader>
-      <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-4 pb-16 pt-5 md:px-8 md:pt-7 lg:flex-row lg:items-start lg:gap-8">
+      <main className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 pb-16 pt-5 md:px-8 md:pt-7 lg:flex-row lg:items-start lg:gap-8">
         <aside
           aria-label="About this channel"
           className="flex flex-col lg:sticky lg:top-[100px] lg:min-h-[calc(100dvh-128px)] lg:w-[320px] lg:shrink-0"
         >
           <Link
             href="/channels"
-            className="flex h-6 items-center gap-1.5 text-sm font-semibold text-nx-soft hover:text-nx-cream"
+            className="hidden h-6 items-center gap-1.5 text-sm font-semibold text-nx-soft hover:text-nx-cream lg:flex"
           >
             <ChevronLeft aria-hidden className="h-4 w-4" />
             <span>All channels</span>
           </Link>
-          <NxAvatar
-            author={{ avatarUrl, handle: username, name: name ?? username }}
-            size={112}
-            className="mt-[22px]"
-            style={{ boxShadow: `0 0 0 6px #0f0e0c, 0 0 0 8px ${ring}59` }}
-          />
-          <h1 className="m-0 mt-[22px] whitespace-nowrap font-nx-serif text-[44px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[62px]">
-            {title}
-          </h1>
-          <p className="m-0 mt-3 text-[17px] font-semibold text-nx-soft">
-            <span>{savesLabel}</span>
-            {newCount > 0 && (
-              <>
-                <span> · </span>
-                <span className="text-nx-accent">{`${newCount} you haven’t seen`}</span>
-              </>
-            )}
-          </p>
-          <p className="m-0 mt-2 text-sm leading-normal text-nx-muted">
+          {/* Phones: the face beside the title, as on the phone app. */}
+          <div className="flex items-center gap-4 lg:block">
+            <NxAvatar
+              author={{ avatarUrl, handle: username, name: name ?? username }}
+              size={64}
+              className="lg:hidden"
+              style={{ boxShadow: `0 0 0 3px #0f0e0c, 0 0 0 5px ${ring}59` }}
+            />
+            <NxAvatar
+              author={{ avatarUrl, handle: username, name: name ?? username }}
+              size={112}
+              className="mt-[22px] hidden lg:block"
+              style={{ boxShadow: `0 0 0 6px #0f0e0c, 0 0 0 8px ${ring}59` }}
+            />
+            <div className="min-w-0 lg:contents">
+              <h1 className="m-0 truncate font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] lg:mt-[22px] lg:whitespace-nowrap lg:text-[62px]">
+                {title}
+              </h1>
+              <p className="m-0 mt-1.5 text-[13px] font-semibold text-nx-soft lg:mt-3 lg:text-[17px]">
+                <span>{savesLabel}</span>
+                {newCount > 0 && (
+                  <>
+                    <span> · </span>
+                    <span className="text-nx-accent">{`${newCount} you haven’t seen`}</span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <p className="m-0 mt-2 hidden text-sm leading-normal text-nx-muted lg:block">
             {mostly
               ? `${mostly} Picked by hand, one at a time, like it’s 2009.`
               : 'Picked by hand, one at a time, like it’s 2009.'}
           </p>
-          <div className="mt-[22px] flex flex-col gap-2.5 sm:flex-row lg:flex-col">
+          <div className="mt-4 flex gap-2.5 lg:mt-[22px] lg:flex-col">
             <Link
               href={friendPlayHref(username)}
-              className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-nx-accent text-base font-extrabold text-black sm:flex-1 lg:flex-none"
+              className="flex h-12 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-5 text-base font-extrabold text-black lg:h-[52px]"
             >
               <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />
               <span>Play all</span>
@@ -186,7 +197,7 @@ export function FriendChannelPage({
             {newCount > 0 && (
               <Link
                 href={friendPlayHref(username, { onlyNew: true })}
-                className="flex h-[52px] items-center justify-center gap-2.5 rounded-full border border-white/[0.08] bg-[#262320] text-base font-extrabold text-nx-cream sm:flex-1 lg:flex-none"
+                className="flex h-12 min-w-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-white/[0.08] bg-[#262320] px-5 text-base font-extrabold text-nx-cream lg:h-[52px]"
               >
                 <span aria-hidden className="h-2 w-2 rounded-full bg-nx-accent" />
                 <span>{newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}</span>
@@ -194,7 +205,11 @@ export function FriendChannelPage({
             )}
           </div>
           {counts.all > 0 && (
-            <div role="group" aria-label="Show" className="mt-[22px] flex flex-wrap gap-1.5">
+            <div
+              role="group"
+              aria-label="Show"
+              className="-mx-4 mt-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:mt-[22px] lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden"
+            >
               {(Object.keys(SHOW_LABEL) as Show[])
                 .filter((k) => k === 'all' || counts[k] > 0)
                 .map((k) => (
@@ -204,7 +219,7 @@ export function FriendChannelPage({
                     aria-pressed={show === k}
                     onClick={() => setShow(k)}
                     className={cn(
-                      'h-9 whitespace-nowrap rounded-full px-3.5 text-[13px]',
+                      'h-9 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px]',
                       show === k
                         ? 'bg-nx-cream font-extrabold text-black'
                         : 'bg-nx-surface font-semibold text-nx-cream',
@@ -215,7 +230,7 @@ export function FriendChannelPage({
                 ))}
             </div>
           )}
-          <p className="m-0 mt-6 flex items-center gap-2 text-[13px] text-nx-muted lg:mt-auto lg:pt-6">
+          <p className="m-0 mt-3 flex items-center gap-2 text-[13px] text-nx-muted lg:mt-auto lg:pt-6">
             <Lock aria-hidden className="h-3.5 w-3.5 shrink-0" />
             <span>Only people on this server can see this page.</span>
           </p>

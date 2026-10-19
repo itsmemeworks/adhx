@@ -517,7 +517,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
         </button>
       </header>
 
-      <div className="mx-auto flex max-w-[1600px] items-center gap-2 overflow-x-auto px-3 pt-4 [scrollbar-width:none] md:flex-wrap md:gap-3 md:px-8 md:pt-[22px] [&::-webkit-scrollbar]:hidden">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-3 pt-4 md:flex-row md:flex-wrap md:items-center md:px-8 md:pt-[22px]">
         <div
           role="group"
           aria-label="Whose saves"
@@ -535,7 +535,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
               aria-pressed={state.scope === o.id}
               onClick={() => set({ scope: o.id })}
               className={cn(
-                'flex h-9 items-center whitespace-nowrap rounded-full px-4 text-sm md:h-10 md:px-[18px]',
+                'flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm md:flex-none md:px-[18px]',
                 state.scope === o.id
                   ? 'bg-nx-cream font-extrabold text-black'
                   : 'font-semibold text-nx-cream hover:bg-white/[0.06]',
@@ -545,17 +545,19 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
             </button>
           ))}
         </div>
-        <span aria-hidden className="h-6 w-px shrink-0 bg-nx-hairline" />
-        <div role="group" aria-label="Show" className="flex shrink-0 gap-1.5">
-          {TYPES.map((t) => (
-            <Pill key={t} on={state.type === t} onClick={() => set({ type: t })}>
-              <span>{TYPE_LABELS[t]}</span>
-            </Pill>
-          ))}
+        <div className="-mx-3 flex items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] md:mx-0 md:gap-3 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
+          <span aria-hidden className="hidden h-6 w-px shrink-0 bg-nx-hairline md:block" />
+          <div role="group" aria-label="Show" className="flex shrink-0 gap-1.5">
+            {TYPES.map((t) => (
+              <Pill key={t} on={state.type === t} onClick={() => set({ type: t })}>
+                <span>{TYPE_LABELS[t]}</span>
+              </Pill>
+            ))}
+          </div>
+          <Pill on={state.wordsOnly} onClick={() => set({ wordsOnly: !state.wordsOnly })}>
+            <span>Words only</span>
+          </Pill>
         </div>
-        <Pill on={state.wordsOnly} onClick={() => set({ wordsOnly: !state.wordsOnly })}>
-          <span>Words only</span>
-        </Pill>
         {typed && data && !stale && items.length > 0 && !sparse && (
           <LookedIn items={items} className="ml-auto hidden xl:flex" />
         )}

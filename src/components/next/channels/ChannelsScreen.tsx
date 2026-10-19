@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { Lock } from 'lucide-react'
+import { Lock, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from '@/components/feed/types'
 import { autoPlayHref, channelPlayHref, recentPlayHref } from '../theater/queue'
@@ -150,48 +150,101 @@ export function ChannelsScreen() {
                 here.
               </p>
             ) : (
-              <ul className={cn(ROW, 'md:grid-cols-3 xl:grid-cols-4')}>
-                {data?.madeForYou.map((c) => {
-                  const cover = posts(c.covers)
-                    .map((p) => tilesFromPosts([p])[0])
-                    .find((t) => t.img)
-                  return (
-                    <li key={c.slug} className="relative w-[240px] shrink-0 md:w-auto">
-                      <Link
-                        href={autoPlayHref(c.slug)}
-                        aria-label={`Play ${c.name}, ${countLabel(c.size)}`}
-                        className="relative block h-[160px] overflow-hidden rounded-[22px] bg-nx-surface text-white"
+              <>
+                {/* Phones: rows, as on the phone app. */}
+                <ul className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden">
+                  {data?.madeForYou.map((c) => {
+                    const cover = posts(c.covers)
+                      .map((p) => tilesFromPosts([p])[0])
+                      .find((t) => t.img)
+                    return (
+                      <li
+                        key={c.slug}
+                        className="flex items-center gap-3.5 rounded-[20px] border border-white/[0.08] bg-nx-surface p-2.5"
                       >
-                        {cover?.img ? (
-                          <NxImage
-                            src={cover.img}
-                            alt=""
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
-                        ) : (
-                          <ChannelCover
-                            tiles={tilesFromPosts(posts(c.covers))}
-                            label={c.name}
-                            className="absolute inset-0"
-                          />
-                        )}
-                        <span className="absolute left-3 top-3 flex h-[30px] max-w-[calc(100%-24px)] items-center rounded-full bg-black/55 px-3 text-[13px] font-extrabold backdrop-blur-md">
-                          <span className="truncate">{c.name}</span>
+                        <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-[14px] bg-[#2a2620]">
+                          {cover?.img && (
+                            <NxImage
+                              src={cover.img}
+                              alt=""
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          )}
                         </span>
-                      </Link>
-                      <button
-                        type="button"
-                        disabled={keeping === c.slug}
-                        onClick={() => void keep(c)}
-                        aria-label={`Keep ${c.name} as one of your channels`}
-                        className="absolute bottom-3 right-3 flex h-8 items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md hover:bg-black/75 disabled:opacity-60"
-                      >
-                        Keep
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate text-base font-extrabold">{c.name}</span>
+                          <span className="truncate text-[13px] text-nx-muted">
+                            {`${countLabel(c.size)} · from what you keep`}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={keeping === c.slug}
+                            onClick={() => void keep(c)}
+                            aria-label={`Keep ${c.name} as one of your channels`}
+                            className="self-start text-[13px] font-semibold text-nx-accent disabled:opacity-60"
+                          >
+                            Keep
+                          </button>
+                        </span>
+                        <Link
+                          href={autoPlayHref(c.slug)}
+                          aria-label={`Play ${c.name}, ${countLabel(c.size)}`}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#2a2620] text-nx-cream"
+                        >
+                          <Play
+                            aria-hidden
+                            className="ml-0.5 h-4 w-4"
+                            fill="currentColor"
+                            strokeWidth={0}
+                          />
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <ul className={cn(ROW, 'hidden md:grid md:grid-cols-3 xl:grid-cols-4')}>
+                  {data?.madeForYou.map((c) => {
+                    const cover = posts(c.covers)
+                      .map((p) => tilesFromPosts([p])[0])
+                      .find((t) => t.img)
+                    return (
+                      <li key={c.slug} className="relative w-[240px] shrink-0 md:w-auto">
+                        <Link
+                          href={autoPlayHref(c.slug)}
+                          aria-label={`Play ${c.name}, ${countLabel(c.size)}`}
+                          className="relative block h-[160px] overflow-hidden rounded-[22px] bg-nx-surface text-white"
+                        >
+                          {cover?.img ? (
+                            <NxImage
+                              src={cover.img}
+                              alt=""
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                          ) : (
+                            <ChannelCover
+                              tiles={tilesFromPosts(posts(c.covers))}
+                              label={c.name}
+                              className="absolute inset-0"
+                            />
+                          )}
+                          <span className="absolute left-3 top-3 flex h-[30px] max-w-[calc(100%-24px)] items-center rounded-full bg-black/55 px-3 text-[13px] font-extrabold backdrop-blur-md">
+                            <span className="truncate">{c.name}</span>
+                          </span>
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={keeping === c.slug}
+                          onClick={() => void keep(c)}
+                          aria-label={`Keep ${c.name} as one of your channels`}
+                          className="absolute bottom-3 right-3 flex h-8 items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md hover:bg-black/75 disabled:opacity-60"
+                        >
+                          Keep
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
             )}
           </section>
 
