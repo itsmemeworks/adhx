@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.0](https://github.com/itsmemeworks/adhx/compare/v2.0.1...v2.1.0) (2026-10-19)
+
+
+### Features
+
+* offload video processing to a native mac worker ([#551](https://github.com/itsmemeworks/adhx/issues/551)) ([76fb61b](https://github.com/itsmemeworks/adhx/commit/76fb61b82d373778d0b83705d9a8f6abe364d899))
+* save phone shares in the background and show posts once ready ([#550](https://github.com/itsmemeworks/adhx/issues/550)) ([b9c5ae3](https://github.com/itsmemeworks/adhx/commit/b9c5ae3b27828e856cdf5b04d13bda190cd5895d))
+
+
+### Bug Fixes
+
+* keep paging x bookmarks and tidy the ios app from a live review ([#545](https://github.com/itsmemeworks/adhx/issues/545)) ([455a079](https://github.com/itsmemeworks/adhx/commit/455a07991826d329d8d2d32cc96f33077a3bde06))
+* publish container images only for releases ([#548](https://github.com/itsmemeworks/adhx/issues/548)) ([065d914](https://github.com/itsmemeworks/adhx/commit/065d914d8a8ea49a228f5542d14a72c50df1135f))
+* publish main images independently of releases ([#544](https://github.com/itsmemeworks/adhx/issues/544)) ([50290a7](https://github.com/itsmemeworks/adhx/commit/50290a7659bc88ae05fb7eaa6b17cf98971dc08e))
+
 ## [2.0.1](https://github.com/itsmemeworks/adhx/compare/v2.0.0...v2.0.1) (2026-10-19)
 
 
