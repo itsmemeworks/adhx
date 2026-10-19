@@ -4,6 +4,7 @@ import path from 'node:path'
 import { captureException } from '@/lib/sentry'
 import { semanticEnabled, type UnderstandingKind } from './config'
 import { normalize } from './vectors'
+import { remoteProcessing } from '@/lib/processing/config'
 
 /**
  * The web server never runs the model itself. ONNX inference is synchronous
@@ -28,6 +29,8 @@ export interface JobActivity {
   phase: string
   frames: number
   startedAt: string
+  segments?: number
+  completedSegments?: number
 }
 
 /** Messages a child sends to the supervisor. */
@@ -165,10 +168,14 @@ function failPending(error: Error): void {
  */
 export function startSemanticProcesses(): void {
   if (state.started || !semanticEnabled()) return
+  // A mistyped remote mode must never silently start heavy indexing on the NAS.
+  const remote = remoteProcessing()
   state.started = true
   spawn('query')
-  jobsFallback = setTimeout(startJobs, JOBS_START_FALLBACK_MS)
-  jobsFallback.unref?.()
+  if (!remote) {
+    jobsFallback = setTimeout(startJobs, JOBS_START_FALLBACK_MS)
+    jobsFallback.unref?.()
+  }
 }
 
 const JOBS_START_FALLBACK_MS = 3 * 60_000
@@ -177,7 +184,7 @@ let jobsFallback: NodeJS.Timeout | null = null
 function startJobs(): void {
   if (jobsFallback) clearTimeout(jobsFallback)
   jobsFallback = null
-  if (state.started && !state.children.jobs) spawn('jobs')
+  if (state.started && !remoteProcessing() && !state.children.jobs) spawn('jobs')
 }
 
 export function stopSemanticProcesses(): void {

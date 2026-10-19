@@ -18,7 +18,7 @@ It's built to run for yourself and a few friends: one Docker container, one fold
 
 - **Your own copies.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing is streamed from the networks at watch time.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
-- **Search by meaning.** Describe what you remember and ADHX finds it. It matches the words, what's in the pictures, and what happens in the videos (a frame every 2 seconds). This all runs on your server: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
+- **Search by meaning.** Describe what you remember and ADHX finds it. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button.
 - **Channels.** ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
 - **Right now.** See what the people on your server are saving, grouped into moments, and **Tune in** to watch along. Savers are only ever counted, never named.
@@ -86,6 +86,7 @@ On a shared NAS, start with `SEMANTIC_THREADS=1` and `KEEP_CONCURRENCY=1`.
 The [resource guide](deploy/nas/README.md#resource-and-storage-controls) shows
 how to budget CPU, RAM and swap, and check search/playback while a bulk import
 is being understood. Local picture/video search needs no external AI key;
+For a lighter NAS, the optional [native Apple Silicon worker](deploy/mac/README.md) moves background inference, video sampling and H.264 conversion to a Mac. The NAS keeps the database, retained media and a small query model.
 Jev refinement and X sync are [optional additions](deploy/nas/README.md#optional-services-and-x-sync).
 
 Container images are published when the owner merges the Release Please PR and
@@ -169,7 +170,11 @@ Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_
 
 Search by meaning runs on your own server, with [EmbeddingGemma 2](https://huggingface.co/onnx-community/embeddinggemma-2-ONNX): the text model at 4-bit and its picture encoder at 8-bit, at a pinned revision. There's nothing to install. The first time the server starts, it downloads the weights from Hugging Face into `models/` next to the database: about 400 MB, so the server needs to reach `huggingface.co` once. After that it runs offline. For a server with no internet access, copy the `models/` folder from another ADHX.
 
-Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames (one every 2 seconds). Sounds are found only by their words. Understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames. The default local worker samples the first 32 seconds at one frame every two seconds. Sounds are found only by their words. Local understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+
+For a shared NAS, use the optional [native Apple Silicon worker](deploy/mac/README.md). Set `PROCESSING_MODE=remote`, a dedicated `PROCESSING_WORKER_TOKEN`, and `INDEXING_LEVEL=light|normal|deep` on the server. The Mac downloads retained media over authenticated HTTPS and samples throughout the full video in short, resumable sections. Light targets one frame per 12 seconds, normal one per four seconds and deep one per two seconds, with bounded work per section and limits for very long videos. Search can match an individual section rather than averaging away a brief detail. No audio is processed.
+
+The NAS still serves searches and downloads/retains source media. In remote mode the Mac also handles H.264 compatibility conversion, using Apple’s hardware encoder with a bounded software fallback. The NAS checks the uploaded MP4’s codec, full resolution, duration and audio before switching files, and keeps the source until that succeeds. The Mac uses temporary lower-resolution samples for inference. It deletes frames after each section, conversion outputs after each upload attempt and downloaded copies after the final result is acknowledged. Conversion preserves resolution but re-encodes video; it is separate from inference sampling. Interrupted work has an 8 GiB default scratch ceiling and expiry cleanup; reusable model weights stay cached. The queue waits when the Mac is offline. `SEMANTIC_SEARCH=off` pauses model processing in either mode.
 
 `TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
 

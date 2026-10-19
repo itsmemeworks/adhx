@@ -4,7 +4,9 @@ import path from 'path'
 import { and, eq, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { keepJobs, keptFiles } from '@/lib/db/schema'
-import { mediaDir } from './config'
+import { keepH264, mediaDir } from './config'
+import { remoteProcessing } from '@/lib/processing/config'
+import { MAX_ATTEMPTS } from '@/lib/semantic/config'
 import { reconcileKeptMedia } from './metadata'
 
 export type KeptKind = 'video' | 'photo' | 'audio'
@@ -114,6 +116,9 @@ export interface NewKeptFile {
   width?: number | null
   height?: number | null
   durationMs?: number | null
+  /** Download-time probe; used to queue remote browser conversion atomically. */
+  videoCodec?: string | null
+  hasAudio?: boolean
 }
 
 /** Record a post's files (replacing any earlier set) and mark its job done. */
@@ -138,18 +143,52 @@ export async function recordKept(
     })),
   )
   const total = rows.reduce((n, r) => n + r.bytes, 0)
+  const conversions =
+    remoteProcessing() && keepH264()
+      ? rows.filter(
+          (row, index) =>
+            row.slot.startsWith('video-') &&
+            files[index].videoCodec !== undefined &&
+            files[index].videoCodec !== 'h264',
+        )
+      : []
+  const validConversion = (row: (typeof rows)[number]) =>
+    Number.isSafeInteger(row.width) &&
+    !!row.width &&
+    row.width > 0 &&
+    Number.isSafeInteger(row.height) &&
+    !!row.height &&
+    row.height > 0 &&
+    !!row.durationMs &&
+    Number.isFinite(row.durationMs) &&
+    row.durationMs > 0
+  const pendingConversion = conversions.some(validConversion)
   runInTransaction(() => {
+    db.run(sql`DELETE FROM media_conversions WHERE platform=${platform} AND post_id=${postId}`)
     db.delete(keptFiles)
       .where(and(eq(keptFiles.platform, platform), eq(keptFiles.postId, postId)))
       .run()
     if (rows.length) db.insert(keptFiles).values(rows).run()
+    for (const row of conversions) {
+      const file = files[rows.indexOf(row)]
+      const valid = validConversion(row)
+      db.run(sql`INSERT INTO media_conversions(platform,post_id,slot,source_path,source_bytes,source_created_at,source_hash,width,height,duration_ms,has_audio,status,attempts,next_attempt_at,updated_at,last_error)
+        VALUES(${platform},${postId},${row.slot},${row.path},${row.bytes},${row.createdAt},${crypto.randomUUID()},${row.width},${row.height},${row.durationMs},${file.hasAudio ? 1 : 0},${valid ? 'pending' : 'failed'},${valid ? 0 : MAX_ATTEMPTS},0,${now},${valid ? null : 'Source video has no usable dimensions or duration'})`)
+    }
     reconcileKeptMedia(
       platform,
       postId,
       rows.map((r) => ({ ...r, slot: r.slot as Slot })),
     )
     db.update(keepJobs)
-      .set({ status: 'done', lastError: null, bytes: total, updatedAt: now, nextAttemptAt: null })
+      .set({
+        status: pendingConversion ? 'converting' : conversions.length ? 'unavailable' : 'done',
+        lastError:
+          conversions.length && !pendingConversion ? 'Source video cannot be converted' : null,
+        bytes: total,
+        updatedAt: now,
+        nextAttemptAt: null,
+      })
       .where(and(eq(keepJobs.platform, platform), eq(keepJobs.postId, postId)))
       .run()
   })
@@ -160,6 +199,7 @@ export async function recordKept(
 export async function forgetPost(platform: string, postId: string): Promise<void> {
   await fs.rm(absolutePath(postDir(platform, postId)), { recursive: true, force: true })
   runInTransaction(() => {
+    db.run(sql`DELETE FROM media_conversions WHERE platform=${platform} AND post_id=${postId}`)
     db.delete(keptFiles)
       .where(and(eq(keptFiles.platform, platform), eq(keptFiles.postId, postId)))
       .run()

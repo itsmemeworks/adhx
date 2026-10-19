@@ -117,16 +117,14 @@ export async function listSaves(
   // A post joins the phone's feed once it's ready: its copy is kept (or
   // can't be, or isn't needed). Until then it would only show a spinner.
   const cutoff = keepCutoff()
-  const preparingJob = !keepEnabled()
-    ? sql`0`
-    : sql`EXISTS (
+  const preparingJob = sql`EXISTS (
     SELECT 1 FROM keep_jobs j
     WHERE j.platform = ${bookmarks.platform} AND j.post_id = ${bookmarks.id}
-      AND j.status IN ('pending', 'running', 'failed')
+      AND (j.status = 'converting' OR (${keepEnabled() ? 1 : 0} = 1 AND j.status IN ('pending', 'running', 'failed')
       AND (${cutoff} IS NULL OR EXISTS (
         SELECT 1 FROM bookmarks b
         WHERE b.platform = j.platform AND b.id = j.post_id AND b.processed_at >= ${cutoff}
-      ))
+      ))))
   )`
   const mine = and(eq(bookmarks.userId, userId), notArchived)
   const where = and(mine, sql`NOT ${preparingJob}`)

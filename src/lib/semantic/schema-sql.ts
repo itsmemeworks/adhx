@@ -71,4 +71,91 @@ export const UNDERSTANDING_DDL = `
     tokenize = 'unicode61 remove_diacritics 2',
     prefix = '2 3'
   );
+
+  CREATE TABLE IF NOT EXISTS processing_leases (
+    id TEXT PRIMARY KEY,
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    lease_hash TEXT NOT NULL,
+    worker_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    content_hash TEXT NOT NULL DEFAULT '',
+    model TEXT NOT NULL,
+    profile TEXT NOT NULL,
+    media_slot TEXT,
+    generation_hash TEXT NOT NULL,
+    UNIQUE(platform, post_id, kind)
+  );
+  CREATE INDEX IF NOT EXISTS processing_leases_expiry ON processing_leases(expires_at);
+  CREATE TABLE IF NOT EXISTS video_index_state (
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    model TEXT NOT NULL,
+    profile TEXT NOT NULL,
+    duration REAL NOT NULL,
+    segments INTEGER NOT NULL,
+    frames_per_segment INTEGER NOT NULL,
+    next_segment INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(platform, post_id)
+  );
+  CREATE TABLE IF NOT EXISTS video_segments (
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    model TEXT NOT NULL,
+    segment_index INTEGER NOT NULL,
+    start_seconds REAL NOT NULL,
+    end_seconds REAL NOT NULL,
+    vector BLOB NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY(platform, post_id, segment_index)
+  );
+  CREATE INDEX IF NOT EXISTS video_segments_changed ON video_segments(created_at);
+
+  CREATE TABLE IF NOT EXISTS media_conversions (
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    slot TEXT NOT NULL,
+    source_path TEXT NOT NULL,
+    source_bytes INTEGER NOT NULL,
+    source_created_at TEXT NOT NULL,
+    source_hash TEXT NOT NULL,
+    width INTEGER,
+    height INTEGER,
+    duration_ms INTEGER,
+    has_audio INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER NOT NULL DEFAULT 0,
+    lease_id TEXT UNIQUE,
+    lease_hash TEXT,
+    worker_id TEXT,
+    expires_at INTEGER,
+    model TEXT,
+    last_error TEXT,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(platform, post_id, slot)
+  );
+  CREATE INDEX IF NOT EXISTS media_conversions_due ON media_conversions(status,next_attempt_at,expires_at);
+
+  CREATE TRIGGER IF NOT EXISTS conversion_last_save_deleted
+  AFTER DELETE ON bookmarks
+  WHEN NOT EXISTS (SELECT 1 FROM bookmarks WHERE platform=OLD.platform AND id=OLD.id)
+  BEGIN
+    DELETE FROM media_conversions WHERE platform=OLD.platform AND post_id=OLD.id;
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS processing_last_save_deleted
+  AFTER DELETE ON bookmarks
+  WHEN NOT EXISTS (SELECT 1 FROM bookmarks WHERE platform=OLD.platform AND id=OLD.id)
+  BEGIN
+    DELETE FROM processing_leases WHERE platform=OLD.platform AND post_id=OLD.id;
+    DELETE FROM post_embeddings WHERE platform=OLD.platform AND post_id=OLD.id AND kind='video'
+      AND EXISTS (SELECT 1 FROM video_index_state WHERE platform=OLD.platform AND post_id=OLD.id);
+    DELETE FROM video_segments WHERE platform=OLD.platform AND post_id=OLD.id;
+    DELETE FROM video_index_state WHERE platform=OLD.platform AND post_id=OLD.id;
+  END;
 `

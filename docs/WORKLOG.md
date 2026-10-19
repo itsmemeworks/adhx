@@ -6,6 +6,21 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Reject an invalid processing role
+
+- Validate `PROCESSING_MODE` before spawning either model process; a misspelled remote role must not silently start heavy indexing on the server.
+- Add a no-spawn regression; both supervisor tests, typecheck and targeted lint pass. Source proposed for the native-worker PR; final CI remains required.
+
+## 2026-10-19 — Native Mac processing and elastic video understanding
+
+- Add optional authenticated pull-based Mac indexing; remote mode keeps only the NAS query model, with expiring leases and transactional checkpoints.
+- Light/normal/deep profiles sample the whole duration in bounded sections, resume after interruptions and yield to fresh shares; search matches the best section.
+- Native CoreML/CPU and VideoToolbox/software paths preserve retained NAS media; real FFmpeg regressions cover ordinary, single-frame and low-FPS endings.
+- Delete section frames on success/failure and Mac originals after final acknowledgement; bound managed scratch to 8 GiB by default with startup/periodic expiry, preserving model weights.
+- Add last-saver cleanup, moderation exclusion, strict result validation and account-scoped remote progress; document dedicated secrets, launchd setup and server/worker responsibilities.
+- Verification: 3,004 tests, types, formatting, lint (pre-existing warnings), production/static-site builds and native offline text/image/video + hardware video smoke pass; current-head Linux CI remains required.
+- Extend remote work to full-resolution VideoToolbox/software H.264 conversion with bounded streaming uploads, verified atomic promotion and source-preserving retries. Source proposed, worker not installed; current-head Linux CI remains required.
+
 ## 2026-10-19 — Bound mobile share caches and retry newly kept playback
 
 - Give Android exports separate batches, retaining fresh recipient URIs while removing failed transfers and batches older than 24 hours on later exports.

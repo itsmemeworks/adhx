@@ -15,12 +15,20 @@ import { useAuthMe } from '@/components/auth'
 
 export interface LearningStatus {
   enabled: boolean
+  processingMode?: 'local' | 'remote'
+  indexingLevel?: 'light' | 'normal' | 'deep'
   groups: { id: 'words' | 'photos' | 'videos'; done: number; total: number; failed: number }[]
   ready: number
   totalSaves: number
   failed: number
   queued: number
-  current: { kind: 'text' | 'image' | 'video'; phase: string; frames: number } | null
+  current: {
+    kind: 'text' | 'image' | 'video'
+    phase: string
+    frames: number
+    segments?: number
+    completedSegments?: number
+  } | null
 }
 
 export interface LearningRow {
@@ -34,7 +42,7 @@ export interface LearningRow {
 const ROW_COPY: Record<LearningRow['id'], { label: string; sub: string }> = {
   words: { label: 'Posts and articles', sub: 'Read every word' },
   photos: { label: 'Photos and video stills', sub: 'Looked at' },
-  videos: { label: 'Videos', sub: 'Watched, a frame every two seconds' },
+  videos: { label: 'Videos', sub: 'First 32 seconds, a frame every two seconds' },
 }
 
 export interface LearningSummary {
@@ -52,7 +60,15 @@ export function learningSummary(status: LearningStatus | null): LearningSummary 
   const rows = (['words', 'photos', 'videos'] as const)
     .map((id) => {
       const g = status.groups.find((x) => x.id === id)
-      return { id, ...ROW_COPY[id], done: g?.done ?? 0, total: g?.total ?? 0 }
+      return {
+        id,
+        ...ROW_COPY[id],
+        ...(id === 'videos' && status.processingMode === 'remote'
+          ? { sub: `Sampled throughout the video · ${status.indexingLevel ?? 'normal'} detail` }
+          : {}),
+        done: g?.done ?? 0,
+        total: g?.total ?? 0,
+      }
     })
     .filter((r) => r.total > 0)
   const remaining = rows.reduce((n, r) => n + Math.max(0, r.total - r.done), 0)
@@ -81,6 +97,10 @@ export function pillLabel(focus: LearningRow): string {
 export function currentLine(current: LearningStatus['current']): string | null {
   if (!current) return null
   if (current.kind === 'video') {
+    if (current.phase === 'remote')
+      return current.segments
+        ? `Learning a video · part ${(current.completedSegments ?? 0) + 1} of ${current.segments}`
+        : 'Preparing a video on the worker'
     if (current.phase === 'sampling') return 'Picking frames from a video'
     if (current.phase === 'understanding')
       return current.frames ? `Watching a video · ${current.frames} frames` : 'Watching a video'

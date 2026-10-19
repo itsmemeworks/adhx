@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { postEmbeddings } from '@/lib/db/schema'
+import { segmentScores, type SegmentScore } from '@/lib/processing/segment-search'
 import { SEMANTIC_MODEL_VERSION, type UnderstandingKind } from './config'
 import { cosine, fromBlob } from './vectors'
 
@@ -174,14 +175,9 @@ export async function nearest(
   let count = 0
   let sum = 0
   let sumSq = 0
-  const n = index.keys.length
-  for (let slot = 0; slot < n; slot++) {
-    if (!index.alive[slot]) continue
-    const key = index.keys[slot]
-    if (allow && !allow.has(key)) continue
-    const offset = slot * INDEX_DIMS
-    let score = 0
-    for (let i = 0; i < INDEX_DIMS; i++) score += q[i] * index.data[offset + i]
+  const segments = kind === 'video' ? await segmentScores(query, truncate, allow) : undefined
+  const seenSegments = new Set<string>()
+  const consider = (key: string, score: number) => {
     count++
     sum += score
     sumSq += score * score
@@ -202,8 +198,29 @@ export async function nearest(
       floor = best[k - 1].score
     }
   }
+  const n = index.keys.length
+  for (let slot = 0; slot < n; slot++) {
+    if (!index.alive[slot]) continue
+    const key = index.keys[slot]
+    if (allow && !allow.has(key)) continue
+    const offset = slot * INDEX_DIMS
+    let score = 0
+    for (let i = 0; i < INDEX_DIMS; i++) score += q[i] * index.data[offset + i]
+    const segment = segments?.get(key)
+    if (segment) {
+      score = Math.max(score, segment.score)
+      seenSegments.add(key)
+    }
+    consider(key, score)
+  }
+  for (const [key, segment] of segments ?? []) {
+    if (!seenSegments.has(key)) consider(key, segment.score)
+  }
   if (best.length < k) best.sort((a, b) => b.score - a.score)
-  return { hits: await rescore(kind, query, best), ...background(kind, count, sum, sumSq) }
+  return {
+    hits: await rescore(kind, query, best, segments),
+    ...background(kind, count, sum, sumSq),
+  }
 }
 
 /**
@@ -252,6 +269,7 @@ async function rescore(
   kind: UnderstandingKind,
   query: Float32Array,
   hits: VectorHit[],
+  segments?: ReadonlyMap<string, SegmentScore>,
 ): Promise<VectorHit[]> {
   if (hits.length === 0) return hits
   const byId = new Map<string, string[]>()
@@ -286,7 +304,9 @@ async function rescore(
   return hits
     .map((h) => {
       const v = full.get(h.key)
-      return v ? { key: h.key, score: cosine(query, v) } : h
+      const segment = segments?.get(h.key)
+      const score = v ? cosine(query, v) : (segment?.fullScore ?? h.score)
+      return { key: h.key, score: segment ? Math.max(score, segment.fullScore) : score }
     })
     .sort((a, b) => b.score - a.score)
 }

@@ -172,6 +172,7 @@ export function keepStatus(platform: string, id: string): AppKeepStatus {
       status = 'off'
       break
     case 'running':
+    case 'converting':
       status = 'keeping'
       break
     case 'done':
@@ -195,9 +196,18 @@ export function keepStatus(platform: string, id: string): AppKeepStatus {
     platform,
     id,
     status,
-    percent: status === 'kept' ? 100 : status === 'keeping' ? keepProgress(platform, id) : null,
+    percent:
+      status === 'kept'
+        ? 100
+        : status === 'keeping' && job?.status !== 'converting'
+          ? keepProgress(platform, id)
+          : null,
     step:
-      status !== 'keeping' ? null : isKeepConverting(platform, id) ? 'converting' : 'downloading',
+      status !== 'keeping'
+        ? null
+        : job?.status === 'converting' || isKeepConverting(platform, id)
+          ? 'converting'
+          : 'downloading',
     quality: video ? qualityLabel(video.width, video.height) : null,
     kept,
   }

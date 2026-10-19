@@ -72,6 +72,40 @@ describe('kept media', () => {
   })
 
   describe('GET /api/files', () => {
+    it('avoids caching original slots while conversion is pending or has failed', async () => {
+      save('youtube', 'convert')
+      keep('youtube', 'convert', 'video-1', 'source', 'video/webm')
+      testInstance.sqlite
+        .prepare(
+          "INSERT INTO keep_jobs(platform,post_id,status,updated_at) VALUES('youtube','convert','converting',?)",
+        )
+        .run(now())
+      expect((await get('/api/files/youtube/convert/video-1')).headers.get('cache-control')).toBe(
+        'no-store',
+      )
+      testInstance.sqlite
+        .prepare("UPDATE keep_jobs SET status='unavailable' WHERE post_id='convert'")
+        .run()
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO media_conversions(platform,post_id,slot,source_path,source_bytes,source_created_at,source_hash,has_audio,status,updated_at)
+        VALUES('youtube','convert','video-1','youtube/convert/video-1.bin',6,?,'generation',0,'failed',?)`,
+        )
+        .run(now(), now())
+      expect((await get('/api/files/youtube/convert/video-1')).headers.get('cache-control')).toBe(
+        'no-store',
+      )
+      testInstance.sqlite
+        .prepare("UPDATE media_conversions SET status='done' WHERE post_id='convert'")
+        .run()
+      testInstance.sqlite
+        .prepare("UPDATE keep_jobs SET status='done' WHERE post_id='convert'")
+        .run()
+      expect((await get('/api/files/youtube/convert/video-1')).headers.get('cache-control')).toBe(
+        'public, max-age=604800',
+      )
+    })
+
     it('serves a kept file, with byte ranges for seeking', async () => {
       keep('youtube', 'abc', 'video-1', '0123456789', 'video/mp4')
       const whole = await get('/api/files/youtube/abc/video-1')

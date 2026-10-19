@@ -479,11 +479,13 @@ export function ProductSite() {
                 <p className="m-0">
                   Type what you remember, like “a frog in a pond” or “that synth video”, and ADHX
                   finds it. It matches what posts say, what’s in their pictures, and what happens in
-                  their videos, sampling a frame every 2 seconds from the first 32 seconds.
+                  their videos. The local worker samples the first 32 seconds; an optional Mac
+                  worker samples throughout each video with light, normal or deep detail.
                 </p>
                 <p className="m-0">
-                  It runs Google’s EmbeddingGemma 2 on your own server: no API key, no cost per
-                  search, and your saves stay on your machine.
+                  It runs Google’s EmbeddingGemma 2 on your own hardware: no API key, no cost per
+                  search. A native Apple Silicon worker can handle background understanding while
+                  your server keeps your saves and serves searches.
                 </p>
               </>
             }

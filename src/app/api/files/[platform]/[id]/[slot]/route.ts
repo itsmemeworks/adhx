@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { Readable } from 'stream'
 import { NextRequest, NextResponse } from 'next/server'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks } from '@/lib/db/schema'
 import { readPostModeration } from '@/lib/admin/moderation'
@@ -26,6 +26,18 @@ function handOff(location: string): NextResponse {
 
 function notFound(): NextResponse {
   return NextResponse.json({ error: 'Not found' }, { status: 404 })
+}
+
+/** Slot URLs stay stable when an uploaded browser copy replaces its source. */
+function conversionPending(platform: string, id: string, slot: Slot): boolean {
+  return (
+    db.all(sql`SELECT 1 WHERE EXISTS (
+    SELECT 1 FROM keep_jobs WHERE platform=${platform} AND post_id=${id} AND status='converting'
+  ) OR EXISTS (
+    SELECT 1 FROM media_conversions WHERE platform=${platform} AND post_id=${id} AND slot=${slot}
+      AND status IN ('pending','running','failed')
+  )`).length > 0
+  )
 }
 
 const WAIT_MS = 25_000
@@ -158,7 +170,9 @@ export async function GET(
     const headers: Record<string, string> = {
       'Content-Type': kept.mime,
       'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=604800',
+      'Cache-Control': conversionPending(platform, id, kept.slot)
+        ? 'no-store'
+        : 'public, max-age=604800',
       'X-Content-Type-Options': 'nosniff',
     }
     if (request.nextUrl.searchParams.get('download') === '1') {

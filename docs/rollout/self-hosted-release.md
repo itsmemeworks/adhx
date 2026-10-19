@@ -71,11 +71,11 @@ font fix must also pass the current-revision CI checks before merge.
 
 ## Before a private server trial
 
-After merging, choose the immutable `sha-<full-commit>` image published for that
-main revision, or its numbered release image, and pin the digest. Verify its
-source and platform rather than assuming `latest` includes a particular PR.
-Main publication no longer waits for a release PR; numbered release promotion
-reuses that source image. See [publishing recovery](../releasing.md#recovery).
+After merging feature PRs, merge the Release Please PR to create the tagged
+release and publish its container image. Ordinary main merges do not publish.
+Choose the numbered release or its immutable `sha-<full-commit>` image and pin
+the digest. Verify its source and platform rather than assuming `latest`
+includes a particular PR. See [publishing recovery](../releasing.md#recovery).
 
 Inspect the target's current memory, CPU, disk capacity and proxy network. Keep
 its specific paths, hostnames, accounts and credentials outside this repository.
@@ -90,6 +90,19 @@ Then verify sign-in, save/search/play/seek, account isolation, restart/retry
 recovery and backup/restore at the final HTTPS address. These checks necessarily
 follow a separately authorised trial installation; they cannot be truthfully
 marked done beforehand. The browser works without native app distribution.
+
+### Native Mac worker validation
+
+Remote mode adds an authenticated worker protocol and full-duration video
+sections. Require current-revision queue/lease, account cancellation, segment
+search and scratch-cleanup tests, plus both Linux runtime jobs with real models.
+On native Apple Silicon, also test actual frame extraction (including single-frame
+and low-frame-rate endings), the pinned model with CoreML/CPU fallback and a
+completed transfer back to the chosen server. Inspect latency, peak memory,
+search quality and other services while it runs. CoreML/VideoToolbox being
+available is not proof that the model is accelerated or that the host has enough
+memory. A runner source build is not a deployed worker. Follow the
+[worker guide](../../deploy/mac/README.md) and keep deployment observations private.
 
 ## Before broader phone or public website release
 

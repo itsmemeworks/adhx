@@ -36,6 +36,17 @@ function status(partial: Partial<LearningStatus> = {}): LearningStatus {
 }
 
 describe('learning progress', () => {
+  it('shows elastic video detail and segment progress without claiming a fixed interval', () => {
+    const remote = status({
+      processingMode: 'remote',
+      indexingLevel: 'deep',
+      current: { kind: 'video', phase: 'remote', frames: 15, segments: 20, completedSegments: 8 },
+    })
+    render(<LearningSheet status={remote} onClose={() => {}} />)
+    expect(screen.getByText('Sampled throughout the video · deep detail')).toBeInTheDocument()
+    expect(currentLine(remote.current)).toBe('Learning a video · part 9 of 20')
+  })
+
   it('summarises what is left, focusing on the slowest kind', () => {
     const summary = learningSummary(status())
     expect(summary.remaining).toBe(237)
@@ -59,7 +70,7 @@ describe('learning progress', () => {
 
   it('says only true things and never mentions failures', () => {
     render(<LearningSheet status={status()} onClose={() => {}} />)
-    expect(screen.getByText('Watched, a frame every two seconds')).toBeInTheDocument()
+    expect(screen.getByText('First 32 seconds, a frame every two seconds')).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/audio|outside AI|couldn’t be learned/i)
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
   })
