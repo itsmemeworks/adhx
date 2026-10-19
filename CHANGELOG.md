@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/itsmemeworks/adhx/compare/v2.1.1...v2.1.2) (2026-10-19)
+
+
+### Bug Fixes
+
+* protect sign-in links from previews and extend admin expiry ([#556](https://github.com/itsmemeworks/adhx/issues/556)) ([44ceb6d](https://github.com/itsmemeworks/adhx/commit/44ceb6d1361671808e7a36b04d02b1894c1f4c80))
+
 ## [2.1.1](https://github.com/itsmemeworks/adhx/compare/v2.1.0...v2.1.1) (2026-10-19)
 
 
