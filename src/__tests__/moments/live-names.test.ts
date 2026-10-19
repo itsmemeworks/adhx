@@ -464,7 +464,7 @@ describe('the phone, live', () => {
 
     const res = await appMomentGET(phoneReq(`/api/app/live/${slug}`, k), params(slug))
     const detail = await res.json()
-    expect(Object.keys(detail).sort()).toEqual(['items', 'moment', 'watchers'])
+    expect(Object.keys(detail).sort()).toEqual(['items', 'moment', 'reactions', 'watchers'])
     const frog3 = detail.items.find((p: { id: string }) => p.id === 'frog3')
     expect(frog3).toMatchObject({ platform: 'twitter', kind: 'video' })
     expect(usernames(frog3.savers)).toEqual(['ana'])

@@ -27,7 +27,13 @@ type State = {
   rooms: Map<string, Map<string, Entry>>
   bus: EventEmitter
   nextId: number
+  /** The last few seconds of reactions per moment, for phones that poll. */
+  recent: Map<string, ReactionSignal[]>
 }
+
+/** How long a reaction stays visible to pollers, and how many are kept. */
+const RECENT_MS = 15_000
+const RECENT_MAX = 40
 
 const g = globalThis as unknown as { __adhxMomentPresence?: State }
 
@@ -35,7 +41,7 @@ function state(): State {
   if (!g.__adhxMomentPresence) {
     const bus = new EventEmitter()
     bus.setMaxListeners(0)
-    g.__adhxMomentPresence = { rooms: new Map(), bus, nextId: 1 }
+    g.__adhxMomentPresence = { rooms: new Map(), bus, nextId: 1, recent: new Map() }
   }
   return g.__adhxMomentPresence
 }
@@ -90,8 +96,27 @@ export function sendReaction(signal: Omit<ReactionSignal, 'id' | 'at'>): Reactio
     id: `r${Date.now().toString(36)}${(s.nextId++).toString(36)}`,
     at: new Date().toISOString(),
   }
+  const kept = freshReactions(s.recent.get(full.slug) ?? [])
+  kept.push(full)
+  s.recent.set(full.slug, kept.slice(-RECENT_MAX))
   s.bus.emit('reaction', full)
   return full
+}
+
+function freshReactions(list: ReactionSignal[], now = Date.now()): ReactionSignal[] {
+  return list.filter((r) => now - Date.parse(r.at) < RECENT_MS)
+}
+
+/**
+ * Reactions sent to `slug` in the last few seconds, oldest first. Phones that
+ * poll instead of streaming show these; they're never stored anywhere else.
+ */
+export function recentReactions(slug: string, now = Date.now()): ReactionSignal[] {
+  const s = state()
+  const kept = freshReactions(s.recent.get(slug) ?? [], now)
+  if (kept.length) s.recent.set(slug, kept)
+  else s.recent.delete(slug)
+  return kept
 }
 
 /** Listen for reactions. Returns the unsubscribe function. */
