@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Make handed-over sign-in links survive previews
+
+- GET/HEAD now render a small script-free confirmation; only an explicit same-origin, bounded form POST consumes the link and sets the existing protected session cookie.
+- Admin-held links last 60 minutes, emailed/development links retain 15 minutes; creation timestamps preserve the separate one-minute resend cooldown, including legacy SQLite UTC rows.
+- Show invalid/used/expired links with a new-link action instead of silently returning home; resume username selection for unfinished accounts on a later sign-in.
+- Clarify expiry versus resend timing in admin/onboarding/modal and portable setup/architecture guides; keep the callback CSP/referrer rules effective through Next’s global headers.
+- Verify atomic replay/concurrency, origin rejection, body bounds, lifetime/cooldown, production cookie flags and real Chromium/mobile WebKit session persistence after repeated previews and reload.
+- Validation: 3,014 tests, typecheck, production build, formatting and lint (79 existing warnings) pass; Chromium and mobile WebKit confirm previews, real form submission, reload persistence and used-link errors.
+- Source proposed; deployed instances keep their existing behavior until the owner merges, cuts a release and updates the container. No production token was opened or consumed for diagnostics.
+
 ## 2026-10-19 — Explain the NAS and Mac processing pipeline
 
 - Add a README-linked technical overview with topology, phone-save, leased-processing and conversion diagrams.

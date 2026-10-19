@@ -100,7 +100,7 @@ service. See the [build and release flow](docs/releasing.md) for checks and reco
 
 ### Sign-in links
 
-People sign in with a link that works once, for 15 minutes. Choose how links reach them:
+People sign in with a one-time link. Emailed links last 15 minutes; links held for an admin to pass on last **60 minutes**. Opening a link shows a confirmation screen; press **Sign in** in the browser you want to use. Message previews cannot use the link. The one-minute countdown before requesting another link is a resend cooldown, not its expiry. Choose how links reach people:
 
 | Option               | Set                                                                                    | Good for                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -108,7 +108,7 @@ People sign in with a link that works once, for 15 minutes. Choose how links rea
 | Resend               | `RESEND_API_KEY` and `EMAIL_FROM` on a domain you verified there                       | Sending from your own domain without running mail                                                |
 | No email             | `EMAIL_LINKS_TO_ADMIN=1`                                                               | A handful of friends. Links wait on the admin page and you pass them on, by message or in person |
 
-With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and opening it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
+With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and confirming it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
 
 ### Who can sign up
 

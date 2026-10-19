@@ -242,7 +242,7 @@ export const userPreferences = sqliteTable(
 
 // Sign-in links waiting for an admin to hand over (EMAIL_LINKS_TO_ADMIN, for
 // a self-hosted ADHX with no email service). Holds the link itself, so rows
-// live only as long as the login token (15 minutes) and go once it's used.
+// live only as long as the admin-held login token (60 minutes) and go once it's used.
 export const adminSignInLinks = sqliteTable('admin_sign_in_links', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(),
@@ -712,8 +712,8 @@ export const usernameAliases = sqliteTable('username_aliases', {
 })
 
 // One-time magic-link tokens for email sign-in / email-change confirmation.
-// Only the sha256 hash is stored — the raw token exists only in the emailed
-// URL, so a DB read (or leak) can never produce a usable login token.
+// This table stores only the sha256 hash. Admin delivery also retains the raw
+// link in admin_sign_in_links until use/expiry; protect that table as credentials.
 export const loginTokens = sqliteTable('login_tokens', {
   tokenHash: text('token_hash').primaryKey(),
   email: text('email').notNull(), // lowercased

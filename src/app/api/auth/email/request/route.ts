@@ -5,6 +5,7 @@ import { isValidEmail } from '@/lib/utils/email'
 import { hasAdmin, mayGetHeldLink, mayUseEmail } from '@/lib/auth/allowlist'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { loginTokenTtlMs } from '@/lib/auth/login-token-policy'
 
 // POST /api/auth/email/request - kick off an email sign-in.
 // Always returns { ok: true } for a well-formed email (even when sending
@@ -45,7 +46,12 @@ export async function POST(request: NextRequest) {
   // Nobody runs this ADHX yet: the link goes to the server log, and whoever
   // opens it becomes the admin.
   const setup = signInDelivery() === 'admin' && !hasAdmin()
-  const token = await createLoginToken({ email, intent: 'signin', returnTo })
+  const token = await createLoginToken({
+    email,
+    intent: 'signin',
+    returnTo,
+    ttlMs: loginTokenTtlMs(signInDelivery()),
+  })
   const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const url = new URL('/api/auth/email/callback', base)
   url.searchParams.set('token', token)

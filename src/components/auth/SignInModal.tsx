@@ -302,7 +302,7 @@ export function SignInModal({
             </form>
 
             <p className="mt-5 text-[12px] leading-snug" style={{ color: SUBTLE }}>
-              One-tap sign-in link, no password. New here? This creates your account. Link X later
+              One-time sign-in link, no password. New here? This creates your account. Link X later
               in Settings if you want to sync bookmarks.
             </p>
           </>
@@ -331,12 +331,13 @@ export function SignInModal({
               {delivery === 'setup' ? (
                 <>
                   Nobody runs this ADHX yet. If it’s yours, the sign-in link for {email} is in the
-                  server log, on the line starting “[sign-in]”. Opening it makes you the admin.
+                  server log, on the line starting “[sign-in]”. Open it and press Sign in to become
+                  the admin. It expires in 60 minutes.
                 </>
               ) : delivery === 'admin' ? (
                 <>
                   This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for {email}
-                  . It expires in 15 minutes.
+                  . It expires in 60 minutes. Open it in your normal browser and press Sign in.
                 </>
               ) : delivery === 'log' ? (
                 <>

@@ -162,15 +162,17 @@ function SentStep({
             <span className="font-bold text-white">{email}</span>
             <span>
               {' '}
-              is in the server log, on the line starting “[sign-in]”. Opening it makes you the
-              admin.
+              is in the server log, on the line starting “[sign-in]”. Open it and press Sign in to
+              become the admin. The link lasts 60 minutes.
             </span>
           </span>
         ) : handed ? (
           <span className="text-[15px] leading-[1.45] text-white/80">
             <span>This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for </span>
             <span className="font-bold text-white">{email}</span>
-            <span>. Open it in this browser and this page signs you in.</span>
+            <span>
+              . The link lasts 60 minutes. Open it in your normal browser and press Sign in.
+            </span>
           </span>
         ) : (
           <span className="text-[15px] leading-[1.45] text-white/80">
@@ -188,14 +190,14 @@ function SentStep({
           aria-hidden
           className="block h-4 w-4 animate-nx-spin rounded-full border-2 border-[#444] border-t-nx-accent"
         />
-        <span>Waiting for you to open it…</span>
+        <span>Waiting for you to finish signing in…</span>
       </span>
       <div className="flex items-center justify-between text-[13px] text-white/55">
         <button type="button" onClick={onChange} className="py-2 text-white/80 underline">
           Use a different email
         </button>
         {left > 0 ? (
-          <span>{`${handed ? 'New link' : 'Resend'} in 0:${String(left).padStart(2, '0')}`}</span>
+          <span>{`${handed ? 'Request another' : 'Resend'} in 0:${String(left).padStart(2, '0')}`}</span>
         ) : (
           <button
             type="button"
