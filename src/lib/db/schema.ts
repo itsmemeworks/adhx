@@ -50,6 +50,10 @@ export const bookmarks = sqliteTable(
     // How this bookmark was added: 'sync', 'manual', 'url_prefix', 'quoted'
     source: text('source').default('sync'),
 
+    // Just for me: kept, searchable and playable by its owner, but no other
+    // member sees it, counts it or is told who saved it.
+    isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
+
     // Original JSON for debugging
     rawJson: text('raw_json'),
   },
@@ -277,6 +281,8 @@ export const phoneSaveQueue = sqliteTable(
     platform: text('platform'),
     postId: text('post_id'),
     alreadySaved: integer('already_saved', { mode: 'boolean' }).notNull().default(false),
+    /** Shared as "Just for me": the save it makes is private. */
+    isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
     /** Set once failed: a code the apps know, and words fit to show. */
     errorCode: text('error_code'),
     error: text('error'),

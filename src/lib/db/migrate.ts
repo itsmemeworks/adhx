@@ -585,6 +585,23 @@ try {
   // Column already exists — nothing to do.
 }
 
+// bookmarks.is_private / phone_save_queue.is_private — "Just for me" saves.
+// Saves are shared with the server's members by default; a private one is
+// kept for its owner only. Existing rows default to 0 (shared), which is the
+// friends-feed upgrade. Guarded for re-runs (no IF NOT EXISTS).
+try {
+  db.exec('ALTER TABLE bookmarks ADD COLUMN is_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added bookmarks.is_private')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE phone_save_queue ADD COLUMN is_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added phone_save_queue.is_private')
+} catch {
+  // Column already exists — nothing to do.
+}
+
 // Public analytics validates post existence across all bookmark owners and
 // against visible activity. The bookmarks PK begins with user_id and the
 // activity dedupe index begins with action, so neither can serve these exact
