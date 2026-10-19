@@ -155,10 +155,57 @@ The health endpoint checks the database, not the search model, downloader or
 upstream networks. A Docker `unhealthy` status alone does not restart a
 running process; choose monitoring appropriate to your host.
 
+## Optional services and X sync
+
+Start with the local features, then add the services you want:
+
+| Feature                                            | Additional credentials                           | Setup                                                                                                                                                          |
+| -------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kept media and local text/picture/video search     | None beyond the instance's sign-in configuration | Keep `/data` persistent and permit the initial model download.                                                                                                 |
+| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../README.md#the-search-model).                                              |
+| X bookmark import                                  | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`     | Create an OAuth 2.0 confidential Web App, register the exact callback below, then connect the intended X account in ADHX Settings. X API credits are separate. |
+
+For X, register `https://adhx.example.com/api/auth/twitter/callback`, replacing
+the origin with your final `NEXT_PUBLIC_APP_URL`. Use the OAuth 2.0 Client ID
+and Client Secret from [X's application settings](https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code),
+rather than an app-only bearer token or OAuth 1.0 consumer key. ADHX requests
+`tweet.read`, `users.read`, `bookmark.read` and `offline.access`; it does not
+request permission to post. Check which X account is selected on the consent
+screen. Keep the email sign-in and existing session secret when adding X.
+
+The two timing controls do different jobs:
+
+```dotenv
+AUTO_SYNC_EVERY_MINUTES=50
+SYNC_COOLDOWN_MINUTES=1
+```
+
+Automatic sync imports new bookmarks for connected accounts with a successful
+previous sync and **Bring in new bookmarks automatically** enabled. It checks
+eligibility every five minutes; 50 minutes is the interval threshold, not a
+promise of a request at exactly minute 50. Set it to `0` to disable the
+scheduler while testing. The one-minute setting only permits another manual
+sync after its cooldown; it does not run a full import every minute.
+
+Pass both variables through Compose's `environment`, recreate ADHX, then
+check Settings and the signed-in `/api/sync/cooldown` response. A setting does
+not backport a paging fix into an older image. Read the selected image's
+release notes, especially when a Settings sentence still describes an older
+default. Each post X returns uses credits, including posts re-read by a full
+sync; avoid repeated full imports merely to test configuration.
+
+Use private configuration for real keys and record only their variable names
+in shared guides. Keep development and installed-instance keys separate so
+either can be rotated independently. SMTP/Resend remain optional when you use
+admin-held sign-in links; admins can retrieve their own links from the server
+log after bootstrap too.
+
 ## Resource and storage controls
 
-Start with a small library and the example's one concurrent download and one
-inference thread. Measure memory and CPU alongside your existing services.
+Start with a small library. For a shared NAS, explicitly set
+`KEEP_CONCURRENCY=1` and `SEMANTIC_THREADS=1`; the Compose fallbacks are two,
+while this directory's `.env.example` selects one. Measure memory and CPU
+alongside your existing services.
 Development measurements put the full inference worker near 2 GB and the
 text query worker around 600 MB, before the web server and FFmpeg. These are
 not memory guarantees for another CPU or Linux image. Video conversion can
@@ -186,7 +233,65 @@ limits using your Docker/NAS controls only after representative tests. If an
 image is killed for exceeding its limit, a healthy database check on the next
 start does not prove that the chosen limit is sufficient.
 
+### Budget the whole container
+
+`SEMANTIC_THREADS` limits model threading, not the web server, media conversion
+or every child process together. ADHX uses separate query and background model
+processes so a search need not queue behind a video; those processes still
+share the container's CPU and memory budget. Retained 4K playback and video
+inference are different workloads. Test both, including a fresh search while
+indexing is active.
+
+After measuring your host, add resource keys to its existing `adhx` service.
+For example, this illustrative budget allows two CPU cores and 4 GiB of RAM:
+
+```yaml
+services:
+  adhx:
+    # Merge these keys into the complete service; preserve image, environment,
+    # storage, network, restart policy and health check.
+    cpus: 2.0
+    mem_limit: 4g
+    mem_reservation: 2g
+    memswap_limit: 4g
+```
+
+These are Docker service properties, not application environment variables.
+The memory reservation is a soft threshold, not RAM set aside exclusively for
+ADHX. Equal memory and memory-plus-swap limits disable container swap; leaving
+the latter unset can allow additional swap. See [Docker's resource controls](https://docs.docker.com/engine/containers/resource_constraints/).
+Choose a budget that leaves room for the NAS operating system and other apps.
+This example is not a minimum requirement or a validated limit for every model
+input. A hard limit can kill a model worker or the app if it is too low.
+
+Check the runtime's effective limits after recreation; a saved YAML document
+alone does not prove they took effect. Watch available RAM, CPU, disk activity,
+container/process restarts and OOM events where the host exposes them. Avoid
+treating low free-only RAM as pressure without accounting for reclaimable
+cache. Check that Settings' learning counts keep advancing with no failures,
+and try semantic search, video seeking and another service at the same time.
+A healthy database endpoint alone cannot detect a repeatedly killed model
+worker. Keep a private copy of the previous configuration for rollback.
+
 ## Updates, backups and recovery
+
+### Choose an update channel
+
+| Image reference         | What an updater can follow                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `@sha256:<digest>`      | One exact image. A newly published release does not change this reference.                 |
+| `:2.1.3`                | One numbered release; it does not move to the next version number.                         |
+| `:latest`, `:2`, `:2.1` | Moving stable-release aliases, limited to the selected major/minor series where specified. |
+| `:main`                 | The newest published main-branch commit, which may be ahead of the numbered release.       |
+
+For a deliberate update, follow release notifications and select a new verified
+digest. If you choose a moving tag, a NAS image checker can report changes to
+that tag. Detection, pulling an image and recreating the running container are
+separate actions. Publishing an image never upgrades this installed service by
+itself. Confirm the image has finished publishing, supports your architecture
+and contains the intended source revision; a merged PR may still be building.
+The app's displayed version alone may not distinguish different `main`
+commits. See the [image and release flow](../../docs/releasing.md).
 
 Record the running image digest and back up the private data before updating.
 Select a new pinned image, pull it and recreate this project only. For a local
@@ -205,6 +310,13 @@ Stopping or removing the app container should preserve its data. Avoid
 `docker compose down -v` unless you intend to delete named-volume data. For a
 failed update, stop this project, restore its data backup and matching image,
 and leave unrelated services and proxy hosts alone.
+
+When changing only environment or resource settings, keep the verified image
+reference and recreate ADHX without updating every other project. A plain
+process restart does not apply a new container environment. Preserve the
+working VPN/proxy management path; an ADHX backup does not require stopping a
+shared VPN, gateway or the NAS. If an infrastructure update would interrupt
+your only remote connection, arrange independent access and recovery first.
 
 Networks change their extractors often. See the main README for updating the
 image's yt-dlp package; runtime-only package changes disappear when the
