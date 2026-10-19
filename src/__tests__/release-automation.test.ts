@@ -212,8 +212,15 @@ describe('immutable commit images and release promotion', () => {
 describe('release source resolution', () => {
   it('resolves the release tag instead of building a newer main checkout', () => {
     const temp = mkdtempSync(join(tmpdir(), 'adhx-release-plan-'))
+    // Drop the GIT_* variables a commit hook runs under (GIT_INDEX_FILE,
+    // GIT_DIR…): with them, these commands would act on this repository
+    // instead of the scratch ones below.
+    const inherited = { ...process.env }
+    for (const name of Object.keys(inherited)) {
+      if (name.startsWith('GIT_')) delete inherited[name]
+    }
     const env = {
-      ...process.env,
+      ...inherited,
       GIT_AUTHOR_NAME: 'Test',
       GIT_AUTHOR_EMAIL: 'test@example.com',
       GIT_COMMITTER_NAME: 'Test',
