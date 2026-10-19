@@ -1105,12 +1105,29 @@ private fun ActionColumn(
             enabled = onKeep != null,
             selected = yours,
         ) {
-            ActionIcon(rememberVectorPainter(Glyphs.Bookmark), tint = if (yours) AdhxColors.Accent else AdhxColors.White)
+            ActionIcon(rememberVectorPainter(if (yours) Glyphs.BookmarkFilled else Glyphs.Bookmark), tint = if (yours) AdhxColors.Accent else AdhxColors.White)
         }
         // The kept file itself (or the words): an ADHX link only opens for people on it.
-        ActionButton(description = if (post.kind == PostKind.VIDEO) "Share the video" else "Share", onClick = { if (!sharing) onShare() }) {
+        ActionButton(
+            description = when (post.kind) {
+                PostKind.VIDEO -> "Share the video"
+                PostKind.PHOTO -> "Share the photos"
+                PostKind.AUDIO -> "Share the sound"
+                else -> "Share the words"
+            },
+            onClick = { if (!sharing) onShare() },
+        ) {
             when {
-                !sharing -> ActionIcon(rememberVectorPainter(Glyphs.Video))
+                // What it shares: the video (or sound), the photos, or the words.
+                !sharing -> ActionIcon(
+                    rememberVectorPainter(
+                        when (post.kind) {
+                            PostKind.PHOTO -> Glyphs.Photo
+                            PostKind.TEXT, PostKind.ARTICLE -> Glyphs.Lines
+                            else -> Glyphs.Video
+                        },
+                    ),
+                )
                 shareProgress == null -> Spinner(size = 20.dp, stroke = 2.dp)
                 else -> {
                     val fraction by animateFloatAsState(shareProgress.coerceIn(0f, 1f), label = "share")

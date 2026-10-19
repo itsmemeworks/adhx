@@ -182,6 +182,11 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         if (stack.lastOrNull() != link) stack.add(link)
     }
 
+    /** Straight back to home (a tab in a channel's header). */
+    fun home() {
+        while (stack.size > 1) stack.removeAt(stack.lastIndex)
+    }
+
     /** Back: true when there was somewhere to go back to. */
     fun back(): Boolean {
         if (stack.size <= 1) return false

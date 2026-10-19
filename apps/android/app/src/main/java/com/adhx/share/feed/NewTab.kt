@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -57,6 +58,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -103,7 +107,8 @@ fun NewTab(
     connection: Connection,
     reach: Reach,
     actions: HomeActions,
-    header: @Composable (newBadge: String?) -> Unit,
+    /** Over the player; [atEnd] is the end page (caught up), which gets the pages' header. */
+    header: @Composable (newBadge: String?, atEnd: Boolean) -> Unit,
 ) {
     val ui by feed.feed.collectAsStateWithLifecycle()
     val server = connection.server
@@ -131,7 +136,7 @@ fun NewTab(
             vm = library,
             connection = connection,
             reach = reach,
-            bar = { header(null) },
+            bar = { header(null, false) },
             contentTop = 90.dp,
             onSaver = actions.openPerson,
         )
@@ -156,7 +161,7 @@ fun NewTab(
     when {
         ui.items.isEmpty() && (!ui.loadedOnce || ui.loading) -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 34.dp, stroke = 3.dp) }
-            header(null)
+            header(null, false)
         }
         ui.items.isEmpty() && ui.error != null -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Column(
@@ -169,11 +174,11 @@ fun NewTab(
                 Text(ui.error ?: Copy.FEED_CANT_LOAD, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
                 OutlineButton("Try again", onClick = feed::reloadFeed, minHeight = 44.dp)
             }
-            header(null)
+            header(null, false)
         }
         ui.items.isEmpty() -> Box(Modifier.fillMaxSize()) {
             end()
-            header(null)
+            header(null, true)
         }
         else -> PlayerScreen(
             posts = ui.items,
@@ -183,7 +188,7 @@ fun NewTab(
                 feed.onFeedPage(it)
                 page = it
             },
-            topBar = { header(badge) },
+            topBar = { header(badge, page >= ui.items.size) },
             onSaver = actions.openPerson,
             aboveCaption = { post -> WhyChip(post) { why = post } },
             end = if (ui.ended) end else null,
@@ -470,12 +475,20 @@ fun CaughtUp(
         Modifier
             .fillMaxSize()
             .background(AdhxColors.Background)
-            .background(
-                Brush.radialGradient(
-                    listOf(AdhxColors.Accent.copy(alpha = 0.12f), Color.Transparent),
-                    radius = 900f,
-                ),
-            ),
+            .drawBehind {
+                // A soft yellow glow behind Gob: 520×420 around a point 360dp down.
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, 360.dp.toPx())
+                drawOval(
+                    Brush.radialGradient(
+                        0f to AdhxColors.Accent.copy(alpha = 0.12f),
+                        0.65f to Color.Transparent,
+                        center = center,
+                        radius = 260.dp.toPx(),
+                    ),
+                    topLeft = androidx.compose.ui.geometry.Offset(center.x - 260.dp.toPx(), center.y - 210.dp.toPx()),
+                    size = androidx.compose.ui.geometry.Size(520.dp.toPx(), 420.dp.toPx()),
+                )
+            },
     ) {
         Column(
             Modifier
@@ -483,7 +496,7 @@ fun CaughtUp(
                 .verticalScroll(rememberScrollState())
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 96.dp, bottom = 24.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 136.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Gob bobs gently, unless animations are off.
@@ -514,28 +527,26 @@ fun CaughtUp(
                     .semantics(mergeDescendants = true) { heading() },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // One paragraph, so the two lines sit at the boards' 0.95 line height.
+                val title = when {
+                    nothingYet -> Copy.NOTHING_YET_TITLE
+                    isNew -> Copy.CAUGHT_UP
+                    else -> Copy.END_TITLE
+                }
                 Text(
-                    when {
-                        nothingYet -> Copy.NOTHING_YET_TITLE
-                        isNew -> Copy.CAUGHT_UP
-                        else -> Copy.END_TITLE
+                    buildAnnotatedString {
+                        append(title)
+                        if (!nothingYet) {
+                            append("\n")
+                            withStyle(SpanStyle(color = AdhxColors.Accent)) { append(Copy.TOUCH_GRASS) }
+                        }
                     },
                     fontFamily = SerifFamily,
-                    fontSize = 46.sp,
-                    lineHeight = 46.sp,
+                    fontSize = 50.sp,
+                    lineHeight = 48.sp,
                     color = AdhxColors.White,
                     textAlign = TextAlign.Center,
                 )
-                if (!nothingYet) {
-                    Text(
-                        Copy.TOUCH_GRASS,
-                        fontFamily = SerifFamily,
-                        fontSize = 46.sp,
-                        lineHeight = 46.sp,
-                        color = AdhxColors.Accent,
-                        textAlign = TextAlign.Center,
-                    )
-                }
             }
             Text(
                 when {
@@ -563,11 +574,30 @@ fun CaughtUp(
                     LiveButton(onLive, Modifier.weight(1f))
                     // Nothing saved yet: there's nothing to watch again.
                     if (!nothingYet) {
-                        OutlineButton(Copy.WATCH_AGAIN, onClick = onAgain, minHeight = 48.dp, modifier = Modifier.weight(1f))
+                        AgainButton(onAgain, Modifier.weight(1f))
                     }
                 }
             }
         }
+    }
+}
+
+/** "Watch it all again", a faint outline with a turning arrow. */
+@Composable
+private fun AgainButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(50))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Glyphs.Again, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(Copy.WATCH_AGAIN, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1)
     }
 }
 
@@ -576,7 +606,7 @@ fun CaughtUp(
 private fun LiveButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier
-            .heightIn(min = 48.dp)
+            .height(48.dp)
             .clip(RoundedCornerShape(50))
             .background(AdhxColors.Button)
             .clickable(onClick = onClick)
@@ -620,18 +650,20 @@ private fun WatchedCard(watched: List<PhonePost>, server: String, modifier: Modi
                             .offset(x = (30 * i).dp)
                             .rotate(listOf(-5f, -1f, 3f, 6f)[i])
                             .size(width = 40.dp, height = 58.dp)
+                            .background(AdhxColors.Surface, RoundedCornerShape(11.dp))
+                            .padding(2.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .border(2.dp, AdhxColors.Surface, RoundedCornerShape(10.dp))
                             .background(AdhxColors.Placeholder),
                     )
                 }
             }
             Spacer(Modifier.width(14.dp))
         }
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (people.isNotEmpty()) Faces(people, server, size = 22.dp, ring = AdhxColors.Surface)
-            Text(line, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Cream)
+            Text(line, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
         }
+        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Faint, modifier = Modifier.size(16.dp))
     }
 }
 

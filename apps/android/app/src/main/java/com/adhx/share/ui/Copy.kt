@@ -29,6 +29,9 @@ object Copy {
     // Saved for your people, or just for you (the share card and More).
 
     const val SAVED_SHARED = "Saved for your people"
+    const val ADD_A_NOTE = "Add a note"
+    const val NOTE_HINT = "Why they’ll love it"
+    const val NOTE_PRIVATE_HINT = "A note to future you"
     const val SAVED_PRIVATE = "Saved, just for you"
     const val JUST_FOR_ME = "Just for me"
     const val JUST_FOR_ME_OFF = "Keep it private. Still kept, still searchable."
@@ -135,6 +138,11 @@ object Copy {
     }
 
     const val SEE_ALL = "See all"
+    const val YOU_SAVED_TOO = "You saved this too"
+    const val PLAY_ALL = "Play all"
+
+    /** "41 found" over search results. */
+    fun found(n: Int): String = "$n found"
     const val INVITE = "Invite"
 
     /** "3 new" on a channel's covers. */

@@ -1,5 +1,21 @@
 package com.adhx.share.library
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
+import com.adhx.share.links.Networks
+import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SerifFamily
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -99,8 +115,9 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
             .padding(top = 8.dp),
     ) {
         Row(
-            Modifier.padding(horizontal = 12.dp),
+            Modifier.padding(start = 6.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Box(
                 Modifier
@@ -109,46 +126,58 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                     .clickable(onClickLabel = "Back", onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = AdhxColors.White)
+                Icon(Glyphs.Back, contentDescription = "Back", tint = AdhxColors.White, modifier = Modifier.size(22.dp))
             }
-            Spacer(Modifier.width(6.dp))
-            TextField(
-                value = ui.query,
-                onValueChange = vm::setQuery,
-                placeholder = { Text("Describe what you’re looking for", color = AdhxColors.Faint, maxLines = 1) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = AdhxColors.Faint) },
-                trailingIcon = if (ui.query.isNotEmpty()) {
-                    {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = "Clear",
-                            tint = AdhxColors.Faint,
-                            modifier = Modifier.clickable { vm.setQuery("") },
-                        )
-                    }
-                } else {
-                    null
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
-                shape = RoundedCornerShape(26.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = AdhxColors.Surface,
-                    unfocusedContainerColor = AdhxColors.Surface,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = AdhxColors.White,
-                    unfocusedTextColor = AdhxColors.White,
-                    cursorColor = AdhxColors.Accent,
-                ),
-                modifier = Modifier
+            var focused by remember { mutableStateOf(false) }
+            // A 48dp pill; focused, a yellow ring with a soft glow.
+            Row(
+                Modifier
                     .weight(1f)
-                    .focusRequester(focus)
-                    .semantics {
-                        contentDescription = if (ui.scope == SearchScope.EVERYONE) "Search everyone’s saves" else "Search your saves"
-                    },
-            )
+                    .height(56.dp)
+                    .then(if (focused) Modifier.border(4.dp, AdhxColors.Accent.copy(alpha = 0.16f), RoundedCornerShape(50)) else Modifier)
+                    .padding(4.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(AdhxColors.Surface)
+                    .border(2.dp, if (focused) AdhxColors.Accent else Color.White.copy(alpha = 0.08f), RoundedCornerShape(50))
+                    .padding(start = 14.dp, end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(Glyphs.Search, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    if (ui.query.isEmpty()) {
+                        Text("Describe what you’re looking for", fontSize = 16.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.clearAndSetSemantics { })
+                    }
+                    BasicTextField(
+                        value = ui.query,
+                        onValueChange = vm::setQuery,
+                        singleLine = true,
+                        textStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White),
+                        cursorBrush = SolidColor(AdhxColors.Accent),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focus)
+                            .onFocusChanged { focused = it.isFocused }
+                            .semantics {
+                                contentDescription = if (ui.scope == SearchScope.EVERYONE) "Search everyone’s saves" else "Search your saves"
+                            },
+                    )
+                }
+                if (ui.query.isNotEmpty()) {
+                    Box(
+                        Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(AdhxColors.Card)
+                            .clickable(onClickLabel = "Clear search") { vm.setQuery("") },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Glyphs.Close, contentDescription = "Clear search", tint = AdhxColors.Muted, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
         }
 
         val scopes = listOf(SearchScope.EVERYONE, SearchScope.MINE)
@@ -156,16 +185,18 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
             options = listOf(Copy.SCOPE_EVERYONE, Copy.SCOPE_MINE),
             selected = scopes.indexOf(ui.scope).coerceAtLeast(0),
             onSelect = { vm.setScope(scopes[it]) },
+            fontSize = 14,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 14.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 10.dp),
         )
+        TryDescribing(onPick = {
+            vm.setQuery(it)
+            keyboard?.hide()
+        })
 
         when {
-            ui.query.isBlank() -> TryDescribing(onPick = {
-                vm.setQuery(it)
-                keyboard?.hide()
-            })
+            ui.query.isBlank() -> Unit
             ui.items.isEmpty() && (ui.loading || ui.searched != ui.query.trim()) -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
                 Spinner(size = 30.dp, stroke = 3.dp)
             }
@@ -176,31 +207,41 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
     }
 }
 
+/** TRY DESCRIBING, then a row of example searches as chips (it scrolls sideways). */
 @Composable
 private fun TryDescribing(onPick: (String) -> Unit) {
     Column(
-        Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier.padding(top = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             "TRY DESCRIBING",
             fontSize = 12.sp,
             fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 1.4.sp,
+            letterSpacing = 0.7.sp,
             color = AdhxColors.Faint,
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
-        PROMPTS.forEach { prompt ->
-            Text(
-                prompt,
-                fontSize = 15.sp,
-                color = AdhxColors.Cream,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(AdhxColors.Surface)
-                    .clickable { onPick(prompt) }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-            )
+        Row(
+            Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PROMPTS.forEach { prompt ->
+                Box(
+                    Modifier
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(AdhxColors.Surface)
+                        .border(1.dp, AdhxColors.Accent.copy(alpha = 0.4f), RoundedCornerShape(50))
+                        .clickable { onPick(prompt) }
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(prompt, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1)
+                }
+            }
         }
     }
 }
@@ -225,36 +266,68 @@ private fun Results(ui: SearchUi, server: String, onPage: (Int) -> Unit, onOpen:
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         state = grid,
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
+        item(span = { GridItemSpan(maxLineSpan) }, key = "heading") {
+            Row(Modifier.padding(bottom = 0.dp), verticalAlignment = Alignment.Bottom) {
+                Text(
+                    foundHeading(ui.items.firstOrNull()?.match?.on.orEmpty()),
+                    fontFamily = SerifFamily,
+                    fontSize = 28.sp,
+                    lineHeight = 28.sp,
+                    color = AdhxColors.White,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                if (ui.total > 0) Text(Copy.found(ui.total), fontSize = 12.sp, color = AdhxColors.Faint, modifier = Modifier.padding(bottom = 3.dp))
+            }
+        }
         ui.note?.let { note ->
             item(span = { GridItemSpan(maxLineSpan) }, key = "note") {
                 Text(note, fontSize = 13.sp, color = AdhxColors.Faint, modifier = Modifier.padding(bottom = 2.dp))
             }
         }
         itemsIndexed(ui.items, key = { _, post -> post.key }) { index, post ->
-            PosterCard(post, server) { onOpen(index) }
+            val on = post.match?.on.orEmpty()
+            PosterCard(
+                post,
+                server,
+                label = if (post.match != null) matchLabel(on) else Networks.name(post.platform),
+                lit = index == 0 && post.match?.strength == "strong",
+            ) { onOpen(index) }
         }
     }
 }
 
 /**
- * A poster tile: the picture (or the words), the network and author, who of
- * your people saved it, a lock when it's just for you, and how well it matched.
+ * A poster tile, as on the boards: the picture (or the words), a pill
+ * top-left (the network, or where a search found it; yellow when it's the
+ * strongest), how well it matched top-right, then its first line and who
+ * saved it over a dark fade. A lock when it's just for you.
+ * [owner] is the channel's person: the line then says who else saved it
+ * ("You and Ben too").
  */
 @Composable
-fun PosterCard(post: PhonePost, server: String, onClick: () -> Unit) {
+fun PosterCard(
+    post: PhonePost,
+    server: String,
+    height: Dp = 250.dp,
+    label: String? = Networks.name(post.platform),
+    lit: Boolean = false,
+    owner: String? = null,
+    onClick: () -> Unit,
+) {
     val media = post.media.firstOrNull()
     val image = (media?.posterUrl ?: media?.url?.takeIf { media.kind == "photo" })
         ?.let { AdhxApi.resolve(server, it)?.toString() }
+    val title = (post.article?.title?.takeIf { it.isNotBlank() } ?: post.text).trim().lineSequence().firstOrNull()?.trim().orEmpty()
     Box(
         Modifier
             .fillMaxWidth()
-            .aspectRatio(3f / 4f)
-            .clip(RoundedCornerShape(16.dp))
+            .height(height)
+            .clip(RoundedCornerShape(18.dp))
             .background(AdhxColors.Placeholder)
             .clickable(onClickLabel = "Play", onClick = onClick),
     ) {
@@ -273,99 +346,111 @@ fun PosterCard(post: PhonePost, server: String, onClick: () -> Unit) {
                 color = AdhxColors.Cream,
                 maxLines = 7,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 40.dp),
             )
         }
         Column(
             Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
-                .padding(start = 10.dp, end = 10.dp, top = 24.dp, bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))))
+                .padding(start = 10.dp, end = 10.dp, top = 36.dp, bottom = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                NetworkMark(post.platform, size = 13.dp)
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    Copy.handle(post.author.handle) ?: "",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AdhxColors.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            if (image != null && title.isNotBlank()) {
+                Text(title, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            Copy.saversLine(post.savers)?.let { line ->
+            val others = if (owner != null) post.savers.filterNot { it.username == owner } else post.savers
+            val line = when {
+                others.isEmpty() -> null
+                owner != null -> if (others.size == 1 && others[0].isYou) Copy.YOU_SAVED_TOO else "${Copy.names(others)} too"
+                else -> listOfNotNull(Copy.names(others), Networks.name(post.platform)).joinToString(" · ")
+            }
+            if (line != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Faces(post.savers, server, size = 18.dp, description = line)
+                    Faces(others, server, size = 18.dp, description = line)
                     Spacer(Modifier.width(6.dp))
-                    Text(
-                        Copy.names(post.savers),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = AdhxColors.Cream,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(line, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            post.match?.let { Strength(it.strength) }
         }
-        if (Privacy.isPrivate(post)) {
-            Box(
-                Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.55f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                PrivateLock(size = 13.dp)
-            }
-        }
-        if (post.kind == PostKind.VIDEO || post.kind == PostKind.AUDIO) {
-            val seconds = media?.durationMs?.let { (it / 1000).toInt() }
-            if (seconds != null && seconds > 0) {
+        Row(
+            Modifier.align(Alignment.TopStart).padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (label != null) {
                 Text(
-                    "%d:%02d".format(seconds / 60, seconds % 60),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AdhxColors.White,
+                    label,
+                    fontSize = 10.sp,
+                    lineHeight = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (lit) Color.Black else Color.White,
+                    maxLines = 1,
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.55f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                        .clip(RoundedCornerShape(50))
+                        .background(if (lit) AdhxColors.Accent else Color.Black.copy(alpha = 0.55f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
+            if (Privacy.isPrivate(post)) {
+                Box(
+                    Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PrivateLock(size = 12.dp)
+                }
+            }
         }
+        post.match?.let { Strength(it.strength, Modifier.align(Alignment.TopEnd).padding(8.dp)) }
+        if (lit) Box(Modifier.matchParentSize().border(2.dp, AdhxColors.Accent, RoundedCornerShape(18.dp)))
     }
 }
 
-/** Strong / Good / Related, with the website's three bars. */
+/** Where a search found a post, for its pill: on screen, said in it, or in the words. */
+fun matchLabel(on: List<String>): String = when {
+    "screen" in on || "ocr" in on || "onScreen" in on -> "On screen"
+    "speech" in on || "said" in on || "transcript" in on -> "Said in the video"
+    "keywords" in on || "words" in on || "text" in on -> "In the words"
+    else -> "Related"
+}
+
+/** The heading over the results, after where the best one was found. */
+fun foundHeading(on: List<String>): String = when (matchLabel(on)) {
+    "On screen" -> "Found it on screen"
+    "Said in the video" -> "Found it in what’s said"
+    "In the words" -> "Found it in the words"
+    else -> "Closest we’ve got"
+}
+
+/** Strong / Good / Related: the website's three bars in a small dark pill. */
 @Composable
-private fun Strength(strength: String) {
+private fun Strength(strength: String, modifier: Modifier = Modifier) {
     val (label, bars) = when (strength) {
         "strong" -> "Strong match" to 3
         "good" -> "Good match" to 2
         else -> "Related" to 1
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
-            for (i in 1..3) {
-                Box(
-                    Modifier
-                        .width(3.dp)
-                        .height((4 + i * 3).dp)
-                        .clip(RoundedCornerShape(1.dp))
-                        .background(if (i <= bars) AdhxColors.Accent else AdhxColors.White.copy(alpha = 0.3f)),
-                )
-            }
+    Row(
+        modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black.copy(alpha = 0.55f))
+            .padding(horizontal = 7.dp, vertical = 5.dp)
+            .semantics { contentDescription = label },
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        for (i in 1..3) {
+            Box(
+                Modifier
+                    .width(3.dp)
+                    .height((3 + i * 3).dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (i <= bars) AdhxColors.Accent else Color.White.copy(alpha = 0.3f)),
+            )
         }
-        Spacer(Modifier.width(6.dp))
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Cream)
     }
 }

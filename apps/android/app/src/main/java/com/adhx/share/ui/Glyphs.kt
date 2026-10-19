@@ -17,6 +17,15 @@ object Glyphs {
     val Settings = stroke(circle(12f, 12f, 3f) + "M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1")
     val Sliders = stroke("M4 7h9M17 7h3M4 17h3M11 17h9" + circle(15f, 7f, 2f) + circle(9f, 17f, 2f))
     val Bookmark = stroke("M6 3h12v18l-6-4-6 4z")
+    val BookmarkFilled = ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
+        .addPath(
+            pathData = addPathNodes("M6 3h12v18l-6-4-6 4z"),
+            fill = SolidColor(Color.White),
+            stroke = SolidColor(Color.White),
+            strokeLineWidth = 2f,
+            strokeLineJoin = StrokeJoin.Round,
+        )
+        .build()
     val Video = stroke(rect(3f, 6f, 13f, 12f, 2f) + "M16 10l5-3v10l-5-3z")
     val Download = stroke("M12 4v11M7 10l5 5 5-5M5 20h14")
     val More = fill(circle(5f, 12f, 2f) + circle(12f, 12f, 2f) + circle(19f, 12f, 2f))

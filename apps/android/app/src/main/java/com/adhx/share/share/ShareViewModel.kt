@@ -144,6 +144,22 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         SaveQueue.enqueue(context, current.link, id)
     }
 
+    /**
+     * "Add a note": remembered with the share, then sent behind the save
+     * (with it, when the save hasn't gone out yet). Blank or unchanged does nothing.
+     */
+    fun commitNote(text: String) {
+        val note = text.trim().take(AdhxApi.NOTE_MAX).takeIf { it.isNotEmpty() } ?: return
+        val context: Context = getApplication<Application>()
+        val id = itemId ?: return
+        val history = HistoryStore.get(context)
+        val current = history.find(id) ?: return
+        if (current.note == note) return
+        try { history.update(id) { it.copy(note = note, notePending = true) } }
+        catch (_: HistoryWriteException) { storageFailed(); return }
+        SaveQueue.enqueue(context, current.link, id)
+    }
+
     private fun storageFailed() {
         _ui.update { it.copy(phase = Phase.Failed,
             message = "Couldn’t remember that choice on this phone. Free some space and try again.") }

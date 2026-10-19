@@ -15,6 +15,9 @@ class QueuedSaveDelivery(
         val item = read() ?: return ApiResult.Failed(410, "removed", null)
         // A finished receipt retry must never POST a duplicate save.
         val received = item.asPost()
+        // A note written before the save went out rides along with it.
+        val sentNote = item.note.takeIf { item.notePending && received == null && item.queueId == null }
+        val noteSent: (HistoryItem) -> HistoryItem = { if (sentNote != null && it.note == sentNote) it.copy(notePending = false) else it }
         val result = if (received != null) ApiResult.Ok(received, 200) else if (item.queueId != null) {
             api.followQueued(item.queueId, interval, limitMs)
         } else {
@@ -23,9 +26,11 @@ class QueuedSaveDelivery(
                 explicit = item.privateChoice != null,
                 deferPublish = true,
                 requestId = item.id,
-                onQueued = { receipt -> update { it.queuedWith(receipt) } })
+                note = sentNote,
+                onQueued = { receipt -> update { noteSent(it.queuedWith(receipt)) } })
         }
         if (result !is ApiResult.Ok) return result
+        if (sentNote != null) update(noteSent)
         val post = result.value
         if (read()?.postId == null) update { it.savedWith(post) }
         while (true) {

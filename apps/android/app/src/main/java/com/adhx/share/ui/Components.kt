@@ -101,7 +101,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
         ),
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
-        Text(text, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+        Text(text, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -234,10 +234,10 @@ fun JustForMeRow(
             Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(if (on) AdhxColors.Accent else AdhxColors.Raised),
+                .background(if (on) AdhxColors.Accent else AdhxColors.Card),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Lock, contentDescription = null, tint = if (on) AdhxColors.Black else AdhxColors.Muted, modifier = Modifier.size(18.dp))
+            Icon(Glyphs.Lock, contentDescription = null, tint = if (on) AdhxColors.Black else AdhxColors.Muted, modifier = Modifier.size(18.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(Copy.JUST_FOR_ME, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
@@ -246,36 +246,30 @@ fun JustForMeRow(
         if (busy) {
             Spinner(size = 20.dp, stroke = 2.dp)
         }
-        Switch(
-            checked = on,
-            onCheckedChange = null,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = AdhxColors.Black,
-                checkedTrackColor = AdhxColors.Accent,
-                checkedBorderColor = AdhxColors.Accent,
-                uncheckedThumbColor = AdhxColors.Cream,
-                uncheckedTrackColor = Color(0xFF4A453E),
-                uncheckedBorderColor = Color(0xFF4A453E),
-            ),
-        )
+        AdhxSwitch(on, enabled = enabled, large = true)
     }
 }
 
-/** The boards' switch: 48×28, yellow with a black knob when on, dark with a cream knob when off. */
+/**
+ * The boards' switch: yellow with a black knob when on, dark with a cream
+ * knob when off. 48×28 in lists; [large] is the share card's 52×32.
+ */
 @Composable
-fun AdhxSwitch(on: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val x by androidx.compose.animation.core.animateDpAsState(if (on) 23.dp else 3.dp, label = "knob")
+fun AdhxSwitch(on: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, large: Boolean = false) {
+    val width = if (large) 52.dp else 48.dp
+    val knob = if (large) 24.dp else 22.dp
+    val inset = if (large) 4.dp else 3.dp
+    val x by androidx.compose.animation.core.animateDpAsState(if (on) width - knob - inset else inset, label = "knob")
     Box(
         modifier
-            .size(width = 48.dp, height = 28.dp)
+            .size(width = width, height = knob + inset * 2)
             .clip(CircleShape)
             .background(if (on) AdhxColors.Accent.copy(alpha = if (enabled) 1f else 0.55f) else AdhxColors.Hairline),
     ) {
         Box(
             Modifier
-                .padding(start = x, top = 3.dp)
-                .size(22.dp)
+                .padding(start = x, top = inset)
+                .size(knob)
                 .clip(CircleShape)
                 .background(if (on) AdhxColors.Black else AdhxColors.Cream),
         )

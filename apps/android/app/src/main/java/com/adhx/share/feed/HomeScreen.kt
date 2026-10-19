@@ -106,12 +106,17 @@ fun HomeScreen(
             connection = connection,
             reach = reach,
             actions = actions,
-            header = { b ->
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    HomeHeader(tab, onTab, actions, overMedia = true, newBadge = b)
-                    // "3 on their way" over the player, while posts are processing.
-                    if (doing != null) {
-                        DoingPillHost(doing, connection.server, onSeeAll = actions.onDoing, modifier = Modifier.offset(y = (-14).dp))
+            header = { b, atEnd ->
+                if (atEnd) {
+                    // Caught up is a page of its own: the pages' header, the tabs hugging their words.
+                    PageHeader(tab, onTab, onHome = {}, onSearch = actions.onSearch, onSettings = actions.onSettings, centered = true)
+                } else {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        HomeHeader(tab, onTab, actions, overMedia = true, newBadge = b)
+                        // "3 on their way" over the player, while posts are processing.
+                        if (doing != null) {
+                            DoingPillHost(doing, connection.server, onSeeAll = actions.onDoing, modifier = Modifier.offset(y = (-14).dp))
+                        }
                     }
                 }
             },
@@ -232,8 +237,10 @@ fun PageHeader(
     onSearch: () -> Unit,
     onSettings: () -> Unit,
     newBadge: String? = null,
+    /** The tabs hug their words in the middle (caught up) instead of filling the width. */
+    centered: Boolean = false,
 ) {
-    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+    Column(Modifier.fillMaxWidth().statusBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -262,8 +269,11 @@ fun PageHeader(
             onTab = onTab,
             newBadge = newBadge,
             background = AdhxColors.Surface,
-            fill = true,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp).fillMaxWidth(),
+            fill = !centered,
+            wide = centered,
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, top = if (centered) 8.dp else 4.dp)
+                .then(if (centered) Modifier else Modifier.fillMaxWidth()),
         )
     }
 }
@@ -280,6 +290,8 @@ private fun HomeTabs(
     background: Color,
     modifier: Modifier = Modifier,
     fill: Boolean = false,
+    /** 44dp tabs with 20dp sides, as on caught up. */
+    wide: Boolean = false,
 ) {
     // Not clipped: the badge reaches past the pill's edge.
     Row(
@@ -287,7 +299,7 @@ private fun HomeTabs(
             .background(background, RoundedCornerShape(50))
             .padding(4.dp)
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(if (fill) 4.dp else 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (fill || wide) 4.dp else 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HomeTab.entries.forEach { t ->
@@ -297,7 +309,7 @@ private fun HomeTabs(
             Box(if (fill) Modifier.weight(1f) else Modifier) {
                 Row(
                     (if (fill) Modifier.fillMaxWidth() else Modifier)
-                        .height(if (fill) 44.dp else 40.dp)
+                        .height(if (fill || wide) 44.dp else 40.dp)
                         .clip(RoundedCornerShape(50))
                         .background(if (on) AdhxColors.Cream else Color.Transparent)
                         .selectable(selected = on, role = Role.Tab, onClick = { onTab(t) })
@@ -310,7 +322,7 @@ private fun HomeTabs(
                                 }
                             }
                         }
-                        .padding(horizontal = if (t == HomeTab.New) 16.dp else 14.dp),
+                        .padding(horizontal = if (wide) 20.dp else if (t == HomeTab.New) 16.dp else 14.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

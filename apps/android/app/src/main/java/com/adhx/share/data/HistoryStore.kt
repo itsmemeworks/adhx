@@ -56,6 +56,9 @@ data class HistoryItem(
     /** Bind waiting work to its account, without persisting the phone secret here. */
     val ownerServer: String? = null,
     val ownerUsername: String? = null,
+    /** "Add a note" from the share card, and whether it still has to reach the server. */
+    val note: String? = null,
+    val notePending: Boolean = false,
 ) {
     internal fun belongsTo(connection: Connection, allowLegacy: Boolean): Boolean =
         if (ownerServer == null && ownerUsername == null) allowLegacy

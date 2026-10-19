@@ -28,6 +28,19 @@ data class SaveRequest(
     @SerialName("private") val isPrivate: Boolean? = null,
     val deferPublish: Boolean = false,
     val requestId: String? = null,
+    /** A short note for your people (or future you) with the save, up to 140 characters. Left out when null. */
+    val note: String? = null,
+)
+
+/** `POST /api/app/note`: sets your note on one of your saves. */
+@Serializable
+data class NoteRequest(val platform: String, val id: String, val note: String)
+
+/** The note as the server kept it (cleaned, at most 140 characters), or null. */
+@Serializable
+data class NoteResponse(
+    @Serializable(with = LooseTextSerializer::class)
+    val note: String? = null,
 )
 
 @Serializable

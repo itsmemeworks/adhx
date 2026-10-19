@@ -32,6 +32,8 @@ import com.adhx.share.feed.ChannelScreen
 import com.adhx.share.feed.FeedViewModel
 import com.adhx.share.feed.HomeActions
 import com.adhx.share.feed.HomeScreen
+import com.adhx.share.feed.HomeTab
+import com.adhx.share.feed.PageHeader
 import com.adhx.share.feed.TunedInScreen
 import com.adhx.share.library.BackTitleRow
 import com.adhx.share.net.ChannelKind
@@ -205,6 +207,22 @@ private fun MainApp(
                 server = current.server,
                 onBack = back,
                 onPlay = { library.open(Route.ChannelPlayer(it)) },
+                // A channel sits under Channels: the pages' header, and a tab goes home to it.
+                header = {
+                    PageHeader(
+                        tab = HomeTab.Channels,
+                        onTab = { t ->
+                            feed.tab = t
+                            library.home()
+                        },
+                        onHome = {
+                            feed.tab = HomeTab.New
+                            library.home()
+                        },
+                        onSearch = { library.open(Route.Search) },
+                        onSettings = { library.open(Route.Settings) },
+                    )
+                },
             )
             is Route.ChannelPlayer -> {
                 val channel by feed.channel.collectAsStateWithLifecycle()

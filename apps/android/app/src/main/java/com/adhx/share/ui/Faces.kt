@@ -23,28 +23,22 @@ import coil3.compose.AsyncImage
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.Saver
 
-/**
- * The colours behind people's initials. Nine, in an order that gives the
- * boards' people their boards' colours (Ana pink, Ben green, Mum orange,
- * Jo purple, Pete blue); anyone else gets one of the same family.
- */
+/** The colours behind people's initials: exactly the boards' five. */
 private val FaceColors = listOf(
-    Color(0xFF8FD3FF),
     Color(0xFFFF8FA3),
-    Color(0xFF7FE3D6),
     Color(0xFF7FD1AE),
-    Color(0xFFC4A7FF),
-    Color(0xFFD6E36B),
-    Color(0xFFFFB8D9),
-    Color(0xFF6B8CFF),
     Color(0xFFFFB35C),
+    Color(0xFFC4A7FF),
+    Color(0xFF6B8CFF),
 )
 
-/** The same colour for the same person, on every screen. */
+/**
+ * The same colour for the same person, on every screen and on the iPhone
+ * too: the same 16-bit hash of the username as the iOS app, into the five.
+ */
 fun faceColor(username: String): Color {
-    if (username.isBlank()) return FaceColors[0]
-    val hash = username.lowercase().fold(0) { acc, c -> acc * 31 + c.code }
-    return FaceColors[Math.floorMod(hash, FaceColors.size)]
+    val hash = username.lowercase().fold(0) { acc, c -> (acc * 31 + c.code) and 0xFFFF }
+    return FaceColors[hash % FaceColors.size]
 }
 
 /** The first letter of what someone's called, for the drawn face. */
