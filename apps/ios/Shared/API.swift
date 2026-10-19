@@ -389,6 +389,14 @@ struct ADHXClient {
         return answer.answer
     }
 
+    /// Sets (or, with nil, clears) your note on one of your saves. Answers the
+    /// note the server kept (cleaned, at most 140 characters).
+    func setNote(platform: String, id: String, note: String?) async throws -> String? {
+        let answer: NoteAnswer = try await send(
+            "POST", "/api/app/note", body: ["platform": platform, "id": id, "note": Saver.clean(note) ?? NSNull()])
+        return answer.note
+    }
+
     /// Switches one of your saves "Just for me" or back to shared. Answers the
     /// server's word for it.
     func setPrivate(platform: String, id: String, private isPrivate: Bool) async throws -> Bool {
@@ -618,4 +626,8 @@ enum Links {
     static func normalizedCode(_ code: String) -> String {
         code.uppercased().filter { $0.isLetter || $0.isNumber }
     }
+}
+
+private struct NoteAnswer: Decodable {
+    let note: String?
 }

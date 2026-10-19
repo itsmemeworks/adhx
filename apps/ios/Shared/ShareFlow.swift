@@ -135,9 +135,9 @@ final class ShareFlow: ObservableObject {
         await noteTask?.value
     }
 
-    /// The note goes with the save: once the card closes, the same share
-    /// (same link and request id) is sent again carrying it, after the first
-    /// has been answered.
+    /// The note goes with the save once the card closes: on the saved post
+    /// (`/api/app/note`) when it has landed, else with the same share again
+    /// (same link and request id) after the first has been answered.
     private func sendNote() {
         guard noteTask == nil, let text = Saver.clean(note), let client, let link, let recordId else { return }
         switch phase {
@@ -145,9 +145,13 @@ final class ShareFlow: ObservableObject {
         default: return
         }
         let first = saveTask
-        noteTask = Task {
+        noteTask = Task { [weak self] in
             await first?.value
-            _ = try? await client.save(url: link, deferPublish: true, requestId: recordId, note: text)
+            if let r = self?.result {
+                _ = try? await client.setNote(platform: r.platform, id: r.id, note: text)
+            } else {
+                _ = try? await client.save(url: link, deferPublish: true, requestId: recordId, note: text)
+            }
         }
     }
 

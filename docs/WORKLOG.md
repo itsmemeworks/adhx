@@ -10,7 +10,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 - Ran the iOS app in the simulator against the seeded parity server as Pete and restyled it board by board: bundled Instrument Serif and Hanken Grotesk, the one-row header with its corner badge, full-bleed player with the boards' scrims, frosted 52 pt rail, thin progress line, why chip, why/filter/on-their-way sheets, caught up, channels, friend channel masonry, search tiles, Live cards and tuned in, settings, share card.
 - Sound, Repeat, the small window, Hide and the original moved into More (the rail keeps Share, Save to phone and More, plus React on Live).
-- Save notes: `Saver.note` decodes loosely (trimmed, 140 max) and shows as a speech bubble over the byline; the share card has "Add a note", sent as `note` on a repeat of the same save (same link and request id) when the card closes. Needs the server to apply `note` on that repeat.
+- Save notes: `Saver.note` decodes loosely (trimmed, 140 max) and shows as a speech bubble over the byline; the share card has "Add a note", sent when the card closes through `POST /api/app/note` once the save has landed, else as `note` on a repeat of the same save (same link and request id).
 - New "Connected to …" screen after pairing. Debug-only launch arguments connect, avoid sending seen, and preview the welcome and share card (`apps/ios/README.md`).
 - Deviations: system sheets float inset on iOS 26, the send-file sheet is still the system share sheet, faces use the app's colour hash, no "Play the N new"/"See all"/"Invite" on channels.
 
