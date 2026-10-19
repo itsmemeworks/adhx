@@ -12,7 +12,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Add a portable operator checklist for release/image/source alignment, native launchd paths, private machine configuration and proxy upload limits.
 - Require real claim/result acknowledgement, text/image inference, late-video search, H.264 playback and scratch cleanup evidence before increasing load.
 - Explain CPU thread and optional CoreML measurements, shared-host responsiveness, durable queue migration and the difference between clearing saves and deleting accounts.
-- Clarify that account clearing can reuse shared media/indices; cover verified backups and scoped NAS import ownership repair without changing existing library permissions.
+- Clarify that account clearing can reuse shared media/indices; cover verified backups, maintenance-task receipts/readback and scoped NAS import ownership repair without changing existing library permissions.
 - Validation: 3,005 tests with two workers, typecheck, formatting, shell syntax and lint (existing warnings) pass; read-only review corrections cover persisted plists and retained channel caches.
 - Source changes are proposed; the checklist records operator checks rather than claiming a deployment passed them. Keep deployment settings and measured household loads private.
 

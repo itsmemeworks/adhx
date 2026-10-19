@@ -48,6 +48,11 @@ database backup with SQLite's integrity check, validate archive contents and
 checksums where available, and record where the verified copy actually resides.
 Distinguish a verified NAS archive from an attempted download to another host.
 
+If maintenance uses a one-shot helper, verify its own exit status and persisted
+result or receipt, then read back the intended database/file state. A healthy
+web app or a NAS project marked started does not prove that a dependency/helper
+actually ran or finished successfully.
+
 ## Check the operating conditions
 
 | Setting or dependency    | Check before starting                                                                                                                                                           |
