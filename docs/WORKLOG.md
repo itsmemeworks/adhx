@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — QA of the merged friends feed (three members)
+
+- Walked Ana (admin), Ben (from an invite, paired phone) and Jo on a scratch DB with kept media: invite → done → pairing, Just for me, New (why, seen, filter, caught up, Show them, Watch it all again), faces and the Who saved it popover, channels (group, friend, new counts), Live with names (watchers, React, reactions both ways, signed-out shapes), search scopes, the phone API, session renewal, `pnpm build` and `pnpm site:build`.
+- Fixed: `/api/app/feed` also sends `waiting` as `hidden` (both apps read `hidden`); New's header said "1 you haven't seen" on the caught-up card; Right now's Just saved strip, covers and moment posts kept a save made private (or by a banned member) until the regroup, and the strip until 12 newer saves; search tiles hid the faces under "Words only"; Tune in's watching count was reset by the moment's older count.
+- Noted for the apps: they read only `why` (not `whyReasons`), so Why this one shows one reason; neither reads `nothingYet`, so a quiet server says caught up instead of "Nothing new yet".
+- Moment `people`/`posts` counts still catch up at the next regroup (≤5 min) after a save goes private.
+
 ## 2026-10-19 — New and the blended feed
 
 - `post_views` (guarded, cleared with the account, pruned after 180 days at migrate; guard triggers now 48). `POST /api/views` / `POST /api/app/seen` (≤50, idempotent, first `seen_at` kept).
