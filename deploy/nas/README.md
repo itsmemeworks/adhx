@@ -213,9 +213,10 @@ use several cores and substantial temporary disk space, especially at 4K.
 
 - `KEEP_CONCURRENCY`: simultaneous downloads/conversions.
 - `SEMANTIC_THREADS`: inference threads; the separate query worker uses one.
-- `SEMANTIC_VIDEO_MAX_FRAMES`: `16` (default), `8` or `4` small frames from
-  the opening 32 seconds. `8` samples every four seconds, reducing model inputs
-  while retaining the full-quality file. Fewer frames may miss short events;
+- `SEMANTIC_VIDEO_MAX_FRAMES`: up to `16` (default), `8` or `4` small frames
+  spread across the full video duration. `8` reduces model inputs while retaining
+  the full-quality file. FFmpeg seeks directly to samples with one decoder thread;
+  extraction is time-bounded. Old video results refresh in the background. Fewer frames may miss short events;
   measure speed and search quality before choosing a budget. This needs an
   image containing the setting, not just an environment entry on an older image.
 - `KEEP_MIN_FREE_GB`: pause starting downloads below the free-space reserve.

@@ -9,14 +9,15 @@ import { useAuthMe } from '@/components/auth'
  * "Getting to know your saves": how far the understanding pipeline has got
  * with this user's saves (`/api/understanding/status`). A quiet ring while
  * it works; tap it for the details. Copy says only what is true: words are
- * read, pictures looked at, videos watched at the server's sampling interval (no
+ * read, pictures looked at, videos sampled across their duration (no
  * audio), all on ADHX's own servers.
  */
 
 export interface LearningStatus {
   enabled: boolean
   /** Optional for compatibility with older servers. */
-  videoFrameIntervalSeconds?: number
+  videoSampling?: 'whole-video'
+  videoMaxFrames?: number
   groups: { id: 'words' | 'photos' | 'videos'; done: number; total: number; failed: number }[]
   ready: number
   totalSaves: number
@@ -51,15 +52,15 @@ export interface LearningSummary {
 
 export function learningSummary(status: LearningStatus | null): LearningSummary {
   if (!status?.enabled) return { rows: [], remaining: 0, focus: null, failed: 0, progress: 1 }
-  const interval = status.videoFrameIntervalSeconds
-  const seconds = interval === 4 ? 'four' : interval === 8 ? 'eight' : 'two'
   const rows = (['words', 'photos', 'videos'] as const)
     .map((id) => {
       const g = status.groups.find((x) => x.id === id)
       return {
         id,
         ...ROW_COPY[id],
-        ...(id === 'videos' ? { sub: `Watched, a frame every ${seconds} seconds` } : {}),
+        ...(id === 'videos' && status.videoSampling === 'whole-video'
+          ? { sub: `Sampled across the video, up to ${status.videoMaxFrames ?? 16} frames` }
+          : {}),
         done: g?.done ?? 0,
         total: g?.total ?? 0,
       }

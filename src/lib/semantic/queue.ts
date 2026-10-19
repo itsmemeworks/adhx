@@ -11,6 +11,7 @@ import {
   MAX_ATTEMPTS,
   PRIORITY,
   SEMANTIC_MODEL_VERSION,
+  videoSamplingCurrent,
   type UnderstandingKind,
 } from './config'
 
@@ -75,10 +76,15 @@ export async function enqueueBackfill(userId?: string): Promise<number> {
       platform: postEmbeddings.platform,
       postId: postEmbeddings.postId,
       kind: postEmbeddings.kind,
+      contentHash: postEmbeddings.contentHash,
     })
     .from(postEmbeddings)
     .where(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION))
-  const have = new Set(done.map((d) => `${d.platform}:${d.postId}:${d.kind}`))
+  const have = new Set(
+    done
+      .filter((d) => d.kind !== 'video' || videoSamplingCurrent(d.contentHash))
+      .map((d) => `${d.platform}:${d.postId}:${d.kind}`),
+  )
   const queued = await db
     .select({
       platform: understandingQueue.platform,

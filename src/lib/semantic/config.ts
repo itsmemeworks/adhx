@@ -15,25 +15,21 @@ export const SEMANTIC_DTYPE = { model: 'q4', vision_encoder: 'q8' } as const
 export const SEMANTIC_MODEL_VERSION = `${SEMANTIC_MODEL_ID}@${SEMANTIC_MODEL_REVISION}:q4/q8:v1`
 export const SEMANTIC_DIMS = 768
 
-/**
- * Default video sampling: the first 32 seconds, one frame every 2s,
- * 70 vision tokens per frame. pond takes 32 frames at 140 tokens on a GPU; on
- * CPU that costs ~42s and ~3GB per video. 16 × 70 costs ~11–15s and ~2GB, and
- * its vector stays at cosine ~0.95 to the full one on real saves. Part of the
- * video content hash, so requeued videos refresh when this budget changes.
- */
-export const VIDEO_MAX_SECONDS = 32
-// A smaller inference budget covers the same opening window with fewer frames.
-// It never changes the retained video, its resolution or download limits.
+/** A fixed inference budget spread across the full duration, never a playback-quality setting. */
 const configuredVideoFrames = Number(process.env['SEMANTIC_VIDEO_MAX_FRAMES'] || 16)
 export const VIDEO_MAX_FRAMES = [4, 8, 16].includes(configuredVideoFrames)
   ? configuredVideoFrames
   : 16
-export const VIDEO_FPS = VIDEO_MAX_FRAMES / VIDEO_MAX_SECONDS
+/** Avoid duplicating near-identical frames in short clips. */
+export const VIDEO_MIN_INTERVAL_SECONDS = 2
 export const VIDEO_SOFT_TOKENS = 70
-export const VIDEO_SAMPLING = `fps${VIDEO_FPS}x${VIDEO_MAX_FRAMES}@${VIDEO_MAX_SECONDS}s/t${VIDEO_SOFT_TOKENS}`
-/** Frames are downscaled before embedding; the model resizes to its own patch grid anyway. */
 export const VIDEO_FRAME_WIDTH = 448
+export const VIDEO_SAMPLING = `whole-v2/max${VIDEO_MAX_FRAMES}/min${VIDEO_MIN_INTERVAL_SECONDS}s/w${VIDEO_FRAME_WIDTH}/t${VIDEO_SOFT_TOKENS}`
+
+/** Empty hashes represent posts with no video; completed old video windows must refresh. */
+export function videoSamplingCurrent(contentHash: string): boolean {
+  return !contentHash || contentHash.startsWith(`${VIDEO_SAMPLING}|`)
+}
 
 /** Queue priorities: higher runs first. */
 export const PRIORITY = {

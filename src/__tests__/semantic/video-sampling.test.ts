@@ -28,12 +28,11 @@ describe('video inference budgets', () => {
       vi.resetModules()
       const config = await import('@/lib/semantic/config')
       expect(config.VIDEO_MAX_FRAMES).toBe(16)
-      expect(config.VIDEO_FPS).toBe(0.5)
-      expect(config.VIDEO_SAMPLING).toBe('fps0.5x16@32s/t70')
+      expect(config.VIDEO_SAMPLING).toContain('whole-v2/max16/')
     },
   )
 
-  it('preserves default hashes and changes only video hashes for a lighter budget', async () => {
+  it('invalidates opening-window video hashes without changing text, pictures or retained URLs', async () => {
     const item = {
       id: '100',
       platform: 'twitter',
@@ -59,7 +58,8 @@ describe('video inference budgets', () => {
       .update('/api/files/twitter/100/video-1|fps0.5x16@32s/t70')
       .digest('hex')
       .slice(0, 32)
-    expect(original.video?.hash).toBe(expectedHash)
+    expect(original.video?.hash).not.toBe(expectedHash)
+    expect(original.video?.hash).toContain('whole-v2/max16/')
     vi.stubEnv('SEMANTIC_VIDEO_MAX_FRAMES', '8')
     vi.resetModules()
     const lighter = (await import('@/lib/semantic/documents')).buildPostDocument(item)
@@ -67,6 +67,17 @@ describe('video inference budgets', () => {
     expect(lighter.textHash).toBe(original.textHash)
     expect(lighter.image?.hash).toBe(original.image?.hash)
     expect(lighter.video?.url).toBe(original.video?.url)
+  })
+
+  it('bounds sampling work for short clips and very long videos', async () => {
+    vi.stubEnv('SEMANTIC_VIDEO_MAX_FRAMES', '8')
+    vi.resetModules()
+    const { videoSamplePlan } = await import('@/lib/semantic/media')
+    expect(videoSamplePlan(0.5)).toEqual({ count: 1, secondsPerFrame: 0.5 })
+    expect(videoSamplePlan(4)).toEqual({ count: 2, secondsPerFrame: 2 })
+    expect(videoSamplePlan(7200)).toEqual({ count: 8, secondsPerFrame: 900 })
+    for (const duration of [0, -1, NaN, Infinity])
+      expect(() => videoSamplePlan(duration)).toThrow('duration')
   })
 
   it.each([4, 8, 16])(
@@ -90,9 +101,9 @@ describe('video inference budgets', () => {
             '-f',
             'lavfi',
             '-i',
-            'color=c=blue:s=64x36:r=1',
-            '-t',
-            '32',
+            'color=c=red:s=896x504:r=1:d=40[red];color=c=green:s=896x504:r=1:d=40[green];color=c=blue:s=896x504:r=1:d=40[blue];[red][green][blue]concat=n=3:v=1:a=0',
+            '-g',
+            '2',
             '-c:v',
             'libx264',
             '-threads',
@@ -113,11 +124,36 @@ describe('video inference budgets', () => {
         const sampled = await sampleVideoFrames('/api/files/twitter/100/video-1')
         try {
           expect(sampled.files).toHaveLength(budget)
-          expect(sampled.duration).toBe(32)
+          expect(sampled.duration).toBe(120)
+          expect(sampled.secondsPerFrame).toBe(120 / budget)
           const { probeMedia } = await import('@/lib/keep/probe')
           expect((await probeMedia(sampled.files[0])).width).toBe(448)
           expect(createHash('sha256').update(readFileSync(originalPath)).digest('hex')).toBe(before)
-          expect((await import('@/lib/semantic/config')).VIDEO_FPS).toBe(budget / 32)
+          // Blue exists only after 80 seconds: a first-32-seconds sampler fails this.
+          const pixel = (file: string) =>
+            execFileSync(
+              binary,
+              [
+                '-v',
+                'error',
+                '-i',
+                file,
+                '-vf',
+                'scale=1:1',
+                '-frames:v',
+                '1',
+                '-f',
+                'rawvideo',
+                '-pix_fmt',
+                'rgb24',
+                '-',
+              ],
+              { timeout: 10_000 },
+            )
+          const first = pixel(sampled.files[0])
+          const last = pixel(sampled.files.at(-1)!)
+          expect(first[0]).toBeGreaterThan(first[2] + 100)
+          expect(last[2]).toBeGreaterThan(last[0] + 100)
         } finally {
           await sampled.cleanup()
         }

@@ -8,12 +8,12 @@ import {
   TWITTER_MEDIA_HOSTS,
 } from '@/lib/media/proxy'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
+import { probeMedia } from '@/lib/keep/probe'
 import {
   internalOrigin,
-  VIDEO_FPS,
   VIDEO_FRAME_WIDTH,
   VIDEO_MAX_FRAMES,
-  VIDEO_MAX_SECONDS,
+  VIDEO_MIN_INTERVAL_SECONDS,
 } from './config'
 
 /** Hosts the worker may fetch pictures from directly. Everything else is skipped (SSRF). */
@@ -171,15 +171,27 @@ export interface SampledFrames {
   dir: string
   /** JPEG frame files in time order. */
   files: string[]
-  /** Seconds covered. */
+  /** Actual source duration, not just the sampled opening window. */
   duration: number
+  secondsPerFrame: number
   cleanup: () => Promise<void>
 }
 
+/** Uniform samples span the full timeline, with fewer frames for short clips. */
+export function videoSamplePlan(duration: number): { count: number; secondsPerFrame: number } {
+  if (!Number.isFinite(duration) || duration <= 0)
+    throw new MediaUnavailableError('Video duration is not available yet')
+  const count = Math.min(
+    VIDEO_MAX_FRAMES,
+    Math.max(1, Math.ceil(duration / VIDEO_MIN_INTERVAL_SECONDS)),
+  )
+  return { count, secondsPerFrame: duration / count }
+}
+
 /**
- * Sample the opening 32 seconds, downscaled, using the configured frame budget
- * (16 by default, one every 2s). ffmpeg reads the stream over HTTP with Range requests, so
- * only the sampled window (plus the index) is transferred.
+ * Seek to a bounded number of points across the whole video. Each decoder
+ * runs alone with one thread, downscales one still, and never writes the source.
+ * Input seeking avoids decoding all intervening high-resolution frames.
  */
 export async function sampleVideoFrames(videoPath: string): Promise<SampledFrames> {
   if (!videoPath.startsWith('/api/media/') && !videoPath.startsWith('/api/files/')) {
@@ -195,38 +207,68 @@ export async function sampleVideoFrames(videoPath: string): Promise<SampledFrame
   const cleanup = () => rm(dir, { recursive: true, force: true })
   try {
     const binary = await ffmpegPath()
-    await new Promise<void>((resolve, reject) => {
-      execFile(
-        binary,
-        [
-          '-hide_banner',
-          '-loglevel',
-          'error',
-          '-nostdin',
-          '-t',
-          String(VIDEO_MAX_SECONDS),
-          '-i',
-          source,
-          '-vf',
-          `fps=${VIDEO_FPS},scale=${VIDEO_FRAME_WIDTH}:-2`,
-          '-frames:v',
-          String(VIDEO_MAX_FRAMES),
-          '-q:v',
-          '4',
-          path.join(dir, 'f%03d.jpg'),
-        ],
-        { timeout: VIDEO_TIMEOUT_MS, maxBuffer: 1024 * 1024 },
-        (error, _stdout, stderr) => {
-          if (error)
-            reject(
-              new MediaUnavailableError(
-                `ffmpeg failed: ${String(stderr || error.message).slice(0, 300)}`,
-              ),
-            )
-          else resolve()
-        },
-      )
-    }).catch(async (error) => {
+    const deadline = Date.now() + VIDEO_TIMEOUT_MS
+    let duration = 0
+    let secondsPerFrame = 0
+    await (async () => {
+      const info = await probeMedia(source, Math.min(30_000, deadline - Date.now()))
+      if (!info.hasVideo && info.hasAudio) throw new NotAVideoError('No picture track to sample')
+      duration = (info.durationMs ?? 0) / 1000
+      const plan = videoSamplePlan(duration)
+      secondsPerFrame = plan.secondsPerFrame
+      for (let i = 0; i < plan.count; i++) {
+        const remaining = deadline - Date.now()
+        if (remaining <= 0) throw new MediaUnavailableError('Video sampling timed out')
+        await new Promise<void>((resolve, reject) => {
+          execFile(
+            binary,
+            [
+              '-hide_banner',
+              '-loglevel',
+              'error',
+              '-nostdin',
+              '-ss',
+              String(i * secondsPerFrame),
+              '-threads',
+              '1',
+              '-i',
+              source,
+              '-an',
+              '-sn',
+              '-dn',
+              '-filter_threads',
+              '1',
+              '-vf',
+              `scale=${VIDEO_FRAME_WIDTH}:-2`,
+              '-frames:v',
+              '1',
+              '-threads',
+              '1',
+              '-q:v',
+              '4',
+              path.join(dir, `f${String(i).padStart(3, '0')}.jpg`),
+            ],
+            { timeout: Math.min(20_000, remaining), killSignal: 'SIGKILL', maxBuffer: 1024 * 1024 },
+            (error, _stdout, stderr) => {
+              if (error)
+                reject(
+                  new MediaUnavailableError(
+                    `ffmpeg failed: ${String(stderr || error.message).slice(0, 300)}`,
+                  ),
+                )
+              else resolve()
+            },
+          )
+        })
+        // FFmpeg can exit successfully without a frame (bad duration or seek).
+        // Never mark partial coverage as a successfully understood whole video.
+        if (
+          !(await stat(path.join(dir, `f${String(i).padStart(3, '0')}.jpg`)).catch(() => null))
+            ?.size
+        )
+          throw new MediaUnavailableError('Video seek produced no frame')
+      }
+    })().catch(async (error) => {
       if (local) throw error
       const status = await proxyStatus(source)
       if (videoPath.startsWith('/api/files/') && status === 404) {
@@ -251,7 +293,7 @@ export async function sampleVideoFrames(videoPath: string): Promise<SampledFrame
       .map((f) => path.join(dir, f))
     // ffmpeg read the file fine but found no picture track (a sound-only post).
     if (files.length === 0) throw new NotAVideoError('No picture track to sample')
-    return { dir, files, duration: files.length / VIDEO_FPS, cleanup }
+    return { dir, files, duration, secondsPerFrame, cleanup }
   } catch (error) {
     await cleanup()
     throw error

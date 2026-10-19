@@ -280,7 +280,7 @@ function Search() {
         style={at(2300)}
       >
         <span className="text-[15px] font-bold uppercase tracking-[0.14em] text-[#a89f8d]">
-          A frame every 2 seconds
+          Frames across the video
         </span>
         <div className="relative flex gap-2 overflow-hidden rounded-[12px]">
           {(['frog', 'frog', 'frogRain', 'frog', 'frogRain', 'frog'] as ArtId[]).map((a, i) => (

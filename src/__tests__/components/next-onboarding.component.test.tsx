@@ -36,14 +36,15 @@ function status(partial: Partial<LearningStatus> = {}): LearningStatus {
 }
 
 describe('learning progress', () => {
-  it.each([
-    [4, 'four'],
-    [8, 'eight'],
-  ] as const)('shows the server sampling interval of %i seconds', (seconds, word) => {
+  it.each([4, 8, 16])('shows whole-video coverage with a budget of %i frames', (budget) => {
     render(
-      <LearningSheet status={status({ videoFrameIntervalSeconds: seconds })} onClose={() => {}} />,
+      <LearningSheet
+        status={status({ videoSampling: 'whole-video', videoMaxFrames: budget })}
+        onClose={() => {}}
+      />,
     )
-    expect(screen.getByText(`Watched, a frame every ${word} seconds`)).toBeInTheDocument()
+    expect(screen.getByText(`Sampled across the video, up to ${budget} frames`)).toBeInTheDocument()
+    expect(screen.queryByText('Watched, a frame every two seconds')).toBeNull()
   })
 
   it('summarises what is left, focusing on the slowest kind', () => {

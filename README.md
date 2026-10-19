@@ -18,7 +18,7 @@ It's built to run for yourself and a few friends: one Docker container, one fold
 
 - **Your own copies.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing is streamed from the networks at watch time.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
-- **Search by meaning.** Describe what you remember and ADHX finds it. It matches the words, what's in the pictures, and what happens in the videos (a frame every 2 seconds). This all runs on your server: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
+- **Search by meaning.** Describe what you remember and ADHX finds it. It matches the words, what's in the pictures, and what appears in sampled frames spread across the videos. This all runs on your server: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button.
 - **Channels.** ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
 - **Right now.** See what the people on your server are saving, grouped into moments, and **Tune in** to watch along. Savers are only ever counted, never named.
@@ -115,31 +115,31 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 
 ### Settings
 
-| Setting                                      | What it does                                                                                                                 |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_APP_URL`                        | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here.                                           |
-| `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                   |
-| `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                   |
-| `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                 |
-| `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.    |
-| `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                     |
-| `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                       |
-| `KEEP_H264=off`                              | Keep videos in whatever format the network sent (see [Video formats](#video-formats)).                                       |
-| `KEEP_MAX_FILESIZE`                          | Largest single download, default `4G`.                                                                                       |
-| `KEEP_CONCURRENCY`                           | Posts downloaded at once, default `2`.                                                                                       |
-| `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                  |
-| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                    |
-| `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                       |
-| `SYNC_COOLDOWN_MINUTES`                      | Wait between manual X syncs. Set `1` for a one-minute cooldown; this does not set the automatic interval.                    |
-| `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                        |
-| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                           |
-| `SEMANTIC_VIDEO_MAX_FRAMES`                  | Video inference budget: `16` (default), `8` or `4` frames over the first 32 seconds. Kept video quality is unchanged.        |
-| `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                          |
-| `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                         |
-| `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.             |
-| `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text. |
-| `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                        |
-| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                    |
+| Setting                                      | What it does                                                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`                        | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here.                                              |
+| `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                      |
+| `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                      |
+| `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                    |
+| `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.       |
+| `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                        |
+| `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                          |
+| `KEEP_H264=off`                              | Keep videos in whatever format the network sent (see [Video formats](#video-formats)).                                          |
+| `KEEP_MAX_FILESIZE`                          | Largest single download, default `4G`.                                                                                          |
+| `KEEP_CONCURRENCY`                           | Posts downloaded at once, default `2`.                                                                                          |
+| `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                     |
+| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                       |
+| `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                          |
+| `SYNC_COOLDOWN_MINUTES`                      | Wait between manual X syncs. Set `1` for a one-minute cooldown; this does not set the automatic interval.                       |
+| `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                           |
+| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                              |
+| `SEMANTIC_VIDEO_MAX_FRAMES`                  | Video inference budget: Up to `16` (default), `8` or `4` frames spread across the whole video. Kept video quality is unchanged. |
+| `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                             |
+| `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                            |
+| `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.                |
+| `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text.    |
+| `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                           |
+| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                       |
 
 Every setting is in [`.env.example`](.env.example).
 
@@ -168,16 +168,24 @@ Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_
 
 Search by meaning runs on your own server, with [EmbeddingGemma 2](https://huggingface.co/onnx-community/embeddinggemma-2-ONNX): the text model at 4-bit and its picture encoder at 8-bit, at a pinned revision. There's nothing to install. The first time the server starts, it downloads the weights from Hugging Face into `models/` next to the database: about 400 MB, so the server needs to reach `huggingface.co` once. After that it runs offline. For a server with no internet access, copy the `models/` folder from another ADHX.
 
-Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames (one every 2 seconds by default). Sounds are found only by their words. Understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then frames sampled across the full video duration. Sounds are found only by their words. Understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
 
-For lighter video inference, set `SEMANTIC_VIDEO_MAX_FRAMES=8`: one frame every
-four seconds, covering the same opening 32 seconds. `4` samples every eight
-seconds; `16` keeps the default detail. Each sampled frame is downscaled to
-448 pixels wide. This reduces inference inputs, not the quality or resolution
-of kept videos. Fewer frames can miss short events; speed and search-quality
-improvements need testing on your own saves. Recreate the container after
-changing the setting. Pending/new video jobs use it; completed video vectors
-refresh if the post is queued again. Text and picture vectors are unchanged.
+Video understanding samples across the full duration, rather than stopping at
+32 seconds. At most 16 evenly spaced frames are used by default; short clips
+use fewer. For a lighter workload, set `SEMANTIC_VIDEO_MAX_FRAMES=8` (or `4`).
+Each frame is downscaled to 448 pixels wide. FFmpeg seeks directly to each
+sample with one decoder thread instead of decoding every intervening frame.
+Sampling has a two-minute total deadline and a 20-second limit per seek.
+This limits inference inputs without changing the original saved video or its
+playback quality. Sparse sampling can miss brief events and does not listen
+to audio; it is not an exhaustive account of every scene. Speed and search
+quality still need measuring on your own hardware and saves.
+
+Recreate the container after changing the setting. Existing video results from
+the old opening-only sampler or a different budget are queued for background
+refresh automatically. Completed text and picture vectors are retained. Media
+without a readable duration is retried rather than silently indexing only its
+opening. This setting requires an image containing the feature.
 
 `TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
 

@@ -111,7 +111,7 @@ export function buildPostDocument(item: FeedItemResponse): PostDocument {
     keywords,
     hasWords,
     image: imageUrl ? { url: imageUrl, hash: sha(imageUrl) } : null,
-    video: videoPath ? { url: videoPath, hash: sha(`${videoPath}|${VIDEO_SAMPLING}`) } : null,
+    video: videoPath ? { url: videoPath, hash: `${VIDEO_SAMPLING}|${sha(videoPath)}` } : null,
   }
 }
 

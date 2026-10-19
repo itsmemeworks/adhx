@@ -3,7 +3,8 @@ import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks, postEmbeddings, understandingQueue } from '@/lib/db/schema'
 import {
   SEMANTIC_MODEL_VERSION,
-  VIDEO_FPS,
+  VIDEO_MAX_FRAMES,
+  videoSamplingCurrent,
   semanticEnabled,
   type UnderstandingKind,
 } from './config'
@@ -18,7 +19,8 @@ export interface UnderstandingGroup {
 
 export interface UnderstandingStatus {
   enabled: boolean
-  videoFrameIntervalSeconds: number
+  videoSampling: 'whole-video'
+  videoMaxFrames: number
   groups: UnderstandingGroup[]
   /** Saves with every part understood. */
   ready: number
@@ -73,13 +75,17 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
         platform: postEmbeddings.platform,
         id: postEmbeddings.postId,
         kind: postEmbeddings.kind,
+        contentHash: postEmbeddings.contentHash,
         status: postEmbeddings.status,
       })
       .from(postEmbeddings)
       .where(
         and(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION), inArray(postEmbeddings.postId, part)),
       )
-    for (const r of rows) results.set(`${r.platform}:${r.id}:${r.kind}`, r.status)
+    for (const r of rows) {
+      if (r.kind === 'video' && !videoSamplingCurrent(r.contentHash)) continue
+      results.set(`${r.platform}:${r.id}:${r.kind}`, r.status)
+    }
     const q = await db
       .select({
         platform: understandingQueue.platform,
@@ -146,7 +152,8 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
 
   return {
     enabled: semanticEnabled(),
-    videoFrameIntervalSeconds: 1 / VIDEO_FPS,
+    videoSampling: 'whole-video',
+    videoMaxFrames: VIDEO_MAX_FRAMES,
     groups,
     ready,
     totalSaves: all.length,
@@ -189,12 +196,16 @@ export async function stillLearning(keys: string[]): Promise<Set<string>> {
         platform: postEmbeddings.platform,
         id: postEmbeddings.postId,
         kind: postEmbeddings.kind,
+        contentHash: postEmbeddings.contentHash,
       })
       .from(postEmbeddings)
       .where(
         and(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION), inArray(postEmbeddings.postId, part)),
       )
-    for (const r of rows) have.add(`${r.platform}:${r.id}:${r.kind}`)
+    for (const r of rows) {
+      if (r.kind === 'video' && !videoSamplingCurrent(r.contentHash)) continue
+      have.add(`${r.platform}:${r.id}:${r.kind}`)
+    }
   }
   const out = new Set<string>()
   for (const [key, kinds] of needs) {

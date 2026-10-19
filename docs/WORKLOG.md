@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Full-duration video coverage with bounded sampling
+
+- Supersede the opening-window proposal below: seek to evenly spaced points across each full video with a fixed 4/8/16-frame budget, using fewer frames for short clips.
+- Extract one 448px still per seek, sequentially with one decoder thread, a 20s per-seek limit and 120s extraction deadline; retain the full-quality original unchanged.
+- Pass real duration/spacing to the model; unknown duration or missing sampled frames retry rather than falsely completing a partial window.
+- Version video hashes and refresh outdated video results through normal low-priority backfill, preserving text/image vectors and saver scoping.
+- Update progress copy, root/NAS/architecture guidance and website source to describe sparse whole-video sampling honestly; website deployment remains separate.
+- Validate late scenes beyond 80 seconds, all budgets, original integrity, short/long duration plans, model timing and selective backfill. Target-device performance awaits a published release.
+
 ## 2026-10-19 — Optional lighter video inference without reducing kept quality
 
 - Add a bounded 4/8/16-frame inference setting; retain 16 by default and cover the same opening 32 seconds at each budget.

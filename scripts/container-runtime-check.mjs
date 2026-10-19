@@ -175,7 +175,7 @@ async function models() {
   validate(await embedImageBytes(new Uint8Array(await readFile(picture))))
   const frames = await sampleVideoFrames('/api/files/youtube/ci-synthetic/video-1')
   try {
-    validate(await embedVideoFrames(frames.files, frames.duration, 2))
+    validate(await embedVideoFrames(frames.files, frames.duration, frames.secondsPerFrame))
   } finally {
     await frames.cleanup()
   }

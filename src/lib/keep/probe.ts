@@ -12,12 +12,15 @@ export interface Probed {
 }
 
 /** Read a media file's size and length from `ffmpeg -i` (there's no ffprobe in ffmpeg-static). */
-export async function probeMedia(file: string): Promise<Probed> {
+export async function probeMedia(file: string, timeoutMs = 30_000): Promise<Probed> {
   const bin = await ffmpegPath()
   const stderr = await new Promise<string>((resolve) => {
     // `ffmpeg -i x` with no output always exits 1; the details are on stderr.
-    execFile(bin, ['-hide_banner', '-i', file], { timeout: 30_000 }, (_e, _o, err) =>
-      resolve(String(err ?? '')),
+    execFile(
+      bin,
+      ['-hide_banner', '-nostdin', '-threads', '1', '-i', file],
+      { timeout: timeoutMs, killSignal: 'SIGKILL' },
+      (_e, _o, err) => resolve(String(err ?? '')),
     )
   })
   const duration = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/)

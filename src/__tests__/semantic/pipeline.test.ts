@@ -14,18 +14,22 @@ vi.mock('@/lib/db', () => ({
 
 const embedTexts = vi.fn(async (texts: string[]) => texts.map(() => unit(768)))
 const embedImageBytes = vi.fn(async () => unit(768))
-const embedVideoFrames = vi.fn(async () => unit(768))
+const embedVideoFrames = vi.fn(async (_files: string[], _duration: number, _interval: number) =>
+  unit(768),
+)
 vi.mock('@/lib/semantic/model', () => ({
   embedTexts: (texts: string[]) => embedTexts(texts),
   embedImageBytes: () => embedImageBytes(),
-  embedVideoFrames: () => embedVideoFrames(),
+  embedVideoFrames: (files: string[], duration: number, interval: number) =>
+    embedVideoFrames(files, duration, interval),
 }))
 
 const fetchImageBytes = vi.fn(async (_url: string) => new Uint8Array([1, 2, 3]))
 const sampleVideoFrames = vi.fn(async (_url: string) => ({
   dir: '/tmp/x',
   files: ['/tmp/x/f001.jpg'],
-  duration: 1,
+  duration: 120,
+  secondsPerFrame: 15,
   cleanup: async () => {},
 }))
 vi.mock('@/lib/semantic/media', async (orig) => {
@@ -207,6 +211,43 @@ describe('queue', () => {
     expect(await nextJob(new Date(Date.now() + 2 * 60 * 60_000))).toBeUndefined()
   })
 
+  it('refreshes only old video sampling for the signed-in saver and reports accurate progress', async () => {
+    const { saveEmbedding } = await import('@/lib/semantic/store')
+    const { VIDEO_SAMPLING } = await import('@/lib/semantic/config')
+    testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_A, '71')).run()
+    testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_B, '72')).run()
+    addMedia(USER_A, '71', 'video')
+    for (const kind of ['text', 'image', 'video'] as const)
+      await saveEmbedding({
+        platform: 'twitter',
+        postId: '71',
+        kind,
+        status: 'ok',
+        contentHash: 'legacy-hash',
+        vector: unit(768),
+      })
+    expect((await getUnderstandingStatus(USER_A)).groups.find((g) => g.id === 'videos')?.done).toBe(
+      0,
+    )
+    expect(await enqueueBackfill(USER_A)).toBe(1)
+    expect(await enqueueBackfill(USER_A)).toBe(0)
+    const queued = testInstance.db.select().from(schema.understandingQueue).all()
+    expect(queued.map((q) => [q.postId, q.kind])).toEqual([['71', 'video']])
+    await saveEmbedding({
+      platform: 'twitter',
+      postId: '71',
+      kind: 'video',
+      status: 'ok',
+      contentHash: `${VIDEO_SAMPLING}|new-hash`,
+      vector: unit(768),
+    })
+    await testInstance.db.delete(schema.understandingQueue)
+    expect(await enqueueBackfill(USER_A)).toBe(0)
+    expect((await getUnderstandingStatus(USER_A)).groups.find((g) => g.id === 'videos')?.done).toBe(
+      1,
+    )
+  })
+
   it('backfills only what is missing', async () => {
     testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_A, '1')).run()
     testInstance.db.insert(schema.bookmarks).values(createTestBookmark(USER_B, '1')).run()
@@ -236,6 +277,7 @@ describe('worker', () => {
     await enqueuePosts([{ platform: 'twitter', postId: '2' }], PRIORITY.urgent, ['video'])
     expect(await processJob((await nextJob(new Date(Date.now() + 1000)))!)).toBe('skipped')
     expect(embedVideoFrames).toHaveBeenCalledTimes(1)
+    expect(embedVideoFrames).toHaveBeenCalledWith(['/tmp/x/f001.jpg'], 120, 15)
   })
 
   it('records a permanent media refusal as failed without retrying', async () => {

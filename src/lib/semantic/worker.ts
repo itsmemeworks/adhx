@@ -3,7 +3,7 @@ import { repairUnloadedArticles } from '@/lib/sync/repair-articles'
 import { db } from '@/lib/db'
 import type { UnderstandingJob } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
-import { PRIORITY, VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
+import { PRIORITY, semanticEnabled, type UnderstandingKind } from './config'
 import { buildPostDocument, hashFor, type PostDocument } from './documents'
 import { indexPostText } from './keywords'
 import {
@@ -94,7 +94,7 @@ async function understand(job: UnderstandingJob, doc: PostDocument): Promise<Flo
   try {
     activity.frames = sampled.files.length
     activity.phase = 'understanding'
-    return await embedVideoFrames(sampled.files, sampled.duration, 1 / VIDEO_FPS)
+    return await embedVideoFrames(sampled.files, sampled.duration, sampled.secondsPerFrame)
   } finally {
     await sampled.cleanup()
   }

@@ -150,7 +150,7 @@ function SearchMock() {
       </div>
       <div className="flex flex-col gap-2 rounded-[18px] bg-black p-3">
         <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-nx-muted">
-          What it saw · a frame every 2 seconds
+          What it saw · frames across the video
         </span>
         <div className="grid grid-cols-6 gap-1.5">
           {(['frog', 'frog', 'frogRain', 'frog', 'frogRain', 'frog'] as ArtId[]).map((a, i) => (
@@ -479,7 +479,7 @@ export function ProductSite() {
                 <p className="m-0">
                   Type what you remember, like “a frog in a pond” or “that synth video”, and ADHX
                   finds it. It matches what posts say, what’s in their pictures, and what happens in
-                  their videos, sampling a frame every 2 seconds from the first 32 seconds.
+                  their videos, sampling a limited number of small frames across the full duration.
                 </p>
                 <p className="m-0">
                   It runs Google’s EmbeddingGemma 2 on your own server: no API key, no cost per

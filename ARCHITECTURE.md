@@ -371,7 +371,7 @@ flowchart LR
   Q --> W[jobs child: one job at a time]
   W -->|words| T[Text vector]
   W -->|poster / photo| I[Image vector]
-  W -->|ffmpeg: 16 frames over 32 s| V[Video vector]
+  W -->|ffmpeg: bounded samples across full video| V[Video vector]
   T --> E[(post_embeddings)]
   I --> E
   V --> E
@@ -397,7 +397,13 @@ flowchart LR
   the volume.
 - **Media.** Pictures come from the app's own proxies over loopback or from
   allowlisted X CDN hosts; anything else is skipped. Video frames are
-  sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.
+  sampled by ffmpeg (`ffmpeg-static`), preferring retained local files and otherwise
+  the Range-capable video proxy. It probes duration and seeks to up to 16 evenly
+  spaced times (configurable 4/8/16), using fewer samples for short clips. Each
+  decoder runs alone with one thread and outputs a 448px still; extraction has
+  a 120-second deadline and 20-second per-seek limit. Original media is unchanged.
+  Video hashes carry a sampling-version prefix: startup/status backfill refreshes
+  old opening-window results or changed budgets without re-embedding text/images.
 - **Status.** `/api/understanding/status` reports words / photos / videos
   progress for the signed-in user. "Photos" includes video posters, so every
   visual save shows progress after its quick picture pass. The item being worked on is only shown when
