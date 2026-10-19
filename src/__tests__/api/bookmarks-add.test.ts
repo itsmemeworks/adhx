@@ -544,6 +544,94 @@ describe('POST /api/bookmarks/add — YouTube (link network)', () => {
     expect(mockDescribeNetworkPost).toHaveBeenCalledTimes(1)
   })
 
+  it('lets another person save a retained post after the original disappears, without copying private state', async () => {
+    await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    testInstance.sqlite
+      .prepare(
+        `INSERT INTO kept_files (platform,post_id,slot,path,mime,bytes,created_at)
+      VALUES ('youtube',?,'video-1','youtube/retained.mp4','video/mp4',5,'2026-10-18')`,
+      )
+      .run(VIDEO_ID)
+    testInstance.sqlite.prepare("UPDATE bookmarks SET summary='private summary'").run()
+    testInstance.sqlite
+      .prepare(
+        "INSERT INTO bookmark_tags (user_id,platform,bookmark_id,tag) VALUES ('user-123','youtube',?,'private-tag')",
+      )
+      .run(VIDEO_ID)
+    testInstance.sqlite
+      .prepare(
+        "INSERT INTO archived_posts (user_id,platform,bookmark_id,archived_at) VALUES ('user-123','youtube',?,'2026-10-18')",
+      )
+      .run(VIDEO_ID)
+    mockDescribeNetworkPost.mockClear()
+    mockDescribeNetworkPost.mockResolvedValue(null)
+    mockUserId = 'second-user'
+    const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      success: true,
+      bookmark: { userId: 'second-user', text: 'a video', category: 'video', summary: null },
+    })
+    expect(mockDescribeNetworkPost).not.toHaveBeenCalled()
+    expect(
+      testInstance.sqlite
+        .prepare("SELECT count(*) n FROM bookmark_tags WHERE user_id='second-user'")
+        .get(),
+    ).toEqual({ n: 0 })
+    expect(
+      testInstance.sqlite
+        .prepare("SELECT count(*) n FROM archived_posts WHERE user_id='second-user'")
+        .get(),
+    ).toEqual({ n: 0 })
+  })
+
+  it('does not reuse retained metadata from a banned saver', async () => {
+    await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    testInstance.sqlite
+      .prepare(
+        `INSERT INTO kept_files (platform,post_id,slot,path,mime,bytes,created_at)
+      VALUES ('youtube',?,'video-1','youtube/retained.mp4','video/mp4',5,'2026-10-18')`,
+      )
+      .run(VIDEO_ID)
+    testInstance.sqlite
+      .prepare(
+        "INSERT INTO user_bans (user_id,created_at,created_by) VALUES ('user-123','2026-10-18','admin')",
+      )
+      .run()
+    mockDescribeNetworkPost.mockResolvedValue(null)
+    mockUserId = 'second-user'
+    const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    expect(res.status).toBe(404)
+  })
+
+  it('uses files that finished while an upstream photo fallback was being described', async () => {
+    mockDescribeNetworkPost.mockResolvedValue({
+      author: 'creator',
+      authorName: null,
+      text: 'fallback',
+      createdAt: null,
+      category: 'photo',
+      photos: 1,
+      videos: 0,
+      durationMs: null,
+      audioOnly: false,
+    })
+    beforeTransaction = () => {
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO kept_files (platform,post_id,slot,path,mime,bytes,created_at)
+        VALUES ('youtube',?,'video-1','youtube/retained.mp4','video/mp4',5,'2026-10-18')`,
+        )
+        .run(VIDEO_ID)
+    }
+    const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ bookmark: { category: 'video' } })
+    expect(testInstance.sqlite.prepare('SELECT media_type FROM bookmark_media').all()).toEqual([
+      { media_type: 'video' },
+    ])
+  })
+
   it('404s without writing when the post cannot be described', async () => {
     mockDescribeNetworkPost.mockResolvedValue(null)
     const res = await POST(createRequest({ url: `https://youtu.be/${VIDEO_ID}` }))

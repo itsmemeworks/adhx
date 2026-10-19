@@ -5,6 +5,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { keepJobs, keptFiles } from '@/lib/db/schema'
 import { mediaDir } from './config'
+import { reconcileKeptMedia } from './metadata'
 
 export type KeptKind = 'video' | 'photo' | 'audio'
 export type Slot = `${KeptKind}-${number}` | 'poster'
@@ -142,6 +143,11 @@ export async function recordKept(
       .where(and(eq(keptFiles.platform, platform), eq(keptFiles.postId, postId)))
       .run()
     if (rows.length) db.insert(keptFiles).values(rows).run()
+    reconcileKeptMedia(
+      platform,
+      postId,
+      rows.map((r) => ({ ...r, slot: r.slot as Slot })),
+    )
     db.update(keepJobs)
       .set({ status: 'done', lastError: null, bytes: total, updatedAt: now, nextAttemptAt: null })
       .where(and(eq(keepJobs.platform, platform), eq(keepJobs.postId, postId)))

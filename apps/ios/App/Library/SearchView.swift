@@ -60,7 +60,9 @@ struct SearchView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear { focused = library.query.isEmpty }
         .fullScreenCover(item: $playing) { start in
-            PlayerScreen(posts: library.results, server: server, start: start.key)
+            PlayerScreen(posts: library.results, server: server, start: start.key) { index in
+                library.loadMoreSearchIfNeeded(at: index)
+            }
         }
     }
 
@@ -115,7 +117,21 @@ struct SearchView: View {
                                 ResultTile(post: post, server: server)
                             }
                             .buttonStyle(.plain)
+                            .onAppear {
+                                if let index = library.results.firstIndex(where: { $0.key == post.key }) {
+                                    library.loadMoreSearchIfNeeded(at: index)
+                                }
+                            }
                         }
+                    }
+                    if library.loadingMoreSearch {
+                        HStack { Spacer(); RingSpinner().frame(width: 26, height: 26); Spacer() }
+                    } else if let error = library.searchMoreError {
+                        Note(text: error)
+                        Button("Try loading more again") {
+                            library.loadMoreSearchIfNeeded(at: library.results.count - 1)
+                        }
+                        .foregroundStyle(Theme.accent)
                     }
                 }
                 .padding(.bottom, 20)
@@ -138,12 +154,13 @@ struct PlayerScreen: View {
     let posts: [PhonePost]
     let server: URL
     let start: String
+    var onShow: (Int) -> Void = { _ in }
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
 
     var body: some View {
-        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start)
+        PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start, onShow: onShow)
             .overlay(alignment: .topLeading) {
                 if !clean && !scrubbing {
                 Button {

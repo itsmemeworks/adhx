@@ -242,6 +242,130 @@ describe('kept media', () => {
       expect(claimNext(new Date(), since)).toBeNull()
     })
 
+    it('keeps the backfill boundary across restarts and recovers interrupted and retrying saves', async () => {
+      vi.stubEnv('KEEP_BACKFILL', 'off')
+      const { backfillCutoff, scanForNewSaves, claimNext } = await import('@/lib/keep/worker')
+      const firstStart = new Date('2026-10-18T12:00:00.000Z')
+      save('youtube', 'historical', 'a', '2026-01-01T00:00:00.000Z')
+      save('youtube', 'accepted', 'a', '2026-10-18T12:00:00.000Z')
+      const firstCutoff = backfillCutoff(firstStart)
+      expect(scanForNewSaves(1000, firstCutoff)).toBe(1)
+      expect(claimNext(firstStart, firstCutoff)?.postId).toBe('accepted')
+      // Startup recovers running rows; a later process must reuse the same boundary.
+      testInstance.sqlite.prepare("UPDATE keep_jobs SET status = 'pending'").run()
+      ;(globalThis as { __adhxKeep?: unknown }).__adhxKeep = undefined
+      const restarted = new Date('2026-10-18T12:10:00.000Z')
+      const persisted = backfillCutoff(restarted)
+      expect(persisted).toBe(firstCutoff)
+      expect(claimNext(restarted, persisted)?.postId).toBe('accepted')
+      testInstance.sqlite
+        .prepare(
+          "UPDATE keep_jobs SET status = 'failed', next_attempt_at = '2026-10-18T12:11:00.000Z'",
+        )
+        .run()
+      expect(claimNext(restarted, persisted)).toBeNull()
+      expect(claimNext(new Date('2026-10-18T12:12:00.000Z'), persisted)?.postId).toBe('accepted')
+      expect(scanForNewSaves(1000, persisted)).toBe(0)
+    })
+
+    it('starts a new cutoff only after backfill has been enabled again', async () => {
+      const { backfillCutoff } = await import('@/lib/keep/worker')
+      vi.stubEnv('KEEP_BACKFILL', 'off')
+      const first = backfillCutoff(new Date('2026-10-18T12:00:00.000Z'))
+      vi.stubEnv('KEEP_BACKFILL', 'on')
+      expect(backfillCutoff()).toBeNull()
+      vi.stubEnv('KEEP_BACKFILL', 'off')
+      expect(backfillCutoff(new Date('2026-10-18T13:00:00.000Z'))).not.toBe(first)
+    })
+
+    it('reconciles downloaded media for every saver without changing private save state', async () => {
+      save('pinterest', 'pin')
+      testInstance.sqlite
+        .prepare("UPDATE bookmarks SET category = 'photo', summary = 'private summary'")
+        .run()
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO bookmarks (id,user_id,platform,author,text,tweet_url,processed_at,category)
+        VALUES ('pin','u2','pinterest','a','','','2026-10-18','photo')`,
+        )
+        .run()
+      testInstance.sqlite
+        .prepare(
+          "INSERT INTO bookmark_tags (user_id,platform,bookmark_id,tag) VALUES ('u1','pinterest','pin','private-tag')",
+        )
+        .run()
+      testInstance.sqlite
+        .prepare(
+          "INSERT INTO archived_posts (user_id,platform,bookmark_id,archived_at) VALUES ('u1','pinterest','pin','2026-10-18')",
+        )
+        .run()
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO bookmark_media (id,user_id,platform,bookmark_id,media_type,original_url)
+        VALUES ('pin_photo_0','u1','pinterest','pin','photo','https://example.test/preview.jpg')`,
+        )
+        .run()
+      const file = path.join(mediaRoot, 'actual.mp4')
+      fs.writeFileSync(file, 'video')
+      const { recordKept } = await import('@/lib/keep/store')
+      await recordKept('pinterest', 'pin', [
+        { slot: 'video-1', file, mime: 'video/mp4', width: 1080, height: 1920, durationMs: 3000 },
+      ])
+      const rows = testInstance.sqlite
+        .prepare('SELECT user_id, category, summary FROM bookmarks ORDER BY user_id')
+        .all()
+      expect(rows).toEqual([
+        { user_id: 'u1', category: 'video', summary: 'private summary' },
+        { user_id: 'u2', category: 'video', summary: null },
+      ])
+      expect(
+        testInstance.sqlite.prepare('SELECT media_type, width, height FROM bookmark_media').all(),
+      ).toEqual([
+        { media_type: 'video', width: 1080, height: 1920 },
+        { media_type: 'video', width: 1080, height: 1920 },
+      ])
+      expect(testInstance.sqlite.prepare('SELECT tag FROM bookmark_tags').all()).toEqual([
+        { tag: 'private-tag' },
+      ])
+      expect(testInstance.sqlite.prepare('SELECT user_id FROM archived_posts').all()).toEqual([
+        { user_id: 'u1' },
+      ])
+      const { listSaves } = await import('@/lib/app/phone-post')
+      const phone = await listSaves('u2', 0, 20)
+      expect(phone.items[0]).toMatchObject({
+        kind: 'video',
+        media: [{ url: '/api/files/pinterest/pin/video-1' }],
+      })
+    })
+
+    it('replaces stale video slots with the actual photo album and preserves article categories', async () => {
+      save('reddit', 'album')
+      save('twitter', 'essay')
+      testInstance.sqlite.prepare("UPDATE bookmarks SET category='article' WHERE id='essay'").run()
+      const file = path.join(mediaRoot, 'image.jpg')
+      fs.writeFileSync(file, 'image')
+      const { recordKept } = await import('@/lib/keep/store')
+      await recordKept('reddit', 'album', [
+        { slot: 'photo-1', file, mime: 'image/jpeg' },
+        { slot: 'photo-2', file, mime: 'image/jpeg' },
+      ])
+      await recordKept('twitter', 'essay', [{ slot: 'photo-1', file, mime: 'image/jpeg' }])
+      expect(
+        testInstance.sqlite.prepare("SELECT category FROM bookmarks WHERE id='album'").get(),
+      ).toEqual({ category: 'photo' })
+      expect(
+        testInstance.sqlite.prepare("SELECT category FROM bookmarks WHERE id='essay'").get(),
+      ).toEqual({ category: 'article' })
+      const { listSaves } = await import('@/lib/app/phone-post')
+      const phone = await listSaves('u1', 0, 20)
+      const album = phone.items.find((p) => p.id === 'album')!
+      expect(album.kind).toBe('photo')
+      expect(album.media.map((m) => m.url)).toEqual([
+        '/api/files/reddit/album/photo-1',
+        '/api/files/reddit/album/photo-2',
+      ])
+    })
+
     it('pauses while the media disk is nearly full', async () => {
       const { diskHasRoom } = await import('@/lib/keep/worker')
       vi.stubEnv('KEEP_MIN_FREE_GB', '0')

@@ -319,6 +319,10 @@ export const FULL_SCHEMA_SQL = `
     created_at TEXT NOT NULL,
     expires_at INTEGER NOT NULL
   );
+  CREATE TABLE keep_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
   CREATE TABLE keep_jobs (
       platform TEXT NOT NULL,
       post_id TEXT NOT NULL,

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Retained-media recovery and portable Docker hosting
+
+- Persist the backfill-off boundary across restarts, preserving interrupted jobs and retries.
+- Reconcile downloaded file kinds/counts into every saver's playback metadata; preserve private state and article categories.
+- Reuse existing retained link-network metadata when a new person saves a post whose original is gone; exclude banned savers and hidden posts.
+- iOS search follows further pages in the grid/player, with cancellation, deduplication and retry.
+- Replace the vendor/Funnel-specific NAS example with standard Docker proxy/storage hooks; pass media/search controls, add restart/health checks and document playback privacy and backups.
+- Validation: 2,843 tests, typecheck, formatting, production build and iOS simulator build pass; lint has no errors. Fresh/upgrade migration and production retained-save/range/auth smoke checks pass. Linux container/hardware testing remains outstanding. No service installed or deployed.
+
 ## 2026-10-18 — From scratch on a production build: web, iPhone, Android, 14 networks
 
 - **Setup:** `next build` standalone, run like the container (migrate, then `node server.js`) on an empty database with `EMAIL_LINKS_TO_ADMIN=1`, `ALLOWED_EMAILS=@friends.test` and the Jev key.

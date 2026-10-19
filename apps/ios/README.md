@@ -182,3 +182,7 @@ apps/ios/
   ShareExtension/        the extension's entry point and how it reads the shared link
   Shared/                used by both: API, storage, queue, marks, theme, the sheet
 ```
+
+Search follows the server's `nextOffset` as you reach the end of the result
+grid or its player. Further-page failures keep the results already loaded and
+offer a retry. Changing the query cancels the older page request.

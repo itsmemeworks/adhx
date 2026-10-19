@@ -254,6 +254,11 @@ export const adminSignInLinks = sqliteTable('admin_sign_in_links', {
 
 // Kept media: every saved post's files, downloaded once per post (not per
 // saver) into MEDIA_DIR and served by /api/files. See src/lib/keep.
+export const keepSettings = sqliteTable('keep_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+})
+
 export const keepJobs = sqliteTable(
   'keep_jobs',
   {

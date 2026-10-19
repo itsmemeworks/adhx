@@ -25,7 +25,12 @@ final class LibraryModel: ObservableObject {
     @Published private(set) var understood = true
     @Published private(set) var close = true
     @Published private(set) var searchError: String?
+    @Published private(set) var loadingMoreSearch = false
+    @Published private(set) var searchMoreError: String?
     private var searchTask: Task<Void, Never>?
+    private var searchMoreTask: Task<Void, Never>?
+    private var nextSearchOffset: Int?
+    private var searchGeneration = UUID()
 
     /// The phone was removed on the server.
     var onBadKey: () -> Void = {}
@@ -87,6 +92,7 @@ final class LibraryModel: ObservableObject {
 
     private func scheduleSearch() {
         searchTask?.cancel()
+        resetSearchPaging()
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else {
             results = []
@@ -107,6 +113,7 @@ final class LibraryModel: ObservableObject {
     /// Search now (the keyboard's Search key, or a suggestion).
     func searchNow() {
         searchTask?.cancel()
+        resetSearchPaging()
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return }
         searching = true
@@ -119,6 +126,7 @@ final class LibraryModel: ObservableObject {
             let page = try await client.search(q)
             guard !Task.isCancelled else { return }
             results = page.items
+            nextSearchOffset = page.nextOffset
             understood = page.understood
             close = page.close
             searchError = nil
@@ -136,4 +144,39 @@ final class LibraryModel: ObservableObject {
         searching = false
         searched = true
     }
+
+    private func resetSearchPaging() {
+        searchMoreTask?.cancel()
+        searchGeneration = UUID()
+        nextSearchOffset = nil
+        loadingMoreSearch = false
+        searchMoreError = nil
+    }
+
+    /// Continue through every page, in both the search grid and its player.
+    func loadMoreSearchIfNeeded(at index: Int) {
+        guard index >= results.count - 4, !searching, !loadingMoreSearch,
+              let offset = nextSearchOffset, let client = Store.client() else { return }
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let generation = searchGeneration
+        loadingMoreSearch = true
+        searchMoreError = nil
+        searchMoreTask = Task { [weak self] in
+            guard let self else { return }
+            defer { if generation == searchGeneration { loadingMoreSearch = false } }
+            do {
+                let page = try await client.search(q, offset: offset)
+                guard !Task.isCancelled, generation == searchGeneration else { return }
+                let have = Set(results.map(\.key))
+                results += page.items.filter { !have.contains($0.key) }
+                nextSearchOffset = page.nextOffset
+            } catch APIError.badKey {
+                if generation == searchGeneration { onBadKey() }
+            } catch {
+                guard !Task.isCancelled, generation == searchGeneration else { return }
+                searchMoreError = (error as? APIError)?.message ?? APIError.offline.message
+            }
+        }
+    }
+
 }

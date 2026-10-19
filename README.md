@@ -66,11 +66,11 @@ export EMAIL_LINKS_TO_ADMIN=1   # or SMTP_URL / RESEND_API_KEY, see Sign-in link
 docker compose up -d
 ```
 
-ADHX listens on port 3000. Put it behind your usual reverse proxy for HTTPS; sign-in needs HTTPS outside `localhost`. The [`docker-compose.yml`](docker-compose.yml) keeps everything in one volume mounted at `/data`: the database, the search model and every kept file. Migrations run on start.
+The root example publishes ADHX on `127.0.0.1:3000` (`ADHX_PORT` changes the host port). Put it behind your usual host-based reverse proxy for HTTPS; sign-in needs HTTPS outside `localhost`. The [`docker-compose.yml`](docker-compose.yml) keeps everything in one volume mounted at `/data`: the database, the search model and every kept file. Migrations run on start.
 
 To pin a release, set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>`. You can also build the image yourself with `docker build -t adhx .`.
 
-**On a home NAS** with no domain or open ports, [`deploy/nas`](deploy/nas) runs ADHX with Docker Compose behind [Tailscale Funnel](https://tailscale.com/kb/1223/funnel), which gives it a public HTTPS address. Its [README](deploy/nas/README.md) walks through the install.
+**On a Docker host or NAS**, the [deployment guide](deploy/nas/README.md) explains persistent storage, permissions, resource controls, backups and connecting your own HTTPS proxy. The container-proxy example publishes no host port and requires no particular NAS vendor, VPN or public tunnel.
 
 ### Sign-in links
 
@@ -89,6 +89,8 @@ With no email, sign in first yourself: your link is printed in the server log (`
 By default, anyone who can reach your server can make an account. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in.
 
 The admin page has sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+
+Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; the email allowlist protects account creation, not playback.
 
 ### Settings
 
@@ -129,7 +131,7 @@ Kept media is most of the space ADHX uses. As a rough guide:
 
 So 1,000 mixed saves come to roughly 10–30 GB. When you first run ADHX on an existing library, it downloads everything already saved, newest first. If your disk is small, start with `KEEP_BACKFILL=off`, which also stops any older downloads already waiting.
 
-Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_FREE_GB`). They carry on once there's room. Files are deleted when nobody on your server has the post saved any more; that check runs once an hour.
+Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_FREE_GB`). They carry on once there's room. Files are deleted when nobody on your server has the post saved any more; that check runs once an hour. With `KEEP_BACKFILL=off`, the cutoff persists through restarts so accepted downloads and retries finish. Starting once with backfill enabled clears that cutoff.
 
 ### The search model
 

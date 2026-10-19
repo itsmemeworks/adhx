@@ -1,30 +1,51 @@
+# Host-based reverse proxy or local use. For a container proxy, see deploy/nas/.
 services:
   adhx:
     image: ${ADHX_IMAGE:-ghcr.io/itsmemeworks/adhx:latest}
+    restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '127.0.0.1:${ADHX_PORT:-3000}:3000'
     environment:
-      # Sign-in links need one way to reach people: Resend, your own mail
-      # server (SMTP_URL), or EMAIL_LINKS_TO_ADMIN=1 (you pass links on from
-      # the admin page; your own first link is printed in the logs).
-      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET before starting ADHX}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-      TWITTER_CLIENT_ID: ${TWITTER_CLIENT_ID:-}
-      TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET:-}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      SMTP_URL: ${SMTP_URL:-}
-      EMAIL_FROM: ${EMAIL_FROM:-}
-      EMAIL_LINKS_TO_ADMIN: ${EMAIL_LINKS_TO_ADMIN:-}
-      # Only these emails (or @domains) can make an account. Leave empty for open sign-up.
-      ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
-      # 1 when it's just you; 2 or 3 for a group of friends.
-      MOMENT_MIN_SAVERS: ${MOMENT_MIN_SAVERS:-2}
-      # Optional: reorders the top search results by their words.
-      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      DATABASE_PATH: '/data/adhx.db'
+      SESSION_SECRET: '${SESSION_SECRET:?Set SESSION_SECRET before starting ADHX}'
+      NEXT_PUBLIC_APP_URL: '${NEXT_PUBLIC_APP_URL:-http://localhost:3000}'
+      ALLOWED_EMAILS: '${ALLOWED_EMAILS:-}'
+      EMAIL_LINKS_TO_ADMIN: '${EMAIL_LINKS_TO_ADMIN:-1}'
+      SMTP_URL: '${SMTP_URL:-}'
+      RESEND_API_KEY: '${RESEND_API_KEY:-}'
+      EMAIL_FROM: '${EMAIL_FROM:-}'
+      ADMIN_USER_IDS: '${ADMIN_USER_IDS:-}'
+      ADMIN_USERNAMES: '${ADMIN_USERNAMES:-}'
+      MOMENT_MIN_SAVERS: '${MOMENT_MIN_SAVERS:-2}'
+      TWITTER_CLIENT_ID: '${TWITTER_CLIENT_ID:-}'
+      TWITTER_CLIENT_SECRET: '${TWITTER_CLIENT_SECRET:-}'
+      AUTO_SYNC_EVERY_MINUTES: '${AUTO_SYNC_EVERY_MINUTES:-50}'
+      SYNC_COOLDOWN_MINUTES: '${SYNC_COOLDOWN_MINUTES:-60}'
+      KEEP_MEDIA: '${KEEP_MEDIA:-on}'
+      KEEP_BACKFILL: '${KEEP_BACKFILL:-on}'
+      KEEP_H264: '${KEEP_H264:-on}'
+      KEEP_MIN_FREE_GB: '${KEEP_MIN_FREE_GB:-2}'
+      KEEP_MAX_FILESIZE: '${KEEP_MAX_FILESIZE:-4G}'
+      KEEP_CONCURRENCY: '${KEEP_CONCURRENCY:-2}'
+      MEDIA_DIR: '${MEDIA_DIR:-/data/media}'
+      SEMANTIC_SEARCH: '${SEMANTIC_SEARCH:-on}'
+      SEMANTIC_THREADS: '${SEMANTIC_THREADS:-2}'
+      SEMANTIC_CACHE_DIR: '${SEMANTIC_CACHE_DIR:-/data/models}'
+      TYPESAFE_API_KEY: '${TYPESAFE_API_KEY:-}'
+      TRUST_PROXY_IP_HEADERS: '${TRUST_PROXY_IP_HEADERS:-false}'
+      SENTRY_DSN: '${SENTRY_DSN:-}'
     volumes:
-      # The database, the search model and every kept picture and video.
-      # Give it room: video adds up (see README → Disk space).
       - adhx_data:/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(5000)}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
 
 volumes:
   adhx_data:

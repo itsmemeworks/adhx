@@ -18,6 +18,9 @@ import {
   type NetworkPost,
 } from '@/lib/platform/networks'
 import { describeNetworkPost } from '@/lib/keep/describe'
+import { retainedDescription } from '@/lib/keep/retained'
+import { reconcileKeptMedia } from '@/lib/keep/metadata'
+import { keptFilesFor } from '@/lib/keep/store'
 import { expandShortLink, isShortLink } from '@/lib/keep/shortlinks'
 import { keptSrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
@@ -468,7 +471,9 @@ async function addNetworkPost(userId: string, post: NetworkPost, source: string)
     )
   }
 
-  const described = await describeNetworkPost(platform, post.id, post.author)
+  const described =
+    retainedDescription(platform, post.id) ??
+    (await describeNetworkPost(platform, post.id, post.author))
   if (!described) {
     return NextResponse.json(
       { error: `${networkLabel(platform)} post not available` },
@@ -524,6 +529,11 @@ async function addNetworkPost(userId: string, post: NetworkPost, source: string)
       .run()
     if (insert.changes > 0 && mediaRows.length) {
       db.insert(bookmarkMedia).values(mediaRows).onConflictDoNothing().run()
+    }
+    if (insert.changes > 0) {
+      // A download can finish while the upstream description is in flight.
+      // Recheck under the write transaction so this new saver gets its actual files.
+      reconcileKeptMedia(platform, post.id, keptFilesFor(platform, post.id), userId)
     }
     return {
       inserted: insert.changes > 0,

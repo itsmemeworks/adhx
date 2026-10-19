@@ -508,10 +508,10 @@ terminates if it cannot enforce this boundary.
 
 Every saved post's media is downloaded once and served by ADHX itself (`src/lib/keep`):
 
-- **Queue.** `keep_jobs` holds one row per post (not per saver). The in-process worker (`startKeeping`, started from `instrumentation.ts`) scans for saved posts without a job every 30 s and runs `KEEP_CONCURRENCY` jobs at a time, newest save first. Failures back off (1 min → 24 h), then the job is marked `unavailable`. Saves wake it immediately.
+- **Queue.** `keep_jobs` holds one row per post (not per saver). The in-process worker (`startKeeping`, started from `instrumentation.ts`) scans for saved posts without a job every 30 s and runs `KEEP_CONCURRENCY` jobs at a time, newest save first. Failures back off (1 min → 24 h), then the job is marked `unavailable`. Saves wake it immediately. With backfill disabled, `keep_settings.backfill_cutoff` persists the activation boundary across restarts; enabling backfill clears it.
 - **Download.** X uses fxtwitter's original files (photos `name=orig`, the best MP4 variant, up to 4K). Instagram uses yt-dlp, then instafix images and the public mirror. Everything else uses yt-dlp (`-S res,fps,vcodec:h264`), with the page's `og:image` for picture posts. Special cases: Vimeo goes through `player.vimeo.com`; Reddit finds its v.redd.it playlist through vxreddit; Threads only uses link-preview tags.
 - **Re-encoding.** Non-H.264 video is re-encoded to H.264 at the same size (CRF 20) unless `KEEP_H264=off`.
-- **Recording.** Files land in a scratch folder, are probed with ffmpeg, then moved into `MEDIA_DIR/{platform}/{id}-{hash}/` as slots `video-N`, `photo-N`, `audio-N` and `poster`. `kept_files` records each one.
+- **Recording.** Files land in a scratch folder, are probed with ffmpeg, then moved into `MEDIA_DIR/{platform}/{id}-{hash}/` as slots `video-N`, `photo-N`, `audio-N` and `poster`. `kept_files` records each one. In the same transaction, `reconcileKeptMedia` updates each saver's public category/media descriptors to the actual file kinds and counts, preserving private tags, archive state and summaries. Article categories stay articles.
 - **Serving.** `/api/files/{platform}/{id}/{slot}` serves the kept file with Range support. `poster` falls back to `photo-1`, and `video-1` to `audio-1`. Until a file is kept, X, Instagram and TikTok hand off (307, relative) to the old proxies; other networks wait up to 25 s for a running download. Every client media URL is built by `keptSrc()` (`src/lib/keep/src.ts`).
 - **Clean-up.** An hourly pass deletes files for posts nobody has saved any more.
 - **Understanding.** The understanding worker reads kept files straight from disk. Its content hash gains `:kept` once a file is kept, so posts are learned again from the original.
@@ -521,7 +521,7 @@ Every saved post's media is downloaded once and served by ADHX itself (`src/lib/
 YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky live in `src/lib/platform/networks.ts`:
 
 - **Recognising links.** That file holds link detection, canonical links and labels. `detectPlatformPost` falls through to it.
-- **Saving.** `/api/bookmarks/add` calls `describeNetworkPost`: yt-dlp metadata, or link-preview tags for picture posts. It stores the words and one media row per file.
+- **Saving.** `/api/bookmarks/add` first reuses public metadata and file counts from an existing retained copy (`retainedDescription`, excluding hidden posts and banned savers). Otherwise it calls `describeNetworkPost`: yt-dlp metadata, or link-preview tags for picture posts. It stores a fresh per-user save and one media row per file; it never copies another user's tags, summary or archive state.
 - **Previews.** Preview pages are `/s/{network}/{id}`, with `?by=author` where the network needs it.
 - **Short links.** `/api/links/resolve` follows short share links.
 
@@ -638,3 +638,13 @@ automation deploys to staging; production remains an explicit action.
 
 For exact environment variables, migration recovery, deploy commands, and
 incident procedures, see [`CLAUDE.md`](CLAUDE.md).
+
+### Portable Docker hosting
+
+The root Compose example exposes a loopback port for a host-based HTTPS proxy;
+`deploy/nas/` is a vendor-neutral bind-mount example on an existing proxy
+network, with no host port or public tunnel. Both explicitly pass media/search
+controls and include restart and database-health settings. The deployment guide
+covers permissions, private access, resource sizing and consistent backups.
+Kept-file URLs and shared previews are intentionally unauthenticated; source
+post IDs are predictable, so network privacy must be selected by the operator.

@@ -1,7 +1,7 @@
 import fs from 'fs/promises'
 import { and, eq, sql } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { bookmarks, keepJobs } from '@/lib/db/schema'
+import { db, runInTransaction } from '@/lib/db'
+import { bookmarks, keepJobs, keepSettings } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
 import { noteSaved, PRIORITY } from '@/lib/semantic'
 import { keepBackfill, keepConcurrency, keepEnabled, keepMinFreeBytes, mediaDir } from './config'
@@ -229,6 +229,22 @@ export function wakeKeep(): void {
 
 const MODULE = Symbol('keep-worker')
 
+/** Keep the backfill-off boundary across restarts; enabling backfill resets it. */
+export function backfillCutoff(now = new Date()): string | null {
+  return runInTransaction(() => {
+    if (keepBackfill()) {
+      db.delete(keepSettings).where(eq(keepSettings.key, 'backfill_cutoff')).run()
+      return null
+    }
+    db.insert(keepSettings)
+      .values({ key: 'backfill_cutoff', value: new Date(now.getTime() - 60_000).toISOString() })
+      .onConflictDoNothing()
+      .run()
+    return db.select().from(keepSettings).where(eq(keepSettings.key, 'backfill_cutoff')).get()!
+      .value
+  })
+}
+
 export function startKeeping(): void {
   if (!keepEnabled()) return
   const s = state()
@@ -238,7 +254,7 @@ export function startKeeping(): void {
   }
   if (s.timer) return
   s.owner = MODULE
-  s.since = keepBackfill() ? null : new Date(Date.now() - 60_000).toISOString()
+  s.since = backfillCutoff()
   // A restart mid-download leaves rows marked running; try them again.
   db.update(keepJobs)
     .set({ status: 'pending', updatedAt: new Date().toISOString() })
