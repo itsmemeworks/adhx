@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
+
+- `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.
+- `src/lib/people/`: `saversFor`, `visibleSave`/`visibleSaveFilter`, `seenBy`, `withSavers`, `listMembers`. The filter now gates moments, trending counts, Everyone search, `loadSearchItems` copies, similar, sitemap, author hubs, public tweet JSON and the own-play pulse fallback (quoted-only posts drop out of these too).
+- Signed-in outputs carry `savers`/`isPrivate` (feed, search, similar, channel queues, `PhonePost`, `/api/app/search?scope=`); public outputs never do.
+- Web: `SaverFaces` + lock on theater and search tiles, "Just for me" in More and the Save sheet, one-time notice on `/now`, search defaults to Everyone's saves (old scope-less `/play?q=` links now mean everyone).
+- Docs moved to "named to friends, never to strangers" (CLAUDE, PRIVACY, ARCHITECTURE, `/privacy`, README, phone spec).
+- Follow-ups: public tag channels still list privately saved tagged posts; the moments engine keeps a just-privatised save until its next regroup (≤5 min); Live names, blend, invites and group/friend channels are other branches.
+
 ## 2026-10-19 — Make handed-over sign-in links survive previews
 
 - GET/HEAD now render a small script-free confirmation; only an explicit same-origin, bounded form POST consumes the link and sets the existing protected session cookie.

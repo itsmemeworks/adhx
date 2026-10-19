@@ -6,8 +6,9 @@ Last updated: 19 October 2026.
 
 ## Short version
 
-- Your **collection** (saves, archive, private tags, sign-in) is private to your account.
-- **Shared post pages**, **Right now**, **public channels**, and **Top channels** are public by design. They show posts and curator usernames, never account IDs. Right now shows how many people saved something, never who.
+- **Named to friends, never to strangers.** Your saves are shared with the members of your server (everyone who can sign in to it): they see which posts you saved, with your username, display name, avatar and when. Mark a save **Just for me** and nobody else sees it, counts it or is told you saved it.
+- Your **archive, private tags and sign-in** are private to your account.
+- **Shared post pages**, **Right now**, **public channels**, and **Top channels** are public by design. They show posts and curator usernames, never account IDs. People who aren't signed in see how many people saved something, never who, and Just for me saves are never counted.
 - We store some identifiers **only for moderation and abuse-limiting**. Those fields are never selected on any public API or page.
 - We do not sell your data. We do not run ads. We do not run metered AI on your library.
 
@@ -34,15 +35,21 @@ If you connect X, we check your X bookmarks for new ones about every hour, so th
 
 If you make an access key (Settings → Search from Claude), we store only a hash of it, its name, its last four characters and when it was last used. A key can only search your own saves. Removing it stops it working straight away.
 
-### Your collection (private)
+### Your collection (shared with your people)
 
-Bookmarks, media rows, tags, archive state, and preferences are keyed by your account id. Other users cannot read them. Archive is private: it does **not** write a public pulse event.
+Bookmarks, media rows, tags, archive state, and preferences are keyed by your account id. Members of your server can see which posts you saved and when (with your username, display name and avatar), on posts, in search across everyone's saves and in the feed. They never see your tags, archive state or preferences.
+
+A save marked **Just for me** (`bookmarks.is_private`) is still yours to search and play, but no other member sees it, counts it or is told you saved it, and it never writes a public pulse event. Making an existing save private also removes your earlier pulse event for it. Existing saves joined the shared feed when this arrived; the web app says so once.
+
+People who aren't signed in never see names: shared post pages, signed-out Right now and moments, public channels, the public post JSON, trending, social images and the sitemap only ever count savers.
+
+Archive is private: it does **not** write a public pulse event.
 
 A channel (a tag) stays private until you explicitly make it **public**, and you can make it private again from its page. Keeping a “Made for you” channel keeps it private.
 
 ### Community pulse, Right now and Top channels (public, anonymous)
 
-When someone previews, saves, or sends a post, we may record an `activity` event for anonymous counts. **Right now** (`/now`) groups recent saves from everyone into moments by what they’re about; it counts the people who saved, and their account ids never leave the server. When someone views or saves a public channel, we may record a `collection_events` row for Top channels.
+When someone previews, saves, or sends a post, we may record an `activity` event for anonymous counts (never for a Just for me save). **Right now** (`/now`) groups recent saves from everyone into moments by what they’re about; it counts the people who saved, and their account ids never leave the server. When someone views or saves a public channel, we may record a `collection_events` row for Top channels.
 
 Those logs may store:
 

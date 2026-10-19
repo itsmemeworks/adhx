@@ -24,10 +24,11 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 
 - **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
-- **Search by what you remember.** Describe it and ADHX finds it. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
+- **Search by what you remember.** Describe it and ADHX finds it, across everyone's saves or just yours, with your friends' faces on what they kept. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
 - **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
-- **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. For now savers are counted, not named; names are next (see [Where it's going](#where-its-going)).
+- **Names on posts.** See which of your people saved what, in the player and in search. Saves are shared with your people by default; flip **Just for me** on any you'd rather keep to yourself.
+- **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. Moments still count savers rather than name them; names there are next (see [Where it's going](#where-its-going)).
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
 - **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
@@ -37,7 +38,7 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 ADHX is becoming one shared feed for your people. In order:
 
 1. **Say it out loud.** This README, the site and every string in the app, in the new voice.
-2. **Names on posts.** See which of your friends saved what. Saves are shared with your people by default, with a private toggle for the ones that are just for you, and you can search the whole group's vault. When this lands, saves you've already made join the shared feed; the release notes will say so first.
+2. **Names on posts.** Here: see which of your friends saved what, keep any save **Just for me**, and search the whole group's vault. Saves you'd already made joined the shared feed; the app says so once.
 3. **One feed.** A blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
 4. **Channels and Live.** Channels drawn from everyone's saves, one per friend, and Live with names, so you can watch together.
 
