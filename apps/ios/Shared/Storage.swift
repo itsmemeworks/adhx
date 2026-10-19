@@ -145,11 +145,34 @@ enum Store {
         History.clear()
         OfflineQueue.clear()
         KnownPeople.clear()
+        Prefs.justForMeByDefault = false
     }
 
     static func client() -> ADHXClient? {
         guard let server, let key else { return nil }
         return ADHXClient(server: server, key: key)
+    }
+}
+
+/// Choices in Settings that this phone keeps (in the App Group, so the Share
+/// Extension reads them too).
+enum Prefs {
+    private static var d: UserDefaults { AppGroup.defaults }
+
+    /// "Just for me by default": shares from this phone go out with
+    /// `private: true`. The server keeps the same choice for the web
+    /// (`save.privateDefault`) but has no phone route for it yet, so the
+    /// phone keeps its own; off leaves `private` out, so the server's
+    /// choice still applies.
+    static var justForMeByDefault: Bool {
+        get { d.bool(forKey: "justForMeByDefault") }
+        set { d.set(newValue, forKey: "justForMeByDefault") }
+    }
+
+    /// "Sound on by default": videos start with sound instead of muted.
+    static var soundOn: Bool {
+        get { d.bool(forKey: "soundOn") }
+        set { d.set(newValue, forKey: "soundOn") }
     }
 }
 

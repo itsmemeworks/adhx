@@ -120,8 +120,8 @@ struct GobShape: InsettableShape {
     }
 }
 
-/// One person's face, Gob shaped: their photo, or their initial on a colour
-/// of their own. Decorative: whoever shows it says the names.
+/// One person's face, Gob shaped: their photo (`AuthImage`), or their
+/// initial on a colour of their own. Decorative: whoever shows it says the names.
 struct Face: View {
     let saver: Saver
     var server: URL?
@@ -144,13 +144,8 @@ struct Face: View {
         ZStack {
             initial
             if let server, let url = ADHXClient.resolve(saver.avatarUrl, against: server) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        Color.clear
-                    }
-                }
+                // Faces are for members only: loaded with the phone key.
+                AuthImage(url: url) { Color.clear }
             }
         }
         .frame(width: size, height: size)

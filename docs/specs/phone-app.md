@@ -34,6 +34,9 @@ characters), only the SHA-256 is kept, up to 10 per account. A phone key is
 accepted by `/api/app/save`, `/api/app/private`, `/api/app/status`,
 `/api/app/me`, `/api/app/saves`, `/api/app/search` and the friends feed
 endpoints below (`feed`, `seen`, `channels`, `live`) only; a search key is not accepted
+`/api/app/me`, `/api/app/saves`, `/api/app/search`, the friends feed
+endpoints below (`feed`, `seen`, `channels`, `live`), Settings' `people` and
+`doing`, and members' pictures (`/api/files/avatar/<hash>`) only; a search key is not accepted
 there, and a phone key is not accepted by `/api/agent/search`. A phone key
 acts only for its own account: it reads that account's saves, and everyone's
 saves only where a signed-in member could (`/api/app/search?scope=everyone`). Removing a phone in Settings deletes
@@ -196,6 +199,9 @@ an update).
 nothingYet, total, types, waiting, hidden }`. `types` defaults to
   `video,photo` (a sound counts as a video); `hidden` (the same as `waiting`)
   counts the unseen posts the filter left out (`{ text: 4 }`). Apps filter by
+  `{ items: (PhonePost & { why })[], nextCursor, caughtUp, hidden? }`. `types`
+  defaults to `video,photo` (a sound counts as a video); `hidden`, when
+  given, counts what the filter left out (`{ text: 4 }`). Apps filter by
   `kind` too, so an older server that ignores `types` still plays the
   right things.
 - `GET /api/app/feed/types` → `{ types }` and `PUT` the same body: the saved
@@ -302,6 +308,14 @@ it; on a server without these endpoints (404) the app falls back as noted.
   app also filters on the phone, for a server that ignores `types`. `why` is
   read loosely: a line, a list of lines, or objects with `text`. A 404 means
   the server has no feed yet: home plays My saves as before.
+  The
+  app also filters on the phone, for a server that ignores `types`. `why` is
+  read loosely: a line, a list of lines, or objects with `text`. A 404 means
+  the server has no feed yet: home plays My saves as before. Items also
+  carry `whyReasons: [{ kind, text, username? }]` (the headline first); Why
+  this one lists every one. `nothingYet: true` (nothing new on the server at
+  all) shows "Nothing new yet. / Save something for your people to find."
+  instead of the caught-up page.
 - `GET /api/app/feed/types` → `{ types }` and `PUT` the same: the feed
   filter. It may 404 until the blend lands; the phone keeps its own copy and
   the default is videos and photos.
@@ -323,6 +337,22 @@ watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
   isn't used yet.
 - `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
   most 40 characters).
+- `GET /api/app/people` → `{ members: [{ username, name, avatarUrl, saves,
+lastSavedAt, role: owner|admin|member, banned, isYou }], isAdmin, canInvite,
+inviteMode, requests? }`; `requests` (admins only) are
+  `[{ id, username, name, askedAt, invitedBy: { username, name } | null }]`.
+  `POST /api/app/people/requests/{id} { decision: approve | not_now | decline }`
+  → `{ approval }` (403 `forbidden` for non-admins, 404 `not_found` when
+  someone else answered first).
+- `GET /api/app/doing?scope=all` → `{ items: [{ platform, id, title, network,
+thumbnail, savers, savedAt, step (1–7), stepLabel, steps, percent, status:
+working|waiting|needs_you|ready, playable, reason, quality, learned, retry,
+finishedAt }], summary: { onTheirWay, keeping, learning, needsYou, ready,
+freeBytes, processing, remoteConnected } }`. `POST /api/app/doing/retry
+{ platform, id }` → `{ retried }`, for people who saved it (`retry: true`).
+- Faces: `avatarUrl` is `/api/files/avatar/<hash>`, members only, so the app
+  loads it with `Authorization: Bearer <phone key>` (only to its own server)
+  and keeps it in memory; the address changes with each new picture.
 
 ### Home: New · Channels · Live
 
@@ -366,6 +396,54 @@ watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
 - **Search** has Everyone's saves · Mine, Everyone first.
 - With Remove animations on, pages jump instead of sliding, nothing pulses,
   and reactions fade in place instead of rising.
+
+### Settings
+
+Gob opens Settings, in this order:
+
+- **You**: your face (Gob shaped, ringed in your colour, with a pencil),
+  name, "@pete · 214 saves" and **Change picture**. There's no phone route
+  for pictures yet (`/api/account/avatar` takes a signed-in browser), so it
+  opens Settings on your ADHX in the browser (`/settings#you`).
+- **Waiting for you** (admins with someone waiting): "Ben wants in",
+  "Invited by Jo · 10m ago", **Let Ben in**, **Not now** (hides it for a few
+  days) and **Decline** (asks first: "Keep Ben out?").
+- Rows: **Your people** (faces and a count; the list has everyone with their
+  saves, role and when they last saved, and opens a friend's channel),
+  **Invite someone** (when you may invite; no phone route makes invites yet,
+  so it opens `/settings#people` in the browser), **What's in your feed**
+  (the New filter sheet), **Just for me by default**, **Sound on by
+  default** (videos start with sound), **What your ADHX is doing** ("3 on
+  their way · 1 needs you", opening the full list).
+- **This phone**: "Connected to Ana's ADHX" (the owner; "your ADHX" when it's
+  you), the address and **Remove this phone**, which forgets the key here.
+  No phone route removes its own key on the server yet, so the dialog says to
+  remove it from Settings → Phone app on the web as well.
+- **Shared lately**, then the version.
+
+Just for me by default is kept on the phone: the server keeps the same choice
+for the web (`save.privateDefault`) but has no phone route to read or set it.
+On, shares from this phone (and links waiting offline) go out with
+`private: true` and the share card's switch starts on; off, `private` is left
+out so the server's own choice still applies.
+
+### On their way
+
+- While New's player is on screen (and the app is in front), the app asks
+  `/api/app/doing` every 5 s, and stops when it's hidden. When posts are on
+  their way, a pill sits under the tabs: a spinning ring and "3 on their way"
+  (or "1 needs you" when nothing else is moving). An older server (404) gets
+  the old "2 on their way" from `/api/app/saves`' `preparing` instead.
+- Tapping it opens a sheet: "3 on their way" and "1 needs you", then one row
+  per post: its picture, title, a thin bar (yellow, green once it plays) and
+  the step ("Keeping a copy · 62%", "Making it play everywhere · Jo", "Plays
+  now · listening to what's said"). A row that needs you is outlined in red,
+  titled with the plain reason ("It's private on Instagram."), says "Couldn't
+  keep it · Mum's save", and has **Retry** when you saved it. Then **See
+  everything your ADHX is doing** and "All on your server. Nothing sent
+  anywhere."
+- The full list: Needs you, On their way and Done lately (with quality and
+  what was learned), whether the Mac helper is connected, and the free space.
 
 ## The share sheet (both platforms)
 

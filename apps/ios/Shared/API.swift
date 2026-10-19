@@ -127,6 +127,38 @@ struct PhoneMatch: Decodable, Hashable {
     let on: [String]
 }
 
+/// One reason the feed picked a post (`whyReasons`): the first is the
+/// headline (`why`). `kind` is together · more · like · close · fresh · yours.
+struct WhyReason: Decodable, Hashable {
+    let kind: String?
+    let text: String
+    /// The friend the reason is about.
+    let username: String?
+
+    init(kind: String? = nil, text: String, username: String? = nil) {
+        self.kind = kind
+        self.text = text
+        self.username = username
+    }
+
+    private enum Keys: String, CodingKey { case kind, text, username }
+
+    /// An object with `text`, or just a line.
+    init(from decoder: Decoder) throws {
+        if let line = try? decoder.singleValueContainer().decode(String.self) {
+            self.init(text: line)
+        } else {
+            let c = try decoder.container(keyedBy: Keys.self)
+            self.init(kind: (try? c.decodeIfPresent(String.self, forKey: .kind)) ?? nil,
+                      text: try c.decode(String.self, forKey: .text),
+                      username: (try? c.decodeIfPresent(String.self, forKey: .username)) ?? nil)
+        }
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "empty reason"))
+        }
+    }
+}
+
 /// A post ready to play. Addresses are relative to the server.
 struct PhonePost: Decodable, Hashable {
     let platform: String
@@ -150,6 +182,8 @@ struct PhonePost: Decodable, Hashable {
     let isPrivate: Bool
     /// Why the feed picked it ("Ana and Ben saved this"). Feed items only.
     let why: String?
+    /// Every reason, the headline first (feed items on newer servers).
+    let whyReasons: [WhyReason]
 
     /// Unique across networks (the same number can be an X and a TikTok id).
     var key: String { "\(platform):\(postId)" }
@@ -159,13 +193,14 @@ struct PhonePost: Decodable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case platform, postId = "id", kind, author, text, postedAt, savedAt, sourceUrl, openPath,
-             media, article, match, learning, savers, isPrivate, why
+             media, article, match, learning, savers, isPrivate, why, whyReasons
     }
 
     init(platform: String, postId: String, kind: String, author: PhoneAuthor, text: String,
          postedAt: String? = nil, savedAt: String? = nil, sourceUrl: String? = nil, openPath: String = "/",
          media: [PhoneMedia] = [], article: PhoneArticle? = nil, match: PhoneMatch? = nil,
-         learning: Bool? = nil, savers: [Saver] = [], isPrivate: Bool = false, why: String? = nil) {
+         learning: Bool? = nil, savers: [Saver] = [], isPrivate: Bool = false, why: String? = nil,
+         whyReasons: [WhyReason] = []) {
         self.platform = platform
         self.postId = postId
         self.kind = kind
@@ -182,6 +217,7 @@ struct PhonePost: Decodable, Hashable {
         self.savers = savers
         self.isPrivate = isPrivate
         self.why = why
+        self.whyReasons = whyReasons
     }
 
     init(from decoder: Decoder) throws {
@@ -202,8 +238,12 @@ struct PhonePost: Decodable, Hashable {
         // Defensive: a server mid-upgrade may leave these out or get them wrong.
         savers = (try? c.decodeIfPresent(Lossy<Saver>.self, forKey: .savers))?.items ?? []
         isPrivate = (try? c.decodeIfPresent(Bool.self, forKey: .isPrivate)) ?? false
+        let reasons = (try? c.decodeIfPresent(Lossy<WhyReason>.self, forKey: .whyReasons))?.items ?? []
+        whyReasons = reasons
         let why = (try? c.decodeIfPresent(String.self, forKey: .why)) ?? nil
-        self.why = why.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+        // The headline is the first reason when the server only sends the list.
+        self.why = (why ?? reasons.first?.text)
+            .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
     }
 }
 

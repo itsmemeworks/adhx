@@ -204,14 +204,18 @@ struct FeedPage: Decodable {
     let caughtUp: Bool
     /// Posts the type filter left out, when the server says (`{ text: 4 }`).
     let hidden: [FeedType: Int]
+    /// Nothing new on the whole server yet (not "you've seen it all").
+    let nothingYet: Bool
 
-    private enum Keys: String, CodingKey { case items, nextCursor, caughtUp, hidden }
+    private enum Keys: String, CodingKey { case items, nextCursor, caughtUp, hidden, nothingYet }
 
-    init(items: [PhonePost], nextCursor: String?, caughtUp: Bool, hidden: [FeedType: Int] = [:]) {
+    init(items: [PhonePost], nextCursor: String?, caughtUp: Bool, hidden: [FeedType: Int] = [:],
+         nothingYet: Bool = false) {
         self.items = items
         self.nextCursor = nextCursor
         self.caughtUp = caughtUp
         self.hidden = hidden
+        self.nothingYet = nothingYet
     }
 
     init(from decoder: Decoder) throws {
@@ -219,6 +223,7 @@ struct FeedPage: Decodable {
         items = c.posts(.items)
         nextCursor = c.loose(String.self, .nextCursor)
         caughtUp = c.loose(Bool.self, .caughtUp) ?? (nextCursor == nil)
+        nothingYet = c.loose(Bool.self, .nothingYet) ?? false
         var hidden: [FeedType: Int] = [:]
         for (key, value) in c.loose([String: Int].self, .hidden) ?? [:] {
             if let type = FeedType(rawValue: key), value > 0 { hidden[type] = value }
