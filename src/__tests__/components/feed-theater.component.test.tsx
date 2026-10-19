@@ -99,6 +99,24 @@ function post(
   }
 }
 
+/** Render as a wide screen (the theater's columns), until the test ends. */
+const realMatchMedia = window.matchMedia
+function wideScreen() {
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(min-width: 1024px)' || query === '(hover: hover)',
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+}
+afterEach(() => {
+  window.matchMedia = realMatchMedia
+})
+
 describe('feed play links', () => {
   it('reads feed=new|everyone|friends|mine and pages through the blend', () => {
     expect(feedPlayHref()).toBe('/play?feed=new')
@@ -324,26 +342,32 @@ describe('New in the theater', () => {
       .map((p) => p.id)
 
   it('plays what you haven’t seen, says why, then ends caught up', async () => {
+    wideScreen()
     render(<TheaterV2 source={source} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
     expect(screen.getByRole('button', { name: 'Why this one: Saved together' })).toBeInTheDocument()
-    expect(screen.getByText('3 you haven’t seen')).toBeInTheDocument()
+    const column = screen.getByRole('complementary', { name: 'Up next' })
+    expect(within(column).getByText('3 you haven’t seen')).toBeInTheDocument()
     // The next page arrives before it's needed.
     await waitFor(() =>
       expect(fetchMock.mock.calls.some(([u]) => String(u).includes('cursor=c1'))).toBe(true),
     )
     await act(async () => {})
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    // What's next sits under the stage, with a way to skip to it.
+    expect(screen.getByRole('complementary', { name: 'Next' })).toHaveTextContent('Skip to it')
+    fireEvent.click(screen.getByRole('button', { name: 'Skip to it' }))
     expect(screen.getByTestId('stage')).toHaveTextContent('b')
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await act(async () => {})
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('c'))
+    await act(async () => {})
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+      fireEvent.keyDown(window, { key: 'ArrowRight' })
     })
     expect(await screen.findByText('You’re all caught up.')).toBeInTheDocument()
     expect(stageProps.mock.calls.at(-1)?.[0].covered).toBe(true)
-    // The header agrees: nothing left (not the last post still counted).
-    expect(screen.getByText('0 you haven’t seen')).toBeInTheDocument()
+    // The column agrees: nothing left (not the last post still counted).
+    expect(within(column).getByText('0 you haven’t seen')).toBeInTheDocument()
     // Skipped posts count as seen; the batch goes out when the page is hidden.
     act(() => {
       window.dispatchEvent(new Event('pagehide'))
@@ -389,14 +413,32 @@ describe('New in the theater', () => {
     )
   })
 
-  it('switches whose saves from the header', async () => {
+  it('switches whose saves from its column', async () => {
+    wideScreen()
     render(<TheaterV2 source={source} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
-    fireEvent.click(screen.getAllByRole('radio', { name: 'Friends only' })[0])
+    const column = screen.getByRole('complementary', { name: 'Up next' })
+    fireEvent.click(within(column).getByRole('radio', { name: 'Friends only' }))
     expect(router.push).toHaveBeenCalledWith('/play?feed=friends')
   })
 
+  it('on phones, the header’s filter opens kinds and whose saves', async () => {
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
+    // New's count is the badge on its tab.
+    expect(screen.getByText('3 you haven’t seen')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'What’s in your feed: Videos and photos' }))
+    const sheet = screen.getByRole('dialog', { name: 'What’s in your feed' })
+    expect(within(sheet).getByRole('switch', { name: 'Videos' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+    fireEvent.click(within(sheet).getByRole('radio', { name: 'Mine' }))
+    expect(router.push).toHaveBeenCalledWith('/play?feed=mine')
+  })
+
   it('asks for the kinds you pick, remembers them, and offers the ones held back', async () => {
+    wideScreen()
     pages.first = {
       ...(pages.first as object),
       types: ['video', 'photo'],

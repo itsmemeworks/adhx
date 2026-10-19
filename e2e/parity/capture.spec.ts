@@ -84,10 +84,8 @@ async function attempt(ctx: Ctx, what: string, fn: () => Promise<unknown>): Prom
 
 async function theaterReady(page: Page): Promise<void> {
   await page.locator('[data-app-account-scope="trusted"]').first().waitFor({ timeout: 45_000 })
-  await page
-    .getByRole('button', { name: /^(Next post|Next)$/ })
-    .first()
-    .waitFor({ timeout: 45_000 })
+  // The stage's action rail (Save, Share, Download, More).
+  await page.getByRole('navigation', { name: 'Post actions' }).first().waitFor({ timeout: 45_000 })
 }
 
 /** Click the first visible element whose accessible name or text matches. */
@@ -110,7 +108,7 @@ async function onStage(page: Page, title: string): Promise<boolean> {
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const el = n.parentElement
       if (!el || !n.textContent?.toLowerCase().includes(needle)) continue
-      if (el.closest('[role="dialog"], ul, nav, header')) continue
+      if (el.closest('[role="dialog"], ul, ol, nav, header, aside')) continue
       const r = el.getBoundingClientRect()
       const style = getComputedStyle(el)
       if (
@@ -131,11 +129,29 @@ async function playItem(ctx: Ctx, title: string): Promise<void> {
   const { page } = ctx
   await attempt(ctx, `on stage: ${title}`, async () => {
     if (await onStage(page, title)) return
-    await page
-      .getByRole('button', { name: 'Up next', exact: true })
+    // Wide screens list what's next beside the stage; phones open it from ⋯.
+    const row = page
+      .getByRole('button', { name: new RegExp(`^Play ${escapeRe(title)}`, 'i') })
       .locator('visible=true')
       .first()
-      .click()
+    if (await row.count()) {
+      await row.click()
+      await page.waitForTimeout(1_200)
+      if (!(await onStage(page, title))) throw new Error('picked from Up next but not on stage')
+      return
+    }
+    const upNext = page
+      .getByRole('button', { name: 'Up next', exact: true })
+      .locator('visible=true')
+    if (await upNext.count()) await upNext.first().click()
+    else {
+      await page
+        .getByRole('button', { name: 'More options' })
+        .locator('visible=true')
+        .first()
+        .click()
+      await page.getByRole('menuitem', { name: 'Up next' }).first().click()
+    }
     const tile = page
       .getByRole('button', { name: new RegExp(`^Play ${escapeRe(title)}`, 'i') })
       .locator('visible=true')
@@ -299,9 +315,8 @@ const BOARDS: Board[] = [
       await attempt(ctx, 'caught-up card', async () => {
         for (let i = 0; i < 30; i++) {
           if (await page.getByText('Go touch grass.').locator('visible=true').count()) return
-          const next = page.getByRole('button', { name: /^(Next post|Next)$/ }).first()
-          if (!(await next.isEnabled().catch(() => false))) break
-          await next.click()
+          // → is Next (the theater's keys).
+          await page.keyboard.press('ArrowRight')
           await page.waitForTimeout(500)
         }
         await page
