@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -51,7 +52,7 @@ object SaveToPhone {
     /**
      * Fetch [url] with `download=1` into the app's cache (cache/shared, which
      * the FileProvider hands out) for the share sheet. Earlier ones are cleared
-     * first, so only one share's files are ever kept.
+     * after a day on subsequent exports. Fresh batches stay valid for recipients.
      */
     suspend fun fetchToShare(context: Context, url: String, name: String): Pair<File, String>? =
         fetchAllToShare(context, listOf(url), listOf(name))?.firstOrNull()
@@ -67,42 +68,55 @@ object SaveToPhone {
         names: List<String>,
         onProgress: (Float?) -> Unit = {},
     ): List<Pair<File, String>>? = withContext(Dispatchers.IO) {
-        val folder = File(context.cacheDir, "shared").apply {
-            deleteRecursively()
-            mkdirs()
-        }
-        val got = mutableListOf<Pair<File, String>>()
-        for ((i, url) in urls.withIndex()) {
-            val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
-                ?: return@withContext null
-            try {
-                client.newCall(Request.Builder().url(address).build()).execute().use { response ->
-                    val body = response.body
-                    if (!response.isSuccessful || body == null) return@withContext null
-                    val type = body.contentType()?.let { "${it.type}/${it.subtype}" } ?: "application/octet-stream"
-                    val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "bin"
-                    val file = File(folder, "${names.getOrElse(i) { "adhx-$i" }}.$extension")
-                    val length = body.contentLength().takeIf { it > 0 }
-                    var read = 0L
-                    body.byteStream().use { input ->
-                        file.outputStream().use { out ->
-                            val buffer = ByteArray(64 * 1024)
-                            while (true) {
-                                val n = input.read(buffer)
-                                if (n < 0) break
-                                out.write(buffer, 0, n)
-                                read += n
-                                onProgress(length?.let { (i + read.toFloat() / it) / urls.size })
+        val folder = try { ShareCache.create(File(context.cacheDir, "shared")) }
+            catch (_: IOException) { return@withContext null }
+        var complete = false
+        try {
+            val got = mutableListOf<Pair<File, String>>()
+            for ((i, url) in urls.withIndex()) {
+                val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
+                    ?: return@withContext null
+                try {
+                    client.newCall(Request.Builder().url(address).build()).execute().use { response ->
+                        val body = response.body
+                        if (!response.isSuccessful || body == null) return@withContext null
+                        val type = body.contentType()?.let { "${it.type}/${it.subtype}" } ?: "application/octet-stream"
+                        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "bin"
+                        val file = File(folder, "${names.getOrElse(i) { "adhx-$i" }}.$extension")
+                        val length = body.contentLength().takeIf { it > 0 }
+                        ShareCache.requireSpace(folder, length ?: 4 * 1024 * 1024L)
+                        var read = 0L
+                        var sinceSpaceCheck = 0L
+                        body.byteStream().use { input ->
+                            file.outputStream().use { out ->
+                                val buffer = ByteArray(64 * 1024)
+                                while (true) {
+                                    coroutineContext.ensureActive()
+                                    val n = input.read(buffer)
+                                    if (n < 0) break
+                                    if (sinceSpaceCheck >= 4 * 1024 * 1024) {
+                                        ShareCache.requireSpace(folder, 4 * 1024 * 1024L)
+                                        sinceSpaceCheck = 0
+                                    }
+                                    out.write(buffer, 0, n)
+                                    read += n
+                                    sinceSpaceCheck += n
+                                    onProgress(length?.let { (i + read.toFloat() / it) / urls.size })
+                                }
                             }
                         }
+                        got += file to type
                     }
-                    got += file to type
+                } catch (e: IOException) {
+                    return@withContext null
                 }
-            } catch (e: IOException) {
-                return@withContext null
             }
+            complete = true
+            ShareCache.finish(folder)
+            got
+        } finally {
+            if (!complete) ShareCache.discard(folder)
         }
-        got
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)

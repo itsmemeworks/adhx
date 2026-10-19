@@ -169,7 +169,12 @@ on Android 10 and up; a text post's words go to the clipboard), **Share** and
 private, so Share sends what it kept rather than a link: the video file, all
 of an album's photos or the sound (fetched with `?download=1`, with a ring on
 the button while it comes down), or the words of a text post. A post whose
-copy is still being kept says so instead. **More** keeps **Share an ADHX
+copy is still being kept says so instead. Share downloads use separate private
+cache batches, so starting another share keeps earlier recipients' files usable.
+Failed batches are removed immediately; batches older than 24 hours are removed
+on later exports, excluding downloads still active in the app. Share downloads check
+for a 64 MiB free-space reserve before starting and periodically while streaming.
+There is no additional per-file size limit. **More** keeps **Share an ADHX
 link** for people on the same server. Along the bottom: the author and the first lines of text, the time, a
 bar to seek, and **Hide**, which clears everything but a thin progress line
 until the next tap. Next to Hide, a video can **keep playing in a small window**

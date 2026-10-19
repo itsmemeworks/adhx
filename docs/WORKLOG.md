@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Bound mobile share caches and retry newly kept playback
+
+- Give Android exports separate batches, retaining fresh recipient URIs while removing failed transfers and batches older than 24 hours on later exports.
+- Check a 64 MiB free-space reserve before and during Android share downloads without adding a per-file limit; cover cache lifecycle with four file-I/O regressions.
+- Give iOS exports operation-owned temporary folders, removing partial/cancelled downloads and cleaning successful files after Photos or share-sheet completion.
+- Retry iOS playback once on the first kept status even when the old player failure notification arrives later; reset status on post changes and honour cancellation.
+- Android debug compilation and seven JVM tests pass; unsigned iOS simulator builds pass for ARM64 and x86_64. Source only; no phone installed or service changed.
+
 ## 2026-10-19 — Reset Android post-link readiness between posts
 
 - Key the post-link screen's remembered post, progress, readiness, errors and retries by network and post ID.

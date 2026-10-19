@@ -140,6 +140,7 @@ struct PreparingOverlay: View {
     let post: PhonePost
     @ObservedObject var playback: Playback
     @State private var status: StatusResult?
+    @State private var retriedKept = false
 
     private var preparing: Bool {
         guard let s = status?.status else { return false }
@@ -164,7 +165,11 @@ struct PreparingOverlay: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: preparing)
-        .task(id: post.key) { await follow() }
+        .task(id: post.key) {
+            status = nil
+            retriedKept = false
+            await follow()
+        }
     }
 
     /// Ask how the copy is coming along every 2 s while it isn't playing.
@@ -173,11 +178,16 @@ struct PreparingOverlay: View {
         while !Task.isCancelled {
             if playback.ready { return }
             if let s = try? await client.status(platform: post.platform, id: post.postId) {
+                guard !Task.isCancelled else { return }
                 let was = preparing
                 status = s
-                if was && s.status == "kept" {
+                // The first kept response can race the old AVPlayerItem's
+                // failure notification. Reload once, even if it hasn't arrived.
+                if s.status == "kept" && !retriedKept {
+                    retriedKept = true
                     status = nil
                     playback.retry()
+                    continue
                 }
                 if KeepStatus.final.contains(s.status) && !was { return }
             }

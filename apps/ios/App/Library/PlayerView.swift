@@ -180,7 +180,7 @@ private struct PostPage: View {
         }
         .clipped()
         .sheet(item: $sharing) { share in
-            ActivitySheet(items: share.items)
+            ActivitySheet(items: share.items, onComplete: { share.export?.cleanup() })
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $more) {
@@ -388,8 +388,8 @@ private struct PostPage: View {
         guard !sharingBusy else { return }
         sharingBusy = true
         Task {
-            if let files = await KeptFiles.download(post, server: server) {
-                sharing = ShareItems(items: files.map(\.url))
+            if let export = await KeptFiles.download(post, server: server) {
+                sharing = ShareItems(items: export.files.map(\.url), export: export)
             } else {
                 say("Still being kept on your ADHX. Try again in a moment.")
             }
@@ -549,6 +549,7 @@ private struct MoreSheet: View {
 private struct ShareItems: Identifiable {
     let id = UUID()
     let items: [Any]
+    var export: KeptFiles.Export? = nil
 }
 
 private struct SharedFile: Identifiable {
@@ -559,8 +560,13 @@ private struct SharedFile: Identifiable {
 /// The system share sheet, for a file.
 private struct ActivitySheet: UIViewControllerRepresentable {
     let items: [Any]
+    var onComplete: (() -> Void)? = nil
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        // UIKit calls this after the activity finishes or the sheet is dismissed.
+        // Retain the export in the closure until the consumer has finished.
+        controller.completionWithItemsHandler = { _, _, _, _ in onComplete?() }
+        return controller
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
