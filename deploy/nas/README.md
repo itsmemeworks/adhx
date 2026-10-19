@@ -166,6 +166,11 @@ use several cores and substantial temporary disk space, especially at 4K.
 
 - `KEEP_CONCURRENCY`: simultaneous downloads/conversions.
 - `SEMANTIC_THREADS`: inference threads; the separate query worker uses one.
+- `SEMANTIC_VIDEO_MAX_FRAMES`: `16` (default), `8` or `4` small frames from
+  the opening 32 seconds. `8` samples every four seconds, reducing model inputs
+  while retaining the full-quality file. Fewer frames may miss short events;
+  measure speed and search quality before choosing a budget. This needs an
+  image containing the setting, not just an environment entry on an older image.
 - `KEEP_MIN_FREE_GB`: pause starting downloads below the free-space reserve.
   It does not reserve space for work already running; allow extra room for
   downloads, conversion output and other services.

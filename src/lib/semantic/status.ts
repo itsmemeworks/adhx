@@ -1,7 +1,12 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks, postEmbeddings, understandingQueue } from '@/lib/db/schema'
-import { SEMANTIC_MODEL_VERSION, semanticEnabled, type UnderstandingKind } from './config'
+import {
+  SEMANTIC_MODEL_VERSION,
+  VIDEO_FPS,
+  semanticEnabled,
+  type UnderstandingKind,
+} from './config'
 import { jobActivity } from './supervisor'
 
 export interface UnderstandingGroup {
@@ -13,6 +18,7 @@ export interface UnderstandingGroup {
 
 export interface UnderstandingStatus {
   enabled: boolean
+  videoFrameIntervalSeconds: number
   groups: UnderstandingGroup[]
   /** Saves with every part understood. */
   ready: number
@@ -140,6 +146,7 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
 
   return {
     enabled: semanticEnabled(),
+    videoFrameIntervalSeconds: 1 / VIDEO_FPS,
     groups,
     ready,
     totalSaves: all.length,

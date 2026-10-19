@@ -36,6 +36,16 @@ function status(partial: Partial<LearningStatus> = {}): LearningStatus {
 }
 
 describe('learning progress', () => {
+  it.each([
+    [4, 'four'],
+    [8, 'eight'],
+  ] as const)('shows the server sampling interval of %i seconds', (seconds, word) => {
+    render(
+      <LearningSheet status={status({ videoFrameIntervalSeconds: seconds })} onClose={() => {}} />,
+    )
+    expect(screen.getByText(`Watched, a frame every ${word} seconds`)).toBeInTheDocument()
+  })
+
   it('summarises what is left, focusing on the slowest kind', () => {
     const summary = learningSummary(status())
     expect(summary.remaining).toBe(237)

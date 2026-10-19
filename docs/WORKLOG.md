@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Optional lighter video inference without reducing kept quality
+
+- Add a bounded 4/8/16-frame inference setting; retain 16 by default and cover the same opening 32 seconds at each budget.
+- Pass the setting through both Compose examples and document the detail/work tradeoff; kept files, download quality and size controls are unchanged.
+- Include the interval in understanding status so progress copy reflects the selected budget, with compatibility for older servers.
+- Preserve the default video content hash; changed budgets affect only video hashes when queued again, without reindexing words/pictures or replacing originals.
+- Validate actual FFmpeg sampling counts, downscaling and original-file integrity with synthetic retained media; 2,900 tests, typecheck, lint (existing warnings only) and formatting pass. Target-device speed/quality comparison remains pending a published image.
+
 ## 2026-10-19 — Publish every main merge and validate release metadata
 
 - Decouple commit-image publication from Release Please and disabled legacy Fly deployment; every main push builds an immutable SHA image and advances `main` only for the current head.

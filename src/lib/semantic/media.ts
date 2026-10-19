@@ -177,8 +177,8 @@ export interface SampledFrames {
 }
 
 /**
- * Sample a video's first 32 seconds at one frame every 2s (at most 16),
- * downscaled. ffmpeg reads the stream over HTTP with Range requests, so
+ * Sample the opening 32 seconds, downscaled, using the configured frame budget
+ * (16 by default, one every 2s). ffmpeg reads the stream over HTTP with Range requests, so
  * only the sampled window (plus the index) is transferred.
  */
 export async function sampleVideoFrames(videoPath: string): Promise<SampledFrames> {

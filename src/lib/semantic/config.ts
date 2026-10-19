@@ -16,15 +16,20 @@ export const SEMANTIC_MODEL_VERSION = `${SEMANTIC_MODEL_ID}@${SEMANTIC_MODEL_REV
 export const SEMANTIC_DIMS = 768
 
 /**
- * Video sampling: the first 32 seconds (pond's window), one frame every 2s,
+ * Default video sampling: the first 32 seconds, one frame every 2s,
  * 70 vision tokens per frame. pond takes 32 frames at 140 tokens on a GPU; on
  * CPU that costs ~42s and ~3GB per video. 16 × 70 costs ~11–15s and ~2GB, and
  * its vector stays at cosine ~0.95 to the full one on real saves. Part of the
- * video content hash, so changing any of these re-queues videos.
+ * video content hash, so requeued videos refresh when this budget changes.
  */
-export const VIDEO_FPS = 0.5
 export const VIDEO_MAX_SECONDS = 32
-export const VIDEO_MAX_FRAMES = 16
+// A smaller inference budget covers the same opening window with fewer frames.
+// It never changes the retained video, its resolution or download limits.
+const configuredVideoFrames = Number(process.env['SEMANTIC_VIDEO_MAX_FRAMES'] || 16)
+export const VIDEO_MAX_FRAMES = [4, 8, 16].includes(configuredVideoFrames)
+  ? configuredVideoFrames
+  : 16
+export const VIDEO_FPS = VIDEO_MAX_FRAMES / VIDEO_MAX_SECONDS
 export const VIDEO_SOFT_TOKENS = 70
 export const VIDEO_SAMPLING = `fps${VIDEO_FPS}x${VIDEO_MAX_FRAMES}@${VIDEO_MAX_SECONDS}s/t${VIDEO_SOFT_TOKENS}`
 /** Frames are downscaled before embedding; the model resizes to its own patch grid anyway. */

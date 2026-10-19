@@ -126,6 +126,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                       |
 | `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                        |
 | `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                           |
+| `SEMANTIC_VIDEO_MAX_FRAMES`                  | Video inference budget: `16` (default), `8` or `4` frames over the first 32 seconds. Kept video quality is unchanged.        |
 | `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                          |
 | `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                         |
 | `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.             |
@@ -152,7 +153,16 @@ Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_
 
 Search by meaning runs on your own server, with [EmbeddingGemma 2](https://huggingface.co/onnx-community/embeddinggemma-2-ONNX): the text model at 4-bit and its picture encoder at 8-bit, at a pinned revision. There's nothing to install. The first time the server starts, it downloads the weights from Hugging Face into `models/` next to the database: about 400 MB, so the server needs to reach `huggingface.co` once. After that it runs offline. For a server with no internet access, copy the `models/` folder from another ADHX.
 
-Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames (one every 2 seconds). Sounds are found only by their words. Understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames (one every 2 seconds by default). Sounds are found only by their words. Understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+
+For lighter video inference, set `SEMANTIC_VIDEO_MAX_FRAMES=8`: one frame every
+four seconds, covering the same opening 32 seconds. `4` samples every eight
+seconds; `16` keeps the default detail. Each sampled frame is downscaled to
+448 pixels wide. This reduces inference inputs, not the quality or resolution
+of kept videos. Fewer frames can miss short events; speed and search-quality
+improvements need testing on your own saves. Recreate the container after
+changing the setting. Pending/new video jobs use it; completed video vectors
+refresh if the post is queued again. Text and picture vectors are unchanged.
 
 `TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
 
