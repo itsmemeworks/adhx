@@ -133,7 +133,21 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
     bookmark?: { id?: string; platform?: string }
   } = {}
   try {
-    const response = await addBookmark(row.userId, row.url, 'phone_app')
+    const canSave = () =>
+      db
+        .select({ id: phoneSaveQueue.id })
+        .from(phoneSaveQueue)
+        .where(
+          and(
+            eq(phoneSaveQueue.id, row.id),
+            eq(phoneSaveQueue.userId, row.userId),
+            inArray(phoneSaveQueue.status, ['waiting', 'working']),
+            sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${phoneSaveQueue.userId})`,
+          ),
+        )
+        .get() !== undefined
+    if (!canSave()) return
+    const response = await addBookmark(row.userId, row.url, 'phone_app', canSave)
     status = response.status
     data = (await response.json().catch(() => ({}))) as typeof data
   } catch (error) {

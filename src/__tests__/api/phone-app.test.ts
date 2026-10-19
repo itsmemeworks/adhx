@@ -23,10 +23,11 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: vi.fn(async () => sessionUser),
+  clearSessionCookie: vi.fn(),
 }))
 
 vi.mock('@/lib/sentry', () => ({
-  metrics: { bookmarkAdded: vi.fn() },
+  metrics: { bookmarkAdded: vi.fn(), dataCleared: vi.fn() },
   captureException: vi.fn(),
 }))
 
@@ -623,6 +624,57 @@ describe('saving in the background (Prefer: respond-async)', () => {
     const res = await GET(get(`/api/app/save?id=${id}`, key))
     return { status: res.status, body: await res.json() }
   }
+
+  it.each(['clear', 'delete'] as const)(
+    'does not resurrect an in-flight save after account %s',
+    async (action) => {
+      const key = await phoneKey()
+      const queued = await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+      const description = await mockDescribeNetworkPost()
+      mockDescribeNetworkPost.mockClear()
+      let release!: (value: unknown) => void
+      let started!: () => void
+      const reading = new Promise<void>((resolve) => {
+        started = resolve
+      })
+      mockDescribeNetworkPost.mockImplementationOnce(() => {
+        started()
+        return new Promise((resolve) => {
+          release = resolve
+        })
+      })
+      const { saveQueueTick } = await import('@/lib/app/save-queue')
+      const working = saveQueueTick()
+      await reading
+      expect(testInstance.db.select().from(schema.phoneSaveQueue).all()[0]).toMatchObject({
+        id: queued.body.id,
+        status: 'working',
+      })
+      sessionUser = 'user-1'
+      const response =
+        action === 'clear'
+          ? await (await import('@/app/api/account/clear/route')).POST()
+          : await (await import('@/app/api/account/route')).DELETE()
+      expect(response.status).toBe(200)
+      release(description)
+      await working
+      expect(testInstance.db.select().from(schema.phoneSaveQueue).all()).toHaveLength(0)
+      expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+      expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(0)
+      expect(wakeKeep).not.toHaveBeenCalled()
+    },
+  )
+
+  it('does not start a queued operation removed before execution', async () => {
+    const key = await phoneKey()
+    await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    const stale = testInstance.db.select().from(schema.phoneSaveQueue).all()[0]
+    testInstance.db.delete(schema.phoneSaveQueue).run()
+    const { runQueuedSave } = await import('@/lib/app/save-queue')
+    await runQueuedSave(stale)
+    expect(mockDescribeNetworkPost).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+  })
 
   it('answers at once and saves the post in the background', async () => {
     const key = await phoneKey()

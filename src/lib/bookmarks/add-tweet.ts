@@ -10,6 +10,7 @@ import { fetchOgMetadata } from '@/lib/utils/og-fetch'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { noteSaved } from '@/lib/semantic'
+import { cancelledSave, type SaveGuard } from './save-guard'
 
 /**
  * Save a tweet by its URL for `userId` (POST /api/tweets/add, and the X branch
@@ -19,8 +20,10 @@ export async function addTweet(
   userId: string,
   url: unknown,
   source: string = 'manual',
+  canSave: SaveGuard = () => true,
 ): Promise<NextResponse> {
   try {
+    if (!canSave()) return cancelledSave()
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 })
     }
@@ -70,6 +73,7 @@ export async function addTweet(
           ),
         )
         .limit(1)
+      if (!canSave()) return cancelledSave()
       recordActivity({
         action: 'save',
         platform: 'twitter',
@@ -300,6 +304,7 @@ export async function addTweet(
     // All multi-table writes happen atomically: main bookmark + its media +
     // links, plus (optionally) the quoted tweet + its media.
     const inserted = runInTransaction(() => {
+      if (!canSave()) return null
       const bookmarkInsert = db
         .insert(bookmarks)
         .values({
@@ -397,6 +402,7 @@ export async function addTweet(
       return inserted
     })
 
+    if (inserted === null) return cancelledSave()
     // Fetch the created bookmark
     const newBookmark = await db
       .select()

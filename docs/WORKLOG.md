@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Cancel queued shares when clearing an account
+
+- Clear-account now deletes queued URLs together with saved data.
+- Revalidate the queue receipt and live account before work and inside every platform's save transaction after metadata fetching.
+- Keep the optional transactional guard inactive for ordinary saves; cleared/deleted queued work cannot restore bookmarks or media.
+- Add deferred-metadata clear/delete regressions and stale-claim coverage; 108 focused server tests, typecheck, lint (existing warnings) and formatting pass.
+- Android queue-receipt JVM tests (3) and debug APK build pass with one worker and a 1 GiB compiler heap. Source-only changes; no service or phone installed.
+
 ## 2026-10-19 — Durable phone queue receipts and feed readiness
 
 - Review fixes for background phone saves: include queued metadata in account-scoped preparing counts and keep disabled/backfill-excluded downloads visible.

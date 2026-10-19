@@ -96,8 +96,9 @@ The server retries a slow or failing network on its own, so the sheet can
 close at any point. Without the header, `POST` saves at once as above (older
 apps).
 Apps persist the queue receipt before following it and resume polling after
-restarts without posting the same link again. Deleting an account removes
-its queued links together with its other private data.
+restarts without posting the same link again. Clearing or deleting an account
+removes its queued links. A queued metadata request already in progress checks
+its receipt again inside the save transaction, so it cannot restore cleared data.
 
 ### `GET /api/app/status?platform=…&id=…`
 

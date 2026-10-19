@@ -24,6 +24,7 @@ import { keptFilesFor } from '@/lib/keep/store'
 import { expandShortLink, isShortLink } from '@/lib/keep/shortlinks'
 import { keptSrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
+import { cancelledSave, type SaveGuard } from './save-guard'
 
 /**
  * Save the post a link points to for `userId` — the platform-agnostic save
@@ -42,8 +43,10 @@ export async function addBookmark(
   userId: string,
   url: unknown,
   source: string = 'manual',
+  canSave: SaveGuard = () => true,
 ): Promise<NextResponse> {
   try {
+    if (!canSave()) return cancelledSave()
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 })
     }
@@ -55,7 +58,7 @@ export async function addBookmark(
     const detected = detectPlatformPost(expanded ?? url)
 
     if (detected?.platform === 'twitter') {
-      const tweetResponse = await addTweet(userId, url, source)
+      const tweetResponse = await addTweet(userId, url, source, canSave)
       const tweetData = await tweetResponse.json()
       return NextResponse.json(
         { ...tweetData, platform: 'twitter' },
@@ -69,6 +72,7 @@ export async function addBookmark(
         detected.id,
         source,
         detected.previewPath.startsWith('/p/') ? 'post' : 'reel',
+        canSave,
       )
     }
 
@@ -78,12 +82,12 @@ export async function addBookmark(
     if (detected?.platform === 'tiktok' || isTikTokShortLink(url)) {
       const resolved = await resolveTikTokUrl(url)
       if (resolved) {
-        return await addTikTokVideo(userId, resolved.handle, resolved.videoId, source)
+        return await addTikTokVideo(userId, resolved.handle, resolved.videoId, source, canSave)
       }
     }
 
     if (detected && isLinkNetwork(detected.platform)) {
-      return await addNetworkPost(userId, detected as NetworkPost, source)
+      return await addNetworkPost(userId, detected as NetworkPost, source, canSave)
     }
 
     return NextResponse.json(
@@ -104,6 +108,7 @@ async function addInstagramPost(
   postId: string,
   source: string,
   pathHint: 'post' | 'reel',
+  canSave: SaveGuard,
 ) {
   const [existing] = await db
     .select()
@@ -164,6 +169,7 @@ async function addInstagramPost(
   const postUrl = `https://www.instagram.com/${sourcePath}/${postId}/`
 
   const result = runInTransaction(() => {
+    if (!canSave()) return null
     const bookmarkInsert = db
       .insert(bookmarks)
       .values({
@@ -275,6 +281,7 @@ async function addInstagramPost(
     }
   })
 
+  if (!result) return cancelledSave()
   if (!result.inserted) {
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'instagram', bookmark: result.bookmark },
@@ -310,7 +317,13 @@ async function addInstagramPost(
   })
 }
 
-async function addTikTokVideo(userId: string, handle: string, videoId: string, source: string) {
+async function addTikTokVideo(
+  userId: string,
+  handle: string,
+  videoId: string,
+  source: string,
+  canSave: SaveGuard,
+) {
   const [existing] = await db
     .select()
     .from(bookmarks)
@@ -355,6 +368,7 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
   const tiktokUrl = `https://www.tiktok.com/@${handle}/video/${videoId}`
 
   const result = runInTransaction(() => {
+    if (!canSave()) return null
     const bookmarkInsert = db
       .insert(bookmarks)
       .values({
@@ -413,6 +427,7 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
     }
   })
 
+  if (!result) return cancelledSave()
   if (!result.inserted) {
     return NextResponse.json(
       { success: false, isDuplicate: true, platform: 'tiktok', bookmark: result.bookmark },
@@ -450,7 +465,12 @@ async function addTikTokVideo(userId: string, handle: string, videoId: string, s
  * what it is once, stores the words and a media row per file, and queues the
  * download: ADHX keeps and serves these files itself.
  */
-async function addNetworkPost(userId: string, post: NetworkPost, source: string) {
+async function addNetworkPost(
+  userId: string,
+  post: NetworkPost,
+  source: string,
+  canSave: SaveGuard,
+) {
   const platform = post.platform
   const existing = db
     .select()
@@ -509,6 +529,7 @@ async function addNetworkPost(userId: string, post: NetworkPost, source: string)
   }
 
   const result = runInTransaction(() => {
+    if (!canSave()) return null
     const insert = db
       .insert(bookmarks)
       .values({
@@ -552,6 +573,7 @@ async function addNetworkPost(userId: string, post: NetworkPost, source: string)
     }
   })
 
+  if (!result) return cancelledSave()
   if (!result.inserted) {
     return NextResponse.json(
       { success: false, isDuplicate: true, platform, bookmark: result.bookmark },
