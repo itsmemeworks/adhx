@@ -103,6 +103,33 @@ beforeEach(async () => {
 afterEach(() => testInstance.close())
 
 describe('GET /api/app/saves', () => {
+  it('leaves a save out until its copy is kept, and says how many are on their way', async () => {
+    saveFor('user-1', '100', '2026-10-01T00:00:00.000Z', {}, [{ type: 'video' }])
+    saveFor('user-1', '200', '2026-10-02T00:00:00.000Z', {}, [{ type: 'video' }])
+    saveFor('user-1', '300', '2026-10-03T00:00:00.000Z', { text: 'just words' })
+    const job = (id: string, status: string) =>
+      testInstance.db
+        .insert(schema.keepJobs)
+        .values({ platform: 'twitter', postId: id, status, updatedAt: new Date().toISOString() })
+        .onConflictDoUpdate({
+          target: [schema.keepJobs.platform, schema.keepJobs.postId],
+          set: { status },
+        })
+        .run()
+    job('100', 'done')
+    job('200', 'running')
+    const key = await phoneKey('user-1')
+
+    const now = await saves('', key)
+    expect(now.body.items.map((i: { id: string }) => i.id)).toEqual(['300', '100'])
+    expect(now.body).toMatchObject({ total: 2, preparing: 1 })
+
+    job('200', 'done')
+    const later = await saves('', key)
+    expect(later.body.items.map((i: { id: string }) => i.id)).toEqual(['300', '200', '100'])
+    expect(later.body.preparing).toBe(0)
+  })
+
   it('lists your saves newest first, ready to play, and pages through them', async () => {
     saveFor('user-1', '100', '2026-10-01T00:00:00.000Z', {}, [{ type: 'video' }])
     saveFor('user-1', '200', '2026-10-02T00:00:00.000Z', {}, [{ type: 'photo' }, { type: 'photo' }])

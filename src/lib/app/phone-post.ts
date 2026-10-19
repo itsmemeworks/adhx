@@ -101,14 +101,29 @@ export async function listSaves(
   userId: string,
   offset: number,
   limit: number,
-): Promise<{ items: PhonePost[]; total: number; nextOffset: number | null }> {
+): Promise<{
+  items: PhonePost[]
+  total: number
+  nextOffset: number | null
+  /** Saves not shown yet: still being downloaded. */
+  preparing: number
+}> {
   const notArchived = sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN (
     SELECT ${archivedPosts.bookmarkId}, ${archivedPosts.platform}
     FROM ${archivedPosts} WHERE ${archivedPosts.userId} = ${userId}
   )`
-  const where = and(eq(bookmarks.userId, userId), notArchived)
-  const [[{ n }], rows] = await Promise.all([
+  // A post joins the phone's feed once it's ready: its copy is kept (or
+  // can't be, or isn't needed). Until then it would only show a spinner.
+  const preparingJob = sql`EXISTS (
+    SELECT 1 FROM keep_jobs j
+    WHERE j.platform = ${bookmarks.platform} AND j.post_id = ${bookmarks.id}
+      AND j.status IN ('pending', 'running', 'failed')
+  )`
+  const mine = and(eq(bookmarks.userId, userId), notArchived)
+  const where = and(mine, sql`NOT ${preparingJob}`)
+  const [[{ n }], [{ waiting }], rows] = await Promise.all([
     db.select({ n: count() }).from(bookmarks).where(where),
+    db.select({ waiting: count() }).from(bookmarks).where(and(mine, preparingJob)),
     db
       .select({ platform: bookmarks.platform, id: bookmarks.id })
       .from(bookmarks)
@@ -123,6 +138,7 @@ export async function listSaves(
     items: items.map((item) => toPhonePost(item, false)),
     total: n,
     nextOffset: next < n ? next : null,
+    preparing: waiting,
   }
 }
 

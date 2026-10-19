@@ -54,6 +54,9 @@ export async function register(): Promise<void> {
   // copies. Off with KEEP_MEDIA=off, and under test.
   const { startKeeping } = await import('@/lib/keep/worker')
   startKeeping()
+  // Links shared from the phone app, read and saved in the background.
+  const { startSaveQueue } = await import('@/lib/app/save-queue')
+  startSaveQueue()
 }
 
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {

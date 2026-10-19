@@ -259,6 +259,36 @@ export const keepSettings = sqliteTable('keep_settings', {
   value: text('value').notNull(),
 })
 
+/**
+ * Links shared from the phone app, saved in the background: the share sheet
+ * gets an answer at once, and the post appears once it's read and kept.
+ */
+export const phoneSaveQueue = sqliteTable(
+  'phone_save_queue',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    url: text('url').notNull(),
+    /** waiting · working · saved · failed */
+    status: text('status').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: text('next_attempt_at'),
+    /** Set once saved. */
+    platform: text('platform'),
+    postId: text('post_id'),
+    alreadySaved: integer('already_saved', { mode: 'boolean' }).notNull().default(false),
+    /** Set once failed: a code the apps know, and words fit to show. */
+    errorCode: text('error_code'),
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    statusIdx: index('phone_save_queue_status_idx').on(table.status, table.nextAttemptAt),
+    userIdx: index('phone_save_queue_user_id_idx').on(table.userId),
+  }),
+)
+
 export const keepJobs = sqliteTable(
   'keep_jobs',
   {
