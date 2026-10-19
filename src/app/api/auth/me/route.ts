@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { getCurrentUserId, renewSessionCookie } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { isAdminUserId } from '@/lib/admin/guard'
 import { pendingAdminSignInLinks, signInDelivery } from '@/lib/email/magic-link'
@@ -27,7 +27,7 @@ export async function GET() {
   }
 
   const isAdmin = await isAdminUserId(userId)
-  return NextResponse.json({
+  const response = NextResponse.json({
     authenticated: true,
     user: {
       id: account.user.id,
@@ -47,4 +47,7 @@ export async function GET() {
       ? { waitingSignIns: pendingAdminSignInLinks().length }
       : {}),
   })
+  // Every page asks this, so an active session never runs out.
+  await renewSessionCookie(response)
+  return response
 }
