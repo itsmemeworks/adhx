@@ -46,6 +46,10 @@ environment values through the interface or supply a `.env` file alongside
 it, and select a persistent folder. The interface's own setup steps differ
 by vendor; the container contract above stays the same.
 
+UGREEN owners can follow the optional [UGOS Pro walkthrough](ugreen.md) for
+project creation, storage initialization and the first sign-in. The examples
+in this main guide remain portable across Docker hosts and NAS vendors.
+
 ## Prepare the configuration
 
 For the container-proxy example, copy this directory's `.env.example` to

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — UGREEN deployment guide and first-save recovery
+
+- Add an optional UGOS Pro walkthrough while retaining the portable Docker contract, including private bind-folder initialization, GUI configuration, proxy hooks and backups.
+- Correct onboarding username-change guidance and distinguish email, admin-held and development sign-in links in the save modal.
+- Recover failed retained-video previews when the matching post is saved; restore account-scoped Saved state and private tags on shared-preview reload.
+- Document Jev search refinement and automatic channel/moment naming, including the public-text payload and local fallback.
+- Private ARM64 trial verifies persistent accounts/saves, retained 1080p video and byte ranges, and real text/image/video indexing; household configuration and credentials remain outside the repository.
+- Validation and final trial follow-ups are recorded in the PR; this source change does not publish a website or update an installed image automatically.
+
 ## 2026-10-19 — Reproducible font builds and verified Linux inference
 
 - Bundle unchanged official font files, OFL licences and pinned provenance; root and site use local fonts, avoiding Google's variable response format and an upstream Turbopack parser failure.

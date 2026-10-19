@@ -73,10 +73,10 @@ function EmailStep({
         delivery?: Delivery
         setup?: boolean
       } | null
-      if (!res.ok) throw new Error(data?.error ?? 'Couldn’t send the link. Try again.')
+      if (!res.ok) throw new Error(data?.error ?? 'Couldn’t get your link. Try again.')
       onSent(email.trim(), data?.setup ? 'setup' : (data?.delivery ?? 'email'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Couldn’t send the link. Try again.')
+      setError(err instanceof Error ? err.message : 'Couldn’t get your link. Try again.')
     } finally {
       setBusy(false)
     }
@@ -94,7 +94,7 @@ function EmailStep({
       </div>
       <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3">
         <label htmlFor="nx-email" className="text-sm text-white/65">
-          Your email. We’ll send a link, no password.
+          Your email. Sign in with a link, no password.
         </label>
         <input
           id="nx-email"
@@ -116,7 +116,7 @@ function EmailStep({
           disabled={busy}
           className="h-[54px] rounded-full bg-nx-accent text-[17px] font-extrabold text-black disabled:opacity-70"
         >
-          {busy ? 'Sending…' : 'Send me a link'}
+          {busy ? 'Getting your link…' : 'Get a sign-in link'}
         </button>
       </form>
       <span className="text-center text-xs text-white/50">

@@ -80,6 +80,8 @@ Once a release containing this code is published and tested, set `ADHX_IMAGE=ghc
 
 **On a Docker host or NAS**, the [deployment guide](deploy/nas/README.md) explains persistent storage, permissions, resource controls, backups and connecting your own HTTPS proxy. The container-proxy example publishes no host port and requires no particular NAS vendor, VPN or public tunnel.
 
+For UGREEN's Docker interface, use the optional [UGOS Pro walkthrough](deploy/nas/ugreen.md), including data-folder permissions and the first sign-in.
+
 ### Sign-in links
 
 People sign in with a link that works once, for 15 minutes. Choose how links reach them:
@@ -102,29 +104,29 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 
 ### Settings
 
-| Setting                                      | What it does                                                                                                                   |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_APP_URL`                        | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here.                                             |
-| `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                     |
-| `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                     |
-| `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                   |
-| `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.      |
-| `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                       |
-| `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                         |
-| `KEEP_H264=off`                              | Keep videos in whatever format the network sent (see [Video formats](#video-formats)).                                         |
-| `KEEP_MAX_FILESIZE`                          | Largest single download, default `4G`.                                                                                         |
-| `KEEP_CONCURRENCY`                           | Posts downloaded at once, default `2`.                                                                                         |
-| `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                    |
-| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                      |
-| `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                         |
-| `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                          |
-| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                             |
-| `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                            |
-| `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                           |
-| `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.               |
-| `TYPESAFE_API_KEY`                           | Optional: reorders the top search results by their words. Only the search text and the public words of those results are sent. |
-| `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                          |
-| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                      |
+| Setting                                      | What it does                                                                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_APP_URL`                        | The address people use, e.g. `https://adhx.example.com`. Sign-in links point here.                                           |
+| `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                   |
+| `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                   |
+| `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                 |
+| `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.    |
+| `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                     |
+| `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                       |
+| `KEEP_H264=off`                              | Keep videos in whatever format the network sent (see [Video formats](#video-formats)).                                       |
+| `KEEP_MAX_FILESIZE`                          | Largest single download, default `4G`.                                                                                       |
+| `KEEP_CONCURRENCY`                           | Posts downloaded at once, default `2`.                                                                                       |
+| `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                  |
+| `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                    |
+| `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                       |
+| `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                        |
+| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                           |
+| `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                          |
+| `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                         |
+| `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.             |
+| `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text. |
+| `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                        |
+| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                    |
 
 Every setting is in [`.env.example`](.env.example).
 
@@ -147,7 +149,7 @@ Search by meaning runs on your own server, with [EmbeddingGemma 2](https://huggi
 
 Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames (one every 2 seconds). Sounds are found only by their words. Understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
 
-`TYPESAFE_API_KEY` is optional. With it, the top results are reordered by their words, and only the search text and the public words of those results are sent.
+`TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
 
 ### Video formats
 

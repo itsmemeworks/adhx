@@ -10,7 +10,10 @@ import type { TheaterItem } from '@/components/theater/types'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 
 const auth = vi.hoisted(() => ({
-  me: { authenticated: true } as { authenticated: boolean } | null,
+  me: { authenticated: true } as {
+    authenticated: boolean
+    user?: { id: string } | null
+  } | null,
 }))
 const open = vi.hoisted(() => ({
   ctx: {
@@ -35,13 +38,15 @@ vi.mock('@/components/next/theater/TheaterV2', () => ({
     lead,
     source,
   }: {
-    lead?: { post: { id: string; text: string } }
+    lead?: { post: { id: string; text: string; tags: string[] }; saved: boolean }
     source: { shared?: boolean; search: { scope: string } }
   }) => (
     <div
       data-testid="theater"
       data-shared={String(!!source.shared)}
       data-scope={source.search.scope}
+      data-saved={String(!!lead?.saved)}
+      data-tags={lead?.post.tags.join(',')}
     >
       {lead ? `${lead.post.id}: ${lead.post.text}` : 'loading'}
     </div>
@@ -123,6 +128,36 @@ describe('PreviewTheater', () => {
     })
     await screen.findByTestId('theater')
     expect(fetchMock).not.toHaveBeenCalled()
+    open.ctx = { ...open.ctx, navigationType: 'navigate' }
+  })
+
+  it('recognizes an existing save on reload and scopes its tags to the active account', async () => {
+    open.ctx = { ...open.ctx, navigationType: 'reload' as never }
+    auth.me = { authenticated: true, user: { id: 'owner-a' } }
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({ items: [{ id: '20', platform: 'twitter', tags: ['private'] }] }),
+        ),
+    )
+    const resolve = resolved({ ok: true, item: jack, seoEligible: false, related: null })
+    const rendered = await act(async () => render(<PreviewTheater resolve={resolve} />))
+    const theater = await screen.findByTestId('theater')
+    await waitFor(() => expect(theater).toHaveAttribute('data-saved', 'true'))
+    expect(theater).toHaveAttribute('data-tags', 'private')
+    const lookup = fetchMock.mock.calls.find(([url]) => String(url).startsWith('/api/feed?'))
+    const params = new URL(String(lookup?.[0]), 'http://localhost').searchParams
+    expect(params.get('idPlatform')).toBe('twitter')
+    expect(params.get('id')).toBe('20')
+    expect(params.get('hideArchived')).toBe('false')
+
+    auth.me = { authenticated: true, user: { id: 'owner-b' } }
+    fetchMock.mockResolvedValue(new Response('{"items":[]}'))
+    rendered.rerender(<PreviewTheater resolve={resolve} />)
+    expect(theater).toHaveAttribute('data-saved', 'false')
+    expect(theater).toHaveAttribute('data-tags', '')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(fetchMock.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false)
     open.ctx = { ...open.ctx, navigationType: 'navigate' }
   })
 

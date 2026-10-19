@@ -42,6 +42,7 @@ import {
 } from './useTheaterStageEvents'
 import { nextAlbumIndex, StageAlbumDots, StageAlbumScroller } from './StageAlbumChrome'
 import type { TheaterItem } from './types'
+import { POST_SAVED } from '@/lib/theater/client-events'
 
 /**
  * How long a failed video stays on screen before the queue moves on. Matches
@@ -138,6 +139,7 @@ export function StageVideo({
   // load-failure state (retry is worth offering).
   const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [reloadVersion, setReloadVersion] = useState(0)
   const recordPlayback = usePostPlayback(item)
   // Mirrors the live element's `.muted`. Initialized from the `muted` prop,
   // which is only the extern/initial signal from here on — once the user
@@ -199,6 +201,30 @@ export function StageVideo({
     video.muted = muted
     setEffectiveMuted(muted)
   }, [muted])
+
+  // Unsaved previews can fail before there is a retained file. Saving queues
+  // that same URL for download, so changing only the Save button cannot recover
+  // the media element. Reload the existing element once the matching save
+  // succeeds; /api/files waits for an in-progress download. Leave an already
+  // playable video alone so saving never interrupts it or resets its position.
+  useEffect(() => {
+    const onSaved = (event: Event) => {
+      const key = (event as CustomEvent<{ key?: unknown }>).detail?.key
+      const video = videoRef.current
+      if (
+        covered ||
+        key !== `${item.platform || 'twitter'}:${item.bookmarkId}` ||
+        !src.startsWith('/api/files/') ||
+        !video ||
+        video.readyState > 0
+      ) {
+        return
+      }
+      setReloadVersion((version) => version + 1)
+    }
+    window.addEventListener(POST_SAVED, onSaved)
+    return () => window.removeEventListener(POST_SAVED, onSaved)
+  }, [item.platform, item.bookmarkId, src, covered])
 
   // The top progress line is an interactive scrubber. Seek the persistent
   // media element in place so its iOS sound grant survives, and ignore the
@@ -287,7 +313,7 @@ export function StageVideo({
     sourceGenerationRef.current += 1
     currentSrcRef.current = src
     activeLifecycleRef.current = null
-  }, [src])
+  }, [src, reloadVersion])
 
   // New item: reset per-video UI state, then swap the element's source in
   // place and play it. This is the ONLY place that calls play() for a
@@ -354,7 +380,7 @@ export function StageVideo({
         sourceGenerationRef.current += 1
       }
     }
-  }, [src])
+  }, [src, reloadVersion])
 
   // Cover transitions. Pausing is unconditional (a covered video must never be
   // heard under a text post); resuming only touches a video this component
@@ -721,7 +747,10 @@ export function StageVideo({
     if (!isCurrentLifecycleEvent(event.currentTarget)) return
     const { generation, src: operationSrc } = captureSource()
     setErrored(true)
-    fetch(operationSrc, { headers: { Range: 'bytes=0-1' } })
+    fetch(operationSrc, {
+      headers: { Range: 'bytes=0-1' },
+      signal: AbortSignal.timeout(30_000),
+    })
       .then(async (res) => {
         if (!isCurrentSource(generation, operationSrc)) return null
         if (res.status !== 410 && res.status !== 404) return null

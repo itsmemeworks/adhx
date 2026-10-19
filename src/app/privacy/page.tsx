@@ -77,7 +77,8 @@ export default function PrivacyPage() {
           cover posts anyone has saved and never show who saved them. “Made for you” channels are
           private to you. When the operator enables optional refinement, your search text and the
           public words of the top results are sent to TypeSafe (Jev) to put them in a better order;
-          your channels and who saved a post are never sent.
+          it also receives public text from small samples of grouped posts to choose automatic
+          channel and moment names. Media files, private tags and account identities are never sent.
         </Section>
 
         <Section title="Right now and the community pulse">
@@ -91,9 +92,9 @@ export default function PrivacyPage() {
         <Section title="Third parties">
           Depending on the operator’s settings: X for optional bookmark sync, SMTP or Resend for
           email, Sentry for optional error reporting, the chosen hosting provider, and TypeSafe for
-          optional refinement and channel naming. Hugging Face sees the model download request, not
-          your saved library. Networks and public preview providers supply saved posts and media. No
-          advertising pixels.
+          optional refinement and automatic channel/moment naming. Hugging Face sees the model
+          download request, not your saved library. Networks and public preview providers supply
+          saved posts and media. No advertising pixels.
         </Section>
 
         <Section title="Your choices">
