@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Design parity harness (`e2e/parity/`)
+
+- `pnpm parity:serve` seeds a fresh DB with the friends-feed boards' world (Pete admin, Ana, Ben, Mum, Jo; the boards' posts, times, private saves, invites, a waiting join request under "Anyone, I approve", group and Made for you channels, moments, /doing states, seen rows so New shows 12) and runs Next on :3600. Kept media is cloned from `PARITY_MEDIA_SRC` (ffmpeg placeholders without it).
+- `credentials.json` holds a session cookie and a phone key (real pairing flow) per member, so iOS/Android can point at the same server.
+- `pnpm parity:capture` screenshots all 17 `j*-web-*` boards at 1280×800 and 390×844 in their states (⋯ menu, Who saved it, caught-up card, searches, invite made, avatar dialog, tuned in with watchers and reactions), never marking anything seen. `pnpm parity:compare` writes side-by-sides and a worst-first score report.
+- Gaps: no notes in the schema; moment names come from shared words without the model; keep percent and "Mac helper connected" need live work. See `e2e/parity/README.md`.
+- No UI changed.
+
 ## 2026-10-19 — Harden friends-feed delivery, live rooms and processing
 
 - Android shares now use durable staged delivery; both phones reuse request IDs and monotonic privacy versions, with cross-process-safe iPhone history and retryable interrupted acknowledgements.
