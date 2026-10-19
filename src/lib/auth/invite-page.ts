@@ -2,6 +2,7 @@ import type { NextResponse } from 'next/server'
 import { escapeHtml, scriptFreePage } from './link-page'
 import type { InviteProblem } from './invites'
 import { USERNAME_MAX_LENGTH } from './username-rules'
+import { personColour } from '@/components/next/moments/people'
 
 /** Plain reasons an invite can't be used. */
 export const INVITE_PROBLEMS: Record<InviteProblem, string> = {
@@ -61,15 +62,20 @@ export function inviteJoinPage(options: {
   const signedIn = options.signedInAs
     ? `<p class="note">You’re signed in here as @${escapeHtml(options.signedInAs)}. Joining switches this browser to your new name.</p>`
     : ''
+  const inviter = escapeHtml(options.inviter)
+  const initial = escapeHtml(Array.from(options.inviter.trim())[0]?.toUpperCase() ?? '?')
   return scriptFreePage({
     title: `${options.inviter} wants you in.`,
-    content: `<p>Pick a name. No password, no email needed.</p>
-       <form action="/invite/${escapeHtml(options.token)}" method="post">
+    heading: `${inviter} wants you in. <span class="accent">Pick a name.</span>`,
+    kicker: 'Private invite',
+    before: `<div class="chip"><span class="face" aria-hidden="true" style="background:${personColour(options.inviter)}">${initial}</span><span><b>${inviter} invited you</b><small>to their ADHX, for friends only</small></span></div>`,
+    content: `<form action="/invite/${escapeHtml(options.token)}" method="post">
          <label for="username">Your name</label>
          <input class="field" id="username" name="username" value="${escapeHtml(options.name)}" required minlength="3" maxlength="${USERNAME_MAX_LENGTH}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="${options.error ? 'name-error' : 'name-hint'}"${options.error ? ' aria-invalid="true" autofocus' : ''}>
          ${error}
-         <button type="submit">Join</button>
-       </form>${signedIn}`,
+         <button type="submit">Join<span aria-hidden="true">→</span></button>
+       </form>
+       <p class="note">No password, no email needed. This link works once and lasts 7 days.</p>${signedIn}`,
     status: options.status,
   })
 }

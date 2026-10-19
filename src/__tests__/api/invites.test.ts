@@ -268,7 +268,7 @@ describe('invites', () => {
       expect(html).toContain('Pick a name.')
       expect(html).toContain(`action="/invite/${token}" method="post"`)
       expect(html).toContain('name="username" value="cleo"')
-      expect(html).toContain('>Join</button>')
+      expect(html).toMatch(/>Join<span aria-hidden="true">→<\/span><\/button>/)
       expect(html).not.toMatch(/<script/i)
       expect(res.headers.get('content-security-policy')).toContain("default-src 'none'")
       expect(res.headers.get('cache-control')).toBe('no-store')

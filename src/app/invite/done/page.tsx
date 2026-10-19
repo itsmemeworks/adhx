@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
+import { eq } from 'drizzle-orm'
+import { db } from '@/lib/db'
+import { invites } from '@/lib/db/schema'
+import { membersById } from '@/lib/people/by-id'
 import { InviteDoneClient } from './InviteDoneClient'
 
 export const dynamic = 'force-dynamic'
@@ -17,5 +21,22 @@ export default async function InviteDonePage() {
   if (!userId) redirect('/')
   const account = await getAccount(userId)
   if (!account) redirect('/')
-  return <InviteDoneClient username={account.user.username} hasEmail={!!account.identities.email} />
+  // Whose invite brought you here: "on Ana’s ADHX".
+  const [used] = await db
+    .select({ createdBy: invites.createdBy })
+    .from(invites)
+    .where(eq(invites.usedBy, userId))
+    .limit(1)
+  const face = used ? membersById([used.createdBy]).get(used.createdBy) : undefined
+  return (
+    <InviteDoneClient
+      username={account.user.username}
+      displayName={account.user.displayName}
+      avatarUrl={account.user.avatarUrl}
+      inviter={
+        face ? { username: face.username, name: face.name, avatarUrl: face.avatarUrl } : null
+      }
+      hasEmail={!!account.identities.email}
+    />
+  )
 }

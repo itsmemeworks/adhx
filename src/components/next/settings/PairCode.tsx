@@ -99,7 +99,8 @@ export function usePairCode(): PairCodeState {
       const qr = await QRCode.toDataURL(link, {
         margin: 0,
         width: 336,
-        errorCorrectionLevel: 'M',
+        // High: the "You're in" page puts Gob over the middle.
+        errorCorrectionLevel: 'H',
         color: { dark: '#000000', light: '#ffffff' },
       })
       setNow(Date.now())
