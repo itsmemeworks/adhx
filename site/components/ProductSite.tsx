@@ -412,13 +412,14 @@ export function ProductSite() {
               id="hero-title"
               className="m-0 font-nx-serif text-[54px] font-normal leading-[0.95] md:text-[96px]"
             >
-              <span>Keep every post you love. </span>
-              <span className="text-nx-accent">On your own server.</span>
+              <span>Your friends have better taste </span>
+              <span className="text-nx-accent">than the algorithm.</span>
             </h1>
             <p className="m-0 max-w-[720px] text-[18px] leading-relaxed text-nx-soft md:text-[21px]">
-              ADHX saves posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks. It
-              keeps copies at the best available resolution on your own server, and helps you find
-              them again when you describe what you remember. Open source, for you and your friends.
+              ADHX is a private feed of the best posts from X, Instagram, TikTok, YouTube, Reddit
+              and nine more networks, picked by your closest friends and family. Real copies on a
+              server you run, found by what you remember, sent on to any app. Open source. No ads,
+              no strangers.
             </p>
             <div className="flex flex-wrap gap-3">
               <a
@@ -432,7 +433,7 @@ export function ProductSite() {
                 href="#self-host"
                 className="flex min-h-[52px] items-center rounded-full border-[1.5px] border-nx-cream px-6 text-[16px] font-extrabold text-nx-cream"
               >
-                Run your own ADHX
+                Start a feed for your people
               </a>
             </div>
           </div>
@@ -454,7 +455,7 @@ export function ProductSite() {
               id="networks-title"
               className="m-0 text-center text-[13px] font-extrabold uppercase tracking-[0.16em] text-nx-muted"
             >
-              Fourteen networks, one place
+              Fourteen networks. One feed.
             </h2>
             <ul className="m-0 grid list-none grid-cols-4 gap-3 p-0 sm:grid-cols-7">
               {ALL_PLATFORMS.map((p) => (
@@ -473,7 +474,7 @@ export function ProductSite() {
           <Section
             id="search"
             kicker="Search by meaning"
-            title={<span>Describe it. Find it.</span>}
+            title={<span>Nobody remembers captions.</span>}
             body={
               <>
                 <p className="m-0">
@@ -496,13 +497,13 @@ export function ProductSite() {
           <Section
             id="keep"
             flip
-            kicker="Your own copies"
-            title={<span>Your own copies.</span>}
+            kicker="The meme vault"
+            title={<span>Deleted on X. Still here.</span>}
             body={
               <>
                 <p className="m-0">
                   ADHX downloads media at the best available resolution, including 4K when offered.
-                  Once the copy is kept, it plays from your disk even if the original disappears.
+                  Once the copy is kept, it plays from your disk even if the original gets nuked.
                   Private, deleted or DRM-protected posts may not be downloadable.
                 </p>
                 <p className="m-0">
@@ -519,13 +520,13 @@ export function ProductSite() {
           <Section
             id="player"
             kicker="The player"
-            title={<span>Watch your saves, full screen.</span>}
+            title={<span>Full screen. No ads in between.</span>}
             body={
               <>
                 <p className="m-0">
                   Your saves play one after another, newest first: videos, photos, threads and
                   articles. Tap the network’s mark to open the original, tap the sparkle for more
-                  like this, or send the file to a friend.
+                  like this, or send the actual file to the group chat.
                 </p>
               </>
             }
@@ -537,13 +538,13 @@ export function ProductSite() {
             id="now"
             flip
             kicker="Right now"
-            title={<span>See what your friends are saving.</span>}
+            title={<span>What your lot are into tonight.</span>}
             body={
               <>
                 <p className="m-0">
-                  ADHX groups what everyone on your server is saving into moments, as it happens,
-                  and counts the people behind them without naming anyone. Tune in to watch a moment
-                  together.
+                  ADHX groups what everyone on your server is saving into moments, as it happens.
+                  Tune in to watch a moment together. For now it counts the people behind a moment
+                  instead of naming them; names on posts are next.
                 </p>
               </>
             }
@@ -554,7 +555,7 @@ export function ProductSite() {
           <Section
             id="channels"
             kicker="Channels"
-            title={<span>Made for you, and by you.</span>}
+            title={<span>Rabbit holes, dug for you.</span>}
             body={
               <>
                 <p className="m-0">
@@ -604,13 +605,17 @@ export function ProductSite() {
         <Section
           id="apps"
           kicker="iPhone and Android"
-          title={<span>Share from any app.</span>}
+          title={<span>Share from any app. Send to any app.</span>}
           body={
             <>
               <p className="m-0">
                 The companion apps put ADHX in your phone’s share menu. Share a post from TikTok,
                 Instagram, YouTube or anywhere else, and send it to your server in one tap. When the
                 server can’t be reached, the link waits on your phone to be retried.
+              </p>
+              <p className="m-0">
+                Share from the player sends the actual video or photos, so it lands in WhatsApp or
+                Messages as the real thing, not a link that dies next month.
               </p>
               <p className="m-0">
                 Connect a phone by scanning a code in Settings. Play and search your saves in the
@@ -673,7 +678,7 @@ export function ProductSite() {
                   'Invite only the people you choose. No email service needed: you can hand sign-in links over yourself.',
                   'Search runs on your server. Nothing goes to an AI company unless you add the optional TypeSafe key, which sharpens search and names channels.',
                   'Kept media and shared previews play without sign-in to anyone who can reach the server. Use private networking when that is your intended boundary.',
-                  'Open source under the MIT licence. No service account with us and no ads.',
+                  'Open source under the MIT licence. No service account with us, no ads, and nobody selling your attention.',
                 ].map((line) => (
                   <li key={line} className="flex gap-3">
                     <span className="mt-[9px] h-2 w-2 shrink-0 rounded-full bg-nx-accent" />
@@ -702,7 +707,7 @@ export function ProductSite() {
             <Gob size={24} />
             <span className="font-nx-serif text-[20px] leading-none text-white">adhx</span>
           </span>
-          <span>Save it. Lose it. Find it.</span>
+          <span>Your friends have better taste than the algorithm.</span>
           <span className="flex-1" />
           <a href={GITHUB_URL} className="hover:text-white">
             GitHub

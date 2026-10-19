@@ -1,7 +1,7 @@
 {
   "name": "adhx",
   "version": "2.1.2",
-  "description": "Save it. Lose it. Find it. A Twitter/X bookmark manager for people who bookmark everything and read nothing.",
+  "description": "Your friends have better taste than the algorithm. A private, self-hosted feed of the best posts from every network, picked by your closest friends and family.",
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
