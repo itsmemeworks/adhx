@@ -130,6 +130,10 @@ async function commonArgs(): Promise<string[]> {
     path.join(mediaDir(), '.cache', 'yt-dlp'),
     '--ffmpeg-location',
     await ffmpegPath(),
+    // YouTube needs a JavaScript runtime for its player challenges; yt-dlp
+    // only looks for Deno unless told. The Node running ADHX is always here.
+    '--js-runtimes',
+    `node:${process.execPath}`,
   ]
 }
 

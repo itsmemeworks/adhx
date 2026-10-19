@@ -65,10 +65,12 @@ RUN apt-get update && apt-get install -y \
 
 # yt-dlp in its own virtualenv, pinned. Sites change often: bump this with
 # each release, or update a running container with
-#   /opt/yt-dlp/bin/pip install -U yt-dlp
+#   /opt/yt-dlp/bin/pip install -U "yt-dlp[default]"
+# [default] brings yt-dlp-ejs, the scripts YouTube's player challenges need
+# (run with the container's Node: see src/lib/keep/ytdlp.ts).
 ARG YTDLP_VERSION=2026.8.19
 RUN python3 -m venv /opt/yt-dlp \
-    && /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp==${YTDLP_VERSION}"
+    && /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==${YTDLP_VERSION}"
 ENV YTDLP_PATH=/opt/yt-dlp/bin/yt-dlp
 
 WORKDIR /app

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { isPermanent } from '@/lib/keep/ytdlp'
 
 describe('which yt-dlp failures are final', () => {
@@ -20,5 +20,32 @@ describe('which yt-dlp failures are final', () => {
     ]) {
       expect(isPermanent(message), message).toBe(false)
     }
+  })
+})
+
+describe('running yt-dlp', () => {
+  it('gives it the Node running ADHX for YouTube’s player challenges', async () => {
+    vi.resetModules()
+    const calls: string[][] = []
+    vi.doMock('child_process', () => ({
+      execFile: (
+        _bin: string,
+        args: string[],
+        _opts: unknown,
+        done: (e: null, out: string) => void,
+      ) => {
+        calls.push(args)
+        done(null, '{}')
+        return { stdout: null, stderr: null }
+      },
+    }))
+    vi.doMock('@/lib/media/ffmpeg', () => ({ ffmpegPath: async () => '/usr/bin/ffmpeg' }))
+    const { ytdlpInfo } = await import('@/lib/keep/ytdlp')
+    await ytdlpInfo('https://www.youtube.com/watch?v=x')
+    const args = calls[0]
+    expect(args[args.indexOf('--js-runtimes') + 1]).toBe(`node:${process.execPath}`)
+    expect(args.slice(-2)).toEqual(['--', 'https://www.youtube.com/watch?v=x'])
+    vi.doUnmock('child_process')
+    vi.doUnmock('@/lib/media/ffmpeg')
   })
 })
