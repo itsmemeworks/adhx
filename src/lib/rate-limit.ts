@@ -131,8 +131,8 @@ export function __resetRateLimitState(): void {
 }
 
 /**
- * Best-effort client IP extraction for rate-limiting. Fly.io's edge sets
- * `Fly-Client-IP`, which is the production source of truth. Generic forwarding
+ * Best-effort client IP extraction for rate-limiting. On Fly.io (where Fly
+ * sets `FLY_APP_NAME`) its edge's `Fly-Client-IP` is the source of truth. Generic forwarding
  * headers are client-spoofable unless every request is known to traverse a
  * trusted proxy that overwrites them, so they are ignored unless the
  * server-controlled `TRUST_PROXY_IP_HEADERS=true` opt-in is set.
@@ -141,8 +141,12 @@ export function __resetRateLimitState(): void {
  * bucket rather than being exempted from the limit.
  */
 export function getClientIp(request: NextRequest | Request): string {
-  const flyClientIp = request.headers.get('fly-client-ip')?.trim()
-  if (flyClientIp) return flyClientIp
+  // Only Fly's edge sets this; anywhere else (a NAS behind Tailscale or
+  // Caddy) a visitor could send it to dodge the limits.
+  if (process.env.FLY_APP_NAME) {
+    const flyClientIp = request.headers.get('fly-client-ip')?.trim()
+    if (flyClientIp) return flyClientIp
+  }
 
   if (process.env.TRUST_PROXY_IP_HEADERS === 'true') {
     const forwarded = request.headers.get('x-forwarded-for')

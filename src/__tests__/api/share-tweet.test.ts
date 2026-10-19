@@ -705,6 +705,8 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
     })
 
     it('rate-limits per IP — a different IP is unaffected by another IP being limited', async () => {
+      // On Fly, where each visitor's address comes from Fly-Client-IP.
+      vi.stubEnv('FLY_APP_NAME', 'adhx')
       mockFetchTweetData.mockResolvedValue(buildFxResponse())
       const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
       const hammered = '10.0.0.3'

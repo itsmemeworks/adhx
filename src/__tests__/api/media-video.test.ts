@@ -503,6 +503,8 @@ describe('API: /api/media/video', () => {
     })
 
     it('evicts the least-recently-used URL after 1,000 live keys', async () => {
+      // On Fly, where each visitor's address comes from Fly-Client-IP.
+      vi.stubEnv('FLY_APP_NAME', 'adhx')
       mockFetch.mockImplementation((input) =>
         Promise.resolve(
           String(input).startsWith('https://api.fxtwitter.com/')

@@ -158,6 +158,8 @@ describe('GET /api/collections/trending', () => {
   })
 
   it('rate-limits per IP — a different IP is unaffected by another IP being limited', async () => {
+    // On Fly, where each visitor's address comes from Fly-Client-IP.
+    vi.stubEnv('FLY_APP_NAME', 'adhx')
     const hammered = '3.3.3.3'
     for (let i = 0; i < 121; i++) {
       await GET(requestFrom(hammered))
