@@ -1,6 +1,21 @@
 # ADHX × GOB — brand handoff
 
-Tagline: **Save it. Lose it. Find it.**
+Tagline: **Your friends have better taste than the algorithm.**
+
+The app's own strings (page titles, emails, share cards) still say "Save it. Lose it. Find it." until they move over to the new voice.
+
+## Voice
+
+ADHX is a private feed of the best of every social network, picked by your closest friends and family. It talks like a friend with opinions: on your side, openly against the attention economy, usually grinning.
+
+- **Punch up.** The joke is on ad tech, engagement bait and the feed that kept you up till 2am. Never on your friends, the people who post, or anyone still on the other apps.
+- **Edgy, not mean.** A wink, not a sneer. Attitude in headlines and the README; no swearing in buttons or errors.
+- **Clear first, funny second.** Buttons, errors and settings say exactly what happens. The grin goes in headlines, empty states and the end of the feed.
+- **Short.** If a line needs explaining, cut it.
+
+Say: your people, your lot, picked, kept, the feed, caught up, rabbit hole, a box you own. Avoid: users, followers, engagement, content, creators, viral, community, platform, "AI-powered", and "social network" for ADHX itself (it sits on top of them).
+
+Lines that work: "Deleted on X. Still here." · "Nobody remembers captions." · "You're all caught up. Go touch grass." · "Built for short attention spans and long friendships."
 
 ## Palette
 
