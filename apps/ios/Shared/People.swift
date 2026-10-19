@@ -135,21 +135,27 @@ struct Face: View {
     /// The ring that separates overlapping faces (the colour behind them).
     var ring: Color = .black
 
-    /// The boards' five face colours: pink, green, orange, purple, blue.
-    private static let colours: [Color] = [
-        Color(hex: 0xFF8FA3), Color(hex: 0x7FD1AE), Color(hex: 0xFFB35C),
-        Color(hex: 0xC4A7FF), Color(hex: 0x6B8CFF),
-    ]
+    /// The boards' five face colours, in the web's `FACE_COLOURS` order
+    /// (`src/components/next/faces.ts`), so a person has one colour everywhere.
+    static let colourHexes: [UInt32] = [0x7FD1AE, 0xFF8FA3, 0x6B8CFF, 0xC4A7FF, 0xFFB35C]
+    private static let colours: [Color] = colourHexes.map { Color(hex: $0) }
 
-    /// The same colour for the same person, every time (FNV-1a of the
-    /// username, the web's `hashSeed`).
-    static func colour(for username: String) -> Color {
+    /// The same colour for the same person on every device: FNV-1a over the
+    /// lowercased username without "@", modulo the five colours (the web's
+    /// `faceColour`). Ana, Ben, Mum, Jo and Pete get their board colours.
+    static func colourIndex(for username: String) -> Int {
+        var name = username.lowercased()
+        if name.hasPrefix("@") { name.removeFirst() }
         var hash: UInt32 = 0x811C_9DC5
-        for unit in username.utf16 {
+        for unit in name.utf16 {
             hash ^= UInt32(unit)
             hash = hash &* 0x0100_0193
         }
-        return colours[Int(hash % UInt32(colours.count))]
+        return Int(hash % UInt32(colourHexes.count))
+    }
+
+    static func colour(for username: String) -> Color {
+        colours[colourIndex(for: username)]
     }
 
     var body: some View {
