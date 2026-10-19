@@ -177,7 +177,7 @@ they can do (`SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off` on the Mac leave
 one out); the server only hands out kinds it has switched on. Optional `media.cacheKey`
 identifies one retained-file generation independently of its learning kind, so
 speech, text on screen and video sections can share one downloaded original.
-`releaseMedia` acknowledgements and bounded claim reconciliation on subsequent polls removes copies
+`releaseMedia` acknowledgements and bounded claim reconciliation on subsequent polls remove copies
 with no remaining consumer, including cancelled/deleted sources. Expiry and the
 scratch budget bound leftovers when the server cannot be reached. Older workers
 ignore these additive fields; older servers retain per-kind caching. A version 1
