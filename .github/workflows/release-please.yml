@@ -1,32 +1,28 @@
 name: Release Please
 
-# Creates release PRs and GitHub releases automatically based on conventional commits
-#
-# REQUIRED SETUP:
-# 1. Go to Settings → Actions → General → Workflow permissions
-# 2. Enable "Allow GitHub Actions to create and approve pull requests"
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
-  pull-requests: write
-  actions: write # Required for triggering deploy workflow
+  contents: read
+
+concurrency:
+  group: release-please-main
+  cancel-in-progress: false
 
 jobs:
   release-please:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
-      pr: ${{ steps.release.outputs.pr }}
     steps:
-      - uses: actions/checkout@v7
-
       - uses: googleapis/release-please-action@v5
         id: release
         with:
@@ -34,106 +30,16 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Note: CI for release PRs is triggered via workflow_run event in ci.yml
-      # when this workflow completes, which creates the required 'build' status check
-
-      # Keep release PR up to date with main branch
-      # This ensures the PR always includes the latest commits
-      - name: Update release PR branch
-        if: ${{ steps.release.outputs.pr }}
-        continue-on-error: true
-        run: |
-          PR_NUMBER=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.number')
-          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-            echo "Updating PR #$PR_NUMBER branch to include latest main commits"
-            gh pr update-branch "$PR_NUMBER" --rebase || echo "Branch already up to date or update not needed"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Auto-merge the release PR when it's created/updated
-      # Note: Requires "Allow auto-merge" enabled in repo settings
-      - name: Enable auto-merge for release PR
-        if: ${{ steps.release.outputs.prs_created == 'true' }}
-        continue-on-error: true
-        run: |
-          gh pr merge ${{ fromJSON(steps.release.outputs.pr).number }} --auto --squash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Log when a release is created
-      - name: Log release
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          echo "🎉 Release created!"
-          echo "Tag: ${{ steps.release.outputs.tag_name }}"
-          echo "Version: ${{ steps.release.outputs.version }}"
-
-      # Workaround: Manually create release if release-please didn't
-      # This handles the "untagged, merged release PRs outstanding" case
-      - name: Check for and fix stuck releases
-        id: fix-stuck
-        continue-on-error: true
-        run: |
-          echo "created_release=false" >> "$GITHUB_OUTPUT"
-
-          # Find any merged release PRs with pending label
-          STUCK_PRS=$(gh pr list --state merged --label "autorelease: pending" --json number,title --jq '.[].number')
-
-          for PR_NUMBER in $STUCK_PRS; do
-            echo "Found stuck release PR #$PR_NUMBER"
-
-            # Get version from manifest
-            VERSION=$(cat .release-please-manifest.json | jq -r '.["."[]]' 2>/dev/null || cat .release-please-manifest.json | jq -r '."."')
-
-            if [ -n "$VERSION" ] && [ "$VERSION" != "null" ]; then
-              TAG="v$VERSION"
-
-              # Check if release already exists
-              if ! gh release view "$TAG" &>/dev/null; then
-                echo "Creating release $TAG"
-
-                # Get changelog section for this version
-                NOTES=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | head -n -1)
-
-                if [ -z "$NOTES" ]; then
-                  NOTES="Release $TAG"
-                fi
-
-                gh release create "$TAG" --title "$TAG" --notes "$NOTES"
-                echo "created_release=true" >> "$GITHUB_OUTPUT"
-                echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-              fi
-
-              # Update PR labels
-              gh pr edit "$PR_NUMBER" --remove-label "autorelease: pending" --add-label "autorelease: tagged"
-              echo "Fixed PR #$PR_NUMBER"
-            fi
-          done
-
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Trigger deploy via workflow_dispatch when release-please creates a release
-      # This is more reliable than the release: published event (which doesn't fire for GITHUB_TOKEN)
-      - name: Trigger deploy
-        if: ${{ steps.release.outputs.release_created == 'true' || steps.fix-stuck.outputs.created_release == 'true' }}
-        run: |
-          echo "Triggering deploy workflow..."
-          gh workflow run deploy.yml
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Releases created with GITHUB_TOKEN do not emit another workflow event,
-      # so explicitly dispatch the GHCR publisher just like the deploy workflow.
-      - name: Trigger container image publish
-        if: ${{ steps.release.outputs.release_created == 'true' || steps.fix-stuck.outputs.created_release == 'true' }}
-        run: |
-          VERSION="${{ steps.release.outputs.version }}"
-          if [ -z "$VERSION" ]; then
-            VERSION="${{ steps.fix-stuck.outputs.version }}"
-          fi
-          echo "Publishing ghcr.io/${{ github.repository }}:$VERSION"
-          gh workflow run image-publish.yml -f version="$VERSION"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Explicit call works for GITHUB_TOKEN-created releases. The independent
+  # push publisher still runs if Release Please fails, or no release is due.
+  publish-release:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/image-publish.yml
+    with:
+      version: ${{ needs.release-please.outputs.version }}
