@@ -106,6 +106,24 @@ describe('ResultTile', () => {
     expect(screen.getByRole('link', { name: /Ben and Ana saved this/ })).toBeInTheDocument()
   })
 
+  it('keeps "Words only" clear of the faces on a small tile', () => {
+    const { unmount } = render(
+      <ResultTile
+        item={{
+          post: post({ savers: [saver('ben'), saver('ana', { isYou: true })] }),
+          saved: true,
+          matched: ['words'],
+          learning: true,
+        }}
+      />,
+    )
+    expect(screen.getByText('Words only')).toHaveClass('top-10')
+    expect(screen.getByText('Words only')).not.toHaveClass('top-2')
+    unmount()
+    render(<ResultTile item={{ post: post(), saved: false, matched: ['words'], learning: true }} />)
+    expect(screen.getByText('Words only')).toHaveClass('top-2')
+  })
+
   it('keeps "Everyone" when no names are known, and locks a private post', () => {
     const { unmount } = render(
       <ResultTile item={{ post: post(), saved: false, matched: ['words'] }} />,

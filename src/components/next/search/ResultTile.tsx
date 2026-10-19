@@ -320,7 +320,10 @@ export function ResultTile({
     >
       {body}
       <SaversMark item={item} everyone={showStrength} className="right-2 top-2" />
-      {item.learning && <WordsOnlyBadge className="left-2 top-2" />}
+      {item.learning && (
+        // Below the faces when there are some: "Ana and Ben saved this" fills the top of a small tile.
+        <WordsOnlyBadge className={cn('left-2', item.post.savers?.length ? 'top-10' : 'top-2')} />
+      )}
       {showStrength && !onCream && (
         <StrengthMeter strength={strength} where={where} className="absolute bottom-2 left-2" />
       )}

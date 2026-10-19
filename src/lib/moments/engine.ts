@@ -316,6 +316,34 @@ function centred(raw: Float32Array, mean: Float32Array | null): Float32Array {
 
 // ——— Views ———
 
+/**
+ * Which of these posts still have a visible save. Between regroups a save can
+ * go "Just for me" or its saver be banned; what's shown is checked again on
+ * every read, so such a post drops out at once (counts catch up at the next
+ * regroup).
+ */
+function stillVisible(keys: string[]): Set<string> {
+  const out = new Set<string>()
+  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
+  for (let i = 0; i < ids.length; i += 400) {
+    const part = ids.slice(i, i + 400)
+    const rows = db.all<{ platform: string; id: string }>(sql`
+      SELECT DISTINCT b.platform, b.id FROM bookmarks b
+      WHERE ${visibleSave('b')} AND b.id IN (${sql.join(
+        part.map((id) => sql`${id}`),
+        sql`, `,
+      )})
+    `)
+    for (const r of rows) out.add(`${r.platform}:${r.id}`)
+  }
+  return out
+}
+
+function visibleOnly(keys: string[]): string[] {
+  const shown = stillVisible(keys)
+  return keys.filter((k) => shown.has(k))
+}
+
 function newestKeys(members: Map<string, { lastAt: number }>, n: number): string[] {
   return [...members.entries()]
     .sort((a, b) => b[1].lastAt - a[1].lastAt)
@@ -325,7 +353,7 @@ function newestKeys(members: Map<string, { lastAt: number }>, n: number): string
 
 async function momentView(m: Moment, now = Date.now()): Promise<MomentView> {
   const s = state()
-  const covers = await loadPosts(newestKeys(m.members, 8))
+  const covers = await loadPosts(visibleOnly(newestKeys(m.members, 8)))
   let last = 0
   for (const member of m.members.values()) last = Math.max(last, member.lastAt)
   return {
@@ -343,7 +371,7 @@ async function momentView(m: Moment, now = Date.now()): Promise<MomentView> {
 
 async function formingView(f: Forming): Promise<FormingView> {
   const progress = formingProgress(f, minSavers())
-  const covers = await loadPosts(newestKeys(f.members, 6))
+  const covers = await loadPosts(visibleOnly(newestKeys(f.members, 6)))
   return {
     id: f.id,
     title: f.title ?? 'Something new',
@@ -365,12 +393,13 @@ function visibleForming(s: State): Forming[] {
 async function snapshot(): Promise<MomentsSnapshot> {
   const s = state()
   const now = Date.now()
+  const shown = stillVisible(s.stream.map((item) => item.key))
   return {
     label: s.label,
     hours: s.hours,
     moments: await Promise.all(s.moments.map((m) => momentView(m, now))),
     forming: await Promise.all(visibleForming(s).map(formingView)),
-    stream: s.stream,
+    stream: s.stream.filter((item) => shown.has(item.key)),
     stats: s.stats,
   }
 }
@@ -744,7 +773,7 @@ export async function getMomentDetail(slug: string, limit = 60): Promise<MomentD
   await ensureRecomputed()
   const m = state().moments.find((x) => x.slug === slug)
   if (!m) return null
-  const keys = newestKeys(m.members, limit)
+  const keys = visibleOnly(newestKeys(m.members, limit))
   const posts = await loadPosts(keys)
   return {
     moment: await momentView(m),

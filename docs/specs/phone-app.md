@@ -192,9 +192,10 @@ it yet" (New falls back to My saves, Channels and Live say the server needs
 an update).
 
 - `GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo,text,article&cursor` →
-  `{ items: (PhonePost & { why })[], nextCursor, caughtUp, hidden? }`. `types`
-  defaults to `video,photo` (a sound counts as a video); `hidden`, when
-  given, counts what the filter left out (`{ text: 4 }`). Apps filter by
+  `{ items: (PhonePost & { why, whyReasons })[], nextCursor, caughtUp,
+  nothingYet, total, types, waiting, hidden }`. `types` defaults to
+  `video,photo` (a sound counts as a video); `hidden` (the same as `waiting`)
+  counts the unseen posts the filter left out (`{ text: 4 }`). Apps filter by
   `kind` too, so an older server that ignores `types` still plays the
   right things.
 - `GET /api/app/feed/types` → `{ types }` and `PUT` the same body: the saved
@@ -297,7 +298,7 @@ it; on a server without these endpoints (404) the app falls back as noted.
 
 - `GET /api/app/feed?mode=new|everyone|friends|mine&cursor&types=video,photo,text,article`
   → `{ items: PhonePost[] (each with why?), nextCursor, caughtUp, hidden? }`.
-  `hidden` (tentative) counts what the filter left out, `{ text: 4 }`. The
+  `hidden` (also sent as `waiting`) counts what the filter left out, `{ text: 4 }`. The
   app also filters on the phone, for a server that ignores `types`. `why` is
   read loosely: a line, a list of lines, or objects with `text`. A 404 means
   the server has no feed yet: home plays My saves as before.
