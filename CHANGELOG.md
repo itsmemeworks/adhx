@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/itsmemeworks/adhx/compare/v2.0.0...v2.0.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* improve first-save playback and nas setup ([#542](https://github.com/itsmemeworks/adhx/issues/542)) ([c95eb8a](https://github.com/itsmemeworks/adhx/commit/c95eb8a2df572b9de7077d7dd87d0cef5abdc5b5))
+
 ## [2.0.0](https://github.com/itsmemeworks/adhx/compare/v1.73.0...v2.0.0) (2026-10-19)
 
 
