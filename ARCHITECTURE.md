@@ -407,6 +407,10 @@ flowchart LR
 
 ### Optional native Mac processing
 
+For topology, phone-save flow, lease/checkpoint and media-lifecycle diagrams,
+see [How NAS and Mac processing work](docs/remote-processing.md). Installation
+is covered by the [Mac setup guide](deploy/mac/README.md).
+
 `PROCESSING_MODE=remote` disables the local jobs child, retaining the query
 child and keyword indexing. The native ARM64 macOS runner uses the same pinned
 model with CoreML MLProgram/CPU fallback, plus VideoToolbox/software video decoding.

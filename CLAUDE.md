@@ -61,6 +61,10 @@ by email; X is an optional connection. The current home is Right now, with the
 theater, search and channels alongside it. `site/` builds separately; editing
 it does not publish adhx.com.
 
+For the current phone-save, NAS-retention and native Mac processing flows, use
+[`docs/remote-processing.md`](docs/remote-processing.md). It links the installation
+and verification guides and maps the protocol to its implementation.
+
 ## Architecture Overview (legacy X-first flow)
 
 ```

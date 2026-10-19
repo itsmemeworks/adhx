@@ -235,6 +235,11 @@ start does not prove that the chosen limit is sufficient.
 
 ### Move background understanding to a Mac
 
+Use the [NAS and Mac technical overview](../../docs/remote-processing.md) for
+topology, queue and file-lifecycle diagrams, and the
+[connection walkthrough](../mac/README.md#connect-the-nas-and-mac) for both sides'
+environment settings.
+
 The optional [native Apple Silicon worker](../mac/README.md) runs background
 text/image/video inference, frame sampling and H.264 conversion on another machine. Keep the
 NAS's existing HTTPS/network boundary and persistent storage. Set

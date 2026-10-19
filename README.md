@@ -87,6 +87,8 @@ The [resource guide](deploy/nas/README.md#resource-and-storage-controls) shows
 how to budget CPU, RAM and swap, and check search/playback while a bulk import
 is being understood. Local picture/video search needs no external AI key;
 For a lighter NAS, the optional [native Apple Silicon worker](deploy/mac/README.md) moves background inference, video sampling and H.264 conversion to a Mac. The NAS keeps the database, retained media and a small query model.
+The [NAS and Mac processing overview](docs/remote-processing.md) explains the
+queues, network boundary, full-video sampling and file lifecycle with diagrams.
 Jev refinement and X sync are [optional additions](deploy/nas/README.md#optional-services-and-x-sync).
 
 Container images are published when the owner merges the Release Please PR and
@@ -322,6 +324,7 @@ pnpm typecheck && pnpm test && pnpm lint && pnpm format:check && pnpm build
 ```
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for how it fits together, and [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow. Coding agents should also read [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
+For the processing pipeline specifically, read [How NAS and Mac processing work](docs/remote-processing.md), with the phone-save flow, worker protocol and conversion/cleanup diagrams.
 
 ## Use it kindly
 

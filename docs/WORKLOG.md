@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Explain the NAS and Mac processing pipeline
+
+- Add a README-linked technical overview with topology, phone-save, leased-processing and conversion diagrams.
+- Document server/worker responsibilities, full-duration profiles, partial-result search, retry/checkpoint semantics and temporary-file lifetimes.
+- Expand the Mac connection walkthrough with matching release checkout, private environment files and the differently named shared-token settings.
+- Cross-link setup, verification and architecture references; distinguish receipt acceptance, playable media and semantic readiness.
+- Validation: all four Mermaid diagrams parse, local links resolve, shell examples parse and documented sampling examples match the implementation; formatting passes.
+- Documentation only; household settings stay private and no running service changes are required.
+
 ## 2026-10-19 — Avoid background throttling in the native Mac worker
 
 - Set launchd `ProcessType=Standard`, retaining `Nice=10` and the two-thread baseline; controlled sequential native inference reproduced avoidable Background throttling and completed under Standard.
