@@ -70,6 +70,8 @@ ADHX listens on port 3000. Put it behind your usual reverse proxy for HTTPS; sig
 
 To pin a release, set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>`. You can also build the image yourself with `docker build -t adhx .`.
 
+**On a home NAS** with no domain or open ports, [`deploy/nas`](deploy/nas) runs ADHX with Docker Compose behind [Tailscale Funnel](https://tailscale.com/kb/1223/funnel), which gives it a public HTTPS address. Its [README](deploy/nas/README.md) walks through the install.
+
 ### Sign-in links
 
 People sign in with a link that works once, for 15 minutes. Choose how links reach them:
@@ -106,7 +108,10 @@ The admin page has sign-in links, numbers, hiding posts and banning accounts. Wi
 | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                      |
 | `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                         |
 | `SEMANTIC_SEARCH=off`                        | Turn search by meaning off (keyword search still works).                                                                       |
-| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `1`.                                                                             |
+| `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                             |
+| `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                            |
+| `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                           |
+| `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.               |
 | `TYPESAFE_API_KEY`                           | Optional: reorders the top search results by their words. Only the search text and the public words of those results are sent. |
 | `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                          |
 | `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                      |
@@ -120,11 +125,19 @@ Kept media is most of the space ADHX uses. As a rough guide:
 - A short phone video (TikTok, Reel, Short) is 5–30 MB.
 - A minute of 1080p is 15–40 MB; a minute of 4K is 40–100 MB.
 - Photos are 0.1–1 MB each.
-- The search model is about 1.5 GB, downloaded once on first start.
+- The search model is about 400 MB, downloaded once on first start (see [The search model](#the-search-model)).
 
 So 1,000 mixed saves come to roughly 10–30 GB. When you first run ADHX on an existing library, it downloads everything already saved, newest first. If your disk is small, start with `KEEP_BACKFILL=off`, which also stops any older downloads already waiting.
 
 Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_FREE_GB`). They carry on once there's room. Files are deleted when nobody on your server has the post saved any more; that check runs once an hour.
+
+### The search model
+
+Search by meaning runs on your own server, with [EmbeddingGemma 2](https://huggingface.co/onnx-community/embeddinggemma-2-ONNX): the text model at 4-bit and its picture encoder at 8-bit, at a pinned revision. There's nothing to install. The first time the server starts, it downloads the weights from Hugging Face into `models/` next to the database: about 400 MB, so the server needs to reach `huggingface.co` once. After that it runs offline. For a server with no internet access, copy the `models/` folder from another ADHX.
+
+Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames (one every 2 seconds). Sounds are found only by their words. Understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+
+`TYPESAFE_API_KEY` is optional. With it, the top results are reordered by their words, and only the search text and the public words of those results are sent.
 
 ### Video formats
 
@@ -135,10 +148,10 @@ ADHX picks the highest resolution a network offers. If that video isn't H.264, A
 Networks change their pages often, and yt-dlp releases fixes within days. Each ADHX release pins the latest yt-dlp. To update a running container without waiting for a release:
 
 ```bash
-docker compose exec adhx /opt/yt-dlp/bin/pip install -U yt-dlp
+docker compose exec adhx /opt/yt-dlp/bin/pip install -U "yt-dlp[default]"
 ```
 
-Downloads that fail are retried with growing waits over about a day. Until a post is kept, X, Instagram and TikTok posts still play straight from the network.
+`[default]` includes the scripts YouTube needs for its player challenges; ADHX runs them with its own Node.js, so there's nothing else to install. Downloads that fail are retried with growing waits over about a day. Until a post is kept, X, Instagram and TikTok posts still play straight from the network.
 
 ### Backups
 
@@ -257,7 +270,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-The dev server runs at [http://localhost:3001](http://localhost:3001). With no email set up, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install yt-dlp`, `uv tool install yt-dlp` or `brew install yt-dlp`). With little disk space, run with `KEEP_BACKFILL=off`.
+The dev server runs at [http://localhost:3001](http://localhost:3001). With no email set up, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install "yt-dlp[default]"`, `uv tool install "yt-dlp[default]"` or `brew install yt-dlp`); ffmpeg comes with the project. The first `pnpm dev` downloads the search model (about 400 MB) into `data/models/`, which git ignores; `SEMANTIC_SEARCH=off` skips it. With little disk space, run with `KEEP_BACKFILL=off`.
 
 ```bash
 pnpm typecheck && pnpm test && pnpm lint && pnpm format:check && pnpm build

@@ -19,6 +19,8 @@ services:
       ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
       # 1 when it's just you; 2 or 3 for a group of friends.
       MOMENT_MIN_SAVERS: ${MOMENT_MIN_SAVERS:-2}
+      # Optional: reorders the top search results by their words.
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
     volumes:
       # The database, the search model and every kept picture and video.
       # Give it room: video adds up (see README → Disk space).
