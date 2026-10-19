@@ -22,6 +22,7 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 
 ## What you get
 
+- **New.** Open ADHX and it plays what your people saved that you haven't seen yet, blended by a few signals you can read: fresh, saved together, the friends you watch most, and what's like the things you keep. Every post says why it's there, and you can ask for more or less from anyone. Then it stops: "You're all caught up. Go touch grass." Switch to Everyone, Friends only or Mine to keep watching, and pick what's in it: videos and photos by default, text posts and articles if you like reading.
 - **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
 - **Search by what you remember.** Describe it and ADHX finds it, across everyone's saves or just yours, with your friends' faces on what they kept. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
@@ -39,7 +40,7 @@ ADHX is becoming one shared feed for your people. In order:
 
 1. **Say it out loud.** This README, the site and every string in the app, in the new voice.
 2. **Names on posts.** Here: see which of your friends saved what, keep any save **Just for me**, and search the whole group's vault. Saves you'd already made joined the shared feed; the app says so once.
-3. **One feed.** A blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
+3. **One feed.** Here: a blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
 4. **Channels and Live.** Channels drawn from everyone's saves, one per friend, and Live with names, so you can watch together.
 
 Names stay on your server. Links you share with people outside it never show who saved anything.

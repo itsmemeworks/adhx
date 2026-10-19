@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — New and the blended feed
+
+- `post_views` (guarded, cleared with the account, pruned after 180 days at migrate; guard triggers now 48). `POST /api/views` / `POST /api/app/seen` (≤50, idempotent, first `seen_at` kept).
+- `src/lib/feed/blend.ts` (pure: signals, `BLEND_WEIGHTS`, variety, why words, cursor) + `blend-db.ts` (candidates via `seenBy` over 14 days, minus moderated/gone; closeness from `post_views` + co-saves; taste from `post_embeddings`; per-user 5-min snapshots by seed). `GET /api/feed/blend`, `GET|PUT /api/feed/weights`, `GET /api/app/feed`.
+- Web: `/play?feed=new|everyone|friends|mine` pages through the blend; why chip, why line in Up next, Why this one sheet with Show more / less; Everyone · Friends only · Mine; seen after 2s or skip (batched); `CaughtUpStage` when New runs out; "Nothing new yet" with Paste. **New** is the first tab and signed-in `/` → `/play?feed=new`.
+- Refined in the spec: New and Friends only leave out posts only you saved; `nothingYet` and `total` on the response.
+- What's in your feed (owner request): `types=video,photo,text,article` on both feeds (sound counts as video; default video + photo; stored as `feed.types`, `GET|PUT /api/feed/types` and `/api/app/feed/types`), `FeedTypesControl` beside the switch, and "4 text posts waiting · Show them" on the caught-up card.
+- Validation: 3,149 tests, typecheck and lint pass; walked New → Why this one → Show more → caught up → Watch it all again, and the kind filter ("6 text posts waiting · Show them"), at desktop and 375px on a scratch DB.
+- Follow-ups: the phone apps need to adopt `/api/app/feed`; the caught-up "Tonight on your ADHX" row from the design isn't built; closeness counts seen, not watched to the end.
+
 ## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
 
 - `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.
