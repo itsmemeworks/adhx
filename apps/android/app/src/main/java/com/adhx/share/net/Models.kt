@@ -122,8 +122,20 @@ data class PhonePost(
      */
     @Serializable(with = ReasonsSerializer::class)
     val why: List<String> = emptyList(),
+    /**
+     * Every reason the feed had (`[{ kind, text, username? }]`), for Why this
+     * one. Only on `/api/app/feed`; read as loosely as [why].
+     */
+    @Serializable(with = ReasonsSerializer::class)
+    val whyReasons: List<String> = emptyList(),
 ) {
     val key: String get() = "$platform:$id"
+
+    /** The reason for the why chip: the feed's headline, else its first reason. */
+    val headline: String? get() = why.firstOrNull() ?: whyReasons.firstOrNull()
+
+    /** All the reasons, for Why this one: the full list when the server sends one, else [why]. */
+    val reasons: List<String> get() = whyReasons.ifEmpty { why }
 
     val ref: PostRef get() = PostRef(platform, id)
 
@@ -267,6 +279,8 @@ data class FeedResponse(
     val nextCursor: String? = null,
     /** `new` ran out of things you haven't seen. */
     val caughtUp: Boolean = false,
+    /** Nobody has saved anything you could see yet: not caught up, just empty. */
+    val nothingYet: Boolean = false,
     /**
      * Posts the type filter left out, by [MediaType] (`{ text: 4 }`). Read
      * loosely; absent on servers that don't say.
@@ -438,3 +452,165 @@ data class ReactRequest(
     val platform: String,
     val id: String,
 )
+
+// Settings: your people and join approvals (`/api/app/people`), and what
+// your ADHX is doing (`/api/app/doing`). Read loosely, like the feed.
+
+/** One member, as Settings → Your people lists them. Never an account id. */
+@Serializable
+data class Person(
+    val username: String = "",
+    val name: String? = null,
+    val avatarUrl: String? = null,
+    /** Their saves you can see. */
+    val saves: Int = 0,
+    val lastSavedAt: String? = null,
+    /** owner · admin · member — see [PersonRole]. */
+    val role: String = PersonRole.MEMBER,
+    /** Only admins are sent banned members. */
+    val banned: Boolean = false,
+    val isYou: Boolean = false,
+) {
+    val label: String get() = name?.trim()?.takeIf { it.isNotEmpty() } ?: username
+    val asSaver: Saver get() = Saver(username = username, name = name, avatarUrl = avatarUrl, isYou = isYou)
+}
+
+object PersonRole {
+    const val OWNER = "owner"
+    const val ADMIN = "admin"
+    const val MEMBER = "member"
+}
+
+/** Someone a member invited, waiting for an admin to let them in. */
+@Serializable
+data class JoinRequest(
+    /** The invite they joined with: the handle for deciding. */
+    val id: String = "",
+    val username: String = "",
+    val name: String? = null,
+    /** When they joined (ISO). */
+    val askedAt: String? = null,
+    val invitedBy: Inviter? = null,
+    val snoozedUntil: String? = null,
+) {
+    val label: String get() = name?.trim()?.takeIf { it.isNotEmpty() } ?: username
+}
+
+@Serializable
+data class Inviter(val username: String = "", val name: String? = null) {
+    val label: String get() = name?.trim()?.takeIf { it.isNotEmpty() } ?: username
+}
+
+/** `GET /api/app/people`: the web's `GET /api/people`. `requests` for admins only. */
+@Serializable
+data class PeopleResponse(
+    @Serializable(with = LenientPeopleSerializer::class)
+    val members: List<Person> = emptyList(),
+    val isAdmin: Boolean = false,
+    val canInvite: Boolean = false,
+    /** admin · approve · anyone */
+    val inviteMode: String = "admin",
+    @Serializable(with = LenientJoinRequestsSerializer::class)
+    val requests: List<JoinRequest> = emptyList(),
+) {
+    val you: Person? get() = members.firstOrNull { it.isYou }
+    val owner: Person? get() = members.firstOrNull { it.role == PersonRole.OWNER }
+}
+
+/** An admin's answer to a join request. */
+object JoinDecision {
+    const val APPROVE = "approve"
+    const val NOT_NOW = "not_now"
+    const val DECLINE = "decline"
+}
+
+/** `POST /api/app/people/requests/{id}`. */
+@Serializable
+data class JoinDecisionRequest(val decision: String)
+
+/** What the account is now: approved · pending (Not now) · declined. */
+@Serializable
+data class JoinDecisionResponse(val approval: String? = null)
+
+/** Where a post is on its way: working · waiting · needs_you · ready. */
+object DoingStatus {
+    const val WORKING = "working"
+    const val WAITING = "waiting"
+    const val NEEDS_YOU = "needs_you"
+    const val READY = "ready"
+}
+
+/** "Trying again, 2 of 5", and when. */
+@Serializable
+data class RetryInfo(val attempt: Int = 0, val of: Int = 0, val at: String? = null)
+
+/** One post on its way, stuck, or just finished (`DoingItem` in `src/lib/processing/doing.ts`). */
+@Serializable
+data class DoingItem(
+    val platform: String = "",
+    val id: String = "",
+    val title: String = "",
+    /** "Instagram video" */
+    val network: String = "",
+    /** Relative to the server, or null. */
+    val thumbnail: String? = null,
+    val openPath: String? = null,
+    val savers: List<Saver> = emptyList(),
+    val savedAt: String? = null,
+    /** 1–[steps]; [stepLabel] says it in words. */
+    val step: Int = 1,
+    val stepLabel: String = "",
+    val steps: Int = 7,
+    /** 0–100 while a step reports it, else null. */
+    val percent: Double? = null,
+    /** See [DoingStatus]. */
+    val status: String = DoingStatus.WORKING,
+    /** It plays already, even while it's still being learned. */
+    val playable: Boolean = false,
+    /** Plain words for a failure or a wait, else null. */
+    val reason: String? = null,
+    val retryInfo: RetryInfo? = null,
+    val quality: String? = null,
+    val learned: List<String> = emptyList(),
+    /** You saved it, so you may press Retry. */
+    val retry: Boolean = false,
+    val keepLinkOnly: Boolean = false,
+    val finishedAt: String? = null,
+) {
+    val key: String get() = "$platform:$id"
+    val ref: PostRef get() = PostRef(platform, id)
+    val needsYou: Boolean get() = status == DoingStatus.NEEDS_YOU
+    val ready: Boolean get() = status == DoingStatus.READY
+}
+
+@Serializable
+data class DoingSummary(
+    /** Still on their way: working, waiting or needing you. */
+    val onTheirWay: Int = 0,
+    val keeping: Int = 0,
+    val learning: Int = 0,
+    val needsYou: Int = 0,
+    val ready: Int = 0,
+    val freeBytes: Double? = null,
+    /** local · remote (a Mac helper does the learning). */
+    val processing: String = "local",
+    val remoteConnected: Boolean? = null,
+)
+
+/** `GET /api/app/doing?scope=all|mine|needs`. */
+@Serializable
+data class DoingResponse(
+    @Serializable(with = LenientDoingItemsSerializer::class)
+    val items: List<DoingItem> = emptyList(),
+    val summary: DoingSummary = DoingSummary(),
+)
+
+object DoingScope {
+    const val ALL = "all"
+    const val MINE = "mine"
+    const val NEEDS = "needs"
+}
+
+/** `POST /api/app/doing/retry` → `{ retried }`: false when it was already on its way. */
+@Serializable
+data class RetryResponse(val retried: Boolean = false)

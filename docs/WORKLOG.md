@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Android: Settings, join approvals and "On their way"
+
+- Settings (j8-4) rebuilt: your face in Gob's shape, Waiting for you (admins: Let in / Not now / Decline via `POST /api/app/people/requests/{id}`), Your people (`GET /api/app/people`, new list screen), Invite, What's in your feed, Just for me and Sound on by default, What your ADHX is doing with its count, Shared lately, Connected to … with Remove this phone.
+- On their way (j8-5): pill over the New player while `/api/app/doing` says posts are processing (5 s polls while in front, 15 s when idle, stops on 404), a sheet with thumbnail, step, thin bar and Retry (`POST /api/app/doing/retry`), and a full list screen.
+- Avatars: Coil's OkHttp client adds the phone key for the connected server only (`ServerAuthInterceptor`), since `/api/files/avatar/*` is members only.
+- QA fixes: Why this one lists all `whyReasons`; `nothingYet` shows "Nothing new yet. Save something for your people to find."
+- No phone-key routes for avatar upload, display name, invites, removing a phone or the account's "Just for me by default": the app opens web Settings for picture and invites, and keeps its own private default (sent as `private: true` when on; off switches a new save back, never a repeat share).
+- Branch base: `ff/settings` had no Android friends feed, so `apps/android` and `docs/specs/phone-app.md` were brought over from `feat/friends-feed` first (ff/settings doesn't touch them).
+- Verified: `assembleDebug testDebugUnitTest` (51 tests). Not run on a device or emulator.
+
 ## 2026-10-19 — iPhone: Settings, approvals and On their way
 
 - Branch `ff/ios-settings` (from `ff/settings`; `apps/ios` and the phone spec taken from `feat/friends-feed`, which `ff/settings` didn't have yet). Settings from Gob: you (Gob-shaped face, saves), Waiting for you (Let in / Not now / Decline via `/api/app/people/requests/[id]`), Your people list (opens a friend's channel), Invite someone, What's in your feed, Just for me by default, Sound on by default, What your ADHX is doing, Connected to … / Remove this phone, Shared lately.

@@ -71,10 +71,11 @@ class AdhxApi(private val server: String, private val key: String?) {
         interval: () -> Long,
         limitMs: Long = FOLLOW_LIMIT_MS,
         justForMe: Boolean = false,
+        explicit: Boolean = false,
         onQueued: (String) -> Unit = {},
     ): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
-        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe))
+        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe, explicit))
         val request = authed(url).header("Prefer", "respond-async").post(body.toRequestBody(JSON)).build()
         val started = send(request) { code, text ->
             if (code == 202) json.decodeFromString(QueuedBody.serializer(), text).id
@@ -236,7 +237,41 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
     }
 
-    private fun saveRequest(link: String, justForMe: Boolean) = SaveRequest(link, isPrivate = if (justForMe) true else null)
+    /** Your people and, for an admin, who's waiting to be let in. */
+    suspend fun people(): ApiResult<PeopleResponse> {
+        val url = url("api/app/people") ?: return badAddress
+        return send(authed(url).get().build(), PeopleResponse.serializer())
+    }
+
+    /** An admin's answer to a join request ([JoinDecision]). Answers what the account is now. */
+    suspend fun decideJoin(requestId: String, decision: String): ApiResult<JoinDecisionResponse> {
+        val base = url("api/app/people/requests") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(requestId).build()
+        val body = json.encodeToString(JoinDecisionRequest.serializer(), JoinDecisionRequest(decision))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), JoinDecisionResponse.serializer())
+    }
+
+    /** What your ADHX is doing: posts on their way, stuck, or just finished ([DoingScope]). */
+    suspend fun doing(scope: String = DoingScope.ALL): ApiResult<DoingResponse> {
+        val base = url("api/app/doing") ?: return badAddress
+        val url = base.newBuilder().addQueryParameter("scope", scope).build()
+        return send(authed(url).get().build(), DoingResponse.serializer())
+    }
+
+    /** Try a stuck post again (for someone who saved it). */
+    suspend fun retry(platform: String, id: String): ApiResult<RetryResponse> {
+        val url = url("api/app/doing/retry") ?: return badAddress
+        val body = json.encodeToString(PostRef.serializer(), PostRef(platform, id))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), RetryResponse.serializer())
+    }
+
+    /**
+     * `private` is sent when it's on, or when [explicit] (the phone has its
+     * own "Just for me by default", or the switch was touched). Otherwise
+     * it's left out and the server's default for the account applies.
+     */
+    private fun saveRequest(link: String, justForMe: Boolean, explicit: Boolean = false) =
+        SaveRequest(link, isPrivate = if (justForMe) true else if (explicit) false else null)
 
     private fun url(path: String): HttpUrl? = resolve(server, path)
 

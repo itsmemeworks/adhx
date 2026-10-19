@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.adhx.share.data.Connection
 import com.adhx.share.data.ConnectionStore
 import com.adhx.share.data.HistoryStore
+import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.data.ShareState
 import com.adhx.share.links.Links
 import com.adhx.share.net.AdhxApi
@@ -68,6 +69,10 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile
     private var wanted: Boolean? = null
 
+    /** "Just for me by default" on this phone, or null when it was never set here. */
+    @Volatile
+    private var phoneDefault: Boolean? = null
+
     /** Start saving what was shared. Safe to call again (after rotation): it only runs once. */
     fun start(sharedText: String?) {
         if (started) return
@@ -76,7 +81,9 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         val context: Context = getApplication<Application>()
         val link = Links.firstLink(sharedText)
         val platform = link?.let(Links::guessPlatform)
-        _ui.value = ShareUi(link = link, platform = platform)
+        // This phone's "Just for me by default", when it has one; else the server's default stands.
+        phoneDefault = SettingsPrefs.get(context).privateDefault
+        _ui.value = ShareUi(link = link, platform = platform, justForMe = phoneDefault == true)
 
         val connection = ConnectionStore.get(context).current()
         if (connection == null) {
@@ -211,12 +218,17 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         var result = api.saveAndFollow(
             link,
             interval = { if (open) 1_500L else 10_000L },
-            justForMe = wanted == true,
+            // On by default here: sent as `private`. Off by default only goes out
+            // once the post is known to be new (below), so a repeat share never
+            // makes a private save shared.
+            justForMe = wanted ?: (phoneDefault == true),
+            explicit = wanted != null,
             onQueued = { id -> history.update(itemId) { it.queuedWith(id) } },
         )
-        // The switch was flipped while saving: apply it now, even if the sheet has closed.
+        // The switch was flipped while saving, or a new save didn't come back
+        // as this phone's default: apply it now, even if the sheet has closed.
         val done = result
-        val want = wanted
+        val want = wanted ?: phoneDefault?.takeIf { done is ApiResult.Ok && !done.value.alreadySaved }
         if (done is ApiResult.Ok && want != null && want != done.value.isPrivate && done.value.id.isNotBlank()) {
             val switched = api.setPrivate(done.value.platform, done.value.id, want)
             if (switched is ApiResult.Ok) result = ApiResult.Ok(done.value.copy(isPrivate = switched.value), done.status)
@@ -224,7 +236,7 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         when (result) {
             is ApiResult.Ok -> history.update(itemId) { it.savedWith(result.value) }
             is ApiResult.Offline -> {
-                val justForMe = wanted == true
+                val justForMe = wanted ?: (phoneDefault == true)
                 history.update(itemId) { it.copy(state = ShareState.QUEUED, isPrivate = justForMe) }
                 SaveQueue.enqueue(context, link, itemId, justForMe = justForMe)
             }

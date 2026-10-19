@@ -145,6 +145,7 @@ fun NewTab(
             onAgain = { feed.setMode(FeedMode.EVERYONE) },
             hidden = ui.hidden,
             onShowHidden = feed::showHidden,
+            nothingYet = ui.nothingYet,
         )
     }
 
@@ -217,7 +218,7 @@ fun NewTab(
 /** The first reason the feed gives, as a chip over the caption; tapping it explains. */
 @Composable
 private fun WhyChip(post: PhonePost, onClick: () -> Unit) {
-    val reason = post.why.firstOrNull() ?: return
+    val reason = post.headline ?: return
     Row(
         Modifier
             .heightIn(min = 40.dp)
@@ -291,7 +292,7 @@ private fun WhySheet(
                 modifier = Modifier.semantics { heading() },
             )
             PostSummary(post, server)
-            val reasons = post.why.ifEmpty { listOf(Copy.WHY_NONE) }
+            val reasons = post.reasons.ifEmpty { listOf(Copy.WHY_NONE) }
             Column {
                 reasons.forEachIndexed { i, reason ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -392,6 +393,7 @@ fun CaughtUp(
     onAgain: () -> Unit,
     hidden: Map<String, Int> = emptyMap(),
     onShowHidden: () -> Unit = {},
+    nothingYet: Boolean = false,
 ) {
     val still = rememberReducedMotion()
     val isNew = mode == FeedMode.NEW
@@ -444,24 +446,31 @@ fun CaughtUp(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    if (isNew) Copy.CAUGHT_UP else Copy.END_TITLE,
+                    when {
+                        nothingYet -> Copy.NOTHING_YET_TITLE
+                        isNew -> Copy.CAUGHT_UP
+                        else -> Copy.END_TITLE
+                    },
                     fontFamily = SerifFamily,
                     fontSize = 46.sp,
                     lineHeight = 46.sp,
                     color = AdhxColors.White,
                     textAlign = TextAlign.Center,
                 )
-                Text(
-                    Copy.TOUCH_GRASS,
-                    fontFamily = SerifFamily,
-                    fontSize = 46.sp,
-                    lineHeight = 46.sp,
-                    color = AdhxColors.Accent,
-                    textAlign = TextAlign.Center,
-                )
+                if (!nothingYet) {
+                    Text(
+                        Copy.TOUCH_GRASS,
+                        fontFamily = SerifFamily,
+                        fontSize = 46.sp,
+                        lineHeight = 46.sp,
+                        color = AdhxColors.Accent,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
             Text(
                 when {
+                    nothingYet -> Copy.NOTHING_YET_NOTE
                     !isNew -> Copy.END_NOTE
                     watched.isEmpty() -> Copy.NOTHING_NEW_NOTE
                     else -> Copy.CAUGHT_UP_NOTE
@@ -472,7 +481,7 @@ fun CaughtUp(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 14.dp).width(300.dp),
             )
-            if (isNew && watched.isNotEmpty()) WatchedCard(watched, server, Modifier.padding(top = 22.dp))
+            if (isNew && !nothingYet && watched.isNotEmpty()) WatchedCard(watched, server, Modifier.padding(top = 22.dp))
             Copy.hiddenLine(hidden)?.let { line -> HiddenRow(line, onShowHidden, Modifier.padding(top = 14.dp)) }
             Column(
                 Modifier
@@ -483,7 +492,10 @@ fun CaughtUp(
                 PrimaryButton(Copy.BROWSE_CHANNELS, onClick = onChannels, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     LiveButton(onLive, Modifier.weight(1f))
-                    OutlineButton(Copy.WATCH_AGAIN, onClick = onAgain, minHeight = 48.dp, modifier = Modifier.weight(1f))
+                    // Nothing saved yet: there's nothing to watch again.
+                    if (!nothingYet) {
+                        OutlineButton(Copy.WATCH_AGAIN, onClick = onAgain, minHeight = 48.dp, modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }

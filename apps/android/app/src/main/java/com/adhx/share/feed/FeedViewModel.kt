@@ -40,6 +40,8 @@ data class FeedUi(
     /** No more pages to ask for. */
     val ended: Boolean = false,
     val caughtUp: Boolean = false,
+    /** The server says there's nothing to see at all yet ("Nothing new yet."). */
+    val nothingYet: Boolean = false,
     val loading: Boolean = false,
     val loadedOnce: Boolean = false,
     val error: String? = null,
@@ -211,6 +213,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                         // Also the end when a page brings nothing new, so it can't loop.
                         ended = page.nextCursor == null || page.caughtUp || fresh.isEmpty(),
                         caughtUp = page.caughtUp,
+                        nothingYet = page.nothingYet && current.items.isEmpty() && shown.isEmpty(),
                         loading = false,
                         loadedOnce = true,
                         hiddenByServer = page.hidden.ifEmpty { current.hiddenByServer },

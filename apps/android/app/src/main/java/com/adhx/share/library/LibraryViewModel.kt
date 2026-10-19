@@ -59,6 +59,12 @@ sealed interface Route {
     /** One post by its network and id (adhx://post?platform=…&id=…), fetched first. */
     data class PostLink(val platform: String, val id: String) : Route
     data object Settings : Route
+
+    /** Settings → Your people. */
+    data object People : Route
+
+    /** What your ADHX is doing: everything on its way, stuck or just finished. */
+    data object Doing : Route
 }
 
 data class SavesUi(

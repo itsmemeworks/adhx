@@ -58,6 +58,8 @@ object Copy {
     const val CAUGHT_UP_NOTE = "That’s everything your people saved since you last looked."
     const val END_TITLE = "That’s the lot."
     const val END_NOTE = "You’ve seen the whole pile. It’ll be here when you’re back."
+    const val NOTHING_YET_TITLE = "Nothing new yet."
+    const val NOTHING_YET_NOTE = "Save something for your people to find."
     const val NOTHING_NEW_NOTE = "Nothing new since you last looked. Your people must be outside."
     const val BROWSE_CHANNELS = "Browse channels"
     const val SEE_LIVE = "See what’s live"

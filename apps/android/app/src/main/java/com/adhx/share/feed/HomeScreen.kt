@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -46,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.adhx.share.R
 import com.adhx.share.data.Connection
+import com.adhx.share.doing.DoingPillHost
+import com.adhx.share.doing.DoingViewModel
 import com.adhx.share.library.BarButton
 import com.adhx.share.library.LibraryViewModel
 import com.adhx.share.library.Route
@@ -61,6 +64,8 @@ class HomeActions(
     val openPerson: (Saver) -> Unit,
     val onSearch: () -> Unit,
     val onSettings: () -> Unit,
+    /** What your ADHX is doing, in full (from the "On their way" sheet). */
+    val onDoing: () -> Unit = {},
 )
 
 /**
@@ -75,6 +80,7 @@ fun HomeScreen(
     connection: Connection,
     reach: Reach,
     actions: HomeActions,
+    doing: DoingViewModel? = null,
 ) {
     val tab = feed.tab
     // Tapping New again opens "What's in your feed".
@@ -89,7 +95,15 @@ fun HomeScreen(
             connection = connection,
             reach = reach,
             actions = actions,
-            header = { b -> HomeHeader(tab, onTab, actions, overMedia = true, newBadge = b) },
+            header = { b ->
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    HomeHeader(tab, onTab, actions, overMedia = true, newBadge = b)
+                    // "3 on their way" over the player, while posts are processing.
+                    if (doing != null) {
+                        DoingPillHost(doing, connection.server, onSeeAll = actions.onDoing, modifier = Modifier.offset(y = (-14).dp))
+                    }
+                }
+            },
         )
         HomeTab.Channels -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             ChannelsTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions, overMedia = false, newBadge = badge) })

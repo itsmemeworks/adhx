@@ -169,3 +169,41 @@ object HiddenSerializer : KSerializer<Map<String, Int>> {
         return pairs.mapNotNull { (k, v) -> if (k in MediaType.all && v != null && v > 0) k to v else null }.toMap()
     }
 }
+
+/** A list of [T] read one item at a time: an item that doesn't read is dropped. */
+abstract class LenientListSerializer<T>(private val element: KSerializer<T>) : KSerializer<List<T>> {
+    private val delegate = ListSerializer(element)
+    override val descriptor: SerialDescriptor = delegate.descriptor
+
+    override fun serialize(encoder: Encoder, value: List<T>) = delegate.serialize(encoder, value)
+
+    override fun deserialize(decoder: Decoder): List<T> {
+        val json = decoder as? JsonDecoder ?: return delegate.deserialize(decoder)
+        val list = json.decodeJsonElement() as? JsonArray ?: return emptyList()
+        return list.mapNotNull { item ->
+            if (item !is JsonObject) return@mapNotNull null
+            try {
+                json.json.decodeFromJsonElement(element, item).takeIf(::keep)
+            } catch (e: SerializationException) {
+                null
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }
+    }
+
+    /** Whether a decoded item has enough to show. */
+    protected open fun keep(item: T): Boolean = true
+}
+
+object LenientPeopleSerializer : LenientListSerializer<Person>(Person.serializer()) {
+    override fun keep(item: Person) = item.username.isNotBlank()
+}
+
+object LenientJoinRequestsSerializer : LenientListSerializer<JoinRequest>(JoinRequest.serializer()) {
+    override fun keep(item: JoinRequest) = item.id.isNotBlank()
+}
+
+object LenientDoingItemsSerializer : LenientListSerializer<DoingItem>(DoingItem.serializer()) {
+    override fun keep(item: DoingItem) = item.platform.isNotBlank() && item.id.isNotBlank()
+}

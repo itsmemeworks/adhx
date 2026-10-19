@@ -307,15 +307,11 @@ it; on a server without these endpoints (404) the app falls back as noted.
   `hidden` (also sent as `waiting`) counts what the filter left out, `{ text: 4 }`. The
   app also filters on the phone, for a server that ignores `types`. `why` is
   read loosely: a line, a list of lines, or objects with `text`. A 404 means
-  the server has no feed yet: home plays My saves as before.
-  The
-  app also filters on the phone, for a server that ignores `types`. `why` is
-  read loosely: a line, a list of lines, or objects with `text`. A 404 means
-  the server has no feed yet: home plays My saves as before. Items also
-  carry `whyReasons: [{ kind, text, username? }]` (the headline first); Why
-  this one lists every one. `nothingYet: true` (nothing new on the server at
-  all) shows "Nothing new yet. / Save something for your people to find."
-  instead of the caught-up page.
+  the server has no feed yet: home plays My saves as before. `whyReasons`
+  (`[{ kind, text, username? }]`, read the same way) lists every reason for
+  Why this one; `nothingYet: true` (nothing anyone saved yet) shows "Nothing
+  new yet. Save something for your people to find." instead of the
+  caught-up page.
 - `GET /api/app/feed/types` → `{ types }` and `PUT` the same: the feed
   filter. It may 404 until the blend lands; the phone keeps its own copy and
   the default is videos and photos.
@@ -444,6 +440,15 @@ out so the server's own choice still applies.
   anywhere."
 - The full list: Needs you, On their way and Done lately (with quality and
   what was learned), whether the Mac helper is connected, and the free space.
+
+### Android differences
+
+- The "On their way" pill asks `/api/app/doing` every 5 s while something is
+  on its way and every 15 s otherwise, and stops on a 404.
+- "Just for me by default" left unset sends no `private`; switched off, a
+  new save that comes back private is switched back with `/api/app/private`
+  (never a repeat share).
+- Shared lately sits in Settings with how many links are waiting.
 
 ## The share sheet (both platforms)
 

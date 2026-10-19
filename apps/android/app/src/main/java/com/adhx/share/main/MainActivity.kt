@@ -26,6 +26,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.adhx.share.data.Connection
 import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.ShareState
+import com.adhx.share.doing.DoingScreen
+import com.adhx.share.doing.DoingViewModel
 import com.adhx.share.feed.ChannelScreen
 import com.adhx.share.feed.FeedViewModel
 import com.adhx.share.feed.HomeActions
@@ -59,6 +61,8 @@ class MainActivity : ComponentActivity() {
     private val vm: MainViewModel by viewModels()
     private val library: LibraryViewModel by viewModels()
     private val feed: FeedViewModel by viewModels()
+    private val doing: DoingViewModel by viewModels()
+    private val people: PeopleViewModel by viewModels()
     private val pip by lazy { PipHost(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,7 +77,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AdhxTheme {
                 CompositionLocalProvider(LocalPip provides pip) {
-                    MainApp(vm, library, feed)
+                    MainApp(vm, library, feed, doing, people)
                 }
             }
         }
@@ -119,7 +123,13 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MainApp(vm: MainViewModel, library: LibraryViewModel, feed: FeedViewModel) {
+private fun MainApp(
+    vm: MainViewModel,
+    library: LibraryViewModel,
+    feed: FeedViewModel,
+    doing: DoingViewModel,
+    people: PeopleViewModel,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val connection by vm.connection.collectAsStateWithLifecycle()
@@ -163,7 +173,9 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel, feed: FeedView
                     openPerson = openPerson,
                     onSearch = { library.open(Route.Search) },
                     onSettings = { library.open(Route.Settings) },
+                    onDoing = { library.open(Route.Doing) },
                 ),
+                doing = doing,
             )
             Route.MySaves -> SavesHome(
                 vm = library,
@@ -243,7 +255,26 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel, feed: FeedView
                 topBar = { BackBar(back) },
                 onSaver = openPerson,
             )
-            Route.Settings -> SettingsScreen(vm = vm, connection = current, onBack = back, onSharedLately = { library.open(Route.SharedLately) })
+            Route.Settings -> SettingsScreen(
+                vm = vm,
+                people = people,
+                doing = doing,
+                feed = feed,
+                connection = current,
+                actions = SettingsActions(
+                    onBack = back,
+                    onPeople = { library.open(Route.People) },
+                    onDoing = { library.open(Route.Doing) },
+                    onSharedLately = { library.open(Route.SharedLately) },
+                ),
+            )
+            Route.People -> PeopleScreen(
+                people = people,
+                server = current.server,
+                onBack = back,
+                onPerson = openPerson,
+            )
+            Route.Doing -> DoingScreen(doing = doing, server = current.server, onBack = back)
         }
     }
 }

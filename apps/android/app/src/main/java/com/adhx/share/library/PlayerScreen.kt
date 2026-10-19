@@ -113,6 +113,7 @@ import com.adhx.share.links.Links
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.feed.Privacy
+import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
 import com.adhx.share.net.Saver
@@ -159,7 +160,8 @@ private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f)
 /**
  * The player: one post at a time, full screen. Swipe up for the next save,
  * down for the previous; tap to pause or play. One ExoPlayer is shared by
- * every page and plays the page the pager settled on. Videos start muted; with
+ * every page and plays the page the pager settled on. Videos start muted (or
+ * with sound, under Settings → Sound on by default); with
  * Repeat off a video that ends moves on to the next save, with Repeat on it
  * loops. Hide clears everything but a thin progress line until the next tap.
  * [posts] must not be empty unless there is an [end] page.
@@ -194,7 +196,7 @@ fun PlayerScreen(
     // With animations off (Remove animations), pages jump instead of sliding.
     val still = rememberReducedMotion()
     suspend fun goTo(page: Int) = if (still) pager.scrollToPage(page) else pager.animateScrollToPage(page)
-    var muted by rememberSaveable { mutableStateOf(true) }
+    var muted by rememberSaveable { mutableStateOf(!SettingsPrefs.get(context).soundOn) }
     var repeat by rememberSaveable { mutableStateOf(false) }
     var hidden by rememberSaveable { mutableStateOf(false) }
     var notice by remember { mutableStateOf<Notice?>(null) }
