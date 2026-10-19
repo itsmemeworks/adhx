@@ -84,13 +84,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Public tag-collection pages (`/t/{user}/{tag}`) plus the bare curator
   // profile (`/t/{user}`) for every distinct username behind at least one
-  // public tag. Private tags are excluded.
+  // public tag. Private tags, and public ones holding only private saves, are excluded.
   try {
     const publicShares = db
       .select({ tag: tagShares.tag, username: users.username, userId: users.id })
       .from(tagShares)
       .innerJoin(users, eq(tagShares.userId, users.id))
-      .where(eq(tagShares.isPublic, true))
+      .where(
+        and(
+          eq(tagShares.isPublic, true),
+          // Private saves never show on a public channel, so one made only of
+          // them is left out (no tagged saves at all keeps the old behaviour).
+          sql`(NOT EXISTS (
+            SELECT 1 FROM bookmark_tags bt
+            WHERE bt.user_id = ${tagShares.userId} AND bt.tag = ${tagShares.tag}
+          ) OR EXISTS (
+            SELECT 1 FROM bookmark_tags bt
+            JOIN bookmarks b ON b.user_id = bt.user_id AND b.platform = bt.platform AND b.id = bt.bookmark_id
+            WHERE bt.user_id = ${tagShares.userId} AND bt.tag = ${tagShares.tag} AND b.is_private = 0
+          ))`,
+        ),
+      )
       .all()
     const curators = new Set<string>()
     for (const share of publicShares) {
