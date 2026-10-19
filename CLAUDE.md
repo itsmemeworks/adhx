@@ -1183,14 +1183,22 @@ X has a confirmed platform bug: during the **logged-out** login flow it runs a r
 | Staging     | `adhx`      | adhx.fly.dev | `fly.toml`            | `adhx_data`      |
 | Production  | `adhx-prod` | adhx.com     | `fly.production.toml` | `adhx_prod_data` |
 
-**Deployment flow:**
+**Current release flow:**
 
 1. Code merged to main → Release-please creates version bump PR
-2. Version PR merged → **Auto-deploys to staging only**
-3. Verify staging works → Manual production deploy (`gh workflow run deploy.yml -f environment=production`, or Fly CLI)
+2. Owner merges version PR → Release Please creates a tagged GitHub release and calls the container publisher once.
+3. An operator selects and installs the verified release image separately. Fly and Pages are explicit manual operations.
+
+The single root package uses empty `component` **and** `package-name` release
+overrides so the grouped PR can be parsed into an unprefixed version tag.
+An empty component alone falls back to the Node package name in Release Please
+17.6.0 and rejects the merged grouped branch. The action and isolated offline
+round-trip tests are pinned together; see [`docs/releasing.md`](docs/releasing.md).
+
+**Legacy Fly commands (only when explicitly requested):**
 
 ```bash
-# Deploy to staging (default, also triggered by release-please)
+# Deploy to staging (manual)
 gh workflow run deploy.yml
 
 # Deploy to production (uses FLY_API_TOKEN_PROD — staging token cannot deploy adhx-prod)
@@ -1208,9 +1216,9 @@ curl -s https://adhx.com/api/health | jq .version      # production
 - **CI** (`.github/workflows/ci.yml`) - Runs on PRs: lint, typecheck, test, build
 - **Deploy** (`.github/workflows/deploy.yml`) - Deploys to Fly.io with environment selection (staging/production)
 - **Container image** (`.github/workflows/image-publish.yml`) - Publishes public AMD64/ARM64 release images to `ghcr.io/itsmemeworks/adhx`
-- **Release Please** (`.github/workflows/release-please.yml`) - Automated semantic versioning, triggers staging deploy and container publication via `workflow_dispatch`
+- **Release Please** (`.github/workflows/release-please.yml`) - Pinned semantic-version automation; calls container publication only after creating a release. No implicit Fly or website deployment.
 
-**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release-please workflow directly dispatches both downstream workflows. GHCR creates the organization package as private on its first publication and has no visibility API; an owner must set it to **Public** once in package settings. The publish workflow verifies anonymous pulls and fails with the exact settings URL until that is done.
+**Important**: GitHub doesn't fire `release: published` events when releases are created with `GITHUB_TOKEN` (security measure). The release workflow explicitly calls the reusable publisher. GHCR creates the organization package as private on its first publication and has no visibility API; an owner must set it to **Public** once in package settings. The publish workflow verifies anonymous pulls and fails with the exact settings URL until that is done.
 
 ### Sentry Release Tracking
 

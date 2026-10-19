@@ -27,6 +27,23 @@ permissions:
   contents: read
 
 jobs:
+  release-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: .github/release-please/pnpm-lock.yaml
+      - name: Install the pinned release compatibility tools
+        run: pnpm --dir .github/release-please install --frozen-lockfile --ignore-scripts
+      - name: Round-trip real upstream release PRs and tags without GitHub writes
+        run: pnpm --dir .github/release-please test
+
   # GITHUB_TOKEN-created release PRs do not need another full app CI run.
   # Validate their actual diff before reporting the required branch checks.
   release-pr-check:

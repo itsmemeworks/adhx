@@ -44,6 +44,36 @@ immutable base/head revisions. It never checks out or executes the release PR's
 code. These are metadata checks, not claims that the entire suite was rerun.
 Feature PRs cannot bypass CI by choosing a release-like branch name.
 
+## Single-package release identity
+
+The root release configuration intentionally sets both `component` and
+`package-name` to empty strings, while `include-component-in-tag` stays false.
+This keeps the grouped branch `release-please--branches--main`, the title
+`chore: release main`, and plain `v2.1.0`-style tags consistent.
+
+Release Please 17.6.0 treats an empty `component` alone as a request to fall back
+to the Node package name. Its grouped single-package PR has no branch/body
+component, so the release parser then reports that the PR component does not
+match the configured package component and produces no release. An explicit
+empty `package-name` disables that fallback. It does not rename `package.json`.
+
+The action is pinned to a commit bundling Release Please 17.6.0. The isolated
+tools in `.github/release-please/` lock that same library version and exercise
+its actual config loader, Node PR builder, manifest merge plugin and release
+parser. They reproduce the previous failure and check feature/patch releases,
+merged-commit identity, unchanged package name, component rejection and the
+documentation-only policy without making GitHub writes or network calls.
+
+```sh
+pnpm --dir .github/release-please install --frozen-lockfile --ignore-scripts
+pnpm --dir .github/release-please test
+```
+
+PR CI runs these compatibility tests separately from the application suite.
+When updating the action, check its committed dependency lock, update the action
+pin and test-library pin together, and repeat the round trip before shipping.
+The test tools stay outside the application's production dependency tree.
+
 ## Tags and safe updates
 
 - `sha-<40-character-commit>` identifies one source revision and is reused on
@@ -72,3 +102,10 @@ If Release Please fails, fix the reported cause and rerun it. Do not fabricate a
 tag from the newest manifest for an arbitrary older PR. Its normal action uses
 [the manifest configuration](../release-please-config.json) and upstream default
 title formatting. No PAT is required for this pipeline.
+
+A merged version PR alone is not evidence that a GitHub release or image exists.
+For a component-mismatch incident, verify the release candidate against the
+merged PR's title, body version and exact merge commit before recovery; do not
+edit an unrelated package identity or tag the newest `main` opportunistically.
+Once an intended release exists, recover only that version through the publisher
+above. Neither merging a release fix nor recovering an image updates services.
