@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarks, userPreferences, users } from '@/lib/db/schema'
 import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import type { Saver } from './types'
 
 /**
  * Who saved what, for members only (docs/specs/friends-feed.md).
@@ -17,16 +18,7 @@ import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
  * save, private or not.
  */
 
-/** One person who saved a post, as shown to another member. */
-export type Saver = {
-  username: string
-  name: string | null
-  /** Their chosen photo; null when they use the generated icon (render it from `username`). */
-  avatarUrl: string | null
-  /** When they saved it (ISO). */
-  savedAt: string
-  isYou: boolean
-}
+export type { Saver }
 
 function col(alias: string | undefined, name: string, column: unknown): SQL {
   return alias ? sql`${sql.identifier(alias)}.${sql.identifier(name)}` : sql`${column}`

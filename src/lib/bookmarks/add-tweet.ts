@@ -11,16 +11,20 @@ import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { noteSaved } from '@/lib/semantic'
 import { cancelledSave, type SaveGuard } from './save-guard'
+import { applyRepeatPrivacy, type SaveOptions } from './privacy'
 
 /**
  * Save a tweet by its URL for `userId` (POST /api/tweets/add, and the X branch
  * of /api/bookmarks/add and /api/app/save). Answers as the route does.
+ * `options.private` saves it just for the user (no pulse); on a repeat save
+ * it updates the flag.
  */
 export async function addTweet(
   userId: string,
   url: unknown,
   source: string = 'manual',
   canSave: SaveGuard = () => true,
+  options: SaveOptions = {},
 ): Promise<NextResponse> {
   try {
     if (!canSave()) return cancelledSave()
@@ -61,7 +65,8 @@ export async function addTweet(
       // to Trending/Latest (the "missed loop"). De-duped within 60s. Pull the
       // thumbnail from stored media so a saved photo/video tweet still reads
       // rich (getTrendingItems also derives type/cover from the bookmark).
-      const dup = existing[0]
+      if (!canSave()) return cancelledSave()
+      const dup = applyRepeatPrivacy(existing[0], options)!
       const [firstMedia] = await db
         .select({ previewUrl: bookmarkMedia.previewUrl, originalUrl: bookmarkMedia.originalUrl })
         .from(bookmarkMedia)
@@ -74,25 +79,27 @@ export async function addTweet(
         )
         .limit(1)
       if (!canSave()) return cancelledSave()
-      recordActivity({
-        action: 'save',
-        platform: 'twitter',
-        bookmarkId: parsed.tweetId,
-        author: dup.author,
-        authorName: dup.authorName,
-        text: dup.text || null,
-        thumbnailUrl: firstMedia?.previewUrl || firstMedia?.originalUrl || null,
-        contentType: dup.category,
-        url: previewPath('twitter', dup.author, parsed.tweetId),
-        userId,
-        source: source as 'manual' | 'url_prefix' | 'pwa_share',
-      })
+      // A private save never shows in the pulse.
+      if (!dup.isPrivate)
+        recordActivity({
+          action: 'save',
+          platform: 'twitter',
+          bookmarkId: parsed.tweetId,
+          author: dup.author,
+          authorName: dup.authorName,
+          text: dup.text || null,
+          thumbnailUrl: firstMedia?.previewUrl || firstMedia?.originalUrl || null,
+          contentType: dup.category,
+          url: previewPath('twitter', dup.author, parsed.tweetId),
+          userId,
+          source: source as 'manual' | 'url_prefix' | 'pwa_share',
+        })
       return NextResponse.json(
         {
           success: false,
           isDuplicate: true,
           message: 'This tweet is already in your bookmarks',
-          bookmark: existing[0],
+          bookmark: dup,
         },
         { status: 200 },
       )
@@ -319,6 +326,7 @@ export async function addTweet(
           processedAt: now,
           category,
           source, // 'manual' or 'url_prefix'
+          isPrivate: options.private === true,
           isQuote,
           quoteContext,
           quotedTweetId,
@@ -422,7 +430,7 @@ export async function addTweet(
           success: false,
           isDuplicate: true,
           message: 'This tweet is already in your bookmarks',
-          bookmark: newBookmark[0],
+          bookmark: applyRepeatPrivacy(newBookmark[0], options),
         },
         { status: 200 },
       )
@@ -434,19 +442,20 @@ export async function addTweet(
 
     // Push to the public activity pulse (anonymous, server-resolved content).
     const saveAuthor = tweet.author?.screen_name || parsed.author
-    recordActivity({
-      action: 'save',
-      platform: 'twitter',
-      bookmarkId: parsed.tweetId,
-      author: saveAuthor,
-      authorName: tweet.author?.name || null,
-      text: tweet.text || null,
-      // Real media only — no avatar fallback, so text tweets stay "text".
-      thumbnailUrl: tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null,
-      url: previewPath('twitter', saveAuthor, parsed.tweetId),
-      userId,
-      source: source as 'manual' | 'url_prefix' | 'pwa_share',
-    })
+    if (!options.private)
+      recordActivity({
+        action: 'save',
+        platform: 'twitter',
+        bookmarkId: parsed.tweetId,
+        author: saveAuthor,
+        authorName: tweet.author?.name || null,
+        text: tweet.text || null,
+        // Real media only — no avatar fallback, so text tweets stay "text".
+        thumbnailUrl: tweet.media?.all?.[0]?.thumbnail_url || tweet.media?.all?.[0]?.url || null,
+        url: previewPath('twitter', saveAuthor, parsed.tweetId),
+        userId,
+        source: source as 'manual' | 'url_prefix' | 'pwa_share',
+      })
 
     return NextResponse.json({
       success: true,

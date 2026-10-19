@@ -25,6 +25,7 @@ import { expandShortLink, isShortLink } from '@/lib/keep/shortlinks'
 import { keptSrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
 import { cancelledSave, type SaveGuard } from './save-guard'
+import { applyRepeatPrivacy, type SaveOptions } from './privacy'
 
 /**
  * Save the post a link points to for `userId` — the platform-agnostic save
@@ -38,12 +39,15 @@ import { cancelledSave, type SaveGuard } from './save-guard'
  *
  * Answers like the route: `{ success, isDuplicate, platform, bookmark }`, 400
  * when the link isn't a post ADHX can keep, 404 when the post can't be read.
+ * `options.private` saves it just for the user (no pulse); on a repeat save
+ * it updates the flag.
  */
 export async function addBookmark(
   userId: string,
   url: unknown,
   source: string = 'manual',
   canSave: SaveGuard = () => true,
+  options: SaveOptions = {},
 ): Promise<NextResponse> {
   try {
     if (!canSave()) return cancelledSave()
@@ -58,7 +62,7 @@ export async function addBookmark(
     const detected = detectPlatformPost(expanded ?? url)
 
     if (detected?.platform === 'twitter') {
-      const tweetResponse = await addTweet(userId, url, source, canSave)
+      const tweetResponse = await addTweet(userId, url, source, canSave, options)
       const tweetData = await tweetResponse.json()
       return NextResponse.json(
         { ...tweetData, platform: 'twitter' },
@@ -73,6 +77,7 @@ export async function addBookmark(
         source,
         detected.previewPath.startsWith('/p/') ? 'post' : 'reel',
         canSave,
+        options,
       )
     }
 
@@ -82,12 +87,19 @@ export async function addBookmark(
     if (detected?.platform === 'tiktok' || isTikTokShortLink(url)) {
       const resolved = await resolveTikTokUrl(url)
       if (resolved) {
-        return await addTikTokVideo(userId, resolved.handle, resolved.videoId, source, canSave)
+        return await addTikTokVideo(
+          userId,
+          resolved.handle,
+          resolved.videoId,
+          source,
+          canSave,
+          options,
+        )
       }
     }
 
     if (detected && isLinkNetwork(detected.platform)) {
-      return await addNetworkPost(userId, detected as NetworkPost, source, canSave)
+      return await addNetworkPost(userId, detected as NetworkPost, source, canSave, options)
     }
 
     return NextResponse.json(
@@ -109,6 +121,7 @@ async function addInstagramPost(
   source: string,
   pathHint: 'post' | 'reel',
   canSave: SaveGuard,
+  options: SaveOptions,
 ) {
   const [existing] = await db
     .select()
@@ -142,7 +155,12 @@ async function addInstagramPost(
       )
       if (current) {
         return NextResponse.json(
-          { success: false, isDuplicate: true, platform: 'instagram', bookmark: current },
+          {
+            success: false,
+            isDuplicate: true,
+            platform: 'instagram',
+            bookmark: applyRepeatPrivacy(current, options),
+          },
           { status: 200 },
         )
       }
@@ -185,6 +203,7 @@ async function addInstagramPost(
         processedAt: now,
         category: contentType,
         source,
+        isPrivate: options.private === true,
       })
       .onConflictDoNothing()
       .run()
@@ -284,7 +303,12 @@ async function addInstagramPost(
   if (!result) return cancelledSave()
   if (!result.inserted) {
     return NextResponse.json(
-      { success: false, isDuplicate: true, platform: 'instagram', bookmark: result.bookmark },
+      {
+        success: false,
+        isDuplicate: true,
+        platform: 'instagram',
+        bookmark: applyRepeatPrivacy(result.bookmark, options),
+      },
       { status: 200 },
     )
   }
@@ -292,21 +316,22 @@ async function addInstagramPost(
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
   noteSaved([{ platform: 'instagram', postId }])
 
-  recordActivity({
-    action: 'save',
-    platform: 'instagram',
-    bookmarkId: postId,
-    author: handle,
-    authorName: meta.authorName || meta.author || null,
-    text: meta.caption || meta.description || null,
-    thumbnailUrl: meta.imageUrl
-      ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(postId)}`
-      : null,
-    contentType,
-    url: previewPath('instagram', handle, postId, contentType),
-    userId,
-    source: source as 'manual' | 'url_prefix' | 'pwa_share',
-  })
+  if (!options.private)
+    recordActivity({
+      action: 'save',
+      platform: 'instagram',
+      bookmarkId: postId,
+      author: handle,
+      authorName: meta.authorName || meta.author || null,
+      text: meta.caption || meta.description || null,
+      thumbnailUrl: meta.imageUrl
+        ? `/api/media/instagram/thumbnail?id=${encodeURIComponent(postId)}`
+        : null,
+      contentType,
+      url: previewPath('instagram', handle, postId, contentType),
+      userId,
+      source: source as 'manual' | 'url_prefix' | 'pwa_share',
+    })
 
   return NextResponse.json({
     success: true,
@@ -323,6 +348,7 @@ async function addTikTokVideo(
   videoId: string,
   source: string,
   canSave: SaveGuard,
+  options: SaveOptions,
 ) {
   const [existing] = await db
     .select()
@@ -356,7 +382,12 @@ async function addTikTokVideo(
       )
       if (current) {
         return NextResponse.json(
-          { success: false, isDuplicate: true, platform: 'tiktok', bookmark: current },
+          {
+            success: false,
+            isDuplicate: true,
+            platform: 'tiktok',
+            bookmark: applyRepeatPrivacy(current, options),
+          },
           { status: 200 },
         )
       }
@@ -385,6 +416,7 @@ async function addTikTokVideo(
         processedAt: now,
         category: 'video',
         source,
+        isPrivate: options.private === true,
       })
       .onConflictDoNothing()
       .run()
@@ -430,7 +462,12 @@ async function addTikTokVideo(
   if (!result) return cancelledSave()
   if (!result.inserted) {
     return NextResponse.json(
-      { success: false, isDuplicate: true, platform: 'tiktok', bookmark: result.bookmark },
+      {
+        success: false,
+        isDuplicate: true,
+        platform: 'tiktok',
+        bookmark: applyRepeatPrivacy(result.bookmark, options),
+      },
       { status: 200 },
     )
   }
@@ -438,18 +475,19 @@ async function addTikTokVideo(
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
   noteSaved([{ platform: 'tiktok', postId: videoId }])
 
-  recordActivity({
-    action: 'save',
-    platform: 'tiktok',
-    bookmarkId: videoId,
-    author: handle,
-    authorName: meta.authorName || null,
-    text: meta.description || meta.title || null,
-    thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
-    url: previewPath('tiktok', handle, videoId),
-    userId,
-    source: source as 'manual' | 'url_prefix' | 'pwa_share',
-  })
+  if (!options.private)
+    recordActivity({
+      action: 'save',
+      platform: 'tiktok',
+      bookmarkId: videoId,
+      author: handle,
+      authorName: meta.authorName || null,
+      text: meta.description || meta.title || null,
+      thumbnailUrl: null, // tnktok exposes no poster; card falls back to the glyph
+      url: previewPath('tiktok', handle, videoId),
+      userId,
+      source: source as 'manual' | 'url_prefix' | 'pwa_share',
+    })
 
   return NextResponse.json({
     success: true,
@@ -470,6 +508,7 @@ async function addNetworkPost(
   post: NetworkPost,
   source: string,
   canSave: SaveGuard,
+  options: SaveOptions,
 ) {
   const platform = post.platform
   const existing = db
@@ -486,7 +525,12 @@ async function addNetworkPost(
     .all()[0]
   if (existing) {
     return NextResponse.json(
-      { success: false, isDuplicate: true, platform, bookmark: existing },
+      {
+        success: false,
+        isDuplicate: true,
+        platform,
+        bookmark: applyRepeatPrivacy(existing, options),
+      },
       { status: 200 },
     )
   }
@@ -545,6 +589,7 @@ async function addNetworkPost(
         processedAt: now,
         category: described.category,
         source,
+        isPrivate: options.private === true,
       })
       .onConflictDoNothing()
       .run()
@@ -576,7 +621,12 @@ async function addNetworkPost(
   if (!result) return cancelledSave()
   if (!result.inserted) {
     return NextResponse.json(
-      { success: false, isDuplicate: true, platform, bookmark: result.bookmark },
+      {
+        success: false,
+        isDuplicate: true,
+        platform,
+        bookmark: applyRepeatPrivacy(result.bookmark, options),
+      },
       { status: 200 },
     )
   }
@@ -584,19 +634,20 @@ async function addNetworkPost(
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
   wakeKeep()
   noteSaved([{ platform, postId: post.id }])
-  recordActivity({
-    action: 'save',
-    platform,
-    bookmarkId: post.id,
-    author,
-    authorName: described.authorName,
-    text: described.text || null,
-    thumbnailUrl: described.category === 'text' ? null : keptSrc(platform, post.id, 'poster'),
-    contentType: described.category,
-    url: previewPath(platform, author, post.id),
-    userId,
-    source: source as 'manual' | 'url_prefix' | 'pwa_share',
-  })
+  if (!options.private)
+    recordActivity({
+      action: 'save',
+      platform,
+      bookmarkId: post.id,
+      author,
+      authorName: described.authorName,
+      text: described.text || null,
+      thumbnailUrl: described.category === 'text' ? null : keptSrc(platform, post.id, 'poster'),
+      contentType: described.category,
+      url: previewPath(platform, author, post.id),
+      userId,
+      source: source as 'manual' | 'url_prefix' | 'pwa_share',
+    })
 
   return NextResponse.json({
     success: true,

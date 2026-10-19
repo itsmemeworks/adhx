@@ -3,6 +3,7 @@ import { nanoid } from '@/lib/utils'
 import { db } from '@/lib/db'
 import { phoneSaveQueue, users } from '@/lib/db/schema'
 import { addBookmark } from '@/lib/bookmarks/add'
+import type { SaveOptions } from '@/lib/bookmarks/privacy'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
 import { captureException } from '@/lib/sentry'
@@ -49,12 +50,28 @@ function state(): State {
   return g.__adhxSaveQueue
 }
 
-/** Take a shared link: it's saved in the background. */
-export function enqueueSave(userId: string, url: string, now = new Date()): QueuedSave {
+/**
+ * Take a shared link: it's saved in the background. `options.private` is kept
+ * with it, so a "Just for me" share is saved private.
+ */
+export function enqueueSave(
+  userId: string,
+  url: string,
+  now = new Date(),
+  options: SaveOptions = {},
+): QueuedSave {
   const id = nanoid()
   const iso = now.toISOString()
   db.insert(phoneSaveQueue)
-    .values({ id, userId, url, status: 'waiting', createdAt: iso, updatedAt: iso })
+    .values({
+      id,
+      userId,
+      url,
+      status: 'waiting',
+      isPrivate: options.private === true,
+      createdAt: iso,
+      updatedAt: iso,
+    })
     .run()
   wakeSaveQueue()
   return {
@@ -147,7 +164,11 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
         )
         .get() !== undefined
     if (!canSave()) return
-    const response = await addBookmark(row.userId, row.url, 'phone_app', canSave)
+    // Only a "Just for me" share changes the flag: a plain share of a post you
+    // already keep privately leaves it private.
+    const response = await addBookmark(row.userId, row.url, 'phone_app', canSave, {
+      private: row.isPrivate ? true : undefined,
+    })
     status = response.status
     data = (await response.json().catch(() => ({}))) as typeof data
   } catch (error) {

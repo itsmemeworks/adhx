@@ -1,3 +1,4 @@
+import { visibleSaveFilter } from '@/lib/people/savers'
 import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
@@ -436,7 +437,8 @@ async function fetchTrendingWindow(
       .select({
         platform: bookmarks.platform,
         id: bookmarks.id,
-        saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
+        // Visible saves only: private and quoted copies are never counted.
+        saveCount: sql<number>`count(distinct CASE WHEN ${visibleSaveFilter} THEN ${bookmarks.userId} END)`,
         // `/p/` rows were historically stored as video. If any saver has a
         // repaired photo classification, prefer it over that legacy value.
         category: sql<string | null>`CASE
@@ -455,7 +457,9 @@ async function fetchTrendingWindow(
         // Earliest save time across all savers — one half of `addedAt`
         // (display), never ordering. Public timing metadata, no user
         // identity.
-        earliestSavedAt: sql<string | null>`min(${bookmarks.processedAt})`,
+        earliestSavedAt: sql<
+          string | null
+        >`min(CASE WHEN ${visibleSaveFilter} THEN ${bookmarks.processedAt} END)`,
       })
       .from(bookmarks)
       .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
