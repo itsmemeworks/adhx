@@ -39,6 +39,8 @@ data class HistoryItem(
     val photos: Int = 0,
     val audio: Int = 0,
     val error: String? = null,
+    /** Shared "Just for me": sent as `private` with the save (the offline queue too). */
+    val isPrivate: Boolean = false,
 ) {
     /** Nothing more will change, so there's no need to ask the server again. */
     val isFinal: Boolean
@@ -60,6 +62,7 @@ data class HistoryItem(
         posterUrl = post.posterUrl,
         openPath = post.openPath,
         alreadySaved = post.alreadySaved,
+        isPrivate = post.isPrivate,
         keep = keep ?: KeepStatus.WAITING,
         error = null,
     )

@@ -52,9 +52,9 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), MeResponse.serializer())
     }
 
-    suspend fun save(link: String): ApiResult<SaveResponse> {
+    suspend fun save(link: String, justForMe: Boolean = false): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
-        val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link))
+        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe))
         return send(authed(url).post(body.toRequestBody(JSON)).build(), SaveResponse.serializer())
     }
 
@@ -70,10 +70,12 @@ class AdhxApi(private val server: String, private val key: String?) {
         link: String,
         interval: () -> Long,
         limitMs: Long = FOLLOW_LIMIT_MS,
+        justForMe: Boolean = false,
+        explicit: Boolean = false,
         onQueued: (String) -> Unit = {},
     ): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
-        val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link))
+        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe, explicit))
         val request = authed(url).header("Prefer", "respond-async").post(body.toRequestBody(JSON)).build()
         val started = send(request) { code, text ->
             if (code == 202) json.decodeFromString(QueuedBody.serializer(), text).id
@@ -152,15 +154,124 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), SavedPostResponse.serializer())
     }
 
-    /** Search your saves by meaning. */
-    suspend fun search(q: String, offset: Int = 0): ApiResult<SearchResponse> {
+    /** Search saves by meaning: yours, or everyone's on this server ([SearchScope]). */
+    suspend fun search(q: String, offset: Int = 0, scope: String = SearchScope.MINE): ApiResult<SearchResponse> {
         val base = url("api/app/search") ?: return badAddress
         val url = base.newBuilder()
             .addQueryParameter("q", q)
             .addQueryParameter("offset", offset.toString())
+            .addQueryParameter("scope", scope)
             .build()
         return send(authed(url).get().build(), SearchResponse.serializer())
     }
+
+    /** Switch one of your saves "Just for me" (or back). Answers what it is now. */
+    suspend fun setPrivate(platform: String, id: String, justForMe: Boolean): ApiResult<Boolean> {
+        val url = url("api/app/private") ?: return badAddress
+        val body = json.encodeToString(PrivateRequest.serializer(), PrivateRequest(platform, id, justForMe))
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, text ->
+            if (text.isBlank()) justForMe else json.decodeFromString(PrivateResponse.serializer(), text).isPrivate
+        }
+    }
+
+    /** A page of the friends feed ([FeedMode]), only of [types] ([MediaType]) when given. */
+    suspend fun feed(mode: String, cursor: String? = null, types: Collection<String>? = null): ApiResult<FeedResponse> {
+        val base = url("api/app/feed") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("mode", mode)
+            .apply { if (cursor != null) addQueryParameter("cursor", cursor) }
+            .apply { if (!types.isNullOrEmpty()) addQueryParameter("types", MediaType.all.filter { it in types }.joinToString(",")) }
+            .build()
+        return send(authed(url).get().build(), FeedResponse.serializer())
+    }
+
+    /** Your feed filter, as the server keeps it. */
+    suspend fun feedTypes(): ApiResult<FeedTypesBody> {
+        val url = url("api/app/feed/types") ?: return badAddress
+        return send(authed(url).get().build(), FeedTypesBody.serializer())
+    }
+
+    /** Keep your feed filter on the server. */
+    suspend fun setFeedTypes(types: Collection<String>): ApiResult<Unit> {
+        val url = url("api/app/feed/types") ?: return badAddress
+        val body = json.encodeToString(FeedTypesBody.serializer(), FeedTypesBody(MediaType.all.filter { it in types }))
+        return send(authed(url).put(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    /** Mark posts seen (204). At most [SeenBatcher.MAX_BATCH] at a time. */
+    suspend fun seen(posts: List<PostRef>): ApiResult<Unit> {
+        val url = url("api/app/seen") ?: return badAddress
+        val body = json.encodeToString(SeenRequest.serializer(), SeenRequest(posts))
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    suspend fun channels(): ApiResult<ChannelsResponse> {
+        val url = url("api/app/channels") ?: return badAddress
+        return send(authed(url).get().build(), ChannelsResponse.serializer())
+    }
+
+    /** One channel's posts: [ChannelKind] and its slug (a friend's is their username). */
+    suspend fun channel(kind: String, slug: String): ApiResult<ChannelItemsResponse> {
+        val base = url("api/app/channels") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(kind).addPathSegment(slug).build()
+        return send(authed(url).get().build(), ChannelItemsResponse.serializer())
+    }
+
+    suspend fun live(): ApiResult<LiveResponse> {
+        val url = url("api/app/live") ?: return badAddress
+        return send(authed(url).get().build(), LiveResponse.serializer())
+    }
+
+    suspend fun liveMoment(slug: String): ApiResult<LiveDetail> {
+        val base = url("api/app/live") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).build()
+        return send(authed(url).get().build(), LiveDetail.serializer())
+    }
+
+    /** React to a post in a moment: one [Reaction.emoji], or a few words (at most [Reaction.MAX_TEXT]). */
+    suspend fun react(slug: String, platform: String, id: String, emoji: String? = null, text: String? = null): ApiResult<Unit> {
+        val base = url("api/app/live") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).addPathSegment("react").build()
+        val request = ReactRequest(emoji = emoji, text = text?.trim()?.take(Reaction.MAX_TEXT), platform = platform, id = id)
+        val body = json.encodeToString(ReactRequest.serializer(), request)
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    /** Your people and, for an admin, who's waiting to be let in. */
+    suspend fun people(): ApiResult<PeopleResponse> {
+        val url = url("api/app/people") ?: return badAddress
+        return send(authed(url).get().build(), PeopleResponse.serializer())
+    }
+
+    /** An admin's answer to a join request ([JoinDecision]). Answers what the account is now. */
+    suspend fun decideJoin(requestId: String, decision: String): ApiResult<JoinDecisionResponse> {
+        val base = url("api/app/people/requests") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(requestId).build()
+        val body = json.encodeToString(JoinDecisionRequest.serializer(), JoinDecisionRequest(decision))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), JoinDecisionResponse.serializer())
+    }
+
+    /** What your ADHX is doing: posts on their way, stuck, or just finished ([DoingScope]). */
+    suspend fun doing(scope: String = DoingScope.ALL): ApiResult<DoingResponse> {
+        val base = url("api/app/doing") ?: return badAddress
+        val url = base.newBuilder().addQueryParameter("scope", scope).build()
+        return send(authed(url).get().build(), DoingResponse.serializer())
+    }
+
+    /** Try a stuck post again (for someone who saved it). */
+    suspend fun retry(platform: String, id: String): ApiResult<RetryResponse> {
+        val url = url("api/app/doing/retry") ?: return badAddress
+        val body = json.encodeToString(PostRef.serializer(), PostRef(platform, id))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), RetryResponse.serializer())
+    }
+
+    /**
+     * `private` is sent when it's on, or when [explicit] (the phone has its
+     * own "Just for me by default", or the switch was touched). Otherwise
+     * it's left out and the server's default for the account applies.
+     */
+    private fun saveRequest(link: String, justForMe: Boolean, explicit: Boolean = false) =
+        SaveRequest(link, isPrivate = if (justForMe) true else if (explicit) false else null)
 
     private fun url(path: String): HttpUrl? = resolve(server, path)
 

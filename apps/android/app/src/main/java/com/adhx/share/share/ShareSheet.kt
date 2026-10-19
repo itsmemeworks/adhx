@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -68,6 +69,8 @@ import com.adhx.share.net.StatusResponse
 import com.adhx.share.ui.AdhxBrand
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Faces
+import com.adhx.share.ui.JustForMeRow
 import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
@@ -127,9 +130,10 @@ fun ShareSheetScreen(
         ) {
             Sheet(frosted = frosted, onTouched = { touched = true }, onDismiss = close) {
                 when (ui.phase) {
-                    Phase.Saving -> SavingContent(ui)
+                    Phase.Saving -> SavingContent(ui, onJustForMe = vm::setJustForMe)
                     Phase.Saved, Phase.AlreadySaved -> SavedContent(
                         ui = ui,
+                        onJustForMe = vm::setJustForMe,
                         onOpen = {
                             ui.server?.let { onOpenInAdhx(it, ui.post) }
                             close()
@@ -143,7 +147,7 @@ fun ShareSheetScreen(
                         button = "OK",
                         onButton = close,
                     )
-                    Phase.Offline -> OfflineContent(ui, onDone = close)
+                    Phase.Offline -> OfflineContent(ui, onJustForMe = vm::setJustForMe, onDone = close)
                     Phase.NotConnected -> NotConnectedContent(
                         onOpenApp = {
                             onOpenApp()
@@ -222,7 +226,7 @@ private fun Sheet(frosted: Boolean, onTouched: () -> Unit, onDismiss: () -> Unit
 }
 
 @Composable
-private fun SavingContent(ui: ShareUi) {
+private fun SavingContent(ui: ShareUi, onJustForMe: (Boolean) -> Unit) {
     PostHeader(ui = ui, loading = true)
     StatusBox {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -232,10 +236,11 @@ private fun SavingContent(ui: ShareUi) {
         }
     }
     Text(Copy.SAVING_NOTE, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.Faint)
+    JustForMeRow(on = ui.justForMe, onChange = onJustForMe)
 }
 
 @Composable
-private fun SavedContent(ui: ShareUi, onOpen: () -> Unit, onDone: () -> Unit) {
+private fun SavedContent(ui: ShareUi, onJustForMe: (Boolean) -> Unit, onOpen: () -> Unit, onDone: () -> Unit) {
     val already = ui.phase == Phase.AlreadySaved
     PostHeader(ui = ui, loading = false)
     StatusBox {
@@ -247,7 +252,11 @@ private fun SavedContent(ui: ShareUi, onOpen: () -> Unit, onDone: () -> Unit) {
                 }
                 Column {
                     Text(
-                        if (already) Copy.ALREADY else Copy.SAVED,
+                        when {
+                            already -> Copy.ALREADY
+                            ui.justForMe -> Copy.SAVED_PRIVATE
+                            else -> Copy.SAVED_SHARED
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = AdhxColors.White,
@@ -261,6 +270,8 @@ private fun SavedContent(ui: ShareUi, onOpen: () -> Unit, onDone: () -> Unit) {
             if (!already) KeepBar(ui.keep)
         }
     }
+    Audience(ui)
+    JustForMeRow(on = ui.justForMe, onChange = onJustForMe, busy = ui.switching, enabled = !ui.switching)
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlineButton("Open in ADHX", onClick = onOpen, modifier = Modifier.weight(1f))
         PrimaryButton("Done", onClick = onDone, modifier = Modifier.weight(1f))
@@ -268,14 +279,15 @@ private fun SavedContent(ui: ShareUi, onOpen: () -> Unit, onDone: () -> Unit) {
 }
 
 @Composable
-private fun OfflineContent(ui: ShareUi, onDone: () -> Unit) {
+private fun OfflineContent(ui: ShareUi, onJustForMe: (Boolean) -> Unit, onDone: () -> Unit) {
     LinkRow(ui)
     StatusBox {
         Column {
-            Text(Copy.OFFLINE_TITLE, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
+            Text(if (ui.justForMe) Copy.PRIVATE_LATER else Copy.OFFLINE_TITLE, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
             Text(Copy.OFFLINE_BODY, fontSize = 13.sp, lineHeight = 18.sp, color = AdhxColors.Muted)
         }
     }
+    JustForMeRow(on = ui.justForMe, onChange = onJustForMe)
     PrimaryButton("Done", onClick = onDone, modifier = Modifier.fillMaxWidth())
 }
 
@@ -298,6 +310,45 @@ private fun NotConnectedContent(onOpenApp: () -> Unit, onClose: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlineButton("Not now", onClick = onClose, modifier = Modifier.weight(1f))
         PrimaryButton("Open ADHX Share", onClick = onOpenApp, modifier = Modifier.weight(1f))
+    }
+}
+
+/**
+ * Who will see it: your people's faces and "Ana, Ben and Jo will see it", or,
+ * with Just for me on, a lock and "Only you will see this save".
+ */
+@Composable
+private fun Audience(ui: ShareUi) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(AdhxColors.White.copy(alpha = 0.06f))
+            .then(if (ui.justForMe) Modifier.border(1.dp, AdhxColors.White.copy(alpha = 0.16f), shape) else Modifier)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (ui.justForMe) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(AdhxColors.Cream),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Lock, contentDescription = null, tint = AdhxColors.Black, modifier = Modifier.size(18.dp))
+            }
+            Box(Modifier.width(12.dp))
+            Text(Copy.PRIVATE_NOTE, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+        } else {
+            val names = ui.people.map { it.label }
+            if (ui.people.isNotEmpty() && ui.server != null) {
+                Faces(ui.people, ui.server, size = 30.dp, max = 4, ring = AdhxColors.Surface)
+                Box(Modifier.width(12.dp))
+            }
+            Text(Copy.willSee(names), fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+        }
     }
 }
 

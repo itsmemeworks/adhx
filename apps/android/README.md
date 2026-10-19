@@ -1,8 +1,9 @@
 # ADHX Share for Android
 
 The phone app for your own ADHX. Share a post from any app, pick **ADHX** in
-the share menu, and it lands in your saves. The app also plays your saves full
-screen (swipe up for the next one) and searches them by meaning. Your ADHX
+the share menu, and it lands in your saves, for your people or just for you.
+The app plays what your people saved full screen (swipe up for the next one),
+has their channels and what's live, and searches everyone's saves by meaning. Your ADHX
 does the work: it reads each post, keeps a copy of its media and streams it
 back; the phone only sends links and plays what comes back.
 
@@ -105,9 +106,9 @@ and play your own saves; it can't read anyone else's or change your account.
 Plain `http://` addresses are allowed, for an ADHX on your home network. Use
 `https://` for anything on the internet.
 
-**Disconnect** in the app's Settings forgets the key, the list and any waiting
+**Remove this phone** in the app's Settings forgets the key, the list and any waiting
 links on the phone. To cancel the key on the server too, remove the phone in
-Settings → Phone app on your ADHX. If you remove it there first, the app
+Settings → Phone app on your ADHX (there's no phone-key route for that). If you remove it there first, the app
 notices next time it opens and goes back to Connect.
 
 ## Sharing, and the offline queue
@@ -142,13 +143,73 @@ the server turns the link down (a 4xx, like "not a post"), the job stops and
 the list shows why. **Settings → Send waiting links now** starts them all
 again without waiting.
 
-**Shared lately** (the clock button on the home screen) lists the last 50
+**Shared lately** (in Settings) lists the last 50
 shares (kept on the phone only) and keeps unfinished copies up to date while
 it's open. Tap one to watch it in the player.
 
-## Your saves: the player and search
+## Home: New · Channels · Live
 
-The home screen is **My saves** (`GET /api/app/saves`): full screen, newest
+One light row sits on top: Gob (Settings), the tabs, and Search. The full
+behaviour and the endpoints are in
+[`docs/specs/phone-app.md` → The friends feed on the phone](../../docs/specs/phone-app.md#the-friends-feed-on-the-phone).
+
+- **New** (`GET /api/app/feed?mode=new`) plays what you haven't seen, with a
+  count on the tab and a why chip over the byline (tap it for Why this one,
+  and Everyone · Friends only · Mine). Tap New again for What's in your
+  feed: videos and photos by default, text posts and articles if you want them
+  (`types=` on the feed, kept with `/api/app/feed/types` and on the phone). Posts count as seen after 2 s on
+  stage or when you swipe past, sent in batches to `POST /api/app/seen`. It
+  ends on "You're all caught up. Go touch grass."
+- **Channels** (`GET /api/app/channels`): From everyone, Your people (a face
+  per friend, with how many of theirs you haven't seen) and Made for you
+  (My saves first). A channel opens as a grid (`/api/app/channels/{kind}/{slug}`)
+  and plays from the one you tap.
+- **Live** (`GET /api/app/live`): the moments your lot are saving into. Tune
+  in plays one, asks `/api/app/live/{slug}` every 5 s for new posts, who's
+  watching and reactions, and adds React (emoji or a few words,
+  `POST /api/app/live/{slug}/react`). Reactions float up with the sender's face.
+- **Faces** on the byline and search tiles open that friend's channel.
+- **Just for me** on the share card and in More (`private` with the save, or
+  `POST /api/app/private`); private saves show a lock.
+
+A server without the feed (404) keeps the old home: My saves. A feed with
+nothing anyone has saved yet (`nothingYet`) says "Nothing new yet. Save
+something for your people to find." instead of the caught-up page, and Why
+this one lists every reason in `whyReasons`.
+
+## Settings, approvals and "On their way"
+
+Gob opens **Settings**: your face (in Gob's shape) and name, then rows for
+Your people, Invite someone, What's in your feed, Just for me by default,
+Sound on by default, What your ADHX is doing (with its count), Shared lately,
+and "Connected to Ana's ADHX" with **Remove this phone**.
+
+- **Your people** (`GET /api/app/people`): everyone let in, with faces, save
+  counts and when they last saved; a row opens their saves.
+- **Waiting for you** (admins, from `requests` on the same answer): Let in,
+  Not now and Decline (`POST /api/app/people/requests/{id} { decision }`).
+- **Change picture** and **Invite someone** open Settings on your ADHX
+  (`/settings#you`, `/settings#invite`): their routes take a signed-in
+  browser, not a phone key.
+- **Just for me by default** and **Sound on by default** are kept on the
+  phone. Until the first is touched here, saves leave `private` out and the
+  account's own default on the server applies. On, saves go out with
+  `private: true`; off, a new save that comes back private is switched back
+  (a repeat share never changes an existing save).
+- **On their way**: over the New player, a pill ("3 on their way") while
+  posts are processing, asking `GET /api/app/doing` every 5 s while it's on
+  screen (15 s while nothing is). Tap it for a sheet: each post's picture,
+  step and a thin bar (green once it plays); ones that need you show why and
+  **Retry** (`POST /api/app/doing/retry`). **See everything your ADHX is
+  doing** opens the full list (On their way · Needs you · Ready).
+
+Members' pictures (`/api/files/avatar/…`) are for members only, so Coil's
+OkHttp client adds the phone key to requests for the connected ADHX (same
+scheme, host and port) and to nothing else.
+
+## My saves: the player and search
+
+**My saves** (`GET /api/app/saves`, under Channels → Made for you): full screen, newest
 first, one post at a time. Swipe up for the next save and down for the one
 before; pages of 20 load as you near the end. Tap to pause or play. One Media3
 ExoPlayer plays whichever post is on screen and is let go when the app goes to
@@ -161,7 +222,8 @@ and with nothing else saved yet the page shows a shimmering card ("Getting it
 ready… it'll be here in a moment."). The app looks again every 15 s, and at
 the top the new post slides in from above.
 
-On the right, top to bottom: **Sound** (videos start muted), **Repeat** (off,
+On the right, top to bottom: **Sound** (videos start muted, unless Sound
+on by default is set), **Repeat** (off,
 a video that ends moves on to the next save; on, it loops), **Save** (puts the
 video, sound or every photo of an album into the phone's gallery under ADHX,
 on Android 10 and up; a text post's words go to the clipboard), **Share** and
@@ -183,8 +245,8 @@ goes there by itself when you leave the app while a video plays. A text post
 too long for the page fades out with **Read all**, which opens it as a
 scrolling page. A video that can't play says why, in the server's words.
 
-**Search** (`GET /api/app/search`) finds your saves by what you describe, not
-only by the exact words: type, and after a moment a two-column grid of posters
+**Search** (`GET /api/app/search`) finds everyone's saves (or, with Mine,
+yours) by what you describe, not only by the exact words: type, and after a moment a two-column grid of posters
 shows how close each one is. Tap one to play the results from there.
 
 ## Before distributing a phone build
@@ -201,11 +263,16 @@ merging this server PR.
 ```
 app/src/main/java/com/adhx/share/
   share/   ShareActivity (share target), the sheet, its view model
-  main/    MainActivity (the screens and back), Connect, Shared lately, Settings
-  library/ My saves: the player, search by meaning, their view model
+  main/    MainActivity (the screens and back), Connect, Shared lately,
+           Settings, Your people and join approvals
+  doing/   On their way: the pill, its sheet and the full list
+  feed/    Home (New · Channels · Live), the caught-up page, Why this one,
+           channels, Live and Tuned in, reactions, seen batching, Just for me
+  library/ The player, My saves, search by meaning, More, their view model
   work/    SaveWorker and SaveQueue (the offline queue)
   net/     AdhxApi (OkHttp + kotlinx.serialization) and the JSON shapes
-  data/    ConnectionStore (server + key), HistoryStore (recent shares)
+  data/    ConnectionStore (server + key), HistoryStore (recent shares),
+           SettingsPrefs (Just for me and Sound by default)
   links/   finding links, guessing the network, network names and marks
   ui/      colours, buttons, copy
 app/src/main/res/drawable/

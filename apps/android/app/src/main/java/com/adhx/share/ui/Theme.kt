@@ -25,6 +25,12 @@ object AdhxColors {
     val Good = Color(0xFF7DDC8A)
     val Warn = Color(0xFFFFB59A)
     val White = Color(0xFFFFFFFF)
+
+    /** The red dot of Live. */
+    val Live = Color(0xFFFF5A3C)
+
+    /** Buttons that sit on a surface (Open in ADHX, See what's live). */
+    val Button = Color(0xFF262320)
 }
 
 /**
