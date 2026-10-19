@@ -239,10 +239,12 @@ it; on a server without these endpoints (404) the app falls back as noted.
 - `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`.
 - `GET /api/app/live` → `{ moments: [{ slug, name (or title), people, savers?,
   watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
-- `GET /api/app/live/{slug}` → `{ moment, items, watchers, reactions? }`.
-  Items may be `{ post, … }` wrappers. `reactions` (tentative): `[{ id, emoji
-  | text, by: Saver, at }]`; the who may also be flat (`username`, `name`,
-  `avatarUrl`, `isYou`) or under `saver`, `user`, `from` or `who`.
+- `GET /api/app/live/{slug}` → `{ moment, items, watchers, reactions }`.
+  Items may be `{ post, … }` wrappers. `reactions` is the last 15 s, oldest
+  first: `[{ id, at, saver: Saver, emoji? | text?, post: { platform, id } }]`.
+  The app floats each `id` once and skips `isYou` (yours showed when sent).
+  It polls every 5 s; `GET /api/app/live/{slug}/stream` (SSE) also exists and
+  isn't used yet.
 - `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
   most 40 characters).
 
@@ -270,12 +272,13 @@ it; on a server without these endpoints (404) the app falls back as noted.
   (a friend's face, "96 saves · 4 you haven't seen"), Play, and a poster grid.
 - **Live**: the moments, the first one big with its covers, LIVE, faces and
   "3 of you watching". Tune in plays it, asks again every 5 s, shows "Ana and
-  Ben are watching with you", and adds **React** (a smiley) to the button
+  Ben are watching with you" (the chip shows "watching with you"; the names
+  go to screen readers), and adds **React** (a smiley) to the button
   column: six emoji (😂 🔥 😭 👀 💀 ❤️) or "Say something to everyone
   watching" with Send. Reactions float up the left of the screen and fade,
   each as the sender's face ringed in their colour, with the emoji as a
   sticker on its corner or the words in a bubble of their colour. Yours shows
-  at once; ones already there when you tune in don't replay.
+  at once; ones that arrive together rise 0.7 s apart.
 - **Faces**: up to 3 overlapping avatars (their photo, or their initial on
   their colour) and "Ana and Ben saved this" / "Ana and 3 others saved this"
   on the player byline and search tiles. Tapping a face opens that friend's

@@ -162,6 +162,23 @@ class FriendsFeedModelsTest {
     }
 
     @Test
+    fun liveReactionsInTheServersShape() {
+        val detail = json.decodeFromString(
+            LiveDetail.serializer(),
+            """{"moment":{"slug":"b"},"items":[],"watchers":[],"reactions":[
+                {"id":"a1","at":"2026-10-19T20:00:00Z","saver":{"username":"ana","name":"Ana","avatarUrl":"/api/avatars/ana","savedAt":"2026-10-19T19:00:00Z","isYou":false},"emoji":"😂","post":{"platform":"x","id":"1"}},
+                {"id":"a2","at":"2026-10-19T20:00:02Z","saver":{"username":"pete","name":null,"avatarUrl":null,"savedAt":"2026-10-19T19:00:00Z","isYou":true},"text":"again","post":{"platform":"x","id":"1"}}
+            ]}""",
+        )
+        assertEquals(listOf("a1", "a2"), detail.reactions.map { it.key })
+        assertEquals("Ana", detail.reactions[0].who?.label)
+        assertEquals("/api/avatars/ana", detail.reactions[0].who?.avatarUrl)
+        assertEquals("😂", detail.reactions[0].emoji)
+        assertTrue(detail.reactions[1].who?.isYou == true)
+        assertEquals("again", detail.reactions[1].text)
+    }
+
+    @Test
     fun saveSendsPrivateOnlyWhenOn() {
         val off = json.encodeToString(SaveRequest.serializer(), SaveRequest("https://x.com/a/status/1"))
         assertFalse(off.contains("private"))

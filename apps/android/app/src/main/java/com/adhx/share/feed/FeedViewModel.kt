@@ -109,6 +109,8 @@ data class Floating(
     val text: String?,
     val who: Saver?,
     val lane: Float,
+    /** Wait this long before rising, so ones that came in one poll don't stack up. */
+    val delayMs: Long = 0,
 )
 
 /**
@@ -148,7 +150,6 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     val floating = mutableStateListOf<Floating>()
     private var floatingId = 0L
     private val reactionsSeen = HashSet<String>()
-    private var reactionsSeeded = false
 
     private val seen = SeenBatcher()
     private var feedJob: Job? = null
@@ -491,30 +492,26 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * New reactions from the poll float up. The first poll only notes what's
-     * there (no burst of old ones), and yours aren't shown twice.
+     * Reactions from the poll (the server sends the last 15 s, oldest first)
+     * float up once each, by id. Yours were shown when you sent them.
      */
     private fun arrive(reactions: List<LiveReaction>) {
         val fresh = reactions.filter { reactionsSeen.add(it.key) }
-        if (!reactionsSeeded) {
-            reactionsSeeded = true
-            return
-        }
-        fresh.filterNot { it.who?.isYou == true }.takeLast(MAX_FLOATING).forEach { float(it.emoji, it.text, it.who) }
+        fresh.filterNot { it.who?.isYou == true }.takeLast(MAX_FLOATING)
+            .forEachIndexed { i, r -> float(r.emoji, r.text, r.who, delayMs = i * STAGGER_MS) }
     }
 
-    private fun float(emoji: String?, text: String?, who: Saver?) {
+    private fun float(emoji: String?, text: String?, who: Saver?, delayMs: Long = 0) {
         if (floating.size >= MAX_FLOATING) floating.removeAt(0)
         floatingId += 1
         // Spread them across: the golden ratio keeps neighbours apart.
         val lane = ((floatingId * 0.618034) % 1.0).toFloat()
-        floating.add(Floating(floatingId, emoji, text, who, lane))
+        floating.add(Floating(floatingId, emoji, text, who, lane, delayMs))
     }
 
     private fun clearReactions() {
         floating.clear()
         reactionsSeen.clear()
-        reactionsSeeded = false
     }
 
     private fun signedOut(result: ApiResult.Failed, connection: Connection) {
@@ -526,6 +523,9 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         private const val NEAR_END = 5
         private const val MAX_FLOATING = 12
+
+        /** Between reactions that arrived together (the poll is every 5 s). */
+        private const val STAGGER_MS = 700L
         private const val OFFLINE = "Can’t reach your ADHX right now."
     }
 }

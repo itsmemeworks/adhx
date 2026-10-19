@@ -28,6 +28,8 @@ class CopyFacesTest {
         assertEquals("Ana and Ben are watching with you", Copy.watchersLine(listOf(ana, ben, you)))
         assertEquals("Ana is watching with you", Copy.watchersLine(listOf(ana)))
         assertEquals("Just you, for now", Copy.watchersLine(emptyList()))
+        assertEquals("watching with you", Copy.watchersShort(listOf(ana, ben, you)))
+        assertEquals("2 watching with you", Copy.watchersShort(emptyList(), count = 3))
         assertEquals("Ana, Ben, Mum and jo will see it", Copy.willSee(listOf("Ana", "Ben", "Mum", "jo")))
         assertEquals("Your people will see it", Copy.willSee(emptyList()))
         assertEquals("12 from Ana, Ben and Mum today", Copy.watchedSummary(12, listOf("Ana", "Ben", "Mum")))

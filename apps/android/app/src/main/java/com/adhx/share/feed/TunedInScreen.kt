@@ -200,7 +200,10 @@ fun TunedInScreen(
 
 private const val POLL_MS = 5_000L
 
-/** "Ana and Ben are watching with you", with their faces. Read out when it changes. */
+/**
+ * Their faces and "watching with you"; a screen reader hears "Ana and Ben are
+ * watching with you", again when it changes.
+ */
 @Composable
 private fun WatchersChip(watchers: List<Saver>, count: Int, server: String, modifier: Modifier = Modifier) {
     val line = Copy.watchersLine(watchers, maxOf(count, watchers.size))
@@ -221,6 +224,13 @@ private fun WatchersChip(watchers: List<Saver>, count: Int, server: String, modi
             Faces(others, server, size = 26.dp)
             Spacer(Modifier.width(8.dp))
         }
-        Text(line, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            Copy.watchersShort(watchers, maxOf(count, watchers.size)),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = AdhxColors.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

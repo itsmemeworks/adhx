@@ -198,6 +198,16 @@ object Copy {
         }
     }
 
+    /** What the chip shows: "watching with you"; the names go to screen readers ([watchersLine]). */
+    fun watchersShort(watchers: List<Saver>, count: Int = watchers.size): String {
+        val others = watchers.count { !it.isYou }
+        return when {
+            others == 0 && count <= 1 -> "Just you, for now"
+            others == 0 -> "${count - 1} watching with you"
+            else -> "watching with you"
+        }
+    }
+
     /** "3 saves · Ana, Ben and Jo" under a moment. */
     fun momentLine(posts: Int?, people: Int, savers: List<Saver>): String {
         val what = posts?.takeIf { it > 0 }?.let(::saves)

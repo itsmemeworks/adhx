@@ -207,6 +207,7 @@ fun FloatingReactions(items: List<Floating>, server: String, onLanded: (Long) ->
 private fun FloatingOne(item: Floating, server: String, height: Dp, width: Dp, still: Boolean, onDone: () -> Unit) {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(item.id) {
+        if (item.delayMs > 0) kotlinx.coroutines.delay(item.delayMs)
         progress.animateTo(1f, tween(if (still) STILL_MS else RISE_MS, easing = LinearEasing))
         onDone()
     }
