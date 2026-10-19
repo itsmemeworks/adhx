@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
+    /// For Shared lately, which opens its posts in the player.
+    var library: LibraryModel?
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var confirmDisconnect = false
@@ -35,6 +37,29 @@ struct SettingsView: View {
                     } else {
                         row(label: "Connected as", value: "…")
                     }
+                }
+
+                if let library {
+                    NavigationLink {
+                        SharedLatelyView(library: library)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(Theme.accent)
+                            Text("Shared lately")
+                                .font(Theme.sans(16, .bold))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Theme.faint)
+                        }
+                        .padding(16)
+                        .frame(minHeight: 56)
+                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.surface))
+                    }
+                    .accessibilityHint("What you’ve shared from this phone and how each copy is coming along")
                 }
 
                 if model.waiting > 0 {

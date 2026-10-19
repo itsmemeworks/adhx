@@ -32,7 +32,8 @@ Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
 accepted by `/api/app/save`, `/api/app/private`, `/api/app/status`,
-`/api/app/me`, `/api/app/saves` and `/api/app/search` only; a search key is not accepted
+`/api/app/me`, `/api/app/saves`, `/api/app/search` and the friends feed
+endpoints below (`feed`, `seen`, `channels`, `live`) only; a search key is not accepted
 there, and a phone key is not accepted by `/api/agent/search`. A phone key
 acts only for its own account: it reads that account's saves, and everyone's
 saves only where a signed-in member could (`/api/app/search?scope=everyone`). Removing a phone in Settings deletes
@@ -181,10 +182,83 @@ width, height, durationMs }], article, savers, isPrivate }`
   `{ reason }` to show ("Nobody here has saved this yet", "This one couldn't
   be downloaded. The original may still play.").
 - `sourceUrl` is the post on its own network ("Open original").
+- `why` (feed items only): the feed's reason, shown as the why chip.
+
+### The friends feed (`docs/specs/friends-feed.md` → Phone API additions)
+
+Apps decode these loosely: unknown fields are ignored, one unreadable item is
+skipped rather than failing the page, and a 404 means "this ADHX doesn't have
+it yet" (New falls back to My saves, Channels and Live say the server needs
+an update).
+
+- `GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo,text,article&cursor` →
+  `{ items: (PhonePost & { why })[], nextCursor, caughtUp, hidden? }`. `types`
+  defaults to `video,photo` (a sound counts as a video); `hidden`, when
+  given, counts what the filter left out (`{ text: 4 }`). Apps filter by
+  `kind` too, so an older server that ignores `types` still plays the
+  right things.
+- `GET /api/app/feed/types` → `{ types }` and `PUT` the same body: the saved
+  filter. On a 404 the phone keeps it on its own.
+- `POST /api/app/seen` `{ posts: [{ platform, id }] }` (at most 50) → 204. A
+  post counts as seen after 2 s on screen or when you swipe past it; apps send
+  them in batches (10, or 5 s after the last, or on leaving New or the app).
+- `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
+  friends: [{ username, name, avatarUrl, size, newCount, covers }],
+  mine: [{ slug, name, size, covers }] }`. `covers` are addresses (or posts to
+  take a poster from), relative to the server.
+- `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`
+  (a friend's slug is their username).
+- `GET /api/app/live` → `{ moments: [{ slug, name|title, people, savers?,
+  watching, watchers?, covers, live, hue?, label? }] }`; the field set is still
+  settling, so only `slug` is required.
+- `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[], watchers: Saver[],
+  reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
+  tuned in. New reactions (not yours, not ones already there when you tuned
+  in) float up the screen.
+- `POST /api/app/live/{slug}/react` `{ emoji }` (😂 🔥 😭 👀 💀 ❤️) or
+  `{ text }` (at most 40 characters), plus `platform` and `id` of the post on
+  screen.
 
 ## The player and search (both platforms)
 
-- **Home is My saves**: full screen, one post at a time. Swipe up for the
+- **Home** has one row on top: Gob (opens Settings, where Shared lately now
+  lives), the **New · Channels · Live** tabs, and Search everyone's saves.
+  New carries a small yellow badge over its top-right corner with the unseen
+  posts left ("7", "20+" while more pages are coming, "99+" at most); the tab
+  stays sized for its label.
+  - **New** (the default) plays `/api/app/feed?mode=new` in the player below.
+    A why chip sits above the byline; it (and **Why this one** in More) opens
+    a sheet with the reasons and **Whose saves: Everyone · Friends only ·
+    Mine** (modes `new`/`everyone`, `friends`, `mine`), and **Filter**.
+    Tapping New again opens **What's in your feed**: switches for Videos,
+    Photos, Text posts and Articles (videos and photos by default; one always
+    stays on), Whose saves, "12 text posts and 3 articles are waiting.
+    They'll still be in search and channels." and **Show videos and photos**.
+    The end is a page of its own:
+    "You're all caught up." / "Go touch grass." (accent), "12 from Ana, Ben
+    and Mum", "4 text posts waiting · Show them" when the filter hid some, and
+    **Browse channels**, **See what's live** and **Watch it all again** (mode
+    `everyone`).
+  - **Channels**: "From everyone" carousels (2×2 cover mosaics, faces, "38
+    saves · 3 of you"), "Your people" (faces with new-count badges, opening
+    "Ana's saves" with Play all) and "Made for you". Tapping a group or yours
+    plays its queue.
+  - **Live**: "What your lot are into tonight": live moments with a LIVE mark,
+    faces and "3 of you watching", and **Tune in**; quieter ones as rows.
+    Tuned in: LIVE, "Ana and Ben · watching with you", "Jo just saved one · up
+    next" when a save lands (slotted in after the one on screen), and Leave.
+    **React** (a smiley at the top of the rail) opens a card with six emoji
+    and "Say something to everyone watching" (40 characters, Send).
+    Reactions float up and fade: the reactor's face (44–56 pt, ringed in
+    their colour) with the emoji as a sticker on its corner, or with a speech
+    bubble in their colour for words. Under Reduce Motion they only fade.
+- **Saver faces**: up to 3 overlapping faces (the photo, or a coloured
+  initial) and "Ana and Ben saved this · 2h" / "You and 2 others" above the
+  @handle; tapping opens that friend's channel (a choice when there are
+  several). A private post shows a lock. Search tiles show faces too.
+- **Just for me** in the player's More sheet (for your own saves) calls
+  `/api/app/private`.
+- **My saves** (Home on an ADHX without the feed): full screen, one post at a time. Swipe up for the
   next, down for the previous; tap to pause (a play mark shows) or, with the
   buttons hidden, to bring them back. Pages of 20 load as you near the end.
   Videos start muted. Photo albums swipe sideways. Text and articles fill the
@@ -206,10 +280,11 @@ width, height, durationMs }], article, savers, isPrivate }`
   Sound carries on. On Android the window has Previous and Next save. Photos
   and words don't get one. (The iPhone Simulator has no small window; check
   it on a phone.)
-- **Search**: a field ("Describe what you're looking for") with the TRY
-  DESCRIBING prompts, a two-column grid of posters, then the player on those
-  results from the one you tapped.
-- **Shared lately** (the old home) is a list behind a button; its rows open the
+- **Search**: a field ("Describe what you're looking for"), an **Everyone's
+  saves · Mine** switch (Everyone by default), the TRY DESCRIBING prompts, a
+  two-column grid of posters with faces, then the player on those results
+  from the one you tapped.
+- **Shared lately** (the old home) is a list in Settings; its rows open the
   post in the player.
 
 ## The share sheet (both platforms)
@@ -220,7 +295,8 @@ width, height, durationMs }], article, savers, isPrivate }`
    `GET /api/app/save?id=` until saved or failed. "Saving to your ADHX…" and
    "You can close this. Your ADHX carries on, and the post shows up in My
    saves once it's ready."
-3. **Saved**: poster, network, author, words; "Saved to your ADHX" and
+3. **Saved**: poster, network, author, words; "Saved for your people" (or
+   "Saved, just for you") and
    "Keeping a copy · 720p · 60%" with a bar, polling `/api/app/status` every
    1.5 s while the sheet is open. **Open in ADHX** and **Done**. The sheet
    closes itself 3 s after Saved unless touched.
@@ -233,8 +309,16 @@ width, height, durationMs }], article, savers, isPrivate }`
 7. **Not connected**: "Connect the app first" / "Open ADHX Share and scan the
    code in Settings → Phone app on your ADHX."
 
-Channels ("Add to a channel"), Right now and saving for offline are not in
-this version.
+**Just for me** (Saving, Saved and Already saved): off (the default) shows
+"Ana, Ben, Mum and Jo will see it" with their faces (the people the app last
+saw in Channels or the feed, kept on the phone), or "Your people will see it";
+on shows a lock and "Only you will see this save. It's still kept and
+searchable." The save goes out as soon as the sheet opens, so the switch
+calls `/api/app/private` once the post has landed; switched before that, it's
+applied when it lands (by the sheet, or later by the app), and a link waiting
+offline is sent with `private`.
+
+Adding to a channel and saving for offline are not in this version.
 
 ## Colours and type
 
