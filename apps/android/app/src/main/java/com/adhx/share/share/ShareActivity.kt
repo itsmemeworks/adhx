@@ -16,7 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.adhx.share.main.MainActivity
 import com.adhx.share.ui.AdhxTheme
-import com.adhx.share.ui.openInAdhx
+import com.adhx.share.ui.openPostInApp
 import java.util.function.Consumer
 
 /**
@@ -58,7 +58,9 @@ class ShareActivity : ComponentActivity() {
                         // The sheet has already slid away; skip the window animation.
                         overridePendingTransition(0, 0)
                     },
-                    onOpenInAdhx = { server, path -> openInAdhx(this, server, path) },
+                    onOpenInAdhx = { server, post ->
+                        openPostInApp(this, server, post?.platform, post?.id, post?.openPath)
+                    },
                     onOpenApp = {
                         startActivity(
                             Intent(this, MainActivity::class.java)

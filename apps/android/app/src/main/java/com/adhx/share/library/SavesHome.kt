@@ -45,7 +45,11 @@ import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.openInAdhx
 import kotlinx.coroutines.delay
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.AnimatedVisibility
 
 /** Home: My saves in the player, or what to do while there's nothing to play. */
 @Composable
@@ -74,7 +78,6 @@ fun SavesHome(
         }
     }
 
-    val onTheirWay = ui.preparing.takeIf { it > 0 }?.let { if (it == 1) "1 more on its way" else "$it more on their way" }
     val topBar: @Composable BoxScope.() -> Unit = {
         Column(
             Modifier
@@ -92,9 +95,13 @@ fun SavesHome(
                 BarButton(Icons.Filled.Search, "Search your saves", onSearch)
                 BarButton(Icons.Filled.Settings, "Settings", onSettings)
             }
-            // Only over the player: the empty page says it in its own words.
-            if (onTheirWay != null && ui.items.isNotEmpty()) {
-                Text(onTheirWay, style = OverMedia, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Cream)
+            // Only over the player: the empty page shows the whole card.
+            AnimatedVisibility(
+                visible = ui.preparing > 0 && ui.items.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                OnTheirWayPill(ui.preparing.coerceAtLeast(1), Modifier.padding(top = 6.dp))
             }
         }
     }
@@ -132,12 +139,12 @@ fun SavesHome(
                     Text(error, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
                     OutlineButton("Try again", onClick = vm::reloadSaves, minHeight = 44.dp)
                 }
+                ui.preparing > 0 -> PreparingCard(
+                    count = ui.preparing,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
                 else -> Text(
-                    when (ui.preparing) {
-                        0 -> "Nothing yet. In any app, tap Share on a post and pick ADHX."
-                        1 -> "One save is on its way. It shows up here once your ADHX has kept a copy."
-                        else -> "${ui.preparing} saves are on their way. Each shows up here once your ADHX has kept a copy."
-                    },
+                    "Nothing yet. In any app, tap Share on a post and pick ADHX.",
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
                     color = AdhxColors.Faint,

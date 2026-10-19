@@ -146,7 +146,7 @@ private class Playback {
 private data class Notice(val text: String, val at: Long = System.nanoTime())
 
 /** A soft dark shadow, only for words laid over a picture or video. */
-internal val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
+private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
 
 /**
  * The player: one post at a time, full screen. Swipe up for the next save,
@@ -217,12 +217,18 @@ fun PlayerScreen(
         if (settled == 0) onTop()
     }
 
-    // Something new on top (saved while the app was away): at the top, show it;
-    // further down the "new saves" pill offers it instead.
+    // Something new on top (saved while the app was away, or a save that was
+    // on its way): at the top, it slides in from above; further down the
+    // "new saves" pill offers it instead.
     val firstKey = posts.firstOrNull()?.key
-    val initialFirst = remember { firstKey }
+    var shownFirst by remember { mutableStateOf(firstKey) }
     LaunchedEffect(firstKey) {
-        if (firstKey != initialFirst && newOnTop == 0) pager.scrollToPage(0)
+        val before = shownFirst
+        shownFirst = firstKey
+        if (firstKey == before || newOnTop != 0) return@LaunchedEffect
+        val was = posts.indexOfFirst { it.key == before }
+        if (was > 0) pager.scrollToPage(was)
+        pager.animateScrollToPage(0)
     }
 
     LaunchedEffect(player, muted) {

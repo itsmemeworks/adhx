@@ -9,6 +9,7 @@ import com.adhx.share.data.ConnectionStore
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.PhonePost
+import com.adhx.share.net.StatusResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -40,6 +41,9 @@ sealed interface Route {
 
     /** One post from Shared lately, in the player. */
     data class Post(val post: PhonePost) : Route
+
+    /** One post by its network and id (adhx://post?platform=…&id=…), fetched first. */
+    data class PostLink(val platform: String, val id: String) : Route
     data object Settings : Route
 }
 
@@ -137,6 +141,12 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     fun open(route: Route) {
         stack.add(route)
+    }
+
+    /** adhx://post: the post on top of wherever the app was, once. */
+    fun openPostLink(platform: String, id: String) {
+        val link = Route.PostLink(platform, id)
+        if (stack.lastOrNull() != link) stack.add(link)
     }
 
     /** Back: true when there was somewhere to go back to. */
@@ -250,6 +260,12 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             }
             ApiResult.Offline -> ApiResult.Offline
         }
+    }
+
+    /** How the copy of one save is coming along. */
+    suspend fun status(platform: String, id: String): ApiResult<StatusResponse> {
+        val connection = store.current() ?: return ApiResult.Offline
+        return AdhxApi(connection).status(platform, id)
     }
 
     // Search

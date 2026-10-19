@@ -63,6 +63,7 @@ import com.adhx.share.links.Links
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.KeepStatus
+import com.adhx.share.net.SaveResponse
 import com.adhx.share.net.StatusResponse
 import com.adhx.share.ui.AdhxBrand
 import com.adhx.share.ui.AdhxColors
@@ -86,7 +87,8 @@ fun ShareSheetScreen(
     vm: ShareViewModel,
     frosted: Boolean,
     onFinish: () -> Unit,
-    onOpenInAdhx: (server: String, path: String?) -> Unit,
+    /** Opens the post in this app's player (the website only as a fallback). */
+    onOpenInAdhx: (server: String, post: SaveResponse?) -> Unit,
     onOpenApp: () -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -129,7 +131,7 @@ fun ShareSheetScreen(
                     Phase.Saved, Phase.AlreadySaved -> SavedContent(
                         ui = ui,
                         onOpen = {
-                            ui.server?.let { onOpenInAdhx(it, ui.post?.openPath) }
+                            ui.server?.let { onOpenInAdhx(it, ui.post) }
                             close()
                         },
                         onDone = close,
