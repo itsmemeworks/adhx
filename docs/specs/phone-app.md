@@ -184,7 +184,8 @@ width, height, durationMs }], article, savers, isPrivate }`
 
 ## The player and search (both platforms)
 
-- **Home is My saves**: full screen, one post at a time. Swipe up for the
+- **My saves** (home before the friends feed; now under Channels → Made for
+  you, and home on a server without the feed): full screen, one post at a time. Swipe up for the
   next, down for the previous; tap to pause (a play mark shows) or, with the
   buttons hidden, to bring them back. Pages of 20 load as you near the end.
   Videos start muted. Photo albums swipe sideways. Text and articles fill the
@@ -211,6 +212,81 @@ width, height, durationMs }], article, savers, isPrivate }`
   results from the one you tapped.
 - **Shared lately** (the old home) is a list behind a button; its rows open the
   post in the player.
+
+## The friends feed on the phone
+
+The phone side of [`friends-feed.md`](friends-feed.md). Android has all of
+it; on a server without these endpoints (404) the app falls back as noted.
+
+### API
+
+- `GET /api/app/feed?mode=new|everyone|friends|mine&cursor&types=video,photo,text,article`
+  → `{ items: PhonePost[] (each with why?), nextCursor, caughtUp, hidden? }`.
+  `hidden` (tentative) counts what the filter left out, `{ text: 4 }`. The
+  app also filters on the phone, for a server that ignores `types`. `why` is
+  read loosely: a line, a list of lines, or objects with `text`. A 404 means
+  the server has no feed yet: home plays My saves as before.
+- `GET /api/app/feed/types` → `{ types }` and `PUT` the same: the feed
+  filter. It may 404 until the blend lands; the phone keeps its own copy and
+  the default is videos and photos.
+- `POST /api/app/seen { posts: [{ platform, id }] }` → 204. The app sends at
+  most 50 at a time, as soon as 10 are waiting, else within 5 s, and when it
+  goes to the background. A batch that fails is sent again.
+- `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
+  friends: [{ username, name, avatarUrl, size, newCount, covers }],
+  mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
+  accepted too, their poster is used).
+- `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`.
+- `GET /api/app/live` → `{ moments: [{ slug, name (or title), people, savers?,
+  watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
+- `GET /api/app/live/{slug}` → `{ moment, items, watchers, reactions? }`.
+  Items may be `{ post, … }` wrappers. `reactions` (tentative): `[{ id, emoji
+  | text, by: Saver, at }]`; the who may also be flat (`username`, `name`,
+  `avatarUrl`, `isYou`) or under `saver`, `user`, `from` or `who`.
+- `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
+  most 40 characters).
+
+### Home: New · Channels · Live
+
+- **One light row on top**: Gob (opens Settings) on the left, the tabs in the
+  middle, Search on the right. New carries a small yellow badge over its
+  top-right corner with how many unseen posts are left ("7", "19+" while
+  more pages may come, capped at "99+"). Shared lately moved into Settings.
+- **New** (the default) plays the feed in the player. A post counts as seen
+  after 2 s on stage, or as soon as you swipe past it (not when you go back).
+  The why chip sits over the byline; tapping it opens **Why this one**: the
+  post, every reason, and Whose saves (Everyone · Friends only · Mine:
+  Everyone is `new`, the others switch the mode) and Filter.
+- **What's in your feed**: tap New again (or Filter in Why this one) for
+  switches for Videos, Photos, Text posts and Articles (videos and photos by
+  default; at least one stays on) and Whose saves. The feed starts over once,
+  when the sheet closes. The feed ends on "You're
+  all caught up. / Go touch grass." with Gob, what you watched, and Browse
+  channels, See what's live and Watch it all again (mode `everyone`), and
+  "4 text posts waiting · Show them" when the filter left some out.
+- **Channels**: From everyone (2×2 cover tiles with faces), Your people
+  (round faces, a yellow ring and a count for what you haven't seen), Made
+  for you (My saves first, then your own channels). A channel is a header
+  (a friend's face, "96 saves · 4 you haven't seen"), Play, and a poster grid.
+- **Live**: the moments, the first one big with its covers, LIVE, faces and
+  "3 of you watching". Tune in plays it, asks again every 5 s, shows "Ana and
+  Ben are watching with you", and adds **React** (a smiley) to the button
+  column: six emoji (😂 🔥 😭 👀 💀 ❤️) or "Say something to everyone
+  watching" with Send. Reactions float up the left of the screen and fade,
+  each as the sender's face ringed in their colour, with the emoji as a
+  sticker on its corner or the words in a bubble of their colour. Yours shows
+  at once; ones already there when you tune in don't replay.
+- **Faces**: up to 3 overlapping avatars (their photo, or their initial on
+  their colour) and "Ana and Ben saved this" / "Ana and 3 others saved this"
+  on the player byline and search tiles. Tapping a face opens that friend's
+  channel (yours opens My saves).
+- **Just for me**: a switch on the share card (with "Only you will see this
+  save. It's still kept and searchable." when on) and in More. Flipped
+  while the save is on its way, it's applied when the save lands; a link
+  waiting offline sends `private` with it. A private save shows a lock.
+- **Search** has Everyone's saves · Mine, Everyone first.
+- With Remove animations on, pages jump instead of sliding, nothing pulses,
+  and reactions fade in place instead of rising.
 
 ## The share sheet (both platforms)
 

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Android: the friends feed (New · Channels · Live)
+
+- Home is New · Channels · Live under one light row (Gob for Settings, tabs with a 99+-capped New badge, Search). New plays `/api/app/feed`, marks posts seen after 2 s or a swipe past (`SeenBatcher`, batches of up to 50 to `/api/app/seen`), shows the why chip, Why this one, What's in your feed (videos and photos by default, `types=`, `/api/app/feed/types` with a local fallback) and ends on "You're all caught up. Go touch grass."
+- Channels (From everyone, Your people with new counts, Made for you with My saves) and channel grids; Live moments, Tune in polling `/api/app/live/{slug}` every 5 s with watchers, a React picker (6 emoji or 40 characters) and floating reactions with faces (fade in place with animations off).
+- Saver faces and "Ana and Ben saved this" on the byline and search tiles (tap opens that friend); Just for me on the share card (sent with a queued save, or `/api/app/private`) and in More; lock on private posts; search Everyone's saves · Mine. Shared lately moved into Settings.
+- Decoding is lenient (`net/Lenient.kt`); 404s fall back (no feed → My saves home, no Live → nothing live). 36 JVM tests; `assembleDebug` passes.
+- Emulator run against a scratch mock of the contract showed New, faces, why chip, Channels and the one-row header; the run was cut short by memory pressure, and `adb input swipe` doesn't page the player on that emulator (the baseline build doesn't either).
+- Follow-ups: check against the real server once feed/channels/live/react/types land (field names for `why`, `hidden`, `reactions` are guesses); physical-device pass; "Add a note" and "send to your people" from the designs need endpoints.
+
 ## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
 
 - `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.
