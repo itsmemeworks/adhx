@@ -6,6 +6,17 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Live with names: watch together
+
+- Names are added per request for members only (`src/lib/moments/people.ts`): `MomentView.savers` (≤5, from the moment's post keys via `saversFor`, window saves only, never a private save), `watchers`, item `savers`, detail `watchers`, `save.saver`. The engine and its broadcasts stay anonymous; signed-out shapes are unchanged (tested key by key).
+- `presence.ts` (globalThis) counts signed-in streams by account; `watching` events get `watchers` per subscriber (no receiver, no banned accounts). Shared stream code in `stream.ts`.
+- Reactions: `POST /api/moments/{slug}/react` `{ emoji | text }` (six allowlisted emoji, or ≤40 cleaned characters shown as text only; 20/min/user, words 6/min; in memory only) → `reaction` events for members watching that moment. Changed mid-build from four fixed words to this, per the owner.
+- Phone: `GET /api/app/live`, `GET /api/app/live/{slug}`, `POST …/react`, `GET …/stream` (that moment's events, `PhonePost` posts).
+- Web: faces and watchers on `RightNow` cards and `MomentScreen`, "Tune in with Ana"; theater watchers bar, named arrival toast, React button + picker, reactions rising with the reactor's face (`LiveTogether.tsx`; fade only under reduced motion).
+- Verified with two signed-in members in the browser on a scratch DB (`MOMENT_MIN_SAVERS=1`): watchers both ways, emoji and words both ways, Jo's save toast, picker at phone width.
+- Validation: 3,103 tests (with `--maxWorkers=4`; the default run timed out unrelated 5 s tests on a host at load ~60), typecheck, lint (81 existing warnings).
+- Follow-ups: the phone apps don't use these routes yet; the Right now header's "3 of your people are on" and forming-card faces from the mockups aren't built; reactions aren't tied to the post on stage.
+
 ## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
 
 - `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.

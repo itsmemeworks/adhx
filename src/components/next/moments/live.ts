@@ -9,6 +9,7 @@ import type {
   MomentsSnapshot,
   StreamItem,
 } from '@/lib/moments/engine'
+import type { Saver } from '@/lib/people/types'
 
 /**
  * Client side of "Right now": the snapshot plus the live event stream
@@ -41,6 +42,19 @@ export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n.toLocaleString('en-GB')} ${n === 1 ? one : many}`
 }
 
+/**
+ * A moment from an event, keeping the names the card already had when the
+ * event carries none (a stranger's events never do; a member's always do).
+ */
+function keepPeople(next: MomentView, prev: MomentView | undefined): MomentView {
+  if (!prev) return next
+  return {
+    ...next,
+    ...(next.savers === undefined && prev.savers ? { savers: prev.savers } : {}),
+    ...(next.watchers === undefined && prev.watchers ? { watchers: prev.watchers } : {}),
+  }
+}
+
 /** Apply one live event to a snapshot (pure; exported for tests). */
 export function applyEvent(snapshot: MomentsSnapshot, event: MomentEvent): MomentsSnapshot {
   switch (event.type) {
@@ -52,16 +66,25 @@ export function applyEvent(snapshot: MomentsSnapshot, event: MomentEvent): Momen
       return {
         ...snapshot,
         moments: snapshot.moments.map((m) =>
-          m.slug === event.slug ? { ...m, watching: event.watching } : m,
+          m.slug === event.slug
+            ? {
+                ...m,
+                watching: event.watching,
+                ...(event.watchers ? { watchers: event.watchers } : {}),
+              }
+            : m,
         ),
       }
+    case 'reaction':
+      return snapshot
     case 'formed':
       return {
         ...snapshot,
         // A new moment goes right after the lead, where it's seen.
         moments: (() => {
+          const prev = snapshot.moments.find((m) => m.slug === event.moment.slug)
           const rest = snapshot.moments.filter((m) => m.slug !== event.moment.slug)
-          return [...rest.slice(0, 1), event.moment, ...rest.slice(1)]
+          return [...rest.slice(0, 1), keepPeople(event.moment, prev), ...rest.slice(1)]
         })(),
         forming: snapshot.forming.filter((f) => f.id !== event.formingId),
       }
@@ -71,7 +94,9 @@ export function applyEvent(snapshot: MomentsSnapshot, event: MomentEvent): Momen
         12,
       )
       const moments = event.moment
-        ? snapshot.moments.map((m) => (m.slug === event.moment!.slug ? event.moment! : m))
+        ? snapshot.moments.map((m) =>
+            m.slug === event.moment!.slug ? keepPeople(event.moment!, m) : m,
+          )
         : snapshot.moments
       let forming = snapshot.forming
       if (event.forming) {
@@ -115,7 +140,7 @@ export function useMomentStream(
         // ignore a malformed event
       }
     }
-    for (const type of ['snapshot', 'save', 'formed', 'stats', 'watching']) {
+    for (const type of ['snapshot', 'save', 'formed', 'stats', 'watching', 'reaction']) {
       source.addEventListener(type, on as EventListener)
     }
     source.onopen = () => setConnected(true)
@@ -211,11 +236,14 @@ export function useMoment(slug: string): {
   missing: boolean
   fresh: string | null
   watching: number
+  /** Members tuned in now (signed in only; empty for strangers). */
+  watchers: Saver[]
 } {
   const [detail, setDetail] = useState<MomentDetail | null>(null)
   const [missing, setMissing] = useState(false)
   const [fresh, setFresh] = useState<string | null>(null)
   const [watching, setWatching] = useState(0)
+  const [watchers, setWatchers] = useState<Saver[]>([])
 
   useEffect(() => {
     let alive = true
@@ -231,6 +259,7 @@ export function useMoment(slug: string): {
         if (alive && data) {
           setDetail(data)
           setWatching(data.moment.watching)
+          setWatchers(data.watchers ?? [])
         }
       })
       .catch(() => {})
@@ -240,18 +269,23 @@ export function useMoment(slug: string): {
   }, [slug])
 
   useMomentStream((event) => {
-    if (event.type === 'watching' && event.slug === slug) setWatching(event.watching)
+    if (event.type === 'watching' && event.slug === slug) {
+      setWatching(event.watching)
+      if (event.watchers) setWatchers(event.watchers)
+    }
     if (event.type === 'save' && event.item.to?.kind === 'moment' && event.item.to.slug === slug) {
       const item = event.item
       setDetail((d) => {
         if (!d) return d
         const bars = d.bars.slice()
         bars[bars.length - 1] = (bars[bars.length - 1] ?? 0) + 1
+        const saver = event.saver
         return {
-          moment: event.moment ?? d.moment,
+          ...d,
+          moment: event.moment ? keepPeople(event.moment, d.moment) : d.moment,
           bars,
           items: [
-            { post: item.post, savedAt: item.at, people: 1 },
+            { post: item.post, savedAt: item.at, people: 1, ...(saver ? { savers: [saver] } : {}) },
             ...d.items.filter((x) => `${x.post.platform ?? 'twitter'}:${x.post.id}` !== item.key),
           ].slice(0, 120),
         }
@@ -260,5 +294,5 @@ export function useMoment(slug: string): {
     }
   }, slug)
 
-  return { detail, missing, fresh, watching }
+  return { detail, missing, fresh, watching, watchers }
 }

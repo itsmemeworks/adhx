@@ -28,7 +28,7 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
 - **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
 - **Names on posts.** See which of your people saved what, in the player and in search. Saves are shared with your people by default; flip **Just for me** on any you'd rather keep to yourself.
-- **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. Moments still count savers rather than name them; names there are next (see [Where it's going](#where-its-going)).
+- **Right now.** What your lot are saving tonight, grouped into moments, with the faces of who's saving them. **Tune in** to watch along: see who's watching with you, who just saved the next one, and throw a 😂 or a "who sent this 💀" at the room. Strangers on a shared link only ever see counts.
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
 - **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.

@@ -2,8 +2,14 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { publicReadRateLimit } from '@/lib/rate-limit'
 import { getMomentDetail } from '@/lib/moments/engine'
+import { withDetailPeople } from '@/lib/moments/people'
+import { getCurrentUserId } from '@/lib/auth/session'
 
-/** GET /api/moments/{slug} — one moment's posts, newest first, and its last 30 minutes. */
+/**
+ * GET /api/moments/{slug} — one moment's posts, newest first, and its last 30
+ * minutes. Signed in, each item also names its `savers`, the moment its
+ * `savers` and `watchers`, and `watchers` lists the members tuned in now.
+ */
 export const dynamic = 'force-dynamic'
 
 const SLUG = /^[a-z0-9-]{1,64}$/
@@ -17,5 +23,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const limit = Number.isFinite(raw) ? Math.min(Math.max(raw, 1), 120) : 60
   const detail = await getMomentDetail(slug, limit)
   if (!detail) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(detail, { headers: { 'Cache-Control': 'no-store' } })
+  const viewerId = (await getCurrentUserId()) ?? ''
+  return NextResponse.json(withDetailPeople(detail, viewerId), {
+    headers: { 'Cache-Control': 'no-store' },
+  })
 }

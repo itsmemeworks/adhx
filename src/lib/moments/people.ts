@@ -1,0 +1,156 @@
+import { privateKeysFor, saversFor } from '@/lib/people/savers'
+import { membersById } from '@/lib/people/by-id'
+import type { Saver } from '@/lib/people/types'
+import {
+  momentPostKeys,
+  type MomentDetail,
+  type MomentEvent,
+  type MomentView,
+  type MomentsSnapshot,
+  type StreamItem,
+} from './engine'
+import { watcherIds, type ReactionSignal } from './presence'
+
+/**
+ * Live with names: who is saving a moment, who is watching it, who reacted.
+ * Added per request, only for a signed-in member (`viewerId`), on top of the
+ * engine's anonymous output. Signed out (`viewerId === ''`) every helper
+ * returns its input untouched, so public responses keep their old shape and
+ * never carry a name.
+ *
+ * Moments name visible saves only (`saversFor` minus the viewer's own private
+ * saves): a private save is never counted or named here, not even to its owner.
+ */
+
+/** Faces on a moment card. `people` on the view is the full count. */
+export const MAX_MOMENT_SAVERS = 5
+/** Watchers named at most (the count is still `watching`). */
+export const MAX_WATCHERS = 12
+
+/** Visible savers per post (newest first), without the viewer's own private saves. */
+function visibleSavers(keys: string[], viewerId: string): Map<string, Saver[]> {
+  const posts = keys.map((k) => {
+    const at = k.indexOf(':')
+    return { platform: k.slice(0, at), id: k.slice(at + 1) }
+  })
+  const savers = saversFor(posts, viewerId)
+  const own = privateKeysFor(posts, viewerId)
+  for (const key of own) {
+    const list = savers.get(key)?.filter((s) => !s.isYou)
+    if (list?.length) savers.set(key, list)
+    else savers.delete(key)
+  }
+  return savers
+}
+
+/** Up to 5 people saving a moment's posts in its window, newest first. */
+export function momentSavers(slug: string, viewerId: string): Saver[] {
+  if (!viewerId) return []
+  const found = momentPostKeys(slug)
+  if (!found) return []
+  const byKey = visibleSavers(found.keys, viewerId)
+  const newest = new Map<string, Saver>()
+  for (const list of byKey.values()) {
+    for (const s of list) {
+      if (s.savedAt < found.since) continue
+      const had = newest.get(s.username)
+      if (!had || had.savedAt < s.savedAt) newest.set(s.username, s)
+    }
+  }
+  return [...newest.values()]
+    .sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0))
+    .slice(0, MAX_MOMENT_SAVERS)
+}
+
+/** Members tuned in to a moment now, without the viewer; banned accounts left out. */
+export function watchersFor(slug: string, viewerId: string): Saver[] {
+  if (!viewerId) return []
+  const ids = watcherIds(slug).filter((w) => w.userId !== viewerId)
+  if (ids.length === 0) return []
+  const faces = membersById(ids.map((w) => w.userId))
+  const out: Saver[] = []
+  for (const w of ids) {
+    const face = faces.get(w.userId)
+    if (!face) continue
+    out.push({ ...face, savedAt: new Date(w.since).toISOString(), isYou: false })
+    if (out.length >= MAX_WATCHERS) break
+  }
+  return out
+}
+
+export function withMomentPeople(moment: MomentView, viewerId: string): MomentView {
+  if (!viewerId) return moment
+  return {
+    ...moment,
+    savers: momentSavers(moment.slug, viewerId),
+    watchers: watchersFor(moment.slug, viewerId),
+  }
+}
+
+export function withSnapshotPeople(snapshot: MomentsSnapshot, viewerId: string): MomentsSnapshot {
+  if (!viewerId) return snapshot
+  return { ...snapshot, moments: snapshot.moments.map((m) => withMomentPeople(m, viewerId)) }
+}
+
+export function withDetailPeople(detail: MomentDetail, viewerId: string): MomentDetail {
+  if (!viewerId) return detail
+  const keys = detail.items.map((i) => `${i.post.platform ?? 'twitter'}:${i.post.id}`)
+  const savers = visibleSavers(keys, viewerId)
+  const moment = withMomentPeople(detail.moment, viewerId)
+  return {
+    ...detail,
+    moment,
+    items: detail.items.map((item, i) => ({ ...item, savers: savers.get(keys[i]) ?? [] })),
+    watchers: moment.watchers ?? [],
+  }
+}
+
+/** Who just saved this stream item: the visible save made then, else the newest. */
+export function arrivingSaver(item: StreamItem, viewerId: string): Saver | undefined {
+  if (!viewerId) return undefined
+  const list = visibleSavers([item.key], viewerId).get(item.key) ?? []
+  const at = Date.parse(item.at)
+  return list.find((s) => Date.parse(s.savedAt) === at) ?? list[0]
+}
+
+/** An engine event as this subscriber may see it: names added for members only. */
+export function eventForViewer(event: MomentEvent, viewerId: string): MomentEvent {
+  if (!viewerId) return event
+  switch (event.type) {
+    case 'snapshot':
+      return { ...event, snapshot: withSnapshotPeople(event.snapshot, viewerId) }
+    case 'formed':
+      return { ...event, moment: withMomentPeople(event.moment, viewerId) }
+    case 'save': {
+      const saver = arrivingSaver(event.item, viewerId)
+      return {
+        ...event,
+        ...(event.moment ? { moment: withMomentPeople(event.moment, viewerId) } : {}),
+        ...(saver ? { saver } : {}),
+      }
+    }
+    case 'watching':
+      return { ...event, watchers: watchersFor(event.slug, viewerId) }
+    default:
+      return event
+  }
+}
+
+/** A reaction named for one receiver (a member); null for strangers or a banned reactor. */
+export function reactionForViewer(
+  signal: ReactionSignal,
+  viewerId: string,
+): Extract<MomentEvent, { type: 'reaction' }> | null {
+  if (!viewerId) return null
+  const face = membersById([signal.userId]).get(signal.userId)
+  if (!face) return null
+  return {
+    type: 'reaction',
+    slug: signal.slug,
+    id: signal.id,
+    at: signal.at,
+    saver: { ...face, savedAt: signal.at, isYou: signal.userId === viewerId },
+    ...(signal.emoji ? { emoji: signal.emoji } : { text: signal.text ?? '' }),
+    post: signal.post,
+  }
+}
