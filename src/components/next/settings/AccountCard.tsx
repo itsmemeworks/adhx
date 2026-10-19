@@ -11,6 +11,7 @@ import {
 import { UsernameChooser } from '@/components/auth/UsernameChooser'
 import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
+import { GobShape, gobContent, gobMask } from '../GobShape'
 import { INPUT, PRIMARY, SECONDARY, SettingsCard } from './parts'
 
 export interface AuthMe {
@@ -60,21 +61,25 @@ function AvatarRow({ me }: { me: AuthMe }) {
     username,
   })
 
+  // Each choice is Gob shaped, the same as the picture it gives you.
   const choice = (on: boolean) =>
     cn(
-      'h-11 w-11 overflow-hidden rounded-full ring-offset-2 ring-offset-nx-surface',
+      'h-11 w-11 ring-offset-2 ring-offset-nx-surface',
+      gobMask,
       on ? 'ring-2 ring-nx-accent' : 'ring-1 ring-white/20 hover:ring-white/50',
     )
 
   return (
     <Row>
       <div className="flex items-center gap-3">
-        <img
-          src={currentSrc}
-          alt=""
-          referrerPolicy="no-referrer"
-          className="h-14 w-14 shrink-0 rounded-full object-cover"
-        />
+        <GobShape size={56}>
+          <img
+            src={currentSrc}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="h-full w-full object-cover"
+          />
+        </GobShape>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <RowLabel>Picture</RowLabel>
           <span className="text-sm text-white/70">
@@ -94,7 +99,7 @@ function AvatarRow({ me }: { me: AuthMe }) {
                 src={xPhoto}
                 alt=""
                 referrerPolicy="no-referrer"
-                className="h-full w-full object-cover"
+                className={cn(gobContent, 'object-cover')}
                 onError={() => setXBroken(true)}
               />
             </button>
@@ -105,7 +110,7 @@ function AvatarRow({ me }: { me: AuthMe }) {
               onClick={() => updatePreference('avatarSource', 'generated')}
               className={choice(selected === 'generated')}
             >
-              <img src={generated} alt="" className="h-full w-full object-cover" />
+              <img src={generated} alt="" className={cn(gobContent, 'object-cover')} />
             </button>
           </div>
         )}

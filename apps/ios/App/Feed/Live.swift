@@ -679,9 +679,9 @@ private struct FloatingReactions: View {
             let saver = reaction.event.saver
             return Face(saver: saver, server: server, size: size, ring: .clear)
                 .padding(3)
-                .background(Circle().fill(.black))
+                .background(GobShape().fill(.black))
                 .padding(2)
-                .background(Circle().fill(Face.colour(for: saver.username)))
+                .background(GobShape().fill(Face.colour(for: saver.username)))
         }
 
         @ViewBuilder

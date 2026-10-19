@@ -50,16 +50,18 @@ export function Faces({
       {faces.map((p, i) => (
         <span
           key={p.username}
-          className="block rounded-full"
+          className="block"
           style={{
             marginLeft: i === 0 ? 0 : live ? -4 : -Math.round(size / 3.5),
             zIndex: faces.length - i,
-            boxShadow: live ? `0 0 0 2px ${ring}, 0 0 0 4px ${LIVE_RING}` : `0 0 0 2px ${ring}`,
           }}
         >
           <NxAvatar
             author={{ avatarUrl: p.avatarUrl, handle: p.username, name: saverName(p) }}
             size={size}
+            style={{
+              boxShadow: live ? `0 0 0 2px ${ring}, 0 0 0 4px ${LIVE_RING}` : `0 0 0 2px ${ring}`,
+            }}
           />
         </span>
       ))}
@@ -250,14 +252,11 @@ export function ReactionFloats({
         const size = r.emoji ? 44 + (lane(`${r.id}s`) % 3) * 6 : 44
         const label = REACTION_EMOJI.find((e) => e.emoji === r.emoji)?.label
         const face = (
-          <span
-            aria-hidden
-            className="relative block shrink-0 rounded-full"
-            style={{ boxShadow: `0 0 0 3px #000, 0 0 0 5px ${colour}` }}
-          >
+          <span aria-hidden className="relative block shrink-0">
             <NxAvatar
               author={{ avatarUrl: r.saver.avatarUrl, handle: r.saver.username, name }}
               size={size}
+              style={{ boxShadow: `0 0 0 3px #000, 0 0 0 5px ${colour}` }}
             />
           </span>
         )
@@ -334,14 +333,11 @@ export function ArrivalToast({
         <span className="block h-[46px] w-[46px] overflow-hidden rounded-xl bg-[#2a2620]">
           {cover && <NxImage src={cover} alt="" className="h-full w-full object-cover" />}
         </span>
-        <span
-          aria-hidden
-          className="absolute -bottom-1.5 -right-1.5 block rounded-full"
-          style={{ boxShadow: '0 0 0 2px #1a1814' }}
-        >
+        <span aria-hidden className="absolute -bottom-1.5 -right-1.5 block">
           <NxAvatar
             author={{ avatarUrl: saver.avatarUrl, handle: saver.username, name: saverName(saver) }}
             size={22}
+            style={{ boxShadow: '0 0 0 2px #1a1814' }}
           />
         </span>
       </span>

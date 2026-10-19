@@ -139,11 +139,12 @@ export function AccountMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-white/15 hover:ring-white/40"
+        className="group relative flex h-10 w-10 items-center justify-center rounded-[38%]"
       >
         <NxAvatar
           author={{ avatarUrl: me.avatarUrl, handle, name: me.displayName ?? handle }}
           size={36}
+          className="ring-1 ring-white/15 ring-offset-2 ring-offset-transparent group-hover:ring-white/40"
         />
         {me.waitingSignIns > 0 && (
           <span

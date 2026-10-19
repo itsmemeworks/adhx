@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { GobShape } from '@/components/next/GobShape'
 
 interface AuthorAvatarProps {
   src?: string | null
@@ -15,6 +16,7 @@ const SIZE_CLASSES = {
   lg: 'w-10 h-10 text-sm',
 }
 
+/** A person's face, Gob shaped like every other one (see `GobShape`). */
 export function AuthorAvatar({ src, author, size = 'sm' }: AuthorAvatarProps): React.ReactElement {
   const sizeClass = SIZE_CLASSES[size]
   // A remote avatar that fails to load (dead URL, blocked hotlink, etc.)
@@ -24,22 +26,22 @@ export function AuthorAvatar({ src, author, size = 'sm' }: AuthorAvatarProps): R
   // as absent — it loads fine, so `onError` never fires for it.
   const remote = usableAvatarUrl(src)
 
-  if (remote && !broken) {
-    return (
-      <img
-        src={remote}
-        alt={author}
-        className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
-        onError={() => setBroken(true)}
-      />
-    )
-  }
-
   return (
-    <img
-      src={generateAvatarDataUri(author)}
-      alt={author}
-      className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
-    />
+    <GobShape className={sizeClass}>
+      {remote && !broken ? (
+        <img
+          src={remote}
+          alt={author}
+          className="h-full w-full object-cover"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <img
+          src={generateAvatarDataUri(author)}
+          alt={author}
+          className="h-full w-full object-cover"
+        />
+      )}
+    </GobShape>
   )
 }

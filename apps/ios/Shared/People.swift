@@ -89,8 +89,39 @@ enum KnownPeople {
 
 // MARK: - Faces
 
-/// One person's round face: their photo, or their initial on a colour of
-/// their own. Decorative: whoever shows it says the names.
+/// Gob's shape (brand/BRAND.md), the shape of every person's face: a
+/// continuous rounded square with corners at 38% of its size, tilted −4°.
+/// The tilt is in the path, so whatever it clips stays upright (initials
+/// read straight) and a `strokeBorder` ring follows the corners. Status
+/// dots, live dots, round buttons and badges stay circles.
+struct GobShape: InsettableShape {
+    static let cornerFraction: CGFloat = 0.38
+    static let tilt: Angle = .degrees(-4)
+    /// Tilted, the square reaches ~1.6% past its frame; this keeps it inside.
+    private static let fit: CGFloat = 0.984
+
+    var inset: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let side = max(0, min(rect.width, rect.height) * Self.fit - inset * 2)
+        let square = CGRect(x: rect.midX - side / 2, y: rect.midY - side / 2, width: side, height: side)
+        let shape = RoundedRectangle(cornerRadius: side * Self.cornerFraction, style: .continuous)
+            .path(in: square)
+        let turn = CGAffineTransform(translationX: rect.midX, y: rect.midY)
+            .rotated(by: Self.tilt.radians)
+            .translatedBy(x: -rect.midX, y: -rect.midY)
+        return shape.applying(turn)
+    }
+
+    func inset(by amount: CGFloat) -> GobShape {
+        var shape = self
+        shape.inset += amount
+        return shape
+    }
+}
+
+/// One person's face, Gob shaped: their photo, or their initial on a colour
+/// of their own. Decorative: whoever shows it says the names.
 struct Face: View {
     let saver: Saver
     var server: URL?
@@ -123,13 +154,13 @@ struct Face: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(Circle())
-        .overlay(Circle().strokeBorder(ring, lineWidth: max(1.5, size / 15)))
+        .clipShape(GobShape())
+        .overlay(GobShape().strokeBorder(ring, lineWidth: max(1.5, size / 15)))
         .accessibilityHidden(true)
     }
 
     private var initial: some View {
-        Circle()
+        Rectangle()
             .fill(Self.colour(for: saver.username))
             .overlay(
                 Text(String(saver.displayName.prefix(1)).uppercased())

@@ -58,13 +58,15 @@ export function SaverFaces({
     >
       <span aria-hidden={linked ? undefined : true} className="flex shrink-0">
         {faces.map((s, i) => {
+          // The ring sits on the Gob-shaped face itself, so it follows the corners.
           const face = (
             <NxAvatar
               author={{ avatarUrl: s.avatarUrl, handle: s.username, name: saverName(s) }}
-              size={size}
+              size={size + 4}
+              className={cn('border-2', ring)}
             />
           )
-          const frame = cn('block rounded-full border-2', ring, i > 0 && '-ml-2')
+          const frame = cn('block', i > 0 && '-ml-2')
           return linked ? (
             <FaceLink
               key={s.username}

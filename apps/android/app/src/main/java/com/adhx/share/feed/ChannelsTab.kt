@@ -55,6 +55,7 @@ import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Faces
+import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
@@ -236,7 +237,7 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
             Box(
                 Modifier
                     .size(68.dp)
-                    .then(if (fresh) Modifier.border(2.dp, AdhxColors.Accent, CircleShape) else Modifier),
+                    .then(if (fresh) Modifier.border(2.dp, AdhxColors.Accent, GobShape) else Modifier),
             )
             Avatar(friend.username, friend.label, friend.avatarUrl, server, size = 60.dp)
             if (fresh) {
