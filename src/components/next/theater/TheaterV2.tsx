@@ -402,6 +402,8 @@ export function TheaterV2({
   // Tune in (a live moment): its colour, who's watching, new saves arriving.
   const [momentHue, setMomentHue] = useState('#ffd23f')
   const [watching, setWatching] = useState(0)
+  /** A watching event came in: newer than the moment's own count, which may predate this page joining. */
+  const watchingLive = useRef(false)
   const [arrivals, setArrivals] = useState(0)
   const [waiting, setWaiting] = useState(false)
   const [wander, setWander] = useState(false)
@@ -454,6 +456,7 @@ export function TheaterV2({
     const controller = new AbortController()
     setLoad({ status: 'loading' })
     setCaughtUp(false)
+    watchingLive.current = false
     feedCursor.current = null
     feedLoading.current = null
     const types = typesKey ? (typesKey.split(',') as FeedKind[]) : null
@@ -501,8 +504,10 @@ export function TheaterV2({
         }
         if (response.moment) {
           setMomentHue(response.moment.hue)
-          setWatching(response.moment.watching)
-          setWatchers(response.watchers ?? [])
+          if (!watchingLive.current) {
+            setWatching(response.moment.watching)
+            setWatchers(response.watchers ?? [])
+          }
         }
         setTitle(
           source.feed
@@ -712,6 +717,7 @@ export function TheaterV2({
   useMomentStream(
     (event) => {
       if (event.type === 'watching' && event.slug === source.moment) {
+        watchingLive.current = true
         setWatching(event.watching)
         if (event.watchers) setWatchers(event.watchers)
       }

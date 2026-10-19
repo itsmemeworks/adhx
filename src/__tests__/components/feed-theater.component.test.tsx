@@ -463,3 +463,76 @@ describe('New in the theater', () => {
     expect(screen.queryByText('You’re all caught up.')).not.toBeInTheDocument()
   })
 })
+
+describe('Tune in', () => {
+  /** A stand-in EventSource the test can push events through. */
+  class FakeEventSource {
+    static last: FakeEventSource | null = null
+    listeners = new Map<string, ((e: MessageEvent<string>) => void)[]>()
+    onopen: (() => void) | null = null
+    onerror: (() => void) | null = null
+    constructor(public url: string) {
+      FakeEventSource.last = this
+    }
+    addEventListener(type: string, fn: (e: MessageEvent<string>) => void) {
+      this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn])
+    }
+    close() {}
+    emit(type: string, data: unknown) {
+      for (const fn of this.listeners.get(type) ?? [])
+        fn(new MessageEvent(type, { data: JSON.stringify(data) }))
+    }
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    FakeEventSource.last = null
+  })
+
+  it('keeps the live watching count when the moment loads after it', async () => {
+    let answer: (r: Response) => void = () => {}
+    vi.stubGlobal('EventSource', FakeEventSource)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        String(url).startsWith('/api/moments/frog?')
+          ? new Promise<Response>((resolve) => (answer = resolve))
+          : new Response('{}'),
+      ),
+    )
+    render(<TheaterV2 source={sourceFromParams(new URLSearchParams('moment=frog'))} />)
+    await waitFor(() => expect(FakeEventSource.last?.url).toContain('watch=frog'))
+    const ana = {
+      username: 'ana',
+      name: 'Ana',
+      avatarUrl: null,
+      savedAt: '2026-10-19T10:00:00Z',
+      isYou: false,
+    }
+    // This page joining is counted on the stream first…
+    act(() =>
+      FakeEventSource.last!.emit('watching', {
+        type: 'watching',
+        slug: 'frog',
+        watching: 2,
+        watchers: [ana],
+      }),
+    )
+    // …then the moment, read before it joined, arrives.
+    await act(async () =>
+      answer(
+        new Response(
+          JSON.stringify({
+            moment: { slug: 'frog', title: 'Frog', hue: '#7ee08a', watching: 1, people: 2 },
+            items: [{ post: post('a', ''), savedAt: '2026-10-19T10:00:00Z', people: 1 }],
+            bars: [],
+            watchers: [],
+          }),
+        ),
+      ),
+    )
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
+    expect(screen.getByText('2 watching')).toBeInTheDocument()
+    expect(screen.getByText(/is watching with you/)).toBeInTheDocument()
+  })
+})
