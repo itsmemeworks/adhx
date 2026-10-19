@@ -324,7 +324,7 @@ export function DoingScreen() {
             <p className="m-0 text-[15px] text-[#a39b8b]">
               {remote
                 ? 'Keeping, converting and learning happen on your server and your Mac. Nothing goes anywhere else.'
-                : 'Keeping, converting and learning all happen on your own server.'}
+                : 'Everything happens on your server. Nothing is sent anywhere.'}
             </p>
           </div>
           <span className="flex-1" />

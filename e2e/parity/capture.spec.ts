@@ -394,7 +394,7 @@ const BOARDS: Board[] = [
       await attempt(ctx, 'new link made (mocked)', () =>
         clickText(page, /Make an invite link|Make a link/),
       )
-      await attempt(ctx, 'link copied', () => clickText(page, 'Copy link'))
+      await attempt(ctx, 'link copied', () => clickText(page, /^Copy$/))
     },
   },
   {

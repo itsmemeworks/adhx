@@ -8,22 +8,23 @@ import { cn } from '@/lib/utils'
 export const PRIMARY =
   'inline-flex h-12 items-center justify-center gap-2 rounded-full bg-nx-accent px-5 text-[15px] font-extrabold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50'
 
-/** Cream outline, everything else. */
+/** Quiet outline, everything else. */
 export const SECONDARY =
-  'inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-nx-cream/40 px-4 text-sm font-bold text-nx-cream transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-[#4a453e] px-4 text-sm font-semibold text-nx-cream transition-colors hover:border-nx-muted hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
 
 /** Red outline for the danger zone. */
 export const DANGER =
   'inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#ff8a7a]/60 px-4 text-sm font-bold text-[#ff8a7a] transition-colors hover:bg-[#ff8a7a]/10 disabled:cursor-not-allowed disabled:opacity-50'
 
 export const INPUT =
-  'h-12 w-full min-w-0 rounded-[14px] border-[1.5px] border-nx-hairline bg-black px-4 text-base text-white outline-none placeholder:text-white/35 focus:border-nx-accent sm:text-[15px]'
+  'h-12 w-full min-w-0 rounded-full border-[1.5px] border-[#4a453e] bg-nx-ink px-[18px] text-base font-semibold text-nx-cream outline-none placeholder:font-normal placeholder:text-nx-muted focus:border-nx-accent'
 
 /** A rounded card on nx-surface with a serif heading. */
 export function SettingsCard({
   id,
   title,
   sub,
+  note,
   right,
   tone = 'plain',
   className,
@@ -32,6 +33,8 @@ export function SettingsCard({
   id?: string
   title: string
   sub?: string
+  /** Small words beside the title ("4 on this server"). */
+  note?: string
   right?: ReactNode
   /** `accent` rings the card in yellow; `danger` in red. */
   tone?: 'plain' | 'accent' | 'danger'
@@ -44,23 +47,26 @@ export function SettingsCard({
       id={id}
       aria-labelledby={headingId}
       className={cn(
-        'flex scroll-mt-24 flex-col gap-4 rounded-[22px] bg-nx-surface p-4 md:p-6',
-        tone === 'accent' && 'ring-1 ring-nx-accent/45',
-        tone === 'danger' && 'ring-1 ring-[#ff8a7a]/35',
+        'flex scroll-mt-24 flex-col gap-[18px] rounded-[28px] border border-white/[0.08] bg-nx-surface p-4 md:p-6',
+        tone === 'accent' && 'border-nx-accent/45',
+        tone === 'danger' && 'border-[#ff8a7a]/35',
         className,
       )}
     >
       <div className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2
-            id={headingId}
-            className={cn(
-              'm-0 font-nx-serif text-[28px] font-normal leading-none md:text-[30px]',
-              tone === 'danger' && 'text-[#ff8a7a]',
-            )}
-          >
-            {title}
-          </h2>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2
+              id={headingId}
+              className={cn(
+                'm-0 font-nx-serif text-[30px] font-normal leading-[0.95] md:text-[38px]',
+                tone === 'danger' && 'text-[#ff8a7a]',
+              )}
+            >
+              {title}
+            </h2>
+            {note && <span className="whitespace-nowrap text-sm text-nx-muted">{note}</span>}
+          </div>
           {sub && <p className="m-0 text-sm text-white/60">{sub}</p>}
         </div>
         {right}
@@ -114,15 +120,15 @@ export function Switch({
       disabled={disabled}
       onClick={onChange}
       className={cn(
-        'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full p-[3px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-nx-accent focus-visible:ring-offset-2 focus-visible:ring-offset-nx-surface disabled:cursor-not-allowed disabled:opacity-50',
-        checked ? 'justify-end bg-nx-accent' : 'justify-start bg-white/15',
+        'relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full p-[3px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-nx-accent focus-visible:ring-offset-2 focus-visible:ring-offset-nx-surface disabled:cursor-not-allowed disabled:opacity-50',
+        checked ? 'justify-end bg-nx-accent' : 'justify-start bg-[#4a453e]',
       )}
     >
       <span
         aria-hidden
         className={cn(
-          'block h-[22px] w-[22px] rounded-full shadow',
-          checked ? 'bg-black' : 'bg-white',
+          'block h-[26px] w-[26px] rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.4)]',
+          checked ? 'bg-black' : 'bg-nx-cream',
         )}
       />
     </button>

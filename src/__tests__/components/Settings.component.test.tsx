@@ -387,6 +387,9 @@ describe('SettingsClient — account', () => {
     mockFetch(me)
     render(<SettingsClient />)
 
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Add an email so you can always get back in' }),
+    )
     await waitFor(() =>
       expect(screen.getByText(/add an email\. it.?s how you sign in/i)).toBeInTheDocument(),
     )
@@ -405,6 +408,9 @@ describe('SettingsClient — account', () => {
     mockFetch(me, { 'POST /api/auth/email/change': changeSpy })
     render(<SettingsClient />)
 
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Add an email so you can always get back in' }),
+    )
     await waitFor(() => expect(screen.getByPlaceholderText('you@email.com')).toBeInTheDocument())
     fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
       target: { value: 'me@example.com' },

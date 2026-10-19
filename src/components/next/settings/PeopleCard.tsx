@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, Copy, Link2, MoreHorizontal } from 'lucide-react'
+import { Check, Copy, Link2, MoreHorizontal, Share, X } from 'lucide-react'
+import { Gob } from '../Gob'
 import { cn } from '@/lib/utils'
-import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { FaceInitial } from '../FaceInitial'
 import { GobShape } from '../GobShape'
 import { useInvites, type PendingInvite } from './InviteCard'
-import { PRIMARY, SECONDARY, SettingsCard } from './parts'
+import { SECONDARY, SettingsCard } from './parts'
 import { agoLabel, expiresLabel } from './when'
 
 /**
@@ -76,27 +78,34 @@ export function usePeople() {
 
 function Face({
   username,
+  name = null,
   url,
   size = 34,
   className,
 }: {
   username: string
+  /** For the initial when there's no photo. */
+  name?: string | null
   url: string | null
   size?: number
   /** Rings go on the Gob-shaped frame. */
   className?: string
 }) {
   const [broken, setBroken] = useState(false)
-  const src = (!broken && usableAvatarUrl(url)) || generateAvatarDataUri(username)
+  const src = !broken ? usableAvatarUrl(url) : null
   return (
     <GobShape size={size} className={className}>
-      <img
-        src={src}
-        alt=""
-        referrerPolicy="no-referrer"
-        onError={() => setBroken(true)}
-        className="block h-full w-full object-cover"
-      />
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() => setBroken(true)}
+          className="block h-full w-full object-cover"
+        />
+      ) : (
+        <FaceInitial username={username} name={name} size={size} />
+      )}
     </GobShape>
   )
 }
@@ -162,11 +171,12 @@ export function JoinQueue({
           >
             <div className="flex min-w-0 items-center gap-3">
               <span className="relative shrink-0">
-                <Face username={r.username} url={null} size={40} />
+                <Face username={r.username} name={r.name} url={null} size={40} />
                 {r.invitedBy && (
                   <span className="absolute -bottom-1 -right-1.5 block">
                     <Face
                       username={r.invitedBy.username}
+                      name={r.invitedBy.name}
                       url={null}
                       size={18}
                       className="shadow-[0_0_0_2px_#1f1c16]"
@@ -181,7 +191,7 @@ export function JoinQueue({
                 </span>
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-nowrap items-center gap-2">
               <button
                 type="button"
                 disabled={busy === r.id}
@@ -205,9 +215,10 @@ export function JoinQueue({
                 disabled={busy === r.id}
                 onClick={() => void decide(r, 'decline')}
                 aria-label={`Decline ${shownName(r)}`}
-                className="min-h-[44px] px-2 text-[13px] font-semibold text-white/60 underline-offset-2 hover:text-white hover:underline"
+                title="Decline"
+                className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-nx-muted hover:bg-white/10 hover:text-nx-cream disabled:opacity-50"
               >
-                Decline
+                <X aria-hidden className="h-4 w-4" />
               </button>
             </div>
           </li>
@@ -376,8 +387,20 @@ function InviteRow({
   )
 }
 
-export function PeopleCard({ data, reload }: { data: PeopleData | null; reload: () => void }) {
-  const inv = useInvites()
+export type Invites = ReturnType<typeof useInvites>
+
+export function PeopleCard({
+  data,
+  reload,
+  invites,
+}: {
+  data: PeopleData | null
+  reload: () => void
+  /** Shared with the page, which shows a link the moment it's made (`NewInviteCard`). */
+  invites?: Invites
+}) {
+  const own = useInvites()
+  const inv = invites ?? own
   const [modeBusy, setModeBusy] = useState(false)
   const [modeError, setModeError] = useState<string | null>(null)
 
@@ -411,13 +434,7 @@ export function PeopleCard({ data, reload }: { data: PeopleData | null; reload: 
   const showInvites = inv.canInvite || inv.invites.length > 0
 
   return (
-    <SettingsCard
-      id="people"
-      title="Your people"
-      right={
-        <span className="shrink-0 pt-1 text-sm text-white/55">{`${count} on this server`}</span>
-      }
-    >
+    <SettingsCard id="people" title="Your people" note={`${count} on this server`}>
       {data.isAdmin && data.requests && (
         <JoinQueue
           requests={data.requests}
@@ -436,11 +453,11 @@ export function PeopleCard({ data, reload }: { data: PeopleData | null; reload: 
             <li
               key={p.username}
               className={cn(
-                'flex min-h-[56px] items-center gap-3 border-t border-white/[0.08] py-1.5',
+                'flex min-h-12 items-center gap-3 border-t border-white/[0.08] py-1',
                 p.banned && 'opacity-60',
               )}
             >
-              <Face username={p.username} url={p.avatarUrl} />
+              <Face username={p.username} name={p.name} url={p.avatarUrl} />
               <span className="flex min-w-0 flex-1 flex-col gap-px">
                 <span className="truncate text-[15px] font-extrabold">
                   <span>{shownName(p)}</span>
@@ -491,29 +508,7 @@ export function PeopleCard({ data, reload }: { data: PeopleData | null; reload: 
               </button>
             )}
           </h3>
-          {inv.made && (
-            <div className="mb-2 flex flex-col gap-2.5 rounded-2xl bg-black/40 p-4">
-              <span className="text-[13px] text-white/65">
-                Send it to one person. It works once, for 7 days, and it’s shown only now.
-              </span>
-              <code className="block select-all break-all rounded-xl bg-black px-3 py-2.5 font-mono text-[13px] text-nx-cream">
-                {inv.made.url}
-              </code>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => void inv.copy()} className={PRIMARY}>
-                  {inv.copied ? 'Copied' : 'Copy link'}
-                </button>
-                {inv.canShare && (
-                  <button type="button" onClick={() => void inv.share()} className={SECONDARY}>
-                    Share…
-                  </button>
-                )}
-                <button type="button" onClick={inv.dismiss} className={SECONDARY}>
-                  Done
-                </button>
-              </div>
-            </div>
-          )}
+          {inv.made && !invites && <NewInviteCard inv={inv} />}
           {inv.invites.length === 0 ? (
             <p className="m-0 border-t border-white/[0.08] py-3 text-[13px] text-white/55">
               No links waiting. Make one and send it to a friend.
@@ -577,5 +572,123 @@ export function PeopleCard({ data, reload }: { data: PeopleData | null; reload: 
         </div>
       )}
     </SettingsCard>
+  )
+}
+
+/**
+ * A link that was just made: big, yellow-edged, with Copy and Share. It's
+ * shown only now (the server keeps a hash), so it stays until Done.
+ */
+export function NewInviteCard({ inv, className }: { inv: Invites; className?: string }) {
+  const made = inv.made
+  const [toast, setToast] = useState<string | null>(null)
+  const root = useRef<HTMLElement>(null)
+  // Made from the people card further down: bring it into view.
+  useEffect(() => {
+    if (made?.id) root.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+  }, [made?.id])
+  useEffect(() => {
+    if (!toast) return
+    const t = window.setTimeout(() => setToast(null), 3200)
+    return () => window.clearTimeout(t)
+  }, [toast])
+  if (!made) return null
+  return (
+    <section
+      ref={root}
+      aria-labelledby="new-invite-title"
+      className={cn(
+        'relative flex flex-col gap-4 rounded-[28px] border-2 border-nx-accent/70 bg-nx-surface p-5 shadow-[0_0_0_6px_rgba(255,210,63,0.08)] md:px-7 md:py-6',
+        className,
+      )}
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <h2
+            id="new-invite-title"
+            className="m-0 font-nx-serif text-[34px] font-normal leading-[0.95] md:text-[44px]"
+          >
+            {made.nameHint ? `Invite ${made.nameHint}` : 'Invite someone'}
+          </h2>
+          <p className="m-0 text-[15px] leading-snug text-nx-soft md:text-base">
+            One link signs them in and puts ADHX on their phone. Works once, for 7 days.
+          </p>
+        </div>
+        <Gob size={64} className="-m-1 hidden shrink-0 sm:block" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-[13px] font-semibold text-nx-soft">New invite link</span>
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <span className="flex h-14 min-w-0 flex-1 items-center gap-2.5 rounded-full border-[1.5px] border-[#4a453e] bg-nx-ink pl-4 pr-2">
+            <Link2 aria-hidden className="h-4 w-4 shrink-0 text-nx-muted" />
+            <code className="min-w-0 flex-1 select-all truncate rounded-lg bg-nx-accent/10 px-1.5 py-1 font-nx-sans text-[15px] font-bold text-nx-cream">
+              {made.url}
+            </code>
+          </span>
+          <span className="flex gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                await inv.copy()
+                setToast(
+                  made.nameHint
+                    ? `Link copied. Send it to ${made.nameHint} however you like.`
+                    : 'Link copied. Send it however you like.',
+                )
+              }}
+              className="flex h-14 items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-6 text-base font-extrabold text-black"
+            >
+              {inv.copied ? (
+                <Check aria-hidden className="h-[18px] w-[18px]" strokeWidth={3} />
+              ) : (
+                <Copy aria-hidden className="h-[18px] w-[18px]" />
+              )}
+              <span>{inv.copied ? 'Copied' : 'Copy'}</span>
+            </button>
+            {inv.canShare && (
+              <button
+                type="button"
+                onClick={() => void inv.share()}
+                className="flex h-14 items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-nx-cream px-5 text-base font-extrabold text-nx-cream"
+              >
+                <Share aria-hidden className="h-[18px] w-[18px]" />
+                <span>Share…</span>
+              </button>
+            )}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="flex-1 text-[13px] text-nx-muted">
+            Anyone with this link can join once. You can revoke it below.
+          </span>
+          <button
+            type="button"
+            disabled={inv.busy}
+            onClick={() => void inv.create('')}
+            className="min-h-11 whitespace-nowrap text-[13px] font-semibold text-nx-accent underline underline-offset-2 hover:text-nx-cream"
+          >
+            {inv.busy ? 'Making…' : 'Make another link'}
+          </button>
+          <button
+            type="button"
+            onClick={inv.dismiss}
+            className="min-h-11 whitespace-nowrap text-[13px] font-semibold text-nx-soft hover:text-nx-cream"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+      {toast && (
+        <div
+          role="status"
+          className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#262320] py-2.5 pl-2.5 pr-5 text-[15px] font-semibold text-nx-cream shadow-nx-toast md:bottom-8"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-nx-accent text-black">
+            <Check aria-hidden className="h-4 w-4" strokeWidth={3} />
+          </span>
+          <span>{toast}</span>
+        </div>
+      )}
+    </section>
   )
 }
