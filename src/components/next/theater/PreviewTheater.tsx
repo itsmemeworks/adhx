@@ -4,8 +4,9 @@ import { networkLabel } from '@/lib/platform/networks'
 import { detectPlatformPost } from '@/lib/platform/url'
 
 import Link from 'next/link'
-import { Suspense, use, useEffect, useMemo, useRef } from 'react'
+import { Suspense, use, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthMe } from '@/components/auth'
+import type { FeedItem } from '@/components/feed/types'
 import { theaterItemToFeedItem } from '@/components/theater/collection-item'
 import type { TheaterItem } from '@/components/theater/types'
 import { sourceUrl } from '@/lib/activity/preview-path'
@@ -70,11 +71,40 @@ function Resolved({
 }) {
   const result = use(resolve)
   const item = result.ok ? result.item : null
-  const lead = useMemo<SearchResultItem | null>(
-    () =>
-      item ? { post: theaterItemToFeedItem(item), saved: false, matched: [], stage: item } : null,
-    [item],
-  )
+  const { me, loading } = useAuthMe()
+  const userId = !loading && me?.authenticated ? me.user?.id : null
+  const key = item ? `${item.platform || 'twitter'}:${item.bookmarkId}` : null
+  const [owned, setOwned] = useState<{ key: string; userId: string; tags: string[] } | null>(null)
+  useEffect(() => {
+    if (!item?.bookmarkId || !key || !userId) return
+    const controller = new AbortController()
+    const params = new URLSearchParams({
+      id: item.bookmarkId,
+      idPlatform: item.platform || 'twitter',
+      hideArchived: 'false',
+      limit: '1',
+    })
+    void fetch(`/api/feed?${params}`, {
+      credentials: 'same-origin',
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
+    })
+      .then(async (response) => {
+        if (!response.ok) return
+        const data = (await response.json()) as { items?: FeedItem[] }
+        if (controller.signal.aborted) return
+        const saved = data.items?.find((post) => `${post.platform || 'twitter'}:${post.id}` === key)
+        setOwned(saved ? { key, userId, tags: saved.tags } : null)
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [item?.bookmarkId, item?.platform, key, userId])
+  const saved = !!owned && owned.key === key && owned.userId === userId
+  const lead = useMemo<SearchResultItem | null>(() => {
+    if (!item) return null
+    const post = theaterItemToFeedItem(item)
+    if (saved && owned) post.tags = owned.tags
+    return { post, saved, matched: [], stage: item }
+  }, [item, saved, owned])
   useSaveOnOpen(item, lead)
   if (!lead) return <Unavailable originalUrl={originalUrl} />
   return <TheaterV2 source={SHARED_SOURCE} lead={lead} />

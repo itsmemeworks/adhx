@@ -30,6 +30,7 @@ const INPUT_BG = '#2a241d'
 const ACCENT_GRADIENT = 'linear-gradient(135deg,#e88a5e,#d26b40)'
 
 type Stage = 'form' | 'success'
+type Delivery = 'email' | 'admin' | 'log' | 'setup'
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -50,6 +51,7 @@ export function SignInModal({
 }: SignInModalProps) {
   const [email, setEmail] = useState('')
   const [stage, setStage] = useState<Stage>('form')
+  const [delivery, setDelivery] = useState<Delivery>('email')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const modalRootRef = useRef<HTMLDivElement>(null)
@@ -81,6 +83,7 @@ export function SignInModal({
     const root = modalRootRef.current
     if (!open || !root) return
     setStage('form')
+    setDelivery('email')
     setError(null)
     setSubmitting(false)
     const registration = registerModal({
@@ -167,6 +170,14 @@ export function SignInModal({
         body: JSON.stringify({ email: trimmed, returnTo: effectiveReturnTo }),
       })
       if (res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setDelivery(
+          data.setup
+            ? 'setup'
+            : data.delivery === 'admin' || data.delivery === 'log'
+              ? data.delivery
+              : 'email',
+        )
         setEmail(trimmed)
         setStage('success')
       } else {
@@ -280,7 +291,7 @@ export function SignInModal({
                 className="mt-3 h-12 w-full rounded-full text-[14.5px] font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
                 style={{ background: ACCENT_GRADIENT }}
               >
-                {submitting ? 'Sending…' : 'Email me a magic link'}
+                {submitting ? 'Getting your link…' : 'Get a sign-in link'}
               </button>
 
               {error && (
@@ -304,7 +315,11 @@ export function SignInModal({
               <Mail style={{ width: 20, height: 20, color: SUBTLE }} />
             </div>
             <h2 id={titleId} className="font-serif text-2xl leading-tight" style={{ color: INK }}>
-              Check your inbox
+              {delivery === 'admin' || delivery === 'setup'
+                ? 'Ask for your link'
+                : delivery === 'log'
+                  ? 'Get your sign-in link'
+                  : 'Check your inbox'}
             </h2>
             <p
               id={descriptionId}
@@ -313,7 +328,24 @@ export function SignInModal({
               className="mt-2 text-[13.5px] leading-snug"
               style={{ color: MUTED }}
             >
-              We sent a sign-in link to {email}. It expires in 15 minutes.
+              {delivery === 'setup' ? (
+                <>
+                  Nobody runs this ADHX yet. If it’s yours, the sign-in link for {email} is in the
+                  server log, on the line starting “[sign-in]”. Opening it makes you the admin.
+                </>
+              ) : delivery === 'admin' ? (
+                <>
+                  This ADHX doesn’t send email. Ask whoever runs it for the sign-in link for {email}
+                  . It expires in 15 minutes.
+                </>
+              ) : delivery === 'log' ? (
+                <>
+                  The sign-in link for {email} is in the server log, on the line starting
+                  “[magic-link]”. It expires in 15 minutes.
+                </>
+              ) : (
+                <>We sent a sign-in link to {email}. It expires in 15 minutes.</>
+              )}
             </p>
             <button
               ref={successActionRef}

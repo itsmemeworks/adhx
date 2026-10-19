@@ -162,9 +162,9 @@ describe('getting started', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
     render(<StartScreen returnTo="/search" autoSync={false} />)
-    const input = await screen.findByLabelText('Your email. We’ll send a link, no password.')
+    const input = await screen.findByLabelText('Your email. Sign in with a link, no password.')
     fireEvent.change(input, { target: { value: 'pat@example.test' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Send me a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Get a sign-in link' }))
     expect(await screen.findByText('Check your inbox')).toBeInTheDocument()
 
     signedIn = true
@@ -213,9 +213,9 @@ describe('signing in again', () => {
     })
     try {
       render(<StartScreen returnTo="/start" autoSync={false} />)
-      const input = await screen.findByLabelText('Your email. We’ll send a link, no password.')
+      const input = await screen.findByLabelText('Your email. Sign in with a link, no password.')
       fireEvent.change(input, { target: { value: 'pat@example.test' } })
-      fireEvent.click(screen.getByRole('button', { name: 'Send me a link' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Get a sign-in link' }))
       await screen.findByText('Check your inbox')
       signedIn = true
       await act(async () => {
@@ -242,9 +242,9 @@ describe('setting up a new ADHX', () => {
       ),
     )
     render(<StartScreen returnTo="/" autoSync={false} />)
-    const input = await screen.findByLabelText('Your email. We’ll send a link, no password.')
+    const input = await screen.findByLabelText('Your email. Sign in with a link, no password.')
     fireEvent.change(input, { target: { value: 'me@home.test' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Send me a link' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Get a sign-in link' }))
     expect(await screen.findByText(/is in the server log/)).toBeInTheDocument()
     expect(screen.queryByText(/Ask whoever runs it/)).not.toBeInTheDocument()
   })

@@ -264,6 +264,21 @@ describe('TheaterV2', () => {
     expect(screen.getAllByRole('button', { name: 'Mute' }).length).toBeGreaterThan(0)
   })
 
+  it('notifies the media player after a manual save succeeds', async () => {
+    const saved = vi.fn()
+    window.addEventListener('nx-post-saved', saved)
+    try {
+      render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
+      await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      await waitFor(() => expect(saved).toHaveBeenCalledOnce())
+      expect(saved.mock.calls[0][0].detail).toEqual({ key: 'twitter:3' })
+      expect(screen.getByRole('button', { name: 'Saved. Add to a channel' })).toBeInTheDocument()
+    } finally {
+      window.removeEventListener('nx-post-saved', saved)
+    }
+  })
+
   it('remembers a mute choice over the account default', async () => {
     prefs.current = {
       preferences: { soundOn: true, bionicReading: false, bodyFont: 'ibm-plex' },

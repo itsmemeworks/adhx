@@ -92,6 +92,7 @@ import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/le
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { channelTitle } from '../channels/ChannelParts'
 import { useBusyLogo } from '../logo-busy'
+import { POST_SAVED as NX_POST_SAVED } from '@/lib/theater/client-events'
 
 /** X articles carry their whole body; other links only have a preview. */
 function hasFullArticle(post: FeedItem): boolean {
@@ -160,7 +161,7 @@ function emptyState(
 }
 
 /** `CustomEvent<{ key }>`: a post (by `resultKey`) was saved outside the theater. */
-export const NX_POST_SAVED = 'nx-post-saved'
+export { POST_SAVED as NX_POST_SAVED } from '@/lib/theater/client-events'
 
 async function fetchQueue(url: string, signal?: AbortSignal): Promise<QueueResponse> {
   const response = await fetch(url, { signal, credentials: 'same-origin' })
@@ -774,6 +775,7 @@ export function TheaterV2({
       const data = (await res.json().catch(() => null)) as { error?: string } | null
       if (!res.ok || data?.error) throw new Error(data?.error || 'save failed')
       setSavedNow((s) => new Set(s).add(currentKey))
+      window.dispatchEvent(new CustomEvent(NX_POST_SAVED, { detail: { key: currentKey } }))
       return true
     } catch {
       flash('Couldn’t save that. Try again.')

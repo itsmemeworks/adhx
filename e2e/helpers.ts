@@ -107,7 +107,7 @@ export function readToggle(page: Page) {
 
 export async function expectSignInModal(page: Page): Promise<void> {
   await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Email me a magic link' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Get a sign-in link' })).toBeVisible()
 }
 
 export function countActivity(action: string): number {

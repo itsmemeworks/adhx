@@ -111,7 +111,7 @@ describe('SignInModal', () => {
   it('renders the default title and email sign-in only', () => {
     render(<SignInModal open onClose={vi.fn()} />)
     expect(screen.getByText('Sign in to ADHX')).toBeInTheDocument()
-    expect(screen.getByText('Email me a magic link')).toBeInTheDocument()
+    expect(screen.getByText('Get a sign-in link')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Close sign-in' })).toBeVisible()
     expect(screen.queryByText('Continue with')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /continue with/i })).not.toBeInTheDocument()
@@ -143,7 +143,7 @@ describe('SignInModal', () => {
     fireEvent.change(screen.getByLabelText('Email address'), {
       target: { value: 'user@example.com' },
     })
-    fireEvent.click(screen.getByText('Email me a magic link'))
+    fireEvent.click(screen.getByText('Get a sign-in link'))
 
     await waitFor(() => expect(screen.getByText('Check your inbox')).toBeInTheDocument())
     expect(screen.getByText(/We sent a sign-in link to user@example.com/)).toBeInTheDocument()
@@ -153,11 +153,49 @@ describe('SignInModal', () => {
     )
   })
 
+  it.each([
+    {
+      mode: 'an admin-held link',
+      response: { ok: true, delivery: 'admin' },
+      title: 'Ask for your link',
+      instruction: /Ask whoever runs it for the sign-in link for user@example.com/,
+    },
+    {
+      mode: 'first-owner setup',
+      response: { ok: true, delivery: 'admin', setup: true },
+      title: 'Ask for your link',
+      instruction: /server log, on the line starting “\[sign-in\]”. Opening it makes you the admin/,
+    },
+    {
+      mode: 'development logging',
+      response: { ok: true, delivery: 'log' },
+      title: 'Get your sign-in link',
+      instruction: /server log, on the line starting “\[magic-link\]”/,
+    },
+  ])(
+    'shows the actual delivery instructions for $mode',
+    async ({ response, title, instruction }) => {
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => response })
+
+      render(<SignInModal open onClose={vi.fn()} />)
+      fireEvent.change(screen.getByLabelText('Email address'), {
+        target: { value: 'user@example.com' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Get a sign-in link' }))
+
+      expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent(instruction)
+      expect(screen.queryByText('Check your inbox')).not.toBeInTheDocument()
+      expect(screen.queryByText(/We sent a sign-in link/)).not.toBeInTheDocument()
+    },
+  )
+
   it('shows a validation error for an invalid email without calling the API', async () => {
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
     render(<SignInModal open onClose={vi.fn()} />)
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'not-an-email' } })
-    fireEvent.click(screen.getByText('Email me a magic link'))
+    fireEvent.click(screen.getByText('Get a sign-in link'))
 
     expect(await screen.findByText('Enter a valid email address.')).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -175,7 +213,7 @@ describe('SignInModal', () => {
     fireEvent.change(screen.getByLabelText('Email address'), {
       target: { value: 'user@example.com' },
     })
-    fireEvent.click(screen.getByText('Email me a magic link'))
+    fireEvent.click(screen.getByText('Get a sign-in link'))
 
     expect(await screen.findByText('Slow down.')).toBeInTheDocument()
     expect(screen.queryByText('Check your inbox')).not.toBeInTheDocument()
@@ -193,7 +231,7 @@ describe('SignInModal', () => {
     fireEvent.change(screen.getByLabelText('Email address'), {
       target: { value: 'user@example.com' },
     })
-    fireEvent.click(screen.getByText('Email me a magic link'))
+    fireEvent.click(screen.getByText('Get a sign-in link'))
 
     expect(await screen.findByText('Down for maintenance.')).toBeInTheDocument()
   })
@@ -209,7 +247,7 @@ describe('SignInModal', () => {
     render(<SignInModal open onClose={vi.fn()} />)
     const emailInput = screen.getByLabelText('Email address')
     const closeButton = screen.getByRole('button', { name: 'Close sign-in' })
-    const submitButton = screen.getByRole('button', { name: 'Email me a magic link' })
+    const submitButton = screen.getByRole('button', { name: 'Get a sign-in link' })
 
     await waitFor(() => expect(emailInput).toHaveFocus())
 
@@ -453,7 +491,7 @@ describe('SignInModal', () => {
     fireEvent.change(screen.getByLabelText('Email address'), {
       target: { value: 'user@example.com' },
     })
-    fireEvent.click(screen.getByText('Email me a magic link'))
+    fireEvent.click(screen.getByText('Get a sign-in link'))
     await screen.findByText('Check your inbox')
 
     fireEvent.click(screen.getByText('Use a different email'))
@@ -468,7 +506,7 @@ describe('SignInModal', () => {
     fireEvent.change(screen.getByLabelText('Email address'), {
       target: { value: 'user@example.com' },
     })
-    fireEvent.click(screen.getByText('Email me a magic link'))
+    fireEvent.click(screen.getByText('Get a sign-in link'))
 
     const successAction = await screen.findByRole('button', { name: 'Use a different email' })
     await waitFor(() => expect(successAction).toHaveFocus())
