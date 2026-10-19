@@ -105,7 +105,7 @@ export function MagicLinkEmail({ url, intent }: MagicLinkEmailProps) {
             <Text style={fine}>{t.fine}</Text>
           </Section>
 
-          <Text style={tagline}>Save it. Lose it. Find it.</Text>
+          <Text style={tagline}>Your friends have better taste than the algorithm.</Text>
         </Container>
       </Body>
     </Html>

@@ -11,7 +11,7 @@ describe('MagicLinkEmail', () => {
     expect(html).toContain('One tap, no password')
     expect(html).toContain('Sign in')
     expect(html).toContain('https://adhx.com/logo-dark.png')
-    expect(html).toContain('Save it. Lose it. Find it.')
+    expect(html).toContain('Your friends have better taste than the algorithm.')
     expect(html).toContain(URL)
     expect(html).toContain('#08070a')
     // A self-hosted ADHX's mail loads the logo from itself.

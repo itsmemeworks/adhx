@@ -55,8 +55,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!/^\w{1,15}$/.test(username) || !/^\d+$/.test(id)) {
     return {
-      title: 'ADHX - Save it. Lose it. Find it.',
-      description: 'For people who bookmark everything and read nothing.',
+      title: 'ADHX - Your friends have better taste than the algorithm.',
+      description: 'Every app wants your attention. ADHX just wants your friends’ opinions.',
     }
   }
 

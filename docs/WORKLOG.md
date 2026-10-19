@@ -82,6 +82,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Validation: 3,044 tests, typecheck, production build and lint (79 existing warnings) pass; walked the flow in a browser on a scratch DB (taken name, join, done page, simulated phone pairing, used link, email add, Settings/admin cards, 375px width).
 - Follow-ups: sessions aren't rolling, so an invite account that never adds an email is locked out after 30 days; `post_views` will also bump the guard-trigger count (46 here).
 
+## 2026-10-19 — Move the app's own strings to the new voice
+
+- Phase 1 ("say it out loud"), app half: the tagline is now "Your friends have better taste than the algorithm." in metadata titles, the OG/Twitter cards, the magic-link email, the signed-out home, `/start`, the crawler list, `manifest.json`, `robots.txt`, AGENTS.md and CLAUDE.md. README, `site/` and `brand/BRAND.md` moved in the docs/new-voice PR.
+- Empty My saves is "Nothing kept yet" ("No algorithm is going to fill this for you"); Tune in's end is "You’re all caught up. Go touch grass." Copy describes only what ships: savers are still counted, not named.
+- `public/og-logo.png` (also the source of `/opengraph-image` and `/twitter-image`) is a picture and still shows "save it. lose it. find it." until it is redrawn. Once both PRs land, drop BRAND.md's "app strings still say…" line.
+
 ## 2026-10-19 — Make handed-over sign-in links survive previews
 
 - GET/HEAD now render a small script-free confirmation; only an explicit same-origin, bounded form POST consumes the link and sets the existing protected session cookie.

@@ -35,9 +35,9 @@ Use org `your-org` and project `your-project`.
 
 ## ADHX
 
-**Save it. Lose it. Find it.**
+**Your friends have better taste than the algorithm.**
 
-A self-hosted keeper for the posts you and your friends love, built with Next.js 16. It saves posts from X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky. It downloads their media once in the best quality and serves it itself (see "Kept media and link networks" below). `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
+A private feed of the best posts from every network, kept on a server you run for your friends and family. UI copy follows the Voice section of `brand/BRAND.md` (punch up at ad tech, edgy not mean, clear first and funny second) and only describes what ships today. A self-hosted keeper for the posts you and your friends love, built with Next.js 16. It saves posts from X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky. It downloads their media once in the best quality and serves it itself (see "Kept media and link networks" below). `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
 
 ## Agent Context Protocol
 
@@ -516,7 +516,8 @@ Other details:
 
 `MatterLogo` selects the dark or paper lockup; fixed theater surfaces must pass
 `surface="dark"`. Header lockups are at least 32px tall. The brand tagline is
-**Save it. Lose it. Find it.**
+**Your friends have better taste than the algorithm.** `public/og-logo.png` is a picture and
+may still carry the old line until it is redrawn.
 
 **OG Image Routes:**
 
