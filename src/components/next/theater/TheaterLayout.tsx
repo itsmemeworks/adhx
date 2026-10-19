@@ -154,7 +154,7 @@ export function FaceStack({
       ))}
       {more > 0 && (
         <span
-          className="flex items-center justify-center rounded-full bg-[#262320] font-extrabold text-nx-cream"
+          className="relative flex items-center justify-center rounded-full bg-[#262320] font-extrabold text-nx-cream"
           style={{
             width: size,
             height: size,
