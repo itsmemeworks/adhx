@@ -38,6 +38,34 @@ data class SaveResponse(
     val savedAt: String? = null,
 )
 
+/** 202 to `POST /api/app/save` with `Prefer: respond-async`: queued, not read yet. */
+@Serializable
+data class QueuedBody(
+    val queued: Boolean = false,
+    val id: String = "",
+    val state: String = QueuedState.WAITING,
+)
+
+/** `GET /api/app/save?id=`: how a queued link is going. */
+@Serializable
+data class QueuedSave(
+    val id: String = "",
+    /** waiting · saving · saved · failed — see [QueuedState]. */
+    val state: String = QueuedState.WAITING,
+    /** The same answer as a 200 to the save itself, once `saved`. */
+    val post: SaveResponse? = null,
+    /** not_a_post · unavailable · failed, once `failed`. */
+    val code: String? = null,
+    val error: String? = null,
+)
+
+object QueuedState {
+    const val WAITING = "waiting"
+    const val SAVING = "saving"
+    const val SAVED = "saved"
+    const val FAILED = "failed"
+}
+
 @Serializable
 data class Kept(
     val videos: Int = 0,
@@ -129,6 +157,8 @@ data class SavesResponse(
     val items: List<PhonePost> = emptyList(),
     val total: Int = 0,
     val nextOffset: Int? = null,
+    /** Saves still being downloaded: not in `items` or `total` yet. */
+    val preparing: Int = 0,
 )
 
 @Serializable

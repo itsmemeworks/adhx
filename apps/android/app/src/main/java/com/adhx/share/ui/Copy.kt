@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 /** The words the app shows, in one place. */
 object Copy {
     const val SAVING = "Saving to your ADHX…"
-    const val SAVING_NOTE = "You can close this. It carries on, and the post is in My saves as soon as it lands."
+    const val SAVING_NOTE = "You can close this. Your ADHX carries on, and the post shows up in My saves once it’s ready."
     const val SAVED = "Saved to your ADHX"
     const val ALREADY = "Already in your saves"
     const val NOT_A_POST_TITLE = "That’s not one post"

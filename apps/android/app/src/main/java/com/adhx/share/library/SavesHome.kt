@@ -44,6 +44,8 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.openInAdhx
+import kotlinx.coroutines.delay
+import androidx.compose.ui.text.font.FontWeight
 
 /** Home: My saves in the player, or what to do while there's nothing to play. */
 @Composable
@@ -64,21 +66,36 @@ fun SavesHome(
     LaunchedEffect(resumed) {
         if (resumed) vm.refreshSaves()
     }
+    // Saves still on their way join the list once their copy is kept: look again now and then.
+    LaunchedEffect(resumed, ui.preparing > 0) {
+        while (resumed && ui.preparing > 0) {
+            delay(15_000)
+            vm.refreshSaves()
+        }
+    }
 
+    val onTheirWay = ui.preparing.takeIf { it > 0 }?.let { if (it == 1) "1 more on its way" else "$it more on their way" }
     val topBar: @Composable BoxScope.() -> Unit = {
-        Row(
+        Column(
             Modifier
                 .fillMaxWidth()
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
                 .statusBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AdhxBrand(markSize = 28.dp, modifier = Modifier.weight(1f))
-            BarButton(painterResource(R.drawable.ic_history), "Shared lately", onSharedLately)
-            BarButton(Icons.Filled.Search, "Search your saves", onSearch)
-            BarButton(Icons.Filled.Settings, "Settings", onSettings)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AdhxBrand(markSize = 28.dp, modifier = Modifier.weight(1f))
+                BarButton(painterResource(R.drawable.ic_history), "Shared lately", onSharedLately)
+                BarButton(Icons.Filled.Search, "Search your saves", onSearch)
+                BarButton(Icons.Filled.Settings, "Settings", onSettings)
+            }
+            // Only over the player: the empty page says it in its own words.
+            if (onTheirWay != null && ui.items.isNotEmpty()) {
+                Text(onTheirWay, style = OverMedia, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Cream)
+            }
         }
     }
 
@@ -116,7 +133,11 @@ fun SavesHome(
                     OutlineButton("Try again", onClick = vm::reloadSaves, minHeight = 44.dp)
                 }
                 else -> Text(
-                    "Nothing yet. In any app, tap Share on a post and pick ADHX.",
+                    when (ui.preparing) {
+                        0 -> "Nothing yet. In any app, tap Share on a post and pick ADHX."
+                        1 -> "One save is on its way. It shows up here once your ADHX has kept a copy."
+                        else -> "${ui.preparing} saves are on their way. Each shows up here once your ADHX has kept a copy."
+                    },
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
                     color = AdhxColors.Faint,

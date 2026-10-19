@@ -146,7 +146,7 @@ private class Playback {
 private data class Notice(val text: String, val at: Long = System.nanoTime())
 
 /** A soft dark shadow, only for words laid over a picture or video. */
-private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
+internal val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
 
 /**
  * The player: one post at a time, full screen. Swipe up for the next save,

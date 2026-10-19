@@ -52,6 +52,8 @@ data class SavesUi(
     val error: String? = null,
     /** Saves that arrived above the one on screen since the last reload (the "N new saves" pill). */
     val newOnTop: Int = 0,
+    /** Saves still being downloaded, not in [items] yet ("2 more on their way"). */
+    val preparing: Int = 0,
 )
 
 data class SearchUi(
@@ -165,6 +167,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                         nextOffset = result.value.nextOffset,
                         loading = false,
                         loadedOnce = true,
+                        preparing = result.value.preparing,
                     )
                 }
                 is ApiResult.Failed -> {
@@ -204,8 +207,14 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                 val had = current.items.mapTo(HashSet()) { it.key }
                 val firstHad = current.items.firstOrNull()?.key
                 val above = result.value.items.takeWhile { it.key != firstHad }.filter { it.key !in had }
-                if (above.isEmpty()) return@launch
+                if (above.isEmpty()) {
+                    if (current.preparing != result.value.preparing) {
+                        _saves.value = current.copy(preparing = result.value.preparing)
+                    }
+                    return@launch
+                }
                 _saves.value = current.copy(
+                    preparing = result.value.preparing,
                     items = above + current.items,
                     total = result.value.total,
                     // The server's offsets moved down by as many as arrived.

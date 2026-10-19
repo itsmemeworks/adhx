@@ -112,12 +112,18 @@ notices next time it opens and goes back to Connect.
 
 ## Sharing, and the offline queue
 
-When you share to ADHX, a sheet slides up over the app you're in:
+When you share to ADHX, a small frosted card slides up at the bottom of the
+app you're in. On Android 12 and later the app behind is blurred; on older
+phones, or with blur switched off, it's dimmed instead.
 
 1. It finds the first `http(s)://` link in what was shared and shows the
    network's mark straight away.
-2. It sends `POST /api/app/save`. If you close the sheet early, the save
-   still finishes.
+2. It sends `POST /api/app/save` with `Prefer: respond-async`, so your ADHX
+   answers at once and reads the post by itself (a home server can take a
+   while, Instagram especially). The card then asks `GET /api/app/save?id=`
+   every 1.5 s until the post is saved or turned down. If you close the card
+   early, your ADHX carries on, and the app keeps checking now and then so
+   Shared lately catches up.
 3. **Saved** shows the post and how keeping a copy is going
    (`GET /api/app/status` every 1.5 s). It closes by itself after 3 seconds
    unless you touch it.

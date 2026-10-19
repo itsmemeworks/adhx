@@ -2,6 +2,7 @@ package com.adhx.share.net
 
 import com.adhx.share.data.Connection
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -57,6 +58,60 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).post(body.toRequestBody(JSON)).build(), SaveResponse.serializer())
     }
 
+    /**
+     * Save [link] in the background (`Prefer: respond-async`), then follow it
+     * with `GET /api/app/save?id=` every [interval] until it's saved or failed.
+     * An older server saves at once and answers 200 straight away. A timeout
+     * or 5xx on the POST is [ApiResult.Offline]; once queued, missed polls are
+     * only waited out, since the server carries on by itself. After [limitMs]
+     * still queued, it's `Failed` with [STILL_SAVING].
+     */
+    suspend fun saveAndFollow(
+        link: String,
+        interval: () -> Long,
+        limitMs: Long = FOLLOW_LIMIT_MS,
+    ): ApiResult<SaveResponse> {
+        val url = url("api/app/save") ?: return badAddress
+        val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link))
+        val request = authed(url).header("Prefer", "respond-async").post(body.toRequestBody(JSON)).build()
+        val started = send(request) { code, text ->
+            if (code == 202) json.decodeFromString(QueuedBody.serializer(), text).id
+            else json.decodeFromString(SaveResponse.serializer(), text)
+        }
+        val queueId = when (started) {
+            is ApiResult.Ok -> when (val value = started.value) {
+                is SaveResponse -> return ApiResult.Ok(value, started.status)
+                is String -> value.ifBlank { return ApiResult.Failed(started.status, "bad_answer", NOT_ADHX) }
+                else -> return ApiResult.Failed(started.status, "bad_answer", NOT_ADHX)
+            }
+            is ApiResult.Failed -> return started
+            ApiResult.Offline -> return ApiResult.Offline
+        }
+        val until = System.currentTimeMillis() + limitMs
+        while (System.currentTimeMillis() < until) {
+            delay(interval())
+            when (val polled = queued(queueId)) {
+                is ApiResult.Ok -> {
+                    val q = polled.value
+                    when (q.state) {
+                        QueuedState.SAVED -> if (q.post != null) return ApiResult.Ok(q.post, 200)
+                        QueuedState.FAILED -> return ApiResult.Failed(200, q.code ?: "failed", q.error?.takeIf { it.isNotBlank() })
+                    }
+                }
+                is ApiResult.Failed -> if (polled.status == 401 || polled.status == 404) return polled
+                ApiResult.Offline -> Unit
+            }
+        }
+        return ApiResult.Failed(0, STILL_SAVING, null)
+    }
+
+    /** How a queued link is going. */
+    suspend fun queued(id: String): ApiResult<QueuedSave> {
+        val base = url("api/app/save") ?: return badAddress
+        val url = base.newBuilder().addQueryParameter("id", id).build()
+        return send(authed(url).get().build(), QueuedSave.serializer())
+    }
+
     suspend fun status(platform: String, id: String): ApiResult<StatusResponse> {
         val base = url("api/app/status") ?: return badAddress
         val url = base.newBuilder()
@@ -105,9 +160,12 @@ class AdhxApi(private val server: String, private val key: String?) {
     }
 
     // On the IO dispatcher: reading the body blocks, and callers are on Main.
+    private suspend fun <T> send(request: Request, serializer: KSerializer<T>): ApiResult<T> =
+        send(request) { _, text -> json.decodeFromString(serializer, text) }
+
     private suspend fun <T> send(
         request: Request,
-        serializer: KSerializer<T>,
+        decode: (code: Int, text: String) -> T,
     ): ApiResult<T> = withContext(Dispatchers.IO) {
         try {
             client.newCall(request).await().use { response ->
@@ -115,7 +173,7 @@ class AdhxApi(private val server: String, private val key: String?) {
                 when {
                     response.code in 502..504 -> ApiResult.Offline
                     response.isSuccessful -> try {
-                        ApiResult.Ok(json.decodeFromString(serializer, text), response.code)
+                        ApiResult.Ok(decode(response.code, text), response.code)
                     } catch (e: IllegalArgumentException) {
                         ApiResult.Failed(response.code, "bad_answer", NOT_ADHX)
                     }
@@ -136,6 +194,12 @@ class AdhxApi(private val server: String, private val key: String?) {
 
     companion object {
         const val PAGE = 20
+
+        /** `saveAndFollow` gave up waiting, but the server is still on it. */
+        const val STILL_SAVING = "still_saving"
+
+        /** The server retries a queued save for about 15 minutes. */
+        const val FOLLOW_LIMIT_MS = 16 * 60 * 1_000L
         private val JSON = "application/json; charset=utf-8".toMediaType()
         private const val NOT_ADHX = "That address didn’t answer like an ADHX."
 
