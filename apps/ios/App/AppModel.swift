@@ -15,6 +15,8 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var pairing = false
     @Published var pairError: String?
+    /// A post to open in the player (from "Open in ADHX" on the share card).
+    @Published var openPost: PostRef?
     @Published private(set) var sending = false
 
     private var pollTask: Task<Void, Never>?
@@ -57,6 +59,10 @@ final class AppModel: ObservableObject {
 
     /// `adhx://pair?server=…&code=…` from the system camera or a scanned code.
     func handle(url: URL) {
+        if let post = Links.postRef(from: url) {
+            openPost = post
+            return
+        }
         guard let (server, code) = Links.pairing(from: url) else { return }
         Task { await pair(server: server, code: code) }
     }

@@ -134,6 +134,9 @@ private struct PostPage: View {
     @Environment(\.openURL) private var openURL
     @State private var photo = 0
     @State private var saving = false
+    @State private var sharingBusy = false
+    /// Files or words for the system share sheet (WhatsApp, Messages…).
+    @State private var sharing: ShareItems?
     @State private var reading = false
     @State private var more = false
 
@@ -176,6 +179,10 @@ private struct PostPage: View {
             }
         }
         .clipped()
+        .sheet(item: $sharing) { share in
+            ActivitySheet(items: share.items)
+                .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $more) {
             MoreSheet(post: post, server: server, say: say)
                 .presentationDetents([.height(post.kind == "video" ? 400 : 330)])
@@ -195,16 +202,9 @@ private struct PostPage: View {
                     if post.kind == "video" {
                         PlayerLayerView(player: playback.player) { playback.attach($0) }
                     }
-                    if let problem = playback.problem {
-                        Text(problem)
-                            .font(Theme.sans(15))
-                            .foregroundStyle(Theme.cream)
-                            .multilineTextAlignment(.center)
-                            .padding(16)
-                            .background(RoundedRectangle(cornerRadius: 14).fill(.black.opacity(0.7)))
-                            .padding(32)
-                    } else if !playback.ready {
-                        RingSpinner().frame(width: 34, height: 34)
+                    if playback.problem != nil || !playback.ready {
+                        // Still being kept on your ADHX: an animated card until it's ready.
+                        PreparingOverlay(post: post, playback: playback)
                     } else if playback.paused {
                         Image(systemName: "play.fill")
                             .font(.system(size: 32))
@@ -269,14 +269,10 @@ private struct PostPage: View {
                     }
                     .accessibilityAddTraits(playback.repeatOne ? .isSelected : [])
                 }
-                if let media = savable {
-                    RailButton(label: "Save", shadow: overMedia, accessibility: "Save to Photos") {
-                        guard !saving else { return }
-                        saving = true
-                        Task {
-                            say(await SaveToPhotos.save(media.url, isVideo: media.video))
-                            saving = false
-                        }
+                if hasMedia || !post.text.isEmpty {
+                    RailButton(label: "Save", shadow: overMedia,
+                               accessibility: hasMedia ? "Save to Photos" : "Copy the words") {
+                        save()
                     } icon: {
                         if saving {
                             RingSpinner().frame(width: 20, height: 20)
@@ -286,14 +282,20 @@ private struct PostPage: View {
                         }
                     }
                 }
-                if let source = post.sourceUrl.flatMap(URL.init(string:)) {
-                    ShareLink(item: source) {
-                        RailFace(label: "Share", shadow: overMedia) {
-                            Image(systemName: "square.and.arrow.up")
+                if hasMedia || !post.text.isEmpty {
+                    RailButton(label: "Share", shadow: overMedia,
+                               accessibility: hasMedia ? "Share the \(post.kind == "photo" ? "photos" : "file")" : "Share the words") {
+                        share()
+                    } icon: {
+                        if sharingBusy {
+                            RingSpinner().frame(width: 20, height: 20)
+                        } else {
+                            Image(systemName: shareIcon)
                                 .font(.system(size: 19, weight: .semibold))
                         }
                     }
-                    .accessibilityLabel("Share link")
+                }
+                if let source = post.sourceUrl.flatMap(URL.init(string:)) {
                     RailButton(label: "Original", shadow: overMedia,
                                accessibility: "Open original on \(Network.name(post.platform))") {
                         openURL(source)
@@ -343,16 +345,55 @@ private struct PostPage: View {
     }
 
     /// The file the Save button keeps: the video, or the photo on screen.
-    private var savable: (url: URL, video: Bool)? {
+    /// Share shows what it sends: the video, the photos, the sound or the words.
+    private var shareIcon: String {
+        guard hasMedia else { return "text.quote" }
         switch post.kind {
-        case "video":
-            return ADHXClient.resolve(post.media.first?.url, against: server).map { ($0, true) }
-        case "photo":
-            let index = min(photo, max(post.media.count - 1, 0))
-            guard post.media.indices.contains(index) else { return nil }
-            return ADHXClient.resolve(post.media[index].url, against: server).map { ($0, false) }
-        default:
-            return nil
+        case "video": return "play.rectangle.fill"
+        case "audio": return "waveform"
+        case "photo": return post.media.count > 1 ? "photo.stack.fill" : "photo.fill"
+        default: return "square.and.arrow.up"
+        }
+    }
+
+    /// A video, sound or photos your ADHX keeps (anything else is words).
+    private var hasMedia: Bool { !KeptFiles.sources(of: post, server: server).isEmpty }
+
+    /// Save: the media to Photos (a sound to Files, through the share sheet),
+    /// or the words to the clipboard.
+    private func save() {
+        guard hasMedia else {
+            UIPasteboard.general.string = post.text
+            say("Copied")
+            return
+        }
+        guard !saving else { return }
+        if post.kind == "audio" {
+            share()
+            return
+        }
+        saving = true
+        Task {
+            say(await SaveToPhotos.save(post, server: server))
+            saving = false
+        }
+    }
+
+    /// Share: the kept file itself (so it plays in WhatsApp and the like), or the words.
+    private func share() {
+        guard hasMedia else {
+            sharing = ShareItems(items: [post.text])
+            return
+        }
+        guard !sharingBusy else { return }
+        sharingBusy = true
+        Task {
+            if let files = await KeptFiles.download(post, server: server) {
+                sharing = ShareItems(items: files.map(\.url))
+            } else {
+                say("Still being kept on your ADHX. Try again in a moment.")
+            }
+            sharingBusy = false
         }
     }
 
@@ -367,8 +408,8 @@ private struct PostPage: View {
     }
 }
 
-/// More for a post: share the kept video itself, copy the link or the words,
-/// or open it on your ADHX.
+/// More for a post: share its ADHX link with people on your server, copy the
+/// original link or the words, or open it on your ADHX.
 private struct MoreSheet: View {
     let post: PhonePost
     let server: URL
@@ -376,7 +417,6 @@ private struct MoreSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var sharing: SharedFile?
-    @State private var preparing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -412,10 +452,10 @@ private struct MoreSheet: View {
                 .accessibilityLabel("Close")
             }
             VStack(spacing: 4) {
-                if post.kind == "video", let file = ADHXClient.resolve(post.media.first?.url, against: server) {
-                    row(icon: "play.rectangle", title: "Share the video",
-                        detail: "Sends the copy your ADHX kept, not just the link", busy: preparing) {
-                        Task { await shareVideo(file) }
+                if let open = ADHXClient.resolve(post.openPath, against: server) {
+                    row(icon: "person.2", title: "Share an ADHX link",
+                        detail: "For people on your ADHX: opens this post there") {
+                        sharing = SharedFile(url: open)
                     }
                 }
                 if let source = post.sourceUrl {
@@ -503,26 +543,12 @@ private struct MoreSheet: View {
         .frame(minHeight: 60)
         .contentShape(Rectangle())
     }
+}
 
-    /// The kept file itself, downloaded from your ADHX, for the share sheet.
-    private func shareVideo(_ url: URL) async {
-        preparing = true
-        defer { preparing = false }
-        guard var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
-        let query = comps.queryItems ?? []
-        comps.queryItems = query + [URLQueryItem(name: "download", value: "1")]
-        guard let from = comps.url,
-              let (file, response) = try? await URLSession.shared.download(from: from),
-              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            say("That isn’t on your ADHX yet. Try again in a bit.")
-            return
-        }
-        let name = response.suggestedFilename ?? "\(post.platform)-\(post.postId).mp4"
-        let named = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-        try? FileManager.default.removeItem(at: named)
-        guard (try? FileManager.default.moveItem(at: file, to: named)) != nil else { return }
-        sharing = SharedFile(url: named)
-    }
+/// Files or words for the share sheet, from the player's rail.
+private struct ShareItems: Identifiable {
+    let id = UUID()
+    let items: [Any]
 }
 
 private struct SharedFile: Identifiable {

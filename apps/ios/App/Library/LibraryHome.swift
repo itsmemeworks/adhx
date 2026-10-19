@@ -10,6 +10,8 @@ struct LibraryHome: View {
     @State private var scrubbing = false
     @State private var jumpTo: String?
     @State private var onFirst = true
+    /// A post opened from "Open in ADHX" on the share card.
+    @State private var opened: OpenedPost?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -40,9 +42,14 @@ struct LibraryHome: View {
                     }
                     .padding(.top, 64)
                     .transition(.opacity)
+                } else if library.preparing > 0 && !library.saves.isEmpty {
+                    PreparingPill(count: library.preparing)
+                        .padding(.top, 64)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: library.preparing)
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task {
@@ -55,6 +62,28 @@ struct LibraryHome: View {
         .onChange(of: scenePhase) { _, phase in
             // New shares land in your saves; pick them up when you come back.
             if phase == .active { Task { await library.reload() } }
+        }
+        // Saves on their way: look again every 15 s until they've landed.
+        .task(id: library.preparing > 0) {
+            while library.preparing > 0, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+                guard !Task.isCancelled else { return }
+                await library.reload()
+            }
+        }
+        .onChange(of: model.openPost, initial: true) { _, ref in
+            guard let ref else { return }
+            model.openPost = nil
+            Task {
+                if let post = await library.post(platform: ref.platform, id: ref.id) {
+                    opened = OpenedPost(post: post)
+                }
+            }
+        }
+        .fullScreenCover(item: $opened) { item in
+            if let server = model.server {
+                PlayerScreen(posts: [item.post], server: server, start: item.post.key)
+            }
         }
     }
 
@@ -110,6 +139,13 @@ struct LibraryHome: View {
                     .foregroundStyle(Theme.muted)
                 Button("Try again") { Task { await library.reload() } }
                     .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false))
+            } else if library.preparing > 0 {
+                HStack {
+                    Spacer()
+                    PreparingCard(compact: true)
+                    Spacer()
+                }
+                .padding(.top, 20)
             } else {
                 EmptyShares()
             }
@@ -133,4 +169,10 @@ private struct BarIcon: View {
             .frame(width: 44, height: 44)
             .background(Circle().fill(.black.opacity(0.45)))
     }
+}
+
+/// A post to show on its own in the player.
+private struct OpenedPost: Identifiable {
+    let post: PhonePost
+    var id: String { post.key }
 }

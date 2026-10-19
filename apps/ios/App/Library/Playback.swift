@@ -131,6 +131,13 @@ final class Playback: ObservableObject {
         player.play()
     }
 
+    /// Load the same file again (its copy has just been kept).
+    func retry() {
+        let url = currentURL
+        currentURL = nil
+        show(url)
+    }
+
     func togglePause() {
         guard currentURL != nil else { return }
         paused.toggle()

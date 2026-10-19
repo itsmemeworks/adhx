@@ -72,8 +72,10 @@ struct StatusResult: Decodable, Equatable {
     let percent: Int?
     let quality: String?
     let kept: KeptCounts?
+    /// While keeping: downloading or converting (re-encoding).
+    let step: String?
 
-    private enum CodingKeys: String, CodingKey { case platform, id, status, percent, quality, kept }
+    private enum CodingKeys: String, CodingKey { case platform, id, status, percent, quality, kept, step }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -89,6 +91,7 @@ struct StatusResult: Decodable, Equatable {
         }
         quality = try c.decodeIfPresent(String.self, forKey: .quality)
         kept = try c.decodeIfPresent(KeptCounts.self, forKey: .kept)
+        step = try c.decodeIfPresent(String.self, forKey: .step)
     }
 }
 
@@ -150,10 +153,19 @@ struct PhonePost: Decodable, Hashable {
     }
 }
 
+/// One of your saves, by network and id (a deep link into the player).
+struct PostRef: Hashable, Identifiable {
+    let platform: String
+    let id: String
+    var key: String { "\(platform):\(id)" }
+}
+
 struct SavesPage: Decodable {
     let items: [PhonePost]
     let total: Int
     let nextOffset: Int?
+    /// Saves on their way: not in `items` until their copy is ready.
+    let preparing: Int?
 }
 
 struct OneSave: Decodable {
@@ -440,6 +452,26 @@ enum Links {
               let code = items.first(where: { $0.name == "code" })?.value,
               !code.isEmpty else { return nil }
         return (server, normalizedCode(code))
+    }
+
+    /// `adhx://post?platform=…&id=…`: open one of your saves in the app.
+    static func post(platform: String, id: String) -> URL? {
+        var comps = URLComponents()
+        comps.scheme = "adhx"
+        comps.host = "post"
+        comps.queryItems = [URLQueryItem(name: "platform", value: platform), URLQueryItem(name: "id", value: id)]
+        return comps.url
+    }
+
+    /// Reads `adhx://post?platform=…&id=…`.
+    static func postRef(from url: URL) -> PostRef? {
+        guard url.scheme?.lowercased() == "adhx",
+              let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              comps.host?.lowercased() == "post" else { return nil }
+        let items = comps.queryItems ?? []
+        guard let platform = items.first(where: { $0.name == "platform" })?.value, !platform.isEmpty,
+              let id = items.first(where: { $0.name == "id" })?.value, !id.isEmpty else { return nil }
+        return PostRef(platform: platform, id: id)
     }
 
     /// Upper case, without dashes or spaces.
