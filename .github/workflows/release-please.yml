@@ -30,8 +30,8 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # Explicit call works for GITHUB_TOKEN-created releases. The independent
-  # push publisher still runs if Release Please fails, or no release is due.
+  # The only automatic publisher: run after Release Please creates a release.
+  # Explicit calls work even though GITHUB_TOKEN suppresses downstream events.
   publish-release:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}

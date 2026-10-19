@@ -1,35 +1,41 @@
 # Builds, images and releases
 
-The repository has two image channels. Each merge to `main` publishes a commit
-image, without waiting for a release PR. Release Please assigns numbered
-versions and promotes the matching commit image when a release is created.
-Publishing an image does not update an installed service or publish the website.
+Container images are published only for tagged releases. Merge application PRs
+into `main`, then merge the Release Please PR when ready to ship the accumulated
+changes. Ordinary main pushes do not publish images. Documentation-only commits
+do not initiate a release. Publishing an image does not update an installed
+service or publish the website.
 
-| Stage            | Work                                                                                                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application PR   | Tests, lint/types/format, production audit, extension/site builds, browser tests and native AMD64/ARM64 runner-image smoke checks. The required `build` check depends on both native image builds; it does not compile the app again. |
-| Release PR       | Validate the bot identity, repository/branch and actual three-file diff. Only package version, matching root manifest version and changelog changes are allowed. Changes to code, scripts or dependencies fail the required checks.   |
-| Every main push  | Build/publish `sha-<full-commit>` for AMD64 and ARM64. Advance `main` only if this remains the main head. No repeated full application CI suite.                                                                                      |
-| Numbered release | Reuse that source commit's image and apply the version tag. The latest stable release also gets major/minor and `latest` aliases. If its commit image is missing, build it once as recovery.                                          |
+| Stage               | Work                                                                                                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application PR      | Tests, lint/types/format, production audit, extension/site builds, browser tests and native AMD64/ARM64 runner-image smoke checks. The required `build` check depends on both native image builds; it does not compile the app again.  |
+| Ordinary main merge | Release Please updates its pending release PR when releasable changes exist. No container publication.                                                                                                                                 |
+| Release PR          | Validate bot identity, repository/branch and actual three-file diff. Only package version, matching root manifest version and changelog changes are allowed. No repeated full application CI suite.                                    |
+| Release PR merge    | Release Please creates the tag and GitHub release, then explicitly calls the publisher for that version. Build AMD64/ARM64 once, publish the immutable SHA and numbered tags, and update stable aliases for the latest stable release. |
+| Recovery            | Manually publish an existing release version. Reuse an existing SHA image when available.                                                                                                                                              |
 
-PR images are validation artifacts and are not published to GHCR. Protected main
-requires build, format and test checks with an up-to-date base. Different source
-revisions need separate images, including a release commit that changes the
-application's version. Release promotion does not start a second build for the
-same source revision. Existing BuildKit caches are reused.
+PR runner images remain necessary to validate both supported architectures, but
+are not published to GHCR. Protected main requires build, format and test checks
+with an up-to-date base. BuildKit caches are reused during release publication.
+There is no automatic image build on individual feature/fix/docs PR merges.
 
 ## Why releases use an explicit publisher
 
 Release Please uses `GITHUB_TOKEN`. GitHub suppresses most downstream workflow
 events created with that token, so a release event alone is insufficient. The
-release workflow calls the image workflow explicitly. A separately published
-human release can also trigger it; per-commit concurrency and the immutable SHA
-tag prevent duplicate builds. See [GitHub's event rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+release workflow calls the image workflow explicitly, only when
+`release_created` is true. The image workflow has no `push` or `release` event
+trigger, so publishing the GitHub release cannot start a second automatic build.
+Per-commit concurrency and the immutable SHA tag also prevent rebuilds during
+manual recovery. See [GitHub's event rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
 and [Release Please's documentation](https://github.com/googleapis/release-please-action#other-actions-on-release-please-prs).
 
-Main image publication is independent of Release Please succeeding or finding a
-releasable commit. Release Please maintains its own PR branch; the owner merges the release PR.
-It creates tags and release notes; it does not invoke the legacy Fly deployment. That workflow
+The owner merges the Release Please PR. The configured `docs`, `style`, `chore`,
+`refactor`, `test`, `build` and `ci` changelog sections are hidden, so commits of
+those types alone do not initiate a release. Use accurate Conventional Commit
+titles; `feat`, `fix`, `perf`, `security`, `revert` and breaking changes can be
+release-worthy. Documentation still ships in the next release with application
+changes. Release Please does not invoke the legacy Fly deployment; that workflow
 and the Pages website remain explicit opt-in operations.
 
 The trusted `workflow_run` metadata job reports the three branch-required check
@@ -42,8 +48,8 @@ Feature PRs cannot bypass CI by choosing a release-like branch name.
 
 - `sha-<40-character-commit>` identifies one source revision and is reused on
   retries. The OCI index records that revision.
-- `main` follows the newest main commit whose image has finished publishing.
-  An older run finishing later cannot deliberately move it backward.
+- The legacy `main` tag is no longer updated. Existing installations following it
+  must choose a numbered release or `latest`, preferably pinning its verified digest.
 - `2.1.3` identifies a numbered release and refuses replacement by a different
   digest. `2.1`, `2` and `latest` follow the latest stable GitHub release.
 - Prereleases get their version tag without stable aliases.
@@ -55,8 +61,8 @@ canonical URL. Follow the [NAS update/backup guide](../deploy/nas/README.md#upda
 ## Recovery
 
 Rerun a failed publishing job, or manually run **Publish container image** on
-`main`. Leave `version` blank to recover the current main commit; enter `2.1.3`
-(or `v2.1.3`) to resolve and recover that exact existing release tag. The tag must
+`main`. Enter `2.1.3` (or `v2.1.3`) to resolve and recover that exact existing
+release tag. A version is mandatory; untagged main snapshots cannot be published. The tag must
 match the package version and belong to main's history. A numbered release can
 reuse an already-published SHA image; it never overwrites another release digest.
 Old releases produced before SHA tags were introduced may need their original

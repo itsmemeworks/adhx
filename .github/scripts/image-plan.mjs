@@ -13,12 +13,12 @@ export function normalizeVersion(raw) {
   return version
 }
 
-export function imagePlan({ sha, repository, version = '', currentMain, latestRelease }) {
+export function imagePlan({ sha, repository, version = '', latestRelease }) {
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('Expected an immutable commit SHA')
   version = normalizeVersion(version)
+  if (!version) throw new Error('A tagged release version is required')
   const image = `ghcr.io/${repository.toLowerCase()}`
   const tags = [`${image}:sha-${sha}`]
-  if (sha === currentMain) tags.push(`${image}:main`)
   if (version) {
     tags.push(`${image}:${version}`)
     if (!version.includes('-') && version === normalizeVersion(latestRelease || '')) {
@@ -31,6 +31,9 @@ export function imagePlan({ sha, repository, version = '', currentMain, latestRe
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const version = normalizeVersion(process.env.RAW_VERSION || '')
+  if (!version) throw new Error('A tagged release version is required')
+  if (process.env.GITHUB_REF !== 'refs/heads/main')
+    throw new Error('Release images may only be published from main')
   const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim()
   if (version) {
     git('fetch', '--no-tags', 'origin', `refs/tags/v${version}`)
@@ -38,8 +41,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     git('merge-base', '--is-ancestor', 'HEAD', 'origin/main')
     if (JSON.parse(readFileSync('package.json', 'utf8')).version !== version)
       throw new Error('Release tag and package version disagree')
-  } else if (process.env.GITHUB_REF !== 'refs/heads/main') {
-    throw new Error('Commit images may only be published from main')
   }
   const plan = imagePlan({
     sha: git('rev-parse', 'HEAD'),
