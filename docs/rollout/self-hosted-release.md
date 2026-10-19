@@ -43,8 +43,11 @@ non-root image, SQLite migrations/integrity, native ONNX bindings, synthetic
 VP9-to-H.264 conversion, image/video frame processing, the actual yt-dlp wrapper,
 anonymous API rejection, media byte ranges and persisted data after container
 recreation. The `validate-models` PR label enables real pinned text/image/video
-CPU inference and prints elapsed time and peak process RSS. Keep that label for
-this PR and require both native jobs to pass before recommending merge.
+CPU inference and prints elapsed time and peak process RSS. Use it when changing
+the inference pipeline, model dependencies or container runtime. Require both
+native jobs on the current revision before recommending merge. The required
+`build` status depends on these native builds, avoiding a third app compilation.
+Release PRs use validated version/changelog checks; see [the release flow](../releasing.md).
 
 To repeat full container checks locally after building the selected revision:
 
@@ -68,9 +71,11 @@ font fix must also pass the current-revision CI checks before merge.
 
 ## Before a private server trial
 
-After merging, choose an image built from the merged revision. Either build it
-on the intended architecture or wait for its release image and pin the digest.
-The previously inspected published `latest` predates this branch.
+After merging, choose the immutable `sha-<full-commit>` image published for that
+main revision, or its numbered release image, and pin the digest. Verify its
+source and platform rather than assuming `latest` includes a particular PR.
+Main publication no longer waits for a release PR; numbered release promotion
+reuses that source image. See [publishing recovery](../releasing.md#recovery).
 
 Inspect the target's current memory, CPU, disk capacity and proxy network. Keep
 its specific paths, hostnames, accounts and credentials outside this repository.

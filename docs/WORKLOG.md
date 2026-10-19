@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Publish every main merge and validate release metadata
+
+- Decouple commit-image publication from Release Please and disabled legacy Fly deployment; every main push builds an immutable SHA image and advances `main` only for the current head.
+- Serialize duplicate events per source commit, reuse existing digests for numbered releases, protect immutable release tags and keep stable aliases on the latest release.
+- Run full CI on feature PRs once; native runner builds supply the required build result. Release PRs validate actual version/changelog contents instead of receiving unconditional success.
+- Remove automatic merges, redundant release-branch rebases, ad-hoc stuck-tag creation and the custom title override; use Release Please’s normal versioning and explicit reusable image publication.
+- Add executable tests for metadata attacks, check outcomes, tag planning and stale/prerelease protection; document the pipeline and manual recovery. Legacy hosting and Pages remain opt-in.
+- Source changes are proposed, not deployed; recover the already-tagged release through its existing publisher while the workflow fix is reviewed.
+
 ## 2026-10-19 — UGREEN deployment guide and first-save recovery
 
 - Add an optional UGOS Pro walkthrough while retaining the portable Docker contract, including private bind-folder initialization, GUI configuration, proxy hooks and backups.

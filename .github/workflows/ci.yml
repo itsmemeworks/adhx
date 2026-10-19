@@ -3,8 +3,6 @@ name: CI
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
   # Manual trigger for debugging or special cases
   workflow_dispatch:
     inputs:
@@ -24,91 +22,55 @@ on:
     workflows: ['Release Please']
     types: [completed]
 
-# Permissions needed for:
-# - checks: write - to create check runs for release PRs
-# - contents: read - default permission to checkout code
+# Only the trusted metadata-check job may write checks.
 permissions:
-  checks: write
   contents: read
 
 jobs:
-  # Create check run for release PRs when triggered by Release Please workflow
-  # Uses GitHub Checks API to report status on the PR's HEAD commit
+  # GITHUB_TOKEN-created release PRs do not need another full app CI run.
+  # Validate their actual diff before reporting the required branch checks.
   release-pr-check:
-    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
-    steps:
-      - name: Create check run for release PR
-        uses: actions/github-script@v9
-        with:
-          script: |
-            // Find open release PR
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:release-please--branches--main`,
-              state: 'open'
-            });
-
-            if (prs.length === 0) {
-              console.log('No open release PR found, skipping');
-              return;
-            }
-
-            const pr = prs[0];
-            console.log(`Found release PR #${pr.number} with head SHA: ${pr.head.sha}`);
-
-            // Create check runs on the PR's HEAD commit to satisfy branch
-            // protection's required checks. Release PRs only bump version /
-            // changelog, so the real CI jobs are skipped — synthesize a passing
-            // check for each required context.
-            for (const name of ['build', 'format', 'test']) {
-              const { data: checkRun } = await github.rest.checks.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name,
-                head_sha: pr.head.sha,
-                status: 'completed',
-                conclusion: 'success',
-                output: {
-                  title: `Release PR ${name} check`,
-                  summary: 'Release PRs skip full CI - only version/changelog updates.',
-                  text: `This check was created automatically for release PR #${pr.number}.\n\nRelease PRs only contain automated version bumps and changelog updates, so full CI is skipped.`
-                }
-              });
-              console.log(`✅ Created '${name}' check run ${checkRun.id} for PR #${pr.number}`);
-            }
-
-  build:
-    runs-on: ubuntu-latest
-    # Skip for workflow_run events (handled by release-pr-check job)
-    # For pull_request events, skip release-please PRs
-    # For push events, always run
-    if: |
-      github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
     steps:
       - uses: actions/checkout@v7
-
-      # Version is read from the "packageManager" field in package.json
-      - uses: pnpm/action-setup@v6
-
-      - uses: actions/setup-node@v7
         with:
-          node-version: '24'
-          cache: 'pnpm'
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            await require('./.github/scripts/check-release-pr.cjs')({ github, context, core })
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
+  # Both native runner-image builds already compile the production app.
+  # Keep the required `build` context without compiling it a third time.
+  build:
+    needs: container-smoke
+    runs-on: ubuntu-latest
+    if: |
+      always() && github.event_name != 'workflow_run' &&
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
+    steps:
+      - name: Require both native image builds and smoke tests
+        env:
+          RESULT: ${{ needs.container-smoke.result }}
+        run: test "$RESULT" = success
 
   extension:
     runs-on: ubuntu-latest
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: actions/checkout@v7
 
@@ -141,7 +103,9 @@ jobs:
   container-smoke:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -180,7 +144,9 @@ jobs:
   site-build:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -196,7 +162,9 @@ jobs:
   dependency-audit:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -214,7 +182,9 @@ jobs:
   format:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -235,10 +205,11 @@ jobs:
 
   test:
     # Skip for release-please PRs (only update version/changelog) and workflow_run events
-    # For push events, always run
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -266,7 +237,9 @@ jobs:
   e2e:
     if: |
       github.event_name != 'workflow_run' &&
-      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+      !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+        github.head_ref == 'release-please--branches--main' &&
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
