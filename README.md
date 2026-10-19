@@ -34,14 +34,16 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 - **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
 
-## Where it's going
+## What's new
 
-ADHX is becoming one shared feed for your people. In order:
+ADHX is now one shared feed for your people:
 
-1. **Say it out loud.** This README, the site and every string in the app, in the new voice.
-2. **Names on posts.** Here: see which of your friends saved what, keep any save **Just for me**, and search the whole group's vault. Saves you'd already made joined the shared feed; the app says so once.
-3. **One feed.** Here: a blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
-4. **Channels and Live.** Here: channels drawn from everyone's saves and one per friend, and Live with names, so you can watch together.
+- **New.** Only what your people saved that you haven't seen, with why each post is next, then "You're all caught up. Go touch grass."
+- **Saver faces and Just for me.** Every post shows who kept it. Saves are shared by default; **Just for me** keeps one out of everyone else's feed, channels and search.
+- **Channels from everyone.** Channels drawn from the whole group's saves, plus one per friend with what's new to you.
+- **Live with names.** Watch together, see who's watching and who saved the next one, and react as it plays.
+- **Search what's said and what's on screen**, across everyone's saves.
+- **Invite links** that sign a friend in and pair their phone in one go.
 
 Names stay on your server. Links you share with people outside it never show who saved anything.
 

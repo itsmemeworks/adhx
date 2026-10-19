@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — adhx.com rebuilt for the friends feed
+
+- `site/` now follows the approved desktop and phone boards: nav (a `<details>` menu below `md`), hero ("Your friends have better taste than the algorithm." with a laptop theater and an overlapping phone), fourteen networks (real marks via `NetworkIcon`), "Three steps. No algorithm.", seven feature rows (New, saver faces + Just for me, the meme vault, search by what's said / on screen, channels, Live, invites), the apps, the "short attention spans and long friendships" band, "Yours. Not ours." with the setup command, footer.
+- Responsive, not fixed boards: `max-w` containers, phone layout below `md`, desktop from `lg`. Phone and laptop mockups scale with their frame (`.nx-scale` + `--u`, `components/frames.tsx`). New: `People.tsx` (Gob-shaped faces), `Meme.tsx` (Impact-style top/bottom captions as real text, Anton/Oswald from Google Fonts as fallback), `icons.tsx`, `mocks.tsx`; `art.tsx` gains elephant, hamster, bird and grass; `CopyCommand` gains a titled, highlighted variant.
+- No third-party media: the boards' real stills are replaced by the site's own illustrations; owner-requested meme captions go over them. Copy only claims what's on `feat/friends-feed`; approvals read "Approve who joins, if you like"; the apps stay build-from-source.
+- README "Where it's going" is now "What's new". Metadata and OG description updated.
+- Checked: `pnpm site:build`, `pnpm typecheck`, `pnpm format:check`; visual pass at 1440, 1024, 800, 390, 375 and 320 (no horizontal scroll). Follow-ups: the hero reel (`/showreel`, MP4) still shows the older feature set and should be re-recorded; the small-screen menu stays open after following a link.
+
 ## 2026-10-19 — Faces are Gob shaped
 
 - Owner request: every person's face is Gob's shape (rounded square, 38% corners, tilted −4°) instead of a circle, on web, iPhone and Android. Photos and initials stay upright inside; rings on stacks follow the shape.

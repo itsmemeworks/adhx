@@ -125,3 +125,87 @@ body {
     animation: none !important;
   }
 }
+
+/* Meme captions over illustrated posts (components/Meme.tsx): Impact, then
+   Anton or Oswald from Google Fonts, then condensed system fonts. */
+:root {
+  --font-meme: Impact, 'Anton', 'Oswald', Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+}
+.nx-meme {
+  position: absolute;
+  inset: 0;
+  container-type: inline-size;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+}
+.nx-meme-line {
+  display: block;
+  max-width: 92cqw;
+  margin: 3.5cqw 4cqw;
+  font-family: var(--font-meme);
+  font-weight: 400;
+  font-size: calc(var(--meme, 8) * 1cqw);
+  line-height: 1.04;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: #fff;
+  -webkit-text-stroke: 0.15em #000;
+  paint-order: stroke fill;
+  text-shadow:
+    0 0.03em 0 #000,
+    0 -0.03em 0 #000,
+    0.03em 0 0 #000,
+    -0.03em 0 0 #000,
+    0 0.08em 0.2em rgba(0, 0, 0, 0.5);
+}
+
+/* Phone and laptop mockups scale with their frame: children size themselves in
+   `--u`, one design pixel (components/frames.tsx). */
+.nx-scale {
+  container-type: inline-size;
+}
+
+/* Live: reactions bob as they float past, the red dot breathes. */
+.nx-float {
+  animation: nx-float 3.6s ease-in-out infinite;
+}
+.nx-pulse {
+  animation: nx-pulse 1.8s ease-in-out infinite;
+}
+@keyframes nx-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+@keyframes nx-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 90, 60, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 90, 60, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-float,
+  .nx-pulse {
+    animation: none;
+  }
+}
+
+/* The small-screen menu (a <details>, so it works without script). */
+.nx-menu > summary {
+  list-style: none;
+}
+.nx-menu > summary::-webkit-details-marker {
+  display: none;
+}
