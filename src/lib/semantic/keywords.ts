@@ -78,10 +78,22 @@ export function startKeywordIndex(): void {
  * library it's often the best keyword hit there is).
  */
 const FILLER = new Set(
-  'a an the and or but of to in on at by for with from about into as is are was were be been being it its this that these those i me my you your we our they their he she his her some something any thing one'.split(
+  'a an the and or but of to in on at by for with from about into as is are was were be been being it its this that these those i me my you your we our they their he him she his her them us some something any thing one has have had do does did so than then just very'.split(
     ' ',
   ),
 )
+
+/**
+ * What an apostrophe leaves behind: "brother's" → "brother", "don't" → "don".
+ * Without this the tokenizer splits off a lone "s" (or "t", "ll" …) that
+ * matches every possessive in the library.
+ */
+const CLITIC = /(?<=[\p{L}\p{N}])['’ʼ](?:s|t|d|m|ll|re|ve)(?![\p{L}\p{N}])/giu
+
+/** A single letter on its own says nothing ("s", "x"); a lone digit can ("3 cats"). */
+function isLoneLetter(token: string): boolean {
+  return token.length === 1 && /\p{L}/u.test(token)
+}
 
 /**
  * Build an FTS5 query from free text. Every token is quoted (so user input
@@ -95,15 +107,20 @@ export function ftsQuery(input: string): string | null {
   return tokens.map((t) => (t.prefix ? `"${t.token}"*` : `"${t.token}"`)).join(' OR ')
 }
 
-/** The words a keyword search looks for (filler dropped), the last one a prefix while typing. */
+/**
+ * The words a keyword search looks for, the last one a prefix while typing.
+ * Possessive and contraction endings, lone letters and filler are dropped;
+ * if nothing is left, the filler words stand in (a search for "the who").
+ */
 export function queryTokens(input: string): { token: string; prefix: boolean }[] {
-  const all =
+  const all = (
     input
       .toLowerCase()
-      .match(/[\p{L}\p{N}]+/gu)
-      ?.slice(0, MAX_TOKENS) ?? []
+      .replace(CLITIC, '')
+      .match(/[\p{L}\p{N}]+/gu) ?? []
+  ).filter((t) => !isLoneLetter(t))
   const meaningful = all.filter((t) => !FILLER.has(t))
-  const tokens = meaningful.length ? meaningful : all
+  const tokens = (meaningful.length ? meaningful : all).slice(0, MAX_TOKENS)
   const typing = !/\s$/.test(input)
   return tokens.map((token, i) => ({
     token,
