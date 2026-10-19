@@ -14,9 +14,10 @@ extension/
 e2e/
 test/
 
-# Local data
+# Local data (and a NAS install's data, secrets and media under deploy/)
 data/
 *.db
+deploy/
 
 # Git
 .git

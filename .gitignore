@@ -66,3 +66,6 @@ design_handoff_knowledge_graph/
 site/.next/
 site/out/
 site/next-env.d.ts
+
+# A NAS install's database and kept media (deploy/nas)
+deploy/nas/data/
