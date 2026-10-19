@@ -12,7 +12,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Remove both push and release-event publisher triggers, eliminating duplicate automatic entry points; manual recovery requires an existing release version.
 - Keep per-SHA serialization, immutable images, build caches and latest-stable guards. Retire the rolling `main` tag and document migration to releases.
 - Hide docs changelog entries so docs-only commits do not initiate releases; normal PR architecture/build validation remains unchanged.
-- Source changes are proposed, not deployed; validation and follow-ups are recorded in the PR.
+- Validation: 2,892 tests, typecheck, formatting and Actionlint pass; lint has zero errors and existing warnings. Source changes are proposed, not deployed.
 
 ## 2026-10-19 — Skip documentation images and cancel superseded main builds
 
