@@ -114,10 +114,10 @@ $ADHX_URL/api/share/tweet/{username}/{statusId}
 
 Extract `username` and `statusId` from any of these:
 
-| Format                           | Example                                                   |
-| -------------------------------- | --------------------------------------------------------- |
-| `x.com/{user}/status/{id}`       | `https://x.com/dgt10011/status/2020167690560647464`       |
-| `twitter.com/{user}/status/{id}` | `https://twitter.com/dgt10011/status/2020167690560647464` |
+| Format                           | Example                                                        |
+| -------------------------------- | -------------------------------------------------------------- |
+| `x.com/{user}/status/{id}`       | `https://x.com/dgt10011/status/2020167690560647464`            |
+| `twitter.com/{user}/status/{id}` | `https://twitter.com/dgt10011/status/2020167690560647464`      |
 | `<your ADHX>/{user}/status/{id}` | `https://adhx.example.com/dgt10011/status/2020167690560647464` |
 
 ```bash

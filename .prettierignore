@@ -10,3 +10,5 @@ coverage
 .claude
 extension/dist
 extension/.extension-js
+# Xcode writes these in its own style
+apps/ios/**/*.xcassets

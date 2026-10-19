@@ -62,7 +62,7 @@ The code is case-insensitive and may contain a dash or spaces.
 Short links are followed on the server.
 
 - `200 { platform, network, id, author, authorName, text, category, posterUrl,
-  openPath, alreadySaved, savedAt }`
+openPath, alreadySaved, savedAt }`
   - `network` is the display name ("TikTok", "X").
   - `posterUrl` (or null) and `openPath` may be relative; resolve them against
     the server address. `openPath` opens the post in ADHX.

@@ -8,14 +8,14 @@ release. Understanding can still be switched off at runtime
 
 ## What changes for people
 
-| Before | After |
-| --- | --- |
-| Signed-in `/` → `/saved` | `/play?recent=1` (theater on your newest saves) |
-| `/saved?open=` | `/play?recent=1&start=platform:id` |
-| `/library?search=` | `/search?q=` |
-| `/tags` | `/channels` |
-| `/t/{user}/{tag}` | new channel page (same URL, same visibility rules) |
-| — | `/start` (email-link sign-in, X import), `/play`, `/search`, `/channels` |
+| Before                   | After                                                                    |
+| ------------------------ | ------------------------------------------------------------------------ |
+| Signed-in `/` → `/saved` | `/play?recent=1` (theater on your newest saves)                          |
+| `/saved?open=`           | `/play?recent=1&start=platform:id`                                       |
+| `/library?search=`       | `/search?q=`                                                             |
+| `/tags`                  | `/channels`                                                              |
+| `/t/{user}/{tag}`        | new channel page (same URL, same visibility rules)                       |
+| —                        | `/start` (email-link sign-in, X import), `/play`, `/search`, `/channels` |
 
 Unchanged: signed-out `/` (public theater), `/live`, `/trending`,
 `/leaderboard`, `/settings`, `/admin`, preview pages (`/{user}/status/{id}` …).

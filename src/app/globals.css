@@ -260,49 +260,111 @@
 
 /* "Right now": live arrivals. Covered by the reduced-motion rule below. */
 @keyframes nx-live-pulse {
-  0% { box-shadow: 0 0 0 0 rgb(var(--nx-pulse, 255 210 63) / 0.6); }
-  70% { box-shadow: 0 0 0 10px rgb(var(--nx-pulse, 255 210 63) / 0); }
-  100% { box-shadow: 0 0 0 0 rgb(var(--nx-pulse, 255 210 63) / 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgb(var(--nx-pulse, 255 210 63) / 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgb(var(--nx-pulse, 255 210 63) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--nx-pulse, 255 210 63) / 0);
+  }
 }
 @keyframes nx-slide-in {
-  from { transform: translateX(-36px) scale(0.9); opacity: 0; }
-  to { transform: none; opacity: 1; }
+  from {
+    transform: translateX(-36px) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }
 @keyframes nx-drop-in {
-  0% { transform: translateY(-30px) scale(0.7); opacity: 0; }
-  60% { transform: translateY(3px) scale(1.03); opacity: 1; }
-  100% { transform: none; opacity: 1; }
+  0% {
+    transform: translateY(-30px) scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(3px) scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
 }
 @keyframes nx-fade-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 @keyframes nx-float-up {
-  0% { transform: translateY(6px); opacity: 0; }
-  25% { opacity: 1; }
-  100% { transform: translateY(-26px); opacity: 0; }
+  0% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-26px);
+    opacity: 0;
+  }
 }
 @keyframes nx-pop-in {
-  0% { transform: scale(0.92); opacity: 0.4; }
-  60% { transform: scale(1.02); opacity: 1; }
-  100% { transform: none; }
+  0% {
+    transform: scale(0.92);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
 }
 @keyframes nx-breathe {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
-.animate-nx-live-pulse { animation: nx-live-pulse 1.6s infinite; }
+.animate-nx-live-pulse {
+  animation: nx-live-pulse 1.6s infinite;
+}
 
 /* Phones: keep the page clear of the bottom tab bar (BottomNav). */
 @media (max-width: 767px) {
-  body:has([data-nx-bottom-nav]) { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  body:has([data-nx-bottom-nav]) {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
 }
-.animate-nx-slide-in { animation: nx-slide-in 0.5s ease-out; }
-.animate-nx-drop-in { animation: nx-drop-in 0.55s ease-out; }
-.animate-nx-glow { animation: nx-fade-out 1.4s ease-out forwards; }
-.animate-nx-float-up { animation: nx-float-up 1.2s ease-out forwards; }
-.animate-nx-pop-in { animation: nx-pop-in 0.6s ease-out; }
-.animate-nx-breathe { animation: nx-breathe 1.6s ease-in-out infinite; }
+.animate-nx-slide-in {
+  animation: nx-slide-in 0.5s ease-out;
+}
+.animate-nx-drop-in {
+  animation: nx-drop-in 0.55s ease-out;
+}
+.animate-nx-glow {
+  animation: nx-fade-out 1.4s ease-out forwards;
+}
+.animate-nx-float-up {
+  animation: nx-float-up 1.2s ease-out forwards;
+}
+.animate-nx-pop-in {
+  animation: nx-pop-in 0.6s ease-out;
+}
+.animate-nx-breathe {
+  animation: nx-breathe 1.6s ease-in-out infinite;
+}
 
 /* Gob, the mark (src/components/next/Gob.tsx). Coordinates are the 96 grid. */
 .gob {
