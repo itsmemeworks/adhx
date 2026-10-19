@@ -40,7 +40,7 @@ const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <key>KeepAlive</key><true/>
 <key>ThrottleInterval</key><integer>30</integer>
 <key>Nice</key><integer>10</integer>
-<key>ProcessType</key><string>Background</string>
+<key>ProcessType</key><string>Standard</string>
 <key>StandardOutPath</key><string>${xml(path.join(logs, 'worker.log'))}</string>
 <key>StandardErrorPath</key><string>${xml(path.join(logs, 'worker-error.log'))}</string>
 </dict></plist>

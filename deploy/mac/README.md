@@ -1,18 +1,25 @@
 # Native Apple Silicon worker
 
 This optional companion processes ADHX's queued text, images and video segments
-and browser-compatible H.264 copies on a Mac. Your NAS owns the database, media, queue and search permissions. The
-worker needs no database or NAS filesystem mount, inbound listener or public port.
+and browser-compatible H.264 copies on a Mac. Your NAS owns the database, media,
+queue and search permissions. The worker needs no database or NAS filesystem
+mount, inbound listener or public port.
 
 Use a native Apple Silicon Mac, macOS and ARM64 Node.js 22 or newer. A Docker
 container cannot use macOS CoreML or VideoToolbox. Install this repository's
 dependencies with `pnpm install --frozen-lockfile` in a stable checkout; do not
 delete or move that checkout while the service is installed.
 
+Follow the [rollout verification checklist](VERIFY.md) to match the released
+server image and worker source, test the complete processing path and tune host
+resources before importing a large library. This worker runs directly on macOS;
+neither Docker nor Apple Container is required on the Mac.
+
 1. Update the server to a release that supports remote processing. Set
-   `SEMANTIC_SEARCH=on`, `KEEP_MEDIA=on`, `PROCESSING_MODE=remote` and a random URL-safe `PROCESSING_WORKER_TOKEN` of 32 to
-   256 characters in its private environment. The query model remains on the server;
-   Generate it once with `openssl rand -hex 32`.
+   `SEMANTIC_SEARCH=on`, `KEEP_MEDIA=on`, `PROCESSING_MODE=remote` and a random
+   URL-safe `PROCESSING_WORKER_TOKEN` of 32 to 256 characters in its private
+   environment. Generate the token once with `openssl rand -hex 32`.
+   The query model remains on the server.
    Queued indexing waits if the Mac is offline. Select `INDEXING_LEVEL=light`,
    `normal` or `deep` on the server, rather than a raw frame count.
 2. Copy `worker.env.example` outside the checkout, for example into
@@ -37,6 +44,16 @@ queued jobs wait while the Mac sleeps or is disconnected. Keep the server privat
 on LAN/VPN, including Tailscale for remote workers. The credential grants machine
 processing access, so use a dedicated secret and rotate it on both machines if
 compromised. Do not reuse a sign-in cookie, AI-service key or X credential.
+
+The installer uses launchd's `Standard` process type with `Nice=10` and a default
+of two inference threads. `Background` applies additional CPU/I/O throttling and
+can substantially slow model work despite apparently busy CPU threads. These
+settings keep priority and concurrency conservative without forcing background
+classification; they do not impose a hard memory limit. Measure the installed
+service as well as foreground runs when tuning your host.
+For an existing installation, rerun `deploy/mac/install.sh` with the private
+environment-file path after updating the checkout. Pulling source or restarting
+the old service alone leaves its persisted `Background` plist unchanged.
 
 Source downloads and cheap metadata probes still run on the NAS. Keep download
 concurrency conservative and budget those separately. With `KEEP_H264=on` in
