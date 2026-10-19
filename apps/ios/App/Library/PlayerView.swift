@@ -622,7 +622,13 @@ private struct ProgressLine: View {
 private extension View {
     /// The soft shadow words get when they sit on a video or photo.
     @ViewBuilder func overMediaShadow(_ on: Bool) -> some View {
-        if on { shadow(color: .black.opacity(0.6), radius: 3, y: 1) } else { self }
+        // A tight dark edge plus a soft glow: readable on white pictures too.
+        if on {
+            shadow(color: .black.opacity(0.9), radius: 1, y: 0.5)
+                .shadow(color: .black.opacity(0.6), radius: 4, y: 1)
+        } else {
+            self
+        }
     }
 }
 

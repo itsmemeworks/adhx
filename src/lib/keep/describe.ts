@@ -99,8 +99,13 @@ function fromInfo(info: YtdlpInfo, fallbackAuthor: string): NetworkPostDescripti
 
 /** Threads titles read "Name (@handle) on Threads". */
 function nameFromTitle(title: string | undefined): string | null {
-  const m = title?.match(/^(.*?) \(@[^)]+\) on /)
+  const m = title?.match(/^(.*?) \(@[^)]+\)(?: on |$)/)
   return m ? m[1].trim() : null
+}
+
+/** A preview title that's only "Name (@handle)" (Bluesky) says who, not what. */
+function isOnlyAuthor(title: string | undefined): boolean {
+  return !!title && /^[^()]*\(@[^)]+\)$/.test(title.trim())
 }
 
 export async function describeNetworkPost(
@@ -131,10 +136,8 @@ export async function describeNetworkPost(
   }
   const og = await pageOpenGraph({ platform, postId: id, author: fallbackAuthor, category: null })
   if (!og) return null
-  const text = joinText(platform === 'threads' ? '' : clean(og.title), clean(og.description)).slice(
-    0,
-    MAX_TEXT,
-  )
+  const title = platform === 'threads' || isOnlyAuthor(og.title) ? '' : clean(og.title)
+  const text = joinText(title, clean(og.description)).slice(0, MAX_TEXT)
   const mediaOnly = MEDIA_ONLY.has(platform)
   return {
     author: fallbackAuthor,

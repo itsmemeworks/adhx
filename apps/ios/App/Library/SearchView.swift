@@ -185,41 +185,47 @@ private struct ResultTile: View {
     let server: URL
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.surface)
-            if let poster = ADHXClient.resolve(post.posterUrl, against: server) {
-                AsyncImage(url: poster) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else if phase.error != nil {
-                        words
-                    } else {
-                        Theme.surface
+        // The tile's shape sets its size; the picture only fills it. (A
+        // filled image as the base would widen the tile past its column.)
+        Theme.surface
+            .aspectRatio(3 / 4, contentMode: .fit)
+            .overlay {
+                if let poster = ADHXClient.resolve(post.posterUrl, against: server) {
+                    AsyncImage(url: poster) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFill()
+                        } else if phase.error != nil {
+                            words
+                        } else {
+                            Theme.surface
+                        }
+                    }
+                } else {
+                    words
+                }
+            }
+            .overlay {
+                LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
+            }
+            .overlay(alignment: .bottomLeading) {
+                HStack(spacing: 6) {
+                    NetworkMark(platform: post.platform, size: 12)
+                    if let strength = post.match?.strength {
+                        Text(strength == "strong" ? "Strong match" : strength == "good" ? "Good match" : "Related")
+                            .font(Theme.sans(11, .bold))
+                            .foregroundStyle(strength == "related" ? Theme.muted : Theme.accent)
+                    }
+                    Spacer(minLength: 0)
+                    if post.plays {
+                        Image(systemName: "play.fill").font(.system(size: 11)).foregroundStyle(.white)
                     }
                 }
-            } else {
-                words
+                .padding(10)
             }
-            LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
-            HStack(spacing: 6) {
-                NetworkMark(platform: post.platform, size: 12)
-                if let strength = post.match?.strength {
-                    Text(strength == "strong" ? "Strong match" : strength == "good" ? "Good match" : "Related")
-                        .font(Theme.sans(11, .bold))
-                        .foregroundStyle(strength == "related" ? Theme.muted : Theme.accent)
-                }
-                Spacer(minLength: 0)
-                if post.plays {
-                    Image(systemName: "play.fill").font(.system(size: 11)).foregroundStyle(.white)
-                }
-            }
-            .padding(10)
-        }
-        .aspectRatio(3 / 4, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(Network.name(post.platform)), \(post.author.handle), \(post.text)")
-        .accessibilityAddTraits(.isButton)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(Network.name(post.platform)), \(post.author.handle), \(post.text)")
+            .accessibilityAddTraits(.isButton)
     }
 }
 

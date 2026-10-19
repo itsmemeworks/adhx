@@ -348,7 +348,7 @@ actor Flusher {
                     History.upsert(record)
                 }
                 sent += 1
-            } catch APIError.offline {
+            } catch APIError.offline, APIError.slow {
                 return .stillOffline(sent: sent)
             } catch APIError.badKey {
                 return .badKey

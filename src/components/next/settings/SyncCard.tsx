@@ -339,7 +339,7 @@ export function SyncCard({
             ))}
 
           <p className="m-0 text-[13px] text-white/55">
-            {`${counts.lastSyncAt ? `Last synced ${timeSince(counts.lastSyncAt)}.` : 'Not synced yet.'} You can sync everything by hand once an hour.`}
+            {`${counts.lastSyncAt ? `Last synced ${timeSince(counts.lastSyncAt)}.` : 'Not synced yet.'} You can sync everything by hand again a minute after the last sync.`}
           </p>
         </>
       )}

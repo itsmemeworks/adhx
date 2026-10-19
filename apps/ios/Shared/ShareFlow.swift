@@ -112,7 +112,7 @@ final class ShareFlow: ObservableObject {
                 scheduleAutoClose()
             }
             startPolling(client: client, platform: r.platform, id: r.id)
-        } catch APIError.offline {
+        } catch APIError.offline, APIError.slow {
             History.update(id: recordId) { $0.stage = .queued }
             OfflineQueue.add(id: recordId, link: link)
             phase = .offline
