@@ -8,8 +8,8 @@ import {
   Newsreader,
   Roboto_Mono,
   Instrument_Serif,
-  Hanken_Grotesk,
 } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { AppShell } from '@/components/AppShell'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
@@ -60,9 +60,7 @@ const robotoMono = Roboto_Mono({
   variable: '--font-roboto-mono',
 })
 
-// next_ui redesign — Instrument Serif (display) + Hanken Grotesk (body).
-// Not preloaded: only pages behind the `next_ui` flag use them, so the
-// current UI never downloads these files.
+// The look's faces: Instrument Serif (display) and Hanken Grotesk (body).
 const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
   weight: '400',
@@ -71,10 +69,14 @@ const instrumentSerif = Instrument_Serif({
   preload: false,
 })
 
-const hankenGrotesk = Hanken_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
+// Hanken Grotesk ships with the app (variable, 400–800, Latin; OFL licence
+// beside it). Google's copy broke `next build` inside Docker, and a NAS build
+// shouldn't need Google Fonts for the body face.
+const hankenGrotesk = localFont({
+  src: './fonts/HankenGrotesk-latin-variable.woff2',
+  weight: '400 800',
   variable: '--font-hanken-grotesk',
+  display: 'swap',
   preload: false,
 })
 

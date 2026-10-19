@@ -76,7 +76,8 @@ export function ensurePoster(platform: string, postId: string): Promise<KeptFile
       slot: 'poster',
       path: relative,
       mime: 'image/jpeg',
-      bytes: (await fs.stat(out)).size,
+      // A kept file under MEDIA_DIR; don't let the build trace the whole project for it.
+      bytes: (await fs.stat(/* turbopackIgnore: true */ out)).size,
       width: probed.width,
       height: probed.height,
       durationMs: null,

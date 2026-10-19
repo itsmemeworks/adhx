@@ -17,9 +17,10 @@ vi.mock('next/font/google', () => {
     Newsreader: font,
     Roboto_Mono: font,
     Instrument_Serif: font,
-    Hanken_Grotesk: font,
   }
 })
+
+vi.mock('next/font/local', () => ({ default: () => ({ variable: '--test-font' }) }))
 
 vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: layoutMocks.getCurrentUserId,
