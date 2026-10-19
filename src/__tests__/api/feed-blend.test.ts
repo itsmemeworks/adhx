@@ -74,11 +74,17 @@ type Page = {
   caughtUp: boolean
   nothingYet: boolean
   total: number
+  types: string[]
+  waiting: Record<string, number>
 }
+
+/** Most posts here are words only; ask for every kind unless a test says otherwise. */
+const ALL_KINDS = 'types=video,photo,text,article'
 
 async function feed(query: string): Promise<{ status: number; body: Page & { error?: string } }> {
   const { GET } = await import('@/app/api/feed/blend/route')
-  const res = await GET(new NextRequest(`${BASE}/api/feed/blend?${query}`))
+  const q = query.includes('types=') || query.includes('notypes') ? query : `${query}&${ALL_KINDS}`
+  const res = await GET(new NextRequest(`${BASE}/api/feed/blend?${q.replace('&notypes', '')}`))
   return {
     status: res.status,
     body: res.status === 200 || res.status === 400 ? await res.json() : null,
@@ -415,7 +421,7 @@ describe('phone: /api/app/feed and /api/app/seen', () => {
 
   it('plays New as phone posts with why, and marks seen', async () => {
     const phone = key('phone')
-    const res = await call('/api/app/feed?mode=new', phone)
+    const res = await call(`/api/app/feed?mode=new&${ALL_KINDS}`, phone)
     expect(res.status).toBe(200)
     const body = (await res.json()) as {
       items: { id: string; why: string; kind: string; savers: unknown[]; openPath: string }[]
@@ -433,7 +439,7 @@ describe('phone: /api/app/feed and /api/app/seen', () => {
     expect(
       (await call('/api/app/seen', phone, { posts: [{ platform: 'twitter', id: 'p1' }] })).status,
     ).toBe(204)
-    const after = await (await call('/api/app/feed?mode=new', phone)).json()
+    const after = await (await call(`/api/app/feed?mode=new&${ALL_KINDS}`, phone)).json()
     expect(after.items.map((i: { id: string }) => i.id)).toEqual(['p3'])
     expect(
       testInstance.db
@@ -452,5 +458,152 @@ describe('phone: /api/app/feed and /api/app/seen', () => {
     const phone = key('phone')
     expect((await call('/api/app/feed?mode=everything', phone)).status).toBe(400)
     expect((await call('/api/app/seen', phone, { posts: 'p1' })).status).toBe(400)
+  })
+})
+
+describe("what's in your feed", () => {
+  function media(userId: string, id: string, type: string, platform = 'twitter') {
+    testInstance.db
+      .insert(schema.bookmarkMedia)
+      .values({
+        id: `${userId}-${id}`,
+        userId,
+        platform,
+        bookmarkId: id,
+        mediaType: type,
+        originalUrl: `https://example.com/${id}`,
+      })
+      .run()
+  }
+
+  beforeEach(() => {
+    save(ANA, 'v1', 2)
+    media(ANA, 'v1', 'video')
+    save(BEN, 'g1', 2)
+    media(BEN, 'g1', 'animated_gif')
+    save(ANA, 'ph1', 2)
+    media(ANA, 'ph1', 'photo')
+    save(BEN, 'a1', 2, { category: 'article' })
+    save(ANA, 'a2', 2)
+    testInstance.db
+      .insert(schema.bookmarkLinks)
+      .values({ userId: ANA, bookmarkId: 'a2', expandedUrl: 'https://x.com/i/article/123' })
+      .run()
+    save(BEN, 'sc1', 2, { platform: 'soundcloud' })
+    media(BEN, 'sc1', 'video', 'soundcloud')
+  })
+
+  async function types(method: 'GET' | 'PUT', body?: unknown) {
+    const { GET, PUT } = await import('@/app/api/feed/types/route')
+    const req = new NextRequest(`${BASE}/api/feed/types`, {
+      method,
+      ...(body === undefined
+        ? {}
+        : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+    })
+    const res = await (method === 'GET' ? GET(req) : PUT(req))
+    return { status: res.status, body: res.status === 401 ? null : await res.json() }
+  }
+
+  it('defaults to videos and photos; sound plays with video', async () => {
+    viewer = PETE
+    const { body } = await feed('mode=new&notypes')
+    expect(body.types).toEqual(['video', 'photo'])
+    expect(ids(body.items)).toEqual(['g1', 'ph1', 'sc1', 'v1'])
+  })
+
+  it('filters to the kinds asked for, the same kinds the phone shows', async () => {
+    viewer = PETE
+    expect(ids((await feed('mode=new&types=article')).body.items)).toEqual(['a1', 'a2'])
+    expect(ids((await feed('mode=new&types=text')).body.items)).toEqual(['p1', 'p3'])
+    expect(ids((await feed('mode=everyone&types=photo,audio')).body.items)).toEqual([
+      'g1',
+      'ph1',
+      'sc1',
+      'v1',
+    ])
+    const phone = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const { GET } = await import('@/app/api/app/feed/route')
+    const res = await GET(
+      new NextRequest(`${BASE}/api/app/feed?mode=new&${ALL_KINDS}`, {
+        headers: { authorization: `Bearer ${phone}` },
+      }),
+    )
+    const phoneKinds = Object.fromEntries(
+      ((await res.json()).items as { id: string; kind: string }[]).map((i) => [i.id, i.kind]),
+    )
+    expect(phoneKinds).toMatchObject({
+      v1: 'video',
+      g1: 'video',
+      sc1: 'audio',
+      ph1: 'photo',
+      a1: 'article',
+      a2: 'article',
+      p1: 'text',
+    })
+  })
+
+  it('caught up within the filter, saying what else is waiting', async () => {
+    viewer = PETE
+    await views(
+      ['v1', 'g1', 'ph1', 'sc1'].map((id) => ({
+        platform: id === 'sc1' ? 'soundcloud' : 'twitter',
+        id,
+      })),
+    )
+    const { body } = await feed('mode=new&types=video,photo')
+    expect(body.items).toEqual([])
+    expect(body.caughtUp).toBe(true)
+    expect(body.nothingYet).toBe(false)
+    expect(body.waiting).toEqual({ text: 2, article: 2 })
+    // Seen ones don't count as waiting.
+    await views([{ platform: 'twitter', id: 'a1' }])
+    expect((await feed('mode=new&types=video,photo')).body.waiting).toEqual({ text: 2, article: 1 })
+  })
+
+  it('remembers the choice and uses it when types is left out', async () => {
+    expect((await types('GET')).status).toBe(401)
+    viewer = PETE
+    expect(await types('GET')).toEqual({ status: 200, body: { types: ['video', 'photo'] } })
+    expect(await types('PUT', { types: ['article', 'text'] })).toEqual({
+      status: 200,
+      body: { types: ['text', 'article'] },
+    })
+    expect((await types('GET')).body).toEqual({ types: ['text', 'article'] })
+    const { body } = await feed('mode=new&notypes')
+    expect(body.types).toEqual(['text', 'article'])
+    expect(ids(body.items)).toEqual(['a1', 'a2', 'p1', 'p3'])
+    // The choice is Pete's alone.
+    viewer = ANA
+    expect((await types('GET')).body).toEqual({ types: ['video', 'photo'] })
+  })
+
+  it('keeps at least one kind and refuses unknown ones', async () => {
+    viewer = PETE
+    expect((await types('PUT', { types: [] })).status).toBe(400)
+    expect((await types('PUT', { types: ['video', 'memes'] })).status).toBe(400)
+    expect((await types('PUT', {})).status).toBe(400)
+    expect((await feed('mode=new&types=')).status).toBe(400)
+    expect((await feed('mode=new&types=memes')).status).toBe(400)
+  })
+
+  it('the phone reads and sets the same choice', async () => {
+    const phone = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const search = createAccessKey(PETE, 'Claude', 'search')!.key
+    const { GET, PUT } = await import('@/app/api/app/feed/types/route')
+    const req = (key: string, body?: unknown) =>
+      new NextRequest(`${BASE}/api/app/feed/types`, {
+        method: body === undefined ? 'GET' : 'PUT',
+        headers: { authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      })
+    expect((await GET(req(search))).status).toBe(401)
+    expect(await (await GET(req(phone))).json()).toEqual({ types: ['video', 'photo'] })
+    expect(await (await PUT(req(phone, { types: ['audio', 'text'] }))).json()).toEqual({
+      types: ['video', 'text'],
+    })
+    expect((await PUT(req(phone, { types: [] }))).status).toBe(400)
+    viewer = PETE
+    expect((await types('GET')).body).toEqual({ types: ['video', 'text'] })
   })
 })

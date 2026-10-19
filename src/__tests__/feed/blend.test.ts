@@ -6,6 +6,10 @@ import {
   blend,
   decodeCursor,
   encodeCursor,
+  feedTypesSummary,
+  parseFeedTypes,
+  waitingKinds,
+  waitingLine,
   likeScores,
   parseBlendQuery,
   parseWeights,
@@ -340,6 +344,7 @@ describe('stable pages', () => {
       mode: 'new',
       limit: 20,
       cursor: null,
+      types: null,
     })
     expect(parseBlendQuery(new URLSearchParams('mode=friends&limit=500'))).toMatchObject({
       mode: 'friends',
@@ -359,5 +364,39 @@ describe('feed weights preference', () => {
     expect(parseWeights('nonsense')).toEqual({})
     expect(parseWeights('[1]')).toEqual({})
     expect(parseWeights(null)).toEqual({})
+  })
+})
+
+describe("what's in your feed", () => {
+  it('reads a comma list in a fixed order; audio is video; nothing unknown or empty', () => {
+    expect(parseFeedTypes('photo,video')).toEqual(['video', 'photo'])
+    expect(parseFeedTypes(' Article , audio ')).toEqual(['video', 'article'])
+    expect(parseFeedTypes('video,memes')).toBeNull()
+    expect(parseFeedTypes('')).toBeNull()
+    expect(parseFeedTypes(',')).toBeNull()
+    expect(parseBlendQuery(new URLSearchParams('mode=new'))).toMatchObject({ types: null })
+    expect(parseBlendQuery(new URLSearchParams('types=text'))).toMatchObject({ types: ['text'] })
+    expect(parseBlendQuery(new URLSearchParams('types='))).toHaveProperty('error')
+  })
+
+  it('sums the choice up in a few words', () => {
+    expect(feedTypesSummary(['video', 'photo'])).toBe('Videos and photos')
+    expect(feedTypesSummary(['video'])).toBe('Videos only')
+    expect(feedTypesSummary(['photo', 'text', 'article'])).toBe('Photos, text posts and articles')
+    expect(feedTypesSummary(['article', 'text', 'photo', 'video'])).toBe('Everything')
+  })
+
+  it('says what the filter is holding back', () => {
+    expect(waitingLine({ text: 4 })).toBe('4 text posts waiting')
+    expect(waitingLine({ text: 1, article: 2 })).toBe('1 text post and 2 articles waiting')
+    expect(waitingLine({ text: 0 })).toBe('')
+    const hidden = [
+      { ...post('t:1', [save('ana', 1)]), kind: 'text' as const },
+      { ...post('t:2', [save('ben', 1)], { seen: true }), kind: 'text' as const },
+      { ...post('t:3', [save('me', 1)]), kind: 'text' as const },
+      { ...post('a:1', [save('mum', 1)]), kind: 'article' as const },
+    ]
+    // Only what New would have played: unseen, and saved by someone else.
+    expect(waitingKinds(hidden, ctx())).toEqual({ text: 1, article: 1 })
   })
 })

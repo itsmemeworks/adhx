@@ -9,9 +9,11 @@ import { captureException } from '@/lib/sentry'
 const LIMIT = { windowMs: 60_000, max: 60 }
 
 /**
- * GET /api/app/feed?mode=new|everyone|friends|mine&cursor&limit — the
- * blended feed for the phone: `{ items: PhonePost[], nextCursor, caughtUp,
- * nothingYet, total }`. Each item carries `why` (and `whyReasons`) besides
+ * GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo&cursor&limit
+ * — the blended feed for the phone: `{ items: PhonePost[], nextCursor,
+ * caughtUp, nothingYet, total, types, waiting }`. `types` (video, photo, text,
+ * article; audio plays with video) defaults to the stored choice
+ * (`/api/app/feed/types`), else video and photo. Each item carries `why` (and `whyReasons`) besides
  * the usual `savers` / `isPrivate`. Mark what's been on screen with
  * `POST /api/app/seen`.
  */
@@ -25,7 +27,11 @@ export const GET = withPhoneKey(async (request, { userId }) => {
     return response
   }
   try {
-    const page = await blendPage(userId, query.mode, { limit: query.limit, cursor: query.cursor })
+    const page = await blendPage(userId, query.mode, {
+      limit: query.limit,
+      cursor: query.cursor,
+      types: query.types,
+    })
     return NextResponse.json(
       {
         items: page.items.map((post) => ({
@@ -45,6 +51,8 @@ export const GET = withPhoneKey(async (request, { userId }) => {
         caughtUp: page.caughtUp,
         nothingYet: page.nothingYet,
         total: page.total,
+        types: page.types,
+        waiting: page.waiting,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )

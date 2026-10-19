@@ -11,7 +11,7 @@ const LIMIT = { windowMs: 60_000, max: 60 }
 /**
  * GET /api/feed/blend?mode=new|everyone|friends|mine&limit&cursor — the
  * blended feed (docs/specs/friends-feed.md): `{ items, nextCursor, caughtUp,
- * nothingYet, total }`. Items are `FeedItem`s with `savers`, `isPrivate`,
+ * nothingYet, total, types, waiting }`. Items are `FeedItem`s with `savers`, `isPrivate`,
  * `why` (the headline reason) and `whyReasons`. Members only.
  *
  * - `new`: only posts you haven't seen; `caughtUp` once there are no more.
@@ -19,7 +19,12 @@ const LIMIT = { windowMs: 60_000, max: 60 }
  * - `everyone`: all members' saves, yours sparingly.
  * - `friends`: what friends saved that you haven't.
  * - `mine`: your saves.
- * - `cursor` is opaque; pages from one cursor chain never reshuffle.
+ * - `types=video,photo,text,article` ("What's in your feed"; sound counts
+ *   as video): omitted, the stored choice (`/api/feed/types`), else video
+ *   and photo. `caughtUp` and `why` apply within it; New's `waiting` counts
+ *   the unseen posts it leaves out, by kind.
+ * - `cursor` is opaque; pages from one cursor chain never reshuffle (send the
+ *   same `types` with each page).
  */
 export const GET = withAuth(async (request: NextRequest, userId) => {
   const query = parseBlendQuery(request.nextUrl.searchParams)
@@ -32,7 +37,11 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     )
   }
   try {
-    const page = await blendPage(userId, query.mode, { limit: query.limit, cursor: query.cursor })
+    const page = await blendPage(userId, query.mode, {
+      limit: query.limit,
+      cursor: query.cursor,
+      types: query.types,
+    })
     return NextResponse.json(page, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     return handleRouteError(error, {

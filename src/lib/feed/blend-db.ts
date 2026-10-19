@@ -18,8 +18,10 @@ import { goneKeys } from '@/lib/semantic/gone'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { fromBlob } from '@/lib/semantic/vectors'
 import {
+  FEED_KINDS,
   FEED_WEIGHTS_KEY,
   blend,
+  waitingKinds,
   decodeCursor,
   encodeCursor,
   parseWeights,
@@ -27,10 +29,12 @@ import {
   type BlendMode,
   type BlendPick,
   type BlendSave,
+  type FeedKind,
   type FeedWeight,
   type WhyReason,
 } from './blend'
 import { seenKeys } from './views'
+import { postKinds, readFeedTypes } from './kinds'
 
 /**
  * The blended feed's database side (`GET /api/feed/blend`, `/api/app/feed`):
@@ -73,9 +77,18 @@ export interface BlendPage {
   nothingYet: boolean
   /** Posts in this snapshot (New: how many you haven't seen). */
   total: number
+  /** The kinds this page is filtered to ("What's in your feed"). */
+  types: FeedKind[]
+  /** New only: unseen posts the filter leaves out, by kind ("4 text posts waiting"). */
+  waiting: Partial<Record<FeedKind, number>>
 }
 
-type Snapshot = { picks: BlendPick[]; nothingYet: boolean; at: number }
+type Snapshot = {
+  picks: BlendPick[]
+  nothingYet: boolean
+  waiting: Partial<Record<FeedKind, number>>
+  at: number
+}
 const g = globalThis as unknown as { __adhxBlend?: Map<string, Snapshot> }
 const snapshots: Map<string, Snapshot> = (g.__adhxBlend ??= new Map())
 
@@ -399,8 +412,13 @@ export function writeFeedWeight(
 export async function computeBlend(
   viewerId: string,
   mode: BlendMode,
-  opts: { now?: number; seed?: string } = {},
-): Promise<{ picks: BlendPick[]; nothingYet: boolean }> {
+  opts: { now?: number; seed?: string; types?: readonly FeedKind[] } = {},
+): Promise<{
+  picks: BlendPick[]
+  nothingYet: boolean
+  waiting: Partial<Record<FeedKind, number>>
+}> {
+  const types = opts.types ?? FEED_KINDS
   const now = opts.now ?? Date.now()
   const moderated = readModeratedPostKeys()
   if (!moderated.ok) throw moderated.error
@@ -409,8 +427,9 @@ export async function computeBlend(
   if (gone.size) keys = keys.filter((k) => !gone.has(k))
   const saves = savesFor(keys, viewerId)
   const seen = seenKeys(viewerId, keys)
+  const kinds = await postKinds(keys)
   const { similarity, like } = tasteFor(viewerId, keys)
-  const candidates: BlendCandidate[] = keys.flatMap((key) => {
+  const all: (BlendCandidate & { kind: FeedKind })[] = keys.flatMap((key) => {
     const list = saves.get(key)
     if (!list?.length) return []
     return [
@@ -420,24 +439,30 @@ export async function computeBlend(
         similarity: similarity.get(key) ?? null,
         like: like.get(key) ?? null,
         seen: seen.has(key),
+        kind: kinds.get(key) ?? 'text',
       },
     ]
   })
-  const picks = blend(
-    candidates,
-    {
-      viewerId,
-      now,
-      closeness: closenessFor(viewerId, now),
-      weights: readFeedWeights(viewerId),
-      seed: opts.seed,
-    },
-    mode,
-  )
-  // New with nothing at all from your people (not just nothing unseen).
-  const nothingYet =
-    mode === 'new' && !candidates.some((c) => c.saves.some((s) => s.userId !== viewerId))
-  return { picks, nothingYet }
+  // "What's in your feed": the blend, caught up and why all work inside it.
+  const candidates = all.filter((c) => types.includes(c.kind))
+  const ctx = {
+    viewerId,
+    now,
+    closeness: closenessFor(viewerId, now),
+    weights: readFeedWeights(viewerId),
+    seed: opts.seed,
+  }
+  const picks = blend(candidates, ctx, mode)
+  const waiting =
+    mode === 'new'
+      ? waitingKinds(
+          all.filter((c) => !types.includes(c.kind)),
+          ctx,
+        )
+      : {}
+  // New with nothing at all from your people (not just nothing unseen), of any kind.
+  const nothingYet = mode === 'new' && !all.some((c) => c.saves.some((s) => s.userId !== viewerId))
+  return { picks, nothingYet, waiting }
 }
 
 function newSeed(): string {
@@ -466,9 +491,11 @@ export class BadCursorError extends Error {
 export async function blendPage(
   viewerId: string,
   mode: BlendMode,
-  opts: { limit: number; cursor?: string | null; now?: number },
+  opts: { limit: number; cursor?: string | null; now?: number; types?: FeedKind[] | null },
 ): Promise<BlendPage> {
   const now = opts.now ?? Date.now()
+  // Omitted: the person's stored choice, else videos and photos.
+  const types = opts.types ?? readFeedTypes(viewerId)
   let seed: string
   let offset = 0
   if (opts.cursor) {
@@ -479,12 +506,16 @@ export async function blendPage(
   } else {
     seed = newSeed()
   }
-  const cacheKey = `${viewerId}|${mode}|${seed}`
+  const cacheKey = `${viewerId}|${mode}|${types.join(',')}|${seed}`
   let snapshot = snapshots.get(cacheKey)
   if (snapshot && now - snapshot.at > SNAPSHOT_MS) snapshot = undefined
   if (!snapshot) {
-    const { picks, nothingYet } = await computeBlend(viewerId, mode, { now, seed })
-    snapshot = { picks, nothingYet, at: now }
+    const { picks, nothingYet, waiting } = await computeBlend(viewerId, mode, {
+      now,
+      seed,
+      types,
+    })
+    snapshot = { picks, nothingYet, waiting, at: now }
     remember(cacheKey, snapshot)
     if (opts.cursor && mode === 'new') offset = 0
   }
@@ -510,5 +541,7 @@ export async function blendPage(
     caughtUp: mode === 'new' && nextCursor === null,
     nothingYet: snapshot.nothingYet,
     total: snapshot.picks.length,
+    types,
+    waiting: snapshot.waiting,
   }
 }

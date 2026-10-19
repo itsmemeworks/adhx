@@ -419,7 +419,9 @@ export const BLEND_PAGE = { default: 20, max: 50 } as const
 /** `mode` (default `new`), `limit` (1–50, default 20) and `cursor`, or what's wrong. */
 export function parseBlendQuery(
   params: URLSearchParams,
-): { mode: BlendMode; limit: number; cursor: string | null } | { error: string } {
+):
+  | { mode: BlendMode; limit: number; cursor: string | null; types: FeedKind[] | null }
+  | { error: string } {
   const mode = params.get('mode') ?? 'new'
   if (!isBlendMode(mode)) return { error: `mode must be one of ${BLEND_MODES.join(', ')}.` }
   const raw = Number.parseInt(params.get('limit') ?? '', 10)
@@ -428,5 +430,85 @@ export function parseBlendQuery(
     : BLEND_PAGE.default
   const cursor = params.get('cursor')
   if (cursor && !decodeCursor(cursor)) return { error: 'That page link has expired. Start again.' }
-  return { mode, limit, cursor: cursor || null }
+  // Omitted: the person's stored choice (`feed.types`).
+  const typesParam = params.get('types')
+  const types = typesParam === null ? null : parseFeedTypes(typesParam)
+  if (typesParam !== null && !types) {
+    return { error: `types is a comma list of ${FEED_KINDS.join(', ')}, at least one.` }
+  }
+  return { mode, limit, cursor: cursor || null, types }
+}
+
+// ——— "What's in your feed" (user_preferences `feed.types`) ———
+
+/** What a post is, for the feed's filter. Sound (SoundCloud) counts as video. */
+export type FeedKind = 'video' | 'photo' | 'text' | 'article'
+export const FEED_KINDS: readonly FeedKind[] = ['video', 'photo', 'text', 'article']
+/** Most people want video and pictures; text posts and articles are opt-in. */
+export const DEFAULT_FEED_KINDS: readonly FeedKind[] = ['video', 'photo']
+export const FEED_TYPES_KEY = 'feed.types'
+
+/** `video,photo` → the kinds in a fixed order; null when empty or anything is unknown. */
+export function parseFeedTypes(text: string | null | undefined): FeedKind[] | null {
+  if (!text) return null
+  const parts = text
+    .split(',')
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean)
+  if (parts.length === 0) return null
+  // `audio` is what the phone calls a sound post; it plays with videos.
+  const kinds = parts.map((p) => (p === 'audio' ? 'video' : p))
+  if (!kinds.every((k) => (FEED_KINDS as readonly string[]).includes(k))) return null
+  return FEED_KINDS.filter((k) => kinds.includes(k))
+}
+
+export const FEED_KIND_LABELS: Record<FeedKind, string> = {
+  video: 'Videos',
+  photo: 'Photos',
+  text: 'Text posts',
+  article: 'Articles',
+}
+
+function listWords(words: string[]): string {
+  if (words.length <= 1) return words.join('')
+  return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
+}
+
+/** "Videos and photos", "Videos only", "Everything". */
+export function feedTypesSummary(types: readonly FeedKind[]): string {
+  const kinds = FEED_KINDS.filter((k) => types.includes(k))
+  if (kinds.length === FEED_KINDS.length) return 'Everything'
+  if (kinds.length === 1) return `${FEED_KIND_LABELS[kinds[0]]} only`
+  const words = kinds.map((k, i) =>
+    i === 0 ? FEED_KIND_LABELS[k] : FEED_KIND_LABELS[k].toLowerCase(),
+  )
+  return listWords(words)
+}
+
+const KIND_NOUNS: Record<FeedKind, [string, string]> = {
+  video: ['video', 'videos'],
+  photo: ['photo', 'photos'],
+  text: ['text post', 'text posts'],
+  article: ['article', 'articles'],
+}
+
+/** "4 text posts waiting", "4 text posts and 1 article waiting"; '' when none. */
+export function waitingLine(waiting: Partial<Record<FeedKind, number>>): string {
+  const parts = FEED_KINDS.flatMap((k) => {
+    const n = waiting[k] ?? 0
+    return n > 0 ? [`${n} ${KIND_NOUNS[k][n === 1 ? 0 : 1]}`] : []
+  })
+  return parts.length ? `${listWords(parts)} waiting` : ''
+}
+
+/** Unseen New posts the filter leaves out, by kind (for "4 text posts waiting · Show them"). */
+export function waitingKinds(
+  hidden: (BlendCandidate & { kind: FeedKind })[],
+  ctx: BlendContext,
+): Partial<Record<FeedKind, number>> {
+  const out: Partial<Record<FeedKind, number>> = {}
+  for (const c of hidden) {
+    if (scoreCandidate(c, ctx, 'new')) out[c.kind] = (out[c.kind] ?? 0) + 1
+  }
+  return out
 }
