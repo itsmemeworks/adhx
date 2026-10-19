@@ -9,15 +9,23 @@ The app only ever talks to your own ADHX.
 
 It has two parts:
 
-- **The app** (`App/`): connects to your ADHX, plays your saves full screen
-  (swipe up for the next, `App/Library/`), searches them by meaning, lists what
-  you’ve shared lately and how each copy is coming along, and has Settings.
+- **The app** (`App/`): connects to your ADHX and opens on **New**, what
+  your people saved that you haven’t seen, full screen (swipe up for the next)
+  until “You’re all caught up.” Next to it, **Channels** (rabbit holes from
+  everyone, one per friend, and ones made from what you keep) and **Live**
+  (what a few of you are saving right now, to tune in to together). It
+  searches everyone’s saves or just yours by meaning, lists what you’ve shared
+  lately (in Settings) and how each copy is coming along, and has Settings. `App/Feed/` is
+  New, Channels and Live; `App/Library/` is the player, search and your saves.
 - **The Share Extension** (`ShareExtension/`): the sheet you see after picking
   ADHX in the share menu: Saving, Saved, Already in your saves, That’s not one
-  post, Saved for later, Connect the app first.
+  post, Saved for later, Connect the app first. It says who will see the save
+  and has a **Just for me** switch.
 
-Code both of them use is in `Shared/`: talking to your ADHX, storage, the list
-of waiting links, network marks, colours and the sheet itself. The API and the
+Code both of them use is in `Shared/`: talking to your ADHX (`API.swift`, and
+the friends feed in `FriendsAPI.swift`), people’s faces and names
+(`People.swift`), storage, the list of waiting links, network marks, colours
+and the sheet itself. The API and the
 sheet’s states are described in `docs/specs/phone-app.md` at the repo root.
 
 It uses only Apple’s frameworks. No packages or other tools are needed.
@@ -112,8 +120,9 @@ Share Extension can’t see the connection.
    the address instead” and type both.
 3. The app sends the code to `POST /api/app/pair` with the phone’s model
    name, and gets back a phone key. That key can save links, read their
-   status, and read and search your own saves (`/api/app/saves`,
-   `/api/app/search`); nothing else.
+   status, read and search saves (`/api/app/saves`, `/api/app/search`), and
+   play the friends feed (`/api/app/feed`, `channels`, `live`), as a
+   signed-in member could; nothing else.
 4. The Home screen checks the key with `GET /api/app/me` when it opens. If you
    removed the phone on your ADHX, the app forgets the key and goes back to
    Connect.
@@ -197,6 +206,26 @@ apps/ios/
   ShareExtension/        the extension's entry point and how it reads the shared link
   Shared/                used by both: API, storage, queue, marks, theme, the sheet
 ```
+
+## The friends feed
+
+Your people see what you save, named, unless you switch **Just for me** (on
+the share sheet, or in the player’s More). The app only shows names the
+server sends it, which it does for members only.
+
+- **New** plays videos and photos unless you switch on text posts or
+  articles (tap New again). The choice is saved on your ADHX
+  (`/api/app/feed/types`) and on the phone, for servers that don’t keep it.
+- **New** marks a post seen after 2 seconds on screen, or as soon as you swipe
+  past it, and sends them to `/api/app/seen` in batches.
+- The share sheet names your people from the last Channels or feed the app
+  loaded (kept on the phone in the App Group, cleared on Disconnect), or says
+  “Your people will see it”.
+- Live polls `/api/app/live/{slug}` every 5 seconds while you’re tuned in;
+  reactions (an emoji, or up to 40 characters) go to
+  `/api/app/live/{slug}/react` and float up with the sender’s face.
+- On an ADHX without these endpoints yet (404), New plays your saves as
+  before, and Channels and Live say the server needs an update.
 
 Search follows the server's `nextOffset` as you reach the end of the result
 grid or its player. Further-page failures keep the results already loaded and

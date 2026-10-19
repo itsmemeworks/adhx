@@ -211,7 +211,14 @@ function getTileDataForTags(
   const bookmarkResults = db
     .select()
     .from(bookmarks)
-    .where(and(inArray(bookmarks.userId, userIds), inArray(bookmarks.id, allBookmarkIds)))
+    .where(
+      and(
+        inArray(bookmarks.userId, userIds),
+        inArray(bookmarks.id, allBookmarkIds),
+        // Private wins: a public channel's tiles and count skip private saves.
+        eq(bookmarks.isPrivate, false),
+      ),
+    )
     .orderBy(desc(bookmarks.processedAt))
     .all()
   const bookmarkByKey = new Map(

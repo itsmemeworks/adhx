@@ -54,3 +54,24 @@ export function withPhoneKey(
     return handler(request, caller)
   }
 }
+
+/**
+ * Wrap a route so it runs for a valid phone key or a signed-in session (the
+ * web can read the same data). A request that brings a key uses only the
+ * key: a bad one is refused even when a session cookie is present.
+ */
+export function withPhoneKeyOrSession<C = unknown>(
+  handler: (request: Request, userId: string, ctx: C) => Promise<Response> | Response,
+): (request: Request, ctx?: C) => Promise<Response> {
+  return async (request: Request, ctx?: C) => {
+    if (request.headers.get('authorization')) {
+      const caller = await phoneCaller(request)
+      if (!caller) return badKey()
+      return handler(request, caller.userId, ctx as C)
+    }
+    const { getCurrentUserId } = await import('@/lib/auth/session')
+    const userId = await getCurrentUserId()
+    if (!userId) return appError(401, 'signed_out', 'Sign in, or connect this phone first.')
+    return handler(request, userId, ctx as C)
+  }
+}

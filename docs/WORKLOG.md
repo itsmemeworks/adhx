@@ -14,7 +14,46 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Refined in the spec: New and Friends only leave out posts only you saved; `nothingYet` and `total` on the response.
 - What's in your feed (owner request): `types=video,photo,text,article` on both feeds (sound counts as video; default video + photo; stored as `feed.types`, `GET|PUT /api/feed/types` and `/api/app/feed/types`), `FeedTypesControl` beside the switch, and "4 text posts waiting · Show them" on the caught-up card.
 - Validation: 3,149 tests, typecheck and lint pass; walked New → Why this one → Show more → caught up → Watch it all again, and the kind filter ("6 text posts waiting · Show them"), at desktop and 375px on a scratch DB.
+- Merged with the friends-feed branch (Live with names, channels from everyone, speech/screen search, iOS): one seen list — `people/seen.ts` folded into `feed/views.ts` (`notSeenBy`, `newTo`), so a friend channel's "N new" drops what you watched in New.
 - Follow-ups: the phone apps need to adopt `/api/app/feed`; the caught-up "Tonight on your ADHX" row from the design isn't built; closeness counts seen, not watched to the end.
+
+## 2026-10-19 — Channels from everyone: group channels and one per friend
+
+- `group_channels` (server-wide, no `user_id`) + `src/lib/channels/group.ts`: everyone's visible saves clustered and named with Made for you's machinery (shared `meanVectors`/`bestClusters`/`nameClusters` from `auto.ts`). Lazy, single-flight, background recompute (>12h, ±10 visible saves, model change, a counted saver gone); reads re-check each post's visible savers.
+- `src/lib/channels/friends.ts` (one channel per other member, `newCount` via `people/seen.ts`, which tolerates a missing `post_views`), `overview.ts` shared by `GET /api/channels` (+`group`, `friends`, `canInvite`) and `GET /api/app/channels`. New queues: `/api/channels/group/[slug]`, `/api/channels/friend/[username]?new=1`, `/api/app/channels/{group|friend|mine}/{slug}` (phone key or session).
+- Web: From everyone and Your people rows (+ Invite someone), `/channels/friend/[username]`, `/play?group=` / `/play?friend=` with back links and empty states, linked saver faces on tiles, theater "Who saved it" popover.
+- Private wins: public tag collection, clone, theater backfill, curator profile, leaderboard tiles, public tweet `publicTags` and the sitemap skip the owner's private saves.
+- Validation: 3,103 tests (new: 11 channels, 3 private-wins, 9 component), typecheck, lint (existing warnings only); walked the rows, friend page, queues, popover and phone width in a browser on a scratch DB.
+- Follow-ups: friend page filters (Videos/Photos/Music) and "New" tile badges from the design aren't built; group naming needs real embeddings (scratch DB used hand-made rows); `auto_channels` still isn't removed on account delete (pre-existing).
+
+## 2026-10-19 — iPhone app: New, Channels, Live, faces and Just for me
+
+- Home is one row over the player: Gob (Settings, which now holds Shared lately), New · Channels · Live with an unseen badge on New ("99+" cap), Search. New pages `/api/app/feed`, marks posts seen (2 s on screen or swiped past, batched to `/api/app/seen`), shows the why chip and a "Why this one" sheet with Everyone · Friends only · Mine, and ends on "You're all caught up. Go touch grass."
+- Media filter: New plays videos and photos by default (`types=` on the feed, filtered by kind on the phone too); tapping New again or Filter in the Why sheet opens "What's in your feed"; the choice is PUT to `/api/app/feed/types` and kept locally on a 404; the end page offers "4 text posts waiting · Show them".
+- Channels (group carousels, your people with new counts → "Ana's saves", made for you) and Live (moment cards; tuned in polls every 5 s with watchers and "up next" arrivals; a React rail button opens six emoji and a 40-character line, `{emoji}`/`{text}` to `/react`; reactions from the poll float up as ringed faces with an emoji sticker or speech bubble, fade-only under Reduce Motion).
+- Saver faces and lines on the player byline and search tiles (tap → friend channel); Search defaults to Everyone's saves; Just for me in the player's More and on the share card (remembered before the post lands, carried by waiting links).
+- Everything new decodes loosely (`Shared/FriendsAPI.swift`); a 404 falls back to My saves or an "update your ADHX" note.
+- Checked: simulator build, and a run against a sample-data stand-in for the phone API (New, header badge, media filter and its fallbacks, why sheet, modes, seen batches, More toggle, Channels, friend channel, Live, React picker, floating reactions, caught-up, search scopes). Not checked: the share extension card on a device, real feed/channels/live servers (other branches), VoiceOver by ear.
+
+## 2026-10-19 — Live with names: watch together
+
+- Names are added per request for members only (`src/lib/moments/people.ts`): `MomentView.savers` (≤5, from the moment's post keys via `saversFor`, window saves only, never a private save), `watchers`, item `savers`, detail `watchers`, `save.saver`. The engine and its broadcasts stay anonymous; signed-out shapes are unchanged (tested key by key).
+- `presence.ts` (globalThis) counts signed-in streams by account; `watching` events get `watchers` per subscriber (no receiver, no banned accounts). Shared stream code in `stream.ts`.
+- Reactions: `POST /api/moments/{slug}/react` `{ emoji | text }` (six allowlisted emoji, or ≤40 cleaned characters shown as text only; 20/min/user, words 6/min; in memory only) → `reaction` events for members watching that moment. Changed mid-build from four fixed words to this, per the owner.
+- Phone: `GET /api/app/live`, `GET /api/app/live/{slug}`, `POST …/react`, `GET …/stream` (that moment's events, `PhonePost` posts).
+- Web: faces and watchers on `RightNow` cards and `MomentScreen`, "Tune in with Ana"; theater watchers bar, named arrival toast, React button + picker, reactions rising with the reactor's face (`LiveTogether.tsx`; fade only under reduced motion).
+- Verified with two signed-in members in the browser on a scratch DB (`MOMENT_MIN_SAVERS=1`): watchers both ways, emoji and words both ways, Jo's save toast, picker at phone width.
+- Validation: 3,103 tests (with `--maxWorkers=4`; the default run timed out unrelated 5 s tests on a host at load ~60), typecheck, lint (81 existing warnings).
+- Follow-ups: the phone apps don't use these routes yet; the Right now header's "3 of your people are on" and forming-card faces from the mockups aren't built; reactions aren't tied to the post on stage.
+
+## 2026-10-19 — Search what's said in videos and the text on screen
+
+- New `speech` / `screen` queue kinds write words (not vectors) to `post_extracted_text` (keyed by post; trigger-deleted with the last save). Whisper base (`onnx-community/whisper-base@1846881b…`, fp32 encoder/q8 decoder, per-window language + no-speech check) transcribes the first 10 min; Florence-2 base (`onnx-community/Florence-2-base-ft@e88a44ea…`, q8, `<OCR_WITH_REGION>`) reads ≤4 photos + 4 frames from the first minute. Junk filter in `extract-clean.ts`, re-applied server-side to Mac results.
+- The words join the text document ("Said in the video:" / "Text on screen:") and `post_text_fts`; only posts with extracted words change text hash (no `SEMANTIC_MODEL_VERSION` bump). Search adds `speech`/`screen` signals ("Said in the video", "On screen" on tiles); Jev never receives them and treats them like visual matches.
+- Models run only in `extract-child.ts` (forked by the jobs child or the Mac runner, one model per process, exits after 60 s idle): Florence-2 alone held 1.6–2 GB and `dispose()` didn't return it. Processing protocol 2 (`kinds` on claim, `extracted`, media by `slot`); v1 workers are still served and never see the new kinds. `SEMANTIC_SPEECH` / `SEMANTIC_SCREEN_TEXT=off` switches.
+- Measured on an M4 (2 threads): 178 s of speech in 10–12 s, 1.6 s per picture/frame, extract process peak ~1.4–1.5 GB (speech) / ~1.8 GB (screen). Real end-to-end smoke (temp DB, real models): "the cat that screams at the cucumber" → the video (strong, speech+screen), a captionless meme by its caption, German speech by a German query.
+- Copy that promised "no audio is processed" now says speech and on-screen text are read on your server and none of it leaves. 3,061 tests, typecheck, lint and production build pass.
+- Follow-ups: transcripts are not shown to people (search only); no status row for speech/screen progress in the learning sheet; window boundaries can garble a word; measure on the NAS CPU before a bulk backfill.
 
 ## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
 

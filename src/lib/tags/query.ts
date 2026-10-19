@@ -23,6 +23,9 @@ import { TtlLruCache } from '@/lib/cache/ttl-lru'
  * the exact same gate `/api/share/tag/by-name/[username]/[tag]` enforces —
  * this module is a second, independent implementation (not a re-export of the
  * API route) so review both together if the sharing rule ever changes.
+ *
+ * Private saves (`bookmarks.is_private`) are never part of a public tag
+ * collection, even when tagged: this is a public read.
  */
 
 export type ContentType = 'video' | 'photo' | 'text' | 'article'
@@ -187,6 +190,10 @@ async function fetchTagCollection(
   const matched = bookmarkResults
     .filter((b) => taggedKeySet.has(`${b.platform}:${b.id}`))
     .filter((b) => !moderated.has(`${b.platform}:${b.id}`))
+    // Private wins: a post the owner kept just for themself never shows on
+    // the public channel, even when they tagged it (the owner still sees it
+    // through `channelQueue`'s owner path).
+    .filter((b) => !b.isPrivate)
     // Newest-added-to-the-tag first. A playlist is ordered by when its curator
     // put each post IN it (owner) — not by when they first saved the post,
     // which is what `bookmarks.processedAt` above says. Rows with no

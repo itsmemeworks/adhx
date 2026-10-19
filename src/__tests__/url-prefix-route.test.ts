@@ -1,5 +1,5 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
 const moderationMocks = vi.hoisted(() => ({
   readPostModeration: vi.fn(),
@@ -146,6 +146,12 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
   })
 
   describe('Metadata generation', () => {
+    // The page pulls in the whole theater; its first import can take longer
+    // than a test's 5 s budget on a busy machine, so load it once up front.
+    beforeAll(async () => {
+      await import('@/app/[username]/status/[id]/page')
+    }, 60_000)
+
     it('returns fallback metadata for invalid username', async () => {
       const { generateMetadata } = await import('@/app/[username]/status/[id]/page')
 

@@ -1,11 +1,12 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { postViews } from '@/lib/db/schema'
 
 /**
  * The feed's watched list (`post_views`): a post counts as seen after 2s on
  * stage, or when it's skipped. New (`/api/feed/blend?mode=new`) plays only
- * posts without a row. Your own rows only, never anyone else's.
+ * posts without a row; friend and group channels count "N new" from it
+ * (`newTo`). Your own rows only, never anyone else's.
  */
 
 export const MAX_VIEWS_PER_CALL = 50
@@ -66,4 +67,27 @@ export function seenKeys(userId: string, keys: string[]): Set<string> {
     }
   }
   return out
+}
+
+/**
+ * SQL: the viewer hasn't seen this post. `alias` is the `bookmarks` alias in
+ * a raw query (`FROM bookmarks b` → `notSeenBy(viewer, 'b')`). Always true
+ * when nobody is signed in.
+ */
+export function notSeenBy(viewerId: string, alias: string): SQL {
+  if (!viewerId) return sql`1 = 1`
+  const a = sql.identifier(alias)
+  return sql`NOT EXISTS (
+    SELECT 1 FROM post_views pv
+    WHERE pv.user_id = ${viewerId} AND pv.platform = ${a}.platform AND pv.post_id = ${a}.id
+  )`
+}
+
+/** SQL: neither saved by the viewer nor seen by them — what "new" means on a channel. */
+export function newTo(viewerId: string, alias: string): SQL {
+  const a = sql.identifier(alias)
+  return sql`(NOT EXISTS (
+    SELECT 1 FROM bookmarks mine
+    WHERE mine.user_id = ${viewerId} AND mine.platform = ${a}.platform AND mine.id = ${a}.id
+  ) AND ${notSeenBy(viewerId, alias)})`
 }

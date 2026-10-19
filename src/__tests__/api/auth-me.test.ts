@@ -26,6 +26,7 @@ vi.mock('@/lib/auth/session', () => ({
       .get(mockSession.userId)
     return Promise.resolve(banned ? null : mockSession.userId)
   }),
+  renewSessionCookie: vi.fn(() => Promise.resolve(false)),
 }))
 
 describe('API: /api/auth/me', () => {

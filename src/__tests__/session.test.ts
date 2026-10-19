@@ -6,12 +6,15 @@ let moderationReadable = true
 
 // Mock jose module
 vi.mock('jose', () => ({
-  SignJWT: vi.fn().mockImplementation(() => ({
-    setProtectedHeader: vi.fn().mockReturnThis(),
-    setIssuedAt: vi.fn().mockReturnThis(),
-    setExpirationTime: vi.fn().mockReturnThis(),
-    sign: vi.fn().mockResolvedValue('mock-jwt-token'),
-  })),
+  // A function, not an arrow: the session module constructs it with `new`.
+  SignJWT: vi.fn().mockImplementation(function () {
+    return {
+      setProtectedHeader: vi.fn().mockReturnThis(),
+      setIssuedAt: vi.fn().mockReturnThis(),
+      setExpirationTime: vi.fn().mockReturnThis(),
+      sign: vi.fn().mockResolvedValue('mock-jwt-token'),
+    }
+  }),
   jwtVerify: vi.fn(),
 }))
 
@@ -180,6 +183,48 @@ describe('Session Module', () => {
 
       const { getCurrentUserId } = await import('@/lib/auth/session')
       expect(await getCurrentUserId()).toBeNull()
+    })
+  })
+
+  describe('renewSessionCookie', () => {
+    const response = () => ({ cookies: { set: vi.fn() } })
+
+    it('re-signs a session issued more than a day ago', async () => {
+      const { jwtVerify } = await import('jose')
+      mockCookieStore.get.mockReturnValue({ value: 'old-jwt' })
+      ;(jwtVerify as ReturnType<typeof vi.fn>).mockResolvedValue({
+        payload: { userId: 'user-456', username: 'ben', iat: Date.now() / 1000 - 2 * 86400 },
+      })
+      const res = response()
+      const { renewSessionCookie } = await import('@/lib/auth/session')
+      expect(await renewSessionCookie(res as never)).toBe(true)
+      expect(res.cookies.set).toHaveBeenCalledWith(
+        'adhx_session',
+        'mock-jwt-token',
+        expect.objectContaining({ maxAge: 30 * 24 * 60 * 60, httpOnly: true }),
+      )
+    })
+
+    it('leaves a fresh session alone', async () => {
+      const { jwtVerify } = await import('jose')
+      mockCookieStore.get.mockReturnValue({ value: 'new-jwt' })
+      ;(jwtVerify as ReturnType<typeof vi.fn>).mockResolvedValue({
+        payload: { userId: 'user-456', username: 'ben', iat: Date.now() / 1000 - 60 },
+      })
+      const res = response()
+      const { renewSessionCookie } = await import('@/lib/auth/session')
+      expect(await renewSessionCookie(res as never)).toBe(false)
+      expect(res.cookies.set).not.toHaveBeenCalled()
+    })
+
+    it('never renews an invalid token', async () => {
+      const { jwtVerify } = await import('jose')
+      mockCookieStore.get.mockReturnValue({ value: 'forged' })
+      ;(jwtVerify as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('bad signature'))
+      const res = response()
+      const { renewSessionCookie } = await import('@/lib/auth/session')
+      expect(await renewSessionCookie(res as never)).toBe(false)
+      expect(res.cookies.set).not.toHaveBeenCalled()
     })
   })
 

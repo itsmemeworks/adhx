@@ -1,8 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { bookmarks, postEmbeddings } from '@/lib/db/schema'
+import { bookmarks, postEmbeddings, postExtractedText } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
-import { PRIORITY, semanticEnabled, type UnderstandingKind } from './config'
+import { PRIORITY, isExtractKind, semanticEnabled, type UnderstandingKind } from './config'
 import { enqueuePosts, enqueueBackfill, type PostKey } from './queue'
 import { wakeJobs } from './supervisor'
 import { indexSavedPosts } from './keywords'
@@ -97,6 +97,31 @@ export async function retryFailed(userId: string): Promise<number> {
       )
     await enqueuePosts([f], PRIORITY.urgent, [f.kind as UnderstandingKind])
   }
-  if (mine.length) wakeJobs()
-  return mine.length
+  // Speech / text on screen: the row keeps any earlier words; it just stops counting as done.
+  const failedWords = db
+    .select({
+      platform: postExtractedText.platform,
+      postId: postExtractedText.postId,
+      kind: postExtractedText.kind,
+    })
+    .from(postExtractedText)
+    .where(eq(postExtractedText.status, 'failed'))
+    .all()
+    .filter((f) => savedKeys.has(`${f.platform}:${f.postId}`) && isExtractKind(f.kind))
+  for (const f of failedWords) {
+    db.update(postExtractedText)
+      .set({ model: '' })
+      .where(
+        and(
+          eq(postExtractedText.platform, f.platform),
+          eq(postExtractedText.postId, f.postId),
+          eq(postExtractedText.kind, f.kind),
+        ),
+      )
+      .run()
+    if (isExtractKind(f.kind)) await enqueuePosts([f], PRIORITY.urgent, [f.kind])
+  }
+  const total = mine.length + failedWords.length
+  if (total) wakeJobs()
+  return total
 }

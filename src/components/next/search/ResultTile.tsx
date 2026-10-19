@@ -20,6 +20,7 @@ import { MediaChip, NxImage } from '../primitives'
 import { PrivateLock, SaverFaces } from '../SaverFaces'
 import { saversLine } from '../savers'
 import {
+  heardOrRead,
   kindOf,
   openHref,
   previewVideoSrc,
@@ -71,8 +72,9 @@ export function EveryoneBadge({ className }: { className?: string }) {
 }
 
 /**
- * Top-right of a result: who saved it (members see faces), a lock when it's
- * just for you, or — with no names known — "Everyone" on someone else's save.
+ * Top-right of a result: who saved it (members see faces; tapping one opens
+ * that friend's channel), a lock when it's just for you, or — with no names
+ * known — "Everyone" on someone else's save.
  */
 export function SaversMark({
   item,
@@ -94,7 +96,7 @@ export function SaversMark({
         )}
       >
         {item.post.isPrivate && <PrivateLock />}
-        <SaverFaces savers={savers} tone="plate" size={18} compact={savers.length > 2} />
+        <SaverFaces savers={savers} tone="plate" size={18} compact={savers.length > 2} linked />
       </span>
     )
   }
@@ -112,18 +114,24 @@ export function StrengthMeter({
   className,
   tone = 'plate',
   withLabel = false,
+  where,
 }: {
   strength: MatchStrength
   className?: string
   tone?: 'plate' | 'cream'
   withLabel?: boolean
+  /** Where the match was found when the tile can't show it ("Said in the video", "On screen"). */
+  where?: string | null
 }) {
   const bars = strength === 'strong' ? 3 : strength === 'good' ? 2 : 1
+  const label = where
+    ? `${STRENGTH_LABEL[strength]}, ${where.toLowerCase()}`
+    : STRENGTH_LABEL[strength]
   return (
     <span
       role="img"
-      aria-label={STRENGTH_LABEL[strength]}
-      title={STRENGTH_LABEL[strength]}
+      aria-label={label}
+      title={label}
       className={cn(
         'pointer-events-auto flex h-6 shrink-0 items-end gap-[3px] rounded-full px-2 pb-[7px] pt-1.5',
         tone === 'plate' ? 'nx-plate' : 'bg-nx-ink/10',
@@ -147,7 +155,7 @@ export function StrengthMeter({
           )}
         />
       ))}
-      {withLabel && (
+      {(withLabel || where) && (
         <span
           aria-hidden
           className={cn(
@@ -155,7 +163,9 @@ export function StrengthMeter({
             tone === 'plate' ? 'text-white' : 'text-nx-ink',
           )}
         >
-          {STRENGTH_LABEL[strength]}
+          {withLabel && where
+            ? `${STRENGTH_LABEL[strength]} · ${where}`
+            : (where ?? STRENGTH_LABEL[strength])}
         </span>
       )}
     </span>
@@ -213,13 +223,14 @@ export function ResultTile({
   const kind = kindOf(item)
   const { post } = item
   const author = postAuthor(post)
+  const heard = heardOrRead(item)
   const savers = post.savers ?? []
   const savedBy = savers.length
     ? `, ${saversLine(savers)}`
     : item.saved || !showStrength
       ? ''
       : ', saved by someone else'
-  const label = `${feedItemAccessibleDescription(post)}${savedBy}${post.isPrivate ? ', just for you' : ''}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}` : ''}`
+  const label = `${feedItemAccessibleDescription(post)}${savedBy}${post.isPrivate ? ', just for you' : ''}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}${heard ? `, ${heard.toLowerCase()}` : ''}` : ''}`
   const frame = cn(
     'group relative block w-full overflow-hidden rounded-nx-tile bg-nx-surface text-left font-nx-sans',
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent',
@@ -229,6 +240,7 @@ export function ResultTile({
   const cover = postCoverSrc(post)
   const badge = mediaBadge(item)
   const strength = strengthOfItem(item)
+  const where = heard
   const reduced = useReducedMotion()
   const [hovering, setHovering] = useState(false)
   const [previewPlaying, setPreviewPlaying] = useState(false)
@@ -248,7 +260,7 @@ export function ResultTile({
           <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
             {author.handle || author.name}
           </span>
-          {showStrength && <StrengthMeter strength={strength} tone="cream" />}
+          {showStrength && <StrengthMeter strength={strength} tone="cream" where={where} />}
         </span>
         <span className={cn('line-clamp-[7] font-nx-serif', postTextSize(text.length))}>
           {text || 'Post'}
@@ -310,7 +322,7 @@ export function ResultTile({
       <SaversMark item={item} everyone={showStrength} className="right-2 top-2" />
       {item.learning && <WordsOnlyBadge className="left-2 top-2" />}
       {showStrength && !onCream && (
-        <StrengthMeter strength={strength} className="absolute bottom-2 left-2" />
+        <StrengthMeter strength={strength} where={where} className="absolute bottom-2 left-2" />
       )}
     </Link>
   )

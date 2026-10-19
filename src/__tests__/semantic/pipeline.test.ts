@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as schema from '@/lib/db/schema'
 import { createTestDb, createTestBookmark, USER_A, USER_B, type TestDbInstance } from '../api/setup'
 import type { FeedItemResponse } from '@/lib/feed/build-item'
@@ -101,6 +101,14 @@ function addMedia(userId: string, bookmarkId: string, mediaType: string, platfor
 beforeEach(() => {
   testInstance = createTestDb()
   vi.clearAllMocks()
+  // These cover the vector kinds; speech and text on screen have their own tests
+  // (extract-pipeline.test.ts).
+  vi.stubEnv('SEMANTIC_SPEECH', 'off')
+  vi.stubEnv('SEMANTIC_SCREEN_TEXT', 'off')
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
 })
 
 describe('vectors', () => {

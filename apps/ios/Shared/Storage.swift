@@ -144,6 +144,7 @@ enum Store {
         phoneName = nil
         History.clear()
         OfflineQueue.clear()
+        KnownPeople.clear()
     }
 
     static func client() -> ADHXClient? {
@@ -184,6 +185,11 @@ struct ShareRecord: Codable, Identifiable, Equatable {
     var percent: Int?
     var quality: String?
     var kept: KeptCounts?
+    /// The server's word: this save is "Just for me".
+    var isPrivate: Bool?
+    /// "Just for me" was switched before the server had the post; applied
+    /// once it lands (`StatusRefresher`).
+    var wantsPrivate: Bool?
     var createdAt = Date()
     var updatedAt = Date()
 
@@ -204,6 +210,7 @@ struct ShareRecord: Codable, Identifiable, Equatable {
         openPath = r.openPath
         alreadySaved = r.alreadySaved
         savedAt = r.savedAt
+        if let p = r.isPrivate { isPrivate = p }
         failure = nil
         failureMessage = nil
         updatedAt = Date()
@@ -302,6 +309,8 @@ enum OfflineQueue {
         var id: String   // the ShareRecord id
         var link: String
         var queuedAt = Date()
+        /// Send it "Just for me" (nil: as the server likes, shared).
+        var isPrivate: Bool?
     }
 
     private static let key = "queue"
@@ -321,11 +330,20 @@ enum OfflineQueue {
 
     static var count: Int { all().count }
 
-    static func add(id: String, link: String) {
+    static func add(id: String, link: String, isPrivate: Bool? = nil) {
         lock.lock(); defer { lock.unlock() }
         var entries = all()
         guard !entries.contains(where: { $0.id == id || $0.link == link }) else { return }
-        entries.append(Entry(id: id, link: link))
+        entries.append(Entry(id: id, link: link, isPrivate: isPrivate))
+        write(entries)
+    }
+
+    /// "Just for me" switched while the link waits.
+    static func setPrivate(id: String, _ isPrivate: Bool) {
+        lock.lock(); defer { lock.unlock() }
+        var entries = all()
+        guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
+        entries[index].isPrivate = isPrivate
         write(entries)
     }
 
@@ -360,7 +378,7 @@ actor Flusher {
         var sent = 0
         for entry in entries {
             do {
-                let answer = try await client.save(url: entry.link)
+                let answer = try await client.save(url: entry.link, private: entry.isPrivate)
                 OfflineQueue.remove(id: entry.id)
                 let record: (inout ShareRecord) -> Void = { record in
                     switch answer {
@@ -397,13 +415,26 @@ actor Flusher {
         for record in History.all()
         where record.stage == .saving && record.queueId == nil && record.updatedAt < cutoff {
             History.update(id: record.id) { $0.stage = .queued }
-            OfflineQueue.add(id: record.id, link: record.link)
+            OfflineQueue.add(id: record.id, link: record.link, isPrivate: record.wantsPrivate)
         }
     }
 }
 
 /// Asks the server how the kept copies are coming along.
 enum StatusRefresher {
+    /// "Just for me" switched on the sheet before the post had landed: tell
+    /// the server now that it has it.
+    private static func applyWantedPrivacy(_ record: ShareRecord, landed progress: QueuedSave,
+                                           client: ADHXClient) async {
+        guard progress.state == "saved", let post = progress.post, let wanted = record.wantsPrivate else { return }
+        if (post.isPrivate ?? false) != wanted {
+            guard let now = try? await client.setPrivate(platform: post.platform, id: post.id, private: wanted)
+            else { return }
+            History.update(id: record.id) { $0.isPrivate = now }
+        }
+        History.update(id: record.id) { $0.wantsPrivate = nil }
+    }
+
     static func refresh() async {
         guard let client = Store.client() else { return }
         for record in History.all() where record.stage == .saving {
@@ -411,6 +442,7 @@ enum StatusRefresher {
             do {
                 let progress = try await client.queuedSave(id: queueId)
                 History.update(id: record.id) { $0.apply(progress) }
+                await applyWantedPrivacy(record, landed: progress, client: client)
             } catch APIError.server(let httpStatus, _, _) where httpStatus == 404 {
                 History.update(id: record.id) {
                     $0.fail(.server(status: 404, code: "failed", message: APIError.fallbackMessage(for: "failed")))

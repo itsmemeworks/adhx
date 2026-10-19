@@ -633,6 +633,27 @@ export const understandingQueue = sqliteTable(
   }),
 )
 
+// Words read out of a post's media (speech, text on screen), keyed by post.
+// DDL lives in `src/lib/semantic/schema-sql.ts`.
+export const postExtractedText = sqliteTable(
+  'post_extracted_text',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(), // 'speech' | 'screen'
+    model: text('model').notNull(),
+    contentHash: text('content_hash').notNull(),
+    status: text('status').notNull(), // 'ok' | 'none' | 'failed'
+    text: text('text'),
+    language: text('language'),
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+  }),
+)
+
 // "Made for you" channels: one user's saves grouped by meaning and named.
 // Derived and private (never shown to anyone else); recomputed when stale.
 // Keeping one turns it into an ordinary tag channel.
@@ -656,9 +677,30 @@ export const autoChannels = sqliteTable(
   }),
 )
 
+// "From everyone" channels: the whole server's visible saves (never private,
+// quoted or a banned saver's) grouped by meaning and named, like Made for
+// you. Server-wide and derived: no user_id. `savers` is a JSON object of
+// saver user id -> posts in the channel at compute time; reads re-check every
+// post's visible savers, so a deleted or banned account drops out at once.
+export const groupChannels = sqliteTable('group_channels', {
+  slug: text('slug').primaryKey(),
+  name: text('name').notNull(),
+  size: integer('size').notNull(),
+  /** JSON array of `platform:id`, closest to the group's centre first. */
+  postKeys: text('post_keys').notNull(),
+  savers: text('savers').notNull(),
+  position: integer('position').notNull(),
+  /** Visible saves on the server when computed (staleness check). */
+  savesAtCompute: integer('saves_at_compute').notNull(),
+  computedAt: text('computed_at').notNull(),
+  modelVersion: text('model_version').notNull(),
+})
+
 export type PostEmbedding = typeof postEmbeddings.$inferSelect
+export type PostExtractedText = typeof postExtractedText.$inferSelect
 export type UnderstandingJob = typeof understandingQueue.$inferSelect
 export type AutoChannel = typeof autoChannels.$inferSelect
+export type GroupChannel = typeof groupChannels.$inferSelect
 
 // Banned accounts — session + sign-in treated as signed-out. Public
 // profile / playlist pages 404; leaderboards skip the owner. Data is kept

@@ -110,7 +110,7 @@ tags. To stop only the background work, set `SEMANTIC_SEARCH=off`.
 
 ## Known gaps (follow-ups)
 
-- Videos are understood from frames only (no audio), by design for now.
+- What's said in a video is transcribed from its first ten minutes only, and text on screen is read from four frames of its first minute (plus up to four pictures).
 - The redesign has unit/component tests but no Playwright suite yet.
 - Settings, the signed-out home, Live, Trending, Leaderboard, post previews,
   Admin and Welcome still use the previous look; nothing links back to the

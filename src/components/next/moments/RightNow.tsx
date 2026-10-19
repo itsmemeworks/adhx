@@ -16,12 +16,15 @@ import {
   type MomentView,
   type StreamItem,
 } from './live'
+import { Faces } from './LiveTogether'
+import { savingLine, tuneInLabel, watchingLine } from './people'
 
 /**
  * "Right now" on Channels: what people are saving, sorted into moments as
  * it happens. Saves slide into the "Just saved" strip tagged with where they
  * went; a card glows in its colour when one lands in it; groups still
- * forming fill up and pop into new moments. All anonymous.
+ * forming fill up and pop into new moments. Anonymous to strangers; signed-in
+ * members also see who is saving each moment and who is watching it.
  */
 
 const KIND_WORD: Record<string, string> = {
@@ -143,6 +146,8 @@ function MomentCard({
     ...all.filter((p) => !postCoverSrc(p)),
   ].slice(0, lead ? 4 : 3)
   const arriving = flash ? asFeed(flash.item.post) : null
+  const savers = moment.savers ?? []
+  const watchers = moment.watchers ?? []
   return (
     <article
       className={cn(
@@ -244,15 +249,30 @@ function MomentCard({
               </span>
             )}
           </p>
+          {savers.length > 0 && (
+            // Members only: the server sends `savers` to signed-in members alone.
+            <p className="m-0 flex min-w-0 items-center gap-2 text-[13px] text-nx-soft">
+              <Faces people={savers} size={lead ? 28 : 24} />
+              <span className="truncate">{savingLine(savers, moment.people)}</span>
+            </p>
+          )}
         </div>
-        <Link
-          href={momentPlayHref(moment.slug)}
-          className="flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-extrabold text-black"
-          style={{ background: moment.hue }}
-        >
-          <Radio aria-hidden className="h-4 w-4" strokeWidth={2.4} />
-          <span>Tune in</span>
-        </Link>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {watchers.length > 0 && (
+            <span className="flex max-w-[220px] items-center gap-2 text-[12px] text-nx-soft">
+              <Faces people={watchers} size={22} live />
+              <span className="truncate">{watchingLine(watchers)}</span>
+            </span>
+          )}
+          <Link
+            href={momentPlayHref(moment.slug)}
+            className="flex h-11 max-w-[240px] shrink-0 items-center gap-2 rounded-full px-4 text-sm font-extrabold text-black"
+            style={{ background: moment.hue }}
+          >
+            <Radio aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+            <span className="truncate">{tuneInLabel(watchers)}</span>
+          </Link>
+        </div>
       </div>
     </article>
   )

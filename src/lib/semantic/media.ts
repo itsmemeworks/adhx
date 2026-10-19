@@ -167,6 +167,79 @@ export async function fetchImageBytes(url: string): Promise<Uint8Array> {
 
 export { ffmpegPath }
 
+/**
+ * ffmpeg couldn't read a same-origin media path: ask the proxy why (409 for a
+ * photo labelled as a video, 404/410 for media deleted upstream, 404 under
+ * /api/files for "not downloaded yet") and throw the matching error.
+ */
+export async function whyProxyFailed(
+  videoPath: string,
+  source: string,
+  error: unknown,
+): Promise<never> {
+  const status = await proxyStatus(source)
+  if (videoPath.startsWith('/api/files/') && status === 404) {
+    throw new MediaUnavailableError('Not downloaded yet')
+  }
+  if (status === 307 || status === 302) {
+    // Handed off to a proxy: ask the proxy itself.
+    const followed = await proxyStatusFollowing(source)
+    if (followed === 409) throw new NotAVideoError('Post is a photo, not a video')
+    if (followed !== null && GONE.has(followed)) {
+      throw new MediaGoneError(`Video is gone: ${followed}`)
+    }
+    throw error
+  }
+  if (status === 409) throw new NotAVideoError('Post is a photo, not a video')
+  if (status !== null && GONE.has(status)) throw new MediaGoneError(`Video is gone: ${status}`)
+  throw error
+}
+
+/**
+ * The kept file to listen to behind a post's `/api/files/…/video-N` path: the
+ * video itself, or the sound a sound-only post keeps instead. Null until kept.
+ */
+export async function keptSoundFile(url: string): Promise<string | null> {
+  const m = url.match(/^\/api\/files\/([a-z]{1,16})\/([^/?]+)\/(video-\d+)/)
+  if (!m) return null
+  const { keptFile, keptFilesFor, absolutePath } = await import('@/lib/keep/store')
+  const id = decodeURIComponent(m[2])
+  const kept =
+    keptFile(m[1], id, m[3] as `video-${number}`) ??
+    keptFilesFor(m[1], id).find((f) => f.slot.startsWith('audio-')) ??
+    null
+  return kept ? absolutePath(kept.path) : null
+}
+
+/**
+ * Where to read a post's sound from: its kept file, or the same-origin proxy
+ * over loopback until it is kept. Throws `NotAVideoError` when the post kept
+ * only pictures and `MediaGoneError` when its download gave up.
+ */
+export async function soundSource(videoPath: string): Promise<{ source: string; local: boolean }> {
+  if (!videoPath.startsWith('/api/media/') && !videoPath.startsWith('/api/files/')) {
+    throw new MediaUnavailableError('Video must be a same-origin media proxy path')
+  }
+  const local = await keptSoundFile(videoPath)
+  if (local) return { source: local, local: true }
+  const none = await noVideoToSample(videoPath)
+  if (none && !(none instanceof NotAVideoError && /sound/i.test(none.message))) throw none
+  return { source: internalOrigin() + videoPath, local: false }
+}
+
+/** Where to read a post's video frames from (kept file or loopback proxy); null when it has none. */
+export async function frameSource(
+  videoPath: string,
+): Promise<{ source: string; local: boolean } | null> {
+  if (!videoPath.startsWith('/api/media/') && !videoPath.startsWith('/api/files/')) return null
+  const local = await keptLocalFile(videoPath)
+  if (local) return { source: local, local: true }
+  const none = await noVideoToSample(videoPath)
+  if (none instanceof NotAVideoError) return null
+  if (none) throw none
+  return { source: internalOrigin() + videoPath, local: false }
+}
+
 export interface SampledFrames {
   dir: string
   /** JPEG frame files in time order. */
@@ -228,22 +301,7 @@ export async function sampleVideoFrames(videoPath: string): Promise<SampledFrame
       )
     }).catch(async (error) => {
       if (local) throw error
-      const status = await proxyStatus(source)
-      if (videoPath.startsWith('/api/files/') && status === 404) {
-        throw new MediaUnavailableError('Not downloaded yet')
-      }
-      if (status === 307 || status === 302) {
-        // Handed off to a proxy: ask the proxy itself.
-        const followed = await proxyStatusFollowing(source)
-        if (followed === 409) throw new NotAVideoError('Post is a photo, not a video')
-        if (followed !== null && GONE.has(followed)) {
-          throw new MediaGoneError(`Video is gone: ${followed}`)
-        }
-        throw error
-      }
-      if (status === 409) throw new NotAVideoError('Post is a photo, not a video')
-      if (status !== null && GONE.has(status)) throw new MediaGoneError(`Video is gone: ${status}`)
-      throw error
+      return whyProxyFailed(videoPath, source, error)
     })
     const files = (await readdir(dir))
       .filter((f) => f.endsWith('.jpg'))

@@ -107,7 +107,7 @@ function SearchMock() {
   const results: Array<{ art: ArtId; chip: string; on: string }> = [
     { art: 'frog', chip: 'Strong match', on: 'in the video' },
     { art: 'frogRain', chip: 'Strong match', on: 'in the picture' },
-    { art: 'wave', chip: 'Related', on: 'in the words' },
+    { art: 'wave', chip: 'Good match', on: 'said in the video' },
   ]
   return (
     <div className="flex flex-col gap-4 rounded-[28px] bg-nx-surface p-4 md:p-5">
@@ -478,15 +478,18 @@ export function ProductSite() {
             body={
               <>
                 <p className="m-0">
-                  Type what you remember, like “a frog in a pond” or “that synth video”, and ADHX
-                  finds it. It matches what posts say, what’s in their pictures, and what happens in
-                  their videos. The local worker samples the first 32 seconds; an optional Mac
-                  worker samples throughout each video with light, normal or deep detail.
+                  Type what you remember, like “a frog in a pond” or “the cat that screams at the
+                  cucumber”, and ADHX finds it. It matches what posts say, what’s in their pictures,
+                  what happens in their videos, what’s said in them and the text on screen, so a
+                  meme turns up by its caption. The local worker samples the first 32 seconds; an
+                  optional Mac worker samples throughout each video with light, normal or deep
+                  detail.
                 </p>
                 <p className="m-0">
-                  It runs Google’s EmbeddingGemma 2 on your own hardware: no API key, no cost per
-                  search. A native Apple Silicon worker can handle background understanding while
-                  your server keeps your saves and serves searches.
+                  It runs Google’s EmbeddingGemma 2, Whisper and Florence-2 on your own hardware: no
+                  API key, no cost per search, and no picture, sound or transcript is sent anywhere.
+                  A native Apple Silicon worker can handle background understanding while your
+                  server keeps your saves and serves searches.
                 </p>
               </>
             }
@@ -676,7 +679,7 @@ export function ProductSite() {
                 {[
                   'One Docker container and one folder of data. Keep its secret in your private .env file; stop the app or use a coordinated SQLite backup before copying its data.',
                   'Invite only the people you choose. No email service needed: you can hand sign-in links over yourself.',
-                  'Search runs on your server. Nothing goes to an AI company unless you add the optional TypeSafe key, which sharpens search and names channels.',
+                  'Search runs on your server, including what’s said in videos and the text on screen. Nothing goes to an AI company unless you add the optional TypeSafe key, which sharpens search with posts’ own words and names channels.',
                   'Kept media and shared previews play without sign-in to anyone who can reach the server. Use private networking when that is your intended boundary.',
                   'Open source under the MIT licence. No service account with us, no ads, and nobody selling your attention.',
                 ].map((line) => (

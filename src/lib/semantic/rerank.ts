@@ -5,8 +5,9 @@ import { askJev, jevAvailable } from './jev'
 /**
  * Optional second pass over the best few results with Jev (TypeSafe's
  * decision model): one graded `score` question per candidate, answered in a
- * single call. Only the query and PUBLIC post content are sent (never tags,
- * never who saved it). Any failure or timeout returns the fused order.
+ * single call. Only the query and the post's own PUBLIC words are sent (never
+ * tags, never who saved it, never what was heard or read in its media on this
+ * server). Any failure or timeout returns the fused order.
  */
 
 const TIMEOUT_MS = 3_000
@@ -31,7 +32,7 @@ export const RERANK_TUNING = { fusedWeight: 1, visualFusedWeight: 2.5 }
 export interface RerankCandidate {
   key: string
   item: FeedItemResponse
-  /** True when the post was matched on its picture or video rather than words. */
+  /** True when the post was matched on its picture, video, speech or on-screen text rather than its own words. */
   visual: boolean
 }
 
