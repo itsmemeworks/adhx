@@ -13,16 +13,24 @@ import androidx.compose.runtime.setValue
  */
 class SettingsPrefs private constructor(context: Context) {
     private val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+    private val store = ConnectionStore.get(context)
 
     private var privateState by mutableStateOf(readPrivate())
     private var soundState by mutableStateOf(prefs.getBoolean(K_SOUND, false))
 
     /** New saves from this phone start "Just for me". Null: never set here. */
     var privateDefault: Boolean?
-        get() = privateState
+        get() = privateState.forAccount(store.current(), store.allowLegacyHistory.value)
         set(value) {
-            prefs.edit().apply { if (value == null) remove(K_PRIVATE) else putBoolean(K_PRIVATE, value) }.apply()
-            privateState = value
+            val next = PrivateDefault.capture(value, store.current())
+            // Choice and ownership share one atomic preferences edit. If it never reaches disk,
+            // old-owner/legacy values still fail closed against the durable connection record.
+            prefs.edit().apply {
+                if (next.value == null) remove(K_PRIVATE) else putBoolean(K_PRIVATE, next.value)
+                putString(K_PRIVATE_SERVER, next.server)
+                putString(K_PRIVATE_USERNAME, next.username)
+            }.apply()
+            privateState = next
         }
 
     /** Videos start with sound (they start muted otherwise). */
@@ -38,11 +46,17 @@ class SettingsPrefs private constructor(context: Context) {
         privateDefault = null
     }
 
-    private fun readPrivate(): Boolean? = if (prefs.contains(K_PRIVATE)) prefs.getBoolean(K_PRIVATE, false) else null
+    private fun readPrivate() = PrivateDefault(
+        value = if (prefs.contains(K_PRIVATE)) prefs.getBoolean(K_PRIVATE, false) else null,
+        server = prefs.getString(K_PRIVATE_SERVER, null),
+        username = prefs.getString(K_PRIVATE_USERNAME, null),
+    )
 
     companion object {
         private const val FILE = "settings"
         private const val K_PRIVATE = "private_default"
+        private const val K_PRIVATE_SERVER = "private_default_server"
+        private const val K_PRIVATE_USERNAME = "private_default_username"
         private const val K_SOUND = "sound_on"
 
         @Volatile

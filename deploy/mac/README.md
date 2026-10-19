@@ -7,7 +7,9 @@ mount, inbound listener or public port.
 
 Use a native Apple Silicon Mac, macOS and ARM64 Node.js 22 or newer. A Docker
 container cannot use macOS CoreML or VideoToolbox. Install this repository's
-dependencies with `pnpm install --frozen-lockfile` in a stable checkout; do not
+dependencies with `pnpm install --frozen-lockfile` in a stable checkout. Install
+a maintained FFmpeg (`brew install ffmpeg` with Homebrew, or your trusted package
+manager), then set its absolute path in `FFMPEG_PATH` when needed; do not
 delete or move that checkout while the service is installed.
 
 Follow the [rollout verification checklist](VERIFY.md) to match the released
@@ -58,7 +60,16 @@ cp deploy/mac/worker.env.example "$HOME/Library/Application Support/ADHX-worker/
 chmod 600 "$HOME/Library/Application Support/ADHX-worker/worker.env"
 ```
 
-Edit that private `worker.env` before running anything:
+Edit that private `worker.env` before running anything. Set `FFMPEG_PATH` to your
+maintained FFmpeg binary (normally `/opt/homebrew/bin/ffmpeg` on Apple Silicon).
+The installer captures that absolute binary for launchd, whose default PATH
+does not include Homebrew. Check prerequisites without installing a service:
+
+```sh
+deploy/mac/install.sh "$HOME/Library/Application Support/ADHX-worker/worker.env" --check
+```
+
+Configuration:
 
 | Mac setting                               | Value                                                                                  |
 | ----------------------------------------- | -------------------------------------------------------------------------------------- |

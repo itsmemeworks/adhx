@@ -3,7 +3,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -28,7 +27,7 @@ val hasReleaseSigning = releaseStoreFile != null &&
 
 android {
     namespace = "com.adhx.share"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.adhx.share"
@@ -77,7 +76,7 @@ kotlin {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -99,7 +98,28 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.network.cache.control)
     implementation(libs.zxing.android.embedded)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
+}
+
+// Audit the actual transitive runtime graph, not only the declared version catalog.
+tasks.register("exportRuntimeDependencies") {
+    val report = layout.buildDirectory.file("reports/runtime-dependencies.json")
+    outputs.file(report)
+    outputs.upToDateWhen { false }
+    doLast {
+        val modules = configurations.getByName("debugRuntimeClasspath")
+            .incoming.resolutionResult.allComponents
+            .filter { it.id is org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+            .mapNotNull { it.moduleVersion }
+            .map { "${it.group}:${it.name}" to it.version }.distinct().sortedBy { it.first }
+        val output = report.get().asFile
+        output.parentFile.mkdirs()
+        output.writeText(modules.joinToString(",\n", "[\n", "\n]\n") { (name, version) ->
+            "  {\"name\":\"$name\",\"version\":\"$version\"}"
+        })
+    }
 }

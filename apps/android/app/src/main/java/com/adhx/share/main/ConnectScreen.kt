@@ -68,6 +68,7 @@ fun ConnectScreen(vm: MainViewModel) {
     val context = LocalContext.current
     val ui by vm.connect.collectAsStateWithLifecycle()
     val removed by vm.removedNotice.collectAsStateWithLifecycle()
+    val storageError by vm.storageError.collectAsStateWithLifecycle()
     var typing by rememberSaveable { mutableStateOf(false) }
 
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
@@ -134,7 +135,7 @@ fun ConnectScreen(vm: MainViewModel) {
             } else {
                 ScanPanel(onClick = startScan, busy = ui.busy)
             }
-            StatusLine(busy = ui.busy, error = ui.error)
+            StatusLine(busy = ui.busy, error = ui.error ?: storageError)
         }
 
         Column(

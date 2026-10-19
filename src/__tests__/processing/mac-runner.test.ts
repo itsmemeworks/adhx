@@ -219,7 +219,7 @@ describe('real native frame extraction', () => {
       try {
         expect(sampled.files).toHaveLength(plan.framesPerSegment)
         for (const frame of sampled.files) expect((await stat(frame)).size).toBeGreaterThan(0)
-        if (fps === 0.2) {
+        if (fps === 0.2 || duration === 0.04) {
           const expected = path.join(dir, 'expected-last.jpg')
           await execute(
             binary,
@@ -258,6 +258,25 @@ describe('real native frame extraction', () => {
       expect(await readdir(cache)).toEqual([])
     },
     20_000,
+  )
+
+  it.each(['undecodable', 'aborted'])(
+    'clears frame scratch after %s extraction',
+    async (failure) => {
+      const source = path.join(dir, 'source.mp4')
+      const original = Buffer.from('not a decodable video')
+      await writeFile(source, original)
+      const controller = new AbortController()
+      if (failure === 'aborted') controller.abort(new Error('Synthetic lease revoked'))
+      const cache = path.join(dir, 'scratch')
+      await expect(
+        sampleNativeFrames(source, createVideoPlan(1, 'deep'), 0, controller.signal, cache),
+      ).rejects.toThrow(
+        failure === 'aborted' ? 'Synthetic lease revoked' : 'Video frame extraction failed',
+      )
+      expect(await readdir(cache)).toEqual([])
+      expect(await readFile(source)).toEqual(original)
+    },
   )
 })
 

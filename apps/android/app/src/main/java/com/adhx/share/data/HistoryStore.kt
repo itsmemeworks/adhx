@@ -57,6 +57,10 @@ data class HistoryItem(
     val ownerServer: String? = null,
     val ownerUsername: String? = null,
 ) {
+    internal fun belongsTo(connection: Connection, allowLegacy: Boolean): Boolean =
+        if (ownerServer == null && ownerUsername == null) allowLegacy
+        else ownerServer == connection.server && ownerUsername == connection.username
+
     /** Nothing more will change, so there's no need to ask the server again. */
     val isFinal: Boolean
         get() = when (state) {
@@ -137,9 +141,10 @@ class HistoryStore private constructor(context: Context) {
      * Add a fresh share at the top. Sharing the same link again moves it up
      * instead of listing it twice. Returns the item's id.
      */
-    fun addShare(link: String, platform: String?, state: String = ShareState.SAVING, privateDefault: Boolean? = null, connection: Connection? = null): String {
+    fun addShare(link: String, platform: String?, state: String = ShareState.SAVING, privateDefault: Boolean? = null, connection: Connection? = null, allowLegacy: Boolean = true): String {
         synchronized(lock) {
-            val existing = _items.value.firstOrNull { it.link == link }
+            val existing = _items.value.firstOrNull { it.link == link &&
+                (connection == null || it.belongsTo(connection, allowLegacy)) }
             if (existing != null && (existing.publishPending || existing.state == ShareState.SAVING || existing.state == ShareState.QUEUED)) return existing.id
             val item = HistoryItem(id = UUID.randomUUID().toString(), link = link, sharedAt = 0)
                 .copy(sharedAt = System.currentTimeMillis(), state = state, platform = existing?.platform ?: platform, error = null,

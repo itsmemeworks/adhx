@@ -357,14 +357,14 @@ pnpm db:migrate
 pnpm dev
 ```
 
-The dev server runs at [http://localhost:3001](http://localhost:3001). With no email set up, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install "yt-dlp[default]"`, `uv tool install "yt-dlp[default]"` or `brew install yt-dlp`); ffmpeg comes with the project. The first `pnpm dev` downloads the search model (about 400 MB) into `data/models/`, which git ignores; `SEMANTIC_SEARCH=off` skips it. With little disk space, run with `KEEP_BACKFILL=off`.
+The dev server runs at [http://localhost:3001](http://localhost:3001). With no email set up, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install "yt-dlp[default]"`, `uv tool install "yt-dlp[default]"` or `brew install yt-dlp`); install a maintained FFmpeg with your OS package manager (`brew install ffmpeg` on macOS or `apt install ffmpeg` on Debian/Ubuntu). The Docker image includes its distribution-maintained FFmpeg. The first `pnpm dev` downloads the search model (about 400 MB) into `data/models/`, which git ignores; `SEMANTIC_SEARCH=off` skips it. With little disk space, run with `KEEP_BACKFILL=off`.
 
 ```bash
 pnpm typecheck && pnpm test && pnpm lint && pnpm format:check && pnpm build
 ```
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for how it fits together, and [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow. Coding agents should also read [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
-For the processing pipeline specifically, read [How NAS and Mac processing work](docs/remote-processing.md), with the phone-save flow, worker protocol and conversion/cleanup diagrams. The [friends-feed verification guide](docs/rollout/friends-feed-verification.md) covers queue recovery, privacy, presence, worker cleanup and checks across browsers and phone apps.
+For the processing pipeline specifically, read [How NAS and Mac processing work](docs/remote-processing.md), with the phone-save flow, worker protocol and conversion/cleanup diagrams. The [friends-feed verification guide](docs/rollout/friends-feed-verification.md) covers queue recovery, privacy, presence, worker cleanup and checks across browsers and phone apps. Also see [dependency maintenance](docs/rollout/dependency-maintenance.md), the [database upgrade rehearsal](docs/rollout/upgrade-rehearsal.md), [processing load and recovery](docs/rollout/processing-load-recovery.md), and the [physical phone acceptance checklist](docs/rollout/phone-device-acceptance.md).
 
 ## Use it kindly
 

@@ -134,6 +134,10 @@ private fun MainApp(
     val scope = rememberCoroutineScope()
     val connection by vm.connection.collectAsStateWithLifecycle()
     val reach by vm.reach.collectAsStateWithLifecycle()
+    val storageError by vm.storageError.collectAsStateWithLifecycle()
+    LaunchedEffect(storageError) {
+        storageError?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+    }
 
     // While the app is in front, check the key: a removed one goes back to Connect.
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()

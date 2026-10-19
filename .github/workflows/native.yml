@@ -8,6 +8,7 @@ on:
       - 'apps/ios/**'
       - '!apps/**/README.md'
       - 'src/app/api/app/**'
+      - 'scripts/security/check-android.mjs'
       - '.github/workflows/native.yml'
   workflow_dispatch:
 
@@ -30,10 +31,12 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
       - name: Build debug app and run regression tests
         working-directory: apps/android
-        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest
+        run: ./gradlew --no-daemon --max-workers=2 assembleDebug testDebugUnitTest exportRuntimeDependencies
+      - name: Audit resolved Android runtime libraries
+        run: node scripts/security/check-android.mjs apps/android/app/build/reports/runtime-dependencies.json
 
   ios:
     runs-on: macos-15

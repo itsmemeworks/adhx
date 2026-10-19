@@ -66,9 +66,11 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         val phoneDefault = SettingsPrefs.get(context).privateDefault
         _ui.value = ShareUi(link = link, platform = platform, justForMe = phoneDefault == true)
 
-        val connection = ConnectionStore.get(context).current()
+        val store = ConnectionStore.get(context)
+        val connection = store.current()
         if (connection == null) {
-            _ui.update { it.copy(phase = Phase.NotConnected) }
+            _ui.update { it.copy(phase = if (store.storageError.value == null) Phase.NotConnected else Phase.Failed,
+                message = store.storageError.value) }
             return
         }
         _ui.update { it.copy(server = connection.server) }
@@ -79,7 +81,7 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
 
         val history = HistoryStore.get(context)
         val itemId = try {
-            history.addShare(link, platform, privateDefault = phoneDefault, connection = connection)
+            history.addShare(link, platform, privateDefault = phoneDefault, connection = connection, allowLegacy = store.allowLegacyHistory.value)
         } catch (_: HistoryWriteException) {
             storageFailed()
             return

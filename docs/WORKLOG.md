@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Dependency maintenance and release rehearsals
+
+- Refresh compatible app/extension packages; all three JS lockfiles and resolved Android Maven libraries now have advisory gates, with a dated dev-only exception for the unpatched braces issue.
+- Move FFmpeg to maintained system packages, resolve absolute downloader paths, preflight/capture the Mac binary for launchd, exercise real DASH merging and handle FFmpeg 9 end-seek errors without losing short/final frames.
+- Refresh Android's toolchain/Coil; migrate credentials atomically to direct Keystore AES-GCM, retain legacy reads only for migration, and scope history/defaults across accounts and interrupted cleanup.
+- Scan existing native image builds and actual release digests for fixable high/critical advisories before tag promotion; extend dependency automation without duplicating builds or publishing on PRs.
+- Rehearse actual v2.1.2 schema migration twice, queue recovery and WAL backup/restore using synthetic accounts/media; add an offline CI fixture tied to released source.
+- Add a 10,000-save load/recovery harness, real pinned-model/end-of-video checks and 1080p/audio conversion; publish measured results and limitations in linked guides.
+- Prepare physical phone acceptance steps at the owner's request because no spare phone was available. Validation details are recorded on the PR; no service or installed app deployed.
+
 ## 2026-10-19 — Harden friends-feed delivery, live rooms and processing
 
 - Android shares now use durable staged delivery; both phones reuse request IDs and monotonic privacy versions, with cross-process-safe iPhone history and retryable interrupted acknowledgements.

@@ -369,8 +369,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     confirmRemove = false
-                    prefs.forgetAccount()
-                    vm.disconnect()
+                    if (vm.disconnect()) prefs.forgetAccount()
                 }) {
                     Text(SettingsCopy.REMOVE, color = AdhxColors.Warn, fontWeight = FontWeight.ExtraBold)
                 }

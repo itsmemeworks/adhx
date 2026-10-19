@@ -11,6 +11,7 @@ import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.HistoryStore
 import com.adhx.share.data.HistoryWriteException
 import com.adhx.share.data.ShareState
+import com.adhx.share.data.SettingsPrefs
 import com.adhx.share.links.Links
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
@@ -21,6 +22,9 @@ import com.adhx.share.work.SaveQueue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 
 /** How the server answered `GET /api/app/me` last. */
@@ -52,7 +56,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     val connection: StateFlow<Connection?> = store.connection
     val removedNotice: StateFlow<Boolean> = store.removedNotice
-    val items: StateFlow<List<HistoryItem>> = history.items
+    val storageError: StateFlow<String?> = store.storageError
+    val items: StateFlow<List<HistoryItem>> = combine(store.connection, history.items, store.allowLegacyHistory) { account, rows, legacy ->
+        if (account == null) emptyList() else rows.filter { it.belongsTo(account, legacy) }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _connect = MutableStateFlow(ConnectUi())
     val connect: StateFlow<ConnectUi> = _connect.asStateFlow()
@@ -96,20 +103,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val name = Build.MODEL?.trim()?.take(40)?.ifBlank { null }
             when (val result = AdhxApi(server, null).pair(code, name)) {
                 is ApiResult.Ok -> {
-                    val previous = store.lastServer()
-                    if (previous != null && previous != server) {
-                        // A different ADHX: the old list and queue belong to the old one.
-                        SaveQueue.cancelAll(getApplication<Application>())
-                        history.clear()
-                    }
-                    store.save(
-                        Connection(
-                            server = server,
-                            key = result.value.key,
-                            username = result.value.username,
-                            phoneName = result.value.name ?: name,
-                        ),
+                    val next = Connection(
+                        server = server,
+                        key = result.value.key,
+                        username = result.value.username,
+                        phoneName = result.value.name ?: name,
                     )
+                    val changedAccount = store.changesAccount(next)
+                    val saved = store.save(next)
+                    if (!saved) {
+                        showError(store.storageError.value ?: "Couldn’t keep your connection. Free some space and try a new code.")
+                        return@launch
+                    }
+                    if (changedAccount) {
+                        SettingsPrefs.get(getApplication<Application>()).forgetAccount()
+                        SaveQueue.cancelAll(getApplication<Application>())
+                        try { history.clear() } catch (_: HistoryWriteException) {
+                            showError("Connected, but couldn’t clear the old history. Free some space and reopen ADHX.")
+                        }
+                    }
                     _reach.value = Reach.Connected
                     _connect.value = ConnectUi()
                 }
@@ -128,14 +140,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun checkMe() {
         val connection = store.current() ?: return
         viewModelScope.launch {
-            when (val result = AdhxApi(connection).me()) {
+            val result = AdhxApi(connection).me()
+            // Every completion (including revoked/offline) belongs to its requesting origin/key.
+            if (!connection.sameCredential(store.current())) return@launch
+            when (result) {
                 is ApiResult.Ok -> {
                     _reach.value = Reach.Connected
-                    store.updateIdentity(result.value.username, result.value.name)
+                    store.updateIdentity(connection, result.value.username, result.value.name)
                 }
                 is ApiResult.Failed -> {
                     if (result.status == 401 || result.code == "bad_key") {
-                        if (store.current()?.key == connection.key) store.clear(removedByServer = true)
+                        store.clear(removedByServer = true, expected = connection)
                     } else {
                         _reach.value = Reach.Unreachable
                     }
@@ -212,10 +227,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun sendWaitingNow(): Int = SaveQueue.sendWaitingNow(getApplication<Application>())
 
     /** Forget the key and the history, and drop links still waiting. */
-    fun disconnect() {
+    fun disconnect(): Boolean {
+        if (!store.clear()) return false
         SaveQueue.cancelAll(getApplication<Application>())
-        history.clear()
-        store.clear()
+        try { history.clear() } catch (_: HistoryWriteException) {
+            showError("Disconnected, but couldn’t clear the old history. Free some space and reopen ADHX.")
+        }
         _reach.value = Reach.Checking
+        return true
     }
 }

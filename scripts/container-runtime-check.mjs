@@ -44,6 +44,11 @@ async function seed() {
   const transformerRequire = createRequire(import.meta.resolve('@huggingface/transformers'))
   const ort = transformerRequire('onnxruntime-node')
   assert.equal(typeof ort.InferenceSession.create, 'function')
+  console.log(
+    execFileSync(await ffmpegPath(), ['-version'], { encoding: 'utf8', timeout: 10_000 }).split(
+      '\n',
+    )[0],
+  )
   integrity()
   await mkdir(root, { recursive: true })
   const vp9 = path.join(root, 'source.webm')

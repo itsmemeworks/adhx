@@ -62,7 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.adhx.share.library.BarButton
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.DoingItem

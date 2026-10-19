@@ -81,7 +81,7 @@ class DoingViewModel(app: Application) : AndroidViewModel(app) {
                 is ApiResult.Ok -> _ui.update { it.copy(view = result.value, error = null) }
                 is ApiResult.Failed -> when {
                     result.status == 401 || result.code == "bad_key" -> {
-                        if (store.current()?.key == connection.key) store.clear(removedByServer = true)
+                        store.clear(removedByServer = true, expected = connection)
                     }
                     result.status == 404 -> _ui.update { it.copy(unavailable = true) }
                     else -> _ui.update { it.copy(error = result.message ?: SettingsCopy.DOING_CANT_LOAD) }

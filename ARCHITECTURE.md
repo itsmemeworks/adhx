@@ -374,7 +374,8 @@ meaning. It runs EmbeddingGemma 2 on the server (text q4 + vision q8; its
 audio encoder is not loaded) through `@huggingface/transformers` on
 `onnxruntime-node`. What's said in a video (Whisper base) and text on its
 pictures and frames (Florence-2 base) are read into words on the server too,
-and join the post's words.
+and join the post's words. The following diagram describes local processing;
+remote Mac processing uses the length-aware segment plans described below.
 
 ```mermaid
 flowchart LR
@@ -425,7 +426,8 @@ flowchart LR
   `SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off` stop new work.
 - **Media.** Pictures come from the app's own proxies over loopback or from
   allowlisted X CDN hosts; anything else is skipped. Video frames are
-  sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.
+  sampled by a maintained system FFmpeg reading the Range-capable video proxy.
+  `FFMPEG_PATH` selects an operator-managed binary; Docker uses Debian FFmpeg.
 - **Status.** `/api/understanding/status` reports words / photos / videos
   progress for the signed-in user. "Photos" includes video posters, so every
   visual save shows progress after its quick picture pass. The item being worked on is only shown when

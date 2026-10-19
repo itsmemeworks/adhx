@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Shared Node + pnpm toolchain. Keep this version aligned with packageManager.
-FROM node:24-slim AS base
+FROM node:24-trixie-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
@@ -66,6 +66,7 @@ RUN apt-get update && apt-get install -y \
     sqlite3 \
     python3 \
     python3-venv \
+    ffmpeg \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 

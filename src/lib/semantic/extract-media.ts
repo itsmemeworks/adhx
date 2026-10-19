@@ -15,7 +15,7 @@ import type { RunExtract } from './extractor'
 
 /**
  * Getting media ready for the extract process, and turning its raw output
- * into words worth keeping. ffmpeg (the bundled `ffmpeg-static`) runs here,
+ * into words worth keeping. the configured system FFmpeg runs here,
  * asynchronously; only the model runs in the extract process. No database
  * access: the native Mac worker uses this too.
  */

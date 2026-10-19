@@ -50,7 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.adhx.share.R
 import com.adhx.share.feed.Privacy
 import com.adhx.share.links.Networks

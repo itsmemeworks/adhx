@@ -52,7 +52,6 @@ const nextConfig = {
     '@huggingface/transformers',
     'onnxruntime-node',
     'sharp',
-    'ffmpeg-static',
   ],
 
   // Image optimization for Twitter media

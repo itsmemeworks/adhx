@@ -290,8 +290,12 @@ export async function sampleNativeFrames(
   try {
     for (const [frame, timestamp] of times.entries()) {
       const output = path.join(dir, `${frame}.jpg`)
-      const extract = (hardware: boolean, lastFrame = false) =>
-        new Promise<void>((resolve, reject) => {
+      const extract = async (hardware: boolean, lastFrame = false) => {
+        signal.throwIfAborted()
+        // An unsuccessful decoder can leave an incomplete JPEG. Never let the
+        // next attempt mistake that previous output for a successfully read frame.
+        await rm(output, { force: true })
+        return new Promise<void>((resolve, reject) => {
           execFile(
             binary,
             [
@@ -306,6 +310,8 @@ export async function sampleNativeFrames(
               ...(hardware ? ['-hwaccel', 'videotoolbox'] : []),
               '-threads',
               '1',
+              '-filter_threads',
+              '1',
               '-i',
               file,
               '-map',
@@ -315,6 +321,8 @@ export async function sampleNativeFrames(
               ...(lastFrame ? ['-fps_mode', 'passthrough', '-update', '1'] : ['-frames:v', '1']),
               '-vf',
               `scale=${VIDEO_FRAME_WIDTH}:-2`,
+              '-threads:v',
+              '1',
               '-q:v',
               '4',
               output,
@@ -326,23 +334,34 @@ export async function sampleNativeFrames(
             },
           )
         })
+      }
+      let accurate = false
       try {
         await extract(true)
+        accurate = true
       } catch {
         signal.throwIfAborted()
-        await extract(false)
+        try {
+          await extract(false)
+          accurate = true
+        } catch {
+          signal.throwIfAborted()
+        }
       }
-      const hasFrame = await stat(output)
-        .then((info) => info.size > 0)
-        .catch((error) => {
-          if (error.code === 'ENOENT') return false
-          throw error
-        })
+      const hasFrame =
+        accurate &&
+        (await stat(output)
+          .then((info) => info.size > 0)
+          .catch((error) => {
+            if (error.code === 'ENOENT') return false
+            throw error
+          }))
       if (!hasFrame) {
         // An accurate seek can discard the only frame of a short clip or the
-        // last displayed frame of a low-FPS video, then exit successfully with
-        // no output. Decode the final GOP without discarding earlier timestamps
-        // and overwrite one JPEG until its last frame, keeping memory bounded.
+        // last displayed frame of a low-FPS video. FFmpeg versions either exit
+        // successfully without output or fail opening the empty JPEG encoder.
+        // Decode the final GOP without discarding earlier timestamps and
+        // overwrite one JPEG until its last frame, keeping memory bounded.
         try {
           await extract(true, true)
         } catch {

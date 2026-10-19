@@ -150,6 +150,26 @@ jobs:
             --tag "$IMAGE_TAG" \
             .
 
+      - name: Scan the assembled image for fixable high and critical advisories
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_TAG }}
+          format: json
+          output: trivy-${{ matrix.arch }}.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          timeout: 15m
+      - name: Retain the image vulnerability report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: image-security-${{ matrix.arch }}
+          path: trivy-${{ matrix.arch }}.json
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Check native media, auth, migrations and volume persistence
         run: |
           if [ "$CHECK_MODELS" = 'true' ]; then
@@ -191,8 +211,12 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Reject known production dependency advisories
-        run: pnpm audit --prod --audit-level low
+      - name: Install extension dependency metadata
+        run: pnpm --dir extension install --frozen-lockfile --ignore-scripts
+      - name: Install pinned release-tool metadata
+        run: pnpm --dir .github/release-please install --frozen-lockfile --ignore-scripts
+      - name: Audit production and build dependencies in all lockfiles
+        run: pnpm check:dependencies
 
   # Dedicated formatting gate. Kept as its own job (rather than a step in `test`)
   # so it surfaces as a distinct required status check on PRs.
@@ -248,8 +272,24 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Install maintained media tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Run tests
         run: pnpm test
+
+      - name: Rehearse large queues, interrupted workers and video recovery
+        env:
+          ADHX_LOAD_REPORT_PATH: ${{ runner.temp }}/processing-load-report.json
+        run: pnpm exec vitest run --config scripts/verify-processing-load.config.ts
+      - name: Retain the processing rehearsal report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: processing-load-report
+          path: ${{ runner.temp }}/processing-load-report.json
+          if-no-files-found: ignore
+          retention-days: 14
 
   e2e:
     if: |

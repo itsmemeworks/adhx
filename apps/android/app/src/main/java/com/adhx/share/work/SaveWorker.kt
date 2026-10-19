@@ -30,13 +30,16 @@ class SaveWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val itemId = inputData.getString(SaveQueue.KEY_ITEM)
         val history = HistoryStore.get(applicationContext)
 
-        val connection = ConnectionStore.get(applicationContext).current()
+        val store = ConnectionStore.get(applicationContext)
+        val connection = store.current()
         if (connection == null) {
+            if (store.storageError.value != null) return Result.retry()
             history.update(itemId) { it.copy(state = ShareState.FAILED, error = Copy.NOT_CONNECTED_TITLE) }
             return Result.failure()
         }
 
         var item = history.find(itemId) ?: return Result.success()
+        if (!store.ownsHistory(item, connection)) return Result.failure()
         // Upgrade offline history written by an older app before submitting it with deferPublish.
         if (item.postId == null && item.queueId == null && !item.publishPending) {
             history.update(itemId) { it.copy(publishPending = true,

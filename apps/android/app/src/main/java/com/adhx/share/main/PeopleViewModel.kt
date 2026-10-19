@@ -67,7 +67,7 @@ class PeopleViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             if (result is ApiResult.Failed && (result.status == 401 || result.code == "bad_key")) {
-                if (store.current()?.key == connection.key) store.clear(removedByServer = true)
+                store.clear(removedByServer = true, expected = connection)
             }
         }
     }

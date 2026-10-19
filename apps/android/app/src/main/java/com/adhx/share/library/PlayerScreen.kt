@@ -107,7 +107,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.adhx.share.R
 import com.adhx.share.links.Links
 import com.adhx.share.links.Networks

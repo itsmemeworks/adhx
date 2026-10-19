@@ -68,6 +68,14 @@ deployment credential is used.
   yield, and waiting jobs gain priority rather than being indefinitely
   displaced by new arrivals. Pausing understanding still permits conversion.
 
+## Release checks
+
+Run the [released-database upgrade and restore rehearsal](upgrade-rehearsal.md)
+the [processing load and recovery harness](processing-load-recovery.md),
+and the [dependency/media-tool checks](dependency-maintenance.md) alongside
+these tests. The [physical phone acceptance worksheet](phone-device-acceptance.md)
+provides repeatable device steps and explicitly records what remains unrun.
+
 ## Before distributing phone builds
 
 Use at least two test accounts. Keep the test server separate from an existing

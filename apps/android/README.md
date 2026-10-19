@@ -15,7 +15,7 @@ The API, pairing flow and copy are in [`docs/specs/phone-app.md`](../../docs/spe
 
 ## Build it
 
-You need JDK 17 or newer and the Android SDK (platform 35). The easiest way to
+You need JDK 17 or newer and the Android SDK (platform 37, SDK Manager package `platforms;android-37.0`). The easiest way to
 get both is Android Studio.
 
 **Android Studio:** File → Open → pick `apps/android`. Let it sync, then press
@@ -29,7 +29,7 @@ cd apps/android
 ./gradlew assembleRelease                # app/build/outputs/apk/release/
 ```
 
-The Gradle wrapper (8.11.1) is committed, so no separate Gradle install is
+The Gradle wrapper (9.6.0) is committed, so no separate Gradle install is
 needed: `./gradlew` downloads it the first time.
 
 Tell Gradle where the SDK is, either with `ANDROID_HOME` or a
@@ -99,9 +99,20 @@ The signed APK is `app/build/outputs/apk/release/app-release.apk`.
 
 The app calls `POST /api/app/pair` with the code and the phone's model name,
 and gets back a **phone key**. The key and the address are kept in
-EncryptedSharedPreferences (the encryption key lives in the Android
-Keystore). The key can save links, read how saving is going, and list, search
-and play your own saves; it can't read anyone else's or change your account.
+an atomic AES-256-GCM encrypted file in the app’s private `noBackupFilesDir`;
+the non-exportable key lives in Android Keystore. Existing installations read
+the old EncryptedSharedPreferences once and remove it only after the new file
+has been synced and decrypted successfully. A missing key, unreadable record or
+full disk reports a secure-storage error and preserves the existing files.
+Pairing and disconnect only report success after their new record is durable;
+a disconnect writes a tombstone so an old migration copy cannot reconnect it.
+A durable account-scope flag also hides old history and prevents its delivery
+if clearing local rows fails while switching accounts, including after restart.
+The phone’s private-default preference carries the same server/account ownership;
+a kill before its old value is cleared cannot apply that value to the next account.
+No phone credential is included in backup/device transfer. The key gives the app
+access to its account’s permitted saves, friends feed, search, live rooms and
+account-scoped actions. Server-side role and privacy checks apply to each request.
 
 Plain `http://` addresses are allowed, for an ADHX on your home network. Use
 `https://` for anything on the internet.
@@ -261,13 +272,48 @@ scrolling page. A video that can't play says why, in the server's words.
 yours) by what you describe, not only by the exact words: type, and after a moment a two-column grid of posters
 shows how close each one is. Tap one to play the results from there.
 
+## Dependency and storage checks
+
+Android uses Coil 3 with its explicit OkHttp network component and cache-control
+strategy. The phone key goes only to the paired scheme, host and port; redirects
+to another origin lose it. Both image caches have a credential-derived namespace
+so pairing to another account cannot reuse the previous account’s pictures.
+The namespace is a digest, never the phone key. The deprecated AndroidX
+`security-crypto` package remains only for one-time reads of old pairings; new
+credentials use Android Keystore directly.
+
+Run `./gradlew --no-daemon --max-workers=2 assembleDebug testDebugUnitTest exportRuntimeDependencies` to build, test and write the resolved runtime Maven
+graph to `app/build/reports/runtime-dependencies.json`. JVM tests cover migration,
+failed writes/readback, missing/wrong keys, tampering, disconnect tombstones,
+origin-restricted authentication, cross-origin redirects and cache separation.
+They exercise the production migration/encryption logic with an in-memory file
+and JVM AES implementation. Android Keystore/AtomicFile behaviour still requires
+the physical-device checks below.
+
 ## Before distributing a phone build
 
 A debug build or emulator run does not establish signed physical-device behaviour.
 On a physical phone, verify pairing/revocation at the final HTTPS origin, sharing
 from another app, offline queuing/retries, seek playback, picture-in-picture,
 saving media to the gallery and search pagination. Keep the release signing key
-private and reuse it for updates. No signed APK or store release is published by
+private and reuse it for updates. For the credential migration specifically:
+
+- Use a disposable test account and the same signing key to install the previous
+  paired app, then update in place. Confirm the same account works without pairing
+  again and the old encrypted preferences disappear only after the new record works.
+- Force-stop and restart after pairing, migration and disconnect. Disconnected
+  phones must stay disconnected; a failed write must never claim success.
+- On an emulator or disposable test installation only, fill its private storage,
+  interrupt a write and remove its test Keystore key. The app must show an error,
+  retain its stored files and queued shares, and avoid sending with a guessed key.
+  Recover with available disk space or an explicit fresh pairing code.
+- Pair to another test account on the same origin. Confirm previous private
+  pictures/history are absent, image fetching uses the new key and no credential
+  is forwarded to an external image origin.
+- Verify Android backup/restore and device transfer require fresh pairing; do not
+  copy Keystore-bound credential files between devices.
+
+No signed APK or store release is published by
 merging this server PR.
 
 ## Layout

@@ -383,7 +383,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     /** A removed key sends the app back to Connect, which says why. */
     private fun signedOut(result: ApiResult.Failed, connection: Connection) {
         if (result.status == 401 || result.code == "bad_key") {
-            if (store.current()?.key == connection.key) store.clear(removedByServer = true)
+            store.clear(removedByServer = true, expected = connection)
         }
     }
 
