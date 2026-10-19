@@ -46,7 +46,8 @@ All of these require sign-in unless marked public.
 - `POST /api/views` with body `{ posts: [{ platform, id }] }` (at most 50) marks posts seen → 204.
 - `GET /api/channels` adds `group: [{ slug, name, size, covers }]` (made from everyone's visible saves) and `friends: [{ username, name, avatarUrl, size, covers }]` (one per member with visible saves).
 - `GET /api/channels/group/[slug]` and `GET /api/channels/friend/[username]` return play queues.
-- Moments: when signed in, `MomentView.savers` (up to 5 faces plus `people`), moment items carry `savers`, and the stream's `watching` event carries `watchers: Saver[]` (members tuned in now, names only to signed-in subscribers).
+- Moments: when signed in, `MomentView.savers` (up to 5 faces plus `people`, saves inside the moment's window, newest first), `MomentView.watchers`, moment items carry `savers` (on the item, not the post), the detail carries `watchers`, the stream's `watching` event carries `watchers: Saver[]` (members tuned in now, without the receiver and banned accounts, names only to signed-in subscribers) and `save` carries `saver` (who just saved it). Moments name visible saves only: a private save is never counted or named there, not even to its owner. Names are computed per request from the moment's post keys (`momentPostKeys` + `saversFor`); the engine and anything it broadcasts stay anonymous. Signed out, every moments response keeps its old shape (no `savers` or `watchers` keys).
+- `POST /api/moments/{slug}/react` with body `{ emoji, platform, id }` or `{ text, platform, id }` (exactly one) → `{ id, at }`. `emoji` is one of 😂 🔥 😭 👀 💀 ❤️; `text` has whitespace collapsed, control and direction characters dropped, ends trimmed, and must then be 1–40 characters (an emoji counts as one); it is only ever rendered as text, never HTML. 20 reactions a minute per person, 6 of them words; never stored. It reaches the signed-in subscribers watching that moment (the sender included, with `isYou`) as a `reaction` event `{ slug, id, at, saver, emoji | text, post: { platform, id } }`. Strangers never receive one. Errors: `bad_reaction`, `bad_text`, `bad_post`, `busy` (429), `no_moment` (404).
 - `POST /api/invites` (admin, or any member when `INVITES=members`) → `{ id, url, expiresAt }`. `GET /api/invites` lists unused ones; `DELETE /api/invites/[id]` revokes one.
 - `/invite/[token]` (public page): pick a name, which signs you in, then shows the phone pairing code and QR on the same screen. A used or expired invite says so.
 
@@ -59,7 +60,8 @@ All of these require sign-in unless marked public.
 - `POST /api/app/seen` with body `{ posts: [{ platform, id }] }` → 204.
 - `GET /api/app/search?scope=mine|everyone`.
 - `GET /api/app/channels` → `{ group, friends, mine }`, using the shapes above with covers as absolute-path URLs. `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`.
-- `GET /api/app/live` → the moments snapshot with savers. `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[] }`.
+- `GET /api/app/live` → the moments snapshot with `savers` and `watchers` on each moment, covers as image addresses (a path from the server root, or a full URL for a link's preview picture), the Just saved strip as `PhonePost`s. `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[], watchers }` (404 `moment_gone`).
+- `POST /api/app/live/{slug}/react` (same body and rules as the web) and `GET /api/app/live/{slug}/stream`: SSE for that moment only (`watching`, `save` with `item.post` as a `PhonePost`, `formed`, `reaction`), counting the phone's member as watching by name.
 
 ## Product behaviour
 
@@ -68,7 +70,7 @@ All of these require sign-in unless marked public.
 - **New**: the signed-in home. It plays only what you haven't seen, then ends on a card: "You're all caught up. Go touch grass." with buttons for Channels and Right now. A post counts as seen after 2 s on stage, or when you skip it.
 - **The blend**: the signals are fresh, saved together, close to you, like what you keep, not seen yet, variety (no more than 2 in a row from one friend) and your own (sparingly). Each item carries `why` ("Ana and Ben saved this", "Like the frog video you kept"), shown as the via note.
 - **Channels**: a "From everyone" row (group channels) and a "Your people" row (one per friend) above "Made for you" and "Your channels".
-- **Live with names**: moment cards show faces. Tune in shows "Ana and Ben are watching" with their avatars, live.
+- **Live with names**: moment cards show faces ("Ana, Ben and Jo are saving these") and who's watching ("Ana and Ben are watching", green rings); the button says "Tune in with Ana" when a friend is in. Tuned in: "Ana and Ben are watching with you", the arriving-save toast names the saver ("Jo just saved one · playing next", with the post's picture), and one React button (a smiley in the rail) opens a picker: six emoji (a tap sends and closes) and "Say something to everyone watching" with Send. Reactions rise up the stage for everyone tuned in and fade: the reactor's avatar leads, ringed in their colour, with an emoji as a sticker on its corner or words in a speech bubble in their colour. Reduced motion: they fade in and out in place.
 - **Search everyone's saves**: the search scope switch defaults to Everyone for signed-in members, with names on tiles.
 - **Search what's on screen and said**: speech in videos is transcribed and on-screen text is read on the server, both added to the post's words for search. Copy that promised "no audio is processed" must be updated to say what is processed, and that it all stays on your server.
 

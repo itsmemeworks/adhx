@@ -49,7 +49,7 @@ A channel (a tag) stays private until you explicitly make it **public**, and you
 
 ### Community pulse, Right now and Top channels (public, anonymous)
 
-When someone previews, saves, or sends a post, we may record an `activity` event for anonymous counts (never for a Just for me save). **Right now** (`/now`) groups recent saves from everyone into moments by what they’re about; it counts the people who saved, and their account ids never leave the server. When someone views or saves a public channel, we may record a `collection_events` row for Top channels.
+When someone previews, saves, or sends a post, we may record an `activity` event for anonymous counts (never for a Just for me save). **Right now** (`/now`) groups recent saves from everyone into moments by what they’re about; it counts the people who saved, and their account ids never leave the server. Signed-in members also see who is saving a moment and who is tuned in to it, and can send a reaction (an emoji or a few words) to the others watching; who is watching and reactions live only in the server's memory and are never stored. People who aren't signed in only ever see counts. When someone views or saves a public channel, we may record a `collection_events` row for Top channels.
 
 Those logs may store:
 

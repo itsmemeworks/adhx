@@ -7,6 +7,8 @@ import { keysToHits } from '@/lib/channels/channels'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { publishable } from '@/lib/semantic/search'
 import { visibleSave } from '@/lib/people/savers'
+import type { Saver } from '@/lib/people/types'
+import type { ReactionEmoji } from './reactions'
 import { INDEX_DIMS, nearestPosts, postVector, refreshIndex } from '@/lib/semantic/vector-index'
 import { seedFrom } from '@/lib/channels/cluster'
 import {
@@ -55,6 +57,9 @@ import { nameMoment } from './naming'
  * Anonymous by construction: savers are only counted (their ids never leave
  * this module), posts are anonymised copies, and only posts allowed in
  * Everyone search (no banned savers, not moderated, not deleted) appear.
+ * Names are added per request, for signed-in members only, by `people.ts`
+ * (from the post keys, `momentPostKeys`) — never here, so nothing the engine
+ * shares (snapshots, events) can name anyone.
  */
 
 // ——— Views sent to browsers ———
@@ -70,6 +75,13 @@ export interface MomentView {
   watching: number
   /** Newest few posts (up to 8), for the card mosaic. */
   covers: FeedItem[]
+  /**
+   * Members only (`people.ts`, never the engine): up to 5 people saving these,
+   * newest first; `people` is the full count.
+   */
+  savers?: Saver[]
+  /** Members only: members tuned in now, without the viewer. */
+  watchers?: Saver[]
 }
 
 export interface FormingView {
@@ -104,16 +116,49 @@ export interface MomentsSnapshot {
 
 export interface MomentDetail {
   moment: MomentView
-  items: { post: FeedItem; savedAt: string; people: number }[]
+  /** `savers`: members only (`people.ts`), newest first. */
+  items: { post: FeedItem; savedAt: string; people: number; savers?: Saver[] }[]
   bars: number[]
+  /** Members only: members tuned in now, without the viewer. */
+  watchers?: Saver[]
+}
+
+/**
+ * Who reacted, how, and to which post: exactly one of `emoji` (from
+ * `REACTION_EMOJI`) or `text` (cleaned, ≤40 characters; show it as text,
+ * never HTML). Members only, never stored.
+ */
+export interface ReactionEvent {
+  type: 'reaction'
+  slug: string
+  id: string
+  at: string
+  saver: Saver
+  emoji?: ReactionEmoji
+  text?: string
+  post: { platform: string; id: string }
 }
 
 export type MomentEvent =
   | { type: 'snapshot'; snapshot: MomentsSnapshot }
-  | { type: 'save'; item: StreamItem; moment?: MomentView; forming?: FormingView }
+  | {
+      type: 'save'
+      item: StreamItem
+      moment?: MomentView
+      forming?: FormingView
+      /** Members only: who just saved it. */
+      saver?: Saver
+    }
   | { type: 'formed'; moment: MomentView; formingId: string }
   | { type: 'stats'; stats: { today: number; lastHour: number } }
-  | { type: 'watching'; slug: string; watching: number }
+  | {
+      type: 'watching'
+      slug: string
+      watching: number
+      /** Members only: members tuned in now, without the receiver. */
+      watchers?: Saver[]
+    }
+  | ReactionEvent
 
 // ——— State ———
 
@@ -712,6 +757,28 @@ export async function getMomentDetail(slug: string, limit = 60): Promise<MomentD
       })),
     bars: minuteBars(m.recent, Date.now()),
   }
+}
+
+/**
+ * A moment's post keys, newest first, and the start of its window (ISO), so
+ * `people.ts` can name savers for members. Post keys only: saver ids never
+ * leave the engine. Null when there is no such moment (nothing is computed).
+ */
+export function momentPostKeys(slug: string, limit = 60): { keys: string[]; since: string } | null {
+  const s = state()
+  const m = s.moments.find((x) => x.slug === slug)
+  if (!m) return null
+  return {
+    keys: newestKeys(m.members, limit),
+    since: new Date(Date.now() - s.hours * 3_600_000).toISOString(),
+  }
+}
+
+/** Whether a moment is live now (computing first if needed). */
+export async function hasMoment(slug: string): Promise<boolean> {
+  ensureRunning()
+  await ensureRecomputed()
+  return state().moments.some((x) => x.slug === slug)
 }
 
 /** Posts near a moment that aren't in it yet ("Wander"), best first. */
