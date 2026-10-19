@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Search your saves by meaning: words, pictures and what's in videos. Tapping
-/// a result plays the results from there.
+/// Search by meaning: words, pictures and what's in videos, through everyone's
+/// saves or just yours. Tapping a result plays the results from there.
 struct SearchView: View {
     @ObservedObject var library: LibraryModel
     let server: URL
@@ -52,6 +52,8 @@ struct SearchView: View {
                     .foregroundStyle(Theme.cream)
             }
 
+            ScopeSwitch(scope: $library.scope)
+
             content
         }
         .padding(.horizontal, 16)
@@ -96,7 +98,9 @@ struct SearchView: View {
                 HStack { Spacer(); RingSpinner().frame(width: 30, height: 30); Spacer() }
                     .padding(.top, 40)
             } else {
-                Note(text: "Nothing in your saves matches that yet. Try describing it another way.")
+                Note(text: library.scope == .everyone
+                     ? "Nothing in anyone’s saves matches that yet. Try describing it another way."
+                     : "Nothing in your saves matches that yet. Try describing it another way.")
             }
             Spacer(minLength: 0)
         } else {
@@ -114,7 +118,7 @@ struct SearchView: View {
                                 focused = false
                                 playing = PlayerStart(key: post.key)
                             } label: {
-                                ResultTile(post: post, server: server)
+                                PostTile(post: post, server: server)
                             }
                             .buttonStyle(.plain)
                             .onAppear {
@@ -180,9 +184,55 @@ struct PlayerScreen: View {
     }
 }
 
-private struct ResultTile: View {
+/// Everyone's saves · Mine.
+private struct ScopeSwitch: View {
+    @Binding var scope: SearchScope
+
+    var body: some View {
+        HStack(spacing: 4) {
+            option(.everyone, "Everyone’s saves")
+            option(.mine, "Mine")
+        }
+        .padding(4)
+        .background(Capsule().fill(Theme.surface))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Whose saves")
+    }
+
+    private func option(_ value: SearchScope, _ title: String) -> some View {
+        let on = scope == value
+        return Button { scope = value } label: {
+            Text(title)
+                .font(Theme.sans(14, on ? .heavy : .bold))
+                .foregroundStyle(on ? .black : Theme.cream)
+                .frame(maxWidth: .infinity, minHeight: 40)
+                .background(Capsule().fill(on ? Theme.cream : .clear))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+}
+
+/// A post as a poster in a grid (search, a friend's channel): its network,
+/// how well it matched, who saved it and a lock when it's just for you.
+struct PostTile: View {
     let post: PhonePost
     let server: URL
+    /// In someone's channel: leave them out of the faces ("You and Ben too").
+    var hiddenSaver: String?
+    @ObservedObject private var privacy = PrivacyStore.shared
+
+    private var shownSavers: [Saver] {
+        post.savers.filter { $0.username != hiddenSaver }
+    }
+
+    private var saversLine: String? {
+        let savers = shownSavers
+        guard !savers.isEmpty else { return nil }
+        let who = SaverWords.who(savers)
+        return hiddenSaver == nil ? who : "\(who) too"
+    }
 
     var body: some View {
         // The tile's shape sets its size; the picture only fills it. (A
@@ -207,7 +257,22 @@ private struct ResultTile: View {
             .overlay {
                 LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
             }
+            .overlay(alignment: .topTrailing) {
+                if privacy.isPrivate(post) {
+                    PrivateLock(size: 24).padding(8)
+                }
+            }
             .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let saversLine {
+                        HStack(spacing: 6) {
+                            FaceStack(savers: shownSavers, server: server, size: 18, ring: .black)
+                            Text(saversLine)
+                                .font(Theme.sans(11, .bold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                        }
+                    }
                 HStack(spacing: 6) {
                     NetworkMark(platform: post.platform, size: 12)
                     if let strength = post.match?.strength {
@@ -220,16 +285,25 @@ private struct ResultTile: View {
                         Image(systemName: "play.fill").font(.system(size: 11)).foregroundStyle(.white)
                     }
                 }
+                }
                 .padding(10)
             }
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(Network.name(post.platform)), \(post.author.handle), \(post.text)")
+            .accessibilityLabel(accessibilityText)
             .accessibilityAddTraits(.isButton)
     }
 }
 
-extension ResultTile {
+extension PostTile {
+    fileprivate var accessibilityText: String {
+        var parts = [Network.name(post.platform), post.author.handle]
+        if let saversLine { parts.append(saversLine) }
+        if privacy.isPrivate(post) { parts.append("just for me") }
+        parts.append(post.article?.title ?? post.text)
+        return parts.joined(separator: ", ")
+    }
+
     /// A post with no picture (or one that won't load) shows its words.
     fileprivate var words: some View {
         Text(post.article?.title ?? post.text)

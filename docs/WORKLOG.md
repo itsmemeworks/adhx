@@ -14,7 +14,53 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - **Doing**: `GET /api/activity/processing` / `GET /api/app/doing` (7 steps, statuses, plain reasons, retry info, savers; never another member's private save), retry and keep-the-link-only (`keep_jobs.accepted_at`), Mac helper presence from worker polls. `/doing` polls every 3 s; "N on their way" pill in `NxHeader`.
 - Skipped: non-allowlisted email sign-ins landing in the queue as "asked to join" (it would mean emailing links to any address that asks; refusals stay as before). An X relink still overwrites a custom display name (it no longer overwrites a picture stored here).
 - Verified on a scratch DB with headless Chromium: approve moves the waiting browser on to /invite/done, upload + zoom stores and serves the JPEG (401 to strangers), 375px layouts have no sideways scroll.
+- Merged with the friends-feed branch (blend, Android, Gob-shaped faces): the You picture, the dialog's crop and byline previews, Your people's members and the waiting faces use `GobShape` / `gobMask`; the channels' invite link now points at `/settings#people`.
 - Follow-ups: the phone apps don't call the new routes yet; X sync imports don't follow "Just for me by default"; the doing list caps at 60 rows / 400 candidates.
+
+## 2026-10-19 — Faces are Gob shaped
+
+- Owner request: every person's face is Gob's shape (rounded square, 38% corners, tilted −4°) instead of a circle, on web, iPhone and Android. Photos and initials stay upright inside; rings on stacks follow the shape.
+- One primitive per platform: web `GobShape` / `gobMask` / `gobContent` (`src/components/next/GobShape.tsx`, used by `NxAvatar`, `AuthorAvatar`, the Settings picture and its picker, the X picture); iOS `GobShape: InsettableShape` and Android `GobShape` (tilt baked into the path, in `Shared/People.swift` and `ui/GobShape.kt`).
+- The generated web face is now a full square (the frame clips it). Status and live dots, round buttons, badges and the OG share images stay as they were.
+- Follow-up: an avatar picker or crop preview from another branch should use `GobShape` / `gobMask` too.
+
+## 2026-10-19 — New and the blended feed
+
+- `post_views` (guarded, cleared with the account, pruned after 180 days at migrate; guard triggers now 48). `POST /api/views` / `POST /api/app/seen` (≤50, idempotent, first `seen_at` kept).
+- `src/lib/feed/blend.ts` (pure: signals, `BLEND_WEIGHTS`, variety, why words, cursor) + `blend-db.ts` (candidates via `seenBy` over 14 days, minus moderated/gone; closeness from `post_views` + co-saves; taste from `post_embeddings`; per-user 5-min snapshots by seed). `GET /api/feed/blend`, `GET|PUT /api/feed/weights`, `GET /api/app/feed`.
+- Web: `/play?feed=new|everyone|friends|mine` pages through the blend; why chip, why line in Up next, Why this one sheet with Show more / less; Everyone · Friends only · Mine; seen after 2s or skip (batched); `CaughtUpStage` when New runs out; "Nothing new yet" with Paste. **New** is the first tab and signed-in `/` → `/play?feed=new`.
+- Refined in the spec: New and Friends only leave out posts only you saved; `nothingYet` and `total` on the response.
+- What's in your feed (owner request): `types=video,photo,text,article` on both feeds (sound counts as video; default video + photo; stored as `feed.types`, `GET|PUT /api/feed/types` and `/api/app/feed/types`), `FeedTypesControl` beside the switch, and "4 text posts waiting · Show them" on the caught-up card.
+- Validation: 3,149 tests, typecheck and lint pass; walked New → Why this one → Show more → caught up → Watch it all again, and the kind filter ("6 text posts waiting · Show them"), at desktop and 375px on a scratch DB.
+- Merged with the friends-feed branch (Live with names, channels from everyone, speech/screen search, iOS): one seen list — `people/seen.ts` folded into `feed/views.ts` (`notSeenBy`, `newTo`), so a friend channel's "N new" drops what you watched in New.
+- Follow-ups: the phone apps need to adopt `/api/app/feed`; the caught-up "Tonight on your ADHX" row from the design isn't built; closeness counts seen, not watched to the end.
+
+## 2026-10-19 — Android: the friends feed (New · Channels · Live)
+
+- Home is New · Channels · Live under one light row (Gob for Settings, tabs with a 99+-capped New badge, Search). New plays `/api/app/feed`, marks posts seen after 2 s or a swipe past (`SeenBatcher`, batches of up to 50 to `/api/app/seen`), shows the why chip, Why this one, What's in your feed (videos and photos by default, `types=`, `/api/app/feed/types` with a local fallback) and ends on "You're all caught up. Go touch grass."
+- Channels (From everyone, Your people with new counts, Made for you with My saves) and channel grids; Live moments, Tune in polling `/api/app/live/{slug}` every 5 s with watchers, a React picker (6 emoji or 40 characters) and floating reactions with faces (fade in place with animations off).
+- Saver faces and "Ana and Ben saved this" on the byline and search tiles (tap opens that friend); Just for me on the share card (sent with a queued save, or `/api/app/private`) and in More; lock on private posts; search Everyone's saves · Mine. Shared lately moved into Settings.
+- Decoding is lenient (`net/Lenient.kt`); 404s fall back (no feed → My saves home, no Live → nothing live). 36 JVM tests; `assembleDebug` passes.
+- Emulator run against a scratch mock of the contract: New with faces, why chip and badge; the filter sheet (`types=` sent); Channels; Live and Tune in with the watchers chip, React picker, floating reactions and `react` sent; More's Just for me (`/api/app/private` sent); seen batches sent. `adb input swipe` doesn't page the player on that emulator (the baseline build doesn't either), so the caught-up page wasn't reached there.
+- Follow-ups: check against the real server once feed/channels/live/react/types land (field names for `why`, `hidden`, `reactions` are guesses); physical-device pass; "Add a note" and "send to your people" from the designs need endpoints.
+
+## 2026-10-19 — Channels from everyone: group channels and one per friend
+
+- `group_channels` (server-wide, no `user_id`) + `src/lib/channels/group.ts`: everyone's visible saves clustered and named with Made for you's machinery (shared `meanVectors`/`bestClusters`/`nameClusters` from `auto.ts`). Lazy, single-flight, background recompute (>12h, ±10 visible saves, model change, a counted saver gone); reads re-check each post's visible savers.
+- `src/lib/channels/friends.ts` (one channel per other member, `newCount` via `people/seen.ts`, which tolerates a missing `post_views`), `overview.ts` shared by `GET /api/channels` (+`group`, `friends`, `canInvite`) and `GET /api/app/channels`. New queues: `/api/channels/group/[slug]`, `/api/channels/friend/[username]?new=1`, `/api/app/channels/{group|friend|mine}/{slug}` (phone key or session).
+- Web: From everyone and Your people rows (+ Invite someone), `/channels/friend/[username]`, `/play?group=` / `/play?friend=` with back links and empty states, linked saver faces on tiles, theater "Who saved it" popover.
+- Private wins: public tag collection, clone, theater backfill, curator profile, leaderboard tiles, public tweet `publicTags` and the sitemap skip the owner's private saves.
+- Validation: 3,103 tests (new: 11 channels, 3 private-wins, 9 component), typecheck, lint (existing warnings only); walked the rows, friend page, queues, popover and phone width in a browser on a scratch DB.
+- Follow-ups: friend page filters (Videos/Photos/Music) and "New" tile badges from the design aren't built; group naming needs real embeddings (scratch DB used hand-made rows); `auto_channels` still isn't removed on account delete (pre-existing).
+
+## 2026-10-19 — iPhone app: New, Channels, Live, faces and Just for me
+
+- Home is one row over the player: Gob (Settings, which now holds Shared lately), New · Channels · Live with an unseen badge on New ("99+" cap), Search. New pages `/api/app/feed`, marks posts seen (2 s on screen or swiped past, batched to `/api/app/seen`), shows the why chip and a "Why this one" sheet with Everyone · Friends only · Mine, and ends on "You're all caught up. Go touch grass."
+- Media filter: New plays videos and photos by default (`types=` on the feed, filtered by kind on the phone too); tapping New again or Filter in the Why sheet opens "What's in your feed"; the choice is PUT to `/api/app/feed/types` and kept locally on a 404; the end page offers "4 text posts waiting · Show them".
+- Channels (group carousels, your people with new counts → "Ana's saves", made for you) and Live (moment cards; tuned in polls every 5 s with watchers and "up next" arrivals; a React rail button opens six emoji and a 40-character line, `{emoji}`/`{text}` to `/react`; reactions from the poll float up as ringed faces with an emoji sticker or speech bubble, fade-only under Reduce Motion).
+- Saver faces and lines on the player byline and search tiles (tap → friend channel); Search defaults to Everyone's saves; Just for me in the player's More and on the share card (remembered before the post lands, carried by waiting links).
+- Everything new decodes loosely (`Shared/FriendsAPI.swift`); a 404 falls back to My saves or an "update your ADHX" note.
+- Checked: simulator build, and a run against a sample-data stand-in for the phone API (New, header badge, media filter and its fallbacks, why sheet, modes, seen batches, More toggle, Channels, friend channel, Live, React picker, floating reactions, caught-up, search scopes). Not checked: the share extension card on a device, real feed/channels/live servers (other branches), VoiceOver by ear.
 
 ## 2026-10-19 — Live with names: watch together
 
@@ -53,6 +99,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Email change already worked for email-less accounts; covered by a test. Docs: README invites-first sign-up, CLAUDE.md auth, spec columns (`id`, `revoked_at`).
 - Validation: 3,044 tests, typecheck, production build and lint (79 existing warnings) pass; walked the flow in a browser on a scratch DB (taken name, join, done page, simulated phone pairing, used link, email add, Settings/admin cards, 375px width).
 - Follow-ups: sessions aren't rolling, so an invite account that never adds an email is locked out after 30 days; `post_views` will also bump the guard-trigger count (46 here).
+
+## 2026-10-19 — Move the app's own strings to the new voice
+
+- Phase 1 ("say it out loud"), app half: the tagline is now "Your friends have better taste than the algorithm." in metadata titles, the OG/Twitter cards, the magic-link email, the signed-out home, `/start`, the crawler list, `manifest.json`, `robots.txt`, AGENTS.md and CLAUDE.md. README, `site/` and `brand/BRAND.md` moved in the docs/new-voice PR.
+- Empty My saves is "Nothing kept yet" ("No algorithm is going to fill this for you"); Tune in's end is "You’re all caught up. Go touch grass." Copy describes only what ships: savers are still counted, not named.
+- `public/og-logo.png` (also the source of `/opengraph-image` and `/twitter-image`) is a picture and still shows "save it. lose it. find it." until it is redrawn. Once both PRs land, drop BRAND.md's "app strings still say…" line.
 
 ## 2026-10-19 — Make handed-over sign-in links survive previews
 

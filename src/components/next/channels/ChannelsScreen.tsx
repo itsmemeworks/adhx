@@ -9,6 +9,12 @@ import { autoPlayHref, channelPlayHref, recentPlayHref } from '../theater/queue'
 import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
+import {
+  FromEveryoneRow,
+  YourPeopleRow,
+  type FriendChannelCardData,
+  type GroupChannelCardData,
+} from './PeopleRows'
 
 interface CoverItem {
   post: FeedItem
@@ -36,6 +42,9 @@ interface ChannelsResponse {
   username: string | null
   mine: MyChannel[]
   madeForYou: MadeForYou[]
+  group?: GroupChannelCardData[]
+  friends?: FriendChannelCardData[]
+  canInvite?: boolean
 }
 
 function posts(covers: CoverItem[]): FeedItem[] {
@@ -106,6 +115,16 @@ export function ChannelsScreen() {
           </h1>
           {error && (
             <p className="m-0 text-white/70">Channels didn’t load. Refresh to try again.</p>
+          )}
+
+          {!error && (
+            <>
+              <FromEveryoneRow channels={data ? (data.group ?? []) : null} />
+              <YourPeopleRow
+                friends={data ? (data.friends ?? []) : null}
+                canInvite={!!data?.canInvite}
+              />
+            </>
           )}
 
           <section aria-labelledby="nx-mfy" className="flex flex-col gap-3">

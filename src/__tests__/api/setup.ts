@@ -340,6 +340,14 @@ export const FULL_SCHEMA_SQL = `
     name_hint TEXT
   );
   CREATE INDEX invites_created_by_idx ON invites(created_by);
+  CREATE TABLE post_views (
+    user_id TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    seen_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, platform, post_id)
+  );
+  CREATE INDEX post_views_seen_at_idx ON post_views(seen_at);
   CREATE TABLE keep_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL

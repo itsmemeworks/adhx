@@ -4,7 +4,7 @@ Orientation for AI agents (and humans) starting work in this repo with no prior 
 
 ## What this project is
 
-**ADHX** — _"Save it. Lose it. Find it."_ A self-hosted keeper for social posts from fourteen networks. One Next.js 16 container stores SQLite, retained media and an on-server search model. Native iOS/Android companions share links, play saves and search them. People sign in by email magic link; connecting X for bookmark sync is optional.
+**ADHX** — _"Your friends have better taste than the algorithm."_ A private, self-hosted feed of the best posts from fourteen networks, kept for your friends and family. One Next.js 16 container stores SQLite, retained media and an on-server search model. Native iOS/Android companions share links, play saves and search them. People sign in by email magic link; connecting X for bookmark sync is optional.
 
 Personal save state stays account-scoped. Shared post previews, retained media and anonymous community features are intentionally visible to anyone who can reach the instance. Operators choose their network boundary. `site/` is a separate static product website intended for adhx.com; deployment and domain cutover are separate from editing this repository. Deployment examples must remain vendor-neutral; never commit household settings or credentials.
 

@@ -46,7 +46,9 @@ People who aren't signed in never see names: shared post pages, signed-out Right
 
 Archive is private: it does **not** write a public pulse event.
 
-A channel (a tag) stays private until you explicitly make it **public**, and you can make it private again from its page. Keeping a “Made for you” channel keeps it private.
+Members also see a channel of everything you saved for them (**Your people**, `/channels/friend/{username}`), and your saves are grouped with everyone's into **From everyone** channels (`group_channels`, server-wide, members only). Just for me saves are in neither, and leave them as soon as you switch.
+
+A channel (a tag) stays private until you explicitly make it **public**, and you can make it private again from its page. A public channel never lists a post you saved Just for me, even if you tagged it. Keeping a “Made for you” channel keeps it private.
 
 ### Community pulse, Right now and Top channels (public, anonymous)
 

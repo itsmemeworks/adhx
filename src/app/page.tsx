@@ -6,13 +6,15 @@ import { PublicHome } from '@/components/next/moments/PublicHome'
 import { metrics } from '@/lib/sentry'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { savedToPlay } from '@/lib/next-ui/routes'
+import { feedPlayHref } from '@/components/next/theater/queue'
 
 /**
  * `/` — signed out: what ADHX is, a way in, and Right now live underneath,
  * plus the crawlable static list of what's being saved.
  *
- * Signed in, this is Right now (`/now`), or the theater on a just-added
- * post when there is one (`?added=success|duplicate&id=`).
+ * Signed in, this is New (`/play?feed=new`: what your people saved that
+ * you haven't seen), or the theater on a just-added post when there is one
+ * (`?added=success|duplicate&id=`).
  *
  * force-dynamic: session cookie + runtime SQLite (migrated at container start).
  */
@@ -32,7 +34,7 @@ export default async function HomePage({
   const params = await searchParams
   if (userId) {
     const addedId = params.added ? (params.id ?? params.tweetId) : null
-    redirect(addedId ? savedToPlay(addedId, params.platform) : '/now')
+    redirect(addedId ? savedToPlay(addedId, params.platform) : feedPlayHref('new'))
   }
 
   const seed = await getTheaterFeed()

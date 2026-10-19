@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Copy, Link2, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { GobShape } from '../GobShape'
 import { useInvites, type PendingInvite } from './InviteCard'
 import { PRIMARY, SECONDARY, SettingsCard } from './parts'
 import { agoLabel, expiresLabel } from './when'
@@ -77,22 +78,26 @@ function Face({
   username,
   url,
   size = 34,
+  className,
 }: {
   username: string
   url: string | null
   size?: number
+  /** Rings go on the Gob-shaped frame. */
+  className?: string
 }) {
   const [broken, setBroken] = useState(false)
   const src = (!broken && usableAvatarUrl(url)) || generateAvatarDataUri(username)
   return (
-    <img
-      src={src}
-      alt=""
-      referrerPolicy="no-referrer"
-      onError={() => setBroken(true)}
-      className="shrink-0 rounded-full object-cover"
-      style={{ width: size, height: size }}
-    />
+    <GobShape size={size} className={className}>
+      <img
+        src={src}
+        alt=""
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+        className="block h-full w-full object-cover"
+      />
+    </GobShape>
   )
 }
 
@@ -159,8 +164,13 @@ export function JoinQueue({
               <span className="relative shrink-0">
                 <Face username={r.username} url={null} size={40} />
                 {r.invitedBy && (
-                  <span className="absolute -bottom-1 -right-1.5 block rounded-full shadow-[0_0_0_2px_#1f1c16]">
-                    <Face username={r.invitedBy.username} url={null} size={18} />
+                  <span className="absolute -bottom-1 -right-1.5 block">
+                    <Face
+                      username={r.invitedBy.username}
+                      url={null}
+                      size={18}
+                      className="shadow-[0_0_0_2px_#1f1c16]"
+                    />
                   </span>
                 )}
               </span>

@@ -245,6 +245,107 @@ private func playable(_ platform: String?, _ category: String?) -> Bool {
     return ["tiktok", "youtube", "vimeo", "twitch"].contains(platform ?? "")
 }
 
+/// Who will see this save, and the "Just for me" switch.
+private struct Audience: View {
+    @ObservedObject var flow: ShareFlow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            who
+            JustForMeSwitch(isOn: flow.justForMe, busy: flow.privacyBusy) { flow.setJustForMe($0) }
+            if let error = flow.privacyError {
+                Text(error)
+                    .font(Theme.sans(13))
+                    .foregroundStyle(Theme.warn)
+            }
+        }
+    }
+
+    private var who: some View {
+        HStack(spacing: 12) {
+            if flow.justForMe {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Theme.cream))
+                Text("Only you will see this save. It’s still kept and searchable.")
+            } else {
+                if !flow.people.isEmpty {
+                    FaceStack(savers: flow.people, server: flow.server, size: 30,
+                              ring: Theme.surface, limit: 4)
+                }
+                Text(audienceLine)
+            }
+        }
+        .font(Theme.sans(15, .bold))
+        .lineSpacing(2)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+            shape.fill(.white.opacity(0.06))
+                .overlay {
+                    if flow.justForMe {
+                        shape.strokeBorder(.white.opacity(0.16), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    }
+                }
+        }
+        .accessibilityElement(children: .combine)
+        .animation(.easeInOut(duration: 0.2), value: flow.justForMe)
+    }
+
+    /// "Ana, Ben, Mum and Jo will see it", or "Your people will see it".
+    private var audienceLine: String {
+        let names = flow.people.map(\.displayName)
+        guard !names.isEmpty else { return "Your people will see it" }
+        return SaverWords.names(names, upTo: 4) + " will see it"
+    }
+}
+
+/// "Just for me": a lock, the words and a switch. Used on the share card and
+/// in the player's More sheet.
+struct JustForMeSwitch: View {
+    let isOn: Bool
+    var busy = false
+    let change: (Bool) -> Void
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { isOn }, set: { change($0) })) {
+            HStack(spacing: 12) {
+                ZStack {
+                    if busy {
+                        RingSpinner(size: 18, lineWidth: 2, track: .clear)
+                    } else {
+                        Image(systemName: isOn ? "lock.fill" : "lock.open")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                }
+                .foregroundStyle(isOn ? .black : Theme.muted)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(isOn ? Theme.accent : Theme.raised))
+                .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Just for me")
+                        .font(Theme.sans(16, .bold))
+                        .foregroundStyle(.white)
+                    Text(isOn ? "Your people won’t see this save" : "Keep it private. Still kept, still searchable.")
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.faint)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .tint(Theme.accent)
+        .disabled(busy)
+        .frame(minHeight: 48)
+        .accessibilityHint("Only you will see this save. It’s still kept and searchable.")
+    }
+}
+
 // MARK: - States
 
 private struct SavingContent: View {
@@ -278,6 +379,8 @@ private struct SavingContent: View {
                 }
                 .padding(.vertical, 2)
             }
+
+            Audience(flow: flow)
 
             Text("You can close this. Your ADHX carries on, and the post shows up in My saves once it’s ready.")
                 .font(Theme.sans(13))
@@ -335,11 +438,13 @@ private struct SavedContent: View {
                                 .font(.system(size: 14, weight: .heavy))
                                 .foregroundStyle(.black)
                         )
-                    Text("Saved to your ADHX")
+                    Text(flow.justForMe ? "Saved, just for you" : "Saved for your people")
                         .font(Theme.sans(17, .heavy))
                 }
                 KeepProgress(keep: flow.keep)
             }
+
+            Audience(flow: flow)
 
             ButtonsRow(flow: flow)
         }
@@ -425,6 +530,8 @@ private struct AlreadySavedContent: View {
                     }
                 }
             }
+
+            Audience(flow: flow)
 
             ButtonsRow(flow: flow)
         }

@@ -6,6 +6,7 @@ import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-a
 import { UsernameChooser } from '@/components/auth/UsernameChooser'
 import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
+import { GobShape } from '../GobShape'
 import { AvatarDialog } from './AvatarDialog'
 import { INPUT, PRIMARY, SECONDARY, SettingsCard, Switch } from './parts'
 
@@ -61,13 +62,15 @@ function PictureRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
   return (
     <Row>
       <div className="flex items-center gap-4">
-        <img
-          src={src}
-          alt="Your picture"
-          referrerPolicy="no-referrer"
-          onError={() => setBroken(true)}
-          className="h-24 w-24 shrink-0 rounded-full object-cover shadow-[0_0_0_3px_#1a1814,0_0_0_5px_rgba(255,255,255,0.12)]"
-        />
+        <GobShape size={96} className="shadow-[0_0_0_3px_#1a1814,0_0_0_5px_rgba(255,255,255,0.12)]">
+          <img
+            src={src}
+            alt="Your picture"
+            referrerPolicy="no-referrer"
+            onError={() => setBroken(true)}
+            className="h-full w-full object-cover"
+          />
+        </GobShape>
         <span className="flex min-w-0 flex-col items-start gap-2">
           <button type="button" onClick={() => setOpen(true)} className={SECONDARY}>
             <ImageIcon aria-hidden className="h-4 w-4" />

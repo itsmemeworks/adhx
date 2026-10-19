@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { appError, withPhoneKey } from '@/lib/api/phone-auth'
 import { LIVE_LIMIT, phoneMomentDetail } from '@/lib/app/live'
 import { getMomentDetail } from '@/lib/moments/engine'
-import { withDetailPeople } from '@/lib/moments/people'
+import { reactionForViewer, withDetailPeople } from '@/lib/moments/people'
+import { recentReactions } from '@/lib/moments/presence'
 import { SLUG } from '@/lib/moments/react'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -10,9 +11,11 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/app/live/{slug} — one moment for Tune in on the phone:
- * `{ moment, items, watchers }`. `items` are `PhonePost`s newest first (each
- * names its `savers`; `savedAt` is when it was last saved), `watchers` the
- * members tuned in now (not you). 404 `moment_gone` when it has passed.
+ * `{ moment, items, watchers, reactions }`. `items` are `PhonePost`s newest
+ * first (each names its `savers`; `savedAt` is when it was last saved),
+ * `watchers` the members tuned in now (not you), `reactions` the last few
+ * seconds of reactions (`{id, at, saver, emoji | text, post}`) for a phone
+ * that polls. 404 `moment_gone` when it has passed.
  */
 export async function GET(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params
@@ -25,8 +28,13 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
     }
     const detail = SLUG.test(slug) ? await getMomentDetail(slug, 60) : null
     if (!detail) return appError(404, 'moment_gone', 'This moment has passed.')
-    return NextResponse.json(phoneMomentDetail(withDetailPeople(detail, userId)), {
-      headers: { 'Cache-Control': 'no-store' },
-    })
+    const reactions = recentReactions(slug)
+      .map((signal) => reactionForViewer(signal, userId))
+      .filter((r) => r !== null)
+      .map(({ type: _type, ...reaction }) => reaction)
+    return NextResponse.json(
+      { ...phoneMomentDetail(withDetailPeople(detail, userId)), reactions },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
   })(request)
 }

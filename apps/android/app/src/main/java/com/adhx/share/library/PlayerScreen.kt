@@ -46,6 +46,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -111,10 +112,15 @@ import com.adhx.share.R
 import com.adhx.share.links.Links
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi
+import com.adhx.share.feed.Privacy
 import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
+import com.adhx.share.net.Saver
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Faces
+import com.adhx.share.ui.PrivateLock
+import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
@@ -156,7 +162,13 @@ private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f)
  * every page and plays the page the pager settled on. Videos start muted; with
  * Repeat off a video that ends moves on to the next save, with Repeat on it
  * loops. Hide clears everything but a thin progress line until the next tap.
- * [posts] must not be empty.
+ * [posts] must not be empty unless there is an [end] page.
+ *
+ * The friends feed adds to it: [onSaver] makes the faces on the byline open
+ * that person's channel; [aboveCaption] and [belowCaption] put something
+ * over the post (the why chip, the live reactions); [end] is one last page
+ * after the posts (You're all caught up). [onReact] adds React at the top
+ * of the button column (Live); [reacting] lights it while its picker is open.
  */
 @Composable
 fun PlayerScreen(
@@ -167,11 +179,21 @@ fun PlayerScreen(
     topBar: @Composable BoxScope.() -> Unit,
     newOnTop: Int = 0,
     onTop: () -> Unit = {},
+    onSaver: ((Saver) -> Unit)? = null,
+    aboveCaption: (@Composable (PhonePost) -> Unit)? = null,
+    belowCaption: (@Composable (PhonePost) -> Unit)? = null,
+    end: (@Composable () -> Unit)? = null,
+    onReact: ((PhonePost) -> Unit)? = null,
+    reacting: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val pager = rememberPagerState(initialPage = startIndex.coerceIn(0, (posts.size - 1).coerceAtLeast(0))) { posts.size }
+    val pageCount = posts.size + if (end != null) 1 else 0
+    val pager = rememberPagerState(initialPage = startIndex.coerceIn(0, (pageCount - 1).coerceAtLeast(0))) { posts.size + if (end != null) 1 else 0 }
+    // With animations off (Remove animations), pages jump instead of sliding.
+    val still = rememberReducedMotion()
+    suspend fun goTo(page: Int) = if (still) pager.scrollToPage(page) else pager.animateScrollToPage(page)
     var muted by rememberSaveable { mutableStateOf(true) }
     var repeat by rememberSaveable { mutableStateOf(false) }
     var hidden by rememberSaveable { mutableStateOf(false) }
@@ -218,6 +240,8 @@ fun PlayerScreen(
 
     LaunchedEffect(settled) {
         scrub = null
+        // The end page has buttons of its own: never leave it hidden.
+        if (end != null && settled == posts.size) hidden = false
         onPage(settled)
         if (settled == 0) onTop()
     }
@@ -233,7 +257,7 @@ fun PlayerScreen(
         if (firstKey == before || newOnTop != 0) return@LaunchedEffect
         val was = posts.indexOfFirst { it.key == before }
         if (was > 0) pager.scrollToPage(was)
-        pager.animateScrollToPage(0)
+        goTo(0)
     }
 
     LaunchedEffect(player, muted) {
@@ -298,7 +322,10 @@ fun PlayerScreen(
     // With Repeat off, a video that ends moves on to the next save.
     var ended by remember { mutableIntStateOf(0) }
     LaunchedEffect(ended) {
-        if (ended > 0 && !repeat) step(1)?.let { pager.animateScrollToPage(it) }
+        if (ended > 0 && !repeat) {
+            // The last video ends onto the end page, when there is one.
+            (step(1) ?: settled.plus(1).takeIf { end != null && !inPip && it == posts.size })?.let { goTo(it) }
+        }
     }
 
     // A video on screen can go in a small window.
@@ -362,6 +389,10 @@ fun PlayerScreen(
             key = { posts.getOrNull(it)?.key ?: it },
             modifier = Modifier.fillMaxSize(),
         ) { page ->
+            if (page == posts.size && end != null) {
+                Box(Modifier.fillMaxSize()) { end() }
+                return@VerticalPager
+            }
             val post = posts.getOrNull(page) ?: return@VerticalPager
             PostPage(
                 post = post,
@@ -387,6 +418,11 @@ fun PlayerScreen(
                 },
                 onRead = { reading = post },
                 onMore = { more = post },
+                onSaver = onSaver,
+                aboveCaption = aboveCaption,
+                belowCaption = belowCaption,
+                onReact = onReact?.let { react -> { react(post) } },
+                reacting = reacting,
                 onPip = if (pip?.supported == true && post.kind == PostKind.VIDEO) {
                     { pip.enter() }
                 } else {
@@ -428,7 +464,7 @@ fun PlayerScreen(
         if (newOnTop > 0 && !hidden && !inPip && scrub == null) {
             NewSavesPill(
                 count = newOnTop,
-                onClick = { scope.launch { pager.animateScrollToPage(0) } },
+                onClick = { scope.launch { goTo(0) } },
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
@@ -518,6 +554,11 @@ private fun PostPage(
     onTap: () -> Unit,
     onRead: () -> Unit,
     onMore: () -> Unit,
+    onSaver: ((Saver) -> Unit)?,
+    aboveCaption: (@Composable (PhonePost) -> Unit)?,
+    belowCaption: (@Composable (PhonePost) -> Unit)?,
+    onReact: (() -> Unit)?,
+    reacting: Boolean,
     onPip: (() -> Unit)?,
     onToggleMute: () -> Unit,
     onToggleRepeat: () -> Unit,
@@ -590,7 +631,14 @@ private fun PostPage(
                     .padding(bottom = lift),
             ) {
                 if (photos.size > 1) Dots(count = photos.size, current = album.currentPage)
-                CaptionText(post, Modifier.padding(start = 16.dp, end = 88.dp))
+                if (aboveCaption != null) {
+                    Box(Modifier.padding(start = 16.dp, end = 88.dp, bottom = 12.dp)) { aboveCaption(post) }
+                }
+                CaptionText(post, server, onSaver, Modifier.padding(start = 16.dp, end = 88.dp))
+                if (belowCaption != null) {
+                    // Clear of the button column on the right; it scrolls sideways if it's long.
+                    Box(Modifier.padding(top = 12.dp, end = 72.dp)) { belowCaption(post) }
+                }
             }
             ActionColumn(
                 post = post,
@@ -604,6 +652,8 @@ private fun PostPage(
                 onSave = if (canSave) onSave else null,
                 onShare = onShare,
                 onMore = onMore,
+                onReact = onReact,
+                reacting = reacting,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .graphicsLayer { alpha = chrome }
@@ -841,24 +891,65 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
 /** Posts shorter than this (in characters) get the biggest type. */
 private const val SHORT_WORDS = 140
 
-/** Bottom left, over the post: the @handle and the first lines of text (words posts show them in the page). */
+/**
+ * Bottom left, over the post: who of your people saved it (faces and "Ana and
+ * Ben saved this", a lock when it's just for you), the @handle and the first
+ * lines of text (words posts show them in the page).
+ */
 @Composable
-private fun CaptionText(post: PhonePost, modifier: Modifier = Modifier) {
+private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Unit)?, modifier: Modifier = Modifier) {
     val words = post.kind == PostKind.TEXT || post.kind == PostKind.ARTICLE
     val handle = Copy.handle(post.author.handle)
         ?: post.author.name?.takeIf { it.isNotBlank() }
         ?: Networks.name(post.platform)
         ?: ""
+    val justYou = Privacy.isPrivate(post)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            handle,
-            style = OverMedia,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = AdhxColors.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        val line = Copy.saversLine(post.savers)
+        if (line != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Faces(
+                    savers = post.savers,
+                    server = server,
+                    size = 30.dp,
+                    description = line,
+                    onTap = onSaver,
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    line,
+                    style = OverMedia,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AdhxColors.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt)?.let {
+                    Text(" · $it", style = OverMedia, fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1)
+                }
+                if (justYou) {
+                    Spacer(Modifier.width(8.dp))
+                    PrivateLock(size = 15.dp)
+                }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (justYou && line == null) {
+                PrivateLock(size = 14.dp)
+                Spacer(Modifier.width(6.dp))
+            }
+            Text(
+                handle,
+                style = OverMedia,
+                fontSize = if (line != null) 14.sp else 15.sp,
+                fontWeight = if (line != null) FontWeight.SemiBold else FontWeight.ExtraBold,
+                color = if (line != null) AdhxColors.Muted else AdhxColors.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         if (!words && post.text.isNotBlank()) {
             Text(
                 post.text,
@@ -891,6 +982,8 @@ private fun ActionColumn(
     onSave: (() -> Unit)?,
     onShare: () -> Unit,
     onMore: () -> Unit,
+    onReact: (() -> Unit)?,
+    reacting: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -900,6 +993,16 @@ private fun ActionColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        if (onReact != null) {
+            ActionButton(
+                label = Copy.REACT,
+                description = if (reacting) Copy.CLOSE_REACT else Copy.REACT,
+                onClick = onReact,
+                ringed = reacting,
+            ) {
+                ActionIcon(rememberVectorPainter(Icons.Filled.Face), tint = if (reacting) AdhxColors.Accent else AdhxColors.White)
+            }
+        }
         if (muted != null) {
             ActionButton(label = "Sound", description = if (muted) "Sound on" else "Sound off", onClick = onToggleMute) {
                 ActionIcon(painterResource(if (muted) R.drawable.ic_sound_off else R.drawable.ic_sound_on))
@@ -969,6 +1072,7 @@ private fun ActionButton(
     description: String,
     onClick: () -> Unit,
     on: Boolean = false,
+    ringed: Boolean = false,
     icon: @Composable () -> Unit,
 ) {
     Column(
@@ -985,7 +1089,13 @@ private fun ActionButton(
                 .clip(CircleShape)
                 .background(if (on) AdhxColors.Accent else Color.Black.copy(alpha = 0.5f))
                 // A faint ring, so the dark circle still reads on a black page (not on yellow Repeat).
-                .then(if (on) Modifier else Modifier.border(1.dp, AdhxColors.White.copy(alpha = 0.18f), CircleShape)),
+                .then(
+                    when {
+                        on -> Modifier
+                        ringed -> Modifier.border(2.dp, AdhxColors.Accent, CircleShape)
+                        else -> Modifier.border(1.dp, AdhxColors.White.copy(alpha = 0.18f), CircleShape)
+                    },
+                ),
             contentAlignment = Alignment.Center,
         ) {
             icon()

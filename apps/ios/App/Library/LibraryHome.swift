@@ -1,67 +1,108 @@
 import SwiftUI
+import UIKit
 
-/// Home: your saves, full screen. Search, Shared lately and Settings sit on top.
+/// The three parts of Home, in the row under the top bar.
+enum HomeTab: String, CaseIterable, Identifiable {
+    case new, channels, live
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .new: return "New"
+        case .channels: return "Channels"
+        case .live: return "Live"
+        }
+    }
+}
+
+/// Home: New (the friends feed, full screen), Channels and Live, under a top
+/// bar with Shared lately, Search and Settings. On a server without the feed
+/// yet, New plays your saves as before.
 struct LibraryHome: View {
     @EnvironmentObject private var model: AppModel
     @StateObject private var library = LibraryModel()
+    @StateObject private var feed = FeedModel()
+    @StateObject private var channels = ChannelsModel()
+    @StateObject private var live = LiveModel()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var tab: HomeTab = .new
     @State private var clean = false
     @State private var scrubbing = false
     @State private var jumpTo: String?
     @State private var onFirst = true
     /// A post opened from "Open in ADHX" on the share card.
     @State private var opened: OpenedPost?
+    /// The post whose "Why this one" sheet is up.
+    @State private var why: PhonePost?
+    /// "What's in your feed" is up.
+    @State private var filtering = false
+    /// The top bar and tabs, measured, so what's under them starts below.
+    @State private var headerHeight: CGFloat = 112
+
+    /// The player's own buttons are hidden (Hide, or dragging through a video).
+    private var playerChromeHidden: Bool { tab == .new && (clean || scrubbing) }
 
     var body: some View {
         ZStack(alignment: .top) {
-            if let server = model.server, !library.saves.isEmpty {
-                PlayerView(posts: library.saves, server: server, clean: $clean, scrubbing: $scrubbing,
-                           jumpTo: $jumpTo) { index in
-                    library.loadMoreIfNeeded(at: index)
-                    onFirst = index == 0
-                    if index < library.newAtTop { library.newAtTop = 0 }
-                }
-            } else {
-                nothingToPlay
-            }
-            if !clean && !scrubbing {
-                topBar
-                if library.newAtTop > 0 && !onFirst {
-                    Button {
-                        jumpTo = library.saves.first?.key
-                        library.newAtTop = 0
-                    } label: {
-                        Label(library.newAtTop == 1 ? "1 new save" : "\(library.newAtTop) new saves",
-                              systemImage: "arrow.up")
-                            .font(Theme.sans(14, .heavy))
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 16)
-                            .frame(minHeight: 40)
-                            .background(Capsule().fill(Theme.accent))
+            Group {
+                switch tab {
+                case .new:
+                    newTab
+                case .channels:
+                    if let server = model.server {
+                        ChannelsView(model: channels, server: server)
+                            .safeAreaPadding(.top, headerHeight)
                     }
-                    .padding(.top, 64)
-                    .transition(.opacity)
-                } else if library.preparing > 0 && !library.saves.isEmpty {
-                    PreparingPill(count: library.preparing)
-                        .padding(.top, 64)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                case .live:
+                    if let server = model.server {
+                        LiveView(model: live, server: server)
+                            .safeAreaPadding(.top, headerHeight)
+                    }
                 }
+            }
+            .transition(.opacity)
+            if !playerChromeHidden {
+                header
+                if tab == .new { newPills.padding(.top, headerHeight + 6) }
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: library.preparing)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: library.preparing)
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task {
             let app = model
-            library.onBadKey = { [weak app] in app?.disconnect() }
-            await library.reload()
+            let badKey: () -> Void = { [weak app] in app?.disconnect() }
+            library.onBadKey = badKey
+            feed.onBadKey = badKey
+            channels.onBadKey = badKey
+            live.onBadKey = badKey
+            async let saves: Void = library.reload()
+            async let blend: Void = feed.reload()
+            async let rows: Void = channels.reload()
+            async let moments: Void = live.reload()
+            _ = await (saves, blend, rows, moments)
+            await feed.loadTypes()
         }
         .onAppear { model.startPolling() }
-        .onDisappear { model.stopPolling() }
+        .onDisappear {
+            model.stopPolling()
+            feed.pause()
+        }
+        .onChange(of: tab) { old, new in
+            if old == .new { feed.pause() }
+            if new == .channels { Task { await channels.reload() } }
+            if new == .live { Task { await live.reload() } }
+            clean = false
+        }
         .onChange(of: scenePhase) { _, phase in
-            // New shares land in your saves; pick them up when you come back.
-            if phase == .active { Task { await library.reload() } }
+            if phase == .active {
+                // New shares land in your saves; pick them up when you come back.
+                Task { await library.reload() }
+                if feed.items.isEmpty || feed.loadError != nil { Task { await feed.reload() } }
+            } else {
+                Task { await feed.flushSeen() }
+            }
         }
         // Saves on their way: look again every 15 s until they've landed.
         .task(id: library.preparing > 0) {
@@ -85,46 +126,202 @@ struct LibraryHome: View {
                 PlayerScreen(posts: [item.post], server: server, start: item.post.key)
             }
         }
+        .sheet(item: $why) { post in
+            if let server = model.server {
+                WhySheet(post: post, server: server, mode: feed.mode, choose: { mode in
+                    Task { await feed.setMode(mode) }
+                }, filter: { filtering = true })
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Theme.surface)
+                .presentationCornerRadius(28)
+            }
+        }
+        .sheet(isPresented: $filtering) {
+            FeedFilterSheet(types: feed.types, mode: feed.mode, newCount: newBadge, hidden: feed.hidden,
+                            setTypes: { types in Task { await feed.setTypes(types) } },
+                            choose: { mode in Task { await feed.setMode(mode) } })
+                .presentationDetents([.height(660), .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Theme.surface)
+                .presentationCornerRadius(28)
+        }
+    }
+
+    // MARK: New
+
+    @ViewBuilder
+    private var newTab: some View {
+        if let server = model.server {
+            if feed.unsupported {
+                savesPlayer(server)
+            } else if !feed.loadedOnce {
+                HStack { Spacer(); RingSpinner(size: 34, lineWidth: 3); Spacer() }
+                    .frame(maxHeight: .infinity)
+            } else if let error = feed.loadError, feed.items.isEmpty {
+                EmptyNote(title: "Can’t load New", message: error) { Task { await feed.reload() } }
+                    .padding(.top, headerHeight)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            } else if feed.items.isEmpty && feed.mode != .new && feed.mode != .everyone {
+                VStack(alignment: .leading, spacing: 0) {
+                    EmptyNote(title: "Nothing here yet",
+                              message: feed.mode == .mine ? "Share something from another app and it lands here."
+                                  : "Your people haven’t saved anything yet. Give them a nudge.")
+                    Button("Back to New") { Task { await feed.setMode(.new) } }
+                        .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false))
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                }
+                .padding(.top, headerHeight)
+                .frame(maxHeight: .infinity, alignment: .top)
+            } else if feed.items.isEmpty {
+                caughtUp(server, topInset: headerHeight + 12)
+            } else {
+                PlayerView(posts: feed.items, server: server, clean: $clean, scrubbing: $scrubbing,
+                           start: feed.currentKey,
+                           extras: PlayerExtras(onWhy: { why = $0 }, toastTop: headerHeight + 44,
+                                                endPage: feed.atEnd ? AnyView(caughtUp(server, topInset: endPageTop)) : nil)) { index in
+                    feed.shown(index)
+                }
+            }
+        }
+    }
+
+    private func caughtUp(_ server: URL, topInset: CGFloat) -> some View {
+        CaughtUpView(people: feed.sessionPeople, watched: feed.items.count, server: server,
+                     browseChannels: { switchTab(.channels) },
+                     seeLive: { switchTab(.live) },
+                     watchAgain: { Task { await feed.setMode(.everyone) } },
+                     topInset: topInset,
+                     hidden: feed.hidden,
+                     showHidden: { Task { await feed.setTypes(feed.types.union(feed.hidden.keys)) } })
+    }
+
+    /// The end page is full screen (under the status bar), so it clears that too.
+    private var endPageTop: CGFloat {
+        let window = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first
+        return headerHeight + (window?.safeAreaInsets.top ?? 59) + 12
+    }
+
+    private func switchTab(_ to: HomeTab) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { tab = to }
+    }
+
+    /// Under the bar on New: saves on their way (and, without the feed, new saves).
+    @ViewBuilder
+    private var newPills: some View {
+        if feed.unsupported {
+            if library.newAtTop > 0 && !onFirst {
+                Button {
+                    jumpTo = library.saves.first?.key
+                    library.newAtTop = 0
+                } label: {
+                    Label(library.newAtTop == 1 ? "1 new save" : "\(library.newAtTop) new saves",
+                          systemImage: "arrow.up")
+                        .font(Theme.sans(14, .heavy))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 40)
+                        .background(Capsule().fill(Theme.accent))
+                }
+                .transition(.opacity)
+            } else if library.preparing > 0 && !library.saves.isEmpty {
+                PreparingPill(count: library.preparing)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        } else if library.preparing > 0 && !feed.items.isEmpty {
+            PreparingPill(count: library.preparing)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
+    /// The New tab's badge: unseen posts left ("99+" past that; "20+" while
+    /// more pages are still to come). Nil outside New's own mode.
+    private var newBadge: String? {
+        guard !feed.unsupported, feed.mode == .new, feed.currentIndex < feed.items.count else { return nil }
+        let left = feed.items.count - feed.currentIndex
+        guard left > 0 else { return nil }
+        if left > 99 { return "99+" }
+        return feed.atEnd ? "\(left)" : "\(left)+"
+    }
+
+    /// The old Home: your saves, for a server without the feed.
+    @ViewBuilder
+    private func savesPlayer(_ server: URL) -> some View {
+        if !library.saves.isEmpty {
+            PlayerView(posts: library.saves, server: server, clean: $clean, scrubbing: $scrubbing,
+                       jumpTo: $jumpTo, extras: PlayerExtras(toastTop: headerHeight + 44)) { index in
+                library.loadMoreIfNeeded(at: index)
+                onFirst = index == 0
+                if index < library.newAtTop { library.newAtTop = 0 }
+            }
+        } else {
+            nothingToPlay
+        }
+    }
+
+    // MARK: Top
+
+    /// One row: Gob (Settings), the tabs, Search.
+    private var header: some View {
+        topBar
+        .padding(.top, 6)
+        .background {
+            GeometryReader { box in
+                Color.clear.preference(key: HeaderHeight.self, value: box.size.height)
+            }
+        }
+        .onPreferenceChange(HeaderHeight.self) { height in
+            if abs(height - headerHeight) > 0.5 { headerHeight = height }
+        }
+        .padding(.bottom, tab == .new ? 24 : 10)
+        .background(
+            Group {
+                if tab == .new {
+                    LinearGradient(colors: [.black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
+                } else {
+                    Theme.app
+                }
+            }
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+        )
     }
 
     private var topBar: some View {
         HStack(spacing: 8) {
-            Wordmark(markSize: 28, textSize: 24)
-            Spacer(minLength: 0)
             NavigationLink {
-                SharedLatelyView(library: library)
+                SettingsView(library: library)
             } label: {
-                BarIcon(name: "clock.arrow.circlepath")
+                Gob(size: 30)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-            .accessibilityLabel("Shared lately")
+            .accessibilityLabel("Settings")
+            Spacer(minLength: 0)
+            TabPills(tab: $tab, liveDot: live.anyLive, newBadge: newBadge,
+                     overMedia: tab == .new && !feed.items.isEmpty) { item in
+                // The New tab again: what's in your feed.
+                if item == .new && tab == .new && !feed.unsupported { filtering = true } else { switchTab(item) }
+            }
+                .layoutPriority(1)
+            Spacer(minLength: 0)
             if let server = model.server {
                 NavigationLink {
                     SearchView(library: library, server: server)
                 } label: {
                     BarIcon(name: "magnifyingglass")
                 }
-                .accessibilityLabel("Search your saves")
+                .accessibilityLabel("Search everyone’s saves")
             }
-            NavigationLink {
-                SettingsView()
-            } label: {
-                BarIcon(name: "gearshape")
-            }
-            .accessibilityLabel("Settings")
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 6)
-        .padding(.bottom, 24)
-        .background(
-            LinearGradient(colors: [.black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea(edges: .top)
-        )
+        .padding(.horizontal, 12)
     }
 
     @ViewBuilder
     private var nothingToPlay: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Spacer().frame(height: 70)
+            Spacer().frame(height: headerHeight)
             ConnectionPill(host: Links.displayHost(model.server), state: model.connection)
             Text("My saves")
                 .font(Theme.serif(40))
@@ -169,6 +366,79 @@ private struct BarIcon: View {
             .frame(width: 44, height: 44)
             .background(Circle().fill(.black.opacity(0.45)))
     }
+}
+
+/// New · Channels · Live.
+private struct TabPills: View {
+    @Binding var tab: HomeTab
+    let liveDot: Bool
+    /// Unseen posts left, on New's top-right corner.
+    let newBadge: String?
+    /// Over a video: a dark see-through plate; on a page, the surface.
+    let overMedia: Bool
+    let choose: (HomeTab) -> Void
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(HomeTab.allCases) { item in
+                let on = item == tab
+                Button { choose(item) } label: {
+                    HStack(spacing: 7) {
+                        if item == .live && liveDot {
+                            Circle().fill(Theme.live).frame(width: 7, height: 7)
+                        }
+                        Text(item.title)
+                    }
+                    .font(Theme.sans(15, on ? .heavy : .bold))
+                    .foregroundStyle(on ? .black : Theme.cream)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 40)
+                    .background(Capsule().fill(on ? Theme.cream : .clear))
+                    .contentShape(Capsule())
+                    // Over the corner, so the tab stays sized for its label.
+                    .overlay(alignment: .topTrailing) {
+                        if item == .new, let newBadge {
+                            Text(newBadge)
+                                .font(Theme.sans(11, .heavy))
+                                .monospacedDigit()
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 5)
+                                .frame(minWidth: 20, minHeight: 20)
+                                .background(Capsule().fill(Theme.accent))
+                                .overlay(Capsule().strokeBorder(.black, lineWidth: 2))
+                                .fixedSize()
+                                .alignmentGuide(.top) { $0[.top] + 9 }
+                                .alignmentGuide(.trailing) { $0[.trailing] - 8 }
+                                .allowsHitTesting(false)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(label(for: item))
+                .accessibilityHint(item == .new && on ? "Choose what’s in your feed" : "")
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(Capsule().fill(overMedia ? AnyShapeStyle(.black.opacity(0.5)) : AnyShapeStyle(Theme.surface)))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Sections")
+    }
+
+    private func label(for item: HomeTab) -> String {
+        switch item {
+        case .new: return newBadge.map { "New, \($0) left" } ?? "New"
+        case .live: return liveDot ? "Live, something’s on now" : "Live"
+        case .channels: return "Channels"
+        }
+    }
+}
+
+private struct HeaderHeight: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 /// A post to show on its own in the player.

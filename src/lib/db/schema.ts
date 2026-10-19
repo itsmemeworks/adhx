@@ -213,6 +213,25 @@ export const archivedPosts = sqliteTable(
   }),
 )
 
+// Posts a member has seen in the feed (`post_views`): on stage for 2s, or
+// skipped. New (`/api/feed/blend?mode=new`) plays only posts without a row;
+// the blend also reads it for "close to you". PK: (userId, platform, postId).
+// User-linked (account guard; cleared with the account). Rows older than 180
+// days are pruned at migrate.
+export const postViews = sqliteTable(
+  'post_views',
+  {
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    seenAt: text('seen_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.platform, table.postId] }),
+    seenAtIdx: index('post_views_seen_at_idx').on(table.seenAt),
+  }),
+)
+
 // Tag shares - track which tags are shared publicly
 export const tagShares = sqliteTable(
   'tag_shares',
@@ -670,10 +689,30 @@ export const autoChannels = sqliteTable(
   }),
 )
 
+// "From everyone" channels: the whole server's visible saves (never private,
+// quoted or a banned saver's) grouped by meaning and named, like Made for
+// you. Server-wide and derived: no user_id. `savers` is a JSON object of
+// saver user id -> posts in the channel at compute time; reads re-check every
+// post's visible savers, so a deleted or banned account drops out at once.
+export const groupChannels = sqliteTable('group_channels', {
+  slug: text('slug').primaryKey(),
+  name: text('name').notNull(),
+  size: integer('size').notNull(),
+  /** JSON array of `platform:id`, closest to the group's centre first. */
+  postKeys: text('post_keys').notNull(),
+  savers: text('savers').notNull(),
+  position: integer('position').notNull(),
+  /** Visible saves on the server when computed (staleness check). */
+  savesAtCompute: integer('saves_at_compute').notNull(),
+  computedAt: text('computed_at').notNull(),
+  modelVersion: text('model_version').notNull(),
+})
+
 export type PostEmbedding = typeof postEmbeddings.$inferSelect
 export type PostExtractedText = typeof postExtractedText.$inferSelect
 export type UnderstandingJob = typeof understandingQueue.$inferSelect
 export type AutoChannel = typeof autoChannels.$inferSelect
+export type GroupChannel = typeof groupChannels.$inferSelect
 
 // Banned accounts — session + sign-in treated as signed-out. Public
 // profile / playlist pages 404; leaderboards skip the owner. Data is kept
@@ -875,5 +914,6 @@ export type NewUser = typeof users.$inferInsert
 export type UserIdentity = typeof userIdentities.$inferSelect
 export type NewUserIdentity = typeof userIdentities.$inferInsert
 export type Invite = typeof invites.$inferSelect
+export type PostView = typeof postViews.$inferSelect
 export type LoginToken = typeof loginTokens.$inferSelect
 export type NewLoginToken = typeof loginTokens.$inferInsert

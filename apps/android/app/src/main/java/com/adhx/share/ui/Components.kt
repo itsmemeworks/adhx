@@ -1,6 +1,22 @@
 package com.adhx.share.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -133,5 +149,123 @@ fun SkeletonBar(height: Dp, modifier: Modifier = Modifier) {
             .height(height)
             .clip(RoundedCornerShape(height / 2))
             .background(AdhxColors.Placeholder),
+    )
+}
+
+/**
+ * A pill-shaped row of choices (New · Channels · Live, Everyone's saves ·
+ * Mine). The chosen one is cream with black words. [fill] spreads them over
+ * the whole width; otherwise they hug their words. Read out as tabs.
+ */
+@Composable
+fun Segmented(
+    options: List<String>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    fill: Boolean = true,
+    background: Color = AdhxColors.Surface,
+    height: Dp = 44.dp,
+    dotAt: Int? = null,
+) {
+    Row(
+        modifier
+            .clip(RoundedCornerShape(50))
+            .background(background)
+            .padding(4.dp)
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        options.forEachIndexed { i, label ->
+            val on = i == selected
+            Row(
+                (if (fill) Modifier.weight(1f) else Modifier)
+                    .height(height)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (on) AdhxColors.Cream else Color.Transparent)
+                    .selectable(selected = on, role = Role.Tab, onClick = { onSelect(i) })
+                    .padding(horizontal = 18.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (dotAt == i) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(AdhxColors.Live))
+                    Spacer(Modifier.width(7.dp))
+                }
+                Text(
+                    label,
+                    fontSize = 15.sp,
+                    fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold,
+                    color = if (on) AdhxColors.Black else AdhxColors.Cream,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * "Just for me": a lock in a circle (yellow when on), the title and a line,
+ * and a switch. The whole row toggles; [busy] shows while the server is asked.
+ */
+@Composable
+fun JustForMeRow(
+    on: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    busy: Boolean = false,
+    enabled: Boolean = true,
+) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .toggleable(value = on, enabled = enabled, role = Role.Switch, onValueChange = onChange)
+            .semantics(mergeDescendants = true) { stateDescription = if (on) Copy.JUST_FOR_ME_ON else Copy.SHARED_STATE },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(if (on) AdhxColors.Accent else AdhxColors.Raised),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.Lock, contentDescription = null, tint = if (on) AdhxColors.Black else AdhxColors.Muted, modifier = Modifier.size(18.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(Copy.JUST_FOR_ME, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            Text(if (on) Copy.JUST_FOR_ME_ON else Copy.JUST_FOR_ME_OFF, fontSize = 13.sp, color = AdhxColors.Faint)
+        }
+        if (busy) {
+            Spinner(size = 20.dp, stroke = 2.dp)
+        }
+        Switch(
+            checked = on,
+            onCheckedChange = null,
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = AdhxColors.Black,
+                checkedTrackColor = AdhxColors.Accent,
+                checkedBorderColor = AdhxColors.Accent,
+                uncheckedThumbColor = AdhxColors.Cream,
+                uncheckedTrackColor = Color(0xFF4A453E),
+                uncheckedBorderColor = Color(0xFF4A453E),
+            ),
+        )
+    }
+}
+
+/** The small lock on a "Just for me" save. */
+@Composable
+fun PrivateLock(size: Dp = 14.dp, tint: Color = AdhxColors.Cream, modifier: Modifier = Modifier) {
+    Icon(
+        Icons.Filled.Lock,
+        contentDescription = Copy.PRIVATE_LABEL,
+        tint = tint,
+        modifier = modifier.size(size),
     )
 }

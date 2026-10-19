@@ -7,7 +7,9 @@ import {
   AdhxLoader,
   ArticleStage,
   ArticleTile,
+  GobShape,
   NextTile,
+  NxAvatar,
   PasteToast,
   PhotoTile,
   PostStage,
@@ -200,6 +202,48 @@ describe('tiles', () => {
     expect(fallback).not.toBeNull()
     fireEvent.error(fallback!)
     expect(container.querySelector('img[src*="pbs.twimg.com/original"]')).toBeNull()
+  })
+})
+
+describe('faces', () => {
+  it('NxAvatar is Gob shaped: a 38% rounded square tilted −4°, the photo upright inside', () => {
+    const { container } = render(
+      <NxAvatar
+        author={{ avatarUrl: 'https://pbs.twimg.com/ana.jpg', handle: 'ana', name: 'Ana' }}
+        size={40}
+        className="border-2"
+      />,
+    )
+    const frame = container.querySelector('[data-shape="gob"]') as HTMLElement
+    expect(frame.className).toContain('rounded-[38%]')
+    expect(frame.className).toContain('-rotate-[4deg]')
+    expect(frame.className).toContain('overflow-hidden')
+    expect(frame.className).toContain('border-2')
+    expect(frame.className).not.toContain('rounded-full')
+    expect(frame.style.width).toBe('40px')
+    const img = frame.querySelector('img')!
+    expect(img.parentElement!.className).toContain('rotate-[4deg]')
+    expect(img.getAttribute('src')).toBe('https://pbs.twimg.com/ana.jpg')
+  })
+
+  it('falls back to a square generated face, so the frame does the clipping', () => {
+    const { container } = render(
+      <NxAvatar author={{ avatarUrl: null, handle: 'ana', name: 'Ana' }} size={22} />,
+    )
+    const src = decodeURIComponent(container.querySelector('img')!.getAttribute('src')!)
+    expect(src).toContain('<rect width="80" height="80"')
+    expect(src).not.toContain('clipPath')
+  })
+
+  it('GobShape takes its size from the caller', () => {
+    const { container } = render(
+      <GobShape className="h-14 w-14">
+        <span />
+      </GobShape>,
+    )
+    const frame = container.querySelector('[data-shape="gob"]') as HTMLElement
+    expect(frame.className).toContain('h-14')
+    expect(frame.style.width).toBe('')
   })
 })
 

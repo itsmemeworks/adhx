@@ -90,12 +90,12 @@ const hankenGrotesk = localFont({
 
 const siteUrl = PUBLIC_BASE_URL
 const siteDescription =
-  'Keep posts from X, Instagram, TikTok, YouTube, Reddit and more on your own server, then find them by describing what you remember.'
+  'Every app wants your attention. ADHX just wants your friends’ opinions. Keep the best posts from X, Instagram, TikTok, YouTube, Reddit and more on a server you run, and find any of them by describing what you remember.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'ADHX - Save it. Lose it. Find it.',
+    default: 'ADHX - Your friends have better taste than the algorithm.',
     template: '%s | ADHX',
   },
   description: siteDescription,
@@ -136,13 +136,13 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: siteUrl,
     siteName: 'ADHX',
-    title: 'ADHX - Save it. Lose it. Find it.',
+    title: 'ADHX - Your friends have better taste than the algorithm.',
     description: siteDescription,
     // Images auto-generated from opengraph-image.tsx
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ADHX - Save it. Lose it. Find it.',
+    title: 'ADHX - Your friends have better taste than the algorithm.',
     description: siteDescription,
     // Images auto-generated from twitter-image.tsx
     creator: '@adhx_app',

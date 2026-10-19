@@ -5,6 +5,7 @@ import { Camera, Check, ImageUp, Minus, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GOB_COLOURS, gobDataUri, type GobColour } from '@/lib/avatar/gob'
 import { generateAvatarDataUri } from '@/lib/avatar/generated-avatar'
+import { GobShape, gobMask } from '../GobShape'
 import { SaverFaces } from '../SaverFaces'
 import { XLogo } from '../primitives'
 import { PRIMARY, SECONDARY } from './parts'
@@ -338,9 +339,10 @@ export function AvatarDialog({
                   className="absolute inset-0 h-full w-full object-cover"
                 />
               )}
+              {/* The picture shows in Gob's shape everywhere, so the crop window is that shape too. */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 rounded-full"
+                className={cn('pointer-events-none absolute inset-[6px]', gobMask)}
                 style={{ boxShadow: '0 0 0 2px #f4f1ea, 0 0 0 999px rgba(0,0,0,0.6)' }}
               />
             </div>
@@ -446,7 +448,9 @@ export function AvatarDialog({
                   onClick={() => setSource('gob')}
                   className="flex items-center gap-2.5 text-left"
                 >
-                  <img src={gobDataUri(colour)} alt="" className="h-10 w-10 rounded-full" />
+                  <GobShape size={40}>
+                    <img src={gobDataUri(colour)} alt="" className="block h-full w-full" />
+                  </GobShape>
                   <span className="flex min-w-0 flex-col">
                     <span className="text-[15px] font-extrabold">Make me a Gob</span>
                     <span className="text-[13px] text-[#a39b8b]">A face in your colour</span>

@@ -21,6 +21,22 @@ export function pairKey(platform: string, bookmarkId: string): string {
   return `${platform}:${bookmarkId}`
 }
 
+/** The owner's private saves among these tagged posts (never public, never cloned). */
+async function privateTaggedKeys(
+  ownerId: string,
+  rows: { platform: string; bookmarkId: string }[],
+): Promise<Set<string>> {
+  if (rows.length === 0) return new Set()
+  const ids = [...new Set(rows.map((r) => r.bookmarkId))]
+  const found = await db
+    .select({ platform: bookmarks.platform, id: bookmarks.id })
+    .from(bookmarks)
+    .where(
+      and(eq(bookmarks.userId, ownerId), eq(bookmarks.isPrivate, true), inArray(bookmarks.id, ids)),
+    )
+  return new Set(found.map((b) => pairKey(b.platform, b.id)))
+}
+
 export type CloneTagOk = {
   ok: true
   tag: string
@@ -76,8 +92,12 @@ export async function cloneTagToUser(opts: {
     .from(bookmarkTags)
     .where(and(eq(bookmarkTags.userId, sourceUserId), eq(bookmarkTags.tag, tagName)))
 
+  // Private wins: posts the owner kept just for themself are never copied.
+  const privateKeys = await privateTaggedKeys(sourceUserId, sourceTaggedRows)
   const sourceTaggedBookmarks = sourceTaggedRows.filter(
-    (row) => !moderated.has(pairKey(row.platform, row.bookmarkId)),
+    (row) =>
+      !moderated.has(pairKey(row.platform, row.bookmarkId)) &&
+      !privateKeys.has(pairKey(row.platform, row.bookmarkId)),
   )
 
   if (sourceTaggedBookmarks.length === 0) {
@@ -328,7 +348,12 @@ export async function listTaggedBookmarks(ownerId: string, tagName: string) {
     .from(bookmarkTags)
     .where(and(eq(bookmarkTags.userId, ownerId), eq(bookmarkTags.tag, tagName)))
 
-  const tagged = taggedRows.filter((row) => !moderated.has(pairKey(row.platform, row.bookmarkId)))
+  const privateKeys = await privateTaggedKeys(ownerId, taggedRows)
+  const tagged = taggedRows.filter(
+    (row) =>
+      !moderated.has(pairKey(row.platform, row.bookmarkId)) &&
+      !privateKeys.has(pairKey(row.platform, row.bookmarkId)),
+  )
 
   if (tagged.length === 0)
     return { bookmarks: [], media: [] as (typeof bookmarkMedia.$inferSelect)[] }

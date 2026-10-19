@@ -171,6 +171,16 @@ function buildAdhxContext(tweetId: string, bannedUserIds: Set<string>) {
         ),
       )
       .innerJoin(users, eq(tagShares.userId, users.id))
+      // Private wins: a curator's private save never lists their channel here.
+      .innerJoin(
+        bookmarks,
+        and(
+          eq(bookmarks.userId, bookmarkTags.userId),
+          eq(bookmarks.platform, bookmarkTags.platform),
+          eq(bookmarks.id, bookmarkTags.bookmarkId),
+          eq(bookmarks.isPrivate, false),
+        ),
+      )
       .where(and(eq(bookmarkTags.bookmarkId, tweetId), eq(bookmarkTags.platform, 'twitter')))
       .all()
 

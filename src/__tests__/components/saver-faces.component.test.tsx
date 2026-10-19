@@ -73,6 +73,18 @@ describe('SaverFaces', () => {
     expect(screen.getByText('Ana and 3 others').tagName).toBe('SPAN')
   })
 
+  it('draws each face in Gob’s shape with the ring on the shape, not a circle', () => {
+    const { container } = render(<SaverFaces savers={[saver('ana'), saver('ben')]} tone="cream" />)
+    const frames = container.querySelectorAll('[data-shape="gob"]')
+    expect(frames).toHaveLength(2)
+    for (const frame of frames) {
+      expect(frame.className).toContain('rounded-[38%]')
+      expect(frame.className).toContain('border-2')
+      expect(frame.className).toContain('border-nx-cream')
+    }
+    expect(container.querySelector('.rounded-full')).toBeNull()
+  })
+
   it('renders nothing without savers', () => {
     const { container } = render(<SaverFaces savers={[]} />)
     expect(container).toBeEmptyDOMElement()

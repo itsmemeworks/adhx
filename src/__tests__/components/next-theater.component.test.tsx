@@ -122,6 +122,8 @@ describe('theater queue', () => {
       group: 'video',
       channel: null,
       auto: null,
+      groupChannel: null,
+      friend: null,
       recent: false,
       moment: null,
       start: 'twitter:1',
@@ -416,7 +418,7 @@ describe('TheaterV2', () => {
       async () => new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
     )
     render(<TheaterV2 source={{ ...source, recent: true }} />)
-    expect(await screen.findByText('Nothing saved yet')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing kept yet')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Bring in X bookmarks' })).toHaveAttribute(
       'href',
       '/settings?sync=1',

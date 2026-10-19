@@ -6,6 +6,7 @@ import { keysToHits } from '@/lib/channels/channels'
 import { loadSearchItems, type SearchItem } from '@/lib/semantic/items'
 import type { FeedItemResponse } from '@/lib/feed/build-item'
 import type { Saver } from '@/lib/people/types'
+import type { WhyReason } from '@/lib/feed/blend'
 import { keepEnabled } from '@/lib/keep/config'
 import { keepCutoff } from '@/lib/keep/worker'
 
@@ -38,6 +39,10 @@ export interface PhonePost {
   savers: Saver[]
   /** Your save is just for you: no one else sees, counts or is told about it. */
   isPrivate: boolean
+  /** The feed (`/api/app/feed`) only: why it's here, "Ana and Ben saved this". */
+  why?: string
+  /** The feed only: every reason, headline first (for "Why this one"). */
+  whyReasons?: WhyReason[]
 }
 
 export interface PhoneMedia {

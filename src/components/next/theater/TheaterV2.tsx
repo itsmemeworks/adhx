@@ -57,7 +57,7 @@ import { useMobileSwipeNavigation } from '@/components/theater/useMobileSwipeNav
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { articleHeadline, postAuthor, postText } from '../post'
 import { NxAvatar } from '../primitives'
-import { PrivateLock, SaverFaces } from '../SaverFaces'
+import { PrivateLock, SaversButton } from '../SaverFaces'
 import type { Saver } from '@/lib/people/types'
 import { useAuthMe } from '@/components/auth'
 import { AdhxLoader } from '../loader'
@@ -83,6 +83,10 @@ import {
   REPEAT_LABELS,
   REPEAT_ORDER,
   backHref,
+  feedPlayHref,
+  feedUrl,
+  friendPlayHref,
+  isChannelSource,
   queuePosition,
   queueUrl,
   upcomingSavedKeys,
@@ -96,9 +100,20 @@ import {
   ShareSheet,
   SaveSheet,
   UpNextSheet,
+  WhySheet,
   type ChannelOption,
   type MenuRow,
+  type WhyFriend,
 } from './TheaterSheets'
+import { CaughtUpStage, FeedSwitch, FeedTypesControl, WhyChip } from './FeedParts'
+import { SEEN_AFTER_MS, useSeenPosts } from './useSeenPosts'
+import {
+  DEFAULT_FEED_KINDS,
+  FEED_KINDS,
+  type BlendMode,
+  type FeedKind,
+  type FeedWeight,
+} from '@/lib/feed/blend'
 import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
 import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
@@ -121,22 +136,54 @@ type Load =
   | { status: 'loading' }
   | { status: 'error'; missing?: boolean; busy?: boolean }
   | { status: 'ready' }
-type Panel = null | 'queue' | 'more' | 'save' | 'share'
+type Panel = null | 'queue' | 'more' | 'save' | 'share' | 'why'
 
 type QueueResponse = SearchResponse & {
   name?: string
   channel?: { tag: string }
   /** A moment's detail (Tune in): its items carry when they were saved. */
   moment?: { title: string; hue: string; watching: number }
+  /** The blended feed (`/api/feed/blend`): paging and the end of New. */
+  nextCursor?: string | null
+  caughtUp?: boolean
+  nothingYet?: boolean
+  total?: number
+  /** The kinds the feed was filtered to, and (New) unseen posts of other kinds. */
+  types?: FeedKind[]
+  waiting?: Partial<Record<FeedKind, number>>
   /** Members only: who else is tuned in. */
   watchers?: Saver[]
+}
+
+const FEED_TITLES: Record<BlendMode, string> = {
+  new: 'New',
+  everyone: 'Everyone',
+  friends: 'Friends only',
+  mine: 'Mine',
+}
+
+/** Blended feed items are plain posts; "saved" is whether you're among the savers. */
+function feedResults(items: FeedItem[]): SearchResultItem[] {
+  return items.map((post) => ({
+    post,
+    saved: !!post.savers?.some((s) => s.isYou),
+    matched: [],
+  }))
 }
 
 /** What to say when there's nothing to play, by where the queue came from. */
 function emptyState(
   source: PlaySource,
   load: Load,
-): { title: string; body: string; action: string; href: string; retry?: boolean } {
+): {
+  title: string
+  body: string
+  action: string
+  href: string
+  retry?: boolean
+  /** Offer Paste instead of a link. */
+  paste?: boolean
+} {
   const missing = load.status === 'error' && load.missing
   if (source.moment && missing)
     return {
@@ -145,10 +192,19 @@ function emptyState(
       action: 'Right now',
       href: '/now',
     }
-  if ((source.channel || source.auto) && missing)
+  if (source.friend && missing)
+    return {
+      title: 'No saves to show here',
+      body: 'They may have left, or kept everything just for themselves.',
+      action: 'Channels',
+      href: '/channels',
+    }
+  if (isChannelSource(source) && missing)
     return {
       title: 'This channel isn’t here',
-      body: 'It may have been made private or removed.',
+      body: source.groupChannel
+        ? 'Channels from everyone get remade as people save. Pick another.'
+        : 'It may have been made private or removed.',
       action: 'Channels',
       href: '/channels',
     }
@@ -162,10 +218,39 @@ function emptyState(
       href: backHref(source),
       retry: true,
     }
-  if (source.recent)
+  if (source.feed === 'new' || source.feed === 'everyone')
     return {
-      title: 'Nothing saved yet',
-      body: 'Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or bring in your X bookmarks.',
+      title: 'Nothing new yet.',
+      body: 'Save something for your people to find.',
+      action: 'Paste',
+      href: '/channels',
+      paste: true,
+    }
+  if (source.feed === 'friends')
+    return {
+      title: 'Nothing from your people yet.',
+      body: 'When friends save something, it plays here.',
+      action: 'Browse channels',
+      href: '/channels',
+    }
+  if (source.friend?.onlyNew)
+    return {
+      title: 'You’re all caught up',
+      body: 'Nothing new from them since you last looked. Go touch grass.',
+      action: 'Play all of them',
+      href: friendPlayHref(source.friend.username),
+    }
+  if (source.friend || source.groupChannel)
+    return {
+      title: 'Nothing to play here yet',
+      body: 'Nobody has saved anything others can see in here.',
+      action: 'Channels',
+      href: '/channels',
+    }
+  if (source.recent || source.feed === 'mine')
+    return {
+      title: 'Nothing kept yet',
+      body: 'No algorithm is going to fill this for you. Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or bring in your X bookmarks.',
       action: 'Bring in X bookmarks',
       href: '/settings?sync=1',
     }
@@ -322,6 +407,26 @@ export function TheaterV2({
   const [wander, setWander] = useState(false)
   const waitingRef = useRef(false)
   waitingRef.current = waiting
+  // The blended feed (`feed=`): the next page, how many in all, the end of New.
+  const feedCursor = useRef<string | null>(null)
+  const feedLoading = useRef<Promise<boolean> | null>(null)
+  const [feedTotal, setFeedTotal] = useState(0)
+  const [caughtUp, setCaughtUp] = useState(false)
+  /** "Show more / less from …", loaded when "Why this one" first opens. */
+  const [weights, setWeights] = useState<Record<string, FeedWeight> | null>(null)
+  const [weightBusy, setWeightBusy] = useState<string | null>(null)
+  // "What's in your feed": a choice made here wins over the link's `types`,
+  // which wins over the stored choice (the server's default).
+  const [typesChoice, setTypesChoice] = useState<{ source: PlaySource; types: FeedKind[] } | null>(
+    null,
+  )
+  const chosenTypes =
+    typesChoice?.source === source ? typesChoice.types : (source.feedTypes ?? null)
+  const typesKey = chosenTypes?.join(',') ?? ''
+  /** The kinds the loaded pages are filtered to (later pages ask for the same). */
+  const feedTypesUsed = useRef<FeedKind[] | null>(null)
+  const [shownTypes, setShownTypes] = useState<FeedKind[]>([...DEFAULT_FEED_KINDS])
+  const [feedWaiting, setFeedWaiting] = useState<Partial<Record<FeedKind, number>>>({})
   // Tuned in with names (members only): who else is in, who just saved, reactions.
   const [watchers, setWatchers] = useState<Saver[]>([])
   const [arrival, setArrival] = useState<{
@@ -348,40 +453,63 @@ export function TheaterV2({
     }
     const controller = new AbortController()
     setLoad({ status: 'loading' })
+    setCaughtUp(false)
+    feedCursor.current = null
+    feedLoading.current = null
+    const types = typesKey ? (typesKey.split(',') as FeedKind[]) : null
     fetchQueue(
-      queueUrl(source, () => searchUrl({ ...source.search, view: 'bento' }, { refine: true })),
+      source.feed
+        ? feedUrl(source.feed, null, 20, types)
+        : queueUrl(source, () => searchUrl({ ...source.search, view: 'bento' }, { refine: true })),
       controller.signal,
     )
       .then((response) => {
         // The recent queue is the feed: plain posts, all the viewer's own.
-        const results = source.recent
-          ? (response.items as unknown as FeedItem[]).map((post) => ({
-              post,
-              saved: true,
-              matched: [],
-            }))
-          : source.moment
-            ? (
-                response.items as unknown as { post: FeedItem; savedAt: string; savers?: Saver[] }[]
-              ).map(({ post, savedAt, savers: by }) => ({
-                // Members get each post's savers on the item: the byline shows them.
-                post: by ? { ...post, savers: by } : post,
-                saved: false,
+        const results = source.feed
+          ? feedResults(response.items as unknown as FeedItem[])
+          : source.recent
+            ? (response.items as unknown as FeedItem[]).map((post) => ({
+                post,
+                saved: true,
                 matched: [],
-                savedAt,
               }))
-            : source.channel || source.auto
-              ? response.items
-              : orderByStrength(response.items)
+            : source.moment
+              ? (
+                  response.items as unknown as {
+                    post: FeedItem
+                    savedAt: string
+                    savers?: Saver[]
+                  }[]
+                ).map(({ post, savedAt, savers: by }) => ({
+                  // Members get each post's savers on the item: the byline shows them.
+                  post: by ? { ...post, savers: by } : post,
+                  saved: false,
+                  matched: [],
+                  savedAt,
+                }))
+              : isChannelSource(source)
+                ? response.items
+                : orderByStrength(response.items)
+        if (source.feed) {
+          feedCursor.current = response.nextCursor ?? null
+          feedTypesUsed.current = response.types ?? types
+          if (response.types?.length) setShownTypes(response.types)
+          setFeedWaiting(response.waiting ?? {})
+          setFeedTotal(response.total ?? results.length)
+          // Opened New with nothing left: straight to the end card.
+          setCaughtUp(source.feed === 'new' && results.length === 0 && !response.nothingYet)
+        }
         if (response.moment) {
           setMomentHue(response.moment.hue)
           setWatching(response.moment.watching)
           setWatchers(response.watchers ?? [])
         }
         setTitle(
-          source.recent
-            ? 'Your saves'
-            : (response.moment?.title ??
+          source.feed
+            ? FEED_TITLES[source.feed]
+            : source.recent
+              ? 'Your saves'
+              : (response.moment?.title ??
                 response.name ??
                 (response.channel ? channelTitle(response.channel.tag) : null)),
         )
@@ -424,7 +552,7 @@ export function TheaterV2({
         })
       })
     return () => controller.abort()
-  }, [source, lead])
+  }, [source, lead, typesKey])
 
   const current = items[index] ?? null
   const currentKey = current ? resultKey(current) : ''
@@ -444,6 +572,15 @@ export function TheaterV2({
   const isPrivate = !!current && (privateNow.get(currentKey) ?? !!current.post.isPrivate)
   // Savers are only sent to signed-in members; a save made here adds you.
   const { me } = useAuthMe()
+  // Seen (the feed's watched list): 2s on stage, or skipped. Members only.
+  const markSeen = useSeenPosts(!!me?.user && !source.shared)
+  const currentKeyRef = useRef(currentKey)
+  currentKeyRef.current = currentKey
+  useEffect(() => {
+    if (!currentKey || caughtUp) return
+    const t = setTimeout(() => markSeen(currentKey), SEEN_AFTER_MS)
+    return () => clearTimeout(t)
+  }, [currentKey, caughtUp, markSeen])
   const member = !!me?.user
   const savers = useMemo<Saver[] | undefined>(() => {
     const list = current?.post.savers
@@ -458,6 +595,16 @@ export function TheaterV2({
     }
     return [you, ...list]
   }, [current, currentKey, savedNow, me])
+
+  /** Friends "Why this one" can show more or less of: whoever else saved it. */
+  const whyFriends = useMemo<WhyFriend[]>(
+    () =>
+      (savers ?? [])
+        .filter((s) => !s.isYou)
+        .slice(0, 2)
+        .map((s) => ({ username: s.username, name: s.name?.trim() || s.username })),
+    [savers],
+  )
 
   const flash = useCallback((message: string, ms = 2200) => {
     setToast(message)
@@ -488,17 +635,23 @@ export function TheaterV2({
   }, [items, index])
 
   // ——— Moving through the queue ———
-  const goTo = useCallback((i: number) => {
-    setCaptionOpen(false)
-    setArticleProgress(0)
-    setLongPost(false)
-    setEnded(false)
-    setWaiting(false)
-    setArrivals(0)
-    setArrival(null)
-    setTimedPaused(false)
-    setIndex(i)
-  }, [])
+  const goTo = useCallback(
+    (i: number) => {
+      // Moving on before 2s is skipping it, which counts as seen too.
+      markSeen(currentKeyRef.current)
+      setCaughtUp(false)
+      setCaptionOpen(false)
+      setArticleProgress(0)
+      setLongPost(false)
+      setEnded(false)
+      setWaiting(false)
+      setArrivals(0)
+      setArrival(null)
+      setTimedPaused(false)
+      setIndex(i)
+    },
+    [markSeen],
+  )
 
   // The queue as of now, for async steps that must not act on a stale render.
   const itemsRef = useRef(items)
@@ -509,6 +662,38 @@ export function TheaterV2({
     itemsRef.current = list
     setItems(list)
   }, [])
+
+  /** The blended feed's next page, appended. True when it brought anything new. */
+  const loadMoreFeed = useCallback((): Promise<boolean> => {
+    const cursor = feedCursor.current
+    if (!source.feed || !cursor) return Promise.resolve(false)
+    if (feedLoading.current) return feedLoading.current
+    const task = fetchQueue(feedUrl(source.feed, cursor, 20, feedTypesUsed.current))
+      .then((response) => {
+        if (feedCursor.current !== cursor) return false // reloaded meanwhile
+        feedCursor.current = response.nextCursor ?? null
+        if (typeof response.total === 'number') setFeedTotal(response.total)
+        const before = itemsRef.current.length
+        const list = appendUnique(
+          itemsRef.current,
+          feedResults(response.items as unknown as FeedItem[]),
+        )
+        if (list.length === before) return false
+        replaceItems(list)
+        return true
+      })
+      .catch(() => false)
+      .finally(() => {
+        feedLoading.current = null
+      })
+    feedLoading.current = task
+    return task
+  }, [source.feed, replaceItems])
+
+  // A few posts from the end of what's loaded, fetch the next page.
+  useEffect(() => {
+    if (source.feed && feedCursor.current && index >= items.length - 4) void loadMoreFeed()
+  }, [source.feed, index, items.length, loadMoreFeed])
 
   // A video turned out to be deleted upstream: drop it and play what's next.
   useEffect(() => {
@@ -660,6 +845,20 @@ export function TheaterV2({
   )
 
   const next = useCallback(async () => {
+    if (source.feed && nextIndex(items, index, { repeat: 'off', videosOnly }) === null) {
+      // The feed pages in: fetch more before wrapping or ending.
+      for (let tries = 0; tries < 3 && feedCursor.current; tries++) {
+        await loadMoreFeed()
+        const after = nextIndex(itemsRef.current, index, { repeat: 'off', videosOnly })
+        if (after !== null) return goTo(after)
+      }
+      if (source.feed === 'new') {
+        // Everything your people saved has been on stage.
+        markSeen(currentKeyRef.current)
+        setCaughtUp(true)
+        return
+      }
+    }
     const i = nextIndex(items, index, { repeat, videosOnly })
     if (i !== null) return goTo(i)
     if (source.moment) {
@@ -697,8 +896,11 @@ export function TheaterV2({
     sourceName,
     source.moment,
     source.shared,
+    source.feed,
     wander,
     addWander,
+    loadMoreFeed,
+    markSeen,
   ])
 
   const prev = useCallback(() => {
@@ -722,9 +924,10 @@ export function TheaterV2({
           if (!post0) return
           const pasted: SearchResultItem = { post: post0, saved: true, matched: [] }
           const at = indexRef.current
+          const wasEmpty = itemsRef.current.length === 0
           replaceItems(insertAfter(itemsRef.current, at, [pasted]))
           setSavedNow((s) => new Set(s).add(post.key))
-          goTo(at + 1)
+          goTo(wasEmpty ? 0 : at + 1)
         })
         .catch(() => {})
     },
@@ -761,7 +964,7 @@ export function TheaterV2({
   // A long post is read like an article: no timer, the bar shows how far down you are.
   const timed = !!current && !isVideo && kind !== 'article' && !longPost
   const dwell = useDwell({
-    active: timed && !ended && panel === null && !captionOpen,
+    active: timed && !ended && !caughtUp && panel === null && !captionOpen,
     seconds: current ? dwellSeconds(current) : 6,
     paused: timedPaused,
     resetKey: currentKey,
@@ -1090,6 +1293,74 @@ export function TheaterV2({
     }
   }, [current, flash, next])
 
+  // ——— The blended feed ———
+  /** Everyone · Friends only · Mine (and "Watch it all again" → Everyone). */
+  const switchFeed = useCallback((mode: BlendMode) => router.push(feedPlayHref(mode)), [router])
+
+  /** "What's in your feed": remember the choice and reload the feed with it. */
+  const changeTypes = useCallback(
+    (types: FeedKind[]) => {
+      setTypesChoice({ source, types })
+      setShownTypes(types)
+      void fetch('/api/feed/types', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ types }),
+      }).catch(() => {})
+    },
+    [source],
+  )
+
+  /** Caught up, with other kinds still unseen: play just those, this once. */
+  const showWaiting = useCallback(() => {
+    const kinds = FEED_KINDS.filter((k) => (feedWaiting[k] ?? 0) > 0)
+    if (kinds.length) router.push(feedPlayHref('new', kinds))
+  }, [feedWaiting, router])
+
+  // Caught up: the card replaces the stage, so the clip behind it stops.
+  useEffect(() => {
+    if (caughtUp) stage.pause()
+  }, [caughtUp])
+
+  const openWhy = useCallback(() => {
+    setPanel('why')
+    if (weights !== null) return
+    fetch('/api/feed/weights', { credentials: 'same-origin' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ weights: Record<string, FeedWeight> }>) : null))
+      .then((d) => setWeights(d?.weights ?? {}))
+      .catch(() => setWeights({}))
+  }, [weights])
+
+  const setFriendWeight = useCallback(
+    async (friend: WhyFriend, weight: FeedWeight) => {
+      setWeightBusy(friend.username)
+      try {
+        const res = await fetch('/api/feed/weights', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: friend.username, weight }),
+        })
+        const data = (await res.json().catch(() => null)) as {
+          weights?: Record<string, FeedWeight>
+        } | null
+        if (!res.ok || !data?.weights) throw new Error('weights failed')
+        setWeights(data.weights)
+        flash(
+          weight === 1
+            ? `More from ${friend.name} from now on`
+            : weight === -1
+              ? `Less from ${friend.name} from now on`
+              : `${friend.name} is back to normal`,
+        )
+      } catch {
+        flash('Couldn’t change that. Try again.')
+      } finally {
+        setWeightBusy(null)
+      }
+    },
+    [flash],
+  )
+
   // ——— Keyboard (desktop) and swipes (phones) ———
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1134,13 +1405,31 @@ export function TheaterV2({
   const back = backHref(source)
   const navHere = source.shared
     ? null
-    : source.moment
-      ? 'now'
-      : source.channel || source.auto
-        ? 'channels'
-        : source.recent
-          ? 'saves'
-          : 'search'
+    : source.feed
+      ? 'new'
+      : source.moment
+        ? 'now'
+        : isChannelSource(source)
+          ? 'channels'
+          : source.recent
+            ? 'saves'
+            : 'search'
+  if (load.status === 'ready' && !current && source.feed === 'new' && caughtUp) {
+    // Opened New with nothing left you haven't seen.
+    return (
+      <div className="flex min-h-dvh flex-col bg-nx-stage font-nx-sans text-nx-cream">
+        <NxHeader current={navHere} />
+        <main className="flex flex-1 flex-col pb-20 md:pb-0">
+          <CaughtUpStage
+            className="flex-1"
+            onWatchAgain={() => switchFeed('everyone')}
+            waiting={feedWaiting}
+            onShowWaiting={showWaiting}
+          />
+        </main>
+      </div>
+    )
+  }
   if (load.status !== 'ready' || !current) {
     const empty = emptyState(source, load)
     return (
@@ -1163,29 +1452,44 @@ export function TheaterV2({
                     Try again
                   </button>
                 )}
-                <Link
-                  href={empty.href}
-                  className={
-                    empty.retry
-                      ? 'rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white'
-                      : 'rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink'
-                  }
-                >
-                  {empty.action}
-                </Link>
+                {empty.paste ? (
+                  <PasteButton
+                    onClick={paste.pasteFromClipboard}
+                    className="h-auto px-5 py-3 text-sm"
+                  />
+                ) : (
+                  <Link
+                    href={empty.href}
+                    className={
+                      empty.retry
+                        ? 'rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white'
+                        : 'rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink'
+                    }
+                  >
+                    {empty.action}
+                  </Link>
+                )}
               </span>
             </>
           )}
         </main>
+        {paste.toast}
       </div>
     )
   }
 
+  // Why it's here, as a chip; "Ana saved this · 1h" alone is already the faces line.
+  const whyFirst = current.post.whyReasons?.[0]?.kind
+  const whyChip =
+    !!current.post.why &&
+    !((whyFirst === 'fresh' || whyFirst === 'yours') && savers && savers.length > 0)
   const author = postAuthor(current.post)
   const caption = postText(current.post)
   const overlay = kind === 'post' || kind === 'article'
   const textOnly = !send.supported
   const menu: MenuRow[] = [
+    // The blended feed says why each post is here.
+    ...(current.post.why ? [{ label: 'Why this one', onSelect: openWhy }] : []),
     { label: 'Add to a channel', onSelect: () => void save() },
     { label: 'Copy link', onSelect: () => void copyLink() },
     // Members only (savers come with a session): keep this save to yourself.
@@ -1246,7 +1550,7 @@ export function TheaterV2({
             onEnded={() => void next()}
             photoCaption={false}
             repeat={repeat === 'one'}
-            covered={overlay || (panel !== null && !isVideo)}
+            covered={overlay || caughtUp || (panel !== null && !isVideo)}
           />
           {kind === 'post' && (
             // Room on the right so the rail never sits on the words.
@@ -1278,17 +1582,31 @@ export function TheaterV2({
             ))}
         </div>
 
+        {source.feed && (
+          // Below xl, whose saves and what's in the feed sit on the stage (the header has no room).
+          <div className="pointer-events-none absolute inset-x-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-20 flex flex-wrap items-start gap-2 md:left-7 md:right-24 md:top-4 xl:hidden">
+            <FeedSwitch mode={source.feed} onChange={switchFeed} className="pointer-events-auto" />
+            <FeedTypesControl
+              types={shownTypes}
+              onChange={changeTypes}
+              className="pointer-events-auto"
+            />
+          </div>
+        )}
         {/* Where this queue is from and what's playing, in one row at the stage's top-left. */}
         <div
           className={cn(
             'pointer-events-none absolute inset-x-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 flex flex-wrap items-start gap-2 md:left-7 md:right-24 md:top-4',
+            // Below xl the feed's own controls take the first row.
+            source.feed &&
+              'top-[max(116px,calc(env(safe-area-inset-top)+108px))] md:top-[68px] xl:top-4',
             // On a cream page see-through chips turn muddy grey: make them solid,
             // and on desktop join them into one pill split by thin lines.
             overlay &&
               '[&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none md:right-auto md:flex-nowrap md:items-stretch md:gap-0 md:divide-x md:divide-white/15 md:overflow-hidden md:rounded-[20px] md:bg-[#1c1b19] md:[&>*]:!rounded-none md:[&>*]:!bg-transparent md:[&>*]:!text-white',
           )}
         >
-          {!source.recent && !source.shared && (
+          {!source.recent && !source.shared && !source.feed && (
             <Link
               href={back}
               className="nx-plate pointer-events-auto hidden h-9 min-w-0 max-w-[320px] items-center gap-1.5 rounded-full pl-2 pr-4 text-[13px] font-bold md:flex"
@@ -1297,15 +1615,18 @@ export function TheaterV2({
               <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
             </Link>
           )}
+          {whyChip && <WhyChip post={current.post} onOpen={openWhy} />}
           {overlay && (isPrivate || (savers && savers.length > 0)) && (
             // Who saved it, by the chips: text and article stages have no byline scrim.
             <span className="pointer-events-auto flex h-9 min-w-0 items-center gap-1.5">
               {isPrivate && <PrivateLock className="h-7 w-7" />}
               {savers && savers.length > 0 && (
-                <SaverFaces
+                <SaversButton
                   savers={savers}
                   tone="plate"
-                  className="h-9 max-w-[280px] pl-1.5 pr-3.5"
+                  placement="below"
+                  className="h-9 max-w-[280px]"
+                  facesClassName="h-9 pl-1.5 pr-3.5"
                 />
               )}
             </span>
@@ -1410,7 +1731,7 @@ export function TheaterV2({
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
                 <span className="truncate text-xs text-white/65">
-                  {`${viaReason(position.via, source.shared ? 'post' : source.channel || source.auto ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
+                  {`${viaReason(position.via, source.shared ? 'post' : isChannelSource(source) ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
                 </span>
               </span>
             </div>
@@ -1469,7 +1790,7 @@ export function TheaterV2({
               className="block h-3 w-3 rounded-full animate-nx-live-pulse"
               style={{ background: momentHue }}
             />
-            <span className="font-nx-serif text-[28px]">You’re all caught up</span>
+            <span className="font-nx-serif text-[28px]">You’re all caught up. Go touch grass.</span>
             <span className="text-sm text-white/75">New saves play here as they land.</span>
           </div>
         )}
@@ -1613,7 +1934,7 @@ export function TheaterV2({
                     </span>
                   )}
                 </span>
-                {savers && savers.length > 0 && <SaverFaces savers={savers} tone="scrim" />}
+                {savers && savers.length > 0 && <SaversButton savers={savers} tone="scrim" />}
                 {caption &&
                   (captionOpen ? (
                     <span className="pointer-events-auto block max-h-[42vh] overflow-y-auto pr-2 text-[15px] leading-[1.45] md:text-[17px]">
@@ -1789,10 +2110,19 @@ export function TheaterV2({
                 Play again
               </button>
               <Link href={back} className="rounded-full border border-white/30 px-5 py-3 text-sm">
-                Back to search
+                {source.feed ? 'Browse channels' : 'Back to search'}
               </Link>
             </div>
           </div>
+        )}
+
+        {caughtUp && (
+          <CaughtUpStage
+            className="absolute inset-0 z-20"
+            onWatchAgain={() => switchFeed('everyone')}
+            waiting={feedWaiting}
+            onShowWaiting={showWaiting}
+          />
         )}
 
         {panel === 'queue' && (
@@ -1829,6 +2159,19 @@ export function TheaterV2({
             }}
           />
         )}
+        {panel === 'why' && (
+          <WhySheet
+            item={current}
+            friends={whyFriends}
+            weights={weights}
+            busy={weightBusy}
+            onWeight={(username, weight) => {
+              const friend = whyFriends.find((f) => f.username === username)
+              if (friend) void setFriendWeight(friend, weight)
+            }}
+            onClose={() => setPanel(null)}
+          />
+        )}
         {panel === 'share' && (
           <ShareSheet
             url={publicUrl()}
@@ -1842,7 +2185,14 @@ export function TheaterV2({
               ...row,
               onSelect: () => {
                 row.onSelect()
-                if (row.checked === undefined && row.label !== 'Repeat') setPanel(null)
+                // Repeat cycles in place; Why this one opens its own sheet.
+                if (
+                  row.checked === undefined &&
+                  row.label !== 'Repeat' &&
+                  row.label !== 'Why this one'
+                ) {
+                  setPanel(null)
+                }
               },
             }))}
             onClose={() => setPanel(null)}
@@ -1865,14 +2215,29 @@ export function TheaterV2({
         {/* The same header as every other screen: logo and tabs, then tools. */}
         <NxLogo className="pointer-events-auto hidden md:flex" />
         <PrimaryNav current={navHere} className="pointer-events-auto" />
-        <Link
-          href={back}
-          // Phones only; on desktop it leads the row of chips on the stage.
-          className="nx-plate pointer-events-auto flex h-10 min-w-0 max-w-[60vw] items-center gap-1.5 rounded-full pl-2 pr-4 text-sm md:hidden"
-        >
-          <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
-          <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
-        </Link>
+        {source.feed ? (
+          <>
+            <FeedSwitch
+              mode={source.feed}
+              onChange={switchFeed}
+              className="pointer-events-auto hidden xl:flex"
+            />
+            <FeedTypesControl
+              types={shownTypes}
+              onChange={changeTypes}
+              className="pointer-events-auto hidden xl:flex"
+            />
+          </>
+        ) : (
+          <Link
+            href={back}
+            // Phones only; on desktop it leads the row of chips on the stage.
+            className="nx-plate pointer-events-auto flex h-10 min-w-0 max-w-[60vw] items-center gap-1.5 rounded-full pl-2 pr-4 text-sm md:hidden"
+          >
+            <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
+            <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
+          </Link>
+        )}
         <span className="flex-1" />
         {source.moment ? (
           <span className="nx-plate flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-extrabold">
@@ -1888,8 +2253,17 @@ export function TheaterV2({
           </span>
         ) : (
           !position.via && (
-            <span className="nx-plate hidden h-8 items-center rounded-full px-3 text-xs tabular-nums text-white/85 md:flex">
-              {`${position.n} of ${position.of}`}
+            <span
+              className={cn(
+                'nx-plate hidden h-8 items-center whitespace-nowrap rounded-full px-3 text-xs tabular-nums text-white/85',
+                source.feed ? 'xl:flex' : 'md:flex',
+              )}
+            >
+              {source.feed === 'new'
+                ? `${Math.max(0, feedTotal - index)} you haven’t seen`
+                : source.feed
+                  ? `${index + 1} of ${Math.max(feedTotal, items.length)}`
+                  : `${position.n} of ${position.of}`}
             </span>
           )
         )}

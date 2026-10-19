@@ -8,6 +8,7 @@ import {
   archivedPosts,
   syncLogs,
   userPreferences,
+  postViews,
   accessKeys,
   appPairCodes,
   invites,
@@ -36,7 +37,7 @@ import { clearSessionCookie } from '@/lib/auth/session'
  * DELETE /api/account
  *
  * Deletes the user's account and associated private/product data: bookmarks,
- * tags, preferences, OAuth tokens, the `users` row,
+ * tags, preferences, the feed's seen list, OAuth tokens, the `users` row,
  * every linked sign-in identity (X, email, invite), outstanding magic-link
  * tokens, and invites it made or joined with. Historical moderation/audit records remain intact, but cannot be
  * used as a live account or auth identity.
@@ -81,6 +82,9 @@ export const DELETE = withAuth(async (_req, userId) => {
 
       // 9. Delete user preferences
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
+
+      // 10. Delete the feed's seen list
+      db.delete(postViews).where(eq(postViews.userId, userId)).run()
 
       // 11. Delete public tag-share settings
       db.delete(tagShares).where(eq(tagShares.userId, userId)).run()
