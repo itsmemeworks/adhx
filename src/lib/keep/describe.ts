@@ -24,9 +24,21 @@ export interface NetworkPostDescription {
 
 const MAX_TEXT = 4000
 
+/** Remove tags until none are left (`<<b>script>` must not leave `<script>`). */
+function stripTags(value: string): string {
+  let out = value
+  let before: string
+  do {
+    before = out
+    out = out.replace(/<[^>]*>/g, '')
+  } while (out !== before)
+  return out
+}
+
+/** Plain text from a caption: entities decoded first, so `&lt;b&gt;` can't come back as a tag. */
 function clean(value: unknown): string {
   return typeof value === 'string'
-    ? decodeEntities(value.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''))
+    ? stripTags(decodeEntities(value).replace(/<br\s*\/?>/gi, '\n'))
         .replace(/\u00a0/g, ' ')
         .replace(/\r/g, '')
         .trim()

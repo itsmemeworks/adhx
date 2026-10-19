@@ -68,3 +68,18 @@ describe('describeNetworkPost when yt-dlp fails', () => {
     })
   })
 })
+
+describe('describeNetworkPost words', () => {
+  it('never turns encoded tags in a caption back into real ones', async () => {
+    ytdlpInfo.mockResolvedValue({
+      title: 'Cats &lt;script&gt;alert(1)&lt;/script&gt; &amp; dogs',
+      description: '<p>line one<br>line two</p>&lt;&lt;i&gt;script&gt;x',
+      uploader_id: '@pets',
+      formats: [{ vcodec: 'avc1', acodec: 'mp4a', height: 720 }],
+    })
+    const { describeNetworkPost } = await import('@/lib/keep/describe')
+    const post = await describeNetworkPost('youtube', 'abcdefghijk', undefined)
+    expect(post?.text).toMatch(/^Cats alert\(1\) & dogs\n\nline one\nline two/)
+    expect(post?.text).not.toMatch(/<[a-z/]/i)
+  })
+})
