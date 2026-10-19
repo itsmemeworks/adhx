@@ -1,15 +1,18 @@
+import { sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
 import { privateKeysFor, saversFor } from '@/lib/people/savers'
 import { membersById } from '@/lib/people/by-id'
 import type { Saver } from '@/lib/people/types'
 import {
   momentPostKeys,
+  watchingCount,
   type MomentDetail,
   type MomentEvent,
   type MomentView,
   type MomentsSnapshot,
   type StreamItem,
 } from './engine'
-import { watcherIds, type ReactionSignal } from './presence'
+import { watcherCredentials, watcherIds, type ReactionSignal } from './presence'
 
 /**
  * Live with names: who is saving a moment, who is watching it, who reacted.
@@ -43,6 +46,22 @@ function visibleSavers(keys: string[], viewerId: string): Map<string, Saver[]> {
   return savers
 }
 
+/** Only saver metadata for older cached posts; never hydrate their text/media again. */
+export function momentSaverUpdates(
+  keys: string[],
+  viewerId: string,
+): { key: string; savers: Saver[]; isPrivate: boolean }[] {
+  const savers = visibleSavers(keys, viewerId)
+  const ownPrivate = privateKeysFor(
+    keys.map((key) => {
+      const split = key.indexOf(':')
+      return { platform: key.slice(0, split), id: key.slice(split + 1) }
+    }),
+    viewerId,
+  )
+  return keys.map((key) => ({ key, savers: savers.get(key) ?? [], isPrivate: ownPrivate.has(key) }))
+}
+
 /** Up to 5 people saving a moment's posts in its window, newest first. */
 export function momentSavers(slug: string, viewerId: string): Saver[] {
   if (!viewerId) return []
@@ -62,10 +81,31 @@ export function momentSavers(slug: string, viewerId: string): Saver[] {
     .slice(0, MAX_MOMENT_SAVERS)
 }
 
+/** Revocation takes effect on the next response/event, rather than waiting for lease expiry. */
+function authorizedWatcherIds(slug: string) {
+  const keys = [...new Set(watcherCredentials(slug).map((c) => c.keyId))]
+  const allowed = new Map<string, string>()
+  for (let i = 0; i < keys.length; i += 400) {
+    const rows = db.all<{ id: string; user_id: string }>(
+      sql`SELECT id, user_id FROM access_keys WHERE scope = 'phone' AND id IN (${sql.join(
+        keys.slice(i, i + 400).map((id) => sql`${id}`),
+        sql`, `,
+      )})`,
+    )
+    for (const row of rows) allowed.set(row.id, row.user_id)
+  }
+  return watcherIds(slug, (keyId, userId) => allowed.get(keyId) === userId)
+}
+
+function memberWatchingCount(slug: string): number {
+  const ids = authorizedWatcherIds(slug).map((w) => w.userId)
+  return Math.max(0, watchingCount(slug) - ids.length + membersById(ids).size)
+}
+
 /** Members tuned in to a moment now, without the viewer; banned accounts left out. */
 export function watchersFor(slug: string, viewerId: string): Saver[] {
   if (!viewerId) return []
-  const ids = watcherIds(slug).filter((w) => w.userId !== viewerId)
+  const ids = authorizedWatcherIds(slug).filter((w) => w.userId !== viewerId)
   if (ids.length === 0) return []
   const faces = membersById(ids.map((w) => w.userId))
   const out: Saver[] = []
@@ -82,6 +122,7 @@ export function withMomentPeople(moment: MomentView, viewerId: string): MomentVi
   if (!viewerId) return moment
   return {
     ...moment,
+    watching: memberWatchingCount(moment.slug),
     savers: momentSavers(moment.slug, viewerId),
     watchers: watchersFor(moment.slug, viewerId),
   }
@@ -130,7 +171,11 @@ export function eventForViewer(event: MomentEvent, viewerId: string): MomentEven
       }
     }
     case 'watching':
-      return { ...event, watchers: watchersFor(event.slug, viewerId) }
+      return {
+        ...event,
+        watching: memberWatchingCount(event.slug),
+        watchers: watchersFor(event.slug, viewerId),
+      }
     default:
       return event
   }

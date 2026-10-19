@@ -126,25 +126,41 @@ The polling process downloads retained originals over authenticated HTTPS into a
 private cache, then runs one inference segment at a time in a separate native
 child. Heartbeats remain responsive while inference runs. A completed segment
 releases its job so urgent saves can run before the next segment of a long video.
+Conversion and understanding claims alternate while both have work, so a
+large import cannot monopolise the worker with compatibility conversions.
+Understanding retains urgent-save priority, with one priority point per waiting
+minute so old backfill eventually gets a turn. Conversion claims alternate
+between newest saves for playback and oldest sources to prevent starvation. This is fairness between jobs, not interruption of an encoding in progress.
 Inference creates temporary 448px JPEG samples without changing the NAS copy.
 Compatibility conversion creates a separate full-resolution temporary MP4 and
 re-encodes video, so it is not byte-for-byte lossless. File and cache limits default to 4 GiB and 8 GiB. Oversized files
 remain queued/failed for operator attention, rather than consuming unbounded RAM
 or disk. Cached originals expire during subsequent work after 24 hours and may be
-evicted earlier to meet the disk budget. A successful final result immediately
-deletes that job's original from the Mac; it is retained only between unfinished
-video segments. Temporary frames are deleted after every segment, including
+evicted earlier to meet the disk budget. A server-issued file identity lets speech, on-screen text and video understanding
+reuse one original even though their result hashes differ. A successful result
+releases that original as soon as its last queued/leased consumer finishes. A
+replacement NAS file has a new identity and is downloaded again. Older servers
+still work with per-kind caching. Abandoned or unacknowledged generations remain
+subject to the same 24-hour expiry and disk ceiling. Each claim also reconciles
+a bounded batch of cached identities: deleted/replaced sources and posts with no
+remaining media consumers are removed on the next poll. Keys identify reusable
+local copies only; every NAS download still requires the machine key and a current lease. Temporary frames are deleted after every segment, including
 failures. Conversion outputs are deleted after each upload attempt; after a
 validated final acknowledgement the downloaded conversion source is deleted too.
 Invalidated conversion capabilities also discard stale local sources. Startup and periodic cleanup remove abandoned frame/conversion directories and
-partial downloads after one hour and orphan originals after 24 hours. Reusable
+partial downloads after one hour and orphan originals after 24 hours. On-screen text decoding may skip one corrupt picture when others are readable.
+Model loading/inference errors, and a job with no readable inputs, fail for retry
+and preserve previously extracted words rather than recording "no text".
+Reusable
 model weights are stored separately and remain cached across jobs.
 Use one worker per cache directory. Its disk ceiling counts originals, partial
 downloads, temporary conversion outputs and frame contents, including recent crash leftovers; those
 leftovers can be evicted before their expiry when space is needed. Native video
 sampling reserves 64 MiB of frame scratch space and caps each JPEG at 4 MiB. A
 cache too small for the current original plus that reserve rejects the work
-without deleting its active original. Model weights and unrelated files are
+without deleting any of its active inputs. All pictures and videos for one
+on-screen-text job remain pinned through downloads and the scratch reservation;
+if the full set cannot fit, the job retries instead of silently dropping images. Model weights and unrelated files are
 outside the scratch ceiling and are never removed by scratch cleanup.
 
 Light targets 120-second segments with roughly one sample every 12 seconds;

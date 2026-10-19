@@ -10,7 +10,11 @@ import type { ReactionEmoji } from './reactions'
  * Account ids stay server-side: nothing here is sent to a client as is.
  */
 
-type Entry = { count: number; since: number }
+type Entry = {
+  count: number
+  since: number
+  phones: Map<string, { keyId: string; expires: number }>
+}
 
 /** A reaction as sent (ids only); each receiver gets its own named copy. */
 export type ReactionSignal = {
@@ -32,6 +36,7 @@ type State = {
 }
 
 /** How long a reaction stays visible to pollers, and how many are kept. */
+export const WATCH_LEASE_MS = 15_000
 const RECENT_MS = 15_000
 const RECENT_MAX = 40
 
@@ -59,7 +64,8 @@ export function joinWatch(slug: string, userId: string): () => void {
   const s = state()
   const room = s.rooms.get(slug) ?? new Map<string, Entry>()
   s.rooms.set(slug, room)
-  const entry = room.get(userId) ?? { count: 0, since: Date.now() }
+  const entry = room.get(userId) ?? { count: 0, since: Date.now(), phones: new Map() }
+  entry.phones ??= new Map()
   entry.count++
   room.set(userId, entry)
   let left = false
@@ -70,22 +76,71 @@ export function joinWatch(slug: string, userId: string): () => void {
     const e = r?.get(userId)
     if (!r || !e) return
     e.count--
-    if (e.count <= 0) r.delete(userId)
+    if (e.count <= 0 && !e.phones.size) r.delete(userId)
     if (r.size === 0) state().rooms.delete(slug)
   }
 }
 
-/** Members tuned in to `slug`, first to arrive first. */
-export function watcherIds(slug: string): { userId: string; since: number }[] {
+/** A foreground phone renews a short lease, scoped to its exact credential and screen. */
+export function renewWatch(slug: string, userId: string, keyId: string, session: string): boolean {
+  const before = new Set(state().rooms.get(slug)?.keys())
+  // Reap idle rooms as new foreground work arrives; abandoned leases cannot
+  // accumulate indefinitely even when nobody reopens their old moment.
+  for (const key of state().rooms.keys()) watcherIds(key)
+  const room = state().rooms.get(slug) ?? new Map<string, Entry>()
+  state().rooms.set(slug, room)
+  const entry = room.get(userId) ?? { count: 0, since: Date.now(), phones: new Map() }
+  entry.phones ??= new Map()
+  entry.phones.set(`${keyId}:${session}`, { keyId, expires: Date.now() + WATCH_LEASE_MS })
+  room.set(userId, entry)
+  return before.size !== room.size || [...room.keys()].some((id) => !before.has(id))
+}
+
+export function leaveWatch(slug: string, userId: string, keyId: string, session: string): void {
+  const entry = state().rooms.get(slug)?.get(userId)
+  entry?.phones?.delete(`${keyId}:${session}`)
+  watcherIds(slug)
+}
+
+/** Members, once per account across tabs and phones. Expired or revoked leases are removed. */
+export function watcherIds(
+  slug: string,
+  validKey?: (keyId: string, userId: string) => boolean,
+): { userId: string; since: number }[] {
   const room = state().rooms.get(slug)
   if (!room) return []
+  const now = Date.now()
+  for (const [userId, entry] of room) {
+    entry.phones ??= new Map()
+    for (const [session, phone] of entry.phones) {
+      if (phone.expires <= now || (validKey && !validKey(phone.keyId, userId)))
+        entry.phones.delete(session)
+    }
+    if (entry.count <= 0 && entry.phones.size === 0) room.delete(userId)
+  }
+  if (!room.size) state().rooms.delete(slug)
   return [...room.entries()]
     .map(([userId, e]) => ({ userId, since: e.since }))
     .sort((a, b) => a.since - b.since)
 }
 
+/** Live phone credentials, for one batched revocation check by the naming layer. */
+export function watcherCredentials(slug: string): { keyId: string; userId: string }[] {
+  watcherIds(slug)
+  return [...(state().rooms.get(slug)?.entries() ?? [])].flatMap(([userId, entry]) =>
+    [...entry.phones.values()].map(({ keyId }) => ({ keyId, userId })),
+  )
+}
+
+/** Adjust the engine's stream count to count named accounts once and include polling phones. */
+export function namedWatchAdjustment(slug: string): number {
+  const people = watcherIds(slug)
+  const streams = [...(state().rooms.get(slug)?.values() ?? [])].reduce((n, e) => n + e.count, 0)
+  return people.length - streams
+}
+
 export function isWatching(slug: string, userId: string): boolean {
-  return !!state().rooms.get(slug)?.has(userId)
+  return watcherIds(slug).some((w) => w.userId === userId)
 }
 
 /** Send a reaction to everyone listening for reactions (the moment's streams filter by slug). */

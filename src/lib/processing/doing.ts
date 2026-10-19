@@ -21,6 +21,7 @@ import { enqueuePosts } from '@/lib/semantic/queue'
 import { wakeJobs, jobActivity } from '@/lib/semantic/supervisor'
 import { remoteProcessing } from './config'
 import { remoteWorkerConnected } from './presence'
+import { activityState } from './doing-state'
 
 /**
  * "What your ADHX is doing" (`/doing`, `GET /api/activity/processing`,
@@ -56,9 +57,8 @@ export const RECENT_MS = 30 * 60_000
 const NEEDS_YOU_FOR_MS = 7 * 24 * 60 * 60_000
 /** Learning that gave up shows this long. */
 const LEARN_FAILED_FOR_MS = 24 * 60 * 60_000
-/** At most this many rows are built; counts cover everything. */
+/** At most this many rows are hydrated; counts cover the complete visible backlog. */
 const MAX_ITEMS = 60
-const MAX_CANDIDATES = 400
 
 export interface DoingItem {
   platform: string
@@ -138,48 +138,6 @@ function iso(ms: number): string {
   return new Date(ms).toISOString()
 }
 
-/**
- * Post keys anything is happening to, newest save first, only those the
- * viewer may see (or, for `mine`, has saved).
- */
-function candidates(
-  viewerId: string,
-  scope: DoingScope,
-  now: number,
-): { platform: string; id: string; savedAt: string }[] {
-  const recent = iso(now - RECENT_MS)
-  const needsSince = iso(now - NEEDS_YOU_FOR_MS)
-  const learnSince = iso(now - LEARN_FAILED_FOR_MS)
-  const visible =
-    scope === 'mine'
-      ? sql`b.user_id = ${viewerId} AND COALESCE(b.source, '') != 'quoted'`
-      : seenBy(viewerId, 'b')
-  return db.all<{ platform: string; id: string; savedAt: string }>(sql`
-    WITH cand(platform, post_id) AS (
-      SELECT platform, post_id FROM keep_jobs
-        WHERE status IN ('pending', 'running', 'converting', 'failed')
-           OR (status = 'unavailable' AND accepted_at IS NULL AND updated_at >= ${needsSince})
-           OR (status IN ('done', 'unavailable') AND updated_at >= ${recent})
-      UNION SELECT platform, post_id FROM understanding_queue
-      UNION SELECT platform, post_id FROM media_conversions
-        WHERE status IN ('pending', 'running', 'failed') OR updated_at >= ${recent}
-      UNION SELECT platform, post_id FROM post_embeddings
-        WHERE status = 'failed' AND created_at >= ${learnSince}
-      UNION SELECT platform, post_id FROM post_extracted_text
-        WHERE status = 'failed' AND created_at >= ${learnSince}
-      UNION SELECT platform, id FROM bookmarks WHERE processed_at >= ${recent}
-    )
-    SELECT platform, id, savedAt FROM (
-      SELECT c.platform AS platform, c.post_id AS id,
-        (SELECT MAX(b.processed_at) FROM bookmarks b
-          WHERE b.platform = c.platform AND b.id = c.post_id AND ${visible}) AS savedAt
-      FROM cand c
-    ) WHERE savedAt IS NOT NULL
-    ORDER BY savedAt DESC
-    LIMIT ${MAX_CANDIDATES}
-  `)
-}
-
 /** Plain words for why a download failed. */
 export function keepReason(lastError: string | null, platform: string): string {
   const network = networkLabel(platform)
@@ -233,6 +191,7 @@ export async function processingActivity(
   viewerId: string,
   scope: DoingScope = 'all',
   now = Date.now(),
+  options: { summaryOnly?: boolean } = {},
 ): Promise<DoingView> {
   const freeBytes = await freeDiskBytes()
   const remote = remoteProcessing()
@@ -253,8 +212,20 @@ export async function processingActivity(
   }
   if (!viewerId) return empty
 
-  const cands = candidates(viewerId, scope === 'needs' ? 'all' : scope, now)
-  if (cands.length === 0) return empty
+  const state = activityState(viewerId, scope, {
+    now,
+    recentMs: RECENT_MS,
+    needsMs: NEEDS_YOU_FOR_MS,
+    failedMs: LEARN_FAILED_FOR_MS,
+    keeping: keepEnabled(),
+    diskFull,
+    remoteOffline: remote && remoteConnected === false,
+    limit: MAX_ITEMS,
+    summaryOnly: options.summaryOnly === true,
+  })
+  const summary: DoingSummary = { ...empty.summary, ...state.summary }
+  const cands = state.candidates
+  if (cands.length === 0) return { items: [], summary }
   const ids = [...new Set(cands.map((c) => c.id))]
   const wanted = new Set(cands.map((c) => key(c.platform, c.id)))
   const idList = sql.join(
@@ -394,7 +365,7 @@ export async function processingActivity(
 
   const keyed = cands.map((c) => ({ ...c, k: key(c.platform, c.id) }))
   const saverMap = saversFor(
-    keyed.slice(0, MAX_CANDIDATES).map((c) => ({ platform: c.platform, id: c.id })),
+    keyed.map((c) => ({ platform: c.platform, id: c.id })),
     viewerId,
   )
 
@@ -544,19 +515,6 @@ export async function processingActivity(
       keepLinkOnly: keepLinkOnly && mine.has(c.k),
       finishedAt,
     })
-  }
-
-  const summary: DoingSummary = {
-    onTheirWay: items.filter((i) => i.status !== 'ready').length,
-    keeping: items.filter((i) => i.status !== 'ready' && i.status !== 'needs_you' && i.step <= 3)
-      .length,
-    learning: items.filter((i) => i.status !== 'ready' && i.status !== 'needs_you' && i.step >= 4)
-      .length,
-    needsYou: items.filter((i) => i.status === 'needs_you').length,
-    ready: items.filter((i) => i.status === 'ready').length,
-    freeBytes,
-    processing: remote ? 'remote' : 'local',
-    remoteConnected,
   }
 
   const RANK: Record<DoingStatus, number> = { needs_you: 0, working: 1, waiting: 2, ready: 3 }

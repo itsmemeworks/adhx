@@ -60,37 +60,47 @@ export function enqueueSave(
   userId: string,
   url: string,
   now = new Date(),
-  options: SaveOptions & { deferPublish?: boolean } = {},
+  options: SaveOptions & { deferPublish?: boolean; requestId?: string } = {},
 ): QueuedSave {
   const id = nanoid()
   const iso = now.toISOString()
-  db.insert(phoneSaveQueue)
-    .values({
-      id,
-      userId,
-      url,
-      status: 'waiting',
-      isPrivate: options.private === true,
-      privateChoice: options.private ?? null,
-      publishPending: options.deferPublish === true,
-      // Settled now: a share that didn't say makes a new save private when the
-      // owner has "Just for me by default" on (never changes a repeat save).
-      defaultPrivate: options.private === undefined && privateByDefault(userId),
-      createdAt: iso,
-      updatedAt: iso,
-    })
-    .run()
+  const receipt = runInTransaction(() => {
+    const inserted = db
+      .insert(phoneSaveQueue)
+      .values({
+        id,
+        userId,
+        requestId: options.requestId ?? null,
+        url,
+        status: 'waiting',
+        isPrivate: options.private === true,
+        privateChoice: options.private ?? null,
+        publishPending: options.deferPublish === true,
+        defaultPrivate: options.private === undefined && privateByDefault(userId),
+        createdAt: iso,
+        updatedAt: iso,
+      })
+      .onConflictDoNothing({ target: [phoneSaveQueue.userId, phoneSaveQueue.requestId] })
+      .run()
+    if (inserted.changes === 0 && options.requestId) {
+      const existing = db
+        .select()
+        .from(phoneSaveQueue)
+        .where(
+          and(eq(phoneSaveQueue.userId, userId), eq(phoneSaveQueue.requestId, options.requestId)),
+        )
+        .get()
+      if (!existing || existing.url !== url) throw new QueuedSaveConflict()
+      return queuedSave(userId, existing.id)!
+    }
+    return queuedSave(userId, id)!
+  })
   wakeSaveQueue()
-  return {
-    id,
-    state: 'waiting',
-    platform: null,
-    postId: null,
-    alreadySaved: false,
-    errorCode: null,
-    error: null,
-  }
+  return receipt
 }
+
+/** Reusing a request id must never replace the URL or privacy intent it already accepted. */
+export class QueuedSaveConflict extends Error {}
 
 /** One of your queued saves, or null when it isn't yours (or is long gone). */
 export function queuedSave(userId: string, id: string): QueuedSave | null {
@@ -277,7 +287,12 @@ function publishQueuedSave(row: typeof phoneSaveQueue.$inferSelect): void {
 /** A phone's privacy choice, persisted even while the downloader is working.
  * Also acknowledges two-phase publication. Unknown/other-owner jobs fail closed.
  */
-export function updateQueuedPrivacy(userId: string, id: string, choice?: boolean): boolean {
+export function updateQueuedPrivacy(
+  userId: string,
+  id: string,
+  choice?: boolean,
+  intentVersion?: number,
+): boolean {
   return runInTransaction(() => {
     const current = db
       .select()
@@ -285,13 +300,18 @@ export function updateQueuedPrivacy(userId: string, id: string, choice?: boolean
       .where(and(eq(phoneSaveQueue.id, id), eq(phoneSaveQueue.userId, userId)))
       .get()
     if (!current) return false
-    // An acknowledgement retry must never undo a later web privacy change.
-    if (choice === undefined && !current.publishPending) return true
+    // Versioned clients persist one monotonically increasing value per intent.
+    // Accepting and applying it share this transaction. A lost response followed
+    // by a retry cannot undo a later web toggle, nor can an older request win.
+    if (intentVersion !== undefined && intentVersion <= current.privacyIntentVersion) return true
+    // Legacy omission-only acknowledgement retries stay idempotent too.
+    if (intentVersion === undefined && choice === undefined && !current.publishPending) return true
     const row = db
       .update(phoneSaveQueue)
       .set({
         ...(choice === undefined ? {} : { privateChoice: choice, isPrivate: choice }),
         publishPending: false,
+        ...(intentVersion === undefined ? {} : { privacyIntentVersion: intentVersion }),
         updatedAt: new Date().toISOString(),
       })
       .where(and(eq(phoneSaveQueue.id, id), eq(phoneSaveQueue.userId, userId)))
@@ -321,7 +341,10 @@ export async function saveQueueTick(now = new Date()): Promise<number> {
       db.delete(phoneSaveQueue)
         .where(
           and(
-            inArray(phoneSaveQueue.status, ['saved', 'failed']),
+            or(
+              eq(phoneSaveQueue.status, 'failed'),
+              and(eq(phoneSaveQueue.status, 'saved'), eq(phoneSaveQueue.publishPending, false)),
+            ),
             lt(phoneSaveQueue.updatedAt, new Date(now.getTime() - KEEP_FINISHED_MS).toISOString()),
           ),
         )

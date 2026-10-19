@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { followDoing, type DoingSnapshot } from './doing-poller'
 import type { Saver } from '@/lib/people/types'
 
 /** The client's copy of `DoingView` (`src/lib/processing/doing.ts`). */
@@ -51,48 +52,26 @@ export function useDoing(options: {
   everyMs: number
   summaryOnly?: boolean
   enabled?: boolean
-}): {
-  items: DoingItem[] | null
-  summary: DoingSummary | null
-  refresh: () => void
-} {
-  const { scope = 'all', everyMs, summaryOnly = false, enabled = true } = options
-  const [items, setItems] = useState<DoingItem[] | null>(null)
-  const [summary, setSummary] = useState<DoingSummary | null>(null)
-  const timer = useRef<number | null>(null)
-
-  const load = useCallback(async () => {
-    if (timer.current) window.clearTimeout(timer.current)
-    try {
-      const qs = new URLSearchParams({ scope, ...(summaryOnly ? { summary: '1' } : {}) })
-      const res = await fetch(`/api/activity/processing?${qs}`, {
-        cache: 'no-store',
-        credentials: 'same-origin',
-      })
-      if (res.ok) {
-        const data = (await res.json()) as { items?: DoingItem[]; summary: DoingSummary }
-        setSummary(data.summary)
-        if (data.items) setItems(data.items)
-      }
-    } catch {
-      // Keep what's shown; try again on the next tick.
-    }
-    if (!document.hidden) timer.current = window.setTimeout(() => void load(), everyMs)
-  }, [scope, everyMs, summaryOnly])
-
+  accountId?: string
+}): DoingSnapshot & { refresh: () => void } {
+  const {
+    scope = 'all',
+    everyMs,
+    summaryOnly = false,
+    enabled = true,
+    accountId = 'session',
+  } = options
+  const [state, setState] = useState<DoingSnapshot>({ items: null, summary: null, error: null })
+  const refresh = useRef(() => {})
   useEffect(() => {
+    setState({ items: null, summary: null, error: null })
     if (!enabled) return
-    void load()
-    const onVisible = () => {
-      if (!document.hidden) void load()
-      else if (timer.current) window.clearTimeout(timer.current)
-    }
-    document.addEventListener('visibilitychange', onVisible)
+    const subscription = followDoing(accountId, scope, { notify: setState, everyMs, summaryOnly })
+    refresh.current = subscription.refresh
     return () => {
-      if (timer.current) window.clearTimeout(timer.current)
-      document.removeEventListener('visibilitychange', onVisible)
+      refresh.current = () => {}
+      subscription.leave()
     }
-  }, [load, enabled])
-
-  return { items, summary, refresh: () => void load() }
+  }, [scope, everyMs, summaryOnly, enabled, accountId])
+  return { ...state, refresh: () => refresh.current() }
 }

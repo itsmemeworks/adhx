@@ -124,7 +124,17 @@ phones, or with blur switched off, it's dimmed instead.
    while, Instagram especially). The card then asks `GET /api/app/save?id=`
    every 1.5 s until the post is saved or turned down. If you close the card
    early, your ADHX carries on, and the app keeps checking now and then so
-   Shared lately catches up.
+   Shared lately catches up. Every share is registered with WorkManager before
+   it sends anything, including when online. New saves are staged privately
+   (`deferPublish: true`) until the app acknowledges the latest **Just for me**
+   choice through `PATCH /api/app/save`. The receipt, explicit choice (including
+   off) and pending acknowledgement are stored before retrying, so closing the
+   card or restarting the phone cannot publish a private choice or lose it.
+   A failed acknowledgement retries the receipt, rather than queuing the link again.
+   Each changed choice increments a stored version; retries reuse it, so an
+   already accepted request cannot undo a later privacy change on the website.
+   The initial POST also reuses the history UUID as `requestId`, so losing its
+   response and restarting resumes the original receipt and captured default.
 3. **Saved** shows the post and how keeping a copy is going
    (`GET /api/app/status` every 1.5 s). It closes by itself after 3 seconds
    unless you touch it. **Open in ADHX** opens the post in this app's player
@@ -144,7 +154,8 @@ the list shows why. **Settings → Send waiting links now** starts them all
 again without waiting.
 
 **Shared lately** (in Settings) lists the last 50
-shares (kept on the phone only) and keeps unfinished copies up to date while
+completed shares, plus every unfinished delivery (kept on the phone only),
+and keeps unfinished copies up to date while
 it's open. Tap one to watch it in the player.
 
 ## Home: New · Channels · Live
@@ -169,8 +180,8 @@ behaviour and the endpoints are in
   watching and reactions, and adds React (emoji or a few words,
   `POST /api/app/live/{slug}/react`). Reactions float up with the sender's face.
 - **Faces** on the byline and search tiles open that friend's channel.
-- **Just for me** on the share card and in More (`private` with the save, or
-  `POST /api/app/private`); private saves show a lock.
+- **Just for me** on the share card persists through the queued receipt;
+  More in the player uses `POST /api/app/private`. Private saves show a lock.
 
 A server without the feed (404) keeps the old home: My saves. A feed with
 nothing anyone has saved yet (`nothingYet`) says "Nothing new yet. Save
@@ -193,9 +204,10 @@ and "Connected to Ana's ADHX" with **Remove this phone**.
   browser, not a phone key.
 - **Just for me by default** and **Sound on by default** are kept on the
   phone. Until the first is touched here, saves leave `private` out and the
-  account's own default on the server applies. On, saves go out with
-  `private: true`; off, a new save that comes back private is switched back
-  (a repeat share never changes an existing save).
+  account's own default on the server applies. On sends `private: true`;
+  off applies only to a new save when acknowledging publication. An untouched
+  off default never makes an existing private repeat shared. Explicitly changing
+  the share-card switch applies to repeats too.
 - **On their way**: over the New player, a pill ("3 on their way") while
   posts are processing, asking `GET /api/app/doing` every 5 s while it's on
   screen (15 s while nothing is). Tap it for a sheet: each post's picture,

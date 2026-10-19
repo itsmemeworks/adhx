@@ -98,7 +98,12 @@ sequenceDiagram
 ```
 
 The account-owned `phone_save_queue` tracks waiting, working, saved or failed
-URLs. The phone persists its receipt so it can follow the same request after an
+URLs. New native shares use `deferPublish` to stage saves privately until their
+chosen privacy is acknowledged by `PATCH /api/app/save`. The monotonic
+`intentVersion` is persisted on the phone and server; an accepted acknowledgement
+whose response was lost can be retried without undoing a later web privacy edit.
+A stable per-account `requestId` also resumes the same receipt after a lost
+initial POST response; reusing it with a different URL returns a conflict. The phone persists its receipt so it can follow the same request after an
 interruption. Older clients without `Prefer: respond-async` use the synchronous
 save path. X imports and browser saves join the downstream media/understanding
 stages without using phone receipts.
@@ -162,19 +167,31 @@ job leases up to four retained pictures plus the video, fetched one at a time by
 Florence-2 base model (8-bit), dropping slivers and stray marks. The Mac sends
 back only the cleaned words with `extracted`; the NAS applies the same filter
 again, stores them in `post_extracted_text`, rewrites the post's keyword row and
-queues its text vector again in the same transaction. Both models run in a
+queues its text vector again in the same transaction. Video-consuming learning
+waits for all conversion slots of that post, so file replacement cannot
+immediately invalidate an expensive speech or OCR pass. Both models run in a
 separate extract process that holds one model at a time and exits when idle.
 
 The protocol is versioned. Version 2 workers send `protocol: 2` and the `kinds`
 they can do (`SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off` on the Mac leaves
-one out); the server only hands out kinds it has switched on. A version 1
+one out); the server only hands out kinds it has switched on. Optional `media.cacheKey`
+identifies one retained-file generation independently of its learning kind, so
+speech, text on screen and video sections can share one downloaded original.
+`releaseMedia` acknowledgements and bounded claim reconciliation on subsequent polls removes copies
+with no remaining consumer, including cancelled/deleted sources. Expiry and the
+scratch budget bound leftovers when the server cannot be reached. Older workers
+ignore these additive fields; older servers retain per-kind caching. A version 1
 worker is still accepted and is only ever given text, image, video and
 conversion jobs, so it never sees a kind it doesn't know. A newer kind a
 version 2 worker doesn't recognise is deferred back to the queue.
 
-Conversion claims take priority over inference. Within understanding, fresh
-saves and Up next have higher priority than imports and backfill; within a
-priority, words come first, then pictures, speech, on-screen text and video. Each completed video section releases its
+Claims alternate between conversion and understanding, with the turn persisted
+on the server. An empty class yields immediately; pausing indexing still allows
+conversion. Conversion alternates newest-save and oldest-source ordering.
+Within understanding, fresh saves and Up next start above imports and backfill,
+while each minute waiting adds one effective priority point so old work cannot
+be starved indefinitely. Within a priority, words come first, then pictures,
+speech, on-screen text and video. Each completed video section releases its
 lease and returns unfinished work to backfill priority, giving new saves another
 chance to run. Failures use bounded retries with backoff and can ultimately need
 operator attention.
@@ -235,7 +252,7 @@ flowchart TD
   Upload --> Check{"NAS validates lease, source, codec, dimensions, duration and audio"}
   Check -->|"Valid"| Commit["Promote unique file and commit per-slot metadata swap"]
   Commit --> Ack["Acknowledge; remove unreferenced NAS source"]
-  Ack --> Local["Remove Mac downloaded source"]
+  Ack --> Local["Release Mac source when no queued pass still needs that generation"]
   Check -->|"Rejected"| Retry["Keep NAS source; retry or require attention"]
   Encode -->|"Failure"| Retry
   Upload -->|"Failure"| Retry
@@ -251,7 +268,7 @@ Verify promoted-file playback too: an upload log alone is insufficient evidence.
 
 | Mac data                                                     | Lifetime                                                                          |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| Downloaded photo or completed video's working copy           | Removed after final acknowledged result                                           |
+| Downloaded photo or completed video's working copy           | Shared across kinds; removed after final queued consumer acknowledges             |
 | Unfinished video's working copy                              | Reused between sections; can expire or be evicted to meet budget                  |
 | Sampled frames                                               | Removed after each section, including failures                                    |
 | Speech samples and on-screen text frames                     | Removed after each job, including failures; crash leftovers swept as scratch      |
@@ -261,7 +278,9 @@ Verify promoted-file playback too: an upload log alone is insufficient evidence.
 | Model weights                                                | Separate reusable cache, retained across jobs and updates                         |
 
 The default worker budget is 8 GiB of scratch and 4 GiB per file, including space
-reserved for active frame or conversion output. A job that cannot fit is deferred
+reserved for active frame, OCR, audio or conversion output. Every input in the
+current job is pinned during pruning; insufficient space defers the job without
+deleting its active inputs. A job that cannot fit is deferred
 rather than allowing unbounded growth. Use one runner per cache directory.
 Cleanup runs while the worker runs; offline crash leftovers wait until startup.
 Logs need a host log-rotation policy and are separate from media scratch. NAS

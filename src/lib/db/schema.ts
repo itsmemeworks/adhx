@@ -299,6 +299,8 @@ export const phoneSaveQueue = sqliteTable(
   {
     id: text('id').primaryKey(),
     userId: text('user_id').notNull(),
+    /** Stable per-share phone id; omitted by legacy clients. */
+    requestId: text('request_id'),
     url: text('url').notNull(),
     /** waiting · working · saved · failed */
     status: text('status').notNull(),
@@ -316,6 +318,8 @@ export const phoneSaveQueue = sqliteTable(
     privateChoice: integer('private_choice', { mode: 'boolean' }),
     /** New saves stay private until the phone acknowledges its intent. */
     publishPending: integer('publish_pending', { mode: 'boolean' }).notNull().default(false),
+    /** Highest acknowledged phone intent; replay never overrides a later web edit. */
+    privacyIntentVersion: integer('privacy_intent_version').notNull().default(0),
     /** Set once failed: a code the apps know, and words fit to show. */
     errorCode: text('error_code'),
     error: text('error'),
@@ -325,6 +329,7 @@ export const phoneSaveQueue = sqliteTable(
   (table) => ({
     statusIdx: index('phone_save_queue_status_idx').on(table.status, table.nextAttemptAt),
     userIdx: index('phone_save_queue_user_id_idx').on(table.userId),
+    requestIdx: uniqueIndex('phone_save_queue_request_idx').on(table.userId, table.requestId),
   }),
 )
 

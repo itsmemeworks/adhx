@@ -251,6 +251,10 @@ export async function transcribeSamples(samples: Float32Array): Promise<SpeechWi
   return windows
 }
 
+/** Only a corrupt/unsupported picture can be skipped in a multi-image job.
+ * Model loading and inference errors must propagate so old words survive retry. */
+export class ScreenImageError extends Error {}
+
 /** The text lines on one picture or frame, with where they sit. */
 export async function readScreenFile(file: string): Promise<ScreenRead> {
   const m = await once(
@@ -259,7 +263,9 @@ export async function readScreenFile(file: string): Promise<ScreenRead> {
     loadScreen,
   )
   const task = '<OCR_WITH_REGION>'
-  const image = await m.RawImage.read(file)
+  const image = await m.RawImage.read(file).catch(() => {
+    throw new ScreenImageError('Cannot decode screen image')
+  })
   const inputs = (await m.processor(image, m.processor.construct_prompts(task))) as Record<
     string,
     unknown

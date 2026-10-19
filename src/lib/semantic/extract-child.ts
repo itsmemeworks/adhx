@@ -6,6 +6,7 @@
  * goes back to the system instead of sitting next to the search model.
  */
 import type { ExtractRequest, ExtractResponse } from './extractor'
+import { runExtractTask } from './extract-task'
 
 const IDLE_MS = Math.max(1_000, Number(process.env['ADHX_EXTRACT_IDLE_MS'] || 60_000))
 
@@ -23,20 +24,7 @@ function rest(): void {
 
 async function handle(request: ExtractRequest): Promise<ExtractResponse> {
   const model = await import('./extract-model')
-  const { task } = request
-  if (task.kind === 'speech') {
-    const samples = await model.readSamples(task.file)
-    return { id: request.id, windows: await model.transcribeSamples(samples) }
-  }
-  const reads = []
-  for (const file of task.files) {
-    try {
-      reads.push(await model.readScreenFile(file))
-    } catch {
-      // One unreadable picture doesn't lose the others.
-    }
-  }
-  return { id: request.id, reads }
+  return runExtractTask(request, model)
 }
 
 process.on('message', (request: ExtractRequest) => {

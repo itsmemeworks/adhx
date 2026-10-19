@@ -295,7 +295,7 @@ The friends-feed contract is `docs/specs/friends-feed.md`. Saves are shared with
 - `bookmarks/visibility-sql.ts` (also in `FULL_SCHEMA_SQL`) installs idempotent SQLite triggers that bump `server_settings['saves.visibility']`. Public caches check `savePrivacyFingerprint()` on every read, including warm hits and other web processes. Do not replace this with TTL-only or process-local invalidation.
 - Blend snapshots cache ordering/seen state, but every page rechecks moderation, gone posts, current savers, reasons and counts. Cursor offsets refer to the original ordered slots, so removing an invisible post cannot skip or repeat surviving posts. Channel clones read the recipient's `privateByDefault`, preserving existing copies.
 - Named SSE streams recheck their account's approval/ban and the exact phone key before each event/reaction and every heartbeat (20 s). Rejection closes the stream and removes its watcher/reaction subscriptions.
-- `POST /api/app/save` can take `deferPublish: true`; the iPhone uses it. New queue saves are staged privately until `PATCH /api/app/save { id, private? }` confirms intent. `private_choice` keeps explicit false distinct from omission; `publish_pending` survives restarts. Completion and intent updates read/write the latest queue row transactionally. Omission preserves repeat-save privacy and acknowledgement retries cannot undo a later web toggle. Interrupted iPhone acknowledgements remain in Shared lately for retry; no automatic timeout publishes them.
+- `POST /api/app/save` can take `deferPublish: true`; both native apps use it. New queue saves are staged privately until `PATCH /api/app/save { id, private?, intentVersion? }` confirms intent. Versioned native acknowledgements only accept a newer persisted version; equal/stale retries are no-ops, including after a manual web privacy change. `private_choice` keeps explicit false distinct from omission; `publish_pending` survives restarts. Completion and intent updates read/write the latest queue row transactionally. Omission preserves repeat-save privacy and acknowledgement retries cannot undo a later web toggle. Interrupted iPhone acknowledgements remain in Shared lately for retry; Android uses WorkManager-backed receipt/intent delivery; no automatic timeout publishes them.
 - Pending approvals select their public handle from `user_identities.provider_id`, with a left join to the invite. An inviter's deletion must not strand joined accounts after its invite records are removed.
 
 ### Multi-User Query Safety
@@ -1410,3 +1410,12 @@ const results = await db
   .orderBy(desc(bookmarks.processedAt))
   .limit(20)
 ```
+
+### Friends-feed reliability verification
+
+- Doing totals use `processing/doing-state.ts` aggregate SQL over the full visible backlog; filter/order before limiting details to 60. `summary=1` avoids post/media/saver hydration. Keep aggregate predicates aligned with detailed step/status logic and preserve private/owner isolation.
+- `components/next/doing/doing-poller.ts` shares one foreground poll per account/scope, cancels pending fetches and timers after the final subscriber, and retains explicit stale/error feedback. Never restart polling from an obsolete response.
+- Web viewing marks stay in an account-scoped bounded outbox until an HTTP success; network and HTTP failures retry, including after reconnect/reload. Account changes must never submit old marks under the new cookie.
+- Native live polling POSTs bounded known keys plus a screen UUID, refreshes existing metadata and consumes `removedKeys`. Do not drop a cached item merely because it fell outside newest60. Foreground presence leases expire after15s and count one account across tabs/phones; names remain per authorized viewer.
+- OCR skips specifically unreadable pictures, but model/inference failures or no successfully processed inputs must fail/retry, not record `none`. Cache pruning pins every input of an active job. Retained-generation keys share originals across learning kinds; server release/reconciliation plus bounded expiry removes unused copies.
+- Processing scheduling alternates conversion/understanding durably and ages waiting work. See `processing/scheduling.ts`, `docs/remote-processing.md`, and `docs/rollout/friends-feed-verification.md` for the verification matrix and native CI.

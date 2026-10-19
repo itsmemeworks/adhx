@@ -9,6 +9,7 @@ import com.adhx.share.data.Connection
 import com.adhx.share.data.ConnectionStore
 import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.HistoryStore
+import com.adhx.share.data.HistoryWriteException
 import com.adhx.share.data.ShareState
 import com.adhx.share.links.Links
 import com.adhx.share.net.AdhxApi
@@ -148,8 +149,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshStatuses() {
         val connection = store.current() ?: return
         if (refreshing) return
+        // Recover publication intent after process death even when metadata/keeping already finished.
+        items.value.filter { it.publishPending || it.queueId != null }.forEach {
+            SaveQueue.enqueue(getApplication<Application>(), it.link, it.id, androidx.work.ExistingWorkPolicy.KEEP)
+        }
         val pending = items.value.filter {
-            (it.state == ShareState.SAVING && it.queueId != null) ||
+            (!it.publishPending && it.state == ShareState.SAVING && it.queueId != null) ||
                 (it.state == ShareState.SAVED && !it.isFinal && it.platform != null && it.postId != null)
         }
         if (pending.isEmpty()) return
@@ -195,6 +200,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         is ApiResult.Offline -> break
                     }
                 }
+            } catch (_: HistoryWriteException) {
+                // The durable worker retries its unchanged receipt when space is available.
             } finally {
                 refreshing = false
             }

@@ -15,7 +15,13 @@ vi.mock('@/lib/db', () => ({
   runInTransaction: <T>(fn: () => T): T => instance.sqlite.transaction(fn)(),
 }))
 
-import { claimProcessingJob, completeExtractJob, failProcessingJob } from '@/lib/processing/jobs'
+import {
+  claimProcessingJob,
+  completeExtractJob,
+  failProcessingJob,
+  cacheReleaseAfter,
+  reconcileMediaCache,
+} from '@/lib/processing/jobs'
 import { PROCESSING_PROTOCOL, SUPPORTED_PROTOCOLS, claimableKinds } from '@/lib/processing/protocol'
 import { claimConversionJob } from '@/lib/processing/conversion'
 import { SEMANTIC_MODEL_VERSION, PRIORITY, type JobKind } from '@/lib/semantic/config'
@@ -157,6 +163,83 @@ describe('protocol versions', () => {
 })
 
 describe('speech and on-screen text jobs', () => {
+  it('reconciles only current file generations with live consumers and removes deleted-source copies', async () => {
+    await savedPost(['speech'])
+    const job = (await claim(2, ['speech']))!
+    const key = job.media!.cacheKey!
+    expect(reconcileMediaCache([key])).toEqual([])
+    instance.sqlite
+      .prepare("UPDATE kept_files SET created_at='replacement' WHERE slot='video-1'")
+      .run()
+    expect(reconcileMediaCache([key])).toEqual([key])
+    instance.sqlite
+      .prepare("UPDATE kept_files SET created_at='2026-10-19T10:00:00.000Z' WHERE slot='video-1'")
+      .run()
+    instance.sqlite.prepare("DELETE FROM bookmarks WHERE id='100'").run()
+    expect(reconcileMediaCache([key])).toEqual([key])
+    expect(() => reconcileMediaCache(['../secret'])).toThrow('cache keys')
+    expect(() => reconcileMediaCache(Array(513).fill(key))).toThrow('cache keys')
+  })
+
+  it('rejects malformed cache reconciliation before leasing any work', async () => {
+    await savedPost(['speech'])
+    const response = await POST(
+      request({
+        action: 'claim',
+        workerId: 'mac-test',
+        model: SEMANTIC_MODEL_VERSION,
+        protocol: 2,
+        kinds: ['speech'],
+        cachedMedia: ['../private'],
+      }),
+    )
+    expect(response.status).toBe(400)
+    expect(instance.sqlite.prepare('SELECT count(*) AS n FROM processing_leases').get()).toEqual({
+      n: 0,
+    })
+  })
+
+  it('cleans a cached original when a redundant current job is skipped at claim time', async () => {
+    await savedPost(['speech'])
+    const job = (await claim(2, ['speech']))!
+    await completeExtractJob(job.id, job.lease, 'words already extracted from this source', 'en')
+    await enqueuePosts([{ platform: 'twitter', postId: '100' }], PRIORITY.urgent, ['speech'])
+    const response = await POST(
+      request({
+        action: 'claim',
+        workerId: 'mac-test',
+        model: SEMANTIC_MODEL_VERSION,
+        protocol: 2,
+        kinds: ['speech'],
+      }),
+    )
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.job).toBeNull()
+    expect(body.releaseMedia).toContain(job.media!.cacheKey)
+  })
+
+  it('shares generation-safe file identities across learning kinds and releases after the last consumer', async () => {
+    await savedPost(['speech', 'screen'])
+    const speech = (await claim(2, ['speech']))!
+    const screen = (await claim(2, ['screen']))!
+    const video = screen.files!.find((file) => file.slot === 'video-1')!
+    expect(speech.contentHash).not.toBe(screen.contentHash)
+    expect(speech.media!.cacheKey).toMatch(/^[a-f0-9]{64}$/)
+    expect(speech.media!.cacheKey).toBe(video.cacheKey)
+    const afterSpeech = cacheReleaseAfter(speech.id, speech.lease)
+    await completeExtractJob(speech.id, speech.lease, 'useful spoken words here', 'en')
+    expect(afterSpeech()).not.toContain(video.cacheKey)
+    const afterScreen = cacheReleaseAfter(screen.id, screen.lease)
+    await completeExtractJob(screen.id, screen.lease, 'readable words on screen', null)
+    expect(afterScreen()).toContain(video.cacheKey)
+    await enqueuePosts([{ platform: 'twitter', postId: '100' }], PRIORITY.urgent, ['speech'])
+    instance.sqlite
+      .prepare("UPDATE kept_files SET created_at='changed-generation' WHERE slot='video-1'")
+      .run()
+    expect((await claim(2, ['speech']))!.media!.cacheKey).not.toBe(video.cacheKey)
+  })
+
   it('leases the sound, stores the cleaned words and re-queues the text vector', async () => {
     await savedPost(['speech'])
     const job = (await claim())!
@@ -181,7 +264,7 @@ describe('speech and on-screen text jobs', () => {
         language: 'en',
       }),
     )
-    expect(await response.json()).toEqual({ done: true })
+    expect(await response.json()).toMatchObject({ done: true, releaseMedia: expect.any(Array) })
     expect(getExtracted('twitter', '100', 'speech')).toMatchObject({
       status: 'ok',
       language: 'en',

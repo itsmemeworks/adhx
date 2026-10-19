@@ -333,3 +333,56 @@ describe('GET /api/app/doing', () => {
     expect(noKey.status).toBe(401)
   })
 })
+
+it('counts the full cold queue and keeps an older failure actionable beyond the display limit', async () => {
+  testInstance.db.delete(schema.bookmarks).run()
+  testInstance.db.delete(schema.keepJobs).run()
+  testInstance.db.delete(schema.understandingQueue).run()
+  for (let n = 0; n < 450; n++) {
+    save(ANA, `cold-${n}`, { processedAt: ago(n * 1000) })
+    keep(
+      `cold-${n}`,
+      n === 449 ? 'unavailable' : 'pending',
+      n === 449 ? { lastError: 'private' } : {},
+    )
+  }
+  const all = await doing('all', ANA)
+  expect(all.items).toHaveLength(60)
+  expect(all.summary).toMatchObject({ onTheirWay: 450, keeping: 449, needsYou: 1 })
+  expect(all.items[0].id).toBe('cold-449')
+  const needs = await doing('needs', ANA)
+  expect(needs.items.map((i) => i.id)).toEqual(['cold-449'])
+  expect(needs.summary.onTheirWay).toBe(450)
+})
+
+it('does not let recent ready items hide older work, or count another account’s private backlog', async () => {
+  for (let n = 0; n < 450; n++) {
+    save(BEN, `private-${n}`, { isPrivate: true })
+    keep(`private-${n}`, 'pending')
+    save(ANA, `ready-${n}`)
+    keep(`ready-${n}`, 'done')
+  }
+  save(ANA, 'older-work', { processedAt: ago(5 * 86_400_000) })
+  keep('older-work', 'done', { updatedAt: ago(5 * 86_400_000) })
+  queue('older-work', 'video')
+  const all = await doing('all', ANA)
+  expect(all.items.some((i) => i.id === 'older-work')).toBe(true)
+  expect(all.items.some((i) => i.id.startsWith('private-'))).toBe(false)
+  expect(all.summary.onTheirWay).toBe(6)
+})
+
+it('answers summary polls without hydrating post media or faces', async () => {
+  viewer = ANA
+  const phone = await import('@/lib/app/phone-app')
+  const hydrate = vi.spyOn(phone, 'appPost')
+  try {
+    const { GET } = await import('@/app/api/activity/processing/route')
+    const response = await GET(new NextRequest(`${BASE}/api/activity/processing?summary=1`))
+    const body = await response.json()
+    expect(body.summary.onTheirWay).toBe(5)
+    expect(body).not.toHaveProperty('items')
+    expect(hydrate).not.toHaveBeenCalled()
+  } finally {
+    hydrate.mockRestore()
+  }
+})

@@ -440,6 +440,17 @@ export function TheaterV2({
   const [floats, setFloats] = useState<FloatingReaction[]>([])
   const [reactOpen, setReactOpen] = useState(false)
   const [reacting, setReacting] = useState(false)
+  const [reactionError, setReactionError] = useState<string | null>(null)
+  const reactionTarget = useRef<FeedItem | null>(null)
+  const reactionRequest = useRef<AbortController | null>(null)
+  useEffect(() => {
+    setReactOpen(false)
+    setReactionError(null)
+    return () => {
+      reactionRequest.current?.abort()
+      reactionRequest.current = null
+    }
+  }, [source.moment])
 
   // ——— Load the queue from the search this session came from ———
   useEffect(() => {
@@ -576,15 +587,24 @@ export function TheaterV2({
   const [privateNow, setPrivateNow] = useState<Map<string, boolean>>(new Map())
   const isPrivate = !!current && (privateNow.get(currentKey) ?? !!current.post.isPrivate)
   // Savers are only sent to signed-in members; a save made here adds you.
-  const { me } = useAuthMe()
+  const { me, loading: authLoading } = useAuthMe()
   // Seen (the feed's watched list): 2s on stage, or skipped. Members only.
-  const markSeen = useSeenPosts(!!me?.user && !source.shared)
+  const markSeen = useSeenPosts(!authLoading && !!me?.user && !source.shared, me?.user?.id)
   const currentKeyRef = useRef(currentKey)
   currentKeyRef.current = currentKey
   useEffect(() => {
     if (!currentKey || caughtUp) return
-    const t = setTimeout(() => markSeen(currentKey), SEEN_AFTER_MS)
-    return () => clearTimeout(t)
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const visible = () => {
+      if (timer !== null) clearTimeout(timer)
+      timer = document.hidden ? null : setTimeout(() => markSeen(currentKey), SEEN_AFTER_MS)
+    }
+    visible()
+    document.addEventListener('visibilitychange', visible)
+    return () => {
+      if (timer !== null) clearTimeout(timer)
+      document.removeEventListener('visibilitychange', visible)
+    }
   }, [currentKey, caughtUp, markSeen])
   const member = !!me?.user
   const savers = useMemo<Saver[] | undefined>(() => {
@@ -790,30 +810,46 @@ export function TheaterV2({
     }
   }, [source.moment, replaceItems])
 
-  /** A reaction to what's playing, for the members tuned in (it comes back on the stream). */
+  /** Keep the draft and its original post until the server acknowledges it. */
   const sendReaction = useCallback(
-    async (reaction: { emoji: ReactionEmoji } | { text: string }) => {
-      const post = itemsRef.current[indexRef.current]?.post
-      if (!source.moment || !post) return
-      setReactOpen(false)
+    async (reaction: { emoji: ReactionEmoji } | { text: string }): Promise<boolean> => {
+      const post = reactionTarget.current ?? itemsRef.current[indexRef.current]?.post
+      if (!source.moment || !post || reactionRequest.current) return false
+      const controller = new AbortController()
+      reactionRequest.current = controller
       setReacting(true)
+      setReactionError(null)
       try {
         const response = await fetch(`/api/moments/${encodeURIComponent(source.moment)}/react`, {
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
           body: JSON.stringify({ ...reaction, platform: post.platform ?? 'twitter', id: post.id }),
         })
-        if (response.status === 429) flash('Easy there. Try again in a moment.')
-        else if (!response.ok) flash('That didn’t send. Try again.')
+        if (controller.signal.aborted) return false
+        if (!response.ok) {
+          setReactionError(
+            response.status === 429
+              ? 'Easy there. Try again in a moment.'
+              : 'That didn’t send. Your words are still here. Try again.',
+          )
+          return false
+        }
+        setReactOpen(false)
+        return true
       } catch {
-        flash('That didn’t send. Try again.')
+        if (!controller.signal.aborted)
+          setReactionError('That didn’t send. Your words are still here. Try again.')
+        return false
       } finally {
-        // A short pause between reactions, so a tap can't turn into a flood.
-        window.setTimeout(() => setReacting(false), 800)
+        if (reactionRequest.current === controller) {
+          reactionRequest.current = null
+          setReacting(false)
+        }
       }
     },
-    [source.moment, flash],
+    [source.moment],
   )
 
   const toggleWander = useCallback(
@@ -1810,20 +1846,30 @@ export function TheaterV2({
         )}
         {source.moment && member && reactOpen && (
           <ReactionPicker
-            onEmoji={(emoji) => void sendReaction({ emoji })}
-            onText={(text) => void sendReaction({ text })}
+            onEmoji={(emoji) => sendReaction({ emoji })}
+            onText={(text) => sendReaction({ text })}
             onClose={() => setReactOpen(false)}
             disabled={reacting}
+            error={reactionError}
             className="absolute inset-x-3 bottom-[max(16px,env(safe-area-inset-bottom))] z-40 md:inset-x-auto md:bottom-auto md:right-24 md:top-1/2 md:w-[400px] md:-translate-y-1/2"
           />
         )}
 
         <nav
           aria-label="Post actions"
-          className="absolute bottom-[164px] right-3 z-10 flex flex-col gap-3 md:bottom-auto md:right-6 md:top-1/2 md:-translate-y-1/2"
+          className="absolute bottom-[min(164px,calc(100%-144px))] right-2 z-10 flex max-h-[max(48px,calc(100%-260px))] flex-col gap-3 overflow-y-auto overscroll-contain px-1 py-1 [scrollbar-width:thin] [&>*]:shrink-0 md:bottom-auto md:right-5 md:top-1/2 md:max-h-[calc(100%-32px)] md:-translate-y-1/2"
         >
           {source.moment && member && (
-            <ReactButton open={reactOpen} onToggle={() => setReactOpen((o) => !o)} />
+            <ReactButton
+              open={reactOpen}
+              onToggle={() => {
+                if (!reactOpen) {
+                  reactionTarget.current = itemsRef.current[indexRef.current]?.post ?? null
+                  setReactionError(null)
+                }
+                setReactOpen((o) => !o)
+              }}
+            />
           )}
           {originalUrl && (
             <a

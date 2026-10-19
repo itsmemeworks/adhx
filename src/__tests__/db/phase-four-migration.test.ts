@@ -499,8 +499,11 @@ describe('Phase 4 startup migration', () => {
 
 it('upgrades queued privacy intent idempotently and shares visibility revisions across connections', () => {
   const { databasePath, migrationsPath, sqlite } = createMigrationFixture()
-  sqlite.exec(`ALTER TABLE phone_save_queue DROP COLUMN private_choice;
+  sqlite.exec(`DROP INDEX phone_save_queue_request_idx;
+    ALTER TABLE phone_save_queue DROP COLUMN request_id;
+    ALTER TABLE phone_save_queue DROP COLUMN private_choice;
     ALTER TABLE phone_save_queue DROP COLUMN publish_pending;
+    ALTER TABLE phone_save_queue DROP COLUMN privacy_intent_version;
     DROP TRIGGER save_visibility_insert;
     DROP TRIGGER save_visibility_update;
     DROP TRIGGER save_visibility_delete;`)
@@ -521,9 +524,36 @@ it('upgrades queued privacy intent idempotently and shares visibility revisions 
   try {
     expect(
       migrated
-        .prepare('SELECT is_private,private_choice,publish_pending FROM phone_save_queue')
+        .prepare(
+          'SELECT is_private,private_choice,publish_pending,privacy_intent_version,request_id FROM phone_save_queue',
+        )
         .get(),
-    ).toEqual({ is_private: 1, private_choice: null, publish_pending: 0 })
+    ).toEqual({
+      is_private: 1,
+      private_choice: null,
+      publish_pending: 0,
+      privacy_intent_version: 0,
+      request_id: null,
+    })
+    const requestId = '11111111-1111-4111-8111-111111111111'
+    migrated
+      .prepare('UPDATE phone_save_queue SET request_id=?, privacy_intent_version=7 WHERE id=?')
+      .run(requestId, 'old-queue')
+    expect(() =>
+      other
+        .prepare(
+          `INSERT INTO phone_save_queue(id,user_id,url,status,request_id,created_at,updated_at)
+      VALUES('duplicate-request','queue-owner','https://youtu.be/other','waiting',?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
+        )
+        .run(requestId),
+    ).toThrow(/UNIQUE constraint failed/)
+    const rerun = runMigration(databasePath, migrationsPath)
+    expect(rerun.status, `${rerun.stdout}\n${rerun.stderr}`).toBe(0)
+    expect(
+      other
+        .prepare('SELECT request_id,privacy_intent_version FROM phone_save_queue WHERE id=?')
+        .get('old-queue'),
+    ).toEqual({ request_id: requestId, privacy_intent_version: 7 })
     const expected = new Database(':memory:')
     try {
       expected.exec(FULL_SCHEMA_SQL)

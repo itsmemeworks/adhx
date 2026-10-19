@@ -111,7 +111,11 @@ final class ShareFlow: ObservableObject {
             privacyTouched = true
             record.wantsPrivate = true
         }
-        History.upsert(record)
+        record.privacyIntentVersion = 1
+        guard History.upsert(record) else {
+            phase = .problem(title: "Couldn’t save on this phone", message: "Free some space and try again.")
+            return
+        }
         recordId = record.id
         phase = .saving
         saveTask = Task { [weak self] in
@@ -127,20 +131,23 @@ final class ShareFlow: ObservableObject {
 
     private func save(with client: ADHXClient, link: String, recordId: String) async {
         do {
-            switch try await client.save(url: link, private: privacyTouched ? justForMe : nil, deferPublish: true) {
+            switch try await client.save(url: link, private: privacyTouched ? justForMe : nil, deferPublish: true, requestId: recordId) {
             case .saved(let r):
                 landed(r, client: client)
             case .queued(let id):
                 // Your ADHX has it and saves it in its own time; ask how it's
                 // going while the sheet is open.
                 queueId = id
-                History.update(id: recordId) { $0.queue(id); $0.publishPending = true }
+                guard let intent = History.update(id: recordId, { $0.queue(id); $0.publishPending = true }) else {
+                    phase = .problem(title: "Couldn’t remember that share", message: "It stays private. Free some space and try again.")
+                    return
+                }
                 // A choice made before the POST answered is included here. The
                 // server holds new saves private until this is acknowledged.
                 privacyBusy = true
                 defer { privacyBusy = false }
-                try await client.queuedPrivacy(id: id, private: privacyTouched ? justForMe : nil)
-                History.update(id: recordId) { $0.wantsPrivate = nil; $0.publishPending = false }
+                try await client.queuedPrivacy(id: id, private: intent.wantsPrivate, intentVersion: intent.intentVersion)
+                History.update(id: recordId) { $0.acknowledgePrivacy(version: intent.intentVersion, private: intent.wantsPrivate) }
                 if !closeRequested { waitForServer(client: client, queueId: id) }
             }
         } catch APIError.offline, APIError.slow {
@@ -267,20 +274,23 @@ final class ShareFlow: ObservableObject {
     func setJustForMe(_ on: Bool) {
         touch()
         guard on != justForMe, !privacyBusy else { return }
+        let intent: ShareRecord?
+        if let recordId {
+            intent = History.update(id: recordId) { $0.choosePrivacy(on) }
+            guard intent != nil else {
+                privacyError = "Couldn’t remember that choice. Free some space and try again."
+                return
+            }
+        } else { intent = nil }
         privacyTouched = true
         privacyError = nil
         justForMe = on
-        if let queueId, let client {
-            if let recordId {
-                History.update(id: recordId) { $0.wantsPrivate = on; $0.publishPending = true }
-            }
+        if let queueId, let client, let recordId, let intent {
             privacyBusy = true
             privacyTask = Task { [weak self] in
                 do {
-                    try await client.queuedPrivacy(id: queueId, private: on)
-                    if let recordId = self?.recordId {
-                        History.update(id: recordId) { $0.wantsPrivate = nil; $0.isPrivate = on; $0.publishPending = false }
-                    }
+                    try await client.queuedPrivacy(id: queueId, private: on, intentVersion: intent.intentVersion)
+                    History.update(id: recordId) { $0.acknowledgePrivacy(version: intent.intentVersion, private: on) }
                 } catch {
                     self?.privacyError = "Couldn’t change that. Try again."
                 }
@@ -289,7 +299,6 @@ final class ShareFlow: ObservableObject {
         } else if let r = result {
             sendPrivacy(on, platform: r.platform, id: r.id)
         } else if let recordId {
-            History.update(id: recordId) { $0.wantsPrivate = on }
             OfflineQueue.setPrivate(id: recordId, on)
         }
     }

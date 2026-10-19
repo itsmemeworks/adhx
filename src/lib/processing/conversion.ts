@@ -13,7 +13,7 @@ import { MAX_ATTEMPTS, PRIORITY, SEMANTIC_MODEL_VERSION } from '@/lib/semantic/c
 import { enqueuePosts } from '@/lib/semantic/queue'
 import { captureException } from '@/lib/sentry'
 import { indexingLevel, remoteProcessing } from './config'
-import { ProcessingConflict, ProcessingInputError } from './jobs'
+import { mediaCacheKey, ProcessingConflict, ProcessingInputError } from './jobs'
 import { supportedProtocol, type ProcessingJob } from './protocol'
 
 const LEASE_MS = 120_000
@@ -201,11 +201,20 @@ export async function claimConversionJob(
       next_attempt_at=${now},expires_at=NULL,lease_hash=NULL,updated_at=${new Date(now).toISOString()},
       last_error='Conversion worker lease expired' WHERE status='running' AND expires_at<=${now} RETURNING *`)
     for (const row of expired) updateKeepState(row)
+    const oldestNext =
+      db.all<{ value: string }>(
+        sql`SELECT value FROM server_settings WHERE key='processing.lastConversionOrder'`,
+      )[0]?.value === 'newest'
     const row = db.all<Conversion>(sql`SELECT c.* FROM media_conversions c
       WHERE c.status='pending' AND c.next_attempt_at<=${now}
       AND NOT EXISTS(SELECT 1 FROM moderated_posts m WHERE m.platform=c.platform AND m.bookmark_id=c.post_id AND m.hidden=1)
-      ORDER BY (SELECT max(b.processed_at) FROM bookmarks b WHERE b.platform=c.platform AND b.id=c.post_id) DESC,c.slot LIMIT 1`)[0]
+      ORDER BY
+        CASE WHEN ${oldestNext ? 1 : 0}=1 THEN c.source_created_at END ASC,
+        CASE WHEN ${oldestNext ? 1 : 0}=0 THEN (SELECT max(b.processed_at) FROM bookmarks b WHERE b.platform=c.platform AND b.id=c.post_id) END DESC,
+        c.source_created_at,c.platform,c.post_id,c.slot LIMIT 1`)[0]
     if (!row || !sourceCurrent(row)) return null
+    db.run(sql`INSERT INTO server_settings(key,value,updated_at) VALUES('processing.lastConversionOrder',${oldestNext ? 'oldest' : 'newest'},${new Date(now).toISOString()})
+      ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at`)
     const id = randomUUID(),
       token = randomBytes(32).toString('base64url')
     db.run(sql`UPDATE media_conversions SET status='running',lease_id=${id},lease_hash=${digest(token)},worker_id=${workerId},
@@ -221,6 +230,11 @@ export async function claimConversionJob(
         path: `/api/processing/media?id=${id}`,
         mime: row.source_path.endsWith('.webm') ? 'video/webm' : 'video/mp4',
         bytes: row.source_bytes,
+        cacheKey: mediaCacheKey(
+          row.platform,
+          row.post_id,
+          keptFilesFor(row.platform, row.post_id).find((file) => file.slot === row.slot)!,
+        ),
       },
       conversion: {
         width: row.width,

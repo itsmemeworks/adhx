@@ -466,6 +466,8 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
   const shutdown = new AbortController()
   let running = false
   let lastCleanup = 0
+  let cacheCursor = 0
+  const activeInputs = new Set<string>()
 
   async function post<T>(body: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
     const response = await request(`${config.serverUrl}/api/processing/jobs`, {
@@ -480,10 +482,18 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
       ]),
     })
     if (!response.ok) throw new Error(`Worker request failed (${response.status})`)
-    return response.json() as Promise<T>
+    const result = (await response.json()) as T & { releaseMedia?: unknown }
+    if (Array.isArray(result.releaseMedia)) {
+      for (const key of result.releaseMedia) {
+        if (typeof key === 'string' && /^[a-f0-9]{64}$/.test(key))
+          await rm(path.join(config.cacheDir, `${key}.media`), { force: true })
+      }
+    }
+    return result
   }
 
   async function pruneCache(incoming: number, keep?: string): Promise<void> {
+    const protectedInput = (file: string) => file === keep || activeInputs.has(file)
     const files: Array<{ file: string; bytes: number; age: number; scratch: boolean }> = []
     const treeBytes = async (file: string): Promise<number> => {
       const info = await lstat(file)
@@ -502,7 +512,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
       const file = path.join(config.cacheDir, name)
       const info = await lstat(file)
       const expired = Date.now() - info.mtimeMs > (scratch ? 60 * 60_000 : 24 * 60 * 60_000)
-      if (expired && file !== keep) {
+      if (expired && !protectedInput(file)) {
         await rm(file, { recursive: true, force: true })
         continue
       }
@@ -513,7 +523,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
     files.sort((a, b) => Number(b.scratch) - Number(a.scratch) || a.age - b.age)
     let used = files.reduce((total, file) => total + file.bytes, 0)
     for (const file of files) {
-      if (file.file === keep) continue
+      if (protectedInput(file.file)) continue
       if (used + incoming <= config.maxCacheBytes) break
       await rm(file.file, { recursive: true, force: true })
       used -= file.bytes
@@ -538,19 +548,25 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
     }
     await mkdir(config.cacheDir, { recursive: true, mode: 0o700 })
     await chmod(config.cacheDir, 0o700)
-    // Lease URLs change on each claim. Cache by the stable source hash/kind so
-    // long videos are downloaded once across resumable segment leases.
-    const key = createHash('sha256')
-      .update(`${job.kind}|${job.contentHash}${slot ? `|${slot}` : ''}`)
-      .digest('hex')
+    // Lease URLs change on each claim. Cache by the server-owned retained-file generation, sharing
+    // originals across speech, screen and resumable vision segments. Older
+    // servers retain their per-kind fallback; content hashes are not file IDs.
+    if (media.cacheKey !== undefined && !/^[a-f0-9]{64}$/.test(media.cacheKey))
+      throw new Error('Invalid retained media identity')
+    const key =
+      media.cacheKey ??
+      createHash('sha256')
+        .update(`${job.kind}|${job.contentHash}${slot ? `|${slot}` : ''}`)
+        .digest('hex')
     const target = path.join(config.cacheDir, `${key}.media`)
-    try {
-      if ((await stat(target)).size === media.bytes) {
-        await pruneCache(0, target)
-        return target
-      }
-    } catch {
-      /* missing or stale cached original */
+    if (
+      await stat(target)
+        .then((info) => info.isFile() && info.size === media.bytes)
+        .catch(() => false)
+    ) {
+      activeInputs.add(target)
+      await pruneCache(0)
+      return target
     }
     await rm(target, { force: true })
     await pruneCache(media.bytes)
@@ -583,6 +599,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
       if (bytes !== media.bytes) throw new Error('Retained media was incomplete')
       await file.close()
       await rename(temporary, target)
+      activeInputs.add(target)
       return target
     } catch (error) {
       await file.close().catch(() => undefined)
@@ -601,12 +618,24 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
         await pruneCache(0)
         lastCleanup = Date.now()
       }
+      const cached = (await readdir(config.cacheDir))
+        .filter((name) => /^[a-f0-9]{64}\.media$/.test(name))
+        .sort()
+      cacheCursor = cached.length ? cacheCursor % cached.length : 0
+      const cachedIdentities =
+        cached.length > 512
+          ? [...cached, ...cached]
+              .slice(cacheCursor, cacheCursor + 512)
+              .map((name) => name.slice(0, -6))
+          : cached.map((name) => name.slice(0, -6))
+      cacheCursor = cached.length ? (cacheCursor + 512) % cached.length : 0
       const { job } = await post<{ job: ProcessingJob | null }>({
         action: 'claim',
         workerId: config.workerId,
         model: SEMANTIC_MODEL_VERSION,
         protocol: PROCESSING_PROTOCOL,
         kinds: workerKinds(),
+        ...(cachedIdentities.length ? { cachedMedia: cachedIdentities } : {}),
       })
       if (!job) return false
       if (job.model !== SEMANTIC_MODEL_VERSION)
@@ -693,7 +722,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
             },
             signal,
           )
-          if (result.done) await rm(file, { force: true })
+          if (result.done && !job.media?.cacheKey) await rm(file, { force: true })
         } else if (job.kind === 'screen') {
           const listed = job.files ?? (job.media ? [{ ...job.media, slot: 'photo-1' }] : [])
           if (listed.length === 0 || listed.length > 8) throw new Error('Invalid screen job')
@@ -720,7 +749,11 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
             { action: 'extracted', ...base, text },
             signal,
           )
-          if (result.done) for (const d of downloaded) await rm(d.file, { force: true })
+          if (result.done)
+            for (const d of downloaded) {
+              if (!listed.find((media) => media.slot === d.slot)?.cacheKey)
+                await rm(d.file, { force: true })
+            }
         } else if (job.kind === 'text') {
           if (typeof job.text !== 'string' || job.text.length > 32_000)
             throw new Error('Invalid text job')
@@ -736,7 +769,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
               { action: 'complete', ...base, vector },
               signal,
             )
-            if (result.done) await rm(file, { force: true })
+            if (result.done && !job.media?.cacheKey) await rm(file, { force: true })
           } else {
             const progress =
               job.video ??
@@ -773,7 +806,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
                 { action: 'segment', ...base, index, vector },
                 signal,
               )
-              if (result.done) await rm(file, { force: true })
+              if (result.done && !job.media?.cacheKey) await rm(file, { force: true })
             } finally {
               await frames.cleanup()
             }
@@ -784,11 +817,14 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
         }
         log(`[worker] completed ${job.kind === 'video' ? 'video segment' : job.kind}`)
       } catch (error) {
+        // An invalidated lease/deleted source must not retain an active original.
+        // Network heartbeat loss also fails closed; checkpoints remain on NAS.
+        if (signal.aborted) for (const file of activeInputs) await rm(file, { force: true })
         const reason =
           error instanceof ScratchBudgetError
             ? job.kind === 'convert'
               ? 'Native scratch cache budget is too small for the original plus the maximum conversion output'
-              : 'Native scratch cache budget is too small; allow room for the original plus 64 MiB of video frames'
+              : 'Native scratch cache budget is too small; allow room for all current media inputs plus 64 MiB of processing scratch'
             : 'Native processing failed; inspect the worker configuration and retained media'
         if (!signal.aborted) {
           await post({
@@ -806,6 +842,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
       } finally {
         clearInterval(heartbeat)
         controller.abort()
+        activeInputs.clear()
       }
       return true
     } finally {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Smile } from 'lucide-react'
 import type { FeedItem } from '@/components/feed/types'
 import type { Saver } from '@/lib/people/types'
@@ -134,15 +134,18 @@ export function ReactionPicker({
   onText,
   onClose,
   disabled = false,
+  error,
   className,
 }: {
-  onEmoji: (emoji: ReactionEmoji) => void
-  onText: (text: string) => void
+  onEmoji: (emoji: ReactionEmoji) => void | Promise<boolean>
+  onText: (text: string) => void | Promise<boolean>
   onClose: () => void
   disabled?: boolean
+  error?: string | null
   className?: string
 }) {
   const [text, setText] = useState('')
+  const inputId = useId()
   const first = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     first.current?.focus()
@@ -159,11 +162,15 @@ export function ReactionPicker({
         }
       }}
       className={cn(
-        'pointer-events-auto flex flex-col gap-2.5 rounded-[26px] border border-white/10 bg-[#1a1814]/90 p-3 text-white shadow-nx-toast backdrop-blur-xl',
+        'pointer-events-auto flex max-h-[calc(100%-32px)] min-w-0 flex-col gap-2.5 overflow-y-auto overscroll-contain rounded-[26px] border border-white/10 bg-[#1a1814]/90 p-3 text-white shadow-nx-toast backdrop-blur-xl',
         className,
       )}
     >
-      <div role="group" aria-label="Quick reactions" className="flex justify-between gap-1.5">
+      <div
+        role="group"
+        aria-label="Quick reactions"
+        className="grid grid-cols-3 gap-1.5 min-[380px]:grid-cols-6"
+      >
         {REACTION_EMOJI.map((r, i) => (
           <button
             key={r.emoji}
@@ -173,7 +180,7 @@ export function ReactionPicker({
             title={r.label}
             disabled={disabled}
             onClick={() => onEmoji(r.emoji)}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-[#262320] text-[26px] leading-none transition-transform hover:scale-110 disabled:opacity-60 motion-reduce:hover:scale-100"
+            className="flex h-12 min-w-0 items-center justify-center rounded-full bg-[#262320] text-[26px] leading-none transition-transform hover:scale-110 disabled:opacity-60 motion-reduce:hover:scale-100"
           >
             <span aria-hidden>{r.emoji}</span>
           </button>
@@ -181,21 +188,22 @@ export function ReactionPicker({
       </div>
       <form
         className="flex gap-2"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault()
           if (!clean || disabled) return
-          onText(clean)
-          setText('')
+          if ((await onText(clean)) !== false) setText('')
         }}
       >
-        <label htmlFor="nx-react-say" className="sr-only">
+        <label htmlFor={inputId} className="sr-only">
           Say something
         </label>
         <input
-          id="nx-react-say"
+          id={inputId}
           value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={MAX_REACTION_TEXT}
+          onChange={(e) => setText(Array.from(e.target.value).slice(0, MAX_REACTION_TEXT).join(''))}
+          maxLength={MAX_REACTION_TEXT * 2}
+          disabled={disabled}
+          aria-describedby={`${inputId}-hint`}
           autoComplete="off"
           enterKeyHint="send"
           placeholder="Say something to everyone watching"
@@ -206,9 +214,17 @@ export function ReactionPicker({
           disabled={!clean || disabled}
           className="h-11 shrink-0 rounded-full bg-nx-accent px-[18px] text-[15px] font-extrabold text-black disabled:opacity-50"
         >
-          <span>Send</span>
+          <span>{disabled ? 'Sending…' : error ? 'Retry' : 'Send'}</span>
         </button>
       </form>
+      <p id={`${inputId}-hint`} className="m-0 text-xs text-nx-soft">
+        Live reactions disappear after a few seconds.
+      </p>
+      {error && (
+        <p role="status" className="m-0 text-sm text-[#ffb891]">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

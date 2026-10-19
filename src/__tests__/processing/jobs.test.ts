@@ -108,6 +108,23 @@ function request(body: unknown, credential = token) {
   })
 }
 
+describe('understanding queue fairness', () => {
+  it('eventually serves an old backfill job while fresh urgent work keeps arriving', async () => {
+    await saved('text', 'old')
+    await saved('text', 'fresh')
+    await enqueuePosts([{ platform: 'twitter', postId: 'old' }], PRIORITY.backfill, ['text'])
+    await enqueuePosts([{ platform: 'twitter', postId: 'fresh' }], PRIORITY.urgent, ['text'])
+    instance.sqlite
+      .prepare("UPDATE understanding_queue SET enqueued_at=? WHERE post_id='old'")
+      .run(new Date(Date.now() - 120 * 60_000).toISOString())
+    const job = (await claim())!
+    expect(job.text).toContain('Useful public content')
+    expect(
+      instance.sqlite.prepare('SELECT post_id FROM processing_leases WHERE id=?').get(job.id),
+    ).toEqual({ post_id: 'old' })
+  })
+})
+
 describe('machine authentication', () => {
   it('requires remote mode and a separate constant-time URL-safe credential', () => {
     expect(workerAuthorized(request({}))).toBe(true)

@@ -653,11 +653,16 @@ try {
 for (const [column, definition] of [
   ['private_choice', 'integer'],
   ['publish_pending', 'integer NOT NULL DEFAULT 0'],
+  ['privacy_intent_version', 'integer NOT NULL DEFAULT 0'],
+  ['request_id', 'text'],
 ]) {
   const columns = db.prepare('PRAGMA table_info(phone_save_queue)').all() as { name: string }[]
   if (!columns.some((c) => c.name === column))
     db.exec(`ALTER TABLE phone_save_queue ADD COLUMN ${column} ${definition}`)
 }
+db.exec(
+  'CREATE UNIQUE INDEX IF NOT EXISTS phone_save_queue_request_idx ON phone_save_queue(user_id, request_id)',
+)
 try {
   db.exec('ALTER TABLE keep_jobs ADD COLUMN accepted_at text')
   console.log('[migrate] Added keep_jobs.accepted_at')

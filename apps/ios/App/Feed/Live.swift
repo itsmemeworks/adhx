@@ -45,6 +45,7 @@ final class LiveModel: ObservableObject {
 }
 
 struct LiveView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var model: LiveModel
     let server: URL
     @State private var tuned: LiveMoment?
@@ -87,7 +88,9 @@ struct LiveView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable { await model.reload() }
-        .task { await model.follow() }
+        .task(id: scenePhase == .active && tuned == nil) {
+            if scenePhase == .active && tuned == nil { await model.follow() }
+        }
         .fullScreenCover(item: $tuned) { moment in
             TunedInScreen(moment: moment, server: server)
         }
@@ -262,10 +265,11 @@ final class TunedInModel: ObservableObject {
     @Published private(set) var watchers: [Saver] = []
     @Published private(set) var loadedOnce = false
     @Published private(set) var gone = false
+    @Published private(set) var loadError: String?
     /// "Jo just saved one", for a few seconds after a new save lands.
     @Published private(set) var arrival: Saver?
     @Published var currentIndex = 0
-    /// Reactions on their way up the screen (yours at once, others' from the poll).
+    /// Reactions on their way up the screen (yours after acknowledgement, others from the poll).
     @Published private(set) var floating: [FloatingReaction] = []
     private var arrivalTask: Task<Void, Never>?
     /// Reactions already shown (or already old when you tuned in).
@@ -277,48 +281,61 @@ final class TunedInModel: ObservableObject {
         watchers = moment.watchers
     }
 
-    var current: PhonePost? { currentIndex < items.count ? items[currentIndex] : nil }
+    var current: PhonePost? { items.indices.contains(currentIndex) ? items[currentIndex] : nil }
 
     /// People watching besides you.
     var others: [Saver] { watchers.filter { !$0.isYou } }
 
     func follow() async {
+        guard let client = Store.client() else { return }
+        let session = UUID().uuidString
+        defer {
+            // A separate task can send leave even though the screen's poll task was cancelled.
+            Task { try? await client.leaveLive(slug: slug, session: session) }
+        }
         while !Task.isCancelled {
-            await refresh()
+            await refresh(watching: session)
+            if gone { return }
             try? await Task.sleep(nanoseconds: 5_000_000_000)
         }
     }
 
-    func refresh() async {
+    func refresh(watching session: String? = nil) async {
         guard let client = Store.client() else { return }
         do {
-            let detail = try await client.live(slug: slug)
+            let detail = try await client.live(slug: slug, watching: session, known: items.map(\.key))
             guard !Task.isCancelled else { return }
             if let moment = detail.moment { self.moment = moment }
             watchers = detail.watchers
             let first = !loadedOnce
-            merge(detail.items)
+            merge(detail.items, removed: Set(detail.removedKeys), saverUpdates: Dictionary(detail.saverUpdates.map { ($0.key, $0) }, uniquingKeysWith: { _, latest in latest }))
             take(detail.reactions, quietly: first)
             gone = false
+            loadError = nil
+        } catch is CancellationError { return
         } catch let error as APIError where error.isMissing {
             gone = true
+            items = []
+            watchers = []
+        } catch APIError.badKey {
+            items = []
+            watchers = []
+            gone = true
         } catch {
-            // Keep what's on screen; look again next time.
+            loadError = (error as? APIError)?.message ?? APIError.offline.message
         }
         loadedOnce = true
     }
 
     /// New saves go right after the one on screen ("up next").
-    private func merge(_ fresh: [PhonePost]) {
-        guard loadedOnce, !items.isEmpty else {
-            items = fresh
-            return
-        }
+    private func merge(_ fresh: [PhonePost], removed: Set<String>, saverUpdates: [String: LiveSaverUpdate]) {
+        let playing = current?.key
         let have = Set(items.map(\.key))
-        let new = fresh.filter { !have.contains($0.key) }
-        guard !new.isEmpty else { return }
-        let at = min(currentIndex + 1, items.count)
-        items.insert(contentsOf: new, at: at)
+        let new = fresh.filter { !have.contains($0.key) && !removed.contains($0.key) }
+        items = mergeLiveQueue(current: items, fresh: fresh, removed: removed, playing: playing, saverUpdates: saverUpdates)
+        if let playing, let index = items.firstIndex(where: { $0.key == playing }) { currentIndex = index }
+        else { currentIndex = min(currentIndex, max(0, items.count - 1)) }
+        guard loadedOnce else { return }
         if let saver = new.first?.savers.first(where: { !$0.isYou }) {
             arrival = saver
             arrivalTask?.cancel()
@@ -333,6 +350,7 @@ final class TunedInModel: ObservableObject {
     /// Others' reactions from the poll float up; the ones already there when
     /// you tuned in don't. Yours floated when you sent them.
     private func take(_ reactions: [LiveReactionEvent], quietly: Bool) {
+        if shownReactions.count > 1000 { shownReactions = Set(reactions.map(\.id).filter { shownReactions.contains($0) }) }
         for reaction in reactions where shownReactions.insert(reaction.id).inserted {
             guard !quietly, !reaction.saver.isYou else { continue }
             float(reaction)
@@ -350,17 +368,17 @@ final class TunedInModel: ObservableObject {
     }
 
     /// Sends an emoji or a few words about the post on screen, and floats it
-    /// with your face straight away.
-    func react(_ say: LiveSay, you: Saver) async -> Bool {
-        guard let post = current, let client = Store.client() else { return false }
-        switch say {
-        case .emoji(let emoji):
-            float(LiveReactionEvent(id: UUID().uuidString, saver: you, emoji: emoji, text: nil))
-        case .text(let text):
-            float(LiveReactionEvent(id: UUID().uuidString, saver: you, emoji: nil, text: text))
-        }
+    /// with your face after the server accepts it.
+    func react(_ say: LiveSay, you: Saver, to post: PostRef) async -> Bool {
+        guard let client = Store.client() else { return false }
         do {
-            try await client.react(slug: slug, say, to: post.ref)
+            try await client.react(slug: slug, say, to: post)
+            switch say {
+            case .emoji(let emoji):
+                float(LiveReactionEvent(id: UUID().uuidString, saver: you, emoji: emoji, text: nil))
+            case .text(let text):
+                float(LiveReactionEvent(id: UUID().uuidString, saver: you, emoji: nil, text: text))
+            }
             return true
         } catch {
             return false
@@ -373,12 +391,16 @@ struct TunedInScreen: View {
     @StateObject private var model: TunedInModel
     let server: URL
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var clean = false
     @State private var scrubbing = false
     @State private var note: String?
     @State private var picking = false
     @State private var words = ""
+    @State private var sending = false
+    @State private var retry: (say: LiveSay, post: PostRef)?
+    @State private var reactionPost: PostRef?
     @FocusState private var typing: Bool
 
     init(moment: LiveMoment, server: URL) {
@@ -397,12 +419,15 @@ struct TunedInScreen: View {
             } else {
                 VStack(spacing: 16) {
                     if model.loadedOnce {
-                        Text(model.gone ? "This one’s over." : "Nothing in it yet.")
+                        Text(model.loadError != nil ? "Can’t reach this room" : (model.gone ? "This one’s over." : "Nothing in it yet."))
                             .font(Theme.serif(34))
                             .foregroundStyle(.white)
-                        Text(model.gone ? "Everyone’s moved on. Plenty more in New." : "Hang on, your lot are saving.")
+                        Text(model.loadError ?? (model.gone ? "Everyone’s moved on. Plenty more in New." : "Hang on, your lot are saving."))
                             .font(Theme.sans(15))
                             .foregroundStyle(Theme.muted)
+                        if model.loadError != nil {
+                            Button("Try again") { Task { await model.refresh() } }.buttonStyle(PillButtonStyle(kind: .primary))
+                        }
                     } else {
                         RingSpinner(size: 34, lineWidth: 3)
                     }
@@ -433,8 +458,9 @@ struct TunedInScreen: View {
         .background(Color.black.ignoresSafeArea())
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: model.arrival)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: picking)
-        .onChange(of: model.currentIndex) { _, _ in note = nil }
-        .task { await model.follow() }
+        .task(id: scenePhase) {
+            if scenePhase == .active { await model.follow() }
+        }
     }
 
     private var topBar: some View {
@@ -473,9 +499,12 @@ struct TunedInScreen: View {
                 .accessibilityAddTraits(.updatesFrequently)
             }
             if let note {
-                Text(note)
-                    .font(Theme.sans(13, .bold))
-                    .foregroundStyle(Theme.warn)
+                HStack {
+                    Text(note).font(Theme.sans(13, .bold)).foregroundStyle(Theme.warn)
+                    if let retry { Button("Retry") { send(retry.say, to: retry.post) }.disabled(sending) }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityAddTraits(.updatesFrequently)
             }
         }
         .padding(.horizontal, 16)
@@ -492,6 +521,7 @@ struct TunedInScreen: View {
     private var watchersChip: some View {
         let others = model.others
         let names = SaverWords.names(SaverWords.ordered(others).map(\.displayName), upTo: 2)
+        let unnamed = max(0, (model.moment.watching ?? 1) - 1 - others.count)
         return HStack(spacing: 7) {
             if !others.isEmpty {
                 FaceStack(savers: others, server: server, size: 26, ring: .black)
@@ -499,7 +529,7 @@ struct TunedInScreen: View {
             // The names when they fit; the faces say who when they don't.
             ViewThatFits(in: .horizontal) {
                 if others.isEmpty {
-                    Text("Just you so far")
+                    Text(unnamed > 0 ? "\(unnamed) watching with you" : "Just you so far")
                 } else {
                     Text("\(names) · watching with you")
                     Text("watching with you")
@@ -514,13 +544,14 @@ struct TunedInScreen: View {
         .frame(minHeight: 34)
         .background(Capsule().fill(.black.opacity(0.55)))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(others.isEmpty ? "Just you watching so far"
+        .accessibilityLabel(others.isEmpty ? (unnamed > 0 ? "\(unnamed) watching with you" : "Just you watching so far")
                             : SaverWords.names(others.map(\.displayName), upTo: 2) + (others.count == 1 ? " is" : " are") + " watching with you")
         .accessibilityAddTraits(.updatesFrequently)
     }
 
     private func togglePicker() {
         picking.toggle()
+        if picking { reactionPost = model.current?.ref }
         if !picking { typing = false }
         note = nil
     }
@@ -533,8 +564,10 @@ struct TunedInScreen: View {
 
     /// Six quick emoji, and a few words to everyone watching.
     private var picker: some View {
+      ScrollView {
         VStack(spacing: 10) {
-            HStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+              HStack(spacing: 8) {
                 ForEach(LiveSay.quick, id: \.emoji) { quick in
                     Button {
                         send(.emoji(quick.emoji))
@@ -546,9 +579,10 @@ struct TunedInScreen: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(quick.name)
-                    if quick.emoji != LiveSay.quick.last?.emoji { Spacer(minLength: 4) }
                 }
+              }
             }
+            .disabled(sending)
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Quick reactions")
             HStack(spacing: 8) {
@@ -560,7 +594,7 @@ struct TunedInScreen: View {
                     .submitLabel(.send)
                     .onSubmit(sendWords)
                     .onChange(of: words) { _, text in
-                        if text.count > LiveSay.maxText { words = String(text.prefix(LiveSay.maxText)) }
+                        if text.unicodeScalars.count > LiveSay.maxText { words = LiveSay.clip(text) }
                     }
                     .padding(.horizontal, 16)
                     .frame(height: 44)
@@ -568,18 +602,24 @@ struct TunedInScreen: View {
                     .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
                     .accessibilityLabel("Say something")
                     .accessibilityHint("Up to \(LiveSay.maxText) characters, to everyone watching")
-                Button("Send", action: sendWords)
+                Button(sending ? "Sending…" : (retry != nil ? "Retry" : "Send"), action: sendWords)
                     .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false))
-                    .disabled(words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(sending || words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+            Text("Live reactions disappear. These aren’t saved messages.")
+                .font(Theme.sans(12)).foregroundStyle(Theme.muted)
             if let note {
                 Text(note)
                     .font(Theme.sans(13, .bold))
                     .foregroundStyle(Theme.warn)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityAddTraits(.updatesFrequently)
             }
         }
         .padding(12)
+      }
+        .frame(maxHeight: 300)
+        .scrollBounceBehavior(.basedOnSize)
         .background {
             let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
             shape.fill(.ultraThinMaterial)
@@ -593,17 +633,28 @@ struct TunedInScreen: View {
     private func sendWords() {
         let text = words.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        words = ""
-        typing = false
-        picking = false
         send(.text(text))
     }
 
-    private func send(_ say: LiveSay) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    private func send(_ say: LiveSay, to target: PostRef? = nil) {
+        guard !sending, let post = target ?? reactionPost ?? model.current?.ref else { return }
+        sending = true
         note = nil
         Task {
-            if await model.react(say, you: you) == false { note = "Couldn’t send that. Try again." }
+            let sent = await model.react(say, you: you, to: post)
+            sending = false
+            if sent {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                if case .text(let text) = say, words.trimmingCharacters(in: .whitespacesAndNewlines) == text { words = "" }
+                retry = nil
+                typing = false
+                picking = false
+            } else {
+                retry = (say, post)
+                if case .text = say { note = "Not sent. Your words are still here. Tap Retry."; picking = true }
+                else { note = "Not sent. Tap Retry." }
+                UIAccessibility.post(notification: .announcement, argument: note)
+            }
         }
     }
 

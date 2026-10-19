@@ -12,7 +12,7 @@ import com.adhx.share.data.HistoryStore
 import com.adhx.share.data.ShareState
 import java.util.concurrent.TimeUnit
 
-/** Links waiting on the phone until the server can be reached. */
+/** Durable delivery and privacy acknowledgements, including shares started while online. */
 object SaveQueue {
 
     const val TAG = "adhx-save"
@@ -21,14 +21,14 @@ object SaveQueue {
     const val KEY_PRIVATE = "private"
 
     /**
-     * One unique piece of work per link: sharing the same link again while
-     * it waits doesn't queue it twice.
+     * One chain per history item. An edit appends behind an in-flight request,
+     * so cancelling work can never discard an arriving server receipt.
      */
     fun enqueue(
         context: Context,
         link: String,
         itemId: String?,
-        policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP,
+        policy: ExistingWorkPolicy = ExistingWorkPolicy.APPEND_OR_REPLACE,
         justForMe: Boolean = false,
     ) {
         val request = OneTimeWorkRequestBuilder<SaveWorker>()
@@ -41,13 +41,13 @@ object SaveQueue {
             .setInputData(workDataOf(KEY_LINK to link, KEY_ITEM to itemId, KEY_PRIVATE to justForMe))
             .addTag(TAG)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(workName(link), policy, request)
+        WorkManager.getInstance(context).enqueueUniqueWork(workName(itemId ?: link), policy, request)
     }
 
     /** "Send waiting links now": start each waiting link over, without the back-off wait. */
     fun sendWaitingNow(context: Context): Int {
-        val waiting = HistoryStore.get(context).items.value.filter { it.state == ShareState.QUEUED }
-        waiting.forEach { enqueue(context, it.link, it.id, ExistingWorkPolicy.REPLACE, justForMe = it.isPrivate) }
+        val waiting = HistoryStore.get(context).items.value.filter { it.state == ShareState.QUEUED || it.publishPending }
+        waiting.forEach { enqueue(context, it.link, it.id, ExistingWorkPolicy.APPEND_OR_REPLACE, justForMe = it.isPrivate) }
         return waiting.size
     }
 

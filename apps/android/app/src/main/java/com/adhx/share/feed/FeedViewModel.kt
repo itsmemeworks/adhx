@@ -14,6 +14,7 @@ import com.adhx.share.net.ApiResult
 import com.adhx.share.net.ChannelsResponse
 import com.adhx.share.net.FeedMode
 import com.adhx.share.net.LiveMoment
+import com.adhx.share.net.LiveSaverUpdate
 import com.adhx.share.net.LiveReaction
 import com.adhx.share.net.MediaType
 import com.adhx.share.net.PhonePost
@@ -440,10 +441,14 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
      * Ask for the moment again (every ~5 s while tuned in). New posts join the
      * end, so the one playing never moves.
      */
-    suspend fun pollTuned() {
+    private var tunedPlayingKey: String? = null
+
+    fun playingTuned(post: PhonePost?) { tunedPlayingKey = post?.key }
+
+    suspend fun pollTuned(session: String? = null) {
         val connection = store.current() ?: return
         val slug = _tuned.value.slug.takeIf { it.isNotBlank() } ?: return
-        val result = AdhxApi(connection).liveMoment(slug)
+        val result = AdhxApi(connection).liveMoment(slug, session, _tuned.value.items.map { it.key })
         val current = _tuned.value
         if (current.slug != slug) return
         _tuned.value = when (result) {
@@ -453,10 +458,9 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 val had = current.items.mapTo(HashSet()) { it.key }
                 val fresh = detail.items.filter { it.key !in had }
                 // Keep each post's newest savers (someone else may have saved it meanwhile).
-                val byKey = detail.items.associateBy { it.key }
                 current.copy(
                     moment = detail.moment ?: current.moment,
-                    items = current.items.map { byKey[it.key] ?: it } + fresh,
+                    items = mergeLivePosts(current.items, detail.items, detail.removedKeys.toSet(), tunedPlayingKey, detail.saverUpdates.associate { it.key to it }),
                     watchers = detail.watchers ?: detail.moment?.watchers?.takeIf { it.isNotEmpty() } ?: current.watchers,
                     loadedOnce = true,
                     error = null,
@@ -465,10 +469,15 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
             }
             is ApiResult.Failed -> {
                 signedOut(result, connection)
-                current.copy(loadedOnce = true, error = if (result.status == 404) Copy.LIVE_ENDED else result.message ?: Copy.LIVE_CANT_LOAD)
+                current.copy(items = if (result.status == 404 || result.status == 401) emptyList() else current.items, watchers = emptyList(), loadedOnce = true, error = if (result.status == 404) Copy.LIVE_ENDED else result.message ?: Copy.LIVE_CANT_LOAD)
             }
             ApiResult.Offline -> current.copy(loadedOnce = true, error = if (current.items.isEmpty()) OFFLINE else null)
         }
+    }
+
+    suspend fun leaveTuned(slug: String, session: String) {
+        val connection = store.current() ?: return
+        AdhxApi(connection).leaveLive(slug, session)
     }
 
     fun seenArrivals() {
@@ -477,16 +486,17 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * React to [post] in the moment you're tuned in to: an emoji, or a few
-     * words. Yours floats up at once; false when it didn't get through.
+     * words. Yours floats only after acknowledgement; false keeps the draft for retry.
      */
     suspend fun react(post: PhonePost, emoji: String? = null, text: String? = null): Boolean {
         val connection = store.current() ?: return false
         val slug = _tuned.value.slug.takeIf { it.isNotBlank() } ?: return false
-        val words = text?.trim()?.take(com.adhx.share.net.Reaction.MAX_TEXT)?.takeIf { it.isNotEmpty() }
+        val words = text?.trim()?.let(com.adhx.share.net.Reaction::clip)?.takeIf { it.isNotEmpty() }
         if (emoji == null && words == null) return false
         val me = Saver(username = connection.username ?: "you", name = Copy.YOU, isYou = true)
-        float(emoji, words, me)
-        return AdhxApi(connection).react(slug, post.platform, post.id, emoji = emoji, text = words) is ApiResult.Ok
+        val sent = AdhxApi(connection).react(slug, post.platform, post.id, emoji = emoji, text = words) is ApiResult.Ok
+        if (sent) float(emoji, words, me)
+        return sent
     }
 
     /** A floating reaction has finished. */
@@ -499,6 +509,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
      * float up once each, by id. Yours were shown when you sent them.
      */
     private fun arrive(reactions: List<LiveReaction>) {
+        if (reactionsSeen.size > 1000) reactionsSeen.retainAll(reactions.map { it.key }.toSet())
         val fresh = reactions.filter { reactionsSeen.add(it.key) }
         fresh.filterNot { it.who?.isYou == true }.takeLast(MAX_FLOATING)
             .forEachIndexed { i, r -> float(r.emoji, r.text, r.who, delayMs = i * STAGGER_MS) }
@@ -531,4 +542,16 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         private const val STAGGER_MS = 700L
         private const val OFFLINE = "Can’t reach your ADHX right now."
     }
+}
+
+
+/** Refresh metadata in place; only explicit removal drops a cached post. Preserve the playing key under the cap. */
+internal fun mergeLivePosts(current: List<PhonePost>, fresh: List<PhonePost>, removed: Set<String>, playing: String?, saverUpdates: Map<String, LiveSaverUpdate> = emptyMap()): List<PhonePost> {
+    val byKey = fresh.associateBy { it.key }
+    val have = current.mapTo(HashSet()) { it.key }
+    val merged = current.filterNot { it.key in removed }.map { cached -> byKey[cached.key] ?: saverUpdates[cached.key]?.let { cached.copy(savers = it.savers, isPrivate = it.isPrivate) } ?: cached } + fresh.filter { it.key !in have && it.key !in removed }
+    if (merged.size <= 200) return merged
+    val index = merged.indexOfFirst { it.key == playing }.coerceAtLeast(0)
+    val start = (index - 60).coerceIn(0, merged.size - 200)
+    return merged.subList(start, start + 200)
 }

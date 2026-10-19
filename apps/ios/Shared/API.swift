@@ -177,9 +177,9 @@ struct PhonePost: Decodable, Hashable {
     let learning: Bool?
     /// The members who saved it, newest first (yours has `isYou`). Empty on
     /// older servers.
-    let savers: [Saver]
+    var savers: [Saver]
     /// Your save is "Just for me".
-    let isPrivate: Bool
+    var isPrivate: Bool
     /// Why the feed picked it ("Ana and Ben saved this"). Feed items only.
     let why: String?
     /// Every reason, the headline first (feed items on newer servers).
@@ -376,10 +376,11 @@ struct ADHXClient {
 
     /// `isPrivate` saves it "Just for me"; nil leaves the server's default
     /// (shared with your people, or what a repeat save already had).
-    func save(url: String, private isPrivate: Bool? = nil, deferPublish: Bool = false) async throws -> SaveAnswer {
+    func save(url: String, private isPrivate: Bool? = nil, deferPublish: Bool = false, requestId: String? = nil) async throws -> SaveAnswer {
         var body: [String: Any] = ["url": url]
         if let isPrivate { body["private"] = isPrivate }
         if deferPublish { body["deferPublish"] = true }
+        if let requestId { body["requestId"] = requestId }
         let answer: SaveOrQueued = try await send(
             "POST", "/api/app/save", body: body, headers: ["Prefer": "respond-async"])
         return answer.answer
@@ -394,9 +395,10 @@ struct ADHXClient {
     }
 
     /// Persist the share card's latest choice before a queued post is published.
-    func queuedPrivacy(id: String, private isPrivate: Bool? = nil) async throws {
+    func queuedPrivacy(id: String, private isPrivate: Bool? = nil, intentVersion: Int? = nil) async throws {
         var body: [String: Any] = ["id": id]
         if let isPrivate { body["private"] = isPrivate }
+        if let intentVersion { body["intentVersion"] = intentVersion }
         let _: [String: Bool] = try await send("PATCH", "/api/app/save", body: body)
     }
 

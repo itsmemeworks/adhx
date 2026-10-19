@@ -423,20 +423,30 @@ private struct LiveAnswer: Decodable {
     }
 }
 
+struct LiveSaverUpdate: Decodable {
+    let key: String
+    let savers: [Saver]
+    let isPrivate: Bool
+}
+
 struct LiveDetail: Decodable {
     let moment: LiveMoment?
     let items: [PhonePost]
     let watchers: [Saver]
     /// Recent reactions from people tuned in, to float up the screen.
     let reactions: [LiveReactionEvent]
+    let removedKeys: [String]
+    let saverUpdates: [LiveSaverUpdate]
 
-    private enum Keys: String, CodingKey { case moment, items, watchers, reactions }
+    private enum Keys: String, CodingKey { case moment, items, watchers, reactions, removedKeys, saverUpdates }
 
-    init(moment: LiveMoment?, items: [PhonePost], watchers: [Saver], reactions: [LiveReactionEvent] = []) {
+    init(moment: LiveMoment?, items: [PhonePost], watchers: [Saver], reactions: [LiveReactionEvent] = [], removedKeys: [String] = [], saverUpdates: [LiveSaverUpdate] = []) {
         self.moment = moment
         self.items = items
         self.watchers = watchers
         self.reactions = reactions
+        self.removedKeys = removedKeys
+        self.saverUpdates = saverUpdates
     }
 
     init(from decoder: Decoder) throws {
@@ -446,6 +456,8 @@ struct LiveDetail: Decodable {
         let watchers = c.savers(.watchers)
         self.watchers = watchers.isEmpty ? (moment?.watchers ?? []) : watchers
         reactions = c.loose(Lossy<LiveReactionEvent>.self, .reactions)?.items ?? []
+        removedKeys = c.loose([String].self, .removedKeys) ?? []
+        saverUpdates = c.loose([LiveSaverUpdate].self, .saverUpdates) ?? []
     }
 }
 
@@ -459,6 +471,9 @@ enum LiveSay: Equatable {
         ("😂", "Laughing"), ("🔥", "Fire"), ("😭", "Crying"), ("👀", "Eyes"), ("💀", "Skull"), ("❤️", "Heart"),
     ]
     static let maxText = 40
+    static func clip(_ text: String) -> String {
+        String(String.UnicodeScalarView(text.unicodeScalars.prefix(maxText)))
+    }
 }
 
 /// Someone's reaction, from the live poll. The shape is still settling: the
@@ -550,15 +565,26 @@ extension ADHXClient {
         return answer.moments
     }
 
-    func live(slug: String) async throws -> LiveDetail {
-        try await send("GET", "/api/app/live/\(Self.pathPart(slug))")
+    func live(slug: String, watching session: String? = nil, known: [String] = []) async throws -> LiveDetail {
+        do {
+            return try await send("POST", "/api/app/live/\(Self.pathPart(slug))",
+                                  body: ["known": Array(known.prefix(200))],
+                                  headers: session.map { ["X-ADHX-Watch": $0] } ?? [:])
+        } catch APIError.server(status: 405, code: _, message: _) {
+            return try await send("GET", "/api/app/live/\(Self.pathPart(slug))")
+        }
+    }
+
+    func leaveLive(slug: String, session: String) async throws {
+        let _: Nothing = try await send("DELETE", "/api/app/live/\(Self.pathPart(slug))",
+                                        headers: ["X-ADHX-Watch": session], timeout: 5)
     }
 
     func react(slug: String, _ say: LiveSay, to post: PostRef) async throws {
         var body: [String: Any] = ["platform": post.platform, "id": post.id]
         switch say {
         case .emoji(let emoji): body["emoji"] = emoji
-        case .text(let text): body["text"] = String(text.prefix(LiveSay.maxText))
+        case .text(let text): body["text"] = LiveSay.clip(text)
         }
         let _: Nothing = try await send("POST", "/api/app/live/\(Self.pathPart(slug))/react", body: body)
     }

@@ -45,6 +45,7 @@ import {
   type RecentPost,
 } from './group'
 import { nameMoment } from './naming'
+import { namedWatchAdjustment } from './presence'
 
 /**
  * "Right now": what people are saving, grouped by meaning, live.
@@ -352,7 +353,6 @@ function newestKeys(members: Map<string, { lastAt: number }>, n: number): string
 }
 
 async function momentView(m: Moment, now = Date.now()): Promise<MomentView> {
-  const s = state()
   const covers = await loadPosts(visibleOnly(newestKeys(m.members, 8)))
   let last = 0
   for (const member of m.members.values()) last = Math.max(last, member.lastAt)
@@ -364,7 +364,7 @@ async function momentView(m: Moment, now = Date.now()): Promise<MomentView> {
     posts: m.members.size,
     lastAt: new Date(last || now).toISOString(),
     rising: isRising(m.recent, now),
-    watching: s.watching.get(m.slug) ?? 0,
+    watching: watchingCount(m.slug),
     covers: [...covers.values()].slice(0, 8),
   }
 }
@@ -788,6 +788,12 @@ export async function getMomentDetail(slug: string, limit = 60): Promise<MomentD
   }
 }
 
+/** Validate older cached references without hydrating their words or media. */
+export function visibleMomentKeys(slug: string, knownKeys: string[]): string[] {
+  const moment = state().moments.find((m) => m.slug === slug)
+  return moment ? visibleOnly(knownKeys.filter((key) => moment.members.has(key))) : []
+}
+
 /**
  * A moment's post keys, newest first, and the start of its window (ISO), so
  * `people.ts` can name savers for members. Post keys only: saver ids never
@@ -825,6 +831,16 @@ export async function getMomentNeighbours(slug: string, limit = 20): Promise<Fee
     .slice(0, limit)
 }
 
+/** Anonymous streams plus named accounts, counted once across their devices. */
+export function watchingCount(slug: string): number {
+  return Math.max(0, (state().watching.get(slug) ?? 0) + namedWatchAdjustment(slug))
+}
+
+/** Polling phones use the same anonymous event as open web streams. */
+export function announceWatching(slug: string): void {
+  emit({ type: 'watching', slug, watching: watchingCount(slug) })
+}
+
 /**
  * Listen for live events. `watch` counts this listener as watching that
  * moment (Tune in, a moment's page). Returns the unsubscribe function.
@@ -838,7 +854,7 @@ export function subscribe(listener: (event: MomentEvent) => void, watch?: string
   if (watch) {
     const n = (s.watching.get(watch) ?? 0) + 1
     s.watching.set(watch, n)
-    emit({ type: 'watching', slug: watch, watching: n })
+    announceWatching(watch)
   }
   let done = false
   return () => {
@@ -851,7 +867,7 @@ export function subscribe(listener: (event: MomentEvent) => void, watch?: string
       const n = Math.max(0, (s.watching.get(watch) ?? 1) - 1)
       if (n === 0) s.watching.delete(watch)
       else s.watching.set(watch, n)
-      emit({ type: 'watching', slug: watch, watching: n })
+      announceWatching(watch)
     }
   }
 }

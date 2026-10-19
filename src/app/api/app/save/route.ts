@@ -5,7 +5,13 @@ import { addBookmark } from '@/lib/bookmarks/add'
 import { privateFlag } from '@/lib/bookmarks/privacy'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
-import { enqueueSave, NOT_A_POST, queuedSave, updateQueuedPrivacy } from '@/lib/app/save-queue'
+import {
+  enqueueSave,
+  NOT_A_POST,
+  queuedSave,
+  updateQueuedPrivacy,
+  QueuedSaveConflict,
+} from '@/lib/app/save-queue'
 
 /**
  * POST /api/app/save { url, private? } — the phone app's share sheet. `url` is
@@ -23,16 +29,38 @@ export const POST = withPhoneKey(async (request, { userId }) => {
     url?: unknown
     private?: unknown
     deferPublish?: unknown
+    requestId?: unknown
   }
   const isPrivate = privateFlag(body)
   const url = firstLink(body?.url)
   if (!url) return appError(400, 'no_link', 'There’s no link in what was shared.')
 
   if (/respond-async/i.test(request.headers.get('prefer') ?? '')) {
-    const queued = enqueueSave(userId, url, undefined, {
-      private: isPrivate,
-      deferPublish: body?.deferPublish === true,
-    })
+    if (
+      body.requestId !== undefined &&
+      (typeof body.requestId !== 'string' ||
+        !/^(?:[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}|[A-Za-z0-9_-]{21})$/i.test(
+          body.requestId,
+        ))
+    ) {
+      return appError(400, 'bad_request', 'Send a UUID or 21-character share request id.')
+    }
+    let queued
+    try {
+      queued = enqueueSave(userId, url, undefined, {
+        private: isPrivate,
+        deferPublish: body?.deferPublish === true,
+        requestId: body.requestId as string | undefined,
+      })
+    } catch (error) {
+      if (error instanceof QueuedSaveConflict)
+        return appError(
+          409,
+          'request_conflict',
+          'That share request was already used for a different link.',
+        )
+      throw error
+    }
     return NextResponse.json(
       { queued: true, id: queued.id, state: queued.state },
       {
@@ -101,18 +129,24 @@ export const GET = withPhoneKey(async (request, { userId }) => {
   )
 })
 
-/** PATCH /api/app/save { id, private? }: persist intent while still queued;
- * acknowledge a deferred publication even when the extension is closing.
+/** PATCH /api/app/save { id, private?, intentVersion? }: persist queued intent.
+ * Versioned acknowledgement retries are a no-op once accepted, including
+ * after a later web edit; genuinely newer explicit intents remain mutations.
  */
 export const PATCH = withPhoneKey(async (request, { userId }) => {
   const body = (await request.json().catch(() => null)) as {
     id?: unknown
     private?: unknown
+    intentVersion?: unknown
   } | null
   if (
     typeof body?.id !== 'string' ||
     !body.id ||
-    (body.private !== undefined && typeof body.private !== 'boolean')
+    (body.private !== undefined && typeof body.private !== 'boolean') ||
+    (body.intentVersion !== undefined &&
+      (typeof body.intentVersion !== 'number' ||
+        !Number.isSafeInteger(body.intentVersion) ||
+        body.intentVersion < 1))
   ) {
     return appError(
       400,
@@ -120,7 +154,14 @@ export const PATCH = withPhoneKey(async (request, { userId }) => {
       'Send the queued share id and, optionally, whether it is private.',
     )
   }
-  if (!updateQueuedPrivacy(userId, body.id, body.private as boolean | undefined)) {
+  if (
+    !updateQueuedPrivacy(
+      userId,
+      body.id,
+      body.private as boolean | undefined,
+      body.intentVersion as number | undefined,
+    )
+  ) {
     return appError(404, 'not_queued', 'That share is not yours or is no longer waiting.')
   }
   return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })

@@ -441,6 +441,24 @@ describe('N on their way', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('labels stale header progress instead of suggesting work is still updating', async () => {
+    vi.useFakeTimers()
+    fetchMock
+      .mockImplementationOnce(() => json({ summary: summaryWith(3) }))
+      .mockRejectedValue(new Error('offline'))
+    render(<OnTheirWayPill />)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(screen.getByRole('link', { name: /3 on their way/ })).toBeInTheDocument()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_001)
+    })
+    expect(
+      screen.getByRole('link', { name: /Progress unavailable. Last count: 3/ }),
+    ).toBeInTheDocument()
+  })
+
   function summaryWith(n: number): DoingSummary {
     return {
       onTheirWay: n,

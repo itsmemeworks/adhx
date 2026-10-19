@@ -42,7 +42,11 @@ import { GET as detailGET } from '@/app/api/moments/[slug]/route'
 import { GET as streamGET } from '@/app/api/moments/stream/route'
 import { POST as reactPOST } from '@/app/api/moments/[slug]/react/route'
 import { GET as appLiveGET } from '@/app/api/app/live/route'
-import { GET as appMomentGET } from '@/app/api/app/live/[slug]/route'
+import {
+  GET as appMomentGET,
+  POST as appMomentPOST,
+  DELETE as appMomentDELETE,
+} from '@/app/api/app/live/[slug]/route'
 import { POST as appReactPOST } from '@/app/api/app/live/[slug]/react/route'
 import { GET as appStreamGET } from '@/app/api/app/live/[slug]/stream/route'
 
@@ -464,7 +468,14 @@ describe('the phone, live', () => {
 
     const res = await appMomentGET(phoneReq(`/api/app/live/${slug}`, k), params(slug))
     const detail = await res.json()
-    expect(Object.keys(detail).sort()).toEqual(['items', 'moment', 'reactions', 'watchers'])
+    expect(Object.keys(detail).sort()).toEqual([
+      'items',
+      'moment',
+      'reactions',
+      'removedKeys',
+      'saverUpdates',
+      'watchers',
+    ])
     const frog3 = detail.items.find((p: { id: string }) => p.id === 'frog3')
     expect(frog3).toMatchObject({ platform: 'twitter', kind: 'video' })
     expect(usernames(frog3.savers)).toEqual(['ana'])
@@ -537,5 +548,199 @@ describe('the phone, live', () => {
 
     await phone.close()
     await ben.close()
+  })
+})
+
+describe('phone room leases and cached post refresh', () => {
+  const session = 'phone-room-session-12345'
+  async function poll(slug: string, key: string, watch = session, known: string[] = []) {
+    return appMomentPOST(
+      new NextRequest(`${BASE}/api/app/live/${slug}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'X-ADHX-Watch': watch,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ known }),
+      }),
+      params(slug),
+    )
+  }
+
+  it('counts one member across two phones and a web stream, and leaving one screen keeps the others', async () => {
+    await seedFrogs()
+    const slug = await frogSlug()
+    const key = createAccessKey(USER_A, 'Phone', 'phone')!.key
+    const web = await openStream(USER_A, slug)
+    try {
+      await poll(slug, key)
+      await poll(slug, key, 'second-phone-session-12345')
+      expect((await detailAs(USER_B, slug)).moment.watching).toBe(1)
+      expect(usernames((await detailAs(USER_B, slug)).watchers)).toEqual(['ana'])
+      await appMomentDELETE(
+        new NextRequest(`${BASE}/api/app/live/${slug}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${key}`, 'X-ADHX-Watch': session },
+        }),
+        params(slug),
+      )
+      await web.close()
+      expect((await detailAs(USER_B, slug)).moment.watching).toBe(1)
+      await appMomentDELETE(
+        new NextRequest(`${BASE}/api/app/live/${slug}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${key}`, 'X-ADHX-Watch': 'second-phone-session-12345' },
+        }),
+        params(slug),
+      )
+      expect((await detailAs(USER_B, slug)).moment.watching).toBe(0)
+    } finally {
+      await web.close()
+    }
+  })
+
+  it('does not join on a normal detail read; rejects malformed sessions and unknown keys', async () => {
+    await seedFrogs()
+    const slug = await frogSlug()
+    const key = createAccessKey(USER_A, 'Phone', 'phone')!.key
+    await appMomentGET(
+      new Request(`${BASE}/api/app/live/${slug}`, { headers: { Authorization: `Bearer ${key}` } }),
+      params(slug),
+    )
+    expect((await detailAs(USER_B, slug)).moment.watching).toBe(0)
+    expect((await poll(slug, key, 'bad')).status).toBe(400)
+    expect((await poll(slug, 'invalid-key')).status).toBe(401)
+    expect((await poll(slug, key, session, Array(201).fill('twitter:frog0'))).status).toBe(400)
+  })
+
+  it('corrects a quiet web room when a disconnected phone lease expires', async () => {
+    await seedFrogs()
+    const slug = await frogSlug()
+    const key = createAccessKey(USER_A, 'Phone', 'phone')!.key
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
+    const web = await openStream(USER_B, slug)
+    try {
+      await poll(slug, key)
+      await settle()
+      expect(web.of('watching').at(-1)?.data.watching).toBe(2)
+      const announces = web.of('watching').length
+      await poll(slug, key)
+      await settle()
+      expect(web.of('watching')).toHaveLength(announces) // ordinary heartbeats do not fan out room-wide
+      await vi.advanceTimersByTimeAsync(20_001)
+      expect(web.of('watching').at(-1)?.data.watching).toBe(1)
+      expect(usernames(web.of('watching').at(-1)?.data.watchers)).toEqual([])
+    } finally {
+      vi.useRealTimers()
+      await web.close()
+    }
+  })
+
+  it('bounds streamed request bodies before buffering and rejects malformed known keys', async () => {
+    await seedFrogs()
+    const slug = await frogSlug()
+    const key = createAccessKey(USER_A, 'Phone', 'phone')!.key
+    const cancel = vi.fn()
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(45_001))
+      },
+      cancel,
+    })
+    const response = await appMomentPOST(
+      new Request(`${BASE}/api/app/live/${slug}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}` },
+        body,
+        duplex: 'half',
+      } as RequestInit),
+      params(slug),
+    )
+    expect(response.status).toBe(400)
+    expect(cancel).toHaveBeenCalledOnce()
+    expect((await poll(slug, key, session, ['twitter:../escape'])).status).toBe(400)
+  })
+
+  it('expires a disconnected phone after 15 seconds and immediately excludes a revoked key or banned account', async () => {
+    await seedFrogs()
+    const slug = await frogSlug()
+    const { key, id } = createAccessKey(USER_A, 'Phone', 'phone')!
+    await poll(slug, key)
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 15_001)
+    expect((await detailAs(USER_B, slug)).moment.watching).toBe(0)
+    clock.mockRestore()
+    await poll(slug, key)
+    testInstance.sqlite.prepare('DELETE FROM access_keys WHERE id = ?').run(id)
+    expect(usernames((await detailAs(USER_B, slug)).watchers)).toEqual([])
+    expect((await detailAs(USER_B, slug)).moment.watching).toBe(0)
+    const replacement = createAccessKey(USER_A, 'Phone2', 'phone')!.key
+    await poll(slug, replacement)
+    testInstance.sqlite
+      .prepare(
+        'INSERT INTO user_bans (user_id, reason, created_at, created_by) VALUES (?, ?, ?, ?)',
+      )
+      .run(USER_A, 'test', new Date().toISOString(), USER_B)
+    expect(usernames((await detailAs(USER_B, slug)).watchers)).toEqual([])
+  })
+
+  it('refreshes older cached saver metadata and explicitly removes newly private saves without pruning by latest60 absence', async () => {
+    await seedFrogs()
+    // All are near the same topic and belong to one moment; frog0 is older than its newest60.
+    for (let i = 6; i < 76; i++) {
+      save(USER_A, `frog${i}`, `frog video number ${i}`, {
+        processedAt: new Date(Date.now() + i).toISOString(),
+      })
+      await understood(`frog${i}`, topic(0, i + 1))
+    }
+    const vector = new Float32Array(768)
+    vector[0] = 1
+    const base = Date.now() - 100_000
+    for (let i = 0; i < 76; i++) {
+      await understood(`frog${i}`, vector)
+      testInstance.sqlite
+        .prepare('UPDATE bookmarks SET processed_at = ? WHERE id = ?')
+        .run(new Date(base + i * 1000).toISOString(), `frog${i}`)
+    }
+    save(USER_B, 'frog75', 'frog video number 75', {
+      processedAt: new Date(base + 75_000).toISOString(),
+    })
+    const slug = await frogSlug()
+    const key = createAccessKey(USER_C, 'Phone', 'phone')!.key
+    const first = await (await poll(slug, key, session, ['twitter:frog0', 'twitter:frog3'])).json()
+    expect(first.items).toHaveLength(60)
+    expect(first.items.some((p: { id: string }) => p.id === 'frog0')).toBe(false)
+    expect(
+      first.saverUpdates.find((p: { key: string }) => p.key === 'twitter:frog0').savers,
+    ).toHaveLength(2)
+    expect(Object.keys(first.saverUpdates[0]).sort()).toEqual(['isPrivate', 'key', 'savers'])
+    testInstance.sqlite
+      .prepare("UPDATE bookmarks SET is_private = 1 WHERE user_id = ? AND id IN ('frog0', 'frog3')")
+      .run(USER_A)
+    const second = await (await poll(slug, key, session, ['twitter:frog0', 'twitter:frog3'])).json()
+    expect(
+      usernames(second.saverUpdates.find((p: { key: string }) => p.key === 'twitter:frog0').savers),
+    ).toEqual(['ben'])
+    expect(second.removedKeys).toEqual(['twitter:frog3'])
+    expect(
+      second.saverUpdates.find((p: { key: string }) => p.key === 'twitter:frog0').isPrivate,
+    ).toBe(false)
+    testInstance.sqlite
+      .prepare("UPDATE bookmarks SET is_private = 1 WHERE user_id = ? AND id = 'frog75'")
+      .run(USER_A)
+    const ownerKey = createAccessKey(USER_A, 'Owner phone', 'phone')!.key
+    const owner = await (await poll(slug, ownerKey, session, ['twitter:frog0'])).json()
+    expect(
+      owner.saverUpdates.find((p: { key: string }) => p.key === 'twitter:frog0'),
+    ).toMatchObject({ isPrivate: true })
+    expect(
+      usernames(owner.saverUpdates.find((p: { key: string }) => p.key === 'twitter:frog0').savers),
+    ).toEqual(['ben'])
+    expect(owner.items.find((p: { id: string }) => p.id === 'frog75').isPrivate).toBe(true)
+    const strangerToSave = await (await poll(slug, key)).json()
+    expect(strangerToSave.items.find((p: { id: string }) => p.id === 'frog75').isPrivate).toBe(
+      false,
+    )
+    expect(JSON.stringify((await snapshotAs(null)).moments)).not.toContain('username')
   })
 })

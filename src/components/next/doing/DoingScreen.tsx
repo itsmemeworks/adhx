@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuthMe } from '@/components/auth'
 import { Check, CheckCircle, CloudOff, ImageOff, RotateCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NxHeader } from '../channels/ChannelParts'
@@ -273,7 +274,18 @@ function Tiles({ summary }: { summary: DoingSummary }) {
 /** /doing: What your ADHX is doing. */
 export function DoingScreen() {
   const [scope, setScope] = useState<DoingScope>('all')
-  const { items, summary, refresh } = useDoing({ scope, everyMs: DOING_POLL_MS })
+  const { me, loading } = useAuthMe()
+  const {
+    items,
+    summary,
+    error: progressError,
+    refresh,
+  } = useDoing({
+    scope,
+    everyMs: DOING_POLL_MS,
+    accountId: me?.user?.id,
+    enabled: !loading && !!me?.authenticated,
+  })
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -353,7 +365,22 @@ export function DoingScreen() {
           </p>
         )}
 
-        {items === null ? (
+        {progressError && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#29231a] px-4 py-3 text-sm text-nx-cream"
+          >
+            <span>{progressError}</span>
+            <button
+              type="button"
+              onClick={refresh}
+              className="min-h-11 rounded-full border border-white/20 px-4 font-bold"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {items === null && progressError ? null : items === null ? (
           <div aria-hidden className="flex flex-col gap-2.5">
             {[0, 1, 2].map((i) => (
               <span

@@ -1,7 +1,7 @@
 import { captureException } from '@/lib/sentry'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { subscribe, type MomentEvent } from './engine'
+import { subscribe, watchingCount, type MomentEvent } from './engine'
 import { eventForViewer, reactionForViewer } from './people'
 import { joinWatch, onReaction } from './presence'
 
@@ -118,7 +118,22 @@ export function momentStreamResponse({
           : () => {}
       let unsubscribe = () => {}
       const ping = setInterval(() => {
-        if (authorized()) write(': ping\n\n')
+        if (authorized()) {
+          write(': ping\n\n')
+          if (watch) {
+            try {
+              send(
+                eventForViewer(
+                  { type: 'watching', slug: watch, watching: watchingCount(watch) },
+                  viewerId,
+                ),
+              )
+            } catch (error) {
+              captureException(error, { endpoint: 'moments.stream.presence' })
+              cleanup()
+            }
+          }
+        }
       }, PING_MS)
       cleanup = () => {
         if (closed) return

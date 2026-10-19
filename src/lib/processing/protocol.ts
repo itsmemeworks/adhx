@@ -41,6 +41,8 @@ export interface ProcessingMedia {
   path: string
   mime: string
   bytes: number
+  /** Opaque retained-file generation; shared by speech, OCR and vision. Optional for older servers. */
+  cacheKey?: string
 }
 export interface ProcessingJob {
   id: string
@@ -62,7 +64,14 @@ export interface ProcessingJob {
   conversion?: { width: number; height: number; duration: number; hasAudio: boolean }
 }
 export type ProcessingRequest =
-  | { action: 'claim'; workerId: string; model: string; protocol: number; kinds?: string[] }
+  | {
+      action: 'claim'
+      workerId: string
+      model: string
+      protocol: number
+      kinds?: string[]
+      cachedMedia?: string[]
+    }
   | { action: 'heartbeat'; id: string; lease: string }
   | { action: 'plan'; id: string; lease: string; duration: number }
   | { action: 'complete'; id: string; lease: string; vector: number[] }

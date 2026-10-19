@@ -565,12 +565,15 @@ original cursor positions, but recheck moderation, savers, explanations and
 counts on every page. Active live streams recheck membership and their phone
 key before events and on each 20-second heartbeat, closing on revocation.
 
-The iPhone share sheet can acknowledge a link before its privacy choice is
+Both native share sheets can acknowledge a link before their privacy choice is
 settled: `deferPublish: true` stages new saves privately, then
 `PATCH /api/app/save { id, private? }` durably confirms the current choice.
 Changes made while metadata is being fetched are read at completion, in the
 same transaction that publishes the save. Closing the extension waits for the
 intent request; interrupted acknowledgements are retried from Shared lately.
+Android delivery belongs to durable WorkManager and resumes the same receipt.
+Both persist a monotonic intent version, so retrying an accepted request with a
+lost response cannot undo a newer intent or a later web privacy change.
 Without an acknowledgement a new save stays private. Repeat shares preserve
 existing privacy unless an explicit choice changes it. Keeping a public
 channel applies the recipient's private-by-default setting to new copies.
@@ -800,3 +803,21 @@ controls and include restart and database-health settings. The deployment guide
 covers permissions, private access, resource sizing and consistent backups.
 Kept-file URLs and shared previews are intentionally unauthenticated; source
 post IDs are predictable, so network privacy must be selected by the operator.
+
+## Friends-feed reliability
+
+Live phones renew a 15-second presence lease while in the foreground and leave
+explicitly on dismissal/background. Presence is counted by account across web
+streams and phones, checked against active credentials, and named only for
+members. A bounded known-post list refreshes saver metadata and removes posts
+the server no longer considers visible without losing older playable entries.
+Reaction drafts remain attached to their original post until acknowledged;
+failed sends keep the words and offer Retry. These are ephemeral reactions.
+
+The Doing summary counts the complete visible queue in SQLite; filters and
+status priority apply before the 60-row display limit. Summary-only requests
+skip media and face hydration. Web consumers share a foreground poll per account
+and scope, abort it on navigation, and show stale/error recovery explicitly.
+Viewing marks use an account-scoped local outbox, removing entries only after a
+successful response and retrying on reconnect. See the
+[friends-feed verification guide](docs/rollout/friends-feed-verification.md).

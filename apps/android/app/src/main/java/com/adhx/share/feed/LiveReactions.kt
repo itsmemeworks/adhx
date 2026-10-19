@@ -4,6 +4,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -71,8 +75,7 @@ import com.adhx.share.ui.rememberReducedMotion
  * back, closes it.
  */
 @Composable
-fun ReactPicker(onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: () -> Unit) {
-    var words by rememberSaveable { mutableStateOf("") }
+fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean, error: String?, onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: () -> Unit) {
     BackHandler(onBack = onDismiss)
     Box(
         Modifier
@@ -85,11 +88,13 @@ fun ReactPicker(onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: 
                 .navigationBarsPadding()
                 .imePadding()
                 .padding(12.dp)
+                .heightIn(max = 320.dp)
                 .widthIn(max = 520.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
                 .background(AdhxColors.Surface.copy(alpha = 0.94f))
                 .border(1.dp, AdhxColors.White.copy(alpha = 0.1f), RoundedCornerShape(26.dp))
+                .verticalScroll(rememberScrollState())
                 // Taps on the card stay on the card.
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = {})
                 .padding(12.dp)
@@ -98,7 +103,7 @@ fun ReactPicker(onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: 
         ) {
             Row(
                 Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth().horizontalScroll(rememberScrollState())
                     .semantics { contentDescription = Copy.QUICK_REACTIONS },
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -108,7 +113,7 @@ fun ReactPicker(onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: 
                             .size(48.dp)
                             .clip(CircleShape)
                             .background(AdhxColors.Button)
-                            .clickable(onClickLabel = Reaction.names[emoji]) { onEmoji(emoji) }
+                            .clickable(enabled = !sending, onClickLabel = Reaction.names[emoji]) { onEmoji(emoji) }
                             .clearAndSetSemantics {
                                 contentDescription = Reaction.names[emoji]?.replaceFirstChar { it.uppercase() } ?: emoji
                                 role = Role.Button
@@ -122,15 +127,12 @@ fun ReactPicker(onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 val send = {
                     val said = words.trim()
-                    if (said.isNotEmpty()) {
-                        onText(said)
-                        words = ""
-                    }
+                    if (said.isNotEmpty() && !sending) onText(said)
                 }
                 Box(
                     Modifier
                         .weight(1f)
-                        .height(44.dp)
+                        .heightIn(min = 44.dp)
                         .clip(RoundedCornerShape(50))
                         .background(AdhxColors.Background)
                         .border(1.dp, AdhxColors.Hairline, RoundedCornerShape(50))
@@ -142,7 +144,7 @@ fun ReactPicker(onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: 
                     }
                     BasicTextField(
                         value = words,
-                        onValueChange = { words = it.take(Reaction.MAX_TEXT) },
+                        onValueChange = { onWordsChange(Reaction.clip(it)) },
                         singleLine = true,
                         textStyle = TextStyle(fontSize = 15.sp, color = AdhxColors.Cream),
                         cursorBrush = SolidColor(AdhxColors.Accent),
@@ -155,21 +157,25 @@ fun ReactPicker(onEmoji: (String) -> Unit, onText: (String) -> Unit, onDismiss: 
                 }
                 Box(
                     Modifier
-                        .height(44.dp)
+                        .heightIn(min = 44.dp)
                         .clip(RoundedCornerShape(50))
                         .background(if (words.isBlank()) AdhxColors.Raised else AdhxColors.Accent)
-                        .clickable(enabled = words.isNotBlank(), role = Role.Button, onClick = send)
+                        .clickable(enabled = !sending && words.isNotBlank(), role = Role.Button, onClick = send)
                         .padding(horizontal = 18.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(Copy.SEND, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = if (words.isBlank()) AdhxColors.Faint else Color.Black)
+                    Text(if (sending) "Sending…" else if (error != null) "Retry" else Copy.SEND, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = if (words.isBlank()) AdhxColors.Faint else Color.Black)
                 }
+            }
+            Text("Live reactions disappear. These aren’t saved messages.", fontSize = 12.sp, color = AdhxColors.Muted)
+            if (error != null) {
+                Text(error, color = AdhxColors.Warn, fontSize = 13.sp, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
             if (words.isNotEmpty()) {
                 Text(
-                    Copy.charsLeft(words.length),
+                    Copy.charsLeft(Reaction.length(words)),
                     fontSize = 12.sp,
-                    color = if (words.length >= Reaction.MAX_TEXT) AdhxColors.Warn else AdhxColors.Faint,
+                    color = if (Reaction.length(words) >= Reaction.MAX_TEXT) AdhxColors.Warn else AdhxColors.Faint,
                     modifier = Modifier.align(Alignment.End).padding(end = 6.dp),
                 )
             }

@@ -187,6 +187,8 @@ fun PlayerScreen(
     end: (@Composable () -> Unit)? = null,
     onReact: ((PhonePost) -> Unit)? = null,
     reacting: Boolean = false,
+    /** Live privacy/metadata refreshes keep the keyed page rather than jumping to New's top. */
+    preservePlaybackOnRefresh: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -256,7 +258,7 @@ fun PlayerScreen(
     LaunchedEffect(firstKey) {
         val before = shownFirst
         shownFirst = firstKey
-        if (firstKey == before || newOnTop != 0) return@LaunchedEffect
+        if (preservePlaybackOnRefresh || firstKey == before || newOnTop != 0) return@LaunchedEffect
         val was = posts.indexOfFirst { it.key == before }
         if (was > 0) pager.scrollToPage(was)
         goTo(0)

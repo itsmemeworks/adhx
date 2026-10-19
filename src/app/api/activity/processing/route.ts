@@ -16,7 +16,9 @@ export const dynamic = 'force-dynamic'
 export const GET = withAuth(async (request, userId) => {
   const params = new URL(request.url).searchParams
   const raw = params.get('scope')
-  const view = await processingActivity(userId, isDoingScope(raw) ? raw : 'all')
+  const view = await processingActivity(userId, isDoingScope(raw) ? raw : 'all', undefined, {
+    summaryOnly: params.get('summary') === '1',
+  })
   // `summary=1`: just the counts, for the header's "N on their way".
   return NextResponse.json(params.get('summary') === '1' ? { summary: view.summary } : view, {
     headers: { 'Cache-Control': 'private, no-store' },

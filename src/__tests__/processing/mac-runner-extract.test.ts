@@ -19,6 +19,7 @@ vi.mock('@/lib/semantic/extractor', () => ({
 }))
 
 import { createMacRunner, workerKinds, type MacRunnerConfig } from '@/lib/processing/mac-runner'
+import { createVideoPlan } from '@/lib/processing/profiles'
 import type { ProcessingJob } from '@/lib/processing/protocol'
 import { SEMANTIC_MODEL_VERSION } from '@/lib/semantic/config'
 
@@ -158,6 +159,120 @@ describe('native worker: speech and text on screen', () => {
     expect(await runner.runOnce()).toBe(true)
     expect(actions[1]).toMatchObject({ action: 'fail', code: 'retry' })
     expect(log).toHaveBeenCalledWith('[worker] processing deferred; job will retry')
+    runner.close()
+  })
+  it('pins all OCR inputs and fails safely when scratch cannot fit beside them', async () => {
+    config.maxCacheBytes = 64 * 1024 ** 2 + 3
+    const job: ProcessingJob = {
+      ...base('screen'),
+      files: ['photo-1', 'photo-2'].map((slot) => ({
+        path: `/api/processing/media?id=job1&slot=${slot}`,
+        mime: 'image/jpeg',
+        bytes: 3,
+        slot,
+      })),
+    }
+    const { fetch, actions } = server(job, { 'photo-1': 'one', 'photo-2': 'two' })
+    const runner = createMacRunner(config, {
+      fetch,
+      extract,
+      processor: { run: vi.fn(), close: vi.fn() },
+      log: vi.fn(),
+    })
+    await runner.runOnce()
+    expect(media.readScreenText).not.toHaveBeenCalled()
+    expect(actions.at(-1)).toMatchObject({ action: 'fail', code: 'retry' })
+    expect(
+      await Promise.all((await readdir(dir)).map((file) => readFile(path.join(dir, file), 'utf8'))),
+    ).toEqual(expect.arrayContaining(['one', 'two']))
+    runner.close()
+  })
+
+  it('reuses one file generation across speech, OCR and video, then releases it after final acknowledgement', async () => {
+    const cacheKey = 'a'.repeat(64)
+    const input = { path: '/api/processing/media?id=job1', mime: 'video/mp4', bytes: 5, cacheKey }
+    const jobs: ProcessingJob[] = [
+      { ...base('speech'), media: input },
+      { ...base('screen'), id: 'job2', files: [{ ...input, slot: 'video-1' }] },
+      {
+        ...base('video'),
+        id: 'job3',
+        media: input,
+        video: { plan: createVideoPlan(4, 'normal'), nextSegment: 0 },
+      },
+    ]
+    let downloads = 0
+    let claim = 0
+    const fetch = vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (String(url).includes('/api/processing/media')) {
+        downloads++
+        return new Response('video')
+      }
+      const body = JSON.parse(String(init?.body))
+      if (body.action === 'claim') return json({ job: jobs[claim++] })
+      return json({ done: true, releaseMedia: body.id === 'job3' ? [cacheKey] : [] })
+    }) as unknown as typeof globalThis.fetch
+    media.transcribeSource.mockResolvedValue({ text: 'words said', language: 'en' })
+    media.readScreenText.mockImplementation(async (_photos, video) => {
+      expect(await readFile(video.source, 'utf8')).toBe('video')
+      return 'words on screen'
+    })
+    const runner = createMacRunner(config, {
+      fetch,
+      extract,
+      processor: { run: vi.fn(async () => Array(768).fill(0.01)), close: vi.fn() },
+      sample: async (file) => {
+        expect(await readFile(file, 'utf8')).toBe('video')
+        return { files: ['sample.jpg'], cleanup: vi.fn(async () => {}) }
+      },
+      log: vi.fn(),
+    })
+    await runner.runOnce()
+    expect(await readdir(dir)).toEqual([`${cacheKey}.media`])
+    await runner.runOnce()
+    expect(await readdir(dir)).toEqual([`${cacheKey}.media`])
+    await runner.runOnce()
+    expect(downloads).toBe(1)
+    expect(await readdir(dir)).toEqual([])
+    runner.close()
+  })
+
+  it('reconciles cached originals on an idle claim and deletes them when the server has no consumers', async () => {
+    const cacheKey = 'b'.repeat(64)
+    const { writeFile } = await import('node:fs/promises')
+    await writeFile(path.join(dir, `${cacheKey}.media`), 'old')
+    const fetch = vi.fn(async (_url, init) => {
+      const body = JSON.parse(String(init?.body))
+      expect(body.cachedMedia).toEqual([cacheKey])
+      return json({ job: null, releaseMedia: [cacheKey] })
+    }) as unknown as typeof globalThis.fetch
+    const runner = createMacRunner(config, {
+      fetch,
+      extract,
+      processor: { run: vi.fn(), close: vi.fn() },
+      log: vi.fn(),
+    })
+    expect(await runner.runOnce()).toBe(false)
+    expect(await readdir(dir)).toEqual([])
+    runner.close()
+  })
+
+  it('does not acknowledge a systemic OCR error as no text', async () => {
+    const job: ProcessingJob = {
+      ...base('screen'),
+      media: { path: '/api/processing/media?id=job1', mime: 'image/jpeg', bytes: 3 },
+    }
+    const { fetch, actions } = server(job, { 'photo-1': 'one' })
+    media.readScreenText.mockRejectedValue(new Error('model download failed'))
+    const runner = createMacRunner(config, {
+      fetch,
+      extract,
+      processor: { run: vi.fn(), close: vi.fn() },
+      log: vi.fn(),
+    })
+    await runner.runOnce()
+    expect(actions.at(-1)).toMatchObject({ action: 'fail', code: 'retry' })
+    expect(actions.some((body) => body.action === 'extracted')).toBe(false)
     runner.close()
   })
 })

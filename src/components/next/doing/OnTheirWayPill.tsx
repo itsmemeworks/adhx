@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { CloudOff } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 import { cn } from '@/lib/utils'
 import { useDoing } from './useDoing'
@@ -18,27 +19,33 @@ export function OnTheirWayPill({ className }: { className?: string }) {
   const pathname = usePathname()
   const signedIn = !loading && !!me?.authenticated
   const here = pathname === '/doing'
-  const { summary } = useDoing({
+  const { summary, error } = useDoing({
     everyMs: PILL_POLL_MS,
+    accountId: me?.user?.id,
     summaryOnly: true,
     enabled: signedIn && !here,
   })
   const n = summary?.onTheirWay ?? 0
   if (!signedIn || here || n <= 0) return null
-  const label = `${n} on ${n === 1 ? 'its' : 'their'} way`
+  const label = error ? `Last count: ${n}` : `${n} on ${n === 1 ? 'its' : 'their'} way`
   return (
     <Link
       href="/doing"
-      aria-label={`${label}${summary?.needsYou ? `, ${summary.needsYou} need you` : ''}. See what your ADHX is doing`}
+      aria-label={`${error ? 'Progress unavailable. ' : ''}${label}${summary?.needsYou ? `, ${summary.needsYou} need you` : ''}. See what your ADHX is doing`}
+      title={error ?? undefined}
       className={cn(
         'flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/[0.08] bg-[#1a1814] px-1.5 text-sm font-semibold text-nx-cream sm:pl-2.5 sm:pr-4',
         className,
       )}
     >
-      <span
-        aria-hidden
-        className="block h-[18px] w-[18px] shrink-0 animate-nx-spin rounded-full border-[2.5px] border-[#4a453e] border-t-nx-accent"
-      />
+      {error ? (
+        <CloudOff aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-muted" />
+      ) : (
+        <span
+          aria-hidden
+          className="block h-[18px] w-[18px] shrink-0 animate-nx-spin rounded-full border-[2.5px] border-[#4a453e] border-t-nx-accent"
+        />
+      )}
       <span className="hidden sm:inline">{label}</span>
       {!!summary?.needsYou && (
         <span

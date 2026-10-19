@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import OSLog
 import Security
 
@@ -215,12 +216,29 @@ struct ShareRecord: Codable, Identifiable, Equatable {
     var wantsPrivate: Bool?
     /// Acknowledgement interrupted by the extension closing: retry safely.
     var publishPending: Bool?
+    /// Reused after a lost answer; changed only by a new explicit choice.
+    var privacyIntentVersion: Int?
     var createdAt = Date()
     var updatedAt = Date()
 
     init(link: String) {
         self.link = link
         self.platform = Network.guess(from: link)
+    }
+
+    var intentVersion: Int { privacyIntentVersion ?? 1 }
+
+    mutating func choosePrivacy(_ on: Bool) {
+        privacyIntentVersion = intentVersion + 1
+        wantsPrivate = on
+        if queueId != nil { publishPending = true }
+    }
+
+    mutating func acknowledgePrivacy(version: Int, private choice: Bool?) {
+        guard intentVersion == version else { return }
+        publishPending = false
+        wantsPrivate = nil
+        if let choice { isPrivate = choice }
     }
 
     mutating func apply(_ r: SaveResult) {
@@ -235,7 +253,7 @@ struct ShareRecord: Codable, Identifiable, Equatable {
         openPath = r.openPath
         alreadySaved = r.alreadySaved
         savedAt = r.savedAt
-        if let p = r.isPrivate { isPrivate = p }
+        if publishPending != true, let p = r.isPrivate { isPrivate = p }
         failure = nil
         failureMessage = nil
         updatedAt = Date()
@@ -286,44 +304,79 @@ enum History {
     private static let key = "history"
     private static let limit = 100
     private static let lock = NSLock()
+    private static let file: URL = {
+        #if ADHX_HISTORY_TEST
+        if let directory = ProcessInfo.processInfo.environment["ADHX_HISTORY_TEST_DIRECTORY"] {
+            return URL(fileURLWithPath: directory).appendingPathComponent("history.json")
+        }
+        #endif
+        let base = AppGroup.id.flatMap { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) }
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("ADHXShare", isDirectory: true)
+        return base.appendingPathComponent("history.json")
+    }()
 
+    /// Atomic files avoid torn reads. Unlike UserDefaults' cached whole-array value,
+    /// each process reads the latest committed intent before taking the write lock.
     static func all() -> [ShareRecord] {
-        guard let data = AppGroup.defaults.data(forKey: key),
+        guard let data = (try? Data(contentsOf: file)) ?? AppGroup.defaults.data(forKey: key),
               let records = try? JSONDecoder().decode([ShareRecord].self, from: data) else { return [] }
         return records
     }
 
-    private static func write(_ records: [ShareRecord]) {
-        let trimmed = Array(records.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
-        if let data = try? JSONEncoder().encode(trimmed) {
-            AppGroup.defaults.set(data, forKey: key)
-        }
-    }
-
-    static func upsert(_ record: ShareRecord) {
+    private static func locked<R>(unavailable: R, _ body: () -> R) -> R {
         lock.lock(); defer { lock.unlock() }
-        var records = all()
-        if let i = records.firstIndex(where: { $0.id == record.id }) {
-            records[i] = record
-        } else {
-            records.insert(record, at: 0)
-        }
-        write(records)
+        do {
+            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(),
+                withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        } catch { return unavailable }
+        let fd = open(file.appendingPathExtension("lock").path, O_CREAT | O_RDWR, 0o600)
+        guard fd >= 0 else { return unavailable }
+        defer { close(fd) }
+        guard flock(fd, LOCK_EX) == 0 else { return unavailable }
+        defer { flock(fd, LOCK_UN) }
+        return body()
     }
 
-    /// Changes one record in place; returns the changed record.
+    private static func write(_ records: [ShareRecord]) -> Bool {
+        let sorted = records.sorted { $0.createdAt > $1.createdAt }
+        let pending = sorted.filter { $0.publishPending == true || $0.stage == .saving || $0.stage == .queued }
+        let completed = sorted.filter { $0.publishPending != true && $0.stage != .saving && $0.stage != .queued }
+        do {
+            try JSONEncoder().encode(pending + completed.prefix(limit)).write(to: file, options: .atomic)
+            // Migration from the old app-group preference is complete only after a successful write.
+            AppGroup.defaults.removeObject(forKey: key)
+            return true
+        } catch {
+            adhxLog.error("Could not persist shared history")
+            return false
+        }
+    }
+
+    @discardableResult
+    static func upsert(_ record: ShareRecord) -> Bool {
+        locked(unavailable: false) {
+            var records = all()
+            if let i = records.firstIndex(where: { $0.id == record.id }) { records[i] = record }
+            else { records.insert(record, at: 0) }
+            return write(records)
+        }
+    }
+
+    /// Cross-process read/modify/write: the app and extension cannot discard each other's intent.
     @discardableResult
     static func update(id: String, _ change: (inout ShareRecord) -> Void) -> ShareRecord? {
-        lock.lock(); defer { lock.unlock() }
-        var records = all()
-        guard let i = records.firstIndex(where: { $0.id == id }) else { return nil }
-        change(&records[i])
-        write(records)
-        return records[i]
+        locked(unavailable: nil) {
+            var records = all()
+            guard let i = records.firstIndex(where: { $0.id == id }) else { return nil }
+            change(&records[i])
+            guard write(records) else { return nil }
+            return records[i]
+        }
     }
 
     static func clear() {
-        AppGroup.defaults.removeObject(forKey: key)
+        _ = locked(unavailable: false) { write([]) }
     }
 }
 
@@ -358,7 +411,7 @@ enum OfflineQueue {
     static func add(id: String, link: String, isPrivate: Bool? = nil) {
         lock.lock(); defer { lock.unlock() }
         var entries = all()
-        guard !entries.contains(where: { $0.id == id || $0.link == link }) else { return }
+        guard !entries.contains(where: { $0.id == id }) else { return }
         entries.append(Entry(id: id, link: link, isPrivate: isPrivate))
         write(entries)
     }
@@ -402,21 +455,34 @@ actor Flusher {
 
         var sent = 0
         for entry in entries {
-            do {
-                let answer = try await client.save(url: entry.link, private: entry.isPrivate)
+            // An earlier POST may have committed its receipt before the app died
+            // removing this queue entry. Resume it through StatusRefresher instead.
+            if History.all().first(where: { $0.id == entry.id })?.queueId != nil {
                 OfflineQueue.remove(id: entry.id)
+                continue
+            }
+            do {
+                let answer = try await client.save(url: entry.link, private: History.all().first { $0.id == entry.id }?.wantsPrivate ?? entry.isPrivate, deferPublish: true, requestId: entry.id)
                 let record: (inout ShareRecord) -> Void = { record in
                     switch answer {
                     case .saved(let result): record.apply(result)
-                    case .queued(let id): record.queue(id)
+                    case .queued(let id):
+                        record.queue(id)
+                        record.publishPending = true
+                        record.privacyIntentVersion = record.intentVersion
+                        if record.wantsPrivate == nil { record.wantsPrivate = entry.isPrivate }
                     }
                 }
                 if History.update(id: entry.id, record) == nil {
+                    // Existing row plus nil means the write failed. Never recreate
+                    // it at version1 and discard a more recent explicit choice.
+                    guard !History.all().contains(where: { $0.id == entry.id }) else { return .stillOffline(sent: sent) }
                     var new = ShareRecord(link: entry.link)
                     new.id = entry.id
                     record(&new)
-                    History.upsert(new)
+                    guard History.upsert(new) else { return .stillOffline(sent: sent) }
                 }
+                OfflineQueue.remove(id: entry.id)
                 sent += 1
             } catch APIError.offline, APIError.slow {
                 return .stillOffline(sent: sent)
@@ -434,11 +500,12 @@ actor Flusher {
 
     /// A share whose sheet closed before the answer came stays "saving";
     /// after a minute, send it again (the server knows if it already has it).
-    private func rescueStuckSaves() {
+    func rescueStuckSaves() {
         let cutoff = Date().addingTimeInterval(-60)
         // A share the server took (queueId) is in hand there; the refresher asks after it.
         for record in History.all()
-        where record.stage == .saving && record.queueId == nil && record.updatedAt < cutoff {
+        where record.queueId == nil &&
+            (record.stage == .queued || (record.stage == .saving && record.updatedAt < cutoff)) {
             History.update(id: record.id) { $0.stage = .queued }
             OfflineQueue.add(id: record.id, link: record.link, isPrivate: record.wantsPrivate)
         }
@@ -451,13 +518,11 @@ enum StatusRefresher {
     /// the server now that it has it.
     private static func applyWantedPrivacy(_ record: ShareRecord, landed progress: QueuedSave,
                                            client: ADHXClient) async {
-        guard progress.state == "saved", let post = progress.post, let wanted = record.wantsPrivate else { return }
-        if (post.isPrivate ?? false) != wanted {
-            guard let now = try? await client.setPrivate(platform: post.platform, id: post.id, private: wanted)
-            else { return }
-            History.update(id: record.id) { $0.isPrivate = now }
-        }
-        History.update(id: record.id) { $0.wantsPrivate = nil }
+        guard progress.state == "saved", let queueId = record.queueId,
+              let wanted = record.wantsPrivate else { return }
+        guard (try? await client.queuedPrivacy(id: queueId, private: wanted, intentVersion: record.intentVersion)) != nil
+        else { return }
+        History.update(id: record.id) { $0.acknowledgePrivacy(version: record.intentVersion, private: wanted) }
     }
 
     static func refresh() async {
@@ -466,8 +531,8 @@ enum StatusRefresher {
             guard let queueId = record.queueId else { continue }
             do {
                 if record.publishPending == true {
-                    try await client.queuedPrivacy(id: queueId, private: record.wantsPrivate)
-                    History.update(id: record.id) { $0.publishPending = false; $0.wantsPrivate = nil }
+                    try await client.queuedPrivacy(id: queueId, private: record.wantsPrivate, intentVersion: record.intentVersion)
+                    History.update(id: record.id) { $0.acknowledgePrivacy(version: record.intentVersion, private: record.wantsPrivate) }
                 }
                 let progress = try await client.queuedSave(id: queueId)
                 History.update(id: record.id) { $0.apply(progress) }

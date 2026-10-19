@@ -4,8 +4,12 @@ import { isDoingScope, processingActivity } from '@/lib/processing/doing'
 
 /** GET /api/app/doing?scope=all|mine|needs — the web's `/api/activity/processing`, for the phone. */
 export const GET = withPhoneKey(async (request, { userId }) => {
-  const raw = new URL(request.url).searchParams.get('scope')
-  return NextResponse.json(await processingActivity(userId, isDoingScope(raw) ? raw : 'all'), {
+  const params = new URL(request.url).searchParams
+  const raw = params.get('scope')
+  const view = await processingActivity(userId, isDoingScope(raw) ? raw : 'all', undefined, {
+    summaryOnly: params.get('summary') === '1',
+  })
+  return NextResponse.json(params.get('summary') === '1' ? { summary: view.summary } : view, {
     headers: { 'Cache-Control': 'no-store' },
   })
 })

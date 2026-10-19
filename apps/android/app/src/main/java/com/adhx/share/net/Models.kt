@@ -26,6 +26,15 @@ data class SaveRequest(
     val url: String,
     /** "Just for me": no one else sees, counts or is told about it. Left out when false. */
     @SerialName("private") val isPrivate: Boolean? = null,
+    val deferPublish: Boolean = false,
+    val requestId: String? = null,
+)
+
+@Serializable
+data class QueuedPrivacyRequest(
+    val id: String,
+    @SerialName("private") val isPrivate: Boolean? = null,
+    val intentVersion: Long? = null,
 )
 
 @Serializable
@@ -415,6 +424,8 @@ data class LiveResponse(val moments: List<LiveMoment> = emptyList())
 /** `GET /api/app/live/{slug}`. */
 @Serializable
 data class LiveDetail(
+    val removedKeys: List<String> = emptyList(),
+    val saverUpdates: List<LiveSaverUpdate> = emptyList(),
     val moment: LiveMoment? = null,
     @Serializable(with = LenientPostsSerializer::class)
     val items: List<PhonePost> = emptyList(),
@@ -423,6 +434,10 @@ data class LiveDetail(
     @Serializable(with = LiveReactionsSerializer::class)
     val reactions: List<LiveReaction> = emptyList(),
 )
+
+/** Compact privacy/name refresh for older posts already held by the player. */
+@Serializable
+data class LiveSaverUpdate(val key: String, val savers: List<Saver> = emptyList(), val isPrivate: Boolean = false)
 
 /** One reaction someone sent while tuned in: an emoji, or a few words. */
 @Serializable
@@ -442,6 +457,11 @@ object Reaction {
 
     /** The most a typed reaction can say. */
     const val MAX_TEXT = 40
+    fun clip(text: String): String {
+        val points = text.codePoints().limit(MAX_TEXT.toLong()).toArray()
+        return String(points, 0, points.size)
+    }
+    fun length(text: String): Int = text.codePointCount(0, text.length)
 }
 
 /** `POST /api/app/live/{slug}/react`: `{ emoji }` or `{ text }`, and the post. */

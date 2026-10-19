@@ -190,6 +190,84 @@ async function content(row: Pick<Lease, 'platform' | 'post_id' | 'kind'>) {
   return { doc, hash, media, list }
 }
 
+/** Opaque identity of one retained-file generation, independent of learning kind. */
+export function mediaCacheKey(platform: string, postId: string, file: KeptFile): string {
+  const created = db.all<{ created_at: string }>(
+    sql`SELECT created_at FROM kept_files WHERE platform=${platform} AND post_id=${postId} AND slot=${file.slot}`,
+  )[0]?.created_at
+  return retainedIdentity(platform, postId, file, created)
+}
+
+function retainedIdentity(
+  platform: string,
+  postId: string,
+  file: Pick<KeptFile, 'slot' | 'path' | 'bytes'>,
+  created?: string,
+): string {
+  return digest(JSON.stringify([platform, postId, file.slot, file.path, file.bytes, created]))
+}
+
+/** A bounded authenticated worker reconciliation. A cache key is only a local
+ * reuse hint, never a capability to fetch media. Missing generations or posts
+ * with no remaining media consumers are removed over subsequent bounded polls. */
+export function validateMediaCacheKeys(keys: unknown): string[] {
+  if (keys === undefined) return []
+  if (
+    !Array.isArray(keys) ||
+    keys.length > 512 ||
+    keys.some((key) => typeof key !== 'string' || !/^[a-f0-9]{64}$/.test(key))
+  )
+    throw new ProcessingInputError('Invalid worker cache keys')
+  return keys
+}
+
+export function reconcileMediaCache(keys: unknown): string[] {
+  const remove = new Set<string>(validateMediaCacheKeys(keys))
+  if (!remove.size) return []
+  const files = db.all<{
+    platform: string
+    post_id: string
+    slot: KeptFile['slot']
+    path: string
+    bytes: number
+    created_at: string
+  }>(sql`
+    SELECT k.platform,k.post_id,k.slot,k.path,k.bytes,k.created_at FROM kept_files k
+    WHERE EXISTS(SELECT 1 FROM bookmarks b WHERE b.platform=k.platform AND b.id=k.post_id)
+      AND NOT EXISTS(SELECT 1 FROM moderated_posts m WHERE m.platform=k.platform AND m.bookmark_id=k.post_id AND m.hidden=1)
+      AND (EXISTS(SELECT 1 FROM understanding_queue q WHERE q.platform=k.platform AND q.post_id=k.post_id AND q.kind IN ('image','video','speech','screen'))
+        OR EXISTS(SELECT 1 FROM processing_leases l WHERE l.platform=k.platform AND l.post_id=k.post_id AND l.kind IN ('image','video','speech','screen') AND l.expires_at>${Date.now()})
+        OR EXISTS(SELECT 1 FROM media_conversions c WHERE c.platform=k.platform AND c.post_id=k.post_id AND c.slot=k.slot
+          AND c.source_path=k.path AND c.source_bytes=k.bytes AND c.source_created_at=k.created_at AND c.status IN ('pending','running')))`)
+  for (const file of files)
+    remove.delete(retainedIdentity(file.platform, file.post_id, file, file.created_at))
+  return [...remove]
+}
+
+/** Capture only server-owned capabilities before completing a lease. After the
+ * transaction, release originals with no remaining queued/leased consumer.
+ * A changed generation is a different key; stale generations expire on the Mac. */
+export function cacheReleaseAfter(id: string, token: string): () => string[] {
+  const row = checkedLease(id, token)
+  const keys = keptFilesFor(row.platform, row.post_id).map((file) =>
+    mediaCacheKey(row.platform, row.post_id, file),
+  )
+  return () => {
+    const kinds = db.all<{ kind: JobKind }>(sql`SELECT kind FROM understanding_queue
+      WHERE platform=${row.platform} AND post_id=${row.post_id}
+      UNION SELECT kind FROM processing_leases WHERE platform=${row.platform}
+        AND post_id=${row.post_id} AND expires_at>${Date.now()}`)
+    const retain = new Set(
+      kinds.flatMap(({ kind }) =>
+        mediaListFor(row.platform, row.post_id, kind).map((file) =>
+          mediaCacheKey(row.platform, row.post_id, file),
+        ),
+      ),
+    )
+    return keys.filter((key) => !retain.has(key))
+  }
+}
+
 /**
  * The searchable words changed: the post's text vector is queued again in
  * the same transaction (keeping the higher priority), and the keyword row is
@@ -270,6 +348,7 @@ export async function claimProcessingJob(
   model: string,
   protocol: number,
   advertised?: unknown,
+  onRelease?: (keys: string[]) => void,
 ): Promise<ProcessingJob | null> {
   if (model !== SEMANTIC_MODEL_VERSION || !supportedProtocol(protocol))
     throw new ProcessingConflict('Worker model or protocol does not match server')
@@ -291,6 +370,9 @@ export async function claimProcessingJob(
       id = randomUUID(),
       now = Date.now()
     const row = runInTransaction(() => {
+      // A conversion replaces retained source metadata and invalidates this
+      // post's generation. Do not start expensive video, speech or OCR work
+      // that would be thrown away when any pending slot is published.
       const [candidate] = db.all<{
         platform: string
         post_id: string
@@ -300,9 +382,11 @@ export async function claimProcessingJob(
         WHERE q.next_attempt_at <= ${new Date(now).toISOString()}
           AND q.kind IN ${kinds}
           AND NOT EXISTS (SELECT 1 FROM moderated_posts m WHERE m.platform=q.platform AND m.bookmark_id=q.post_id AND m.hidden=1)
-          AND (q.kind!='video' OR NOT EXISTS (SELECT 1 FROM media_conversions c WHERE c.platform=q.platform AND c.post_id=q.post_id AND c.status IN ('pending','running')))
+          AND (q.kind NOT IN ('video','speech','screen') OR NOT EXISTS (SELECT 1 FROM media_conversions c WHERE c.platform=q.platform AND c.post_id=q.post_id AND c.status IN ('pending','running')))
           AND NOT EXISTS (SELECT 1 FROM processing_leases l WHERE l.platform=q.platform AND l.post_id=q.post_id AND l.kind=q.kind AND l.expires_at>${now})
-        ORDER BY q.priority DESC, ${kindOrderSql(sql.raw('q.kind'))},q.enqueued_at LIMIT 1`)
+        ORDER BY (q.priority + max(0, CAST((julianday(${new Date(now).toISOString()})-julianday(q.enqueued_at))*1440 AS INTEGER))) DESC,
+          CASE WHEN q.enqueued_at < ${new Date(now - 15 * 60_000).toISOString()} THEN q.enqueued_at END,
+          ${kindOrderSql(sql.raw('q.kind'))},q.enqueued_at LIMIT 1`)
       if (!candidate) return null
       db.run(
         sql`DELETE FROM processing_leases WHERE platform=${candidate.platform} AND post_id=${candidate.post_id} AND kind=${candidate.kind}`,
@@ -315,6 +399,7 @@ export async function claimProcessingJob(
     if (!row) return null
     const values = await content(row)
     if (!values || values.hash === null) {
+      const freed = cacheReleaseAfter(id, token)
       let changed = false
       runInTransaction(() => {
         const owned = checkedLease(id, token)
@@ -327,17 +412,20 @@ export async function claimProcessingJob(
         release(owned)
       })
       if (changed) await reindexWords(row)
+      onRelease?.(freed())
       continue
     }
     const current = isExtractKind(row.kind)
       ? extractedCurrent(getExtracted(row.platform, row.post_id, row.kind), row.kind, values.hash)
       : isCurrent(await getEmbedding(row.platform, row.post_id, row.kind), values.hash)
     if (current) {
+      const freed = cacheReleaseAfter(id, token)
       runInTransaction(() => {
         const owned = checkedLease(id, token)
         db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(owned)}`)
         release(owned)
       })
+      onRelease?.(freed())
       continue
     }
     if (row.kind !== 'text' && !values.media) {
@@ -387,6 +475,7 @@ export async function claimProcessingJob(
               path: `/api/processing/media?id=${id}`,
               mime: values.media.mime,
               bytes: values.media.bytes,
+              cacheKey: mediaCacheKey(row.platform, row.post_id, values.media),
             },
           }
         : {}),
@@ -396,6 +485,7 @@ export async function claimProcessingJob(
               path: `/api/processing/media?id=${id}&slot=${file.slot}`,
               mime: file.mime,
               bytes: file.bytes,
+              cacheKey: mediaCacheKey(row.platform, row.post_id, file),
               slot: file.slot,
             })),
             videoSeconds: values.list.find((f) => f.slot === 'video-1')?.durationMs

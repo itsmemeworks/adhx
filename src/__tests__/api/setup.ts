@@ -356,6 +356,7 @@ export const FULL_SCHEMA_SQL = `
   CREATE TABLE phone_save_queue (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    request_id TEXT,
     url TEXT NOT NULL,
     status TEXT NOT NULL,
     attempts INTEGER NOT NULL DEFAULT 0,
@@ -367,6 +368,7 @@ export const FULL_SCHEMA_SQL = `
     default_private INTEGER NOT NULL DEFAULT 0,
     private_choice INTEGER,
     publish_pending INTEGER NOT NULL DEFAULT 0,
+    privacy_intent_version INTEGER NOT NULL DEFAULT 0,
     error_code TEXT,
     error TEXT,
     created_at TEXT NOT NULL,
@@ -374,6 +376,7 @@ export const FULL_SCHEMA_SQL = `
   );
   CREATE INDEX phone_save_queue_status_idx ON phone_save_queue(status, next_attempt_at);
   CREATE INDEX phone_save_queue_user_id_idx ON phone_save_queue(user_id);
+  CREATE UNIQUE INDEX phone_save_queue_request_idx ON phone_save_queue(user_id, request_id);
   CREATE TABLE keep_jobs (
       platform TEXT NOT NULL,
       post_id TEXT NOT NULL,

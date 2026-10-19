@@ -226,9 +226,15 @@ server sends it, which it does for members only.
 - The share sheet names your people from the last Channels or feed the app
   loaded (kept on the phone in the App Group, cleared on Disconnect), or says
   “Your people will see it”.
-- Live polls `/api/app/live/{slug}` every 5 seconds while you’re tuned in;
-  reactions (an emoji, or up to 40 characters) go to
-  `/api/app/live/{slug}/react` and float up with the sender’s face.
+- Live refreshes every 5 seconds while you’re tuned in and in the foreground.
+  A screen-specific presence lease expires after 15 seconds if the phone
+  disconnects; leaving/backgrounding sends an explicit leave. Existing saver
+  metadata refreshes without jumping playback, and explicit removals are
+  distinguished from posts falling outside the latest page.
+- Reactions (an emoji, or up to 40 Unicode code points) go to
+  `/api/app/live/{slug}/react` and float up after acknowledgement. Failed words
+  remain available for Retry against the original post. They are ephemeral
+  reactions, not stored messages.
 - On an ADHX without these endpoints yet (404), New plays your saves as
   before, and Channels and Live say the server needs an update.
 
@@ -239,6 +245,20 @@ offer a retry. Changing the query cancels the older page request.
 The share card confirms its privacy choice against the server queue before
 finishing the extension. New saves stay private until that confirmation, even
 if metadata finishes first. An interrupted confirmation is kept in Shared
-lately and retried on the next refresh. This uses `deferPublish` and
-`PATCH /api/app/save` from the matching server release; update the server
-before testing this flow with a newly built app.
+lately and retried on the next refresh. Each changed choice gets a persisted
+monotonic version; retries reuse it so an already accepted request cannot undo
+a later web privacy edit. A genuinely new explicit choice is a new mutation.
+This uses `deferPublish` and `PATCH /api/app/save` from the matching server
+release; update the server before testing this flow with a newly built app.
+
+History automatically moves from the old app-group preference into an atomic
+JSON file in the same private app-group container. A file lock protects each
+read/change/write across the app and extension, and unfinished receipts and
+acknowledgements are retained beyond the recent-history limit. The queue
+records an accepted receipt before removing its offline entry. Each initial
+save reuses its stored history UUID as `requestId`, so a lost initial response
+returns the same receipt after a restart. Unfinished offline entries can be
+reconstructed from history if interrupted.
+
+For regression commands and the cross-device recovery matrix, see
+[Friends-feed reliability checks](../../docs/rollout/friends-feed-verification.md).

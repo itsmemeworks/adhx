@@ -29,9 +29,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,9 +82,16 @@ fun TunedInScreen(
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
     LaunchedEffect(slug, resumed) {
-        while (resumed) {
-            feed.pollTuned()
-            delay(POLL_MS)
+        if (resumed) {
+            val session = java.util.UUID.randomUUID().toString()
+            try {
+                while (true) {
+                    feed.pollTuned(session)
+                    delay(POLL_MS)
+                }
+            } finally {
+                withContext(NonCancellable) { feed.leaveTuned(slug, session) }
+            }
         }
     }
     // "A new one, up next" shows for a few seconds.
@@ -127,6 +135,7 @@ fun TunedInScreen(
         }
     }
 
+    val scope = rememberCoroutineScope()
     if (ui.items.isEmpty()) {
         Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Column(
@@ -140,6 +149,9 @@ fun TunedInScreen(
                     !ui.loadedOnce -> Spinner(size = 30.dp, stroke = 3.dp)
                     else -> {
                         Text(ui.error ?: Copy.LIVE_ENDED, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
+                        if (ui.error != null && ui.error != Copy.LIVE_ENDED) {
+                            OutlineButton("Try again", onClick = { scope.launch { feed.pollTuned() } }, minHeight = 44.dp)
+                        }
                         OutlineButton("Back", onClick = onBack, minHeight = 44.dp)
                     }
                 }
@@ -149,14 +161,25 @@ fun TunedInScreen(
         return
     }
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var picking by remember { mutableStateOf<PhonePost?>(null) }
+    var pickingKey by rememberSaveable(slug) { mutableStateOf<String?>(null) }
+    val picking = ui.items.firstOrNull { it.key == pickingKey }
+    var words by rememberSaveable(slug) { mutableStateOf("") }
+    var sending by remember { mutableStateOf(false) }
+    var sendError by remember { mutableStateOf<String?>(null) }
     val send: (PhonePost, String?, String?) -> Unit = { post, emoji, text ->
-        picking = null
-        scope.launch {
-            if (!feed.react(post, emoji = emoji, text = text)) {
-                Toast.makeText(context, Copy.REACT_FAILED, Toast.LENGTH_SHORT).show()
+        if (!sending) {
+            sending = true
+            sendError = null
+            scope.launch {
+                val sent = feed.react(post, emoji = emoji, text = text)
+                sending = false
+                if (sent) {
+                    if (text != null && words.trim() == text) words = ""
+                    pickingKey = null
+                } else {
+                    sendError = if (text != null) "Not sent. Your words are still here. Tap Retry." else "Not sent. Tap the reaction to retry."
+                    pickingKey = post.key
+                }
             }
         }
     }
@@ -165,11 +188,12 @@ fun TunedInScreen(
             posts = ui.items,
             server = server,
             startIndex = 0,
-            onPage = {},
+            onPage = { index -> feed.playingTuned(ui.items.getOrNull(index)) },
             topBar = { top() },
             onSaver = onSaver,
-            onReact = { post -> picking = if (picking == null) post else null },
+            onReact = { post -> if (!sending) pickingKey = if (picking == null) post.key else null },
             reacting = picking != null,
+            preservePlaybackOnRefresh = true,
             aboveCaption = {
                 ui.moment?.label?.let { name ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -190,9 +214,13 @@ fun TunedInScreen(
         )
         picking?.let { post ->
             ReactPicker(
+                words = words,
+                onWordsChange = { words = it },
+                sending = sending,
+                error = sendError,
                 onEmoji = { send(post, it, null) },
                 onText = { send(post, null, it) },
-                onDismiss = { picking = null },
+                onDismiss = { pickingKey = null },
             )
         }
     }

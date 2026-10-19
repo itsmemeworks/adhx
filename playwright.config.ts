@@ -34,7 +34,11 @@ export default defineConfig({
     },
     {
       name: 'webkit-mobile',
-      testMatch: ['**/mobile-webkit.spec.ts', '**/email-sign-in.spec.ts'],
+      testMatch: [
+        '**/mobile-webkit.spec.ts',
+        '**/email-sign-in.spec.ts',
+        '**/friends-reliability.spec.ts',
+      ],
       use: { ...devices['iPhone 13'], browserName: 'webkit' },
     },
   ],

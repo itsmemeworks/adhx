@@ -85,15 +85,40 @@ The app treats no answer, a timeout, and 502/503/504 as **offline**: the link
 is queued on the phone and sent when the server can be reached.
 
 **Saving in the background** (current apps): send `Prefer: respond-async`.
-For an editable share card, also send `deferPublish: true` (the iPhone does).
-A new save stays private until `PATCH /api/app/save { id, private? }`
-acknowledges the current choice. Send the PATCH as soon as the queue id is
-known, and again when the switch changes, without waiting for the post to land.
+Both apps send a stable `requestId` with each initial asynchronous save: the
+persisted history UUID (a 21-character nanoid is also accepted). Retrying the
+same account/id/link returns the original receipt, including after a lost POST
+response or process restart, without changing its original default or intent.
+Reusing the id for a different link returns `409 request_conflict`; another
+account can use the same id independently. Keep the id until delivery ends;
+only a new user-initiated share allocates another. Receipt deduplication lasts
+for the queue's seven-day finished-row retention; a saved row still awaiting
+publication acknowledgement is retained until it is acknowledged. Older clients may omit it.
+
+For an editable share card, also send `deferPublish: true` (both apps do).
+A new save stays private until `PATCH /api/app/save { id, private?, intentVersion? }`
+acknowledges the current choice. The endpoint accepts a choice as soon as the
+queue id is known, including before metadata lands. iPhone sends it then and
+again for later switches. Android keeps a new save staged until metadata is
+available, then acknowledges the latest persisted choice before showing Saved;
+this also lets an untouched off default preserve a repeat save's privacy.
 The route accepts only that phone's own queue rows, including working and
 completed ones. Omitting `private` confirms the captured default for a new
 save and preserves a repeat save's existing privacy. Acknowledgements are
 idempotent; an interrupted acknowledgement leaves a new save private. Keep
-pending acknowledgements on disk and retry them when the app resumes.
+pending acknowledgements on disk and retry them when the app resumes. New
+clients send a positive safe-integer `intentVersion`, starting at 1 and changing
+only with a new explicit choice. The server atomically accepts only a higher
+version: equal/stale replays succeed without changing privacy, even after a
+manual web edit. A never-accepted newer explicit choice is a normal mutation;
+this is replay protection, not conflict resolution between simultaneous edits.
+Unversioned older clients retain their existing behaviour.
+
+On iPhone, history migrates automatically from the old app-group preference to
+an atomic JSON file in the private app-group container. Cross-process file
+locking protects intent/version updates by the app and extension; pending
+receipts and acknowledgements remain beyond the 100-completed-share limit.
+Android retains unfinished delivery beyond its 50-completed-share limit too.
 
 The server answers at once, before reading the post (which can take a while
 from a home server; Instagram is slow to answer one):
@@ -339,8 +364,14 @@ watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
   Items may be `{ post, … }` wrappers. `reactions` is the last 15 s, oldest
   first: `[{ id, at, saver: Saver, emoji? | text?, post: { platform, id } }]`.
   The app floats each `id` once and skips `isYou` (yours showed when sent).
-  It polls every 5 s; `GET /api/app/live/{slug}/stream` (SSE) also exists and
-  isn't used yet.
+  Current apps POST `{ known: [platform:id, ...] }` (at most 200) to the same
+  route every 5 s in the foreground, with `X-ADHX-Watch: <screen UUID>`.
+  The response refreshes known post metadata and includes authoritative
+  `removedKeys` and compact `saverUpdates: [{ key, savers, isPrivate }]` for
+  older known posts; absence from the newest 60 alone is not a removal. POST falls
+  back to GET on older servers. `DELETE` with the same screen UUID leaves;
+  disconnected/background phones expire after 15 s. Accounts count once across
+  web tabs and phones. `GET /api/app/live/{slug}/stream` remains available.
 - `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
   most 40 characters).
 - `GET /api/app/people` → `{ members: [{ username, name, avatarUrl, saves,
@@ -390,14 +421,16 @@ freeBytes, processing, remoteConnected } }`. `POST /api/app/doing/retry
   watching" with Send. Reactions float up the left of the screen and fade,
   each as the sender's face ringed in their colour, with the emoji as a
   sticker on its corner or the words in a bubble of their colour. Yours shows
-  at once; ones that arrive together rise 0.7 s apart.
+  after acknowledgement; failed words stay in the composer with Retry, bound
+  to the original post even if playback advances. Reactions are ephemeral, not
+  stored chat. Ones that arrive together rise 0.7 s apart.
 - **Faces**: up to 3 overlapping avatars (their photo, or their initial on
   their colour) and "Ana and Ben saved this" / "Ana and 3 others saved this"
   on the player byline and search tiles. Tapping a face opens that friend's
   channel (yours opens My saves).
 - **Just for me**: a switch on the share card (with "Only you will see this
   save. It's still kept and searchable." when on) and in More. Flipped
-  while the save is on its way, it's applied when the save lands; a link
+  while the save is on its way, its intent is persisted before publication; a link
   waiting offline sends `private` with it. A private save shows a lock.
 - **Search** has Everyone's saves · Mine, Everyone first.
 - With Remove animations on, pages jump instead of sliding, nothing pulses,
@@ -487,12 +520,14 @@ out so the server's own choice still applies.
 saw in Channels or the feed, kept on the phone), or "Your people will see it";
 on shows a lock and "Only you will see this save. It's still kept and
 searchable." The save goes out as soon as the sheet opens, so the switch
-uses `PATCH /api/app/save` for an accepted iPhone queue receipt, including
-while metadata is still being fetched, and `/api/app/private` for a directly
-saved post. Closing the iPhone sheet waits for its intent acknowledgement;
-interrupted acknowledgements are retried by the app. A link waiting offline
-is sent with `private`. Android currently applies an in-flight switch when
-the post lands.
+uses `PATCH /api/app/save { id, private?, intentVersion }` for an accepted
+queue receipt, including while metadata is still being fetched, and
+`/api/app/private` for a directly saved post. Both apps persist the receipt,
+choice and monotonic intent version before sending. New shares stage privately
+until acknowledgement. iPhone dismissal waits for the intent request; Android
+hands delivery to durable WorkManager before network work starts. Interrupted
+acknowledgements retry the same version without submitting a duplicate save or
+undoing a later web privacy edit. A changed choice increments the version.
 
 Adding to a channel and saving for offline are not in this version.
 

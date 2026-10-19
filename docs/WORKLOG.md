@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Harden friends-feed delivery, live rooms and processing
+
+- Android shares now use durable staged delivery; both phones reuse request IDs and monotonic privacy versions, with cross-process-safe iPhone history and retryable interrupted acknowledgements.
+- Native live rooms renew foreground presence leases, deduplicate accounts across devices, refresh compact saver/privacy metadata and remove only authoritative removals while preserving playback identity.
+- Failed reaction drafts keep their original post and offer Retry; small-screen web rails/pickers remain reachable, with bounded native pickers and Unicode limits.
+- Count the complete visible processing backlog in SQL before limiting details to 60; summary polls skip media hydration, web consumers share foreground polling, and viewed-post updates use an account-scoped acknowledged outbox.
+- Pin all active OCR inputs, distinguish unreadable pictures from model failures, reuse retained originals across passes and reconcile/expire unused cache entries.
+- Alternate conversion and understanding fairly, age old work, and wait for all source conversions before video-consuming learning.
+- Add server/web/native regressions, a native CI workflow and a linked cross-device verification guide; simulator display failure prevented a native visual claim, while unsigned native builds and automated checks are recorded on the PR. No service or installed phone app deployed.
+
 ## 2026-10-19 — Close friends-feed review privacy gaps
 
 - Revalidate cached blend savers/reasons/counts and moderation without shifting cursor slots; public caches check a durable SQLite visibility revision across processes.

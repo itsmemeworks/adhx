@@ -1,5 +1,7 @@
 package com.adhx.share.net
 
+import kotlinx.serialization.builtins.serializer
+
 import com.adhx.share.data.Connection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -73,9 +75,11 @@ class AdhxApi(private val server: String, private val key: String?) {
         justForMe: Boolean = false,
         explicit: Boolean = false,
         onQueued: (String) -> Unit = {},
+        deferPublish: Boolean = false,
+        requestId: String? = null,
     ): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
-        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe, explicit))
+        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe, explicit).copy(deferPublish = deferPublish, requestId = requestId))
         val request = authed(url).header("Prefer", "respond-async").post(body.toRequestBody(JSON)).build()
         val started = send(request) { code, text ->
             if (code == 202) json.decodeFromString(QueuedBody.serializer(), text).id
@@ -123,6 +127,13 @@ class AdhxApi(private val server: String, private val key: String?) {
         val base = url("api/app/save") ?: return badAddress
         val url = base.newBuilder().addQueryParameter("id", id).build()
         return send(authed(url).get().build(), QueuedSave.serializer())
+    }
+
+    /** Acknowledge the latest durable choice without ever submitting the link again. */
+    suspend fun queuedPrivacy(id: String, choice: Boolean?, intentVersion: Long? = null): ApiResult<Unit> {
+        val url = url("api/app/save") ?: return badAddress
+        val body = json.encodeToString(QueuedPrivacyRequest.serializer(), QueuedPrivacyRequest(id, choice, intentVersion))
+        return send(authed(url).patch(body.toRequestBody(JSON)).build()) { _, _ -> Unit }
     }
 
     suspend fun status(platform: String, id: String): ApiResult<StatusResponse> {
@@ -222,17 +233,27 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), LiveResponse.serializer())
     }
 
-    suspend fun liveMoment(slug: String): ApiResult<LiveDetail> {
+    suspend fun liveMoment(slug: String, session: String? = null, known: List<String> = emptyList()): ApiResult<LiveDetail> {
         val base = url("api/app/live") ?: return badAddress
         val url = base.newBuilder().addPathSegment(slug).build()
-        return send(authed(url).get().build(), LiveDetail.serializer())
+        val body = "{\"known\":" + json.encodeToString(kotlinx.serialization.builtins.ListSerializer(String.serializer()), known.take(200)) + "}"
+        val request = authed(url).post(body.toRequestBody(JSON))
+        if (session != null) request.header("X-ADHX-Watch", session)
+        val result = send(request.build(), LiveDetail.serializer())
+        return if (result is ApiResult.Failed && result.status == 405) send(authed(url).get().build(), LiveDetail.serializer()) else result
+    }
+
+    suspend fun leaveLive(slug: String, session: String): ApiResult<Unit> {
+        val base = url("api/app/live") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).build()
+        return send(authed(url).header("X-ADHX-Watch", session).delete().build()) { _, _ -> }
     }
 
     /** React to a post in a moment: one [Reaction.emoji], or a few words (at most [Reaction.MAX_TEXT]). */
     suspend fun react(slug: String, platform: String, id: String, emoji: String? = null, text: String? = null): ApiResult<Unit> {
         val base = url("api/app/live") ?: return badAddress
         val url = base.newBuilder().addPathSegment(slug).addPathSegment("react").build()
-        val request = ReactRequest(emoji = emoji, text = text?.trim()?.take(Reaction.MAX_TEXT), platform = platform, id = id)
+        val request = ReactRequest(emoji = emoji, text = text?.trim()?.let(Reaction::clip), platform = platform, id = id)
         val body = json.encodeToString(ReactRequest.serializer(), request)
         return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
     }

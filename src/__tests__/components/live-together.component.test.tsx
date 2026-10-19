@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import type { FeedItem } from '@/components/feed/types'
 import type { Saver } from '@/lib/people/types'
 import {
@@ -94,19 +94,19 @@ describe('the React picker', () => {
     expect(onEmoji).toHaveBeenCalledWith('💀')
   })
 
-  it('says a few words, cleaned, and never sends nothing', () => {
+  it('says a few words, cleaned, and never sends nothing', async () => {
     const onText = vi.fn()
     render(<ReactionPicker onEmoji={vi.fn()} onText={onText} onClose={vi.fn()} />)
     const field = screen.getByRole('textbox', { name: 'Say something' })
     expect(field).toHaveAttribute('placeholder', 'Say something to everyone watching')
-    expect(field).toHaveAttribute('maxLength', '40')
+    expect(field).toHaveAttribute('maxLength', '80')
     const send = screen.getByRole('button', { name: 'Send' })
     fireEvent.change(field, { target: { value: '   ' } })
     expect(send).toBeDisabled()
     fireEvent.change(field, { target: { value: '  who   sent this 💀 ' } })
     fireEvent.click(send)
     expect(onText).toHaveBeenCalledWith('who sent this 💀')
-    expect(field).toHaveValue('')
+    await waitFor(() => expect(field).toHaveValue(''))
   })
 
   it('closes on Escape', () => {
@@ -210,4 +210,41 @@ describe('the live client keeps names', () => {
     })
     expect(reacted).toBe(saved)
   })
+})
+
+it('retains a failed reaction draft and clears it only after an acknowledged retry', async () => {
+  const onText = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+  const { rerender } = render(
+    <ReactionPicker onEmoji={vi.fn()} onText={onText} onClose={vi.fn()} />,
+  )
+  const field = screen.getByRole('textbox', { name: 'Say something' })
+  fireEvent.change(field, { target: { value: 'keep these words' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  await waitFor(() => expect(onText).toHaveBeenCalledTimes(1))
+  expect(field).toHaveValue('keep these words')
+  rerender(
+    <ReactionPicker
+      onEmoji={vi.fn()}
+      onText={onText}
+      onClose={vi.fn()}
+      error="That didn’t send."
+    />,
+  )
+  expect(screen.getByRole('status')).toHaveTextContent('That didn’t send.')
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+  await waitFor(() => expect(field).toHaveValue(''))
+  expect(onText.mock.calls.map(([text]) => text)).toEqual(['keep these words', 'keep these words'])
+})
+
+it('allows forty emoji code points and makes pending sends clear and non-interactive', () => {
+  const { rerender } = render(
+    <ReactionPicker onEmoji={vi.fn()} onText={vi.fn()} onClose={vi.fn()} />,
+  )
+  const field = screen.getByRole('textbox', { name: 'Say something' })
+  fireEvent.change(field, { target: { value: '💀'.repeat(41) } })
+  expect(field).toHaveValue('💀'.repeat(40))
+  rerender(<ReactionPicker onEmoji={vi.fn()} onText={vi.fn()} onClose={vi.fn()} disabled />)
+  expect(screen.getByRole('button', { name: 'Sending…' })).toBeDisabled()
+  expect(field).toBeDisabled()
+  expect(screen.getByText('Live reactions disappear after a few seconds.')).toBeInTheDocument()
 })
