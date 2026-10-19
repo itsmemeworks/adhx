@@ -61,11 +61,14 @@ export default function PrivacyPage() {
           channels, archive and preferences are keyed by your account. Other members can see which
           posts you saved and when, unless you mark a save “Just for me”; they never see your tags,
           archive or preferences. A “Just for me” save never writes a public pulse, and nor does
-          archive. A channel stays private until you make it public on its page, and you can make it
-          private again there. Keeping a “Made for you” channel keeps it private. If X is connected,
-          we check it for new bookmarks about every hour. An access key (for searching from Claude)
-          is stored only as a hash, can only search your own saves, and stops working as soon as you
-          remove it.
+          archive. Members also get a channel of everything you saved for them, and your saves are
+          grouped with everyone’s into channels from everyone; “Just for me” saves are in neither. A
+          channel stays private until you make it public on its page, and you can make it private
+          again there; a public channel never shows a post you saved “Just for me”, even if you
+          tagged it. Keeping a “Made for you” channel keeps it private. If X is connected, we check
+          it for new bookmarks about every hour. An access key (for searching from Claude) is stored
+          only as a hash, can only search your own saves, and stops working as soon as you remove
+          it.
         </Section>
 
         <Section title="Retained media and phones">

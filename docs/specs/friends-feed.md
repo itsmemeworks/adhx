@@ -44,8 +44,9 @@ All of these require sign-in unless marked public.
   - `friends` excludes the viewer's own saves.
   - `mine` is the viewer's saves.
 - `POST /api/views` with body `{ posts: [{ platform, id }] }` (at most 50) marks posts seen → 204.
-- `GET /api/channels` adds `group: [{ slug, name, size, covers }]` (made from everyone's visible saves) and `friends: [{ username, name, avatarUrl, size, covers }]` (one per member with visible saves).
-- `GET /api/channels/group/[slug]` and `GET /api/channels/friend/[username]` return play queues.
+- `GET /api/channels` adds `group: [{ slug, name, size, members, savers, newCount, covers }]` (made from everyone's visible saves; `members` = how many saved into it, `savers` = up to 3 faces) and `friends: [{ username, name, avatarUrl, size, newCount, covers }]` (one per other member with visible saves; `newCount` = their visible saves you haven't saved or seen), plus `canInvite`.
+- `GET /api/channels/group/[slug]` and `GET /api/channels/friend/[username]` return play queues in the `/api/channels/auto/[slug]` shape (`{ name, items, total, understood, close, refined, nextOffset }`), newest save first. The friend queue adds `friend` and takes `?new=1` (only what's new to you); your own username is 404 (your saves are My saves).
+- `group_channels (slug, name, size, post_keys, savers, position, saves_at_compute, computed_at, model_version)`: server-wide, no `user_id`. Recomputed when missing, the model changed, after 12 h, after ±10 visible saves, or when a counted saver left or was banned. Every read re-checks each post's visible savers.
 - Moments: when signed in, `MomentView.savers` (up to 5 faces plus `people`), moment items carry `savers`, and the stream's `watching` event carries `watchers: Saver[]` (members tuned in now, names only to signed-in subscribers).
 - `POST /api/invites` (admin, or any member when `INVITES=members`) → `{ id, url, expiresAt }`. `GET /api/invites` lists unused ones; `DELETE /api/invites/[id]` revokes one.
 - `/invite/[token]` (public page): pick a name, which signs you in, then shows the phone pairing code and QR on the same screen. A used or expired invite says so.
@@ -58,7 +59,7 @@ All of these require sign-in unless marked public.
 - `GET /api/app/feed?mode=new|everyone|friends|mine&cursor` → `{ items: PhonePost[], nextCursor, caughtUp }`.
 - `POST /api/app/seen` with body `{ posts: [{ platform, id }] }` → 204.
 - `GET /api/app/search?scope=mine|everyone`.
-- `GET /api/app/channels` → `{ group, friends, mine }`, using the shapes above with covers as absolute-path URLs. `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`.
+- `GET /api/app/channels` → `{ group, friends, mine }`, using the shapes above with covers as absolute-path URLs. `mine` = your channels then Made for you, `{ slug, name, size, kind: 'channel' | 'made-for-you', isPublic, covers }`. `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }` (`friend` takes `?new=1`; `mine` tries your channel first, then Made for you). These also accept a signed-in session.
 - `GET /api/app/live` → the moments snapshot with savers. `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[] }`.
 
 ## Product behaviour
@@ -67,7 +68,9 @@ All of these require sign-in unless marked public.
 - **Private toggle**: "Just for me" in the theater's Save sheet and More menu, the phone share cards and the phone player's More sheet. A private post shows a small lock.
 - **New**: the signed-in home. It plays only what you haven't seen, then ends on a card: "You're all caught up. Go touch grass." with buttons for Channels and Right now. A post counts as seen after 2 s on stage, or when you skip it.
 - **The blend**: the signals are fresh, saved together, close to you, like what you keep, not seen yet, variety (no more than 2 in a row from one friend) and your own (sparingly). Each item carries `why` ("Ana and Ben saved this", "Like the frog video you kept"), shown as the via note.
-- **Channels**: a "From everyone" row (group channels) and a "Your people" row (one per friend) above "Made for you" and "Your channels".
+- **Channels**: a "From everyone" row (group channels: "Rabbit holes, dug by your friends", "38 saves · 3 of you", "N new") and a "Your people" row (one big avatar card per friend, "N new", plus "Invite someone" → Settings when you may invite) above "Made for you" and "Your channels". A friend's channel is `/channels/friend/{username}` (members only): Play all, Play the N new ones, "Only people on this server can see this page." Play: `/play?group=slug`, `/play?friend=username[&new=1]`.
+- **Who saved it**: the theater's faces open a popover listing each saver and when, with "See Ana’s saves" (yours: "See your saves" → My saves).
+- **Private wins on public channels**: `/t/{user}/{tag}`, its OG mosaic, the public queue, clone, curator profile, leaderboard tiles and the sitemap never list a post the owner saved privately. The owner still sees it.
 - **Live with names**: moment cards show faces. Tune in shows "Ana and Ben are watching" with their avatars, live.
 - **Search everyone's saves**: the search scope switch defaults to Everyone for signed-in members, with names on tiles.
 - **Search what's on screen and said**: speech in videos is transcribed and on-screen text is read on the server, both added to the post's words for search. Copy that promised "no audio is processed" must be updated to say what is processed, and that it all stays on your server.
