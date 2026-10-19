@@ -62,7 +62,7 @@ All of these require sign-in unless marked public.
 - `PhonePost.savers: Saver[]` and `PhonePost.isPrivate: boolean`.
 - `POST /api/app/save` accepts `private: boolean` (in the async queue too).
 - `POST /api/app/private` with body `{ platform, id, private }` → `{ private }`.
-- `GET /api/app/feed?mode=new|everyone|friends|mine&types&cursor&limit` → `{ items: PhonePost[], nextCursor, caughtUp, nothingYet, total, types, waiting }`; each item adds `why` and `whyReasons`. `types` as on the web.
+- `GET /api/app/feed?mode=new|everyone|friends|mine&types&cursor&limit` → `{ items: PhonePost[], nextCursor, caughtUp, nothingYet, total, types, waiting, hidden }`; each item adds `why` and `whyReasons`. `types` as on the web; `hidden` repeats `waiting` under the name the phone apps read.
 - `GET|PUT /api/app/feed/types`: the same stored choice as `/api/feed/types`.
 - `POST /api/app/seen` with body `{ posts: [{ platform, id }] }` → 204.
 - `GET /api/app/search?scope=mine|everyone`.

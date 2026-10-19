@@ -561,6 +561,20 @@ describe("what's in your feed", () => {
     expect((await feed('mode=new&types=video,photo')).body.waiting).toEqual({ text: 2, article: 1 })
   })
 
+  it('tells the phone what is waiting under the name the apps read, hidden', async () => {
+    viewer = PETE
+    const phone = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const { GET } = await import('@/app/api/app/feed/route')
+    const res = await GET(
+      new NextRequest(`${BASE}/api/app/feed?mode=new&types=video,photo`, {
+        headers: { authorization: `Bearer ${phone}` },
+      }),
+    )
+    const body = await res.json()
+    expect(body.waiting).toEqual({ text: 2, article: 2 })
+    expect(body.hidden).toEqual(body.waiting)
+  })
+
   it('remembers the choice and uses it when types is left out', async () => {
     expect((await types('GET')).status).toBe(401)
     viewer = PETE

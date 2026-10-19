@@ -11,11 +11,12 @@ const LIMIT = { windowMs: 60_000, max: 60 }
 /**
  * GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo&cursor&limit
  * — the blended feed for the phone: `{ items: PhonePost[], nextCursor,
- * caughtUp, nothingYet, total, types, waiting }`. `types` (video, photo, text,
+ * caughtUp, nothingYet, total, types, waiting, hidden }`. `types` (video, photo, text,
  * article; audio plays with video) defaults to the stored choice
  * (`/api/app/feed/types`), else video and photo. Each item carries `why` (and `whyReasons`) besides
  * the usual `savers` / `isPrivate`. Mark what's been on screen with
- * `POST /api/app/seen`.
+ * `POST /api/app/seen`. `hidden` is `waiting` again under the name the
+ * iPhone and Android apps read ("4 text posts waiting · Show them").
  */
 export const GET = withPhoneKey(async (request, { userId }) => {
   const query = parseBlendQuery(new URL(request.url).searchParams)
@@ -53,6 +54,7 @@ export const GET = withPhoneKey(async (request, { userId }) => {
         total: page.total,
         types: page.types,
         waiting: page.waiting,
+        hidden: page.waiting,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )
