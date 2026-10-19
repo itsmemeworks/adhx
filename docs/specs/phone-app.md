@@ -203,16 +203,16 @@ an update).
   post counts as seen after 2 s on screen or when you swipe past it; apps send
   them in batches (10, or 5 s after the last, or on leaving New or the app).
 - `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
-  friends: [{ username, name, avatarUrl, size, newCount, covers }],
-  mine: [{ slug, name, size, covers }] }`. `covers` are addresses (or posts to
+friends: [{ username, name, avatarUrl, size, newCount, covers }],
+mine: [{ slug, name, size, covers }] }`. `covers` are addresses (or posts to
   take a poster from), relative to the server.
 - `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`
   (a friend's slug is their username).
 - `GET /api/app/live` → `{ moments: [{ slug, name|title, people, savers?,
-  watching, watchers?, covers, live, hue?, label? }] }`; the field set is still
+watching, watchers?, covers, live, hue?, label? }] }`; the field set is still
   settling, so only `slug` is required.
 - `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[], watchers: Saver[],
-  reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
+reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   tuned in. New reactions (not yours, not ones already there when you tuned
   in) float up the screen.
 - `POST /api/app/live/{slug}/react` `{ emoji }` (😂 🔥 😭 👀 💀 ❤️) or
@@ -308,12 +308,12 @@ it; on a server without these endpoints (404) the app falls back as noted.
   most 50 at a time, as soon as 10 are waiting, else within 5 s, and when it
   goes to the background. A batch that fails is sent again.
 - `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
-  friends: [{ username, name, avatarUrl, size, newCount, covers }],
-  mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
+friends: [{ username, name, avatarUrl, size, newCount, covers }],
+mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
   accepted too, their poster is used).
 - `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`.
 - `GET /api/app/live` → `{ moments: [{ slug, name (or title), people, savers?,
-  watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
+watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
 - `GET /api/app/live/{slug}` → `{ moment, items, watchers, reactions }`.
   Items may be `{ post, … }` wrappers. `reactions` is the last 15 s, oldest
   first: `[{ id, at, saver: Saver, emoji? | text?, post: { platform, id } }]`.
