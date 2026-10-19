@@ -352,6 +352,40 @@ describe('Right now, live', () => {
     stop()
   })
 
+  it('drops a post at once when its only save goes private or its saver is banned', async () => {
+    await seedLibrary()
+    await __moments.recompute()
+    const before = await getMomentsSnapshot()
+    const [frog] = before.moments
+    const strip = before.stream.map((i) => i.key)
+    expect(frog.covers.map((p) => p.id)).toContain('frog5')
+    expect(strip.length).toBeGreaterThan(1)
+
+    // frog5 and the newest strip post are only USER_A's; frog0 is USER_B's too.
+    const [newest] = strip
+    testInstance.sqlite
+      .prepare(`UPDATE bookmarks SET is_private = 1 WHERE id IN ('frog5', ?)`)
+      .run(newest.slice(newest.indexOf(':') + 1))
+    testInstance.db
+      .insert(schema.userBans)
+      .values({
+        userId: USER_B,
+        reason: 'spam',
+        createdAt: new Date().toISOString(),
+        createdBy: 'a',
+      })
+      .run()
+
+    const after = await getMomentsSnapshot()
+    expect(after.stream.map((i) => i.key)).toEqual(strip.slice(1))
+    const covers = after.moments[0].covers.map((p) => p.id)
+    expect(covers).not.toContain('frog5')
+    expect(covers).toContain('frog0')
+    const detail = await getMomentDetail(frog.slug)
+    expect(detail?.items.map((i) => i.post.id)).not.toContain('frog5')
+    expect(detail?.items).toHaveLength(5)
+  })
+
   it('widens the window and says so when the last day is quiet', async () => {
     const old = new Date(Date.now() - 48 * 3_600_000).toISOString()
     for (let i = 0; i < 6; i++) {
