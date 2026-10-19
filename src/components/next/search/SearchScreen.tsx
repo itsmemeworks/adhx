@@ -261,8 +261,8 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
               value={state.scope}
               onChange={(scope) => set({ scope })}
               options={[
+                { id: 'everyone', label: 'Everyone’s saves' },
                 { id: 'mine', label: 'My saves' },
-                { id: 'everyone', label: 'Everyone' },
               ]}
             />
           </form>
@@ -285,7 +285,7 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
             className="md:hidden"
           >
             <Users aria-hidden className="h-3.5 w-3.5" />
-            <span>{state.scope === 'everyone' ? 'Everyone' : 'My saves'}</span>
+            <span>{state.scope === 'everyone' ? 'Everyone’s saves' : 'My saves'}</span>
           </Pill>
           <span aria-hidden className="h-6 w-px shrink-0 bg-nx-hairline md:hidden" />
           <div role="group" aria-label="Show" className="flex shrink-0 gap-1.5">

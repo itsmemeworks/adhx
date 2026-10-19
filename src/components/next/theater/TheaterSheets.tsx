@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Bookmark, Check, Plus, Sparkles, X } from 'lucide-react'
+import { Bookmark, Check, Lock, Plus, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { articleHeadline, postCoverSrc, postText } from '../post'
@@ -246,6 +246,9 @@ export function SaveSheet({
   onCreate,
   onCopy,
   onClose,
+  isPrivate,
+  privateBusy = false,
+  onPrivate,
 }: {
   channels: ChannelOption[] | null
   selected: ReadonlySet<string>
@@ -256,6 +259,10 @@ export function SaveSheet({
   onCreate: (name: string) => void
   onCopy: (url: string) => void
   onClose: () => void
+  /** "Just for me": shown when the caller can switch it. */
+  isPrivate?: boolean
+  privateBusy?: boolean
+  onPrivate?: (on: boolean) => void
 }) {
   const [query, setQuery] = useState('')
   const needle = sanitizeTag(query)
@@ -307,6 +314,7 @@ export function SaveSheet({
           <X aria-hidden className="h-4 w-4" />
         </button>
       </div>
+      {onPrivate && <PrivateRow on={!!isPrivate} busy={privateBusy} onChange={onPrivate} />}
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -385,6 +393,53 @@ export function SaveSheet({
         <p className="m-0 text-sm text-white/60">Type a name to start your first channel.</p>
       )}
     </Sheet>
+  )
+}
+
+/** "Just for me" as a switch: on, nobody else sees, counts or is told about this save. */
+export function PrivateRow({
+  on,
+  busy = false,
+  onChange,
+}: {
+  on: boolean
+  busy?: boolean
+  onChange: (on: boolean) => void
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={busy}
+      onClick={() => onChange(!on)}
+      className="flex min-h-[52px] w-full items-center gap-3 rounded-xl bg-white/[0.04] px-3 text-left hover:bg-white/[0.08] disabled:opacity-60"
+    >
+      <Lock
+        aria-hidden
+        className={cn('h-[18px] w-[18px]', on ? 'text-nx-accent' : 'text-white/60')}
+      />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-sm font-semibold">Just for me</span>
+        <span className="text-xs text-white/55">
+          {on ? 'Only you can see this save.' : 'Your people can see you saved this.'}
+        </span>
+      </span>
+      <span
+        aria-hidden
+        className={cn(
+          'relative h-6 w-10 shrink-0 rounded-full transition-colors',
+          on ? 'bg-nx-accent' : 'bg-white/25',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[left]',
+            on ? 'left-[18px]' : 'left-0.5',
+          )}
+        />
+      </span>
+    </button>
   )
 }
 

@@ -74,9 +74,13 @@ export interface SearchState {
   view: SearchView
 }
 
+/**
+ * Search is for signed-in members, so it starts across everyone's saves (with
+ * names on the tiles). `?scope=mine` narrows it to yours.
+ */
 export const DEFAULT_STATE: SearchState = {
   q: '',
-  scope: 'mine',
+  scope: 'everyone',
   type: 'all',
   wordsOnly: false,
   view: 'bento',

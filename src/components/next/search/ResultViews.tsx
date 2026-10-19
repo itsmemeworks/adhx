@@ -6,6 +6,7 @@ import { Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { articleHeadline, postAuthor, postCoverSrc, postText } from '../post'
 import { MediaChip, NxImage, Scrim } from '../primitives'
+import { saversLine } from '../savers'
 import {
   groupResults,
   KIND_WORD,
@@ -21,13 +22,7 @@ import {
   type MatchSignal,
   type SearchResultItem,
 } from './model'
-import {
-  EveryoneBadge,
-  mediaBadge,
-  ResultTile,
-  StrengthMeter,
-  useReducedMotion,
-} from './ResultTile'
+import { SaversMark, mediaBadge, ResultTile, StrengthMeter, useReducedMotion } from './ResultTile'
 
 /** "Video · 0:41 · in the video" (no repeated words when there is no duration). */
 function queueMeta(item: SearchResultItem): string {
@@ -96,7 +91,7 @@ export function BestMatch({
         <span className="line-clamp-[8] font-nx-serif text-[30px] leading-[1.08] md:text-[40px]">
           {text}
         </span>
-        {!item.saved && <EveryoneBadge className="right-3.5 top-3.5" />}
+        <SaversMark item={item} className="right-3.5 top-3.5" />
       </Link>
     )
   }
@@ -151,7 +146,7 @@ export function BestMatch({
         withLabel
         className="absolute left-3.5 top-12"
       />
-      {!item.saved && <EveryoneBadge className="right-3.5 top-3.5" />}
+      <SaversMark item={item} className="right-3.5 top-3.5" />
       {!playing && kind !== 'photo' && kind !== 'article' && (
         <span
           aria-hidden
@@ -393,7 +388,11 @@ export function QueueView({
                   <span className="truncate text-xs text-nx-muted">{queueMeta(item)}</span>
                 </span>
                 <span className="shrink-0 rounded-full border border-nx-hairline px-2 py-1 text-[11px] text-nx-soft">
-                  {item.saved ? 'Yours' : 'Everyone'}
+                  {item.post.savers?.length
+                    ? saversLine(item.post.savers)
+                    : item.saved
+                      ? 'Yours'
+                      : 'Everyone'}
                 </span>
               </Link>
             </li>
