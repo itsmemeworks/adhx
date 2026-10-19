@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/itsmemeworks/adhx/compare/v2.1.0...v2.1.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* avoid background throttling in mac worker ([#553](https://github.com/itsmemeworks/adhx/issues/553)) ([a722aa7](https://github.com/itsmemeworks/adhx/commit/a722aa74c01d497e4af08aeb96f06cc0964b7060))
+* match grouped root release components ([#552](https://github.com/itsmemeworks/adhx/issues/552)) ([5e407a4](https://github.com/itsmemeworks/adhx/commit/5e407a49c4af4b3f018b90bd72a34347603e122a))
+
 ## [2.1.0](https://github.com/itsmemeworks/adhx/compare/v2.0.1...v2.1.0) (2026-10-19)
 
 
