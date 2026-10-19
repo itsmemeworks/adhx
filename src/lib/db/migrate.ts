@@ -166,6 +166,14 @@ try {
       name_hint TEXT
     );
     CREATE INDEX IF NOT EXISTS invites_created_by_idx ON invites(created_by);
+    CREATE TABLE IF NOT EXISTS post_views (
+      user_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      seen_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, platform, post_id)
+    );
+    CREATE INDEX IF NOT EXISTS post_views_seen_at_idx ON post_views(seen_at);
     CREATE TABLE IF NOT EXISTS keep_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -214,7 +222,7 @@ try {
     );
   `)
   console.log(
-    '[migrate] Ensured users/user_identities/login_tokens/access_keys/invites/keep tables',
+    '[migrate] Ensured users/user_identities/login_tokens/access_keys/invites/post_views/keep tables',
   )
 } catch (error) {
   console.log('[migrate] FAILED creating account tables', error)
@@ -724,6 +732,18 @@ try {
   }
 } catch (error) {
   console.log('[migrate] Warning: activity pruning failed', error)
+}
+
+// post_views is the feed's watched list. New only looks back ~14 days and
+// "close to you" ~180, so older rows are never read again.
+try {
+  const cutoff = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
+  const res = db.prepare('DELETE FROM post_views WHERE seen_at < ?').run(cutoff)
+  if (res.changes > 0) {
+    console.log(`[migrate] Pruned ${res.changes} post_views rows older than 180 days`)
+  }
+} catch (error) {
+  console.log('[migrate] Warning: post_views pruning failed', error)
 }
 
 // users.role — authorization belongs to the immutable account id. Existing

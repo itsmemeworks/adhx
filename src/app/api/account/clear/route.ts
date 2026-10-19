@@ -9,6 +9,7 @@ import {
   syncLogs,
   userPreferences,
   phoneSaveQueue,
+  postViews,
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
@@ -40,6 +41,8 @@ export const POST = withAuth(async (_req, userId) => {
       db.delete(syncLogs).where(eq(syncLogs.userId, userId)).run()
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
       db.delete(phoneSaveQueue).where(eq(phoneSaveQueue.userId, userId)).run()
+      // What you've seen in the feed starts over too.
+      db.delete(postViews).where(eq(postViews.userId, userId)).run()
     })
 
     metrics.dataCleared()
