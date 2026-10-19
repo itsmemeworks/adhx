@@ -19,6 +19,16 @@ import { noteSaved, PRIORITY } from '@/lib/semantic'
  */
 const SYNC_PULSE_CAP = 25
 
+/**
+ * X's bookmarks endpoint sometimes stops sending a next-page token after a
+ * page or two at 100 a page (reported on X's developer forum; their advice is
+ * a smaller page). We ask for 50, and if a full sync still ends on a nearly
+ * full page short of X's 800, go through once more 20 at a time.
+ */
+const PAGE_SIZE = 50
+const SMALL_PAGE_SIZE = 20
+const X_BOOKMARK_LIMIT = 800
+
 export type SyncMode =
   /** Every page until X stops returning a next-page token (the Sync button). */
   | 'full'
@@ -118,9 +128,12 @@ export async function runBookmarkSync(
     // still lead to older bookmarks missing from this account. The hourly
     // sync stops after the first page holding a bookmark already here: X
     // lists newest bookmarks first, so everything after it was seen before.
-    // Either way X serves only the newest 800 (8 pages of 100).
+    // Either way X serves only the newest 800.
     let cursor: string | undefined
+    let pageSize = PAGE_SIZE
+    let retriedSmall = false
     const requestedCursors = new Set<string>()
+    const fetchedIds = new Set<string>()
     while (!stopped()) {
       if (cursor) {
         if (requestedCursors.has(cursor)) {
@@ -131,12 +144,14 @@ export async function runBookmarkSync(
         requestedCursors.add(cursor)
       }
       const result = await fetchBookmarks(userId, {
-        maxResults: 100,
+        maxResults: pageSize,
         paginationToken: cursor,
       })
       if (stopped()) break
       pageNumber++
-      allTweets.push(...result.bookmarks)
+      const unseen = result.bookmarks.filter((b) => !fetchedIds.has(b.id))
+      for (const b of unseen) fetchedIds.add(b.id)
+      allTweets.push(...unseen)
       publishProgress()
       send('page', {
         pageNumber,
@@ -148,7 +163,20 @@ export async function runBookmarkSync(
         `[sync] page ${pageNumber}: X sent ${result.bookmarks.length} (result_count ${result.resultCount}), ${result.nextToken ? 'more pages' : 'no more pages'}`,
       )
       cursor = result.nextToken
-      if (!cursor) break
+      if (!cursor) {
+        const pageWasFull = Math.max(result.resultCount, result.bookmarks.length) >= pageSize - 10
+        if (mode === 'full' && !retriedSmall && pageWasFull && fetchedIds.size < X_BOOKMARK_LIMIT) {
+          // X may have ended the list early: once more from the newest, in small pages.
+          retriedSmall = true
+          pageSize = SMALL_PAGE_SIZE
+          requestedCursors.clear()
+          console.warn(
+            `[sync] X ended the list on a full page; checking again ${SMALL_PAGE_SIZE} at a time`,
+          )
+          continue
+        }
+        break
+      }
       if (mode === 'new' && result.bookmarks.some((b) => existingIds.has(b.id))) break
     }
 

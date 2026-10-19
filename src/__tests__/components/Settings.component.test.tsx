@@ -346,7 +346,9 @@ describe('SettingsClient — X bookmarks', () => {
     expect(screen.getByText('X posts saved').parentElement).toHaveTextContent('42')
     expect(screen.getByText('saves in all').parentElement).toHaveTextContent('50')
     expect(
-      screen.getByText(/Last synced .* You can sync everything by hand once an hour\./),
+      screen.getByText(
+        /Last synced .* You can sync everything by hand again a minute after the last sync\./,
+      ),
     ).toBeInTheDocument()
   })
 })

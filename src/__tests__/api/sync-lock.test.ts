@@ -137,11 +137,11 @@ describe('GET /api/sync locking', () => {
       info.mockRestore()
       expect(fetchBookmarks).toHaveBeenCalledTimes(21)
       expect(fetchBookmarks).toHaveBeenNthCalledWith(1, 'user-1', {
-        maxResults: 100,
+        maxResults: 50,
         paginationToken: undefined,
       })
       expect(fetchBookmarks).toHaveBeenLastCalledWith('user-1', {
-        maxResults: 100,
+        maxResults: 50,
         paginationToken: 'page-21',
       })
       expect(saveBookmark).toHaveBeenCalledTimes(1)
@@ -161,6 +161,63 @@ describe('GET /api/sync locking', () => {
       })
     },
   )
+
+  it('goes through again in small pages when X ends the list on a full page', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const tweet = (i: number) => ({ id: `t-${i}`, text: `Bookmark ${i}`, authorId: 'alice' })
+    const { fetchBookmarks } = await import('@/lib/twitter/client')
+    vi.mocked(fetchBookmarks).mockReset()
+    // 50 a page: X sends 48 (two deleted) and no next-page token, though there are more.
+    vi.mocked(fetchBookmarks).mockResolvedValueOnce({
+      bookmarks: Array.from({ length: 48 }, (_, i) => tweet(i)),
+      resultCount: 50,
+    })
+    // 20 a page from the newest: the same posts, then older ones X skipped.
+    for (let page = 0; page < 5; page++) {
+      vi.mocked(fetchBookmarks).mockResolvedValueOnce({
+        bookmarks: Array.from({ length: 20 }, (_, i) => tweet(page * 20 + i)),
+        resultCount: 20,
+        nextToken: `small-${page + 1}`,
+      })
+    }
+    vi.mocked(fetchBookmarks).mockResolvedValueOnce({
+      bookmarks: [tweet(100), tweet(101)],
+      resultCount: 2,
+    })
+    const { saveBookmark } = await import('@/lib/sync/save-bookmark')
+    vi.mocked(saveBookmark).mockResolvedValue({ inserted: false } as Awaited<
+      ReturnType<typeof saveBookmark>
+    >)
+    const { GET } = await import('@/app/api/sync/route')
+    const body = await (await GET(new NextRequest('https://adhx.test/api/sync'))).text()
+
+    expect(fetchBookmarks).toHaveBeenCalledTimes(7)
+    expect(fetchBookmarks).toHaveBeenNthCalledWith(2, 'user-1', {
+      maxResults: 20,
+      paginationToken: undefined,
+    })
+    // Each post once: 0–99 plus the two older ones.
+    expect(saveBookmark).toHaveBeenCalledTimes(102)
+    expect(body).toContain('event: complete')
+    expect(body).toContain('"total":102')
+  })
+
+  it('stops after one pass when X ends on a short page', async () => {
+    const { fetchBookmarks } = await import('@/lib/twitter/client')
+    vi.mocked(fetchBookmarks)
+      .mockReset()
+      .mockResolvedValueOnce({
+        bookmarks: [{ id: 'only', text: 'Only one', authorId: 'alice' }],
+        resultCount: 1,
+      })
+    const { saveBookmark } = await import('@/lib/sync/save-bookmark')
+    vi.mocked(saveBookmark).mockResolvedValue({ inserted: false } as Awaited<
+      ReturnType<typeof saveBookmark>
+    >)
+    const { GET } = await import('@/app/api/sync/route')
+    await (await GET(new NextRequest('https://adhx.test/api/sync'))).text()
+    expect(fetchBookmarks).toHaveBeenCalledTimes(1)
+  })
 
   it('fails rather than looping or claiming completion when X repeats a cursor', async () => {
     const { fetchBookmarks } = await import('@/lib/twitter/client')
