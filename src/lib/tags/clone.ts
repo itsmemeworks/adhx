@@ -211,6 +211,8 @@ export async function cloneTagToUser(opts: {
             userId: currentUserId,
             source: 'clone' as const,
             isPrivate,
+            // A note is its writer's own words, never copied to someone else's save.
+            note: null,
             processedAt: addedAtForIndex(clonedAtMs, i),
           })),
         )

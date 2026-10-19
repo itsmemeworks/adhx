@@ -295,3 +295,76 @@ describe('your own feed and saves', () => {
     expect(testInstance.db.select().from(schema.activity).all()).toHaveLength(0)
   })
 })
+
+describe('notes on saves', () => {
+  beforeEach(() => {
+    testInstance.sqlite.exec(`
+      UPDATE bookmarks SET note = 'you’re welcome' WHERE user_id = 'u_ben' AND id = 'shared';
+      UPDATE bookmarks SET note = 'whisper words' WHERE user_id = 'u_ben' AND id = 'secret';
+      UPDATE bookmarks SET note = 'Ana’s own aside' WHERE user_id = 'u_ana' AND id = 'mineprivate';
+    `)
+  })
+
+  it('search: members see a note on the saver’s face, never a private save’s', async () => {
+    viewer = ANA
+    const { items } = await search('q=frog&scope=everyone')
+    const shared = items.find((i) => i.post.id === 'shared')!
+    expect(shared.post.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(JSON.stringify(items)).not.toContain('whisper')
+    // Your own private save's note is yours to see.
+    const mine = items.find((i) => i.post.id === 'mineprivate')!
+    expect(mine.post.savers).toEqual([
+      expect.objectContaining({ isYou: true, note: 'Ana’s own aside' }),
+    ])
+  })
+
+  it('search and similar: signed out never sees a note', async () => {
+    const everyone = await search('q=frog&scope=everyone')
+    expect(everyone.status).toBe(401)
+    const like = await similar('platform=twitter&id=shared&scope=everyone')
+    expect(like.status).toBe(200)
+    expect(like.items.length).toBeGreaterThan(0)
+    expect(JSON.stringify(like.items)).not.toMatch(/welcome|whisper|aside/)
+  })
+
+  it('similar: members see notes, never a private save’s', async () => {
+    viewer = ANA
+    const { items } = await similar('platform=twitter&id=public2&scope=everyone')
+    const shared = items.find((i) => i.post.id === 'shared')!
+    expect(shared.post.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(JSON.stringify(items)).not.toContain('whisper')
+  })
+
+  it('/api/feed carries notes for members, without anyone else’s private ones', async () => {
+    viewer = ANA
+    const { GET } = await import('@/app/api/feed/route')
+    const res = await GET(new NextRequest('http://localhost/api/feed?limit=50'), undefined as never)
+    const body = await res.text()
+    expect(body).toContain('you’re welcome')
+    expect(body).not.toContain('whisper')
+    viewer = BEN
+    const own = await GET(new NextRequest('http://localhost/api/feed?limit=50'), undefined as never)
+    const text = await own.text()
+    expect(text).toContain('whisper')
+    expect(text).not.toContain('aside')
+  })
+
+  it('trending never carries a note', async () => {
+    recordActivity({
+      action: 'save',
+      platform: 'twitter',
+      bookmarkId: 'shared',
+      author: 'testauthor',
+      text: 'frog',
+      url: '/testauthor/status/shared',
+      userId: BEN,
+    })
+    const { items } = await getTrendingItems({ limit: 10 })
+    expect(items.length).toBeGreaterThan(0)
+    expect(JSON.stringify(items)).not.toMatch(/welcome|whisper|aside/)
+  })
+})

@@ -34,6 +34,7 @@ export const FULL_SCHEMA_SQL = `
     summary TEXT,
     source TEXT DEFAULT 'sync',
     is_private INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
     raw_json TEXT,
     PRIMARY KEY (user_id, platform, id)
   );
@@ -369,6 +370,7 @@ export const FULL_SCHEMA_SQL = `
     private_choice INTEGER,
     publish_pending INTEGER NOT NULL DEFAULT 0,
     privacy_intent_version INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
     error_code TEXT,
     error TEXT,
     created_at TEXT NOT NULL,

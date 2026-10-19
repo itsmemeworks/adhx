@@ -61,7 +61,9 @@ const CHUNK = 400
 /**
  * Savers for each post, keyed `platform:id`, newest saver first. Includes
  * non-banned members' visible saves plus the viewer's own save even when it
- * is private; quoted copies never count. Empty when signed out.
+ * is private; quoted copies never count. Empty when signed out. Each saver
+ * carries their `note` when they left one, so a private save's note only
+ * ever reaches its owner.
  */
 export function saversFor(
   keys: { platform: string; id: string }[],
@@ -78,6 +80,7 @@ export function saversFor(
         id: bookmarks.id,
         userId: bookmarks.userId,
         savedAt: bookmarks.processedAt,
+        note: bookmarks.note,
         username: users.username,
         name: users.displayName,
         avatarUrl: users.avatarUrl,
@@ -102,6 +105,7 @@ export function saversFor(
         avatarUrl: memberAvatar(r.avatarUrl, r.avatarSource),
         savedAt: r.savedAt,
         isYou: r.userId === viewerId,
+        ...(r.note ? { note: r.note } : {}),
       })
       out.set(key, list)
     }

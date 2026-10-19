@@ -76,9 +76,13 @@ export function momentSavers(slug: string, viewerId: string): Saver[] {
       if (!had || had.savedAt < s.savedAt) newest.set(s.username, s)
     }
   }
-  return [...newest.values()]
-    .sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0))
-    .slice(0, MAX_MOMENT_SAVERS)
+  return (
+    [...newest.values()]
+      .sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0))
+      .slice(0, MAX_MOMENT_SAVERS)
+      // Faces on the whole moment, not one post: a note belongs with its post.
+      .map(({ note: _note, ...face }) => face)
+  )
 }
 
 /** Revocation takes effect on the next response/event, rather than waiting for lease expiry. */

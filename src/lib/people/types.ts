@@ -12,4 +12,9 @@ export type Saver = {
   /** When they saved it (ISO). */
   savedAt: string
   isYou: boolean
+  /**
+   * Their note on this save ("making this Sunday"), when they left one. Members
+   * only, like the rest of `Saver`; a private save's note reaches its owner alone.
+   */
+  note?: string
 }

@@ -31,7 +31,7 @@ Offline, Shared lately, Android sheet).
 Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
-accepted by `/api/app/save`, `/api/app/private`, `/api/app/status`,
+accepted by `/api/app/save`, `/api/app/private`, `/api/app/note`, `/api/app/status`,
 `/api/app/me`, `/api/app/saves`, `/api/app/search` and the friends feed
 endpoints below (`feed`, `seen`, `channels`, `live`) only; a search key is not accepted
 `/api/app/me`, `/api/app/saves`, `/api/app/search`, the friends feed
@@ -61,12 +61,18 @@ The code is case-insensitive and may contain a dash or spaces.
 - `200 { username, name }` — who the key saves for, and the phone's name
 - `401 { code: 'bad_key' }` the key was removed (the app goes back to Connect)
 
-### `POST /api/app/save` — `{ url, private? }`
+### `POST /api/app/save` — `{ url, private?, note? }`
 
 `url` is a link, or text containing one (the first `http(s)://` link is used).
 Short links are followed on the server. `private: true` saves it "Just for
 me" (also through the `respond-async` queue): no one else sees, counts or is
 told about it. On a repeat save, `private` updates the flag.
+
+`note` is a few words for your people ("this is so you, Ben"), kept with a
+queued share too (`phone_save_queue.note`). The server collapses whitespace,
+drops control and direction characters, trims it and keeps at most 140
+characters (an emoji counts as one); an empty note means none. On a repeat
+save, `note` replaces the note and `""` clears it; leaving it out keeps it.
 
 - `200 { platform, network, id, author, authorName, text, category, posterUrl,
 openPath, alreadySaved, savedAt, isPrivate }`
@@ -169,6 +175,15 @@ Switch one of your saves "Just for me" or back to shared with your people.
 - `400 { code: 'bad_request' }` · `401 { code: 'bad_key' }` ·
   `404 { code: 'not_saved' }`
 
+### `POST /api/app/note` — `{ platform, id, note }`
+
+Set or clear the note on one of your saves ("Add a note"). `note` is a string
+(cleaned as above; empty clears it) or `null`.
+
+- `200 { note }` — the note as stored, or `null`
+- `400 { code: 'bad_request' }` · `401 { code: 'bad_key' }` ·
+  `404 { code: 'not_saved' }`
+
 ### `GET /api/app/saves?offset&limit`
 
 Your saves for the player, newest first, without archived ones (like My saves
@@ -206,9 +221,14 @@ saves never appear). `type`: `all` · `videos` · `photos` · `text` ·
 savedAt, sourceUrl, openPath, media: [{ kind: video|photo, url, posterUrl,
 width, height, durationMs }], article, savers, isPrivate }`
 
-- `savers`: `[{ username, name, avatarUrl, savedAt, isYou }]`, newest first —
-  the members who saved it (your own save shows with `isYou`). `avatarUrl`
-  null means draw the generated icon from `username`.
+- `savers`: `[{ username, name, avatarUrl, savedAt, isYou, note? }]`, newest
+  first — the members who saved it (your own save shows with `isYou`).
+  `avatarUrl` null means draw the generated icon from `username`. `note` is
+  that member's note on their save, present only when they left one; it is
+  only ever sent to members, and a private save's note only to its owner.
+  Your own note is the `isYou` saver's `note`. Moment cards' `savers` (faces
+  for the whole moment) never carry notes; a moment's items and the `save`
+  event's `saver` do.
 - `isPrivate`: your save is "Just for me".
 
 - `kind`: `video` · `audio` (SoundCloud: play `media[0].url`, it's the sound)
@@ -300,6 +320,11 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   several). A private post shows a lock. Search tiles show faces too.
 - **Just for me** in the player's More sheet (for your own saves) calls
   `/api/app/private`.
+- **Notes**: the share card's "Add a note" field (140 characters, a counter
+  near the limit) sends `note` with the save; the player's More sheet edits
+  yours with `/api/app/note`. The player shows the newest friend's note as a
+  speech bubble (their face, in their colour) above the faces line; Who saved
+  it lists each note under the saver's name.
 - **My saves** (home before the friends feed; now under Channels → Made for
   you, and home on a server without the feed): full screen, one post at a time. Swipe up for the
   next, down for the previous; tap to pause (a play mark shows) or, with the

@@ -54,7 +54,7 @@ function state(): State {
 
 /**
  * Take a shared link: it's saved in the background. `options.private` is kept
- * with it, so a "Just for me" share is saved private.
+ * with it, so a "Just for me" share is saved private, and so is `options.note`.
  */
 export function enqueueSave(
   userId: string,
@@ -77,6 +77,8 @@ export function enqueueSave(
         privateChoice: options.private ?? null,
         publishPending: options.deferPublish === true,
         defaultPrivate: options.private === undefined && privateByDefault(userId),
+        // '' keeps "clear the note" distinct from null ("not given").
+        note: options.note === undefined ? null : (options.note ?? ''),
         createdAt: iso,
         updatedAt: iso,
       })
@@ -186,6 +188,8 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
     // Repeat saves are untouched until that same atomic publication step.
     const response = await addBookmark(row.userId, row.url, 'phone_app', canSave, {
       defaultPrivate: true,
+      // A new save is staged private, so its note shows only once it's published.
+      ...(row.note === null ? {} : { note: row.note }),
     })
     status = response.status
     data = (await response.json().catch(() => ({}))) as typeof data

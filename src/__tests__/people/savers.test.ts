@@ -110,6 +110,45 @@ describe('saversFor', () => {
   })
 })
 
+describe('notes on saves', () => {
+  it('carries each member’s note, and leaves it off when there is none', () => {
+    save(ANA, '1', '2026-10-01T10:00:00.000Z', { note: 'the original and still the best' })
+    save(BEN, '1', '2026-10-02T10:00:00.000Z')
+    const savers = saversFor([post('1')], CAL).get('twitter:1')!
+    expect(savers.find((s) => s.username === 'ana')!.note).toBe('the original and still the best')
+    expect('note' in savers.find((s) => s.username === 'ben')!).toBe(false)
+  })
+
+  it('never shows a private save’s note to anyone but its owner', () => {
+    save(BEN, '1', '2026-10-01T10:00:00.000Z', { isPrivate: true, note: 'just for me, this' })
+    save(CAL, '1', '2026-10-02T10:00:00.000Z')
+    expect(JSON.stringify(saversFor([post('1')], ANA).get('twitter:1'))).not.toContain(
+      'just for me',
+    )
+    const own = saversFor([post('1')], BEN).get('twitter:1')!
+    expect(own.find((s) => s.isYou)!.note).toBe('just for me, this')
+  })
+
+  it('never reaches a signed-out viewer or a banned saver’s friends', () => {
+    save(BEN, '1', '2026-10-01T10:00:00.000Z', { note: 'you’re welcome' })
+    save(CAL, '1', '2026-10-02T10:00:00.000Z', { note: 'banned words' })
+    ban(CAL)
+    expect(saversFor([post('1')], '').size).toBe(0)
+    expect(withSavers([{ id: '1', platform: 'twitter' }], '')).toEqual([
+      { id: '1', platform: 'twitter' },
+    ])
+    expect(JSON.stringify(saversFor([post('1')], ANA).get('twitter:1'))).not.toContain('banned')
+  })
+
+  it('withSavers carries notes for members', () => {
+    save(BEN, '1', '2026-10-01T10:00:00.000Z', { note: 'you’re welcome' })
+    const [item] = withSavers([{ id: '1', platform: 'twitter' }], ANA)
+    expect(item.savers).toEqual([
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    ])
+  })
+})
+
 describe('visibleSave', () => {
   it('drops private, quoted and banned saves, aliased or not', () => {
     save(ANA, '1', '2026-10-01T10:00:00.000Z')

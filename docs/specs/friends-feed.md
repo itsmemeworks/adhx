@@ -10,23 +10,28 @@ ADHX is a private feed of the best of every social network, picked by your close
 - **Strangers never see names.** Signed-out visitors, public pages (`/now` signed out, `/moments/*` signed out, previews, public channels, the public tweet JSON, trending, OG images, the sitemap) keep the old behaviour: savers are counted, never named, and private saves are never counted.
 - Existing saves join the shared feed on upgrade (they default to not private). The web app shows a one-time notice explaining this, with a link to make saves private.
 - Saves with `source = 'quoted'` (the quoted post stored with a save) are never shown as someone's save.
+- **Notes on saves** follow the same rule: members see a saver's note next to their face; strangers never do, and a private save's note reaches its owner only.
 
 ## Data
 
 - `bookmarks.is_private integer NOT NULL DEFAULT 0`: a guarded ALTER in `migrate.ts`, the Drizzle column `isPrivate` in `schema.ts`, and the same column in `FULL_SCHEMA_SQL` in `src/__tests__/api/setup.ts`.
 - `phone_save_queue.is_private integer NOT NULL DEFAULT 0`, so a private share from a phone stays private.
+- `bookmarks.note text NULL`: the saver's note ("making this Sunday"). Cleaned by `cleanNote` (`src/lib/people/note-text.ts`): whitespace collapsed, control and direction characters dropped, ends trimmed, at most 140 characters (grapheme clusters, so an emoji counts as one); empty → null. A guarded ALTER in `migrate.ts`, `note` in `schema.ts` and in `FULL_SCHEMA_SQL`. Clones of a public channel never copy it.
+- `phone_save_queue.note text NULL`: the note sent with a queued share (cleaned; `''` clears a repeat save's note, null leaves it).
 - `post_views (user_id, platform, post_id, seen_at)`, primary key `(user_id, platform, post_id)`: the server-side watched list. It is user-linked, so it needs an `ACCOUNT_GUARDS` entry and a delete on account clear and delete.
 - `invites (id, token_hash, created_by, created_at, expires_at, used_by, used_at, revoked_at, name_hint)`: single-use invite links. `id` is the public handle for listing and revoking; `revoked_at` lets a revoked link say so. Also user-linked.
 
 ## Shared helpers (server)
 
 - `src/lib/people/savers.ts`
-  - `type Saver = { username: string; name: string | null; avatarUrl: string | null; savedAt: string; isYou: boolean }`
+  - `type Saver = { username: string; name: string | null; avatarUrl: string | null; savedAt: string; isYou: boolean; note?: string }` (`note` only when they left one)
   - `saversFor(keys: { platform: string; id: string }[], viewerId: string): Map<string, Saver[]>`, keyed by `platform:id`.
     - Includes non-banned members' saves that are not private, plus the viewer's own save even when it is private.
     - Excludes `source = 'quoted'` rows.
     - Ordered newest saver first.
     - Returns an empty map when `viewerId` is `''` (signed out).
+    - Each saver carries their `note`. Since others' private saves are never included, a private save's note only ever reaches its owner. Everything built on `saversFor`/`withSavers` (feed, blend, search, similar, channel queues, moment items, phone posts, the live poll's `saverUpdates`, `/doing`) carries notes; faces that stand for more than one post (moment cards, group channel cards) and watchers/reactions never do.
+- `src/lib/bookmarks/note.ts`: `noteOption(body)` (a request's `note`), `setSaveNote(userId, platform, id, note)`, `applyRepeatNote`, and `clearPostNotes(platform, id, username?)` for admins.
   - `visibleSaveFilter`: the SQL condition "not private and not quoted and saver not banned". Every query that counts or groups other people's saves (moments, trending, Everyone search `publishable`, group channels, the blended feed) must use it, so a post with only private savers never surfaces.
 - `src/lib/people/members.ts`: `listMembers(viewerId)` returns members with their visible save counts, for friend channels and the feed's per-friend controls.
 
@@ -36,6 +41,9 @@ All of these require sign-in unless marked public.
 
 - `POST /api/bookmarks/add` and `POST /api/tweets/add` accept `private?: boolean`. A repeat save that passes `private` updates the flag.
 - `PATCH /api/bookmarks/[id]/private` with body `{ platform, private }` → `{ private }`.
+- `POST /api/bookmarks/add`, `POST /api/tweets/add` and `POST /api/app/save` (sync and queued) accept `note?: string`. A new save stores it (cleaned); a repeat save with `note` replaces it (`""` or `null` clears it); without `note` it is left alone.
+- `PATCH /api/bookmarks/[id]/note` with body `{ platform, note }` (`note`: string or null; empty clears) → `{ note }` (as stored, or null). 400 without a string or null; 404 when it isn't your save. Only ever writes your own row.
+- Moderation: `POST /api/admin/posts { platform, id, clearNotes: true | "<username>" }` (admins) clears every note on the post, or one member's, writes an `admin_audit` `clear_note` row and returns `{ platform, id, notesCleared }`. It does not hide the post.
 - `FeedItem.savers?: Saver[]` and `FeedItem.isPrivate?: boolean` (the viewer's own save is private). These are set on `/api/feed`, `/api/search`, `/api/search/similar` (signed in), channel queues and moment items, but only when the viewer is signed in.
 - `GET /api/search?scope=everyone`, signed in: the same posts as today, minus posts whose only savers are private, with `savers` attached. Signed-out callers keep the anonymous shape.
 - `GET /api/feed/blend?mode=new|everyone|friends|mine&types=video,photo,text,article&limit&cursor` → `{ items: FeedItem[], nextCursor: string | null, caughtUp: boolean, nothingYet: boolean, total: number, types: FeedKind[], waiting: { [kind]: number } }`
@@ -64,6 +72,7 @@ All of these require sign-in unless marked public.
 - `PhonePost.savers: Saver[]` and `PhonePost.isPrivate: boolean`.
 - `POST /api/app/save` accepts `private: boolean` (in the async queue too).
 - `POST /api/app/private` with body `{ platform, id, private }` → `{ private }`.
+- `POST /api/app/save` accepts `note` (in the async queue too); `POST /api/app/note` with body `{ platform, id, note }` → `{ note }` (404 `not_saved`). `PhonePost.savers[].note` as above.
 - `GET /api/app/feed?mode=new|everyone|friends|mine&types&cursor&limit` → `{ items: PhonePost[], nextCursor, caughtUp, nothingYet, total, types, waiting, hidden }`; each item adds `why` and `whyReasons`. `types` as on the web; `hidden` repeats `waiting` under the name the phone apps read.
 - `GET|PUT /api/app/feed/types`: the same stored choice as `/api/feed/types`.
 - `POST /api/app/seen` with body `{ posts: [{ platform, id }] }` → 204.
@@ -79,7 +88,8 @@ All of these require sign-in unless marked public.
 - **New**: the signed-in home (`/` → `/play?feed=new`, first tab in the nav). It plays only what you haven't seen, then ends on a card: "You're all caught up. Go touch grass." and "That's everything your people saved since you last looked.", with Browse channels, See what's live and Watch it all again (Everyone, seen posts included). A post counts as seen after 2 s on stage, or when you skip it. Everyone · Friends only · Mine switches the mode (New lights Everyone). Next to it, **What's in your feed** shows a summary ("Videos and photos") and opens four toggle chips (Videos, Photos, Text posts, Articles; at least one stays on); videos and photos by default. When the filter holds back unseen posts, the caught-up card adds "4 text posts waiting · Show them", which plays just those, this once (`/play?feed=new&types=text`). On a server where nobody else has saved anything lately: "Nothing new yet. Save something for your people to find." with Paste.
 - **The blend**: the signals are fresh, saved together, close to you, like what you keep, not seen yet, variety (no more than 2 in a row from one friend, or from one Made for you topic) and your own (sparingly). Each item carries `why` ("Ana and Ben saved this", "Like the frog videos you kept", "Mum saved this · 1h", "You watch most of Ben's saves"), shown as the chip at the stage's top-left ("Saved together" for two or more savers) and on each Up next tile. **Why this one** (in More) lists every reason, with Show more / Show less per friend.
 - **Channels**: a "From everyone" row (group channels: "Rabbit holes, dug by your friends", "38 saves · 3 of you", "N new") and a "Your people" row (one big avatar card per friend, "N new", plus "Invite someone" → Settings when you may invite) above "Made for you" and "Your channels". A friend's channel is `/channels/friend/{username}` (members only): Play all, Play the N new ones, "Only people on this server can see this page." Play: `/play?group=slug`, `/play?friend=username[&new=1]`.
-- **Who saved it**: the theater's faces open a popover listing each saver and when, with "See Ana’s saves" (yours: "See your saves" → My saves).
+- **Who saved it**: the theater's faces open a popover listing each saver and when, with their note in quotes under their name, and "See Ana’s saves" (yours: "See your saves" → My saves).
+- **Notes**: "Add a note" in the theater's Save sheet and the phone share card (140 characters, a counter from 120). The theater byline shows the newest friend's note (else yours) as a speech-bubble chip with their face ringed in their colour (`SaverNote`, `components/next/SaverNote.tsx`, rendered by `SaversButton`); the top chips on text and article stages leave it to the popover. Notes are text only, never HTML.
 - **Private wins on public channels**: `/t/{user}/{tag}`, its OG mosaic, the public queue, clone, curator profile, leaderboard tiles and the sitemap never list a post the owner saved privately. The owner still sees it.
 - **Live with names**: moment cards show faces ("Ana, Ben and Jo are saving these") and who's watching ("Ana and Ben are watching", green rings); the button says "Tune in with Ana" when a friend is in. Tuned in: "Ana and Ben are watching with you", the arriving-save toast names the saver ("Jo just saved one · playing next", with the post's picture), and one React button (a smiley in the rail) opens a picker: six emoji (a tap sends and closes) and "Say something to everyone watching" with Send. Reactions rise up the stage for everyone tuned in and fade: the reactor's avatar leads, ringed in their colour, with an emoji as a sticker on its corner or words in a speech bubble in their colour. Reduced motion: they fade in and out in place.
 - **Search everyone's saves**: the search scope switch defaults to Everyone for signed-in members, with names on tiles.

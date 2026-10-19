@@ -113,4 +113,29 @@ describe('public tag channels: private wins', () => {
     expect(cats.count).toBe(1)
     expect(JSON.stringify(profile)).not.toContain('secret1')
   })
+
+  it('never puts a note on a public channel, its signed-out queue or a clone', async () => {
+    testInstance.sqlite.exec(
+      "UPDATE bookmarks SET note = 'this is so you, Ana' WHERE user_id = 'u_ben' AND id = 'open1'",
+    )
+    const page = await getPublicTagCollection('ben', 'cats')
+    expect(JSON.stringify(page)).not.toContain('so you')
+    const anon = await channelQueue('ben', 'cats', null)
+    expect(JSON.stringify(anon)).not.toContain('so you')
+
+    // Members still see it, on Ben's face.
+    const ana = await channelQueue('ben', 'cats', ANA)
+    expect(ana.status === 'ok' && ana.items[0].post.savers).toEqual([
+      expect.objectContaining({ username: 'ben', note: 'this is so you, Ana' }),
+    ])
+
+    // A clone is Ana's own save: Ben's words stay his.
+    await cloneTagToUser({ sourceUserId: BEN, tagName: 'cats', currentUserId: ANA })
+    const anaCopy = testInstance.db
+      .select()
+      .from(schema.bookmarks)
+      .all()
+      .find((b) => b.userId === ANA && b.id === 'open1')!
+    expect(anaCopy.note).toBeNull()
+  })
 })
