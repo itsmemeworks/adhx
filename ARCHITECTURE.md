@@ -15,6 +15,8 @@ runtime. The Next.js route handlers are the backend. They use Drizzle over one
 API service, Redis tier, or object store. The one exception is the
 understanding pipeline below: the web server forks two child processes on the
 same machine that run the embedding model, because inference blocks its thread.
+With `PROCESSING_MODE=remote`, only the lightweight query child remains there;
+a native Mac companion claims background work through authenticated HTTPS.
 
 ## Current product and legacy sections
 
@@ -383,7 +385,7 @@ flowchart LR
 - **Durable priority queue.** Fresh saves and Up next jump the line; within a
   priority, words run before pictures before videos so cheap results land
   first. Failures back off and give up after three attempts; Retry re-queues.
-- **Two child processes.** ONNX inference is synchronous on its thread; run
+- **Local child processes.** ONNX inference is synchronous on its thread; run
   inside the web server, one video froze every request for ~15 s. So
   `supervisor.ts` forks `child.ts` twice (`node --import tsx`, which is why the
   image ships `tsconfig.json`): `jobs` runs the worker with the full model at
@@ -402,6 +404,61 @@ flowchart LR
   progress for the signed-in user. "Photos" includes video posters, so every
   visual save shows progress after its quick picture pass. The item being worked on is only shown when
   it is one of that user's own saves.
+
+### Optional native Mac processing
+
+`PROCESSING_MODE=remote` disables the local jobs child, retaining the query
+child and keyword indexing. The native ARM64 macOS runner uses the same pinned
+model with CoreML MLProgram/CPU fallback, plus VideoToolbox/software video decoding.
+It never mounts SQLite or opens an inbound port. A dedicated random machine
+credential authenticates `/api/processing/jobs` and lease-scoped retained-media
+transfers through `/api/processing/media`; account/phone tokens are not accepted.
+The machine credential grants instance-wide processing access and belongs only
+on trusted private hosts. `SEMANTIC_SEARCH=off` pauses indexing claims/results while conversion can continue;
+`KEEP_MEDIA=off` pauses new conversion claims separately.
+
+`processing_leases` provides expiring, heartbeat-renewed claims. Only the current
+lease and content/model/profile generation can checkpoint a result. A server-only
+source fingerprint is rechecked inside result transactions after asynchronous reads. The NAS
+commits results and queue changes in one transaction. `video_index_state` and
+`video_segments` checkpoint each section, so a restart resumes at the next one.
+Unfinished sections return to backfill priority, allowing fresh shares to jump
+the line. Removing the last saver deletes these derived rows and leases.
+
+Remote videos use `INDEXING_LEVEL=light|normal|deep`: target section lengths of
+120/60/30 seconds and sample spacing of 12/4/2 seconds respectively. Sections
+uniformly cover the entire duration with at most 16 frames each, capped at 512
+sections and 24 hours. Segment vectors are searched independently with the best
+section contributing one vote per post, subject to existing account/moderation
+filters. A final aggregate remains available for channels and similarity.
+Changing detail invalidates only remote video generations, not text/image vectors.
+
+The Mac keeps an unfinished video's private downloaded copy between sections.
+A final acknowledged result deletes it; section frames always clean up in
+`finally`. Scratch originals, partial downloads and frames share an 8 GiB default
+ceiling. Startup and periodic sweeps expire abandoned scratch after one hour and
+originals after 24 hours; budget pressure can evict sooner. Model weights remain
+cached separately. The NAS retains downloads and cheap metadata probes.
+
+In remote mode `recordKept` queues non-H.264 videos in `media_conversions`
+instead of encoding on the NAS, and holds the post in a durable `converting`
+state until every required slot finishes. Conversion claims take priority over
+inference and use independent heartbeat-renewed leases. `KEEP_H264=off` skips
+conversion and permits source codecs, as in local mode. Failed conversion never
+re-downloads the source automatically.
+
+The native worker encodes full-resolution H.264/yuv420p and AAC using VideoToolbox,
+with a bounded two-thread software fallback. It streams the converted file to
+`PUT /api/processing/result` under its lease. The NAS limits uploads to 4 GiB,
+streams to a separate private scratch directory (8 GiB total, two concurrent
+uploads), preserves its free-space reserve and enforces idle/overall deadlines.
+A restricted MP4 metadata probe checks codec, dimensions, duration and audio;
+then a unique immutable filename is promoted with a transactional per-slot
+metadata swap. The original is removed only after commit. Changed/deleted or
+moderated sources cannot accept late uploads. Crash leftovers have expiry and
+reference-aware cleanup. Mac converted files always clean up after an attempt;
+downloaded sources are removed on acknowledgement or expired capability, otherwise
+bounded for retry. See [`deploy/mac/README.md`](deploy/mac/README.md).
 
 ## Search by meaning
 

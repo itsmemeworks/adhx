@@ -233,6 +233,41 @@ limits using your Docker/NAS controls only after representative tests. If an
 image is killed for exceeding its limit, a healthy database check on the next
 start does not prove that the chosen limit is sufficient.
 
+### Move background understanding to a Mac
+
+The optional [native Apple Silicon worker](../mac/README.md) runs background
+text/image/video inference, frame sampling and H.264 conversion on another machine. Keep the
+NAS's existing HTTPS/network boundary and persistent storage. Set
+`PROCESSING_MODE=remote`, `PROCESSING_WORKER_TOKEN` to a dedicated random
+URL-safe secret, and `INDEXING_LEVEL=light|normal|deep` in its private
+configuration. The Compose examples pass these settings explicitly.
+Configure the same secret and the HTTPS origin on the Mac. This is a machine
+processing credential with access to queued public post content, so keep it
+private and separate from user/phone/AI credentials. No database mount,
+port forwarding or public endpoint is needed.
+
+The query model remains on the NAS; keyword search and playback continue while
+the Mac is asleep. Pending sections resume when it returns. Full video duration
+is sampled at each detail level, with bounded sections; retained media on the
+NAS stays at its original quality. Mac originals are deleted after final
+acknowledgement, frames after every section, with a bounded scratch cache and
+expiry cleanup for interruptions. Upgrade the server and worker together to a
+compatible release before enabling remote mode.
+
+Source downloads and small metadata probes still run on the NAS. Keep
+`KEEP_CONCURRENCY=1` and monitor those separately. Non-H.264 sources wait for
+conversion on the Mac; the NAS retains the source until the uploaded MP4 passes
+codec, resolution, duration and audio checks and its metadata commits. Each
+converted upload is limited to 4 GiB. Configure the existing HTTPS proxy to
+accept that size and stream it without buffering another full copy, with adequate
+read/send timeouts. See [proxy upload hooks](../mac/README.md#proxy-upload-hooks).
+Consider `KEEP_H264=off` only if your clients can play the source codecs.
+
+Remote mode reduces heavy processing load; it does not remove the need to budget
+the whole service. `SEMANTIC_SEARCH=off` pauses models in either mode while remote
+conversion remains available. `KEEP_MEDIA=off` separately pauses new downloads
+and new conversion claims without deleting retained files.
+
 ### Budget the whole container
 
 `SEMANTIC_THREADS` limits model threading, not the web server, media conversion

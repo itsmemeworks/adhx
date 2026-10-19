@@ -14,6 +14,7 @@ import { posterFrame } from './poster'
 import { probeMedia, type Probed } from './probe'
 import { execFile } from 'child_process'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
+import { remoteProcessing } from '@/lib/processing/config'
 import { absolutePath, mimeFor, postDir, slotFor, type KeptKind, type NewKeptFile } from './store'
 import { isAudioOnly, ytdlpDownload, ytdlpInfo, YtdlpError } from './ytdlp'
 
@@ -312,7 +313,7 @@ export async function keepPost(target: KeepTarget): Promise<NewKeptFile[]> {
     const moves: Array<[string, string]> = []
     for (const c of collected) {
       let probed = await probeMedia(c.file)
-      if (c.kind === 'video' && probed.hasVideo && keepH264()) {
+      if (c.kind === 'video' && probed.hasVideo && keepH264() && !remoteProcessing()) {
         const converted = await toH264(c.file, probed, target.onConverting)
         if (converted) {
           c.file = converted
@@ -332,6 +333,7 @@ export async function keepPost(target: KeepTarget): Promise<NewKeptFile[]> {
         width: probed.width,
         height: probed.height,
         durationMs: kind === 'photo' ? null : probed.durationMs,
+        ...(kind === 'video' ? { videoCodec: probed.videoCodec, hasAudio: probed.hasAudio } : {}),
       })
       if (!posterSet && kind === 'video' && !c.poster) {
         c.poster = await posterFrame(c.file, probed.durationMs, path.join(scratch, 'frame.jpg'))

@@ -3,6 +3,8 @@ import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks, postEmbeddings, understandingQueue } from '@/lib/db/schema'
 import { SEMANTIC_MODEL_VERSION, semanticEnabled, type UnderstandingKind } from './config'
 import { jobActivity } from './supervisor'
+import { remoteActivity } from '@/lib/processing/activity'
+import { remoteProcessing, indexingLevel, videoResultCurrent } from '@/lib/processing/config'
 
 export interface UnderstandingGroup {
   id: 'words' | 'photos' | 'videos'
@@ -13,6 +15,8 @@ export interface UnderstandingGroup {
 
 export interface UnderstandingStatus {
   enabled: boolean
+  processingMode: 'local' | 'remote'
+  indexingLevel: 'light' | 'normal' | 'deep'
   groups: UnderstandingGroup[]
   /** Saves with every part understood. */
   ready: number
@@ -26,6 +30,8 @@ export interface UnderstandingStatus {
     kind: UnderstandingKind
     phase: string
     frames: number
+    segments?: number
+    completedSegments?: number
   } | null
 }
 
@@ -67,13 +73,17 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
         platform: postEmbeddings.platform,
         id: postEmbeddings.postId,
         kind: postEmbeddings.kind,
+        contentHash: postEmbeddings.contentHash,
         status: postEmbeddings.status,
       })
       .from(postEmbeddings)
       .where(
         and(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION), inArray(postEmbeddings.postId, part)),
       )
-    for (const r of rows) results.set(`${r.platform}:${r.id}:${r.kind}`, r.status)
+    for (const r of rows) {
+      if (r.kind === 'video' && !videoResultCurrent(r.contentHash)) continue
+      results.set(`${r.platform}:${r.id}:${r.kind}`, r.status)
+    }
     const q = await db
       .select({
         platform: understandingQueue.platform,
@@ -126,7 +136,7 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
   let queuedForUser = 0
   for (const q of queued) if (savedKeys.has(q.slice(0, q.lastIndexOf(':')))) queuedForUser++
 
-  const activity = jobActivity()
+  const activity = remoteProcessing() ? remoteActivity(userId) : jobActivity()
   const current =
     activity && savedKeys.has(`${activity.platform}:${activity.postId}`)
       ? {
@@ -135,11 +145,16 @@ export async function getUnderstandingStatus(userId: string): Promise<Understand
           kind: activity.kind,
           phase: activity.phase,
           frames: activity.frames,
+          ...(activity.segments
+            ? { segments: activity.segments, completedSegments: activity.completedSegments ?? 0 }
+            : {}),
         }
       : null
 
   return {
     enabled: semanticEnabled(),
+    processingMode: remoteProcessing() ? 'remote' : 'local',
+    indexingLevel: indexingLevel(),
     groups,
     ready,
     totalSaves: all.length,
@@ -182,12 +197,16 @@ export async function stillLearning(keys: string[]): Promise<Set<string>> {
         platform: postEmbeddings.platform,
         id: postEmbeddings.postId,
         kind: postEmbeddings.kind,
+        contentHash: postEmbeddings.contentHash,
       })
       .from(postEmbeddings)
       .where(
         and(eq(postEmbeddings.model, SEMANTIC_MODEL_VERSION), inArray(postEmbeddings.postId, part)),
       )
-    for (const r of rows) have.add(`${r.platform}:${r.id}:${r.kind}`)
+    for (const r of rows) {
+      if (r.kind === 'video' && !videoResultCurrent(r.contentHash)) continue
+      have.add(`${r.platform}:${r.id}:${r.kind}`)
+    }
   }
   const out = new Set<string>()
   for (const [key, kinds] of needs) {

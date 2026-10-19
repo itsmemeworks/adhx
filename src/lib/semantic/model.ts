@@ -6,6 +6,8 @@ import {
   modelCacheDir,
 } from './config'
 import { normalize } from './vectors'
+import { stat } from 'node:fs/promises'
+import path from 'node:path'
 
 /**
  * The one EmbeddingGemma 2 instance for this process (text + vision; no
@@ -33,28 +35,81 @@ function serialize<T>(work: () => Promise<T>): Promise<T> {
   return run
 }
 
+async function cachedSource(textOnly: boolean): Promise<string | null> {
+  const source = path.join(modelCacheDir(), SEMANTIC_MODEL_ID, SEMANTIC_MODEL_REVISION)
+  const files = [
+    'config.json',
+    'preprocessor_config.json',
+    'processor_config.json',
+    'tokenizer.json',
+    'tokenizer_config.json',
+    'chat_template.jinja',
+    'onnx/model_q4.onnx',
+    'onnx/model_q4.onnx_data',
+    ...(!textOnly
+      ? ['onnx/vision_encoder_quantized.onnx', 'onnx/vision_encoder_quantized.onnx_data']
+      : []),
+  ]
+  const ready = await Promise.all(
+    files.map(async (file) => {
+      try {
+        const info = await stat(path.join(source, file))
+        return info.isFile() && info.size > 0
+      } catch {
+        return false
+      }
+    }),
+  )
+  return ready.every(Boolean) ? source : null
+}
+
 async function load(): Promise<Loaded> {
   const tf = await import('@huggingface/transformers')
   tf.env.cacheDir = modelCacheDir()
   tf.env.allowLocalModels = true
   const threads = Math.max(1, Number(process.env['SEMANTIC_THREADS'] || 2))
-  const config = await tf.AutoConfig.from_pretrained(SEMANTIC_MODEL_ID, {
+  const textOnly = process.env['SEMANTIC_TEXT_ONLY'] === '1'
+  // Transformers' tokenizer registry probes `main` even when a revision was
+  // supplied. A complete pinned cache must therefore be loaded as a local
+  // directory, avoiding both an unnecessary network probe and offline failure.
+  const local = await cachedSource(textOnly)
+  const source = local ?? SEMANTIC_MODEL_ID
+  const options = {
     revision: SEMANTIC_MODEL_REVISION,
-  })
+    ...(local ? { local_files_only: true } : {}),
+  }
+  const config = await tf.AutoConfig.from_pretrained(source, options)
   // Do not download or allocate the audio encoder (video frames only, for now).
   // The query process is words-only and skips the vision encoder too
   // (identical text vectors, ~600MB instead of ~2GB).
-  const textOnly = process.env['SEMANTIC_TEXT_ONLY'] === '1'
   Object.assign(config, { audio_config: null, ...(textOnly ? { vision_config: null } : {}) })
-  const [processor, model] = await Promise.all([
-    tf.AutoProcessor.from_pretrained(SEMANTIC_MODEL_ID, { revision: SEMANTIC_MODEL_REVISION }),
-    tf.AutoModel.from_pretrained(SEMANTIC_MODEL_ID, {
-      revision: SEMANTIC_MODEL_REVISION,
+  // Native workers may opt into Apple's CoreML execution provider. Containers
+  // and the web server's query child retain the established CPU configuration.
+  const nativeCoreML = process.env['SEMANTIC_DEVICE'] === 'coreml' && process.platform === 'darwin'
+  const createModel = (accelerated: boolean) =>
+    tf.AutoModel.from_pretrained(source, {
+      ...options,
       config,
-      device: 'cpu',
+      device: accelerated ? 'coreml' : 'cpu',
       dtype: SEMANTIC_DTYPE,
-      session_options: { intraOpNumThreads: threads, interOpNumThreads: 1 },
-    } as Parameters<typeof tf.AutoModel.from_pretrained>[1]),
+      session_options: {
+        intraOpNumThreads: threads,
+        interOpNumThreads: 1,
+        ...(accelerated
+          ? { executionProviders: [{ name: 'coreml', coreMlFlags: 0x010 }, 'cpu'] }
+          : {}),
+      },
+    } as Parameters<typeof tf.AutoModel.from_pretrained>[1])
+  const modelPromise = createModel(nativeCoreML).catch((error: unknown) => {
+    if (!nativeCoreML) throw error
+    // Quantized operators may not compile under CoreML on every macOS/model
+    // combination. Keep this fallback hot rather than retrying each job.
+    console.warn('[semantic] CoreML model initialization failed; using native CPU')
+    return createModel(false)
+  })
+  const [processor, model] = await Promise.all([
+    tf.AutoProcessor.from_pretrained(source, options),
+    modelPromise,
   ])
   // Video frames at 70 vision tokens instead of the default 140 (Gemma 4's
   // smallest budget): half the cost per frame, near-identical vectors.
