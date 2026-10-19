@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Reset Android post-link readiness between posts
+
+- Key the post-link screen's remembered post, progress, readiness, errors and retries by network and post ID.
+- Opening a second post in the running app now starts its own readiness polling rather than inheriting a completed post's player state.
+- Android debug Kotlin compilation and queue-receipt JVM regressions pass with one worker and a 1 GiB heap; no phone or service installed.
+
 ## 2026-10-19 — Cancel queued shares when clearing an account
 
 - Clear-account now deletes queued URLs together with saved data.

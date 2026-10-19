@@ -43,12 +43,13 @@ fun PostLinkScreen(
     id: String,
     onBack: () -> Unit,
 ) {
-    var post by remember { mutableStateOf<PhonePost?>(null) }
-    var status by remember { mutableStateOf<StatusResponse?>(null) }
+    // Consecutive post links share this composition; readiness belongs to one post.
+    var post by remember(platform, id) { mutableStateOf<PhonePost?>(null) }
+    var status by remember(platform, id) { mutableStateOf<StatusResponse?>(null) }
     // True once the server says the copy is done with (kept, or never will be).
-    var settled by remember { mutableStateOf(false) }
-    var problem by remember { mutableStateOf<String?>(null) }
-    var tries by remember { mutableIntStateOf(0) }
+    var settled by remember(platform, id) { mutableStateOf(false) }
+    var problem by remember(platform, id) { mutableStateOf<String?>(null) }
+    var tries by remember(platform, id) { mutableIntStateOf(0) }
 
     // The post, and again once its copy is kept: the player needs the kept file.
     LaunchedEffect(platform, id, tries, settled) {
