@@ -20,9 +20,18 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Readable } from 'node:stream'
 import { ffmpegPath } from '../media/ffmpeg'
 import { probeMedia } from '../keep/probe'
-import { SEMANTIC_MODEL_VERSION, VIDEO_FRAME_WIDTH } from '../semantic/config'
+import {
+  EXTRACT_KINDS,
+  KINDS,
+  SEMANTIC_MODEL_VERSION,
+  VIDEO_FRAME_WIDTH,
+  extractEnabled,
+  type JobKind,
+} from '../semantic/config'
+import { readScreenText, transcribeSource } from '../semantic/extract-media'
+import { ExtractorProcess, type RunExtract } from '../semantic/extractor'
 import { segmentBounds, segmentSampleTimes, validateVideoPlan, type VideoPlan } from './profiles'
-import type { ProcessingJob } from './protocol'
+import { PROCESSING_PROTOCOL, type ProcessingJob, type ProcessingMedia } from './protocol'
 
 const GIB = 1024 ** 3
 const MAX_IMAGE_BYTES = 32 * 1024 ** 2
@@ -32,7 +41,25 @@ const HEARTBEAT_MS = 20_000
 const MAX_FRAME_BYTES = 4 * 1024 ** 2
 const FRAME_SCRATCH_BYTES = 16 * MAX_FRAME_BYTES
 const CONVERT_TIMEOUT = 2 * 60 * 60_000
+/** Ten minutes of 16 kHz float samples (~38 MiB) plus a few text-reading frames. */
+const EXTRACT_SCRATCH_BYTES = 64 * 1024 ** 2
 class ScratchBudgetError extends Error {}
+
+/**
+ * What this worker offers to do (protocol 2 `kinds`). `SEMANTIC_SPEECH=off`
+ * or `SEMANTIC_SCREEN_TEXT=off` on the Mac leaves that work for another
+ * worker (or for later).
+ */
+export function workerKinds(): JobKind[] {
+  return [...KINDS, ...EXTRACT_KINDS.filter(extractEnabled)]
+}
+
+function defaultModelCache(): string {
+  return (
+    process.env['SEMANTIC_CACHE_DIR'] ||
+    path.join(os.homedir(), 'Library/Caches/ADHX-worker/models')
+  )
+}
 
 export interface ConversionDetails {
   width: number
@@ -86,6 +113,8 @@ export interface RunnerDependencies {
     maxBytes: number,
   ) => Promise<ConvertedVideo>
   log?: (message: string) => void
+  /** Runs the speech / on-screen text model (defaults to a separate extract process). */
+  extract?: RunExtract
 }
 
 /** Browser-compatible copy, retaining source resolution and any audio. */
@@ -352,9 +381,7 @@ export class NativeModelProcessor implements MacProcessor {
             ADHX_MAC_MODEL_CHILD: '1',
             SEMANTIC_TEXT_ONLY: '0',
             SEMANTIC_DEVICE: process.env['SEMANTIC_DEVICE'] || 'cpu',
-            SEMANTIC_CACHE_DIR:
-              process.env['SEMANTIC_CACHE_DIR'] ||
-              path.join(os.homedir(), 'Library/Caches/ADHX-worker/models'),
+            SEMANTIC_CACHE_DIR: defaultModelCache(),
           },
           stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
         })
@@ -423,6 +450,11 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
     dependencies.sample ??
     ((file, plan, index, signal) => sampleNativeFrames(file, plan, index, signal, config.cacheDir))
   const transcode = dependencies.transcode ?? convertNativeVideo
+  const extractor = dependencies.extract
+    ? null
+    : new ExtractorProcess({ SEMANTIC_CACHE_DIR: defaultModelCache(), SEMANTIC_DEVICE: 'cpu' })
+  const extract: RunExtract =
+    dependencies.extract ?? ((task, signal) => extractor!.run(task, signal))
   const log = dependencies.log ?? ((message: string) => process.stdout.write(`${message}\n`))
   const probe =
     dependencies.probe ??
@@ -464,6 +496,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
     for (const name of await readdir(config.cacheDir)) {
       const scratch =
         /^(?:frames|transcode)-[a-zA-Z0-9]+$/.test(name) ||
+        /^adhx-(?:speech|screen)-[a-zA-Z0-9]+$/.test(name) ||
         /^[a-f0-9]{64}\.[a-f0-9-]+\.partial$/.test(name)
       if (!scratch && !/^[a-f0-9]{64}\.media$/.test(name)) continue
       const file = path.join(config.cacheDir, name)
@@ -489,12 +522,17 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
       throw new ScratchBudgetError('Native media cache budget exceeded')
   }
 
-  async function cachedMedia(job: ProcessingJob, signal: AbortSignal): Promise<string> {
+  async function cachedMedia(
+    job: ProcessingJob,
+    signal: AbortSignal,
+    media: ProcessingMedia | undefined = job.media,
+    slot = '',
+  ): Promise<string> {
     if (
-      !job.media ||
-      !Number.isSafeInteger(job.media.bytes) ||
-      job.media.bytes <= 0 ||
-      job.media.bytes > config.maxFileBytes
+      !media ||
+      !Number.isSafeInteger(media.bytes) ||
+      media.bytes <= 0 ||
+      media.bytes > config.maxFileBytes
     ) {
       throw new Error('Media exceeds the native worker file budget')
     }
@@ -502,10 +540,12 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
     await chmod(config.cacheDir, 0o700)
     // Lease URLs change on each claim. Cache by the stable source hash/kind so
     // long videos are downloaded once across resumable segment leases.
-    const key = createHash('sha256').update(`${job.kind}|${job.contentHash}`).digest('hex')
+    const key = createHash('sha256')
+      .update(`${job.kind}|${job.contentHash}${slot ? `|${slot}` : ''}`)
+      .digest('hex')
     const target = path.join(config.cacheDir, `${key}.media`)
     try {
-      if ((await stat(target)).size === job.media.bytes) {
+      if ((await stat(target)).size === media.bytes) {
         await pruneCache(0, target)
         return target
       }
@@ -513,12 +553,13 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
       /* missing or stale cached original */
     }
     await rm(target, { force: true })
-    await pruneCache(job.media.bytes)
+    await pruneCache(media.bytes)
     const temporary = path.join(config.cacheDir, `${key}.${randomUUID()}.partial`)
     const file = await open(temporary, 'wx', 0o600)
     try {
       const url = new URL('/api/processing/media', config.serverUrl)
       url.searchParams.set('id', String(job.id))
+      if (slot) url.searchParams.set('slot', slot)
       const response = await request(url, {
         headers: { Authorization: `Bearer ${config.token}`, 'X-ADHX-Lease': job.lease },
         redirect: 'error',
@@ -532,14 +573,14 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
           const chunk = await reader.read()
           if (chunk.done) break
           bytes += chunk.value.byteLength
-          if (bytes > job.media.bytes || bytes > config.maxFileBytes)
+          if (bytes > media.bytes || bytes > config.maxFileBytes)
             throw new Error('Retained media exceeded its declared size')
           await file.writeFile(chunk.value)
         }
       } finally {
         await reader.cancel().catch(() => undefined)
       }
-      if (bytes !== job.media.bytes) throw new Error('Retained media was incomplete')
+      if (bytes !== media.bytes) throw new Error('Retained media was incomplete')
       await file.close()
       await rename(temporary, target)
       return target
@@ -564,7 +605,8 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
         action: 'claim',
         workerId: config.workerId,
         model: SEMANTIC_MODEL_VERSION,
-        protocol: 1,
+        protocol: PROCESSING_PROTOCOL,
+        kinds: workerKinds(),
       })
       if (!job) return false
       if (job.model !== SEMANTIC_MODEL_VERSION)
@@ -634,12 +676,57 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
           } finally {
             await converted.cleanup()
           }
+        } else if (job.kind === 'speech') {
+          const file = await cachedMedia(job, signal)
+          await pruneCache(EXTRACT_SCRATCH_BYTES, file)
+          const heard = await transcribeSource(file, extract, {
+            localOnly: true,
+            signal,
+            scratch: config.cacheDir,
+          })
+          const result = await post<{ done: boolean }>(
+            {
+              action: 'extracted',
+              ...base,
+              text: heard?.text ?? null,
+              language: heard?.language ?? null,
+            },
+            signal,
+          )
+          if (result.done) await rm(file, { force: true })
+        } else if (job.kind === 'screen') {
+          const listed = job.files ?? (job.media ? [{ ...job.media, slot: 'photo-1' }] : [])
+          if (listed.length === 0 || listed.length > 8) throw new Error('Invalid screen job')
+          const downloaded: { file: string; slot: string }[] = []
+          for (const media of listed) {
+            if (!/^(?:(?:video|photo)-[1-9]\d?|poster)$/.test(media.slot))
+              throw new Error('Invalid screen job')
+            if (media.slot !== 'video-1' && media.bytes > MAX_IMAGE_BYTES)
+              throw new Error('Image exceeds the native worker budget')
+            downloaded.push({
+              file: await cachedMedia(job, signal, media, media.slot),
+              slot: media.slot,
+            })
+          }
+          const video = downloaded.find((d) => d.slot === 'video-1')
+          await pruneCache(EXTRACT_SCRATCH_BYTES, video?.file)
+          const text = await readScreenText(
+            downloaded.filter((d) => d !== video).map((d) => d.file),
+            video ? { source: video.file, duration: job.videoSeconds ?? null } : null,
+            extract,
+            { localOnly: true, signal, scratch: config.cacheDir },
+          )
+          const result = await post<{ done: boolean }>(
+            { action: 'extracted', ...base, text },
+            signal,
+          )
+          if (result.done) for (const d of downloaded) await rm(d.file, { force: true })
         } else if (job.kind === 'text') {
           if (typeof job.text !== 'string' || job.text.length > 32_000)
             throw new Error('Invalid text job')
           const vector = await processor.run({ kind: 'text', text: job.text }, signal)
           await post({ action: 'complete', ...base, vector }, signal)
-        } else {
+        } else if (job.kind === 'image' || job.kind === 'video') {
           if (job.kind === 'image' && (job.media?.bytes ?? Infinity) > MAX_IMAGE_BYTES)
             throw new Error('Image exceeds the native worker budget')
           const file = await cachedMedia(job, signal)
@@ -691,6 +778,9 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
               await frames.cleanup()
             }
           }
+        } else {
+          // A newer server could offer a kind this worker doesn't know.
+          throw new Error(`Unknown job kind: ${String(job.kind).slice(0, 20)}`)
         }
         log(`[worker] completed ${job.kind === 'video' ? 'video segment' : job.kind}`)
       } catch (error) {
@@ -749,6 +839,7 @@ export function createMacRunner(config: MacRunnerConfig, dependencies: RunnerDep
     close(): void {
       shutdown.abort()
       processor.close()
+      extractor?.close()
     },
   }
 }

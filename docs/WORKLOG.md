@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Search what's said in videos and the text on screen
+
+- New `speech` / `screen` queue kinds write words (not vectors) to `post_extracted_text` (keyed by post; trigger-deleted with the last save). Whisper base (`onnx-community/whisper-base@1846881b…`, fp32 encoder/q8 decoder, per-window language + no-speech check) transcribes the first 10 min; Florence-2 base (`onnx-community/Florence-2-base-ft@e88a44ea…`, q8, `<OCR_WITH_REGION>`) reads ≤4 photos + 4 frames from the first minute. Junk filter in `extract-clean.ts`, re-applied server-side to Mac results.
+- The words join the text document ("Said in the video:" / "Text on screen:") and `post_text_fts`; only posts with extracted words change text hash (no `SEMANTIC_MODEL_VERSION` bump). Search adds `speech`/`screen` signals ("Said in the video", "On screen" on tiles); Jev never receives them and treats them like visual matches.
+- Models run only in `extract-child.ts` (forked by the jobs child or the Mac runner, one model per process, exits after 60 s idle): Florence-2 alone held 1.6–2 GB and `dispose()` didn't return it. Processing protocol 2 (`kinds` on claim, `extracted`, media by `slot`); v1 workers are still served and never see the new kinds. `SEMANTIC_SPEECH` / `SEMANTIC_SCREEN_TEXT=off` switches.
+- Measured on an M4 (2 threads): 178 s of speech in 10–12 s, 1.6 s per picture/frame, extract process peak ~1.4–1.5 GB (speech) / ~1.8 GB (screen). Real end-to-end smoke (temp DB, real models): "the cat that screams at the cucumber" → the video (strong, speech+screen), a captionless meme by its caption, German speech by a German query.
+- Copy that promised "no audio is processed" now says speech and on-screen text are read on your server and none of it leaves. 3,061 tests, typecheck, lint and production build pass.
+- Follow-ups: transcripts are not shown to people (search only); no status row for speech/screen progress in the learning sheet; window boundaries can garble a word; measure on the NAS CPU before a bulk backfill.
+
 ## 2026-10-19 — Make handed-over sign-in links survive previews
 
 - GET/HEAD now render a small script-free confirmation; only an explicit same-origin, bounded form POST consumes the link and sets the existing protected session cookie.

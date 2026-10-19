@@ -1,11 +1,12 @@
-import { and, eq, inArray, isNull, like, or } from 'drizzle-orm'
+import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings, userBans } from '@/lib/db/schema'
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
 import { SEMANTIC_MODEL_VERSION, type UnderstandingKind } from './config'
 import { queryPrompt } from './documents'
 import { withoutGone } from './gone'
-import { keywordSearch } from './keywords'
+import { extractedWordsFor, type ExtractedWords } from './extracted'
+import { keywordSearch, queryTokens, textTokens, tokenHits } from './keywords'
 import { embedQuery } from './supervisor'
 import { nearest, refreshIndex } from './vector-index'
 import { fromBlob } from './vectors'
@@ -24,7 +25,12 @@ import { fromBlob } from './vectors'
 export type SearchScope = 'mine' | 'everyone'
 /** Same vocabulary as the feed's `filter`. */
 export type SearchType = 'all' | 'videos' | 'photos' | 'text' | 'articles'
-export type MatchSignal = 'words' | 'picture' | 'video' | 'keywords'
+/**
+ * Why a post matched. `speech` (said in its video) and `screen` (text on
+ * screen) are words read out of its media: they are part of its text vector
+ * and keyword row, and are named when the query's words are found there.
+ */
+export type MatchSignal = 'words' | 'picture' | 'video' | 'keywords' | 'speech' | 'screen'
 
 export interface SearchRequest {
   q: string
@@ -283,7 +289,10 @@ export async function searchPosts(
   }
   ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
 
-  const page = ranked.slice(request.offset, request.offset + request.limit)
+  const page = labelExtractedMatches(
+    ranked.slice(request.offset, request.offset + request.limit),
+    request.q,
+  )
   return {
     hits: page.map((r) => ({
       ...r,
@@ -295,6 +304,74 @@ export async function searchPosts(
     // Without meaning, keyword hits are exact words: close by definition.
     close: ranked.length > 0 && (vector === null || ranked[0].score >= TUNING.closeScore),
   }
+}
+
+function flat(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+/** Each post's keyword row (its own words plus what was read out of its media). */
+function keywordBodies(keys: string[]): Map<string, string> {
+  const out = new Map<string, string>()
+  const wanted = new Set(keys)
+  for (const part of chunks([...new Set(keys.map((k) => split(k).postId))])) {
+    const rows = db.all<{ platform: string; post_id: string; body: string }>(
+      sql`SELECT platform, post_id, body FROM post_text_fts WHERE post_id IN ${part}`,
+    )
+    for (const r of rows) {
+      const key = `${r.platform}:${r.post_id}`
+      if (wanted.has(key)) out.set(key, r.body)
+    }
+  }
+  return out
+}
+
+/**
+ * Name matches made on what's said in a video (`speech`) or the text on
+ * screen (`screen`). Those words live in the post's text vector and keyword
+ * row, so fusion only knows "words" or "keywords"; here the query's words
+ * are looked for in each part. Words found only in the media lead; a post
+ * with no words of its own that matched on meaning is credited to them too.
+ * Exported for tests.
+ */
+export function labelExtractedMatches<T extends { key: string; matched: MatchSignal[] }>(
+  hits: T[],
+  q: string,
+  lookup: {
+    words?: (keys: string[]) => Map<string, ExtractedWords>
+    bodies?: (keys: string[]) => Map<string, string>
+  } = {},
+): T[] {
+  const wordy = hits.filter((h) => h.matched.some((m) => m === 'words' || m === 'keywords'))
+  if (wordy.length === 0) return hits
+  const extracted = (lookup.words ?? extractedWordsFor)(wordy.map((h) => h.key))
+  if (extracted.size === 0) return hits
+  const bodies = (lookup.bodies ?? keywordBodies)([...extracted.keys()])
+  const tokens = queryTokens(q)
+  return hits.map((hit) => {
+    const words = extracted.get(hit.key)
+    if (!words || !hit.matched.some((m) => m === 'words' || m === 'keywords')) return hit
+    let own = bodies.get(hit.key) ?? ''
+    if (words.speech) own = own.replace(flat(words.speech), ' ')
+    if (words.screen) own = own.replace(flat(words.screen), ' ')
+    const ownHits = tokenHits(textTokens(own), tokens)
+    const said = words.speech ? tokenHits(textTokens(words.speech), tokens) : 0
+    const shown = words.screen ? tokenHits(textTokens(words.screen), tokens) : 0
+    const found: MatchSignal[] = []
+    if (said && said >= shown) found.push('speech')
+    if (shown) found.push('screen')
+    if (said && said < shown) found.push('speech')
+    const wordless = !/[\p{L}\p{N}]/u.test(own.replace(/https?:\/\/\S+/g, ''))
+    if (!found.length && wordless && hit.matched[0] === 'words') {
+      if (words.speech) found.push('speech')
+      if (words.screen) found.push('screen')
+    }
+    if (!found.length) return hit
+    const rest = hit.matched.filter((m) => !found.includes(m))
+    const wordsLed = hit.matched[0] === 'words' || hit.matched[0] === 'keywords'
+    const lead = wordsLed && (wordless || Math.max(said, shown) > ownHits)
+    return { ...hit, matched: lead ? [...found, ...rest] : [...rest, ...found] }
+  })
 }
 
 /** Gone posts out, then scope (everyone: bans + moderation) and content-type filters, in rank order. */

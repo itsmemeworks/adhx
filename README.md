@@ -24,7 +24,7 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 
 - **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
-- **Search by what you remember.** Describe it and ADHX finds it. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
+- **Search by what you remember.** Describe it and ADHX finds it. It matches the words, what's in the pictures, sampled video frames, what's said in a video and the text on screen (that meme's caption, a screenshot, burned-in subtitles). It all happens on your server, or on the optional native Mac worker: no picture, frame, sound or transcript is sent anywhere, and nothing goes to an AI service unless you add the optional search refinement key.
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
 - **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
 - **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. For now savers are counted, not named; names are next (see [Where it's going](#where-its-going)).
@@ -156,6 +156,8 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                        |
 | `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                           |
 | `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                          |
+| `SEMANTIC_SPEECH=off`                        | Stop transcribing what's said in videos. Transcripts already made stay searchable.                                           |
+| `SEMANTIC_SCREEN_TEXT=off`                   | Stop reading text on pictures and video frames. Text already read stays searchable.                                          |
 | `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                         |
 | `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.             |
 | `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text. |
@@ -179,7 +181,7 @@ Kept media is most of the space ADHX uses. As a rough guide:
 - A short phone video (TikTok, Reel, Short) is 5–30 MB.
 - A minute of 1080p is 15–40 MB; a minute of 4K is 40–100 MB.
 - Photos are 0.1–1 MB each.
-- The search model is about 400 MB, downloaded once on first start (see [The search model](#the-search-model)).
+- The search model is about 400 MB, downloaded once on first start, plus about 410 MB for the speech and on-screen text models the first time they're needed (see [The search model](#the-search-model)).
 
 So 1,000 mixed saves come to roughly 10–30 GB. When you first run ADHX on an existing library, it downloads everything already saved, newest first. If your disk is small, start with `KEEP_BACKFILL=off`, which also stops any older downloads already waiting.
 
@@ -189,13 +191,22 @@ Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_
 
 Search by meaning runs on your own server, with [EmbeddingGemma 2](https://huggingface.co/onnx-community/embeddinggemma-2-ONNX): the text model at 4-bit and its picture encoder at 8-bit, at a pinned revision. There's nothing to install. The first time the server starts, it downloads the weights from Hugging Face into `models/` next to the database: about 400 MB, so the server needs to reach `huggingface.co` once. After that it runs offline. For a server with no internet access, copy the `models/` folder from another ADHX.
 
-Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames. The default local worker samples the first 32 seconds at one frame every two seconds. Sounds are found only by their words. Local understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, what's said, text on screen, then video frames. The default local worker samples the first 32 seconds at one frame every two seconds. Local understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
 
-For a shared NAS, use the optional [native Apple Silicon worker](deploy/mac/README.md). Set `PROCESSING_MODE=remote`, a dedicated `PROCESSING_WORKER_TOKEN`, and `INDEXING_LEVEL=light|normal|deep` on the server. The Mac downloads retained media over authenticated HTTPS and samples throughout the full video in short, resumable sections. Light targets one frame per 12 seconds, normal one per four seconds and deep one per two seconds, with bounded work per section and limits for very long videos. Search can match an individual section rather than averaging away a brief detail. No audio is processed.
+#### What's said and what's on screen
+
+Two more models, also pinned and downloaded once into `SEMANTIC_CACHE_DIR`, turn media into words your server can search:
+
+- **Speech.** [Whisper base](https://huggingface.co/onnx-community/whisper-base) (multilingual, about 135 MB) transcribes the first ten minutes of each kept video or sound, in its own language. Silence, music and the lines speech models invent on them ("Thanks for watching") are dropped.
+- **Text on screen.** [Florence-2 base](https://huggingface.co/onnx-community/Florence-2-base-ft) (8-bit, about 275 MB) reads up to four of a post's pictures and four frames from the first minute of its video. Stray marks and blank pictures are dropped.
+
+The words join the post's own words, labelled "Said in the video" and "Text on screen", for both meaning and keyword search, and results say when that's where they matched. Each model runs in a short-lived process that exits after a minute without work, so only one of them is in memory at a time. Measured on an Apple M4 with two threads: about 3½ seconds per minute of speech and 1.6 seconds per picture or frame, with the extract process peaking near 1.5 GB (speech) and 1.8 GB (text on screen) on top of the search worker. Expect a slower NAS CPU to take several times longer. `SEMANTIC_SPEECH=off` or `SEMANTIC_SCREEN_TEXT=off` stops new work of that kind; words already found stay searchable.
+
+For a shared NAS, use the optional [native Apple Silicon worker](deploy/mac/README.md). Set `PROCESSING_MODE=remote`, a dedicated `PROCESSING_WORKER_TOKEN`, and `INDEXING_LEVEL=light|normal|deep` on the server. The Mac downloads retained media over authenticated HTTPS and samples throughout the full video in short, resumable sections. Light targets one frame per 12 seconds, normal one per four seconds and deep one per two seconds, with bounded work per section and limits for very long videos. Search can match an individual section rather than averaging away a brief detail. The Mac also transcribes speech and reads text on screen, sending back only the words.
 
 The NAS still serves searches and downloads/retains source media. In remote mode the Mac also handles H.264 compatibility conversion, using Apple’s hardware encoder with a bounded software fallback. The NAS checks the uploaded MP4’s codec, full resolution, duration and audio before switching files, and keeps the source until that succeeds. The Mac uses temporary lower-resolution samples for inference. It deletes frames after each section, conversion outputs after each upload attempt and downloaded copies after the final result is acknowledged. Conversion preserves resolution but re-encodes video; it is separate from inference sampling. Interrupted work has an 8 GiB default scratch ceiling and expiry cleanup; reusable model weights stay cached. The queue waits when the Mac is offline. `SEMANTIC_SEARCH=off` pauses model processing in either mode.
 
-`TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
+`TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ own public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, what was said in them or read on screen, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
 
 ### Video formats
 

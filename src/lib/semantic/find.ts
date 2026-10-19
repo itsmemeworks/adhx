@@ -36,15 +36,18 @@ export async function findPosts(request: SearchRequest & { refine: boolean }): P
       items.slice(0, RERANK_TOP).map((item) => ({
         key: `${item.post.platform}:${item.post.id}`,
         item: item.post,
-        visual: item.matched[0] === 'picture' || item.matched[0] === 'video',
+        // Jev never hears or sees the media (and never gets its extracted
+        // words), so these keep more of their fused rank, like pictures.
+        visual: ['picture', 'video', 'speech', 'screen'].includes(item.matched[0] ?? ''),
       })),
     )
     if (reranked) {
       const byKey = new Map(items.map((i) => [`${i.post.platform}:${i.post.id}`, i]))
       items = [...reranked.order.map((c) => byKey.get(c.key)!), ...items.slice(RERANK_TOP)]
-      // Jev reads words, so it judges only matches made on words alone (never
-      // one its picture or video also matched): it sets their strength, and
-      // drops the ones it calls unrelated.
+      // Jev reads the post's own words, so it judges only matches made on
+      // those alone (never one its picture, video, speech or on-screen text
+      // also matched): it sets their strength, and drops the ones it calls
+      // unrelated.
       const lead = items[0]
       items = items
         .map((i) => {

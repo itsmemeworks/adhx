@@ -6,19 +6,31 @@ import {
   SEMANTIC_DIMS,
   MAX_ATTEMPTS,
   PRIORITY,
-  type UnderstandingKind,
+  EXTRACT_KINDS,
+  SCREEN_MAX_IMAGES,
+  extractEnabled,
+  isExtractKind,
+  type ExtractKind,
+  type JobKind,
 } from '@/lib/semantic/config'
-import { buildPostDocument, hashFor } from '@/lib/semantic/documents'
-import { loadPostItem } from '@/lib/semantic/posts'
-import { enqueueBackfill } from '@/lib/semantic/queue'
+import { hashFor } from '@/lib/semantic/documents'
+import { acceptExtracted } from '@/lib/semantic/extract-clean'
+import { extractedCurrent, getExtracted, saveExtracted } from '@/lib/semantic/extracted'
+import { loadPostDocument } from '@/lib/semantic/posts'
+import { enqueueBackfill, kindOrderSql } from '@/lib/semantic/queue'
 import { getEmbedding, isCurrent } from '@/lib/semantic/store'
 import { normalize, toBlob, fromBlob } from '@/lib/semantic/vectors'
 import { indexPostText } from '@/lib/semantic/keywords'
-import { absolutePath, keptFile, type KeptFile } from '@/lib/keep/store'
+import { absolutePath, keptFile, keptFilesFor, type KeptFile } from '@/lib/keep/store'
 import { readPostModeration } from '@/lib/admin/moderation'
 import { indexingLevel, remoteVideoPrefix } from './config'
 import { createVideoPlan, segmentBounds, type VideoPlan, type IndexingLevel } from './profiles'
-import { PROCESSING_PROTOCOL, type ProcessingJob, type VideoProgress } from './protocol'
+import {
+  claimableKinds,
+  supportedProtocol,
+  type ProcessingJob,
+  type VideoProgress,
+} from './protocol'
 
 const LEASE_MS = 120_000
 let lastBackfill = 0
@@ -28,7 +40,7 @@ interface Lease {
   id: string
   platform: string
   post_id: string
-  kind: UnderstandingKind
+  kind: JobKind
   lease_hash: string
   expires_at: number
   content_hash: string
@@ -108,40 +120,109 @@ function progress(state: VideoState): VideoProgress {
   }
 }
 
-/** Media capabilities only refer to retained files, never worker-supplied paths/URLs. */
-function mediaFor(platform: string, postId: string, kind: UnderstandingKind): KeptFile | null {
-  if (kind === 'video') return keptFile(platform, postId, 'video-1')
+const slotNumber = (slot: string) => Number(slot.split('-')[1] ?? 0)
+
+/**
+ * Media capabilities only refer to retained files, never worker-supplied
+ * paths/URLs. Most kinds read one file; text on screen reads the post's
+ * pictures (at most `SCREEN_MAX_IMAGES`) and its video's frames.
+ */
+function mediaListFor(platform: string, postId: string, kind: JobKind): KeptFile[] {
+  if (kind === 'video') return [keptFile(platform, postId, 'video-1')].filter((f) => !!f)
   if (kind === 'image')
-    return keptFile(platform, postId, 'poster') ?? keptFile(platform, postId, 'photo-1')
-  return null
+    return [keptFile(platform, postId, 'poster') ?? keptFile(platform, postId, 'photo-1')].filter(
+      (f) => !!f,
+    )
+  if (kind === 'speech') {
+    const sound =
+      keptFile(platform, postId, 'video-1') ??
+      keptFilesFor(platform, postId)
+        .filter((f) => f.slot.startsWith('audio-'))
+        .sort((a, b) => slotNumber(a.slot) - slotNumber(b.slot))[0]
+    return sound ? [sound] : []
+  }
+  if (kind === 'screen') {
+    const files = keptFilesFor(platform, postId)
+    const photos = files
+      .filter((f) => f.slot.startsWith('photo-'))
+      .sort((a, b) => slotNumber(a.slot) - slotNumber(b.slot))
+      .slice(0, SCREEN_MAX_IMAGES)
+    const video = files.find((f) => f.slot === 'video-1')
+    const list = [...photos, ...(video ? [video] : [])]
+    const poster = files.find((f) => f.slot === 'poster')
+    return list.length ? list : poster ? [poster] : []
+  }
+  return []
+}
+function mediaFor(platform: string, postId: string, kind: JobKind): KeptFile | null {
+  return mediaListFor(platform, postId, kind)[0] ?? null
 }
 async function content(row: Pick<Lease, 'platform' | 'post_id' | 'kind'>) {
   const moderated = readPostModeration(row.platform, row.post_id)
   if (!moderated.ok) throw new Error('Cannot read moderation state')
   if (moderated.value) return null
-  const item = await loadPostItem(row.platform, row.post_id)
-  if (!item) return null
-  const doc = buildPostDocument(item)
+  const loaded = await loadPostDocument(row.platform, row.post_id)
+  if (!loaded) return null
+  const { doc } = loaded
   const base = hashFor(doc, row.kind)
-  const media = mediaFor(row.platform, row.post_id, row.kind)
+  const list = mediaListFor(row.platform, row.post_id, row.kind)
+  const media = list[0] ?? null
   // Retained-file replacement invalidates old work, even when the proxy URL stayed fixed.
-  const createdAt = media
-    ? db.all<{ created_at: string }>(
-        sql`SELECT created_at FROM kept_files WHERE platform=${row.platform} AND post_id=${row.post_id} AND slot=${media.slot}`,
-      )[0]?.created_at
-    : ''
+  const identities = list.map((file) => {
+    const createdAt = db.all<{ created_at: string }>(
+      sql`SELECT created_at FROM kept_files WHERE platform=${row.platform} AND post_id=${row.post_id} AND slot=${file.slot}`,
+    )[0]?.created_at
+    return `${file.slot}|${file.path}|${file.bytes}|${file.durationMs}|${createdAt ?? ''}`
+  })
   const identity = media
-    ? `${media.path}|${media.bytes}|${media.durationMs}|${createdAt}`
+    ? row.kind === 'screen'
+      ? identities.join(',')
+      : identities[0].slice(identities[0].indexOf('|') + 1)
     : 'not-kept'
   const hash =
     base === null
       ? null
       : row.kind === 'video'
         ? `${remoteVideoPrefix()}${digest(`${base}|${identity}`)}`
-        : row.kind === 'image' && media
+        : row.kind !== 'text' && media
           ? `${base}:kept:${digest(identity).slice(0, 16)}`
           : base
-  return { doc, hash, media }
+  return { doc, hash, media, list }
+}
+
+/**
+ * The searchable words changed: the post's text vector is queued again in
+ * the same transaction (keeping the higher priority), and the keyword row is
+ * rewritten by the caller once the transaction commits.
+ */
+function requeueText(row: Pick<Lease, 'platform' | 'post_id'>, priority: number): void {
+  const now = new Date().toISOString()
+  db.run(sql`INSERT INTO understanding_queue(platform,post_id,kind,priority,attempts,enqueued_at,next_attempt_at)
+    VALUES(${row.platform},${row.post_id},'text',${priority},0,${now},${now})
+    ON CONFLICT(platform,post_id,kind) DO UPDATE SET priority=max(priority,excluded.priority),next_attempt_at=excluded.next_attempt_at`)
+}
+async function reindexWords(row: Pick<Lease, 'platform' | 'post_id'>): Promise<void> {
+  const loaded = await loadPostDocument(row.platform, row.post_id)
+  if (loaded) indexPostText(row.platform, row.post_id, loaded.doc.keywords)
+}
+function queuedPriority(row: Lease): number {
+  return (
+    db.all<{ priority: number }>(
+      sql`SELECT priority FROM understanding_queue WHERE ${leaseWhere(row)}`,
+    )[0]?.priority ?? PRIORITY.backfill
+  )
+}
+/** Record "nothing of this kind" for an extract job; true when the post's words changed. */
+function noneExtracted(row: Lease, contentHash: string | null): boolean {
+  const changed = saveExtracted({
+    platform: row.platform,
+    postId: row.post_id,
+    kind: row.kind as ExtractKind,
+    contentHash,
+    status: 'none',
+  })
+  if (changed) requeueText(row, queuedPriority(row))
+  return changed
 }
 
 /** Transactional compare-and-swap; stale workers cannot extend or finish another lease. */
@@ -188,15 +269,23 @@ export async function claimProcessingJob(
   workerId: string,
   model: string,
   protocol: number,
+  advertised?: unknown,
 ): Promise<ProcessingJob | null> {
-  if (model !== SEMANTIC_MODEL_VERSION || protocol !== PROCESSING_PROTOCOL)
+  if (model !== SEMANTIC_MODEL_VERSION || !supportedProtocol(protocol))
     throw new ProcessingConflict('Worker model or protocol does not match server')
   if (typeof workerId !== 'string' || !/^[A-Za-z0-9._ -]{1,80}$/.test(workerId))
     throw new ProcessingInputError('Invalid worker name')
+  if (advertised !== undefined && !Array.isArray(advertised))
+    throw new ProcessingInputError('Invalid worker kinds')
   if (Date.now() - lastBackfill > 60_000) {
+    // Work switched off here (SEMANTIC_SPEECH / SEMANTIC_SCREEN_TEXT) leaves the queue.
+    for (const kind of EXTRACT_KINDS)
+      if (!extractEnabled(kind)) db.run(sql`DELETE FROM understanding_queue WHERE kind=${kind}`)
     await enqueueBackfill()
     lastBackfill = Date.now()
   }
+  const kinds = claimableKinds(protocol, advertised)
+  if (kinds.length === 0) return null
   for (let skipped = 0; skipped < 30; skipped++) {
     const token = randomBytes(32).toString('base64url'),
       id = randomUUID(),
@@ -205,14 +294,15 @@ export async function claimProcessingJob(
       const [candidate] = db.all<{
         platform: string
         post_id: string
-        kind: UnderstandingKind
+        kind: JobKind
       }>(sql`
         SELECT q.platform,q.post_id,q.kind FROM understanding_queue q
         WHERE q.next_attempt_at <= ${new Date(now).toISOString()}
+          AND q.kind IN ${kinds}
           AND NOT EXISTS (SELECT 1 FROM moderated_posts m WHERE m.platform=q.platform AND m.bookmark_id=q.post_id AND m.hidden=1)
           AND (q.kind!='video' OR NOT EXISTS (SELECT 1 FROM media_conversions c WHERE c.platform=q.platform AND c.post_id=q.post_id AND c.status IN ('pending','running')))
           AND NOT EXISTS (SELECT 1 FROM processing_leases l WHERE l.platform=q.platform AND l.post_id=q.post_id AND l.kind=q.kind AND l.expires_at>${now})
-        ORDER BY q.priority DESC, CASE q.kind WHEN 'text' THEN 0 WHEN 'image' THEN 1 ELSE 2 END,q.enqueued_at LIMIT 1`)
+        ORDER BY q.priority DESC, ${kindOrderSql(sql.raw('q.kind'))},q.enqueued_at LIMIT 1`)
       if (!candidate) return null
       db.run(
         sql`DELETE FROM processing_leases WHERE platform=${candidate.platform} AND post_id=${candidate.post_id} AND kind=${candidate.kind}`,
@@ -225,19 +315,24 @@ export async function claimProcessingJob(
     if (!row) return null
     const values = await content(row)
     if (!values || values.hash === null) {
+      let changed = false
       runInTransaction(() => {
         const owned = checkedLease(id, token)
-        if (values)
+        if (values && isExtractKind(row.kind)) changed = noneExtracted(owned, null)
+        else if (values)
           db.run(
             sql`INSERT INTO post_embeddings(platform,post_id,kind,model,content_hash,dims,status,created_at) VALUES(${row.platform},${row.post_id},${row.kind},${model},'',0,'none',${new Date().toISOString()}) ON CONFLICT(platform,post_id,kind) DO UPDATE SET model=excluded.model,content_hash='',dims=0,vector=NULL,status='none',error=NULL,created_at=excluded.created_at`,
           )
         db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(owned)}`)
         release(owned)
       })
+      if (changed) await reindexWords(row)
       continue
     }
-    const existing = await getEmbedding(row.platform, row.post_id, row.kind)
-    if (isCurrent(existing, values.hash)) {
+    const current = isExtractKind(row.kind)
+      ? extractedCurrent(getExtracted(row.platform, row.post_id, row.kind), row.kind, values.hash)
+      : isCurrent(await getEmbedding(row.platform, row.post_id, row.kind), values.hash)
+    if (current) {
       runInTransaction(() => {
         const owned = checkedLease(id, token)
         db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(owned)}`)
@@ -249,9 +344,14 @@ export async function claimProcessingJob(
       const terminal = db.all<{ status: string }>(
         sql`SELECT status FROM keep_jobs WHERE platform=${row.platform} AND post_id=${row.post_id}`,
       )[0]
+      let changed = false
       runInTransaction(() => {
         const owned = checkedLease(id, token)
-        if (terminal?.status === 'done' || terminal?.status === 'unavailable') {
+        const done = terminal?.status === 'done' || terminal?.status === 'unavailable'
+        if (done && isExtractKind(row.kind)) {
+          changed = noneExtracted(owned, values.hash)
+          db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(owned)}`)
+        } else if (done) {
           db.run(
             sql`INSERT INTO post_embeddings(platform,post_id,kind,model,content_hash,dims,status,created_at) VALUES(${row.platform},${row.post_id},${row.kind},${model},${values.hash},0,'none',${new Date().toISOString()}) ON CONFLICT(platform,post_id,kind) DO UPDATE SET model=excluded.model,content_hash=excluded.content_hash,dims=0,vector=NULL,status='none',error=NULL,created_at=excluded.created_at`,
           )
@@ -262,12 +362,14 @@ export async function claimProcessingJob(
           )
         release(owned)
       })
+      if (changed) await reindexWords(row)
       continue
     }
-    const changed = db.run(
-      sql`UPDATE processing_leases SET content_hash=${values.hash},media_slot=${values.media?.slot ?? null} WHERE id=${id} AND expires_at>${Date.now()}`,
+    const slots = values.list.map((f) => f.slot).join(',')
+    const leased = db.run(
+      sql`UPDATE processing_leases SET content_hash=${values.hash},media_slot=${slots || null} WHERE id=${id} AND expires_at>${Date.now()}`,
     )
-    if (!changed.changes) continue
+    if (!leased.changes) continue
     const lease = checkedLease(id, token)
     if (row.kind === 'text') indexPostText(row.platform, row.post_id, values.doc.keywords)
     const state = stateFor(lease)
@@ -288,10 +390,68 @@ export async function claimProcessingJob(
             },
           }
         : {}),
+      ...(row.kind === 'screen'
+        ? {
+            files: values.list.map((file) => ({
+              path: `/api/processing/media?id=${id}&slot=${file.slot}`,
+              mime: file.mime,
+              bytes: file.bytes,
+              slot: file.slot,
+            })),
+            videoSeconds: values.list.find((f) => f.slot === 'video-1')?.durationMs
+              ? values.list.find((f) => f.slot === 'video-1')!.durationMs! / 1000
+              : null,
+          }
+        : {}),
       ...(state ? { video: progress(state) } : {}),
     }
   }
   return null
+}
+
+/**
+ * Protocol 2: the words a worker heard or read for a speech or on-screen
+ * text job. The server applies the same junk filter before storing them,
+ * then re-queues the post's text vector when its words changed.
+ */
+export async function completeExtractJob(
+  id: string,
+  token: string,
+  text: unknown,
+  language: unknown,
+): Promise<void> {
+  if (text !== null && typeof text !== 'string') throw new ProcessingInputError('Invalid words')
+  if (typeof text === 'string' && text.length > 64_000)
+    throw new ProcessingInputError('Invalid words')
+  const row = await currentLease(id, token)
+  if (!isExtractKind(row.kind)) throw new ProcessingConflict('This job takes an embedding')
+  const kind = row.kind
+  const accepted = acceptExtracted(kind, text)
+  const lang =
+    kind === 'speech' &&
+    typeof language === 'string' &&
+    /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/.test(language)
+      ? language
+      : null
+  let changed = false
+  runInTransaction(() => {
+    requireSaved(row)
+    checkedLease(id, token)
+    const priority = queuedPriority(row)
+    changed = saveExtracted({
+      platform: row.platform,
+      postId: row.post_id,
+      kind,
+      contentHash: row.content_hash,
+      status: accepted ? 'ok' : 'none',
+      text: accepted,
+      language: lang,
+    })
+    db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(row)}`)
+    if (changed) requeueText(row, priority)
+    release(row)
+  })
+  if (changed) await reindexWords(row)
 }
 
 export async function heartbeat(id: string, token: string): Promise<void> {
@@ -343,6 +503,7 @@ export async function completeProcessingJob(
   const vector = resultVector(values)
   const row = await currentLease(id, token)
   if (row.kind === 'video') throw new ProcessingConflict('Videos finish one segment at a time')
+  if (isExtractKind(row.kind)) throw new ProcessingConflict('This job finishes with its words')
   runInTransaction(() => {
     requireSaved(row)
     checkedLease(id, token)
@@ -408,6 +569,7 @@ export async function failProcessingJob(
   error: string,
 ): Promise<void> {
   const row = await currentLease(id, token)
+  let changed = false
   runInTransaction(() => {
     checkedLease(id, token)
     requireSaved(row)
@@ -416,7 +578,19 @@ export async function failProcessingJob(
     )
     if (job) {
       const attempts = job.attempts + 1
-      if (code === 'none' || attempts >= MAX_ATTEMPTS) {
+      if ((code === 'none' || attempts >= MAX_ATTEMPTS) && isExtractKind(row.kind)) {
+        if (code === 'none') changed = noneExtracted(row, row.content_hash)
+        else
+          saveExtracted({
+            platform: row.platform,
+            postId: row.post_id,
+            kind: row.kind,
+            contentHash: row.content_hash,
+            status: 'failed',
+            error: error.slice(0, 300),
+          })
+        db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(row)}`)
+      } else if (code === 'none' || attempts >= MAX_ATTEMPTS) {
         db.run(sql`INSERT INTO post_embeddings(platform,post_id,kind,model,content_hash,dims,status,error,created_at)
           VALUES(${row.platform},${row.post_id},${row.kind},${row.model},${row.content_hash},0,${code === 'none' ? 'none' : 'failed'},${code === 'none' ? null : error.slice(0, 300)},${new Date().toISOString()})
           ON CONFLICT(platform,post_id,kind) DO UPDATE SET model=excluded.model,content_hash=excluded.content_hash,dims=0,vector=NULL,status=excluded.status,error=excluded.error,created_at=excluded.created_at`)
@@ -430,15 +604,20 @@ export async function failProcessingJob(
     }
     release(row)
   })
+  if (changed) await reindexWords(row)
 }
 
 export async function processingMedia(
   id: string,
   token: string,
+  slot?: string | null,
 ): Promise<{ file: string; mime: string; bytes: number }> {
   const row = await currentLease(id, token)
-  const media = mediaFor(row.platform, row.post_id, row.kind)
-  if (!media || media.slot !== row.media_slot)
+  const leased = (row.media_slot ?? '').split(',').filter(Boolean)
+  const media = slot
+    ? mediaListFor(row.platform, row.post_id, row.kind).find((f) => f.slot === slot)
+    : mediaFor(row.platform, row.post_id, row.kind)
+  if (!media || !leased.includes(media.slot) || (!slot && media.slot !== leased[0]))
     throw new ProcessingConflict('Media is no longer retained')
   return { file: absolutePath(media.path), mime: media.mime, bytes: media.bytes }
 }

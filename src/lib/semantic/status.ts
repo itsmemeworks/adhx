@@ -1,7 +1,12 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { bookmarkMedia, bookmarks, postEmbeddings, understandingQueue } from '@/lib/db/schema'
-import { SEMANTIC_MODEL_VERSION, semanticEnabled, type UnderstandingKind } from './config'
+import {
+  SEMANTIC_MODEL_VERSION,
+  semanticEnabled,
+  type JobKind,
+  type UnderstandingKind,
+} from './config'
 import { jobActivity } from './supervisor'
 import { remoteActivity } from '@/lib/processing/activity'
 import { remoteProcessing, indexingLevel, videoResultCurrent } from '@/lib/processing/config'
@@ -27,7 +32,7 @@ export interface UnderstandingStatus {
   current: {
     platform: string
     postId: string
-    kind: UnderstandingKind
+    kind: JobKind
     phase: string
     frames: number
     segments?: number

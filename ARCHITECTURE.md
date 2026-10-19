@@ -370,8 +370,11 @@ so a first-time backfill cannot flood Discover.
 ## Understanding pipeline (search by meaning)
 
 `src/lib/semantic/` turns every save into vectors that power search by
-meaning. It runs EmbeddingGemma 2 on the server (text q4 + vision q8; no
-audio yet) through `@huggingface/transformers` on `onnxruntime-node`.
+meaning. It runs EmbeddingGemma 2 on the server (text q4 + vision q8; its
+audio encoder is not loaded) through `@huggingface/transformers` on
+`onnxruntime-node`. What's said in a video (Whisper base) and text on its
+pictures and frames (Florence-2 base) are read into words on the server too,
+and join the post's words.
 
 ```mermaid
 flowchart LR
@@ -381,6 +384,9 @@ flowchart LR
   W -->|words| T[Text vector]
   W -->|poster / photo| I[Image vector]
   W -->|ffmpeg: 16 frames over 32 s| V[Video vector]
+  W -->|extract process| X[(post_extracted_text)]
+  X -->|said / on screen| T
+  X --> K[(post_text_fts)]
   T --> E[(post_embeddings)]
   I --> E
   V --> E
@@ -390,8 +396,8 @@ flowchart LR
   or who saved it), so one row serves everyone who saved the post. Per-user
   reads join `bookmarks`, which is the isolation boundary.
 - **Durable priority queue.** Fresh saves and Up next jump the line; within a
-  priority, words run before pictures before videos so cheap results land
-  first. Failures back off and give up after three attempts; Retry re-queues.
+  priority, words run first, then pictures, speech, text on screen and videos,
+  so cheap results land first. Failures back off and give up after three attempts; Retry re-queues.
 - **Local child processes.** ONNX inference is synchronous on its thread; run
   inside the web server, one video froze every request for ~15 s. So
   `supervisor.ts` forks `child.ts` twice (`node --import tsx`, which is why the
@@ -404,6 +410,19 @@ flowchart LR
   job at a time and rests about half the last run's duration between jobs (the
   pattern pond uses). Model weights download once to `SEMANTIC_CACHE_DIR` on
   the volume.
+- **Speech and text on screen.** `speech` and `screen` jobs write words, not
+  vectors, to `post_extracted_text` (keyed by post; removed with the last
+  save). The jobs child prepares the media with ffmpeg (mono 16 kHz samples of
+  the first ten minutes; up to four pictures and four frames from the first
+  minute) and hands it to a separate extract process (`extract-child.ts`) that
+  holds one model at a time and exits after a minute idle, so its 1.5–1.8 GB
+  goes back to the system. Junk (silence, music, invented outro lines, stray
+  marks) is filtered in `extract-clean.ts`. New words rewrite the keyword row
+  and re-queue only that post's `text` vector: its text hash includes them.
+  Search names these matches `speech` / `screen` ("Said in the video", "On
+  screen") when the query's words are found there, and Jev (which never gets
+  these words) keeps their fused rank like a visual match.
+  `SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off` stop new work.
 - **Media.** Pictures come from the app's own proxies over loopback or from
   allowlisted X CDN hosts; anything else is skipped. Video frames are
   sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.
@@ -421,6 +440,9 @@ is covered by the [Mac setup guide](deploy/mac/README.md).
 `PROCESSING_MODE=remote` disables the local jobs child, retaining the query
 child and keyword indexing. The native ARM64 macOS runner uses the same pinned
 model with CoreML MLProgram/CPU fallback, plus VideoToolbox/software video decoding.
+On processing protocol 2 it also takes `speech` and `screen` jobs and returns
+only the cleaned words (`extracted`); protocol 1 workers are still served and
+never handed those kinds.
 It never mounts SQLite or opens an inbound port. A dedicated random machine
 credential authenticates `/api/processing/jobs` and lease-scoped retained-media
 transfers through `/api/processing/media`; account/phone tokens are not accepted.

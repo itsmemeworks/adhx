@@ -50,7 +50,14 @@ export interface PlaySource {
   shared?: boolean
 }
 
-const SIGNALS: readonly MatchSignal[] = ['words', 'picture', 'video', 'keywords']
+const SIGNALS: readonly MatchSignal[] = [
+  'words',
+  'picture',
+  'video',
+  'keywords',
+  'speech',
+  'screen',
+]
 const KEY = /^[a-z]{1,16}:[A-Za-z0-9_-]{1,64}$/
 const CHANNEL = /^([A-Za-z0-9_]{1,40})\/([a-z0-9-]{1,64})$/
 const SLUG = /^[a-z0-9-]{1,64}$/

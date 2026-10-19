@@ -46,6 +46,9 @@ beforeEach(async () => {
   vi.stubEnv('INDEXING_LEVEL', 'normal')
   vi.stubEnv('PROCESSING_WORKER_TOKEN', token)
   vi.stubEnv('MEDIA_DIR', root)
+  // Speech and text on screen are covered in extract-protocol.test.ts.
+  vi.stubEnv('SEMANTIC_SPEECH', 'off')
+  vi.stubEnv('SEMANTIC_SCREEN_TEXT', 'off')
 })
 afterEach(async () => {
   instance.close()

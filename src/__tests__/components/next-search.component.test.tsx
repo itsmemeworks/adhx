@@ -19,7 +19,9 @@ import {
   DEFAULT_STATE,
   countLabel,
   groupResults,
+  heardOrRead,
   matchReason,
+  matchShort,
   openHref,
   paramsFromState,
   orderByStrength,
@@ -110,6 +112,33 @@ describe('search model', () => {
     )
     expect(countLabel(1, 'videos')).toBe('1 video')
     expect(countLabel(3, 'all')).toBe('3 matches')
+  })
+
+  it('says when a match was said in the video or written on screen', () => {
+    const said: SearchResultItem = { ...squirrel, matched: ['speech', 'keywords'] }
+    const meme: SearchResultItem = { ...community, matched: ['screen'] }
+    expect(groupResults([said, meme, community]).map((g) => g.name)).toEqual([
+      'Said in the video',
+      'On screen',
+      'What it’s about',
+    ])
+    expect(matchReason({ ...said, matched: ['speech'] })).toBe('Someone says it in the video.')
+    expect(matchReason({ ...meme, matched: ['screen', 'picture'] })).toBe(
+      'It’s written on screen, and the picture agrees.',
+    )
+    expect(matchReason({ ...squirrel, matched: ['video', 'speech'] })).toBe(
+      'What happens in the video matches what you described, and what’s said in it agrees.',
+    )
+    expect(matchShort(meme)).toBe('on screen')
+    expect(matchShort(said)).toBe('said in the video')
+    expect(heardOrRead(said)).toBe('Said in the video')
+    expect(heardOrRead(meme)).toBe('On screen')
+    expect(heardOrRead(squirrel)).toBeNull()
+    render(<BentoView items={[{ ...said, strength: 'strong' }, meme]} query="cucumber" />)
+    expect(
+      screen.getAllByRole('img', { name: 'Strong match, said in the video' }).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getAllByText('On screen').length).toBeGreaterThan(0)
   })
 
   it('opens your saves in the theater and anyone else’s on its public page', () => {

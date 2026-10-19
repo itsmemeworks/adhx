@@ -13,7 +13,8 @@ import { nextPostKind, type NextPostKind } from '../post'
 export type SearchScope = 'mine' | 'everyone'
 export type SearchType = 'all' | 'videos' | 'photos' | 'text' | 'articles'
 export type SearchView = 'bento' | 'groups' | 'queue'
-export type MatchSignal = 'words' | 'picture' | 'video' | 'keywords'
+/** `speech`: said in the video. `screen`: text on screen (a meme caption, a subtitle). */
+export type MatchSignal = 'words' | 'picture' | 'video' | 'keywords' | 'speech' | 'screen'
 /** How sure a match is: it's the thing / very likely / close in meaning only. */
 export type MatchStrength = 'strong' | 'good' | 'related'
 
@@ -176,6 +177,8 @@ export const KIND_WORD: Record<NextPostKind, string> = {
 export const SIGNAL_GROUPS: { signal: MatchSignal; name: string }[] = [
   { signal: 'video', name: 'Shown in the video' },
   { signal: 'picture', name: 'In the picture' },
+  { signal: 'speech', name: 'Said in the video' },
+  { signal: 'screen', name: 'On screen' },
   { signal: 'words', name: 'What it’s about' },
   { signal: 'keywords', name: 'Your exact words' },
 ]
@@ -203,12 +206,16 @@ export function matchReason(item: SearchResultItem): string {
     picture: 'The picture shows what you described',
     words: 'It’s about what you described, even in different words',
     keywords: 'It uses the words you typed',
+    speech: 'Someone says it in the video',
+    screen: 'It’s written on screen',
   }
   const also: Record<MatchSignal, string> = {
     video: 'the video',
     picture: 'the picture',
     words: 'what it says',
     keywords: 'your exact words',
+    speech: 'what’s said in it',
+    screen: 'the text on screen',
   }
   const base = lead[best ?? 'words']
   return second ? `${base}, and ${also[second]} agrees.` : `${base}.`
@@ -221,8 +228,21 @@ export function matchShort(item: SearchResultItem): string {
     picture: 'in the picture',
     words: 'about this',
     keywords: 'your words',
+    speech: 'said in the video',
+    screen: 'on screen',
   }
   return short[item.matched[0] ?? 'words']
+}
+
+/**
+ * A tile can't show why it matched when the match was something said or
+ * written in its media: those say so on the tile ("Said in the video").
+ */
+export function heardOrRead(item: SearchResultItem): string | null {
+  const lead = item.matched[0]
+  if (lead === 'speech') return 'Said in the video'
+  if (lead === 'screen') return 'On screen'
+  return null
 }
 
 export function kindOf(item: SearchResultItem): NextPostKind {
