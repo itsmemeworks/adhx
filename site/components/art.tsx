@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 /**
  * Illustrated stand-ins for saved posts on the product site: flat scenes in
@@ -7,7 +7,20 @@ import type { ReactNode } from 'react'
  */
 
 export type ArtId =
-  'frog' | 'frogRain' | 'synth' | 'peaks' | 'city' | 'steak' | 'cat' | 'wave' | 'skate' | 'neon'
+  | 'frog'
+  | 'frogRain'
+  | 'synth'
+  | 'peaks'
+  | 'city'
+  | 'steak'
+  | 'cat'
+  | 'wave'
+  | 'skate'
+  | 'neon'
+  | 'elephant'
+  | 'hamster'
+  | 'bird'
+  | 'grass'
 
 const SCENES: Record<ArtId, ReactNode> = {
   frog: (
@@ -216,16 +229,115 @@ const SCENES: Record<ArtId, ReactNode> = {
       <path d="M90 320 h120" stroke="#ffd23f" strokeWidth="10" strokeLinecap="round" />
     </>
   ),
+  elephant: (
+    <>
+      <rect width="300" height="400" fill="#9ccbe0" />
+      <circle cx="244" cy="118" r="22" fill="#fff4cf" />
+      <path d="M0 236 q50 -34 100 -6 t110 -4 t90 4 V400 H0z" fill="#6f9a52" />
+      <rect y="256" width="300" height="144" fill="#c9a96a" />
+      <path d="M0 300 h300" stroke="#b8975a" strokeWidth="4" />
+      <ellipse cx="172" cy="214" rx="72" ry="50" fill="#8e8a94" />
+      <rect x="120" y="236" width="20" height="46" rx="8" fill="#7b7782" />
+      <rect x="146" y="240" width="20" height="44" rx="8" fill="#8e8a94" />
+      <rect x="192" y="238" width="20" height="44" rx="8" fill="#7b7782" />
+      <rect x="216" y="236" width="20" height="46" rx="8" fill="#8e8a94" />
+      <path
+        d="M242 200 q16 6 12 30"
+        stroke="#7b7782"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="108" cy="196" r="38" fill="#8e8a94" />
+      <ellipse cx="134" cy="194" rx="24" ry="32" fill="#7b7782" />
+      <path
+        d="M80 208 q-16 30 -4 64"
+        stroke="#8e8a94"
+        strokeWidth="15"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M90 218 q-8 9 -18 7"
+        stroke="#f4f1ea"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="98" cy="186" r="4.5" fill="#141414" />
+    </>
+  ),
+  hamster: (
+    <>
+      <rect width="300" height="400" fill="#e8c79a" />
+      <rect y="276" width="300" height="124" fill="#a8723f" />
+      <path d="M0 316 h300 M0 356 h300" stroke="#8e5d30" strokeWidth="3" />
+      <ellipse cx="150" cy="238" rx="82" ry="72" fill="#d9893d" />
+      <ellipse cx="150" cy="262" rx="50" ry="42" fill="#f6dcb6" />
+      <circle cx="98" cy="170" r="20" fill="#d9893d" />
+      <circle cx="202" cy="170" r="20" fill="#d9893d" />
+      <circle cx="98" cy="170" r="10" fill="#f2a7a0" />
+      <circle cx="202" cy="170" r="10" fill="#f2a7a0" />
+      <circle cx="124" cy="210" r="8" fill="#141414" />
+      <circle cx="178" cy="206" r="12" fill="#141414" />
+      <circle cx="182" cy="202" r="4" fill="#f4f1ea" />
+      <ellipse cx="152" cy="232" rx="8" ry="5.5" fill="#e0607a" />
+      <rect x="146" y="240" width="12" height="11" rx="2" fill="#f4f1ea" />
+      <ellipse cx="116" cy="290" rx="14" ry="9" fill="#f2a7a0" />
+      <ellipse cx="186" cy="290" rx="14" ry="9" fill="#f2a7a0" />
+    </>
+  ),
+  bird: (
+    <>
+      <rect width="300" height="400" fill="#2c5d6e" />
+      <path d="M0 300 q75 -14 150 0 t150 0 V400 H0z" fill="#23495a" />
+      <ellipse cx="150" cy="356" rx="120" ry="40" fill="#3a3632" />
+      <ellipse cx="146" cy="272" rx="58" ry="84" fill="#1d1d22" />
+      <path d="M126 214 q-6 -40 30 -64" stroke="#1d1d22" strokeWidth="34" fill="none" />
+      <circle cx="162" cy="146" r="36" fill="#1d1d22" />
+      <path d="M190 146 L268 128 L196 158z" fill="#e8b93a" />
+      <path d="M192 164 L254 180 L190 174z" fill="#d9a22e" />
+      <circle cx="176" cy="138" r="8" fill="#4fd8a0" />
+      <circle cx="178" cy="138" r="4" fill="#141414" />
+      <path
+        d="M150 118 l14 -6"
+        stroke="#141414"
+        strokeWidth="5"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </>
+  ),
+  grass: (
+    <>
+      <rect width="300" height="400" fill="#8fd0ee" />
+      <circle cx="232" cy="96" r="30" fill="#fff4cf" />
+      <path d="M0 270 q80 -60 160 -10 t140 -10 V400 H0z" fill="#5fae4a" />
+      <path d="M0 310 q90 -40 180 0 t120 0 V400 H0z" fill="#3f8a38" />
+      {Array.from({ length: 16 }, (_, i) => (
+        <path key={i} d={`M${10 + i * 19} 400 l6 -34 l6 34`} fill={i % 2 ? '#6fc25a' : '#4f9f42'} />
+      ))}
+    </>
+  ),
 }
 
 /** One illustrated "post", filling its box. Decorative. */
-export function Art({ id, className }: { id: ArtId; className?: string }) {
+export function Art({
+  id,
+  className,
+  style,
+}: {
+  id: ArtId
+  className?: string
+  style?: CSSProperties
+}) {
   return (
     <svg
       aria-hidden
       viewBox="0 0 300 400"
       preserveAspectRatio="xMidYMid slice"
       className={className}
+      style={style}
     >
       {SCENES[id]}
     </svg>
