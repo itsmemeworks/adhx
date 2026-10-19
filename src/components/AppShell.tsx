@@ -28,7 +28,7 @@ export function useAppAccountScope(): AppAccountScope | null {
 }
 
 /** New-design pages that sign you in and bring you back, rather than going home. */
-const SIGN_IN_FIRST = new Set(['/search', '/play', '/channels', '/settings'])
+const SIGN_IN_FIRST = new Set(['/search', '/play', '/channels', '/settings', '/doing'])
 
 function isPublicPlay(search: string): boolean {
   const params = new URLSearchParams(search)
@@ -104,6 +104,7 @@ export function AppShell({
     pathname.startsWith('/channels/') ||
     pathname === '/tags' ||
     pathname === '/settings' ||
+    pathname === '/doing' ||
     pathname === '/welcome' ||
     pathname === '/invite/done' ||
     pathname === '/admin' ||

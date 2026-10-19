@@ -261,8 +261,8 @@ describe('SettingsClient — X bookmarks', () => {
     expect(screen.queryByText('Appearance')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^(Light|Dark|System)$/ })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Settings', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument()
-    expect(screen.getByText('Your picture, email and username.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'You' })).toBeInTheDocument()
+    expect(screen.getByText('Shows on your saves')).toBeInTheDocument()
     expect(syncCard().getByText('Connected')).toBeInTheDocument()
     expect(screen.getByText('tester@example.com')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Sync X bookmarks' })).toBeInTheDocument()
@@ -417,36 +417,45 @@ describe('SettingsClient — account', () => {
     await waitFor(() => expect(screen.getByText(/check me@example\.com/i)).toBeInTheDocument())
   })
 
-  it('shows the X profile photo on the X row and an avatar picker on Account', async () => {
+  it('offers the X photo in Change picture when X is connected', async () => {
     mockFetch(ME_BOTH)
     render(<SettingsClient />)
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /use x photo/i })).toBeInTheDocument(),
-    )
-    expect(screen.getByRole('button', { name: /use generated avatar/i })).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Change picture' }))
+    const dialog = screen.getByRole('dialog', { name: 'Change picture' })
+    expect(within(dialog).getByRole('radio', { name: /Use your X picture/ })).toBeInTheDocument()
+    // The X row still shows the X photo.
     const xPhoto = 'https://pbs.twimg.com/profile_images/1/me.jpg'
-    const xBtn = screen.getByRole('button', { name: /use x photo/i })
-    expect(xBtn.querySelector('img')?.getAttribute('src')).toBe(xPhoto)
-    expect(document.querySelectorAll(`img[src="${xPhoto}"]`).length).toBeGreaterThanOrEqual(2)
+    expect(document.querySelectorAll(`img[src="${xPhoto}"]`).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('hides the X photo picker when X is not connected', async () => {
+  it('leaves the X photo out of Change picture when X is not connected', async () => {
     mockFetch(ME_EMAIL_ONLY)
     render(<SettingsClient />)
 
-    await waitFor(() => expect(screen.getByText('tester@example.com')).toBeInTheDocument())
-    expect(screen.queryByRole('button', { name: /use x photo/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /use generated avatar/i })).not.toBeInTheDocument()
-    expect(screen.getByText('Made from your username')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Change picture' }))
+    const dialog = screen.getByRole('dialog', { name: 'Change picture' })
+    expect(within(dialog).queryByRole('radio', { name: /Use your X picture/ })).toBeNull()
+    expect(within(dialog).getByRole('radio', { name: /Upload a photo/ })).toBeInTheDocument()
   })
 
-  it('persists the generated avatar choice', async () => {
-    mockFetch(ME_BOTH)
+  it('saves a Gob picture and refreshes the account', async () => {
+    const avatarSpy = vi.fn<FetchImpl>(() =>
+      jsonResponse({ avatarUrl: '/api/files/avatar/0123456789abcdef', source: 'gob' }),
+    )
+    mockFetch(ME_BOTH, { 'POST /api/account/avatar': avatarSpy })
     render(<SettingsClient />)
 
-    fireEvent.click(await screen.findByRole('button', { name: /use generated avatar/i }))
-    expect(updatePreference).toHaveBeenCalledWith('avatarSource', 'generated')
+    fireEvent.click(await screen.findByRole('button', { name: 'Change picture' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Lime' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(avatarSpy).toHaveBeenCalled())
+    const [, init] = avatarSpy.mock.calls[0]
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      source: 'gob',
+      colour: 'lime',
+    })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Change picture' })).toBeNull())
   })
 
   it('signs out from the Account card', async () => {

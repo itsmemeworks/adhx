@@ -11,7 +11,7 @@ import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { noteSaved } from '@/lib/semantic'
 import { cancelledSave, type SaveGuard } from './save-guard'
-import { applyRepeatPrivacy, type SaveOptions } from './privacy'
+import { applyRepeatPrivacy, newSavePrivate, withPrivateDefault, type SaveOptions } from './privacy'
 
 /**
  * Save a tweet by its URL for `userId` (POST /api/tweets/add, and the X branch
@@ -24,8 +24,10 @@ export async function addTweet(
   url: unknown,
   source: string = 'manual',
   canSave: SaveGuard = () => true,
-  options: SaveOptions = {},
+  rawOptions: SaveOptions = {},
 ): Promise<NextResponse> {
+  // Without `private`, a new save follows the owner's "Just for me by default".
+  const options = withPrivateDefault(userId, rawOptions)
   try {
     if (!canSave()) return cancelledSave()
     if (!url || typeof url !== 'string') {
@@ -326,7 +328,7 @@ export async function addTweet(
           processedAt: now,
           category,
           source, // 'manual' or 'url_prefix'
-          isPrivate: options.private === true,
+          isPrivate: newSavePrivate(options),
           isQuote,
           quoteContext,
           quotedTweetId,
@@ -442,7 +444,7 @@ export async function addTweet(
 
     // Push to the public activity pulse (anonymous, server-resolved content).
     const saveAuthor = tweet.author?.screen_name || parsed.author
-    if (!options.private)
+    if (!newSavePrivate(options))
       recordActivity({
         action: 'save',
         platform: 'twitter',

@@ -247,7 +247,7 @@ export function YourPeopleRow({
               {canInvite && (
                 <li className="w-[248px] shrink-0 md:w-auto">
                   <Link
-                    href="/settings#invite"
+                    href="/settings#people"
                     className="flex h-[158px] flex-col items-center justify-center gap-2.5 rounded-[24px] border-[1.5px] border-dashed border-nx-accent/55 p-4 text-center"
                   >
                     <span

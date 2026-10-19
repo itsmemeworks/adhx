@@ -85,8 +85,10 @@ describe('API: /api/auth/me', () => {
       username: 'xuser',
       displayName: 'X User',
       avatarUrl: 'https://example.com/avatar.jpg',
+      avatarSource: 'x',
       usernameChosen: true,
       usernameChangeCount: 0,
+      privateDefault: false,
     })
     expect(data.identities.x).toEqual({
       providerId: 'x-user-1',

@@ -4,7 +4,7 @@ import { memberAvatar, seenBy } from './savers'
 
 /**
  * The server's members as one signed-in member sees them: every non-banned
- * account, with how many of their saves the viewer can see (visible saves;
+ * account that has been let in (not waiting for approval), with how many of their saves the viewer can see (visible saves;
  * for the viewer, all their own saves including private ones). For friend
  * channels and the feed's per-friend controls. Empty when signed out.
  *
@@ -47,6 +47,7 @@ export function listMembers(viewerId: string): Member[] {
       GROUP BY b.user_id
     ) s ON s.user_id = u.id
     WHERE NOT EXISTS (SELECT 1 FROM user_bans ub WHERE ub.user_id = u.id)
+      AND u.approval = 'approved'
     ORDER BY s.last_saved_at IS NULL, s.last_saved_at DESC, u.username
   `)
   return rows.map((r) => ({

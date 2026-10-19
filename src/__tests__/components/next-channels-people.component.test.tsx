@@ -110,7 +110,7 @@ describe('Your people row', () => {
     expect(within(card).getByText('4 new')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Invite someone/ })).toHaveAttribute(
       'href',
-      '/settings#invite',
+      '/settings#people',
     )
   })
 

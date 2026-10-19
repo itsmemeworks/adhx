@@ -18,6 +18,7 @@ import {
   conversionFailure,
 } from '@/lib/processing/conversion'
 import { indexingPaused } from '@/lib/processing/config'
+import { noteWorkerSeen } from '@/lib/processing/presence'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,6 +30,7 @@ export async function POST(request: Request): Promise<Response> {
       { error: 'Worker authentication required' },
       { status: 401, headers: { ...headers, 'WWW-Authenticate': 'Bearer' } },
     )
+  noteWorkerSeen()
   let body: ProcessingRequest
   try {
     const raw = await readResponseBodyWithLimit(new Response(request.body), 64 * 1024)

@@ -129,8 +129,8 @@ const nextConfig = {
       ],
     },
     {
-      // Invite pages (not /invite/done): script-free, token kept off referrers.
-      source: '/invite/:token((?!done$)[^/]+)',
+      // Invite pages (not /invite/done or /invite/waiting): script-free, token kept off referrers.
+      source: '/invite/:token((?!(?:done|waiting)$)[^/]+)',
       headers: [
         { key: 'Referrer-Policy', value: 'same-origin' },
         {

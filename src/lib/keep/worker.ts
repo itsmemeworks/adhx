@@ -22,6 +22,8 @@ const SCAN_EVERY_MS = 30_000
 const CLEAN_EVERY_MS = 60 * 60_000
 /** Waits before each retry; after the last, the job is marked unavailable. */
 const BACKOFF_MS = [60_000, 10 * 60_000, 60 * 60_000, 6 * 60 * 60_000, 24 * 60 * 60_000]
+/** Tries a download gets before it gives up: the first, then one per wait. */
+export const KEEP_MAX_ATTEMPTS = BACKOFF_MS.length + 1
 
 interface State {
   timer: ReturnType<typeof setInterval> | null
@@ -192,13 +194,22 @@ async function tick(): Promise<void> {
 
 let warnedFull = 0
 
-/** Pause downloading while the media disk is nearly full (KEEP_MIN_FREE_GB). */
-export async function diskHasRoom(): Promise<boolean> {
+/** Free bytes on the media disk, or null when it can't be read. */
+export async function freeDiskBytes(): Promise<number | null> {
   try {
     await fs.mkdir(mediaDir(), { recursive: true })
     const stats = await fs.statfs(mediaDir())
-    const free = stats.bavail * stats.bsize
-    if (free >= keepMinFreeBytes()) return true
+    return stats.bavail * stats.bsize
+  } catch {
+    return null
+  }
+}
+
+/** Pause downloading while the media disk is nearly full (KEEP_MIN_FREE_GB). */
+export async function diskHasRoom(): Promise<boolean> {
+  try {
+    const free = await freeDiskBytes()
+    if (free === null || free >= keepMinFreeBytes()) return true
     if (Date.now() - warnedFull > 60 * 60_000) {
       warnedFull = Date.now()
       console.warn(

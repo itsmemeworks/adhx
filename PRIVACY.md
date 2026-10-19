@@ -23,6 +23,7 @@ When a post is saved, the server downloads its video, pictures and sound once, f
 When you sign in (magic-link email; X is optional later in Settings, for bookmark sync):
 
 - a unique username, optional display name and avatar
+- if you upload or take a picture (Settings → You → Change picture), a 512-pixel square JPEG of the crop you chose, re-made on your server without the photo's metadata (no location or camera details), in the media folder's `avatars/`. The original photo is not kept. Only members of your server can load it. It is deleted when you change or remove it, and when you delete your account. A Gob picture is made on the server the same way.
 - email address (if you used a magic link), stored lowercased
 - an X user id (if you connected X)
 - a signed, httpOnly session cookie (`adhx_session`, 30 days)
@@ -109,7 +110,9 @@ Until you clear Saved or delete your account (Settings). Pulse and channel-view 
 - **Automatic X sync** — on while X is connected; turn it off in Settings.
 - **Access keys** — remove any key in Settings.
 - **Clear data** — deletes your bookmarks and related rows; keeps the account.
-- **Delete account** — removes the account, identities, tokens, access keys, and Saved.
+- **Just for me by default** — Settings → You: new saves start private.
+- **Your picture** — Settings → You: change it, or remove it to use a face made from your username.
+- **Delete account** — removes the account, identities, tokens, access keys, your picture, and Saved.
 
 To ask a question about this policy, email [security@adhx.com](mailto:security@adhx.com).
 

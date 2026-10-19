@@ -624,6 +624,44 @@ try {
   // Column already exists — nothing to do.
 }
 
+// Join approvals: users.approval ('approved' | 'pending' | 'declined') and the
+// "Not now" snooze. Every existing account is approved (the column default).
+// server_settings holds runtime server settings such as who can invite.
+// keep_jobs.accepted_at records "Keep the link only" on a job that gave up.
+// phone_save_queue.default_private carries "Just for me by default" for a queued share.
+// Guarded for re-runs (no IF NOT EXISTS on ADD COLUMN).
+try {
+  db.exec("ALTER TABLE users ADD COLUMN approval text NOT NULL DEFAULT 'approved'")
+  console.log('[migrate] Added users.approval')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE users ADD COLUMN approval_snoozed_until integer')
+  console.log('[migrate] Added users.approval_snoozed_until')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE phone_save_queue ADD COLUMN default_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added phone_save_queue.default_private')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE keep_jobs ADD COLUMN accepted_at text')
+  console.log('[migrate] Added keep_jobs.accepted_at')
+} catch {
+  // Column already exists — nothing to do.
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS server_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`)
+
 // Public analytics validates post existence across all bookmark owners and
 // against visible activity. The bookmarks PK begins with user_id and the
 // activity dedupe index begins with action, so neither can serve these exact

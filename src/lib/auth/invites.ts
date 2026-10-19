@@ -2,11 +2,12 @@ import crypto from 'crypto'
 import { and, asc, eq, gt, isNull, sql, type SQL } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { invites, userIdentities, usernameAliases, users } from '@/lib/db/schema'
+import { readServerSetting, writeServerSetting } from '@/lib/settings/server'
 import { sanitizeUsername } from './username-rules'
 
 /**
- * Invite links: the easy way in. An admin (or, with `INVITES=members`, any
- * member) makes a link for one person. Opening it shows a script-free page
+ * Invite links: the easy way in. An admin (or, when "Who can invite" allows
+ * it, any member) makes a link for one person. Opening it shows a script-free page
  * that says who invited you; picking a name and pressing Join makes an
  * account with no email (its sign-in identity is the invite itself) and signs
  * that browser in. The invite is the permission, so `ALLOWED_EMAILS` doesn't
@@ -25,15 +26,52 @@ const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/
 
 const hash = (token: string) => crypto.createHash('sha256').update(token).digest('hex')
 
-/** `INVITES=members` lets every member make invites; otherwise only admins. */
-export function invitesOpenToMembers(): boolean {
-  return process.env['INVITES']?.trim().toLowerCase() === 'members'
+/**
+ * Who can invite (Settings → Your people, admins only):
+ * - `admin`: only admins make invites.
+ * - `approve`: anyone can; people a member invites wait for an admin to let
+ *   them in (`users.approval = 'pending'`).
+ * - `anyone`: anyone can, and their people get straight in.
+ */
+export type InviteMode = 'admin' | 'approve' | 'anyone'
+export const INVITE_MODES: readonly InviteMode[] = ['admin', 'approve', 'anyone']
+const INVITE_MODE_KEY = 'invites.who'
+
+export function isInviteMode(value: unknown): value is InviteMode {
+  return typeof value === 'string' && (INVITE_MODES as readonly string[]).includes(value)
 }
 
-/** May this (signed-in, not banned) account make invites right now? */
+/**
+ * The stored choice, or the first default from the environment
+ * (`INVITES=members` → anyone, otherwise only admins).
+ */
+export function inviteMode(): InviteMode {
+  try {
+    const stored = readServerSetting(INVITE_MODE_KEY)
+    if (isInviteMode(stored)) return stored
+  } catch {
+    // No settings table yet: fall back to the environment.
+  }
+  return process.env['INVITES']?.trim().toLowerCase() === 'members' ? 'anyone' : 'admin'
+}
+
+export function setInviteMode(mode: InviteMode): void {
+  writeServerSetting(INVITE_MODE_KEY, mode)
+}
+
+/** Members (not only admins) may make invites right now. */
+export function invitesOpenToMembers(): boolean {
+  return inviteMode() !== 'admin'
+}
+
+/** May this (signed-in, not banned, approved) account make invites right now? */
 export function mayCreateInvites(userId: string): boolean {
-  const user = db.select({ role: users.role }).from(users).where(eq(users.id, userId)).get()
-  if (!user) return false
+  const user = db
+    .select({ role: users.role, approval: users.approval })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get()
+  if (!user || user.approval !== 'approved') return false
   return user.role === 'admin' || invitesOpenToMembers()
 }
 
@@ -44,7 +82,7 @@ export function mayCreateInvites(userId: string): boolean {
 function makerCanInvite(): SQL {
   const allowed = invitesOpenToMembers() ? sql`1` : sql`u.role = 'admin'`
   // Spelled out as `invites.created_by`: user_bans has its own created_by.
-  return sql`(EXISTS (SELECT 1 FROM users u WHERE u.id = invites.created_by AND (${allowed}))
+  return sql`(EXISTS (SELECT 1 FROM users u WHERE u.id = invites.created_by AND u.approval = 'approved' AND (${allowed}))
     AND NOT EXISTS (SELECT 1 FROM user_bans b WHERE b.user_id = invites.created_by))`
 }
 
@@ -95,8 +133,22 @@ export function createInvite(
   })
 }
 
+/**
+ * A short, non-secret code people can tell invites apart by: the first four
+ * characters of the invite's public id (never anything from the token).
+ */
+export function inviteCode(id: string): string {
+  return id
+    .replace(/^inv_/, '')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .slice(0, 4)
+    .toUpperCase()
+}
+
 export interface InviteSummary {
   id: string
+  /** `inviteCode(id)`, for showing. */
+  code: string
   createdAt: string
   expiresAt: string
   nameHint: string | null
@@ -139,6 +191,7 @@ export function listPendingInvites(
     .all()
   return rows.map(({ createdById, expiresAt, ...row }) => ({
     ...row,
+    code: inviteCode(row.id),
     expiresAt: new Date(expiresAt).toISOString(),
     mine: createdById === userId,
   }))
@@ -159,6 +212,37 @@ export function revokeInvite(id: string, userId: string, isAdmin: boolean): bool
     )
     .run()
   return result.changes === 1
+}
+
+/**
+ * A fresh link for an invite that still works: only the token's hash is
+ * kept, so an older link can't be shown again. The invite keeps its id, code
+ * and expiry; the link sent before stops working. The maker's own, or any
+ * for an admin. Null when the invite is used, revoked, expired or not theirs.
+ */
+export function renewInviteLink(
+  id: string,
+  userId: string,
+  isAdmin: boolean,
+  now = Date.now(),
+): { id: string; token: string; expiresAt: string } | null {
+  const token = crypto.randomBytes(32).toString('base64url')
+  const row = db
+    .update(invites)
+    .set({ tokenHash: hash(token) })
+    .where(
+      and(
+        eq(invites.id, id),
+        isNull(invites.usedAt),
+        isNull(invites.revokedAt),
+        gt(invites.expiresAt, now),
+        isAdmin ? undefined : eq(invites.createdBy, userId),
+        makerCanInvite(),
+      ),
+    )
+    .returning({ id: invites.id, expiresAt: invites.expiresAt })
+    .get()
+  return row ? { id: row.id, token, expiresAt: new Date(row.expiresAt).toISOString() } : null
 }
 
 export type InviteProblem = 'bad' | 'used' | 'expired' | 'revoked' | 'dead'
@@ -196,7 +280,7 @@ export function readInvite(token: unknown, now = Date.now()): InviteLookup {
 }
 
 export type RedeemInviteResult =
-  | { ok: true; userId: string; username: string }
+  | { ok: true; userId: string; username: string; approval: 'approved' | 'pending' }
   | { ok: false; problem: InviteProblem }
   | { ok: false; nameError: 'invalid' | 'taken'; username: string }
 
@@ -224,6 +308,10 @@ function isUniqueViolation(error: unknown): boolean {
  * checked like `/welcome` (`sanitizeUsername`, 3–15 characters, not anyone's
  * current or past name); a bad or taken name rolls the claim back, leaving
  * the invite unused.
+ *
+ * With "Anyone, I approve" on, someone a member (not an admin) invited joins
+ * as `pending`: the account exists, but it is signed out everywhere except the
+ * waiting page until an admin lets them in.
  */
 export function redeemInvite(
   token: unknown,
@@ -236,6 +324,7 @@ export function redeemInvite(
 
   const tokenHash = hash(token)
   const userId = `u_${crypto.randomBytes(8).toString('hex')}`
+  let approval: 'approved' | 'pending' = 'approved'
   try {
     const claimed = runInTransaction(() => {
       const invite = db
@@ -250,16 +339,22 @@ export function redeemInvite(
             makerCanInvite(),
           ),
         )
-        .returning({ id: invites.id })
+        .returning({ id: invites.id, createdBy: invites.createdBy })
         .get()
       if (!invite) return false
       if (usernameTaken(username)) throw new NameTaken()
-      db.insert(users).values({ id: userId, username, usernameChosen: true }).run()
+      const maker = db
+        .select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, invite.createdBy))
+        .get()
+      approval = maker?.role !== 'admin' && inviteMode() === 'approve' ? 'pending' : 'approved'
+      db.insert(users).values({ id: userId, username, usernameChosen: true, approval }).run()
       db.insert(userIdentities).values({ provider: 'invite', providerId: invite.id, userId }).run()
       db.update(invites).set({ usedBy: userId }).where(eq(invites.id, invite.id)).run()
       return true
     })
-    if (claimed) return { ok: true, userId, username }
+    if (claimed) return { ok: true, userId, username, approval }
   } catch (error) {
     if (error instanceof NameTaken || isUniqueViolation(error)) {
       // Rolled back: the invite is still unused unless someone else just won it.
