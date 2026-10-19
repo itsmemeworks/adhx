@@ -21,6 +21,8 @@ import {
   WideMediaStage,
   articleLede,
   displayUrl,
+  faceColour,
+  faceInitial,
   isTallMedia,
   mediaImageSrc,
   nextPostKind,
@@ -226,13 +228,28 @@ describe('faces', () => {
     expect(img.getAttribute('src')).toBe('https://pbs.twimg.com/ana.jpg')
   })
 
-  it('falls back to a square generated face, so the frame does the clipping', () => {
+  it('falls back to their initial on their colour, upright in the frame', () => {
     const { container } = render(
-      <NxAvatar author={{ avatarUrl: null, handle: 'ana', name: 'Ana' }} size={22} />,
+      <NxAvatar author={{ avatarUrl: null, handle: 'ana', name: 'Ana' }} size={30} />,
     )
-    const src = decodeURIComponent(container.querySelector('img')!.getAttribute('src')!)
-    expect(src).toContain('<rect width="80" height="80"')
-    expect(src).not.toContain('clipPath')
+    expect(container.querySelector('img')).toBeNull()
+    const face = container.querySelector('[data-face="initial"]') as HTMLElement
+    expect(face).toHaveAttribute('data-initial', 'A')
+    expect(face.style.background).toBe('rgb(255, 143, 163)') // Ana is pink, as on the boards
+    expect(face.parentElement!.className).toContain('rotate-[4deg]')
+  })
+
+  it('gives the boards’ people the boards’ colours, from the username alone', () => {
+    expect(['ana', 'ben', 'mum', 'jo', 'pete'].map(faceColour)).toEqual([
+      '#ff8fa3',
+      '#7fd1ae',
+      '#ffb35c',
+      '#c4a7ff',
+      '#6b8cff',
+    ])
+    expect(faceColour('@Ana')).toBe(faceColour('ana'))
+    expect(faceInitial('You', 'pete')).toBe('P')
+    expect(faceInitial('Ana', 'ana')).toBe('A')
   })
 
   it('GobShape takes its size from the caller', () => {

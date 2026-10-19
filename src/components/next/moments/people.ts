@@ -1,5 +1,5 @@
+import { faceColour } from '../faces'
 import type { Saver } from '@/lib/people/types'
-import { hashSeed } from '@/lib/avatar/generated-avatar'
 import { orderedSavers, saverName } from '../savers'
 
 /**
@@ -55,19 +55,7 @@ export function arrivalLine(saver: Saver): string {
   return `${saverName(saver)} just saved one`
 }
 
-/** Bright colours with dark text on each, one per person (rings, reaction bubbles). */
-const PERSON_COLOURS = [
-  '#ff8fa3',
-  '#7fd1ae',
-  '#c4a7ff',
-  '#ffb35c',
-  '#86c2ff',
-  '#ffd23f',
-  '#7fe3d6',
-  '#d6e36b',
-] as const
-
-/** A member's colour: the same on every screen, from their username. */
+/** A member's colour on every screen (rings, reaction bubbles): their face's colour. */
 export function personColour(username: string): string {
-  return PERSON_COLOURS[hashSeed(username) % PERSON_COLOURS.length]
+  return faceColour(username)
 }

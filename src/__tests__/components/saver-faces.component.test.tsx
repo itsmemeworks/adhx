@@ -69,7 +69,7 @@ describe('SaverFaces', () => {
     const { container } = render(
       <SaverFaces savers={[saver('ana'), saver('ben'), saver('cal'), saver('dee')]} />,
     )
-    expect(container.querySelectorAll('img')).toHaveLength(3)
+    expect(container.querySelectorAll('[data-shape="gob"]')).toHaveLength(3)
     expect(screen.getByText('Ana and 3 others').tagName).toBe('SPAN')
   })
 

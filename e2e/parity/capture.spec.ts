@@ -338,6 +338,18 @@ const BOARDS: Board[] = [
       await attempt(ctx, 'theater ready', () => theaterReady(ctx.page))
       await playItem(ctx, 'Charlie bit my finger')
       await pausePlayback(ctx.page)
+      // Wide screens show the reasons beside the stage (the board's right column).
+      if (!ctx.mobile)
+        await attempt(ctx, 'Why it’s on your feed open', async () => {
+          await ctx.page
+            .getByRole('button', { name: /^Why this one:/ })
+            .locator('visible=true')
+            .first()
+            .click()
+          await ctx.page
+            .getByRole('complementary', { name: 'Why it’s on your feed' })
+            .waitFor({ timeout: 5_000 })
+        })
       await attempt(ctx, 'Who saved it open', async () => {
         await ctx.page
           .locator('button[aria-haspopup="dialog"]')
