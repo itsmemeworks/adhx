@@ -31,7 +31,14 @@ class SaveWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         // Queued on the server at once; follow it so the history shows how it
         // ended, but well inside WorkManager's 10 minutes: a stopped worker is
         // run again, and that would queue the link a second time.
-        val follow = AdhxApi(connection).saveAndFollow(link, interval = { 5_000L }, limitMs = FOLLOW_MS)
+        val api = AdhxApi(connection)
+        val queueId = history.find(itemId)?.queueId
+        val follow = if (queueId != null) {
+            api.followQueued(queueId, interval = { 5_000L }, limitMs = FOLLOW_MS)
+        } else {
+            api.saveAndFollow(link, interval = { 5_000L }, limitMs = FOLLOW_MS,
+                onQueued = { id -> history.update(itemId) { it.queuedWith(id) } })
+        }
         return when (val result = follow) {
             is ApiResult.Ok -> {
                 history.update(itemId) { it.savedWith(result.value) }

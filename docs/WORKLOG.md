@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Durable phone queue receipts and feed readiness
+
+- Review fixes for background phone saves: include queued metadata in account-scoped preparing counts and keep disabled/backfill-excluded downloads visible.
+- Remove queued URLs during account deletion and exclude orphaned account jobs from claims.
+- Persist Android queue receipts before polling; resume receipts after process death or follow timeout without submitting another save.
+- Add server feed/account regressions and Android serialization/HTTP resume tests; source is in flight, with no running service changed.
+- Typecheck and lint pass (existing warnings); focused tests hit import timeouts under host load, Android build stopped to prioritise service recovery. Full verification remains required.
+
 ## 2026-10-19 — Publish only tagged releases
 
 - Supersede automatic main-image publication: ordinary PR merges never publish; Release Please calls the publisher only after creating a tagged release.

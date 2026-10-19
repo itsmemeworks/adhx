@@ -95,6 +95,9 @@ Then poll `GET /api/app/save?id=…` (every 1.5 s while the sheet is open):
 The server retries a slow or failing network on its own, so the sheet can
 close at any point. Without the header, `POST` saves at once as above (older
 apps).
+Apps persist the queue receipt before following it and resume polling after
+restarts without posting the same link again. Deleting an account removes
+its queued links together with its other private data.
 
 ### `GET /api/app/status?platform=…&id=…`
 
@@ -122,8 +125,10 @@ on the web). `limit` 1–50 (default 20).
 
 - `200 { items: PhonePost[], total, nextOffset, preparing }` (`nextOffset` null
   at the end). A save joins the list once it's ready: its copy is kept, or
-  can't be, or isn't needed. `preparing` counts saves still being downloaded
-  (not in `items` or `total`); apps may say "2 more on their way".
+  can't be, or isn't needed. `preparing` counts links queued for metadata and
+  saves still being downloaded (not in `items` or `total`); apps may say
+  "2 more on their way". Disabled keeping and older saves excluded by the
+  backfill cutoff remain visible rather than waiting forever.
 - `?platform=…&id=…` instead: `200 { item: PhonePost }` for one of your saves,
   archived or not (Shared lately opens it in the player), or
   `404 { code: 'not_saved' }`.

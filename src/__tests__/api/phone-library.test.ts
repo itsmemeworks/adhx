@@ -21,6 +21,13 @@ vi.mock('@/lib/db', () => ({
 }))
 vi.mock('@/lib/auth/session', () => ({ getCurrentUserId: vi.fn(async () => sessionUser) }))
 vi.mock('@/lib/sentry', () => ({ captureException: vi.fn(), metrics: {} }))
+let keepOn = true
+let cutoff: string | null = null
+vi.mock('@/lib/keep/config', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/keep/config')>()),
+  keepEnabled: () => keepOn,
+}))
+vi.mock('@/lib/keep/worker', () => ({ keepCutoff: () => cutoff, wakeKeep: vi.fn() }))
 
 const findPosts = vi.fn()
 vi.mock('@/lib/semantic/find', () => ({ findPosts: (...args: unknown[]) => findPosts(...args) }))
@@ -92,6 +99,8 @@ beforeEach(async () => {
   testInstance = createTestDb()
   sessionUser = null
   vi.clearAllMocks()
+  keepOn = true
+  cutoff = null
   const { __resetRateLimitState } = await import('@/lib/rate-limit')
   __resetRateLimitState()
   await testInstance.db.insert(schema.users).values([
@@ -103,6 +112,50 @@ beforeEach(async () => {
 afterEach(() => testInstance.close())
 
 describe('GET /api/app/saves', () => {
+  it('includes server-queued shares in preparing, scoped to the phone account', async () => {
+    testInstance.db
+      .insert(schema.phoneSaveQueue)
+      .values(
+        ['user-1', 'user-2'].map((userId) => ({
+          id: userId,
+          userId,
+          url: 'https://youtu.be/queued',
+          status: 'waiting',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })),
+      )
+      .run()
+    const list = await saves('', await phoneKey('user-1'))
+    expect(list.body).toMatchObject({ total: 0, items: [], preparing: 1 })
+  })
+
+  it('keeps old queued downloads visible when keeping is off or backfill excludes them', async () => {
+    saveFor('user-1', '100', '2026-10-01T00:00:00.000Z', {}, [{ type: 'video' }])
+    testInstance.db
+      .insert(schema.keepJobs)
+      .values({
+        platform: 'twitter',
+        postId: '100',
+        status: 'pending',
+        updatedAt: new Date().toISOString(),
+      })
+      .run()
+    const key = await phoneKey('user-1')
+    keepOn = false
+    const off = await saves('', key)
+    expect(off.body.items.map((item: { id: string }) => item.id)).toEqual(['100'])
+    expect(off.body.preparing).toBe(0)
+    keepOn = true
+    cutoff = '2026-10-02T00:00:00.000Z'
+    const old = await saves('', key)
+    expect(old.body.items.map((item: { id: string }) => item.id)).toEqual(['100'])
+    expect(old.body.preparing).toBe(0)
+    // Shared downloads may still run when another saver has a new-enough save.
+    saveFor('user-2', '100', '2026-10-03T00:00:00.000Z')
+    expect((await saves('', key)).body).toMatchObject({ total: 0, preparing: 1 })
+  })
+
   it('leaves a save out until its copy is kept, and says how many are on their way', async () => {
     saveFor('user-1', '100', '2026-10-01T00:00:00.000Z', {}, [{ type: 'video' }])
     saveFor('user-1', '200', '2026-10-02T00:00:00.000Z', {}, [{ type: 'video' }])

@@ -20,6 +20,8 @@ data class HistoryItem(
     val sharedAt: Long,
     /** saving · queued · saved · failed — see [ShareState]. */
     val state: String = ShareState.SAVING,
+    /** Server queue receipt, retained across app/worker restarts. */
+    val queueId: String? = null,
     val platform: String? = null,
     val network: String? = null,
     val postId: String? = null,
@@ -48,6 +50,7 @@ data class HistoryItem(
 
     fun savedWith(post: SaveResponse): HistoryItem = copy(
         state = ShareState.SAVED,
+        queueId = null,
         platform = post.platform.ifBlank { platform },
         network = post.network ?: network,
         postId = post.id.ifBlank { null },
@@ -60,6 +63,8 @@ data class HistoryItem(
         keep = keep ?: KeepStatus.WAITING,
         error = null,
     )
+
+    fun queuedWith(id: String): HistoryItem = copy(state = ShareState.SAVING, queueId = id)
 
     fun withStatus(status: StatusResponse): HistoryItem = copy(
         keep = status.status,
@@ -117,7 +122,12 @@ class HistoryStore private constructor(context: Context) {
     }
 
     private fun write(list: List<HistoryItem>) {
-        prefs.edit().putString(K_ITEMS, AdhxApi.json.encodeToString(serializer, list)).apply()
+        val receiptChanged = list.any { next ->
+            next.queueId != null && _items.value.firstOrNull { it.id == next.id }?.queueId != next.queueId
+        }
+        val edit = prefs.edit().putString(K_ITEMS, AdhxApi.json.encodeToString(serializer, list))
+        // Persist a new server receipt before a worker can be stopped and retried.
+        if (receiptChanged) edit.commit() else edit.apply()
         _items.value = list
     }
 

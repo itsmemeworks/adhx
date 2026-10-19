@@ -147,7 +147,11 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         val history = HistoryStore.get(context)
         // Every 1.5 s while the sheet is open; after that, now and then, so
         // Shared lately catches up while the app is still around.
-        val result = AdhxApi(connection).saveAndFollow(link, interval = { if (open) 1_500L else 10_000L })
+        val result = AdhxApi(connection).saveAndFollow(
+            link,
+            interval = { if (open) 1_500L else 10_000L },
+            onQueued = { id -> history.update(itemId) { it.queuedWith(id) } },
+        )
         when (result) {
             is ApiResult.Ok -> history.update(itemId) { it.savedWith(result.value) }
             is ApiResult.Offline -> {

@@ -14,6 +14,8 @@ import com.adhx.share.links.Links
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.KeepStatus
+import com.adhx.share.net.QueuedState
+import com.adhx.share.ui.Copy
 import com.adhx.share.work.SaveQueue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -147,7 +149,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val connection = store.current() ?: return
         if (refreshing) return
         val pending = items.value.filter {
-            it.state == ShareState.SAVED && !it.isFinal && it.platform != null && it.postId != null
+            (it.state == ShareState.SAVING && it.queueId != null) ||
+                (it.state == ShareState.SAVED && !it.isFinal && it.platform != null && it.postId != null)
         }
         if (pending.isEmpty()) return
         refreshing = true
@@ -155,6 +158,32 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val api = AdhxApi(connection)
                 for (item in pending) {
+                    val queueId = item.queueId
+                    if (item.state == ShareState.SAVING && queueId != null) {
+                        when (val result = api.queued(queueId)) {
+                            is ApiResult.Ok -> {
+                                _reach.value = Reach.Connected
+                                val progress = result.value
+                                when (progress.state) {
+                                    QueuedState.SAVED -> progress.post?.let { post ->
+                                        history.update(item.id) { it.savedWith(post) }
+                                    }
+                                    QueuedState.FAILED -> history.update(item.id) {
+                                        it.copy(state = ShareState.FAILED, queueId = null,
+                                            error = Copy.shareError(200, progress.code, progress.error))
+                                    }
+                                }
+                            }
+                            is ApiResult.Failed -> if (result.status == 404) {
+                                history.update(item.id) {
+                                    it.copy(state = ShareState.FAILED, queueId = null,
+                                        error = Copy.shareError(404, result.code, result.message))
+                                }
+                            }
+                            ApiResult.Offline -> break
+                        }
+                        continue
+                    }
                     when (val result = api.status(item.platform!!, item.postId!!)) {
                         is ApiResult.Ok -> {
                             _reach.value = Reach.Connected

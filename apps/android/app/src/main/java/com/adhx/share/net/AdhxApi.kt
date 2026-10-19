@@ -70,6 +70,7 @@ class AdhxApi(private val server: String, private val key: String?) {
         link: String,
         interval: () -> Long,
         limitMs: Long = FOLLOW_LIMIT_MS,
+        onQueued: (String) -> Unit = {},
     ): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
         val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link))
@@ -87,6 +88,16 @@ class AdhxApi(private val server: String, private val key: String?) {
             is ApiResult.Failed -> return started
             ApiResult.Offline -> return ApiResult.Offline
         }
+        onQueued(queueId)
+        return followQueued(queueId, interval, limitMs)
+    }
+
+    /** Resume a durably remembered share without posting the link again. */
+    suspend fun followQueued(
+        queueId: String,
+        interval: () -> Long,
+        limitMs: Long = FOLLOW_LIMIT_MS,
+    ): ApiResult<SaveResponse> {
         val until = System.currentTimeMillis() + limitMs
         while (System.currentTimeMillis() < until) {
             delay(interval())

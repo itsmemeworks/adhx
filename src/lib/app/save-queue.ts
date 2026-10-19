@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
 import { db } from '@/lib/db'
-import { phoneSaveQueue } from '@/lib/db/schema'
+import { phoneSaveQueue, users } from '@/lib/db/schema'
 import { addBookmark } from '@/lib/bookmarks/add'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
@@ -97,6 +97,7 @@ function claimNext(now: Date): typeof phoneSaveQueue.$inferSelect | null {
     .where(
       and(
         eq(phoneSaveQueue.status, 'waiting'),
+        sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${phoneSaveQueue.userId})`,
         or(isNull(phoneSaveQueue.nextAttemptAt), lte(phoneSaveQueue.nextAttemptAt, iso)),
       ),
     )
