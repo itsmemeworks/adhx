@@ -16,6 +16,9 @@ struct Saver: Codable, Hashable, Identifiable {
     let avatarUrl: String?
     let savedAt: String?
     let isYou: Bool
+    /// What they said with their save (at most 140 characters). Older
+    /// servers don't send it.
+    let note: String?
 
     var id: String { username }
 
@@ -27,15 +30,22 @@ struct Saver: Codable, Hashable, Identifiable {
     }
 
     init(username: String, name: String? = nil, avatarUrl: String? = nil, savedAt: String? = nil,
-         isYou: Bool = false) {
+         isYou: Bool = false, note: String? = nil) {
         self.username = username
         self.name = name
         self.avatarUrl = avatarUrl
         self.savedAt = savedAt
         self.isYou = isYou
+        self.note = Saver.clean(note)
     }
 
-    private enum CodingKeys: String, CodingKey { case username, name, avatarUrl, savedAt, isYou }
+    private enum CodingKeys: String, CodingKey { case username, name, avatarUrl, savedAt, isYou, note }
+
+    /// Trimmed, at most 140 characters, nil when empty.
+    static func clean(_ note: String?) -> String? {
+        guard let text = note?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+        return String(text.prefix(140))
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -44,6 +54,7 @@ struct Saver: Codable, Hashable, Identifiable {
         avatarUrl = (try? c.decodeIfPresent(String.self, forKey: .avatarUrl)) ?? nil
         savedAt = (try? c.decodeIfPresent(String.self, forKey: .savedAt)) ?? nil
         isYou = (try? c.decodeIfPresent(Bool.self, forKey: .isYou)) ?? false
+        note = Saver.clean((try? c.decodeIfPresent(String.self, forKey: .note)) ?? nil)
     }
 }
 
@@ -545,6 +556,10 @@ extension ADHXClient {
 
     /// Marks posts as watched (at most 50 at a time).
     func seen(_ posts: [PostRef]) async throws {
+        #if DEBUG
+        // `-adhxDryRun YES`: look around a shared test server without changing it.
+        if UserDefaults.standard.bool(forKey: "adhxDryRun") { return }
+        #endif
         let body: [String: Any] = ["posts": posts.prefix(50).map { ["platform": $0.platform, "id": $0.id] }]
         let _: Nothing = try await send("POST", "/api/app/seen", body: body)
     }

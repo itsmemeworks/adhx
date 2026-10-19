@@ -70,7 +70,7 @@ struct ChannelsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 24) {
                 if !model.loadedOnce {
                     HStack { Spacer(); RingSpinner(size: 34, lineWidth: 3); Spacer() }
                         .padding(.top, 60)
@@ -96,7 +96,7 @@ struct ChannelsView: View {
                     if !model.index.mine.isEmpty { madeForYou }
                 }
             }
-            .padding(.top, 12)
+            .padding(.top, 8)
             .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
@@ -133,9 +133,9 @@ struct ChannelsView: View {
 
     private var yourPeople: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "Your people", detail: nil)
+            SectionTitle(title: "Your people", detail: nil, size: 28)
             ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: 16) {
+                LazyHStack(alignment: .top, spacing: 14) {
                     ForEach(model.index.friends) { person in
                         Button { friend = person } label: {
                             PersonButton(person: person, server: server)
@@ -151,8 +151,8 @@ struct ChannelsView: View {
 
     private var madeForYou: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "Made for you", detail: "Built from what you keep. No ad tech consulted.")
-            VStack(spacing: 10) {
+            SectionTitle(title: "Made for you", detail: "Built from what you keep. No ad tech consulted.", size: 28)
+            VStack(spacing: 8) {
                 ForEach(model.index.mine) { channel in
                     Button { play(.mine, channel.slug) } label: {
                         MineRow(channel: channel, server: server, opening: model.opening == "mine:\(channel.slug)")
@@ -185,11 +185,12 @@ struct ChannelsView: View {
 struct SectionTitle: View {
     let title: String
     let detail: String?
+    var size: CGFloat = 32
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(Theme.serif(32))
+                .font(Theme.serif(size))
                 .foregroundStyle(.white)
                 .accessibilityAddTraits(.isHeader)
             if let detail {
@@ -305,7 +306,7 @@ private struct GroupTile: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             Text(channel.name)
                 .font(Theme.sans(15, .heavy))
-                .foregroundStyle(Theme.cream)
+                .foregroundStyle(Theme.ink)
                 .lineLimit(1)
             HStack(spacing: 7) {
                 if !channel.savers.isEmpty {
@@ -345,26 +346,34 @@ private struct PersonButton: View {
     let server: URL
 
     var body: some View {
-        VStack(spacing: 8) {
-            Face(saver: person.asSaver, server: server, size: 64, ring: Theme.app)
+        VStack(spacing: 6) {
+            // The boards' double ring: a gap the colour of the page, then
+            // yellow when there's something new (a plate otherwise).
+            Face(saver: person.asSaver, server: server, size: 60, ring: .clear)
+                .padding(2)
+                .background(GobShape().fill(Theme.app))
+                .padding(2)
+                .background(GobShape().fill(person.newCount > 0 ? Theme.accent : Theme.plate))
                 .overlay(alignment: .topTrailing) {
                     if person.newCount > 0 {
                         Text(person.newCount > 99 ? "99+" : "\(person.newCount)")
                             .font(Theme.sans(12, .heavy))
                             .foregroundStyle(.black)
-                            .padding(.horizontal, 6)
-                            .frame(minWidth: 24, minHeight: 24)
+                            .padding(.horizontal, 5)
+                            .frame(minWidth: 22, minHeight: 22)
                             .background(Capsule().fill(Theme.accent))
-                            .overlay(Capsule().strokeBorder(Theme.app, lineWidth: 2))
-                            .offset(x: 4, y: -2)
+                            .padding(2)
+                            .background(Capsule().fill(Theme.app))
+                            .fixedSize()
+                            .offset(x: 0, y: -2)
                     }
                 }
             Text(person.displayName)
-                .font(Theme.sans(13, .bold))
-                .foregroundStyle(Theme.cream)
+                .font(Theme.sans(13, .semibold))
+                .foregroundStyle(Theme.ink)
                 .lineLimit(1)
         }
-        .frame(width: 72)
+        .frame(width: 68)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(person.displayName)’s saves" + (person.newCount > 0 ? ", \(person.newCount) new" : ""))
@@ -378,33 +387,35 @@ private struct MineRow: View {
     let opening: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             CoverImage(url: ADHXClient.resolve(channel.covers.first, against: server))
-                .frame(width: 96, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            VStack(alignment: .leading, spacing: 3) {
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
                 Text(channel.name)
-                    .font(Theme.sans(16, .heavy))
-                    .foregroundStyle(.white)
+                    .font(Theme.sans(15, .heavy))
+                    .foregroundStyle(Theme.ink)
                     .lineLimit(1)
                 Text(detail)
                     .font(Theme.sans(13))
-                    .foregroundStyle(Theme.muted)
+                    .foregroundStyle(Theme.faint)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
-            if opening {
-                RingSpinner(size: 22, lineWidth: 2)
-            } else {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.black)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(Theme.accent))
+            Group {
+                if opening {
+                    RingSpinner(size: 22, lineWidth: 2)
+                } else {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.ink)
+                }
             }
+            .frame(width: 44, height: 44)
+            .background(Circle().fill(Theme.plate))
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.surface))
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.surface))
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(channel.name), \(detail)")
@@ -469,9 +480,11 @@ struct FriendChannelScreen: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
-                Face(saver: friend, server: server, size: 64, ring: Theme.app)
+                Face(saver: friend, server: server, size: 64, ring: .clear)
                     .padding(3)
-                    .overlay(GobShape().strokeBorder(Face.colour(for: friend.username).opacity(0.4), lineWidth: 2))
+                    .background(GobShape().fill(Theme.app))
+                    .padding(2)
+                    .background(GobShape().fill(Face.colour(for: friend.username).opacity(0.35)))
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(Theme.serif(40))
@@ -488,7 +501,7 @@ struct FriendChannelScreen: View {
                 } label: {
                     Label("Play all", systemImage: "play.fill")
                 }
-                .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false))
+                .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false, fontSize: 15))
             }
         }
     }
@@ -504,7 +517,7 @@ struct FriendChannelScreen: View {
                     Text("\(newCount) you haven’t seen").foregroundStyle(Theme.accent)
                 }
             }
-            .font(Theme.sans(13, .bold))
+            .font(Theme.sans(13, .semibold))
             .accessibilityElement(children: .combine)
         }
     }
@@ -522,18 +535,40 @@ struct FriendChannelScreen: View {
                 .font(Theme.sans(15))
                 .foregroundStyle(Theme.muted)
         } else {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
-                      spacing: 10) {
-                ForEach(posts, id: \.key) { post in
-                    Button {
-                        playing = PlayQueue(posts: posts, start: post.key)
-                    } label: {
-                        PostTile(post: post, server: server, hiddenSaver: friend.username)
+            // Two columns of posters in their own shapes, each post going to
+            // the shorter column (the boards' masonry).
+            let columns = Self.columns(posts)
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(0..<2, id: \.self) { column in
+                    LazyVStack(spacing: 10) {
+                        ForEach(columns[column], id: \.key) { post in
+                            Button {
+                                playing = PlayQueue(posts: posts, start: post.key)
+                            } label: {
+                                PostTile(post: post, server: server, hiddenSaver: friend.username)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+
+    /// Posts split into two columns, each to the one that's shorter so far.
+    static func columns(_ posts: [PhonePost]) -> [[PhonePost]] {
+        var out: [[PhonePost]] = [[], []]
+        var heights: [CGFloat] = [0, 0]
+        for post in posts {
+            var aspect: CGFloat = 0.75
+            if let media = post.media.first, let w = media.width, let h = media.height, w > 0, h > 0 {
+                aspect = min(max(CGFloat(w) / CGFloat(h), 0.6), 1)
+            }
+            let column = heights[0] <= heights[1] ? 0 : 1
+            out[column].append(post)
+            heights[column] += 1 / aspect + 0.06
+        }
+        return out
     }
 
     private func load() async {

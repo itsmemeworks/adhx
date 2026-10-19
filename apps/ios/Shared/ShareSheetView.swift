@@ -42,27 +42,18 @@ struct ShareSheetScreen: View {
     }
 
     private var sheet: some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(Theme.hairline)
-                .frame(width: 40, height: 5)
-                .padding(.top, 10)
-                .padding(.bottom, 18)
-                .accessibilityHidden(true)
-            content
-        }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 18)
+        content
+        .padding(20)
         .frame(maxWidth: .infinity)
         .background {
             // Frosted: the app underneath shows through, blurred and darkened.
-            let shape = RoundedRectangle(cornerRadius: 30, style: .continuous)
+            let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
             shape.fill(.ultraThinMaterial)
-                .overlay(shape.fill(Theme.surface.opacity(0.55)))
-                .overlay(shape.strokeBorder(.white.opacity(0.08), lineWidth: 1))
-                .shadow(color: .black.opacity(0.35), radius: 24, y: 8)
+                .overlay(shape.fill(Theme.surface.opacity(0.8)))
+                .overlay(shape.strokeBorder(.white.opacity(0.1), lineWidth: 1))
+                .shadow(color: .black.opacity(0.5), radius: 30, y: 24)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .padding(.bottom, 8)
         .background {
             GeometryReader { proxy in
@@ -217,13 +208,13 @@ private struct ProgressBar: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(Theme.raised)
+                Capsule().fill(.white.opacity(0.12))
                 Capsule().fill(Theme.accent)
                     .frame(width: geo.size.width * min(1, max(0, fraction)))
                     .animation(.easeOut(duration: 0.4), value: fraction)
             }
         }
-        .frame(height: 6)
+        .frame(height: 4)
         .accessibilityHidden(true)
     }
 }
@@ -233,7 +224,7 @@ private struct ButtonsRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Button("Open in ADHX") { flow.openInADHX() }
-                .buttonStyle(PillButtonStyle(kind: .outline))
+                .buttonStyle(PillButtonStyle(kind: .raised, fontSize: 16))
             Button("Done") { flow.requestClose() }
                 .buttonStyle(PillButtonStyle(kind: .primary))
         }
@@ -248,10 +239,13 @@ private func playable(_ platform: String?, _ category: String?) -> Bool {
 /// Who will see this save, and the "Just for me" switch.
 private struct Audience: View {
     @ObservedObject var flow: ShareFlow
+    /// "Add a note", once the post is saved.
+    var withNote = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             who
+            if withNote { NoteField(flow: flow) }
             JustForMeSwitch(isOn: flow.justForMe, busy: flow.privacyBusy) { flow.setJustForMe($0) }
             if let error = flow.privacyError {
                 Text(error)
@@ -264,21 +258,21 @@ private struct Audience: View {
     private var who: some View {
         HStack(spacing: 12) {
             if flow.justForMe {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 16, weight: .bold))
+                Image(systemName: "lock")
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.black)
                     .frame(width: 36, height: 36)
-                    .background(Circle().fill(Theme.cream))
+                    .background(Circle().fill(Theme.ink))
                 Text("Only you will see this save. It’s still kept and searchable.")
             } else {
                 if !flow.people.isEmpty {
                     FaceStack(savers: flow.people, server: flow.server, size: 30,
-                              ring: Theme.surface, limit: 4)
+                              ring: Color(hex: 0x22201C), limit: 4)
                 }
                 Text(audienceLine)
             }
         }
-        .font(Theme.sans(15, .bold))
+        .font(Theme.sans(15, .semibold))
         .lineSpacing(2)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 12)
@@ -319,18 +313,18 @@ struct JustForMeSwitch: View {
                     if busy {
                         RingSpinner(size: 18, lineWidth: 2, track: .clear)
                     } else {
-                        Image(systemName: isOn ? "lock.fill" : "lock.open")
+                        Image(systemName: "lock")
                             .font(.system(size: 16, weight: .semibold))
                     }
                 }
                 .foregroundStyle(isOn ? .black : Theme.muted)
                 .frame(width: 40, height: 40)
-                .background(Circle().fill(isOn ? Theme.accent : Theme.raised))
+                .background(Circle().fill(isOn ? Theme.accent : Theme.plate))
                 .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Just for me")
-                        .font(Theme.sans(16, .bold))
-                        .foregroundStyle(.white)
+                        .font(Theme.sans(16, .semibold))
+                        .foregroundStyle(Theme.ink)
                     Text(isOn ? "Your people won’t see this save" : "Keep it private. Still kept, still searchable.")
                         .font(Theme.sans(13))
                         .foregroundStyle(Theme.faint)
@@ -338,8 +332,7 @@ struct JustForMeSwitch: View {
                 }
             }
         }
-        .toggleStyle(.switch)
-        .tint(Theme.accent)
+        .toggleStyle(BoardSwitchStyle())
         .disabled(busy)
         .frame(minHeight: 48)
         .accessibilityHint("Only you will see this save. It’s still kept and searchable.")
@@ -391,62 +384,119 @@ private struct SavingContent: View {
     }
 }
 
+/// Saved: a tall poster with a check (or a lock) on its corner, the small
+/// wordmark, "Saved for your people", the network and the copy's progress;
+/// then who will see it, a note, Just for me, and Open / Done.
 private struct SavedContent: View {
     @ObservedObject var flow: ShareFlow
 
     var body: some View {
         let wide = Network.isWide(flow.platform)
         let hasPoster = flow.posterURL != nil
-        VStack(alignment: .leading, spacing: 18) {
-            SheetHeader(closeLabel: "Close") { flow.requestClose() }
-
-            HStack(alignment: wide || !hasPoster ? .center : .top, spacing: 14) {
-                if hasPoster {
-                    Poster(url: flow.posterURL, platform: flow.platform, wide: wide,
-                           showPlay: playable(flow.platform, flow.result?.category))
-                } else {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Theme.placeholder)
-                        .frame(width: 56, height: 56)
-                        .overlay(NetworkMark(platform: flow.platform, size: 24))
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                Group {
+                    if hasPoster {
+                        TallPoster(url: flow.posterURL, wide: wide)
+                    } else {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Theme.placeholder)
+                            .frame(width: 84, height: 84)
+                            .overlay(NetworkMark(platform: flow.platform, size: 28))
+                    }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: flow.justForMe ? "lock" : "checkmark")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(.black)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(flow.justForMe ? Theme.ink : Theme.accent))
+                        .padding(3)
+                        .background(Circle().fill(Theme.surface))
+                        .offset(x: 9, y: 9)
+                        .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    NetworkLabel(platform: flow.platform, text: flow.networkName)
-                    if let title = flow.title {
-                        Text(title)
-                            .font(Theme.sans(16, .heavy))
-                            .lineLimit(Network.titleIsWords(flow.platform) ? 2 : 1)
-                    }
-                    if let words = flow.words {
-                        Text(words)
-                            .font(Theme.sans(14))
-                            .foregroundStyle(Theme.muted)
-                            .lineSpacing(2)
-                            .lineLimit(3)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            StatusBox {
-                HStack(spacing: 10) {
-                    Circle()
-                        .fill(Theme.accent)
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 14, weight: .heavy))
-                                .foregroundStyle(.black)
-                        )
+                    Wordmark(markSize: 20, textSize: 20)
                     Text(flow.justForMe ? "Saved, just for you" : "Saved for your people")
-                        .font(Theme.sans(17, .heavy))
+                        .font(Theme.serif(34))
+                        .lineSpacing(-3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(flow.networkName)
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.faint)
+                        .lineLimit(1)
+                    if !hasPoster, let title = flow.title {
+                        Text(title)
+                            .font(Theme.sans(14, .semibold))
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 0)
+                    KeepProgress(keep: flow.keep)
                 }
-                KeepProgress(keep: flow.keep)
+                .frame(maxWidth: .infinity, minHeight: hasPoster && !wide ? 148 : nil, alignment: .topLeading)
             }
+            // As tall as the poster: the progress sits along its bottom.
+            .fixedSize(horizontal: false, vertical: true)
 
-            Audience(flow: flow)
+            Audience(flow: flow, withNote: true)
 
             ButtonsRow(flow: flow)
+        }
+    }
+}
+
+/// The post's poster on the Saved card: tall (84×148), or a wide one cropped to fit.
+private struct TallPoster: View {
+    let url: URL?
+    let wide: Bool
+
+    var body: some View {
+        Theme.placeholder
+            .overlay {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image { image.resizable().scaledToFill() } else { Color.clear }
+                }
+            }
+            .frame(width: 84, height: wide ? 84 : 148)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}
+
+/// "Add a note": a line said with the save, up to 140 characters.
+private struct NoteField: View {
+    @ObservedObject var flow: ShareFlow
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Add a note")
+                .font(Theme.sans(13, .semibold))
+                .foregroundStyle(Theme.muted)
+                .accessibilityHidden(true)
+            TextField("", text: $flow.note,
+                      prompt: Text(flow.justForMe ? "A note to future you" : "Say why they’ll like it")
+                          .foregroundColor(Theme.faint))
+                .font(Theme.sans(16))
+                .foregroundStyle(Theme.ink)
+                .tint(Theme.accent)
+                .focused($focused)
+                .submitLabel(.done)
+                .onSubmit { focused = false }
+                .onChange(of: flow.note) { _, text in
+                    if text.count > ShareFlow.noteLimit { flow.note = String(text.prefix(ShareFlow.noteLimit)) }
+                }
+                .onChange(of: focused) { _, now in if now { flow.touch() } }
+                .padding(.horizontal, 16)
+                .frame(height: 48)
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.app))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(focused || !flow.note.isEmpty ? Theme.accent.opacity(0.6) : .white.opacity(0.12),
+                                  lineWidth: 1))
+                .accessibilityLabel("Add a note")
+                .accessibilityHint("Your people see it with the save. Up to \(ShareFlow.noteLimit) characters.")
         }
     }
 }
@@ -461,18 +511,14 @@ private struct KeepProgress: View {
                                                quality: keep.quality, kept: keep.kept, withPercent: false)
             let showsBar = keep.status == "keeping" || keep.status == "kept"
             let percent = keep.status == "kept" ? 100 : keep.percent
-            HStack {
-                Text(line)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(showsBar && percent != nil && keep.status != "kept" ? "\(line) · \(percent!)%" : line)
+                    .font(Theme.sans(12, .semibold))
                     .foregroundStyle(tone == .warn ? Theme.warn : Theme.muted)
                     .lineLimit(1)
-                Spacer(minLength: 8)
-                if showsBar, let percent {
-                    Text("\(percent)%").foregroundStyle(Theme.muted)
+                if showsBar {
+                    ProgressBar(fraction: Double(percent ?? 0) / 100)
                 }
-            }
-            .font(Theme.sans(13))
-            if showsBar {
-                ProgressBar(fraction: Double(percent ?? 0) / 100)
             }
         }
     }

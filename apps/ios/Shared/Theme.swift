@@ -1,3 +1,4 @@
+import CoreText
 import SwiftUI
 import UIKit
 
@@ -7,6 +8,10 @@ enum Theme {
     static let behind = Color.black
     static let surface = Color(hex: 0x1A1814)
     static let raised = Color(hex: 0x2A2620)
+    /// The boards' quiet buttons and round icon plates (#262320).
+    static let plate = Color(hex: 0x262320)
+    /// The boards' white text on dark (#f4f1ea).
+    static let ink = Color(hex: 0xF4F1EA)
     static let placeholder = Color(hex: 0x2A2825)
     static let hairline = Color(hex: 0x4A453C)
     static let accent = Color(hex: 0xFFD23F)
@@ -26,16 +31,85 @@ enum Theme {
         return Color(hex: value)
     }
 
-    /// Instrument Serif when it's bundled (see README), else the system serif.
+    /// Instrument Serif (bundled in `Shared/Fonts`), else the system serif.
     static func serif(_ size: CGFloat) -> Font {
+        BundledFonts.register()
         if UIFont(name: "InstrumentSerif-Regular", size: size) != nil {
             return .custom("InstrumentSerif-Regular", size: size)
         }
         return .system(size: size, weight: .regular, design: .serif)
     }
 
+    /// Hanken Grotesk (bundled, one variable file), else the system sans.
     static func sans(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight)
+        if let font = BundledFonts.hanken(size, weight) { return Font(font) }
+        return .system(size: size, weight: weight)
+    }
+}
+
+/// The designs' two families, OFL, in `Shared/Fonts`. Registered for this
+/// process on first use (the variable Hanken Grotesk is a .woff2, which
+/// CoreText reads but `UIAppFonts` doesn't promise to).
+enum BundledFonts {
+    private static let registered: Bool = {
+        let bundle = Bundle.main
+        let urls = ["InstrumentSerif-Regular.ttf", "HankenGrotesk-latin-variable.woff2"].compactMap { name -> URL? in
+            let parts = name.split(separator: ".", maxSplits: 1).map(String.init)
+            return bundle.url(forResource: parts[0], withExtension: parts[1])
+                ?? bundle.url(forResource: parts[0], withExtension: parts[1], subdirectory: "Fonts")
+        }
+        for url in urls { CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil) }
+        return !urls.isEmpty
+    }()
+
+    static func register() { _ = registered }
+
+    private static var cache: [String: UIFont] = [:]
+    private static let lock = NSLock()
+    /// 'wght'
+    private static let weightAxis = 0x7767_6874
+
+    static func hanken(_ size: CGFloat, _ weight: Font.Weight) -> UIFont? {
+        register()
+        let value = weightValue(weight)
+        let key = "\(size)-\(value)"
+        lock.lock()
+        defer { lock.unlock() }
+        if let font = cache[key] { return font }
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .family: "Hanken Grotesk",
+            UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): [weightAxis: value],
+        ])
+        let font = UIFont(descriptor: descriptor, size: size)
+        guard font.familyName == "Hanken Grotesk" else { return nil }
+        cache[key] = font
+        return font
+    }
+
+    private static func weightValue(_ weight: Font.Weight) -> Int {
+        switch weight {
+        case .ultraLight: return 200
+        case .thin: return 100
+        case .light: return 300
+        case .medium: return 500
+        case .semibold: return 600
+        case .bold: return 700
+        case .heavy: return 800
+        case .black: return 900
+        default: return 400
+        }
+    }
+}
+
+extension View {
+    /// The boards' frosted glass: a blur of what's behind, darkened
+    /// (`background: rgba(0,0,0,dim); backdrop-filter: blur(12px)`).
+    func frosted<S: Shape>(_ shape: S, dim: Double = 0.45) -> some View {
+        background {
+            shape.fill(.ultraThinMaterial)
+                .overlay(shape.fill(Color.black.opacity(dim)))
+                .environment(\.colorScheme, .dark)
+        }
     }
 }
 
@@ -53,7 +127,7 @@ extension Color {
 /// eyes that never match and a mouth tilted −7°, on a 96×96 grid.
 /// `busy` gives a worried "o" mouth and a gentle bob (none under Reduce Motion).
 struct Gob: View {
-    enum Mood { case idle, busy }
+    enum Mood { case idle, busy, happy }
 
     var size: CGFloat = 30
     var mood: Mood = .idle
@@ -64,6 +138,10 @@ struct Gob: View {
 
     var body: some View {
         Canvas { context, canvasSize in
+            if mood == .happy {
+                Self.drawHappy(&context, canvasSize)
+                return
+            }
             context.scaleBy(x: canvasSize.width / 96, y: canvasSize.height / 96)
             context.rotate(-4, around: CGPoint(x: 48, y: 50))
 
@@ -95,6 +173,28 @@ struct Gob: View {
             return
         }
         withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) { bobUp = true }
+    }
+
+    /// Grinning, eyes squeezed shut (the "connected" board), on a 40×40 grid tilted −7°.
+    private static func drawHappy(_ context: inout GraphicsContext, _ size: CGSize) {
+        context.scaleBy(x: size.width / 40, y: size.height / 40)
+        context.rotate(-7, around: CGPoint(x: 20, y: 20))
+        context.fill(Path(roundedRect: CGRect(x: 3, y: 3, width: 34, height: 34), cornerRadius: 14),
+                     with: .color(Theme.accent))
+        func arc(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ rise: CGFloat, _ line: CGFloat) {
+            var path = Path()
+            path.move(to: CGPoint(x: x, y: y))
+            path.addQuadCurve(to: CGPoint(x: x + w, y: y), control: CGPoint(x: x + w / 2, y: y - rise))
+            context.stroke(path, with: .color(ink), style: StrokeStyle(lineWidth: line, lineCap: .round))
+        }
+        arc(10.5, 17.5, 6, 8, 2.4)
+        arc(21.5, 17, 9, 12, 2.6)
+        var mouth = Path()
+        mouth.move(to: CGPoint(x: 13.5, y: 25))
+        mouth.addQuadCurve(to: CGPoint(x: 26.5, y: 24.5), control: CGPoint(x: 20, y: 37))
+        mouth.closeSubpath()
+        context.fill(mouth, with: .color(ink))
+        context.stroke(mouth, with: .color(ink), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))
     }
 
     private static func circle(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat) -> CGRect {
@@ -155,30 +255,42 @@ struct RingSpinner: View {
     }
 }
 
-/// Rounded pill buttons: yellow filled, or cream outline.
+/// Rounded pill buttons, as on the boards: yellow filled (16/800), a quiet
+/// hairline outline, or a raised plate (15/600).
 struct PillButtonStyle: ButtonStyle {
-    enum Kind { case primary, outline, warn }
+    enum Kind { case primary, outline, raised, warn }
     var kind: Kind = .primary
     var height: CGFloat = 52
     var fullWidth = true
+    /// Overrides the kind's own size.
+    var fontSize: CGFloat?
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(Theme.sans(15, .heavy))
+            .font(Theme.sans(fontSize ?? (kind == .primary ? 16 : 15), kind == .primary ? .heavy : .semibold))
             .lineLimit(1)
+            .minimumScaleFactor(0.85)
             .padding(.horizontal, 20)
             .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: height)
             .foregroundStyle(foreground)
-            .background(Capsule().fill(kind == .primary ? Theme.accent : Color.clear))
-            .overlay(Capsule().strokeBorder(border, lineWidth: 1.5))
+            .background(Capsule().fill(fill))
+            .overlay(Capsule().strokeBorder(border, lineWidth: 1))
             .contentShape(Capsule())
             .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+
+    private var fill: Color {
+        switch kind {
+        case .primary: return Theme.accent
+        case .raised: return Theme.plate
+        case .outline, .warn: return .clear
+        }
     }
 
     private var foreground: Color {
         switch kind {
         case .primary: return .black
-        case .outline: return Theme.cream
+        case .outline, .raised: return Theme.ink
         case .warn: return Theme.warn
         }
     }
@@ -186,8 +298,50 @@ struct PillButtonStyle: ButtonStyle {
     private var border: Color {
         switch kind {
         case .primary: return .clear
-        case .outline: return Theme.cream
+        case .outline: return .white.opacity(0.16)
+        case .raised: return .white.opacity(0.12)
         case .warn: return Theme.warn
+        }
+    }
+}
+
+/// The boards' switch: 48×28, yellow with a black knob when on, a dark
+/// track with a cream knob when off.
+struct BoardSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            HStack(spacing: 14) {
+                configuration.label
+                Spacer(minLength: 0)
+                Knob(on: configuration.isOn)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityRepresentation {
+            Toggle(isOn: configuration.$isOn) { configuration.label }
+        }
+    }
+
+    struct Knob: View {
+        let on: Bool
+        @Environment(\.isEnabled) private var enabled
+
+        var body: some View {
+            Capsule()
+                .fill(on ? Theme.accent : Color(hex: 0x4A453E))
+                .frame(width: 48, height: 28)
+                .overlay(alignment: on ? .trailing : .leading) {
+                    Circle()
+                        .fill(on ? Color.black : Theme.ink)
+                        .frame(width: 22, height: 22)
+                        .padding(3)
+                }
+                .opacity(enabled ? 1 : 0.6)
+                .animation(.easeOut(duration: 0.15), value: on)
+                .accessibilityHidden(true)
         }
     }
 }
@@ -200,10 +354,10 @@ struct CloseButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "xmark")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(.white)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.muted)
                 .frame(width: 44, height: 44)
-                .background(Circle().fill(Theme.raised))
+                .background(Circle().fill(Theme.plate))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)

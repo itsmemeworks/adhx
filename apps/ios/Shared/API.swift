@@ -376,8 +376,11 @@ struct ADHXClient {
 
     /// `isPrivate` saves it "Just for me"; nil leaves the server's default
     /// (shared with your people, or what a repeat save already had).
-    func save(url: String, private isPrivate: Bool? = nil, deferPublish: Bool = false, requestId: String? = nil) async throws -> SaveAnswer {
+    /// `note` is what you say with it (at most 140 characters; older servers ignore it).
+    func save(url: String, private isPrivate: Bool? = nil, deferPublish: Bool = false, requestId: String? = nil,
+              note: String? = nil) async throws -> SaveAnswer {
         var body: [String: Any] = ["url": url]
+        if let note = Saver.clean(note) { body["note"] = note }
         if let isPrivate { body["private"] = isPrivate }
         if deferPublish { body["deferPublish"] = true }
         if let requestId { body["requestId"] = requestId }

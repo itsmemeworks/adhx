@@ -21,15 +21,15 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
                     RoundBackButton(label: "Back to the feed")
                     Text("Settings")
                         .font(Theme.serif(32))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.ink)
                         .accessibilityAddTraits(.isHeader)
                 }
-                .padding(.bottom, 4)
+                .frame(height: 52)
 
                 youCard
                 if !settings.requests.isEmpty { waitingCard }
@@ -52,7 +52,7 @@ struct SettingsView: View {
                     .padding(.top, 6)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.top, 0)
             .padding(.bottom, 24)
         }
         .refreshable { await settings.load() }
@@ -88,7 +88,7 @@ struct SettingsView: View {
                 FeedFilterSheet(types: feed.types, mode: feed.mode, newCount: nil, hidden: feed.hidden,
                                 setTypes: { types in Task { await feed.setTypes(types) } },
                                 choose: { mode in Task { await feed.setMode(mode) } })
-                    .presentationDetents([.height(660), .large])
+                    .presentationDetents([.height(580), .large])
                     .presentationDragIndicator(.visible)
                     .presentationBackground(Theme.surface)
                     .presentationCornerRadius(28)
@@ -139,7 +139,7 @@ struct SettingsView: View {
 
             Button("Change picture", action: changePicture)
                 .font(Theme.sans(14, .bold))
-                .foregroundStyle(Theme.cream)
+                .foregroundStyle(Theme.ink)
                 .lineLimit(1)
                 .fixedSize()
                 .padding(.horizontal, 14)
@@ -166,7 +166,7 @@ struct SettingsView: View {
     // MARK: Waiting for you
 
     private var waitingCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Text("WAITING FOR YOU")
                     .font(Theme.sans(13, .heavy))
@@ -191,9 +191,6 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.warn)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Text("Nobody gets in until you say yes.")
-                .font(Theme.sans(12))
-                .foregroundStyle(Theme.faint)
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
@@ -205,7 +202,7 @@ struct SettingsView: View {
         let busy = settings.answering == request.id
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Face(saver: request.asSaver, server: model.server, size: 44, ring: Theme.surface)
+                Face(saver: request.asSaver, server: model.server, size: 44, ring: .clear)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(request.shownName) wants in")
                         .font(Theme.sans(15, .heavy))
@@ -227,21 +224,31 @@ struct SettingsView: View {
                         Text("Let \(request.shownName) in")
                     }
                 }
-                .buttonStyle(PillButtonStyle(kind: .primary, height: 44))
+                .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fontSize: 15))
                 Button("Not now") {
                     Task { await settings.answer(request, .notNow) }
                 }
-                .buttonStyle(PillButtonStyle(kind: .outline, height: 44))
+                .buttonStyle(QuietOutline())
                 .accessibilityHint("Hides this for a few days. They keep waiting.")
             }
             .disabled(busy)
-            Button("Decline") { declining = request }
-                .font(Theme.sans(13, .bold))
-                .foregroundStyle(Theme.warn)
-                .frame(minHeight: 44)
-                .buttonStyle(.plain)
-                .disabled(busy)
-                .accessibilityLabel("Decline \(request.shownName)")
+            // Small, under the two: keeping someone out is the rare answer.
+            HStack(spacing: 6) {
+                Text("Nobody gets in until you say yes.")
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Theme.faint)
+                Spacer(minLength: 0)
+                Button("Decline") { declining = request }
+                    .font(Theme.sans(12, .bold))
+                    .foregroundStyle(Theme.warn)
+                    .frame(minHeight: 28)
+                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
+                    .disabled(busy)
+                    .accessibilityLabel("Decline \(request.shownName)")
+            }
+            .padding(.top, -4)
+            .padding(.bottom, -6)
         }
     }
 
@@ -280,12 +287,12 @@ struct SettingsView: View {
             }
             if settings.people?.canInvite ?? true {
                 Button(action: invite) {
-                    SettingsRow(title: "Invite someone", subtitle: "Makes a link on your ADHX", external: true) {
+                    SettingsRow(title: "Invite someone", external: true) {
                         EmptyView()
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint("Opens your ADHX in the browser")
+                .accessibilityHint("Makes a link on your ADHX, in the browser")
                 divider
             }
             if let feed, !feed.unsupported {
@@ -436,7 +443,7 @@ struct SettingsRow<Trailing: View>: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(Theme.sans(15, .bold))
-                    .foregroundStyle(Theme.cream)
+                    .foregroundStyle(Theme.ink)
                 if let subtitle {
                     Text(subtitle)
                         .font(Theme.sans(12))
@@ -467,7 +474,7 @@ private struct ToggleRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(Theme.sans(15, .bold))
-                    .foregroundStyle(Theme.cream)
+                    .foregroundStyle(Theme.ink)
                 if let subtitle {
                     Text(subtitle)
                         .font(Theme.sans(12))
@@ -475,7 +482,7 @@ private struct ToggleRow: View {
                 }
             }
         }
-        .tint(Theme.accent)
+        .toggleStyle(BoardSwitchStyle())
         .padding(.horizontal, 16)
         .frame(minHeight: subtitle == nil ? 56 : 64)
     }
@@ -515,15 +522,20 @@ private struct DoingSettingsRow: View {
     var body: some View {
         SettingsRow(title: "What your ADHX is doing",
                     subtitle: doing.line ?? (doing.loadedOnce ? "Nothing on its way" : nil)) {
-            if doing.needsYou > 0 {
-                Text("\(doing.needsYou)")
-                    .font(Theme.sans(11, .heavy))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 6)
-                    .frame(minWidth: 20, minHeight: 20)
-                    .background(Capsule().fill(Theme.accent))
-                    .accessibilityHidden(true)
-            }
+            EmptyView()
         }
+    }
+}
+
+/// "Not now": a hairline outline, 15/700 (the boards' quiet second answer).
+private struct QuietOutline: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Theme.sans(15, .bold))
+            .foregroundStyle(Theme.ink)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .overlay(Capsule().strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
+            .contentShape(Capsule())
+            .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

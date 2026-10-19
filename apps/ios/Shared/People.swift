@@ -41,6 +41,12 @@ enum SaverWords {
         return names.prefix(limit).joined(separator: ", ") + " and \(rest) other" + (rest == 1 ? "" : "s")
     }
 
+    /// The saver whose note the byline shows: a friend's first (newest
+    /// first), else yours.
+    static func noted(_ savers: [Saver]) -> Saver? {
+        savers.first { !$0.isYou && $0.note != nil } ?? savers.first { $0.note != nil }
+    }
+
     /// The newest saver's time: "2h", "20m".
     static func when(_ savers: [Saver]) -> String? {
         let newest = savers.compactMap { Format.date($0.savedAt) }.max()
@@ -158,8 +164,10 @@ struct Face: View {
         Rectangle()
             .fill(Self.colour(for: saver.username))
             .overlay(
-                Text(String(saver.displayName.prefix(1)).uppercased())
-                    .font(.system(size: size * 0.44, weight: .heavy))
+                // Your own face shows your initial, not the "Y" of "You".
+                Text(String((saver.isYou ? (saver.name?.isEmpty == false ? saver.name! : saver.username)
+                                         : saver.displayName).prefix(1)).uppercased())
+                    .font(Theme.sans(size * 0.42, .heavy))
                     .foregroundStyle(.black)
             )
     }

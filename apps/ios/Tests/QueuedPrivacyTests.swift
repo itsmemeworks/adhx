@@ -20,6 +20,14 @@ struct QueuedPrivacyTests {
             }
             return
         }
+        // Save notes decode loosely: present, missing, blank or too long.
+        let noted = try JSONDecoder().decode([Saver].self, from: Data(#"""
+            [{"username":"ben","note":"  you're welcome "},{"username":"ana"},{"username":"jo","note":""},
+             {"username":"mum","note":7},{"username":"pete","note":"\#(String(repeating: "x", count: 200))"}]
+            """#.utf8))
+        precondition(noted[0].note == "you're welcome")
+        precondition(noted[1].note == nil && noted[2].note == nil && noted[3].note == nil)
+        precondition(noted[4].note?.count == 140)
         var record = ShareRecord(link: "https://example.com/post")
         record.queue("receipt")
         record.publishPending = true

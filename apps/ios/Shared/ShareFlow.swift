@@ -30,6 +30,11 @@ final class ShareFlow: ObservableObject {
     /// The card's height, so the extension can ask iOS for a sheet that fits it.
     @Published var cardHeight: CGFloat = 0
 
+    /// "Add a note": said with the save, on the byline of everyone who sees it.
+    @Published var note = ""
+    static let noteLimit = 140
+    private var noteTask: Task<Void, Never>?
+
     /// "Just for me": no one else sees, counts or is told about this save.
     @Published private(set) var justForMe = false
     /// Telling the server about a switch made after the save went.
@@ -127,6 +132,23 @@ final class ShareFlow: ObservableObject {
     func waitForSave() async {
         await saveTask?.value
         await privacyTask?.value
+        await noteTask?.value
+    }
+
+    /// The note goes with the save: once the card closes, the same share
+    /// (same link and request id) is sent again carrying it, after the first
+    /// has been answered.
+    private func sendNote() {
+        guard noteTask == nil, let text = Saver.clean(note), let client, let link, let recordId else { return }
+        switch phase {
+        case .saving, .saved, .alreadySaved: break
+        default: return
+        }
+        let first = saveTask
+        noteTask = Task {
+            await first?.value
+            _ = try? await client.save(url: link, deferPublish: true, requestId: recordId, note: text)
+        }
     }
 
     private func save(with client: ADHXClient, link: String, recordId: String) async {
@@ -333,6 +355,7 @@ final class ShareFlow: ObservableObject {
         guard !closeRequested else { return }
         closeRequested = true
         autoCloseTask?.cancel()
+        sendNote()
     }
 
     func openInADHX() {
@@ -350,3 +373,37 @@ final class ShareFlow: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+extension ShareFlow {
+    /// The Saved card with a post and no network: `-adhxSharePreview saved|private`
+    /// in the app (Debug builds), to look at the card in the simulator.
+    static func preview(post: PhonePost, server: URL, private isPrivate: Bool) -> ShareFlow {
+        let flow = ShareFlow()
+        flow.server = server
+        flow.link = post.sourceUrl
+        flow.platform = post.platform
+        flow.result = SaveResult(platform: post.platform, network: nil, id: post.postId, author: post.author.handle,
+                                 authorName: post.author.name, text: post.text, category: post.kind,
+                                 posterUrl: post.posterUrl, openPath: post.openPath, alreadySaved: false,
+                                 savedAt: nil, isPrivate: isPrivate)
+        flow.keep = StatusResult(status: "keeping", percent: isPrivate ? 55 : 40)
+        flow.justForMe = isPrivate
+        flow.touched = true
+        flow.phase = .saved
+        return flow
+    }
+}
+
+extension StatusResult {
+    init(status: String, percent: Int?) {
+        platform = nil
+        id = nil
+        self.status = status
+        self.percent = percent
+        quality = nil
+        kept = nil
+        step = nil
+    }
+}
+#endif
