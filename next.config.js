@@ -129,6 +129,18 @@ const nextConfig = {
       ],
     },
     {
+      // Invite pages (not /invite/done): script-free, token kept off referrers.
+      source: '/invite/:token((?!done$)[^/]+)',
+      headers: [
+        { key: 'Referrer-Policy', value: 'same-origin' },
+        {
+          key: 'Content-Security-Policy',
+          value:
+            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+        },
+      ],
+    },
+    {
       source: '/api/auth/email/callback',
       headers: [
         // Next's global headers can override Route Handler headers. Keep the

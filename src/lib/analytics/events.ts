@@ -76,6 +76,7 @@ export const ANALYTIC_SOURCES = [
   'shortcut',
   'oauth',
   'email',
+  'invite',
   'share',
   'download',
 ] as const

@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Invite links that pair a phone
+
+- New `invites` table (sha256 token hash, 7-day expiry, single use, revocable, account-guarded, removed on account deletion) and `/api/invites` (make: admins or `INVITES=members`, 30/hour, 20 waiting; list without links; revoke).
+- `GET /invite/<token>` is a script-free "Ana wants you in." page; only a same-origin form POST spends it in one conditional write, creating an email-less account (`'invite'` identity) with a `/welcome`-validated name. Bad/taken names leave it unused. Ignores `ALLOWED_EMAILS`; dies with a banned/deleted maker or when member invites are switched off.
+- `/invite/done` shows "You're in." with the phone pairing QR/code (shared `PairCode.tsx`, also used by Settings → Phone app), configured app links and "Skip, take me to the feed". Invite cards in Settings and on the admin page.
+- Email change already worked for email-less accounts; covered by a test. Docs: README invites-first sign-up, CLAUDE.md auth, spec columns (`id`, `revoked_at`).
+- Validation: 3,044 tests, typecheck, production build and lint (79 existing warnings) pass; walked the flow in a browser on a scratch DB (taken name, join, done page, simulated phone pairing, used link, email add, Settings/admin cards, 375px width).
+- Follow-ups: sessions aren't rolling, so an invite account that never adds an email is locked out after 30 days; `post_views` will also bump the guard-trigger count (46 here).
+
 ## 2026-10-19 — Make handed-over sign-in links survive previews
 
 - GET/HEAD now render a small script-free confirmation; only an explicit same-origin, bounded form POST consumes the link and sets the existing protected session cookie.
