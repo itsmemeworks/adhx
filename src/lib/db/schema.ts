@@ -658,10 +658,30 @@ export const autoChannels = sqliteTable(
   }),
 )
 
+// "From everyone" channels: the whole server's visible saves (never private,
+// quoted or a banned saver's) grouped by meaning and named, like Made for
+// you. Server-wide and derived: no user_id. `savers` is a JSON object of
+// saver user id -> posts in the channel at compute time; reads re-check every
+// post's visible savers, so a deleted or banned account drops out at once.
+export const groupChannels = sqliteTable('group_channels', {
+  slug: text('slug').primaryKey(),
+  name: text('name').notNull(),
+  size: integer('size').notNull(),
+  /** JSON array of `platform:id`, closest to the group's centre first. */
+  postKeys: text('post_keys').notNull(),
+  savers: text('savers').notNull(),
+  position: integer('position').notNull(),
+  /** Visible saves on the server when computed (staleness check). */
+  savesAtCompute: integer('saves_at_compute').notNull(),
+  computedAt: text('computed_at').notNull(),
+  modelVersion: text('model_version').notNull(),
+})
+
 export type PostEmbedding = typeof postEmbeddings.$inferSelect
 export type PostExtractedText = typeof postExtractedText.$inferSelect
 export type UnderstandingJob = typeof understandingQueue.$inferSelect
 export type AutoChannel = typeof autoChannels.$inferSelect
+export type GroupChannel = typeof groupChannels.$inferSelect
 
 // Banned accounts — session + sign-in treated as signed-out. Public
 // profile / playlist pages 404; leaderboards skip the owner. Data is kept

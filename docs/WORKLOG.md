@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Channels from everyone: group channels and one per friend
+
+- `group_channels` (server-wide, no `user_id`) + `src/lib/channels/group.ts`: everyone's visible saves clustered and named with Made for you's machinery (shared `meanVectors`/`bestClusters`/`nameClusters` from `auto.ts`). Lazy, single-flight, background recompute (>12h, ±10 visible saves, model change, a counted saver gone); reads re-check each post's visible savers.
+- `src/lib/channels/friends.ts` (one channel per other member, `newCount` via `people/seen.ts`, which tolerates a missing `post_views`), `overview.ts` shared by `GET /api/channels` (+`group`, `friends`, `canInvite`) and `GET /api/app/channels`. New queues: `/api/channels/group/[slug]`, `/api/channels/friend/[username]?new=1`, `/api/app/channels/{group|friend|mine}/{slug}` (phone key or session).
+- Web: From everyone and Your people rows (+ Invite someone), `/channels/friend/[username]`, `/play?group=` / `/play?friend=` with back links and empty states, linked saver faces on tiles, theater "Who saved it" popover.
+- Private wins: public tag collection, clone, theater backfill, curator profile, leaderboard tiles, public tweet `publicTags` and the sitemap skip the owner's private saves.
+- Validation: 3,103 tests (new: 11 channels, 3 private-wins, 9 component), typecheck, lint (existing warnings only); walked the rows, friend page, queues, popover and phone width in a browser on a scratch DB.
+- Follow-ups: friend page filters (Videos/Photos/Music) and "New" tile badges from the design aren't built; group naming needs real embeddings (scratch DB used hand-made rows); `auto_channels` still isn't removed on account delete (pre-existing).
+
 ## 2026-10-19 — iPhone app: New, Channels, Live, faces and Just for me
 
 - Home is one row over the player: Gob (Settings, which now holds Shared lately), New · Channels · Live with an unseen badge on New ("99+" cap), Search. New pages `/api/app/feed`, marks posts seen (2 s on screen or swiped past, batched to `/api/app/seen`), shows the why chip and a "Why this one" sheet with Everyone · Friends only · Mine, and ends on "You're all caught up. Go touch grass."

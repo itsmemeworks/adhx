@@ -255,6 +255,8 @@ async function fetchPublicProfile(
     .orderBy(desc(bookmarks.processedAt))
     .all()
     .filter((b) => !moderated.has(`${b.platform}:${b.id}`))
+    // Private wins: kept-just-for-me posts never count or show here.
+    .filter((b) => !b.isPrivate)
   const bookmarkByKey = new Map(bookmarkResults.map((b) => [`${b.platform}:${b.id}`, b]))
 
   // Group matched bookmarks by tag, preserving the processedAt-desc order

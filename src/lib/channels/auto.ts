@@ -16,7 +16,7 @@ import { askJev, jevAvailable } from '@/lib/semantic/jev'
 import { loadPostItem } from '@/lib/semantic/posts'
 import { embedQueries } from '@/lib/semantic/supervisor'
 import { fromBlob } from '@/lib/semantic/vectors'
-import { groupSaves, seedFrom } from './cluster'
+import { groupSaves, seedFrom, type Cluster } from './cluster'
 import { CHANNEL_NAMES } from './names'
 
 /**
@@ -86,9 +86,20 @@ async function postVectors(userId: string): Promise<{ keys: string[]; vectors: F
     .where(eq(bookmarks.userId, userId))
     .orderBy(desc(bookmarks.processedAt))
     .limit(MAX_POSTS)
-  const wanted = new Set(saved.map((s) => `${s.platform}:${s.id}`))
+  return meanVectors(saved)
+}
+
+/**
+ * One unit vector per post: its understood kinds (words, picture, video)
+ * averaged. Posts with nothing understood yet are left out. Shared with
+ * group channels (`group.ts`).
+ */
+export async function meanVectors(
+  posts: { platform: string; id: string }[],
+): Promise<{ keys: string[]; vectors: Float32Array[] }> {
+  const wanted = new Set(posts.map((s) => `${s.platform}:${s.id}`))
   const sums = new Map<string, Float32Array>()
-  const ids = [...new Set(saved.map((s) => s.id))]
+  const ids = [...new Set(posts.map((s) => s.id))]
   for (let i = 0; i < ids.length; i += CHUNK) {
     const rows = await db
       .select({
@@ -165,6 +176,60 @@ function dot(a: Float32Array, b: Float32Array): number {
   return s
 }
 
+/**
+ * The best few groups: big enough, tight groups first (a big loose
+ * catch-all makes a poor channel).
+ */
+export function bestClusters(clusters: Cluster[], max = MAX_CHANNELS): Cluster[] {
+  return clusters
+    .filter((c) => c.members.length >= MIN_GROUP)
+    .sort(
+      (a, b) => Math.sqrt(b.members.length) * b.cohesion - Math.sqrt(a.members.length) * a.cohesion,
+    )
+    .slice(0, max)
+}
+
+/**
+ * Name each group from `CHANNEL_NAMES`: the closest few names by meaning,
+ * then Jev picks among them looking at a handful of the group's posts (or
+ * the closest wins). No two groups get the same name. `reserved` slugs are
+ * never used. Shared with group channels.
+ */
+export async function nameClusters(
+  clusters: Cluster[],
+  keys: string[],
+  deps: AutoChannelDeps = {},
+  reserved: ReadonlySet<string> = new Set(),
+): Promise<AutoChannelView[]> {
+  const views: AutoChannelView[] = []
+  if (clusters.length === 0) return views
+  const names = await nameVectors(deps)
+  const choose = deps.chooseName ?? chooseWithJev
+  const used = new Set<string>()
+  for (const cluster of clusters) {
+    const candidates = CHANNEL_NAMES.map((name, i) => ({
+      name,
+      s: dot(cluster.centroid, names[i]),
+    }))
+      .filter((c) => !used.has(c.name) && !reserved.has(sanitizeTag(c.name)))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, CANDIDATE_NAMES)
+      .map((c) => c.name)
+    if (candidates.length === 0) continue
+    const memberKeys = cluster.members.map((i) => keys[i])
+    const samples: string[] = []
+    for (const key of memberKeys.slice(0, SAMPLE_POSTS)) {
+      const at = key.indexOf(':')
+      const item = await loadPostItem(key.slice(0, at), key.slice(at + 1))
+      if (item) samples.push(buildPostDocument(item).keywords.replace(/\s+/g, ' ').slice(0, 300))
+    }
+    const name = (await choose(candidates, samples)) ?? candidates[0]
+    used.add(name)
+    views.push({ slug: sanitizeTag(name), name, size: memberKeys.length, keys: memberKeys })
+  }
+  return views
+}
+
 /** Group, name and store this user's channels. Replaces any previous set. */
 export async function computeAutoChannels(
   userId: string,
@@ -173,41 +238,9 @@ export async function computeAutoChannels(
   const now = (deps.now ?? (() => new Date()))()
   const saves = await saveCount(userId)
   const { keys, vectors } = await postVectors(userId)
-  const clusters = groupSaves(vectors, seedFrom(userId))
-    .filter((c) => c.members.length >= MIN_GROUP)
-    // Tight groups first: a big loose catch-all makes a poor channel.
-    .sort(
-      (a, b) => Math.sqrt(b.members.length) * b.cohesion - Math.sqrt(a.members.length) * a.cohesion,
-    )
-    .slice(0, MAX_CHANNELS)
+  const clusters = bestClusters(groupSaves(vectors, seedFrom(userId)))
 
-  const views: AutoChannelView[] = []
-  if (clusters.length > 0) {
-    const names = await nameVectors(deps)
-    const choose = deps.chooseName ?? chooseWithJev
-    const used = new Set<string>()
-    for (const cluster of clusters) {
-      const candidates = CHANNEL_NAMES.map((name, i) => ({
-        name,
-        s: dot(cluster.centroid, names[i]),
-      }))
-        .filter((c) => !used.has(c.name))
-        .sort((a, b) => b.s - a.s)
-        .slice(0, CANDIDATE_NAMES)
-        .map((c) => c.name)
-      if (candidates.length === 0) continue
-      const memberKeys = cluster.members.map((i) => keys[i])
-      const samples: string[] = []
-      for (const key of memberKeys.slice(0, SAMPLE_POSTS)) {
-        const at = key.indexOf(':')
-        const item = await loadPostItem(key.slice(0, at), key.slice(at + 1))
-        if (item) samples.push(buildPostDocument(item).keywords.replace(/\s+/g, ' ').slice(0, 300))
-      }
-      const name = (await choose(candidates, samples)) ?? candidates[0]
-      used.add(name)
-      views.push({ slug: sanitizeTag(name), name, size: memberKeys.length, keys: memberKeys })
-    }
-  }
+  const views = await nameClusters(clusters, keys, deps)
 
   runInTransaction(() => {
     db.delete(autoChannels).where(eq(autoChannels.userId, userId)).run()

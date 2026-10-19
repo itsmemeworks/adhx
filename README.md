@@ -26,7 +26,7 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
 - **Search by what you remember.** Describe it and ADHX finds it, across everyone's saves or just yours, with your friends' faces on what they kept. It matches the words, what's in the pictures, sampled video frames, what's said in a video and the text on screen (that meme's caption, a screenshot, burned-in subtitles). It all happens on your server, or on the optional native Mac worker: no picture, frame, sound or transcript is sent anywhere, and nothing goes to an AI service unless you add the optional search refinement key.
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
-- **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
+- **Channels.** Rabbit holes, dug by your friends: ADHX groups everyone's saves by what they're about and names the groups, gives every friend a channel of everything they kept (with what's new to you), and does the same for your own saves. Make your own channels too, and share them. Anything kept just for you stays out of all of it.
 - **Names on posts.** See which of your people saved what, in the player and in search. Saves are shared with your people by default; flip **Just for me** on any you'd rather keep to yourself.
 - **Right now.** What your lot are saving tonight, grouped into moments, with the faces of who's saving them. **Tune in** to watch along: see who's watching with you, who just saved the next one, and throw a 😂 or a "who sent this 💀" at the room. Strangers on a shared link only ever see counts.
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
@@ -40,7 +40,7 @@ ADHX is becoming one shared feed for your people. In order:
 1. **Say it out loud.** This README, the site and every string in the app, in the new voice.
 2. **Names on posts.** Here: see which of your friends saved what, keep any save **Just for me**, and search the whole group's vault. Saves you'd already made joined the shared feed; the app says so once.
 3. **One feed.** A blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
-4. **Channels and Live.** Channels drawn from everyone's saves, one per friend, and Live with names, so you can watch together.
+4. **Channels and Live.** Channels: here, drawn from everyone's saves and one per friend. Live with names is next, so you can watch together.
 
 Names stay on your server. Links you share with people outside it never show who saved anything.
 

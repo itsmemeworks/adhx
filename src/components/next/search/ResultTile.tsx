@@ -72,8 +72,9 @@ export function EveryoneBadge({ className }: { className?: string }) {
 }
 
 /**
- * Top-right of a result: who saved it (members see faces), a lock when it's
- * just for you, or — with no names known — "Everyone" on someone else's save.
+ * Top-right of a result: who saved it (members see faces; tapping one opens
+ * that friend's channel), a lock when it's just for you, or — with no names
+ * known — "Everyone" on someone else's save.
  */
 export function SaversMark({
   item,
@@ -95,7 +96,7 @@ export function SaversMark({
         )}
       >
         {item.post.isPrivate && <PrivateLock />}
-        <SaverFaces savers={savers} tone="plate" size={18} compact={savers.length > 2} />
+        <SaverFaces savers={savers} tone="plate" size={18} compact={savers.length > 2} linked />
       </span>
     )
   }

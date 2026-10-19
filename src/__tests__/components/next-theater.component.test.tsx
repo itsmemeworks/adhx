@@ -122,6 +122,8 @@ describe('theater queue', () => {
       group: 'video',
       channel: null,
       auto: null,
+      groupChannel: null,
+      friend: null,
       recent: false,
       moment: null,
       start: 'twitter:1',
