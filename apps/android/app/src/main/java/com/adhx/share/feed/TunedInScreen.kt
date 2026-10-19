@@ -1,5 +1,22 @@
 package com.adhx.share.feed
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import coil3.compose.AsyncImage
+import com.adhx.share.R
+import com.adhx.share.net.AdhxApi
+import com.adhx.share.ui.Avatar
+import com.adhx.share.ui.GobShape
+import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.faceColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -76,6 +93,8 @@ fun TunedInScreen(
     server: String,
     onBack: () -> Unit,
     onSaver: (Saver) -> Unit,
+    onSearch: (() -> Unit)? = null,
+    onSettings: (() -> Unit)? = null,
 ) {
     LaunchedEffect(slug) { feed.tuneIn(slug) }
     val ui by feed.tuned.collectAsStateWithLifecycle()
@@ -103,34 +122,57 @@ fun TunedInScreen(
     }
 
     val top: @Composable () -> Unit = {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
-                .statusBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                BarButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
-                Spacer(Modifier.width(10.dp))
-                LiveBadge()
-                Spacer(Modifier.width(8.dp))
-                WatchersChip(ui.watchers, ui.moment?.watching ?: 0, server, Modifier.weight(1f, fill = false))
-            }
-            if (ui.arrived > 0) {
-                Text(
-                    Copy.NEW_UP_NEXT,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AdhxColors.Black,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .clip(RoundedCornerShape(50))
-                        .background(AdhxColors.Cream)
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                        .semantics { liveRegion = LiveRegionMode.Polite },
-                )
+        Box(Modifier.fillMaxWidth()) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent))),
+            )
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(bottom = 20.dp),
+            ) {
+                // Gob and "adhx" (back home), Search and Settings, as on the pages but over the post.
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .padding(start = 16.dp, end = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(onClickLabel = Copy.LEAVE_LIVE, onClick = onBack)
+                            .semantics(mergeDescendants = true) { contentDescription = "adhx home" },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(32.dp).rotate(-4f))
+                        Spacer(Modifier.width(9.dp))
+                        Text("adhx", fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 28.sp, color = Color.White)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    onSearch?.let { BarButton(Glyphs.Search, Copy.SEARCH, it) }
+                    onSettings?.let { BarButton(Glyphs.Settings, Copy.OPEN_SETTINGS, it) }
+                }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                ) {
+                    Row(Modifier.padding(end = 52.dp), verticalAlignment = Alignment.CenterVertically) {
+                        LiveBadge(height = 40.dp, border = true)
+                        Spacer(Modifier.width(8.dp))
+                        WatchersChip(ui.watchers, ui.moment?.watching ?: 0, server, Modifier.weight(1f, fill = false))
+                    }
+                    Box(Modifier.align(Alignment.CenterEnd)) { BarButton(Glyphs.Close, Copy.LEAVE_LIVE, onBack) }
+                }
+                if (ui.arrived > 0) {
+                    ArrivalCard(ui.arrival, server, Modifier.align(Alignment.End).padding(top = 12.dp, end = 16.dp))
+                }
             }
         }
     }
@@ -196,9 +238,17 @@ fun TunedInScreen(
             preservePlaybackOnRefresh = true,
             aboveCaption = {
                 ui.moment?.label?.let { name ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("In ", fontSize = 13.sp, color = AdhxColors.Muted)
-                        Text(name, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(
+                        Modifier
+                            .height(26.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.Black.copy(alpha = 0.45f))
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("In", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
+                        Spacer(Modifier.width(6.dp))
+                        Text(name, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             },
@@ -228,6 +278,56 @@ fun TunedInScreen(
 
 private const val POLL_MS = 5_000L
 
+/** "Jo just saved one · up next": the new post's picture with their face on its corner. */
+@Composable
+private fun ArrivalCard(post: PhonePost?, server: String, modifier: Modifier = Modifier) {
+    val saver = post?.savers?.firstOrNull()
+    val media = post?.media?.firstOrNull()
+    val poster = (media?.posterUrl ?: media?.url?.takeIf { media.kind == "photo" })?.let { AdhxApi.resolve(server, it)?.toString() }
+    Row(
+        modifier
+            .width(228.dp)
+            .shadow(20.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(RoundedCornerShape(20.dp))
+            .background(AdhxColors.Surface.copy(alpha = 0.85f))
+            .border(1.dp, (saver?.let { faceColor(it.username) } ?: AdhxColors.White).copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+            .padding(start = 8.dp, end = 14.dp, top = 8.dp, bottom = 8.dp)
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(47.dp)) {
+            Box(
+                Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(AdhxColors.Placeholder),
+            ) {
+                if (poster != null) AsyncImage(poster, null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+            }
+            if (saver != null) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .background(AdhxColors.Surface, GobShape)
+                        .padding(2.dp),
+                ) { Avatar(saver, server, size = 20.dp) }
+            }
+        }
+        Spacer(Modifier.width(11.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(
+                saver?.let { Copy.justSavedOne(it) } ?: Copy.NEW_UP_NEXT,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (saver != null) Text(Copy.UP_NEXT, fontSize = 14.sp, color = AdhxColors.Muted)
+        }
+    }
+}
+
 /**
  * Their faces and "watching with you"; a screen reader hears "Ana and Ben are
  * watching with you", again when it changes.
@@ -241,7 +341,8 @@ private fun WatchersChip(watchers: List<Saver>, count: Int, server: String, modi
             .heightIn(min = 40.dp)
             .clip(RoundedCornerShape(50))
             .background(Color.Black.copy(alpha = 0.55f))
-            .padding(start = if (others.isEmpty()) 12.dp else 6.dp, end = 12.dp)
+            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(50))
+            .padding(start = if (others.isEmpty()) 12.dp else 6.dp, end = 14.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription = line
                 liveRegion = LiveRegionMode.Polite
@@ -249,8 +350,8 @@ private fun WatchersChip(watchers: List<Saver>, count: Int, server: String, modi
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (others.isNotEmpty()) {
-            Faces(others, server, size = 26.dp)
-            Spacer(Modifier.width(8.dp))
+            Faces(others, server, size = 26.dp, ring = WatchingGreen)
+            Spacer(Modifier.width(9.dp))
         }
         Text(
             Copy.watchersShort(watchers, maxOf(count, watchers.size)),

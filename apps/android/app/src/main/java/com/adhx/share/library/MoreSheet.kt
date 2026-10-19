@@ -63,6 +63,7 @@ import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.NetworkMark
 import com.adhx.share.ui.openInAdhx
+import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.launch
 
 /**
@@ -70,9 +71,29 @@ import kotlinx.coroutines.launch
  * link), Copy link, Copy the words, Share an ADHX link (for people on the
  * same server) and Open in my ADHX.
  */
+/**
+ * The player's own switches, which live in More so the column on the right
+ * stays as on the boards: Sound and Repeat (null for photos and words), the
+ * small window (null when it can't), and Hide.
+ */
+class PlayerControls(
+    val muted: Boolean?,
+    val onToggleMute: () -> Unit,
+    val repeat: Boolean?,
+    val onToggleRepeat: () -> Unit,
+    val onPip: (() -> Unit)?,
+    val onHide: () -> Unit,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoreSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDismiss: () -> Unit) {
+fun MoreSheet(
+    post: PhonePost,
+    server: String,
+    onNotice: (String) -> Unit,
+    onDismiss: () -> Unit,
+    controls: PlayerControls? = null,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -106,6 +127,61 @@ fun MoreSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
         ) {
             Header(post, server, network, onClose = { close() })
             Spacer(Modifier.height(12.dp))
+            if (controls != null) {
+                controls.muted?.let { muted ->
+                    MoreRow(
+                        icon = painterResource(if (muted) R.drawable.ic_sound_on else R.drawable.ic_sound_off),
+                        title = if (muted) "Sound on" else "Sound off",
+                        subtitle = if (muted) "Playing without sound" else "Playing with sound",
+                        onClick = {
+                            controls.onToggleMute()
+                            close()
+                        },
+                    )
+                }
+                controls.repeat?.let { repeat ->
+                    MoreRow(
+                        icon = painterResource(R.drawable.ic_repeat_one),
+                        title = if (repeat) "Repeat off" else "Repeat this one",
+                        subtitle = if (repeat) "Plays the next save when this ends" else "Loops until you swipe",
+                        onClick = {
+                            controls.onToggleRepeat()
+                            close()
+                        },
+                    )
+                }
+                controls.onPip?.let { pip ->
+                    MoreRow(
+                        icon = painterResource(R.drawable.ic_pip),
+                        title = "Keep playing in a small window",
+                        subtitle = "Carries on over your other apps",
+                        onClick = {
+                            close()
+                            pip()
+                        },
+                    )
+                }
+                MoreRow(
+                    icon = painterResource(R.drawable.ic_hide_overlay),
+                    title = "Hide controls",
+                    subtitle = "Tap the post to bring them back",
+                    onClick = {
+                        controls.onHide()
+                        close()
+                    },
+                )
+            }
+            if (source != null) {
+                MoreRow(
+                    icon = painterResource(Networks.icon(post.platform)),
+                    title = "Open on $network",
+                    subtitle = "The original post",
+                    onClick = {
+                        openUrl(context, source)
+                        close()
+                    },
+                )
+            }
             if (post.yours) {
                 var switching by remember { mutableStateOf(false) }
                 JustForMeRow(

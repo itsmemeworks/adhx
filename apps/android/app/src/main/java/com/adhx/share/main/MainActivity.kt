@@ -47,6 +47,7 @@ import com.adhx.share.library.SavesHome
 import com.adhx.share.library.SearchScreen
 import com.adhx.share.net.ApiResult
 import com.adhx.share.ui.AdhxTheme
+import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.openInAdhx
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.CoroutineScope
@@ -152,6 +153,7 @@ private fun MainApp(
         return
     }
 
+    val peopleUi by people.ui.collectAsStateWithLifecycle()
     BackHandler(enabled = library.stack.size > 1) { library.back() }
     val back = { library.back(); Unit }
     val route = library.stack.lastOrNull() ?: Route.Home
@@ -178,6 +180,15 @@ private fun MainApp(
                     onSearch = { library.open(Route.Search) },
                     onSettings = { library.open(Route.Settings) },
                     onDoing = { library.open(Route.Doing) },
+                    onPeople = { library.open(Route.People) },
+                    onInvite = if (peopleUi.people?.canInvite != false) {
+                        {
+                            Toast.makeText(context, SettingsCopy.INVITE_NOTE, Toast.LENGTH_SHORT).show()
+                            openInAdhx(context, current.server, "/settings#invite")
+                        }
+                    } else {
+                        null
+                    },
                 ),
                 doing = doing,
             )
@@ -216,6 +227,8 @@ private fun MainApp(
                 server = current.server,
                 onBack = back,
                 onSaver = openPerson,
+                onSearch = { library.open(Route.Search) },
+                onSettings = { library.open(Route.Settings) },
             )
             Route.Search -> SearchScreen(
                 vm = library,

@@ -1,5 +1,12 @@
 package com.adhx.share.feed
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import com.adhx.share.ui.AdhxSwitch
+import com.adhx.share.ui.Glyphs
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,7 +54,13 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedFilterSheet(types: Set<String>, mode: String, onApply: (Set<String>, String) -> Unit) {
+fun FeedFilterSheet(
+    types: Set<String>,
+    mode: String,
+    onApply: (Set<String>, String) -> Unit,
+    newCount: String? = null,
+    hidden: Map<String, Int> = emptyMap(),
+) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var picked by remember { mutableStateOf(types) }
@@ -58,25 +71,33 @@ fun FeedFilterSheet(types: Set<String>, mode: String, onApply: (Set<String>, Str
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Hairline) },
+        dragHandle = { SheetHandle(AdhxColors.Hairline) },
     ) {
         Column(
             Modifier
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                Copy.FILTER_TITLE,
-                fontFamily = SerifFamily,
-                fontSize = 36.sp,
-                lineHeight = 38.sp,
-                color = AdhxColors.White,
-                modifier = Modifier.semantics { heading() },
-            )
-            Text(Copy.FILTER_NOTE, fontSize = 14.sp, lineHeight = 20.sp, color = AdhxColors.Faint)
-            Column {
-                MediaType.all.forEach { type ->
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    Copy.FILTER_TITLE,
+                    fontFamily = SerifFamily,
+                    fontSize = 32.sp,
+                    lineHeight = 32.sp,
+                    color = AdhxColors.White,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                if (newCount != null) {
+                    Text("$newCount new", fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, modifier = Modifier.padding(bottom = 4.dp))
+                }
+            }
+            Column(
+                Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(AdhxColors.Card),
+            ) {
+                MediaType.all.forEachIndexed { i, type ->
                     val on = type in picked
                     // The last one on can't be switched off.
                     val last = on && picked.size == 1
@@ -87,23 +108,58 @@ fun FeedFilterSheet(types: Set<String>, mode: String, onApply: (Set<String>, Str
                         note = if (last) Copy.KEEP_ONE else null,
                         onChange = { want -> picked = if (want) picked + type else picked - type },
                     )
+                    if (i < MediaType.all.lastIndex) {
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.06f)))
+                    }
                 }
             }
-            Text(Copy.WHOSE_SAVES, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
-            Segmented(
-                options = Copy.WHOSE,
-                selected = whoseIndex(whose),
-                onSelect = { whose = WHOSE_MODES[it] },
-                background = AdhxColors.Background,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    Copy.WHOSE_SAVES.uppercase(),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.8.sp,
+                    color = AdhxColors.Faint,
+                )
+                Segmented(
+                    options = Copy.WHOSE,
+                    selected = whoseIndex(whose),
+                    onSelect = { whose = WHOSE_MODES[it] },
+                    background = AdhxColors.Card,
+                    height = 40.dp,
+                    fontSize = 14,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            // What the switches leave out, by the current feed's count.
+            val waiting = Copy.waitingNote(hidden.filterKeys { it !in picked })
+            if (waiting != null) Text(waiting, fontSize = 13.sp, lineHeight = 18.sp, color = AdhxColors.Faint)
             PrimaryButton(
-                Copy.DONE,
+                Copy.showKinds(picked),
                 onClick = { scope.launch { state.hide() }.invokeOnCompletion { close() } },
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
+}
+
+/** A sheet's grab handle: 40×5 at the top. */
+@Composable
+fun SheetHandle(color: Color = Color.White.copy(alpha = 0.22f)) {
+    Box(
+        Modifier
+            .padding(top = 10.dp, bottom = 14.dp)
+            .size(width = 40.dp, height = 5.dp)
+            .clip(RoundedCornerShape(50))
+            .background(color),
+    )
+}
+
+private fun typeIcon(type: String) = when (type) {
+    "video" -> Glyphs.VideoFeed
+    "photo" -> Glyphs.PhotoFeed
+    "text" -> Glyphs.Lines
+    else -> Glyphs.Article
 }
 
 @Composable
@@ -112,31 +168,17 @@ private fun TypeRow(type: String, on: Boolean, enabled: Boolean, note: String?, 
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .heightIn(min = 64.dp)
             .toggleable(value = on, enabled = enabled, role = Role.Switch, onValueChange = onChange)
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        Icon(typeIcon(type), contentDescription = null, tint = if (on) AdhxColors.Accent else AdhxColors.Faint, modifier = Modifier.size(22.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
             Text(note ?: line, fontSize = 13.sp, color = if (note != null) AdhxColors.Accent else AdhxColors.Faint)
         }
-        Switch(
-            checked = on,
-            onCheckedChange = null,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = AdhxColors.Black,
-                checkedTrackColor = AdhxColors.Accent,
-                checkedBorderColor = AdhxColors.Accent,
-                uncheckedThumbColor = AdhxColors.Cream,
-                uncheckedTrackColor = Color(0xFF4A453E),
-                uncheckedBorderColor = Color(0xFF4A453E),
-                disabledCheckedThumbColor = AdhxColors.Black,
-                disabledCheckedTrackColor = AdhxColors.Accent.copy(alpha = 0.55f),
-                disabledCheckedBorderColor = AdhxColors.Accent.copy(alpha = 0.55f),
-            ),
-        )
+        AdhxSwitch(on, enabled = enabled)
     }
 }

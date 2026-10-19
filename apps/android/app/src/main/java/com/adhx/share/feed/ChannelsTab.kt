@@ -1,5 +1,13 @@
 package com.adhx.share.feed
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,6 +62,7 @@ import com.adhx.share.net.MineChannel
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Faces
 import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.OutlineButton
@@ -90,7 +99,7 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
             }
         }
         if (channels.group.isNotEmpty()) {
-            item(key = "group-h") { Heading(Copy.FROM_EVERYONE, Copy.FROM_EVERYONE_NOTE, size = 32) }
+            item(key = "group-h") { Heading(Copy.FROM_EVERYONE, Copy.FROM_EVERYONE_NOTE, size = 32, top = 20) }
             item(key = "group") {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -105,20 +114,38 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
             }
         }
         if (channels.friends.isNotEmpty()) {
-            item(key = "people-h") { Heading(Copy.YOUR_PEOPLE, null, size = 28) }
+            item(key = "people-h") {
+                Heading(Copy.YOUR_PEOPLE, null, size = 28) {
+                    Text(
+                        Copy.SEE_ALL,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AdhxColors.Accent,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(onClick = actions.onPeople)
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                    )
+                }
+            }
             item(key = "people") {
+                // Spread across the width when they fit (four friends and Invite); scrolls past that.
+                val invite = actions.onInvite
+                val count = channels.friends.size + if (invite != null) 1 else 0
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = if (count <= 5) Arrangement.SpaceBetween else Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     items(channels.friends, key = { it.username }) { friend ->
                         PersonBubble(friend, server) { actions.openPerson(friend.asSaver) }
                     }
+                    if (invite != null) item(key = "invite") { InviteBubble(invite) }
                 }
             }
         }
         if (ui.loadedOnce) {
-            item(key = "mine-h") { Heading(Copy.MADE_FOR_YOU, Copy.MADE_FOR_YOU_NOTE, size = 28) }
+            item(key = "mine-h") { Heading(Copy.MADE_FOR_YOU, Copy.MADE_FOR_YOU_NOTE, size = 28, top = 26, bottom = 10) }
             item(key = "my-saves") {
                 MineRow(title = Copy.MY_SAVES, line = Copy.MY_SAVES_NOTE, cover = null, server = server) {
                     actions.open(Route.MySaves)
@@ -144,20 +171,30 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
 }
 
 @Composable
-private fun Heading(title: String, note: String?, size: Int) {
-    Column(
-        Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+private fun Heading(
+    title: String,
+    note: String?,
+    size: Int,
+    top: Int = 24,
+    bottom: Int = 12,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        Modifier.padding(start = 16.dp, end = 16.dp, top = top.dp, bottom = bottom.dp),
+        verticalAlignment = Alignment.Bottom,
     ) {
-        Text(
-            title,
-            fontFamily = SerifFamily,
-            fontSize = size.sp,
-            lineHeight = size.sp,
-            color = AdhxColors.White,
-            modifier = Modifier.semantics { heading() },
-        )
-        if (note != null) Text(note, fontSize = 13.sp, color = AdhxColors.Faint)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                title,
+                fontFamily = SerifFamily,
+                fontSize = size.sp,
+                lineHeight = (size * 0.95f).sp,
+                color = AdhxColors.White,
+                modifier = Modifier.semantics { heading() },
+            )
+            if (note != null) Text(note, fontSize = 14.sp, color = AdhxColors.Faint)
+        }
+        trailing?.invoke()
     }
 }
 
@@ -201,66 +238,118 @@ private fun GroupTile(channel: GroupChannel, server: String, onClick: () -> Unit
             .semantics(mergeDescendants = true) { contentDescription = "${channel.name}, $line" },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CoverGrid(channel.covers, server, 160.dp)
+        Box {
+            CoverGrid(channel.covers, server, 160.dp)
+            if (channel.newCount > 0) {
+                Text(
+                    Copy.newCount(channel.newCount),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.Black,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .height(24.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(AdhxColors.Accent)
+                        .padding(horizontal = 9.dp)
+                        .wrapContentHeight(Alignment.CenterVertically),
+                )
+            }
+        }
         Text(
             channel.name,
             fontSize = 15.sp,
             fontWeight = FontWeight.ExtraBold,
             color = AdhxColors.White,
-            maxLines = 2,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (channel.savers.isNotEmpty()) {
                 Faces(channel.savers, server, size = 20.dp, ring = AdhxColors.Background)
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(7.dp))
             }
             Text(line, fontSize = 12.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
-/** A friend: their face (ringed in yellow, with a count, when there's something new) and their name. */
+/**
+ * A friend: their 60dp face with a ring (yellow, and a count, when there's
+ * something new; dark otherwise) and their name.
+ */
 @Composable
 private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> Unit) {
     val fresh = friend.newCount > 0
     Column(
         Modifier
-            .width(68.dp)
+            .width(62.dp)
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .clearAndSetSemantics { contentDescription = Copy.friendDescription(friend.label, friend.newCount) },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(Modifier.size(68.dp), contentAlignment = Alignment.Center) {
+        // 60dp face, a 2dp gap, then a 4dp ring: 72dp across, overhanging the 62dp column a little.
+        Box(Modifier.requiredSize(72.dp), contentAlignment = Alignment.Center) {
             Box(
                 Modifier
-                    .size(68.dp)
-                    .then(if (fresh) Modifier.border(2.dp, AdhxColors.Accent, GobShape) else Modifier),
+                    .size(72.dp)
+                    .border(2.dp, if (fresh) AdhxColors.Accent else AdhxColors.Card, GobShape)
+                    .padding(2.dp)
+                    .border(2.dp, if (fresh) AdhxColors.Accent else AdhxColors.Card, GobShape),
             )
-            Avatar(friend.username, friend.label, friend.avatarUrl, server, size = 60.dp)
+            Avatar(friend.username, friend.label, friend.avatarUrl, server, size = 64.dp, modifier = Modifier.padding(2.dp))
             if (fresh) {
                 Box(
                     Modifier
                         .align(Alignment.TopEnd)
-                        .offset(x = 2.dp, y = (-2).dp)
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(AdhxColors.Accent)
-                        .border(2.dp, AdhxColors.Background, CircleShape),
+                        .offset(x = 0.dp, y = 0.dp)
+                        .height(22.dp)
+                        .defaultMinSize(minWidth = 22.dp)
+                        .background(AdhxColors.Background, CircleShape)
+                        .padding(2.dp)
+                        .background(AdhxColors.Accent, CircleShape)
+                        .padding(horizontal = 4.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         if (friend.newCount > 99) "99+" else friend.newCount.toString(),
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
+                        lineHeight = 12.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.Black,
                     )
                 }
             }
         }
-        Text(friend.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Cream, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(friend.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Invite: a dashed yellow circle with a plus. */
+@Composable
+private fun InviteBubble(onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(62.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(Modifier.requiredSize(72.dp), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.size(60.dp)) {
+                drawCircle(
+                    AdhxColors.Accent.copy(alpha = 0.6f),
+                    radius = size.minDimension / 2 - 0.75.dp.toPx(),
+                    style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
+                )
+            }
+            Icon(Glyphs.Plus, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(24.dp))
+        }
+        Text(Copy.INVITE, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Accent, maxLines = 1)
     }
 }
 
@@ -268,22 +357,25 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
 private fun MineRow(channel: MineChannel, server: String, onClick: () -> Unit) =
     MineRow(channel.name, Copy.saves(channel.size), channel.covers.firstOrNull(), server, onClick)
 
-/** A row: a 56dp cover (Gob for My saves), the name and a line. */
+/** A card: a 56dp cover (Gob for My saves), the name and a line, and a play button. */
 @Composable
 private fun MineRow(title: String, line: String, cover: String?, server: String, onClick: () -> Unit) {
     val url = cover?.let { AdhxApi.resolve(server, it)?.toString() }
     Row(
         Modifier
+            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(AdhxColors.Surface)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(8.dp)
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(if (url == null) AdhxColors.Accent else AdhxColors.Placeholder),
             contentAlignment = Alignment.Center,
         ) {
@@ -293,10 +385,20 @@ private fun MineRow(title: String, line: String, cover: String?, server: String,
                 Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(34.dp))
             }
         }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(line, fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(12.dp))
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(AdhxColors.Card),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
         }
     }
 }

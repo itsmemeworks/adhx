@@ -1,5 +1,9 @@
 package com.adhx.share.feed
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.material3.Icon
+import androidx.compose.ui.unit.Dp
+import com.adhx.share.ui.Glyphs
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -92,10 +96,10 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
                 Copy.liveTitle(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)),
                 fontFamily = SerifFamily,
                 fontSize = 36.sp,
-                lineHeight = 36.sp,
+                lineHeight = 34.sp,
                 color = AdhxColors.White,
                 modifier = Modifier
-                    .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 16.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 9.dp)
                     .semantics { heading() },
             )
         }
@@ -135,30 +139,42 @@ private fun NothingLive() {
     }
 }
 
-/** The red LIVE badge; the dot pulses unless animations are off. */
+/** The red LIVE badge: a dot whose glow pulses (unless animations are off), and LIVE. */
 @Composable
-fun LiveBadge(modifier: Modifier = Modifier) {
+fun LiveBadge(modifier: Modifier = Modifier, height: Dp = 30.dp, border: Boolean = false) {
     val still = rememberReducedMotion()
     val pulse = if (still) {
-        1f
+        0f
     } else {
         val t = rememberInfiniteTransition(label = "live")
-        t.animateFloat(1f, 0.35f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "dot").value
+        t.animateFloat(0f, 1f, infiniteRepeatable(tween(1400), RepeatMode.Restart), label = "glow").value
     }
     Row(
         modifier
-            .height(32.dp)
+            .height(height)
             .clip(RoundedCornerShape(50))
-            .background(Color.Black.copy(alpha = 0.55f))
-            .border(1.dp, AdhxColors.Live.copy(alpha = 0.5f), RoundedCornerShape(50))
-            .padding(horizontal = 10.dp),
+            .background(Color.Black.copy(alpha = 0.6f))
+            .then(if (border) Modifier.border(1.dp, AdhxColors.Live.copy(alpha = 0.5f), RoundedCornerShape(50)) else Modifier)
+            .padding(start = 10.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(8.dp).alpha(pulse).clip(CircleShape).background(AdhxColors.Live))
-        Spacer(Modifier.width(6.dp))
-        Text(Copy.LIVE_BADGE, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, color = AdhxColors.White)
+        // A 9dp dot with two soft rings (4dp and 9dp); the outer one breathes out.
+        Canvas(Modifier.size(9.dp)) {
+            val r = size.minDimension / 2
+            drawCircle(AdhxColors.Live.copy(alpha = 0.12f * (1f - pulse)), radius = r + (9.dp.toPx() * (0.6f + 0.4f * pulse)))
+            drawCircle(AdhxColors.Live.copy(alpha = 0.3f), radius = r + 4.dp.toPx())
+            drawCircle(AdhxColors.Live, radius = r)
+        }
+        Spacer(Modifier.width(9.dp))
+        Text(Copy.LIVE_BADGE, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, color = Color.White)
     }
 }
+
+/** The ring round the live moment's card (the boards' pink). */
+private val LiveRing = Color(0xFFFF8FA3)
+
+/** The green ring round the faces of people watching now. */
+val WatchingGreen = Color(0xFF5EE38A)
 
 /** The first moment: a mosaic of its covers, LIVE, who's watching, its name, and Tune in. */
 @Composable
@@ -169,15 +185,16 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(26.dp))
             .background(AdhxColors.Surface)
+            .then(if (moment.live) Modifier.border(2.dp, LiveRing, RoundedCornerShape(26.dp)) else Modifier)
             .clickable(onClickLabel = Copy.TUNE_IN, onClick = onTuneIn)
-            .padding(10.dp)
+            .padding(8.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription = listOfNotNull(moment.label, if (moment.live) Copy.LIVE_BADGE.lowercase() else null, watching, line).joinToString(", ")
             },
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             Modifier
@@ -185,42 +202,56 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
                 .height(178.dp)
                 .clip(RoundedCornerShape(20.dp)),
         ) {
+            // One tall cover on the left; two on top and one wide underneath on the right.
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 Cover(urls.getOrNull(0), Modifier.weight(1.3f).fillMaxHeight())
-                for (col in 0..1) {
-                    Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Cover(urls.getOrNull(1 + col * 2), Modifier.weight(1f).fillMaxWidth())
-                        Cover(urls.getOrNull(2 + col * 2), Modifier.weight(1f).fillMaxWidth())
+                Column(Modifier.weight(2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Cover(urls.getOrNull(1), Modifier.weight(1f).fillMaxHeight())
+                        Cover(urls.getOrNull(2), Modifier.weight(1f).fillMaxHeight())
                     }
+                    Cover(urls.getOrNull(3), Modifier.weight(1f).fillMaxWidth())
                 }
             }
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))),
-            )
             if (moment.live) LiveBadge(Modifier.align(Alignment.TopStart).padding(10.dp))
             if (watching != null) {
                 Row(
                     Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(10.dp),
+                        .align(Alignment.BottomEnd)
+                        .padding(10.dp)
+                        .height(34.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(start = 5.dp, end = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val faces = moment.watchers.ifEmpty { moment.savers }
                     if (faces.isNotEmpty()) {
-                        Faces(faces, server, size = 24.dp)
+                        Faces(faces, server, size = 24.dp, ring = WatchingGreen)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(watching, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AdhxColors.White)
+                    Text(watching, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                 }
             }
         }
         Column(Modifier.padding(horizontal = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(moment.label, fontFamily = SerifFamily, fontSize = 32.sp, lineHeight = 32.sp, color = AdhxColors.White)
+            Text(moment.label, fontFamily = SerifFamily, fontSize = 32.sp, lineHeight = 31.sp, color = AdhxColors.White)
             if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.Muted)
         }
-        PrimaryButton(Copy.TUNE_IN, onClick = onTuneIn, modifier = Modifier.fillMaxWidth())
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(50))
+                .background(AdhxColors.Accent)
+                .clickable(onClick = onTuneIn),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Glyphs.Play, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(Copy.TUNE_IN, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+        }
     }
 }
 
@@ -239,22 +270,23 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(22.dp))
             .background(AdhxColors.Surface)
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
             .clickable(onClickLabel = Copy.TUNE_IN, onClick = onTuneIn)
-            .padding(10.dp)
+            .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
             .semantics(mergeDescendants = true) { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(RoundedCornerShape(14.dp)))
-        Spacer(Modifier.width(14.dp))
+        Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(RoundedCornerShape(16.dp)))
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             if (moment.live) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(7.dp).clip(CircleShape).background(AdhxColors.Live))
                     Spacer(Modifier.width(6.dp))
-                    Text(Copy.LIVE_BADGE, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp, color = AdhxColors.Live)
+                    Text(Copy.LIVE_BADGE, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.9.sp, color = AdhxColors.Live)
                 }
             }
             Text(moment.label, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -265,6 +297,16 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
                 }
                 if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+        }
+        Spacer(Modifier.width(12.dp))
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(AdhxColors.Card),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
         }
     }
 }

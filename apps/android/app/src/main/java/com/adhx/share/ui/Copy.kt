@@ -103,11 +103,21 @@ object Copy {
     const val DONE = "Done"
     const val SHOW_THEM = "Show them"
     val TYPE_LABELS = mapOf(
-        "video" to ("Videos" to "And sounds"),
-        "photo" to ("Photos" to "Pictures and albums"),
-        "text" to ("Text posts" to "Posts that are only words"),
-        "article" to ("Articles" to "Links to things to read"),
+        "video" to ("Videos" to "Reels, clips and tracks with sound"),
+        "photo" to ("Photos" to "Single shots, albums and memes"),
+        "text" to ("Text posts" to "Threads, tweets and hot takes"),
+        "article" to ("Articles" to "Long reads, for when you’ve got time"),
     )
+
+    /** "Show videos and photos": the filter's button, naming what will play. */
+    fun showKinds(types: Set<String>): String {
+        val names = com.adhx.share.net.MediaType.all.filter { it in types }.map { TYPE_LABELS[it]?.first?.lowercase() ?: it }
+        return if (names.isEmpty()) DONE else "Show ${list(names, max = 4)}"
+    }
+
+    /** "12 text posts and 3 articles are waiting. They’ll still be in search and channels." */
+    fun waitingNote(hidden: Map<String, Int>): String? =
+        hiddenLine(hidden)?.removeSuffix(" waiting")?.let { "$it ${if (hidden.values.sum() == 1) "is" else "are"} waiting. They’ll still be in search and channels." }
 
     /** "4 text posts waiting", "4 text posts and 1 article waiting". */
     fun hiddenLine(hidden: Map<String, Int>): String? {
@@ -124,6 +134,14 @@ object Copy {
         return if (parts.isEmpty()) null else "${list(parts, max = 4)} waiting"
     }
 
+    const val SEE_ALL = "See all"
+    const val INVITE = "Invite"
+
+    /** "3 new" on a channel's covers. */
+    fun newCount(n: Int): String = if (n > 99) "99+ new" else "$n new"
+
+    const val WHY_TOGETHER = "Saved together"
+    const val WHY_CLOSE = "Close to you"
     const val WHY_TITLE = "Why this one"
     const val WHOSE_SAVES = "Whose saves"
     const val WHY_NOTE = "No engagement bait. These are the only reasons."
@@ -178,6 +196,11 @@ object Copy {
     const val LIVE_CANT_LOAD = "Live didn’t load. Try again."
     const val LIVE_ENDED = "This one’s gone quiet."
     const val NEW_UP_NEXT = "A new one, up next"
+    const val UP_NEXT = "up next"
+    const val LEAVE_LIVE = "Leave live"
+
+    /** "Jo just saved one" (or "You just saved one"). */
+    fun justSavedOne(saver: Saver): String = "${if (saver.isYou) "You" else saver.label} just saved one"
 
     /** "What your lot are into tonight" (or today). */
     fun liveTitle(hour: Int): String = if (hour >= 17 || hour < 4) "What your lot are into tonight" else "What your lot are into today"
@@ -245,6 +268,25 @@ object Copy {
         if (savers.isEmpty()) return null
         return "${names(savers)} saved this"
     }
+
+    /** A post's words as one run for the byline: paragraphs joined by a full stop when they lack one. */
+    fun oneLine(text: String): String =
+        text.trim().split(Regex("\\s*\\n+\\s*")).filter { it.isNotBlank() }.reduceOrNull { acc, next ->
+            if (acc.last() in ".!?…:;,") "$acc $next" else "$acc. $next"
+        } ?: ""
+
+    /** The note to show on the byline: a friend's first (yours when only you left one), trimmed. */
+    fun noteOf(savers: List<Saver>): Pair<Saver, String>? {
+        val withNotes = savers.mapNotNull { s -> s.note?.trim()?.takeIf { it.isNotEmpty() }?.let { s to it.take(NOTE_MAX) } }
+        return withNotes.firstOrNull { !it.first.isYou } ?: withNotes.firstOrNull()
+    }
+
+    /** What a screen reader hears for a note: "Ben's note: you're welcome". */
+    fun noteDescription(saver: Saver, note: String): String =
+        "${if (saver.isYou) "Your" else "${saver.label}’s"} note: $note"
+
+    /** Notes on saves are at most this long. */
+    const val NOTE_MAX = 140
 
     /** "Ana", "Ana and Ben", "Ana and 3 others", with your own save as "you". */
     fun names(savers: List<Saver>, max: Int = 2): String {

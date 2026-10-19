@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -53,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -74,8 +76,10 @@ import com.adhx.share.main.Reach
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.FeedMode
 import com.adhx.share.net.PhonePost
+import com.adhx.share.net.WhyReason
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Faces
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
@@ -211,35 +215,59 @@ fun NewTab(
                 feed.filterOpen = false
                 feed.applyFilter(types, mode)
             },
+            newCount = badge,
+            hidden = ui.hidden,
         )
     }
 }
 
-/** The first reason the feed gives, as a chip over the caption; tapping it explains. */
+/** The first reason the feed gives, as a chip over the caption ("Saved together ›"); tapping it explains. */
 @Composable
 private fun WhyChip(post: PhonePost, onClick: () -> Unit) {
-    val reason = post.headline ?: return
+    val reason = whyChipLabel(post) ?: return
     Row(
         Modifier
-            .heightIn(min = 40.dp)
+            .height(40.dp)
             .clip(RoundedCornerShape(50))
-            .background(Color.Black.copy(alpha = 0.5f))
+            .background(Color.Black.copy(alpha = 0.55f))
             .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
             .clickable(onClickLabel = Copy.WHY_TITLE, onClick = onClick)
             .padding(start = 10.dp, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Filled.Info, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
+        Icon(whyIcon(post.whyKind, chip = true), contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Text(
             reason,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = AdhxColors.Cream,
+            color = AdhxColors.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
+        Spacer(Modifier.width(8.dp))
+        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(14.dp))
     }
+}
+
+/** The chip's short words: "Saved together", "Close to you", else the headline itself. */
+internal fun whyChipLabel(post: PhonePost): String? {
+    val headline = post.headline ?: return null
+    return when (post.whyKind) {
+        "together" -> Copy.WHY_TOGETHER
+        "close" -> Copy.WHY_CLOSE
+        else -> headline
+    }
+}
+
+/** The icon for a kind of reason; on the chip, "close" is a heart. */
+private fun whyIcon(kind: String?, chip: Boolean = false) = when (kind) {
+    "together" -> Glyphs.People
+    "close" -> if (chip) Glyphs.Heart else Glyphs.PlayCircle
+    "more" -> Glyphs.Plus
+    "like", "yours" -> Glyphs.Bookmark
+    else -> Glyphs.Again
 }
 
 /** The Why sheet's Everyone · Friends only · Mine, as feed modes. */
@@ -275,65 +303,106 @@ private fun WhySheet(
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Hairline) },
+        dragHandle = { SheetHandle() },
     ) {
         Column(
             Modifier
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                Copy.WHY_TITLE,
-                fontFamily = SerifFamily,
-                fontSize = 40.sp,
-                lineHeight = 40.sp,
-                color = AdhxColors.White,
-                modifier = Modifier.semantics { heading() },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    Copy.WHY_TITLE,
+                    fontFamily = SerifFamily,
+                    fontSize = 40.sp,
+                    lineHeight = 40.sp,
+                    color = AdhxColors.White,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(AdhxColors.Card)
+                        .clickable(onClickLabel = "Close") { scope.launch { state.hide() }.invokeOnCompletion { onDismiss() } }
+                        .semantics { contentDescription = "Close" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Glyphs.Close, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(18.dp))
+                }
+            }
             PostSummary(post, server)
-            val reasons = post.reasons.ifEmpty { listOf(Copy.WHY_NONE) }
-            Column {
+            val reasons = post.whyReasons.ifEmpty { post.reasons.map { WhyReason(it) } }.ifEmpty { listOf(WhyReason(Copy.WHY_NONE)) }
+            Column(Modifier.padding(top = 2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 reasons.forEachIndexed { i, reason ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // The people behind a reason: everyone for "together", else the one it names.
+                    val faces = when {
+                        reason.kind == "together" || (reason.kind == null && i == 0) -> others
+                        reason.username != null -> post.savers.filter { it.username == reason.username }
+                        else -> emptyList()
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(if (i == 0) AdhxColors.Accent else AdhxColors.Card),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(whyIcon(reason.kind), contentDescription = null, tint = if (i == 0) Color.Black else AdhxColors.White, modifier = Modifier.size(20.dp))
+                        }
                         Text(
-                            reason,
+                            reason.text,
                             fontSize = 16.sp,
                             lineHeight = 21.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = AdhxColors.White,
                             modifier = Modifier.weight(1f),
                         )
-                        // The people behind the first reason.
-                        if (i == 0 && others.isNotEmpty()) {
-                            Spacer(Modifier.width(14.dp))
-                            Faces(others, server, size = 26.dp, ring = AdhxColors.Surface)
-                        }
+                        if (faces.isNotEmpty()) Faces(faces, server, size = 26.dp, ring = AdhxColors.Surface)
                     }
                 }
             }
-            Text(Copy.WHOSE_SAVES, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
-            Segmented(
-                options = Copy.WHOSE,
-                selected = whoseIndex(mode),
-                onSelect = { i ->
-                    scope.launch { state.hide() }.invokeOnCompletion { onMode(WHOSE_MODES[i]) }
-                },
-                background = AdhxColors.Background,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlineButton(
-                Copy.FILTER,
-                onClick = { scope.launch { state.hide() }.invokeOnCompletion { onFilter() } },
-                minHeight = 44.dp,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(Copy.WHOSE_SAVES, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
+                Segmented(
+                    options = Copy.WHOSE,
+                    selected = whoseIndex(mode),
+                    onSelect = { i ->
+                        scope.launch { state.hide() }.invokeOnCompletion { onMode(WHOSE_MODES[i]) }
+                    },
+                    background = AdhxColors.Background,
+                    fontSize = 14,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            // Where the boards have "Show less / more from …" (not on the phone API yet): what's in your feed.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(AdhxColors.Card)
+                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))
+                    .clickable { scope.launch { state.hide() }.invokeOnCompletion { onFilter() } },
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Glyphs.Sliders, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(Copy.FILTER_TITLE, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            }
             Text(
                 Copy.WHY_NOTE,
                 fontSize = 13.sp,
                 color = AdhxColors.Faint,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             )
         }
     }

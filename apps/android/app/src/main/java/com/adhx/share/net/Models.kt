@@ -135,22 +135,34 @@ data class PhonePost(
      * Every reason the feed had (`[{ kind, text, username? }]`), for Why this
      * one. Only on `/api/app/feed`; read as loosely as [why].
      */
-    @Serializable(with = ReasonsSerializer::class)
-    val whyReasons: List<String> = emptyList(),
+    @Serializable(with = WhyReasonsSerializer::class)
+    val whyReasons: List<WhyReason> = emptyList(),
 ) {
     val key: String get() = "$platform:$id"
 
     /** The reason for the why chip: the feed's headline, else its first reason. */
-    val headline: String? get() = why.firstOrNull() ?: whyReasons.firstOrNull()
+    val headline: String? get() = why.firstOrNull() ?: whyReasons.firstOrNull()?.text
+
+    /** What kind of reason the headline is (together · more · like · close · fresh · yours), when the server says. */
+    val whyKind: String? get() = whyReasons.firstOrNull()?.kind
 
     /** All the reasons, for Why this one: the full list when the server sends one, else [why]. */
-    val reasons: List<String> get() = whyReasons.ifEmpty { why }
+    val reasons: List<String> get() = whyReasons.map { it.text }.ifEmpty { why }
 
     val ref: PostRef get() = PostRef(platform, id)
 
     /** You saved it yourself (so the "Just for me" switch applies). */
     val yours: Boolean get() = isPrivate || savers.any { it.isYou }
 }
+
+/** One of the feed's reasons for a post: its words, and what kind of reason it is. */
+@Serializable
+data class WhyReason(
+    val text: String = "",
+    /** together · more · like · close · fresh · yours */
+    val kind: String? = null,
+    val username: String? = null,
+)
 
 /** One member who saved a post. `avatarUrl` may be relative; null means draw their initial. */
 @Serializable
@@ -160,6 +172,9 @@ data class Saver(
     val avatarUrl: String? = null,
     val savedAt: String? = null,
     val isYou: Boolean = false,
+    /** A short note they left with their save ("you're welcome"), up to 140 characters. Older servers send none. */
+    @Serializable(with = LooseTextSerializer::class)
+    val note: String? = null,
 ) {
     /** What to call them: their name, else their username. */
     val label: String get() = name?.trim()?.takeIf { it.isNotEmpty() } ?: username
@@ -346,6 +361,8 @@ data class GroupChannel(
     @Serializable(with = CoversSerializer::class)
     val covers: List<String> = emptyList(),
     val savers: List<Saver> = emptyList(),
+    /** Posts in it you haven't seen ("3 new"). */
+    val newCount: Int = 0,
 )
 
 /** One friend's saves. */

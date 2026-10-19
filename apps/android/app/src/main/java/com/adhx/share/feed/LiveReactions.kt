@@ -92,7 +92,7 @@ fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean
                 .widthIn(max = 520.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
-                .background(AdhxColors.Surface.copy(alpha = 0.94f))
+                .background(AdhxColors.Surface.copy(alpha = 0.88f))
                 .border(1.dp, AdhxColors.White.copy(alpha = 0.1f), RoundedCornerShape(26.dp))
                 .verticalScroll(rememberScrollState())
                 // Taps on the card stay on the card.
@@ -252,7 +252,7 @@ private fun RingedFace(who: Saver?, server: String, size: Dp) {
             .size(size + 10.dp)
             .border(2.dp, color, GobShape)
             .padding(2.dp)
-            .border(3.dp, Color.Black, GobShape)
+            .background(Color.Black, GobShape)
             .padding(3.dp),
     ) {
         Avatar(

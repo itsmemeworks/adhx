@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -167,6 +168,7 @@ fun Segmented(
     background: Color = AdhxColors.Surface,
     height: Dp = 44.dp,
     dotAt: Int? = null,
+    fontSize: Int = 15,
 ) {
     Row(
         modifier
@@ -185,7 +187,7 @@ fun Segmented(
                     .clip(RoundedCornerShape(50))
                     .background(if (on) AdhxColors.Cream else Color.Transparent)
                     .selectable(selected = on, role = Role.Tab, onClick = { onSelect(i) })
-                    .padding(horizontal = 18.dp),
+                    .padding(horizontal = if (fill) 4.dp else 18.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -195,10 +197,11 @@ fun Segmented(
                 }
                 Text(
                     label,
-                    fontSize = 15.sp,
+                    fontSize = fontSize.sp,
                     fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold,
                     color = if (on) AdhxColors.Black else AdhxColors.Cream,
                     maxLines = 1,
+                    softWrap = false,
                 )
             }
         }
@@ -255,6 +258,26 @@ fun JustForMeRow(
                 uncheckedTrackColor = Color(0xFF4A453E),
                 uncheckedBorderColor = Color(0xFF4A453E),
             ),
+        )
+    }
+}
+
+/** The boards' switch: 48×28, yellow with a black knob when on, dark with a cream knob when off. */
+@Composable
+fun AdhxSwitch(on: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val x by androidx.compose.animation.core.animateDpAsState(if (on) 23.dp else 3.dp, label = "knob")
+    Box(
+        modifier
+            .size(width = 48.dp, height = 28.dp)
+            .clip(CircleShape)
+            .background(if (on) AdhxColors.Accent.copy(alpha = if (enabled) 1f else 0.55f) else AdhxColors.Hairline),
+    ) {
+        Box(
+            Modifier
+                .padding(start = x, top = 3.dp)
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(if (on) AdhxColors.Black else AdhxColors.Cream),
         )
     }
 }

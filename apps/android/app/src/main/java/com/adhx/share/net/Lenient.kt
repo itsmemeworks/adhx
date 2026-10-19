@@ -3,6 +3,7 @@ package com.adhx.share.net
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
@@ -21,6 +22,26 @@ import kotlinx.serialization.json.contentOrNull
 private fun JsonElement.text(): String? = (this as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
 
 private fun JsonObject.firstText(vararg keys: String): String? = keys.firstNotNullOfOrNull { this[it]?.text() }
+
+/**
+ * A line of text that may be missing or not text at all (a saver's `note`
+ * on a server that doesn't have notes yet, or sends something else): a
+ * non-empty string, else null. Never fails the post.
+ */
+object LooseTextSerializer : KSerializer<String?> {
+    override val descriptor: SerialDescriptor = String.serializer().nullable.descriptor
+
+    override fun serialize(encoder: Encoder, value: String?) = encoder.encodeString(value ?: "")
+
+    override fun deserialize(decoder: Decoder): String? {
+        val element = (decoder as? JsonDecoder)?.decodeJsonElement() ?: return decoder.decodeString().trim().takeIf { it.isNotEmpty() }
+        return when (element) {
+            is JsonPrimitive -> element.text()
+            is JsonObject -> element.firstText("text", "note")
+            else -> null
+        }
+    }
+}
 
 /** `why`: "Saved together", or ["…", "…"], or [{ text }], or { reasons: […] }. */
 object ReasonsSerializer : KSerializer<List<String>> {
@@ -42,6 +63,29 @@ object ReasonsSerializer : KSerializer<List<String>> {
             ?: (element["reasons"] ?: element["lines"])?.let { reasons(it) }
             ?: emptyList()
     }.distinct()
+}
+
+/** `whyReasons`: like `why`, keeping each reason's `kind` and `username` when it's an object. */
+object WhyReasonsSerializer : KSerializer<List<WhyReason>> {
+    private val delegate = ListSerializer(WhyReason.serializer())
+    override val descriptor: SerialDescriptor = delegate.descriptor
+
+    override fun serialize(encoder: Encoder, value: List<WhyReason>) = delegate.serialize(encoder, value)
+
+    override fun deserialize(decoder: Decoder): List<WhyReason> {
+        val element = (decoder as? JsonDecoder)?.decodeJsonElement() ?: return delegate.deserialize(decoder)
+        return reasons(element).distinctBy { it.text }
+    }
+
+    private fun reasons(element: JsonElement): List<WhyReason> = when (element) {
+        is JsonNull -> emptyList()
+        is JsonPrimitive -> listOfNotNull(element.text()?.let { WhyReason(it) })
+        is JsonArray -> element.flatMap { reasons(it) }
+        is JsonObject -> element.firstText("text", "label", "reason", "line")
+            ?.let { listOf(WhyReason(it, element["kind"]?.text(), element["username"]?.text())) }
+            ?: (element["reasons"] ?: element["lines"])?.let { reasons(it) }
+            ?: emptyList()
+    }
 }
 
 /**
