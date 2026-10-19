@@ -9,6 +9,7 @@ import type { Saver } from '@/lib/people/types'
 import { timeAgo } from './moments/live'
 import { NxAvatar } from './primitives'
 import { orderedSavers, saverHref, saverName, saversLine, savesOf } from './savers'
+import { bylineNote, SaverNote } from './SaverNote'
 
 /**
  * Who saved this, for members: up to three overlapping faces and a short line
@@ -157,9 +158,10 @@ function FaceLink({
 
 /**
  * The faces as a button that opens "Who saved it": each saver, when they
- * saved it, and a link to their channel (yours: My saves). For the theater.
- * `placement`: open above the faces (a byline at the bottom) or below (chips
- * at the top).
+ * saved it, their note, and a link to their channel (yours: My saves). For
+ * the theater. `placement`: open above the faces (a byline at the bottom,
+ * which also shows the newest friend's note as a speech bubble) or below
+ * (chips at the top).
  */
 export function SaversButton({
   savers,
@@ -219,7 +221,8 @@ export function SaversButton({
   if (savers.length === 0) return null
   const list = orderedSavers(savers)
   const others = list.filter((s) => !s.isYou).length
-  return (
+  const noted = placement === 'above' ? bylineNote(savers) : undefined
+  const button = (
     <span ref={root} className={cn('pointer-events-auto relative flex min-w-0', className)}>
       <button
         type="button"
@@ -259,13 +262,14 @@ export function SaversButton({
                     author={{ avatarUrl: s.avatarUrl, handle: s.username, name: saverName(s) }}
                     size={40}
                   />
-                  <span className="flex min-w-0 flex-col gap-1">
+                  <span className="flex min-w-0 flex-col gap-1.5">
                     <span className="flex items-baseline gap-2">
                       <span className="truncate text-[15px] font-extrabold">{saverName(s)}</span>
                       <span className="shrink-0 text-[13px] text-white/55">
                         {timeAgo(s.savedAt)}
                       </span>
                     </span>
+                    <SaverNote saver={s} variant="quote" />
                     <Link
                       href={saverHref(s)}
                       className="flex items-center gap-1 text-[13px] font-semibold text-nx-accent hover:underline"
@@ -292,6 +296,13 @@ export function SaversButton({
           </div>,
           document.body,
         )}
+    </span>
+  )
+  if (!noted) return button
+  return (
+    <span className="flex min-w-0 flex-col items-start gap-2">
+      <SaverNote saver={noted} />
+      {button}
     </span>
   )
 }

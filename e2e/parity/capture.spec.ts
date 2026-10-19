@@ -318,7 +318,6 @@ const BOARDS: Board[] = [
     shows: 'New, Charlie bit my finger playing, Who saved it open (plus the why panel)',
     path: '/play?feed=new',
     seek: 41,
-    known: ['Ana’s note on the save (“the original and still the best”): the schema has no notes.'],
     setup: async (ctx) => {
       await attempt(ctx, 'theater ready', () => theaterReady(ctx.page))
       await playItem(ctx, 'Charlie bit my finger')
@@ -339,7 +338,7 @@ const BOARDS: Board[] = [
     shows: 'Ana’s saves (friend channel)',
     path: '/channels/friend/ana',
     phone: 'j3-3-phone-friend-channel',
-    known: ['Ana’s note card: the schema has no notes.'],
+    known: ['Ana’s note card (a tile quoting her note) isn’t built yet.'],
   },
   {
     name: 'j4-1-web-search-said',
@@ -405,7 +404,6 @@ const BOARDS: Board[] = [
     shows: 'Food you’ll cook one day, playing It’s all about the sauce',
     path: '/play?group=food-youll-cook-one-day',
     seek: 3,
-    known: ['Mum’s note (“making this Sunday”): the schema has no notes.'],
     setup: async (ctx) => {
       await attempt(ctx, 'theater ready', () => theaterReady(ctx.page))
       await playItem(ctx, 'It’s all about the sauce')

@@ -215,6 +215,7 @@ function insertSave(
   who: PersonKey,
   minutesAgo: number,
   isPrivate = false,
+  note: string | null = null,
 ) {
   db.insert(bookmarks)
     .values({
@@ -230,6 +231,7 @@ function insertSave(
       category: p.category,
       source: 'manual',
       isPrivate,
+      note,
     })
     .run()
 }
@@ -315,7 +317,7 @@ function planFillers() {
 
 function seedSaves() {
   for (const w of POSTS) {
-    for (const s of w.saves) insertSave(w, s.who, s.minutesAgo, s.private)
+    for (const s of w.saves) insertSave(w, s.who, s.minutesAgo, s.private, s.note ?? null)
   }
   fillers.forEach((f, i) => insertSave(f, f.who, fillerAgo(i)))
 }

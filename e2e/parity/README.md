@@ -79,8 +79,9 @@ pair for real: Settings → Phone app on the web as that member makes a code.
   Instagram Reel on attempt 2), and ready (recent saves). Keep is on, but the
   seed pins the `KEEP_BACKFILL=off` cutoff in the year 2999, so the keep worker
   never downloads anything.
-- **Not in the schema**: notes on saves ("the original and still the best",
-  "making this Sunday").
+- **Notes on saves**: Ana's "the original and still the best" on Charlie,
+  Ben's "you’re welcome" on the Rickroll, Mum's "making this Sunday" on the
+  sauce video and Pete's "this is so you, Ben" on the dark chocolate Reel.
 
 The parity server runs with `SEMANTIC_SEARCH=off` (search is keywords plus
 seeded speech and on-screen words), `AUTO_SYNC_EVERY_MINUTES=0`, and FxTwitter /

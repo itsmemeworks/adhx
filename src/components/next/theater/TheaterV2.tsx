@@ -586,6 +586,8 @@ export function TheaterV2({
   // "Just for me": the server's flag, then whatever was switched here.
   const [privateNow, setPrivateNow] = useState<Map<string, boolean>>(new Map())
   const isPrivate = !!current && (privateNow.get(currentKey) ?? !!current.post.isPrivate)
+  // Your note on each post, as set here in the Save sheet (else the server's).
+  const [noteNow, setNoteNow] = useState<Map<string, string | null>>(new Map())
   // Savers are only sent to signed-in members; a save made here adds you.
   const { me, loading: authLoading } = useAuthMe()
   // Seen (the feed's watched list): 2s on stage, or skipped. Members only.
@@ -608,18 +610,22 @@ export function TheaterV2({
   }, [currentKey, caughtUp, markSeen])
   const member = !!me?.user
   const savers = useMemo<Saver[] | undefined>(() => {
-    const list = current?.post.savers
+    const mine = noteNow.get(currentKey)
+    const list = current?.post.savers?.map((s) => (s.isYou ? withNote(s, mine) : s))
     if (!list) return undefined
     if (!savedNow.has(currentKey) || list.some((s) => s.isYou) || !me?.user) return list
-    const you: Saver = {
-      username: me.user.username,
-      name: me.user.displayName || null,
-      avatarUrl: me.user.avatarUrl,
-      savedAt: new Date().toISOString(),
-      isYou: true,
-    }
+    const you: Saver = withNote(
+      {
+        username: me.user.username,
+        name: me.user.displayName || null,
+        avatarUrl: me.user.avatarUrl,
+        savedAt: new Date().toISOString(),
+        isYou: true,
+      },
+      mine,
+    )
     return [you, ...list]
-  }, [current, currentKey, savedNow, me])
+  }, [current, currentKey, savedNow, me, noteNow])
 
   /** Friends "Why this one" can show more or less of: whoever else saved it. */
   const whyFriends = useMemo<WhyFriend[]>(
@@ -2205,6 +2211,14 @@ export function TheaterV2({
             isPrivate={isPrivate}
             privateBusy={privateBusy}
             onPrivate={(on) => void setPostPrivate(on)}
+            note={
+              current && {
+                platform: current.post.platform ?? 'twitter',
+                id: current.post.id,
+                value: savers?.find((s) => s.isYou)?.note ?? null,
+              }
+            }
+            onNote={(note) => setNoteNow((m) => new Map(m).set(currentKey, note))}
             onClose={() => {
               setPanel(null)
               setCreated(null)
@@ -2342,4 +2356,11 @@ export function TheaterV2({
       <BottomNav current={navHere} />
     </>
   )
+}
+
+/** A saver with the note set here (undefined: as the server sent it; null: none). */
+function withNote(saver: Saver, note: string | null | undefined): Saver {
+  if (note === undefined) return saver
+  const { note: _was, ...rest } = saver
+  return note ? { ...rest, note } : rest
 }

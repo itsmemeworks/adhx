@@ -139,6 +139,8 @@ export interface Save {
   who: PersonKey
   minutesAgo: number
   private?: boolean
+  /** Their note on the save (boards j1-2, j2-3, j3-1, j3-2, j6-2). */
+  note?: string
 }
 
 export interface WorldPost {
@@ -221,7 +223,7 @@ export const POSTS: WorldPost[] = [
     saves: [
       { who: 'pete', minutesAgo: h(2) },
       { who: 'ben', minutesAgo: d(1) },
-      { who: 'ana', minutesAgo: d(3) },
+      { who: 'ana', minutesAgo: d(3), note: 'the original and still the best' },
     ],
     speech: 'Charlie bit me… ouch, Charlie. Charlie, that really hurt.',
   },
@@ -304,7 +306,7 @@ export const POSTS: WorldPost[] = [
     topic: 'joke',
     media: copyVideo('youtube', YT_RICK),
     saves: [
-      { who: 'ben', minutesAgo: m(15) },
+      { who: 'ben', minutesAgo: m(15), note: 'you’re welcome' },
       { who: 'ana', minutesAgo: d(2) },
     ],
   },
@@ -320,7 +322,7 @@ export const POSTS: WorldPost[] = [
     topic: 'food',
     media: copyVideo('instagram', IG_CHOC),
     saves: [
-      { who: 'pete', minutesAgo: m(1) },
+      { who: 'pete', minutesAgo: m(1), note: 'this is so you, Ben' },
       { who: 'ben', minutesAgo: d(3) },
     ],
     screen: 'Trying dark chocolate for the first time',
@@ -356,7 +358,7 @@ export const POSTS: WorldPost[] = [
     topic: 'food',
     media: copyVideo('pinterest', PIN_STEAK),
     saves: [
-      { who: 'mum', minutesAgo: h(1) },
+      { who: 'mum', minutesAgo: h(1), note: 'making this Sunday' },
       { who: 'pete', minutesAgo: d(2) },
     ],
     screen: 'it’s all about the sauce',
