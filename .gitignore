@@ -16,6 +16,8 @@ data/*.db-shm
 
 # Media downloads (can be large)
 data/media/
+# The search model, downloaded on first use (about 400 MB)
+data/models/
 
 # Config with credentials
 bookmarks-archiver.config.json
