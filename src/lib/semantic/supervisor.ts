@@ -2,7 +2,7 @@ import { fork, type ChildProcess } from 'node:child_process'
 import os from 'node:os'
 import path from 'node:path'
 import { captureException } from '@/lib/sentry'
-import { semanticEnabled, type UnderstandingKind } from './config'
+import { semanticEnabled, type JobKind } from './config'
 import { normalize } from './vectors'
 import { remoteProcessing } from '@/lib/processing/config'
 
@@ -25,7 +25,7 @@ export type ChildRole = 'jobs' | 'query'
 export interface JobActivity {
   platform: string
   postId: string
-  kind: UnderstandingKind
+  kind: JobKind
   phase: string
   frames: number
   startedAt: string

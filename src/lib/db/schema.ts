@@ -614,6 +614,27 @@ export const understandingQueue = sqliteTable(
   }),
 )
 
+// Words read out of a post's media (speech, text on screen), keyed by post.
+// DDL lives in `src/lib/semantic/schema-sql.ts`.
+export const postExtractedText = sqliteTable(
+  'post_extracted_text',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(), // 'speech' | 'screen'
+    model: text('model').notNull(),
+    contentHash: text('content_hash').notNull(),
+    status: text('status').notNull(), // 'ok' | 'none' | 'failed'
+    text: text('text'),
+    language: text('language'),
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+  }),
+)
+
 // "Made for you" channels: one user's saves grouped by meaning and named.
 // Derived and private (never shown to anyone else); recomputed when stale.
 // Keeping one turns it into an ordinary tag channel.
@@ -638,6 +659,7 @@ export const autoChannels = sqliteTable(
 )
 
 export type PostEmbedding = typeof postEmbeddings.$inferSelect
+export type PostExtractedText = typeof postExtractedText.$inferSelect
 export type UnderstandingJob = typeof understandingQueue.$inferSelect
 export type AutoChannel = typeof autoChannels.$inferSelect
 

@@ -14,11 +14,15 @@ export async function GET(request: Request): Promise<Response> {
   if (!workerAuthorized(request))
     return Response.json({ error: 'Worker authentication required' }, { status: 401, headers })
   try {
-    const id = new URL(request.url).searchParams.get('id') || ''
+    const params = new URL(request.url).searchParams
+    const id = params.get('id') || ''
+    const slot = params.get('slot')
+    if (slot !== null && !/^(?:(?:video|photo|audio)-[1-9]\d?|poster)$/.test(slot))
+      throw new ProcessingConflict('Unknown media slot')
     const lease = request.headers.get('x-adhx-lease') || ''
     const conversion = await conversionMedia(id, lease)
     if (!conversion && indexingPaused()) throw new ProcessingConflict('Background indexing paused')
-    const media = conversion ?? (await processingMedia(id, lease))
+    const media = conversion ?? (await processingMedia(id, lease, slot))
     const info = await stat(media.file)
     if (!info.isFile() || info.size !== media.bytes)
       throw new ProcessingConflict('Retained media changed')

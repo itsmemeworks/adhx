@@ -11,6 +11,7 @@ import {
   groupResults,
   KIND_WORD,
   kindOf,
+  heardOrRead,
   matchReason,
   matchShort,
   openHref,
@@ -84,6 +85,7 @@ export function BestMatch({
         <StrengthMeter
           strength={strengthOfItem(item)}
           withLabel
+          where={heardOrRead(item)}
           tone="cream"
           className="absolute left-3.5 top-12"
         />
@@ -144,6 +146,7 @@ export function BestMatch({
       <StrengthMeter
         strength={strengthOfItem(item)}
         withLabel
+        where={heardOrRead(item)}
         className="absolute left-3.5 top-12"
       />
       <SaversMark item={item} className="right-3.5 top-3.5" />

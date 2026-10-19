@@ -20,6 +20,13 @@
  * `post_text_fts` is the keyword side of hybrid search: the same post text the
  * model reads (never tags), one row per post, written on save independently
  * of the model. A model-free startup pass fills any missing rows.
+ *
+ * `post_extracted_text` holds words read out of a post's media on this
+ * server: `speech` (what is said in its video or sound) and `screen` (text in
+ * its pictures or video frames). Keyed by post like `post_embeddings`; `model`
+ * is the extractor version, `status` is `ok` (words kept), `none` (nothing
+ * worth keeping: silence, music, no text) or `failed`. The words join the
+ * post's text document and keyword row. Removed with the post's last save.
  */
 export const UNDERSTANDING_DDL = `
   CREATE TABLE IF NOT EXISTS post_embeddings (
@@ -71,6 +78,27 @@ export const UNDERSTANDING_DDL = `
     tokenize = 'unicode61 remove_diacritics 2',
     prefix = '2 3'
   );
+
+  CREATE TABLE IF NOT EXISTS post_extracted_text (
+    platform TEXT NOT NULL,
+    post_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    model TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    status TEXT NOT NULL,
+    text TEXT,
+    language TEXT,
+    error TEXT,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (platform, post_id, kind)
+  );
+
+  CREATE TRIGGER IF NOT EXISTS extracted_text_last_save_deleted
+  AFTER DELETE ON bookmarks
+  WHEN NOT EXISTS (SELECT 1 FROM bookmarks WHERE platform=OLD.platform AND id=OLD.id)
+  BEGIN
+    DELETE FROM post_extracted_text WHERE platform=OLD.platform AND post_id=OLD.id;
+  END;
 
   CREATE TABLE IF NOT EXISTS processing_leases (
     id TEXT PRIMARY KEY,

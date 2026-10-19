@@ -3,19 +3,37 @@ import { repairUnloadedArticles } from '@/lib/sync/repair-articles'
 import { db } from '@/lib/db'
 import type { UnderstandingJob } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
-import { PRIORITY, VIDEO_FPS, semanticEnabled, type UnderstandingKind } from './config'
-import { buildPostDocument, hashFor, type PostDocument } from './documents'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import {
+  PRIORITY,
+  VIDEO_FPS,
+  extractEnabled,
+  isExtractKind,
+  semanticEnabled,
+  type ExtractKind,
+  type JobKind,
+} from './config'
+import { hashFor, type PostDocument } from './documents'
+import { extractedCurrent, getExtracted, saveExtracted } from './extracted'
+import { readScreenText, sweepScratch, transcribeSource } from './extract-media'
+import { sharedExtractor } from './extractor'
 import { indexPostText } from './keywords'
 import {
   fetchImageBytes,
+  frameSource,
   MediaUnavailableError,
   MediaGoneError,
   NotAVideoError,
   keptLocalFile,
+  keptSoundFile,
   sampleVideoFrames,
+  soundSource,
+  whyProxyFailed,
 } from './media'
 import { embedImageBytes, embedTexts, embedVideoFrames } from './model'
-import { loadPostItem } from './posts'
+import { loadPostDocument } from './posts'
 import { completeJob, enqueueBackfill, enqueuePosts, failJob, nextJob } from './queue'
 import { getEmbedding, isCurrent, saveEmbedding } from './store'
 
@@ -28,8 +46,8 @@ import { getEmbedding, isCurrent, saveEmbedding } from './store'
 export interface WorkerActivity {
   platform: string
   postId: string
-  kind: UnderstandingKind
-  phase: 'loading' | 'sampling' | 'understanding'
+  kind: JobKind
+  phase: 'loading' | 'sampling' | 'understanding' | 'listening' | 'reading'
   frames: number
   startedAt: string
 }
@@ -77,6 +95,126 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+/** What is said in the post's video or sound. Null for silence, music or no sound. */
+async function listen(
+  doc: PostDocument,
+): Promise<{ text: string; language: string | null } | null> {
+  const activity = state.current!
+  const { source, local } = await soundSource(doc.speech!.url)
+  activity.phase = 'listening'
+  const run = sharedExtractor()
+  try {
+    return await transcribeSource(source, (task, signal) => run.run(task, signal), {
+      localOnly: local,
+    })
+  } catch (error) {
+    if (local || error instanceof MediaUnavailableError) throw error
+    if (error instanceof Error && error.message.startsWith('ffmpeg failed'))
+      return whyProxyFailed(doc.speech!.url, source, error)
+    throw error
+  }
+}
+
+/** Text on the post's pictures and a few video frames. Null when there is none. */
+async function readOnScreen(doc: PostDocument): Promise<string | null> {
+  const activity = state.current!
+  const screen = doc.screen!
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'adhx-screen-images-'))
+  try {
+    const images: string[] = []
+    for (const [i, url] of screen.images.entries()) {
+      const kept = await keptLocalFile(url)
+      if (kept) {
+        images.push(kept)
+        continue
+      }
+      const file = path.join(dir, `image-${i}`)
+      await writeFile(file, await fetchImageBytes(url))
+      images.push(file)
+    }
+    const video = screen.video ? await frameSource(screen.video) : null
+    activity.phase = 'reading'
+    const run = sharedExtractor()
+    return await readScreenText(
+      images,
+      video ? { source: video.source, duration: screen.videoSeconds } : null,
+      (task, signal) => run.run(task, signal),
+      { localOnly: video?.local ?? true },
+    )
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}
+
+/**
+ * The post's searchable words changed (new speech or text on screen): its
+ * keyword row is rewritten now and its text vector is queued again, at the
+ * same priority as the job that found them.
+ */
+async function wordsChanged(job: UnderstandingJob): Promise<void> {
+  const loaded = await loadPostDocument(job.platform, job.postId)
+  if (!loaded) return
+  indexPostText(job.platform, job.postId, loaded.doc.keywords)
+  await enqueuePosts([{ platform: job.platform, postId: job.postId }], job.priority, ['text'])
+}
+
+/** Speech and text on screen: words for the post's document instead of a vector. */
+async function processExtract(
+  job: UnderstandingJob,
+  kind: ExtractKind,
+  doc: PostDocument,
+): Promise<'done' | 'skipped' | 'retry' | 'failed'> {
+  if (!extractEnabled(kind)) {
+    await completeJob(job)
+    return 'skipped'
+  }
+  const key = { platform: job.platform, postId: job.postId, kind }
+  const hash = await withKeptState(hashFor(doc, kind), kind, doc)
+  if (extractedCurrent(getExtracted(job.platform, job.postId, kind), kind, hash)) {
+    await completeJob(job)
+    return 'skipped'
+  }
+  if (hash === null) {
+    if (saveExtracted({ ...key, contentHash: null, status: 'none' })) await wordsChanged(job)
+    await completeJob(job)
+    return 'skipped'
+  }
+  try {
+    let text: string | null
+    let language: string | null = null
+    if (kind === 'speech') {
+      const heard = await listen(doc)
+      text = heard?.text ?? null
+      language = heard?.language ?? null
+    } else {
+      text = await readOnScreen(doc)
+    }
+    const changed = saveExtracted({
+      ...key,
+      contentHash: hash,
+      status: text ? 'ok' : 'none',
+      text,
+      language,
+    })
+    if (changed) await wordsChanged(job)
+    await completeJob(job)
+    return 'done'
+  } catch (error) {
+    if (error instanceof NotAVideoError || error instanceof MediaGoneError) {
+      if (saveExtracted({ ...key, contentHash: hash, status: 'none' })) await wordsChanged(job)
+      await completeJob(job)
+      return 'skipped'
+    }
+    const message = error instanceof Error ? error.message : String(error)
+    const permanent = error instanceof MediaUnavailableError && /not allowed|must be/.test(message)
+    const gaveUp = permanent || (await failJob(job, message))
+    if (!gaveUp) return 'retry'
+    if (permanent) await completeJob(job)
+    saveExtracted({ ...key, contentHash: hash, status: 'failed', error: message })
+    return 'failed'
+  }
+}
+
 async function understand(job: UnderstandingJob, doc: PostDocument): Promise<Float32Array> {
   const activity = state.current!
   if (job.kind === 'text') {
@@ -104,7 +242,7 @@ async function understand(job: UnderstandingJob, doc: PostDocument): Promise<Flo
 export async function processJob(
   job: UnderstandingJob,
 ): Promise<'done' | 'skipped' | 'retry' | 'failed'> {
-  const kind = job.kind as UnderstandingKind
+  const kind = job.kind as JobKind
   state.current = {
     platform: job.platform,
     postId: job.postId,
@@ -114,12 +252,13 @@ export async function processJob(
     startedAt: new Date().toISOString(),
   }
   try {
-    const item = await loadPostItem(job.platform, job.postId)
-    if (!item) {
+    const loaded = await loadPostDocument(job.platform, job.postId)
+    if (!loaded) {
       await completeJob(job) // nobody has this post saved any more
       return 'skipped'
     }
-    const doc = buildPostDocument(item)
+    const { doc } = loaded
+    if (isExtractKind(kind)) return await processExtract(job, kind, doc)
     // Keywords are cheap and model-free: keep them current on every text job.
     if (kind === 'text') indexPostText(job.platform, job.postId, doc.keywords)
     const hash = await withKeptState(hashFor(doc, kind), kind, doc)
@@ -200,9 +339,19 @@ async function withKeptState(
   doc: PostDocument,
 ): Promise<string | null> {
   if (!hash) return hash
-  const url = kind === 'video' ? doc.video?.url : kind === 'image' ? doc.image?.url : null
+  const url =
+    kind === 'video'
+      ? doc.video?.url
+      : kind === 'image'
+        ? doc.image?.url
+        : kind === 'speech'
+          ? doc.speech?.url
+          : kind === 'screen'
+            ? (doc.screen?.video ?? doc.screen?.images[0])
+            : null
   if (!url) return hash
-  const kept = await keptLocalFile(url)
+  // A sound-only post keeps `audio-1` behind its `video-1` path.
+  const kept = kind === 'speech' ? await keptSoundFile(url) : await keptLocalFile(url)
   return kept ? `${hash}:kept` : hash
 }
 
@@ -221,8 +370,8 @@ export async function clearWordlessText(): Promise<number> {
   `)
   let cleared = 0
   for (const row of rows) {
-    const item = await loadPostItem(row.platform, row.post_id)
-    if (!item || buildPostDocument(item).hasWords) continue
+    const loaded = await loadPostDocument(row.platform, row.post_id)
+    if (!loaded || loaded.doc.hasWords) continue
     await saveEmbedding({
       platform: row.platform,
       postId: row.post_id,
@@ -236,6 +385,7 @@ export async function clearWordlessText(): Promise<number> {
 }
 
 async function loop(): Promise<void> {
+  await sweepScratch()
   try {
     await enqueueBackfill()
     await clearWordlessText()

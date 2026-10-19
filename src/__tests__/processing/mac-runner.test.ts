@@ -444,7 +444,11 @@ describe('native worker protocol and isolation', () => {
     })
     expect(await runner.runOnce()).toBe(true)
     expect(actions.map((a) => a.action)).toEqual(['claim', 'complete'])
-    expect(actions[0]).toMatchObject({ protocol: 1, model: SEMANTIC_MODEL_VERSION })
+    expect(actions[0]).toMatchObject({
+      protocol: 2,
+      model: SEMANTIC_MODEL_VERSION,
+      kinds: ['text', 'image', 'video', 'speech', 'screen'],
+    })
     expect(actions[1]).toMatchObject({ id: 'job1', lease: 'private-lease', vector })
     expect(run.mock.calls[0][0]).toMatchObject({ kind: 'text', text: textJob().text })
     expect(JSON.stringify(log.mock.calls)).not.toContain(config.token)

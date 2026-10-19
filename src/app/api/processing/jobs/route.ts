@@ -5,6 +5,7 @@ import {
   planProcessingVideo,
   completeProcessingJob,
   completeVideoSegment,
+  completeExtractJob,
   failProcessingJob,
   ProcessingConflict,
   ProcessingInputError,
@@ -45,7 +46,7 @@ export async function POST(request: Request): Promise<Response> {
             (await claimConversionJob(body.workerId, body.model, body.protocol)) ??
             (indexingPaused()
               ? null
-              : await claimProcessingJob(body.workerId, body.model, body.protocol)),
+              : await claimProcessingJob(body.workerId, body.model, body.protocol, body.kinds)),
         },
         { headers },
       )
@@ -68,6 +69,12 @@ export async function POST(request: Request): Promise<Response> {
     if (body.action === 'complete') {
       if (!Array.isArray(body.vector)) throw new ProcessingInputError('Expected an embedding')
       await completeProcessingJob(body.id, body.lease, body.vector)
+      return Response.json({ done: true }, { headers })
+    }
+    if (body.action === 'extracted') {
+      if (body.text !== null && typeof body.text !== 'string')
+        throw new ProcessingInputError('Expected words or null')
+      await completeExtractJob(body.id, body.lease, body.text, body.language)
       return Response.json({ done: true }, { headers })
     }
     if (body.action === 'segment') {
