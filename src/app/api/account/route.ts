@@ -10,6 +10,7 @@ import {
   userPreferences,
   accessKeys,
   appPairCodes,
+  invites,
   phoneSaveQueue,
   adminSignInLinks,
   oauthTokens,
@@ -35,8 +36,8 @@ import { clearSessionCookie } from '@/lib/auth/session'
  *
  * Deletes the user's account and associated private/product data: bookmarks,
  * tags, preferences, OAuth tokens, the `users` row,
- * and every linked sign-in identity (X + email) and outstanding magic-link
- * token. Historical moderation/audit records remain intact, but cannot be
+ * every linked sign-in identity (X, email, invite), outstanding magic-link
+ * tokens, and invites it made or joined with. Historical moderation/audit records remain intact, but cannot be
  * used as a live account or auth identity.
  *
  * Historical activity/analytics rows survive, but their nullable private
@@ -106,6 +107,10 @@ export const DELETE = withAuth(async (_req, userId) => {
       db.delete(accessKeys).where(eq(accessKeys.userId, userId)).run()
       db.delete(appPairCodes).where(eq(appPairCodes.userId, userId)).run()
       db.delete(phoneSaveQueue).where(eq(phoneSaveQueue.userId, userId)).run()
+      // Invites this account made (pending ones die with it) or joined with.
+      db.delete(invites)
+        .where(or(eq(invites.createdBy, userId), eq(invites.usedBy, userId)))
+        .run()
 
       // 16. Preserve aggregate history without retaining this account's
       // private actor/viewer ID.

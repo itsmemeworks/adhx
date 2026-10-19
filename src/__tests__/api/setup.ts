@@ -319,6 +319,18 @@ export const FULL_SCHEMA_SQL = `
     created_at TEXT NOT NULL,
     expires_at INTEGER NOT NULL
   );
+  CREATE TABLE invites (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_by TEXT,
+    used_at TEXT,
+    revoked_at TEXT,
+    name_hint TEXT
+  );
+  CREATE INDEX invites_created_by_idx ON invites(created_by);
   CREATE TABLE keep_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL

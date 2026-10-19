@@ -154,6 +154,18 @@ try {
       created_at TEXT NOT NULL,
       expires_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS invites (
+      id TEXT PRIMARY KEY,
+      token_hash TEXT NOT NULL UNIQUE,
+      created_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used_by TEXT,
+      used_at TEXT,
+      revoked_at TEXT,
+      name_hint TEXT
+    );
+    CREATE INDEX IF NOT EXISTS invites_created_by_idx ON invites(created_by);
     CREATE TABLE IF NOT EXISTS keep_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -201,7 +213,9 @@ try {
       PRIMARY KEY (platform, post_id, slot)
     );
   `)
-  console.log('[migrate] Ensured users/user_identities/login_tokens/access_keys/keep tables')
+  console.log(
+    '[migrate] Ensured users/user_identities/login_tokens/access_keys/invites/keep tables',
+  )
 } catch (error) {
   console.log('[migrate] FAILED creating account tables', error)
   db.close()

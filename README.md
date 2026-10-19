@@ -69,7 +69,7 @@ Downloads run through [yt-dlp](https://github.com/yt-dlp/yt-dlp), plus each netw
 You need:
 
 - **Somewhere to run a container** with a persistent folder: a home server, a NAS, a small VPS, or [Fly.io](#flyio).
-- **A way to get sign-in links to people.** ADHX has no passwords; people sign in with a one-time link. Pick one (see [Sign-in links](#sign-in-links)): your own mail server, a [Resend](https://resend.com) account, or no email at all, where you pass links on yourself.
+- **A way to let people in.** ADHX has no passwords. The easy way is an [invite link](#who-can-sign-up): send it, they pick a name, done. For signing back in on a new browser, people use a one-time email link: your own mail server, a [Resend](https://resend.com) account, or no email at all, where you pass links on yourself (see [Sign-in links](#sign-in-links)).
 - **Disk space.** See [Disk space](#disk-space).
 
 ### Docker Compose
@@ -80,7 +80,7 @@ cp .env.example .env
 openssl rand -base64 32
 ```
 
-Edit `.env`: put the generated value in `SESSION_SECRET`, set `NEXT_PUBLIC_APP_URL` to your final HTTPS address, set `ALLOWED_EMAILS` to your invited addresses and set `EMAIL_LINKS_TO_ADMIN=1` (or configure SMTP/Resend). Create this file once and keep it private and stable; do not generate a new secret on each restart.
+Edit `.env`: put the generated value in `SESSION_SECRET`, set `NEXT_PUBLIC_APP_URL` to your final HTTPS address, set `ALLOWED_EMAILS` to your own email (that closes email sign-up to strangers; [invite links](#who-can-sign-up) let your people in) and set `EMAIL_LINKS_TO_ADMIN=1` (or configure SMTP/Resend). Create this file once and keep it private and stable; do not generate a new secret on each restart.
 
 For this source checkout, build and select its image explicitly:
 
@@ -117,7 +117,7 @@ service. See the [build and release flow](docs/releasing.md) for checks and reco
 
 ### Sign-in links
 
-People sign in with a one-time link. Emailed links last 15 minutes; links held for an admin to pass on last **60 minutes**. Opening a link shows a confirmation screen; press **Sign in** in the browser you want to use. Message previews cannot use the link. The one-minute countdown before requesting another link is a resend cooldown, not its expiry. Choose how links reach people:
+Invites (below) get people in. Sign-in links get them back in: on a new browser, or when a session runs out after 30 days. Emailed links last 15 minutes; links held for an admin to pass on last **60 minutes**. Opening a link shows a confirmation screen; press **Sign in** in the browser you want to use. Message previews cannot use the link. The one-minute countdown before requesting another link is a resend cooldown, not its expiry. Choose how links reach people:
 
 | Option               | Set                                                                                    | Good for                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -127,13 +127,19 @@ People sign in with a one-time link. Emailed links last 15 minutes; links held f
 
 With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and confirming it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
 
+People who joined by invite have no email until they add one in **Settings → Account**. Until then their browser session is their only way in, so nudge them to add one.
+
 ### Who can sign up
 
-By default, anyone who can reach your server can make an account. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in.
+**Invite links are the easy path.** On the admin page or in **Settings → Invite someone**, press **Make an invite link** and send it however you like. Your friend opens it, sees "Ana wants you in.", picks a name and presses **Join**. That's the whole sign-up: no email, no password, and their phone pairing code is on the next screen. Each link works once, for 7 days. Pending ones are listed with **Revoke**. A banned person's invites stop working. Links are shown once, when they're made: ADHX keeps only a fingerprint of each. Message previews can open an invite without using it; only pressing **Join** does.
 
-The admin page has sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+Only admins make invites, unless you set `INVITES=members` to let everyone in the group invite their own people.
 
-Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; the email allowlist protects account creation, not playback.
+Email sign-up works too. By default, anyone who can reach your server can make an account with their email. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in. Invite links work whatever `ALLOWED_EMAILS` says: the invite is the permission.
+
+The admin page has invites, sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+
+Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; invites and the email allowlist protect account creation, not playback.
 
 ### Settings
 
@@ -143,6 +149,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                   |
 | `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                   |
 | `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                 |
+| `INVITES=members`                            | Let every member make invite links, not just admins.                                                                         |
 | `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.    |
 | `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                     |
 | `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                       |
