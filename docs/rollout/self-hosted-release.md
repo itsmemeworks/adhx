@@ -24,6 +24,9 @@ a service has been installed or the public website has been replaced.
 - **Honest phone links:** default install links lead to build instructions until
   signed releases exist. Custom public links are build-time Docker arguments.
   The committed Android wrapper and paid iOS App Group requirement are documented.
+- **Build fonts:** the app and site bundle local fonts with their licences and
+  pinned upstream provenance. Builds no longer depend on Google's changing font
+  response format, which exposed a Next.js Turbopack parser bug during this audit.
 - **Website separation:** PR CI builds the static site without publishing it.
   Pages publication is manual, so merging app changes cannot replace the legacy
   hosted service accidentally.
@@ -52,6 +55,16 @@ IMAGE_TAG=adhx:local bash scripts/container-smoke.sh --models
 This uses temporary containers and synthetic data and removes its named volume
 on completion. It does not install an application service. Standard container
 checks can omit `--models`; the model check downloads the pinned weights.
+
+## Recorded Linux validation
+
+[CI run 39218434002](https://github.com/itsmemeworks/adhx/actions/runs/39218434002)
+passed all checks for `da361e3`, including both native Linux container/model jobs.
+The ARM64 synthetic text/image/video model process reported about 1.31 GB peak
+RSS and 35.8 seconds including loading; AMD64 reported about 1.17 GB and 22.3
+seconds. These are short synthetic checks on hosted runners, not total server
+memory, long-video throughput or measurements of a particular NAS. The later
+font fix must also pass the current-revision CI checks before merge.
 
 ## Before a private server trial
 

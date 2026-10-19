@@ -1,24 +1,27 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
-import { Hanken_Grotesk, Instrument_Serif } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 
-const serif = Instrument_Serif({
-  subsets: ['latin'],
+// Reuse the application's licensed assets without a build-time font request.
+const serif = localFont({
+  src: '../../src/app/fonts/InstrumentSerif-Regular.ttf',
   weight: '400',
   variable: '--font-instrument-serif',
+  display: 'swap',
 })
-const sans = Hanken_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
+const sans = localFont({
+  src: '../../src/app/fonts/HankenGrotesk-latin-variable.woff2',
+  weight: '400 800',
   variable: '--font-hanken-grotesk',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://adhx.com'),
   title: 'ADHX: keep every post you love, on your own server',
   description:
-    'Self-hosted and open source. Save posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks, keep the originals in full quality, and find anything by describing it. With iPhone and Android companion apps.',
+    'Self-hosted and open source. Save posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks, keep copies at the best available resolution, and find them by describing what you remember. With iPhone and Android companion apps.',
   icons: {
     icon: [
       { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
@@ -29,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ADHX: keep every post you love, on your own server',
     description:
-      'Self-hosted and open source. Fourteen networks, full-quality originals, search by meaning.',
+      'Self-hosted and open source. Fourteen networks, copies at the best available resolution, search by meaning.',
     images: [{ url: '/adhx-reel.jpg', width: 1280, height: 720 }],
     videos: [{ url: '/adhx-reel.mp4', width: 1280, height: 720, type: 'video/mp4' }],
   },

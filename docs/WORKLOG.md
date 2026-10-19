@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Reproducible font builds and verified Linux inference
+
+- Bundle unchanged official font files, OFL licences and pinned provenance; root and site use local fonts, avoiding Google's variable response format and an upstream Turbopack parser failure.
+- Keep secure Next 16.3.8 and the existing production bundler; correct remaining site metadata quality claims.
+- Root production and static-site builds and focused layout tests pass locally. Prior fix da361e3 passed every GitHub check, including native AMD64/ARM64 conversion, persistence and real text/image/video inference; require the font revision's checks too.
+- No service installation, image/site publication, DNS change or household configuration committed.
+
 ## 2026-10-19 — Pre-installation fixes and native Linux validation gates
 
 - Patch production dependencies (Next 16.3.8 and compatible transitives): local production audit now zero; retain two documented development-tool advisories rather than forcing major overrides.

@@ -1,14 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import {
-  IBM_Plex_Sans,
-  Inter,
-  Lexend,
-  Atkinson_Hyperlegible,
-  Indie_Flower,
-  Newsreader,
-  Roboto_Mono,
-  Instrument_Serif,
-} from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
 import { AppShell } from '@/components/AppShell'
@@ -16,56 +6,74 @@ import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { getCurrentUserId } from '@/lib/auth/session'
 
-// Body fonts - user can choose in settings
-const ibmPlex = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+// Body fonts remain selectable in settings. Every face is bundled so Docker
+// builds never depend on Google's changing CSS/font responses. Provenance and
+// unchanged OFL licenses live alongside the font files.
+const ibmPlex = localFont({
+  src: './fonts/IBMPlexSans-variable.ttf',
+  weight: '400 700',
   variable: '--font-ibm-plex',
+  display: 'swap',
 })
 
-const inter = Inter({
-  subsets: ['latin'],
+const inter = localFont({
+  src: './fonts/Inter-variable.ttf',
+  weight: '100 900',
   variable: '--font-inter',
+  display: 'swap',
 })
 
-const lexend = Lexend({
-  subsets: ['latin'],
+const lexend = localFont({
+  src: './fonts/Lexend-variable.ttf',
+  weight: '100 900',
   variable: '--font-lexend',
+  display: 'swap',
 })
 
-const atkinson = Atkinson_Hyperlegible({
-  subsets: ['latin'],
-  weight: ['400', '700'],
+const atkinson = localFont({
+  src: [
+    { path: './fonts/AtkinsonHyperlegible-Regular.ttf', weight: '400', style: 'normal' },
+    { path: './fonts/AtkinsonHyperlegible-Bold.ttf', weight: '700', style: 'normal' },
+  ],
   variable: '--font-atkinson',
+  display: 'swap',
 })
 
 // Indie Flower - playful handwritten font for the ADHX wordmark only
-const indieFlower = Indie_Flower({
-  subsets: ['latin'],
+const indieFlower = localFont({
+  src: './fonts/IndieFlower-Regular.ttf',
   variable: '--font-indie-flower',
   weight: '400',
+  display: 'swap',
 })
 
 // Matter — Newsreader serif (headlines, page titles, article reading body)
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  style: ['normal', 'italic'],
+const newsreader = localFont({
+  src: [
+    { path: './fonts/Newsreader-variable.ttf', weight: '200 800', style: 'normal' },
+    { path: './fonts/Newsreader-Italic-variable.ttf', weight: '200 800', style: 'italic' },
+  ],
   variable: '--font-newsreader',
+  display: 'swap',
 })
 
 // Matter — Roboto Mono (handles, timestamps, counts, URLs)
-const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const robotoMono = localFont({
+  src: './fonts/RobotoMono-variable.ttf',
+  weight: '400 600',
   variable: '--font-roboto-mono',
+  display: 'swap',
 })
 
 // The look's faces: Instrument Serif (display) and Hanken Grotesk (body).
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
+const instrumentSerif = localFont({
+  src: [
+    { path: './fonts/InstrumentSerif-Regular.ttf', style: 'normal' },
+    { path: './fonts/InstrumentSerif-Italic.ttf', style: 'italic' },
+  ],
   weight: '400',
-  style: ['normal', 'italic'],
   variable: '--font-instrument-serif',
+  display: 'swap',
   preload: false,
 })
 
