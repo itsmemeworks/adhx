@@ -135,15 +135,21 @@ struct Face: View {
     /// The ring that separates overlapping faces (the colour behind them).
     var ring: Color = .black
 
+    /// The boards' five face colours: pink, green, orange, purple, blue.
     private static let colours: [Color] = [
         Color(hex: 0xFF8FA3), Color(hex: 0x7FD1AE), Color(hex: 0xFFB35C),
-        Color(hex: 0xC4A7FF), Color(hex: 0x6B8CFF), Color(hex: 0xFFD23F),
+        Color(hex: 0xC4A7FF), Color(hex: 0x6B8CFF),
     ]
 
-    /// The same colour for the same person, every time.
+    /// The same colour for the same person, every time (FNV-1a of the
+    /// username, the web's `hashSeed`).
     static func colour(for username: String) -> Color {
-        let sum = username.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
-        return colours[sum % colours.count]
+        var hash: UInt32 = 0x811C_9DC5
+        for unit in username.utf16 {
+            hash ^= UInt32(unit)
+            hash = hash &* 0x0100_0193
+        }
+        return colours[Int(hash % UInt32(colours.count))]
     }
 
     var body: some View {

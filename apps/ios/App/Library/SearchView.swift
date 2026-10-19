@@ -227,14 +227,14 @@ struct PlayerScreen: View {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.ink)
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(.black.opacity(0.5)))
+                        .frosted(Circle(), dim: 0.45)
                 }
                 .accessibilityLabel("Close")
                 .padding(.leading, 16)
-                .padding(.top, 8)
+                .padding(.top, 4)
                 }
             }
     }

@@ -16,6 +16,8 @@ struct PlayerExtras {
     var inMoment: String?
     /// Room between the rail's buttons (Live has one more, so they sit closer).
     var railSpacing: CGFloat = 14
+    /// The progress line's colour (Live's is yellow, the feed's cream).
+    var progressColour: Color = Theme.ink
 
     struct ReactButton {
         var isOpen: Bool
@@ -190,6 +192,10 @@ private struct PostPage: View {
     @State private var sharing: ShareItems?
     @State private var reading = false
     @State private var more = false
+    /// The bookmark is saving it to your ADHX.
+    @State private var keeping = false
+    /// "In your saves": Just for me and your note, from the bookmark.
+    @State private var savedSheet = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -233,7 +239,8 @@ private struct PostPage: View {
                 bottomRow
                     .padding(.bottom, 16)
             } else if post.kind == "video" && onScreen {
-                ProgressLine(fraction: playback.duration > 0 ? playback.time / playback.duration : 0)
+                ProgressLine(fraction: playback.duration > 0 ? playback.time / playback.duration : 0,
+                             colour: extras.progressColour)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
             }
@@ -248,6 +255,13 @@ private struct PostPage: View {
                       playback: post.plays && onScreen ? playback : nil,
                       hide: { clean = true })
                 .presentationDetents([.height(moreHeight)])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Theme.surface)
+                .presentationCornerRadius(28)
+        }
+        .sheet(isPresented: $savedSheet) {
+            SavedSheet(post: post, say: say)
+                .presentationDetents([.height(privacy.canSwitch(post) ? 300 : 220)])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.surface)
                 .presentationCornerRadius(28)
@@ -400,6 +414,22 @@ private struct PostPage: View {
                 }
                 .accessibilityAddTraits(react.isOpen ? .isSelected : [])
             }
+            if privacy.isSaved(post) || post.sourceUrl != nil {
+                let saved = privacy.isSaved(post)
+                RailButton(accessibility: saved ? "In your saves" : "Save to your ADHX") {
+                    keep()
+                } icon: {
+                    if keeping {
+                        RingSpinner().frame(width: 20, height: 20)
+                    } else {
+                        Image(systemName: saved ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundStyle(saved ? Theme.accent : Theme.ink)
+                    }
+                }
+                .accessibilityHint(saved ? "Just for me and your note" : "")
+                .accessibilityAddTraits(saved ? .isSelected : [])
+            }
             if hasMedia || !post.text.isEmpty {
                 RailButton(accessibility: hasMedia ? "Share the \(post.kind == "photo" ? "photos" : post.kind == "video" ? "video" : "file")" : "Share the words") {
                     share()
@@ -438,9 +468,12 @@ private struct PostPage: View {
     @ViewBuilder
     private var bottomRow: some View {
         if post.plays, onScreen, playback.duration > 0 {
-            Scrubber(playback: playback)
+            Scrubber(playback: playback, colour: extras.progressColour)
                 .padding(.horizontal, 16)
                 .animation(.easeOut(duration: 0.15), value: playback.scrubTime != nil)
+        } else if post.plays {
+            // The track is there before the video is: no jump when it starts.
+            ProgressLine(fraction: 0, colour: extras.progressColour).padding(.horizontal, 16)
         }
     }
 
@@ -458,6 +491,28 @@ private struct PostPage: View {
 
     /// A video, sound or photos your ADHX keeps (anything else is words).
     private var hasMedia: Bool { !KeptFiles.sources(of: post, server: server).isEmpty }
+
+    /// The bookmark: someone else's post goes into your saves; one of yours
+    /// opens "In your saves" (Just for me and your note).
+    private func keep() {
+        if privacy.isSaved(post) {
+            savedSheet = true
+            return
+        }
+        guard !keeping else { return }
+        keeping = true
+        Task {
+            do {
+                try await privacy.save(post)
+                say("Saved to your ADHX")
+            } catch let error as APIError {
+                say(error.message)
+            } catch {
+                say("Couldn’t save that. Try again.")
+            }
+            keeping = false
+        }
+    }
 
     /// Save: the media to Photos (a sound to Files, through the share sheet),
     /// or the words to the clipboard.
@@ -732,6 +787,96 @@ private struct MoreSheet: View {
     }
 }
 
+/// "In your saves", from the bookmark on one of yours: Just for me, and the
+/// note your people see with it.
+private struct SavedSheet: View {
+    let post: PhonePost
+    let say: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var privacy = PrivacyStore.shared
+    @State private var switching = false
+    @State private var note = ""
+    @State private var savingNote = false
+    @FocusState private var typing: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("In your saves")
+                    .font(Theme.serif(32))
+                    .foregroundStyle(Theme.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                CloseButton { dismiss() }
+            }
+            if privacy.canSwitch(post) {
+                JustForMeSwitch(isOn: privacy.isPrivate(post), busy: switching) { on in
+                    switching = true
+                    Task {
+                        do {
+                            try await privacy.set(post, private: on)
+                            say(on ? "Just for you now" : "Your people can see it now")
+                        } catch {
+                            say("Couldn’t change that. Try again.")
+                        }
+                        switching = false
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Your note")
+                    .font(Theme.sans(13, .semibold))
+                    .foregroundStyle(Theme.muted)
+                    .accessibilityHidden(true)
+                HStack(spacing: 8) {
+                    TextField("", text: $note,
+                              prompt: Text(privacy.isPrivate(post) ? "A note to future you" : "Say why they’ll like it")
+                                  .foregroundColor(Theme.faint))
+                        .font(Theme.sans(16))
+                        .foregroundStyle(Theme.ink)
+                        .tint(Theme.accent)
+                        .focused($typing)
+                        .submitLabel(.done)
+                        .onSubmit(saveNote)
+                        .onChange(of: note) { _, text in if text.count > 140 { note = String(text.prefix(140)) } }
+                        .padding(.horizontal, 16)
+                        .frame(height: 48)
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.app))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(typing ? Theme.accent.opacity(0.6) : .white.opacity(0.12), lineWidth: 1))
+                        .accessibilityLabel("Your note")
+                    Button(savingNote ? "Saving…" : "Save", action: saveNote)
+                        .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false, fontSize: 15))
+                        .disabled(noteUnchanged)
+                        .opacity(noteUnchanged ? 0.5 : 1)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 29)
+        .onAppear { note = privacy.note(post) ?? "" }
+    }
+
+    private var noteUnchanged: Bool { savingNote || Saver.clean(note) == privacy.note(post) }
+
+    private func saveNote() {
+        guard !noteUnchanged else { return }
+        savingNote = true
+        typing = false
+        Task {
+            do {
+                try await privacy.setNote(post, Saver.clean(note))
+                say(Saver.clean(note) == nil ? "Note cleared" : "Note saved")
+                dismiss()
+            } catch {
+                say("Couldn’t save the note. Try again.")
+            }
+            savingNote = false
+        }
+    }
+}
+
 /// Sound, Repeat, the small window and Hide, for the video on screen (More).
 private struct PlayingControls: View {
     @ObservedObject var playback: Playback
@@ -892,6 +1037,7 @@ private struct ActivitySheet: UIViewControllerRepresentable {
 /// while dragging it thickens and the time shows big in the middle.
 private struct Scrubber: View {
     @ObservedObject var playback: Playback
+    var colour: Color = Theme.ink
 
     var body: some View {
         GeometryReader { box in
@@ -903,7 +1049,7 @@ private struct Scrubber: View {
             let thumb: CGFloat = dragging ? 20 : 0
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.22)).frame(height: thickness)
-                Capsule().fill(dragging ? Theme.accent : Color(hex: 0xF4F1EA))
+                Capsule().fill(dragging ? Theme.accent : colour)
                     .frame(width: box.size.width * fraction, height: thickness)
                 Circle().fill(Theme.accent)
                     .frame(width: thumb, height: thumb)
@@ -938,11 +1084,12 @@ private struct Scrubber: View {
 /// The thin line left when the buttons are hidden.
 private struct ProgressLine: View {
     let fraction: Double
+    var colour: Color = Theme.ink
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.22))
-                Capsule().fill(Color(hex: 0xF4F1EA)).frame(width: geo.size.width * min(max(fraction, 0), 1))
+                Capsule().fill(colour).frame(width: geo.size.width * min(max(fraction, 0), 1))
             }
         }
         .frame(height: 3)

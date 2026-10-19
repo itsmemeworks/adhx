@@ -472,7 +472,8 @@ struct TunedInScreen: View {
                 PlayerView(posts: model.items, server: server, clean: $clean, scrubbing: $scrubbing,
                            extras: PlayerExtras(bottomInset: picking ? 146 : 0, toastTop: 120,
                                                 react: .init(isOpen: picking, toggle: togglePicker),
-                                                inMoment: model.moment.name, railSpacing: 8)) { index in
+                                                inMoment: model.moment.name, railSpacing: 8,
+                                                progressColour: Theme.accent)) { index in
                     model.currentIndex = index
                 }
             } else {
