@@ -18,6 +18,7 @@ object SaveQueue {
     const val TAG = "adhx-save"
     const val KEY_LINK = "link"
     const val KEY_ITEM = "item"
+    const val KEY_PRIVATE = "private"
 
     /**
      * One unique piece of work per link: sharing the same link again while
@@ -28,6 +29,7 @@ object SaveQueue {
         link: String,
         itemId: String?,
         policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP,
+        justForMe: Boolean = false,
     ) {
         val request = OneTimeWorkRequestBuilder<SaveWorker>()
             .setConstraints(
@@ -36,7 +38,7 @@ object SaveQueue {
                     .build(),
             )
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .setInputData(workDataOf(KEY_LINK to link, KEY_ITEM to itemId))
+            .setInputData(workDataOf(KEY_LINK to link, KEY_ITEM to itemId, KEY_PRIVATE to justForMe))
             .addTag(TAG)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(workName(link), policy, request)
@@ -45,7 +47,7 @@ object SaveQueue {
     /** "Send waiting links now": start each waiting link over, without the back-off wait. */
     fun sendWaitingNow(context: Context): Int {
         val waiting = HistoryStore.get(context).items.value.filter { it.state == ShareState.QUEUED }
-        waiting.forEach { enqueue(context, it.link, it.id, ExistingWorkPolicy.REPLACE) }
+        waiting.forEach { enqueue(context, it.link, it.id, ExistingWorkPolicy.REPLACE, justForMe = it.isPrivate) }
         return waiting.size
     }
 

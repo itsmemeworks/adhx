@@ -1,0 +1,531 @@
+package com.adhx.share.feed
+
+import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.adhx.share.data.Connection
+import com.adhx.share.data.ConnectionStore
+import com.adhx.share.net.AdhxApi
+import com.adhx.share.net.ApiResult
+import com.adhx.share.net.ChannelsResponse
+import com.adhx.share.net.FeedMode
+import com.adhx.share.net.LiveMoment
+import com.adhx.share.net.LiveReaction
+import com.adhx.share.net.MediaType
+import com.adhx.share.net.PhonePost
+import com.adhx.share.net.Saver
+import com.adhx.share.ui.Copy
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+
+enum class HomeTab { New, Channels, Live }
+
+data class FeedUi(
+    val mode: String = FeedMode.NEW,
+    val items: List<PhonePost> = emptyList(),
+    val nextCursor: String? = null,
+    /** No more pages to ask for. */
+    val ended: Boolean = false,
+    val caughtUp: Boolean = false,
+    val loading: Boolean = false,
+    val loadedOnce: Boolean = false,
+    val error: String? = null,
+    /** This server has no feed yet (404): home plays My saves instead. */
+    val unavailable: Boolean = false,
+    /** What the feed shows ([MediaType]): videos and photos unless you add words. */
+    val types: Set<String> = MediaType.DEFAULT,
+    /** Left out by the filter, as the server last said. */
+    val hiddenByServer: Map<String, Int> = emptyMap(),
+    /** Left out on the phone (a server that didn't filter them). */
+    val hiddenHere: Map<String, Int> = emptyMap(),
+) {
+    /** What the filter is hiding, by type, for "4 text posts waiting". */
+    val hidden: Map<String, Int>
+        get() = MediaType.all.mapNotNull { t ->
+            val n = (hiddenByServer[t] ?: 0) + (hiddenHere[t] ?: 0)
+            if (n > 0 && t !in types) t to n else null
+        }.toMap()
+}
+
+data class ChannelsUi(
+    val channels: ChannelsResponse = ChannelsResponse(),
+    val loading: Boolean = false,
+    val loadedOnce: Boolean = false,
+    val error: String? = null,
+    /** This server has no channels for the phone yet. */
+    val unavailable: Boolean = false,
+)
+
+/** One channel, open: what it is, and its posts. */
+data class ChannelUi(
+    val kind: String = "",
+    val slug: String = "",
+    val title: String = "",
+    /** A friend's channel: their face. */
+    val person: Saver? = null,
+    val size: Int = 0,
+    val newCount: Int = 0,
+    val items: List<PhonePost> = emptyList(),
+    val loading: Boolean = false,
+    val error: String? = null,
+)
+
+data class LiveUi(
+    val moments: List<LiveMoment> = emptyList(),
+    val loading: Boolean = false,
+    val loadedOnce: Boolean = false,
+    val error: String? = null,
+)
+
+/** The moment you're tuned in to. */
+data class TunedUi(
+    val slug: String = "",
+    val moment: LiveMoment? = null,
+    val items: List<PhonePost> = emptyList(),
+    val watchers: List<Saver> = emptyList(),
+    val loadedOnce: Boolean = false,
+    val error: String? = null,
+    /** Posts that arrived while tuned in (the "new one, up next" note). */
+    val arrived: Int = 0,
+)
+
+/** A reaction floating up the screen while tuned in. [lane] (0–1) is where across it rises. */
+data class Floating(
+    val id: Long,
+    val emoji: String?,
+    val text: String?,
+    val who: Saver?,
+    val lane: Float,
+    /** Wait this long before rising, so ones that came in one poll don't stack up. */
+    val delayMs: Long = 0,
+)
+
+/**
+ * The friends feed on the phone: New (and the other blend modes), Channels and
+ * Live, plus which posts you've seen. Every endpoint here is newer than some
+ * servers; a 404 shows the old home rather than an error.
+ */
+class FeedViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val store = ConnectionStore.get(app)
+    private val prefs = FeedPrefs(app)
+
+    var tab by mutableStateOf(HomeTab.New)
+
+    /** The "What's in your feed" sheet is open. */
+    var filterOpen by mutableStateOf(false)
+
+    /** The page of the feed on screen, so the player comes back to it. */
+    var feedPage = 0
+
+    private val _feed = MutableStateFlow(FeedUi())
+    val feed: StateFlow<FeedUi> = _feed.asStateFlow()
+
+    private val _channels = MutableStateFlow(ChannelsUi())
+    val channels: StateFlow<ChannelsUi> = _channels.asStateFlow()
+
+    private val _channel = MutableStateFlow(ChannelUi())
+    val channel: StateFlow<ChannelUi> = _channel.asStateFlow()
+
+    private val _live = MutableStateFlow(LiveUi())
+    val live: StateFlow<LiveUi> = _live.asStateFlow()
+
+    private val _tuned = MutableStateFlow(TunedUi())
+    val tuned: StateFlow<TunedUi> = _tuned.asStateFlow()
+
+    /** Reactions floating up the screen right now (yours, and new ones from the poll). */
+    val floating = mutableStateListOf<Floating>()
+    private var floatingId = 0L
+    private val reactionsSeen = HashSet<String>()
+
+    private val seen = SeenBatcher()
+    private var feedJob: Job? = null
+    private var flushJob: Job? = null
+    private var channelJob: Job? = null
+
+    init {
+        store.connection
+            .map { it?.server to it?.key }
+            .distinctUntilChanged()
+            .onEach { (server, key) ->
+                feedJob?.cancel()
+                channelJob?.cancel()
+                flushJob?.cancel()
+                if (server == null) prefs.clear()
+                _feed.value = FeedUi(types = prefs.types)
+                _channels.value = ChannelsUi()
+                _channel.value = ChannelUi()
+                _live.value = LiveUi()
+                _tuned.value = TunedUi()
+                clearReactions()
+                Privacy.clear()
+                feedPage = 0
+                tab = HomeTab.New
+                filterOpen = false
+                if (server != null && key != null) {
+                    loadMoreFeed()
+                    syncTypes()
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    // The feed
+
+    fun loadMoreFeed() {
+        val now = _feed.value
+        if (now.loading || now.ended || now.unavailable) return
+        val connection = store.current() ?: return
+        val mode = now.mode
+        val types = now.types
+        _feed.value = now.copy(loading = true, error = null)
+        feedJob = viewModelScope.launch {
+            val result = AdhxApi(connection).feed(mode, now.nextCursor, types)
+            val current = _feed.value
+            if (current.mode != mode || current.types != types) return@launch
+            _feed.value = when (result) {
+                is ApiResult.Ok -> {
+                    val had = current.items.mapTo(HashSet()) { it.key }
+                    val page = result.value
+                    val fresh = page.items.filter { it.key !in had }
+                    // A server that ignores `types` still gets filtered here.
+                    val (shown, left) = fresh.partition { MediaType.of(it.kind) in types }
+                    val hiddenHere = current.hiddenHere.toMutableMap()
+                    left.forEach { val t = MediaType.of(it.kind); hiddenHere[t] = (hiddenHere[t] ?: 0) + 1 }
+                    current.copy(
+                        items = current.items + shown,
+                        nextCursor = page.nextCursor,
+                        // Also the end when a page brings nothing new, so it can't loop.
+                        ended = page.nextCursor == null || page.caughtUp || fresh.isEmpty(),
+                        caughtUp = page.caughtUp,
+                        loading = false,
+                        loadedOnce = true,
+                        hiddenByServer = page.hidden.ifEmpty { current.hiddenByServer },
+                        hiddenHere = hiddenHere,
+                    )
+                }
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    if (result.status == 404) {
+                        current.copy(loading = false, loadedOnce = true, unavailable = true)
+                    } else {
+                        current.copy(loading = false, loadedOnce = true, error = result.message ?: Copy.FEED_CANT_LOAD)
+                    }
+                }
+                ApiResult.Offline -> current.copy(loading = false, loadedOnce = true, error = OFFLINE)
+            }
+            // A page the filter mostly emptied: keep going while the player is near the end.
+            val after = _feed.value
+            if (result is ApiResult.Ok && !after.ended && after.items.size - feedPage <= NEAR_END) loadMoreFeed()
+        }
+    }
+
+    /**
+     * The feed filter from the sheet: [types] (at least one) and whose saves.
+     * Starts the feed over once if either changed; the filter is kept on the
+     * phone and, where the server can, on the server.
+     */
+    fun applyFilter(types: Set<String>, mode: String) {
+        val now = _feed.value
+        val clean = MediaType.clean(types)
+        if (clean == now.types && mode == now.mode) return
+        if (clean != now.types) saveTypes(clean)
+        restart(mode, clean)
+    }
+
+    /** "Show them" on the caught-up page: add what the filter was hiding. */
+    fun showHidden() {
+        val now = _feed.value
+        applyFilter(now.types + now.hidden.keys, now.mode)
+    }
+
+    private fun saveTypes(types: Set<String>) {
+        prefs.types = types
+        val connection = store.current() ?: return
+        // Quietly not kept on a server without it yet: the phone remembers.
+        viewModelScope.launch { AdhxApi(connection).setFeedTypes(types) }
+    }
+
+    /** The server's copy of the filter wins when it has one. */
+    private fun syncTypes() {
+        val connection = store.current() ?: return
+        viewModelScope.launch {
+            val result = AdhxApi(connection).feedTypes()
+            if (result !is ApiResult.Ok || result.value.types.isEmpty()) return@launch
+            val types = MediaType.clean(result.value.types)
+            prefs.types = types
+            if (types != _feed.value.types) restart(_feed.value.mode, types)
+        }
+    }
+
+    private fun restart(mode: String, types: Set<String>) {
+        seen.leaveStage(System.currentTimeMillis())
+        flushSeen()
+        feedJob?.cancel()
+        feedPage = 0
+        _feed.value = FeedUi(mode = mode, types = types)
+        loadMoreFeed()
+    }
+
+    /** Start the feed over in [mode] ([FeedMode]): Watch it all again, or the Why sheet's switch. */
+    fun setMode(mode: String) = restart(mode, _feed.value.types)
+
+    fun reloadFeed() = setMode(_feed.value.mode)
+
+    /** The player is at [page]: count what's left behind, fetch more near the end. */
+    fun onFeedPage(page: Int) {
+        feedPage = page
+        val now = _feed.value
+        seen.onStage(now.items.getOrNull(page)?.ref, page, System.currentTimeMillis())
+        sendSeenSoon()
+        if (now.error == null && page >= now.items.size - NEAR_END) loadMoreFeed()
+    }
+
+    /** Called a moment after a page settles: the post on stage may count as seen now. */
+    fun tickSeen() {
+        seen.tick(System.currentTimeMillis())
+        sendSeenSoon()
+    }
+
+    /** The app is going to the background: send what's waiting now. */
+    fun onPause() {
+        seen.tick(System.currentTimeMillis())
+        flushSeen()
+    }
+
+    private fun sendSeenSoon() {
+        if (seen.waiting == 0) return
+        if (seen.full) {
+            flushSeen()
+            return
+        }
+        if (flushJob?.isActive == true) return
+        flushJob = viewModelScope.launch {
+            delay(SeenBatcher.FLUSH_MS)
+            flushSeen()
+        }
+    }
+
+    private fun flushSeen() {
+        val connection = store.current() ?: return
+        val batch = seen.drain()
+        if (batch.isEmpty()) return
+        viewModelScope.launch {
+            when (val result = AdhxApi(connection).seen(batch)) {
+                is ApiResult.Ok -> Unit
+                // An older server without /seen: nothing to keep trying.
+                is ApiResult.Failed -> if (result.status != 404 && result.status != 400) seen.failed(batch)
+                ApiResult.Offline -> seen.failed(batch)
+            }
+        }
+    }
+
+    // Channels
+
+    fun loadChannels(force: Boolean = false) {
+        val now = _channels.value
+        if (now.loading || (now.loadedOnce && !force && now.error == null)) return
+        val connection = store.current() ?: return
+        _channels.value = now.copy(loading = true, error = null)
+        viewModelScope.launch {
+            val result = AdhxApi(connection).channels()
+            _channels.value = when (result) {
+                is ApiResult.Ok -> ChannelsUi(channels = result.value, loadedOnce = true)
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    if (result.status == 404) {
+                        ChannelsUi(loadedOnce = true, unavailable = true)
+                    } else {
+                        _channels.value.copy(loading = false, loadedOnce = true, error = result.message ?: Copy.CHANNELS_CANT_LOAD)
+                    }
+                }
+                ApiResult.Offline -> _channels.value.copy(loading = false, loadedOnce = true, error = OFFLINE)
+            }
+        }
+    }
+
+    /** Open a channel: [kind] is a [com.adhx.share.net.ChannelKind]. */
+    fun openChannel(kind: String, slug: String, title: String, person: Saver? = null) {
+        val now = _channel.value
+        if (now.kind == kind && now.slug == slug && now.items.isNotEmpty()) return
+        val friend = _channels.value.channels.friends.firstOrNull { it.username == slug }
+        val size = when (kind) {
+            com.adhx.share.net.ChannelKind.FRIEND -> friend?.size
+            com.adhx.share.net.ChannelKind.GROUP -> _channels.value.channels.group.firstOrNull { it.slug == slug }?.size
+            else -> _channels.value.channels.mine.firstOrNull { it.slug == slug }?.size
+        } ?: 0
+        _channel.value = ChannelUi(
+            kind = kind,
+            slug = slug,
+            title = title,
+            person = person ?: friend?.asSaver,
+            size = size,
+            newCount = friend?.newCount ?: 0,
+            loading = true,
+        )
+        loadChannel()
+    }
+
+    fun loadChannel() {
+        val connection = store.current() ?: return
+        val now = _channel.value
+        if (now.slug.isBlank()) return
+        _channel.value = now.copy(loading = true, error = null)
+        channelJob?.cancel()
+        channelJob = viewModelScope.launch {
+            val result = AdhxApi(connection).channel(now.kind, now.slug)
+            val current = _channel.value
+            if (current.slug != now.slug || current.kind != now.kind) return@launch
+            _channel.value = when (result) {
+                is ApiResult.Ok -> current.copy(
+                    items = result.value.items,
+                    size = current.size.takeIf { it > 0 } ?: result.value.items.size,
+                    loading = false,
+                )
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    current.copy(loading = false, error = if (result.status == 404) Copy.CHANNEL_EMPTY else result.message ?: Copy.CHANNELS_CANT_LOAD)
+                }
+                ApiResult.Offline -> current.copy(loading = false, error = OFFLINE)
+            }
+        }
+    }
+
+    // Live
+
+    fun loadLive() {
+        val now = _live.value
+        if (now.loading) return
+        val connection = store.current() ?: return
+        _live.value = now.copy(loading = true, error = null)
+        viewModelScope.launch {
+            val result = AdhxApi(connection).live()
+            _live.value = when (result) {
+                is ApiResult.Ok -> LiveUi(moments = result.value.moments, loadedOnce = true)
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    // No Live on this server yet: nothing's live, as far as the phone can tell.
+                    if (result.status == 404) LiveUi(loadedOnce = true) else _live.value.copy(loading = false, loadedOnce = true, error = result.message ?: Copy.LIVE_CANT_LOAD)
+                }
+                ApiResult.Offline -> _live.value.copy(loading = false, loadedOnce = true, error = OFFLINE)
+            }
+        }
+    }
+
+    /** Tune in to [slug]: shows what's known from the list straight away. */
+    fun tuneIn(slug: String) {
+        if (_tuned.value.slug == slug && _tuned.value.loadedOnce) return
+        val known = _live.value.moments.firstOrNull { it.slug == slug }
+        clearReactions()
+        _tuned.value = TunedUi(slug = slug, moment = known, watchers = known?.watchers.orEmpty())
+    }
+
+    /**
+     * Ask for the moment again (every ~5 s while tuned in). New posts join the
+     * end, so the one playing never moves.
+     */
+    suspend fun pollTuned() {
+        val connection = store.current() ?: return
+        val slug = _tuned.value.slug.takeIf { it.isNotBlank() } ?: return
+        val result = AdhxApi(connection).liveMoment(slug)
+        val current = _tuned.value
+        if (current.slug != slug) return
+        _tuned.value = when (result) {
+            is ApiResult.Ok -> {
+                val detail = result.value
+                arrive(detail.reactions)
+                val had = current.items.mapTo(HashSet()) { it.key }
+                val fresh = detail.items.filter { it.key !in had }
+                // Keep each post's newest savers (someone else may have saved it meanwhile).
+                val byKey = detail.items.associateBy { it.key }
+                current.copy(
+                    moment = detail.moment ?: current.moment,
+                    items = current.items.map { byKey[it.key] ?: it } + fresh,
+                    watchers = detail.watchers ?: detail.moment?.watchers?.takeIf { it.isNotEmpty() } ?: current.watchers,
+                    loadedOnce = true,
+                    error = null,
+                    arrived = if (current.loadedOnce && fresh.isNotEmpty()) current.arrived + fresh.size else current.arrived,
+                )
+            }
+            is ApiResult.Failed -> {
+                signedOut(result, connection)
+                current.copy(loadedOnce = true, error = if (result.status == 404) Copy.LIVE_ENDED else result.message ?: Copy.LIVE_CANT_LOAD)
+            }
+            ApiResult.Offline -> current.copy(loadedOnce = true, error = if (current.items.isEmpty()) OFFLINE else null)
+        }
+    }
+
+    fun seenArrivals() {
+        if (_tuned.value.arrived != 0) _tuned.value = _tuned.value.copy(arrived = 0)
+    }
+
+    /**
+     * React to [post] in the moment you're tuned in to: an emoji, or a few
+     * words. Yours floats up at once; false when it didn't get through.
+     */
+    suspend fun react(post: PhonePost, emoji: String? = null, text: String? = null): Boolean {
+        val connection = store.current() ?: return false
+        val slug = _tuned.value.slug.takeIf { it.isNotBlank() } ?: return false
+        val words = text?.trim()?.take(com.adhx.share.net.Reaction.MAX_TEXT)?.takeIf { it.isNotEmpty() }
+        if (emoji == null && words == null) return false
+        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, isYou = true)
+        float(emoji, words, me)
+        return AdhxApi(connection).react(slug, post.platform, post.id, emoji = emoji, text = words) is ApiResult.Ok
+    }
+
+    /** A floating reaction has finished. */
+    fun landed(id: Long) {
+        floating.removeAll { it.id == id }
+    }
+
+    /**
+     * Reactions from the poll (the server sends the last 15 s, oldest first)
+     * float up once each, by id. Yours were shown when you sent them.
+     */
+    private fun arrive(reactions: List<LiveReaction>) {
+        val fresh = reactions.filter { reactionsSeen.add(it.key) }
+        fresh.filterNot { it.who?.isYou == true }.takeLast(MAX_FLOATING)
+            .forEachIndexed { i, r -> float(r.emoji, r.text, r.who, delayMs = i * STAGGER_MS) }
+    }
+
+    private fun float(emoji: String?, text: String?, who: Saver?, delayMs: Long = 0) {
+        if (floating.size >= MAX_FLOATING) floating.removeAt(0)
+        floatingId += 1
+        // Spread them across: the golden ratio keeps neighbours apart.
+        val lane = ((floatingId * 0.618034) % 1.0).toFloat()
+        floating.add(Floating(floatingId, emoji, text, who, lane, delayMs))
+    }
+
+    private fun clearReactions() {
+        floating.clear()
+        reactionsSeen.clear()
+    }
+
+    private fun signedOut(result: ApiResult.Failed, connection: Connection) {
+        if (result.status == 401 || result.code == "bad_key") {
+            if (store.current()?.key == connection.key) store.clear(removedByServer = true)
+        }
+    }
+
+    companion object {
+        private const val NEAR_END = 5
+        private const val MAX_FLOATING = 12
+
+        /** Between reactions that arrived together (the poll is every 5 s). */
+        private const val STAGGER_MS = 700L
+        private const val OFFLINE = "Can’t reach your ADHX right now."
+    }
+}

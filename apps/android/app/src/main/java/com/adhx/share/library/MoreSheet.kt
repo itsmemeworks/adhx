@@ -52,7 +52,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.adhx.share.R
+import com.adhx.share.feed.Privacy
 import com.adhx.share.links.Networks
+import com.adhx.share.net.ApiResult
+import com.adhx.share.ui.JustForMeRow
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.PhonePost
 import com.adhx.share.net.PostKind
@@ -63,7 +66,7 @@ import com.adhx.share.ui.openInAdhx
 import kotlinx.coroutines.launch
 
 /**
- * More: the post at a glance, then Share the video (the kept file, not the
+ * More: the post at a glance, "Just for me" (on your own saves), then Share the video (the kept file, not the
  * link), Copy link, Copy the words, Share an ADHX link (for people on the
  * same server) and Open in my ADHX.
  */
@@ -103,6 +106,31 @@ fun MoreSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
         ) {
             Header(post, server, network, onClose = { close() })
             Spacer(Modifier.height(12.dp))
+            if (post.yours) {
+                var switching by remember { mutableStateOf(false) }
+                JustForMeRow(
+                    on = Privacy.isPrivate(post),
+                    busy = switching,
+                    enabled = !switching,
+                    onChange = { want ->
+                        switching = true
+                        scope.launch {
+                            val result = Privacy.set(context, post, want)
+                            switching = false
+                            onNotice(
+                                when {
+                                    result is ApiResult.Ok -> if (result.value) Copy.NOW_PRIVATE else Copy.NOW_SHARED
+                                    result is ApiResult.Failed && result.code == "not_saved" -> Copy.NOT_YOURS
+                                    result is ApiResult.Failed -> result.message ?: Copy.PRIVATE_FAILED
+                                    else -> Copy.PRIVATE_FAILED
+                                },
+                            )
+                        }
+                    },
+                    modifier = Modifier.padding(vertical = 6.dp),
+                )
+                Spacer(Modifier.height(6.dp))
+            }
             val videoUrl = media?.url?.takeIf { post.kind == PostKind.VIDEO }?.let { AdhxApi.resolve(server, it)?.toString() }
             if (videoUrl != null) {
                 MoreRow(
