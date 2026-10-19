@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Match grouped root release identities
+
+- Set an explicit empty release-only package name: an empty component alone fell back to the Node name and rejected merged grouped PRs.
+- Preserve the existing release branch/title, unprefixed version tags and actual application package name.
+- Pin the action commit and its Release Please 17.6.0 test library together in an isolated, locked tool package.
+- Add offline upstream config/PR/manifest-merge/release round trips to PR CI, including the original failure and feature/patch/docs policies.
+- Correct legacy release/deployment notes and document exact-commit recovery. Source fix proposed; no service, tag or image publication performed here.
+
 ## 2026-10-19 — Reject an invalid processing role
 
 - Validate `PROCESSING_MODE` before spawning either model process; a misspelled remote role must not silently start heavy indexing on the server.
