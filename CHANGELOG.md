@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/itsmemeworks/adhx/compare/v1.73.0...v2.0.0) (2026-10-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* the old Shorts-only support and its saved Shorts are removed (Shorts now save as YouTube posts), and the previous look and its next_ui flag are gone.
+
+### Features
+
+* self-hosted adhx with search by meaning, kept media and phone apps ([#538](https://github.com/itsmemeworks/adhx/issues/538)) ([0b834b4](https://github.com/itsmemeworks/adhx/commit/0b834b496351bf2d73839b03a5a72490b93ce995))
+
 ## [1.73.0](https://github.com/itsmemeworks/adhx/compare/v1.72.0...v1.73.0) (2026-09-15)
 
 
