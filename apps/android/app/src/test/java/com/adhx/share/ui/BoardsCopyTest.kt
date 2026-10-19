@@ -20,6 +20,16 @@ class BoardsCopyTest {
         val five = setOf(Color(0xFFFF8FA3), Color(0xFF7FD1AE), Color(0xFFFFB35C), Color(0xFFC4A7FF), Color(0xFF6B8CFF))
         listOf("ana", "ben", "mum", "jo", "pete", "benji", "", "Zoë").forEach { assertTrue(faceColor(it) in five) }
         assertEquals(faceColor("jo"), faceColor("JO"))
+        assertEquals(faceColor("jo"), faceColor("@jo"))
+    }
+
+    @Test
+    fun theBoardsPeopleGetTheirBoardColours() {
+        assertEquals(Color(0xFFFF8FA3), faceColor("ana"))
+        assertEquals(Color(0xFF7FD1AE), faceColor("ben"))
+        assertEquals(Color(0xFFFFB35C), faceColor("mum"))
+        assertEquals(Color(0xFFC4A7FF), faceColor("jo"))
+        assertEquals(Color(0xFF6B8CFF), faceColor("pete"))
     }
 
     @Test

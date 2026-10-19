@@ -66,7 +66,7 @@ fun PeopleScreen(people: PeopleViewModel, server: String, onBack: () -> Unit, on
             .padding(horizontal = 16.dp),
     ) {
         Row(Modifier.height(64.dp), verticalAlignment = Alignment.CenterVertically) {
-            BarButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
+            BarButton(com.adhx.share.ui.Glyphs.Back, "Back", onBack)
             Spacer(Modifier.width(12.dp))
             Text(
                 SettingsCopy.YOUR_PEOPLE,

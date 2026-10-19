@@ -7,6 +7,7 @@ import android.util.Log
 import com.adhx.share.data.Connection
 import com.adhx.share.data.ConnectionStore
 import com.adhx.share.main.MainActivity
+import com.adhx.share.main.Welcome
 
 /**
  * Debug builds only (src/debug): stores a server and phone key the way pairing
@@ -23,6 +24,8 @@ class DebugConnectActivity : Activity() {
                 Connection(server, key, intent.getStringExtra("username"), intent.getStringExtra("phone")),
             )
             Log.i("AdhxDebug", "connected to $server: $saved")
+            // As if it had just paired: "Connected to …" first.
+            if (intent.getBooleanExtra("welcome", false)) Welcome.pending = true
             startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         }
         finish()

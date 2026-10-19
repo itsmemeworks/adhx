@@ -92,7 +92,8 @@ fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean
                 .widthIn(max = 520.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
-                .background(AdhxColors.Surface.copy(alpha = 0.88f))
+                // The boards' glass is 88% over a blur; without the blur it needs to be nearly solid.
+                .background(AdhxColors.Surface.copy(alpha = 0.96f))
                 .border(1.dp, AdhxColors.White.copy(alpha = 0.1f), RoundedCornerShape(26.dp))
                 .verticalScroll(rememberScrollState())
                 // Taps on the card stay on the card.

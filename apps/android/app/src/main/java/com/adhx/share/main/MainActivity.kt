@@ -156,6 +156,23 @@ private fun MainApp(
     }
 
     val peopleUi by people.ui.collectAsStateWithLifecycle()
+    if (Welcome.pending) {
+        BackHandler { Welcome.pending = false }
+        ConnectedScreen(
+            connection = current,
+            people = people,
+            onSearch = {
+                Welcome.pending = false
+                library.open(Route.Search)
+            },
+            onSettings = {
+                Welcome.pending = false
+                library.open(Route.Settings)
+            },
+            onStart = { Welcome.pending = false },
+        )
+        return
+    }
     BackHandler(enabled = library.stack.size > 1) { library.back() }
     val back = { library.back(); Unit }
     val route = library.stack.lastOrNull() ?: Route.Home

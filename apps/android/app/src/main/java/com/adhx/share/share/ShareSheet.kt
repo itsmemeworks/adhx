@@ -364,6 +364,11 @@ private fun CardTop(ui: ShareUi, title: String, line: String?, done: Boolean = f
             if (networkName.isNotBlank()) {
                 Text(networkName, fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            // Still saving: the post's words aren't in yet.
+            if (post == null) {
+                SkeletonBar(12.dp, Modifier.fillMaxWidth(0.8f))
+                SkeletonBar(12.dp, Modifier.fillMaxWidth(0.55f))
+            }
             Spacer(Modifier.weight(1f))
             if (line != null) Text(line, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted, maxLines = 1)
             if (bar) KeepBar(ui.keep)

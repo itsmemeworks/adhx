@@ -39,6 +39,45 @@ object ShareKept {
         ).distinct().joinToString("\n\n")
     }
 
+    /** A post's kept files, fetched into the share cache and ready to hand to another app. */
+    class Ready(val files: List<java.io.File>, val uris: List<Uri>, val type: String) {
+        /** ACTION_SEND (or SEND_MULTIPLE) for them, with read access to every file. */
+        fun intent(): Intent {
+            val intent = if (uris.size == 1) {
+                Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0])
+            } else {
+                Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList<Uri>(uris))
+            }
+            // ClipData carries the read grant for every file, not just the first.
+            val clip = ClipData.newRawUri(null, uris[0]).apply { uris.drop(1).forEach { addItem(ClipData.Item(it)) } }
+            intent.setType(type).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).clipData = clip
+            return intent
+        }
+    }
+
+    /**
+     * Fetch [post]'s kept files for sending (the send sheet). Either they're
+     * [Ready], or there's a line saying why not.
+     */
+    suspend fun prepare(
+        context: Context,
+        server: String,
+        post: PhonePost,
+        onProgress: (Float?) -> Unit,
+        onBytes: (Long, Long?) -> Unit = { _, _ -> },
+    ): Pair<Ready?, String?> {
+        val urls = files(post, server)
+        if (urls.isEmpty()) return null to "There’s nothing to send in this one"
+        if (stillKeeping(context, post)) return null to STILL_KEEPING
+        val names = urls.indices.map { i -> SaveToPhone.fileName(post.platform, post.id, i.takeIf { urls.size > 1 }) }
+        val got = SaveToPhone.fetchAllToShare(context, urls, names, onProgress, onBytes)
+            ?: return null to (AdhxApi.reason(urls.first()) ?: DIDNT_COME)
+        val uris = got.map { (file, _) -> FileProvider.getUriForFile(context, "${context.packageName}.files", file) }
+        val types = got.map { it.second }.distinct()
+        val type = types.singleOrNull() ?: types.map { it.substringBefore('/') }.distinct().singleOrNull()?.let { "$it/*" } ?: "*/*"
+        return Ready(got.map { it.first }, uris, type) to null
+    }
+
     /**
      * Share [post]: its kept files through the share sheet, or its words.
      * Returns a notice to show when it couldn't (null when the sheet opened).
@@ -101,7 +140,7 @@ object ShareKept {
         return status is ApiResult.Ok && stillKeeping(status.value.status)
     }
 
-    private fun send(context: Context, intent: Intent) {
+    fun send(context: Context, intent: Intent) {
         context.startActivity(Intent.createChooser(intent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

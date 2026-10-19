@@ -220,6 +220,7 @@ fun PlayerScreen(
     val playback = remember { Playback() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
     var more by remember { mutableStateOf<PhonePost?>(null) }
+    var sendingPost by remember { mutableStateOf<PhonePost?>(null) }
     // Where the scrub line is being dragged to (0–1), or null: the controls fade out meanwhile.
     var scrub by remember { mutableStateOf<Float?>(null) }
     val chrome by animateFloatAsState(if (scrub == null) 1f else 0f, label = "chrome")
@@ -460,7 +461,10 @@ fun PlayerScreen(
                     }
                 },
                 onShare = {
-                    if (sharing == null) {
+                    // Videos, sounds and photos go through the send sheet; words straight to the share sheet.
+                    if (ShareKept.files(post, server).isNotEmpty()) {
+                        sendingPost = post
+                    } else if (sharing == null) {
                         sharing = post.key
                         shareProgress = null
                         scope.launch {
@@ -485,6 +489,9 @@ fun PlayerScreen(
         }
         if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
         reading?.let { Reader(it, onClose = { reading = null }) }
+        if (!inPip) {
+            sendingPost?.let { post -> SendSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { sendingPost = null }) }
+        }
         if (!inPip) {
             more?.let { post ->
                 val plays = PostKind.plays(post.kind)
@@ -649,7 +656,8 @@ private fun PostPage(
             // swipes between apps), the caption 18dp above it and the column 6dp higher.
             val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val lineBottom = navBottom + 4.dp
-            val lift = lineBottom + 18.dp
+            // With Live's React picker open, the caption and column sit just above it, as on the boards.
+            val lift = lineBottom + 18.dp + if (reacting) REACT_PICKER_HEIGHT else 0.dp
             Box(
                 Modifier
                     .align(Alignment.BottomStart)
@@ -703,6 +711,8 @@ private fun PostPage(
             )
             BottomRow(
                 playback = if (onScreen && plays) playback else null,
+                // Live's line is yellow, as on the boards; New's is cream.
+                color = if (onReact != null) AdhxColors.Accent else AdhxColors.White,
                 scrub = scrub,
                 onScrub = onScrub,
                 onSeek = onSeek,
@@ -794,6 +804,9 @@ private fun MediaPage(
         }
     }
 }
+
+/** How much room Live's React picker takes at the bottom, with a little air above it. */
+private val REACT_PICKER_HEIGHT = 156.dp
 
 /** Taller than wide by at least 4:3 (a phone video, a reel), when the size is known. */
 internal fun isUpright(width: Double?, height: Double?): Boolean {
@@ -1202,6 +1215,7 @@ private fun ActionButton(
 @Composable
 private fun BottomRow(
     playback: Playback?,
+    color: Color,
     scrub: Float?,
     onScrub: (Float?) -> Unit,
     onSeek: (Long) -> Unit,
@@ -1212,6 +1226,7 @@ private fun BottomRow(
     val fraction = if (duration > 0) (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
     ScrubLine(
         fraction = scrub ?: fraction,
+        color = color,
         dragging = scrub != null,
         enabled = duration > 0,
         onDrag = onScrub,
@@ -1233,6 +1248,7 @@ private fun BottomRow(
 @Composable
 private fun ScrubLine(
     fraction: Float,
+    color: Color,
     dragging: Boolean,
     enabled: Boolean,
     onDrag: (Float) -> Unit,
@@ -1277,7 +1293,7 @@ private fun ScrubLine(
             drawLine(AdhxColors.Accent, Offset(thickness / 2, y), Offset(x.coerceAtLeast(thickness / 2), y), thickness, StrokeCap.Round)
             drawCircle(AdhxColors.Accent, 10.dp.toPx(), Offset(x.coerceIn(10.dp.toPx(), size.width - 10.dp.toPx()), y))
         } else if (x > 0f) {
-            drawLine(AdhxColors.White, Offset(thickness / 2, y), Offset(x.coerceAtLeast(thickness / 2), y), thickness, StrokeCap.Round)
+            drawLine(color, Offset(thickness / 2, y), Offset(x.coerceAtLeast(thickness / 2), y), thickness, StrokeCap.Round)
         }
     }
 }

@@ -138,6 +138,22 @@ object Copy {
     }
 
     const val SEE_ALL = "See all"
+
+    // Connected (just paired)
+    const val PHONE_CONNECTED = "This phone is connected"
+    const val CONNECTED_TO = "Connected to"
+    const val SAVED_THIS_WEEK = "Here’s what your people saved this week"
+    const val START_WATCHING = "Start watching"
+    const val CONNECTED_NOTE = "Share from any app to save. Your saves are shared with your people unless you make them just for you."
+
+    /** "Ana’s ADHX", "your ADHX". */
+    fun whoseAdhx(owner: String?, yours: Boolean): String = when {
+        yours || owner.isNullOrBlank() -> "your ADHX"
+        else -> "$owner’s ADHX"
+    }
+
+    /** "You, Ana, Mum and Jo". */
+    fun youAnd(names: List<String>): String = list(listOf("You") + names, max = 5)
     const val YOU_SAVED_TOO = "You saved this too"
     const val PLAY_ALL = "Play all"
 

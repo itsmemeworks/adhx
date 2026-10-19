@@ -36,9 +36,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -142,14 +144,42 @@ fun Spinner(size: Dp = 14.dp, stroke: Dp = 2.dp, track: Color = AdhxColors.Hairl
     )
 }
 
-/** A rounded grey bar standing in for text that hasn't arrived yet. */
+/**
+ * A rounded grey bar standing in for text that hasn't arrived yet, with a
+ * soft light sweeping across it (still when animations are off).
+ */
 @Composable
 fun SkeletonBar(height: Dp, modifier: Modifier = Modifier) {
+    val still = rememberReducedMotion()
+    val sweep = if (still) {
+        -1f
+    } else {
+        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "shimmer")
+        t.animateFloat(
+            -1f,
+            2f,
+            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1300, easing = androidx.compose.animation.core.LinearEasing)),
+            label = "sweep",
+        ).value
+    }
     Box(
         modifier
             .height(height)
             .clip(RoundedCornerShape(height / 2))
-            .background(AdhxColors.Placeholder),
+            .background(AdhxColors.Placeholder)
+            .drawWithContent {
+                drawContent()
+                if (sweep > -1f) {
+                    val w = size.width
+                    drawRect(
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            listOf(Color.Transparent, Color.White.copy(alpha = 0.08f), Color.Transparent),
+                            startX = w * sweep - w * 0.5f,
+                            endX = w * sweep + w * 0.5f,
+                        ),
+                    )
+                }
+            },
     )
 }
 
