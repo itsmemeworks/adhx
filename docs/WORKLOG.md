@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — iPhone: Settings, approvals and On their way
+
+- Branch `ff/ios-settings` (from `ff/settings`; `apps/ios` and the phone spec taken from `feat/friends-feed`, which `ff/settings` didn't have yet). Settings from Gob: you (Gob-shaped face, saves), Waiting for you (Let in / Not now / Decline via `/api/app/people/requests/[id]`), Your people list (opens a friend's channel), Invite someone, What's in your feed, Just for me by default, Sound on by default, What your ADHX is doing, Connected to … / Remove this phone, Shared lately.
+- On their way: pill under New's tabs from `/api/app/doing`, polled every 5 s only while the player is on screen; sheet with thumbnail, step and thin bar per post, Retry (`/api/app/doing/retry`) on rows that need you; full list screen. Older servers keep the old `preparing` pill.
+- Faces load through `AuthImage` (phone key as `Authorization: Bearer`, only to the paired server, memory cache), since `/api/files/avatar/<hash>` is members only.
+- QA: Why this one lists every `whyReasons` entry; `nothingYet` shows "Nothing new yet." instead of the caught-up page.
+- No phone routes yet for: changing the picture (`/api/account/avatar` is session only), invites, the `save.privateDefault` preference (kept on the phone; sends `private: true` when on), or a phone removing its own key. Picture and invites open web Settings.
+- Built for the simulator with `xcodebuild`; not tried against a live server.
+
 ## 2026-10-19 — Settings for You and Your people, join approvals, What your ADHX is doing
 
 - **You**: Change picture dialog (upload, camera, X picture, a Gob in four colours; circular crop with zoom, live saver-faces preview). `POST /api/account/avatar` sniffs the type, caps 5 MB, and `sharp` re-encodes a clamped crop to a 512px metadata-free JPEG in `MEDIA_DIR/avatars/<userId>-<hash>.jpg`, served to members only at `/api/files/avatar/<hash>`; the old file goes on replace and all of them on account delete. Display name (`PATCH /api/account/profile`) and "Just for me by default" (`save.privateDefault`, honoured by every save path and settled when a phone share is queued).

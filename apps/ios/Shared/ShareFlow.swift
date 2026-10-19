@@ -101,7 +101,14 @@ final class ShareFlow: ObservableObject {
         server = client.server
         self.client = client
 
-        let record = ShareRecord(link: link)
+        var record = ShareRecord(link: link)
+        // Settings → "Just for me by default": the switch starts on and the
+        // share goes out private.
+        if Prefs.justForMeByDefault {
+            justForMe = true
+            privacyTouched = true
+            record.wantsPrivate = true
+        }
         History.upsert(record)
         recordId = record.id
         phase = .saving
@@ -117,7 +124,7 @@ final class ShareFlow: ObservableObject {
 
     private func save(with client: ADHXClient, link: String, recordId: String) async {
         do {
-            switch try await client.save(url: link) {
+            switch try await client.save(url: link, private: privacyTouched ? justForMe : nil) {
             case .saved(let r):
                 landed(r, client: client)
             case .queued(let id):

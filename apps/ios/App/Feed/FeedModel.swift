@@ -14,6 +14,8 @@ final class FeedModel: ObservableObject {
     @Published private(set) var atEnd = false
     /// The server says you've seen everything (New).
     @Published private(set) var caughtUp = false
+    /// There's nothing new on the server at all yet (not "all caught up").
+    @Published private(set) var nothingYet = false
     /// This ADHX has no feed yet (404): Home plays your saves instead.
     @Published private(set) var unsupported = false
     /// Where you are, so coming back to New starts on the same post.
@@ -134,6 +136,7 @@ final class FeedModel: ObservableObject {
             nextCursor = page.nextCursor
             atEnd = page.nextCursor == nil || page.items.isEmpty
             caughtUp = page.caughtUp && atEnd
+            if replacing { nothingYet = page.nothingYet && shown.isEmpty }
             loadError = nil
             unsupported = false
             KnownPeople.remember(page.items.flatMap(\.savers))

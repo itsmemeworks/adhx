@@ -15,8 +15,12 @@ It has two parts:
   everyone, one per friend, and ones made from what you keep) and **Live**
   (what a few of you are saving right now, to tune in to together). It
   searches everyone’s saves or just yours by meaning, lists what you’ve shared
-  lately (in Settings) and how each copy is coming along, and has Settings. `App/Feed/` is
-  New, Channels and Live; `App/Library/` is the player, search and your saves.
+  lately (in Settings) and how each copy is coming along, and has Settings
+  (you, your people, letting people in, defaults, this phone). A pill on the
+  player says what's **on its way** (being kept and learned on your ADHX),
+  with Retry for what needs you. `App/Feed/` is New, Channels and Live;
+  `App/Library/` is the player, search and your saves; `App/Settings/` is
+  Settings and Your people; `App/Doing/` is On their way.
 - **The Share Extension** (`ShareExtension/`): the sheet you see after picking
   ADHX in the share menu: Saving, Saved, Already in your saves, That’s not one
   post, Saved for later, Connect the app first. It says who will see the save
@@ -24,7 +28,8 @@ It has two parts:
 
 Code both of them use is in `Shared/`: talking to your ADHX (`API.swift`, and
 the friends feed in `FriendsAPI.swift`), people’s faces and names
-(`People.swift`), storage, the list of waiting links, network marks, colours
+(`People.swift`), members' pictures loaded with the phone key
+(`AuthImage.swift`), storage, the list of waiting links, network marks, colours
 and the sheet itself. The API and the
 sheet’s states are described in `docs/specs/phone-app.md` at the repo root.
 

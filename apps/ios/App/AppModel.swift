@@ -137,6 +137,7 @@ final class AppModel: ObservableObject {
 
     func disconnect() {
         Store.disconnect()
+        AuthImageLoader.shared.clear()
         connection = .checking
         reload()
     }

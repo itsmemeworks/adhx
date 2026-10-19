@@ -23,6 +23,7 @@ struct LibraryHome: View {
     @StateObject private var feed = FeedModel()
     @StateObject private var channels = ChannelsModel()
     @StateObject private var live = LiveModel()
+    @StateObject private var doing = DoingModel()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -39,6 +40,13 @@ struct LibraryHome: View {
     @State private var filtering = false
     /// The top bar and tabs, measured, so what's under them starts below.
     @State private var headerHeight: CGFloat = 112
+    /// Home is the screen on top (not under Settings or Search).
+    @State private var onScreen = false
+    /// The "On their way" sheet is up.
+    @State private var showingDoing = false
+
+    /// The player is showing, so its "On their way" pill asks every 5 s.
+    private var watchingDoing: Bool { onScreen && scenePhase == .active && tab == .new }
 
     /// The player's own buttons are hidden (Hide, or dragging through a video).
     private var playerChromeHidden: Bool { tab == .new && (clean || scrubbing) }
@@ -68,6 +76,7 @@ struct LibraryHome: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: library.preparing)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: doing.onTheirWay)
         .background(Theme.app.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task {
@@ -77,6 +86,7 @@ struct LibraryHome: View {
             feed.onBadKey = badKey
             channels.onBadKey = badKey
             live.onBadKey = badKey
+            doing.onBadKey = badKey
             async let saves: Void = library.reload()
             async let blend: Void = feed.reload()
             async let rows: Void = channels.reload()
@@ -84,10 +94,17 @@ struct LibraryHome: View {
             _ = await (saves, blend, rows, moments)
             await feed.loadTypes()
         }
-        .onAppear { model.startPolling() }
+        .onAppear {
+            onScreen = true
+            model.startPolling()
+        }
         .onDisappear {
+            onScreen = false
             model.stopPolling()
             feed.pause()
+        }
+        .onChange(of: watchingDoing, initial: true) { _, watching in
+            if watching { doing.watch("player") } else { doing.unwatch("player") }
         }
         .onChange(of: tab) { old, new in
             if old == .new { feed.pause() }
@@ -137,6 +154,15 @@ struct LibraryHome: View {
                 .presentationCornerRadius(28)
             }
         }
+        .sheet(isPresented: $showingDoing) {
+            if let server = model.server {
+                OnTheirWaySheet(doing: doing, server: server)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(Theme.surface)
+                    .presentationCornerRadius(28)
+            }
+        }
         .sheet(isPresented: $filtering) {
             FeedFilterSheet(types: feed.types, mode: feed.mode, newCount: newBadge, hidden: feed.hidden,
                             setTypes: { types in Task { await feed.setTypes(types) } },
@@ -174,6 +200,11 @@ struct LibraryHome: View {
                 }
                 .padding(.top, headerHeight)
                 .frame(maxHeight: .infinity, alignment: .top)
+            } else if feed.items.isEmpty && feed.nothingYet {
+                // Nobody has saved anything new yet: not "all caught up".
+                EmptyNote(title: "Nothing new yet.", message: "Save something for your people to find.")
+                    .padding(.top, headerHeight)
+                    .frame(maxHeight: .infinity, alignment: .top)
             } else if feed.items.isEmpty {
                 caughtUp(server, topInset: headerHeight + 12)
             } else {
@@ -225,11 +256,29 @@ struct LibraryHome: View {
                         .background(Capsule().fill(Theme.accent))
                 }
                 .transition(.opacity)
-            } else if library.preparing > 0 && !library.saves.isEmpty {
-                PreparingPill(count: library.preparing)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+            } else if !library.saves.isEmpty {
+                onTheirWay
             }
-        } else if library.preparing > 0 && !feed.items.isEmpty {
+        } else if !feed.items.isEmpty {
+            onTheirWay
+        }
+    }
+
+    /// Posts being kept and learned (`/api/app/doing`), opening the sheet; on
+    /// an older server, the saves still on their way.
+    @ViewBuilder
+    private var onTheirWay: some View {
+        if !doing.unsupported {
+            if doing.onTheirWay > 0 {
+                Button {
+                    showingDoing = true
+                } label: {
+                    OnTheirWayPill(moving: doing.moving, needsYou: doing.needsYou)
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        } else if library.preparing > 0 {
             PreparingPill(count: library.preparing)
                 .transition(.opacity.combined(with: .move(edge: .top)))
         }
@@ -291,7 +340,7 @@ struct LibraryHome: View {
     private var topBar: some View {
         HStack(spacing: 8) {
             NavigationLink {
-                SettingsView(library: library)
+                SettingsView(library: library, feed: feed, doing: doing)
             } label: {
                 Gob(size: 30)
                     .frame(width: 44, height: 44)

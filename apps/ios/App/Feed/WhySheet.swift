@@ -83,10 +83,24 @@ struct WhySheet: View {
         return parts.joined(separator: " · ")
     }
 
-    /// What we can honestly say about it: the feed's own reason, who saved
-    /// it, and that it's new to you.
+    /// What we can honestly say about it: every reason the feed gives (or,
+    /// from an older server, its one line and who saved it), and that it's
+    /// new to you.
     private var reasons: [Reason] {
         var out: [Reason] = []
+        if !post.whyReasons.isEmpty {
+            for (index, reason) in post.whyReasons.enumerated() {
+                out.append(Reason(icon: Self.icon(for: reason.kind), text: reason.text,
+                                  savers: Self.savers(for: reason, lead: index == 0, in: post.savers)))
+            }
+            if mode == .new, !post.whyReasons.contains(where: { $0.kind == "fresh" }) {
+                out.append(Reason(icon: "eye.slash", text: "You haven’t seen it yet", savers: []))
+            }
+            if PrivacyStore.shared.isPrivate(post) {
+                out.append(Reason(icon: "lock.fill", text: "One of yours, just for you", savers: []))
+            }
+            return out
+        }
         if let why = post.why {
             out.append(Reason(icon: "sparkles", text: why, savers: post.savers))
         }
@@ -105,6 +119,29 @@ struct WhySheet: View {
             out.append(Reason(icon: "clock", text: "It’s next, newest first", savers: []))
         }
         return out
+    }
+}
+
+extension WhySheet {
+    /// An icon for each kind of reason the blend gives.
+    static func icon(for kind: String?) -> String {
+        switch kind {
+        case "together": return "person.2.fill"
+        case "more", "close": return "heart.fill"
+        case "like": return "sparkles"
+        case "fresh": return "clock"
+        case "yours": return "bookmark.fill"
+        default: return "sparkles"
+        }
+    }
+
+    /// Faces next to a reason: the friend it's about, or (on the headline)
+    /// the people who saved it.
+    static func savers(for reason: WhyReason, lead: Bool, in savers: [Saver]) -> [Saver] {
+        if let username = reason.username {
+            return savers.filter { $0.username == username }
+        }
+        return lead || reason.kind == "together" ? savers : []
     }
 }
 
