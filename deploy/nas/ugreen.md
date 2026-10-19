@@ -133,6 +133,16 @@ playback and seeking, then search for words and visible content. The first
 model download takes time. A healthy web/database status does not prove that
 model inference or a source-network downloader is working.
 
+For a bulk X import, use the [shared-host resource checks](README.md#resource-and-storage-controls).
+In **Docker → Container → your ADHX container → Basic Information → Others**,
+check the effective CPU and memory limits; **Process** helps distinguish the
+web server from model workers. Menu labels can differ. Use Docker's overview
+and Task Manager for total CPU, available memory/cache and disk load, alongside
+the app's learning progress. A CPU limit without a RAM limit still permits
+memory growth. Test search and playback while indexing is active before
+increasing concurrency. A completed text pass does not measure peak video
+inference memory.
+
 Restart or recreate this project and verify accounts, files and search survive.
 Confirm the intended bind folder or named volume remains mounted. Pair phones
 with the final HTTPS address when a native app is available. Record the running
@@ -150,3 +160,19 @@ project with the same data mount and session secret. Preserve other projects
 and shared proxy networks. Keep the previous image reference and a matching
 backup, and test a restore in a separate project. Avoid any option to delete
 associated data/volumes unless you intend to remove the library.
+
+For an environment/resource change, edit the existing project's complete
+Compose configuration and **Redeploy**, keeping the image reference and data
+mount. Choose image pulling when deliberately updating the image. The
+deployment-log panel can be blank or keep saying **Processing** after the
+project is already running: inspect the actual container status, logs and
+HTTPS health before retrying a deployment. Never paste a sanitized guide over
+working credentials. See [X sync timing and optional keys](README.md#optional-services-and-x-sync).
+
+UGOS can show an **Updatable** badge when image update detection is enabled
+and a tracked tag changes. An image pinned by digest will not follow a new
+release; a numbered tag will not advance to the next number either. Use the
+[channel table](README.md#choose-an-update-channel) to choose between explicit
+digest updates and a moving tag, then use the project's update/redeployment
+flow to apply it. The badge is a notification, not proof an update has been
+installed. See UGREEN's [project update guide](https://support.ugnas.com/detail/article/en-US/411).
