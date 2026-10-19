@@ -147,8 +147,8 @@ function emptyState(
     }
   if (source.recent)
     return {
-      title: 'Nothing saved yet',
-      body: 'Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or bring in your X bookmarks.',
+      title: 'Nothing kept yet',
+      body: 'No algorithm is going to fill this for you. Paste a link to a post from X, Instagram, TikTok, YouTube, Reddit and more, or bring in your X bookmarks.',
       action: 'Bring in X bookmarks',
       href: '/settings?sync=1',
     }
@@ -1291,7 +1291,7 @@ export function TheaterV2({
               className="block h-3 w-3 rounded-full animate-nx-live-pulse"
               style={{ background: momentHue }}
             />
-            <span className="font-nx-serif text-[28px]">You’re all caught up</span>
+            <span className="font-nx-serif text-[28px]">You’re all caught up. Go touch grass.</span>
             <span className="text-sm text-white/75">New saves play here as they land.</span>
           </div>
         )}

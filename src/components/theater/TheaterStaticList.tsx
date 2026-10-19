@@ -58,7 +58,7 @@ export function TheaterStaticList({
 
   return (
     <section aria-label="ADHX" className="sr-only">
-      <h1>ADHX — Save it. Lose it. Find it.</h1>
+      <h1>ADHX — Your friends have better taste than the algorithm.</h1>
       <p>
         ADHX keeps the posts you save from X, Instagram, TikTok, YouTube and ten more networks, with
         their videos and photos stored on this server, so they&apos;re there when you want them.

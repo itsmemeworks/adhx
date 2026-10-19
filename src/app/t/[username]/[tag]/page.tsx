@@ -100,7 +100,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (result.status === 'not_found') {
     return {
       title: `ADHX ${noun}`,
-      description: 'Save it. Lose it. Find it.',
+      description: 'Your friends have better taste than the algorithm.',
       openGraph: {
         images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
       },

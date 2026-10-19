@@ -153,8 +153,10 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'invalid-user', id: '123' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
-      expect(metadata.description).toBe('For people who bookmark everything and read nothing.')
+      expect(metadata.title).toBe('ADHX - Your friends have better taste than the algorithm.')
+      expect(metadata.description).toBe(
+        'Every app wants your attention. ADHX just wants your friends’ opinions.',
+      )
     })
 
     it('returns fallback metadata for invalid tweet ID', async () => {
@@ -164,7 +166,7 @@ describe('URL Prefix Route: /[username]/status/[id]', () => {
         params: Promise.resolve({ username: 'validuser', id: 'not-numeric' }),
       })
 
-      expect(metadata.title).toBe('ADHX - Save it. Lose it. Find it.')
+      expect(metadata.title).toBe('ADHX - Your friends have better taste than the algorithm.')
     })
 
     it('returns a minimal noindex tombstone when FxTwitter cannot resolve the tweet (deleted/private/suspended)', async () => {
