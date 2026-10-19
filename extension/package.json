@@ -19,5 +19,9 @@
     "build:firefox": "extension build --browser firefox",
     "typecheck": "tsc --noEmit",
     "validate:manifests": "node scripts/validate-manifests.mjs"
+  },
+  "packageManager": "pnpm@10.34.7",
+  "pnpm": {
+    "allowBuilds": {}
   }
 }

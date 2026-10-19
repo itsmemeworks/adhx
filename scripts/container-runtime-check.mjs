@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
-import { mkdir, readFile, stat } from 'node:fs/promises'
+import { access, mkdir, readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { ffmpegPath } from '../src/lib/media/ffmpeg.ts'
 import { mediaDir } from '../src/lib/keep/config.ts'
@@ -35,15 +35,39 @@ function integrity() {
 
 async function seed() {
   assert.equal(process.getuid(), 1001, 'Runtime must run as the documented non-root UID')
+  for (const buildTool of [
+    '/usr/local/lib/node_modules/npm',
+    '/usr/local/lib/node_modules/corepack',
+    '/pnpm',
+  ]) {
+    await assert.rejects(access(buildTool), { code: 'ENOENT' })
+  }
   assert.ok(
     ['x64', 'arm64'].includes(process.arch),
     'Only the advertised Linux architectures are tested',
   )
-  // Resolve the transitive package from its actual pnpm parent. Importing it
-  // loads the architecture-specific .node addon and its shared libraries.
+  // Resolve from its actual pnpm parent and execute a tiny embedded ONNX Add
+  // graph. No model download or optional CUDA postinstall is needed for CPU.
   const transformerRequire = createRequire(import.meta.resolve('@huggingface/transformers'))
   const ort = transformerRequire('onnxruntime-node')
-  assert.equal(typeof ort.InferenceSession.create, 'function')
+  const model = Buffer.from(
+    'CAk6WgoOCgF4CgF5EgF6IgNBZGQSFUFESFggbmF0aXZlIENQVSBjaGVja1oPCgF4EgoKCAgBEgQKAggBWg8KAXkSCgoICAESBAoCCAFiDwoBehIKCggIARIECgIIAUICEA0=',
+    'base64',
+  )
+  const session = await ort.InferenceSession.create(model, {
+    executionProviders: ['cpu'],
+    intraOpNumThreads: 1,
+    interOpNumThreads: 1,
+  })
+  try {
+    const outputs = await session.run({
+      x: new ort.Tensor('float32', Float32Array.of(2), [1]),
+      y: new ort.Tensor('float32', Float32Array.of(3), [1]),
+    })
+    assert.equal(outputs.z.data[0], 5)
+  } finally {
+    await session.release()
+  }
   console.log(
     execFileSync(await ffmpegPath(), ['-version'], { encoding: 'utf8', timeout: 10_000 }).split(
       '\n',

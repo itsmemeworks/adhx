@@ -28,9 +28,36 @@ audit covers only the packages sent to that audit.
   architectures, including reused images, before promoting release/latest tags.
   Unfixed advisories still need operator review; passing this
   gate does not establish that an image has no vulnerabilities.
+  The runtime image omits npm, Corepack and the build-only pnpm cache; deployed
+  migrations use its lockfile-installed `tsx` directly. Scanner findings are
+  also printed in job logs so a failed gate can be diagnosed without rescanning.
 - Dependabot checks the root app, extension, Android, Docker base and Actions
   weekly. Minor/patch updates are grouped; major migrations need their own
   compatibility review.
+
+## JavaScript installation policy
+
+The application, extension and release-compatibility tools each pin
+`pnpm@10.34.7` in their own `package.json` and retain independent lockfiles.
+Use Corepack or the exact pinned pnpm version; the checked-in `.npmrc` rejects
+another version and fails on an unreviewed dependency lifecycle script.
+`pnpm install --frozen-lockfile` must leave all three dependency graphs unchanged.
+
+The application’s version-specific `pnpm.allowBuilds` permits the reviewed
+esbuild binary checks and the resolver’s native optional-package setup.
+The protobuf hook only emits a version-scheme warning and is disabled.
+The ONNX hook only adds optional CUDA/TensorRT libraries on Linux x64 and is
+also disabled: the application selects CPU or macOS CoreML, whose native
+binaries are already included in the locked package for AMD64 and ARM64.
+SQLite’s native build step is approved at its locked version; Sharp uses its
+locked native packages without an install hook.
+The extension and release-test packages allow no dependency build scripts;
+their CI installs also pass `--ignore-scripts` explicitly.
+
+When updating a package that adds or changes a lifecycle script, review its
+purpose and contents, update the exact allow/deny entry, and repeat a clean
+frozen install plus SQLite, image and inference checks. Do not bypass the
+policy with a blanket build approval.
 
 ## FFmpeg and downloader
 

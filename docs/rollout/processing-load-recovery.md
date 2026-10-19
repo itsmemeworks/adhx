@@ -64,6 +64,11 @@ including failure. The JSON report remains at the selected output path.
   including its final minute and the final sample at 478 seconds. Blue frames
   exist only in that ending, so decoding their colour proves the ending was
   actually sampled. All intermediate frame files are removed.
+- A real backfill pass is introduced after the first video checkpoint. Its
+  text work may preempt the demoted video, so the rehearsal waits for eight
+  persisted checkpoints rather than assuming eight claims mean eight video
+  segments. Coverage must still be exactly 120 decoded frames including the
+  ending, and unexpected video failures fail immediately.
 - Completion acknowledgements remove the cached source when no consumer needs
   it; abandoned scratch from a previous worker is swept and an unrelated model
   directory stays intact. The retained original's SHA-256 stays unchanged.
@@ -144,7 +149,37 @@ Next page rendering, TLS, Tailscale, a shared NAS disk, mobile networking or a
 physical phone. Pair its report with the browser suite and the physical-device
 checks in [the friends-feed verification guide](friends-feed-verification.md).
 
-Real disk-full exhaustion is represented by the worker's configured scratch
-budget, avoiding intentional exhaustion of the host disk. Platform filesystem
-errors such as ENOSPC still need a separately constrained filesystem rehearsal
-if an operator requires that additional guarantee.
+## Actual disk-full write failure on macOS
+
+The regular harness checks the configured scratch budget. The optional macOS
+rehearsal below separately checks **real OS `ENOSPC`** without filling the host
+disk or connecting to an installed service:
+
+```sh
+ADHX_ENOSPC_REPORT_PATH=/tmp/adhx-processing-enospc-report.json \
+pnpm exec tsx scripts/verify-processing-enospc.ts
+```
+
+It creates a disposable 64 MiB HFS+ image and refuses to fill it unless its
+mount has a different device from the host, the exact private mount path and
+at most 80 MiB capacity. Host free space must be at least 2 GiB before creation.
+Only that mounted image is filled; the filler has a hard 64 MiB bound. A
+16 MiB synthetic retained source stays outside the image. The actual Mac
+runner downloads its streamed bytes into the image while a transparent
+observer records errors from Node's real filesystem write method, rather than
+injecting a simulated error. Claim and failure acknowledgements use an
+in-memory endpoint, so this checks downloader cleanup, not NAS transport or
+database retry persistence.
+
+Verified on 19 October 2026: the 64 MiB image had 4,681,728 bytes free before
+the 16,777,216-byte download. The worker's actual write returned `ENOSPC`,
+reported a retryable failure, called no model, sent no successful/empty result
+and removed all partial/cache files. The retained source's hash stayed
+unchanged. Cleanup detached the image and deleted the fixture. Cleanup lives
+in `finally`, with handlers for Ctrl+C and ordinary termination, and selects a detach device only from the
+exact newly created image; it never detaches an existing service volume.
+
+This is a small synthetic-image download test, rather than a full disk during
+conversion, a NAS filesystem test, or a promise of cleanup after the entire
+test process is forcibly killed. It needs normal macOS disk-image support and
+does not request administrator permissions or change system settings.

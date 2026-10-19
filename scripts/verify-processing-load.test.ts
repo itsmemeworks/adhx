@@ -34,6 +34,10 @@ let activeRunner: ReturnType<typeof createMacRunner> | undefined
 const rehearsalAbort = new AbortController()
 const viewer = USER_A
 const report: Record<string, unknown> = {}
+const processingTrace: Array<Record<string, unknown>> = []
+const workerLogs: string[] = []
+report.processingTrace = processingTrace
+report.workerLogs = workerLogs
 const token = 'p'.repeat(43)
 const vector = Array.from({ length: 768 }, (_, i) => (i === 0 ? 1 : 0))
 const exec = promisify(execFile)
@@ -85,6 +89,7 @@ import {
 import { ffmpegPath } from '../src/lib/media/ffmpeg'
 import { probeMedia } from '../src/lib/keep/probe'
 import sharp from 'sharp'
+import { enqueueBackfill } from '../src/lib/semantic/queue'
 
 async function post(body: unknown) {
   const response = await fetch(`${origin}/api/processing/jobs`, {
@@ -111,6 +116,14 @@ async function saveReport() {
     path.join(os.tmpdir(), 'adhx-processing-load-report.json')
   await writeFile(output, `${JSON.stringify(report, null, 2)}\n`)
   process.stdout.write(`Processing load report: ${output}\n`)
+}
+
+function expectConvertedDuration(actual: number | null, expected: number) {
+  expect(actual).not.toBeNull()
+  // Match the production integrity check: encoder/AAC packet padding may
+  // legitimately add a few milliseconds, while truncation still fails.
+  const toleranceMs = Math.max(100, Math.min(500, expected * 0.001))
+  expect(Math.abs(actual! - expected)).toBeLessThanOrEqual(toleranceMs)
 }
 
 function seed() {
@@ -191,9 +204,14 @@ async function responseBurst(samples = 24, active?: () => boolean) {
   const result = { summary: timing(summary), needsPage: timing(details), health: timing(healthy) }
   // Generous regression guard, not a promised production SLO. This is one
   // event loop, local HTTP and an isolated disk-backed WAL database.
-  expect(result.summary.p95Ms).toBeLessThan(1000)
-  expect(result.needsPage.p95Ms).toBeLessThan(1000)
-  expect(result.health.maxMs).toBeLessThan(2000)
+  try {
+    expect(result.summary.p95Ms).toBeLessThan(1000)
+    expect(result.needsPage.p95Ms).toBeLessThan(1000)
+    expect(result.health.maxMs).toBeLessThan(2000)
+  } catch (error) {
+    report.failedResponseBurst = result
+    throw error
+  }
   return result
 }
 
@@ -257,6 +275,14 @@ beforeAll(async () => {
         ...(chunks.length ? { body: Buffer.concat(chunks) } : {}),
       })
       const route = new URL(request.url).pathname
+      const action =
+        route === '/api/processing/jobs' && chunks.length
+          ? (JSON.parse(Buffer.concat(chunks).toString()) as {
+              action: string
+              code?: string
+              error?: string
+            })
+          : null
       const response =
         route === '/api/processing/jobs'
           ? await jobs(request)
@@ -265,6 +291,26 @@ beforeAll(async () => {
             : route === '/api/activity/processing'
               ? await doing(request)
               : await health()
+      if (action) {
+        const trace: Record<string, unknown> = { action: action.action, status: response.status }
+        if (action.action === 'claim') {
+          const payload = (await response.clone().json()) as {
+            job?: { id: string; kind: string } | null
+          }
+          trace.kind = payload.job?.kind ?? null
+          if (payload.job)
+            trace.post = (
+              instance.sqlite
+                .prepare('SELECT post_id FROM processing_leases WHERE id=?')
+                .get(payload.job.id) as { post_id: string } | undefined
+            )?.post_id
+        }
+        if (action.action === 'fail') {
+          trace.code = action.code
+          trace.error = action.error
+        }
+        processingTrace.push(trace)
+      }
       res.writeHead(response.status, Object.fromEntries(response.headers))
       res.end(Buffer.from(await response.arrayBuffer()))
     } catch (error) {
@@ -302,6 +348,10 @@ afterAll(async () => {
   if (instance) instance.close()
   vi.unstubAllEnvs()
   if (root) await rm(root, { recursive: true, force: true })
+  report.fixtureRemoved = true
+  // Preserve diagnostics even when a coverage/latency assertion fails before
+  // the happy-path save. No tokens, local source paths or personal data appear.
+  await saveReport()
 })
 
 it('keeps a large queue responsive, recovers a killed runner, bounds scratch and learns through a long video ending', async () => {
@@ -571,7 +621,7 @@ it('keeps a large queue responsive, recovers a killed runner, bounds scratch and
         frames++
         if (data[2] > data[0] + 50) endingFrames++
       }
-      completedSegments++
+      if (task.kind === 'video') completedSegments++
       if (nativeModel && task.kind === 'video' && completedSegments === plan.segments) {
         const started = performance.now()
         const inferred = await nativeModel.run(
@@ -623,15 +673,57 @@ it('keeps a large queue responsive, recovers a killed runner, bounds scratch and
   await writeFile(path.join(models, 'sentinel'), 'not media scratch')
   const runner = createMacRunner(
     { ...config, maxCacheBytes: 128 * 1024 ** 2 },
-    { processor, log() {} },
+    {
+      processor,
+      log(message) {
+        workerLogs.push(message)
+      },
+    },
   )
   activeRunner = runner
   const plan = createVideoPlan(duration, 'normal')
+  let claimCalls = 0
+  let seededBackfill = false
+  const videoCheckpoint = () =>
+    (
+      instance.sqlite
+        .prepare(
+          "SELECT next_segment FROM video_index_state WHERE post_id='long-video' AND platform='twitter'",
+        )
+        .get() as { next_segment: number } | undefined
+    )?.next_segment ?? 0
   const sampling = await measureDuring(async () => {
-    for (let index = 0; index < plan.segments; index++) expect(await runner.runOnce()).toBe(true)
+    while (videoCheckpoint() < plan.segments) {
+      expect(
+        ++claimCalls,
+        'Video checkpoints must finish without unbounded claims/retries',
+      ).toBeLessThanOrEqual(plan.segments + 8)
+      expect(await runner.runOnce()).toBe(true)
+      const retry = instance.sqlite
+        .prepare(
+          "SELECT attempts,last_error FROM understanding_queue WHERE post_id='long-video' AND kind='video'",
+        )
+        .get() as { attempts: number; last_error: string | null } | undefined
+      expect(
+        retry?.attempts ?? 1,
+        `Unexpected video deferral: ${retry?.last_error ?? workerLogs.at(-1)}`,
+      ).toBe(1)
+      if (!seededBackfill && videoCheckpoint() >= 1) {
+        // Slow machines cross the periodic backfill interval mid-video. Force
+        // the same real path everywhere: text may correctly preempt a demoted
+        // video checkpoint. One worker claim is not necessarily one segment.
+        await enqueueBackfill()
+        seededBackfill = true
+      }
+    }
   })
   report.duringFrameSamplingAndFinalInference = sampling.timings
   runner.close()
+  expect(
+    processingTrace.some(
+      (entry) => entry.action === 'claim' && entry.kind === 'text' && entry.post === 'long-video',
+    ),
+  ).toBe(true)
   expect(frames).toBe(plan.segments * plan.framesPerSegment)
   expect(endingFrames).toBeGreaterThanOrEqual(plan.framesPerSegment)
   expect(
@@ -659,6 +751,10 @@ it('keeps a large queue responsive, recovers a killed runner, bounds scratch and
     abandonedScratchRemoved: true,
     modelDirectoryPreserved: true,
     scratchBudgetRejectionRetryable: true,
+    claimCalls,
+    backfillInterleavingExercised: processingTrace.some(
+      (entry) => entry.action === 'claim' && entry.kind === 'text' && entry.post === 'long-video',
+    ),
   }
 
   nativeModel?.close()
@@ -675,7 +771,7 @@ it('keeps a large queue responsive, recovers a killed runner, bounds scratch and
   const converted = conversion.value
   const convertedProbe = await probeMedia(converted.file)
   expect(convertedProbe.videoCodec).toBe('h264')
-  expect(convertedProbe.durationMs).toBe(duration * 1000)
+  expectConvertedDuration(convertedProbe.durationMs, duration * 1000)
   report.duringConversion = conversion.timings
   report.conversion = {
     milliseconds: conversion.workMs,
@@ -785,10 +881,10 @@ it('converts a realistic 1080p moving video with audio while the large queue rem
       audioCodec: 'aac',
       width: 1920,
       height: 1080,
-      durationMs: duration * 1000,
       hasVideo: true,
       hasAudio: true,
     })
+    expectConvertedDuration(outputProbe.durationMs, duration * 1000)
     expect(sha(await readFile(source))).toBe(originalHash)
     report.realistic1080pConversion = {
       source: {

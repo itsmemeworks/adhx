@@ -17,10 +17,14 @@ const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 
 describe('production container dependencies', () => {
   it('pins pnpm and installs the frozen lockfile', () => {
-    expect(packageJson.packageManager).toBe('pnpm@9.15.9')
+    expect(packageJson.packageManager).toMatch(/^pnpm@10\.\d+\.\d+$/)
+    const [, minor, patch] = packageJson.packageManager!.match(/^pnpm@10\.(\d+)\.(\d+)$/)!
+    expect(Number(minor) > 34 || (Number(minor) === 34 && Number(patch) >= 5)).toBe(true)
     expect(dockerfile).toContain('ENV PNPM_HOME="/pnpm"')
     expect(dockerfile).toContain('corepack enable')
-    expect(dockerfile).toContain('corepack prepare pnpm@9.15.9 --activate')
+    expect(dockerfile).toContain(`corepack prepare ${packageJson.packageManager} --activate`)
+    expect(dockerfile).toContain('COPY package.json pnpm-lock.yaml .npmrc ./')
+    expect(readFileSync(join(root, '.npmrc'), 'utf8')).toContain('strict-dep-builds=true')
     expect(dockerfile).toContain('pnpm install --frozen-lockfile')
     expect(dockerfile).toContain('pnpm run build')
   })
@@ -36,6 +40,17 @@ describe('production container dependencies', () => {
   it('does not install dependencies with npm or install a global tsx', () => {
     expect(dockerfile).not.toMatch(/\bnpm\s+(?:ci|install)\b/)
     expect(dockerfile).not.toMatch(/\b(?:npm|pnpm)\b[^\n]*(?:-g|--global)[^\n]*\btsx\b/)
+  })
+
+  it('starts the runner from a fresh Node image and excludes package-manager toolchains', () => {
+    const runner = dockerfile.match(/^FROM (\S+) AS runner\n([\s\S]*)$/m)
+    expect(runner).not.toBeNull()
+    expect(runner![1]).toMatch(/^node:24-/)
+    expect(runner![2]).not.toMatch(/(?:corepack prepare|pnpm install|COPY --from=base)/)
+    expect(runner![2]).toContain('/usr/local/lib/node_modules/npm')
+    expect(runner![2]).toContain('/usr/local/lib/node_modules/corepack')
+    // The runtime smoke script checks the assembled filesystem on both Linux
+    // architectures; these source guards catch accidental stage inheritance early.
   })
 
   it('keeps the standalone server and non-root runtime', () => {

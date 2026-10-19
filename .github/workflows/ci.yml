@@ -154,6 +154,7 @@ jobs:
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: ${{ env.IMAGE_TAG }}
+          version: v0.76.0
           format: json
           output: trivy-${{ matrix.arch }}.json
           scanners: vuln
@@ -161,6 +162,9 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
           timeout: 15m
+      - name: Show image findings in the job log
+        if: always()
+        run: node scripts/security/summarize-image.mjs trivy-${{ matrix.arch }}.json
       - name: Retain the image vulnerability report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

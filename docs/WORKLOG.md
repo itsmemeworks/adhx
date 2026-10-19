@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Exercise release gates across platforms
+
+- Separate the Node runtime from build tools, remove unused package managers and recommended OS extras, and expose retained scanner findings directly in CI logs.
+- Refresh the pinned package manager with explicit dependency-build permissions; keep the three independent lockfiles and frozen installs.
+- Reset only the isolated browser-test development cache to prevent stale Turbopack reload loops on repeat runs.
+- Make load/recovery assertions follow actual video checkpoints while allowing fair interleaved queue work and bounded audio-container padding.
+- Add a guarded macOS rehearsal that observes real disk-full errors inside a disposable 64 MiB image, verifies retry/cleanup and removes the image. No installed service or personal data touched.
+
 ## 2026-10-19 — Dependency maintenance and release rehearsals
 
 - Refresh compatible app/extension packages; all three JS lockfiles and resolved Android Maven libraries now have advisory gates, with a dated dev-only exception for the unpatched braces issue.

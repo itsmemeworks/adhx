@@ -3,7 +3,7 @@
   "version": "2.1.2",
   "description": "Your friends have better taste than the algorithm. A private, self-hosted feed of the best posts from every network, picked by your closest friends and family.",
   "type": "module",
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "pnpm@10.34.7",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
@@ -126,6 +126,13 @@
       "undici@^7.0.0": "^7.29.0",
       "yaml@^2.0.0": "^2.8.3",
       "postcss-selector-parser@<7.1.6": "^7.1.6"
+    },
+    "allowBuilds": {
+      "better-sqlite3@13.0.3": true,
+      "esbuild@0.25.12 || 0.28.2": true,
+      "unrs-resolver@1.12.2": true,
+      "protobufjs@7.6.6": false,
+      "onnxruntime-node@1.30.0": false
     }
   }
 }
