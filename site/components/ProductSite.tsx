@@ -55,7 +55,7 @@ const NAV = [
 
 function Kicker({ children }: { children: ReactNode }) {
   return (
-    <span className="flex items-center gap-2 whitespace-nowrap text-[12px] font-extrabold uppercase tracking-[0.16em] text-nx-accent md:text-[13px]">
+    <span className="flex items-center gap-2 whitespace-nowrap text-[12px] font-extrabold uppercase leading-[1.3] tracking-[0.16em] text-nx-accent md:text-[13px]">
       {children}
     </span>
   )
@@ -116,7 +116,7 @@ function Reaction({
 function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-nx-ink/90 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-lg">
-      <div className={cn(WRAP, 'flex h-16 items-center gap-3 md:h-[72px] md:gap-12')}>
+      <div className={cn(WRAP, 'flex h-[63px] items-center gap-3 md:h-[71px] md:gap-12')}>
         <a
           href="#top"
           aria-label="adhx, back to the top"
@@ -229,7 +229,7 @@ function Hero() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative overflow-hidden pb-12 pt-6 md:pb-20 md:pt-12 lg:pb-24 lg:pt-16"
+      className="relative overflow-hidden pb-12 pt-6 md:pb-20 md:pt-12 lg:pb-11 lg:pt-16"
     >
       <div className={cn(WRAP, 'flex flex-col gap-4 md:gap-8')}>
         <h1
@@ -245,8 +245,15 @@ function Hero() {
         <div className="flex flex-col gap-7 lg:flex-row lg:items-start lg:gap-10">
           <div className="flex flex-col items-stretch gap-6 md:items-start lg:w-[420px] lg:shrink-0 lg:gap-7 lg:pt-2">
             <p className="m-0 max-w-[640px] text-[16px] leading-[1.45] text-nx-soft md:text-[19px] md:leading-[1.5]">
-              A private feed of the best of every social network, picked by your closest friends and
-              family, on a box you own. Real copies, found by what you remember, sent on to any app.
+              <span className="md:hidden">
+                A private feed of the best of every social network, picked by your closest friends
+                and family. On a box you own. Open source.
+              </span>
+              <span className="hidden md:inline">
+                A private feed of the best of every social network, picked by your closest friends
+                and family, on a box you own. Real copies, found by what you remember, sent on to
+                any app.
+              </span>
             </p>
             <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:gap-3 lg:flex-col lg:items-start">
               <GitHubButton>Get it on GitHub</GitHubButton>
@@ -293,13 +300,13 @@ function Networks() {
   return (
     <section
       aria-labelledby="nets-title"
-      className="border-y border-white/10 bg-black py-10 md:py-12"
+      className="border-y border-white/10 bg-black py-6 md:py-12 lg:py-6"
     >
-      <div className={cn(WRAP, 'flex flex-col gap-5 md:gap-6')}>
-        <div className="flex flex-col gap-1.5 md:flex-row md:items-baseline md:justify-between md:gap-6">
+      <div className={cn(WRAP, 'flex flex-col gap-[18px] md:gap-6 lg:gap-[22px]')}>
+        <div className="flex flex-col gap-1.5 md:gap-2 lg:flex-row lg:items-baseline lg:justify-between lg:gap-6">
           <h2
             id="nets-title"
-            className="m-0 font-nx-serif text-[30px] font-normal leading-none md:text-[38px]"
+            className="m-0 font-nx-serif text-[30px] font-normal leading-none md:whitespace-nowrap md:text-[38px]"
           >
             <span>Fourteen networks. </span>
             <span className="text-nx-accent">One feed.</span>
@@ -365,7 +372,11 @@ const STEPS: Array<{
 
 function HowItWorks() {
   return (
-    <section id="how" aria-labelledby="how-title" className="scroll-mt-16 py-10 md:py-16">
+    <section
+      id="how"
+      aria-labelledby="how-title"
+      className="scroll-mt-16 pb-16 pt-8 md:py-16 lg:pb-10"
+    >
       <div className={WRAP}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
           <div className="flex flex-col gap-2.5 md:gap-3.5">
@@ -425,7 +436,9 @@ function Feature({
   id,
   kicker,
   title,
+  shortTitle,
   children,
+  short,
   mock,
   flip = false,
   dark = false,
@@ -433,7 +446,11 @@ function Feature({
   id: string
   kicker: ReactNode
   title: string
+  /** The phone board's shorter headline, below `md`. */
+  shortTitle?: string
   children: ReactNode
+  /** The phone board's shorter copy, below `md`. */
+  short?: ReactNode
   mock: ReactNode
   flip?: boolean
   dark?: boolean
@@ -443,7 +460,7 @@ function Feature({
       <div
         className={cn(
           WRAP,
-          'grid items-center gap-4 pb-9 pt-7 md:gap-8 md:py-14 lg:min-h-[440px] lg:gap-16 lg:py-8',
+          'grid items-center gap-4 pb-9 pt-7 md:gap-8 md:py-14 lg:min-h-[440px] lg:gap-16 lg:py-[30px]',
           flip
             ? 'lg:grid-cols-[minmax(0,620fr)_minmax(0,516fr)]'
             : 'lg:grid-cols-[minmax(0,516fr)_minmax(0,620fr)]',
@@ -455,14 +472,34 @@ function Feature({
             id={id}
             className="m-0 font-nx-serif text-[34px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[48px] lg:text-[56px]"
           >
-            {title}
+            {shortTitle ? (
+              <>
+                <span className="md:hidden">{shortTitle}</span>
+                <span className="hidden md:inline">{title}</span>
+              </>
+            ) : (
+              title
+            )}
           </h2>
-          <div className="flex flex-col gap-3 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
+          {short && (
+            <div className="flex flex-col gap-2 text-[15px] leading-[1.45] text-nx-soft md:hidden">
+              {short}
+            </div>
+          )}
+          <div
+            className={cn(
+              'flex-col gap-3 text-[15px] leading-[1.45] text-nx-soft md:flex md:text-[18px] md:leading-[1.55]',
+              short ? 'hidden' : 'flex',
+            )}
+          >
             {children}
           </div>
         </div>
         <div
-          className={cn('mx-auto w-full min-w-0 max-w-[620px] pt-2 lg:pt-0', flip && 'lg:order-1')}
+          className={cn(
+            'mx-auto w-full min-w-0 max-w-[620px] md:pt-2 lg:pt-0',
+            flip && 'lg:order-1',
+          )}
         >
           {mock}
         </div>
@@ -478,6 +515,13 @@ function Features() {
         id="f-new"
         kicker="New"
         title="Only what you haven’t seen. Then it stops."
+        shortTitle="Only what you haven’t seen."
+        short={
+          <p className="m-0">
+            Only what your people saved that you haven’t seen, with why each one’s next. Videos and
+            photos first. Then it stops.
+          </p>
+        }
         mock={<NewMock />}
       >
         <p className="m-0">
@@ -491,6 +535,13 @@ function Features() {
         id="f-faces"
         kicker="Saver faces"
         title="Ana and Ben saved this."
+        short={
+          <p className="m-0">
+            <span>Every post wears the faces of whoever kept it. Shared by default; flip </span>
+            <strong className="font-extrabold text-nx-cream">Just for me</strong>
+            <span> to keep one to yourself.</span>
+          </p>
+        }
         mock={<FacesMock />}
         flip
         dark
@@ -509,6 +560,17 @@ function Features() {
         id="f-vault"
         kicker="The meme vault"
         title="Deleted on X. Still here."
+        short={
+          <>
+            <p className="m-0">
+              A real copy of every save, in the best quality going. Share sends the actual file to
+              any app.
+            </p>
+            <p className="m-0 text-[13px] text-nx-muted">
+              Posts that are private or DRM-protected may not download.
+            </p>
+          </>
+        }
         mock={<VaultMock />}
       >
         <p className="m-0">
@@ -525,6 +587,12 @@ function Features() {
         id="f-search"
         kicker="Search"
         title="Nobody remembers captions."
+        short={
+          <p className="m-0">
+            ADHX hears what’s said in the video and reads the text on screen. Or ask Claude, with
+            the adhx skill.
+          </p>
+        }
         mock={<SearchMock />}
         flip
         dark
@@ -550,6 +618,12 @@ function Features() {
         id="f-channels"
         kicker="Channels"
         title="Rabbit holes, dug by your friends."
+        short={
+          <p className="m-0">
+            Channels from everyone’s saves, named for what they’re about. Plus one per friend, with
+            what’s new to you on top.
+          </p>
+        }
         mock={<ChannelsMock />}
       >
         <p className="m-0">
@@ -568,6 +642,11 @@ function Features() {
           </>
         }
         title="Watch together. Heckle in real time."
+        short={
+          <p className="m-0">
+            See who’s watching with you, who saved the next one, and every “ha” as it floats past.
+          </p>
+        }
         mock={<LiveMock />}
         flip
         dark
@@ -583,6 +662,11 @@ function Features() {
         id="f-invites"
         kicker="Invites"
         title="One link. They’re in, phone and all."
+        short={
+          <p className="m-0">
+            It signs a friend in and pairs their phone in one go. Approve who joins, if you like.
+          </p>
+        }
         mock={<InvitesMock />}
       >
         <p className="m-0">
@@ -621,9 +705,15 @@ function Apps() {
             <span className="block md:inline">Send to any app.</span>
           </h2>
           <p className="m-0 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
-            Hit share anywhere and pick ADHX. The post lands on your box, for your people or just
-            for you. Then it plays in the same full-screen player, and Share sends the actual video
-            to the group chat.
+            <span className="md:hidden">
+              Pick ADHX from any app’s share button. Watch in the full-screen player, then send the
+              actual video to the group chat.
+            </span>
+            <span className="hidden md:inline">
+              Hit share anywhere and pick ADHX. The post lands on your box, for your people or just
+              for you. Then it plays in the same full-screen player, and Share sends the actual
+              video to the group chat.
+            </span>
           </p>
           <ul className="m-0 mt-1 hidden list-none flex-col gap-2.5 p-0 md:flex">
             {[
@@ -638,7 +728,8 @@ function Apps() {
             ))}
           </ul>
           <p className="m-0 mt-1 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
-            <span>
+            <span className="md:hidden">No store downloads yet: build from the </span>
+            <span className="hidden md:inline">
               The apps are build-from-source for now: there are no store downloads in this release.
               Follow the{' '}
             </span>
@@ -655,7 +746,8 @@ function Apps() {
             >
               Android
             </a>
-            <span> setup guide on GitHub.</span>
+            <span className="md:hidden"> guide.</span>
+            <span className="hidden md:inline"> setup guide on GitHub.</span>
           </p>
         </div>
         <Mock
@@ -695,13 +787,21 @@ function Apps() {
 function Band() {
   return (
     <section aria-labelledby="band-title" className="relative overflow-hidden bg-black">
-      <div className="relative h-[220px] md:h-[300px] lg:absolute lg:inset-y-0 lg:left-[34%] lg:right-0 lg:h-auto">
+      <div className="absolute inset-0 md:relative md:inset-auto md:h-[300px] lg:absolute lg:inset-y-0 lg:left-[34%] lg:right-0 lg:h-auto">
         <Art id="elephant" className="absolute inset-0 h-full w-full" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black lg:bg-[linear-gradient(90deg,#000_0%,rgba(0,0,0,0.82)_26%,rgba(0,0,0,0.1)_52%,rgba(0,0,0,0.3)_100%)]" />
-        <span className="absolute inset-x-0 bottom-[22%] top-0 md:inset-x-[18%] lg:bottom-0 lg:left-auto lg:right-0 lg:w-[50%]">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0.6)_42%,#000_90%)] md:bg-[linear-gradient(180deg,transparent_0%,transparent_50%,#000_100%)] lg:bg-[linear-gradient(90deg,#000_0%,rgba(0,0,0,0.82)_26%,rgba(0,0,0,0.1)_52%,rgba(0,0,0,0.3)_100%)]" />
+        <span className="absolute inset-x-[18%] bottom-[22%] top-0 hidden md:block lg:bottom-0 lg:left-auto lg:right-0 lg:w-[50%]">
           <Meme top="Zero ads were shown" bottom="During this elephant" size={7.5} />
         </span>
       </div>
+      <span
+        aria-hidden
+        className="nx-float absolute right-4 top-[38px] flex h-11 items-center gap-2 rounded-[22px] bg-nx-cream pl-1.5 pr-4 text-[#141414] shadow-[0_14px_34px_rgba(0,0,0,0.45)] md:hidden"
+      >
+        <span className="absolute -bottom-1 left-5 h-2.5 w-2.5 rotate-45 rounded-[2px] bg-nx-cream" />
+        <Face who="ben" size={30} />
+        <span className="whitespace-nowrap text-[14px] font-semibold">“you’re welcome”</span>
+      </span>
       <div
         aria-hidden
         className="absolute right-[6%] top-1/2 hidden -translate-y-1/2 flex-col items-end gap-2.5 lg:flex"
@@ -719,7 +819,7 @@ function Band() {
       <div
         className={cn(
           WRAP,
-          'relative -mt-10 flex flex-col gap-2.5 pb-7 md:gap-4 md:pb-12 lg:mt-0 lg:min-h-[360px] lg:justify-center lg:gap-[18px] lg:py-12',
+          'relative flex min-h-[280px] flex-col justify-end gap-2.5 pb-7 pt-24 md:-mt-10 md:min-h-0 md:justify-start md:gap-4 md:pb-12 md:pt-0 lg:mt-0 lg:min-h-[360px] lg:justify-center lg:gap-[18px] lg:py-12',
         )}
       >
         <h2
@@ -737,7 +837,8 @@ function Band() {
           </span>
         </h2>
         <p className="m-0 max-w-[520px] text-[14px] leading-[1.4] text-nx-soft md:text-[18px] md:leading-[1.5]">
-          No streaks, no like counts, no strangers. Just your lot, and whatever Ben found today.
+          <span>No streaks, no like counts, no strangers.</span>
+          <span className="hidden md:inline"> Just your lot, and whatever Ben found today.</span>
         </p>
       </div>
     </section>
@@ -774,26 +875,36 @@ function SelfHost() {
           </p>
           <ul className="m-0 mt-1.5 flex list-none flex-col gap-2 p-0 text-[15px] leading-[1.4] text-nx-cream md:gap-3 md:text-[16px] md:leading-[1.45]">
             {[
-              'One Docker container and one folder of data.',
-              'Invite-only. Approve who joins, if you like.',
-              'Search runs on your server, what’s said and what’s on screen included. Nothing goes to an AI company unless you add the optional search refinement key.',
-              'Kept media and shared previews play for anyone who can reach your server, so use private networking if that matters to you.',
-              'No ads, nobody selling your attention. Open source under the MIT licence.',
+              {
+                long: 'One Docker container and one folder of data.',
+                short: 'One Docker container, one folder of data.',
+              },
+              {
+                long: 'Invite-only. Approve who joins, if you like.',
+                short: 'Invite-only. Approve who joins, if you like.',
+              },
+              {
+                long: 'Search runs on your server, what’s said and what’s on screen included. Nothing goes to an AI company unless you add the optional search refinement key.',
+                short: 'Search runs on your server. An AI key is optional.',
+              },
+              {
+                long: 'Kept media and shared previews play for anyone who can reach your server, so use private networking if that matters to you.',
+                short: 'Kept media plays for anyone who can reach your server.',
+              },
+              {
+                long: 'No ads, nobody selling your attention. Open source under the MIT licence.',
+                short: 'No ads. Open source, MIT licence.',
+              },
             ].map((line) => (
-              <li key={line} className="flex gap-2.5 md:gap-3">
+              <li key={line.long} className="flex gap-2.5 md:gap-3">
                 <Dot className="mt-[7px] h-1.5 w-1.5 md:mt-2 md:h-[7px] md:w-[7px]" />
-                <span>{line}</span>
+                <span className="md:hidden">{line.short}</span>
+                <span className="hidden md:inline">{line.long}</span>
               </li>
             ))}
           </ul>
         </div>
         <div className="flex min-w-0 flex-col gap-3 md:gap-4">
-          <Mock label="A meme over an illustration of a tangle of synth cables: Me explaining self-hosting to the group chat.">
-            <span className="relative block aspect-[16/7] overflow-hidden rounded-[20px] border border-white/10 md:rounded-[24px]">
-              <Art id="synth" className="absolute inset-0 h-full w-full" />
-              <Meme top="Me explaining self-hosting" bottom="To the group chat" size={6.4} />
-            </span>
-          </Mock>
           <CopyCommand text={SETUP} title="Set it up" note="on your server" />
           <a
             href={`${GITHUB_URL}/blob/main/deploy/nas/README.md`}
@@ -827,7 +938,7 @@ export function ProductSite() {
         <div
           className={cn(
             WRAP,
-            'flex flex-col gap-2.5 py-7 md:min-h-[112px] md:flex-row md:items-center md:gap-[18px] md:py-6',
+            'flex flex-col gap-2.5 py-[23px] md:min-h-[111px] md:flex-row md:items-center md:gap-[18px] md:py-6',
           )}
         >
           <span className="gob-host flex items-center gap-2">
@@ -838,7 +949,10 @@ export function ProductSite() {
             Your friends have better taste than the algorithm.
           </span>
           <span className="hidden flex-1 md:block" />
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-1 md:gap-7">
+          <nav
+            aria-label="Footer"
+            className="-my-[13px] flex flex-wrap gap-x-[22px] gap-y-1 md:my-0 md:gap-7"
+          >
             {[
               { href: GITHUB_URL, label: 'GitHub' },
               { href: `${GITHUB_URL}/blob/main/PRIVACY.md`, label: 'Privacy' },
