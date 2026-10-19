@@ -33,10 +33,12 @@ class SaveWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         // run again, and that would queue the link a second time.
         val api = AdhxApi(connection)
         val queueId = history.find(itemId)?.queueId
+        // The switch may have moved since the link was queued: the history has the latest.
+        val justForMe = history.find(itemId)?.isPrivate ?: inputData.getBoolean(SaveQueue.KEY_PRIVATE, false)
         val follow = if (queueId != null) {
             api.followQueued(queueId, interval = { 5_000L }, limitMs = FOLLOW_MS)
         } else {
-            api.saveAndFollow(link, interval = { 5_000L }, limitMs = FOLLOW_MS,
+            api.saveAndFollow(link, interval = { 5_000L }, limitMs = FOLLOW_MS, justForMe = justForMe,
                 onQueued = { id -> history.update(itemId) { it.queuedWith(id) } })
         }
         return when (val result = follow) {

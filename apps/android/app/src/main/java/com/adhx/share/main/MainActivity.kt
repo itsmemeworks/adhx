@@ -26,6 +26,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.adhx.share.data.Connection
 import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.ShareState
+import com.adhx.share.feed.ChannelScreen
+import com.adhx.share.feed.FeedViewModel
+import com.adhx.share.feed.HomeActions
+import com.adhx.share.feed.HomeScreen
+import com.adhx.share.feed.TunedInScreen
+import com.adhx.share.library.BackTitleRow
+import com.adhx.share.net.ChannelKind
+import com.adhx.share.net.Saver
 import com.adhx.share.library.BackBar
 import com.adhx.share.library.LibraryViewModel
 import com.adhx.share.library.LocalPip
@@ -42,11 +50,15 @@ import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-/** The host app: Connect, then My saves (the player), Search, Shared lately and Settings. */
+/**
+ * The host app: Connect, then home (New · Channels · Live), My saves,
+ * channels, Live, Search, Shared lately and Settings.
+ */
 class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
     private val library: LibraryViewModel by viewModels()
+    private val feed: FeedViewModel by viewModels()
     private val pip by lazy { PipHost(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,7 +73,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AdhxTheme {
                 CompositionLocalProvider(LocalPip provides pip) {
-                    MainApp(vm, library)
+                    MainApp(vm, library, feed)
                 }
             }
         }
@@ -107,7 +119,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
+private fun MainApp(vm: MainViewModel, library: LibraryViewModel, feed: FeedViewModel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val connection by vm.connection.collectAsStateWithLifecycle()
@@ -128,17 +140,66 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
 
     BackHandler(enabled = library.stack.size > 1) { library.back() }
     val back = { library.back(); Unit }
-    val route = library.stack.lastOrNull() ?: Route.Saves
+    val route = library.stack.lastOrNull() ?: Route.Home
+
+    // A face opens that person's saves; your own opens My saves.
+    val openPerson: (Saver) -> Unit = { saver ->
+        if (saver.isYou) {
+            library.open(Route.MySaves)
+        } else {
+            library.open(Route.Channel(ChannelKind.FRIEND, saver.username, saver.label, saver.avatarUrl))
+        }
+    }
 
     key(route) {
         when (route) {
-            Route.Saves -> SavesHome(
+            Route.Home -> HomeScreen(
+                feed = feed,
+                library = library,
+                connection = current,
+                reach = reach,
+                actions = HomeActions(
+                    open = library::open,
+                    openPerson = openPerson,
+                    onSearch = { library.open(Route.Search) },
+                    onSettings = { library.open(Route.Settings) },
+                ),
+            )
+            Route.MySaves -> SavesHome(
                 vm = library,
                 connection = current,
                 reach = reach,
-                onSearch = { library.open(Route.Search) },
-                onSharedLately = { library.open(Route.SharedLately) },
-                onSettings = { library.open(Route.Settings) },
+                bar = { BackTitleRow(com.adhx.share.ui.Copy.MY_SAVES, back) },
+                onSaver = openPerson,
+            )
+            is Route.Channel -> ChannelScreen(
+                feed = feed,
+                route = route,
+                server = current.server,
+                onBack = back,
+                onPlay = { library.open(Route.ChannelPlayer(it)) },
+            )
+            is Route.ChannelPlayer -> {
+                val channel by feed.channel.collectAsStateWithLifecycle()
+                if (channel.items.isEmpty()) {
+                    LaunchedEffect(Unit) { library.back() }
+                } else {
+                    PlayerScreen(
+                        posts = channel.items,
+                        server = current.server,
+                        startIndex = route.start,
+                        onPage = {},
+                        topBar = { BackBar(back) },
+                        onSaver = openPerson,
+                    )
+                }
+            }
+            is Route.TunedIn -> TunedInScreen(
+                feed = feed,
+                slug = route.slug,
+                server = current.server,
+                onBack = back,
+                onSaver = openPerson,
             )
             Route.Search -> SearchScreen(
                 vm = library,
@@ -157,6 +218,7 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
                         startIndex = route.start,
                         onPage = library::onSearchPage,
                         topBar = { BackBar(back) },
+                        onSaver = openPerson,
                     )
                 }
             }
@@ -179,8 +241,9 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
                 startIndex = 0,
                 onPage = {},
                 topBar = { BackBar(back) },
+                onSaver = openPerson,
             )
-            Route.Settings -> SettingsScreen(vm = vm, connection = current, onBack = back)
+            Route.Settings -> SettingsScreen(vm = vm, connection = current, onBack = back, onSharedLately = { library.open(Route.SharedLately) })
         }
     }
 }

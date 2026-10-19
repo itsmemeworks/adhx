@@ -57,11 +57,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.PhonePost
+import com.adhx.share.feed.Privacy
 import com.adhx.share.net.PostKind
+import com.adhx.share.net.SearchScope
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Faces
 import com.adhx.share.ui.NetworkMark
+import com.adhx.share.ui.PrivateLock
+import com.adhx.share.ui.Segmented
 import com.adhx.share.ui.Spinner
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 private val PROMPTS = listOf(
     "that video with the squirrel",
@@ -70,7 +77,10 @@ private val PROMPTS = listOf(
     "a synth you play by typing",
 )
 
-/** Search by meaning: a field, the TRY DESCRIBING prompts, then a grid of posters. */
+/**
+ * Search by meaning: a field, Everyone's saves · Mine (Everyone first), the
+ * TRY DESCRIBING prompts, then a grid of posters with who saved each.
+ */
 @Composable
 fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpen: (Int) -> Unit) {
     val ui by vm.search.collectAsStateWithLifecycle()
@@ -134,9 +144,22 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                 ),
                 modifier = Modifier
                     .weight(1f)
-                    .focusRequester(focus),
+                    .focusRequester(focus)
+                    .semantics {
+                        contentDescription = if (ui.scope == SearchScope.EVERYONE) "Search everyone’s saves" else "Search your saves"
+                    },
             )
         }
+
+        val scopes = listOf(SearchScope.EVERYONE, SearchScope.MINE)
+        Segmented(
+            options = listOf(Copy.SCOPE_EVERYONE, Copy.SCOPE_MINE),
+            selected = scopes.indexOf(ui.scope).coerceAtLeast(0),
+            onSelect = { vm.setScope(scopes[it]) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 14.dp),
+        )
 
         when {
             ui.query.isBlank() -> TryDescribing(onPick = {
@@ -147,7 +170,7 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                 Spinner(size = 30.dp, stroke = 3.dp)
             }
             ui.error != null -> Note(ui.error!!)
-            ui.items.isEmpty() -> Note(SearchUi.NO_RESULTS)
+            ui.items.isEmpty() -> Note(ui.noResults)
             else -> Results(ui, server, vm::onSearchPage, onOpen)
         }
     }
@@ -218,8 +241,12 @@ private fun Results(ui: SearchUi, server: String, onPage: (Int) -> Unit, onOpen:
     }
 }
 
+/**
+ * A poster tile: the picture (or the words), the network and author, who of
+ * your people saved it, a lock when it's just for you, and how well it matched.
+ */
 @Composable
-private fun PosterCard(post: PhonePost, server: String, onClick: () -> Unit) {
+fun PosterCard(post: PhonePost, server: String, onClick: () -> Unit) {
     val media = post.media.firstOrNull()
     val image = (media?.posterUrl ?: media?.url?.takeIf { media.kind == "photo" })
         ?.let { AdhxApi.resolve(server, it)?.toString() }
@@ -229,7 +256,7 @@ private fun PosterCard(post: PhonePost, server: String, onClick: () -> Unit) {
             .aspectRatio(3f / 4f)
             .clip(RoundedCornerShape(16.dp))
             .background(AdhxColors.Placeholder)
-            .clickable(onClick = onClick),
+            .clickable(onClickLabel = "Play", onClick = onClick),
     ) {
         if (image != null) {
             AsyncImage(
@@ -269,7 +296,34 @@ private fun PosterCard(post: PhonePost, server: String, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            Copy.saversLine(post.savers)?.let { line ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Faces(post.savers, server, size = 18.dp, description = line)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        Copy.names(post.savers),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AdhxColors.Cream,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             post.match?.let { Strength(it.strength) }
+        }
+        if (Privacy.isPrivate(post)) {
+            Box(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.55f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                PrivateLock(size = 13.dp)
+            }
         }
         if (post.kind == PostKind.VIDEO || post.kind == PostKind.AUDIO) {
             val seconds = media?.durationMs?.let { (it / 1000).toInt() }

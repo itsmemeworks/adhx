@@ -41,7 +41,7 @@ import com.adhx.share.ui.OutlineButton
 
 /** Server address, who the key saves for, the waiting links, and Disconnect. */
 @Composable
-fun SettingsScreen(vm: MainViewModel, connection: Connection, onBack: () -> Unit) {
+fun SettingsScreen(vm: MainViewModel, connection: Connection, onBack: () -> Unit, onSharedLately: () -> Unit) {
     val items by vm.items.collectAsStateWithLifecycle()
     val waiting = items.count { it.state == ShareState.QUEUED }
     var notice by rememberSaveable { mutableStateOf<String?>(null) }
@@ -81,6 +81,12 @@ fun SettingsScreen(vm: MainViewModel, connection: Connection, onBack: () -> Unit
             connection.phoneName?.let {
                 Text("This phone shows up as “$it”", fontSize = 13.sp, color = AdhxColors.Faint)
             }
+        }
+
+        Card {
+            Label("Shared lately")
+            Text("The last 50 links you shared from this phone, and how keeping each one went.", fontSize = 14.sp, color = AdhxColors.Muted)
+            OutlineButton("See shared lately", onClick = onSharedLately, minHeight = 48.dp, modifier = Modifier.fillMaxWidth())
         }
 
         Card {

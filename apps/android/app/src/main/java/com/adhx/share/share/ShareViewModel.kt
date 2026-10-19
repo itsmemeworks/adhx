@@ -13,6 +13,7 @@ import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.KeepStatus
 import com.adhx.share.net.SaveResponse
+import com.adhx.share.net.Saver
 import com.adhx.share.net.StatusResponse
 import com.adhx.share.ui.Copy
 import com.adhx.share.work.SaveQueue
@@ -41,6 +42,12 @@ data class ShareUi(
     val post: SaveResponse? = null,
     val keep: StatusResponse? = null,
     val message: String? = null,
+    /** "Just for me": no one else sees, counts or is told about this save. */
+    val justForMe: Boolean = false,
+    /** The switch is being sent to the server. */
+    val switching: Boolean = false,
+    /** Who will see it (your people), once known. */
+    val people: List<Saver> = emptyList(),
 )
 
 /**
@@ -55,6 +62,11 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
     val ui: StateFlow<ShareUi> = _ui.asStateFlow()
 
     private var started = false
+    private var itemId: String? = null
+
+    /** The switch as you set it, or null while untouched (then the server's answer stands). */
+    @Volatile
+    private var wanted: Boolean? = null
 
     /** Start saving what was shared. Safe to call again (after rotation): it only runs once. */
     fun start(sharedText: String?) {
@@ -79,6 +91,7 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
 
         val history = HistoryStore.get(context)
         val itemId = history.addShare(link, platform)
+        this.itemId = itemId
         val pending = saveInBackground(context, connection, link, itemId)
 
         viewModelScope.launch {
@@ -90,9 +103,11 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
                             phase = if (post.alreadySaved) Phase.AlreadySaved else Phase.Saved,
                             post = post,
                             platform = post.platform.ifBlank { null } ?: it.platform,
+                            justForMe = post.isPrivate,
                         )
                     }
                     pollStatus(connection, post, itemId)
+                    loadPeople(connection)
                 }
                 is ApiResult.Offline -> _ui.update { it.copy(phase = Phase.Offline) }
                 is ApiResult.Failed -> {
@@ -109,6 +124,51 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
                         it.copy(phase = phase, message = result.message?.takeIf { m -> m.isNotBlank() })
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * The "Just for me" switch. Once the post is saved it's `POST
+     * /api/app/private`; while the save is still on its way the choice is
+     * applied when it lands; a link waiting offline sends `private` with it.
+     */
+    fun setJustForMe(on: Boolean) {
+        val context: Context = getApplication<Application>()
+        val now = _ui.value
+        if (now.switching || now.justForMe == on) return
+        wanted = on
+        _ui.update { it.copy(justForMe = on) }
+        val post = now.post
+        val connection = ConnectionStore.get(context).current() ?: return
+        when {
+            post != null && post.platform.isNotBlank() && post.id.isNotBlank() -> {
+                _ui.update { it.copy(switching = true) }
+                viewModelScope.launch {
+                    val result = AdhxApi(connection).setPrivate(post.platform, post.id, on)
+                    _ui.update {
+                        when (result) {
+                            is ApiResult.Ok -> it.copy(switching = false, justForMe = result.value, post = post.copy(isPrivate = result.value))
+                            // Didn't take: the switch goes back to what the save is.
+                            else -> it.copy(switching = false, justForMe = post.isPrivate)
+                        }
+                    }
+                    if (result !is ApiResult.Ok) wanted = post.isPrivate
+                }
+            }
+            // Waiting on the phone: the worker reads this when it sends the link.
+            now.phase == Phase.Offline -> HistoryStore.get(context).update(itemId) { it.copy(isPrivate = on) }
+            // Still saving: [saveInBackground] applies it when the save comes back.
+            else -> Unit
+        }
+    }
+
+    /** Your people's names for "Ana, Ben and Jo will see it" (from the channels list; quietly none on older servers). */
+    private fun loadPeople(connection: Connection) {
+        viewModelScope.launch {
+            val result = AdhxApi(connection).channels()
+            if (result is ApiResult.Ok) {
+                _ui.update { it.copy(people = result.value.friends.map { f -> f.asSaver }) }
             }
         }
     }
@@ -147,16 +207,26 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         val history = HistoryStore.get(context)
         // Every 1.5 s while the sheet is open; after that, now and then, so
         // Shared lately catches up while the app is still around.
-        val result = AdhxApi(connection).saveAndFollow(
+        val api = AdhxApi(connection)
+        var result = api.saveAndFollow(
             link,
             interval = { if (open) 1_500L else 10_000L },
+            justForMe = wanted == true,
             onQueued = { id -> history.update(itemId) { it.queuedWith(id) } },
         )
+        // The switch was flipped while saving: apply it now, even if the sheet has closed.
+        val done = result
+        val want = wanted
+        if (done is ApiResult.Ok && want != null && want != done.value.isPrivate && done.value.id.isNotBlank()) {
+            val switched = api.setPrivate(done.value.platform, done.value.id, want)
+            if (switched is ApiResult.Ok) result = ApiResult.Ok(done.value.copy(isPrivate = switched.value), done.status)
+        }
         when (result) {
             is ApiResult.Ok -> history.update(itemId) { it.savedWith(result.value) }
             is ApiResult.Offline -> {
-                history.update(itemId) { it.copy(state = ShareState.QUEUED) }
-                SaveQueue.enqueue(context, link, itemId)
+                val justForMe = wanted == true
+                history.update(itemId) { it.copy(state = ShareState.QUEUED, isPrivate = justForMe) }
+                SaveQueue.enqueue(context, link, itemId, justForMe = justForMe)
             }
             is ApiResult.Failed -> if (result.code != AdhxApi.STILL_SAVING) {
                 history.update(itemId) {
