@@ -14,6 +14,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Preserve the default video content hash; changed budgets affect only video hashes when queued again, without reindexing words/pictures or replacing originals.
 - Validate actual FFmpeg sampling counts, downscaling and original-file integrity with synthetic retained media; 2,900 tests, typecheck, lint (existing warnings only) and formatting pass. Target-device speed/quality comparison remains pending a published image.
 
+## 2026-10-19 — Shared-NAS operating guidance after a live trial
+
+- Document optional service keys, X OAuth setup and independent automatic/manual sync timings; expose the one-minute manual override in the NAS environment example.
+- Add an illustrative CPU/RAM/swap budget, effective-limit checks and concurrent search/playback validation without treating text indexing as a video-memory benchmark.
+- Distinguish digest pins, numbered versions and moving image channels; separate update detection, image publication and container recreation.
+- Correct shared-NAS concurrency guidance and admin sign-in log recovery; extend the optional UGOS appendix with runtime and deployment-status checks.
+- Keep addresses, credentials, measured household loads and actual installed resource limits private. Documentation only; no running service or default Compose limit changed.
+
 ## 2026-10-19 — Publish every main merge and validate release metadata
 
 - Decouple commit-image publication from Release Please and disabled legacy Fly deployment; every main push builds an immutable SHA image and advances `main` only for the current head.
