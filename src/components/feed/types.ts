@@ -1,6 +1,7 @@
 /**
  * Type definitions for the feed components
  */
+import type { Saver } from '@/lib/people/types'
 
 export interface MediaItem {
   id: string
@@ -141,6 +142,10 @@ export interface FeedItem {
   tags: string[]
   parentTweets?: FeedItem[] | null // Tweets that quote this one (for reverse navigation)
   summary?: string | null // AI-generated summary
+  /** Members who saved it, newest first. Set only for signed-in viewers. */
+  savers?: Saver[]
+  /** The viewer's own save is just for them ("Just for me"). Set only for signed-in viewers. */
+  isPrivate?: boolean
 }
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'

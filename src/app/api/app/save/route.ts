@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import { appError, withPhoneKey } from '@/lib/api/phone-auth'
 import { appPost, firstLink, savedPost } from '@/lib/app/phone-app'
 import { addBookmark } from '@/lib/bookmarks/add'
+import { privateFlag } from '@/lib/bookmarks/privacy'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
 import { enqueueSave, NOT_A_POST, queuedSave } from '@/lib/app/save-queue'
 
 /**
- * POST /api/app/save { url } — the phone app's share sheet. `url` is a link,
- * or text with one in it.
+ * POST /api/app/save { url, private? } — the phone app's share sheet. `url` is
+ * a link, or text with one in it. `private: true` keeps it just for you (in the
+ * queue too); on a repeat save, `private` updates the flag.
  *
  * With `Prefer: respond-async` (the current apps), the link is queued and the
  * answer comes at once: 202 `{ queued: true, id, state }`. The post is read and
@@ -17,12 +19,13 @@ import { enqueueSave, NOT_A_POST, queuedSave } from '@/lib/app/save-queue'
  * (`addBookmark`) and the answer is what was saved.
  */
 export const POST = withPhoneKey(async (request, { userId }) => {
-  const body = (await request.json().catch(() => ({}))) as { url?: unknown }
+  const body = (await request.json().catch(() => ({}))) as { url?: unknown; private?: unknown }
+  const isPrivate = privateFlag(body)
   const url = firstLink(body?.url)
   if (!url) return appError(400, 'no_link', 'There’s no link in what was shared.')
 
   if (/respond-async/i.test(request.headers.get('prefer') ?? '')) {
-    const queued = enqueueSave(userId, url)
+    const queued = enqueueSave(userId, url, undefined, { private: isPrivate })
     return NextResponse.json(
       { queued: true, id: queued.id, state: queued.state },
       {
@@ -32,7 +35,7 @@ export const POST = withPhoneKey(async (request, { userId }) => {
     )
   }
 
-  const response = await addBookmark(userId, url, 'phone_app')
+  const response = await addBookmark(userId, url, 'phone_app', undefined, { private: isPrivate })
   const data = (await response.json().catch(() => ({}))) as {
     success?: boolean
     isDuplicate?: boolean

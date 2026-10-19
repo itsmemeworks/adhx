@@ -32,6 +32,7 @@ export const FULL_SCHEMA_SQL = `
     retweet_context TEXT,
     summary TEXT,
     source TEXT DEFAULT 'sync',
+    is_private INTEGER NOT NULL DEFAULT 0,
     raw_json TEXT,
     PRIMARY KEY (user_id, platform, id)
   );
@@ -345,6 +346,7 @@ export const FULL_SCHEMA_SQL = `
     platform TEXT,
     post_id TEXT,
     already_saved INTEGER NOT NULL DEFAULT 0,
+    is_private INTEGER NOT NULL DEFAULT 0,
     error_code TEXT,
     error TEXT,
     created_at TEXT NOT NULL,

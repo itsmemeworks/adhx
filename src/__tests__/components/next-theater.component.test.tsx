@@ -110,7 +110,7 @@ describe('theater queue', () => {
   it('reads and writes play links, rejecting junk', () => {
     expect(
       playHref(
-        { q: 'frogs', scope: 'mine', type: 'all', wordsOnly: false },
+        { q: 'frogs', scope: 'everyone', type: 'all', wordsOnly: false },
         { group: 'video', start: 'twitter:1' },
       ),
     ).toBe('/play?q=frogs&group=video&start=twitter%3A1')
@@ -244,7 +244,7 @@ describe('TheaterV2', () => {
     expect(screen.getByText('3 of 3')).toBeInTheDocument()
     // One back chip for phones (in the header), one for desktop (on the stage).
     for (const link of screen.getAllByRole('link', { name: /frogs/ })) {
-      expect(link).toHaveAttribute('href', '/search?q=frogs')
+      expect(link).toHaveAttribute('href', '/search?q=frogs&scope=mine')
     }
   })
 
@@ -277,6 +277,60 @@ describe('TheaterV2', () => {
     } finally {
       window.removeEventListener('nx-post-saved', saved)
     }
+  })
+
+  it('names who saved it and switches Just for me from the More menu', async () => {
+    const named = {
+      ...v1,
+      post: {
+        ...v1.post,
+        savers: [
+          {
+            username: 'ben',
+            name: 'Ben',
+            avatarUrl: null,
+            savedAt: '2026-10-18T10:00:00.000Z',
+            isYou: false,
+          },
+        ],
+        isPrivate: false,
+      },
+    }
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/private') && init?.method === 'PATCH') {
+        return new Response(JSON.stringify({ private: true }))
+      }
+      if (url.startsWith('/api/search') && !url.startsWith('/api/search/similar')) {
+        return new Response(
+          JSON.stringify({
+            items: [named, p2],
+            total: 2,
+            understood: true,
+            close: true,
+            refined: true,
+            nextOffset: null,
+          }),
+        )
+      }
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    expect(screen.getByText('Ben saved this')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    const row = screen.getByRole('menuitemcheckbox', { name: /Just for me/ })
+    expect(row).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(row)
+    await waitFor(() =>
+      expect(screen.getByRole('menuitemcheckbox', { name: /Just for me/ })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      ),
+    )
+    const patch = fetchMock.mock.calls.find(([u]) => String(u).includes('/private'))
+    expect(patch?.[0]).toBe('/api/bookmarks/1/private')
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ platform: 'twitter', private: true })
+    expect(screen.getAllByRole('img', { name: 'Just for me' }).length).toBeGreaterThan(0)
   })
 
   it('remembers a mute choice over the account default', async () => {

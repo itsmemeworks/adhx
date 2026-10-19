@@ -6,6 +6,7 @@ import { captureException } from '@/lib/sentry'
 import { keysToHits } from '@/lib/channels/channels'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { publishable } from '@/lib/semantic/search'
+import { visibleSave } from '@/lib/people/savers'
 import { INDEX_DIMS, nearestPosts, postVector, refreshIndex } from '@/lib/semantic/vector-index'
 import { seedFrom } from '@/lib/channels/cluster'
 import {
@@ -187,16 +188,16 @@ export function __resetMoments(): void {
 
 // ——— Reading saves ———
 
-// A quoted post is stored as its own row (`source = 'quoted'`) when the post
-// quoting it is saved; nobody chose to save it, so it never counts here.
+// Only visible saves count (`visibleSave`): not private, not banned, and not a
+// quoted post — that's stored as its own row (`source = 'quoted'`) when the
+// post quoting it is saved; nobody chose to save it.
 type SaveRow = { user_id: string; platform: string; id: string; processed_at: string }
 
 function recentSaves(sinceIso: string, limit: number): SaveRow[] {
   return db.all<SaveRow>(sql`
     SELECT b.user_id, b.platform, b.id, b.processed_at
     FROM bookmarks b
-    LEFT JOIN user_bans u ON u.user_id = b.user_id
-    WHERE u.user_id IS NULL AND COALESCE(b.source, '') != 'quoted' AND b.processed_at >= ${sinceIso}
+    WHERE ${visibleSave('b')} AND b.processed_at >= ${sinceIso}
     ORDER BY b.processed_at DESC
     LIMIT ${limit}
   `)
@@ -206,8 +207,7 @@ function newSaves(afterIso: string): SaveRow[] {
   return db.all<SaveRow>(sql`
     SELECT b.user_id, b.platform, b.id, b.processed_at
     FROM bookmarks b
-    LEFT JOIN user_bans u ON u.user_id = b.user_id
-    WHERE u.user_id IS NULL AND COALESCE(b.source, '') != 'quoted' AND b.processed_at >= ${afterIso}
+    WHERE ${visibleSave('b')} AND b.processed_at >= ${afterIso}
     ORDER BY b.processed_at ASC
     LIMIT 400
   `)
@@ -223,7 +223,7 @@ function readStats(now: number): { today: number; lastHour: number } {
     SELECT
       SUM(CASE WHEN processed_at >= ${dayIso} THEN 1 ELSE 0 END) AS today,
       SUM(CASE WHEN processed_at >= ${hour} THEN 1 ELSE 0 END) AS hour
-    FROM bookmarks WHERE processed_at >= ${since} AND COALESCE(source, '') != 'quoted'
+    FROM bookmarks b WHERE b.processed_at >= ${since} AND ${visibleSave('b')}
   `)
   return { today: row?.today ?? 0, lastHour: row?.hour ?? 0 }
 }

@@ -1,3 +1,4 @@
+import { visibleSaveFilter } from '@/lib/people/savers'
 import { db } from '@/lib/db'
 import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
@@ -155,7 +156,12 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
     })
     .from(bookmarks)
     .where(
-      and(eq(bookmarks.platform, 'twitter'), sql`lower(${bookmarks.author}) = lower(${handle})`),
+      and(
+        eq(bookmarks.platform, 'twitter'),
+        sql`lower(${bookmarks.author}) = lower(${handle})`,
+        // Visible saves only: private, quoted and banned saves never surface or count.
+        visibleSaveFilter,
+      ),
     )
     .groupBy(bookmarks.id)
     .all()

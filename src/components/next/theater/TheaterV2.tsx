@@ -48,6 +48,9 @@ import { useMobileSwipeNavigation } from '@/components/theater/useMobileSwipeNav
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { articleHeadline, postAuthor, postText } from '../post'
 import { NxAvatar } from '../primitives'
+import { PrivateLock, SaverFaces } from '../SaverFaces'
+import type { Saver } from '@/lib/people/types'
+import { useAuthMe } from '@/components/auth'
 import { AdhxLoader } from '../loader'
 import { ArticleStage, PostStage } from '../stages'
 import {
@@ -404,6 +407,24 @@ export function TheaterV2({
   const video = useVideoState(currentKey)
   const send = useSendFile(theaterItem)
   const saved = !!current && (current.saved || savedNow.has(currentKey))
+  // "Just for me": the server's flag, then whatever was switched here.
+  const [privateNow, setPrivateNow] = useState<Map<string, boolean>>(new Map())
+  const isPrivate = !!current && (privateNow.get(currentKey) ?? !!current.post.isPrivate)
+  // Savers are only sent to signed-in members; a save made here adds you.
+  const { me } = useAuthMe()
+  const savers = useMemo<Saver[] | undefined>(() => {
+    const list = current?.post.savers
+    if (!list) return undefined
+    if (!savedNow.has(currentKey) || list.some((s) => s.isYou) || !me?.user) return list
+    const you: Saver = {
+      username: me.user.username,
+      name: me.user.displayName || null,
+      avatarUrl: me.user.avatarUrl,
+      savedAt: new Date().toISOString(),
+      isYou: true,
+    }
+    return [you, ...list]
+  }, [current, currentKey, savedNow, me])
 
   const flash = useCallback((message: string, ms = 2200) => {
     setToast(message)
@@ -744,44 +765,77 @@ export function TheaterV2({
   }, [])
 
   // ——— Actions ———
-  const ensureSaved = useCallback(async (): Promise<boolean> => {
-    if (!current) return false
-    if (saved) return true
-    const url = sourceUrl(
-      current.post.platform ?? 'twitter',
-      current.post.author,
-      current.post.id,
-      kind === 'photo' ? 'photo' : null,
-    )
-    if (!url) return false
-    try {
-      const res = await fetch('/api/bookmarks/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      })
-      if (res.status === 401) {
-        // Signed out: sign in, then land on this post's own page, which
-        // saves it (`?save=1`), whichever queue it was playing in.
-        const returnTo = `${previewPath(
-          current.post.platform ?? 'twitter',
-          current.post.author,
-          current.post.id,
-          kind === 'photo' ? 'photo' : null,
-        )}?save=1`
-        window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
+  const ensureSaved = useCallback(
+    async (opts: { private?: boolean } = {}): Promise<boolean> => {
+      if (!current) return false
+      if (saved) return true
+      const url = sourceUrl(
+        current.post.platform ?? 'twitter',
+        current.post.author,
+        current.post.id,
+        kind === 'photo' ? 'photo' : null,
+      )
+      if (!url) return false
+      try {
+        const res = await fetch('/api/bookmarks/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(opts.private ? { url, private: true } : { url }),
+        })
+        if (res.status === 401) {
+          // Signed out: sign in, then land on this post's own page, which
+          // saves it (`?save=1`), whichever queue it was playing in.
+          const returnTo = `${previewPath(
+            current.post.platform ?? 'twitter',
+            current.post.author,
+            current.post.id,
+            kind === 'photo' ? 'photo' : null,
+          )}?save=1`
+          window.location.assign(`/start?${new URLSearchParams({ returnTo })}`)
+          return false
+        }
+        const data = (await res.json().catch(() => null)) as { error?: string } | null
+        if (!res.ok || data?.error) throw new Error(data?.error || 'save failed')
+        setSavedNow((s) => new Set(s).add(currentKey))
+        if (opts.private) setPrivateNow((m) => new Map(m).set(currentKey, true))
+        window.dispatchEvent(new CustomEvent(NX_POST_SAVED, { detail: { key: currentKey } }))
+        return true
+      } catch {
+        flash('Couldn’t save that. Try again.')
         return false
       }
-      const data = (await res.json().catch(() => null)) as { error?: string } | null
-      if (!res.ok || data?.error) throw new Error(data?.error || 'save failed')
-      setSavedNow((s) => new Set(s).add(currentKey))
-      window.dispatchEvent(new CustomEvent(NX_POST_SAVED, { detail: { key: currentKey } }))
-      return true
-    } catch {
-      flash('Couldn’t save that. Try again.')
-      return false
-    }
-  }, [current, saved, kind, currentKey, flash])
+    },
+    [current, saved, kind, currentKey, flash],
+  )
+
+  /** "Just for me": save it privately, or switch an existing save. */
+  const [privateBusy, setPrivateBusy] = useState(false)
+  const setPostPrivate = useCallback(
+    async (on: boolean) => {
+      if (!current || privateBusy) return
+      setPrivateBusy(true)
+      try {
+        if (!saved) {
+          if (on && (await ensureSaved({ private: true }))) flash('Saved just for you')
+          return
+        }
+        const res = await fetch(`/api/bookmarks/${encodeURIComponent(current.post.id)}/private`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform: current.post.platform ?? 'twitter', private: on }),
+        })
+        const data = (await res.json().catch(() => null)) as { private?: boolean } | null
+        if (!res.ok || typeof data?.private !== 'boolean') throw new Error('private failed')
+        setPrivateNow((m) => new Map(m).set(currentKey, data.private!))
+        flash(data.private ? 'Just for you now' : 'Shared with your people')
+      } catch {
+        flash('Couldn’t change that. Try again.')
+      } finally {
+        setPrivateBusy(false)
+      }
+    },
+    [current, privateBusy, saved, ensureSaved, currentKey, flash],
+  )
 
   /** Save (if needed) and open "add to a channel". */
   const save = useCallback(async () => {
@@ -1048,6 +1102,17 @@ export function TheaterV2({
   const menu: MenuRow[] = [
     { label: 'Add to a channel', onSelect: () => void save() },
     { label: 'Copy link', onSelect: () => void copyLink() },
+    // Members only (savers come with a session): keep this save to yourself.
+    ...(saved || savers
+      ? [
+          {
+            label: 'Just for me',
+            value: isPrivate ? 'On' : 'Off',
+            checked: isPrivate,
+            onSelect: () => void setPostPrivate(!isPrivate),
+          },
+        ]
+      : []),
     {
       label: 'Repeat',
       value: REPEAT_LABELS[repeat],
@@ -1145,6 +1210,19 @@ export function TheaterV2({
               <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
               <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
             </Link>
+          )}
+          {overlay && (isPrivate || (savers && savers.length > 0)) && (
+            // Who saved it, by the chips: text and article stages have no byline scrim.
+            <span className="pointer-events-auto flex h-9 min-w-0 items-center gap-1.5">
+              {isPrivate && <PrivateLock className="h-7 w-7" />}
+              {savers && savers.length > 0 && (
+                <SaverFaces
+                  savers={savers}
+                  tone="plate"
+                  className="h-9 max-w-[280px] pl-1.5 pr-3.5"
+                />
+              )}
+            </span>
           )}
           {source.moment && (kind === 'post' || kind === 'article' || !tuneIntro) && (
             // A small chip, so nothing covers the post (after the first few seconds on media).
@@ -1389,6 +1467,7 @@ export function TheaterV2({
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="flex flex-wrap items-center gap-2 text-[15px] font-bold">
                   <span>{author.handle || author.name}</span>
+                  {isPrivate && <PrivateLock tone="scrim" />}
                   {current.savedAt && (
                     <span
                       className={cn(
@@ -1414,6 +1493,7 @@ export function TheaterV2({
                     </span>
                   )}
                 </span>
+                {savers && savers.length > 0 && <SaverFaces savers={savers} tone="scrim" />}
                 {caption &&
                   (captionOpen ? (
                     <span className="pointer-events-auto block max-h-[42vh] overflow-y-auto pr-2 text-[15px] leading-[1.45] md:text-[17px]">
@@ -1620,6 +1700,9 @@ export function TheaterV2({
                 .then(() => flash('Link copied'))
                 .catch(() => flash('Couldn’t copy the link'))
             }
+            isPrivate={isPrivate}
+            privateBusy={privateBusy}
+            onPrivate={(on) => void setPostPrivate(on)}
             onClose={() => {
               setPanel(null)
               setCreated(null)

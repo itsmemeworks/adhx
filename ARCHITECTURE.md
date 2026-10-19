@@ -497,14 +497,42 @@ flowchart LR
   (~1KB per post per kind) and re-scores candidates with the full vectors
   from SQLite. A linear scan stays in the tens of milliseconds into the
   hundreds of thousands of posts; beyond that it would need an ANN index.
-- **Scopes.** `mine` scans only the viewer's saves. `everyone` covers every
-  post anyone saved but never who: posts must have a non-banned saver and must
-  not be moderated, and other savers' copies are anonymised (no tags, archive
-  state, summary, save time or link owner).
+- **Scopes.** `mine` scans only the viewer's saves. `everyone` covers
+  everyone's saves: a post needs at least one visible save (`visibleSave` in
+  `src/lib/people/savers.ts`: not private, not a quoted copy, saver not
+  banned) or the viewer's own, and must not be moderated. Other savers'
+  copies are anonymised (no tags, archive state, summary, save time or link
+  owner) and never taken from a private save.
+
 - **Refine.** An optional second request reranks the first 20 with Jev
   (TypeSafe), sending only the query and public post words. Jev reads text,
   so visual matches keep more of their fused rank. With it hit@1 rose from
   0.58 to 0.77 on the labelled queries; any failure keeps the fused order.
+
+## Named to friends, never to strangers
+
+Saves are shared with the server's members (signed-in, non-banned accounts);
+see `docs/specs/friends-feed.md`. `bookmarks.is_private` marks a save "Just
+for me": its owner still searches and plays it, but no one else sees, counts
+or is told about it, and it writes no activity pulse (going private also
+deletes the owner's earlier `save` pulse rows for it).
+
+- **One condition.** `visibleSave()` / `visibleSaveFilter` is the SQL for "a
+  save other people may see or count". Moments, trending save counts, Everyone
+  search (`publishable`), `loadSearchItems`' choice of another saver's copy,
+  similar posts, the sitemap, author hubs, the public post JSON and the
+  pulse's own-play fallback all use it.
+- **Names for members only.** `saversFor(keys, viewerId)` returns savers
+  (username, display name, avatar, when, `isYou`) newest first, the viewer's
+  own save included even when private; empty for a signed-out viewer.
+  `loadSearchItems` attaches `savers` and `isPrivate` when the viewer is
+  signed in, so `/api/feed`, `/api/search`, `/api/search/similar`, channel
+  queues and the phone's `PhonePost` carry them; nothing public does.
+  `listMembers(viewerId)` lists members with the saves the viewer can see.
+- **Switching.** Every save path takes `private` (`/api/bookmarks/add`,
+  `/api/tweets/add`, `/api/app/save` and its queue); a repeat save with
+  `private` updates the flag. `PATCH /api/bookmarks/[id]/private` and
+  `POST /api/app/private` switch an existing save.
 
 ## Channels (redesign)
 
