@@ -55,8 +55,16 @@ function postRequest(path: string, body: unknown): NextRequest {
   })
 }
 
-function getRequest(path: string): NextRequest {
-  return new NextRequest(new URL(`http://localhost:3000${path}`))
+function confirmRequest(path: string): NextRequest {
+  const token = new URL(path, 'http://localhost:3000').searchParams.get('token')
+  return new NextRequest('http://localhost:3000/api/auth/email/callback', {
+    method: 'POST',
+    headers: {
+      Origin: 'http://localhost:3000',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(token ? { token } : {}),
+  })
 }
 
 /** Runs /api/auth/email/request and returns the raw token from the emailed URL. */
@@ -178,14 +186,127 @@ describe('API: /api/auth/email/*', () => {
     })
   })
 
-  describe('GET /api/auth/email/callback (signin)', () => {
+  describe('safe link confirmation', () => {
+    it('keeps repeated GET and HEAD previews from consuming a link or creating a session', async () => {
+      const token = await requestToken('preview@example.com', '/channels')
+      const { GET, POST } = await import('@/app/api/auth/email/callback/route')
+      for (const method of ['GET', 'HEAD', 'GET']) {
+        const response = await GET(
+          new NextRequest(`http://localhost:3000/api/auth/email/callback?token=${token}`, {
+            method,
+          }),
+        )
+        expect(response.status).toBe(200)
+        expect(response.headers.getSetCookie()).toHaveLength(0)
+        expect(response.headers.get('cache-control')).toBe('no-store')
+        expect(response.headers.get('referrer-policy')).toBe('same-origin')
+        expect(response.headers.get('content-security-policy')).toContain("form-action 'self'")
+        const html = await response.text()
+        expect(html).toContain('method="post"')
+        expect(html).not.toContain('<script')
+      }
+      expect(await testInstance.db.select().from(schema.users)).toHaveLength(0)
+      expect((await testInstance.db.select().from(schema.loginTokens))[0].usedAt).toBeNull()
+      const signedIn = await POST(confirmRequest(`/api/auth/email/callback?token=${token}`))
+      expect(signedIn.status).toBe(303)
+      expect(signedIn.headers.getSetCookie().join(';')).toContain('adhx_session=')
+      expect(signedIn.headers.get('location')).toContain('/welcome?returnTo=%2Fchannels')
+      const reused = await GET(
+        new NextRequest(`http://localhost:3000/api/auth/email/callback?token=${token}`),
+      )
+      expect(reused.status).toBe(410)
+      expect(await reused.text()).toContain('Get a new sign-in link')
+    })
+
+    it('rejects cross-origin confirmation without consuming the link', async () => {
+      const token = await requestToken('csrf@example.com')
+      const { POST } = await import('@/app/api/auth/email/callback/route')
+      const origins: Record<string, string>[] = [
+        { Origin: 'https://evil.example' },
+        {},
+        { Origin: 'http://localhost:3000', 'Sec-Fetch-Site': 'cross-site' },
+      ]
+      for (const headers of origins) {
+        const response = await POST(
+          new NextRequest('http://localhost:3000/api/auth/email/callback', {
+            method: 'POST',
+            headers,
+            body: new URLSearchParams({ token }),
+          }),
+        )
+        expect(response.status).toBe(403)
+        expect((await testInstance.db.select().from(schema.loginTokens))[0].usedAt).toBeNull()
+      }
+      expect((await POST(confirmRequest(`/api/auth/email/callback?token=${token}`))).status).toBe(
+        303,
+      )
+    })
+
+    it('shows an actionable error for an invalid GET rather than silently returning home', async () => {
+      const { GET } = await import('@/app/api/auth/email/callback/route')
+      const response = await GET(
+        new NextRequest('http://localhost:3000/api/auth/email/callback?token=%22%3E%3Cscript%3E'),
+      )
+      expect(response.status).toBe(410)
+      const html = await response.text()
+      expect(html).toContain('expired or has already been used')
+      expect(html).not.toContain('<script>')
+      expect(response.headers.get('location')).toBeNull()
+    })
+
+    it('resumes username setup after an earlier sign-in did not finish onboarding', async () => {
+      const { POST } = await import('@/app/api/auth/email/callback/route')
+      const first = await requestToken('unfinished@example.com')
+      await POST(confirmRequest(`/api/auth/email/callback?token=${first}`))
+      const second = await requestToken('unfinished@example.com')
+      const response = await POST(confirmRequest(`/api/auth/email/callback?token=${second}`))
+      expect(response.headers.get('location')).toContain('/welcome?')
+      expect(await testInstance.db.select().from(schema.users)).toHaveLength(1)
+    })
+
+    it('rejects oversized or non-form submissions without consuming their token', async () => {
+      const token = await requestToken('bounded@example.com')
+      const { POST } = await import('@/app/api/auth/email/callback/route')
+      for (const [type, body] of [
+        ['application/json', JSON.stringify({ token })],
+        ['application/x-www-form-urlencoded', `padding=${'x'.repeat(1024)}&token=${token}`],
+      ]) {
+        const response = await POST(
+          new NextRequest('http://localhost:3000/api/auth/email/callback', {
+            method: 'POST',
+            headers: { Origin: 'http://localhost:3000', 'Content-Type': type },
+            body,
+          }),
+        )
+        expect(response.status).toBe(410)
+        expect((await testInstance.db.select().from(schema.loginTokens))[0].usedAt).toBeNull()
+      }
+    })
+
+    it('keeps production session-cookie protections on successful confirmation', async () => {
+      const token = await requestToken('cookie@example.com')
+      const { POST } = await import('@/app/api/auth/email/callback/route')
+      vi.stubEnv('NODE_ENV', 'production')
+      vi.stubEnv('SESSION_SECRET', 'isolated-production-cookie-test')
+      try {
+        const response = await POST(confirmRequest(`/api/auth/email/callback?token=${token}`))
+        const cookie = response.headers.getSetCookie().join(';')
+        for (const flag of ['HttpOnly', 'Secure', 'SameSite=lax', 'Path=/'])
+          expect(cookie).toContain(flag)
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
+  })
+
+  describe('POST /api/auth/email/callback (signin)', () => {
     it('creates a new user + email identity + session on first sign-in', async () => {
       const token = await requestToken('newreader@example.com')
 
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      const response = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      const response = await confirm(confirmRequest(`/api/auth/email/callback?token=${token}`))
 
-      expect(response.status).toBe(307)
+      expect(response.status).toBe(303)
       // New account -> one-shot username prompt before landing at the
       // original destination.
       expect(response.headers.get('location')).toBe('http://localhost:3000/welcome?returnTo=%2F')
@@ -205,21 +326,22 @@ describe('API: /api/auth/email/*', () => {
 
     it('redirects to /welcome carrying a safe returnTo for a new account', async () => {
       const token = await requestToken('returner@example.com', '/feed')
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      const response = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      const response = await confirm(confirmRequest(`/api/auth/email/callback?token=${token}`))
       expect(response.headers.get('location')).toBe(
         'http://localhost:3000/welcome?returnTo=%2Ffeed',
       )
     })
 
     it('reuses the existing account on a second sign-in for the same email, redirecting directly (no /welcome)', async () => {
-      const { GET } = await import('@/app/api/auth/email/callback/route')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
 
       const token1 = await requestToken('again@example.com')
-      await GET(getRequest(`/api/auth/email/callback?token=${token1}`))
+      await confirm(confirmRequest(`/api/auth/email/callback?token=${token1}`))
+      await testInstance.db.update(schema.users).set({ usernameChosen: true })
 
       const token2 = await requestToken('again@example.com')
-      const second = await GET(getRequest(`/api/auth/email/callback?token=${token2}`))
+      const second = await confirm(confirmRequest(`/api/auth/email/callback?token=${token2}`))
       expect(second.headers.get('location')).toBe('http://localhost:3000/')
 
       const userRows = await testInstance.db.select().from(schema.users)
@@ -229,40 +351,38 @@ describe('API: /api/auth/email/*', () => {
     })
 
     it('rejects a garbage/unknown token', async () => {
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      const response = await GET(getRequest('/api/auth/email/callback?token=garbage-token'))
-      expect(response.status).toBe(307)
-      expect(response.headers.get('location')).toContain('auth_error=invalid_link')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      const response = await confirm(confirmRequest('/api/auth/email/callback?token=garbage-token'))
+      expect(response.status).toBe(410)
+      expect(await response.text()).toContain('expired or has already been used')
     })
 
     it('rejects a token missing entirely', async () => {
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      const response = await GET(getRequest('/api/auth/email/callback'))
-      expect(response.headers.get('location')).toContain('auth_error=invalid_link')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      const response = await confirm(confirmRequest('/api/auth/email/callback'))
+      expect(response.status).toBe(410)
     })
 
     it('rejects a used token (single-use)', async () => {
       const token = await requestToken('oneshot@example.com')
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      await GET(getRequest(`/api/auth/email/callback?token=${token}`))
-      const second = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
-      expect(second.headers.get('location')).toContain('auth_error=invalid_link')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      await confirm(confirmRequest(`/api/auth/email/callback?token=${token}`))
+      const second = await confirm(confirmRequest(`/api/auth/email/callback?token=${token}`))
+      expect(second.status).toBe(410)
     })
 
     it('allows only one of two concurrent callbacks to consume a sign-in token', async () => {
       const token = await requestToken('parallel@example.com')
-      const { GET } = await import('@/app/api/auth/email/callback/route')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
 
       const responses = await Promise.all([
-        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
-        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
+        confirm(confirmRequest(`/api/auth/email/callback?token=${token}`)),
+        confirm(confirmRequest(`/api/auth/email/callback?token=${token}`)),
       ])
       const locations = responses.map((response) => response.headers.get('location'))
 
       expect(locations.filter((location) => location?.includes('/welcome?'))).toHaveLength(1)
-      expect(
-        locations.filter((location) => location?.includes('auth_error=invalid_link')),
-      ).toHaveLength(1)
+      expect(responses.filter((response) => response.status === 410)).toHaveLength(1)
       expect(await testInstance.db.select().from(schema.users)).toHaveLength(1)
       expect(await testInstance.db.select().from(schema.userIdentities)).toHaveLength(1)
     })
@@ -273,11 +393,11 @@ describe('API: /api/auth/email/*', () => {
         createLoginToken({ email: 'distinct@example.com', intent: 'signin' }),
         createLoginToken({ email: 'distinct@example.com', intent: 'signin' }),
       ])
-      const { GET } = await import('@/app/api/auth/email/callback/route')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
 
       const responses = await Promise.all([
-        GET(getRequest(`/api/auth/email/callback?token=${firstToken}`)),
-        GET(getRequest(`/api/auth/email/callback?token=${secondToken}`)),
+        confirm(confirmRequest(`/api/auth/email/callback?token=${firstToken}`)),
+        confirm(confirmRequest(`/api/auth/email/callback?token=${secondToken}`)),
       ])
       expect(
         responses.every((response) => !response.headers.get('location')?.includes('auth_error')),
@@ -300,9 +420,9 @@ describe('API: /api/auth/email/*', () => {
       const token = await requestToken('expired@example.com')
       await testInstance.db.update(schema.loginTokens).set({ expiresAt: Date.now() - 1_000 })
 
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      const response = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
-      expect(response.headers.get('location')).toContain('auth_error=invalid_link')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      const response = await confirm(confirmRequest(`/api/auth/email/callback?token=${token}`))
+      expect(response.status).toBe(410)
     })
   })
 
@@ -328,8 +448,10 @@ describe('API: /api/auth/email/*', () => {
       expect(call.intent).toBe('change')
       const token = new URL(call.url).searchParams.get('token')!
 
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      const callbackResponse = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      const callbackResponse = await confirm(
+        confirmRequest(`/api/auth/email/callback?token=${token}`),
+      )
       expect(callbackResponse.headers.get('location')).toBe(
         'http://localhost:3000/settings?email_changed=1',
       )
@@ -351,20 +473,18 @@ describe('API: /api/auth/email/*', () => {
       await POST(postRequest('/api/auth/email/change', { email: 'parallel-change@example.com' }))
       const call = mockSendMagicLinkEmail.mock.calls.at(-1)![0] as { url: string }
       const token = new URL(call.url).searchParams.get('token')!
-      const { GET } = await import('@/app/api/auth/email/callback/route')
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
 
       const responses = await Promise.all([
-        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
-        GET(getRequest(`/api/auth/email/callback?token=${token}`)),
+        confirm(confirmRequest(`/api/auth/email/callback?token=${token}`)),
+        confirm(confirmRequest(`/api/auth/email/callback?token=${token}`)),
       ])
       const locations = responses.map((response) => response.headers.get('location'))
 
       expect(
         locations.filter((location) => location?.includes('/settings?email_changed=1')),
       ).toHaveLength(1)
-      expect(
-        locations.filter((location) => location?.includes('auth_error=invalid_link')),
-      ).toHaveLength(1)
+      expect(responses.filter((response) => response.status === 410)).toHaveLength(1)
       const [user] = await testInstance.db
         .select()
         .from(schema.users)
@@ -412,8 +532,8 @@ describe('API: /api/auth/email/*', () => {
         userId: 'user-2',
       })
 
-      const { GET } = await import('@/app/api/auth/email/callback/route')
-      const response = await GET(getRequest(`/api/auth/email/callback?token=${token}`))
+      const { POST: confirm } = await import('@/app/api/auth/email/callback/route')
+      const response = await confirm(confirmRequest(`/api/auth/email/callback?token=${token}`))
       expect(response.headers.get('location')).toBe(
         'http://localhost:3000/settings?auth_error=email_in_use',
       )

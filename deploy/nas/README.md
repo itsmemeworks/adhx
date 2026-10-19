@@ -140,8 +140,10 @@ docker compose up -d
 
 Migrations run on startup. With the default `EMAIL_LINKS_TO_ADMIN=1`, request
 a sign-in link using your email, read it privately from `docker compose logs
-adhx`, and open it to become the first admin. Later invited users' links wait
-on the admin page for you to hand over. To deliver links by email, configure
+adhx`, then open it and press **Sign in** to become the first admin. Later invited users' links wait
+on the admin page for you to hand over. These links last 60 minutes; recipients
+open them and press **Sign in** in their normal browser. The one-minute resend
+countdown does not expire a link. To deliver links by email, configure
 SMTP or Resend instead; see the main README.
 
 Check the final HTTPS URL and database health, owner sign-in and an invited

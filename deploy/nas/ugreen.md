@@ -125,8 +125,9 @@ kept media and shared previews are available to anyone who can reach ADHX.
 
 Open the final HTTPS address and request your owner sign-in link. With
 `EMAIL_LINKS_TO_ADMIN=1` and no existing owner, read it privately from the ADHX
-container's logs in Docker and open it once. Keep the link and log screenshots
-private. Later invited users' links wait in the admin interface.
+container's logs in Docker, open it in your normal browser and press **Sign in**. Keep the link and log screenshots
+private. Later invited users' links wait in the admin interface for 60 minutes.
+Recipients open them and press **Sign in**; message previews do not consume links.
 
 Save a picture and video, wait for their files to finish downloading, check
 playback and seeking, then search for words and visible content. The first

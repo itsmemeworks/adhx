@@ -164,7 +164,8 @@ describe('SignInModal', () => {
       mode: 'first-owner setup',
       response: { ok: true, delivery: 'admin', setup: true },
       title: 'Ask for your link',
-      instruction: /server log, on the line starting “\[sign-in\]”. Opening it makes you the admin/,
+      instruction:
+        /server log, on the line starting “\[sign-in\]”. Open it and press Sign in to become the admin/,
     },
     {
       mode: 'development logging',

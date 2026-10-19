@@ -97,7 +97,8 @@ export function SignInLinks() {
           </h2>
           <p className="text-[13px] text-ink-3">
             This ADHX doesn’t send email. When someone asks to sign in, their link shows up here for
-            you to pass on. Each one works once, for 15 minutes.
+            you to pass on. Each one works once, for 60 minutes. The recipient opens it and presses
+            Sign in in the browser they want to use.
           </p>
         </div>
         <button

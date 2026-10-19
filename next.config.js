@@ -128,6 +128,19 @@ const nextConfig = {
         },
       ],
     },
+    {
+      source: '/api/auth/email/callback',
+      headers: [
+        // Next's global headers can override Route Handler headers. Keep the
+        // token off cross-origin referrers while preserving the form's Origin.
+        { key: 'Referrer-Policy', value: 'same-origin' },
+        {
+          key: 'Content-Security-Policy',
+          value:
+            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+        },
+      ],
+    },
   ],
 }
 

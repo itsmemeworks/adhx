@@ -6,6 +6,7 @@ import { db } from '@/lib/db'
 import { adminSignInLinks, loginTokens, userIdentities, users } from '@/lib/db/schema'
 import { captureException } from '@/lib/sentry'
 import { fetchWithTimeout } from '@/lib/utils/fetch-timeout'
+import { ADMIN_LOGIN_TOKEN_TTL_MS } from '@/lib/auth/login-token-policy'
 
 /**
  * How a sign-in link reaches someone:
@@ -153,7 +154,7 @@ function holdForAdmin(email: string, url: string, intent: 'signin' | 'change'): 
       url,
       intent,
       createdAt: new Date(now).toISOString(),
-      expiresAt: token?.expiresAt ?? now + 15 * 60_000,
+      expiresAt: token?.expiresAt ?? now + ADMIN_LOGIN_TOKEN_TTL_MS,
     })
     .onConflictDoNothing()
     .run()

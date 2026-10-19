@@ -38,8 +38,17 @@ async function ask(email: string) {
 }
 
 async function open(url: string) {
-  const { GET } = await import('@/app/api/auth/email/callback/route')
-  return GET(new NextRequest(url))
+  const { POST } = await import('@/app/api/auth/email/callback/route')
+  return POST(
+    new NextRequest('http://localhost:3000/api/auth/email/callback', {
+      method: 'POST',
+      headers: {
+        Origin: 'http://localhost:3000',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ token: new URL(url).searchParams.get('token')! }),
+    }),
+  )
 }
 
 const roleOf = (email: string) =>
@@ -71,6 +80,7 @@ describe('getting sign-in links to people without Resend', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.unstubAllEnvs()
     testInstance.close()
   })
@@ -122,6 +132,42 @@ describe('getting sign-in links to people without Resend', () => {
   describe('links handed over by an admin', () => {
     beforeEach(() => {
       vi.stubEnv('EMAIL_LINKS_TO_ADMIN', '1')
+    })
+
+    it('keeps admin-held links usable for 60 minutes without extending the resend cooldown', async () => {
+      makeAdmin('owner@home.example')
+      vi.stubEnv('ALLOWED_EMAILS', '@friends.example')
+      const now = Date.now()
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+      await ask('longhand@friends.example')
+      const { pendingAdminSignInLinks } = await import('@/lib/email/magic-link')
+      const [held] = pendingAdminSignInLinks()
+      expect(held.expiresAt).toBe(now + 60 * 60_000)
+      expect((await ask('longhand@friends.example')).status).toBe(429)
+      clock.mockReturnValue(now + 61_000)
+      expect((await ask('longhand@friends.example')).status).toBe(200)
+      clock.mockReturnValue(now + 59 * 60_000)
+      const { GET } = await import('@/app/api/auth/email/callback/route')
+      expect((await GET(new NextRequest(held.url))).status).toBe(200)
+      expect(pendingAdminSignInLinks()).toHaveLength(2)
+      expect((await open(held.url)).status).toBe(303)
+      expect(pendingAdminSignInLinks()).toHaveLength(1)
+      clock.mockReturnValue(now + 62 * 60_000)
+      expect(pendingAdminSignInLinks()).toHaveLength(0)
+    })
+
+    it('handles legacy SQLite UTC creation timestamps with the one-minute resend cooldown', async () => {
+      makeAdmin('owner@home.example')
+      vi.stubEnv('ALLOWED_EMAILS', '@friends.example')
+      const now = Date.now()
+      const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+      await ask('legacy@friends.example')
+      testInstance.sqlite
+        .prepare('UPDATE login_tokens SET created_at = ?')
+        .run(new Date(now).toISOString().slice(0, 19).replace('T', ' '))
+      expect((await ask('legacy@friends.example')).status).toBe(429)
+      clock.mockReturnValue(now + 61_000)
+      expect((await ask('legacy@friends.example')).status).toBe(200)
     })
 
     it('holds the owner’s first link and prints it in the server log', async () => {
@@ -201,6 +247,20 @@ describe('getting sign-in links to people without Resend', () => {
       expect(discardAdminSignInLink(held.tokenHash)).toBe(true)
       expect(discardAdminSignInLink(held.tokenHash)).toBe(false)
     })
+  })
+
+  it('still expires emailed links after 15 minutes', async () => {
+    vi.stubEnv('SMTP_URL', 'smtp://mail.example.com')
+    const now = Date.now()
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+    await ask('emailed@example.com')
+    const token = testInstance.sqlite.prepare('SELECT expires_at FROM login_tokens').get() as {
+      expires_at: number
+    }
+    expect(token.expires_at).toBe(now + 15 * 60_000)
+    clock.mockReturnValue(now + 16 * 60_000)
+    const { hasRecentLoginToken } = await import('@/lib/auth/account')
+    expect(await hasRecentLoginToken('emailed@example.com')).toBe(false)
   })
 
   it('refuses in production with no way to deliver links', async () => {

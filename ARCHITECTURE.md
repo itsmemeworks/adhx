@@ -248,8 +248,10 @@ sequenceDiagram
   participant D as SQLite
   participant X as X
   B->>A: request email magic link
-  A->>D: store SHA-256 token hash, 15 min, unused
-  B->>A: callback with raw token
+  A->>D: store SHA-256 token hash, 15 min email / 60 min admin, unused
+  B->>A: GET link (does not consume)
+  A-->>B: script-free confirmation form
+  B->>A: same-origin POST with raw token
   A->>D: atomic unused + unexpired claim
   A-->>B: signed 30-day httpOnly session
   B->>A: link X while signed in
@@ -258,8 +260,13 @@ sequenceDiagram
   A->>D: atomically link identity and encrypted tokens if generation still matches
 ```
 
-Magic-link tokens are single-use, store only a hash, expire after 15 minutes,
-and are rate-limited per normalized email. Email identity creation and email
+Magic-link tokens are single-use and store a hash. Emailed links expire after
+15 minutes; admin-held links expire after 60 minutes. Admin delivery separately
+retains the raw link until use/expiry so it can be handed over. Requests have a
+one-minute resend cooldown per normalized email, based on creation time rather
+than token lifetime. GET/HEAD only inspect the link; an explicit same-origin POST
+consumes it atomically and sets the session, followed by a 303 redirect. Invalid
+or used links show an actionable error, never a silent redirect home. Email identity creation and email
 changes claim the unique identity in a transaction so concurrent callbacks
 have one winner. `/welcome` only accepts a live, unbanned, signed-in account
 that has not already chosen a username.
