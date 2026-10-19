@@ -46,7 +46,7 @@ final class AppModel: ObservableObject {
             connection = .connected
             reload()
             await refresh()
-        } catch APIError.offline {
+        } catch APIError.offline, APIError.slow {
             pairError = "Can’t reach \(Links.displayHost(server)). Check the address and that your ADHX is on."
         } catch let error as APIError {
             pairError = error.message
