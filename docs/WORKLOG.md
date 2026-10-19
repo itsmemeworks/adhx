@@ -13,7 +13,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Pass real duration/spacing to the model; unknown duration or missing sampled frames retry rather than falsely completing a partial window.
 - Version video hashes and refresh outdated video results through normal low-priority backfill, preserving text/image vectors and saver scoping.
 - Update progress copy, root/NAS/architecture guidance and website source to describe sparse whole-video sampling honestly; website deployment remains separate.
-- Validate late scenes beyond 80 seconds, all budgets, original integrity, short/long duration plans, model timing and selective backfill. Target-device performance awaits a published release.
+- Validation: 2,906 tests, types, formatting, site build and Actionlint pass; lint has zero errors and existing warnings. Real late-scene/frame-budget/integrity, model-timing and selective-backfill checks pass; target-device performance awaits release.
 
 ## 2026-10-19 — Optional lighter video inference without reducing kept quality
 
