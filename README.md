@@ -88,10 +88,12 @@ how to budget CPU, RAM and swap, and check search/playback while a bulk import
 is being understood. Local picture/video search needs no external AI key;
 Jev refinement and X sync are [optional additions](deploy/nas/README.md#optional-services-and-x-sync).
 
-Main-branch merges publish `ghcr.io/itsmemeworks/adhx:main` and an immutable
-`sha-<full-commit>` tag. Numbered releases add version tags and `latest` to the
-same commit image. Pin a digest for an installed service. See the
-[build and release flow](docs/releasing.md) for checks, promotion and recovery.
+Container images are published when the owner merges the Release Please PR and
+it creates a tagged release. Ordinary PR merges, including documentation-only
+changes, do not publish images. Each release builds AMD64 and ARM64 once, with
+an immutable `sha-<full-commit>` tag, numbered version and stable `latest` aliases.
+The legacy `main` image tag is no longer updated. Pin a digest for an installed
+service. See the [build and release flow](docs/releasing.md) for checks and recovery.
 
 ### Sign-in links
 

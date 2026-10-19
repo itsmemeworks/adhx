@@ -6,6 +6,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Publish only tagged releases
+
+- Supersede automatic main-image publication: ordinary PR merges never publish; Release Please calls the publisher only after creating a tagged release.
+- Remove both push and release-event publisher triggers, eliminating duplicate automatic entry points; manual recovery requires an existing release version.
+- Keep per-SHA serialization, immutable images, build caches and latest-stable guards. Retire the rolling `main` tag and document migration to releases.
+- Hide docs changelog entries so docs-only commits do not initiate releases; normal PR architecture/build validation remains unchanged.
+- Validation: 2,892 tests, typecheck, formatting and Actionlint pass; lint has zero errors and existing warnings. Source changes are proposed, not deployed.
+
+## 2026-10-19 — Skip documentation images and cancel superseded main builds
+
+- Ignore documentation/deployment-example-only main pushes; mixed runtime changes still publish regardless of PR title.
+- Cancel obsolete automatic main workflows while protecting versioned release calls and manual recovery, retaining the per-SHA build lock.
+- Permit a completed code image to advance main across docs-only descendants, checking actual ancestry/diffs and both sides of renames.
+- Keep immutable source tags/provenance accurate; document that a package-version release commit is a distinct source build.
+- Add executable file-policy and Git-history regression coverage; source changes proposed separately from installed services.
+
 ## 2026-10-19 — Shared-NAS operating guidance after a live trial
 
 - Document optional service keys, X OAuth setup and independent automatic/manual sync timings; expose the one-minute manual override in the NAS environment example.
