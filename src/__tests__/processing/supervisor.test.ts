@@ -17,6 +17,13 @@ afterEach(() => {
 })
 
 describe('remote NAS model roles', () => {
+  it('rejects an invalid mode before starting any model process', async () => {
+    vi.stubEnv('PROCESSING_MODE', 'remtoe')
+    vi.resetModules()
+    const supervisor = await import('@/lib/semantic/supervisor')
+    expect(() => supervisor.startSemanticProcesses()).toThrow('PROCESSING_MODE')
+    expect(mocks.fork).not.toHaveBeenCalled()
+  })
   it('keeps the query child but never starts indexing after readiness, wake or fallback', async () => {
     vi.useFakeTimers()
     vi.stubEnv('PROCESSING_MODE', 'remote')

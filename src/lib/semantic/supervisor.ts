@@ -168,9 +168,11 @@ function failPending(error: Error): void {
  */
 export function startSemanticProcesses(): void {
   if (state.started || !semanticEnabled()) return
+  // A mistyped remote mode must never silently start heavy indexing on the NAS.
+  const remote = remoteProcessing()
   state.started = true
   spawn('query')
-  if (!remoteProcessing()) {
+  if (!remote) {
     jobsFallback = setTimeout(startJobs, JOBS_START_FALLBACK_MS)
     jobsFallback.unref?.()
   }

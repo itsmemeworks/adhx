@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Reject an invalid processing role
+
+- Validate `PROCESSING_MODE` before spawning either model process; a misspelled remote role must not silently start heavy indexing on the server.
+- Add a no-spawn regression; both supervisor tests, typecheck and targeted lint pass. Source proposed for the native-worker PR; final CI remains required.
+
 ## 2026-10-19 — Native Mac processing and elastic video understanding
 
 - Add optional authenticated pull-based Mac indexing; remote mode keeps only the NAS query model, with expiring leases and transactional checkpoints.

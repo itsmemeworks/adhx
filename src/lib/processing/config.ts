@@ -1,7 +1,10 @@
 import { isIndexingLevel, VIDEO_PLAN_VERSION, type IndexingLevel } from './profiles'
 
 export function remoteProcessing(): boolean {
-  return process.env['PROCESSING_MODE'] === 'remote'
+  const mode = process.env['PROCESSING_MODE'] || 'local'
+  if (mode !== 'local' && mode !== 'remote')
+    throw new Error('PROCESSING_MODE must be local or remote')
+  return mode === 'remote'
 }
 export function indexingPaused(): boolean {
   return ['off', '0', 'false'].includes(process.env['SEMANTIC_SEARCH'] || '')
