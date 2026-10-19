@@ -193,7 +193,7 @@ an update).
 
 - `GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo,text,article&cursor` →
   `{ items: (PhonePost & { why, whyReasons })[], nextCursor, caughtUp,
-  nothingYet, total, types, waiting, hidden }`. `types` defaults to
+nothingYet, total, types, waiting, hidden }`. `types` defaults to
   `video,photo` (a sound counts as a video); `hidden` (the same as `waiting`)
   counts the unseen posts the filter left out (`{ text: 4 }`). Apps filter by
   `kind` too, so an older server that ignores `types` still plays the
