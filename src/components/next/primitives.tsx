@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useState, type CSSProperties, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { GobShape } from './GobShape'
 import type { PostAuthor } from './post'
 
 /**
@@ -89,29 +90,34 @@ function NxImageInner({
   )
 }
 
+/** A person's face, Gob shaped (see `GobShape`): their photo, else one made from their handle. */
 export function NxAvatar({
   author,
   size,
   className,
+  style,
 }: {
   author: Pick<PostAuthor, 'avatarUrl' | 'handle' | 'name'>
   size: number
+  /** On the Gob-shaped frame: rings, borders, margins. */
   className?: string
+  style?: CSSProperties
 }) {
   const remote = usableAvatarUrl(author.avatarUrl)
   const [broken, setBroken] = useState(false)
   const src = remote && !broken ? remote : generateAvatarDataUri(author.handle || author.name)
   return (
-    <img
-      src={src}
-      alt=""
-      width={size}
-      height={size}
-      referrerPolicy="no-referrer"
-      onError={() => setBroken(true)}
-      style={{ width: size, height: size }}
-      className={cn('shrink-0 rounded-full object-cover', className)}
-    />
+    <GobShape size={size} className={className} style={style}>
+      <img
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        referrerPolicy="no-referrer"
+        onError={() => setBroken(true)}
+        className="block h-full w-full object-cover"
+      />
+    </GobShape>
   )
 }
 

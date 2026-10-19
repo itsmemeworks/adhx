@@ -47,7 +47,7 @@ function mulberry32(seed: number): () => number {
 }
 
 /** Curated [background, shapeA, shapeB] triples. Mid-tone and saturated on
- * purpose — the avatar carries its own opaque background circle, so it needs
+ * purpose — the avatar carries its own opaque background, so it needs
  * to read as deliberate sitting on both the near-black theater surfaces and
  * the light "paper" feed surfaces, not blend into either. */
 const PALETTES: ReadonlyArray<readonly [string, string, string]> = [
@@ -106,7 +106,7 @@ export function resolveAccountAvatarSrc(opts: {
 
 /**
  * Renders a deterministic 80×80 SVG document for the given seed: a filled
- * circle (clipped) with three overlapping colored blobs whose position,
+ * square with three overlapping colored blobs whose position,
  * size, opacity, and color all derive from a PRNG seeded by `hashSeed`.
  * Same seed in → byte-identical markup out, every call, every environment.
  */
@@ -126,10 +126,10 @@ export function generateAvatarSvg(seed: string | null | undefined): string {
     shapes += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" fill-opacity="${opacity}"/>`
   }
 
+  // Square on purpose: the face's frame (Gob's shape, see GobShape) does the clipping.
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-hidden="true">` +
-    `<defs><clipPath id="c${hash}"><circle cx="40" cy="40" r="40"/></clipPath></defs>` +
-    `<g clip-path="url(#c${hash})"><rect width="80" height="80" fill="${bg}"/>${shapes}</g>` +
+    `<rect width="80" height="80" fill="${bg}"/>${shapes}` +
     `</svg>`
   )
 }

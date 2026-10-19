@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,8 +45,9 @@ fun initial(label: String): String =
     label.trim().firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString() ?: "?"
 
 /**
- * One person's round face: their photo (resolved against [server]) over a
- * coloured initial, which shows while it loads or when there is none.
+ * One person's face, in Gob's shape ([GobShape]): their photo (resolved
+ * against [server]) over a coloured initial, which shows while it loads or
+ * when there is none.
  * Decorative: say who it is on whatever holds it.
  */
 @Composable
@@ -64,8 +64,8 @@ fun Avatar(
     Box(
         modifier
             .size(size)
-            .then(if (ring != null) Modifier.border(2.dp, ring, CircleShape) else Modifier)
-            .clip(CircleShape)
+            .then(if (ring != null) Modifier.border(2.dp, ring, GobShape) else Modifier)
+            .clip(GobShape)
             .background(faceColor(username)),
         contentAlignment = Alignment.Center,
     ) {
@@ -126,7 +126,7 @@ fun Faces(
                 .then(
                     if (onTap != null) {
                         Modifier
-                            .clip(CircleShape)
+                            .clip(GobShape)
                             .semantics { contentDescription = if (saver.isYou) "You" else saver.label }
                             .clickable(onClickLabel = Copy.openChannelOf(saver)) { onTap(saver) }
                     } else {

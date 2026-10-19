@@ -471,7 +471,7 @@ struct FriendChannelScreen: View {
             HStack(spacing: 14) {
                 Face(saver: friend, server: server, size: 64, ring: Theme.app)
                     .padding(3)
-                    .overlay(Circle().strokeBorder(Face.colour(for: friend.username).opacity(0.4), lineWidth: 2))
+                    .overlay(GobShape().strokeBorder(Face.colour(for: friend.username).opacity(0.4), lineWidth: 2))
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(Theme.serif(40))

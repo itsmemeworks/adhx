@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Faces are Gob shaped
+
+- Owner request: every person's face is Gob's shape (rounded square, 38% corners, tilted −4°) instead of a circle, on web, iPhone and Android. Photos and initials stay upright inside; rings on stacks follow the shape.
+- One primitive per platform: web `GobShape` / `gobMask` / `gobContent` (`src/components/next/GobShape.tsx`, used by `NxAvatar`, `AuthorAvatar`, the Settings picture and its picker, the X picture); iOS `GobShape: InsettableShape` and Android `GobShape` (tilt baked into the path, in `Shared/People.swift` and `ui/GobShape.kt`).
+- The generated web face is now a full square (the frame clips it). Status and live dots, round buttons, badges and the OG share images stay as they were.
+- Follow-up: an avatar picker or crop preview from another branch should use `GobShape` / `gobMask` too.
+
 ## 2026-10-19 — New and the blended feed
 
 - `post_views` (guarded, cleared with the account, pruned after 180 days at migrate; guard triggers now 48). `POST /api/views` / `POST /api/app/seen` (≤50, idempotent, first `seen_at` kept).

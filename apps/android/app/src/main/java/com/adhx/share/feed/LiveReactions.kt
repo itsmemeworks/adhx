@@ -61,6 +61,7 @@ import com.adhx.share.net.Saver
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.GobShape
 import com.adhx.share.ui.faceColor
 import com.adhx.share.ui.rememberReducedMotion
 
@@ -243,9 +244,9 @@ private fun RingedFace(who: Saver?, server: String, size: Dp) {
     Box(
         Modifier
             .size(size + 10.dp)
-            .border(2.dp, color, CircleShape)
+            .border(2.dp, color, GobShape)
             .padding(2.dp)
-            .border(3.dp, Color.Black, CircleShape)
+            .border(3.dp, Color.Black, GobShape)
             .padding(3.dp),
     ) {
         Avatar(
