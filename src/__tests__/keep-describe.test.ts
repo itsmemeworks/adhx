@@ -83,3 +83,21 @@ describe('describeNetworkPost words', () => {
     expect(post?.text).not.toMatch(/<[a-z/]/i)
   })
 })
+
+describe('describeNetworkPost from a page preview', () => {
+  it('keeps a Bluesky "Name (@handle)" title out of the words and uses it as the name', async () => {
+    const { YtdlpError } = await import('@/lib/keep/ytdlp')
+    ytdlpInfo.mockRejectedValue(new YtdlpError('No video formats found', true))
+    pageOpenGraph.mockResolvedValue({
+      title: 'European Space Agency (@esa.int)',
+      description: '📸 This week’s #EarthFromSpace is iceberg A23A.',
+      images: ['https://cdn.bsky.app/img/a.jpg'],
+    })
+    const { describeNetworkPost } = await import('@/lib/keep/describe')
+    expect(await describeNetworkPost('bluesky', '3mckekzn4ok2m', 'esa.int')).toMatchObject({
+      text: '📸 This week’s #EarthFromSpace is iceberg A23A.',
+      authorName: 'European Space Agency',
+      category: 'photo',
+    })
+  })
+})
