@@ -21,6 +21,10 @@ final class LibraryModel: ObservableObject {
     @Published var query = "" {
         didSet { if query != oldValue { scheduleSearch() } }
     }
+    /// Everyone's saves (the default) or just yours.
+    @Published var scope: SearchScope = .everyone {
+        didSet { if scope != oldValue { searchNow() } }
+    }
     @Published private(set) var results: [PhonePost] = []
     @Published private(set) var searching = false
     @Published private(set) var searched = false
@@ -126,7 +130,7 @@ final class LibraryModel: ObservableObject {
     private func runSearch(_ q: String) async {
         guard let client = Store.client() else { return }
         do {
-            let page = try await client.search(q)
+            let page = try await client.search(q, scope: scope)
             guard !Task.isCancelled else { return }
             results = page.items
             nextSearchOffset = page.nextOffset
@@ -161,6 +165,7 @@ final class LibraryModel: ObservableObject {
         guard index >= results.count - 4, !searching, !loadingMoreSearch,
               let offset = nextSearchOffset, let client = Store.client() else { return }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scope = scope
         let generation = searchGeneration
         loadingMoreSearch = true
         searchMoreError = nil
@@ -168,7 +173,7 @@ final class LibraryModel: ObservableObject {
             guard let self else { return }
             defer { if generation == searchGeneration { loadingMoreSearch = false } }
             do {
-                let page = try await client.search(q, offset: offset)
+                let page = try await client.search(q, scope: scope, offset: offset)
                 guard !Task.isCancelled, generation == searchGeneration else { return }
                 let have = Set(results.map(\.key))
                 results += page.items.filter { !have.contains($0.key) }

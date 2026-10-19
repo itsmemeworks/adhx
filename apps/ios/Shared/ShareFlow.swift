@@ -30,6 +30,17 @@ final class ShareFlow: ObservableObject {
     /// The card's height, so the extension can ask iOS for a sheet that fits it.
     @Published var cardHeight: CGFloat = 0
 
+    /// "Just for me": no one else sees, counts or is told about this save.
+    @Published private(set) var justForMe = false
+    /// Telling the server about a switch made after the save went.
+    @Published private(set) var privacyBusy = false
+    @Published private(set) var privacyError: String?
+    /// The people this phone knows (from the feed and channels), who will see
+    /// a shared save.
+    let people: [Saver] = KnownPeople.all()
+    private var privacyTouched = false
+    private var client: ADHXClient?
+
     private(set) var server: URL?
     private var recordId: String?
     private var saveTask: Task<Void, Never>?
@@ -88,6 +99,7 @@ final class ShareFlow: ObservableObject {
             return
         }
         server = client.server
+        self.client = client
 
         let record = ShareRecord(link: link)
         History.upsert(record)
@@ -116,7 +128,7 @@ final class ShareFlow: ObservableObject {
             }
         } catch APIError.offline, APIError.slow {
             History.update(id: recordId) { $0.stage = .queued }
-            OfflineQueue.add(id: recordId, link: link)
+            OfflineQueue.add(id: recordId, link: link, isPrivate: privacyTouched ? justForMe : nil)
             phase = .offline
         } catch APIError.badKey(let message) {
             Keychain.delete()
@@ -135,6 +147,13 @@ final class ShareFlow: ObservableObject {
         if let recordId { History.update(id: recordId) { $0.apply(r) } }
         result = r
         platform = r.platform
+        let serverSays = r.isPrivate ?? false
+        if privacyTouched && serverSays != justForMe {
+            // Switched while it was saving: now the server has it, say so.
+            sendPrivacy(justForMe, platform: r.platform, id: r.id)
+        } else {
+            justForMe = serverSays
+        }
         if r.alreadySaved == true {
             phase = .alreadySaved
         } else {
@@ -217,6 +236,42 @@ final class ShareFlow: ObservableObject {
             try? await Task.sleep(nanoseconds: Self.autoCloseDelay)
             guard let self, !Task.isCancelled, !self.touched, self.phase == .saved else { return }
             self.requestClose()
+        }
+    }
+
+    // MARK: Just for me
+
+    /// The switch on the card. Before the post has landed it's remembered (and
+    /// sent with a waiting link); after, it goes to `/api/app/private`.
+    func setJustForMe(_ on: Bool) {
+        touch()
+        guard on != justForMe, !privacyBusy else { return }
+        privacyTouched = true
+        privacyError = nil
+        justForMe = on
+        if let r = result {
+            sendPrivacy(on, platform: r.platform, id: r.id)
+        } else if let recordId {
+            History.update(id: recordId) { $0.wantsPrivate = on }
+            OfflineQueue.setPrivate(id: recordId, on)
+        }
+    }
+
+    private func sendPrivacy(_ on: Bool, platform: String, id: String) {
+        guard let client else { return }
+        privacyBusy = true
+        Task { [weak self] in
+            do {
+                let now = try await client.setPrivate(platform: platform, id: id, private: on)
+                guard let self else { return }
+                self.justForMe = now
+                if let recordId = self.recordId { History.update(id: recordId) { $0.isPrivate = now } }
+            } catch {
+                guard let self else { return }
+                self.justForMe = !on
+                self.privacyError = "Couldn’t change that. Try again."
+            }
+            self?.privacyBusy = false
         }
     }
 
