@@ -50,6 +50,10 @@ export const bookmarks = sqliteTable(
     // How this bookmark was added: 'sync', 'manual', 'url_prefix', 'quoted'
     source: text('source').default('sync'),
 
+    // Just for me: kept, searchable and playable by its owner, but no other
+    // member sees it, counts it or is told who saved it.
+    isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
+
     // Original JSON for debugging
     rawJson: text('raw_json'),
   },
@@ -277,6 +281,8 @@ export const phoneSaveQueue = sqliteTable(
     platform: text('platform'),
     postId: text('post_id'),
     alreadySaved: integer('already_saved', { mode: 'boolean' }).notNull().default(false),
+    /** Shared as "Just for me": the save it makes is private. */
+    isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
     /** Set once failed: a code the apps know, and words fit to show. */
     errorCode: text('error_code'),
     error: text('error'),
@@ -359,6 +365,28 @@ export const appPairCodes = sqliteTable('app_pair_codes', {
   usedAt: text('used_at'),
   createdAt: text('created_at').notNull(),
 })
+
+// Invite links (`/invite/<token>`): an admin, or any member with
+// INVITES=members, makes one; the person who opens it picks a name and joins
+// with no email. Only the token's SHA-256 is stored. Single use, 7 days, and
+// revocable; `id` is the public handle for listing and revoking.
+export const invites = sqliteTable(
+  'invites',
+  {
+    id: text('id').primaryKey(),
+    tokenHash: text('token_hash').notNull().unique(),
+    createdBy: text('created_by').notNull(),
+    createdAt: text('created_at').notNull(),
+    expiresAt: integer('expires_at').notNull(), // epoch ms
+    usedBy: text('used_by'),
+    usedAt: text('used_at'),
+    revokedAt: text('revoked_at'),
+    nameHint: text('name_hint'),
+  },
+  (table) => ({
+    createdByIdx: index('invites_created_by_idx').on(table.createdBy),
+  }),
+)
 
 // Sync logs - PK: id (includes userId for filtering)
 export const syncLogs = sqliteTable(
@@ -706,8 +734,9 @@ export const users = sqliteTable('users', {
 export const userIdentities = sqliteTable(
   'user_identities',
   {
-    provider: text('provider').notNull(), // 'x' | 'email'
-    providerId: text('provider_id').notNull(), // X user id, or lowercased email
+    provider: text('provider').notNull(), // 'x' | 'email' | 'invite'
+    // X user id, lowercased email, or the invite id an account joined with
+    providerId: text('provider_id').notNull(),
     userId: text('user_id').notNull(),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   },
@@ -825,5 +854,6 @@ export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type UserIdentity = typeof userIdentities.$inferSelect
 export type NewUserIdentity = typeof userIdentities.$inferInsert
+export type Invite = typeof invites.$inferSelect
 export type LoginToken = typeof loginTokens.$inferSelect
 export type NewLoginToken = typeof loginTokens.$inferInsert

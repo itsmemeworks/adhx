@@ -1,3 +1,4 @@
+import { visibleSaveFilter } from '@/lib/people/savers'
 import { MetadataRoute } from 'next'
 import { db } from '@/lib/db'
 import { tagShares, bookmarks, users, activity, userBans } from '@/lib/db/schema'
@@ -137,8 +138,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
           END`,
         })
         .from(bookmarks)
-        .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
-        .where(and(eq(bookmarks.platform, platform), isNull(userBans.userId)))
+        // Visible saves only: a post kept just for someone never reaches the sitemap.
+        .where(and(eq(bookmarks.platform, platform), visibleSaveFilter))
         .groupBy(bookmarks.id)
         .orderBy(desc(sql`max(${bookmarks.processedAt})`))
         .limit(SOURCE_CAP)

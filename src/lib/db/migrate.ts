@@ -154,6 +154,18 @@ try {
       created_at TEXT NOT NULL,
       expires_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS invites (
+      id TEXT PRIMARY KEY,
+      token_hash TEXT NOT NULL UNIQUE,
+      created_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used_by TEXT,
+      used_at TEXT,
+      revoked_at TEXT,
+      name_hint TEXT
+    );
+    CREATE INDEX IF NOT EXISTS invites_created_by_idx ON invites(created_by);
     CREATE TABLE IF NOT EXISTS keep_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -201,7 +213,9 @@ try {
       PRIMARY KEY (platform, post_id, slot)
     );
   `)
-  console.log('[migrate] Ensured users/user_identities/login_tokens/access_keys/keep tables')
+  console.log(
+    '[migrate] Ensured users/user_identities/login_tokens/access_keys/invites/keep tables',
+  )
 } catch (error) {
   console.log('[migrate] FAILED creating account tables', error)
   db.close()
@@ -581,6 +595,23 @@ try {
 try {
   db.exec('ALTER TABLE activity ADD COLUMN hidden integer NOT NULL DEFAULT 0')
   console.log('[migrate] Added activity.hidden')
+} catch {
+  // Column already exists — nothing to do.
+}
+
+// bookmarks.is_private / phone_save_queue.is_private — "Just for me" saves.
+// Saves are shared with the server's members by default; a private one is
+// kept for its owner only. Existing rows default to 0 (shared), which is the
+// friends-feed upgrade. Guarded for re-runs (no IF NOT EXISTS).
+try {
+  db.exec('ALTER TABLE bookmarks ADD COLUMN is_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added bookmarks.is_private')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE phone_save_queue ADD COLUMN is_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added phone_save_queue.is_private')
 } catch {
   // Column already exists — nothing to do.
 }

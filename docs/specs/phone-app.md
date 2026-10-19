@@ -31,10 +31,11 @@ Offline, Shared lately, Android sheet).
 Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
-accepted by `/api/app/save`, `/api/app/status`, `/api/app/me`,
-`/api/app/saves` and `/api/app/search` only; a search key is not accepted
+accepted by `/api/app/save`, `/api/app/private`, `/api/app/status`,
+`/api/app/me`, `/api/app/saves` and `/api/app/search` only; a search key is not accepted
 there, and a phone key is not accepted by `/api/agent/search`. A phone key
-only ever reads its own account's saves. Removing a phone in Settings deletes
+acts only for its own account: it reads that account's saves, and everyone's
+saves only where a signed-in member could (`/api/app/search?scope=everyone`). Removing a phone in Settings deletes
 its key.
 
 ## API
@@ -56,13 +57,15 @@ The code is case-insensitive and may contain a dash or spaces.
 - `200 { username, name }` — who the key saves for, and the phone's name
 - `401 { code: 'bad_key' }` the key was removed (the app goes back to Connect)
 
-### `POST /api/app/save` — `{ url }`
+### `POST /api/app/save` — `{ url, private? }`
 
 `url` is a link, or text containing one (the first `http(s)://` link is used).
-Short links are followed on the server.
+Short links are followed on the server. `private: true` saves it "Just for
+me" (also through the `respond-async` queue): no one else sees, counts or is
+told about it. On a repeat save, `private` updates the flag.
 
 - `200 { platform, network, id, author, authorName, text, category, posterUrl,
-openPath, alreadySaved, savedAt }`
+openPath, alreadySaved, savedAt, isPrivate }`
   - `network` is the display name ("TikTok", "X").
   - `posterUrl` (or null) and `openPath` may be relative; resolve them against
     the server address. `openPath` opens the post in ADHX.
@@ -119,6 +122,14 @@ How the copy of a saved post is coming along.
   - `kept`: `{ videos, photos, audio }` counts of kept files
 - `404 { code: 'not_saved' }` not in this account's saves
 
+### `POST /api/app/private` — `{ platform, id, private }`
+
+Switch one of your saves "Just for me" or back to shared with your people.
+
+- `200 { private }`
+- `400 { code: 'bad_request' }` · `401 { code: 'bad_key' }` ·
+  `404 { code: 'not_saved' }`
+
 ### `GET /api/app/saves?offset&limit`
 
 Your saves for the player, newest first, without archived ones (like My saves
@@ -134,10 +145,12 @@ on the web). `limit` 1–50 (default 20).
   archived or not (Shared lately opens it in the player), or
   `404 { code: 'not_saved' }`.
 
-### `GET /api/app/search?q&type&offset&limit`
+### `GET /api/app/search?q&scope&type&offset&limit`
 
-Search your saves by meaning: words, pictures and video frames
-(`src/lib/semantic/find.ts`). `type`: `all` · `videos` · `photos` · `text` ·
+Search saves by meaning: words, pictures and video frames
+(`src/lib/semantic/find.ts`). `scope`: `mine` (default, your saves) or
+`everyone` (everyone's saves on this server; other people's "Just for me"
+saves never appear). `type`: `all` · `videos` · `photos` · `text` ·
 `articles`; `limit` 1–40 (default 30). 120 searches a minute per account.
 
 - `200 { items: PhonePost[], total, understood, close, nextOffset }`
@@ -146,13 +159,18 @@ Search your saves by meaning: words, pictures and video frames
   - `close: false`: nothing matched closely; these are the nearest.
   - each item has `match: { strength: strong|good|related, on: [...] }`, and
     `learning: true` when its picture or video isn't understood yet.
-- `400 no_query` · `400 bad_type` · `429 busy` (with `Retry-After`)
+- `400 no_query` · `400 bad_scope` · `400 bad_type` · `429 busy` (with `Retry-After`)
 
 ### `PhonePost` (`src/lib/app/phone-post.ts`)
 
 `{ platform, id, kind, author: { handle, name, avatarUrl }, text, postedAt,
 savedAt, sourceUrl, openPath, media: [{ kind: video|photo, url, posterUrl,
-width, height, durationMs }], article }`
+width, height, durationMs }], article, savers, isPrivate }`
+
+- `savers`: `[{ username, name, avatarUrl, savedAt, isYou }]`, newest first —
+  the members who saved it (your own save shows with `isYou`). `avatarUrl`
+  null means draw the generated icon from `username`.
+- `isPrivate`: your save is "Just for me".
 
 - `kind`: `video` · `audio` (SoundCloud: play `media[0].url`, it's the sound)
   · `photo` (swipe `media` sideways) · `article` · `text`

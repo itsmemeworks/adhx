@@ -32,6 +32,7 @@ export const FULL_SCHEMA_SQL = `
     retweet_context TEXT,
     summary TEXT,
     source TEXT DEFAULT 'sync',
+    is_private INTEGER NOT NULL DEFAULT 0,
     raw_json TEXT,
     PRIMARY KEY (user_id, platform, id)
   );
@@ -319,6 +320,18 @@ export const FULL_SCHEMA_SQL = `
     created_at TEXT NOT NULL,
     expires_at INTEGER NOT NULL
   );
+  CREATE TABLE invites (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_by TEXT,
+    used_at TEXT,
+    revoked_at TEXT,
+    name_hint TEXT
+  );
+  CREATE INDEX invites_created_by_idx ON invites(created_by);
   CREATE TABLE keep_settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -333,6 +346,7 @@ export const FULL_SCHEMA_SQL = `
     platform TEXT,
     post_id TEXT,
     already_saved INTEGER NOT NULL DEFAULT 0,
+    is_private INTEGER NOT NULL DEFAULT 0,
     error_code TEXT,
     error TEXT,
     created_at TEXT NOT NULL,

@@ -16,7 +16,7 @@ ADHX is a private feed of the best of every social network, picked by your close
 - `bookmarks.is_private integer NOT NULL DEFAULT 0`: a guarded ALTER in `migrate.ts`, the Drizzle column `isPrivate` in `schema.ts`, and the same column in `FULL_SCHEMA_SQL` in `src/__tests__/api/setup.ts`.
 - `phone_save_queue.is_private integer NOT NULL DEFAULT 0`, so a private share from a phone stays private.
 - `post_views (user_id, platform, post_id, seen_at)`, primary key `(user_id, platform, post_id)`: the server-side watched list. It is user-linked, so it needs an `ACCOUNT_GUARDS` entry and a delete on account clear and delete.
-- `invites (token_hash, created_by, created_at, expires_at, used_by, used_at, name_hint)`: single-use invite links. Also user-linked.
+- `invites (id, token_hash, created_by, created_at, expires_at, used_by, used_at, revoked_at, name_hint)`: single-use invite links. `id` is the public handle for listing and revoking; `revoked_at` lets a revoked link say so. Also user-linked.
 
 ## Shared helpers (server)
 
@@ -47,7 +47,7 @@ All of these require sign-in unless marked public.
 - `GET /api/channels` adds `group: [{ slug, name, size, covers }]` (made from everyone's visible saves) and `friends: [{ username, name, avatarUrl, size, covers }]` (one per member with visible saves).
 - `GET /api/channels/group/[slug]` and `GET /api/channels/friend/[username]` return play queues.
 - Moments: when signed in, `MomentView.savers` (up to 5 faces plus `people`), moment items carry `savers`, and the stream's `watching` event carries `watchers: Saver[]` (members tuned in now, names only to signed-in subscribers).
-- `POST /api/invites` (admin, or any member when `INVITES=members`) → `{ url, expiresAt }`. `GET /api/invites` lists unused ones; `DELETE /api/invites/[id]` revokes one.
+- `POST /api/invites` (admin, or any member when `INVITES=members`) → `{ id, url, expiresAt }`. `GET /api/invites` lists unused ones; `DELETE /api/invites/[id]` revokes one.
 - `/invite/[token]` (public page): pick a name, which signs you in, then shows the phone pairing code and QR on the same screen. A used or expired invite says so.
 
 ## Phone API additions (`/api/app/*`, phone key)

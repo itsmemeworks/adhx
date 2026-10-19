@@ -24,10 +24,11 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 
 - **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
-- **Search by what you remember.** Describe it and ADHX finds it. It matches the words, what's in the pictures, sampled video frames, what's said in a video and the text on screen (that meme's caption, a screenshot, burned-in subtitles). It all happens on your server, or on the optional native Mac worker: no picture, frame, sound or transcript is sent anywhere, and nothing goes to an AI service unless you add the optional search refinement key.
+- **Search by what you remember.** Describe it and ADHX finds it, across everyone's saves or just yours, with your friends' faces on what they kept. It matches the words, what's in the pictures, sampled video frames, what's said in a video and the text on screen (that meme's caption, a screenshot, burned-in subtitles). It all happens on your server, or on the optional native Mac worker: no picture, frame, sound or transcript is sent anywhere, and nothing goes to an AI service unless you add the optional search refinement key.
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
 - **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
-- **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. For now savers are counted, not named; names are next (see [Where it's going](#where-its-going)).
+- **Names on posts.** See which of your people saved what, in the player and in search. Saves are shared with your people by default; flip **Just for me** on any you'd rather keep to yourself.
+- **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. Moments still count savers rather than name them; names there are next (see [Where it's going](#where-its-going)).
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
 - **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
@@ -37,7 +38,7 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 ADHX is becoming one shared feed for your people. In order:
 
 1. **Say it out loud.** This README, the site and every string in the app, in the new voice.
-2. **Names on posts.** See which of your friends saved what. Saves are shared with your people by default, with a private toggle for the ones that are just for you, and you can search the whole group's vault. When this lands, saves you've already made join the shared feed; the release notes will say so first.
+2. **Names on posts.** Here: see which of your friends saved what, keep any save **Just for me**, and search the whole group's vault. Saves you'd already made joined the shared feed; the app says so once.
 3. **One feed.** A blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
 4. **Channels and Live.** Channels drawn from everyone's saves, one per friend, and Live with names, so you can watch together.
 
@@ -69,7 +70,7 @@ Downloads run through [yt-dlp](https://github.com/yt-dlp/yt-dlp), plus each netw
 You need:
 
 - **Somewhere to run a container** with a persistent folder: a home server, a NAS, a small VPS, or [Fly.io](#flyio).
-- **A way to get sign-in links to people.** ADHX has no passwords; people sign in with a one-time link. Pick one (see [Sign-in links](#sign-in-links)): your own mail server, a [Resend](https://resend.com) account, or no email at all, where you pass links on yourself.
+- **A way to let people in.** ADHX has no passwords. The easy way is an [invite link](#who-can-sign-up): send it, they pick a name, done. For signing back in on a new browser, people use a one-time email link: your own mail server, a [Resend](https://resend.com) account, or no email at all, where you pass links on yourself (see [Sign-in links](#sign-in-links)).
 - **Disk space.** See [Disk space](#disk-space).
 
 ### Docker Compose
@@ -80,7 +81,7 @@ cp .env.example .env
 openssl rand -base64 32
 ```
 
-Edit `.env`: put the generated value in `SESSION_SECRET`, set `NEXT_PUBLIC_APP_URL` to your final HTTPS address, set `ALLOWED_EMAILS` to your invited addresses and set `EMAIL_LINKS_TO_ADMIN=1` (or configure SMTP/Resend). Create this file once and keep it private and stable; do not generate a new secret on each restart.
+Edit `.env`: put the generated value in `SESSION_SECRET`, set `NEXT_PUBLIC_APP_URL` to your final HTTPS address, set `ALLOWED_EMAILS` to your own email (that closes email sign-up to strangers; [invite links](#who-can-sign-up) let your people in) and set `EMAIL_LINKS_TO_ADMIN=1` (or configure SMTP/Resend). Create this file once and keep it private and stable; do not generate a new secret on each restart.
 
 For this source checkout, build and select its image explicitly:
 
@@ -117,7 +118,7 @@ service. See the [build and release flow](docs/releasing.md) for checks and reco
 
 ### Sign-in links
 
-People sign in with a one-time link. Emailed links last 15 minutes; links held for an admin to pass on last **60 minutes**. Opening a link shows a confirmation screen; press **Sign in** in the browser you want to use. Message previews cannot use the link. The one-minute countdown before requesting another link is a resend cooldown, not its expiry. Choose how links reach people:
+Invites (below) get people in. Sign-in links get them back in: on a new browser, or when a session runs out after 30 days. Emailed links last 15 minutes; links held for an admin to pass on last **60 minutes**. Opening a link shows a confirmation screen; press **Sign in** in the browser you want to use. Message previews cannot use the link. The one-minute countdown before requesting another link is a resend cooldown, not its expiry. Choose how links reach people:
 
 | Option               | Set                                                                                    | Good for                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -127,13 +128,19 @@ People sign in with a one-time link. Emailed links last 15 minutes; links held f
 
 With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and confirming it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
 
+People who joined by invite have no email until they add one in **Settings → Account**. Until then their browser session is their only way in, so nudge them to add one.
+
 ### Who can sign up
 
-By default, anyone who can reach your server can make an account. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in.
+**Invite links are the easy path.** On the admin page or in **Settings → Invite someone**, press **Make an invite link** and send it however you like. Your friend opens it, sees "Ana wants you in.", picks a name and presses **Join**. That's the whole sign-up: no email, no password, and their phone pairing code is on the next screen. Each link works once, for 7 days. Pending ones are listed with **Revoke**. A banned person's invites stop working. Links are shown once, when they're made: ADHX keeps only a fingerprint of each. Message previews can open an invite without using it; only pressing **Join** does.
 
-The admin page has sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+Only admins make invites, unless you set `INVITES=members` to let everyone in the group invite their own people.
 
-Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; the email allowlist protects account creation, not playback.
+Email sign-up works too. By default, anyone who can reach your server can make an account with their email. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in. Invite links work whatever `ALLOWED_EMAILS` says: the invite is the permission.
+
+The admin page has invites, sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+
+Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; invites and the email allowlist protect account creation, not playback.
 
 ### Settings
 
@@ -143,6 +150,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                   |
 | `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                   |
 | `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                 |
+| `INVITES=members`                            | Let every member make invite links, not just admins.                                                                         |
 | `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.    |
 | `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                     |
 | `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                       |

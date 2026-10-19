@@ -297,7 +297,7 @@ describe('Right now, live', () => {
 
     save(USER_C, 'frog9', 'frog video number 9')
     await understood('frog9', topic(0, 9))
-    // Saves that aren't someone's choice, or are by a banned account, never count.
+    // Saves that aren't someone's choice, are by a banned account, or are private never count.
     save(USER_C, 'frog10', 'frog video number 10', { source: 'quoted' })
     await understood('frog10', topic(0, 10))
     testInstance.db
@@ -311,6 +311,9 @@ describe('Right now, live', () => {
       .run()
     save(USER_B, 'frog11', 'frog video number 11')
     await understood('frog11', topic(0, 11))
+    // Nor does a save kept just for its owner.
+    save(USER_A, 'frog12', 'frog video number 12', { isPrivate: true })
+    await understood('frog12', topic(0, 12))
 
     await __moments.processNewSaves()
     const saves = events.filter((e) => e.type === 'save')

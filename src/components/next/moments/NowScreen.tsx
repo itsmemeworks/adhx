@@ -3,6 +3,7 @@
 import { NxHeader } from '../channels/ChannelParts'
 import { SaveTools } from '../onboarding/SaveTools'
 import { RightNow } from './RightNow'
+import { SharedSavesNotice } from './SharedSavesNotice'
 
 /** The Right now page: the live moments, under the same header as everywhere else. */
 export function NowScreen() {
@@ -12,6 +13,7 @@ export function NowScreen() {
         <SaveTools />
       </NxHeader>
       <main className="mx-auto max-w-[1600px] px-4 pb-16 pt-2 md:px-7 md:pt-4">
+        <SharedSavesNotice />
         <RightNow headingLevel="h1" />
       </main>
     </div>

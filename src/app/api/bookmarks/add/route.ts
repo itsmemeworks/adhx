@@ -2,18 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { addBookmark } from '@/lib/bookmarks/add'
+import { privateFlag } from '@/lib/bookmarks/privacy'
 
 /**
  * Platform-agnostic bookmark add endpoint.
  *
- * POST /api/bookmarks/add { url, source?: 'manual' | 'url_prefix' }
+ * POST /api/bookmarks/add { url, source?: 'manual' | 'url_prefix', private?: boolean }
+ *
+ * `private: true` keeps it just for you; on a repeat save, `private` updates the flag.
  *
  * Returns the created bookmark with the platform field so the client knows
  * where to redirect after save (`/?added=success&platform=...&id=...`). The
  * work is in `addBookmark` (src/lib/bookmarks/add.ts).
  */
 export const POST = withAuth(async (request: NextRequest, userId: string) => {
-  let body: { url?: unknown; source?: string }
+  let body: { url?: unknown; source?: string; private?: unknown }
   try {
     body = await request.json()
   } catch (error) {
@@ -26,5 +29,7 @@ export const POST = withAuth(async (request: NextRequest, userId: string) => {
   if (!body || typeof body !== 'object') {
     return NextResponse.json({ error: 'URL is required' }, { status: 400 })
   }
-  return addBookmark(userId, body.url, body.source ?? 'manual')
+  return addBookmark(userId, body.url, body.source ?? 'manual', undefined, {
+    private: privateFlag(body),
+  })
 })

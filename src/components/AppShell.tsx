@@ -104,6 +104,7 @@ export function AppShell({
     pathname === '/tags' ||
     pathname === '/settings' ||
     pathname === '/welcome' ||
+    pathname === '/invite/done' ||
     pathname === '/admin' ||
     pathname.startsWith('/admin/')
 

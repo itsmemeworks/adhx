@@ -1,6 +1,7 @@
-import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm'
+import { and, eq, inArray, like, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings, userBans } from '@/lib/db/schema'
+import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings } from '@/lib/db/schema'
+import { seenBy } from '@/lib/people/savers'
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
 import { SEMANTIC_MODEL_VERSION, type UnderstandingKind } from './config'
 import { queryPrompt } from './documents'
@@ -17,9 +18,11 @@ import { fromBlob } from './vectors'
  * signals are fused on standardised scores (see `TUNING`).
  *
  * Scope `mine` searches only the viewer's saves. Scope `everyone` searches
- * every post anyone saved, but never says who: results are post keys only,
- * filtered to posts with at least one saver who is not banned and that are
- * not hidden by moderation (the same publication rules as the public pulse).
+ * everyone's saves: results are post keys only, filtered to posts with at
+ * least one visible save (`visibleSave`: not private, not quoted, saver not
+ * banned) — or the viewer's own save — and not hidden by moderation (the same
+ * publication rules as the public pulse). Names are attached later, and only
+ * for signed-in members (`loadSearchItems`).
  */
 
 export type SearchScope = 'mine' | 'everyone'
@@ -148,8 +151,13 @@ async function savedKeys(userId: string): Promise<Set<string>> {
   return new Set(rows.map((r) => `${r.platform}:${r.id}`))
 }
 
-/** Posts allowed in `everyone` results. Fails closed if moderation can't be read. */
-export async function publishable(keys: string[]): Promise<Set<string>> {
+/**
+ * Posts allowed in `everyone` results: at least one visible save (never a
+ * private-only or quoted-only post), or the viewer's own save. Signed out
+ * (`viewerId` empty) only visible saves count. Fails closed if moderation
+ * can't be read.
+ */
+export async function publishable(keys: string[], viewerId = ''): Promise<Set<string>> {
   const moderated = readModeratedPostKeys()
   if (!moderated.ok) throw moderated.error
   const wanted = new Set(keys)
@@ -158,8 +166,7 @@ export async function publishable(keys: string[]): Promise<Set<string>> {
     const rows = await db
       .selectDistinct({ platform: bookmarks.platform, id: bookmarks.id })
       .from(bookmarks)
-      .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
-      .where(and(isNull(userBans.userId), inArray(bookmarks.id, part)))
+      .where(and(seenBy(viewerId), inArray(bookmarks.id, part)))
     for (const r of rows) {
       const key = `${r.platform}:${r.id}`
       if (wanted.has(key) && !moderated.value.has(key)) ok.add(key)
@@ -287,7 +294,11 @@ export async function searchPosts(
       (r) => r.score >= (r.matched[0] === 'words' ? TUNING.minWordsScore : TUNING.minScore),
     )
   }
-  ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
+  ranked = await allowedOnly(ranked, {
+    mine: !!mine,
+    type: request.type,
+    userId: request.userId,
+  })
 
   const page = labelExtractedMatches(
     ranked.slice(request.offset, request.offset + request.limit),
@@ -377,11 +388,14 @@ export function labelExtractedMatches<T extends { key: string; matched: MatchSig
 /** Gone posts out, then scope (everyone: bans + moderation) and content-type filters, in rank order. */
 async function allowedOnly<T extends { key: string }>(
   ranked: T[],
-  opts: { mine: boolean; type: SearchType },
+  opts: { mine: boolean; type: SearchType; userId: string },
 ): Promise<T[]> {
   let out = await withoutGone(ranked)
   if (!opts.mine && out.length > 0) {
-    const allowed = await publishable(out.map((r) => r.key))
+    const allowed = await publishable(
+      out.map((r) => r.key),
+      opts.userId,
+    )
     out = out.filter((r) => allowed.has(r.key))
   }
   if (opts.type !== 'all' && out.length > 0) {
@@ -411,6 +425,22 @@ export interface SimilarRequest {
  */
 export async function similarPosts(request: SimilarRequest): Promise<SearchResult> {
   const self = `${request.platform}:${request.postId}`
+  // Only from a post the caller may know is saved: a visible save, or their
+  // own. A private-only post must not even read as "understood" to others.
+  const [known] = await db
+    .select({ id: bookmarks.id })
+    .from(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.platform, request.platform),
+        eq(bookmarks.id, request.postId),
+        seenBy(request.userId),
+      ),
+    )
+    .limit(1)
+  if (!known) {
+    return { hits: [], total: 0, understood: false, close: false }
+  }
   const rows = await db
     .select({ kind: postEmbeddings.kind, vector: postEmbeddings.vector })
     .from(postEmbeddings)
@@ -438,7 +468,11 @@ export async function similarPosts(request: SimilarRequest): Promise<SearchResul
     }
   }
   let ranked = fuse(vectors, []).filter((r) => r.score >= TUNING.minScore)
-  ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
+  ranked = await allowedOnly(ranked, {
+    mine: !!mine,
+    type: request.type,
+    userId: request.userId,
+  })
   return {
     hits: ranked
       .slice(0, request.limit)

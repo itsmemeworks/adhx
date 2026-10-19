@@ -17,6 +17,7 @@ import { PreferencesCard } from './PreferencesCard'
 import { SECONDARY, SettingsCard } from './parts'
 import { AccessKeysCard } from './AccessKeysCard'
 import { PhoneAppCard } from './PhoneAppCard'
+import { InviteCard } from './InviteCard'
 import { SyncCard, SyncHistoryCard, type SyncCounts, type SyncHistoryEntry } from './SyncCard'
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
@@ -255,6 +256,7 @@ export function SettingsScreen() {
             )}
             <AccountCard me={me} refresh={() => void fetchMe()} />
             <PhoneAppCard />
+            <InviteCard />
             <AccessKeysCard />
           </>
         )}

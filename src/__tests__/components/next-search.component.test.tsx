@@ -93,11 +93,13 @@ describe('search model', () => {
     const state = {
       ...DEFAULT_STATE,
       q: 'squirrels',
-      scope: 'everyone' as const,
+      scope: 'mine' as const,
       view: 'queue' as const,
     }
     const params = paramsFromState(state)
-    expect(params.toString()).toBe('q=squirrels&scope=everyone&view=queue')
+    expect(params.toString()).toBe('q=squirrels&scope=mine&view=queue')
+    // Members search everyone's saves unless they ask for their own.
+    expect(DEFAULT_STATE.scope).toBe('everyone')
     expect(stateFromParams(params)).toEqual(state)
     expect(stateFromParams({ scope: 'all-users', type: 'gifs' })).toEqual(DEFAULT_STATE)
   })
@@ -232,7 +234,7 @@ describe('SearchScreen', () => {
   })
 
   it('searches as you type, then swaps in the refined order', async () => {
-    render(<SearchScreen initial={DEFAULT_STATE} />)
+    render(<SearchScreen initial={{ ...DEFAULT_STATE, scope: 'mine' }} />)
     fireEvent.change(screen.getByLabelText('Describe what you’re looking for'), {
       target: { value: 'squirrels eating biscuits' },
     })
@@ -253,15 +255,15 @@ describe('SearchScreen', () => {
     // Every result opens the theater with this search as its queue.
     expect(screen.getByRole('link', { name: /Best match: James Melville/ })).toHaveAttribute(
       'href',
-      '/play?q=squirrels+eating+biscuits&start=twitter%3A1001',
+      '/play?q=squirrels+eating+biscuits&scope=mine&start=twitter%3A1001',
     )
     fireEvent.click(screen.getByRole('button', { name: 'Play all 1' }))
-    expect(push).toHaveBeenCalledWith('/play?q=squirrels+eating+biscuits')
+    expect(push).toHaveBeenCalledWith('/play?q=squirrels+eating+biscuits&scope=mine')
   })
 
   it('marks posts from other people’s saves when searching everyone', async () => {
-    render(<SearchScreen initial={{ ...DEFAULT_STATE, q: 'synth' }} />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Everyone' })[0])
+    render(<SearchScreen initial={{ ...DEFAULT_STATE, scope: 'mine', q: 'synth' }} />)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Everyone’s saves' })[0])
     await act(async () => {
       await vi.advanceTimersByTimeAsync(600)
     })
@@ -270,7 +272,7 @@ describe('SearchScreen', () => {
     )
     expect(screen.getByRole('link', { name: /saved by someone else/ })).toHaveAttribute(
       'href',
-      '/play?q=synth&scope=everyone&start=twitter%3A2002',
+      '/play?q=synth&start=twitter%3A2002',
     )
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('scope=everyone'))).toBe(true)
   })
@@ -281,7 +283,9 @@ describe('SearchScreen', () => {
         ? new Response(JSON.stringify({ enabled: false, groups: [] }))
         : new Response(JSON.stringify(response([]))),
     )
-    render(<SearchScreen initial={{ ...DEFAULT_STATE, q: 'nothing', type: 'videos' }} />)
+    render(
+      <SearchScreen initial={{ ...DEFAULT_STATE, scope: 'mine', q: 'nothing', type: 'videos' }} />,
+    )
     await act(async () => {
       await vi.advanceTimersByTimeAsync(600)
     })

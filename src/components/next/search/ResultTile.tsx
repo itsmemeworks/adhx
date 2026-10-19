@@ -17,6 +17,8 @@ import {
   postText,
 } from '../post'
 import { MediaChip, NxImage } from '../primitives'
+import { PrivateLock, SaverFaces } from '../SaverFaces'
+import { saversLine } from '../savers'
 import {
   heardOrRead,
   kindOf,
@@ -67,6 +69,39 @@ export function EveryoneBadge({ className }: { className?: string }) {
       <span>Everyone</span>
     </span>
   )
+}
+
+/**
+ * Top-right of a result: who saved it (members see faces), a lock when it's
+ * just for you, or — with no names known — "Everyone" on someone else's save.
+ */
+export function SaversMark({
+  item,
+  everyone = true,
+  className,
+}: {
+  item: SearchResultItem
+  /** Show "Everyone" on someone else's save when no savers are known (search only). */
+  everyone?: boolean
+  className?: string
+}) {
+  const savers = item.post.savers ?? []
+  if (savers.length > 0) {
+    return (
+      <span
+        className={cn(
+          'pointer-events-none absolute flex max-w-[calc(100%-16px)] items-center gap-1',
+          className,
+        )}
+      >
+        {item.post.isPrivate && <PrivateLock />}
+        <SaverFaces savers={savers} tone="plate" size={18} compact={savers.length > 2} />
+      </span>
+    )
+  }
+  if (item.post.isPrivate) return <PrivateLock className={cn('absolute', className)} />
+  if (!item.saved && everyone) return <EveryoneBadge className={className} />
+  return null
 }
 
 /**
@@ -188,7 +223,13 @@ export function ResultTile({
   const { post } = item
   const author = postAuthor(post)
   const heard = heardOrRead(item)
-  const label = `${feedItemAccessibleDescription(post)}${item.saved || !showStrength ? '' : ', saved by someone else'}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}${heard ? `, ${heard.toLowerCase()}` : ''}` : ''}`
+  const savers = post.savers ?? []
+  const savedBy = savers.length
+    ? `, ${saversLine(savers)}`
+    : item.saved || !showStrength
+      ? ''
+      : ', saved by someone else'
+  const label = `${feedItemAccessibleDescription(post)}${savedBy}${post.isPrivate ? ', just for you' : ''}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}${heard ? `, ${heard.toLowerCase()}` : ''}` : ''}`
   const frame = cn(
     'group relative block w-full overflow-hidden rounded-nx-tile bg-nx-surface text-left font-nx-sans',
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent',
@@ -277,8 +318,7 @@ export function ResultTile({
       onBlur={() => setHovering(false)}
     >
       {body}
-      {/* "Saved by someone else" only means something in a search across everyone. */}
-      {!item.saved && showStrength && <EveryoneBadge className="right-2 top-2" />}
+      <SaversMark item={item} everyone={showStrength} className="right-2 top-2" />
       {item.learning && <WordsOnlyBadge className="left-2 top-2" />}
       {showStrength && !onCream && (
         <StrengthMeter strength={strength} where={where} className="absolute bottom-2 left-2" />
