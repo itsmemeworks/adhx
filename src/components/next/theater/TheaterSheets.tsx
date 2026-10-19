@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Bookmark, Check, Lock, Plus, Sparkles, X } from 'lucide-react'
+import { Bookmark, Check, Lock, Minus, Plus, Sparkles, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { articleHeadline, postCoverSrc, postText } from '../post'
@@ -9,6 +9,8 @@ import { NxImage } from '../primitives'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { isVideoItem, viaLabel } from './queue'
 import { channelTitle } from '../channels/ChannelParts'
+import { WhyIcon, whyKind, whyLabel } from './FeedParts'
+import type { FeedWeight } from '@/lib/feed/blend'
 
 /**
  * A panel over the stage: a side panel on wide screens, a bottom sheet on
@@ -172,6 +174,17 @@ export function UpNextSheet({
                       {String(index + 1)}
                     </span>
                   </button>
+                  {item.post.why && (
+                    // The blended feed says why each one is coming up.
+                    <span className="mt-1 flex min-w-0 items-start gap-1 text-[12px] leading-tight text-white/65">
+                      <WhyIcon
+                        kind={whyKind(item.post)}
+                        className="mt-px h-3 w-3 shrink-0 text-nx-accent"
+                        strokeWidth={2.4}
+                      />
+                      <span className="line-clamp-2">{whyLabel(item.post)}</span>
+                    </span>
+                  )}
                 </li>
               </Fragment>
             )
@@ -515,6 +528,127 @@ export function ShareSheet({
           <span className="text-[13px] text-white/55">Paused until you close this.</span>
         )}
       </div>
+    </Sheet>
+  )
+}
+
+/** A friend the why sheet can show more or less of. */
+export interface WhyFriend {
+  username: string
+  name: string
+}
+
+/**
+ * "Why this one": every reason the feed has for the post on stage, and a way
+ * to see more or less from the friends who saved it. Nothing else decides.
+ */
+export function WhySheet({
+  item,
+  friends,
+  weights,
+  busy,
+  onWeight,
+  onClose,
+}: {
+  item: SearchResultItem
+  friends: WhyFriend[]
+  /** Null while loading. */
+  weights: Record<string, FeedWeight> | null
+  busy: string | null
+  onWeight: (username: string, weight: FeedWeight) => void
+  onClose: () => void
+}) {
+  const cover = postCoverSrc(item.post)
+  const kind = kindOf(item)
+  const text = kind === 'article' ? articleHeadline(item.post) : postText(item.post)
+  const reasons = item.post.whyReasons?.length
+    ? item.post.whyReasons
+    : item.post.why
+      ? [{ kind: 'fresh' as const, text: item.post.why }]
+      : []
+  return (
+    <Sheet label="Why this one" onClose={onClose}>
+      <div className="flex items-center gap-2">
+        <h2 className="m-0 flex-1 font-nx-serif text-[26px] font-normal leading-none">
+          Why this one
+        </h2>
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"
+        >
+          <X aria-hidden className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex items-center gap-3 rounded-2xl bg-white/[0.05] p-2">
+        {cover ? (
+          <NxImage src={cover} alt="" className="h-14 w-11 shrink-0 rounded-lg object-cover" />
+        ) : (
+          <span aria-hidden className="h-14 w-11 shrink-0 rounded-lg bg-nx-cream" />
+        )}
+        <span className="line-clamp-2 min-w-0 text-sm font-semibold">
+          {text || `@${item.post.author}`}
+        </span>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+        {reasons.map((reason) => {
+          return (
+            <li
+              key={`${reason.kind}:${reason.text}`}
+              className="flex min-h-11 items-center gap-3 rounded-xl px-1 text-[15px]"
+            >
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-nx-accent"
+              >
+                <WhyIcon kind={reason.kind} className="h-[18px] w-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">{reason.text}</span>
+            </li>
+          )
+        })}
+      </ul>
+      {friends.length > 0 && (
+        // One row per friend: their name, then less or more of them.
+        <div className="flex flex-col gap-1.5 border-t border-white/10 pt-3">
+          {friends.map((friend) => {
+            const weight = weights?.[friend.username] ?? 0
+            return (
+              <div key={friend.username} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{friend.name}</span>
+                {([-1, 1] as const).map((w) => {
+                  const on = weight === w
+                  return (
+                    <button
+                      key={w}
+                      type="button"
+                      aria-pressed={on}
+                      aria-label={`Show ${w === 1 ? 'more' : 'less'} from ${friend.name}`}
+                      disabled={weights === null || busy === friend.username}
+                      onClick={() => onWeight(friend.username, on ? 0 : w)}
+                      className={cn(
+                        'flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold disabled:opacity-50',
+                        on ? 'bg-nx-cream text-black' : 'bg-white/10 text-white',
+                      )}
+                    >
+                      {w === 1 ? (
+                        <Plus aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+                      ) : (
+                        <Minus aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+                      )}
+                      <span>{w === 1 ? 'Show more' : 'Show less'}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      )}
+      <p className="m-0 text-center text-xs text-white/55">
+        No engagement bait. These are the only reasons.
+      </p>
     </Sheet>
   )
 }

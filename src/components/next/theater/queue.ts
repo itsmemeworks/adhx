@@ -17,6 +17,7 @@ import { searchHref } from '../search/model'
 
 export { playHref, searchHref } from '../search/model'
 import { nextPostKind, postText } from '../post'
+import { isBlendMode, parseFeedTypes, type BlendMode, type FeedKind } from '@/lib/feed/blend'
 
 export type RepeatMode = 'off' | 'all' | 'one'
 export const REPEAT_ORDER: RepeatMode[] = ['off', 'all', 'one']
@@ -52,6 +53,17 @@ export interface PlaySource {
    * plays first, then posts like it from everyone's saves.
    */
   shared?: boolean
+  /**
+   * The blended feed (`feed=new|everyone|friends|mine`): what your people
+   * saved, New being only what you haven't seen. Pages through
+   * `/api/feed/blend`.
+   */
+  feed?: BlendMode | null
+  /**
+   * The feed's kinds for this visit only (`types=text,article`, "Show them" on
+   * the caught-up card); otherwise the stored "What's in your feed".
+   */
+  feedTypes?: FeedKind[] | null
 }
 
 const SIGNALS: readonly MatchSignal[] = [
@@ -77,6 +89,26 @@ export function recentPlayHref(start?: string | null): string {
   const params = new URLSearchParams({ recent: '1' })
   if (start) params.set('start', start)
   return `/play?${params}`
+}
+
+/** The blended feed; `new` is the signed-in home. `types` is for this visit only. */
+export function feedPlayHref(mode: BlendMode = 'new', types?: readonly FeedKind[] | null): string {
+  const params = new URLSearchParams({ feed: mode })
+  if (types?.length) params.set('types', types.join(','))
+  return `/play?${params}`
+}
+
+/** One page of the blended feed; without `types` the server uses the stored choice. */
+export function feedUrl(
+  mode: BlendMode,
+  cursor?: string | null,
+  limit = 20,
+  types?: readonly FeedKind[] | null,
+): string {
+  const params = new URLSearchParams({ mode, limit: String(limit) })
+  if (types?.length) params.set('types', types.join(','))
+  if (cursor) params.set('cursor', cursor)
+  return `/api/feed/blend?${params}`
 }
 
 /** Tune in to a moment. */
@@ -117,6 +149,7 @@ export function autoPlayHref(slug: string, start?: string | null): string {
 
 /** Where the theater's queue comes from, as an API URL. */
 export function queueUrl(source: PlaySource, searchUrl: () => string): string {
+  if (source.feed) return feedUrl(source.feed, null, 20, source.feedTypes)
   if (source.channel) {
     const { username, tag } = source.channel
     return `/api/channels/by/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`
@@ -137,6 +170,7 @@ export function queueUrl(source: PlaySource, searchUrl: () => string): string {
 /** Where "back" goes: the channel's page, your channels, or the search. */
 export function backHref(source: PlaySource): string {
   if (source.shared) return '/now'
+  if (source.feed) return '/channels'
   if (source.channel) return `/t/${source.channel.username}/${source.channel.tag}`
   if (source.auto || source.groupChannel) return '/channels'
   if (source.friend) return `/channels/friend/${encodeURIComponent(source.friend.username)}`
@@ -156,6 +190,22 @@ export function sourceFromParams(
   const channel = CHANNEL.exec(get('channel') ?? '')
   const auto = get('auto')
   const moment = get('moment')
+  const feed = get('feed')
+  if (isBlendMode(feed)) {
+    return {
+      search,
+      group: null,
+      channel: null,
+      auto: null,
+      groupChannel: null,
+      friend: null,
+      recent: false,
+      moment: null,
+      start: start && KEY.test(start) ? start : null,
+      feed,
+      feedTypes: parseFeedTypes(get('types')),
+    }
+  }
   const friend = get('friend')
   // `group` is a search's group when it names a signal, else a From everyone channel.
   const signal = SIGNALS.includes(group as MatchSignal) ? (group as MatchSignal) : null

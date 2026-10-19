@@ -213,6 +213,25 @@ export const archivedPosts = sqliteTable(
   }),
 )
 
+// Posts a member has seen in the feed (`post_views`): on stage for 2s, or
+// skipped. New (`/api/feed/blend?mode=new`) plays only posts without a row;
+// the blend also reads it for "close to you". PK: (userId, platform, postId).
+// User-linked (account guard; cleared with the account). Rows older than 180
+// days are pruned at migrate.
+export const postViews = sqliteTable(
+  'post_views',
+  {
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    seenAt: text('seen_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.platform, table.postId] }),
+    seenAtIdx: index('post_views_seen_at_idx').on(table.seenAt),
+  }),
+)
+
 // Tag shares - track which tags are shared publicly
 export const tagShares = sqliteTable(
   'tag_shares',
@@ -875,5 +894,6 @@ export type NewUser = typeof users.$inferInsert
 export type UserIdentity = typeof userIdentities.$inferSelect
 export type NewUserIdentity = typeof userIdentities.$inferInsert
 export type Invite = typeof invites.$inferSelect
+export type PostView = typeof postViews.$inferSelect
 export type LoginToken = typeof loginTokens.$inferSelect
 export type NewLoginToken = typeof loginTokens.$inferInsert

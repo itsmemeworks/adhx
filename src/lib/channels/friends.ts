@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { visibleSave } from '@/lib/people/savers'
-import { newTo } from '@/lib/people/seen'
+import { newTo } from '@/lib/feed/views'
 import type { Member } from '@/lib/people/members'
 
 /**

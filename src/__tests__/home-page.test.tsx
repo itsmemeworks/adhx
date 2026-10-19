@@ -21,9 +21,11 @@ vi.mock('next/navigation', () => ({
 describe('home destination', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('opens Right now', async () => {
+  it('opens New: what your people saved that you haven’t seen', async () => {
     vi.mocked(getCurrentUserId).mockResolvedValue('u1')
-    await expect(HomePage({ searchParams: Promise.resolve({}) })).rejects.toThrow('REDIRECT:/now')
+    await expect(HomePage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      'REDIRECT:/play?feed=new',
+    )
   })
 
   it('starts on a just-added post', async () => {

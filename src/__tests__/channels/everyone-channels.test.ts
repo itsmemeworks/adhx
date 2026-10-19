@@ -46,6 +46,7 @@ import {
 } from '@/lib/channels/group'
 import { friendChannelKeys, friendChannels } from '@/lib/channels/friends'
 import { listMembers } from '@/lib/people/members'
+import { markSeen } from '@/lib/feed/views'
 import { __resetRateLimitState } from '@/lib/rate-limit'
 
 const ANA = 'u_ana'
@@ -253,13 +254,9 @@ describe('Your people (friend channels)', () => {
     expect(friendChannels('', [])).toEqual([])
   })
 
-  it('treats posts the viewer has seen as not new, once post_views exists', () => {
-    testInstance.sqlite.exec(`CREATE TABLE IF NOT EXISTS post_views (
-      user_id TEXT NOT NULL, platform TEXT NOT NULL, post_id TEXT NOT NULL, seen_at TEXT NOT NULL,
-      PRIMARY KEY (user_id, platform, post_id))`)
-    testInstance.sqlite.exec(
-      `INSERT INTO post_views VALUES ('${ANA}', 'twitter', 't0p1', '2026-10-19T00:00:00Z')`,
-    )
+  it('counts what the viewer has seen in the feed as not new', () => {
+    // The same seen list New writes (`POST /api/views` → `markSeen`).
+    markSeen(ANA, [{ platform: 'twitter', id: 't0p1' }])
     expect(friendChannels(ANA, listMembers(ANA))[0].newCount).toBe(6)
   })
 })

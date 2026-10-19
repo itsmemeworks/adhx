@@ -2,21 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bookmark, LayoutGrid, Radio, Search } from 'lucide-react'
+import { Bookmark, CirclePlay, LayoutGrid, Radio, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Gob } from './Gob'
 import { useLogoBusy } from './logo-busy'
 import { QuickSearch, openQuickSearch } from './QuickSearch'
 
 /**
- * The four places in ADHX, the same on every screen: Right now (what people
- * are saving, live, and where Tune in starts), Channels, My saves and Search.
+ * The places in ADHX, the same on every screen: New (what your people saved
+ * that you haven't seen; the signed-in home), Right now (what people are
+ * saving, live, and where Tune in starts), Channels, My saves and Search.
  * Desktop shows them as tabs in the header; phones get a bar along the bottom.
  */
 
-export type NavId = 'now' | 'channels' | 'saves' | 'search'
+export type NavId = 'new' | 'now' | 'channels' | 'saves' | 'search'
 
 export const NAV: { id: NavId; label: string; href: string }[] = [
+  { id: 'new', label: 'New', href: '/play?feed=new' },
   { id: 'now', label: 'Right now', href: '/now' },
   { id: 'channels', label: 'Channels', href: '/channels' },
   { id: 'saves', label: 'My saves', href: '/play?recent=1' },
@@ -44,7 +46,7 @@ function LiveDot({ className }: { className?: string }) {
   )
 }
 
-const ICON = { now: Radio, channels: LayoutGrid, saves: Bookmark, search: Search }
+const ICON = { new: CirclePlay, now: Radio, channels: LayoutGrid, saves: Bookmark, search: Search }
 
 /** The adhx mark and name, linking home; first in every header. */
 export function NxLogo({ className, busy = false }: { className?: string; busy?: boolean }) {

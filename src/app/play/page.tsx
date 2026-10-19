@@ -10,7 +10,8 @@ import { sourceFromParams } from '@/components/next/theater/queue'
  * a channel (`?channel=user/tag`, public ones for anyone), one of your
  * "Made for you" channels (`?auto=slug`), a From everyone channel
  * (`?group=slug`), a friend's channel (`?friend=username`, `&new=1` for the
- * new ones) or a live moment (`?moment=slug`, Tune in; anyone).
+ * new ones) a live moment (`?moment=slug`, Tune in; anyone) or the blended feed
+ * (`?feed=new|everyone|friends|mine`; New is the signed-in home).
  */
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,7 @@ export default async function PlayPage({
   if (!open && !(await getCurrentUserId())) redirect(startHref('/play', params))
   if (
     !open &&
+    !source.feed &&
     !source.auto &&
     !source.groupChannel &&
     !source.friend &&

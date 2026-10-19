@@ -2,6 +2,7 @@
  * Type definitions for the feed components
  */
 import type { Saver } from '@/lib/people/types'
+import type { WhyReason } from '@/lib/feed/blend'
 
 export interface MediaItem {
   id: string
@@ -146,6 +147,10 @@ export interface FeedItem {
   savers?: Saver[]
   /** The viewer's own save is just for them ("Just for me"). Set only for signed-in viewers. */
   isPrivate?: boolean
+  /** The blended feed only: why it's here ("Ana and Ben saved this"). */
+  why?: string
+  /** The blended feed only: every reason, headline first ("Why this one"). */
+  whyReasons?: WhyReason[]
 }
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'
