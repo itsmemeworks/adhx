@@ -28,14 +28,28 @@ class SaveWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             return Result.failure()
         }
 
-        return when (val result = AdhxApi(connection).save(link)) {
+        // Queued on the server at once; follow it so the history shows how it
+        // ended, but well inside WorkManager's 10 minutes: a stopped worker is
+        // run again, and that would queue the link a second time.
+        val api = AdhxApi(connection)
+        val queueId = history.find(itemId)?.queueId
+        val follow = if (queueId != null) {
+            api.followQueued(queueId, interval = { 5_000L }, limitMs = FOLLOW_MS)
+        } else {
+            api.saveAndFollow(link, interval = { 5_000L }, limitMs = FOLLOW_MS,
+                onQueued = { id -> history.update(itemId) { it.queuedWith(id) } })
+        }
+        return when (val result = follow) {
             is ApiResult.Ok -> {
                 history.update(itemId) { it.savedWith(result.value) }
                 Result.success()
             }
             is ApiResult.Offline -> retryOrGiveUp(history, itemId)
             is ApiResult.Failed -> {
-                if (result.status in 400..499) {
+                if (result.code == AdhxApi.STILL_SAVING) {
+                    // The server has it and carries on by itself.
+                    Result.success()
+                } else if (result.status in 200..499) {
                     history.update(itemId) {
                         it.copy(state = ShareState.FAILED, error = Copy.shareError(result.status, result.code, result.message))
                     }
@@ -56,5 +70,7 @@ class SaveWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     private companion object {
         /** With back-off capped at 5 hours, this is roughly a week of trying. */
         const val MAX_ATTEMPTS = 40
+
+        const val FOLLOW_MS = 8 * 60 * 1_000L
     }
 }

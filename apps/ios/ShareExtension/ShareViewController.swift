@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -8,6 +9,7 @@ import UniformTypeIdentifiers
 final class ShareViewController: UIViewController {
     private let flow = ShareFlow()
     private var finished = false
+    private var sizeWatch: AnyCancellable?
 
     override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
@@ -19,6 +21,23 @@ final class ShareViewController: UIViewController {
         modalPresentationStyle = .overFullScreen
     }
 
+    /// iOS 26+ puts a share extension inside its own opaque sheet (FB20934974,
+    /// no API to change it). Clearing the views above ours lets the frosted
+    /// card float over the app, as designed.
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        clearSystemCard()
+    }
+
+    private func clearSystemCard() {
+        var next = view.superview
+        while let v = next {
+            v.backgroundColor = .clear
+            v.isOpaque = false
+            next = v.superview
+        }
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         guard let window = view.window else { return }
@@ -26,6 +45,7 @@ final class ShareViewController: UIViewController {
         let frame = view.convert(view.bounds, to: nil)
         let inCard = frame.minY > 1 || frame.height < screen.height - 1
         if flow.presentedInCard != inCard { flow.presentedInCard = inCard }
+        clearSystemCard()
     }
 
     override func viewDidLoad() {
@@ -33,6 +53,15 @@ final class ShareViewController: UIViewController {
         overrideUserInterfaceStyle = .dark
         view.backgroundColor = .clear
         view.isOpaque = false
+
+        // When iOS shows us in its own card, ask for one only as tall as ours.
+        sizeWatch = flow.$cardHeight
+            .removeDuplicates()
+            .sink { [weak self] height in
+                guard let self, height > 0 else { return }
+                let bottom = self.view.window?.safeAreaInsets.bottom ?? 0
+                self.preferredContentSize = CGSize(width: self.view.bounds.width, height: height + bottom)
+            }
 
         flow.onFinish = { [weak self] in self?.finish() }
         flow.onOpen = { [weak self] url in self?.open(url) }

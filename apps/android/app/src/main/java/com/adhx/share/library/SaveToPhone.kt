@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -51,27 +52,70 @@ object SaveToPhone {
     /**
      * Fetch [url] with `download=1` into the app's cache (cache/shared, which
      * the FileProvider hands out) for the share sheet. Earlier ones are cleared
-     * first, so only one copy is ever kept.
+     * after a day on subsequent exports. Fresh batches stay valid for recipients.
      */
-    suspend fun fetchToShare(context: Context, url: String, name: String): Pair<File, String>? = withContext(Dispatchers.IO) {
-        val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
-            ?: return@withContext null
-        val folder = File(context.cacheDir, "shared").apply {
-            deleteRecursively()
-            mkdirs()
-        }
+    suspend fun fetchToShare(context: Context, url: String, name: String): Pair<File, String>? =
+        fetchAllToShare(context, listOf(url), listOf(name))?.firstOrNull()
+
+    /**
+     * The same for several files (an album), with [onProgress] from 0 to 1
+     * as they come in (null while a file's size isn't known). Null when any
+     * of them didn't come.
+     */
+    suspend fun fetchAllToShare(
+        context: Context,
+        urls: List<String>,
+        names: List<String>,
+        onProgress: (Float?) -> Unit = {},
+    ): List<Pair<File, String>>? = withContext(Dispatchers.IO) {
+        val folder = try { ShareCache.create(File(context.cacheDir, "shared")) }
+            catch (_: IOException) { return@withContext null }
+        var complete = false
         try {
-            client.newCall(Request.Builder().url(address).build()).execute().use { response ->
-                val body = response.body
-                if (!response.isSuccessful || body == null) return@withContext null
-                val type = body.contentType()?.let { "${it.type}/${it.subtype}" } ?: "video/mp4"
-                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "mp4"
-                val file = File(folder, "$name.$extension")
-                file.outputStream().use { out -> body.byteStream().copyTo(out) }
-                file to type
+            val got = mutableListOf<Pair<File, String>>()
+            for ((i, url) in urls.withIndex()) {
+                val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
+                    ?: return@withContext null
+                try {
+                    client.newCall(Request.Builder().url(address).build()).execute().use { response ->
+                        val body = response.body
+                        if (!response.isSuccessful || body == null) return@withContext null
+                        val type = body.contentType()?.let { "${it.type}/${it.subtype}" } ?: "application/octet-stream"
+                        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "bin"
+                        val file = File(folder, "${names.getOrElse(i) { "adhx-$i" }}.$extension")
+                        val length = body.contentLength().takeIf { it > 0 }
+                        ShareCache.requireSpace(folder, length ?: 4 * 1024 * 1024L)
+                        var read = 0L
+                        var sinceSpaceCheck = 0L
+                        body.byteStream().use { input ->
+                            file.outputStream().use { out ->
+                                val buffer = ByteArray(64 * 1024)
+                                while (true) {
+                                    coroutineContext.ensureActive()
+                                    val n = input.read(buffer)
+                                    if (n < 0) break
+                                    if (sinceSpaceCheck >= 4 * 1024 * 1024) {
+                                        ShareCache.requireSpace(folder, 4 * 1024 * 1024L)
+                                        sinceSpaceCheck = 0
+                                    }
+                                    out.write(buffer, 0, n)
+                                    read += n
+                                    sinceSpaceCheck += n
+                                    onProgress(length?.let { (i + read.toFloat() / it) / urls.size })
+                                }
+                            }
+                        }
+                        got += file to type
+                    }
+                } catch (e: IOException) {
+                    return@withContext null
+                }
             }
-        } catch (e: IOException) {
-            null
+            complete = true
+            ShareCache.finish(folder)
+            got
+        } finally {
+            if (!complete) ShareCache.discard(folder)
         }
     }
 

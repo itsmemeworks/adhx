@@ -13,6 +13,8 @@ final class LibraryModel: ObservableObject {
     /// Saves that arrived at the top since you last looked (from a share, the
     /// web, or a sync), shown as a pill that jumps to them.
     @Published var newAtTop = 0
+    /// Saves on their way (still being kept on the server), not in `saves` yet.
+    @Published private(set) var preparing = 0
     private var nextOffset: Int? = 0
 
     // Search
@@ -53,6 +55,7 @@ final class LibraryModel: ObservableObject {
         defer { loading = false }
         do {
             let page = try await client.saves(offset: offset)
+            if replacing { preparing = page.preparing ?? 0 }
             if replacing {
                 if loadedOnce, let firstOld = saves.first?.key {
                     let fresh = page.items.prefix { $0.key != firstOld }.count

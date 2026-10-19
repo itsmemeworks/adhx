@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -61,6 +63,7 @@ import com.adhx.share.links.Links
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.KeepStatus
+import com.adhx.share.net.SaveResponse
 import com.adhx.share.net.StatusResponse
 import com.adhx.share.ui.AdhxBrand
 import com.adhx.share.ui.AdhxColors
@@ -75,14 +78,17 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
- * The bottom sheet over the app you shared from (Android.dc.html): saving →
- * saved, or already saved / not a post / offline / not connected.
+ * A compact frosted card at the bottom, over the app you shared from:
+ * saving → saved, or already saved / not a post / offline / not connected.
+ * [frosted] is true while the window behind is blurred.
  */
 @Composable
 fun ShareSheetScreen(
     vm: ShareViewModel,
+    frosted: Boolean,
     onFinish: () -> Unit,
-    onOpenInAdhx: (server: String, path: String?) -> Unit,
+    /** Opens the post in this app's player (the website only as a fallback). */
+    onOpenInAdhx: (server: String, post: SaveResponse?) -> Unit,
     onOpenApp: () -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -119,13 +125,13 @@ fun ShareSheetScreen(
             enter = slideInVertically { it } + fadeIn(),
             exit = slideOutVertically { it } + fadeOut(),
         ) {
-            Sheet(onTouched = { touched = true }, onDismiss = close) {
+            Sheet(frosted = frosted, onTouched = { touched = true }, onDismiss = close) {
                 when (ui.phase) {
                     Phase.Saving -> SavingContent(ui)
                     Phase.Saved, Phase.AlreadySaved -> SavedContent(
                         ui = ui,
                         onOpen = {
-                            ui.server?.let { onOpenInAdhx(it, ui.post?.openPath) }
+                            ui.server?.let { onOpenInAdhx(it, ui.post) }
                             close()
                         },
                         onDone = close,
@@ -133,7 +139,7 @@ fun ShareSheetScreen(
                     Phase.NotAPost -> MessageContent(
                         ui = ui,
                         title = Copy.NOT_A_POST_TITLE,
-                        body = Copy.NOT_A_POST_BODY,
+                        body = ui.message ?: Copy.NOT_A_POST_BODY,
                         button = "OK",
                         onButton = close,
                     )
@@ -159,13 +165,18 @@ fun ShareSheetScreen(
 }
 
 @Composable
-private fun Sheet(onTouched: () -> Unit, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+private fun Sheet(frosted: Boolean, onTouched: () -> Unit, onDismiss: () -> Unit, content: @Composable () -> Unit) {
     val density = LocalDensity.current
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val dragState = rememberDraggableState { delta -> dragOffset = (dragOffset + delta).coerceAtLeast(0f) }
 
+    // Glass over a blurred app; nearly solid where the app behind isn't blurred.
+    val glass by animateFloatAsState(if (frosted) 0.72f else 0.94f, label = "glass")
     Column(
         modifier = Modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 10.dp, vertical = 10.dp)
+            .widthIn(max = 520.dp)
             .fillMaxWidth()
             // Drag down to dismiss. Outside the offset, so the drag isn't
             // measured against a sheet that moves under the finger.
@@ -181,8 +192,9 @@ private fun Sheet(onTouched: () -> Unit, onDismiss: () -> Unit, content: @Compos
                 },
             )
             .offset { IntOffset(0, dragOffset.roundToInt()) }
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .background(AdhxColors.Surface)
+            .clip(RoundedCornerShape(28.dp))
+            .background(AdhxColors.Surface.copy(alpha = glass))
+            .border(1.dp, AdhxColors.White.copy(alpha = 0.08f), RoundedCornerShape(28.dp))
             // Any touch on the sheet keeps it open (no auto-close).
             .pointerInput(Unit) {
                 awaitPointerEventScope {
@@ -194,9 +206,8 @@ private fun Sheet(onTouched: () -> Unit, onDismiss: () -> Unit, content: @Compos
             }
             // Taps on the sheet itself don't fall through to the dimmed area.
             .pointerInput(Unit) { detectTapGestures { } }
-            .navigationBarsPadding()
-            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box(
             Modifier
@@ -205,7 +216,7 @@ private fun Sheet(onTouched: () -> Unit, onDismiss: () -> Unit, content: @Compos
                 .clip(RoundedCornerShape(2.dp))
                 .background(AdhxColors.Hairline),
         )
-        AdhxBrand(markSize = 30.dp)
+        AdhxBrand(markSize = 24.dp)
         content()
     }
 }
@@ -347,12 +358,12 @@ private fun PostHeader(ui: ShareUi, loading: Boolean) {
     }
 }
 
-/** Tall for vertical video (64×112), wide once a landscape poster loads (112×63). */
+/** Tall for vertical video (56×96), wide once a landscape poster loads (96×54). */
 @Composable
 private fun Poster(url: String?, platform: String?) {
     var landscape by remember(url) { mutableStateOf(false) }
-    val width: Dp = if (landscape) 112.dp else 64.dp
-    val height: Dp = if (landscape) 63.dp else 112.dp
+    val width: Dp = if (landscape) 96.dp else 56.dp
+    val height: Dp = if (landscape) 54.dp else 96.dp
     Box(
         Modifier
             .size(width = width, height = height)
@@ -400,8 +411,9 @@ private fun StatusBox(content: @Composable () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(AdhxColors.Black)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            // Darker glass inside the card, not a solid block.
+            .background(AdhxColors.Black.copy(alpha = 0.4f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         content()
     }

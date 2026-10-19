@@ -10,6 +10,7 @@ import {
   userPreferences,
   accessKeys,
   appPairCodes,
+  phoneSaveQueue,
   adminSignInLinks,
   oauthTokens,
   tagShares,
@@ -104,6 +105,7 @@ export const DELETE = withAuth(async (_req, userId) => {
       db.delete(oauthTokens).where(eq(oauthTokens.userId, userId)).run()
       db.delete(accessKeys).where(eq(accessKeys.userId, userId)).run()
       db.delete(appPairCodes).where(eq(appPairCodes.userId, userId)).run()
+      db.delete(phoneSaveQueue).where(eq(phoneSaveQueue.userId, userId)).run()
 
       // 16. Preserve aggregate history without retaining this account's
       // private actor/viewer ID.

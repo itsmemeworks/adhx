@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Our own bottom sheet over a dimmed backdrop: Saving, Saved, Already saved,
-/// Not a post, Offline, Not connected.
+/// Our own small card, frosted so the app underneath shows through: Saving,
+/// Saved, Already saved, Not a post, Offline, Not connected.
 struct ShareSheetScreen: View {
     @ObservedObject var flow: ShareFlow
     @State private var shown = false
@@ -10,7 +10,7 @@ struct ShareSheetScreen: View {
     var body: some View {
         // iOS may show the extension as its own card. Then the content sits at
         // the card's top on one surface, instead of a sheet inside a sheet.
-        ZStack(alignment: flow.presentedInCard ? .top : .bottom) {
+        ZStack(alignment: .bottom) {
             backdrop
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
@@ -21,7 +21,7 @@ struct ShareSheetScreen: View {
             if shown {
                 sheet
                     .offset(y: drag)
-                    .transition(flow.presentedInCard ? .opacity : .move(edge: .bottom))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .onAppear {
@@ -35,9 +35,10 @@ struct ShareSheetScreen: View {
         .animation(.easeInOut(duration: 0.2), value: flow.phase)
     }
 
+    /// A light dim over the app (none when iOS already shows us in its own card).
     private var backdrop: Color {
-        if flow.presentedInCard { return Theme.surface }
-        return Color.black.opacity(shown ? 0.55 : 0)
+        if flow.presentedInCard { return .clear }
+        return Color.black.opacity(shown ? 0.3 : 0)
     }
 
     private var sheet: some View {
@@ -51,13 +52,26 @@ struct ShareSheetScreen: View {
             content
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 14)
+        .padding(.bottom, 18)
         .frame(maxWidth: .infinity)
-        .background(
-            UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28, style: .continuous)
-                .fill(Theme.surface)
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .background {
+            // Frosted: the app underneath shows through, blurred and darkened.
+            let shape = RoundedRectangle(cornerRadius: 30, style: .continuous)
+            shape.fill(.ultraThinMaterial)
+                .overlay(shape.fill(Theme.surface.opacity(0.55)))
+                .overlay(shape.strokeBorder(.white.opacity(0.08), lineWidth: 1))
+                .shadow(color: .black.opacity(0.35), radius: 24, y: 8)
+        }
+        .padding(.horizontal, 10)
+        .padding(.bottom, 8)
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: CardHeightKey.self, value: proxy.size.height)
+            }
+        }
+        .onPreferenceChange(CardHeightKey.self) { height in
+            if abs(flow.cardHeight - height) > 0.5 { flow.cardHeight = height }
+        }
         .foregroundStyle(.white)
         .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in flow.touch() })
         .gesture(
@@ -167,7 +181,7 @@ private struct Poster: View {
                     )
             }
         }
-        .frame(width: wide ? 112 : 92, height: wide ? 63 : 164)
+        .frame(width: wide ? 112 : 72, height: wide ? 63 : 96)
         .clipShape(shape)
         .accessibilityHidden(true)
     }
@@ -265,7 +279,7 @@ private struct SavingContent: View {
                 .padding(.vertical, 2)
             }
 
-            Text("You can close this. It carries on, and the post is in My saves as soon as it lands.")
+            Text("You can close this. Your ADHX carries on, and the post shows up in My saves once it’s ready.")
                 .font(Theme.sans(13))
                 .lineSpacing(3)
                 .foregroundStyle(Theme.faint)
@@ -475,5 +489,13 @@ private struct MessageContent: View {
             Button(button) { flow.requestClose() }
                 .buttonStyle(PillButtonStyle(kind: .primary))
         }
+    }
+}
+
+/// The card's height, measured for the extension's preferred sheet size.
+private struct CardHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }

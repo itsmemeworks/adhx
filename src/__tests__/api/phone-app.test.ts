@@ -23,10 +23,11 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: vi.fn(async () => sessionUser),
+  clearSessionCookie: vi.fn(),
 }))
 
 vi.mock('@/lib/sentry', () => ({
-  metrics: { bookmarkAdded: vi.fn() },
+  metrics: { bookmarkAdded: vi.fn(), dataCleared: vi.fn() },
   captureException: vi.fn(),
 }))
 
@@ -599,5 +600,149 @@ describe('helpers', () => {
     expect(normalizePairCode('ABCDEFG0')).toBeNull() // 0 isn't in the alphabet
     expect(normalizePairCode('ABC')).toBeNull()
     expect(normalizePairCode(null)).toBeNull()
+  })
+})
+
+describe('saving in the background (Prefer: respond-async)', () => {
+  async function share(body: unknown, key: string) {
+    const { POST } = await import('@/app/api/app/save/route')
+    const req = new NextRequest(`${BASE}/api/app/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        authorization: `Bearer ${key}`,
+        prefer: 'respond-async',
+      },
+      body: JSON.stringify(body),
+    })
+    const res = await POST(req)
+    return { status: res.status, body: await res.json() }
+  }
+
+  async function progress(id: string, key: string) {
+    const { GET } = await import('@/app/api/app/save/route')
+    const res = await GET(get(`/api/app/save?id=${id}`, key))
+    return { status: res.status, body: await res.json() }
+  }
+
+  it.each(['clear', 'delete'] as const)(
+    'does not resurrect an in-flight save after account %s',
+    async (action) => {
+      const key = await phoneKey()
+      const queued = await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+      const description = await mockDescribeNetworkPost()
+      mockDescribeNetworkPost.mockClear()
+      let release!: (value: unknown) => void
+      let started!: () => void
+      const reading = new Promise<void>((resolve) => {
+        started = resolve
+      })
+      mockDescribeNetworkPost.mockImplementationOnce(() => {
+        started()
+        return new Promise((resolve) => {
+          release = resolve
+        })
+      })
+      const { saveQueueTick } = await import('@/lib/app/save-queue')
+      const working = saveQueueTick()
+      await reading
+      expect(testInstance.db.select().from(schema.phoneSaveQueue).all()[0]).toMatchObject({
+        id: queued.body.id,
+        status: 'working',
+      })
+      sessionUser = 'user-1'
+      const response =
+        action === 'clear'
+          ? await (await import('@/app/api/account/clear/route')).POST()
+          : await (await import('@/app/api/account/route')).DELETE()
+      expect(response.status).toBe(200)
+      release(description)
+      await working
+      expect(testInstance.db.select().from(schema.phoneSaveQueue).all()).toHaveLength(0)
+      expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+      expect(testInstance.db.select().from(schema.bookmarkMedia).all()).toHaveLength(0)
+      expect(wakeKeep).not.toHaveBeenCalled()
+    },
+  )
+
+  it('does not start a queued operation removed before execution', async () => {
+    const key = await phoneKey()
+    await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    const stale = testInstance.db.select().from(schema.phoneSaveQueue).all()[0]
+    testInstance.db.delete(schema.phoneSaveQueue).run()
+    const { runQueuedSave } = await import('@/lib/app/save-queue')
+    await runQueuedSave(stale)
+    expect(mockDescribeNetworkPost).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+  })
+
+  it('answers at once and saves the post in the background', async () => {
+    const key = await phoneKey()
+    const queued = await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    expect(queued.status).toBe(202)
+    expect(queued.body).toMatchObject({ queued: true, state: 'waiting' })
+    // Nothing read or saved yet.
+    expect(mockDescribeNetworkPost).not.toHaveBeenCalled()
+    expect(testInstance.db.select().from(schema.bookmarks).all()).toHaveLength(0)
+    expect((await progress(queued.body.id, key)).body).toMatchObject({ state: 'waiting' })
+
+    const { saveQueueTick } = await import('@/lib/app/save-queue')
+    expect(await saveQueueTick()).toBe(1)
+
+    const done = await progress(queued.body.id, key)
+    expect(done.status).toBe(200)
+    expect(done.body).toMatchObject({
+      state: 'saved',
+      post: { platform: 'youtube', id: VIDEO_ID, author: 'somechannel', alreadySaved: false },
+    })
+    const [row] = testInstance.db.select().from(schema.bookmarks).all()
+    expect(row).toMatchObject({ userId: 'user-1', source: 'phone_app' })
+  })
+
+  it('says why when the link isn’t one post', async () => {
+    const key = await phoneKey()
+    const queued = await share({ url: 'https://www.youtube.com/@somechannel' }, key)
+    expect(queued.status).toBe(202)
+    const { saveQueueTick } = await import('@/lib/app/save-queue')
+    await saveQueueTick()
+    expect((await progress(queued.body.id, key)).body).toMatchObject({
+      state: 'failed',
+      code: 'not_a_post',
+    })
+  })
+
+  it('tries again later when the network is slow, then saves', async () => {
+    const key = await phoneKey()
+    mockDescribeNetworkPost.mockRejectedValueOnce(new Error('timed out'))
+    const queued = await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    const { saveQueueTick } = await import('@/lib/app/save-queue')
+    await saveQueueTick()
+    const row = testInstance.db.select().from(schema.phoneSaveQueue).all()[0]
+    expect(row).toMatchObject({ status: 'waiting', attempts: 1 })
+    expect(Date.parse(row.nextAttemptAt!)).toBeGreaterThan(Date.now())
+    expect((await progress(queued.body.id, key)).body.state).toBe('waiting')
+    // Due now.
+    testInstance.db
+      .update(schema.phoneSaveQueue)
+      .set({ nextAttemptAt: new Date(0).toISOString() })
+      .run()
+    await saveQueueTick()
+    expect((await progress(queued.body.id, key)).body).toMatchObject({ state: 'saved' })
+  })
+
+  it('only answers about your own shares', async () => {
+    const key = await phoneKey()
+    const queued = await share({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    sessionUser = 'user-2'
+    const { code } = await newCode()
+    const other = (await pair(code, 'Pixel')).body.key
+    expect((await progress(queued.body.id, other)).status).toBe(404)
+  })
+
+  it('still saves at once for older apps that don’t ask to wait', async () => {
+    const key = await phoneKey()
+    const { status: code, body } = await save({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    expect(code).toBe(200)
+    expect(body).toMatchObject({ platform: 'youtube', id: VIDEO_ID })
   })
 })

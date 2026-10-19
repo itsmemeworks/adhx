@@ -27,6 +27,8 @@ final class ShareFlow: ObservableObject {
     /// iOS may show the extension in its own card instead of over the app;
     /// then the backdrop is solid (as on the States boards) instead of dimmed.
     @Published var presentedInCard = false
+    /// The card's height, so the extension can ask iOS for a sheet that fits it.
+    @Published var cardHeight: CGFloat = 0
 
     private(set) var server: URL?
     private var recordId: String?
@@ -63,7 +65,9 @@ final class ShareFlow: ObservableObject {
         return ADHXClient.resolve(result?.posterUrl, against: server)
     }
 
+    /// The app, on this post; the website only when there's no post yet.
     var openURL: URL? {
+        if let r = result, let url = Links.post(platform: r.platform, id: r.id) { return url }
         guard let server else { return nil }
         return ADHXClient.resolve(result?.openPath, against: server) ?? server
     }
@@ -101,17 +105,15 @@ final class ShareFlow: ObservableObject {
 
     private func save(with client: ADHXClient, link: String, recordId: String) async {
         do {
-            let r = try await client.save(url: link)
-            History.update(id: recordId) { $0.apply(r) }
-            result = r
-            platform = r.platform
-            if r.alreadySaved == true {
-                phase = .alreadySaved
-            } else {
-                phase = .saved
-                scheduleAutoClose()
+            switch try await client.save(url: link) {
+            case .saved(let r):
+                landed(r, client: client)
+            case .queued(let id):
+                // Your ADHX has it and saves it in its own time; ask how it's
+                // going while the sheet is open.
+                History.update(id: recordId) { $0.queue(id) }
+                waitForServer(client: client, queueId: id)
             }
-            startPolling(client: client, platform: r.platform, id: r.id)
         } catch APIError.offline, APIError.slow {
             History.update(id: recordId) { $0.stage = .queued }
             OfflineQueue.add(id: recordId, link: link)
@@ -122,16 +124,66 @@ final class ShareFlow: ObservableObject {
             phase = .notConnected
         } catch let error as APIError {
             History.update(id: recordId) { $0.fail(error) }
-            switch error.code {
-            case "not_a_post", "no_link":
-                phase = .notAPost
-            case "unavailable":
-                phase = .problem(title: "Can’t save this post", message: error.message)
-            default:
-                phase = .problem(title: "Couldn’t save this", message: error.message)
-            }
+            failed(code: error.code, message: error.message)
         } catch {
             // Cancelled: the sheet went away.
+        }
+    }
+
+    /// Saved: show it, and how its copy is coming along.
+    private func landed(_ r: SaveResult, client: ADHXClient) {
+        if let recordId { History.update(id: recordId) { $0.apply(r) } }
+        result = r
+        platform = r.platform
+        if r.alreadySaved == true {
+            phase = .alreadySaved
+        } else {
+            phase = .saved
+            scheduleAutoClose()
+        }
+        startPolling(client: client, platform: r.platform, id: r.id)
+    }
+
+    private func failed(code: String?, message: String) {
+        switch code {
+        case "not_a_post", "no_link":
+            phase = .notAPost
+        case "unavailable":
+            phase = .problem(title: "Can’t save this post", message: message)
+        default:
+            phase = .problem(title: "Couldn’t save this", message: message)
+        }
+    }
+
+    /// The server took the link and is reading it; check every 1.5 s until it
+    /// lands or gives up. Closing the sheet stops asking, not the save.
+    private func waitForServer(client: ADHXClient, queueId: String) {
+        pollTask?.cancel()
+        pollTask = Task { [weak self] in
+            var failures = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: Self.pollInterval)
+                guard !Task.isCancelled else { return }
+                do {
+                    let progress = try await client.queuedSave(id: queueId)
+                    guard let self else { return }
+                    switch progress.state {
+                    case "saved":
+                        if let post = progress.post { self.landed(post, client: client) }
+                        return
+                    case "failed":
+                        if let recordId = self.recordId { History.update(id: recordId) { $0.apply(progress) } }
+                        let code = progress.code ?? "failed"
+                        self.failed(code: code, message: progress.error ?? APIError.fallbackMessage(for: code))
+                        return
+                    default:
+                        failures = 0
+                    }
+                } catch {
+                    failures += 1
+                    if failures >= 5 { return }
+                }
+            }
         }
     }
 

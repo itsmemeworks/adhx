@@ -229,6 +229,31 @@ describe('API: /api/account', () => {
   const EMAIL_A = 'user-a@example.com'
   const EMAIL_B = 'user-b@example.com'
 
+  it('deletes queued shares for this account without touching another account', async () => {
+    testInstance.db
+      .insert(schema.phoneSaveQueue)
+      .values(
+        [USER_A, USER_B].map((userId) => ({
+          id: userId,
+          userId,
+          url: 'https://youtu.be/private-share',
+          status: 'waiting',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })),
+      )
+      .run()
+    const { DELETE } = await import('@/app/api/account/route')
+    expect((await DELETE()).status).toBe(200)
+    expect(
+      testInstance.db
+        .select()
+        .from(schema.phoneSaveQueue)
+        .all()
+        .map((row) => row.userId),
+    ).toEqual([USER_B])
+  })
+
   beforeEach(async () => {
     testInstance = createTestDb()
     mockUserId = USER_A

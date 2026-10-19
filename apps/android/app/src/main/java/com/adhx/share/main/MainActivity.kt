@@ -31,6 +31,7 @@ import com.adhx.share.library.LibraryViewModel
 import com.adhx.share.library.LocalPip
 import com.adhx.share.library.PipHost
 import com.adhx.share.library.PlayerScreen
+import com.adhx.share.library.PostLinkScreen
 import com.adhx.share.library.Route
 import com.adhx.share.library.SavesHome
 import com.adhx.share.library.SearchScreen
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) handlePairLink(intent)
+        if (savedInstanceState == null) handleLink(intent)
         pip.start()
 
         setContent {
@@ -84,14 +85,23 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handlePairLink(intent)
+        handleLink(intent)
     }
 
-    /** adhx://pair?server=…&code=… opened from the phone's camera or a browser. */
-    private fun handlePairLink(intent: Intent?) {
+    /**
+     * adhx://pair?server=…&code=… from the phone's camera or a browser, or
+     * adhx://post?platform=…&id=… (the share card's Open in ADHX).
+     */
+    private fun handleLink(intent: Intent?) {
         val data = intent?.data ?: return
-        if (intent.action == Intent.ACTION_VIEW && data.scheme.equals("adhx", ignoreCase = true)) {
-            vm.pairFromLink(data.toString())
+        if (intent.action != Intent.ACTION_VIEW || !data.scheme.equals("adhx", ignoreCase = true)) return
+        when (data.host?.lowercase()) {
+            "post" -> {
+                val platform = data.getQueryParameter("platform")?.takeIf { it.isNotBlank() } ?: return
+                val id = data.getQueryParameter("id")?.takeIf { it.isNotBlank() } ?: return
+                library.openPostLink(platform, id)
+            }
+            else -> vm.pairFromLink(data.toString())
         }
     }
 }
@@ -155,6 +165,13 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
                 connection = current,
                 onBack = back,
                 onOpen = { item -> openShared(context, scope, library, current, item) },
+            )
+            is Route.PostLink -> PostLinkScreen(
+                library = library,
+                server = current.server,
+                platform = route.platform,
+                id = route.id,
+                onBack = back,
             )
             is Route.Post -> PlayerScreen(
                 posts = listOf(route.post),

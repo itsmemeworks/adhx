@@ -9,6 +9,7 @@ import com.adhx.share.data.ConnectionStore
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.PhonePost
+import com.adhx.share.net.StatusResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -40,6 +41,9 @@ sealed interface Route {
 
     /** One post from Shared lately, in the player. */
     data class Post(val post: PhonePost) : Route
+
+    /** One post by its network and id (adhx://post?platform=…&id=…), fetched first. */
+    data class PostLink(val platform: String, val id: String) : Route
     data object Settings : Route
 }
 
@@ -52,6 +56,8 @@ data class SavesUi(
     val error: String? = null,
     /** Saves that arrived above the one on screen since the last reload (the "N new saves" pill). */
     val newOnTop: Int = 0,
+    /** Saves still being downloaded, not in [items] yet ("2 more on their way"). */
+    val preparing: Int = 0,
 )
 
 data class SearchUi(
@@ -137,6 +143,12 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         stack.add(route)
     }
 
+    /** adhx://post: the post on top of wherever the app was, once. */
+    fun openPostLink(platform: String, id: String) {
+        val link = Route.PostLink(platform, id)
+        if (stack.lastOrNull() != link) stack.add(link)
+    }
+
     /** Back: true when there was somewhere to go back to. */
     fun back(): Boolean {
         if (stack.size <= 1) return false
@@ -165,6 +177,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                         nextOffset = result.value.nextOffset,
                         loading = false,
                         loadedOnce = true,
+                        preparing = result.value.preparing,
                     )
                 }
                 is ApiResult.Failed -> {
@@ -204,8 +217,14 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                 val had = current.items.mapTo(HashSet()) { it.key }
                 val firstHad = current.items.firstOrNull()?.key
                 val above = result.value.items.takeWhile { it.key != firstHad }.filter { it.key !in had }
-                if (above.isEmpty()) return@launch
+                if (above.isEmpty()) {
+                    if (current.preparing != result.value.preparing) {
+                        _saves.value = current.copy(preparing = result.value.preparing)
+                    }
+                    return@launch
+                }
                 _saves.value = current.copy(
+                    preparing = result.value.preparing,
                     items = above + current.items,
                     total = result.value.total,
                     // The server's offsets moved down by as many as arrived.
@@ -241,6 +260,12 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             }
             ApiResult.Offline -> ApiResult.Offline
         }
+    }
+
+    /** How the copy of one save is coming along. */
+    suspend fun status(platform: String, id: String): ApiResult<StatusResponse> {
+        val connection = store.current() ?: return ApiResult.Offline
+        return AdhxApi(connection).status(platform, id)
     }
 
     // Search

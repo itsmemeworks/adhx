@@ -6,6 +6,36 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Bound mobile share caches and retry newly kept playback
+
+- Give Android exports separate batches, retaining fresh recipient URIs while removing failed transfers and batches older than 24 hours on later exports.
+- Check a 64 MiB free-space reserve before and during Android share downloads without adding a per-file limit; cover cache lifecycle with four file-I/O regressions.
+- Give iOS exports operation-owned temporary folders, removing partial/cancelled downloads and cleaning successful files after Photos or share-sheet completion.
+- Retry iOS playback once on the first kept status even when the old player failure notification arrives later; reset status on post changes and honour cancellation.
+- Android debug compilation and seven JVM tests pass; unsigned iOS simulator builds pass for ARM64 and x86_64. Source only; no phone installed or service changed.
+
+## 2026-10-19 — Reset Android post-link readiness between posts
+
+- Key the post-link screen's remembered post, progress, readiness, errors and retries by network and post ID.
+- Opening a second post in the running app now starts its own readiness polling rather than inheriting a completed post's player state.
+- Android debug Kotlin compilation and queue-receipt JVM regressions pass with one worker and a 1 GiB heap; no phone or service installed.
+
+## 2026-10-19 — Cancel queued shares when clearing an account
+
+- Clear-account now deletes queued URLs together with saved data.
+- Revalidate the queue receipt and live account before work and inside every platform's save transaction after metadata fetching.
+- Keep the optional transactional guard inactive for ordinary saves; cleared/deleted queued work cannot restore bookmarks or media.
+- Add deferred-metadata clear/delete regressions and stale-claim coverage; 108 focused server tests, typecheck, lint (existing warnings) and formatting pass.
+- Android queue-receipt JVM tests (3) and debug APK build pass with one worker and a 1 GiB compiler heap. Source-only changes; no service or phone installed.
+
+## 2026-10-19 — Durable phone queue receipts and feed readiness
+
+- Review fixes for background phone saves: include queued metadata in account-scoped preparing counts and keep disabled/backfill-excluded downloads visible.
+- Remove queued URLs during account deletion and exclude orphaned account jobs from claims.
+- Persist Android queue receipts before polling; resume receipts after process death or follow timeout without submitting another save.
+- Add server feed/account regressions and Android serialization/HTTP resume tests; source is in flight, with no running service changed.
+- Typecheck and lint pass (existing warnings); focused tests hit import timeouts under host load, Android build stopped to prioritise service recovery. Full verification remains required.
+
 ## 2026-10-19 — Publish only tagged releases
 
 - Supersede automatic main-image publication: ordinary PR merges never publish; Release Please calls the publisher only after creating a tagged release.

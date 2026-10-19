@@ -77,6 +77,29 @@ openPath, alreadySaved, savedAt }`
 The app treats no answer, a timeout, and 502/503/504 as **offline**: the link
 is queued on the phone and sent when the server can be reached.
 
+**Saving in the background** (current apps): send `Prefer: respond-async`.
+The server answers at once, before reading the post (which can take a while
+from a home server; Instagram is slow to answer one):
+
+- `202 { queued: true, id, state: 'waiting' }`, or `400 no_link` / `401` as above.
+
+Then poll `GET /api/app/save?id=…` (every 1.5 s while the sheet is open):
+
+- `200 { id, state: 'waiting' | 'saving' }`
+- `200 { id, state: 'saved', post: { …the 200 answer above… } }`; from here,
+  `/api/app/status` as before.
+- `200 { id, state: 'failed', code, error }`: `code` is `not_a_post`,
+  `unavailable` or `failed` (gave up after retrying for about 15 minutes).
+- `404 { code: 'not_queued' }` not yours, or finished more than a week ago.
+
+The server retries a slow or failing network on its own, so the sheet can
+close at any point. Without the header, `POST` saves at once as above (older
+apps).
+Apps persist the queue receipt before following it and resume polling after
+restarts without posting the same link again. Clearing or deleting an account
+removes its queued links. A queued metadata request already in progress checks
+its receipt again inside the save transaction, so it cannot restore cleared data.
+
 ### `GET /api/app/status?platform=…&id=…`
 
 How the copy of a saved post is coming along.
@@ -101,7 +124,12 @@ How the copy of a saved post is coming along.
 Your saves for the player, newest first, without archived ones (like My saves
 on the web). `limit` 1–50 (default 20).
 
-- `200 { items: PhonePost[], total, nextOffset }` (`nextOffset` null at the end)
+- `200 { items: PhonePost[], total, nextOffset, preparing }` (`nextOffset` null
+  at the end). A save joins the list once it's ready: its copy is kept, or
+  can't be, or isn't needed. `preparing` counts links queued for metadata and
+  saves still being downloaded (not in `items` or `total`); apps may say
+  "2 more on their way". Disabled keeping and older saves excluded by the
+  backfill cutoff remain visible rather than waiting forever.
 - `?platform=…&id=…` instead: `200 { item: PhonePost }` for one of your saves,
   archived or not (Shared lately opens it in the player), or
   `404 { code: 'not_saved' }`.
@@ -170,8 +198,10 @@ width, height, durationMs }], article }`
 
 1. **Open**: read the shared link (or the first link in shared text); show the
    network's mark straight away (`simple-icons` paths), and the link.
-2. **Saving**: one `POST /api/app/save`. "Saving to your ADHX…" and "You can
-   close this. It carries on, and the post is in My saves as soon as it lands."
+2. **Saving**: one `POST /api/app/save` with `Prefer: respond-async`, then
+   `GET /api/app/save?id=` until saved or failed. "Saving to your ADHX…" and
+   "You can close this. Your ADHX carries on, and the post shows up in My
+   saves once it's ready."
 3. **Saved**: poster, network, author, words; "Saved to your ADHX" and
    "Keeping a copy · 720p · 60%" with a bar, polling `/api/app/status` every
    1.5 s while the sheet is open. **Open in ADHX** and **Done**. The sheet

@@ -158,6 +158,23 @@ try {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS phone_save_queue (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      url TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT,
+      platform TEXT,
+      post_id TEXT,
+      already_saved INTEGER NOT NULL DEFAULT 0,
+      error_code TEXT,
+      error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS phone_save_queue_status_idx ON phone_save_queue(status, next_attempt_at);
+    CREATE INDEX IF NOT EXISTS phone_save_queue_user_id_idx ON phone_save_queue(user_id);
     CREATE TABLE IF NOT EXISTS keep_jobs (
       platform TEXT NOT NULL,
       post_id TEXT NOT NULL,

@@ -101,6 +101,7 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
                             ConnectionStore.get(context).clear(removedByServer = true)
                             Phase.NotConnected
                         }
+                        result.code == AdhxApi.STILL_SAVING -> return@launch
                         result.status == 422 || result.code == "not_a_post" || result.code == "no_link" -> Phase.NotAPost
                         else -> Phase.Failed
                     }
@@ -144,17 +145,33 @@ class ShareViewModel(app: Application) : AndroidViewModel(app) {
         itemId: String,
     ): Deferred<ApiResult<SaveResponse>> = appScope.async {
         val history = HistoryStore.get(context)
-        val result = AdhxApi(connection).save(link)
+        // Every 1.5 s while the sheet is open; after that, now and then, so
+        // Shared lately catches up while the app is still around.
+        val result = AdhxApi(connection).saveAndFollow(
+            link,
+            interval = { if (open) 1_500L else 10_000L },
+            onQueued = { id -> history.update(itemId) { it.queuedWith(id) } },
+        )
         when (result) {
             is ApiResult.Ok -> history.update(itemId) { it.savedWith(result.value) }
             is ApiResult.Offline -> {
                 history.update(itemId) { it.copy(state = ShareState.QUEUED) }
                 SaveQueue.enqueue(context, link, itemId)
             }
-            is ApiResult.Failed -> history.update(itemId) {
-                it.copy(state = ShareState.FAILED, error = Copy.shareError(result.status, result.code, result.message))
+            is ApiResult.Failed -> if (result.code != AdhxApi.STILL_SAVING) {
+                history.update(itemId) {
+                    it.copy(state = ShareState.FAILED, error = Copy.shareError(result.status, result.code, result.message))
+                }
             }
         }
         result
+    }
+
+    /** False once the sheet is gone: the save carries on, polled less often. */
+    @Volatile
+    private var open = true
+
+    override fun onCleared() {
+        open = false
     }
 }

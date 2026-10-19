@@ -44,6 +44,12 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.openInAdhx
+import kotlinx.coroutines.delay
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.AnimatedVisibility
 
 /** Home: My saves in the player, or what to do while there's nothing to play. */
 @Composable
@@ -64,21 +70,39 @@ fun SavesHome(
     LaunchedEffect(resumed) {
         if (resumed) vm.refreshSaves()
     }
+    // Saves still on their way join the list once their copy is kept: look again now and then.
+    LaunchedEffect(resumed, ui.preparing > 0) {
+        while (resumed && ui.preparing > 0) {
+            delay(15_000)
+            vm.refreshSaves()
+        }
+    }
 
     val topBar: @Composable BoxScope.() -> Unit = {
-        Row(
+        Column(
             Modifier
                 .fillMaxWidth()
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
                 .statusBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AdhxBrand(markSize = 28.dp, modifier = Modifier.weight(1f))
-            BarButton(painterResource(R.drawable.ic_history), "Shared lately", onSharedLately)
-            BarButton(Icons.Filled.Search, "Search your saves", onSearch)
-            BarButton(Icons.Filled.Settings, "Settings", onSettings)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AdhxBrand(markSize = 28.dp, modifier = Modifier.weight(1f))
+                BarButton(painterResource(R.drawable.ic_history), "Shared lately", onSharedLately)
+                BarButton(Icons.Filled.Search, "Search your saves", onSearch)
+                BarButton(Icons.Filled.Settings, "Settings", onSettings)
+            }
+            // Only over the player: the empty page shows the whole card.
+            AnimatedVisibility(
+                visible = ui.preparing > 0 && ui.items.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                OnTheirWayPill(ui.preparing.coerceAtLeast(1), Modifier.padding(top = 6.dp))
+            }
         }
     }
 
@@ -115,6 +139,10 @@ fun SavesHome(
                     Text(error, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
                     OutlineButton("Try again", onClick = vm::reloadSaves, minHeight = 44.dp)
                 }
+                ui.preparing > 0 -> PreparingCard(
+                    count = ui.preparing,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
                 else -> Text(
                     "Nothing yet. In any app, tap Share on a post and pick ADHX.",
                     fontSize = 15.sp,

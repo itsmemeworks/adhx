@@ -36,13 +36,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <!-- The pairing QR code holds adhx://pair?server=…&code=…, so the
-                 phone's own camera app can pair too. -->
+                 phone's own camera app can pair too. adhx://post?platform=…&id=…
+                 opens one of your saves in the player (the share card's
+                 Open in ADHX). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:host="pair"
+                    android:scheme="adhx" />
+                <data
+                    android:host="post"
                     android:scheme="adhx" />
             </intent-filter>
         </activity>

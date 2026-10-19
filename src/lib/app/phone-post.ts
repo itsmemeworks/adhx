@@ -1,10 +1,12 @@
 import { and, count, desc, eq, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { archivedPosts, bookmarks } from '@/lib/db/schema'
+import { archivedPosts, bookmarks, phoneSaveQueue } from '@/lib/db/schema'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { keysToHits } from '@/lib/channels/channels'
 import { loadSearchItems, type SearchItem } from '@/lib/semantic/items'
 import type { FeedItemResponse } from '@/lib/feed/build-item'
+import { keepEnabled } from '@/lib/keep/config'
+import { keepCutoff } from '@/lib/keep/worker'
 
 /**
  * A saved post as the phone apps play it (`/api/app/saves`, `/api/app/search`).
@@ -101,14 +103,45 @@ export async function listSaves(
   userId: string,
   offset: number,
   limit: number,
-): Promise<{ items: PhonePost[]; total: number; nextOffset: number | null }> {
+): Promise<{
+  items: PhonePost[]
+  total: number
+  nextOffset: number | null
+  /** Saves not shown yet: still being downloaded. */
+  preparing: number
+}> {
   const notArchived = sql`(${bookmarks.id}, ${bookmarks.platform}) NOT IN (
     SELECT ${archivedPosts.bookmarkId}, ${archivedPosts.platform}
     FROM ${archivedPosts} WHERE ${archivedPosts.userId} = ${userId}
   )`
-  const where = and(eq(bookmarks.userId, userId), notArchived)
-  const [[{ n }], rows] = await Promise.all([
+  // A post joins the phone's feed once it's ready: its copy is kept (or
+  // can't be, or isn't needed). Until then it would only show a spinner.
+  const cutoff = keepCutoff()
+  const preparingJob = !keepEnabled()
+    ? sql`0`
+    : sql`EXISTS (
+    SELECT 1 FROM keep_jobs j
+    WHERE j.platform = ${bookmarks.platform} AND j.post_id = ${bookmarks.id}
+      AND j.status IN ('pending', 'running', 'failed')
+      AND (${cutoff} IS NULL OR EXISTS (
+        SELECT 1 FROM bookmarks b
+        WHERE b.platform = j.platform AND b.id = j.post_id AND b.processed_at >= ${cutoff}
+      ))
+  )`
+  const mine = and(eq(bookmarks.userId, userId), notArchived)
+  const where = and(mine, sql`NOT ${preparingJob}`)
+  const [[{ n }], [{ waiting }], [{ queued }], rows] = await Promise.all([
     db.select({ n: count() }).from(bookmarks).where(where),
+    db.select({ waiting: count() }).from(bookmarks).where(and(mine, preparingJob)),
+    db
+      .select({ queued: count() })
+      .from(phoneSaveQueue)
+      .where(
+        and(
+          eq(phoneSaveQueue.userId, userId),
+          sql`${phoneSaveQueue.status} IN ('waiting', 'working')`,
+        ),
+      ),
     db
       .select({ platform: bookmarks.platform, id: bookmarks.id })
       .from(bookmarks)
@@ -123,6 +156,7 @@ export async function listSaves(
     items: items.map((item) => toPhonePost(item, false)),
     total: n,
     nextOffset: next < n ? next : null,
+    preparing: waiting + queued,
   }
 }
 

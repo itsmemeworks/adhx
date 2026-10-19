@@ -112,15 +112,24 @@ notices next time it opens and goes back to Connect.
 
 ## Sharing, and the offline queue
 
-When you share to ADHX, a sheet slides up over the app you're in:
+When you share to ADHX, a small frosted card slides up at the bottom of the
+app you're in. On Android 12 and later the app behind is blurred; on older
+phones, or with blur switched off, it's dimmed instead.
 
 1. It finds the first `http(s)://` link in what was shared and shows the
    network's mark straight away.
-2. It sends `POST /api/app/save`. If you close the sheet early, the save
-   still finishes.
+2. It sends `POST /api/app/save` with `Prefer: respond-async`, so your ADHX
+   answers at once and reads the post by itself (a home server can take a
+   while, Instagram especially). The card then asks `GET /api/app/save?id=`
+   every 1.5 s until the post is saved or turned down. If you close the card
+   early, your ADHX carries on, and the app keeps checking now and then so
+   Shared lately catches up.
 3. **Saved** shows the post and how keeping a copy is going
    (`GET /api/app/status` every 1.5 s). It closes by itself after 3 seconds
-   unless you touch it.
+   unless you touch it. **Open in ADHX** opens the post in this app's player
+   through `adhx://post?platform=…&id=…` (the website only if there's no id
+   to go on). While its copy is still being kept, the player shows a
+   shimmering card with a progress ring and plays it once it's ready.
 4. **Already in your saves**, **That's not one post** and **Connect the app
    first** say what happened.
 
@@ -146,11 +155,27 @@ ExoPlayer plays whichever post is on screen and is let go when the app goes to
 the background. Photo albums swipe sideways, text posts and articles fill the
 page in a large serif, and SoundCloud plays its sound over the artwork.
 
+A save joins My saves once your ADHX has kept its copy. Until then the server
+counts it in `preparing`: over the player a small pill says "2 on their way",
+and with nothing else saved yet the page shows a shimmering card ("Getting it
+ready… it'll be here in a moment."). The app looks again every 15 s, and at
+the top the new post slides in from above.
+
 On the right, top to bottom: **Sound** (videos start muted), **Repeat** (off,
 a video that ends moves on to the next save; on, it loops), **Save** (puts the
-video, sound or photo on screen into the phone's gallery under ADHX; Android
-10 and up), **Share** and **Original** (the network's logo; opens the post
-there). Along the bottom: the author and the first lines of text, the time, a
+video, sound or every photo of an album into the phone's gallery under ADHX,
+on Android 10 and up; a text post's words go to the clipboard), **Share** and
+**Original** (the network's logo; opens the post there). Your ADHX is
+private, so Share sends what it kept rather than a link: the video file, all
+of an album's photos or the sound (fetched with `?download=1`, with a ring on
+the button while it comes down), or the words of a text post. A post whose
+copy is still being kept says so instead. Share downloads use separate private
+cache batches, so starting another share keeps earlier recipients' files usable.
+Failed batches are removed immediately; batches older than 24 hours are removed
+on later exports, excluding downloads still active in the app. Share downloads check
+for a 64 MiB free-space reserve before starting and periodically while streaming.
+There is no additional per-file size limit. **More** keeps **Share an ADHX
+link** for people on the same server. Along the bottom: the author and the first lines of text, the time, a
 bar to seek, and **Hide**, which clears everything but a thin progress line
 until the next tap. Next to Hide, a video can **keep playing in a small window**
 (picture-in-picture), with buttons for the previous and next save; it also
