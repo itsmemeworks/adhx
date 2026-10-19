@@ -19,9 +19,9 @@ const sans = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://adhx.com'),
-  title: 'ADHX: keep every post you love, on your own server',
+  title: 'ADHX: your friends have better taste than the algorithm',
   description:
-    'Self-hosted and open source. Save posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks, keep copies at the best available resolution, and find them by describing what you remember. With iPhone and Android companion apps.',
+    'A private, self-hosted feed of the best posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks, picked by your closest friends and family. Real copies at the best available resolution, found by describing what you remember. With iPhone and Android apps.',
   icons: {
     icon: [
       { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
@@ -30,9 +30,9 @@ export const metadata: Metadata = {
     apple: '/icon-192.png',
   },
   openGraph: {
-    title: 'ADHX: keep every post you love, on your own server',
+    title: 'ADHX: your friends have better taste than the algorithm',
     description:
-      'Self-hosted and open source. Fourteen networks, copies at the best available resolution, search by meaning.',
+      'Self-hosted and open source. Fourteen networks, real copies, search by what you remember, picked by your people.',
     images: [{ url: '/adhx-reel.jpg', width: 1280, height: 720 }],
     videos: [{ url: '/adhx-reel.mp4', width: 1280, height: 720, type: 'video/mp4' }],
   },

@@ -4,11 +4,17 @@
 [![Release](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml/badge.svg)](https://github.com/itsmemeworks/adhx/actions/workflows/release-please.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
-> **Save it. Lose it. Find it.** On your own server.
+> **Your friends have better taste than the algorithm.**
 
-ADHX keeps the posts you love from X, Instagram, TikTok, YouTube, Reddit and nine more networks. It downloads each post's video, pictures and sound in the best quality the network offers. It stores them on your own server and plays them from there. Find any of them later by describing what you remember, like "the video with the frog".
+Every app wants your attention. ADHX just wants your friends' opinions.
 
-It's built to run for yourself and a few friends: one Docker container, one folder of data. ADHX isn't a hosted service. Once a post's media has been successfully kept, that copy survives deletion of the original. Downloads that are blocked, private or protected by DRM may not succeed.
+ADHX is a private feed of the best posts on X, Instagram, TikTok, YouTube, Reddit and nine more networks, picked by your closest friends and family. Each of you saves the good stuff from whatever app you're in. ADHX downloads a real copy of every post, in the best quality the network offers, onto a server you run, and plays it from there. Deleted on X? Still here.
+
+Nobody remembers captions, so you don't need them: describe what you remember ("the cat that screams at the cucumber") and ADHX finds it. Then send the actual video to WhatsApp, Messages or the group chat, not a link that dies next month.
+
+No ads. No strangers. No engagement metrics. Nobody in a growth meeting deciding what you see. One Docker container, one folder of data, and an invite list for the people you'd actually let in your house.
+
+ADHX isn't a hosted service: you run it. Once a post's media has been kept, that copy survives deletion of the original. Posts that are blocked, private or protected by DRM may not download.
 
 <p align="center">
   <img src="public/og-logo.png" alt="ADHX — save it, lose it, find it" width="560" />
@@ -16,15 +22,26 @@ It's built to run for yourself and a few friends: one Docker container, one fold
 
 ## What you get
 
-- **Your own copies.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing is streamed from the networks at watch time.
+- **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
-- **Search by meaning.** Describe what you remember and ADHX finds it. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
-- **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button.
-- **Channels.** ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
-- **Right now.** See what the people on your server are saving, grouped into moments, and **Tune in** to watch along. Savers are only ever counted, never named.
+- **Search by what you remember.** Describe it and ADHX finds it. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
+- **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
+- **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
+- **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. For now savers are counted, not named; names are next (see [Where it's going](#where-its-going)).
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
-- **A phone app.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android, from any app.
+- **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
+
+## Where it's going
+
+ADHX is becoming one shared feed for your people. In order:
+
+1. **Say it out loud.** This README, the site and every string in the app, in the new voice.
+2. **Names on posts.** See which of your friends saved what. Saves are shared with your people by default, with a private toggle for the ones that are just for you, and you can search the whole group's vault. When this lands, saves you've already made join the shared feed; the release notes will say so first.
+3. **One feed.** A blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
+4. **Channels and Live.** Channels drawn from everyone's saves, one per friend, and Live with names, so you can watch together.
+
+Names stay on your server. Links you share with people outside it never show who saved anything.
 
 ## Supported networks
 
