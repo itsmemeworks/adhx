@@ -16,6 +16,8 @@ data/*.db-shm
 
 # Media downloads (can be large)
 data/media/
+# The search model, downloaded on first use (about 400 MB)
+data/models/
 
 # Config with credentials
 bookmarks-archiver.config.json
@@ -61,3 +63,11 @@ playwright/.cache/
 # Design handoff prototype bundles (reference only, not production code)
 design_handoff_adhx_matter/
 design_handoff_knowledge_graph/
+
+# Product site (adhx.com) build output
+site/.next/
+site/out/
+site/next-env.d.ts
+
+# A NAS install's database and kept media (deploy/nas)
+deploy/nas/data/

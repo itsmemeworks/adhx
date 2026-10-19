@@ -12,6 +12,7 @@ vi.mock('@/lib/auth/session', () => ({
 
 vi.mock('@/lib/auth/account', () => ({
   getAccount: mocks.getAccount,
+  claimableUsernameSuggestion: async (current: string) => current,
 }))
 
 vi.mock('next/navigation', () => ({

@@ -10,6 +10,7 @@ import fs from 'fs'
 import { renameReadStatusToArchivedPosts } from './rename-read-status'
 import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
+import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -126,8 +127,64 @@ try {
       used_at TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS access_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      hint TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT,
+      scope TEXT NOT NULL DEFAULT 'search'
+    );
+    CREATE INDEX IF NOT EXISTS access_keys_user_id_idx ON access_keys(user_id);
+    CREATE TABLE IF NOT EXISTS app_pair_codes (
+      code_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS app_pair_codes_user_id_idx ON app_pair_codes(user_id);
+    CREATE TABLE IF NOT EXISTS admin_sign_in_links (
+      token_hash TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      url TEXT NOT NULL,
+      intent TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS keep_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS keep_jobs (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT,
+      last_error TEXT,
+      bytes INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id)
+    );
+    CREATE INDEX IF NOT EXISTS keep_jobs_status_idx ON keep_jobs(status, next_attempt_at);
+    CREATE TABLE IF NOT EXISTS kept_files (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id, slot)
+    );
   `)
-  console.log('[migrate] Ensured users/user_identities/login_tokens tables')
+  console.log('[migrate] Ensured users/user_identities/login_tokens/access_keys/keep tables')
 } catch (error) {
   console.log('[migrate] FAILED creating account tables', error)
   db.close()
@@ -258,6 +315,20 @@ try {
   }
 } catch (error) {
   console.log('[migrate] FAILED installing durable OAuth refresh lease', error)
+  db.close()
+  process.exit(1)
+}
+
+// Phone app keys share access_keys with the search keys; `scope` tells them
+// apart. Keys made before the column existed are all search keys.
+try {
+  const keyColumns = db.prepare('PRAGMA table_info(access_keys)').all() as Array<{ name: string }>
+  if (!keyColumns.some((column) => column.name === 'scope')) {
+    db.exec("ALTER TABLE access_keys ADD COLUMN scope TEXT NOT NULL DEFAULT 'search'")
+    console.log('[migrate] Added access_keys.scope')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED adding access_keys.scope', error)
   db.close()
   process.exit(1)
 }
@@ -911,6 +982,15 @@ try {
   console.log('[migrate] Ensured analytics_events table')
 } catch (error) {
   console.log('[migrate] Warning: failed to create analytics_events table', error)
+}
+
+// Understanding pipeline (src/lib/semantic/). Derived data: a failure here
+// only disables search-by-meaning, so warn instead of exiting.
+try {
+  db.exec(UNDERSTANDING_DDL)
+  console.log('[migrate] Ensured post_embeddings / understanding_queue tables')
+} catch (error) {
+  console.log('[migrate] Warning: failed to create understanding tables', error)
 }
 
 try {

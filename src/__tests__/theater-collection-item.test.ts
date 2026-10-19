@@ -90,9 +90,8 @@ describe('feedItemToTheaterItem', () => {
   })
 
   describe('inferCollectionContentType', () => {
-    it('keeps TikTok/YouTube video-only and lets Instagram use its saved category', () => {
+    it('keeps TikTok video-only and lets Instagram use its saved category', () => {
       expect(inferCollectionContentType(item({ platform: 'tiktok', media: null }))).toBe('video')
-      expect(inferCollectionContentType(item({ platform: 'youtube', media: null }))).toBe('video')
       expect(
         inferCollectionContentType(item({ platform: 'instagram', category: 'video', media: null })),
       ).toBe('video')

@@ -8,6 +8,9 @@ import {
   archivedPosts,
   syncLogs,
   userPreferences,
+  accessKeys,
+  appPairCodes,
+  adminSignInLinks,
   oauthTokens,
   tagShares,
   users,
@@ -86,6 +89,7 @@ export const DELETE = withAuth(async (_req, userId) => {
         db.delete(loginTokens)
           .where(or(eq(loginTokens.userId, userId), eq(loginTokens.email, email)))
           .run()
+        db.delete(adminSignInLinks).where(eq(adminSignInLinks.email, email)).run()
       } else {
         db.delete(loginTokens).where(eq(loginTokens.userId, userId)).run()
       }
@@ -98,6 +102,8 @@ export const DELETE = withAuth(async (_req, userId) => {
 
       // 15. Delete OAuth tokens
       db.delete(oauthTokens).where(eq(oauthTokens.userId, userId)).run()
+      db.delete(accessKeys).where(eq(accessKeys.userId, userId)).run()
+      db.delete(appPairCodes).where(eq(appPairCodes.userId, userId)).run()
 
       // 16. Preserve aggregate history without retaining this account's
       // private actor/viewer ID.

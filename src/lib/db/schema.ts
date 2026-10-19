@@ -1,4 +1,12 @@
-import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import {
+  sqliteTable,
+  text,
+  integer,
+  blob,
+  primaryKey,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { relations, sql } from 'drizzle-orm'
 
 // ===========================================
@@ -6,9 +14,9 @@ import { relations, sql } from 'drizzle-orm'
 // ===========================================
 
 // Main bookmarks table - PK: (userId, platform, id)
-// `platform` is one of 'twitter' | 'instagram' | 'tiktok' | 'youtube' — added so
-// a TikTok video id (numeric, 19 digits) can't collide with a tweet id (also
-// numeric, 18-19 digits), and YouTube's 11-char id stays in its own namespace.
+// `platform` is 'twitter' | 'instagram' | 'tiktok' or one of the link networks
+// in src/lib/platform/networks.ts — so a TikTok video id (numeric, 19 digits)
+// can't collide with a tweet id (also numeric, 18-19 digits).
 // All bookmark-derived tables (tags/media/links/archived_posts)
 // carry platform too so the foreign-key tuple matches. It's a free-text column
 // (no enum/migration needed to add a platform).
@@ -17,7 +25,7 @@ export const bookmarks = sqliteTable(
   {
     id: text('id').notNull(), // Source-native ID (tweet id, reel shortcode, tiktok video id)
     userId: text('user_id').notNull(), // Owner of the bookmark
-    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok' | 'youtube'
+    platform: text('platform').notNull().default('twitter'), // 'twitter' | 'instagram' | 'tiktok'
     author: text('author').notNull(),
     authorName: text('author_name'),
     authorProfileImageUrl: text('author_profile_image_url'),
@@ -232,6 +240,96 @@ export const userPreferences = sqliteTable(
   }),
 )
 
+// Sign-in links waiting for an admin to hand over (EMAIL_LINKS_TO_ADMIN, for
+// a self-hosted ADHX with no email service). Holds the link itself, so rows
+// live only as long as the login token (15 minutes) and go once it's used.
+export const adminSignInLinks = sqliteTable('admin_sign_in_links', {
+  tokenHash: text('token_hash').primaryKey(),
+  email: text('email').notNull(),
+  url: text('url').notNull(),
+  intent: text('intent').notNull(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+})
+
+// Kept media: every saved post's files, downloaded once per post (not per
+// saver) into MEDIA_DIR and served by /api/files. See src/lib/keep.
+export const keepSettings = sqliteTable('keep_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+})
+
+export const keepJobs = sqliteTable(
+  'keep_jobs',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    /** pending · running · done · failed (retrying) · unavailable (gave up) */
+    status: text('status').notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: text('next_attempt_at'),
+    lastError: text('last_error'),
+    /** Total bytes on disk for this post. */
+    bytes: integer('bytes').notNull().default(0),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId] }),
+    statusIdx: index('keep_jobs_status_idx').on(table.status, table.nextAttemptAt),
+  }),
+)
+
+export const keptFiles = sqliteTable(
+  'kept_files',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    /** `video-1`, `photo-2`, `audio-1`, `poster` */
+    slot: text('slot').notNull(),
+    /** Path under MEDIA_DIR. */
+    path: text('path').notNull(),
+    mime: text('mime').notNull(),
+    bytes: integer('bytes').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    durationMs: integer('duration_ms'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.slot] }),
+  }),
+)
+
+// Personal access keys — read-only search from outside the browser (the adhx
+// skill). Only a SHA-256 of the key is stored; the key itself is shown once.
+export const accessKeys = sqliteTable(
+  'access_keys',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    name: text('name').notNull(),
+    keyHash: text('key_hash').notNull().unique(),
+    /** Last four characters, so people can tell their keys apart. */
+    hint: text('hint').notNull(),
+    createdAt: text('created_at').notNull(),
+    lastUsedAt: text('last_used_at'),
+    /** `search` (the adhx skill: read-only search) or `phone` (the phone app: save + status). */
+    scope: text('scope').notNull().default('search'),
+  },
+  (table) => ({
+    userIdIdx: index('access_keys_user_id_idx').on(table.userId),
+  }),
+)
+
+/** One-time codes that connect the phone app (Settings → Phone app). */
+export const appPairCodes = sqliteTable('app_pair_codes', {
+  codeHash: text('code_hash').primaryKey(),
+  userId: text('user_id').notNull(),
+  expiresAt: integer('expires_at').notNull(), // epoch ms
+  usedAt: text('used_at'),
+  createdAt: text('created_at').notNull(),
+})
+
 // Sync logs - PK: id (includes userId for filtering)
 export const syncLogs = sqliteTable(
   'sync_logs',
@@ -414,6 +512,76 @@ export const moderatedPosts = sqliteTable(
     pk: primaryKey({ columns: [table.platform, table.bookmarkId] }),
   }),
 )
+
+// Understanding pipeline (`src/lib/semantic/`): EmbeddingGemma 2 vectors
+// behind search-by-meaning, plus the durable work queue that produces them.
+// Keyed by the POST, not the saver — only public post content is understood,
+// so one row serves everyone who saved it. Per-user reads always join
+// `bookmarks`. DDL lives in `src/lib/semantic/schema-sql.ts`.
+export const postEmbeddings = sqliteTable(
+  'post_embeddings',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(), // 'text' | 'image' | 'video'
+    model: text('model').notNull(),
+    contentHash: text('content_hash').notNull(),
+    dims: integer('dims').notNull().default(0),
+    vector: blob('vector', { mode: 'buffer' }),
+    status: text('status').notNull().default('ok'), // 'ok' | 'none' | 'failed'
+    error: text('error'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+    statusIdx: index('post_embeddings_status_idx').on(table.kind, table.status),
+  }),
+)
+
+export const understandingQueue = sqliteTable(
+  'understanding_queue',
+  {
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    kind: text('kind').notNull(),
+    priority: integer('priority').notNull().default(10),
+    attempts: integer('attempts').notNull().default(0),
+    enqueuedAt: text('enqueued_at').notNull(),
+    nextAttemptAt: text('next_attempt_at').notNull(),
+    lastError: text('last_error'),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.platform, table.postId, table.kind] }),
+    nextIdx: index('understanding_queue_next_idx').on(table.nextAttemptAt, table.priority),
+  }),
+)
+
+// "Made for you" channels: one user's saves grouped by meaning and named.
+// Derived and private (never shown to anyone else); recomputed when stale.
+// Keeping one turns it into an ordinary tag channel.
+export const autoChannels = sqliteTable(
+  'auto_channels',
+  {
+    userId: text('user_id').notNull(),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    /** JSON array of `platform:id`, closest to the group's centre first. */
+    postKeys: text('post_keys').notNull(),
+    size: integer('size').notNull(),
+    position: integer('position').notNull(),
+    model: text('model').notNull(),
+    /** The user's save count when computed (staleness check). */
+    savesAtCompute: integer('saves_at_compute').notNull(),
+    computedAt: text('computed_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.slug] }),
+  }),
+)
+
+export type PostEmbedding = typeof postEmbeddings.$inferSelect
+export type UnderstandingJob = typeof understandingQueue.$inferSelect
+export type AutoChannel = typeof autoChannels.$inferSelect
 
 // Banned accounts — session + sign-in treated as signed-out. Public
 // profile / playlist pages 404; leaderboards skip the owner. Data is kept

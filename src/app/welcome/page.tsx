@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getCurrentUserId } from '@/lib/auth/session'
-import { getAccount } from '@/lib/auth/account'
+import { claimableUsernameSuggestion, getAccount } from '@/lib/auth/account'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { WelcomeClient } from './WelcomeClient'
 
@@ -32,5 +32,6 @@ export default async function WelcomePage({
   const { returnTo } = await searchParams
   const destination = returnTo && isSafeReturnUrl(returnTo) ? returnTo : '/'
 
-  return <WelcomeClient suggestedUsername={account.user.username} returnTo={destination} />
+  const suggestion = await claimableUsernameSuggestion(account.user.username, userId)
+  return <WelcomeClient suggestedUsername={suggestion} returnTo={destination} />
 }

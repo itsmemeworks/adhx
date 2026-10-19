@@ -162,9 +162,9 @@ describe('FxEmbed URL utilities', () => {
   })
 
   describe('proxiedPhotoSrc', () => {
-    it('builds the same-origin image proxy path', () => {
+    it('builds the same-origin kept-file photo path', () => {
       expect(proxiedPhotoSrc(author, tweetId)).toBe(
-        '/api/media/image?author=testuser&tweetId=1234567890&index=1',
+        '/api/files/twitter/1234567890/photo-1?a=testuser',
       )
     })
   })

@@ -11,6 +11,10 @@
 - [Analytics summary](/api/analytics): Aggregate growth counts (saves, views, shares, tags, …) by platform and content type, plus a top-posts list. Optional `?window=today|week|month|all`. No user identity. No auth required.
 - [Playlists Leaderboard JSON](/api/collections/trending): Public anonymous ranking of curators' shared tag playlists by views + clones. Optional `?window=today|week|month|all-time` (default `week`) and `?limit=` (1–50, default 24). No user identity — entries carry a curator username, never a userId. 60s cache. No auth required.
 
+## Your saves (access key)
+
+- [Search your saves](/api/agent/search): `GET /api/agent/search?q=&type=all|videos|photos|text|articles&limit=&offset=` with `Authorization: Bearer adhx_…` (a personal access key from Settings → Search from Claude). Finds the key owner's own saves by meaning, matching words, pictures and video frames. Read-only; never anyone else's saves. See the [adhx skill](https://github.com/itsmemeworks/adhx/blob/main/skills/adhx/SKILL.md).
+
 ## Public Pages
 
 - [Home theater](/): Live theater of the community pulse. Signed-out visitors watch; saving opens sign-in.

@@ -21,51 +21,45 @@ const item = (over: Partial<FeedItem>): FeedItem =>
     ...over,
   }) as unknown as FeedItem
 
-const withVideo = (platform: FeedItem['platform'], url: string): FeedItem =>
-  item({ platform, media: [{ mediaType: 'video', url }] as unknown as FeedItem['media'] })
-
 describe('feedVideoSrc — inline playback (focus/collection)', () => {
-  it('Twitter → the FxTwitter proxy at hd quality (built from author + id)', () => {
+  it('Twitter → the kept-file route for video #1 (built from author + id)', () => {
     expect(feedVideoSrc(item({ platform: 'twitter', author: 'jack', id: '99' }))).toBe(
-      '/api/media/video?author=jack&tweetId=99&quality=hd',
+      '/api/files/twitter/99/video-1?a=jack',
     )
   })
 
-  it('TikTok → the feed-provided proxy URL (media[0].url), NOT the Twitter proxy', () => {
-    const src = feedVideoSrc(withVideo('tiktok', '/api/media/tiktok/video?username=bob&id=7'))
-    expect(src).toBe('/api/media/tiktok/video?username=bob&id=7')
-  })
-
-  it('Instagram → the feed-provided proxy URL (media[0].url), NOT the Twitter proxy', () => {
-    const src = feedVideoSrc(withVideo('instagram', '/api/media/instagram/video?id=DXVsqQ7CSXw'))
-    expect(src).toBe('/api/media/instagram/video?id=DXVsqQ7CSXw')
-    expect(src).not.toContain('/api/media/video?author=')
-  })
-
-  it('falls back to the Twitter proxy if a non-Twitter row is missing its url', () => {
-    expect(feedVideoSrc(item({ platform: 'instagram', media: null }))).toContain(
-      '/api/media/video?author=',
+  it('TikTok → its own kept-file route with the author, NOT the Twitter route', () => {
+    expect(feedVideoSrc(item({ platform: 'tiktok', author: 'bob', id: '7' }))).toBe(
+      '/api/files/tiktok/7/video-1?a=bob',
     )
+  })
+
+  it('Instagram → its own kept-file route, NOT the Twitter route', () => {
+    const src = feedVideoSrc(item({ platform: 'instagram', id: 'DXVsqQ7CSXw' }))
+    expect(src).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1')
+    expect(src).not.toContain('/api/files/twitter/')
+  })
+
+  it('a new network gets its own route too', () => {
+    expect(
+      feedVideoSrc(item({ platform: 'youtube' as FeedItem['platform'], id: 'jNQXAC9IVRw' })),
+    ).toBe('/api/files/youtube/jNQXAC9IVRw/video-1')
   })
 })
 
 describe('feedHoverSrc — gallery hover-to-play', () => {
-  it('Twitter → the light preview quality tier', () => {
+  it('Twitter → the kept-file route for video #1', () => {
     expect(feedHoverSrc(item({ platform: 'twitter', author: 'jack', id: '99' }))).toBe(
-      '/api/media/video?author=jack&tweetId=99&quality=preview',
+      '/api/files/twitter/99/video-1?a=jack',
     )
   })
 
-  it('TikTok + Instagram → their stream URL (hover-play enabled)', () => {
-    expect(feedHoverSrc(withVideo('tiktok', '/api/media/tiktok/video?username=bob&id=7'))).toBe(
-      '/api/media/tiktok/video?username=bob&id=7',
+  it('TikTok + Instagram → their kept-file route (hover-play enabled)', () => {
+    expect(feedHoverSrc(item({ platform: 'tiktok', author: 'bob', id: '7' }))).toBe(
+      '/api/files/tiktok/7/video-1?a=bob',
     )
-    expect(feedHoverSrc(withVideo('instagram', '/api/media/instagram/video?id=abc'))).toBe(
-      '/api/media/instagram/video?id=abc',
+    expect(feedHoverSrc(item({ platform: 'instagram', id: 'abc' }))).toBe(
+      '/api/files/instagram/abc/video-1',
     )
-  })
-
-  it('YouTube → null (iframe only, no MP4 to hover-play)', () => {
-    expect(feedHoverSrc(withVideo('youtube', 'irrelevant'))).toBeNull()
   })
 })

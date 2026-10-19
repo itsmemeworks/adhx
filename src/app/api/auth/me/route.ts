@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { isAdminUserId } from '@/lib/admin/guard'
+import { pendingAdminSignInLinks, signInDelivery } from '@/lib/email/magic-link'
 
 const SIGNED_OUT = {
   authenticated: false,
@@ -25,6 +26,7 @@ export async function GET() {
     return NextResponse.json(SIGNED_OUT)
   }
 
+  const isAdmin = await isAdminUserId(userId)
   return NextResponse.json({
     authenticated: true,
     user: {
@@ -37,6 +39,12 @@ export async function GET() {
     },
     identities: account.identities,
     xConnected: account.xConnected,
-    isAdmin: await isAdminUserId(userId),
+    // Whoever runs this ADHX may not have set up an X app.
+    xAvailable: !!process.env.TWITTER_CLIENT_ID,
+    isAdmin,
+    // With no email, sign-in links wait for an admin to pass on: say how many.
+    ...(isAdmin && signInDelivery() === 'admin'
+      ? { waitingSignIns: pendingAdminSignInLinks().length }
+      : {}),
   })
 }

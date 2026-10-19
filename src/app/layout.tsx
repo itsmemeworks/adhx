@@ -1,66 +1,96 @@
 import type { Metadata, Viewport } from 'next'
-import {
-  IBM_Plex_Sans,
-  Inter,
-  Lexend,
-  Atkinson_Hyperlegible,
-  Indie_Flower,
-  Newsreader,
-  Roboto_Mono,
-} from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { AppShell } from '@/components/AppShell'
 import { jsonLdScriptContent } from '@/lib/utils/structured-data'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { getCurrentUserId } from '@/lib/auth/session'
 
-// Body fonts - user can choose in settings
-const ibmPlex = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+// Body fonts remain selectable in settings. Every face is bundled so Docker
+// builds never depend on Google's changing CSS/font responses. Provenance and
+// unchanged OFL licenses live alongside the font files.
+const ibmPlex = localFont({
+  src: './fonts/IBMPlexSans-variable.ttf',
+  weight: '400 700',
   variable: '--font-ibm-plex',
+  display: 'swap',
 })
 
-const inter = Inter({
-  subsets: ['latin'],
+const inter = localFont({
+  src: './fonts/Inter-variable.ttf',
+  weight: '100 900',
   variable: '--font-inter',
+  display: 'swap',
 })
 
-const lexend = Lexend({
-  subsets: ['latin'],
+const lexend = localFont({
+  src: './fonts/Lexend-variable.ttf',
+  weight: '100 900',
   variable: '--font-lexend',
+  display: 'swap',
 })
 
-const atkinson = Atkinson_Hyperlegible({
-  subsets: ['latin'],
-  weight: ['400', '700'],
+const atkinson = localFont({
+  src: [
+    { path: './fonts/AtkinsonHyperlegible-Regular.ttf', weight: '400', style: 'normal' },
+    { path: './fonts/AtkinsonHyperlegible-Bold.ttf', weight: '700', style: 'normal' },
+  ],
   variable: '--font-atkinson',
+  display: 'swap',
 })
 
 // Indie Flower - playful handwritten font for the ADHX wordmark only
-const indieFlower = Indie_Flower({
-  subsets: ['latin'],
+const indieFlower = localFont({
+  src: './fonts/IndieFlower-Regular.ttf',
   variable: '--font-indie-flower',
   weight: '400',
+  display: 'swap',
 })
 
 // Matter — Newsreader serif (headlines, page titles, article reading body)
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  style: ['normal', 'italic'],
+const newsreader = localFont({
+  src: [
+    { path: './fonts/Newsreader-variable.ttf', weight: '200 800', style: 'normal' },
+    { path: './fonts/Newsreader-Italic-variable.ttf', weight: '200 800', style: 'italic' },
+  ],
   variable: '--font-newsreader',
+  display: 'swap',
 })
 
 // Matter — Roboto Mono (handles, timestamps, counts, URLs)
-const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const robotoMono = localFont({
+  src: './fonts/RobotoMono-variable.ttf',
+  weight: '400 600',
   variable: '--font-roboto-mono',
+  display: 'swap',
+})
+
+// The look's faces: Instrument Serif (display) and Hanken Grotesk (body).
+const instrumentSerif = localFont({
+  src: [
+    { path: './fonts/InstrumentSerif-Regular.ttf', style: 'normal' },
+    { path: './fonts/InstrumentSerif-Italic.ttf', style: 'italic' },
+  ],
+  weight: '400',
+  variable: '--font-instrument-serif',
+  display: 'swap',
+  preload: false,
+})
+
+// Hanken Grotesk ships with the app (variable, 400–800, Latin; OFL licence
+// beside it). Google's copy broke `next build` inside Docker, and a NAS build
+// shouldn't need Google Fonts for the body face.
+const hankenGrotesk = localFont({
+  src: './fonts/HankenGrotesk-latin-variable.woff2',
+  weight: '400 800',
+  variable: '--font-hanken-grotesk',
+  display: 'swap',
+  preload: false,
 })
 
 const siteUrl = PUBLIC_BASE_URL
 const siteDescription =
-  'Stop saying "wait, I had the perfect meme for this." Save your favorites, build shareable playlists, and become the meme lord your group chat deserves.'
+  'Keep posts from X, Instagram, TikTok, YouTube, Reddit and more on your own server, then find them by describing what you remember.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -144,21 +174,19 @@ const jsonLd = {
   applicationCategory: 'ProductivityApplication',
   operatingSystem: 'Web',
   description:
-    "Sync your X/Twitter bookmarks into one searchable home, discover what's trending, and work through your backlog — every tweet, thread, Reel, TikTok and YouTube Short in one place. The ADHD-friendly bookmark manager.",
-  url: 'https://adhx.com',
+    'Save posts from X, Instagram, TikTok, YouTube and ten more networks, with their videos and photos kept on your own server, and find any of them by describing what you remember.',
+  url: PUBLIC_BASE_URL,
   offers: {
     '@type': 'Offer',
     price: '0',
     priceCurrency: 'USD',
   },
   featureList: [
-    'Sync hundreds of X/Twitter bookmarks',
-    'Discover what people are watching and sending in real time',
-    'Full-text search across everything you save',
-    'One post at a time — archive what you are done with',
-    'Text-to-speech for any post or article',
-    'Save Reels, TikToks and Shorts alongside tweets',
-    'Bionic reading and reader-friendly fonts',
+    'Save posts from 14 networks, with their media kept in the best quality',
+    'Sync X bookmarks every hour',
+    'Find posts by describing what you remember',
+    'See what your friends are saving right now',
+    'Share from your phone with the ADHX Share app',
   ],
 }
 
@@ -169,11 +197,11 @@ const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'ADHX',
-  url: 'https://adhx.com',
+  url: PUBLIC_BASE_URL,
   publisher: {
     '@type': 'Organization',
     name: 'ADHX',
-    logo: 'https://adhx.com/logo-paper.png',
+    logo: `${PUBLIC_BASE_URL}/logo-paper.png`,
   },
 }
 
@@ -201,7 +229,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body
-        className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable}`}
+        className={`${ibmPlex.variable} ${inter.variable} ${lexend.variable} ${atkinson.variable} ${indieFlower.variable} ${newsreader.variable} ${robotoMono.variable} ${instrumentSerif.variable} ${hankenGrotesk.variable}`}
       >
         <AppShell serverAccountId={serverAccountId}>{children}</AppShell>
       </body>

@@ -7,7 +7,6 @@ import {
   buildTweetSeoDescription,
   buildTweetOgDescription,
 } from '@/lib/utils/tweet-metadata'
-import { TheaterShell } from '@/components/theater/TheaterShell'
 import { buildSharedSeed, stubTweetTheaterItem } from '@/lib/theater/shared-seed'
 import { getCachedTweet, resolveTweetShared } from '@/lib/theater/resolve-shared-preview'
 import { SharedPreviewPage, MODERATED_PAGE_METADATA } from '@/lib/theater/shared-preview'
@@ -36,16 +35,7 @@ export default async function QuickAddPage({ params }: Props) {
   const { seed } = await buildSharedSeed(stub)
 
   if (unavailable) {
-    return (
-      <TheaterShell
-        seed={seed}
-        mode="shared"
-        sharedItem={stub}
-        sharedUnavailable
-        sharedUnavailableReason="hidden"
-        authed={!!userId}
-      />
-    )
+    return <SharedPreviewPage seed={seed} sharedItem={stub} authed={false} unavailable />
   }
 
   // Do not await FxTwitter / OG here — chrome paints on the stub, then

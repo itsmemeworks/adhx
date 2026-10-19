@@ -6,6 +6,347 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Reproducible font builds and verified Linux inference
+
+- Bundle unchanged official font files, OFL licences and pinned provenance; root and site use local fonts, avoiding Google's variable response format and an upstream Turbopack parser failure.
+- Keep secure Next 16.3.8 and the existing production bundler; correct remaining site metadata quality claims.
+- Root production and static-site builds and focused layout tests pass locally. Prior fix da361e3 passed every GitHub check, including native AMD64/ARM64 conversion, persistence and real text/image/video inference; require the font revision's checks too.
+- No service installation, image/site publication, DNS change or household configuration committed.
+
+## 2026-10-19 — Pre-installation fixes and native Linux validation gates
+
+- Patch production dependencies (Next 16.3.8 and compatible transitives): local production audit now zero; retain two documented development-tool advisories rather than forcing major overrides.
+- Index shared post text on save and at web startup independently of model inference; cover production disabled flags, startup recovery, privacy/moderation and no model forks.
+- Add native Linux AMD64/ARM64 container checks for media/download tools, ONNX, migrations, ranges, auth and persistent-volume recreation; enable real model inference with the `validate-models` label, replacing obsolete workflow-string assertions.
+- Gate PRs on static website build and production dependency audit; keep Pages publication manual.
+- Persist quick-start configuration, select the checkout's image explicitly, correct phone build/signing guidance and default links, and expose public install destinations as image build arguments.
+- Readiness now distinguishes merge checks from target workload/restore checks after a private trial and later phone/public-site distribution. No service installation, image publication or domain change.
+
+## 2026-10-19 — Guide, website and release-quality audit
+
+- Correct stale self-hosting orientation, backup/dev-secret instructions, extension setup and privacy descriptions; separate website source from live deployment.
+- Website copy now describes offline queuing, native playback/search, conversion and X prerequisites accurately; its Privacy link targets the maintained policy.
+- Record outstanding production dependency advisories (14, including one critical), model-off keyword indexing, Linux/physical-phone testing and domain cutover in `docs/rollout/self-hosted-release.md`.
+- Verify static site build, formatting and UI lint; reproduce the model-off keyword gap with a synthetic production database. Mark legacy architecture sections explicitly.
+- No dependency upgrade, backend behaviour change, website publication or service installation in this audit.
+
+## 2026-10-19 — Retained-media recovery and portable Docker hosting
+
+- Persist the backfill-off boundary across restarts, preserving interrupted jobs and retries.
+- Reconcile downloaded file kinds/counts into every saver's playback metadata; preserve private state and article categories.
+- Reuse existing retained link-network metadata when a new person saves a post whose original is gone; exclude banned savers and hidden posts.
+- iOS search follows further pages in the grid/player, with cancellation, deduplication and retry.
+- Replace the vendor/Funnel-specific NAS example with standard Docker proxy/storage hooks; pass media/search controls, add restart/health checks and document playback privacy and backups.
+- Validation: 2,843 tests, typecheck, formatting, production build and iOS simulator build pass; lint has no errors. Fresh/upgrade migration and production retained-save/range/auth smoke checks pass. Linux container/hardware testing remains outstanding. No service installed or deployed.
+
+## 2026-10-18 — From scratch on a production build: web, iPhone, Android, 14 networks
+
+- **Setup:** `next build` standalone, run like the container (migrate, then `node server.js`) on an empty database with `EMAIL_LINKS_TO_ADMIN=1`, `ALLOWED_EMAILS=@friends.test` and the Jev key.
+- **Passed:**
+  - Owner bootstrap from the server log; the admin card's waiting links for two friends; a stranger refused.
+  - Fresh pairing of three phones.
+  - One post from each of 13 networks kept at best quality and indexed (picture, words, video), including a 4K YouTube video (508 MB) that the phones played as soon as it was kept.
+  - Search by meaning plus the Jev refine, per user, on web and phone keys.
+  - New saves reached the right phone as a pill; a cross-user save shared the kept file.
+- **Fixed:**
+  - Name and channel screens showed adhx.com (inlined at build time); they now use the page's own address.
+  - A DRM Vimeo video was kept as its thumbnail.
+  - Sounds and picture-only posts retried video frames forever.
+  - "This video is unavailable" was retried instead of being treated as final.
+  - A download waiting to retry gave the player no reason.
+  - Returning sign-ins were shown "Save your first post".
+  - `.dockerignore` now leaves out apps, site and build output.
+- **Known:**
+  - Imgur blocks UK addresses (403).
+  - X sync needs the owner's own X developer app.
+  - Web sign-ins end when `SESSION_SECRET` changes (phone keys survive), so keep it fixed in the NAS `.env`.
+
+## 2026-10-18 — Cross-device run: who sees what, everywhere
+
+- **Setup:** e2e server on :3020. Ana on the iPhone 18 Pro, the owner on the iPhone 16, Ben on the Android emulator (fresh install, paired by `adhx://pair` link), and all three on the desktop.
+- **Passed:**
+  - Ana's share from Safari (SoundCloud) reached her saves on the server, desktop and phone, and nobody else's.
+  - Ana's desktop paste (Threads) showed on her phone as a "1 new save" pill that jumps to it.
+  - The owner saved Ana's Reddit video: one download job, kept files shared, a pill on his phone.
+  - Ben's Android share (the Threads post Ana also has) reached his phone with a pill.
+  - Search stayed per person ("baby" found nothing for Ben, "space jellyfish" found the Threads post for both).
+  - Ana's desktop archive removed the post from her phone feed; it still opens by id.
+  - Right now's stream named nobody.
+- **Fixed on the way:** a sound post's filled cover pushed the caption and buttons off-screen (iOS); new saves arriving above the post on screen now show a pill (both apps).
+- **Known:** sounds are found only by their words (no audio processing). Right now forms no group from this small mixed set.
+
+## 2026-10-18 — Phone player: design v22–23 on iPhone and Android
+
+- **Player** (both apps, from the design artifact): swipe up/down between saves, tap to pause; right column Sound, Repeat (off by default: a video that ends plays the next save), Save (Photos / MediaStore, from `?download=1`), Share, Original (the network's logo); bottom row time, scrub line, small window, Hide. Shadows only on words over media.
+- **Text posts** are full bleed: short ones centred in a large serif, long ones fade with **Read all**, which opens a scrolling reader with a reading line.
+- **Small window**: picture-in-picture, also automatic when leaving the app mid-video. Android adds Previous/Next save in the window.
+- **Verified:** iPhone simulator (Repeat, auto-advance, Save to Photos, toast, Hide, reader). Android emulator (column, playback, seek, Repeat, Hide, Save of a 4K video). Not verified: the iPhone small window (the Simulator has none) and the Android reader and small window on screen.
+- **Notes:** each 4K Save is ~0.5 GB on the phone; the emulator crashed once when the Mac was low on disk.
+
+## 2026-10-18 — iPhone app plays and searches your saves
+
+- **Home is My saves** (`apps/ios/App/Library/`): a vertical paging `ScrollView` with one `AVPlayer` that follows the post on screen, loops, starts muted (speaker button), and pauses on tap. Albums swipe sideways; words read as a card; "Open original". Errors show the server's 404/410 `reason`.
+- **Search** (`SearchView`): debounced at 350 ms, TRY DESCRIBING prompts, a poster grid with match strength, "Still learning…" and "Nothing close" notes; a result opens the player there.
+- **Shared lately** (was `HomeView`) is behind the clock button; a row opens the post in the player (`/api/app/saves?platform&id`).
+- **Posters:** Reddit/Bluesky videos had none, so tiles were blank. `src/lib/keep/poster.ts` takes a still on download, and `/api/files/…/poster` makes one once for videos kept before.
+- **Verified** on the iPhone 18 Pro simulator against the e2e server: the Reddit video plays (Range 206s), the X album pages, "baby" finds and plays it.
+- **Not yet:** Android (its own session), preloading the next video, background audio.
+
+## 2026-10-18 — Phone API for playing and searching your saves
+
+- **Owner decision:** the apps play your saves natively and search them by meaning; the server keeps doing the heavy lifting (downloads, understanding, streaming).
+- `GET /api/app/saves` (newest first, no archived, `offset`/`limit`; or `?platform&id` for one) and `GET /api/app/search` (`findPosts` with `scope: 'mine'`, Jev refine on page one, 120/min) take a phone key and only read that key's own saves.
+- Both answer `PhonePost` (`src/lib/app/phone-post.ts`): kind (video, audio, photo, article, text), author, text, relative `/api/files` media and poster addresses, `sourceUrl`, `openPath`, and on search `match` and `learning`.
+- Spec updated (`docs/specs/phone-app.md`: API, the player and search). App READMEs and the "only sends links" copy change with the app work.
+- **Next:** iOS and Android player and search screens; the design artifact gets the new boards.
+
+## 2026-10-18 — Admins see when a sign-in link is waiting
+
+- With `EMAIL_LINKS_TO_ADMIN`, a friend asking for a link waited until the admin happened to open the admin page. `/api/auth/me` now has `waitingSignIns` for admins (only when links are held; never for anyone else).
+- The account menu shows the count on the avatar and a "N sign-in links waiting" item to `/admin#sign-in-links`; an admin's menu looks again every 30s. The card scrolls itself into view once loaded.
+- **Not covered:** phones in the theater and search hide the avatar, so there's no badge there.
+
+## 2026-10-18 — End-to-end run: owner, friends, iPhone and Android
+
+- **Run:** fresh server with no email (links handed over), `ALLOWED_EMAILS=@friends.test`, no X app. Desktop (Playwright) for an owner and two friends; the iOS app on two simulators; the Android app on an emulator; a stranger. Pairing by typed code and by the QR link, shares from Safari and the Android share menu, already saved, not a post, offline then back, removing a phone.
+- **Owner setup:** before there's an admin, held links follow `mayGetHeldLink`, so the owner gets in even off the invite list. Opening a link while nobody is admin makes you the admin (`claimOwnership`); only someone with the server log could have it. The waiting screen says the link is in the log (`setup: true`). Email delivery still needs `ADMIN_USERNAMES`.
+- **No X app:** `/api/auth/me` has `xAvailable`. Start, Settings and the account menu stop offering Connect X (it was a bare 500). Start offers "Save your first post" instead.
+- **Search on small libraries:** z-scores used only the library's own spread, and with n posts nothing can score over √(n−1), so a new friend's search by meaning found nothing. `background()` blends in a measured prior (465 posts, 25 queries) worth 20 posts. Filler words ("a", "the", "at") are left out of the keyword query.
+- **adhx.com in the app:** username, channel links, the OG card, the email logo, privacy and admin copy now use this server's address (`PUBLIC_HOST`).
+- **Unsaved link-network preview:** `/api/files` answers 404 with a reason ("Nobody here has saved this yet") and the player shows it without dropping the post. A download that gave up is 410.
+- **Apps:** Android typed `10.0.2.2:3020` as https (iOS used http for local addresses, now both do). Both re-check "can't be reached" every few seconds. iOS: the share card no longer leaves an empty half-screen when iOS shows it as a card; the Connect screen scrolls instead of pushing the logo under the clock.
+- **Follow-ups:** no notice to the admin that a link is waiting; Android "download" link in Settings needs a published APK; Reddit videos have no poster frame.
+
+## 2026-10-18 — Android app builds; phone API gaps fixed
+
+- **Android:** first real build (JDK 17 + SDK 35, wrapper jar committed) and an emulator run against a local ADHX. Fixed a crash on the first API call (body read on the main thread), new shares landing above the fold in Shared lately, and "Kept · saved" for words-only posts.
+- **Gone tweets:** `fetchTweetResult` (fxembed) tells "gone" (FxTwitter 404/401) from "couldn't ask". `addTweet` now answers 404, so `/api/app/save` says `unavailable` instead of a 500 "try again".
+- **Status `off` with KEEP_BACKFILL=off:** an older save nobody re-saved since the server started is never kept; `/api/app/status` said `waiting` forever (and apps polled forever). It now says `off`. `keepCutoff()` in the keep worker exposes the cut-off.
+- **Re-encoding:** `percent` is null and the new `step` is `converting` while ffmpeg turns a VP9/AV1 download into H.264 (was a stuck 99% for minutes).
+- **Video-only networks** (YouTube, Vimeo, Twitch, SoundCloud): when yt-dlp says the post is gone, the save is `unavailable`; when it fails for now, the post stays a video and the download retries. Before, both became a "photo" of the page's thumbnail.
+- **Follow-up:** apps could show `step: converting` as words; an explicit phone re-share of an old post could queue it despite the backfill cut-off.
+
+## 2026-10-18 — adhx.com moves to GitHub Pages
+
+- **Owner decision:** adhx.com is only the website, served by GitHub Pages. The self-hosted app doesn't serve it.
+- **What moved:** the product site, reel, art and video are now in `site/`, a static Next.js export built with webpack. Turbopack picks up the app's `src/instrumentation.ts` through the shared lockfile. Gob, NetworkIcon and the network list are copied in `site/components/`.
+- **Deploy:** `.github/workflows/site.yml` deploys `site/out`. `CNAME` is `adhx.com`. Pages must be enabled with source "GitHub Actions".
+- **Removed from the app:** `ADHX_PRODUCT_SITE`, `/showreel`, the old iCloud shortcut (it opened adhx.com) and the adhx.com share-target defaults.
+- **Skill:** now requires `ADHX_URL`.
+
+## 2026-10-18 — Gob is back; adhx.com becomes the product site
+
+- **Gob** (`src/components/next/Gob.tsx`, CSS `.gob` in globals.css) replaces the yellow square with dots, per brand/BRAND.md. The serif "adhx" wordmark stays.
+  - Moods: `idle` (blinks, glances), `busy` (bob, look around, "o" mouth), `shut` (eyes closed).
+  - Inside `.gob-host`, hover or focus makes Gob look around.
+  - `AdhxFace` now renders Gob.
+  - The header Gob goes busy through `logo-busy.ts` (`useBusyLogo`) while the player loads, search runs, a paste is grabbed or X syncs.
+- **Product site** (`src/components/site/`), shown at "/" to signed-out visitors when `ADHX_PRODUCT_SITE=1` (set in fly.production.toml).
+  - **Hero:** `HeroReel`, a ~31 s scripted reel as live markup at 1280×720, scaled to fit.
+  - **Sections:** networks, search (EmbeddingGemma 2), kept originals, player, Right now, channels, X sync, phone apps, Claude, self-hosting.
+  - **Illustrations:** illustrated posts (`art.tsx`) instead of anyone's real content.
+  - **Video:** `/showreel` shows the reel alone. `public/site/adhx-reel.mp4` (1.9 MB) and `.jpg` were recorded from it with Playwright and encoded with ffmpeg. Re-record after changing the reel.
+
+## 2026-10-18 — ADHX Share apps (iOS + Android)
+
+- **iOS** (`apps/ios`): hand-written Xcode project (objectVersion 77, synced folders), SwiftUI host app (QR/typed pairing, `adhx://pair` link, Shared lately, Settings) + Share Extension running saving → saved / already / not a post / offline / not connected. Address, history and queue in the App Group; key in the Keychain. Bundle prefix and team in `Config/Base.xcconfig`. Builds with `xcodebuild … CODE_SIGNING_ALLOWED=NO`; paired against a real local server in the simulator. iOS 27 shows share extensions inside the system card, so there is no see-through backdrop.
+- **Android** (`apps/android`): Kotlin + Compose, translucent `ShareActivity` bottom sheet, ZXing scanner (no Google services), WorkManager offline queue, EncryptedSharedPreferences. **Never compiled** (no JDK/SDK on the build Mac), and `gradle-wrapper.jar` is missing: run `gradle wrapper --gradle-version 8.11.1` once and commit it.
+- Both use Gob (from `src/components/next/Gob.tsx`) and `public/icon-512.png` for the icons. README → Phone app covers installing.
+- Follow-ups: compile and test Android, CI builds/releases for the APK, TestFlight, and channels from the sheet.
+
+## 2026-10-18 — Phone app server side (ADHX Share)
+
+- **Phone keys**: `access_keys.scope` (`search` | `phone`, migration adds it, old rows are `search`). Phone keys work only on `/api/app/save|status|me`; search keys only on `/api/agent/search`. Up to 10 phones.
+- **Pairing** (`src/lib/auth/phone-pairing.ts`, table `app_pair_codes`): Settings → Phone app (`PhoneAppCard`) makes an 8-character code, single use, 10 minutes, shown as a QR code holding `adhx://pair?server=<origin>&code=…`. `POST /api/app/pair` spends it for a key; the card polls `/api/app/phones` and lists/removes phones.
+- **Save** (`POST /api/app/save`): the add logic moved out of the routes into `src/lib/bookmarks/add.ts` (`addBookmark`) and `add-tweet.ts` (`addTweet`), so the X branch no longer loops back over HTTP with the cookie. Answers `{ platform, network, id, author, text, posterUrl, openPath, alreadySaved, savedAt }`, 422 `not_a_post`, 404 `unavailable`.
+- **Status** (`GET /api/app/status`): keep job state plus a live percent from yt-dlp's progress lines (`src/lib/keep/progress.ts`, in memory, never goes backwards).
+- Contract for the apps: `docs/specs/phone-app.md`. Apps live in `apps/ios` and `apps/android`.
+- Follow-up: "Add to a channel" from the sheet needs a channel scope for phone keys.
+
+## 2026-10-18 — Sign-in without Resend
+
+- **Three ways to deliver links** (`src/lib/email/magic-link.ts`, `signInDelivery()`): Resend; your own mail server (`SMTP_URL`, nodemailer, `smtpOptions` parses `smtp://`/`smtps://`); or `EMAIL_LINKS_TO_ADMIN=1`.
+- **Admin hand-over**: links wait in `admin_sign_in_links` (raw link, lives as long as the 15-minute token; hidden once used) and show on the admin page's "Sign-in links" card (`/api/admin/sign-in-links`).
+- **Who gets a held link** (`mayGetHeldLink`): invited emails, existing accounts, or anyone while no admin exists. The owner's first link (and admins' own) also prints to the server log.
+- **UI**: the start screen says "Ask whoever runs it for the sign-in link".
+- **Compose**: no longer requires Resend.
+
+## 2026-10-18 — Self-hosted: kept media and fourteen networks
+
+- **Decision (owner)**: ADHX is for self-hosting with friends, never commercial. Save each post's media locally in the best quality and serve it; support linktokeep.com's networks. Reverses the 2026-10-16 "proxy only, no yt-dlp, drop YouTube" call (`docs/specs/any-site-links.md` marked superseded).
+- **Kept media** (`src/lib/keep`, tables `keep_jobs` + `kept_files`):
+  - in-process queue, newest save first, with backoff
+  - downloads from fxtwitter for X, otherwise yt-dlp plus og:image
+  - non-H.264 video is re-encoded to H.264 at the same size
+  - served by `/api/files/...` with Range support, and a relative 307 to the old proxies until kept
+  - hourly orphan clean-up
+  - the understanding worker reads kept files from disk; its hash gains `:kept`
+  - Docker installs Python and a pinned yt-dlp in `/opt/yt-dlp`
+- **Link networks**: YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky.
+  - Code: `networks.ts`, `describeNetworkPost`, `/s/{network}/{id}`, `/api/links/resolve`, plus paste-after-the-address support in `proxy.ts`.
+  - Measured live: all ten saved and downloaded in 1–4 s each.
+  - Facebook and Twitch kept at 1080p, X at 4K.
+  - Vimeo's own videos are DRM (picture only); Threads gives a preview-sized picture only; Imgur is blocked in the UK.
+- **Self-hosting**: `ALLOWED_EMAILS` sign-up allowlist; iOS Settings card explains making your own Shortcut for a non-adhx.com origin; skill takes `ADHX_URL`; README rewritten for self-hosters.
+- **Disk safety** (found when a test backfill filled this Mac's disk): downloads pause below `KEEP_MIN_FREE_GB` (default 2) free, and `KEEP_BACKFILL=off` now also skips older jobs that were already queued.
+- **Not verified**: the Docker image build (no Docker here), any server outside the UK, and a full-library backfill.
+
+## 2026-10-18 — Hourly X bookmark sync; search your saves from the adhx skill
+
+- **Hourly sync**: `src/lib/sync/auto.ts`, started from `instrumentation.ts`. Every 5 minutes it syncs people with X connected, at least one finished sync, `autoSync` not `'false'` in `user_preferences`, not banned, and no sync started in the last `AUTO_SYNC_EVERY_MINUTES` (default 50, so the gap stays under an hour). Mode `'new'`: 100 per page, stops after the first page holding a post already saved (X serves the newest 800 at most). Pauses 6h on X 402 (no credits), 15m on 429. Rows carry `trigger_type='auto'`; only manual rows count toward the Sync button's hour wait. The sync loop moved from the route to `src/lib/sync/run.ts` (`runBookmarkSync`), shared by both.
+- **Access keys**: `access_keys` table (hash only, last four, last used), `src/lib/auth/access-keys.ts`, `/api/access-keys`, Settings → Search from Claude (`AccessKeysCard`), max 5. Only `/api/agent/search` accepts them (`Bearer adhx_…`, ban fails closed); it searches the key owner's own saves via `findPosts` (`src/lib/semantic/find.ts`, now shared with `/api/search`, Jev refine included) and returns a compact shape: kind, original and ADHX URLs, text, links, media, match strength. Deleted with the account.
+- **Skill**: `skills/adhx/SKILL.md` now covers searching saves (setup, turning a request into `q` + `type`, response, errors) as well as reading X posts. Plugin 1.1.0.
+- **Not verified**: a real X account (no X OAuth locally); auto sync tested with mocked X and the claim lock. X bills per post read, so each connected account costs up to ~100 posts an hour.
+
+## 2026-10-18 — Production-readiness audit (production build, real engines, live data)
+
+Ran the Docker layout locally (standalone `server.js`, full node_modules, `src/lib` for the tsx workers, migrate first) behind HTTPS, and a scripted audit of every journey on Chrome desktop, Safari desktop (WebKit), Android Chrome and iPhone (WebKit): 30–31 steps each, all passing at the end; plus a two-engine live test (save → other browser 0.5–2.6s; Tune in plays a new save on the iPhone 1.2s after it lands; watching counts correct) and the e2e suite on Chrome + iPhone WebKit.
+Fixed along the way: `next build` failed (Turbopack resolving the `fork()` path; `turbopackIgnore`); sign-up dead end (16-char suggested names cut onto taken ones; now ≤15, older accounts get a claimable suggestion); moment stopwords were a Set of letters (`'a' + 'b'.split()`), hence names like "For"/"Get"; header search and home paste field lost text typed before hydration (now plain GET forms, uncontrolled); signed-out pages fetched learning status (401); channel tiles showed "Everyone"; `/now` was noindex while in the sitemap; site description still said playlists; `/now` and `/start` lacked an h1; theater load errors now offer Try again (and say when rate-limited); `mobile-webkit.spec` rewritten for the new theater.
+Not covered here: Firefox (headless launch crashes in this sandbox), real email (prod refuses to send without RESEND_API_KEY — set it on Fly), X OAuth/sync with real credentials, load testing. Note: public reads are 120/min per client IP (Fly-Client-IP); carrier-NAT users share one. State: local, not pushed.
+
+## 2026-10-17 — Retired Live, Trending and Leaderboard; profiles, privacy and errors in the new design
+
+Owner: remove `/live`, `/trending`, `/leaderboard`; redesign profiles, privacy and the share error. Old URLs 308 via `next.config.js` (`/live`, `/trending/*`, `/discover` → `/now`; `/leaderboard/*`, `/collections/*` → `/channels`); sitemap now lists home, `/now`, `/privacy` plus content. A reachability script (routes + middleware + semantic workers + scripts as roots) found and removed ~70 dead files: the whole old `TheaterShell` and its chrome, the old `Header`, `PWAInstallPrompt`, trending/leaderboard lists, poster cards, old sync widget; their tests went too (unit count 3601 → 2691; e2e specs for Live removed). AppShell renders pages bare; every page has `NxHeader`. New: `ProfileParts` (hero + post grid) for `/{handle}` and `/t/{username}` (channel cards, "channels" wording), new-look `/privacy` (+ `PRIVACY.md` facts updated: Right now, channels, Top channels — owner to review), `/share` error, `error.tsx`. Paste failure toast offers "Watch it anyway". Fixed: server page calling a client-module function (`channelTitle` → `channels/title.ts`). State: local, not pushed.
+
+## 2026-10-17 — Signed-out home and shared post pages in the new design
+
+Signed-out `/` is `PublicHome`: hero ("Save it. Lose it. Find it."), paste-a-link-to-watch (no account needed), Start saving, Right now live underneath; the sr-only static list stays for crawlers; `?auth_error=x_link_only` shows a hint. Post previews (`/{user}/status/{id}`, `/reels/{id}`, `/reel/{id}`, `/p/{id}`, `/@{user}/video/{id}`) render `PreviewTheater` → `TheaterV2` (`source.shared`, `lead`) instead of `TheaterShell`; server side unchanged (metadata, streamed resolve, JSON-LD, pulse). The post loops until you move on, then everyone's similar posts follow (`/api/search/similar` now answers `scope=everyone` signed out). Auto-save rules kept; signed-out Save anywhere returns to that post's page with `?save=1`. Unavailable posts offer the original. New `theaterItemToFeedItem`; `SearchResultItem.stage` keeps the exact media item. Desktop theater sheets start below the header bar.
+e2e: rewritten for the new pages (previews, signed-out, public-pages, save-clone, preview-repeat, theater-sound, paste-save-failure); removed specs for the old public Live theater and old preview chrome (desktop-filter-layout, launch-ux, live-queue-filter, mobile, queue-count, theater-read, theater-shortcuts, theater-tap-declutter). Not carried over: Read/Watch for a quoted video, the shortcuts help, tap-to-declutter.
+Still old-look: `/live`, `/trending` (+archive), `/leaderboard`, `/{user}`, `/t/{user}`, `/admin`, `/privacy`, `/share`'s error page — owner to decide redesign or remove. State: local, not pushed.
+
+## 2026-10-17 — Full two-browser pass: live data, journeys, edge cases
+
+Second browser driven by a Playwright script signing in other local accounts. Live data verified both ways in ~2-3s: Right now counters, strip, card people +1, watching 1→2, Tune in auto-plays the next save when caught up. Fixed:
+
+- Signed-out `/channels`, `/search`, Tune in went to the old public theater (AppShell redirect): now `/start?returnTo=` and public `/play?moment|channel`. Sign in button, no Paste when signed out.
+- Making a channel private didn't reach the page for up to 30s (per-module caches; JSON-LD listed its posts). Owners can now switch Public/Private; Keep is private by default.
+- New accounts: one-step new-look `/welcome`; no starter-playlist dead end; old header hidden on `/start`; "Maybe later" → Right now.
+- More like this in My saves split into many "More like…" headings (`fromSource`).
+- Tune in note folds into a chip after 8s; caught-up dims only the post; moment page has Paste; clear empty/error screens with the header; new 404.
+- "1 saves today", blank text covers on moment cards, "@x · saved" toast, Top channels crash on a missing `items`.
+  State: local, not pushed.
+
+## 2026-10-17 — Right now is home; one nav everywhere
+
+Owner: Channels and Tune in felt hidden behind the theater and search. Right now moved off `/channels` to its own page, `/now`, which signed-in `/` now opens (live, changes as people save, and every Tune in starts there). `PrimaryNav.tsx` gives every new-design screen the same four places: Right now · Channels · My saves · Search. Desktop gets header tabs (also over the theater at xl+); phones get a bottom tab bar. The moment page uses `NxHeader`. The Right now quiet state links to Channels and My saves. `e2e/right-now.spec.ts` watches `/now` (2/2 pass).
+Also: search result views renamed Best first / By match / Play order; video tiles play muted on hover or focus (not with reduced motion). State: local, not pushed.
+
+## 2026-10-16 — Settings redesigned; /play follows its reading settings
+
+Settings (`src/components/next/settings/`) is in the new design, full-width with `NxHeader`. Your X bookmarks is the first card, with live sync via `useXSync`. `?sync=1` starts a sync; the account menu's Sync X bookmarks now points there. Sign out is on the Account card.
+Theater v2 now honors Watching and reading. Sound comes from `useTheaterSoundPreference`, shared with the old theater, so the latest mute choice wins across tabs. In `next/stages`, Bionic Reading applies to post, quote and article-summary text. The reading font applies only to reading-sized text (>200 chars, quotes, summary), so short posts keep the poster serif. The exception: with Bionic Reading on they switch too, because Instrument Serif has a single weight and its synthesized bold is invisible (owner chose "reading text only").
+Note: the TheaterV2 sound change landed inside 32c269b (another session's commit swept the file); d37cb50 has the stages and tests. State: local, not pushed.
+
+## 2026-10-16 — YouTube removed; saved Shorts deleted; any-site study
+
+Owner decision: ADHX only proxies public media it can understand, and YouTube Shorts play only through YouTube's iframe (no frames to sample), so YouTube is gone: no `youtube` platform, no StageYouTube/oEmbed adapter, no `youtube.com/shorts` detection in paste/share/prefix/extension/bookmarklet, no YouTube CSP frame-src. `/shorts/{id}` redirects home and stays reserved. `YtDebugOverlay` became `AvDebugOverlay` (`?avdebug=1` only).
+Data: `src/lib/db/drop-youtube.ts` (called from migrate.ts) deletes every `platform = 'youtube'` row from bookmarks and its children, activity, moderation, analytics, understanding tables and FTS, plus auto channels that held a Short. Idempotent, one transaction, **irreversible on deploy**. Tested on the full test schema.
+e2e: `theater-sound.spec.ts` now drives a TikTok preview with a local WebM (`e2e/fixtures/sound.webm`) instead of the faked YouTube player; the iOS reject-second-unmute case went with it.
+Also: `docs/specs/any-site-links.md` measures proxy-only support for 12 more sites (yt-dlp rejected). Go: Bluesky, Streamable, LinkedIn, Pinterest, Reddit via vxreddit.
+Follow-ups: the published iCloud shortcut may still offer YouTube (it now lands on "not supported"). State: local, not pushed.
+
+## 2026-10-16 — Right now: Playwright spec across two accounts
+
+`e2e/right-now.spec.ts`: one account watches `/channels` while another saves a frog post through `POST /api/bookmarks/add`; without a reload the watcher sees the strip chip "→ Frog", the card's people count +1 and its "Just saved" overlay. Second test: Tune in skipped to "You’re all caught up", watching 1→2 when the saver opens `/moments/{slug}`, then the next save auto-plays with "Just saved · just now".
+E2E has no model, so `e2e/seed.ts` writes synthetic 768-dim `text` vectors into `post_embeddings` (6 frog posts on one axis saved by two seeded people, 40 background posts, two unsaved frog posts the spec saves) and `MOMENT_MIN_SAVERS=2` is set in `e2e/env.ts`. Naming falls back to the shared word, hence "Frog".
+The engine keeps its state for the server's lifetime, so each attempt saves as a fresh account and asserts the count relative to before (passes with `--repeat-each=4`). Pre-existing, unrelated failures in the full Chromium run: `nav.spec.ts` (j advances Live) and `theater-tap-declutter.spec.ts` (desktop), both failing on the base commit too. State: local, not pushed.
+
+## 2026-10-17 — Post words in the new theater: paragraphs, links, link cards, full articles
+
+The owner's links were /author/status/id addresses copied from the new theater ("Copy link"), so their reports were about `/play`, not the older preview pages (which already rendered these). Fixed in the new theater: paragraphs run together (`postText` collapsed blank lines) → `postBody` + `RichText`; links/@mentions/#hashtags not clickable; no card or picture for linked pages → `LinkCard`; a tweet linking to a blog showed as an empty "Article by @…" → `isRealArticle`; X articles needed "Read it here" → shown in full on the stage; video/photo captions stuck at two lines → tap/More opens them; controls were a centred box for posts but full width for video → one full-width bar.
+
+## 2026-10-16 — Full articles in the theater; second two-browser pass
+
+Owner asked for a full re-test once Settings landed. Articles: the new theater only showed the title and six lines ("Read it here" went to X); added `ArticleReader`, the whole body in the reading font with Bionic Reading. Settings (new design) saves sound, Bionic Reading and font, and the theater and reader follow them (checked, then restored). Right now and Tune in re-tested with five more local accounts: saves land in under 3 s, watching 1→2→1, "1 new save just landed" then Play now with "Just saved".
+Fixed: four frog saves split into forming groups of 3 and 1 (pairs of same-topic posts can sit ~0.3 apart) → `FORM_SIMILARITY` 0.33 and close forming groups merge; the name fallback ignored 3-letter words ("cat"); in dev the engine timer kept running pre-reload code (now rebinds per module copy); Settings had a generic tab title and sent signed-out visitors to `/`.
+The built-in browser pane drops its cookie whenever the local server stops; sessions themselves survive restarts (an hours-old curl session kept working).
+
+## 2026-10-16 — Right now: live moments and Tune in
+
+What people are saving, grouped by meaning, live: `/channels` gets Right now (Just saved strip, moment cards that glow when a save lands, forming groups that pop into new moments), `/moments/{slug}` is a live page, and `/play?moment=slug` is Tune in (new saves play next, caught-up waits for the next one, Stay close / Wander, LIVE · N watching). Engine in `src/lib/moments/`, SSE at `/api/moments/stream`.
+Tested end to end with two browsers as two accounts (the second via Playwright pasting real links): saves appeared on the other screen within ~1 s, people counts rose, a forming "Frogs?" filled 2→3→4 and became a moment, watching went 1→2→1, a brand-new post was understood and sorted in ~2 s, Tune in auto-played a save while caught up.
+Tuning: similarities are centred (raw cosines ~0.72 for any pair). Fixed while testing: quoted posts counted as saves, first start re-streamed the last minute, label widened needlessly, strip thumbnails' shimmer covered the heading.
+Prod: `MOMENT_MIN_SAVERS` (default 3). Follow-ups: a Playwright spec seeding vectors (e2e runs with understanding off), signed-out landing using Right now. State: local, not pushed.
+
+## 2026-10-16 — Previous look removed; theater says when it leaves your results
+
+Owner: "remove everything to do with the old design". The `next_ui` flag, `NEXT_UI_FORCE`, `/api/next-ui` and "Use the previous look" are gone; the library grid (`AuthedHome`, `FeedGrid`, `FilterBar`), Tags page and playlist theater were deleted. `/saved`, `/collection`, `/library`, `/tags` are now redirects; `/t/{user}/{tag}` always renders `ChannelPage` (private → owner only). No runtime rollback any more: runbook rewritten (rollback = redeploy previous release).
+Still on the previous look, awaiting the owner's call: signed-out `/`, `/live`, `/trending`, `/leaderboard`, `/settings`, `/admin`, previews, `/welcome`. Their nav now points at Search/Channels/`/play?recent=1`.
+Same day: posts added after a search's results (stick to this vibe / more like this) are labelled "More like @x’s video · Not from “q”" and don't change the "n of N" count; "couldn't be learned" is never shown; posts deleted upstream are hidden everywhere; X articles whose content never loaded are re-fetched at worker start; account menu (Sync X / Settings / Sign out) in the new headers.
+State: local, not pushed.
+
+## 2026-10-16 — Match strength in search, plus fixes from a full local sweep
+
+Search results now say how close they are: a three-bar meter on every tile (Strong match / Good match / Related), strong first, and the rest under "Related to “frog”" explaining they're close in meaning but not what you described — so the chameleon and the seal under "frog" make sense.
+Strength comes from the fused score; words-only matches take Jev's grade, which may lower them one level at most, and Jev drops words-only items it rates unrelated (< 0.5). Posts with no words of their own no longer get a words vector (they matched everything weakly).
+Sweep fixes: deleted media (404/410) is "nothing to learn", not a failure (local pill went 14 → 2); signed-out sign-in returns to the exact search; channel pages say "channel" in their title and share card.
+Eval unchanged: fused hit@5 0.81 / MRR 0.70, refined 0.90 / 0.83. State: local, not pushed.
+
+## 2026-10-16 — Cutover (phase 7 of the redesign)
+
+`next_ui` is on by default. Signed-in `/` and `/saved` open `/play?recent=1` (keeping `open=`), `/library` → `/search`, `/tags` → `/channels`; with it off the new routes bounce to the old ones. Signed-out `/`, `/live`, trending, leaderboard and settings are unchanged.
+Rollback without a rebuild: runtime `NEXT_UI_FORCE=off` beats every browser choice. `/api/next-ui?value=0|1` persists a per-browser choice server-side ("Use the previous look" links on search and channels).
+The supervisor now starts the query child first and jobs once it's ready (both would race the same model download on an empty volume). Privacy page updated for search by meaning, Everyone search and TypeSafe/Hugging Face (it claimed "no metered AI") — needs owner review.
+Runbook with staged production rollout: `docs/rollout/next-ui-cutover.md`. State: local, not pushed; production unchanged.
+
+## 2026-10-16 — Onboarding (phase 6 of the redesign)
+
+`/start`: email link sign up/in (same box), "Check your inbox" that signs the tab in by itself once the link is opened, then Connect X and import with live counts (existing `/api/sync` stream) plus a "making them searchable" bar.
+Paste a post link anywhere (or the Paste pill) to save it with the grabbing-it toast; it plays in a new recent-saves queue (`/play?recent=1`), or next in the theater. Learning ring + sheet on search, theater and channels; search badges "Words only" results.
+Verified locally end to end, including a real magic-link sign-up with a throwaway test address (link from the dev log). Copy from the design was corrected: no audio is heard, and Jev sees text, so "nothing goes to outside AI companies" became "pictures and videos are understood on ADHX's own servers".
+Fixed while verifying: "Nearest 0 matches" headline, a recent-queue start post older than the newest 100 now plays first, the ring stays reachable when only failures remain.
+Search eval re-run now that every picture and video is understood: fused hit@5 0.81 / MRR 0.70, with Jev 0.90 / 0.83 (unchanged) — phase 2 tuning holds.
+State: local, not pushed. Next: cutover (phase 7).
+
+## 2026-10-16 — Channels (phase 5 of the redesign)
+
+Channels are tags: theater Save opens "add to a channel" (tick, find or create; new channels are public), `/channels` shows Made for you, yours and Top channels, and `/t/{user}/{tag}` renders the new channel page under `next_ui`.
+Made for you: saves grouped by meaning (k-means, big groups split) and named from `CHANNEL_NAMES` via Jev `choice` among the closest names; stored in `auto_channels`, recomputed only when stale; Keep makes it a public tag channel.
+On 448 local saves: 8 groups of 24–51 posts (Memes, Reaction memes, Automation, Dev tools, Prompts and tricks, Coding with AI, Internet lore, AI agents); first compute ~2–8 s. Removed "Cringe" from the names (judgy). Plain k-means gave catch-alls of 78–95 posts, hence the splitting.
+New public `GET /api/channels/by/{user}/{tag}` lets anyone play a public channel; the tag visibility logic moved to `src/lib/tags/visibility.ts`; Jev calls share `src/lib/semantic/jev.ts`.
+State: local, not pushed. Next: onboarding (phase 6). Top channels is empty locally (no public views in this DB).
+
+## 2026-10-16 — Theater v2 (phase 4 of the redesign)
+
+`/play` behind `next_ui` plays a search's results as the queue (Play all, Play this group, any tile). It reuses the current `Stage` for media and adds the approved chrome: rail, seek, transport, volume, repeat, PiP, full screen, Up next and ⋯ sheets, keys and swipes.
+New `GET /api/search/similar` (a post's own vectors per kind, same fusion and scope rules) powers More like this and Stick to this vibe, which carries on past the end of the queue.
+Fixes found while verifying: an extension flag read back from a state updater was always false (ended instead of continuing), cream text posts sat under the rail, the install banner hid the header, long links overflowed the text stage.
+Verified on 448 local saves at 1280px and 375px. State: local, not pushed. Next: channels (phase 5); Save currently saves only (adding to a channel comes with it).
+
+## 2026-10-16 — Search screen (phase 3 of the redesign)
+
+Merged phase 0 (`feat/next-ui-foundations`) into `feat/find-by-context`. Added `/search` behind `next_ui`: search bar with My saves / Everyone, type pills, Words only, Bento / Groups / Queue, Play all.
+Bento autoplays the best match muted (own media proxies; off under reduced motion) beside a masonry; Groups split results by how they matched; Queue explains "Why this one".
+The API now reports `close` (best hit ≥ 2.2) so a far-off query reads "Nearest …" instead of claiming matches. URL sync uses `history.replaceState` (router.replace re-rendered the server page per keystroke and lost the flag).
+Verified on 448 local saves at desktop and 375px. State: local, not pushed. Next: theater v2 (phase 4) takes the result list as its queue; Play opens the first result in today's theater until then.
+
+## 2026-10-16 — Search API by meaning (phase 2 of the redesign)
+
+`GET /api/search`: words/picture/video vectors plus FTS5 keywords, `mine`/`everyone` scope, feed type filters, words only, optional Jev rerank (`refine=1`).
+Fusion standardises each vector list per query (z-scores); RRF scored hit@5 0.35 because every query gets a weak picture list. Fused hit@5 0.84 / MRR 0.68 on 31 labelled local queries; with Jev hit@1 0.77, hit@5 0.90, MRR 0.83 (~250ms). Weights were tuned while only ~60 posts had visuals: re-run `scripts/eval-search.ts` once backfill finishes.
+Everyone results are post keys filtered by bans and moderation; other savers' copies are anonymised in `items.ts`.
+Also fixed: inference blocked the web event loop (see phase 1 entry), Jev 400s from half emoji (`toWellFormed`).
+State: local on `feat/find-by-context`, not pushed. Next: search UI (phase 3), which needs phase 0's `feat/next-ui-foundations` merged in.
+
+## 2026-10-16 — Understanding pipeline for search by meaning (phase 1 of the redesign)
+
+Owner approved a phased rebuild around search by meaning, a content-first theater, and channels (design canvas linked in the PR).
+Added `src/lib/semantic/`: EmbeddingGemma 2 on the server (text q4, vision q8, no audio) understands words, one picture, and video frames.
+Results are keyed by post (no user id, no tags) in `post_embeddings`; a durable `understanding_queue` puts fresh saves and Up next first.
+The model runs only in two child processes forked at startup: a niced jobs worker and a words-only query embedder (in-process inference froze every request for up to 12.5 s). ffmpeg-static samples 16 frames over the first 32 s at 70 vision tokens each (pond's 32 × 140 took ~42s and ~3GB per video on CPU; 16 × 70 takes ~11–15s and ~2GB with cosine ~0.95 to the full vector).
+New `/api/understanding/{status,retry,prioritize}`; saves, sync and clone enqueue. Fly VMs raised to 4GB.
+State: implemented locally on `feat/find-by-context`, not pushed (GitHub account setup pending). Next: search API (phase 2).
+
+## 2026-10-16 — Redesign phase 0: next_ui flag, tokens and visual primitives
+
+Started the find-by-meaning redesign as a strangler rebuild behind `next_ui` (env `NEXT_PUBLIC_NEXT_UI`, `?next_ui=1` persisted per browser).
+Added nx- tokens (warm black, cream, yellow #ffd23f) and Instrument Serif + Hanken Grotesk alongside Matter, not replacing it.
+New `src/components/next`: five tiles, four stages, the AdhxFace loader, shimmer skeleton and paste toast, all from `FeedItem`.
+Text over media always gets the black scrim plus text-shadow; controls get a dark translucent backplate; motion respects reduced-motion.
+`/dev/next-ui` previews everything with real saves; verified at 390px and 1440px. Tests cover the flag, rendering and translation safety.
+State: committed locally on `feat/next-ui-foundations`, not pushed. No schema or backend changes (phase 1 runs in parallel).
+Follow-ups: theater v2 should wire stages to real players via the `media` slot; GIF tiles still show a still cover, not a loop.
+
 ## 2026-09-15 — Move mobile PiP into bottom playback controls
 
 Moved picture-in-picture from the right post-action rail to the bottom playback group, beside expand.

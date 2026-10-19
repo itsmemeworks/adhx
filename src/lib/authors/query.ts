@@ -20,7 +20,7 @@ import { TtlLruCache } from '@/lib/cache/ttl-lru'
  * lookup across ALL of an author's public history: every `activity` row
  * recorded for them (preview/save events) UNIONed with every `bookmarks` row
  * any user has saved for them (aggregated so multiple savers of the same post
- * collapse into one row + a save count). X/Twitter only — IG/TikTok/YouTube
+ * collapse into one row + a save count). X/Twitter only — IG/TikTok
  * have no author-only URL in this app, and `/{username}` is specifically
  * catching X handle-name search queries.
  */

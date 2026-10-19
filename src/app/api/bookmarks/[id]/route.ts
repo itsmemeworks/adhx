@@ -14,7 +14,7 @@ import { captureException, metrics } from '@/lib/sentry'
 import { recordPostAnalytic } from '@/lib/analytics/record'
 import { withAuth } from '@/lib/api/with-auth'
 
-// GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok|youtube - Get single bookmark
+// GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok - Get single bookmark
 export const GET = withAuth(
   async (request: NextRequest, userId, { params }: { params: Promise<{ id: string }> }) => {
     try {

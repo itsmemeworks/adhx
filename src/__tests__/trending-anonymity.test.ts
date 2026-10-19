@@ -169,7 +169,7 @@ describe('trending anonymity invariant', () => {
     expect(item).toMatchObject({
       contentType: 'photo',
       photoCount: 6,
-      thumbnailUrl: '/api/media/instagram/thumbnail?id=ig-carousel',
+      thumbnailUrl: '/api/files/instagram/ig-carousel/poster',
     })
   })
 

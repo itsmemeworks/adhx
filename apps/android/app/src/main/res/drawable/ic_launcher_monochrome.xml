@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed (monochrome) icon: Gob's silhouette with the eyes and mouth cut
+     out, since a themed icon only keeps the shape. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.6875"
+        android:scaleY="0.6875"
+        android:translateX="21"
+        android:translateY="21">
+        <group
+            android:pivotX="48"
+            android:pivotY="50"
+            android:rotation="-4">
+            <path
+                android:fillColor="#FFFFFFFF"
+                android:fillType="evenOdd"
+                android:pathData="M38 14H58A28 28 0 0 1 86 42V58A28 28 0 0 1 58 86H38A28 28 0 0 1 10 58V42A28 28 0 0 1 38 14Z M29 46A7 7 0 1 0 43 46A7 7 0 1 0 29 46Z M52 42A11 11 0 1 0 74 42A11 11 0 1 0 52 42Z M62.5 39A3.5 3.5 0 1 0 69.5 39A3.5 3.5 0 1 0 62.5 39Z M39.144 65.184L58.003 62.868A3.5 3.5 0 0 1 58.856 69.816L39.997 72.132A3.5 3.5 0 0 1 39.144 65.184Z" />
+        </group>
+    </group>
+</vector>

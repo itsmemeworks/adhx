@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ADHX Share</string>
+    <!-- The name shown in other apps' share menus. -->
+    <string name="share_label">ADHX</string>
+</resources>

@@ -1,35 +1,29 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
-import { Lock, Tag as TagIcon } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { headers } from 'next/headers'
 import { getPublicTagCollection, type TagCollectionResult } from '@/lib/tags/query'
 import { getUserIdForUsername, resolveUsernameAlias } from '@/lib/users/lookup'
-import { MatterLogo } from '@/components/matter'
 import { getCurrentUserId } from '@/lib/auth/session'
 import { truncate } from '@/lib/utils/format'
 import { buildCollectionPageLd, jsonLdScriptContent } from '@/lib/utils/structured-data'
-import { TheaterShell } from '@/components/theater/TheaterShell'
-import { buildCollectionSeed } from '@/lib/theater/tag-seed'
 import { recordCollectionEvent } from '@/lib/discovery/record'
 import { isLikelyBot } from '@/lib/activity/bot'
 import { recordAnalytic } from '@/lib/analytics/record'
 import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
+import { ChannelPage } from '@/components/next/channels/ChannelPage'
 
 /**
- * `/t/{username}/{tag}` — public playlist page (a playlist IS one shared tag).
- *
- * Historically this page only fetched metadata server-side and left every
- * item to a client-side `useEffect` fetch — invisible to crawlers and a
- * flash-of-nothing for visitors. It also linked every card straight to
- * x.com, leaking the click off-site. This rewrite server-renders the real
- * item grid (mirrors the `/trending` + `/{username}` hubs), links each card
- * to its on-ADHX preview path, and enforces the exact same public/private
- * gate as the JSON API (`getPublicTagCollection` — see that module for the
- * privacy invariant).
+ * `/t/{username}/{tag}` — a channel's page (a channel IS one shared tag).
+ * Renders `ChannelPage`, plus crawlable links and JSON-LD for search engines.
+ * Visibility is the same public/private gate as the JSON API
+ * (`getPublicTagCollection` — see that module for the privacy invariant);
+ * the owner still sees a private channel. Renamed curators 308 to their
+ * current username.
  *
  * Reads the runtime SQLite DB (migrated at container startup, not present at
- * build time) — must stay dynamic, same reasoning as /trending and /{username}.
+ * build time) — must stay dynamic.
  */
 export const dynamic = 'force-dynamic'
 
@@ -77,14 +71,15 @@ async function loadCollection(
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username, tag } = await params
   const result = await loadCollection(username, tag)
+  const noun = 'channel'
 
   if (result.status === 'redirect') {
     const redirectCardUrl = playlistSocialCardUrl(result.username, result.tag)
     return {
       title: `#${tag} — ADHX`,
-      description: 'A curated playlist on ADHX.',
+      description: `A curated ${noun} on ADHX.`,
       openGraph: {
-        images: [{ url: redirectCardUrl, width: 1200, height: 630, alt: 'ADHX playlist' }],
+        images: [{ url: redirectCardUrl, width: 1200, height: 630, alt: `ADHX ${noun}` }],
       },
       twitter: { card: 'summary_large_image', images: [redirectCardUrl] },
     }
@@ -92,8 +87,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (result.status === 'private') {
     return {
-      title: 'Private playlist — ADHX',
-      description: 'This playlist is private.',
+      title: `Private ${noun} — ADHX`,
+      description: `This ${noun} is private.`,
       robots: { index: false, follow: false },
       openGraph: {
         images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
@@ -104,7 +99,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (result.status === 'not_found') {
     return {
-      title: 'ADHX playlist',
+      title: `ADHX ${noun}`,
       description: 'Save it. Lose it. Find it.',
       openGraph: {
         images: [{ url: ANONYMOUS_PLAYLIST_CARD_URL, width: 1200, height: 630, alt: 'ADHX' }],
@@ -120,7 +115,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .slice(0, 2)
     .join(' · ')
 
-  const title = `#${data.tag} — @${data.username}'s playlist on ADHX`
+  const title = `#${data.tag} — @${data.username}'s ${noun} on ADHX`
   const description = previewTexts
     ? `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}. ${truncate(previewTexts, 200)}`
     : `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username}.`
@@ -142,7 +137,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           url: socialCardUrl,
           width: 1200,
           height: 630,
-          alt: `#${data.tag} playlist by @${data.username}`,
+          alt: `#${data.tag} ${noun} by @${data.username}`,
         },
       ],
     },
@@ -155,30 +150,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-/** Quiet footer badge shown on every branch of this page (public, private, empty). */
-function PoweredByFooter() {
-  return (
-    <footer className="border-t border-hairline px-5 py-8 text-center sm:px-11">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-3 transition-colors hover:text-clay"
-      >
-        Made with <MatterLogo size={13} minHeight={22} /> ↗
-      </Link>
-    </footer>
-  )
-}
-
-function SignedOutNav() {
-  return (
-    <nav className="px-5 pt-5 sm:px-11">
-      <Link href="/" aria-label="ADHX home" className="inline-flex hover:opacity-80">
-        <MatterLogo size={18} />
-      </Link>
-    </nav>
-  )
-}
-
 export default async function SharedTagPage({ params }: Props) {
   const { username, tag } = await params
   const [result, viewerUserId] = await Promise.all([
@@ -188,69 +159,54 @@ export default async function SharedTagPage({ params }: Props) {
   if (result.status === 'redirect') permanentRedirect(`/t/${result.username}/${result.tag}`)
   if (result.status === 'not_found') notFound()
 
-  const signedOut = !viewerUserId
-
   if (result.status === 'private') {
-    return (
-      <div className="flex min-h-screen flex-col bg-paper">
-        {signedOut && <SignedOutNav />}
-        <div className="flex flex-1 items-center justify-center px-4">
-          <div className="max-w-md text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-hairline bg-inset">
-              <Lock className="h-8 w-8 text-ink-3" />
-            </div>
-            <h1 className="font-serif text-2xl font-semibold text-ink">Private playlist</h1>
-            <p className="mt-2 text-ink-2">This tag isn&apos;t publicly shared.</p>
-            <Link
-              href="/"
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-clay-grad px-4 py-2 text-sm font-semibold text-white shadow-glow transition-opacity hover:opacity-90"
-            >
-              Go to ADHX
-            </Link>
-          </div>
-        </div>
-        <PoweredByFooter />
-      </div>
-    )
+    // The owner still sees their private channel here; everyone else is told it's private.
+    let decoded: { username: string; tag: string } | null = null
+    try {
+      decoded = { username: decodeURIComponent(username), tag: decodeURIComponent(tag) }
+    } catch {
+      decoded = null
+    }
+    const ownerId = decoded && viewerUserId ? await getUserIdForUsername(decoded.username) : null
+    if (decoded && viewerUserId && ownerId === viewerUserId) {
+      return <ChannelPage username={decoded.username} tag={decoded.tag} count={0} mine signedIn />
+    }
+    return <PrivateChannel />
   }
 
   const { data } = result
 
   // Discovery leaderboard signal (docs/specs/discovery-leaderboards.md §4) —
-  // record a human view of this public playlist. Bot/crawler UAs are
+  // record a human view of this public channel. Bot/crawler UAs are
   // skipped (same isLikelyBot() gate the pulse uses) so OG-unfurl requests
   // never inflate the leaderboard. Fire-and-forget; never affects rendering —
   // the try/catch also covers headers() outside a request scope (direct
   // renders in tests).
+  const ownerId = await getUserIdForUsername(data.username)
   try {
     const ua = (await headers()).get('user-agent')
-    if (!isLikelyBot(ua)) {
-      const ownerUserId = await getUserIdForUsername(data.username)
-      if (ownerUserId) {
-        recordCollectionEvent({
-          action: 'view',
-          ownerUserId,
-          tag: data.tag,
-          viewerId: viewerUserId,
-        })
-        recordAnalytic({
-          name: 'theater.open',
-          userId: viewerUserId,
-          tag: data.tag,
-          surface: 'playlist',
-        })
-      }
+    if (!isLikelyBot(ua) && ownerId) {
+      recordCollectionEvent({
+        action: 'view',
+        ownerUserId: ownerId,
+        tag: data.tag,
+        viewerId: viewerUserId,
+      })
+      recordAnalytic({
+        name: 'theater.open',
+        userId: viewerUserId,
+        tag: data.tag,
+        surface: 'playlist',
+      })
     }
   } catch {
     // Stats must never break the page.
   }
 
-  const canonicalUrl = `${BASE_URL}/t/${data.username}/${data.tag}`
-
   const jsonLd = buildCollectionPageLd({
-    name: `#${data.tag} — @${data.username}'s playlist on ADHX`,
+    name: `#${data.tag} — @${data.username}'s channel on ADHX`,
     description: `${data.tweetCount} bookmark${data.tweetCount === 1 ? '' : 's'} curated by @${data.username} on ADHX.`,
-    url: canonicalUrl,
+    url: `${BASE_URL}/t/${data.username}/${data.tag}`,
     baseUrl: BASE_URL,
     items: data.items.map((item) => ({
       url: item.url,
@@ -258,35 +214,13 @@ export default async function SharedTagPage({ params }: Props) {
     })),
   })
 
-  // An empty collection has nothing to loop through — the theater needs at
-  // least one item, so this stays the plain empty-state page instead.
-  if (data.items.length === 0) {
-    return (
-      <div className="flex min-h-screen flex-col bg-paper">
-        {signedOut && <SignedOutNav />}
-        <div className="flex flex-1 items-center justify-center px-4">
-          <div className="max-w-md text-center">
-            <TagIcon className="mx-auto mb-4 h-12 w-12 text-ink-3" />
-            <h1 className="font-serif text-2xl font-semibold text-ink">#{data.tag}</h1>
-            <p className="mt-2 text-ink-2">No bookmarks with this tag yet.</p>
-          </div>
-        </div>
-        <PoweredByFooter />
-      </div>
-    )
-  }
-
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScriptContent(jsonLd) }}
       />
-
-      {/* Crawlable content for crawlers/no-JS clients — the interactive
-          `TheaterShell` below (full-viewport, `fixed inset-0`) is what
-          visitors actually see, and carries the tag/curator identity chrome
-          itself, so there's no separate visual header on this route. */}
+      {/* Crawlable links for crawlers and no-JS clients; the channel page loads its posts itself. */}
       <ul className="sr-only">
         {data.items.map((item) => (
           <li key={`${item.platform}:${item.bookmarkId}`}>
@@ -294,13 +228,26 @@ export default async function SharedTagPage({ params }: Props) {
           </li>
         ))}
       </ul>
-
-      <TheaterShell
-        seed={buildCollectionSeed(data.items)}
-        mode="playlist"
-        authed={!signedOut}
-        playlist={{ tag: data.tag, curator: data.username, count: data.tweetCount }}
+      <ChannelPage
+        username={data.username}
+        tag={data.tag}
+        count={data.tweetCount}
+        mine={!!viewerUserId && ownerId === viewerUserId}
+        signedIn={!!viewerUserId}
       />
     </>
+  )
+}
+
+function PrivateChannel() {
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-black px-6 text-center font-nx-sans text-white">
+      <Lock aria-hidden className="h-8 w-8 text-white/50" />
+      <h1 className="m-0 font-nx-serif text-[36px] font-normal leading-none">Private channel</h1>
+      <p className="m-0 text-white/65">Only the person who made it can see this one.</p>
+      <Link href="/" className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-black">
+        Go to ADHX
+      </Link>
+    </main>
   )
 }

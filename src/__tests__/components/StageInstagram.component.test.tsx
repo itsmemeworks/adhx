@@ -325,10 +325,10 @@ describe('Instagram image stage', () => {
       expect(
         Array.from(container.querySelectorAll('img'))
           .map((img) => img.getAttribute('src'))
-          .filter((src) => src?.startsWith('/api/media/instagram/thumbnail')),
+          .filter((src) => src?.startsWith('/api/files/instagram/')),
       ).toEqual([
-        '/api/media/instagram/thumbnail?id=legacy-photo&index=1',
-        '/api/media/instagram/thumbnail?id=legacy-photo&index=2',
+        '/api/files/instagram/legacy-photo/photo-1',
+        '/api/files/instagram/legacy-photo/photo-2',
       ])
       await act(async () => {
         await vi.advanceTimersByTimeAsync(8_000)
@@ -349,7 +349,7 @@ describe('Instagram image stage', () => {
           url: '/p/carousel-1',
           contentType: 'photo',
           photoCount: 3,
-          thumbnailUrl: '/api/media/instagram/thumbnail?id=carousel-1',
+          thumbnailUrl: '/api/files/instagram/carousel-1/poster?a=someone',
         })}
         muted
         onRequestUnmute={vi.fn()}
@@ -362,11 +362,11 @@ describe('Instagram image stage', () => {
     expect(
       Array.from(container.querySelectorAll('img'))
         .map((img) => img.getAttribute('src'))
-        .filter((src) => src?.startsWith('/api/media/instagram/thumbnail')),
+        .filter((src) => src?.startsWith('/api/files/instagram/')),
     ).toEqual([
-      '/api/media/instagram/thumbnail?id=carousel-1&index=1',
-      '/api/media/instagram/thumbnail?id=carousel-1&index=2',
-      '/api/media/instagram/thumbnail?id=carousel-1&index=3',
+      '/api/files/instagram/carousel-1/photo-1',
+      '/api/files/instagram/carousel-1/photo-2',
+      '/api/files/instagram/carousel-1/photo-3',
     ])
   })
 })

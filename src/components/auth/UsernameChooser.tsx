@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { sanitizeUsername } from '@/lib/auth/username-rules'
+import { useSiteHost } from '@/lib/routes/use-host'
 
 // Colors for the `dark` theme — matches the /welcome full-bleed modal (always
 // dark, like the theater / SignInModal, since it's a brand-new account's very
@@ -25,8 +26,8 @@ export interface UsernameChooserProps {
   suggestedUsername: string
   /** Called after a successful claim/change with the new username + how many changes remain. */
   onSuccess: (result: UsernameClaimSuccess) => void
-  /** Visual language: 'dark' matches the /welcome full-bleed modal; 'matter' matches Settings cards. Default 'matter'. */
-  theme?: 'dark' | 'matter'
+  /** Visual language: 'dark' matches the /welcome full-bleed modal; 'next' matches the Settings cards. Default 'next'. */
+  theme?: 'dark' | 'next'
   /** Show the "Keep @suggested" shortcut button below the submit button. Default true. */
   showKeepSuggestion?: boolean
   autoFocus?: boolean
@@ -41,18 +42,19 @@ export interface UsernameChooserProps {
  * Shared username claim/change form — input with a live availability check,
  * submit to `POST /api/auth/username`, and success/error handling. Used by
  * both `/welcome` (first-claim prompt, `theme="dark"`) and the Settings
- * Username card (subsequent changes, `theme="matter"`).
+ * Username card (subsequent changes, `theme="next"`).
  */
 export function UsernameChooser({
   suggestedUsername,
   onSuccess,
-  theme = 'matter',
+  theme = 'next',
   showKeepSuggestion = true,
   autoFocus = false,
   onSanitizedChange,
   submitLabel = 'claim',
   onCancel,
 }: UsernameChooserProps) {
+  const host = useSiteHost()
   const [value, setValue] = useState(suggestedUsername)
   const [availability, setAvailability] = useState<UsernameAvailability>('idle')
   const [submitting, setSubmitting] = useState(false)
@@ -145,7 +147,7 @@ export function UsernameChooser({
           style={{ backgroundColor: INPUT_BG }}
         >
           <span className="whitespace-nowrap font-mono text-[13px]" style={{ color: SUBTLE }}>
-            adhx.com/t/
+            {`${host}/t/`}
           </span>
           <input
             type="text"
@@ -203,28 +205,38 @@ export function UsernameChooser({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-1.5">
-      <div className="flex min-w-0 items-center gap-2">
-        <div className="flex h-11 min-w-0 flex-1 items-center rounded-[10px] border border-hairline bg-inset pl-3.5 pr-2">
-          <span className="whitespace-nowrap font-mono text-[13px] text-ink-3">adhx.com/t/</span>
-          <input
-            type="text"
-            autoFocus={autoFocus}
-            autoComplete="off"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            aria-label="Username"
-            maxLength={15}
-            className="h-full min-w-0 flex-1 bg-transparent text-base text-ink outline-none focus:ring-0 sm:text-sm"
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="flex min-w-0 flex-col gap-2.5 font-nx-sans">
+      <div className="flex h-12 min-w-0 items-center rounded-[14px] border-[1.5px] border-nx-accent bg-black pl-4 pr-2">
+        <span className="whitespace-nowrap text-[14px] text-white/50">{`${host}/t/`}</span>
+        <input
+          type="text"
+          autoFocus={autoFocus}
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          aria-label="Username"
+          maxLength={15}
+          className="h-full min-w-0 flex-1 bg-transparent text-base text-white outline-none sm:text-[15px]"
+        />
+      </div>
+
+      <div className="min-h-[18px] text-[13px]">
+        {availability === 'checking' && <span className="text-white/55">Checking…</span>}
+        {availability === 'available' && <span className="text-[#7ddc8a]">Available</span>}
+        {availability === 'taken' && <span className="text-[#ff8a7a]">Taken. Try another.</span>}
+        {availability === 'error' && (
+          <span className="text-white/55">Couldn&rsquo;t check that name</span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
           disabled={disabled}
-          className="inline-flex min-h-[44px] flex-none items-center whitespace-nowrap rounded-[10px] bg-clay-grad px-3.5 py-2 text-[13px] font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center rounded-full bg-nx-accent px-5 text-[15px] font-extrabold text-black disabled:opacity-50"
         >
           {submitting
             ? 'Saving…'
@@ -232,37 +244,32 @@ export function UsernameChooser({
               ? 'Save'
               : `Claim @${sanitized || '...'}`}
         </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-nx-cream/40 px-5 text-[15px] font-bold text-nx-cream hover:bg-white/10"
+          >
+            Cancel
+          </button>
+        )}
         {showKeepSuggestion && (
           <button
             type="button"
             disabled={submitting}
             onClick={() => claim(suggestedUsername)}
-            className="flex-none text-[13px] text-ink-3 underline underline-offset-2 disabled:opacity-60"
+            className="py-2 text-[13px] text-white/70 underline underline-offset-2 disabled:opacity-60"
           >
             Keep @{suggestedUsername}
           </button>
         )}
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex-none text-[13px] text-ink-3 transition-colors hover:text-ink"
-          >
-            Cancel
-          </button>
-        )}
       </div>
 
-      <div className="min-h-[18px] text-[12.5px]">
-        {availability === 'checking' && <span className="text-ink-3">Checking…</span>}
-        {availability === 'available' && <span className="text-green-700">Available</span>}
-        {availability === 'taken' && <span className="text-red-600">Taken — try another</span>}
-        {availability === 'error' && (
-          <span className="text-ink-3">Couldn&rsquo;t check availability</span>
-        )}
-      </div>
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
+          {error}
+        </p>
+      )}
     </form>
   )
 }

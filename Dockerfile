@@ -24,6 +24,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # Build the application with the lockfile-resolved toolchain.
 FROM deps AS builder
 ARG SENTRY_RELEASE
+# Public phone download destinations are compiled into the client bundle.
+# Leave blank to use the source/build instructions; these are never secrets.
+ARG NEXT_PUBLIC_IOS_APP_URL=""
+ARG NEXT_PUBLIC_ANDROID_APP_URL=""
+ENV NEXT_PUBLIC_IOS_APP_URL=${NEXT_PUBLIC_IOS_APP_URL}
+ENV NEXT_PUBLIC_ANDROID_APP_URL=${NEXT_PUBLIC_ANDROID_APP_URL}
 COPY . .
 RUN pnpm run build
 
@@ -46,15 +52,32 @@ COPY --from=builder /app/src/lib ./src/lib
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
+# tsx reads the `@/` path alias from here when it runs the semantic child
+# processes (src/lib/semantic/child.ts) at runtime.
+COPY --from=builder /app/tsconfig.json ./
 
 # Production stage - minimal runtime image
 FROM base AS runner
 
-# Install sqlite3 CLI and runtime dependencies
+# Install sqlite3 CLI and runtime dependencies. Python runs yt-dlp, which
+# downloads each saved post's media (see src/lib/keep).
 RUN apt-get update && apt-get install -y \
     libsqlite3-0 \
     sqlite3 \
+    python3 \
+    python3-venv \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# yt-dlp in its own virtualenv, pinned. Sites change often: bump this with
+# each release, or update a running container with
+#   /opt/yt-dlp/bin/pip install -U "yt-dlp[default]"
+# [default] brings yt-dlp-ejs, the scripts YouTube's player challenges need
+# (run with the container's Node: see src/lib/keep/ytdlp.ts).
+ARG YTDLP_VERSION=2026.8.19
+RUN python3 -m venv /opt/yt-dlp \
+    && /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==${YTDLP_VERSION}"
+ENV YTDLP_PATH=/opt/yt-dlp/bin/yt-dlp
 
 WORKDIR /app
 
@@ -90,7 +113,7 @@ COPY --from=runtime-files --chown=nextjs:nodejs /runtime ./
 #   fly ssh console --app adhx -C "tsx /app/scripts/<name>.ts"
 
 # Create data directory for SQLite (will be mounted as volume)
-RUN mkdir -p /data && chown nextjs:nodejs /data
+RUN mkdir -p /data && chown nextjs:nodejs /data && chown -R nextjs:nodejs /opt/yt-dlp
 
 USER nextjs
 

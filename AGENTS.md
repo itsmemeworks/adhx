@@ -4,9 +4,9 @@ Orientation for AI agents (and humans) starting work in this repo with no prior 
 
 ## What this project is
 
-**ADHX** (adhx.com) — _"Save it. Lose it. Find it."_ An open-source bookmark manager for people who save everything and read nothing. It syncs X/Twitter bookmarks, previews and saves Instagram Reels, TikToks, and YouTube Shorts via a URL-prefix trick (`x.com/...` → `adhx.com/...`), and turns the community's anonymous save/preview activity into public, crawlable pages (`/trending`). Next.js 16 App Router, SQLite + Drizzle, deployed on Fly.io (staging `adhx.fly.dev`, production `adhx.com`).
+**ADHX** — _"Save it. Lose it. Find it."_ A self-hosted keeper for social posts from fourteen networks. One Next.js 16 container stores SQLite, retained media and an on-server search model. Native iOS/Android companions share links, play saves and search them. People sign in by email magic link; connecting X for bookmark sync is optional.
 
-Strategically, ADHX's growth engine is SEO/GEO: x.com is effectively uncrawlable, so ADHX preview pages act as the indexable, structured mirror of social content — every save creates a public long-tail landing page. Features that add per-user variable cost (metered AI) are deliberately out of scope for the free product.
+Personal save state stays account-scoped. Shared post previews, retained media and anonymous community features are intentionally visible to anyone who can reach the instance. Operators choose their network boundary. `site/` is a separate static product website intended for adhx.com; deployment and domain cutover are separate from editing this repository. Deployment examples must remain vendor-neutral; never commit household settings or credentials.
 
 ## How to get context (read in this order)
 
@@ -33,7 +33,7 @@ If your change makes `README.md`, `ARCHITECTURE.md`, or `CLAUDE.md` inaccurate, 
 ## Verify your work
 
 ```bash
-pnpm typecheck && pnpm test   # 940+ tests
+pnpm typecheck && pnpm test
 pnpm lint && pnpm format:check
 ```
 

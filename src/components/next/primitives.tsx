@@ -1,0 +1,212 @@
+'use client'
+
+import { useCallback, useState, type ReactNode } from 'react'
+import { cn } from '@/lib/utils'
+import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import type { PostAuthor } from './post'
+
+/**
+ * Low-level pieces shared by the next_ui cards and stages.
+ *
+ * Legibility contract (owner-approved design): text over media ALWAYS sits on
+ * `.nx-scrim` (transparent → black .9) AND carries `.nx-text-shadow`; chips and
+ * controls over media sit on `.nx-plate` (black .38 + shadow + blur).
+ * Translation safety: no bare text node is ever the sibling of an element.
+ */
+
+export interface NxImageProps {
+  src: string | null
+  /** Tried once when `src` fails. */
+  fallbackSrc?: string | null
+  alt: string
+  className?: string
+  /** Pop in once loaded (rows/grids); stages fade instead. */
+  reveal?: 'pop' | 'fade' | 'none'
+  loading?: 'lazy' | 'eager'
+}
+
+/**
+ * An `<img>` that shows a shimmer until it loads, swaps to `fallbackSrc` once
+ * on error, and leaves the bare surface behind if both fail.
+ */
+export function NxImage(props: NxImageProps) {
+  // Keyed so a new src starts from a clean loading state.
+  return <NxImageInner key={props.src ?? ''} {...props} />
+}
+
+function NxImageInner({
+  src,
+  fallbackSrc,
+  alt,
+  className,
+  reveal = 'pop',
+  loading = 'lazy',
+}: NxImageProps) {
+  const [current, setCurrent] = useState(src)
+  const [state, setState] = useState<'loading' | 'loaded' | 'failed'>(src ? 'loading' : 'failed')
+
+  // A cached image can finish before hydration attaches onLoad.
+  const ref = useCallback((img: HTMLImageElement | null) => {
+    if (img?.complete && img.naturalWidth > 0) setState('loaded')
+  }, [])
+
+  return (
+    <>
+      {state === 'loading' && (
+        <span aria-hidden className="nx-shimmer animate-nx-shimmer absolute inset-0" />
+      )}
+      {current && state !== 'failed' && (
+        <img
+          ref={ref}
+          src={current}
+          alt={alt}
+          loading={loading}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          draggable={false}
+          onLoad={() => setState('loaded')}
+          onError={() => {
+            if (fallbackSrc && current !== fallbackSrc) {
+              setCurrent(fallbackSrc)
+            } else {
+              setState('failed')
+            }
+          }}
+          className={cn(
+            'block',
+            className,
+            state === 'loaded'
+              ? reveal === 'pop'
+                ? 'animate-nx-pop'
+                : reveal === 'fade'
+                  ? 'opacity-100 transition-opacity duration-300'
+                  : ''
+              : 'opacity-0',
+          )}
+        />
+      )}
+    </>
+  )
+}
+
+export function NxAvatar({
+  author,
+  size,
+  className,
+}: {
+  author: Pick<PostAuthor, 'avatarUrl' | 'handle' | 'name'>
+  size: number
+  className?: string
+}) {
+  const remote = usableAvatarUrl(author.avatarUrl)
+  const [broken, setBroken] = useState(false)
+  const src = remote && !broken ? remote : generateAvatarDataUri(author.handle || author.name)
+  return (
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+      style={{ width: size, height: size }}
+      className={cn('shrink-0 rounded-full object-cover', className)}
+    />
+  )
+}
+
+/** The X logo, sized and coloured by the caller. Decorative. */
+export function XLogo({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M18.2 2h3.4l-7.4 8.5L23 22h-6.8l-5.3-6.9L4.8 22H1.4l7.9-9.1L1 2h7l4.8 6.3zM17 20h1.9L7.1 3.9H5.1z" />
+    </svg>
+  )
+}
+
+/** Bottom gradient that every run of text over media sits on. */
+export function Scrim({ className, children }: { className?: string; children: ReactNode }) {
+  return (
+    <div
+      className={cn(
+        'nx-scrim nx-text-shadow absolute inset-x-0 bottom-0 flex flex-col text-white',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Small label over media (`0:41`, `1 / 3`, `GIF · loops`). */
+export function MediaChip({
+  children,
+  className,
+  tone = 'plate',
+}: {
+  children: string
+  className?: string
+  /** `accent` = yellow (e.g. Playing). */
+  tone?: 'plate' | 'accent'
+}) {
+  return (
+    <span
+      className={cn(
+        'pointer-events-none absolute whitespace-nowrap rounded-[7px] px-2 py-[5px] text-[11px] font-bold leading-none',
+        tone === 'accent'
+          ? 'bg-nx-accent text-black shadow-nx-plate'
+          : 'nx-plate text-white tabular-nums',
+        className,
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+/** Avatar + name, small, for tile footers. */
+export function AuthorLine({
+  author,
+  className,
+  label,
+}: {
+  author: PostAuthor
+  className?: string
+  /** Defaults to the display name. */
+  label?: string
+}) {
+  return (
+    <span className={cn('flex min-w-0 items-center gap-1.5 text-[11px]', className)}>
+      <NxAvatar author={author} size={18} />
+      <span className="truncate">{label ?? author.name}</span>
+    </span>
+  )
+}
+
+/** Thin progress line used by stages (dwell timer / playback). 0–1. */
+export function StageProgress({
+  value,
+  tone = 'light',
+  className,
+}: {
+  value: number
+  tone?: 'light' | 'dark'
+  className?: string
+}) {
+  const pct = Math.max(0, Math.min(1, value)) * 100
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        'h-1 rounded-full',
+        tone === 'light' ? 'bg-nx-cream/25' : 'bg-nx-ink/15',
+        className,
+      )}
+    >
+      <div
+        className={cn('h-1 rounded-full', tone === 'light' ? 'bg-nx-accent' : 'bg-nx-ink')}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  )
+}

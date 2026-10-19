@@ -4,24 +4,42 @@ import { authedTest } from './helpers'
 
 authedTest.describe('settings account', () => {
   authedTest(
-    'Account is email + username; Change is the field plus Save/Cancel',
+    'Account is picture, email and username; Change is the field plus Save/Cancel',
     async ({ page }) => {
       await page.goto('/settings')
-      await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-      await expect(page.getByText('Your email, public username, and avatar')).toBeVisible()
-      await expect(page.getByText('Generated from your username')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
+      await expect(page.getByText('Your picture, email and username.')).toBeVisible()
+      await expect(page.getByText('Made from your username')).toBeVisible()
       await expect(page.getByText(`@${E2E_USERNAME}`)).toBeVisible()
-      await expect(page.getByText(/connect your x account to sync your bookmarks/i)).toBeVisible()
+      const sync = page.locator('#sync')
+      await expect(sync.getByText(/Connect X and we’ll bring in your bookmarks/)).toBeVisible()
+      await expect(sync.getByRole('link', { name: /Connect X/ })).toHaveAttribute(
+        'href',
+        '/api/auth/twitter?returnUrl=%2Fsettings%3Fsync%3D1',
+      )
 
-      await page.getByRole('button', { name: 'Change' }).nth(1).click()
-      await expect(page.getByLabel('Username')).toBeVisible()
+      await page.getByRole('button', { name: 'Change username' }).click()
+      await expect(page.getByRole('textbox', { name: 'Username', exact: true })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible()
       await expect(page.getByText(/keep redirecting/i)).toHaveCount(0)
 
       await page.getByRole('button', { name: 'Cancel' }).click()
-      await expect(page.getByLabel('Username')).toHaveCount(0)
+      await expect(page.getByRole('textbox', { name: 'Username', exact: true })).toHaveCount(0)
       await expect(page.getByText(`@${E2E_USERNAME}`)).toBeVisible()
     },
   )
+
+  authedTest('fits a phone screen with no sideways scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 780 })
+    await page.goto('/settings')
+    await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
+    await page.getByRole('button', { name: 'Change username' }).click()
+    await page.getByRole('button', { name: 'Change email' }).click()
+    await expect(page.getByRole('textbox', { name: 'Username', exact: true })).toBeVisible()
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    )
+    expect(overflow).toBeLessThanOrEqual(0)
+  })
 })

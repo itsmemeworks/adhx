@@ -9,7 +9,6 @@ import type {
 } from '@/components/theater/types'
 import { sourceUrl } from '@/lib/activity/preview-path'
 import { tiktokCreatedAtFromId } from '@/lib/media/tiktok-id'
-import { youtubeThumbnail } from '@/lib/media/youtube'
 
 /**
  * Seed assembly for the "shared" theater mode (preview pages,
@@ -78,7 +77,7 @@ function withPulseDisplay(shared: TheaterItem, pulseCopy?: TheaterItem): Theater
   }
 }
 
-/** Strip a leading `@` (TikTok handles are stored with one; X/IG/YouTube never have one). */
+/** Strip a leading `@` (TikTok handles are stored with one; X/IG never have one). */
 function stripAt(handle: string): string {
   return handle.replace(/^@+/, '')
 }
@@ -218,38 +217,6 @@ export function tiktokToTheaterItem(input: TikTokSharedInput): TheaterItem {
       sourceUrl('tiktok', author, input.id) ??
       `https://www.tiktok.com/@${author}/video/${input.id}`,
     createdAt: tiktokCreatedAtFromId(input.id) ?? new Date().toISOString(),
-    contentType: 'video',
-  }
-}
-
-export interface YouTubeSharedInput {
-  id: string
-  author: string
-  authorName?: string | null
-  text?: string | null
-}
-
-/** URL-only stub — the iframe and poster are id-only; oEmbed fills title/channel. */
-export function stubYouTubeTheaterItem(id: string): TheaterItem {
-  return youtubeToTheaterItem({ id, author: 'youtube' })
-}
-
-/** Map oEmbed/saved-Short fields (as computed by the Shorts preview page) into a TheaterItem. */
-export function youtubeToTheaterItem(input: YouTubeSharedInput): TheaterItem {
-  const author = stripAt(input.author)
-  return {
-    action: 'preview',
-    platform: 'youtube',
-    bookmarkId: input.id,
-    author,
-    authorName: input.authorName ?? null,
-    authorAvatarUrl: null,
-    text: input.text ?? null,
-    thumbnailUrl: youtubeThumbnail(input.id),
-    url: sourceUrl('youtube', author, input.id) ?? `https://www.youtube.com/shorts/${input.id}`,
-    // Ordering slot only — never displayed; `buildSharedSeed` backfills the
-    // displayed `addedAt` from the pulse.
-    createdAt: new Date().toISOString(),
     contentType: 'video',
   }
 }

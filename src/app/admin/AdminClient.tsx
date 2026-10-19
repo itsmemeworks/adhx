@@ -14,6 +14,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SignInLinks } from './SignInLinks'
 import type { AnalyticsWindow } from '@/lib/analytics/query'
 import type { AdminOverview, InspectedPost, InspectedUser } from '@/lib/admin/query'
 
@@ -307,6 +308,8 @@ export function AdminClient() {
           </div>
         )}
 
+        <SignInLinks />
+
         <section className="bg-surface rounded-card border border-hairline shadow-m-sm p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
@@ -465,7 +468,7 @@ export function AdminClient() {
             <div>
               <h2 className="font-serif font-semibold text-base text-ink">Inspect a post</h2>
               <p className="text-[13px] text-ink-3">
-                Paste an x.com / adhx.com URL or <code>platform:id</code>.
+                Paste a post link or <code>platform:id</code>.
               </p>
             </div>
           </div>

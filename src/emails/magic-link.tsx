@@ -35,8 +35,17 @@ const PANEL = '#201b16'
 const BORDER = '#322b23'
 const CLAY = '#e88a5e'
 const CLAY_GRAD = 'linear-gradient(135deg,#e88a5e,#d26b40)'
-/** Production origin so email clients can fetch the dark-surface lockup. */
-const LOGO_SRC = 'https://adhx.com/logo-dark.png'
+/**
+ * The dark-surface lockup, from the ADHX the link points at (absolute, so
+ * email clients can fetch it).
+ */
+function logoSrc(url: string): string {
+  try {
+    return `${new URL(url).origin}/logo-dark.png`
+  } catch {
+    return '/logo-dark.png'
+  }
+}
 
 const copy = {
   signin: {
@@ -76,7 +85,7 @@ export function MagicLinkEmail({ url, intent }: MagicLinkEmailProps) {
         <Container style={shell}>
           <Row style={brand}>
             <Column style={{ verticalAlign: 'middle' }}>
-              <Img src={LOGO_SRC} width="91" height="32" alt="ADHX" style={logo} />
+              <Img src={logoSrc(url)} width="91" height="32" alt="ADHX" style={logo} />
             </Column>
           </Row>
 

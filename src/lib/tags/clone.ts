@@ -5,6 +5,7 @@ import { readModeratedPostKeys, readUserBan } from '@/lib/admin/moderation'
 import { addedAtForIndex } from '@/lib/sync/added-at'
 import { recordCollectionEvent } from '@/lib/discovery/record'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
+import { noteSaved, PRIORITY } from '@/lib/semantic'
 
 export const MAX_CLONE_SIZE = 100
 
@@ -232,6 +233,11 @@ export async function cloneTagToUser(opts: {
       .onConflictDoNothing()
       .run()
   })
+
+  noteSaved(
+    newBookmarks.map((b) => ({ platform: b.platform, postId: b.id })),
+    PRIORITY.sync,
+  )
 
   recordCollectionEvent({
     action: 'clone',

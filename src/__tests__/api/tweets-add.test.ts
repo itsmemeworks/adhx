@@ -954,10 +954,41 @@ describe('API: /api/tweets/add', () => {
   })
 
   describe('Error handling', () => {
-    it('handles FxTwitter API errors', async () => {
+    it('says a deleted or private tweet is not available (404), not "try again"', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
+
+      expect(response.status).toBe(404)
+      const data = await response.json()
+      expect(data.error).toMatch(/no longer available/)
+    })
+
+    it('treats a 200 with no tweet and code 401 as gone too', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ code: 401, message: 'PRIVATE_TWEET', tweet: null }),
+      })
+
+      const { POST } = await import('@/app/api/tweets/add/route')
+      const response = await POST(
+        createRequest({ url: 'https://twitter.com/user/status/123456789' }),
+      )
+
+      expect(response.status).toBe(404)
+    })
+
+    it('handles FxTwitter server errors as a failure worth retrying', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
       })
 
       const { POST } = await import('@/app/api/tweets/add/route')

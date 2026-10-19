@@ -9,7 +9,7 @@ import {
   usernameAliases,
 } from '@/lib/db/schema'
 import { and, desc, eq, gt, isNull, lt, ne, sql } from 'drizzle-orm'
-import { MAX_USERNAME_CHANGES, sanitizeUsername } from './username-rules'
+import { MAX_USERNAME_CHANGES, sanitizeUsername, USERNAME_MAX_LENGTH } from './username-rules'
 
 export { MAX_USERNAME_CHANGES, sanitizeUsername }
 
@@ -127,7 +127,7 @@ function sanitizeLocalPart(email: string): string {
     .replace(/[^a-z0-9_]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '')
-    .slice(0, 15)
+    .slice(0, USERNAME_MAX_LENGTH)
   return cleaned || 'reader'
 }
 
@@ -162,6 +162,25 @@ export type ChooseUsernameResult =
  * inside one `runInTransaction()` so a change can never be spent twice, and
  * a crash mid-change can never leave a name aliased with no real owner.
  */
+/**
+ * A name the welcome screen can offer and the chooser will accept as is.
+ * Accounts made before names were capped at 15 characters may hold a longer
+ * one, which the chooser would cut down (possibly onto someone else's name).
+ */
+export async function claimableUsernameSuggestion(
+  current: string,
+  userId: string,
+): Promise<string> {
+  if (sanitizeUsername(current) === current) return current
+  const base = sanitizeUsername(current) || 'reader'
+  for (let n = 1; n < 1000; n++) {
+    const suffix = n === 1 ? '' : String(n)
+    const candidate = `${base.slice(0, Math.max(1, USERNAME_MAX_LENGTH - suffix.length))}${suffix}`
+    if (!(await isUsernameTaken(candidate, userId))) return candidate
+  }
+  return base
+}
+
 export async function chooseUsername(userId: string, raw: string): Promise<ChooseUsernameResult> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
   if (!user) return { error: 'invalid' }
@@ -490,7 +509,9 @@ export async function findOrCreateUserForEmail(
   for (let attempt = 0; attempt < MAX_EMAIL_CLAIM_ATTEMPTS; attempt++) {
     const userId = `u_${randomHex(8)}`
     const suffix = usernameAttempt === 0 ? '' : String(usernameAttempt + 1)
-    const username = `${base.slice(0, Math.max(1, 20 - suffix.length))}${suffix}`
+    // Keep the suffix inside the length the name chooser accepts, or the
+    // suggested name can't be claimed (the chooser would cut the suffix off).
+    const username = `${base.slice(0, Math.max(1, USERNAME_MAX_LENGTH - suffix.length))}${suffix}`
 
     try {
       return runInTransaction(() => {

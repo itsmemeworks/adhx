@@ -5,7 +5,6 @@ import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 const mocks = vi.hoisted(() => ({
   getInstagramMetadataStatus: vi.fn(),
   getTikTokMetadataStatus: vi.fn(),
-  getYouTubeMetadataStatus: vi.fn(),
   getSavedPreviewDisplay: vi.fn(),
   recordHumanPreview: vi.fn(),
 }))
@@ -29,12 +28,6 @@ vi.mock('@/lib/media/instafix', () => ({
 
 vi.mock('@/lib/media/tnktok', () => ({
   getTikTokMetadataStatus: mocks.getTikTokMetadataStatus,
-}))
-
-vi.mock('@/lib/media/youtube', () => ({
-  getYouTubeMetadataStatus: mocks.getYouTubeMetadataStatus,
-  youtubeEmbedUrl: (id: string) => `https://www.youtube-nocookie.com/embed/${id}`,
-  youtubeThumbnail: (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
 }))
 
 vi.mock('@/lib/media/mirrors', () => ({
@@ -82,23 +75,6 @@ vi.mock('@/lib/theater/shared-seed', () => ({
     contentType: 'video',
     url: `https://www.tiktok.com/@${handle}/video/${id}`,
   }),
-  youtubeToTheaterItem: ({
-    id,
-    author,
-    text,
-  }: {
-    id: string
-    author: string
-    text: string | null
-  }) => ({
-    action: 'preview',
-    platform: 'youtube',
-    bookmarkId: id,
-    author,
-    text,
-    contentType: 'video',
-    url: `https://www.youtube.com/shorts/${id}`,
-  }),
   tweetToTheaterItem: vi.fn(),
 }))
 
@@ -145,7 +121,6 @@ vi.mock('@/components/RelatedSaves', () => ({
 
 const REEL_ID = 'Cwnj8o6pKbn'
 const TIKTOK_ID = '7619017281691045134'
-const YOUTUBE_ID = 'Y9aytLYBajw'
 
 const platforms = [
   {
@@ -173,21 +148,6 @@ const platforms = [
       videoUrl: `https://tnktok.com/generate/video/${TIKTOK_ID}.mp4`,
       title: 'Resolved TikTok',
       author: '@creator',
-    },
-    unresolvedKinds: ['permanent-miss', 'transient-failure'],
-  },
-  {
-    name: 'YouTube',
-    statusMock: mocks.getYouTubeMetadataStatus,
-    resolve: async () => {
-      const { resolveYouTubeShared } = await import('@/lib/theater/resolve-shared-preview')
-      return resolveYouTubeShared(YOUTUBE_ID)
-    },
-    resolvedMetadata: {
-      videoId: YOUTUBE_ID,
-      title: 'Resolved Short',
-      author: '@creator',
-      thumbnailUrl: `https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg`,
     },
     unresolvedKinds: ['permanent-miss', 'transient-failure'],
   },
@@ -331,10 +291,10 @@ describe('ResolvedSharedSeo', () => {
       seoEligible: false,
       item: {
         action: 'preview',
-        platform: 'youtube',
-        bookmarkId: YOUTUBE_ID,
-        author: 'youtube',
-        url: `https://www.youtube.com/shorts/${YOUTUBE_ID}`,
+        platform: 'tiktok',
+        bookmarkId: TIKTOK_ID,
+        author: 'creator',
+        url: `https://www.tiktok.com/@creator/video/${TIKTOK_ID}`,
         createdAt: '2026-08-26T00:00:00Z',
         contentType: 'video',
       },
@@ -346,7 +306,10 @@ describe('ResolvedSharedSeo', () => {
 
   it('renders JSON-LD and static markup for an eligible result', async () => {
     const { ResolvedSharedSeo } = await import('@/lib/theater/shared-preview')
-    const eligible = await platforms[2].resolve()
+    const tiktok = platforms[1]
+    mocks.getSavedPreviewDisplay.mockReturnValue(null)
+    tiktok.statusMock.mockResolvedValue({ kind: 'resolved', metadata: tiktok.resolvedMetadata })
+    const eligible = await tiktok.resolve()
     expect(eligible.ok && eligible.seoEligible).toBe(true)
 
     const element = await ResolvedSharedSeo({ resolve: Promise.resolve(eligible) })

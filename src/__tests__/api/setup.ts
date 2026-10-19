@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/lib/db/schema'
+import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
 
 /**
  * Shared test database setup for API tests.
@@ -291,6 +292,63 @@ export const FULL_SCHEMA_SQL = `
     used_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE access_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      hint TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT,
+      scope TEXT NOT NULL DEFAULT 'search'
+    );
+    CREATE INDEX access_keys_user_id_idx ON access_keys(user_id);
+  CREATE TABLE app_pair_codes (
+    code_hash TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE admin_sign_in_links (
+    token_hash TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    url TEXT NOT NULL,
+    intent TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE TABLE keep_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+  CREATE TABLE keep_jobs (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at TEXT,
+      last_error TEXT,
+      bytes INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id)
+    );
+    CREATE INDEX keep_jobs_status_idx ON keep_jobs(status, next_attempt_at);
+    CREATE TABLE kept_files (
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (platform, post_id, slot)
+    );
+
 `
 
 export interface TestDbInstance {
@@ -306,6 +364,7 @@ export function createTestDb(): TestDbInstance {
   const sqlite = new Database(':memory:')
   sqlite.pragma('foreign_keys = ON')
   sqlite.exec(FULL_SCHEMA_SQL)
+  sqlite.exec(UNDERSTANDING_DDL)
 
   const db = drizzle(sqlite, { schema })
 

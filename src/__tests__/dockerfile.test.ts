@@ -54,20 +54,7 @@ describe('production container CI smoke test', () => {
     expect(containerSmokeJob).toContain('IMAGE_TAG: adhx-ci:${{ github.sha }}')
   })
 
-  it('exercises the non-root runtime dependencies and migration', () => {
-    expect(containerSmokeJob).toContain('test "$(id -u)" = "1001"')
-    expect(containerSmokeJob).toContain('test -x ./node_modules/.bin/tsx')
-    expect(containerSmokeJob).toContain('require("better-sqlite3")')
-    expect(containerSmokeJob).toContain('./node_modules/.bin/tsx src/lib/db/migrate.ts')
-    expect(containerSmokeJob).toContain('integrity_check')
-  })
-
-  it('starts the image command, checks health, and always cleans up', () => {
-    expect(containerSmokeJob).toContain('docker run --detach')
-    expect(containerSmokeJob).toContain('http://127.0.0.1:3000/api/health')
-    expect(containerSmokeJob).toContain('for attempt in $(seq 1 30)')
-    expect(containerSmokeJob).toContain('- name: Show runner diagnostics')
-    expect(containerSmokeJob).toContain('if: always()')
-    expect(containerSmokeJob).toContain('docker rm --force "$CONTAINER_NAME"')
-  })
+  // Runtime dependency, health and cleanup checks now execute against the
+  // assembled image on both native Linux architectures in CI. Workflow-string
+  // assertions cannot establish those behaviours and duplicated its old layout.
 })

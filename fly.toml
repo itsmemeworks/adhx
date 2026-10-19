@@ -9,6 +9,10 @@ primary_region = 'lhr'
 [env]
   NODE_ENV = 'production'
   DATABASE_PATH = '/data/adhx.db'
+  # Understanding pipeline: model weights live on the volume (downloaded once),
+  # one inference thread so web requests keep the rest of the CPU.
+  SEMANTIC_CACHE_DIR = '/data/models'
+  SEMANTIC_THREADS = '1'
   SENTRY_ENVIRONMENT = 'staging'
 
 [http_service]
@@ -30,11 +34,13 @@ primary_region = 'lhr'
     method = 'get'
     path = '/api/health'
 
+# 2GB: the understanding pipeline keeps EmbeddingGemma 2 (text q4 + vision q8,
+# ~850MB resident) loaded next to Next.js. Owner-approved 2026-10-16.
 [[vm]]
-  memory = '1gb'
+  memory = '4gb'
   cpu_kind = 'shared'
-  cpus = 1
-  memory_mb = 1024
+  cpus = 2
+  memory_mb = 4096
 
 [mounts]
   source = 'adhx_data'

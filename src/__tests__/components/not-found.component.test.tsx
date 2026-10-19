@@ -6,18 +6,17 @@ import { render, screen } from '@testing-library/react'
 import NotFound from '@/app/not-found'
 
 describe('NotFound (404 page)', () => {
-  it('links back to Saved and to trending', () => {
+  it('points to Right now and Search, in the new design', () => {
     render(<NotFound />)
-    expect(screen.getByRole('link', { name: /back to Saved/i })).toHaveAttribute('href', '/')
-    expect(screen.getByRole('link', { name: /see what.s trending/i })).toHaveAttribute(
-      'href',
-      '/trending',
-    )
+    expect(screen.getByRole('heading', { name: 'Nothing here' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Right now' })).toHaveAttribute('href', '/now')
+    expect(screen.getByRole('link', { name: 'Search' })).toHaveAttribute('href', '/search')
+    expect(screen.getByRole('link', { name: 'adhx home' })).toHaveAttribute('href', '/')
   })
 
-  it('never links to /search — that route does not exist', () => {
+  it('never sends you to the old design’s pages', () => {
     render(<NotFound />)
-    const links = screen.getAllByRole('link')
-    expect(links.some((link) => link.getAttribute('href') === '/search')).toBe(false)
+    const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'))
+    for (const old of ['/saved', '/trending', '/library']) expect(hrefs).not.toContain(old)
   })
 })

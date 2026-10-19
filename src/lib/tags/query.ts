@@ -1,9 +1,9 @@
+import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
-import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { inferContentType } from '@/lib/content-type'
 import {
   moderationStateFingerprint,
@@ -67,24 +67,29 @@ interface TagCacheEntry {
 }
 type TagCache = TtlLruCache<string, TagCacheEntry>
 const cachesByDb = new WeakMap<object, TagCache>()
+// Next runs route handlers and pages as separate module copies (each with its
+// own `db` object), so a visibility PATCH in /api/tags must reach the cache
+// the page reads from too. Every cache registers here, process-wide.
+const g = globalThis as unknown as { __adhxTagCollectionCaches?: Set<TagCache> }
+const allCaches = (g.__adhxTagCollectionCaches ??= new Set<TagCache>())
 
 function getCache(): TagCache {
   let c = cachesByDb.get(db as object)
   if (!c) {
     c = new TtlLruCache({ maxSize: CACHE_MAX_ENTRIES, ttlMs: CACHE_TTL_MS })
     cachesByDb.set(db as object, c)
+    allCaches.add(c)
   }
   return c
 }
 
 /** Drop a cached playlist read so a visibility PATCH is visible immediately. */
 export function invalidateTagCollectionCache(username?: string, tag?: string): void {
-  const cache = getCache()
-  if (!username || !tag) {
-    cache.clear()
-    return
+  getCache()
+  for (const cache of allCaches) {
+    if (!username || !tag) cache.clear()
+    else cache.delete(`${username.toLowerCase()}:${tag}`)
   }
-  cache.delete(`${username.toLowerCase()}:${tag}`)
 }
 
 /**
@@ -127,25 +132,9 @@ function resolveThumbnail(
   },
   firstMedia: { mediaType: string; previewUrl: string | null } | undefined,
 ): string | null {
-  if (item.platform === 'tiktok') {
-    return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(item.author)}&id=${encodeURIComponent(item.id)}`
-  }
-  if (item.platform === 'instagram') {
-    return `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.id)}`
-  }
-  if (item.platform === 'youtube') {
-    return `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
-  }
-  // Twitter: use FxEmbed URLs, which need media type + preview url.
-  if (!firstMedia) return null
-  const mediaType = firstMedia.mediaType as 'photo' | 'video' | 'animated_gif'
-  return getThumbnailUrl({
-    tweetId: item.id,
-    author: item.author,
-    mediaType,
-    mediaIndex: 1,
-    previewUrl: firstMedia.previewUrl || undefined,
-  })
+  // ADHX's own kept poster (an X post with no media has none).
+  if (item.platform === 'twitter' && !firstMedia) return null
+  return keptSrc(item.platform, item.id, 'poster', item.author)
 }
 
 async function fetchTagCollection(

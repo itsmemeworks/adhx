@@ -20,7 +20,7 @@
  * "sound" on every single video. Reusing the element lets an unmute survive
  * across items rendered by the same StageVideo instance (Stage.tsx renders
  * this component for both twitter and tiktok, so X→TikTok→X keeps it;
- * swapping to a non-video item — text/article/YouTube/a re-probing
+ * swapping to a non-video item — text/article/a re-probing
  * Instagram reel — unmounts this component entirely, an accepted gap).
  *
  * `src`/`muted` are applied imperatively (not as controlled JSX attributes)
@@ -33,7 +33,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { usePostPlayback } from './usePostPlayback'
 import { useVideoPictureInPicture } from './useVideoPictureInPicture'
 import { Play, RotateCcw } from 'lucide-react'
-import { logSV } from './YtDebugOverlay'
+import { logSV } from './AvDebugOverlay'
 import {
   dispatchTheaterStageTap,
   dispatchTheaterUserPlaybackState,
@@ -263,6 +263,19 @@ export function StageVideo({
     }
     window.addEventListener('theater-set-muted', handler)
     return () => window.removeEventListener('theater-set-muted', handler)
+  }, [])
+
+  // Volume (0–1) from the next_ui theater's slider. The element is persistent,
+  // so the level carries across posts like the mute state does.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const volume = (event as CustomEvent<{ volume?: unknown }>).detail?.volume
+      const video = videoRef.current
+      if (!video || typeof volume !== 'number' || !Number.isFinite(volume)) return
+      video.volume = Math.min(1, Math.max(0, volume))
+    }
+    window.addEventListener('theater-set-volume', handler)
+    return () => window.removeEventListener('theater-set-volume', handler)
   }, [])
 
   // A render can commit before the passive source-loading effect below runs.
@@ -602,7 +615,7 @@ export function StageVideo({
   // but vetoed going unmuted without a gesture, signalled ONLY by an
   // unexpected `pause` while `catchUpPendingRef` is armed — never a timer
   // (the same evidence-only discipline as this file's `theater-pause`
-  // handlers and StageYouTube's `fallBackToMuted`: a successful, silent
+  // handlers: a successful, silent
   // unmute produces no event at all, so silence can never mean rejection).
   // Drops back to muted and resumes, exactly like the mount effect's own
   // rejected-unmuted-continuation fallback above.
@@ -701,21 +714,31 @@ export function StageVideo({
   // the same src: our video routes serve GET (no HEAD), so a 2-byte Range
   // request is the cheapest way to read the real status without pulling
   // the whole file. A 410 body carries `{ error: 'unavailable', reason }`;
-  // anything else (including a non-410 error) leaves the generic
-  // load-failure state with its retry button in place.
+  // a 404 may carry a `reason` too (a post nobody here has saved yet);
+  // anything else leaves the generic load-failure state with its retry
+  // button in place.
   const handleVideoError = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     if (!isCurrentLifecycleEvent(event.currentTarget)) return
     const { generation, src: operationSrc } = captureSource()
     setErrored(true)
     fetch(operationSrc, { headers: { Range: 'bytes=0-1' } })
-      .then((res) => {
+      .then(async (res) => {
         if (!isCurrentSource(generation, operationSrc)) return null
-        return res.status === 410 ? res.json() : null
+        if (res.status !== 410 && res.status !== 404) return null
+        const body = (await res.json().catch(() => null)) as { reason?: unknown } | null
+        return { gone: res.status === 410, reason: body?.reason }
       })
-      .then((body) => {
+      .then((probe) => {
         if (!isCurrentSource(generation, operationSrc)) return
-        if (body && typeof body.reason === 'string') {
-          setUnavailableReason(body.reason)
+        if (probe && typeof probe.reason === 'string') {
+          setUnavailableReason(probe.reason)
+          // Lets the theater skip a post that's gone for good. A 404 with a
+          // reason (nobody here has saved it yet) stays: saving it fixes it.
+          if (probe.gone) {
+            window.dispatchEvent(
+              new CustomEvent('theater-media-gone', { detail: { src: operationSrc } }),
+            )
+          }
         }
       })
       .catch(() => {
