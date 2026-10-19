@@ -101,6 +101,7 @@ export function AppShell({
     pathname === '/search' ||
     pathname === '/play' ||
     pathname === '/channels' ||
+    pathname.startsWith('/channels/') ||
     pathname === '/tags' ||
     pathname === '/settings' ||
     pathname === '/welcome' ||
@@ -126,7 +127,7 @@ export function AppShell({
       if (pathname === '/play' && isPublicPlay(search)) return
       // The new design signs you in and brings you back; older pages go home.
       router.replace(
-        SIGN_IN_FIRST.has(pathname)
+        SIGN_IN_FIRST.has(pathname) || pathname.startsWith('/channels/')
           ? `/start?${new URLSearchParams({ returnTo: `${pathname}${search}` })}`
           : '/',
       )

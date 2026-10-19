@@ -48,7 +48,7 @@ import { useMobileSwipeNavigation } from '@/components/theater/useMobileSwipeNav
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { articleHeadline, postAuthor, postText } from '../post'
 import { NxAvatar } from '../primitives'
-import { PrivateLock, SaverFaces } from '../SaverFaces'
+import { PrivateLock, SaversButton } from '../SaverFaces'
 import type { Saver } from '@/lib/people/types'
 import { useAuthMe } from '@/components/auth'
 import { AdhxLoader } from '../loader'
@@ -74,6 +74,8 @@ import {
   REPEAT_LABELS,
   REPEAT_ORDER,
   backHref,
+  friendPlayHref,
+  isChannelSource,
   queuePosition,
   queueUrl,
   upcomingSavedKeys,
@@ -131,10 +133,19 @@ function emptyState(
       action: 'Right now',
       href: '/now',
     }
-  if ((source.channel || source.auto) && missing)
+  if (source.friend && missing)
+    return {
+      title: 'No saves to show here',
+      body: 'They may have left, or kept everything just for themselves.',
+      action: 'Channels',
+      href: '/channels',
+    }
+  if (isChannelSource(source) && missing)
     return {
       title: 'This channel isn’t here',
-      body: 'It may have been made private or removed.',
+      body: source.groupChannel
+        ? 'Channels from everyone get remade as people save. Pick another.'
+        : 'It may have been made private or removed.',
       action: 'Channels',
       href: '/channels',
     }
@@ -147,6 +158,20 @@ function emptyState(
       action: 'Go back',
       href: backHref(source),
       retry: true,
+    }
+  if (source.friend?.onlyNew)
+    return {
+      title: 'You’re all caught up',
+      body: 'Nothing new from them since you last looked. Go touch grass.',
+      action: 'Play all of them',
+      href: friendPlayHref(source.friend.username),
+    }
+  if (source.friend || source.groupChannel)
+    return {
+      title: 'Nothing to play here yet',
+      body: 'Nobody has saved anything others can see in here.',
+      action: 'Channels',
+      href: '/channels',
     }
   if (source.recent)
     return {
@@ -339,7 +364,7 @@ export function TheaterV2({
             ? (response.items as unknown as { post: FeedItem; savedAt: string }[]).map(
                 ({ post, savedAt }) => ({ post, saved: false, matched: [], savedAt }),
               )
-            : source.channel || source.auto
+            : isChannelSource(source)
               ? response.items
               : orderByStrength(response.items)
         if (response.moment) {
@@ -1050,7 +1075,7 @@ export function TheaterV2({
     ? null
     : source.moment
       ? 'now'
-      : source.channel || source.auto
+      : isChannelSource(source)
         ? 'channels'
         : source.recent
           ? 'saves'
@@ -1216,10 +1241,12 @@ export function TheaterV2({
             <span className="pointer-events-auto flex h-9 min-w-0 items-center gap-1.5">
               {isPrivate && <PrivateLock className="h-7 w-7" />}
               {savers && savers.length > 0 && (
-                <SaverFaces
+                <SaversButton
                   savers={savers}
                   tone="plate"
-                  className="h-9 max-w-[280px] pl-1.5 pr-3.5"
+                  placement="below"
+                  className="h-9 max-w-[280px]"
+                  facesClassName="h-9 pl-1.5 pr-3.5"
                 />
               )}
             </span>
@@ -1320,7 +1347,7 @@ export function TheaterV2({
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
                 <span className="truncate text-xs text-white/65">
-                  {`${viaReason(position.via, source.shared ? 'post' : source.channel || source.auto ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
+                  {`${viaReason(position.via, source.shared ? 'post' : isChannelSource(source) ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
                 </span>
               </span>
             </div>
@@ -1493,7 +1520,7 @@ export function TheaterV2({
                     </span>
                   )}
                 </span>
-                {savers && savers.length > 0 && <SaverFaces savers={savers} tone="scrim" />}
+                {savers && savers.length > 0 && <SaversButton savers={savers} tone="scrim" />}
                 {caption &&
                   (captionOpen ? (
                     <span className="pointer-events-auto block max-h-[42vh] overflow-y-auto pr-2 text-[15px] leading-[1.45] md:text-[17px]">

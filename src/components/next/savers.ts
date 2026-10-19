@@ -28,3 +28,19 @@ export function saversLine(savers: readonly Saver[]): string {
   const others = list.length - 1
   return `${saverName(first)} and ${others} others`
 }
+
+/** A friend's channel page. */
+export function friendChannelHref(username: string): string {
+  return `/channels/friend/${encodeURIComponent(username)}`
+}
+
+/** Where tapping a saver goes: their channel, or My saves for you. */
+export function saverHref(saver: Saver): string {
+  return saver.isYou ? '/play?recent=1' : friendChannelHref(saver.username)
+}
+
+/** "Ana’s saves", "Your saves". */
+export function savesOf(saver: Pick<Saver, 'name' | 'username' | 'isYou'>): string {
+  if (saver.isYou) return 'Your saves'
+  return `${saver.name?.trim() || saver.username}’s saves`
+}
