@@ -124,9 +124,17 @@ describe('GET /api/sync locking', () => {
           tags: [],
         },
       })
+      const info = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const { GET } = await import('@/app/api/sync/route')
       const response = await GET(new NextRequest(`https://adhx.test/api/sync${query}`))
       const body = await response.text()
+      // Each page X sent is logged, so a short import shows where X ended the list.
+      const pages = info.mock.calls
+        .map(([line]) => String(line))
+        .filter((l) => l.startsWith('[sync] page'))
+      expect(pages[0]).toBe('[sync] page 1: X sent 50 (result_count 50), more pages')
+      expect(pages.at(-1)).toBe('[sync] page 21: X sent 1 (result_count 1), no more pages')
+      info.mockRestore()
       expect(fetchBookmarks).toHaveBeenCalledTimes(21)
       expect(fetchBookmarks).toHaveBeenNthCalledWith(1, 'user-1', {
         maxResults: 100,

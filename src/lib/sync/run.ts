@@ -143,6 +143,10 @@ export async function runBookmarkSync(
         tweetsFound: result.bookmarks.length,
         cursor: result.nextToken || null,
       })
+      // What X sent, so a short import can be traced to X ending the list.
+      console.warn(
+        `[sync] page ${pageNumber}: X sent ${result.bookmarks.length} (result_count ${result.resultCount}), ${result.nextToken ? 'more pages' : 'no more pages'}`,
+      )
       cursor = result.nextToken
       if (!cursor) break
       if (mode === 'new' && result.bookmarks.some((b) => existingIds.has(b.id))) break
