@@ -315,6 +315,36 @@
     opacity: 0;
   }
 }
+/* Reactions rise up the stage and fade; under reduced motion they only fade (below). */
+@keyframes nx-react-float {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  12% {
+    transform: translateY(-4vh) scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-36vh) scale(1);
+    opacity: 0;
+  }
+}
+@keyframes nx-react-fade {
+  0% {
+    opacity: 0;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
 @keyframes nx-pop-in {
   0% {
     transform: scale(0.92);
@@ -358,6 +388,9 @@
 }
 .animate-nx-float-up {
   animation: nx-float-up 1.2s ease-out forwards;
+}
+.animate-nx-react-float {
+  animation: nx-react-float 4.2s ease-out forwards;
 }
 .animate-nx-pop-in {
   animation: nx-pop-in 0.6s ease-out;
@@ -450,6 +483,10 @@
 @media (prefers-reduced-motion: reduce) {
   [class*='animate-nx-'] {
     animation: none !important;
+  }
+  /* No rising: a reaction fades in and out where it is. */
+  .animate-nx-react-float {
+    animation: nx-react-fade 4.2s ease-in-out forwards !important;
   }
   .gob * {
     animation: none !important;

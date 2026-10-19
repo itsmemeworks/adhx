@@ -97,6 +97,34 @@ export async function setSessionCookie(response: NextResponse, session: Session)
   })
 }
 
+/** A session older than this is re-signed when its owner comes back. */
+const RENEW_AFTER_SECONDS = 24 * 60 * 60
+
+/**
+ * Keep an active session alive: re-sign a valid cookie that is more than a
+ * day old, so it lasts 30 days from the last visit rather than from sign-in.
+ * Accounts made from an invite may have no email to sign back in with.
+ * Only call this after `getCurrentUserId()` has accepted the session.
+ */
+export async function renewSessionCookie(response: NextResponse): Promise<boolean> {
+  const cookieStore = await cookies()
+  const value = cookieStore.get(SESSION_COOKIE_NAME)?.value
+  if (!value) return false
+  try {
+    const { payload } = await jwtVerify(value, getSecretKey())
+    if (!payload.userId || typeof payload.userId !== 'string') return false
+    const issuedAt = typeof payload.iat === 'number' ? payload.iat : 0
+    if (Date.now() / 1000 - issuedAt < RENEW_AFTER_SECONDS) return false
+    await setSessionCookie(response, {
+      userId: payload.userId,
+      username: payload.username as string,
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * Clear the session cookie (logout)
  */

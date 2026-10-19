@@ -7,6 +7,15 @@ import { composeArticleCopy, fetchArticleMarkdown } from '@/lib/theater/article-
 import { RichText, postBody } from '../rich-text'
 import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
+import {
+  ArrivalToast,
+  ReactButton,
+  ReactionFloats,
+  ReactionPicker,
+  WatchersBar,
+  type FloatingReaction,
+} from '../moments/LiveTogether'
+import type { ReactionEmoji } from '@/lib/moments/reactions'
 import { AccountMenu } from '../AccountMenu'
 import { BottomNav, NxLogo, PrimaryNav } from '../PrimaryNav'
 import { NxHeader } from '../channels/ChannelParts'
@@ -99,6 +108,9 @@ import { channelTitle } from '../channels/ChannelParts'
 import { useBusyLogo } from '../logo-busy'
 import { POST_SAVED as NX_POST_SAVED } from '@/lib/theater/client-events'
 
+/** How long a reaction floats on screen. */
+const REACTION_MS = 4_400
+
 /** X articles carry their whole body; other links only have a preview. */
 function hasFullArticle(post: FeedItem): boolean {
   if ((post.platform ?? 'twitter') !== 'twitter') return false
@@ -118,6 +130,8 @@ type QueueResponse = SearchResponse & {
   channel?: { tag: string }
   /** A moment's detail (Tune in): its items carry when they were saved. */
   moment?: { title: string; hue: string; watching: number }
+  /** Members only: who else is tuned in. */
+  watchers?: Saver[]
 }
 
 /** What to say when there's nothing to play, by where the queue came from. */
@@ -333,6 +347,17 @@ export function TheaterV2({
   const [wander, setWander] = useState(false)
   const waitingRef = useRef(false)
   waitingRef.current = waiting
+  // Tuned in with names (members only): who else is in, who just saved, reactions.
+  const [watchers, setWatchers] = useState<Saver[]>([])
+  const [arrival, setArrival] = useState<{
+    saver: Saver
+    post: FeedItem
+    /** Caught up, so it is already playing. */
+    now?: boolean
+  } | null>(null)
+  const [floats, setFloats] = useState<FloatingReaction[]>([])
+  const [reactOpen, setReactOpen] = useState(false)
+  const [reacting, setReacting] = useState(false)
 
   // ——— Load the queue from the search this session came from ———
   useEffect(() => {
@@ -361,15 +386,22 @@ export function TheaterV2({
               matched: [],
             }))
           : source.moment
-            ? (response.items as unknown as { post: FeedItem; savedAt: string }[]).map(
-                ({ post, savedAt }) => ({ post, saved: false, matched: [], savedAt }),
-              )
+            ? (
+                response.items as unknown as { post: FeedItem; savedAt: string; savers?: Saver[] }[]
+              ).map(({ post, savedAt, savers: by }) => ({
+                // Members get each post's savers on the item: the byline shows them.
+                post: by ? { ...post, savers: by } : post,
+                saved: false,
+                matched: [],
+                savedAt,
+              }))
             : isChannelSource(source)
               ? response.items
               : orderByStrength(response.items)
         if (response.moment) {
           setMomentHue(response.moment.hue)
           setWatching(response.moment.watching)
+          setWatchers(response.watchers ?? [])
         }
         setTitle(
           source.recent
@@ -437,6 +469,7 @@ export function TheaterV2({
   const isPrivate = !!current && (privateNow.get(currentKey) ?? !!current.post.isPrivate)
   // Savers are only sent to signed-in members; a save made here adds you.
   const { me } = useAuthMe()
+  const member = !!me?.user
   const savers = useMemo<Saver[] | undefined>(() => {
     const list = current?.post.savers
     if (!list) return undefined
@@ -487,6 +520,7 @@ export function TheaterV2({
     setEnded(false)
     setWaiting(false)
     setArrivals(0)
+    setArrival(null)
     setTimedPaused(false)
     setIndex(i)
   }, [])
@@ -517,7 +551,25 @@ export function TheaterV2({
   // ——— Tune in: new saves in this moment play next ———
   useMomentStream(
     (event) => {
-      if (event.type === 'watching' && event.slug === source.moment) setWatching(event.watching)
+      if (event.type === 'watching' && event.slug === source.moment) {
+        setWatching(event.watching)
+        if (event.watchers) setWatchers(event.watchers)
+      }
+      if (event.type === 'reaction' && event.slug === source.moment) {
+        const float: FloatingReaction = {
+          id: event.id,
+          saver: event.saver,
+          ...(event.emoji ? { emoji: event.emoji } : { text: event.text }),
+        }
+        setFloats((list) =>
+          list.some((r) => r.id === float.id) ? list : [...list, float].slice(-8),
+        )
+        window.setTimeout(
+          () => setFloats((list) => list.filter((r) => r.id !== float.id)),
+          REACTION_MS,
+        )
+        return
+      }
       if (event.type !== 'save' || event.item.to?.kind !== 'moment') return
       if (event.item.to.slug !== source.moment) return
       const key = event.item.key
@@ -525,17 +577,25 @@ export function TheaterV2({
       const existing = itemsRef.current.findIndex((i) => resultKey(i) === key)
       // Already watched: only worth replaying when there's nothing else to watch.
       if (existing !== -1 && existing <= at && !waitingRef.current) return
+      const post = event.item.post as unknown as FeedItem
       const arrived: SearchResultItem = {
-        post: event.item.post as unknown as FeedItem,
+        // Members are told who just saved it; strangers get the post alone.
+        post: event.saver ? { ...post, savers: [event.saver] } : post,
         saved: false,
         matched: [],
         savedAt: event.item.at,
       }
+      setArrival(event.saver ? { saver: event.saver, post } : null)
       if (waitingRef.current) {
         // Caught up: it plays now, at the end of the queue (moved there if it was earlier).
         const list = [...itemsRef.current.filter((_, i) => i !== existing), arrived]
         replaceItems(list)
         goTo(list.length - 1)
+        if (event.saver) {
+          const shown = { saver: event.saver, post, now: true }
+          setArrival(shown)
+          window.setTimeout(() => setArrival((a) => (a === shown ? null : a)), 5000)
+        }
         return
       }
       replaceItems(insertAfter(itemsRef.current, at, [arrived]))
@@ -563,6 +623,32 @@ export function TheaterV2({
       return false
     }
   }, [source.moment, replaceItems])
+
+  /** A reaction to what's playing, for the members tuned in (it comes back on the stream). */
+  const sendReaction = useCallback(
+    async (reaction: { emoji: ReactionEmoji } | { text: string }) => {
+      const post = itemsRef.current[indexRef.current]?.post
+      if (!source.moment || !post) return
+      setReactOpen(false)
+      setReacting(true)
+      try {
+        const response = await fetch(`/api/moments/${encodeURIComponent(source.moment)}/react`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...reaction, platform: post.platform ?? 'twitter', id: post.id }),
+        })
+        if (response.status === 429) flash('Easy there. Try again in a moment.')
+        else if (!response.ok) flash('That didn’t send. Try again.')
+      } catch {
+        flash('That didn’t send. Try again.')
+      } finally {
+        // A short pause between reactions, so a tap can't turn into a flood.
+        window.setTimeout(() => setReacting(false), 800)
+      }
+    },
+    [source.moment, flash],
+  )
 
   const toggleWander = useCallback(
     (on: boolean) => {
@@ -1333,6 +1419,10 @@ export function TheaterV2({
               </span>
             </div>
           )}
+          {source.moment && watchers.length > 0 && (
+            // Members only: the server names watchers to signed-in members alone.
+            <WatchersBar watchers={watchers} className="pointer-events-auto" />
+          )}
           {!source.moment && position.via && (
             // Not from the source: say what it is like and why it's playing.
             <div
@@ -1354,7 +1444,17 @@ export function TheaterV2({
           )}
         </div>
 
-        {source.moment && arrivals > 0 && (
+        {source.moment && arrival && (arrival.now || arrivals === 1) && (
+          <ArrivalToast
+            saver={arrival.saver}
+            post={arrival.post}
+            hue={momentHue}
+            now={arrival.now}
+            onPlay={arrival.now ? undefined : () => goTo(index + 1)}
+            className="absolute right-3 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 max-w-[calc(100%-24px)] md:right-24 md:top-4"
+          />
+        )}
+        {source.moment && arrivals > 0 && !(arrivals === 1 && arrival) && (
           <div
             role="status"
             className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex md:top-16 -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in"
@@ -1401,10 +1501,30 @@ export function TheaterV2({
           </div>
         )}
 
+        {source.moment && member && (
+          // Rising from just above the bottom bar, clear of the rail.
+          <ReactionFloats
+            reactions={floats}
+            className="absolute bottom-[200px] left-0 right-[72px] z-20 md:bottom-[150px] md:right-28"
+          />
+        )}
+        {source.moment && member && reactOpen && (
+          <ReactionPicker
+            onEmoji={(emoji) => void sendReaction({ emoji })}
+            onText={(text) => void sendReaction({ text })}
+            onClose={() => setReactOpen(false)}
+            disabled={reacting}
+            className="absolute inset-x-3 bottom-[max(16px,env(safe-area-inset-bottom))] z-40 md:inset-x-auto md:bottom-auto md:right-24 md:top-1/2 md:w-[400px] md:-translate-y-1/2"
+          />
+        )}
+
         <nav
           aria-label="Post actions"
           className="absolute bottom-[164px] right-3 z-10 flex flex-col gap-3 md:bottom-auto md:right-6 md:top-1/2 md:-translate-y-1/2"
         >
+          {source.moment && member && (
+            <ReactButton open={reactOpen} onToggle={() => setReactOpen((o) => !o)} />
+          )}
           {originalUrl && (
             <a
               href={originalUrl}

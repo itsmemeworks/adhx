@@ -60,13 +60,14 @@ chmod 600 "$HOME/Library/Application Support/ADHX-worker/worker.env"
 
 Edit that private `worker.env` before running anything:
 
-| Mac setting         | Value                                                                                  |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| `ADHX_SERVER_URL`   | Existing HTTPS origin, for example `https://adhx.example.com`, without a path or query |
-| `ADHX_WORKER_TOKEN` | Exact server `PROCESSING_WORKER_TOKEN` value                                           |
-| `ADHX_WORKER_ID`    | A readable identifier such as `mac-worker`                                             |
-| `SEMANTIC_DEVICE`   | `cpu` initially                                                                        |
-| `SEMANTIC_THREADS`  | `2` initially; tune separately from the NAS query-model threads                        |
+| Mac setting                               | Value                                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ADHX_SERVER_URL`                         | Existing HTTPS origin, for example `https://adhx.example.com`, without a path or query |
+| `ADHX_WORKER_TOKEN`                       | Exact server `PROCESSING_WORKER_TOKEN` value                                           |
+| `ADHX_WORKER_ID`                          | A readable identifier such as `mac-worker`                                             |
+| `SEMANTIC_DEVICE`                         | `cpu` initially                                                                        |
+| `SEMANTIC_THREADS`                        | `2` initially; tune separately from the NAS query-model threads                        |
+| `SEMANTIC_SPEECH`, `SEMANTIC_SCREEN_TEXT` | Optional `off` to leave speech or on-screen text to another worker                     |
 
 The example lists optional absolute scratch/model paths and budget overrides.
 Keep reusable model weights separate from disposable scratch, preferably
@@ -151,7 +152,18 @@ normal targets 60-second segments with one every four seconds; deep targets
 30-second segments with one every two seconds. Every level samples the entire
 duration, including the ending. A segment contains at most 16 frames. Videos are
 limited to 24 hours and 512 segments, so very long videos use wider spacing.
-These are visual samples, not a promise to capture every event or spoken word.
+These are visual samples, not a promise to capture every event.
+
+The worker also transcribes what's said (the first ten minutes of each video or
+sound, with the pinned Whisper base model) and reads text on screen (up to four
+pictures and four frames from the first minute, with the pinned Florence-2 base
+model), and sends back only the cleaned words. Both run on CPU in a separate
+process that holds one model at a time and exits after a minute without work;
+on an M4 it peaked near 1.5 GB for speech and 1.8 GB for text on screen. This
+needs a server and worker on processing protocol 2: an older worker keeps
+claiming words, pictures, video and conversions and is never handed these jobs.
+Set `SEMANTIC_SPEECH=off` or `SEMANTIC_SCREEN_TEXT=off` in `worker.env` to leave
+that work for another worker.
 
 Native CPU is the default, using the same pinned q4/q8 model as the server. Set
 `SEMANTIC_DEVICE=coreml` only after measuring memory and latency on your Mac.

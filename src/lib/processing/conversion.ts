@@ -14,7 +14,7 @@ import { enqueuePosts } from '@/lib/semantic/queue'
 import { captureException } from '@/lib/sentry'
 import { indexingLevel, remoteProcessing } from './config'
 import { ProcessingConflict, ProcessingInputError } from './jobs'
-import { PROCESSING_PROTOCOL, type ProcessingJob } from './protocol'
+import { supportedProtocol, type ProcessingJob } from './protocol'
 
 const LEASE_MS = 120_000
 const MAX_OUTPUT_BYTES = 4 * 1024 ** 3
@@ -165,7 +165,7 @@ export async function claimConversionJob(
   model: string,
   protocol: number,
 ): Promise<ProcessingJob | null> {
-  if (model !== SEMANTIC_MODEL_VERSION || protocol !== PROCESSING_PROTOCOL)
+  if (model !== SEMANTIC_MODEL_VERSION || !supportedProtocol(protocol))
     throw new ProcessingConflict('Worker model or protocol does not match server')
   if (typeof workerId !== 'string' || !/^[A-Za-z0-9._ -]{1,80}$/.test(workerId))
     throw new ProcessingInputError('Invalid worker name')

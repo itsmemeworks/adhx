@@ -15,6 +15,26 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Validation: 3,103 tests (new: 11 channels, 3 private-wins, 9 component), typecheck, lint (existing warnings only); walked the rows, friend page, queues, popover and phone width in a browser on a scratch DB.
 - Follow-ups: friend page filters (Videos/Photos/Music) and "New" tile badges from the design aren't built; group naming needs real embeddings (scratch DB used hand-made rows); `auto_channels` still isn't removed on account delete (pre-existing).
 
+## 2026-10-19 — Live with names: watch together
+
+- Names are added per request for members only (`src/lib/moments/people.ts`): `MomentView.savers` (≤5, from the moment's post keys via `saversFor`, window saves only, never a private save), `watchers`, item `savers`, detail `watchers`, `save.saver`. The engine and its broadcasts stay anonymous; signed-out shapes are unchanged (tested key by key).
+- `presence.ts` (globalThis) counts signed-in streams by account; `watching` events get `watchers` per subscriber (no receiver, no banned accounts). Shared stream code in `stream.ts`.
+- Reactions: `POST /api/moments/{slug}/react` `{ emoji | text }` (six allowlisted emoji, or ≤40 cleaned characters shown as text only; 20/min/user, words 6/min; in memory only) → `reaction` events for members watching that moment. Changed mid-build from four fixed words to this, per the owner.
+- Phone: `GET /api/app/live`, `GET /api/app/live/{slug}`, `POST …/react`, `GET …/stream` (that moment's events, `PhonePost` posts).
+- Web: faces and watchers on `RightNow` cards and `MomentScreen`, "Tune in with Ana"; theater watchers bar, named arrival toast, React button + picker, reactions rising with the reactor's face (`LiveTogether.tsx`; fade only under reduced motion).
+- Verified with two signed-in members in the browser on a scratch DB (`MOMENT_MIN_SAVERS=1`): watchers both ways, emoji and words both ways, Jo's save toast, picker at phone width.
+- Validation: 3,103 tests (with `--maxWorkers=4`; the default run timed out unrelated 5 s tests on a host at load ~60), typecheck, lint (81 existing warnings).
+- Follow-ups: the phone apps don't use these routes yet; the Right now header's "3 of your people are on" and forming-card faces from the mockups aren't built; reactions aren't tied to the post on stage.
+
+## 2026-10-19 — Search what's said in videos and the text on screen
+
+- New `speech` / `screen` queue kinds write words (not vectors) to `post_extracted_text` (keyed by post; trigger-deleted with the last save). Whisper base (`onnx-community/whisper-base@1846881b…`, fp32 encoder/q8 decoder, per-window language + no-speech check) transcribes the first 10 min; Florence-2 base (`onnx-community/Florence-2-base-ft@e88a44ea…`, q8, `<OCR_WITH_REGION>`) reads ≤4 photos + 4 frames from the first minute. Junk filter in `extract-clean.ts`, re-applied server-side to Mac results.
+- The words join the text document ("Said in the video:" / "Text on screen:") and `post_text_fts`; only posts with extracted words change text hash (no `SEMANTIC_MODEL_VERSION` bump). Search adds `speech`/`screen` signals ("Said in the video", "On screen" on tiles); Jev never receives them and treats them like visual matches.
+- Models run only in `extract-child.ts` (forked by the jobs child or the Mac runner, one model per process, exits after 60 s idle): Florence-2 alone held 1.6–2 GB and `dispose()` didn't return it. Processing protocol 2 (`kinds` on claim, `extracted`, media by `slot`); v1 workers are still served and never see the new kinds. `SEMANTIC_SPEECH` / `SEMANTIC_SCREEN_TEXT=off` switches.
+- Measured on an M4 (2 threads): 178 s of speech in 10–12 s, 1.6 s per picture/frame, extract process peak ~1.4–1.5 GB (speech) / ~1.8 GB (screen). Real end-to-end smoke (temp DB, real models): "the cat that screams at the cucumber" → the video (strong, speech+screen), a captionless meme by its caption, German speech by a German query.
+- Copy that promised "no audio is processed" now says speech and on-screen text are read on your server and none of it leaves. 3,061 tests, typecheck, lint and production build pass.
+- Follow-ups: transcripts are not shown to people (search only); no status row for speech/screen progress in the learning sheet; window boundaries can garble a word; measure on the NAS CPU before a bulk backfill.
+
 ## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
 
 - `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.

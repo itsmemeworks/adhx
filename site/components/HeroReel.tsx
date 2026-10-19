@@ -297,7 +297,7 @@ function Search() {
       <Caption
         kicker="Search by meaning"
         title={<span>Describe it. Find it.</span>}
-        sub="EmbeddingGemma 2 reads the words, the pictures and the video, on your own server."
+        sub="It reads the words, the pictures, the video, what’s said and the text on screen, on your own server."
       />
     </>
   )
