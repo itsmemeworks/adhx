@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Check, LogOut, RefreshCw } from 'lucide-react'
-import { resolveAccountAvatarSrc } from '@/lib/avatar/generated-avatar'
+import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { FaceInitial } from '../FaceInitial'
 import { GobShape } from '../GobShape'
 import { NxImage, XLogo } from '../primitives'
 import { learningSummary, type LearningStatus } from '../onboarding/learning'
@@ -227,16 +228,16 @@ export function SyncCard({
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <GobShape size={44}>
-              <img
-                src={resolveAccountAvatarSrc({
-                  avatarSource: 'x',
-                  xAvatarUrl: xIdentity.avatarUrl,
-                  username: xIdentity.username,
-                })}
-                alt=""
-                referrerPolicy="no-referrer"
-                className="h-full w-full object-cover"
-              />
+              {usableAvatarUrl(xIdentity.avatarUrl) ? (
+                <img
+                  src={usableAvatarUrl(xIdentity.avatarUrl)!}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <FaceInitial username={xIdentity.username ?? ''} size={44} />
+              )}
             </GobShape>
             <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
               <span className="max-w-full truncate text-[15px] font-bold">{`@${xIdentity.username}`}</span>

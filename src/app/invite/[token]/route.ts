@@ -36,6 +36,7 @@ export async function GET(_request: NextRequest, { params }: Context) {
   return inviteJoinPage({
     token,
     inviter: invite.inviter,
+    inviterUsername: invite.inviterUsername,
     name: sanitizeUsername(invite.nameHint ?? ''),
     signedInAs: await signedInUsername(),
   })
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest, { params }: Context) {
     return inviteJoinPage({
       token,
       inviter: invite.inviter,
+      inviterUsername: invite.inviterUsername,
       name: result.username,
       error:
         result.nameError === 'taken'

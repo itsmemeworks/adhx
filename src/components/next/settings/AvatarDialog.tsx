@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import { Camera, Check, ImageUp, Minus, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GOB_COLOURS, gobDataUri, type GobColour } from '@/lib/avatar/gob'
-import { generateAvatarDataUri } from '@/lib/avatar/generated-avatar'
+import { FaceInitial } from '../FaceInitial'
 import { GobShape, gobMask } from '../GobShape'
 import { SaverFaces } from '../SaverFaces'
 import { XLogo } from '../primitives'
@@ -331,13 +331,17 @@ export function AvatarDialog({
                     top: -(shown.y * photo.height - side / 2) * scale,
                   }}
                 />
-              ) : (
+              ) : faceUrl ? (
                 <img
-                  src={faceUrl ?? generateAvatarDataUri(username)}
+                  src={faceUrl}
                   alt="Your picture"
                   referrerPolicy="no-referrer"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
+              ) : (
+                <span role="img" aria-label="Your picture" className="absolute inset-0 block">
+                  <FaceInitial username={username} name={displayName} size={BOX} />
+                </span>
               )}
               {/* The picture shows in Gob's shape everywhere, so the crop window is that shape too. */}
               <span

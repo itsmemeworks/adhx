@@ -2,7 +2,7 @@ import type { NextResponse } from 'next/server'
 import { escapeHtml, scriptFreePage } from './link-page'
 import type { InviteProblem } from './invites'
 import { USERNAME_MAX_LENGTH } from './username-rules'
-import { personColour } from '@/components/next/moments/people'
+import { faceColour } from '@/components/next/faces'
 
 /** Plain reasons an invite can't be used. */
 export const INVITE_PROBLEMS: Record<InviteProblem, string> = {
@@ -51,6 +51,8 @@ export function inviteErrorPage(message: string, status: number): NextResponse {
 export function inviteJoinPage(options: {
   token: string
   inviter: string
+  /** For their face's colour (the same as in the app). */
+  inviterUsername?: string
   name: string
   error?: string
   signedInAs?: string | null
@@ -68,7 +70,7 @@ export function inviteJoinPage(options: {
     title: `${options.inviter} wants you in.`,
     heading: `${inviter} wants you in. <span class="accent">Pick a name.</span>`,
     kicker: 'Private invite',
-    before: `<div class="chip"><span class="face" aria-hidden="true" style="background:${personColour(options.inviter)}">${initial}</span><span><b>${inviter} invited you</b><small>to their ADHX, for friends only</small></span></div>`,
+    before: `<div class="chip"><span class="face" aria-hidden="true" style="background:${faceColour(options.inviterUsername ?? options.inviter)}">${initial}</span><span><b>${inviter} invited you</b><small>to their ADHX, for friends only</small></span></div>`,
     content: `<form action="/invite/${escapeHtml(options.token)}" method="post">
          <label for="username">Your name</label>
          <input class="field" id="username" name="username" value="${escapeHtml(options.name)}" required minlength="3" maxlength="${USERNAME_MAX_LENGTH}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="${options.error ? 'name-error' : 'name-hint'}"${options.error ? ' aria-invalid="true" autofocus' : ''}>
