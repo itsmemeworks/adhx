@@ -148,6 +148,9 @@ enum KeepStatus {
 enum APIError: Error {
     /// No answer, a timeout, or 502/503/504: queue it and try later.
     case offline
+    /// It answered nothing in time (busy, not gone): treated like `offline`
+    /// everywhere except where saying so helps (search).
+    case slow
     /// 401: the phone key was removed on the server.
     case badKey(String)
     /// Any other error answer, with words fit to show.
@@ -156,6 +159,7 @@ enum APIError: Error {
     var code: String? {
         switch self {
         case .offline: return "offline"
+        case .slow: return "slow"
         case .badKey: return "bad_key"
         case .server(_, let code, _): return code
         }
@@ -164,6 +168,7 @@ enum APIError: Error {
     var message: String {
         switch self {
         case .offline: return "Your ADHX can’t be reached right now."
+        case .slow: return "Your ADHX is taking too long to answer. Try again in a moment."
         case .badKey(let message): return message
         case .server(_, _, let message): return message
         }
@@ -195,11 +200,13 @@ struct ADHXClient {
     var key: String?
 
     static let timeout: TimeInterval = 15
+    /// Search can take a while on a small server (the model runs there).
+    static let searchTimeout: TimeInterval = 60
 
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = timeout
-        config.timeoutIntervalForResource = timeout + 5
+        config.timeoutIntervalForResource = searchTimeout + 5
         config.waitsForConnectivity = false
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         return URLSession(configuration: config)
@@ -243,7 +250,7 @@ struct ADHXClient {
         try await send("GET", "/api/app/search", query: [
             URLQueryItem(name: "q", value: q),
             URLQueryItem(name: "offset", value: String(offset)),
-        ])
+        ], timeout: Self.searchTimeout)
     }
 
     /// Resolves a relative address from the server (posterUrl, openPath).
@@ -255,7 +262,8 @@ struct ADHXClient {
 
     private func send<T: Decodable>(_ method: String, _ path: String,
                                     query: [URLQueryItem] = [],
-                                    body: [String: String]? = nil) async throws -> T {
+                                    body: [String: String]? = nil,
+                                    timeout: TimeInterval = Self.timeout) async throws -> T {
         guard var comps = URLComponents(url: server, resolvingAgainstBaseURL: false) else {
             throw APIError.server(status: 0, code: "bad_address", message: "That address doesn’t look right.")
         }
@@ -266,7 +274,7 @@ struct ADHXClient {
             throw APIError.server(status: 0, code: "bad_address", message: "That address doesn’t look right.")
         }
 
-        var request = URLRequest(url: url, timeoutInterval: Self.timeout)
+        var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let key { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
@@ -285,6 +293,7 @@ struct ADHXClient {
                 throw APIError.server(status: 0, code: "needs_https",
                                       message: "This address needs to start with https://.")
             }
+            if error.code == .timedOut { throw APIError.slow }
             throw APIError.offline
         } catch is CancellationError {
             throw CancellationError()

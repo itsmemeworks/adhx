@@ -201,7 +201,7 @@ private struct TypeAddressForm: View {
                     .onSubmit { focus = .code }
             }
             field(label: "Code") {
-                TextField("", text: $code, prompt: Text("ABCD-EFGH").foregroundColor(Theme.faint))
+                TextField("", text: $code, prompt: Text("ABCD-EFGH").foregroundColor(Theme.faint.opacity(0.55)))
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .font(Theme.sans(17, .bold).monospaced())

@@ -175,7 +175,7 @@ describe('hourly X bookmark sync', () => {
     expect(result).toEqual({ synced: 1, added: 4 })
     expect(fetchBookmarks).toHaveBeenCalledTimes(2)
     expect(fetchBookmarks).toHaveBeenNthCalledWith(1, 'user-1', {
-      maxResults: 100,
+      maxResults: 50,
       paginationToken: undefined,
     })
     expect(saveBookmark).toHaveBeenCalledTimes(4)

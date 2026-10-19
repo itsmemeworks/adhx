@@ -171,10 +171,10 @@ private struct ShareRow: View {
 struct EmptyShares: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Nothing yet.")
+            Text("Nothing shared from this phone yet.")
                 .font(Theme.sans(17, .heavy))
                 .foregroundStyle(.white)
-            Text("In any app, tap Share on a post and pick ADHX. It shows up here.")
+            Text("In any app, tap Share on a post and pick ADHX. It shows up here. Everything you’ve saved is in the player.")
                 .font(Theme.sans(15))
                 .foregroundStyle(Theme.muted)
                 .lineSpacing(3)

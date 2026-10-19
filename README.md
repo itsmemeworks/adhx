@@ -199,7 +199,7 @@ People sign in with email. Connecting X is optional; it brings in their bookmark
 2. Register `<your NEXT_PUBLIC_APP_URL>/api/auth/twitter/callback` as a callback.
 3. Set `TWITTER_CLIENT_ID` and `TWITTER_CLIENT_SECRET`.
 
-X charges the developer app for every post its API returns, so automatic syncing uses API credits. Each sync asks for up to 100 recent bookmarks and stops at the first page that holds one already saved. X only ever returns someone's newest 800 bookmarks. If X runs out of credits, ADHX pauses automatic syncing for six hours and tries again.
+X charges the developer app for every post its API returns, so automatic syncing uses API credits. The hourly sync asks for up to 50 recent bookmarks and stops at the first page that holds one already saved; **Sync X bookmarks** in Settings goes through the whole list. X only ever returns someone's newest 800 bookmarks, and sometimes ends the list early: when a full sync stops on a full page, ADHX goes through once more 20 at a time (re-reading the newest ones, which X charges for again). If X runs out of credits, ADHX pauses automatic syncing for six hours and tries again.
 
 ## Saving posts
 
