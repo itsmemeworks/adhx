@@ -155,7 +155,9 @@ use several cores and substantial temporary disk space, especially at 4K.
   once with backfill enabled clears that boundary for a later activation.
 - `KEEP_H264=off`: skip conversion, preserving source resolution and codec;
   some browsers may not play that codec.
-- `SEMANTIC_SEARCH=off`: stop model workers; keyword search remains available.
+- `SEMANTIC_SEARCH=off`: stop model workers. Existing keyword entries remain
+  searchable, but new saves currently need the worker to populate that index.
+  See the [release-readiness record](../../docs/rollout/self-hosted-release.md).
 
 The first model download is about 400 MB and persists in `/data/models`.
 Kept media dominates storage. Provision room for the library and scratch

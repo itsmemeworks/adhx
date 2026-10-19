@@ -50,7 +50,18 @@ This repo carries its own cumulative context so any fresh session — new branch
 
 `AGENTS.md` at the repo root is the cross-tool entry point (for agents that don't read CLAUDE.md) and points here.
 
-## Architecture Overview
+## Current deployment reference
+
+Use [`README.md`](README.md) and [`deploy/nas/README.md`](deploy/nas/README.md)
+for current setup, and [`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md)
+for unresolved release blockers. The legacy diagram and route notes below still
+include the earlier X-first hosted application; they are historical context,
+not a complete description of the present fourteen-network product. Sign-in is
+by email; X is an optional connection. The current home is Right now, with the
+theater, search and channels alongside it. `site/` builds separately; editing
+it does not publish adhx.com.
+
+## Architecture Overview (legacy X-first flow)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -107,7 +118,7 @@ pnpm install
 pnpm db:migrate  # creates ./data/adhdone.db (Docker does this on start; local does not)
 pnpm dev         # Start dev server at localhost:3001
 pnpm build       # Production build
-pnpm test        # Run all 943 tests
+pnpm test        # Run the automated suite
 ```
 
 ## Tech Stack
@@ -121,7 +132,7 @@ pnpm test        # Run all 943 tests
 - **Icons**: lucide-react
 - **Fonts**: Indie Flower (brand), IBM Plex Sans/Inter/Lexend/Atkinson Hyperlegible (body - user selectable)
 - **Testing**: Vitest
-- **Deployment**: Fly.io with automated deploys via GitHub Actions
+- **Deployment**: portable Docker/Compose; legacy Fly workflows remain in the repository
 
 ## Security
 

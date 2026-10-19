@@ -415,8 +415,8 @@ export function ProductSite() {
             </h1>
             <p className="m-0 max-w-[720px] text-[18px] leading-relaxed text-nx-soft md:text-[21px]">
               ADHX saves posts from X, Instagram, TikTok, YouTube, Reddit and nine more networks. It
-              keeps the originals in full quality on your own server, and finds anything again when
-              you describe it. Open source, for you and your friends.
+              keeps copies at the best available resolution on your own server, and helps you find
+              them again when you describe what you remember. Open source, for you and your friends.
             </p>
             <div className="flex flex-wrap gap-3">
               <a
@@ -430,7 +430,7 @@ export function ProductSite() {
                 href="#self-host"
                 className="flex min-h-[52px] items-center rounded-full border-[1.5px] border-nx-cream px-6 text-[16px] font-extrabold text-nx-cream"
               >
-                Run your own in five minutes
+                Run your own ADHX
               </a>
             </div>
           </div>
@@ -477,7 +477,7 @@ export function ProductSite() {
                 <p className="m-0">
                   Type what you remember, like “a frog in a pond” or “that synth video”, and ADHX
                   finds it. It matches what posts say, what’s in their pictures, and what happens in
-                  their videos, with a frame looked at every 2 seconds.
+                  their videos, sampling a frame every 2 seconds from the first 32 seconds.
                 </p>
                 <p className="m-0">
                   It runs Google’s EmbeddingGemma 2 on your own server: no API key, no cost per
@@ -493,17 +493,18 @@ export function ProductSite() {
             id="keep"
             flip
             kicker="Your own copies"
-            title={<span>Kept in the original.</span>}
+            title={<span>Your own copies.</span>}
             body={
               <>
                 <p className="m-0">
-                  Every save is downloaded once, at the best quality the network offers (4K from X
-                  when the post has it), and played from your disk. Deleted posts and dead links
-                  don’t take your saves with them.
+                  ADHX downloads media at the best available resolution, including 4K when offered.
+                  Once the copy is kept, it plays from your disk even if the original disappears.
+                  Private, deleted or DRM-protected posts may not be downloadable.
                 </p>
                 <p className="m-0">
-                  Videos are made playable in every browser, downloads pause before your disk fills,
-                  and files are tidied away when nobody has the post saved any more.
+                  Videos can be converted to H.264 for browser playback while preserving resolution.
+                  New downloads pause below your free-space threshold, and files are tidied away
+                  when nobody has the post saved any more.
                 </p>
               </>
             }
@@ -571,7 +572,8 @@ export function ProductSite() {
               <>
                 <p className="m-0">
                   Connect X once and ADHX brings in your bookmarks, then checks for new ones every
-                  hour. No syncing by hand.
+                  hour. This needs your own X developer app and API credits; rate limits or
+                  exhausted credits can delay syncing.
                 </p>
               </>
             }
@@ -603,11 +605,12 @@ export function ProductSite() {
             <>
               <p className="m-0">
                 The companion apps put ADHX in your phone’s share menu. Share a post from TikTok,
-                Instagram, YouTube or anywhere else, and it’s saved to your server in one tap, even
-                when you’re offline.
+                Instagram, YouTube or anywhere else, and send it to your server in one tap. When the
+                server can’t be reached, the link waits on your phone to be retried.
               </p>
               <p className="m-0">
-                Connect a phone by scanning a code in Settings. The apps only ever send links.
+                Connect a phone by scanning a code in Settings. Play and search your saves in the
+                app; your server downloads, understands and streams the media.
               </p>
             </>
           }
@@ -654,7 +657,8 @@ export function ProductSite() {
                   'One Docker container and one folder of data. Back it up like anything else.',
                   'Invite only the people you choose. No email service needed: you can hand sign-in links over yourself.',
                   'Search runs on your server. Nothing goes to an AI company unless you add the optional TypeSafe key, which sharpens search and names channels.',
-                  'Open source under the MIT licence. No accounts with us, no ads, no tracking.',
+                  'Kept media and shared previews play without sign-in to anyone who can reach the server. Use private networking when that is your intended boundary.',
+                  'Open source under the MIT licence. No service account with us and no ads.',
                 ].map((line) => (
                   <li key={line} className="flex gap-3">
                     <span className="mt-[9px] h-2 w-2 shrink-0 rounded-full bg-nx-accent" />
@@ -666,7 +670,7 @@ export function ProductSite() {
             <div className="flex min-w-0 flex-col gap-4">
               <CopyCommand text={SETUP} />
               <a
-                href={GITHUB_URL}
+                href={`${GITHUB_URL}/blob/main/deploy/nas/README.md`}
                 className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black"
               >
                 <GitHubMark className="h-5 w-5" />
@@ -688,7 +692,7 @@ export function ProductSite() {
           <a href={GITHUB_URL} className="hover:text-white">
             GitHub
           </a>
-          <a href="/privacy" className="hover:text-white">
+          <a href={`${GITHUB_URL}/blob/main/PRIVACY.md`} className="hover:text-white">
             Privacy
           </a>
           <a href={`${GITHUB_URL}/blob/main/LICENSE`} className="hover:text-white">

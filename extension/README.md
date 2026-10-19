@@ -1,6 +1,6 @@
 # Save to ADHX (desktop extension)
 
-Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on an **X, Instagram, or TikTok post** opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
+Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on a supported social post from any of the app’s fourteen networks opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
 
 When you invoke it, the extension transmits the selected or active source post URL to the
 configured ADHX origin by navigating the tab. Firefox therefore declares the required
@@ -41,8 +41,8 @@ In `extension/.env`:
 EXTENSION_PUBLIC_APP_ORIGIN=http://localhost:3001
 ```
 
-- Unset / empty → production `https://adhx.com`
-- Staging → `https://adhx.fly.dev`
+- Your server → its HTTPS origin, e.g. `https://adhx.example.com`.
+- Unset / empty still uses the legacy default `https://adhx.com`; always set your own origin for self-hosting. A static product site cannot receive saves.
 - No trailing slash. Rebuild after any change (env is baked in at build time).
 - `extension/.env` is gitignored. Do not commit it.
 
@@ -104,6 +104,7 @@ Supported URLs (same set `/share` already routes):
 - X / Twitter status (`x.com/…/status/…`, `twitter.com`, vx/fx mirrors)
 - Instagram Reels / posts (`instagram.com/reel/`, `/reels/`, `/p/`)
 - TikTok videos and short links (`vm.` / `vt.` / `tiktok.com/t/`)
+- YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky (the server validates individual posts)
 
 **Signed in** on that ADHX origin: a new open of the preview autosaves the lead (Save pill → Saved → Tag). Refresh / back / in-app hops do not.
 
@@ -175,7 +176,7 @@ pnpm --dir extension validate:manifests
 
 | Symptom                                        | Likely cause                                                              |
 | ---------------------------------------------- | ------------------------------------------------------------------------- |
-| Lands on `adhx.com` instead of localhost       | `.env` missing / empty, or you did not rebuild + Reload                   |
+| Lands on `adhx.com` instead of your server     | `.env` missing / empty, or you did not rebuild + Reload                   |
 | Preview loads but does not autosave            | Not signed in **on that origin**, or this was a refresh / back navigation |
 | Toolbar does nothing except a red **×**        | Current tab is not a supported post — right-click the post link instead   |
 | Load unpacked greyed out / fails               | Pick the `dist/chromium` folder, not `extension/` or `src/`               |

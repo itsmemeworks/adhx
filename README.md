@@ -8,7 +8,7 @@
 
 ADHX keeps the posts you love from X, Instagram, TikTok, YouTube, Reddit and nine more networks. It downloads each post's video, pictures and sound in the best quality the network offers. It stores them on your own server and plays them from there. Find any of them later by describing what you remember, like "the video with the frog".
 
-It's built to run for yourself and a few friends: one Docker container, one folder of data. ADHX isn't a hosted service. Posts can't disappear behind a deleted account or a dead link, because the files are yours.
+It's built to run for yourself and a few friends: one Docker container, one folder of data. ADHX isn't a hosted service. Once a post's media has been successfully kept, that copy survives deletion of the original. Downloads that are blocked, private or protected by DRM may not succeed.
 
 <p align="center">
   <img src="public/og-logo.png" alt="ADHX — save it, lose it, find it" width="560" />
@@ -109,7 +109,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                    |
 | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                      |
 | `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                         |
-| `SEMANTIC_SEARCH=off`                        | Turn search by meaning off (keyword search still works).                                                                       |
+| `SEMANTIC_SEARCH=off`                        | Stop model workers. Existing keyword entries remain searchable; new keyword indexing currently needs the worker.               |
 | `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                             |
 | `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                            |
 | `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                           |
@@ -147,7 +147,7 @@ ADHX picks the highest resolution a network offers. If that video isn't H.264, A
 
 ### Keeping downloads working
 
-Networks change their pages often, and yt-dlp releases fixes within days. Each ADHX release pins the latest yt-dlp. To update a running container without waiting for a release:
+Networks change their pages often, and yt-dlp releases fixes within days. Each ADHX release pins a yt-dlp version. To update a running container without waiting for a release:
 
 ```bash
 docker compose exec adhx /opt/yt-dlp/bin/pip install -U "yt-dlp[default]"
@@ -157,7 +157,7 @@ docker compose exec adhx /opt/yt-dlp/bin/pip install -U "yt-dlp[default]"
 
 ### Backups
 
-Back up the `/data` volume. It holds `adhx.db`, the `media/` folder and the `models/` folder. The models are re-downloaded if missing, so you can skip them.
+Back up the `/data` volume consistently: stop ADHX before copying it, or use SQLite's backup API with a coordinated media snapshot. It holds `adhx.db` (and any SQLite WAL files), the `media/` folder and the `models/` folder. The model cache can be downloaded again. Keep an independent private backup and test a restore; see the [deployment guide](deploy/nas/README.md#updates-backups-and-recovery).
 
 ### Fly.io
 
@@ -268,6 +268,11 @@ Also set `ADHX_URL` to your server's address, e.g. `https://adhx.example.com`. T
 git clone https://github.com/itsmemeworks/adhx && cd adhx
 pnpm install
 cp .env.example .env
+```
+
+Set `SESSION_SECRET` in `.env` to the output of `openssl rand -base64 32`. Keep that value stable. Then:
+
+```bash
 pnpm db:migrate
 pnpm dev
 ```
@@ -286,7 +291,9 @@ ADHX is for keeping posts for yourself and the people you share your server with
 
 ## The website
 
-[adhx.com](https://adhx.com) is a static site in [`site/`](site/), published to GitHub Pages by `.github/workflows/site.yml`. Run it with `pnpm site:dev`. It's separate from the app: your ADHX doesn't serve it.
+The replacement product site for [adhx.com](https://adhx.com) lives in [`site/`](site/). Run it with `pnpm site:dev` or build it with `pnpm site:build`. `.github/workflows/site.yml` publishes changes from `main` once GitHub Pages is configured; moving an existing domain also requires a deliberate DNS cutover. Source changes in an unmerged PR do not update the live website. Your self-hosted ADHX does not serve this site.
+
+Before a release or installation, review the [release-readiness record](docs/rollout/self-hosted-release.md), including dependency updates, keyword-only indexing and Linux/phone validation still outstanding.
 
 ## Contributing
 

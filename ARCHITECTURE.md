@@ -16,13 +16,24 @@ API service, Redis tier, or object store. The one exception is the
 understanding pipeline below: the web server forks two child processes on the
 same machine that run the embedding model, because inference blocks its thread.
 
+## Current product and legacy sections
+
+The current self-hosted product keeps media from fourteen networks and has native
+iOS/Android clients. Right now is the home; the theater, search and channels
+remain, while the previous Live/trending/leaderboard surfaces are retired.
+Several route tables and UI-flow sections below describe those earlier surfaces
+and remain historical context, not the current navigation contract. For current
+setup use [`README.md`](README.md) and
+[`deploy/nas/README.md`](deploy/nas/README.md); release blockers are recorded in
+[`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md).
+
 ## System context
 
 ```mermaid
 flowchart LR
   B[Browser / PWA] --> N[Next.js pages and route handlers]
   E[Desktop extension] -->|navigate to /share| N
-  N --> D[(SQLite on Fly volume)]
+  N --> D[(SQLite on persistent volume)]
   N --> X[X API and FxTwitter]
   N --> I[Instagram metadata and mirror]
   N --> T[tnktok and TikTok CDN]
@@ -552,7 +563,7 @@ analytics writes use separate rate budgets. Exact limits are documented in
 
 ## Bounded in-process state and scaling envelope
 
-The current deployment deliberately runs one Fly machine and one mounted
+The supported hosting topology uses one application instance and one mounted
 SQLite volume per environment. This makes process-local burst controls
 accurate and keeps SQLite ownership simple.
 
@@ -632,7 +643,7 @@ CI checks source quality, unit and browser behavior, the production build, both
 extension targets, and the runnable container (including migrations and the
 health endpoint).
 
-Staging and production are separate Fly applications with separate volumes,
+The legacy hosted staging and production are separate Fly applications with separate volumes,
 secrets, deploy credentials, Sentry environments, and health checks. Release
 automation deploys to staging; production remains an explicit action.
 

@@ -6,7 +6,7 @@ Thank you for your interest in contributing to ADHX!
 
 **Security:** never file a public issue for a vulnerability. Use a [private advisory](https://github.com/itsmemeworks/adhx/security/advisories/new) or [security@adhx.com](mailto:security@adhx.com). See [SECURITY.md](SECURITY.md).
 
-**Privacy:** what the hosted app stores (including `activity.userId`, which is never public) is in [PRIVACY.md](PRIVACY.md). Conduct reports: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+**Privacy:** what a self-hosted instance stores (including `activity.userId`, which is never public) is in [PRIVACY.md](PRIVACY.md). Conduct reports: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 **Agents:** start at [AGENTS.md](AGENTS.md) / [CLAUDE.md](CLAUDE.md). Put operator-only `gh` accounts and Fly app names in gitignored `CLAUDE.local.md`, not in committed rules.
 
@@ -77,6 +77,9 @@ PR titles should also follow the conventional commit format. When merged via squ
 ```bash
 # Install dependencies
 pnpm install
+
+# Copy .env.example to .env and set a private SESSION_SECRET first.
+# Generate it once with: openssl rand -base64 32
 
 # Create / migrate the local SQLite file (Docker does this on start; local does not)
 pnpm db:migrate

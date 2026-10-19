@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           rows, on its own server.
         </p>
         <p className="m-0 text-[14px] text-white/55">
-          <span>Last updated 17 October 2026. The canonical copy is </span>
+          <span>Last updated 19 October 2026. The canonical copy is </span>
           <a
             href="https://github.com/itsmemeworks/adhx/blob/main/PRIVACY.md"
             className="text-white underline underline-offset-2"
@@ -61,14 +61,23 @@ export default function PrivacyPage() {
           your own saves, and stops working as soon as you remove it.
         </Section>
 
+        <Section title="Retained media and phones">
+          Successfully downloaded media stays on this server and can be played without sign-in by
+          anyone who can reach its URL. Those URLs contain source post IDs, not secret tokens. The
+          email allowlist restricts accounts, not playback; private access also needs a private
+          network boundary. Hidden posts are not served. Phone keys are stored as hashes and can
+          save links and read/search only their owner’s saves. Remove a key in Settings to revoke
+          it.
+        </Section>
+
         <Section title="Search by meaning">
           So you can find saves by what is in them, each post’s words, picture and video frames are
-          turned into numbers by a model that runs on our own servers. These describe the post,
-          never who saved it. “Everyone” search, and the posts that play after a shared post, cover
-          posts anyone has saved and never show who saved them. “Made for you” channels are private
-          to you. When a search is refined, your search text and the public words of the top results
-          are sent to TypeSafe (Jev) to put them in a better order; your channels and who saved a
-          post are never sent.
+          turned into numbers by a model that runs on this instance’s server. These describe the
+          post, never who saved it. “Everyone” search, and the posts that play after a shared post,
+          cover posts anyone has saved and never show who saved them. “Made for you” channels are
+          private to you. When the operator enables optional refinement, your search text and the
+          public words of the top results are sent to TypeSafe (Jev) to put them in a better order;
+          your channels and who saved a post are never sent.
         </Section>
 
         <Section title="Right now and the community pulse">
@@ -80,10 +89,11 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="Third parties">
-          X (if you connect it), Resend (magic-link email), Sentry in production (user ids hashed
-          before metrics), Fly.io (host and storage), TypeSafe (search refinement, as above),
-          Hugging Face (where our search model is downloaded from; nothing about you is sent), and
-          platform CDNs through allowlisted media proxies. No advertising pixels.
+          Depending on the operator’s settings: X for optional bookmark sync, SMTP or Resend for
+          email, Sentry for optional error reporting, the chosen hosting provider, and TypeSafe for
+          optional refinement and channel naming. Hugging Face sees the model download request, not
+          your saved library. Networks and public preview providers supply saved posts and media. No
+          advertising pixels.
         </Section>
 
         <Section title="Your choices">

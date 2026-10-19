@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Guide, website and release-quality audit
+
+- Correct stale self-hosting orientation, backup/dev-secret instructions, extension setup and privacy descriptions; separate website source from live deployment.
+- Website copy now describes offline queuing, native playback/search, conversion and X prerequisites accurately; its Privacy link targets the maintained policy.
+- Record outstanding production dependency advisories (14, including one critical), model-off keyword indexing, Linux/physical-phone testing and domain cutover in `docs/rollout/self-hosted-release.md`.
+- Verify static site build, formatting and UI lint; reproduce the model-off keyword gap with a synthetic production database. Mark legacy architecture sections explicitly.
+- No dependency upgrade, backend behaviour change, website publication or service installation in this audit.
+
 ## 2026-10-19 — Retained-media recovery and portable Docker hosting
 
 - Persist the backfill-off boundary across restarts, preserving interrupted jobs and retries.
