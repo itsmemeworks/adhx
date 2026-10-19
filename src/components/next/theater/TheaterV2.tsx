@@ -160,7 +160,6 @@ import {
   type FeedWeight,
 } from '@/lib/feed/blend'
 import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
-import { LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { channelTitle } from '../channels/ChannelParts'
 import { useBusyLogo } from '../logo-busy'
@@ -994,8 +993,6 @@ export function TheaterV2({
     },
     savedAction: () => ({ label: 'Add to channel', onClick: () => void save() }),
   })
-  const [learningOpen, setLearningOpen] = useState(false)
-  const learning = useLearningStatus({ fast: learningOpen })
 
   const moreLikeThis = useCallback(async (): Promise<boolean> => {
     if (!current) return false
@@ -1485,22 +1482,29 @@ export function TheaterV2({
     return () => root.removeEventListener('loadedmetadata', onMeta, true)
   }, [loaded, caughtUp])
 
+  /** Wide screens: menus open beside the rail, level with the button's bottom. */
+  const railAnchor = useCallback(
+    (button: HTMLElement | null) => {
+      const rect = button?.getBoundingClientRect()
+      setMoreAnchor(
+        wide && rect
+          ? {
+              right: Math.max(12, window.innerWidth - rect.left + 14),
+              bottom: Math.max(16, window.innerHeight - rect.bottom - 8),
+            }
+          : null,
+      )
+    },
+    [wide],
+  )
   const toggleMore = useCallback(() => {
     if (panel === 'more') {
       setPanel(null)
       return
     }
-    const rect = moreRef.current?.getBoundingClientRect()
-    setMoreAnchor(
-      wide && rect
-        ? {
-            right: Math.max(12, window.innerWidth - rect.left + 14),
-            bottom: Math.max(16, window.innerHeight - rect.bottom - 8),
-          }
-        : null,
-    )
+    railAnchor(moreRef.current)
     setPanel('more')
-  }, [panel, wide])
+  }, [panel, railAnchor])
 
   /** Made for you: "Keep this channel" (private until you share it). */
   const [keeping, setKeeping] = useState(false)
@@ -1936,7 +1940,8 @@ export function TheaterV2({
                   covers={items}
                 />
               </div>
-              <div className="absolute right-6 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-2.5">
+              {/* Only where the room is wide enough to keep clear of the rail. */}
+              <div className="absolute right-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col gap-2.5 xl:flex">
                 <button
                   type="button"
                   aria-label="Previous"
@@ -2607,7 +2612,10 @@ export function TheaterV2({
                     type="button"
                     aria-label="Share"
                     title="Share"
-                    onClick={shareIt}
+                    onClick={(e) => {
+                      railAnchor(e.currentTarget)
+                      shareIt()
+                    }}
                     className={railStyle()}
                   >
                     <ShareIcon aria-hidden className="h-[22px] w-[22px]" />
@@ -2952,6 +2960,7 @@ export function TheaterV2({
         )}
         {panel === 'share' && (
           <ShareSheet
+            anchor={wide ? moreAnchor : null}
             url={publicUrl()}
             waiting={pausedForShare.current || timed}
             onClose={() => setPanel(null)}
@@ -2994,9 +3003,6 @@ export function TheaterV2({
           />
         )}
         {paste.toast}
-        {learningOpen && (
-          <LearningSheet status={learning.status} onClose={() => setLearningOpen(false)} />
-        )}
         {toast && (
           <div
             role="status"
@@ -3006,7 +3012,7 @@ export function TheaterV2({
           </div>
         )}
       </div>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2.5 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[max(12px,env(safe-area-inset-top))] md:h-[72px] md:gap-7 md:border-b md:border-white/[0.08] md:bg-nx-ink md:bg-none md:px-8 md:py-0">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2.5 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[max(12px,env(safe-area-inset-top))] md:h-[72px] md:gap-4 md:border-b md:border-white/[0.08] md:bg-nx-ink md:bg-none md:px-8 md:py-0 lg:gap-7">
         {/* Phones: Gob, New · Channels · Live, and one tool. */}
         <PhoneGob className="pointer-events-auto md:hidden" />
         <PhoneTabs
@@ -3018,23 +3024,23 @@ export function TheaterV2({
         <NxLogo className="pointer-events-auto hidden md:flex" />
         <PrimaryNav current={navHere} className="pointer-events-auto" />
         <span className="flex-1" />
-        {source.feed ? (
+        {source.feed && (
           <RoundIconButton
             label={`What’s in your feed: ${feedTypesSummary(shownTypes)}`}
             icon={PhoneFilterIcon}
             onClick={() => setFilterOpen(true)}
-            className="pointer-events-auto md:hidden"
-          />
-        ) : (
-          <RoundIconButton
-            label="Search"
-            icon={PhoneSearchIcon}
-            onClick={openQuickSearch}
-            className="pointer-events-auto md:hidden"
+            className="pointer-events-auto lg:hidden"
           />
         )}
-        <div className="pointer-events-auto hidden md:flex">
-          <HeaderSearch shortcut className="md:w-[340px]" />
+        {/* Phones show one tool (the feed's filter wins); tablets have room for both. */}
+        <RoundIconButton
+          label="Search"
+          icon={PhoneSearchIcon}
+          onClick={openQuickSearch}
+          className={cn('pointer-events-auto lg:hidden', source.feed && 'hidden md:flex')}
+        />
+        <div className="pointer-events-auto hidden lg:flex">
+          <HeaderSearch shortcut className="md:w-[260px] xl:w-[340px]" />
         </div>
         <AccountMenu className="pointer-events-auto" avatarOnPhones={false} />
       </header>

@@ -584,11 +584,14 @@ export function ShareSheet({
   url,
   waiting = false,
   onClose,
+  anchor = null,
 }: {
   url: string
   /** Whether playback is held while this is open (says so). */
   waiting?: boolean
   onClose: () => void
+  /** Wide screens: beside the rail. */
+  anchor?: CSSProperties | null
 }) {
   const [copied, setCopied] = useState<'yes' | 'blocked' | null>(null)
   const field = useRef<HTMLInputElement>(null)
@@ -608,7 +611,7 @@ export function ShareSheet({
     }
   }
   return (
-    <Sheet label="Share" onClose={onClose} side="menu">
+    <Sheet label="Share" onClose={onClose} side="menu" anchor={anchor}>
       <div className="flex flex-col gap-3 md:p-2.5">
         <span className="text-[15px] font-bold">Share this post</span>
         <label className="sr-only" htmlFor="nx-share-link">
