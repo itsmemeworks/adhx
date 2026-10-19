@@ -76,11 +76,17 @@ docker compose up -d
 
 The root example publishes ADHX on `127.0.0.1:3000` (`ADHX_PORT` changes the host port). Put it behind your usual host-based reverse proxy for HTTPS; sign-in needs HTTPS outside `localhost`. The [`docker-compose.yml`](docker-compose.yml) keeps everything in one volume mounted at `/data`: the database, the search model and every kept file. Migrations run on start.
 
-Once a release containing this code is published and tested, set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx@sha256:<digest>` to pin it. An older published `latest` does not contain an unmerged branch; using it is not a test of this checkout.
+For a published image, verify its source revision and architecture, then set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx@sha256:<digest>` to pin it. Merging code, publishing an image and updating your installed container are separate steps.
 
 **On a Docker host or NAS**, the [deployment guide](deploy/nas/README.md) explains persistent storage, permissions, resource controls, backups and connecting your own HTTPS proxy. The container-proxy example publishes no host port and requires no particular NAS vendor, VPN or public tunnel.
 
 For UGREEN's Docker interface, use the optional [UGOS Pro walkthrough](deploy/nas/ugreen.md), including data-folder permissions and the first sign-in.
+
+On a shared NAS, start with `SEMANTIC_THREADS=1` and `KEEP_CONCURRENCY=1`.
+The [resource guide](deploy/nas/README.md#resource-and-storage-controls) shows
+how to budget CPU, RAM and swap, and check search/playback while a bulk import
+is being understood. Local picture/video search needs no external AI key;
+Jev refinement and X sync are [optional additions](deploy/nas/README.md#optional-services-and-x-sync).
 
 Main-branch merges publish `ghcr.io/itsmemeworks/adhx:main` and an immutable
 `sha-<full-commit>` tag. Numbered releases add version tags and `latest` to the
@@ -97,7 +103,7 @@ People sign in with a link that works once, for 15 minutes. Choose how links rea
 | Resend               | `RESEND_API_KEY` and `EMAIL_FROM` on a domain you verified there                       | Sending from your own domain without running mail                                                |
 | No email             | `EMAIL_LINKS_TO_ADMIN=1`                                                               | A handful of friends. Links wait on the admin page and you pass them on, by message or in person |
 
-With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and opening it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get one, so strangers can't fill the list.
+With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and opening it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
 
 ### Who can sign up
 
@@ -124,6 +130,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                  |
 | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                    |
 | `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                       |
+| `SYNC_COOLDOWN_MINUTES`                      | Wait between manual X syncs. Set `1` for a one-minute cooldown; this does not set the automatic interval.                    |
 | `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                        |
 | `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                           |
 | `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                          |
@@ -134,6 +141,14 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                    |
 
 Every setting is in [`.env.example`](.env.example).
+
+For automatic X sync about every 50 minutes and a one-minute manual cooldown,
+set `AUTO_SYNC_EVERY_MINUTES=50` and `SYNC_COOLDOWN_MINUTES=1`. The scheduler
+checks every five minutes, so an eligible automatic sync can start up to about
+five minutes later. **Bring in new bookmarks automatically** must also be on
+in Settings. These values are minutes, not posts per API page; paging fixes
+require an image containing that code. See the
+[configuration and update checks](deploy/nas/README.md#optional-services-and-x-sync).
 
 ### Disk space
 
