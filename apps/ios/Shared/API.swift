@@ -31,6 +31,8 @@ struct SaveResult: Codable, Equatable {
     let openPath: String?
     let alreadySaved: Bool?
     let savedAt: String?
+    /// Your save is "Just for me" (older servers leave it out).
+    var isPrivate: Bool? = nil
 }
 
 /// What the server said to a share: saved now (older servers), or taken and
@@ -125,7 +127,7 @@ struct PhoneMatch: Decodable, Hashable {
     let on: [String]
 }
 
-/// One of your saves, ready to play. Addresses are relative to the server.
+/// A post ready to play. Addresses are relative to the server.
 struct PhonePost: Decodable, Hashable {
     let platform: String
     let postId: String
@@ -141,15 +143,67 @@ struct PhonePost: Decodable, Hashable {
     let article: PhoneArticle?
     let match: PhoneMatch?
     let learning: Bool?
+    /// The members who saved it, newest first (yours has `isYou`). Empty on
+    /// older servers.
+    let savers: [Saver]
+    /// Your save is "Just for me".
+    let isPrivate: Bool
+    /// Why the feed picked it ("Ana and Ben saved this"). Feed items only.
+    let why: String?
 
     /// Unique across networks (the same number can be an X and a TikTok id).
     var key: String { "\(platform):\(postId)" }
+    var ref: PostRef { PostRef(platform: platform, id: postId) }
     var plays: Bool { kind == "video" || kind == "audio" }
     var posterUrl: String? { media.first?.posterUrl }
 
     private enum CodingKeys: String, CodingKey {
         case platform, postId = "id", kind, author, text, postedAt, savedAt, sourceUrl, openPath,
-             media, article, match, learning
+             media, article, match, learning, savers, isPrivate, why
+    }
+
+    init(platform: String, postId: String, kind: String, author: PhoneAuthor, text: String,
+         postedAt: String? = nil, savedAt: String? = nil, sourceUrl: String? = nil, openPath: String = "/",
+         media: [PhoneMedia] = [], article: PhoneArticle? = nil, match: PhoneMatch? = nil,
+         learning: Bool? = nil, savers: [Saver] = [], isPrivate: Bool = false, why: String? = nil) {
+        self.platform = platform
+        self.postId = postId
+        self.kind = kind
+        self.author = author
+        self.text = text
+        self.postedAt = postedAt
+        self.savedAt = savedAt
+        self.sourceUrl = sourceUrl
+        self.openPath = openPath
+        self.media = media
+        self.article = article
+        self.match = match
+        self.learning = learning
+        self.savers = savers
+        self.isPrivate = isPrivate
+        self.why = why
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        platform = try c.decode(String.self, forKey: .platform)
+        postId = try c.decode(String.self, forKey: .postId)
+        kind = try c.decode(String.self, forKey: .kind)
+        author = try c.decode(PhoneAuthor.self, forKey: .author)
+        text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
+        postedAt = try? c.decodeIfPresent(String.self, forKey: .postedAt)
+        savedAt = try? c.decodeIfPresent(String.self, forKey: .savedAt)
+        sourceUrl = try? c.decodeIfPresent(String.self, forKey: .sourceUrl)
+        openPath = (try? c.decodeIfPresent(String.self, forKey: .openPath)) ?? "/"
+        media = (try? c.decodeIfPresent(Lossy<PhoneMedia>.self, forKey: .media))?.items ?? []
+        article = try? c.decodeIfPresent(PhoneArticle.self, forKey: .article)
+        match = try? c.decodeIfPresent(PhoneMatch.self, forKey: .match)
+        learning = try? c.decodeIfPresent(Bool.self, forKey: .learning)
+        // Defensive: a server mid-upgrade may leave these out or get them wrong.
+        savers = (try? c.decodeIfPresent(Lossy<Saver>.self, forKey: .savers))?.items ?? []
+        isPrivate = (try? c.decodeIfPresent(Bool.self, forKey: .isPrivate)) ?? false
+        let why = (try? c.decodeIfPresent(String.self, forKey: .why)) ?? nil
+        self.why = why.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
     }
 }
 
@@ -218,6 +272,13 @@ enum APIError: Error {
         }
     }
 
+    /// The server doesn't have this endpoint (an older ADHX), or not this
+    /// channel or moment any more.
+    var isMissing: Bool {
+        if case .server(let status, _, _) = self, status == 404 { return true }
+        return false
+    }
+
     static func fallbackMessage(for code: String?) -> String {
         switch code {
         case "bad_code": return "That code didn’t work. Make a new one on your ADHX and try again."
@@ -229,6 +290,15 @@ enum APIError: Error {
         default: return "Something went wrong on your ADHX. Try again in a bit."
         }
     }
+}
+
+private struct PrivateAnswer: Decodable {
+    let `private`: Bool?
+}
+
+/// Whose saves search looks through.
+enum SearchScope: String, CaseIterable {
+    case everyone, mine
 }
 
 private struct ErrorBody: Decodable {
@@ -264,10 +334,22 @@ struct ADHXClient {
         try await send("GET", "/api/app/me")
     }
 
-    func save(url: String) async throws -> SaveAnswer {
+    /// `isPrivate` saves it "Just for me"; nil leaves the server's default
+    /// (shared with your people, or what a repeat save already had).
+    func save(url: String, private isPrivate: Bool? = nil) async throws -> SaveAnswer {
+        var body: [String: Any] = ["url": url]
+        if let isPrivate { body["private"] = isPrivate }
         let answer: SaveOrQueued = try await send(
-            "POST", "/api/app/save", body: ["url": url], headers: ["Prefer": "respond-async"])
+            "POST", "/api/app/save", body: body, headers: ["Prefer": "respond-async"])
         return answer.answer
+    }
+
+    /// Switches one of your saves "Just for me" or back to shared. Answers the
+    /// server's word for it.
+    func setPrivate(platform: String, id: String, private isPrivate: Bool) async throws -> Bool {
+        let answer: PrivateAnswer = try await send(
+            "POST", "/api/app/private", body: ["platform": platform, "id": id, "private": isPrivate])
+        return answer.private ?? isPrivate
     }
 
     func queuedSave(id: String) async throws -> QueuedSave {
@@ -296,9 +378,10 @@ struct ADHXClient {
         return one.item
     }
 
-    func search(_ q: String, offset: Int = 0) async throws -> SearchPage {
+    func search(_ q: String, scope: SearchScope = .mine, offset: Int = 0) async throws -> SearchPage {
         try await send("GET", "/api/app/search", query: [
             URLQueryItem(name: "q", value: q),
+            URLQueryItem(name: "scope", value: scope.rawValue),
             URLQueryItem(name: "offset", value: String(offset)),
         ], timeout: Self.searchTimeout)
     }
@@ -310,16 +393,18 @@ struct ADHXClient {
         return URL(string: address, relativeTo: server)?.absoluteURL
     }
 
-    private func send<T: Decodable>(_ method: String, _ path: String,
+    /// One request. `path` is already percent-encoded (see `pathPart`).
+    func send<T: Decodable>(_ method: String, _ path: String,
                                     query: [URLQueryItem] = [],
-                                    body: [String: String]? = nil,
+                                    body: [String: Any]? = nil,
                                     headers: [String: String] = [:],
                                     timeout: TimeInterval = Self.timeout) async throws -> T {
         guard var comps = URLComponents(url: server, resolvingAgainstBaseURL: false) else {
             throw APIError.server(status: 0, code: "bad_address", message: "That address doesn’t look right.")
         }
-        let base = comps.path.hasSuffix("/") ? String(comps.path.dropLast()) : comps.path
-        comps.path = base + path
+        let base = comps.percentEncodedPath.hasSuffix("/")
+            ? String(comps.percentEncodedPath.dropLast()) : comps.percentEncodedPath
+        comps.percentEncodedPath = base + path
         comps.queryItems = query.isEmpty ? nil : query
         guard let url = comps.url else {
             throw APIError.server(status: 0, code: "bad_address", message: "That address doesn’t look right.")
@@ -359,7 +444,9 @@ struct ADHXClient {
 
         if (200..<300).contains(status) {
             do {
-                return try JSONDecoder().decode(T.self, from: data)
+                // 204 (seen, reactions) has no body: read it as an empty object.
+                let body = data.isEmpty || status == 204 ? Data("{}".utf8) : data
+                return try JSONDecoder().decode(T.self, from: body)
             } catch {
                 throw APIError.server(status: status, code: "bad_answer",
                                       message: "That address didn’t answer like an ADHX.")

@@ -15,6 +15,16 @@ enum Theme {
     static let faint = Color(hex: 0xA89F8D)
     static let good = Color(hex: 0x7DDC8A)
     static let warn = Color(hex: 0xFFB59A)
+    /// The red dot on Live.
+    static let live = Color(hex: 0xFF5A3C)
+
+    /// A colour the server sends as "#rrggbb" (a moment's hue), if it reads.
+    static func hue(_ text: String?) -> Color? {
+        guard var hex = text?.trimmingCharacters(in: .whitespaces), !hex.isEmpty else { return nil }
+        if hex.hasPrefix("#") { hex.removeFirst() }
+        guard hex.count == 6, let value = UInt32(hex, radix: 16) else { return nil }
+        return Color(hex: value)
+    }
 
     /// Instrument Serif when it's bundled (see README), else the system serif.
     static func serif(_ size: CGFloat) -> Font {

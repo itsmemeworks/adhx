@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — iPhone app: New, Channels, Live, faces and Just for me
+
+- Home is one row over the player: Gob (Settings, which now holds Shared lately), New · Channels · Live with an unseen badge on New ("99+" cap), Search. New pages `/api/app/feed`, marks posts seen (2 s on screen or swiped past, batched to `/api/app/seen`), shows the why chip and a "Why this one" sheet with Everyone · Friends only · Mine, and ends on "You're all caught up. Go touch grass."
+- Media filter: New plays videos and photos by default (`types=` on the feed, filtered by kind on the phone too); tapping New again or Filter in the Why sheet opens "What's in your feed"; the choice is PUT to `/api/app/feed/types` and kept locally on a 404; the end page offers "4 text posts waiting · Show them".
+- Channels (group carousels, your people with new counts → "Ana's saves", made for you) and Live (moment cards; tuned in polls every 5 s with watchers and "up next" arrivals; a React rail button opens six emoji and a 40-character line, `{emoji}`/`{text}` to `/react`; reactions from the poll float up as ringed faces with an emoji sticker or speech bubble, fade-only under Reduce Motion).
+- Saver faces and lines on the player byline and search tiles (tap → friend channel); Search defaults to Everyone's saves; Just for me in the player's More and on the share card (remembered before the post lands, carried by waiting links).
+- Everything new decodes loosely (`Shared/FriendsAPI.swift`); a 404 falls back to My saves or an "update your ADHX" note.
+- Checked: simulator build, and a run against a sample-data stand-in for the phone API (New, header badge, media filter and its fallbacks, why sheet, modes, seen batches, More toggle, Channels, friend channel, Live, React picker, floating reactions, caught-up, search scopes). Not checked: the share extension card on a device, real feed/channels/live servers (other branches), VoiceOver by ear.
+
 ## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
 
 - `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.
