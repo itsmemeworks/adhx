@@ -33,6 +33,38 @@ struct SaveResult: Codable, Equatable {
     let savedAt: String?
 }
 
+/// What the server said to a share: saved now (older servers), or taken and
+/// being saved in the background (`Prefer: respond-async`).
+enum SaveAnswer: Equatable {
+    case saved(SaveResult)
+    case queued(id: String)
+}
+
+private struct SaveOrQueued: Decodable {
+    let answer: SaveAnswer
+
+    private enum Keys: String, CodingKey { case queued, id }
+
+    init(from decoder: Decoder) throws {
+        let keys = try decoder.container(keyedBy: Keys.self)
+        if (try? keys.decode(Bool.self, forKey: .queued)) == true {
+            answer = .queued(id: try keys.decode(String.self, forKey: .id))
+        } else {
+            answer = .saved(try SaveResult(from: decoder))
+        }
+    }
+}
+
+/// How a link saved in the background is going (`GET /api/app/save?id=`).
+struct QueuedSave: Decodable, Equatable {
+    let id: String
+    /// waiting · saving · saved · failed
+    let state: String
+    let post: SaveResult?
+    let code: String?
+    let error: String?
+}
+
 struct StatusResult: Decodable, Equatable {
     let platform: String?
     let id: String?
@@ -220,8 +252,14 @@ struct ADHXClient {
         try await send("GET", "/api/app/me")
     }
 
-    func save(url: String) async throws -> SaveResult {
-        try await send("POST", "/api/app/save", body: ["url": url])
+    func save(url: String) async throws -> SaveAnswer {
+        let answer: SaveOrQueued = try await send(
+            "POST", "/api/app/save", body: ["url": url], headers: ["Prefer": "respond-async"])
+        return answer.answer
+    }
+
+    func queuedSave(id: String) async throws -> QueuedSave {
+        try await send("GET", "/api/app/save", query: [URLQueryItem(name: "id", value: id)])
     }
 
     func status(platform: String, id: String) async throws -> StatusResult {
@@ -263,6 +301,7 @@ struct ADHXClient {
     private func send<T: Decodable>(_ method: String, _ path: String,
                                     query: [URLQueryItem] = [],
                                     body: [String: String]? = nil,
+                                    headers: [String: String] = [:],
                                     timeout: TimeInterval = Self.timeout) async throws -> T {
         guard var comps = URLComponents(url: server, resolvingAgainstBaseURL: false) else {
             throw APIError.server(status: 0, code: "bad_address", message: "That address doesn’t look right.")
@@ -278,6 +317,7 @@ struct ADHXClient {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let key { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: body)

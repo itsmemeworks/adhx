@@ -165,6 +165,8 @@ struct ShareRecord: Codable, Identifiable, Equatable {
 
     var id: String = UUID().uuidString
     var link: String
+    /// The server took it and is saving it in the background.
+    var queueId: String?
     var platform: String?
     var network: String?
     var postId: String?
@@ -213,6 +215,26 @@ struct ShareRecord: Codable, Identifiable, Equatable {
         quality = s.quality
         kept = s.kept
         updatedAt = Date()
+    }
+
+    /// Taken by the server, being saved in the background.
+    mutating func queue(_ id: String) {
+        stage = .saving
+        queueId = id
+        updatedAt = Date()
+    }
+
+    /// What the server said about a link it was saving in the background.
+    mutating func apply(_ q: QueuedSave) {
+        switch q.state {
+        case "saved":
+            if let post = q.post { apply(post) }
+        case "failed":
+            let code = q.code ?? "failed"
+            fail(.server(status: 200, code: code, message: q.error ?? APIError.fallbackMessage(for: code)))
+        default:
+            break
+        }
     }
 
     mutating func fail(_ error: APIError) {
@@ -338,14 +360,19 @@ actor Flusher {
         var sent = 0
         for entry in entries {
             do {
-                let result = try await client.save(url: entry.link)
+                let answer = try await client.save(url: entry.link)
                 OfflineQueue.remove(id: entry.id)
-                let updated = History.update(id: entry.id) { $0.apply(result) }
-                if updated == nil {
-                    var record = ShareRecord(link: entry.link)
-                    record.id = entry.id
-                    record.apply(result)
-                    History.upsert(record)
+                let record: (inout ShareRecord) -> Void = { record in
+                    switch answer {
+                    case .saved(let result): record.apply(result)
+                    case .queued(let id): record.queue(id)
+                    }
+                }
+                if History.update(id: entry.id, record) == nil {
+                    var new = ShareRecord(link: entry.link)
+                    new.id = entry.id
+                    record(&new)
+                    History.upsert(new)
                 }
                 sent += 1
             } catch APIError.offline, APIError.slow {
@@ -366,7 +393,9 @@ actor Flusher {
     /// after a minute, send it again (the server knows if it already has it).
     private func rescueStuckSaves() {
         let cutoff = Date().addingTimeInterval(-60)
-        for record in History.all() where record.stage == .saving && record.updatedAt < cutoff {
+        // A share the server took (queueId) is in hand there; the refresher asks after it.
+        for record in History.all()
+        where record.stage == .saving && record.queueId == nil && record.updatedAt < cutoff {
             History.update(id: record.id) { $0.stage = .queued }
             OfflineQueue.add(id: record.id, link: record.link)
         }
@@ -377,6 +406,19 @@ actor Flusher {
 enum StatusRefresher {
     static func refresh() async {
         guard let client = Store.client() else { return }
+        for record in History.all() where record.stage == .saving {
+            guard let queueId = record.queueId else { continue }
+            do {
+                let progress = try await client.queuedSave(id: queueId)
+                History.update(id: record.id) { $0.apply(progress) }
+            } catch APIError.server(let httpStatus, _, _) where httpStatus == 404 {
+                History.update(id: record.id) {
+                    $0.fail(.server(status: 404, code: "failed", message: APIError.fallbackMessage(for: "failed")))
+                }
+            } catch {
+                return  // offline or key gone: try next time
+            }
+        }
         for record in History.all() where record.needsStatus {
             guard let platform = record.platform, let id = record.postId else { continue }
             do {
