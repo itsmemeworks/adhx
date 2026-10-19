@@ -13,12 +13,19 @@ export function normalizeVersion(raw) {
   return version
 }
 
-export function imagePlan({ sha, repository, version = '', currentMain, latestRelease }) {
+export function imagePlan({
+  sha,
+  repository,
+  version = '',
+  currentMain,
+  mainEquivalent = false,
+  latestRelease,
+}) {
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('Expected an immutable commit SHA')
   version = normalizeVersion(version)
   const image = `ghcr.io/${repository.toLowerCase()}`
   const tags = [`${image}:sha-${sha}`]
-  if (sha === currentMain) tags.push(`${image}:main`)
+  if (sha === currentMain || mainEquivalent) tags.push(`${image}:main`)
   if (version) {
     tags.push(`${image}:${version}`)
     if (!version.includes('-') && version === normalizeVersion(latestRelease || '')) {

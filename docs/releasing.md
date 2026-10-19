@@ -1,16 +1,18 @@
 # Builds, images and releases
 
-The repository has two image channels. Each merge to `main` publishes a commit
+The repository has two image channels. Each image-relevant merge to `main` publishes a commit
 image, without waiting for a release PR. Release Please assigns numbered
 versions and promotes the matching commit image when a release is created.
+Documentation-only main pushes do not publish an image. File changes decide
+this, so a `docs:` title cannot hide accompanying application changes.
 Publishing an image does not update an installed service or publish the website.
 
-| Stage            | Work                                                                                                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application PR   | Tests, lint/types/format, production audit, extension/site builds, browser tests and native AMD64/ARM64 runner-image smoke checks. The required `build` check depends on both native image builds; it does not compile the app again. |
-| Release PR       | Validate the bot identity, repository/branch and actual three-file diff. Only package version, matching root manifest version and changelog changes are allowed. Changes to code, scripts or dependencies fail the required checks.   |
-| Every main push  | Build/publish `sha-<full-commit>` for AMD64 and ARM64. Advance `main` only if this remains the main head. No repeated full application CI suite.                                                                                      |
-| Numbered release | Reuse that source commit's image and apply the version tag. The latest stable release also gets major/minor and `latest` aliases. If its commit image is missing, build it once as recovery.                                          |
+| Stage                    | Work                                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application PR           | Tests, lint/types/format, production audit, extension/site builds, browser tests and native AMD64/ARM64 runner-image smoke checks. The required `build` check depends on both native image builds; it does not compile the app again. |
+| Release PR               | Validate the bot identity, repository/branch and actual three-file diff. Only package version, matching root manifest version and changelog changes are allowed. Changes to code, scripts or dependencies fail the required checks.   |
+| Image-relevant main push | Build/publish `sha-<full-commit>` for AMD64 and ARM64; cancel superseded automatic builds. Advance `main` only if no newer image-relevant changes exist. No repeated full application CI suite.                                       |
+| Numbered release         | Reuse that source commit's image and apply the version tag. The latest stable release also gets major/minor and `latest` aliases. If its commit image is missing, build it once as recovery.                                          |
 
 PR images are validation artifacts and are not published to GHCR. Protected main
 requires build, format and test checks with an up-to-date base. Different source
@@ -42,11 +44,26 @@ Feature PRs cannot bypass CI by choosing a release-like branch name.
 
 - `sha-<40-character-commit>` identifies one source revision and is reused on
   retries. The OCI index records that revision.
-- `main` follows the newest main commit whose image has finished publishing.
+- `main` follows the newest main commit with image-relevant changes whose image has finished publishing.
   An older run finishing later cannot deliberately move it backward.
 - `2.1.3` identifies a numbered release and refuses replacement by a different
   digest. `2.1`, `2` and `latest` follow the latest stable GitHub release.
 - Prereleases get their version tag without stable aliases.
+
+Automatic main builds cancel superseded main builds; manual recovery and
+numbered-release publication are protected. The per-SHA lock remains so main
+and release events for the same commit still reuse one image. Several code
+PRs merged in quick succession may start several runs, but only the newest
+automatic run needs to finish. A release commit changes the embedded package
+version and therefore remains a separate source build when needed.
+
+Root Markdown, `docs/`, `deploy/`, `.env.example` and `LICENSE` changes alone
+are ignored by the push publisher. Keep the workflow filter and
+`image-policy.mjs` aligned. A documentation merge can leave the running main
+image build's source behind the branch head: promotion checks ancestry and
+the actual intervening diff, allowing that image to advance `main` only if
+no image-relevant files changed. Image SHA tags and provenance still identify
+the real source built; a docs commit is not given a fabricated image tag.
 
 For an installed service, verify the intended image's revision and platforms,
 then pin its digest. Preserve the data mount, session secret, credentials and

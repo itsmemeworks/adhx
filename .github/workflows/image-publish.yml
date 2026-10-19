@@ -3,6 +3,13 @@ name: Publish container image
 on:
   push:
     branches: [main]
+    # Match the non-image paths in image-policy.mjs. Mixed code/docs pushes run.
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'deploy/**'
+      - '.env.example'
+      - 'LICENSE'
   release:
     types: [published]
   workflow_dispatch:
@@ -22,6 +29,12 @@ permissions:
   packages: write
   id-token: write
   attestations: write
+
+# Only automatic main builds supersede one another. Reusable release calls
+# also inherit event_name=push, so a nonempty version must protect them.
+concurrency:
+  group: container-workflow-${{ github.event_name == 'push' && !inputs.version && 'main' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' && !inputs.version }}
 
 jobs:
   prepare:
@@ -47,7 +60,7 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     # Push, release and recovery events for one commit share an idempotent job.
-    # Separate commits never cancel each other's builds.
+    # Keep this second lock: release and main events for one SHA must not build twice.
     concurrency:
       group: publish-container-${{ needs.prepare.outputs.sha }}
       cancel-in-progress: false
@@ -57,6 +70,8 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.sha }}
@@ -119,16 +134,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIGEST: ${{ steps.digest.outputs.digest }}
         run: |
-          CURRENT_MAIN=$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq .commit.sha)
+          git fetch --no-tags origin main
+          CURRENT_MAIN=$(git rev-parse FETCH_HEAD)
+          # A docs-only merge does not build, but must not strand an earlier
+          # code image by making its source SHA differ from the new main head.
+          MAIN_EQUIVALENT=$(node .github/scripts/image-policy.mjs "$SOURCE_SHA" "$CURRENT_MAIN")
           LATEST_RELEASE=''
           if [ -n "$VERSION" ]; then
             LATEST_RELEASE=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
           fi
-          export CURRENT_MAIN LATEST_RELEASE
+          export CURRENT_MAIN MAIN_EQUIVALENT LATEST_RELEASE
           node --input-type=module <<'JS' > /tmp/image-tags.txt
           import { imagePlan } from './.github/scripts/image-plan.mjs'
           const p = imagePlan({ sha: process.env.SOURCE_SHA, repository: process.env.GITHUB_REPOSITORY,
-            version: process.env.VERSION, currentMain: process.env.CURRENT_MAIN, latestRelease: process.env.LATEST_RELEASE })
+            version: process.env.VERSION, currentMain: process.env.CURRENT_MAIN,
+            mainEquivalent: process.env.MAIN_EQUIVALENT === 'true', latestRelease: process.env.LATEST_RELEASE })
           console.log(p.tags.slice(1).join('\n'))
           JS
           TAG_ARGS=()

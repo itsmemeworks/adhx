@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Skip documentation images and cancel superseded main builds
+
+- Ignore documentation/deployment-example-only main pushes; mixed runtime changes still publish regardless of PR title.
+- Cancel obsolete automatic main workflows while protecting versioned release calls and manual recovery, retaining the per-SHA build lock.
+- Permit a completed code image to advance main across docs-only descendants, checking actual ancestry/diffs and both sides of renames.
+- Keep immutable source tags/provenance accurate; document that a package-version release commit is a distinct source build.
+- Add executable file-policy and Git-history regression coverage; source changes proposed separately from installed services.
+
 ## 2026-10-19 — Publish every main merge and validate release metadata
 
 - Decouple commit-image publication from Release Please and disabled legacy Fly deployment; every main push builds an immutable SHA image and advances `main` only for the current head.

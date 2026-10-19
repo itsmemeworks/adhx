@@ -82,9 +82,10 @@ Once a release containing this code is published and tested, set `ADHX_IMAGE=ghc
 
 For UGREEN's Docker interface, use the optional [UGOS Pro walkthrough](deploy/nas/ugreen.md), including data-folder permissions and the first sign-in.
 
-Main-branch merges publish `ghcr.io/itsmemeworks/adhx:main` and an immutable
+Main-branch merges with image-relevant changes publish `ghcr.io/itsmemeworks/adhx:main` and an immutable
 `sha-<full-commit>` tag. Numbered releases add version tags and `latest` to the
-same commit image. Pin a digest for an installed service. See the
+same commit image. Documentation-only changes do not publish; newer automatic
+main builds cancel obsolete ones. Pin a digest for an installed service. See the
 [build and release flow](docs/releasing.md) for checks, promotion and recovery.
 
 ### Sign-in links
