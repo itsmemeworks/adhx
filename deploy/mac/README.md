@@ -13,31 +13,86 @@ delete or move that checkout while the service is installed.
 Follow the [rollout verification checklist](VERIFY.md) to match the released
 server image and worker source, test the complete processing path and tune host
 resources before importing a large library. This worker runs directly on macOS;
-neither Docker nor Apple Container is required on the Mac.
+neither Docker nor Apple Container is required on the Mac. For diagrams and the
+reasons behind the settings, read
+[How NAS and Mac processing work](../../docs/remote-processing.md).
 
-1. Update the server to a release that supports remote processing. Set
-   `SEMANTIC_SEARCH=on`, `KEEP_MEDIA=on`, `PROCESSING_MODE=remote` and a random
-   URL-safe `PROCESSING_WORKER_TOKEN` of 32 to 256 characters in its private
-   environment. Generate the token once with `openssl rand -hex 32`.
-   The query model remains on the server.
-   Queued indexing waits if the Mac is offline. Select `INDEXING_LEVEL=light`,
-   `normal` or `deep` on the server, rather than a raw frame count.
-2. Copy `worker.env.example` outside the checkout, for example into
-   `~/Library/Application Support/ADHX-worker/worker.env`. Protect its directory
-   with mode `700` and the file with `600`. Set the server HTTPS origin and
-   `ADHX_WORKER_TOKEN` to the same random machine token. Never commit the real
-   file. Ensure the Mac trusts your HTTPS certificate normally.
-3. Test in the foreground from the repository root:
+## Connect the NAS and Mac
 
-   ```sh
-   node --env-file="/absolute/private/worker.env" --import tsx src/lib/processing/mac-runner.ts
-   ```
+Keep the NAS's existing volumes, authentication secrets and HTTPS origin. Set
+these in its private configuration, then recreate ADHX using your normal
+Docker/NAS update procedure:
 
-4. After checking a completed job and search result, install the login service:
+```dotenv
+SEMANTIC_SEARCH=on
+KEEP_MEDIA=on
+KEEP_H264=on
+PROCESSING_MODE=remote
+INDEXING_LEVEL=normal
+PROCESSING_WORKER_TOKEN=REPLACE_WITH_A_NEW_DEDICATED_RANDOM_SECRET
+```
 
-   ```sh
-   sh deploy/mac/install.sh "/absolute/private/worker.env"
-   ```
+Generate that secret once with `openssl rand -hex 32`, then copy the same value
+to the Mac's `ADHX_WORKER_TOKEN`. The names differ between the two machines.
+Keep the value out of source control and shared logs. Inspect the
+[proxy upload hooks](#proxy-upload-hooks) before testing conversion.
+`KEEP_H264=on` enables compatibility copies; turn it off if your clients support
+the original codecs. On a shared NAS, start with `SEMANTIC_THREADS=1` for its query
+model and `KEEP_CONCURRENCY=1` for downloads, then measure responsiveness. No
+existing-library reset is required.
+
+On the Mac, install native ARM64 Node.js 22 or newer and the pnpm version named
+by the repository's `packageManager`. Create a separate, stable worker checkout.
+Replace `RELEASE_SOURCE_COMMIT` below with the full source commit of the server
+release you verified, rather than the latest development commit:
+
+```sh
+git clone https://github.com/itsmemeworks/adhx.git "$HOME/adhx-worker"
+cd "$HOME/adhx-worker"
+git checkout --detach RELEASE_SOURCE_COMMIT
+pnpm install --frozen-lockfile
+
+mkdir -p "$HOME/Library/Application Support/ADHX-worker"
+chmod 700 "$HOME/Library/Application Support/ADHX-worker"
+cp deploy/mac/worker.env.example "$HOME/Library/Application Support/ADHX-worker/worker.env"
+chmod 600 "$HOME/Library/Application Support/ADHX-worker/worker.env"
+```
+
+Edit that private `worker.env` before running anything:
+
+| Mac setting         | Value                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `ADHX_SERVER_URL`   | Existing HTTPS origin, for example `https://adhx.example.com`, without a path or query |
+| `ADHX_WORKER_TOKEN` | Exact server `PROCESSING_WORKER_TOKEN` value                                           |
+| `ADHX_WORKER_ID`    | A readable identifier such as `mac-worker`                                             |
+| `SEMANTIC_DEVICE`   | `cpu` initially                                                                        |
+| `SEMANTIC_THREADS`  | `2` initially; tune separately from the NAS query-model threads                        |
+
+The example lists optional absolute scratch/model paths and budget overrides.
+Keep reusable model weights separate from disposable scratch, preferably
+outside the checkout. The same HTTPS address must be reachable from the Mac
+over the intended LAN/VPN connection, with a normally trusted certificate.
+
+Test from that checkout, wait for a completed real job and search result, then
+stop the foreground worker with Control-C before installing the login service:
+
+```sh
+node --env-file="$HOME/Library/Application Support/ADHX-worker/worker.env" --import tsx src/lib/processing/mac-runner.ts
+```
+
+After stopping that foreground process:
+
+```sh
+sh deploy/mac/install.sh "$HOME/Library/Application Support/ADHX-worker/worker.env"
+```
+
+Check **Getting to know your saves** in the app and
+`~/Library/Logs/ADHX-worker/worker.log` for progress. The authenticated
+`/api/understanding/status` endpoint includes failure counts; `/api/health` only
+checks the web app and database. Complete the [verification checklist](VERIFY.md)
+before a large import.
+
+## Running the service
 
 The service runs as your user while logged in. It does not change sleep settings;
 queued jobs wait while the Mac sleeps or is disconnected. Keep the server private
