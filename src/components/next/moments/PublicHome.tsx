@@ -44,15 +44,15 @@ export function PublicHome() {
           <div className="flex max-w-[760px] flex-col gap-4">
             <h1
               id="nx-home-title"
-              className="m-0 font-nx-serif text-[44px] font-normal leading-[0.98] md:text-[76px]"
+              className="m-0 font-nx-serif text-[40px] font-normal leading-[0.98] md:text-[64px]"
             >
-              <span>Save it. Lose it. </span>
-              <span className="text-nx-accent">Find it.</span>
+              <span>Your friends have better taste than </span>
+              <span className="text-nx-accent">the algorithm.</span>
             </h1>
             <p className="m-0 max-w-[600px] text-[17px] leading-snug text-white/75 md:text-[19px]">
-              Keep the posts you love from X, Instagram, TikTok, YouTube, Reddit and more, on your
-              own server, then find them by describing what you remember. Below, what everyone here
-              is saving, live.
+              Every app wants your attention. ADHX just wants your friends’ opinions. Keep the best
+              posts from X, Instagram, TikTok, YouTube, Reddit and more on a server you run, and
+              find them by describing what you remember. Below, what everyone here is saving, live.
             </p>
             <WatchALink />
           </div>

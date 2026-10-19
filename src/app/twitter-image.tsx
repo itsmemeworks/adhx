@@ -3,7 +3,7 @@ import { readFile } from 'fs/promises'
 import { join } from 'path'
 
 export const runtime = 'nodejs'
-export const alt = 'ADHX - Save it. Lose it. Find it.'
+export const alt = 'ADHX - Your friends have better taste than the algorithm.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 

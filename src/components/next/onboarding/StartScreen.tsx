@@ -89,7 +89,9 @@ function EmailStep({
           <h1 className="m-0 font-nx-serif text-[28px] font-normal leading-none md:text-[34px]">
             Keep this forever
           </h1>
-          <span className="text-sm text-white/65">Save it. Lose it. Find it.</span>
+          <span className="text-sm text-white/65">
+            Your friends have better taste than the algorithm.
+          </span>
         </span>
       </div>
       <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-3">

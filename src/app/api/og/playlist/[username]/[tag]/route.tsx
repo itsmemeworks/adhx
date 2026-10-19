@@ -171,7 +171,7 @@ function privateCard(fontData: ArrayBuffer | null): ImageResponse {
           color: '#F4F1EA',
         }}
       >
-        Save it. Lose it. Find it.
+        Your friends have better taste than the algorithm.
       </div>
       <div
         style={{
