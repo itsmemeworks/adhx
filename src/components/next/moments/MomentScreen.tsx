@@ -124,7 +124,7 @@ export function MomentScreen({ slug }: { slug: string }) {
     : 0
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader current="now">
         <SaveTools />
       </NxHeader>

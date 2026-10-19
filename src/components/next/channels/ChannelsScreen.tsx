@@ -2,15 +2,18 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { Lock, Play, Sparkles } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from '@/components/feed/types'
 import { autoPlayHref, channelPlayHref, recentPlayHref } from '../theater/queue'
 import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { ChannelCover, NxHeader, TopChannels, channelTitle, tilesFromPosts } from './ChannelParts'
+import { NxImage } from '../primitives'
 import {
   FromEveryoneRow,
+  ROW,
+  RowHeading,
   YourPeopleRow,
   type FriendChannelCardData,
   type GroupChannelCardData,
@@ -103,23 +106,22 @@ export function ChannelsScreen() {
   }
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader>
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
-        <PasteButton onClick={paste.pasteFromClipboard} />
+        {/* Desktop pastes anywhere on the page (⌘V); phones need the button. */}
+        <PasteButton onClick={paste.pasteFromClipboard} className="md:hidden" />
       </NxHeader>
-      <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-4 pb-16 pt-2 md:px-7 lg:flex-row lg:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-9">
-          <h1 className="m-0 font-nx-serif text-[36px] font-normal leading-none md:text-[52px]">
-            Channels
-          </h1>
+      <main className="mx-auto flex max-w-[1600px] flex-col gap-[30px] px-4 pb-16 pt-5 md:px-10 md:pt-[26px]">
+        <h1 className="sr-only">Channels</h1>
+        <div className="flex min-w-0 flex-col gap-[30px]">
           {error && (
             <p className="m-0 text-white/70">Channels didn’t load. Refresh to try again.</p>
           )}
 
           {!error && (
             <>
-              <FromEveryoneRow channels={data ? (data.group ?? []) : null} />
+              <FromEveryoneRow channels={data ? (data.group ?? []) : null} seeAll="#nx-all" />
               <YourPeopleRow
                 friends={data ? (data.friends ?? []) : null}
                 canInvite={!!data?.canInvite}
@@ -127,87 +129,81 @@ export function ChannelsScreen() {
             </>
           )}
 
-          <section aria-labelledby="nx-mfy" className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
-              <h2
-                id="nx-mfy"
-                className="m-0 flex items-center gap-2 font-nx-serif text-[26px] font-normal md:text-[30px]"
-              >
-                <Sparkles
-                  aria-hidden
-                  className="h-5 w-5 text-nx-accent"
-                  fill="currentColor"
-                  strokeWidth={1.5}
-                />
-                <span>Made for you</span>
-              </h2>
-              <span className="text-[13px] text-white/55">
-                Your saves, grouped by what they’re about. Only you see these.
-              </span>
-            </div>
+          <section aria-labelledby="nx-mfy" className="flex flex-col gap-4">
+            <RowHeading
+              id="nx-mfy"
+              title="Made for you"
+              sub="Built from what you keep. No ad tech was consulted."
+            />
             {data === null && !error ? (
-              <div aria-hidden className="flex gap-3 overflow-hidden">
-                {[0, 1, 2].map((i) => (
+              <div aria-hidden className="flex gap-3 overflow-hidden md:gap-5">
+                {[0, 1, 2, 3].map((i) => (
                   <span
                     key={i}
-                    className="nx-shimmer animate-nx-shimmer block h-[260px] w-[240px] shrink-0 rounded-[18px]"
+                    className="nx-shimmer animate-nx-shimmer block h-[160px] w-[240px] shrink-0 rounded-[22px] md:flex-1"
                   />
                 ))}
               </div>
             ) : data && data.madeForYou.length === 0 ? (
-              <p className="m-0 text-sm text-white/60">
+              <p className="m-0 text-sm text-nx-muted">
                 These appear once enough of your saves are understood. Keep saving, they’ll show up
                 here.
               </p>
             ) : (
-              <ul className="-mx-4 flex list-none gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
-                {data?.madeForYou.map((c) => (
-                  <li key={c.slug} className="flex w-[220px] shrink-0 flex-col gap-2 md:w-[240px]">
-                    <Link
-                      href={autoPlayHref(c.slug)}
-                      aria-label={`Play ${c.name}`}
-                      className="block"
-                    >
-                      <ChannelCover
-                        tiles={tilesFromPosts(posts(c.covers))}
-                        label={c.name}
-                        className="h-[200px] w-full"
-                      />
-                    </Link>
-                    <span className="flex flex-col">
-                      <span className="truncate text-base font-bold">{c.name}</span>
-                      <span className="text-xs text-white/55">{countLabel(c.size)}</span>
-                    </span>
-                    <span className="flex gap-2">
+              <ul className={cn(ROW, 'md:grid-cols-3 xl:grid-cols-4')}>
+                {data?.madeForYou.map((c) => {
+                  const cover = posts(c.covers)
+                    .map((p) => tilesFromPosts([p])[0])
+                    .find((t) => t.img)
+                  return (
+                    <li key={c.slug} className="relative w-[240px] shrink-0 md:w-auto">
                       <Link
                         href={autoPlayHref(c.slug)}
-                        className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-nx-accent text-sm font-extrabold text-black"
+                        aria-label={`Play ${c.name}, ${countLabel(c.size)}`}
+                        className="relative block h-[160px] overflow-hidden rounded-[22px] bg-nx-surface text-white"
                       >
-                        <Play
-                          aria-hidden
-                          className="h-3.5 w-3.5"
-                          fill="currentColor"
-                          strokeWidth={0}
-                        />
-                        <span>Play</span>
+                        {cover?.img ? (
+                          <NxImage
+                            src={cover.img}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : (
+                          <ChannelCover
+                            tiles={tilesFromPosts(posts(c.covers))}
+                            label={c.name}
+                            className="absolute inset-0"
+                          />
+                        )}
+                        <span className="absolute left-3 top-3 flex h-[30px] max-w-[calc(100%-24px)] items-center rounded-full bg-black/55 px-3 text-[13px] font-extrabold backdrop-blur-md">
+                          <span className="truncate">{c.name}</span>
+                        </span>
                       </Link>
                       <button
                         type="button"
                         disabled={keeping === c.slug}
                         onClick={() => void keep(c)}
-                        className="h-10 flex-1 rounded-full border border-white/40 text-sm font-bold disabled:opacity-60"
+                        aria-label={`Keep ${c.name} as one of your channels`}
+                        className="absolute bottom-3 right-3 flex h-8 items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md hover:bg-black/75 disabled:opacity-60"
                       >
                         Keep
                       </button>
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </section>
 
-          <section aria-labelledby="nx-mine" className="flex flex-col gap-3">
-            <h2 id="nx-mine" className="m-0 font-nx-serif text-[26px] font-normal md:text-[30px]">
+          <section
+            id="nx-all"
+            aria-labelledby="nx-mine"
+            className="flex scroll-mt-24 flex-col gap-4"
+          >
+            <h2
+              id="nx-mine"
+              className="m-0 font-nx-serif text-[30px] font-normal leading-[0.95] md:text-[40px]"
+            >
               Your channels
             </h2>
             {data && data.mine.length === 0 && (
@@ -249,10 +245,10 @@ export function ChannelsScreen() {
               })}
             </ul>
           </section>
+          <TopChannels className="w-full lg:max-w-[560px]" />
         </div>
-        <TopChannels className="w-full lg:sticky lg:top-24 lg:w-[400px] lg:shrink-0" />
       </main>
-      <footer className="mx-auto flex max-w-[1600px] flex-wrap gap-x-4 gap-y-1 px-4 pb-10 text-[13px] text-white/50 md:px-7">
+      <footer className="mx-auto flex max-w-[1600px] flex-wrap gap-x-4 gap-y-1 px-4 pb-10 text-[13px] text-nx-muted md:px-10">
         <Link href="/settings" className="underline hover:text-white">
           Settings
         </Link>

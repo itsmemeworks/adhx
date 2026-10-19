@@ -52,7 +52,7 @@ export function InviteDoneClient({ username, hasEmail }: { username: string; has
   const apps = [APP_DOWNLOADS.ios, APP_DOWNLOADS.android].filter((app) => app.configured)
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <main className="mx-auto flex w-full max-w-[560px] flex-col gap-6 px-4 py-10 md:py-16">
         <div className="flex flex-col gap-2">
           <h1 className="m-0 font-nx-serif text-[44px] font-normal leading-none md:text-[56px]">

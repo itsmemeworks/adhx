@@ -114,7 +114,7 @@ export function AccountMenu({
       <a
         href={`/start?${new URLSearchParams({ returnTo: `${window.location.pathname}${window.location.search}` })}`}
         className={cn(
-          'flex h-10 shrink-0 items-center rounded-full bg-nx-cream px-4 text-sm font-extrabold text-black',
+          'flex h-10 shrink-0 items-center whitespace-nowrap rounded-full bg-nx-cream px-4 text-sm font-extrabold text-black md:h-11',
           className,
         )}
       >
@@ -139,12 +139,12 @@ export function AccountMenu({
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
-        className="group relative flex h-10 w-10 items-center justify-center rounded-[38%]"
+        className="group relative flex h-11 w-11 items-center justify-center rounded-[38%]"
       >
         <NxAvatar
           author={{ avatarUrl: me.avatarUrl, handle, name: me.displayName ?? handle }}
-          size={36}
-          className="ring-1 ring-white/15 ring-offset-2 ring-offset-transparent group-hover:ring-white/40"
+          size={44}
+          className="group-hover:ring-2 group-hover:ring-white/40"
         />
         {me.waitingSignIns > 0 && (
           <span

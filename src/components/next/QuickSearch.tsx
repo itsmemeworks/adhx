@@ -169,15 +169,15 @@ export function QuickSearch() {
 }
 
 /**
- * The header's search: a field you type into on desktop (Enter searches),
- * a button that opens the search sheet on phones.
+ * The header's search: a field you type into on desktop (Enter searches, `/`
+ * focuses it), a button that opens the search sheet on phones and tablets.
  */
 export function HeaderSearch({
   className,
   shortcut = false,
 }: {
   className?: string
-  /** Show the `/` key hint (the theater has that shortcut). */
+  /** The page handles `/` itself (the theater); otherwise this field does. */
   shortcut?: boolean
 }) {
   const router = useRouter()
@@ -185,6 +185,26 @@ export function HeaderSearch({
   // before the page's script starts survives, and Enter still searches.
   const field = useRef<HTMLInputElement>(null)
   const [hasText, setHasText] = useState(false)
+
+  useEffect(() => {
+    if (shortcut) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
+      const target = e.target
+      if (
+        target instanceof Element &&
+        target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""]')
+      )
+        return
+      const input = field.current
+      if (!input || input.offsetParent === null) return
+      e.preventDefault()
+      input.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [shortcut])
+
   return (
     <>
       <button
@@ -192,7 +212,7 @@ export function HeaderSearch({
         aria-label="Search"
         onClick={openQuickSearch}
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1c1b19] text-white md:hidden',
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-nx-surface text-nx-cream lg:hidden',
           className,
         )}
       >
@@ -210,13 +230,13 @@ export function HeaderSearch({
           router.push(searchUrl(q))
         }}
         className={cn(
-          'hidden h-[42px] w-[300px] shrink-0 items-center gap-2.5 rounded-full bg-[#1c1b19] px-3.5 focus-within:ring-2 focus-within:ring-nx-accent md:flex',
+          'hidden h-11 w-[340px] min-w-[200px] shrink items-center gap-2.5 rounded-full border border-white/[0.08] bg-nx-surface pl-4 pr-2 text-nx-muted focus-within:border-nx-accent lg:flex',
           className,
         )}
       >
-        <Search aria-hidden className="h-4 w-4 shrink-0 text-white" />
+        <Search aria-hidden className="h-[18px] w-[18px] shrink-0" />
         <label htmlFor="nx-header-search" className="sr-only">
-          Describe what you’re looking for
+          Search everyone’s saves
         </label>
         <input
           ref={field}
@@ -226,7 +246,7 @@ export function HeaderSearch({
           autoComplete="off"
           enterKeyHint="search"
           maxLength={200}
-          placeholder="Describe it…"
+          placeholder="Search everyone’s saves"
           onInput={(e) => setHasText(!!e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
@@ -235,10 +255,13 @@ export function HeaderSearch({
               e.currentTarget.blur()
             }
           }}
-          className="h-full min-w-0 flex-1 appearance-none bg-transparent text-sm text-white outline-none placeholder:text-[#aaa] [&::-webkit-search-cancel-button]:hidden"
+          className="h-full min-w-0 flex-1 appearance-none bg-transparent text-[15px] text-nx-cream outline-none placeholder:text-nx-muted [&::-webkit-search-cancel-button]:hidden"
         />
-        {shortcut && !hasText && (
-          <span aria-hidden className="rounded bg-white/15 px-1.5 text-xs text-white/70">
+        {!hasText && (
+          <span
+            aria-hidden
+            className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-[#262320] text-[13px] font-semibold text-nx-soft"
+          >
             /
           </span>
         )}

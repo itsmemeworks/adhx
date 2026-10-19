@@ -62,7 +62,7 @@ export function WaitingClient({
   const who = admin ?? 'whoever runs this ADHX'
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <header className="flex items-center px-4 py-3 md:px-7 md:py-[18px]">
         <NxLogo />
       </header>

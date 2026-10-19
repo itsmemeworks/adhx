@@ -175,22 +175,30 @@ export function Masonry({
   onOpen,
   hrefFor,
   showStrength = true,
+  owner,
+  isNew,
 }: {
   items: SearchResultItem[]
   columns?: string
   onOpen?: (item: SearchResultItem) => void
   hrefFor?: HrefFor
   showStrength?: boolean
+  /** A friend's channel: whose it is (see `ResultTile`). */
+  owner?: string
+  /** Which tiles get "New". */
+  isNew?: (item: SearchResultItem) => boolean
 }) {
   return (
-    <ul className={cn('list-none gap-2 p-0 md:gap-3', columns)}>
+    <ul className={cn('list-none gap-2 p-0 md:gap-3.5', columns)}>
       {items.map((item) => (
-        <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3">
+        <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3.5">
           <ResultTile
             item={item}
             onOpen={onOpen}
             href={hrefFor?.(item)}
             showStrength={showStrength}
+            owner={owner}
+            isNew={isNew?.(item) ?? false}
           />
         </li>
       ))}

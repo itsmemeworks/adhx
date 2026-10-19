@@ -313,7 +313,7 @@ export function DoingScreen() {
   const remote = summary?.processing === 'remote'
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader />
       <main className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 pb-16 pt-4 md:px-10 md:pt-7">
         <div className="flex flex-col gap-4 md:flex-row md:items-end">

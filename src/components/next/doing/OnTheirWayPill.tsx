@@ -34,7 +34,7 @@ export function OnTheirWayPill({ className }: { className?: string }) {
       aria-label={`${error ? 'Progress unavailable. ' : ''}${label}${summary?.needsYou ? `, ${summary.needsYou} need you` : ''}. See what your ADHX is doing`}
       title={error ?? undefined}
       className={cn(
-        'flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/[0.08] bg-[#1a1814] px-1.5 text-sm font-semibold text-nx-cream sm:pl-2.5 sm:pr-4',
+        'flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/[0.08] bg-nx-surface px-2.5 text-sm font-semibold text-nx-cream md:h-11 md:pl-3 md:pr-4',
         className,
       )}
     >
@@ -46,7 +46,7 @@ export function OnTheirWayPill({ className }: { className?: string }) {
           className="block h-[18px] w-[18px] shrink-0 animate-nx-spin rounded-full border-[2.5px] border-[#4a453e] border-t-nx-accent"
         />
       )}
-      <span className="hidden sm:inline">{label}</span>
+      <span className="hidden md:inline">{label}</span>
       {!!summary?.needsYou && (
         <span
           aria-hidden

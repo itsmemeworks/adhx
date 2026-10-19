@@ -28,6 +28,7 @@ export function SaverFaces({
   size = 22,
   compact = false,
   linked = false,
+  line: lineOverride,
   className,
 }: {
   savers: readonly Saver[]
@@ -37,10 +38,12 @@ export function SaverFaces({
   compact?: boolean
   /** Each face opens that person's channel. */
   linked?: boolean
+  /** Words in place of the usual line ("You and Ben saved this too"). */
+  line?: string
   className?: string
 }) {
   if (savers.length === 0) return null
-  const line = saversLine(savers)
+  const line = lineOverride ?? saversLine(savers)
   const faces = orderedSavers(savers).slice(0, 3)
   const ring =
     tone === 'cream' ? 'border-nx-cream' : tone === 'plate' ? 'border-[#1c1b19]' : 'border-black/60'

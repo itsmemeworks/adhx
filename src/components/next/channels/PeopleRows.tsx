@@ -88,18 +88,34 @@ function Tile({ tile, className }: { tile: CoverTile | undefined; className?: st
   )
 }
 
-function RowHeading({ id, title, sub }: { id: string; title: string; sub: string }) {
+export function RowHeading({
+  id,
+  title,
+  sub,
+  children,
+}: {
+  id: string
+  title: string
+  sub: string
+  /** On the right: a link like "See all channels". */
+  children?: React.ReactNode
+}) {
   return (
-    <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
-      <h2 id={id} className="m-0 font-nx-serif text-[26px] font-normal md:text-[30px]">
+    <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-4">
+      <h2
+        id={id}
+        className="m-0 font-nx-serif text-[30px] font-normal leading-[0.95] md:text-[40px]"
+      >
         {title}
       </h2>
-      <span className="text-[13px] text-white/55">{sub}</span>
+      <span className="text-sm text-nx-muted md:text-base">{sub}</span>
+      {children && <span className="hidden flex-1 md:block" />}
+      {children}
     </div>
   )
 }
 
-const ROW =
+export const ROW =
   '-mx-4 flex list-none gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:overflow-visible md:px-0 md:gap-5 [&::-webkit-scrollbar]:hidden'
 
 function Shimmer({ height }: { height: string }) {
@@ -119,10 +135,26 @@ function Shimmer({ height }: { height: string }) {
 }
 
 /** "From everyone": rabbit holes made from the whole server's saves. */
-export function FromEveryoneRow({ channels }: { channels: GroupChannelCardData[] | null }) {
+export function FromEveryoneRow({
+  channels,
+  seeAll,
+}: {
+  channels: GroupChannelCardData[] | null
+  /** Where "See all channels" goes. */
+  seeAll?: string
+}) {
   return (
-    <section aria-labelledby="nx-everyone" className="flex flex-col gap-3">
-      <RowHeading id="nx-everyone" title="From everyone" sub="Rabbit holes, dug by your friends" />
+    <section aria-labelledby="nx-everyone" className="flex flex-col gap-4">
+      <RowHeading id="nx-everyone" title="From everyone" sub="Rabbit holes, dug by your friends">
+        {seeAll && (
+          <Link
+            href={seeAll}
+            className="hidden h-11 items-center whitespace-nowrap text-[15px] font-semibold text-nx-accent hover:text-nx-cream md:flex"
+          >
+            See all channels
+          </Link>
+        )}
+      </RowHeading>
       {channels === null ? (
         <Shimmer height="h-[230px]" />
       ) : channels.length === 0 ? (
@@ -130,7 +162,7 @@ export function FromEveryoneRow({ channels }: { channels: GroupChannelCardData[]
           These dig themselves once your lot has saved a few dozen things. Keep going.
         </p>
       ) : (
-        <ul className={cn(ROW, 'md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4')}>
+        <ul className={cn(ROW, 'md:grid-cols-3 xl:grid-cols-4')}>
           {channels.map((c) => {
             const tiles = tilesFromPosts(c.covers.map((i) => i.post))
             const who = whoSavedInto(c.members, c.savers)
@@ -152,7 +184,7 @@ export function FromEveryoneRow({ channels }: { channels: GroupChannelCardData[]
                     </span>
                   </span>
                   <span className="truncate text-lg font-extrabold">{c.name}</span>
-                  <span className="flex min-w-0 items-center gap-2.5 text-sm text-white/70">
+                  <span className="flex min-w-0 items-center gap-2.5 text-sm text-nx-soft">
                     {c.savers.length > 0 && (
                       <SaverFaces savers={c.savers} size={22} compact linked tone="scrim" />
                     )}
@@ -179,7 +211,7 @@ export function YourPeopleRow({
   canInvite: boolean
 }) {
   return (
-    <section aria-labelledby="nx-people" className="flex flex-col gap-3">
+    <section aria-labelledby="nx-people" className="flex flex-col gap-4">
       <RowHeading
         id="nx-people"
         title="Your people"
@@ -197,7 +229,7 @@ export function YourPeopleRow({
             </p>
           )}
           {(friends.length > 0 || canInvite) && (
-            <ul className={cn(ROW, 'md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4')}>
+            <ul className={cn(ROW, 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5')}>
               {friends.map((f) => {
                 const tiles = tilesFromPosts(f.covers.map((i) => i.post))
                 const title = savesOf({ ...f, isYou: false })
@@ -208,9 +240,7 @@ export function YourPeopleRow({
                       aria-label={`${title}, ${savesLabel(f.size)}${f.newCount ? `, ${f.newCount} new` : ''}`}
                       className="relative flex h-[158px] flex-col justify-between rounded-[24px] border border-white/[0.08] bg-nx-surface p-4 text-nx-cream"
                     >
-                      <span
-                        className={cn('flex min-w-0 items-center gap-3', f.newCount > 0 && 'pr-12')}
-                      >
+                      <span className="flex min-w-0 items-center gap-3">
                         <NxAvatar
                           author={{
                             avatarUrl: f.avatarUrl,
@@ -225,7 +255,7 @@ export function YourPeopleRow({
                         />
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <span className="truncate text-[17px] font-extrabold">{title}</span>
-                          <span className="text-[13px] text-white/55">{savesLabel(f.size)}</span>
+                          <span className="text-[13px] text-nx-muted">{savesLabel(f.size)}</span>
                         </span>
                       </span>
                       <span aria-hidden className="grid grid-cols-3 gap-1.5">
@@ -239,7 +269,10 @@ export function YourPeopleRow({
                           ),
                         )}
                       </span>
-                      <NewPill count={f.newCount} className="right-3.5 top-3.5" />
+                      <NewPill
+                        count={f.newCount}
+                        className="left-[50px] top-[62px] h-[22px] whitespace-nowrap px-2 text-[11px] shadow-[0_0_0_3px_rgb(var(--nx-surface))]"
+                      />
                     </Link>
                   </li>
                 )
@@ -257,7 +290,7 @@ export function YourPeopleRow({
                       <Plus className="h-[22px] w-[22px]" />
                     </span>
                     <span className="text-base font-extrabold text-nx-accent">Invite someone</span>
-                    <span className="text-[13px] text-white/55">
+                    <span className="text-[13px] text-nx-muted">
                       One link signs them in and pairs their phone
                     </span>
                   </Link>
