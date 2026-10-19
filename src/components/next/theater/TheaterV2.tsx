@@ -2260,7 +2260,7 @@ export function TheaterV2({
               )}
             >
               {source.feed === 'new'
-                ? `${Math.max(0, feedTotal - index)} you haven’t seen`
+                ? `${caughtUp ? 0 : Math.max(0, feedTotal - index)} you haven’t seen`
                 : source.feed
                   ? `${index + 1} of ${Math.max(feedTotal, items.length)}`
                   : `${position.n} of ${position.of}`}

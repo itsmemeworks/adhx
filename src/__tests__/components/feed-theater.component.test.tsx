@@ -342,6 +342,8 @@ describe('New in the theater', () => {
     })
     expect(await screen.findByText('You’re all caught up.')).toBeInTheDocument()
     expect(stageProps.mock.calls.at(-1)?.[0].covered).toBe(true)
+    // The header agrees: nothing left (not the last post still counted).
+    expect(screen.getByText('0 you haven’t seen')).toBeInTheDocument()
     // Skipped posts count as seen; the batch goes out when the page is hidden.
     act(() => {
       window.dispatchEvent(new Event('pagehide'))
