@@ -3,7 +3,7 @@ import { nanoid } from '@/lib/utils'
 import { db } from '@/lib/db'
 import { phoneSaveQueue, users } from '@/lib/db/schema'
 import { addBookmark } from '@/lib/bookmarks/add'
-import type { SaveOptions } from '@/lib/bookmarks/privacy'
+import { privateByDefault, type SaveOptions } from '@/lib/bookmarks/privacy'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
 import { captureException } from '@/lib/sentry'
@@ -69,6 +69,9 @@ export function enqueueSave(
       url,
       status: 'waiting',
       isPrivate: options.private === true,
+      // Settled now: a share that didn't say makes a new save private when the
+      // owner has "Just for me by default" on (never changes a repeat save).
+      defaultPrivate: options.private === undefined && privateByDefault(userId),
       createdAt: iso,
       updatedAt: iso,
     })
@@ -165,9 +168,11 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
         .get() !== undefined
     if (!canSave()) return
     // Only a "Just for me" share changes the flag: a plain share of a post you
-    // already keep privately leaves it private.
+    // already keep privately leaves it private. A new save gets the flag
+    // settled when it was queued.
     const response = await addBookmark(row.userId, row.url, 'phone_app', canSave, {
       private: row.isPrivate ? true : undefined,
+      defaultPrivate: !!row.isPrivate || !!row.defaultPrivate,
     })
     status = response.status
     data = (await response.json().catch(() => ({}))) as typeof data

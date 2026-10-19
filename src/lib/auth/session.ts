@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { SignJWT, jwtVerify } from 'jose'
-import { hasLiveAccount } from './account-state'
+import { accountApproval, type Approval } from './account-state'
 
 const SESSION_COOKIE_NAME = 'adhx_session'
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
@@ -59,19 +59,46 @@ export async function getSession(): Promise<Session | null> {
 }
 
 /**
- * Get the current user ID from session
- * Returns null if no valid session exists
+ * The session's account and whether it has been let in: a valid JWT for an
+ * account that exists and isn't banned. Null otherwise.
  */
-export async function getCurrentUserId(): Promise<string | null> {
+async function sessionAccount(): Promise<{ userId: string; approval: Approval } | null> {
   const session = await getSession()
   if (!session?.userId) return null
-  if (!(await hasLiveAccount(session.userId))) return null
+  const approval = await accountApproval(session.userId)
+  if (!approval) return null
   const { readUserBan } = await import('@/lib/admin/moderation')
   const ban = readUserBan(session.userId)
   // Authentication fails closed: a valid JWT is not enough to authorize a
   // request unless the moderation store confirms this account is not banned.
   if (!ban.ok || ban.value) return null
-  return session.userId
+  return { userId: session.userId, approval }
+}
+
+/**
+ * Get the current user ID from session
+ * Returns null if no valid session exists, and for an account that is still
+ * waiting to be let in (or was declined): that person is signed out
+ * everywhere except the waiting page and its status endpoint, which use
+ * `getWaitingUserId()`.
+ */
+export async function getCurrentUserId(): Promise<string | null> {
+  const account = await sessionAccount()
+  return account?.approval === 'approved' ? account.userId : null
+}
+
+/**
+ * For the waiting page and `/api/auth/approval` only: the account behind this
+ * session when it is NOT let in yet (pending or declined), with its state.
+ * Null for approved accounts (they use `getCurrentUserId()`) and strangers.
+ */
+export async function getWaitingAccount(): Promise<{
+  userId: string
+  approval: Exclude<Approval, 'approved'>
+} | null> {
+  const account = await sessionAccount()
+  if (!account || account.approval === 'approved') return null
+  return { userId: account.userId, approval: account.approval }
 }
 
 /**
@@ -104,7 +131,8 @@ const RENEW_AFTER_SECONDS = 24 * 60 * 60
  * Keep an active session alive: re-sign a valid cookie that is more than a
  * day old, so it lasts 30 days from the last visit rather than from sign-in.
  * Accounts made from an invite may have no email to sign back in with.
- * Only call this after `getCurrentUserId()` has accepted the session.
+ * Only call this after `getCurrentUserId()` (or `getWaitingAccount()`) has
+ * accepted the session.
  */
 export async function renewSessionCookie(response: NextResponse): Promise<boolean> {
   const cookieStore = await cookies()

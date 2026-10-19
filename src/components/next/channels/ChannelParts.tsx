@@ -1,5 +1,6 @@
 'use client'
 
+import { OnTheirWayPill } from '../doing/OnTheirWayPill'
 import { AccountMenu } from '../AccountMenu'
 import { BottomNav, NxLogo, PrimaryNav, type NavId } from '../PrimaryNav'
 import { HeaderSearch } from '../QuickSearch'
@@ -268,6 +269,7 @@ export function NxHeader({
         <NxLogo />
         <PrimaryNav current={current} />
         <span className="flex-1" />
+        <OnTheirWayPill />
         {children}
         <HeaderSearch />
         <AccountMenu />

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const liveUserIds = new Set<string>()
+/** Accounts that joined from a member's invite and are waiting (or were declined). */
+const waitingUserIds = new Map<string, 'pending' | 'declined'>()
 const bannedUserIds = new Set<string>()
 let moderationReadable = true
 
@@ -37,12 +39,16 @@ vi.mock('@/lib/admin/moderation', () => ({
 
 vi.mock('@/lib/auth/account-state', () => ({
   hasLiveAccount: vi.fn((userId: string) => Promise.resolve(liveUserIds.has(userId))),
+  accountApproval: vi.fn((userId: string) =>
+    Promise.resolve(liveUserIds.has(userId) ? (waitingUserIds.get(userId) ?? 'approved') : null),
+  ),
 }))
 
 describe('Session Module', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     liveUserIds.clear()
+    waitingUserIds.clear()
     bannedUserIds.clear()
     moderationReadable = true
     liveUserIds.add('user-456')
@@ -170,6 +176,41 @@ describe('Session Module', () => {
 
       const { getCurrentUserId } = await import('@/lib/auth/session')
       expect(await getCurrentUserId()).toBeNull()
+    })
+
+    it('treats an account waiting to be let in as signed out', async () => {
+      const { jwtVerify } = await import('jose')
+      liveUserIds.add('waiting-user')
+      waitingUserIds.set('waiting-user', 'pending')
+      mockCookieStore.get.mockReturnValue({ value: 'valid-jwt' })
+      ;(jwtVerify as ReturnType<typeof vi.fn>).mockResolvedValue({
+        payload: { userId: 'waiting-user', username: 'ben' },
+      })
+
+      const { getCurrentUserId, getWaitingAccount } = await import('@/lib/auth/session')
+      expect(await getCurrentUserId()).toBeNull()
+      expect(await getWaitingAccount()).toEqual({ userId: 'waiting-user', approval: 'pending' })
+
+      waitingUserIds.set('waiting-user', 'declined')
+      expect(await getCurrentUserId()).toBeNull()
+      expect(await getWaitingAccount()).toEqual({ userId: 'waiting-user', approval: 'declined' })
+
+      waitingUserIds.delete('waiting-user')
+      expect(await getCurrentUserId()).toBe('waiting-user')
+      expect(await getWaitingAccount()).toBeNull()
+    })
+
+    it('never gives a banned waiting account the waiting page either', async () => {
+      const { jwtVerify } = await import('jose')
+      liveUserIds.add('waiting-banned')
+      waitingUserIds.set('waiting-banned', 'pending')
+      bannedUserIds.add('waiting-banned')
+      mockCookieStore.get.mockReturnValue({ value: 'valid-jwt' })
+      ;(jwtVerify as ReturnType<typeof vi.fn>).mockResolvedValue({
+        payload: { userId: 'waiting-banned', username: 'ben' },
+      })
+      const { getWaitingAccount } = await import('@/lib/auth/session')
+      expect(await getWaitingAccount()).toBeNull()
     })
 
     it('rejects a valid session when the moderation store is unreadable', async () => {

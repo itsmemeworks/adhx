@@ -263,6 +263,14 @@ export const keepSettings = sqliteTable('keep_settings', {
   value: text('value').notNull(),
 })
 
+// Server-wide settings an admin changes at runtime (who can invite, …).
+// Environment variables only give the first default; see src/lib/settings/server.ts.
+export const serverSettings = sqliteTable('server_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 /**
  * Links shared from the phone app, saved in the background: the share sheet
  * gets an answer at once, and the post appears once it's read and kept.
@@ -283,6 +291,8 @@ export const phoneSaveQueue = sqliteTable(
     alreadySaved: integer('already_saved', { mode: 'boolean' }).notNull().default(false),
     /** Shared as "Just for me": the save it makes is private. */
     isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
+    /** Shared without saying, while the owner had "Just for me by default" on: a new save is private. */
+    defaultPrivate: integer('default_private', { mode: 'boolean' }).notNull().default(false),
     /** Set once failed: a code the apps know, and words fit to show. */
     errorCode: text('error_code'),
     error: text('error'),
@@ -308,6 +318,8 @@ export const keepJobs = sqliteTable(
     /** Total bytes on disk for this post. */
     bytes: integer('bytes').notNull().default(0),
     updatedAt: text('updated_at').notNull(),
+    /** A saver chose "Keep the link only" for a job that gave up: it stops asking for them. */
+    acceptedAt: text('accepted_at'),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.platform, table.postId] }),
@@ -724,6 +736,14 @@ export const users = sqliteTable('users', {
   // flight cannot recreate an identity or token row afterward.
   xLinkVersion: integer('x_link_version').notNull().default(0),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  // Whether this account may use the server: 'approved' (everyone before
+  // join approvals existed), 'pending' (joined from a member's invite while
+  // "Anyone, I approve" is on, waiting for an admin) or 'declined'. Anything
+  // but approved is signed out everywhere except the waiting page and its
+  // status endpoint (`getCurrentUserId`). See src/lib/auth/approval.ts.
+  approval: text('approval').notNull().default('approved'),
+  // "Not now" on a waiting join: hidden from the admin's queue until then (epoch ms).
+  approvalSnoozedUntil: integer('approval_snoozed_until'),
 })
 
 // Linked sign-in identities for a user — X OAuth and/or email magic link.

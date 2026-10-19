@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
-import { activity, bookmarks, type Bookmark } from '@/lib/db/schema'
+import { activity, bookmarks, userPreferences, type Bookmark } from '@/lib/db/schema'
 
 /**
  * "Just for me" saves (docs/specs/friends-feed.md). A private save is kept,
@@ -12,6 +12,37 @@ import { activity, bookmarks, type Bookmark } from '@/lib/db/schema'
 export type SaveOptions = {
   /** Make the save private. On a repeat save, a boolean updates the flag; undefined leaves it. */
   private?: boolean
+  /**
+   * What a NEW save gets when `private` isn't given. Filled from the owner's
+   * "Just for me by default" (`withPrivateDefault`); never changes a repeat save.
+   */
+  defaultPrivate?: boolean
+}
+
+/** `user_preferences` key for Settings → You → "Just for me by default" ('true' | 'false'). */
+export const PRIVATE_DEFAULT_KEY = 'save.privateDefault'
+
+/** Does this account start new saves private? */
+export function privateByDefault(userId: string): boolean {
+  const row = db
+    .select({ value: userPreferences.value })
+    .from(userPreferences)
+    .where(and(eq(userPreferences.userId, userId), eq(userPreferences.key, PRIVATE_DEFAULT_KEY)))
+    .get()
+  return row?.value === 'true'
+}
+
+/** Fill `defaultPrivate` from the owner's setting, unless the caller already decided. */
+export function withPrivateDefault(userId: string, options: SaveOptions = {}): SaveOptions {
+  if (typeof options.private === 'boolean' || typeof options.defaultPrivate === 'boolean') {
+    return options
+  }
+  return { ...options, defaultPrivate: privateByDefault(userId) }
+}
+
+/** Whether a new save made with these options is private. */
+export function newSavePrivate(options: SaveOptions): boolean {
+  return typeof options.private === 'boolean' ? options.private : options.defaultPrivate === true
 }
 
 /** Read `private` from a request body: a boolean, or undefined for anything else. */

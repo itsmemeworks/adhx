@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Settings for You and Your people, join approvals, What your ADHX is doing
+
+- **You**: Change picture dialog (upload, camera, X picture, a Gob in four colours; circular crop with zoom, live saver-faces preview). `POST /api/account/avatar` sniffs the type, caps 5 MB, and `sharp` re-encodes a clamped crop to a 512px metadata-free JPEG in `MEDIA_DIR/avatars/<userId>-<hash>.jpg`, served to members only at `/api/files/avatar/<hash>`; the old file goes on replace and all of them on account delete. Display name (`PATCH /api/account/profile`) and "Just for me by default" (`save.privateDefault`, honoured by every save path and settled when a phone share is queued).
+- **Your people**: members with save counts, role chip, admin ⋯ ban/unban; pending invites by a 4-character code from the invite id (owner change mid-build), and **Copy link** on an older invite confirms, then mints a fresh token (`POST /api/invites/[id]/link`), since only hashes are stored. Who can invite (`admin | approve | anyone`) lives in a new `server_settings` table; `INVITES=members` is only the first default.
+- **Approvals**: `users.approval` (+ snooze). A member's invite under "Anyone, I approve" makes a `pending` account; `getCurrentUserId()`, phone keys and access keys treat it as signed out; only `/invite/waiting` and `GET /api/auth/approval` see it. Queue: `GET /api/people/requests`, `POST /api/people/requests/[id]`, phone `/api/app/people*`. The waiting page needed `/invite/waiting` excluded from the script-free invite CSP.
+- **Doing**: `GET /api/activity/processing` / `GET /api/app/doing` (7 steps, statuses, plain reasons, retry info, savers; never another member's private save), retry and keep-the-link-only (`keep_jobs.accepted_at`), Mac helper presence from worker polls. `/doing` polls every 3 s; "N on their way" pill in `NxHeader`.
+- Skipped: non-allowlisted email sign-ins landing in the queue as "asked to join" (it would mean emailing links to any address that asks; refusals stay as before). An X relink still overwrites a custom display name (it no longer overwrites a picture stored here).
+- Verified on a scratch DB with headless Chromium: approve moves the waiting browser on to /invite/done, upload + zoom stores and serves the JPEG (401 to strangers), 375px layouts have no sideways scroll.
+- Follow-ups: the phone apps don't call the new routes yet; X sync imports don't follow "Just for me by default"; the doing list caps at 60 rows / 400 candidates.
+
 ## 2026-10-19 — Live with names: watch together
 
 - Names are added per request for members only (`src/lib/moments/people.ts`): `MomentView.savers` (≤5, from the moment's post keys via `saversFor`, window saves only, never a private save), `watchers`, item `savers`, detail `watchers`, `save.saver`. The engine and its broadcasts stay anonymous; signed-out shapes are unchanged (tested key by key).

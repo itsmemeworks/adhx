@@ -263,7 +263,15 @@ export const FULL_SCHEMA_SQL = `
     username_chosen INTEGER NOT NULL DEFAULT 0,
     username_change_count INTEGER NOT NULL DEFAULT 0,
     x_link_version INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    approval TEXT NOT NULL DEFAULT 'approved',
+    approval_snoozed_until INTEGER
+  );
+
+  CREATE TABLE server_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
   );
 
   CREATE TABLE username_aliases (
@@ -347,6 +355,7 @@ export const FULL_SCHEMA_SQL = `
     post_id TEXT,
     already_saved INTEGER NOT NULL DEFAULT 0,
     is_private INTEGER NOT NULL DEFAULT 0,
+    default_private INTEGER NOT NULL DEFAULT 0,
     error_code TEXT,
     error TEXT,
     created_at TEXT NOT NULL,
@@ -363,6 +372,7 @@ export const FULL_SCHEMA_SQL = `
       last_error TEXT,
       bytes INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL,
+      accepted_at TEXT,
       PRIMARY KEY (platform, post_id)
     );
     CREATE INDEX keep_jobs_status_idx ON keep_jobs(status, next_attempt_at);

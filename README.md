@@ -29,6 +29,7 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 - **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
 - **Names on posts.** See which of your people saved what, in the player and in search. Saves are shared with your people by default; flip **Just for me** on any you'd rather keep to yourself.
 - **Right now.** What your lot are saving tonight, grouped into moments, with the faces of who's saving them. **Tune in** to watch along: see who's watching with you, who just saved the next one, and throw a 😂 or a "who sent this 💀" at the room. Strangers on a shared link only ever see counts.
+- **See what it's doing.** **N on their way** in the header opens _What your ADHX is doing_: every post being kept, converted, listened to, read or learned, step by step, who saved it, and the ones that need you (with **Retry** or **Keep the link only**). Free disk space and whether the Mac helper is connected are on the same page.
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
 - **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
@@ -128,13 +129,13 @@ Invites (below) get people in. Sign-in links get them back in: on a new browser,
 
 With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and confirming it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
 
-People who joined by invite have no email until they add one in **Settings → Account**. Until then their browser session is their only way in, so nudge them to add one.
+People who joined by invite have no email until they add one in **Settings → You**. Until then their browser session is their only way in, so nudge them to add one.
 
 ### Who can sign up
 
-**Invite links are the easy path.** On the admin page or in **Settings → Invite someone**, press **Make an invite link** and send it however you like. Your friend opens it, sees "Ana wants you in.", picks a name and presses **Join**. That's the whole sign-up: no email, no password, and their phone pairing code is on the next screen. Each link works once, for 7 days. Pending ones are listed with **Revoke**. A banned person's invites stop working. Links are shown once, when they're made: ADHX keeps only a fingerprint of each. Message previews can open an invite without using it; only pressing **Join** does.
+**Invite links are the easy path.** On the admin page or in **Settings → Your people**, press **Make a link** and send it however you like. Your friend opens it, sees "Ana wants you in.", picks a name and presses **Join**. That's the whole sign-up: no email, no password, and their phone pairing code is on the next screen. Each link works once, for 7 days. Pending ones are listed by a short code with **Copy link** and **Revoke**. A banned person's invites stop working. Links are shown once, when they're made: ADHX keeps only a fingerprint of each, so **Copy link** on an older invite asks first, then makes it a fresh link (the one you sent before stops working). Message previews can open an invite without using it; only pressing **Join** does.
 
-Only admins make invites, unless you set `INVITES=members` to let everyone in the group invite their own people.
+**Who can invite** is in **Settings → Your people** (admins): **Only me**, **Anyone, I approve** or **Anyone**. With **Anyone, I approve**, someone a member invites picks a name and lands on "Waiting for Ana to let you in"; their account can't see anything else until an admin presses **Approve** under **Waiting for you** (or **Not now**, or **Decline**). Invites an admin makes always let people straight in. `INVITES=members` only sets the first choice (**Anyone**); after that, Settings wins.
 
 Email sign-up works too. By default, anyone who can reach your server can make an account with their email. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in. Invite links work whatever `ALLOWED_EMAILS` says: the invite is the permission.
 
@@ -150,7 +151,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                   |
 | `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                   |
 | `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                 |
-| `INVITES=members`                            | Let every member make invite links, not just admins.                                                                         |
+| `INVITES=members`                            | Start with **Who can invite: Anyone** (Settings → Your people changes it later).                                             |
 | `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.    |
 | `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                     |
 | `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                       |

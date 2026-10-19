@@ -25,7 +25,7 @@ import { expandShortLink, isShortLink } from '@/lib/keep/shortlinks'
 import { keptSrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
 import { cancelledSave, type SaveGuard } from './save-guard'
-import { applyRepeatPrivacy, type SaveOptions } from './privacy'
+import { applyRepeatPrivacy, newSavePrivate, withPrivateDefault, type SaveOptions } from './privacy'
 
 /**
  * Save the post a link points to for `userId` — the platform-agnostic save
@@ -47,8 +47,10 @@ export async function addBookmark(
   url: unknown,
   source: string = 'manual',
   canSave: SaveGuard = () => true,
-  options: SaveOptions = {},
+  rawOptions: SaveOptions = {},
 ): Promise<NextResponse> {
+  // Without `private`, a new save follows the owner's "Just for me by default".
+  const options = withPrivateDefault(userId, rawOptions)
   try {
     if (!canSave()) return cancelledSave()
     if (!url || typeof url !== 'string') {
@@ -203,7 +205,7 @@ async function addInstagramPost(
         processedAt: now,
         category: contentType,
         source,
-        isPrivate: options.private === true,
+        isPrivate: newSavePrivate(options),
       })
       .onConflictDoNothing()
       .run()
@@ -316,7 +318,7 @@ async function addInstagramPost(
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
   noteSaved([{ platform: 'instagram', postId }])
 
-  if (!options.private)
+  if (!newSavePrivate(options))
     recordActivity({
       action: 'save',
       platform: 'instagram',
@@ -416,7 +418,7 @@ async function addTikTokVideo(
         processedAt: now,
         category: 'video',
         source,
-        isPrivate: options.private === true,
+        isPrivate: newSavePrivate(options),
       })
       .onConflictDoNothing()
       .run()
@@ -475,7 +477,7 @@ async function addTikTokVideo(
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
   noteSaved([{ platform: 'tiktok', postId: videoId }])
 
-  if (!options.private)
+  if (!newSavePrivate(options))
     recordActivity({
       action: 'save',
       platform: 'tiktok',
@@ -589,7 +591,7 @@ async function addNetworkPost(
         processedAt: now,
         category: described.category,
         source,
-        isPrivate: options.private === true,
+        isPrivate: newSavePrivate(options),
       })
       .onConflictDoNothing()
       .run()
@@ -634,7 +636,7 @@ async function addNetworkPost(
   metrics.bookmarkAdded(source as 'manual' | 'url_prefix')
   wakeKeep()
   noteSaved([{ platform, postId: post.id }])
-  if (!options.private)
+  if (!newSavePrivate(options))
     recordActivity({
       action: 'save',
       platform,

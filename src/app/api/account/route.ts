@@ -27,6 +27,7 @@ import {
 } from '@/lib/db/schema'
 import { eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
+import { removeAvatarFiles } from '@/lib/avatar/store'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { clearSessionCookie } from '@/lib/auth/session'
@@ -134,6 +135,9 @@ export const DELETE = withAuth(async (_req, userId) => {
       // migrate.ts reject any later write carrying this now-dead account ID.
       db.delete(users).where(eq(users.id, userId)).run()
     })
+
+    // The picture files go too (MEDIA_DIR/avatars/<id>-*.jpg).
+    await removeAvatarFiles(userId)
 
     const response = NextResponse.json({
       success: true,

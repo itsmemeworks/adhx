@@ -6,6 +6,8 @@ import { INPUT, PRIMARY, SECONDARY, SettingsCard } from './parts'
 
 export interface PendingInvite {
   id: string
+  /** Short, non-secret code from the invite's id (never the link). */
+  code?: string
   createdAt: string
   expiresAt: string
   nameHint: string | null
@@ -41,6 +43,8 @@ export function useInvites() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [canShare, setCanShare] = useState(false)
+  /** Links made (or renewed) in this visit, by invite id: the only ones that can be copied as they are. */
+  const [links, setLinks] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     try {
@@ -74,6 +78,7 @@ export function useInvites() {
         setError(data.error || 'Couldn’t make an invite. Try again.')
         return false
       }
+      setLinks((l) => ({ ...l, [data.id]: data.url }))
       setMade({
         id: data.id,
         url: data.url,
@@ -114,6 +119,45 @@ export function useInvites() {
     }
   }
 
+  /**
+   * Copy an invite's link. A link is only known when it's made (the server
+   * keeps its hash), so an older invite gets a fresh link after asking: the
+   * one sent before stops working. Returns what happened, for the row to say.
+   */
+  async function copyLink(
+    invite: PendingInvite,
+  ): Promise<'copied' | 'renewed' | 'cancelled' | 'failed'> {
+    setError(null)
+    let url = links[invite.id]
+    let renewed = false
+    if (!url) {
+      if (
+        !window.confirm(
+          'Invite links are shown once, when they’re made. Get a new link for this invite? The one you sent before stops working.',
+        )
+      )
+        return 'cancelled'
+      const res = await fetch(`/api/invites/${encodeURIComponent(invite.id)}/link`, {
+        method: 'POST',
+      }).catch(() => null)
+      const data = res?.ok ? ((await res.json()) as { url?: string }) : null
+      if (!data?.url) {
+        setError('Couldn’t get a new link for that invite. Try again.')
+        await load()
+        return 'failed'
+      }
+      url = data.url
+      renewed = true
+      setLinks((l) => ({ ...l, [invite.id]: data.url! }))
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      window.prompt('Copy this link', url)
+    }
+    return renewed ? 'renewed' : 'copied'
+  }
+
   async function revoke(invite: PendingInvite) {
     const who = invite.nameHint ? ` for ${invite.nameHint}` : ''
     if (!window.confirm(`Revoke the invite${who}? The link will stop working.`)) return
@@ -138,6 +182,7 @@ export function useInvites() {
     copy,
     share,
     revoke,
+    copyLink,
     dismiss: () => setMade(null),
   }
 }

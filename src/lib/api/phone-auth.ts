@@ -12,13 +12,16 @@ export interface PhoneCaller {
   name: string
 }
 
-/** The phone key's account, or null (unknown key, wrong scope, banned account). */
+/** The phone key's account, or null (unknown key, wrong scope, banned or not-yet-approved account). */
 export async function phoneCaller(request: Request): Promise<PhoneCaller | null> {
   const row = accessKeyFromHeader(request.headers.get('authorization'), 'phone')
   if (!row) return null
   const { readUserBan } = await import('@/lib/admin/moderation')
   const ban = readUserBan(row.userId)
   if (!ban.ok || ban.value) return null
+  // An account still waiting to be let in is signed out here too.
+  const { accountApproval } = await import('@/lib/auth/account-state')
+  if ((await accountApproval(row.userId)) !== 'approved') return null
   return { userId: row.userId, keyId: row.id, name: row.name }
 }
 

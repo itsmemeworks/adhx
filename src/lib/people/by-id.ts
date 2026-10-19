@@ -8,7 +8,8 @@ export type Face = { username: string; name: string | null; avatarUrl: string | 
 
 /**
  * Members by account id, for naming people who aren't attached to a save
- * (who is watching a moment, who reacted). Banned accounts are left out.
+ * (who is watching a moment, who reacted). Banned accounts and accounts
+ * still waiting to be let in are left out.
  * Server-side only: the ids are the keys, never send them to a client.
  */
 export function membersById(ids: readonly string[]): Map<string, Face> {
@@ -32,6 +33,7 @@ export function membersById(ids: readonly string[]): Map<string, Face> {
       and(
         inArray(users.id, wanted.slice(0, 400)),
         sql`NOT EXISTS (SELECT 1 FROM user_bans WHERE user_bans.user_id = ${users.id})`,
+        eq(users.approval, 'approved'),
       ),
     )
     .all()

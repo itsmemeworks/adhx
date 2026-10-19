@@ -69,6 +69,9 @@ importers:
       react-email:
         specifier: ^6.9.3
         version: 6.9.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@25.9.2)
       simple-icons:
         specifier: ^16.35.0
         version: 16.35.0

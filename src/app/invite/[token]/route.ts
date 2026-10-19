@@ -44,7 +44,8 @@ export async function GET(_request: NextRequest, { params }: Context) {
 /**
  * POST /invite/<token> (the Join form, same origin only): spend the invite on
  * a new account with the chosen name, sign this browser in and go on to
- * /invite/done. A bad or taken name shows the form again, invite unspent.
+ * /invite/done (or /invite/waiting, when an admin has to let them in
+ * first). A bad or taken name shows the form again, invite unspent.
  */
 export async function POST(request: NextRequest, { params }: Context) {
   const { token } = await params
@@ -79,7 +80,9 @@ export async function POST(request: NextRequest, { params }: Context) {
 
   recordAnalytic({ name: 'auth.complete', userId: result.userId, source: 'invite' })
   const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const response = NextResponse.redirect(new URL('/invite/done', base), 303)
+  // Joined from a member's invite with approvals on: wait for an admin.
+  const next = result.approval === 'pending' ? '/invite/waiting' : '/invite/done'
+  const response = NextResponse.redirect(new URL(next, base), 303)
   response.headers.set('Cache-Control', 'no-store')
   response.headers.set('Referrer-Policy', 'no-referrer')
   await setSessionCookie(response, { userId: result.userId, username: result.username })
