@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Close friends-feed review privacy gaps
+
+- Revalidate cached blend savers/reasons/counts and moderation without shifting cursor slots; public caches check a durable SQLite visibility revision across processes.
+- Revoke named streams on ban/deletion/approval changes or phone-key revocation, including idle heartbeats; clean up watchers and subscriptions.
+- Stage queued new saves privately and persist editable queue intent; iPhone acknowledges the latest choice before completing its extension, with interrupted acknowledgements retained for retry.
+- Channel clones respect the recipient's private default; pending approvals remain actionable after inviter deletion.
+- Add regression coverage for all seven findings, stream revocation, in-flight queue updates, owner/key isolation, acknowledgement retries and idempotent legacy schema upgrades.
+- Validation: 3,353 tests, typecheck, formatting, lint (87 existing warnings), and the unsigned iOS simulator build pass; browser/CI results are recorded on the PR. No service or installed app updated.
+
 ## 2026-10-19 — Android: Settings, join approvals and "On their way"
 
 - Settings (j8-4) rebuilt: your face in Gob's shape, Waiting for you (admins: Let in / Not now / Decline via `POST /api/app/people/requests/{id}`), Your people (`GET /api/app/people`, new list screen), Invite, What's in your feed, Just for me and Sound on by default, What your ADHX is doing with its count, Shared lately, Connected to … with Remove this phone.

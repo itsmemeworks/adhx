@@ -1,3 +1,4 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
 import { visibleSaveFilter } from '@/lib/people/savers'
 import { db } from '@/lib/db'
 import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
@@ -63,7 +64,7 @@ const ACTIVITY_FETCH_CAP = 500
 
 const CACHE_TTL_MS = 30_000
 const CACHE_MAX_ENTRIES = 128
-type AuthorCache = TtlLruCache<string, AuthorProfile>
+type AuthorCache = TtlLruCache<string, { profile: AuthorProfile; privacyKey: string }>
 const cachesByDb = new WeakMap<object, AuthorCache>()
 
 function getCache(): AuthorCache {
@@ -87,12 +88,13 @@ export async function getAuthorProfile(handleParam: string): Promise<AuthorProfi
   const cache = getCache()
   const key = handle.toLowerCase()
   const hit = cache.get(key)
-  if (hit) return hit
+  const privacyKey = savePrivacyFingerprint()
+  if (hit?.privacyKey === privacyKey) return hit.profile
 
   const value = await fetchAuthorProfile(handle)
   // Misses are cheap and attacker-controlled handles have a huge key space.
   // Avoid retaining 404s so newly-observed authors are visible immediately.
-  if (value) cache.set(key, value)
+  if (value) cache.set(key, { profile: value, privacyKey })
   return value
 }
 

@@ -15,12 +15,13 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: Request, ctx: { params: Promise<{ slug: string }> }) {
   const { slug } = await ctx.params
-  return withPhoneKey(async (req, { userId }) => {
+  return withPhoneKey(async (req, { userId, keyId }) => {
     if (!SLUG.test(slug)) return appError(404, 'moment_gone', 'This moment has passed.')
     return momentStreamResponse({
       request: req,
       watch: slug,
       viewerId: userId,
+      keyId,
       only: slug,
       map: phoneEvent,
     })

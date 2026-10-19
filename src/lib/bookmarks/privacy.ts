@@ -1,6 +1,13 @@
 import { and, eq } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
-import { activity, bookmarks, userPreferences, type Bookmark } from '@/lib/db/schema'
+import {
+  activity,
+  bookmarks,
+  phoneSaveQueue,
+  serverSettings,
+  userPreferences,
+  type Bookmark,
+} from '@/lib/db/schema'
 
 /**
  * "Just for me" saves (docs/specs/friends-feed.md). A private save is kept,
@@ -73,6 +80,17 @@ export function setSavePrivate(
       )
       .run()
     if (updated.changes === 0) return null
+    // A queue acknowledgement must not undo a newer choice on the web.
+    db.update(phoneSaveQueue)
+      .set({ privateChoice: isPrivate, isPrivate })
+      .where(
+        and(
+          eq(phoneSaveQueue.userId, userId),
+          eq(phoneSaveQueue.platform, platform),
+          eq(phoneSaveQueue.postId, id),
+        ),
+      )
+      .run()
     if (isPrivate) {
       db.delete(activity)
         .where(
@@ -102,4 +120,18 @@ export function applyRepeatPrivacy<
   if (!!row.isPrivate === options.private) return row
   const next = setSavePrivate(row.userId, row.platform, row.id, options.private)
   return next === null ? row : { ...row, isPrivate: next }
+}
+
+/** A DB-backed fingerprint for public caches, including across web processes.
+ * Never return this value to clients. Privacy toggles do not change moderation
+ * state, so checking only a cache TTL or the moderation fingerprint is unsafe.
+ */
+export function savePrivacyFingerprint(): string {
+  return (
+    db
+      .select({ value: serverSettings.value })
+      .from(serverSettings)
+      .where(eq(serverSettings.key, 'saves.visibility'))
+      .get()?.value ?? '0'
+  )
 }

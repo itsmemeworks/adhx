@@ -1,3 +1,4 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
 import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
@@ -118,7 +119,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfileR
   const ban = readUserBan(userId)
   const moderated = readModeratedPostKeys()
   if (!ban.ok || ban.value || !moderated.ok) return { status: 'not_found' }
-  const moderationKey = moderationStateFingerprint(moderated.value)
+  const moderationKey = `${moderationStateFingerprint(moderated.value)}:${savePrivacyFingerprint()}`
 
   const cache = getCache()
   const key = username.toLowerCase()

@@ -556,6 +556,29 @@ deletes the owner's earlier `save` pulse rows for it).
   `private` updates the flag. `PATCH /api/bookmarks/[id]/private` and
   `POST /api/app/private` switch an existing save.
 
+Privacy changes also invalidate public caches immediately. SQLite triggers in
+`bookmarks/visibility-sql.ts` increment a durable `server_settings` revision on
+save insertion, deletion or visibility changes; public channels, curator/author
+profiles, trending and leaderboards check it even on warm cache hits. This is a
+constant-time read and works across web processes. Feed snapshots keep their
+original cursor positions, but recheck moderation, savers, explanations and
+counts on every page. Active live streams recheck membership and their phone
+key before events and on each 20-second heartbeat, closing on revocation.
+
+The iPhone share sheet can acknowledge a link before its privacy choice is
+settled: `deferPublish: true` stages new saves privately, then
+`PATCH /api/app/save { id, private? }` durably confirms the current choice.
+Changes made while metadata is being fetched are read at completion, in the
+same transaction that publishes the save. Closing the extension waits for the
+intent request; interrupted acknowledgements are retried from Shared lately.
+Without an acknowledgement a new save stays private. Repeat shares preserve
+existing privacy unless an explicit choice changes it. Keeping a public
+channel applies the recipient's private-by-default setting to new copies.
+
+Join approval requests are anchored to the invite identity on the joining
+account. Deleting an inviter removes its invite records without removing
+another person's pending request; the admin can still approve or decline it.
+
 ## Channels (redesign)
 
 A channel is a tag: its posts are the tagged saves, its public page is

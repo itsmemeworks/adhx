@@ -1,3 +1,4 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
 import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
@@ -529,6 +530,7 @@ function getCachedLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEn
   const now = Date.now()
   const moderation = readLeaderboardModeration()
   if (!moderation) return []
+  moderation.key += `:${savePrivacyFingerprint()}`
   const hit = cache.get(key)
   if (hit && hit.expiresAt > now && hit.moderationKey === moderation.key) return hit.value
 

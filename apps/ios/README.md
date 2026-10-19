@@ -235,3 +235,10 @@ server sends it, which it does for members only.
 Search follows the server's `nextOffset` as you reach the end of the result
 grid or its player. Further-page failures keep the results already loaded and
 offer a retry. Changing the query cancels the older page request.
+
+The share card confirms its privacy choice against the server queue before
+finishing the extension. New saves stay private until that confirmation, even
+if metadata finishes first. An interrupted confirmation is kept in Shared
+lately and retried on the next refresh. This uses `deferPublish` and
+`PATCH /api/app/save` from the matching server release; update the server
+before testing this flow with a newly built app.

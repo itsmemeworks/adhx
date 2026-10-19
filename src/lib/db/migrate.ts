@@ -4,6 +4,7 @@
  * Applies Drizzle-generated SQL migrations from ./drizzle folder
  * without requiring drizzle-orm at runtime (for standalone Next.js builds)
  */
+import { SAVE_VISIBILITY_DDL } from '../bookmarks/visibility-sql'
 import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
@@ -648,6 +649,15 @@ try {
 } catch {
   // Column already exists — nothing to do.
 }
+// Queue intent is durable before a phone's share extension can disappear.
+for (const [column, definition] of [
+  ['private_choice', 'integer'],
+  ['publish_pending', 'integer NOT NULL DEFAULT 0'],
+]) {
+  const columns = db.prepare('PRAGMA table_info(phone_save_queue)').all() as { name: string }[]
+  if (!columns.some((c) => c.name === column))
+    db.exec(`ALTER TABLE phone_save_queue ADD COLUMN ${column} ${definition}`)
+}
 try {
   db.exec('ALTER TABLE keep_jobs ADD COLUMN accepted_at text')
   console.log('[migrate] Added keep_jobs.accepted_at')
@@ -661,6 +671,8 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
 `)
+
+db.exec(SAVE_VISIBILITY_DDL)
 
 // Public analytics validates post existence across all bookmark owners and
 // against visible activity. The bookmarks PK begins with user_id and the

@@ -1,3 +1,4 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
 import { visibleSaveFilter } from '@/lib/people/savers'
 import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
@@ -310,7 +311,7 @@ export async function getTrendingItems(opts: GetTrendingOptions = {}): Promise<T
   if (!bannedUsers.ok) throw bannedUsers.error
   const moderatedPosts = readModeratedPostKeys()
   if (!moderatedPosts.ok) throw moderatedPosts.error
-  const moderationKey = moderationStateFingerprint(bannedUsers.value, moderatedPosts.value)
+  const moderationKey = `${moderationStateFingerprint(bannedUsers.value, moderatedPosts.value)}:${savePrivacyFingerprint()}`
 
   const cache = getCache()
   const key = cacheKey(opts)

@@ -213,6 +213,8 @@ struct ShareRecord: Codable, Identifiable, Equatable {
     /// "Just for me" was switched before the server had the post; applied
     /// once it lands (`StatusRefresher`).
     var wantsPrivate: Bool?
+    /// Acknowledgement interrupted by the extension closing: retry safely.
+    var publishPending: Bool?
     var createdAt = Date()
     var updatedAt = Date()
 
@@ -460,12 +462,18 @@ enum StatusRefresher {
 
     static func refresh() async {
         guard let client = Store.client() else { return }
-        for record in History.all() where record.stage == .saving {
+        for record in History.all() where record.stage == .saving || record.publishPending == true {
             guard let queueId = record.queueId else { continue }
             do {
+                if record.publishPending == true {
+                    try await client.queuedPrivacy(id: queueId, private: record.wantsPrivate)
+                    History.update(id: record.id) { $0.publishPending = false; $0.wantsPrivate = nil }
+                }
                 let progress = try await client.queuedSave(id: queueId)
                 History.update(id: record.id) { $0.apply(progress) }
-                await applyWantedPrivacy(record, landed: progress, client: client)
+                if record.publishPending != true {
+                    await applyWantedPrivacy(record, landed: progress, client: client)
+                }
             } catch APIError.server(let httpStatus, _, _) where httpStatus == 404 {
                 History.update(id: record.id) {
                     $0.fail(.server(status: 404, code: "failed", message: APIError.fallbackMessage(for: "failed")))

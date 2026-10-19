@@ -1,4 +1,6 @@
 import { captureException } from '@/lib/sentry'
+import { sql } from 'drizzle-orm'
+import { db } from '@/lib/db'
 import { subscribe, type MomentEvent } from './engine'
 import { eventForViewer, reactionForViewer } from './people'
 import { joinWatch, onReaction } from './presence'
@@ -20,6 +22,8 @@ export interface MomentStreamOptions {
   request: Request
   watch?: string
   viewerId: string
+  /** Phone streams also stop when this exact key is revoked. */
+  keyId?: string
   /** Only events about this moment (the phone's per-moment stream). */
   only?: string
   /** Change each event just before it is sent (the phone adds its post shape). */
@@ -46,6 +50,7 @@ export function momentStreamResponse({
   request,
   watch,
   viewerId,
+  keyId,
   only,
   map,
 }: MomentStreamOptions): Response {
@@ -55,6 +60,22 @@ export function momentStreamResponse({
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       let closed = false
+      // A stream may outlive its credential. Check durable authorization before
+      // every event, reaction and heartbeat, including otherwise idle rooms.
+      const authorized = () => {
+        if (!viewerId) return true
+        try {
+          const active = db.get(sql`SELECT 1 FROM users u
+            WHERE u.id = ${viewerId} AND u.approval = 'approved'
+              AND NOT EXISTS (SELECT 1 FROM user_bans b WHERE b.user_id = u.id)
+              ${keyId ? sql`AND EXISTS (SELECT 1 FROM access_keys k WHERE k.id = ${keyId} AND k.user_id = u.id AND k.scope = 'phone')` : sql``}`)
+          if (active) return true
+        } catch (error) {
+          captureException(error, { endpoint: 'moments.stream.auth' })
+        }
+        cleanup()
+        return false
+      }
       const write = (chunk: string) => {
         if (closed) return
         try {
@@ -69,6 +90,7 @@ export function momentStreamResponse({
       }
       // Runs inside the engine's emit: never let a naming failure reach it.
       const onEvent = (event: MomentEvent) => {
+        if (!authorized()) return
         if (only && !concerns(event, only)) return
         let named = event
         try {
@@ -85,6 +107,7 @@ export function momentStreamResponse({
         viewerId && watch
           ? onReaction((signal) => {
               if (signal.slug !== watch) return
+              if (!authorized()) return
               try {
                 const event = reactionForViewer(signal, viewerId)
                 if (event) send(event)
@@ -93,8 +116,10 @@ export function momentStreamResponse({
               }
             })
           : () => {}
-      const unsubscribe = subscribe(onEvent, watch)
-      const ping = setInterval(() => write(': ping\n\n'), PING_MS)
+      let unsubscribe = () => {}
+      const ping = setInterval(() => {
+        if (authorized()) write(': ping\n\n')
+      }, PING_MS)
       cleanup = () => {
         if (closed) return
         closed = true
@@ -109,7 +134,13 @@ export function momentStreamResponse({
           // already closed
         }
       }
+      // subscribe() emits synchronously; cleanup must already be installed.
+      if (authorized()) {
+        unsubscribe = subscribe(onEvent, watch)
+        if (closed) unsubscribe()
+      }
       request.signal.addEventListener('abort', () => cleanup())
+      if (request.signal.aborted) cleanup()
     },
     cancel() {
       cleanup()

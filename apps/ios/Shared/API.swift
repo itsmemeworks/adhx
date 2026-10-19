@@ -376,9 +376,10 @@ struct ADHXClient {
 
     /// `isPrivate` saves it "Just for me"; nil leaves the server's default
     /// (shared with your people, or what a repeat save already had).
-    func save(url: String, private isPrivate: Bool? = nil) async throws -> SaveAnswer {
+    func save(url: String, private isPrivate: Bool? = nil, deferPublish: Bool = false) async throws -> SaveAnswer {
         var body: [String: Any] = ["url": url]
         if let isPrivate { body["private"] = isPrivate }
+        if deferPublish { body["deferPublish"] = true }
         let answer: SaveOrQueued = try await send(
             "POST", "/api/app/save", body: body, headers: ["Prefer": "respond-async"])
         return answer.answer
@@ -390,6 +391,13 @@ struct ADHXClient {
         let answer: PrivateAnswer = try await send(
             "POST", "/api/app/private", body: ["platform": platform, "id": id, "private": isPrivate])
         return answer.private ?? isPrivate
+    }
+
+    /// Persist the share card's latest choice before a queued post is published.
+    func queuedPrivacy(id: String, private isPrivate: Bool? = nil) async throws {
+        var body: [String: Any] = ["id": id]
+        if let isPrivate { body["private"] = isPrivate }
+        let _: [String: Bool] = try await send("PATCH", "/api/app/save", body: body)
     }
 
     func queuedSave(id: String) async throws -> QueuedSave {

@@ -5,7 +5,7 @@ import { addBookmark } from '@/lib/bookmarks/add'
 import { privateFlag } from '@/lib/bookmarks/privacy'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
-import { enqueueSave, NOT_A_POST, queuedSave } from '@/lib/app/save-queue'
+import { enqueueSave, NOT_A_POST, queuedSave, updateQueuedPrivacy } from '@/lib/app/save-queue'
 
 /**
  * POST /api/app/save { url, private? } — the phone app's share sheet. `url` is
@@ -19,13 +19,20 @@ import { enqueueSave, NOT_A_POST, queuedSave } from '@/lib/app/save-queue'
  * (`addBookmark`) and the answer is what was saved.
  */
 export const POST = withPhoneKey(async (request, { userId }) => {
-  const body = (await request.json().catch(() => ({}))) as { url?: unknown; private?: unknown }
+  const body = (await request.json().catch(() => ({}))) as {
+    url?: unknown
+    private?: unknown
+    deferPublish?: unknown
+  }
   const isPrivate = privateFlag(body)
   const url = firstLink(body?.url)
   if (!url) return appError(400, 'no_link', 'There’s no link in what was shared.')
 
   if (/respond-async/i.test(request.headers.get('prefer') ?? '')) {
-    const queued = enqueueSave(userId, url, undefined, { private: isPrivate })
+    const queued = enqueueSave(userId, url, undefined, {
+      private: isPrivate,
+      deferPublish: body?.deferPublish === true,
+    })
     return NextResponse.json(
       { queued: true, id: queued.id, state: queued.state },
       {
@@ -92,4 +99,29 @@ export const GET = withPhoneKey(async (request, { userId }) => {
     { id, state: queued.state === 'saved' ? 'saving' : queued.state },
     { headers },
   )
+})
+
+/** PATCH /api/app/save { id, private? }: persist intent while still queued;
+ * acknowledge a deferred publication even when the extension is closing.
+ */
+export const PATCH = withPhoneKey(async (request, { userId }) => {
+  const body = (await request.json().catch(() => null)) as {
+    id?: unknown
+    private?: unknown
+  } | null
+  if (
+    typeof body?.id !== 'string' ||
+    !body.id ||
+    (body.private !== undefined && typeof body.private !== 'boolean')
+  ) {
+    return appError(
+      400,
+      'bad_request',
+      'Send the queued share id and, optionally, whether it is private.',
+    )
+  }
+  if (!updateQueuedPrivacy(userId, body.id, body.private as boolean | undefined)) {
+    return appError(404, 'not_queued', 'That share is not yours or is no longer waiting.')
+  }
+  return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
 })

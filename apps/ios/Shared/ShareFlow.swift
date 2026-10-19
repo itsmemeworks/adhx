@@ -45,6 +45,8 @@ final class ShareFlow: ObservableObject {
     private var recordId: String?
     private var saveTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
+    private var queueId: String?
+    private var privacyTask: Task<Void, Never>?
     private var autoCloseTask: Task<Void, Never>?
 
     /// Called once the sheet has animated away.
@@ -120,22 +122,34 @@ final class ShareFlow: ObservableObject {
     /// Waits for the save request, so the extension can stay up for it after the sheet closes.
     func waitForSave() async {
         await saveTask?.value
+        await privacyTask?.value
     }
 
     private func save(with client: ADHXClient, link: String, recordId: String) async {
         do {
-            switch try await client.save(url: link, private: privacyTouched ? justForMe : nil) {
+            switch try await client.save(url: link, private: privacyTouched ? justForMe : nil, deferPublish: true) {
             case .saved(let r):
                 landed(r, client: client)
             case .queued(let id):
                 // Your ADHX has it and saves it in its own time; ask how it's
                 // going while the sheet is open.
-                History.update(id: recordId) { $0.queue(id) }
-                waitForServer(client: client, queueId: id)
+                queueId = id
+                History.update(id: recordId) { $0.queue(id); $0.publishPending = true }
+                // A choice made before the POST answered is included here. The
+                // server holds new saves private until this is acknowledged.
+                privacyBusy = true
+                defer { privacyBusy = false }
+                try await client.queuedPrivacy(id: id, private: privacyTouched ? justForMe : nil)
+                History.update(id: recordId) { $0.wantsPrivate = nil; $0.publishPending = false }
+                if !closeRequested { waitForServer(client: client, queueId: id) }
             }
         } catch APIError.offline, APIError.slow {
-            History.update(id: recordId) { $0.stage = .queued }
-            OfflineQueue.add(id: recordId, link: link, isPrivate: privacyTouched ? justForMe : nil)
+            // Once accepted, retry its acknowledgement rather than enqueueing
+            // a second job. StatusRefresher keeps the original privacy intent.
+            if queueId == nil {
+                History.update(id: recordId) { $0.stage = .queued }
+                OfflineQueue.add(id: recordId, link: link, isPrivate: privacyTouched ? justForMe : nil)
+            }
             phase = .offline
         } catch APIError.badKey(let message) {
             Keychain.delete()
@@ -256,7 +270,23 @@ final class ShareFlow: ObservableObject {
         privacyTouched = true
         privacyError = nil
         justForMe = on
-        if let r = result {
+        if let queueId, let client {
+            if let recordId {
+                History.update(id: recordId) { $0.wantsPrivate = on; $0.publishPending = true }
+            }
+            privacyBusy = true
+            privacyTask = Task { [weak self] in
+                do {
+                    try await client.queuedPrivacy(id: queueId, private: on)
+                    if let recordId = self?.recordId {
+                        History.update(id: recordId) { $0.wantsPrivate = nil; $0.isPrivate = on; $0.publishPending = false }
+                    }
+                } catch {
+                    self?.privacyError = "Couldn’t change that. Try again."
+                }
+                self?.privacyBusy = false
+            }
+        } else if let r = result {
             sendPrivacy(on, platform: r.platform, id: r.id)
         } else if let recordId {
             History.update(id: recordId) { $0.wantsPrivate = on }
@@ -305,6 +335,9 @@ final class ShareFlow: ObservableObject {
     func didClose() {
         pollTask?.cancel()
         autoCloseTask?.cancel()
-        onFinish?()
+        Task { [self] in
+            await waitForSave()
+            onFinish?()
+        }
     }
 }

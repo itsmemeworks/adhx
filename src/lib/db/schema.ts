@@ -312,6 +312,10 @@ export const phoneSaveQueue = sqliteTable(
     isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
     /** Shared without saying, while the owner had "Just for me by default" on: a new save is private. */
     defaultPrivate: integer('default_private', { mode: 'boolean' }).notNull().default(false),
+    /** Explicit choice, including false; null preserves repeat-save privacy. */
+    privateChoice: integer('private_choice', { mode: 'boolean' }),
+    /** New saves stay private until the phone acknowledges its intent. */
+    publishPending: integer('publish_pending', { mode: 'boolean' }).notNull().default(false),
     /** Set once failed: a code the apps know, and words fit to show. */
     errorCode: text('error_code'),
     error: text('error'),

@@ -1,3 +1,4 @@
+import { privateByDefault } from '@/lib/bookmarks/privacy'
 import { db, runInTransaction } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
@@ -200,6 +201,7 @@ export async function cloneTagToUser(opts: {
     (b.processedAt ?? '').localeCompare(a.processedAt ?? ''),
   )
 
+  const isPrivate = privateByDefault(currentUserId)
   runInTransaction(() => {
     if (orderedNewBookmarks.length > 0) {
       db.insert(bookmarks)
@@ -208,6 +210,7 @@ export async function cloneTagToUser(opts: {
             ...b,
             userId: currentUserId,
             source: 'clone' as const,
+            isPrivate,
             processedAt: addedAtForIndex(clonedAtMs, i),
           })),
         )

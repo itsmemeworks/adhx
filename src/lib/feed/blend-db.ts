@@ -26,6 +26,7 @@ import {
   encodeCursor,
   parseWeights,
   type BlendCandidate,
+  type BlendContext,
   type BlendMode,
   type BlendPick,
   type BlendSave,
@@ -83,10 +84,11 @@ export interface BlendPage {
   waiting: Partial<Record<FeedKind, number>>
 }
 
+type Candidate = BlendCandidate & { kind: FeedKind }
 type Snapshot = {
-  picks: BlendPick[]
-  nothingYet: boolean
-  waiting: Partial<Record<FeedKind, number>>
+  candidates: Omit<Candidate, 'saves'>[]
+  context: BlendContext
+  order: string[]
   at: number
 }
 const g = globalThis as unknown as { __adhxBlend?: Map<string, Snapshot> }
@@ -417,6 +419,8 @@ export async function computeBlend(
   picks: BlendPick[]
   nothingYet: boolean
   waiting: Partial<Record<FeedKind, number>>
+  candidates: Candidate[]
+  context: BlendContext
 }> {
   const types = opts.types ?? FEED_KINDS
   const now = opts.now ?? Date.now()
@@ -462,7 +466,7 @@ export async function computeBlend(
       : {}
   // New with nothing at all from your people (not just nothing unseen), of any kind.
   const nothingYet = mode === 'new' && !all.some((c) => c.saves.some((s) => s.userId !== viewerId))
-  return { picks, nothingYet, waiting }
+  return { picks, nothingYet, waiting, candidates: all, context: ctx }
 }
 
 function newSeed(): string {
@@ -508,22 +512,53 @@ export async function blendPage(
   }
   const cacheKey = `${viewerId}|${mode}|${types.join(',')}|${seed}`
   let snapshot = snapshots.get(cacheKey)
-  if (snapshot && now - snapshot.at > SNAPSHOT_MS) snapshot = undefined
+  if (snapshot && (!snapshot.order || now - snapshot.at > SNAPSHOT_MS)) snapshot = undefined
   if (!snapshot) {
-    const { picks, nothingYet, waiting } = await computeBlend(viewerId, mode, {
+    const { picks, candidates, context } = await computeBlend(viewerId, mode, {
       now,
       seed,
       types,
     })
-    snapshot = { picks, nothingYet, waiting, at: now }
+    snapshot = {
+      order: picks.map((p) => p.key),
+      candidates: candidates.map(({ saves: _saves, ...c }) => c),
+      context,
+      at: now,
+    }
     remember(cacheKey, snapshot)
     if (opts.cursor && mode === 'new') offset = 0
   }
 
-  const slice = snapshot.picks.slice(offset, offset + opts.limit)
-  const end = offset + slice.length
-  const nextCursor = end < snapshot.picks.length ? encodeCursor({ s: seed, o: end }) : null
-  const byKey = new Map(slice.map((p) => [p.key, p]))
+  // Cache ordering, never authorization or names. Re-read every candidate's
+  // savers and moderation so counts and hidden-kind totals cannot reveal a
+  // newly private save either. Keep the snapshot's seen state and offsets:
+  // watching between pages must not move unconsumed posts backwards.
+  const moderated = readModeratedPostKeys()
+  if (!moderated.ok) throw moderated.error
+  const keys = snapshot.candidates.map((c) => c.key)
+  const gone = await goneKeys(keys)
+  const saves = savesFor(keys, viewerId)
+  const current = snapshot.candidates.flatMap((c) => {
+    const list = saves.get(c.key)
+    return list?.length && !moderated.value.has(c.key) && !gone.has(c.key)
+      ? [{ ...c, saves: list }]
+      : []
+  })
+  const refreshed = blend(
+    current.filter((c) => types.includes(c.kind)),
+    snapshot.context,
+    mode,
+  )
+  const byKey = new Map(refreshed.map((p) => [p.key, p]))
+  const slice: BlendPick[] = []
+  let end = offset
+  while (end < snapshot.order.length && slice.length < opts.limit) {
+    const pick = byKey.get(snapshot.order[end++])
+    if (pick) slice.push(pick)
+  }
+  // Skip now-invisible slots without changing any surviving post's offset.
+  while (end < snapshot.order.length && !byKey.has(snapshot.order[end])) end++
+  const nextCursor = end < snapshot.order.length ? encodeCursor({ s: seed, o: end }) : null
   const loaded = await loadSearchItems(keysToHits(slice.map((p) => p.key)), viewerId, {
     savers: false,
   })
@@ -539,9 +574,15 @@ export async function blendPage(
     items,
     nextCursor,
     caughtUp: mode === 'new' && nextCursor === null,
-    nothingYet: snapshot.nothingYet,
-    total: snapshot.picks.length,
+    nothingYet: mode === 'new' && !current.some((c) => c.saves.some((s) => s.userId !== viewerId)),
+    total: snapshot.order.filter((key) => byKey.has(key)).length,
     types,
-    waiting: snapshot.waiting,
+    waiting:
+      mode === 'new'
+        ? waitingKinds(
+            current.filter((c) => !types.includes(c.kind)),
+            snapshot.context,
+          )
+        : {},
   }
 }

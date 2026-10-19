@@ -1,3 +1,4 @@
+import { SAVE_VISIBILITY_DDL } from '@/lib/bookmarks/visibility-sql'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/lib/db/schema'
@@ -364,6 +365,8 @@ export const FULL_SCHEMA_SQL = `
     already_saved INTEGER NOT NULL DEFAULT 0,
     is_private INTEGER NOT NULL DEFAULT 0,
     default_private INTEGER NOT NULL DEFAULT 0,
+    private_choice INTEGER,
+    publish_pending INTEGER NOT NULL DEFAULT 0,
     error_code TEXT,
     error TEXT,
     created_at TEXT NOT NULL,
@@ -398,6 +401,7 @@ export const FULL_SCHEMA_SQL = `
       PRIMARY KEY (platform, post_id, slot)
     );
 
+${SAVE_VISIBILITY_DDL}
 `
 
 export interface TestDbInstance {

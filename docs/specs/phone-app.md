@@ -85,6 +85,16 @@ The app treats no answer, a timeout, and 502/503/504 as **offline**: the link
 is queued on the phone and sent when the server can be reached.
 
 **Saving in the background** (current apps): send `Prefer: respond-async`.
+For an editable share card, also send `deferPublish: true` (the iPhone does).
+A new save stays private until `PATCH /api/app/save { id, private? }`
+acknowledges the current choice. Send the PATCH as soon as the queue id is
+known, and again when the switch changes, without waiting for the post to land.
+The route accepts only that phone's own queue rows, including working and
+completed ones. Omitting `private` confirms the captured default for a new
+save and preserves a repeat save's existing privacy. Acknowledgements are
+idempotent; an interrupted acknowledgement leaves a new save private. Keep
+pending acknowledgements on disk and retry them when the app resumes.
+
 The server answers at once, before reading the post (which can take a while
 from a home server; Instagram is slow to answer one):
 
@@ -477,9 +487,12 @@ out so the server's own choice still applies.
 saw in Channels or the feed, kept on the phone), or "Your people will see it";
 on shows a lock and "Only you will see this save. It's still kept and
 searchable." The save goes out as soon as the sheet opens, so the switch
-calls `/api/app/private` once the post has landed; switched before that, it's
-applied when it lands (by the sheet, or later by the app), and a link waiting
-offline is sent with `private`.
+uses `PATCH /api/app/save` for an accepted iPhone queue receipt, including
+while metadata is still being fetched, and `/api/app/private` for a directly
+saved post. Closing the iPhone sheet waits for its intent acknowledgement;
+interrupted acknowledgements are retried by the app. A link waiting offline
+is sent with `private`. Android currently applies an in-flight switch when
+the post lands.
 
 Adding to a channel and saving for offline are not in this version.
 

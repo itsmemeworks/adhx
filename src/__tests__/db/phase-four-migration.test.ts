@@ -496,3 +496,67 @@ describe('Phase 4 startup migration', () => {
     )
   })
 })
+
+it('upgrades queued privacy intent idempotently and shares visibility revisions across connections', () => {
+  const { databasePath, migrationsPath, sqlite } = createMigrationFixture()
+  sqlite.exec(`ALTER TABLE phone_save_queue DROP COLUMN private_choice;
+    ALTER TABLE phone_save_queue DROP COLUMN publish_pending;
+    DROP TRIGGER save_visibility_insert;
+    DROP TRIGGER save_visibility_update;
+    DROP TRIGGER save_visibility_delete;`)
+  sqlite.prepare("INSERT INTO users(id,username) VALUES('queue-owner','queueowner')").run()
+  sqlite
+    .prepare(
+      `INSERT INTO phone_save_queue(id,user_id,url,status,is_private,created_at,updated_at)
+    VALUES('old-queue','queue-owner','https://youtu.be/example','waiting',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`,
+    )
+    .run()
+  sqlite.close()
+  for (let i = 0; i < 2; i++) {
+    const result = runMigration(databasePath, migrationsPath)
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
+  }
+  const migrated = new Database(databasePath)
+  const other = new Database(databasePath)
+  try {
+    expect(
+      migrated
+        .prepare('SELECT is_private,private_choice,publish_pending FROM phone_save_queue')
+        .get(),
+    ).toEqual({ is_private: 1, private_choice: null, publish_pending: 0 })
+    const expected = new Database(':memory:')
+    try {
+      expected.exec(FULL_SCHEMA_SQL)
+      const columns = (db: Database.Database) =>
+        (db.prepare('PRAGMA table_info(phone_save_queue)').all() as { cid: number; name: string }[])
+          .map(({ cid: _cid, ...column }) => column)
+          .sort((a, b) => a.name.localeCompare(b.name))
+      expect(columns(migrated)).toEqual(columns(expected))
+    } finally {
+      expected.close()
+    }
+    other
+      .prepare(
+        `INSERT INTO bookmarks(id,user_id,platform,author,text,tweet_url,processed_at)
+      VALUES('post','queue-owner','twitter','author','words','https://x.com/author/status/post',CURRENT_TIMESTAMP)`,
+      )
+      .run()
+    const revision = () =>
+      (
+        migrated
+          .prepare("SELECT value FROM server_settings WHERE key='saves.visibility'")
+          .get() as { value: string }
+      ).value
+    const before = revision()
+    other.prepare("UPDATE bookmarks SET is_private=1 WHERE id='post'").run()
+    expect(revision()).not.toBe(before)
+    const privateRevision = revision()
+    other.prepare("UPDATE bookmarks SET is_private=1 WHERE id='post'").run()
+    expect(revision()).toBe(privateRevision)
+    other.prepare("DELETE FROM bookmarks WHERE id='post'").run()
+    expect(revision()).not.toBe(privateRevision)
+  } finally {
+    other.close()
+    migrated.close()
+  }
+})

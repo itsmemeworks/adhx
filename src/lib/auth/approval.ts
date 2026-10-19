@@ -62,12 +62,12 @@ export function listJoinRequests(
   now = Date.now(),
 ): JoinRequest[] {
   const rows = db.all<Row>(sql`
-    SELECT i.id, u.username, u.display_name, u.created_at,
+    SELECT ui.provider_id AS id, u.username, u.display_name, u.created_at,
            u.approval_snoozed_until AS snoozed_until,
            m.username AS inviter_username, m.display_name AS inviter_name
     FROM users u
     JOIN user_identities ui ON ui.user_id = u.id AND ui.provider = 'invite'
-    JOIN invites i ON i.id = ui.provider_id
+    LEFT JOIN invites i ON i.id = ui.provider_id
     LEFT JOIN users m ON m.id = i.created_by
     WHERE u.approval = 'pending'
       AND NOT EXISTS (SELECT 1 FROM user_bans b WHERE b.user_id = u.id)
