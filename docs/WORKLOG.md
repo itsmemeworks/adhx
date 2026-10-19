@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Publish only tagged releases
+
+- Supersede automatic main-image publication: ordinary PR merges never publish; Release Please calls the publisher only after creating a tagged release.
+- Remove both push and release-event publisher triggers, eliminating duplicate automatic entry points; manual recovery requires an existing release version.
+- Keep per-SHA serialization, immutable images, build caches and latest-stable guards. Retire the rolling `main` tag and document migration to releases.
+- Hide docs changelog entries so docs-only commits do not initiate releases; normal PR architecture/build validation remains unchanged.
+- Source changes are proposed, not deployed; validation and follow-ups are recorded in the PR.
+
 ## 2026-10-19 — Skip documentation images and cancel superseded main builds
 
 - Ignore documentation/deployment-example-only main pushes; mixed runtime changes still publish regardless of PR title.

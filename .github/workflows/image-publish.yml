@@ -1,22 +1,11 @@
 name: Publish container image
 
 on:
-  push:
-    branches: [main]
-    # Match the non-image paths in image-policy.mjs. Mixed code/docs pushes run.
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - 'deploy/**'
-      - '.env.example'
-      - 'LICENSE'
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       version:
-        description: 'Optional release version to recover; blank publishes the current main commit'
-        required: false
+        description: 'Existing release version to recover, for example 2.1.3'
+        required: true
         type: string
   workflow_call:
     inputs:
@@ -29,12 +18,6 @@ permissions:
   packages: write
   id-token: write
   attestations: write
-
-# Only automatic main builds supersede one another. Reusable release calls
-# also inherit event_name=push, so a nonempty version must protect them.
-concurrency:
-  group: container-workflow-${{ github.event_name == 'push' && !inputs.version && 'main' || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'push' && !inputs.version }}
 
 jobs:
   prepare:
@@ -52,15 +35,15 @@ jobs:
       - name: Resolve the immutable source revision
         id: plan
         env:
-          RAW_VERSION: ${{ inputs.version || github.event.release.tag_name }}
+          RAW_VERSION: ${{ inputs.version }}
         run: node .github/scripts/image-plan.mjs
 
   publish:
     timeout-minutes: 40
     needs: prepare
     runs-on: ubuntu-latest
-    # Push, release and recovery events for one commit share an idempotent job.
-    # Keep this second lock: release and main events for one SHA must not build twice.
+    # Release Please and manual recovery for one commit share an idempotent job.
+    # A retry reuses the immutable image instead of rebuilding it.
     concurrency:
       group: publish-container-${{ needs.prepare.outputs.sha }}
       cancel-in-progress: false
@@ -70,8 +53,6 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.sha }}
@@ -95,7 +76,7 @@ jobs:
             cat /tmp/image-inspect.err >&2
             exit 1
           fi
-      - name: Build and publish the main commit once
+      - name: Build and publish the release commit once
         if: steps.existing.outputs.found != 'true'
         id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -134,21 +115,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIGEST: ${{ steps.digest.outputs.digest }}
         run: |
-          git fetch --no-tags origin main
-          CURRENT_MAIN=$(git rev-parse FETCH_HEAD)
-          # A docs-only merge does not build, but must not strand an earlier
-          # code image by making its source SHA differ from the new main head.
-          MAIN_EQUIVALENT=$(node .github/scripts/image-policy.mjs "$SOURCE_SHA" "$CURRENT_MAIN")
           LATEST_RELEASE=''
           if [ -n "$VERSION" ]; then
             LATEST_RELEASE=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
           fi
-          export CURRENT_MAIN MAIN_EQUIVALENT LATEST_RELEASE
+          export LATEST_RELEASE
           node --input-type=module <<'JS' > /tmp/image-tags.txt
           import { imagePlan } from './.github/scripts/image-plan.mjs'
           const p = imagePlan({ sha: process.env.SOURCE_SHA, repository: process.env.GITHUB_REPOSITORY,
-            version: process.env.VERSION, currentMain: process.env.CURRENT_MAIN,
-            mainEquivalent: process.env.MAIN_EQUIVALENT === 'true', latestRelease: process.env.LATEST_RELEASE })
+            version: process.env.VERSION, latestRelease: process.env.LATEST_RELEASE })
           console.log(p.tags.slice(1).join('\n'))
           JS
           TAG_ARGS=()

@@ -167,38 +167,32 @@ describe('release check reporting', () => {
 })
 
 describe('immutable commit images and release promotion', () => {
-  const sha = 'a'.repeat(40),
-    other = 'b'.repeat(40)
+  const sha = 'a'.repeat(40)
   const repository = 'Owner/App'
-  it('always publishes the full commit identity, even without a release', () => {
-    expect(imagePlan({ sha, repository, currentMain: sha }).tags).toEqual([
-      `ghcr.io/owner/app:sha-${sha}`,
-      'ghcr.io/owner/app:main',
-    ])
+  it('rejects publishing untagged snapshots', () => {
+    expect(() => imagePlan({ sha, repository })).toThrow('tagged release version')
   })
   it('promotes the latest stable release without changing source identity', () => {
     const plan = imagePlan({
       sha,
       repository,
       version: 'v2.1.0',
-      currentMain: sha,
       latestRelease: 'v2.1.0',
     })
     expect(plan.sha).toBe(sha)
     expect(plan.tags).toEqual([
       `ghcr.io/owner/app:sha-${sha}`,
-      'ghcr.io/owner/app:main',
       'ghcr.io/owner/app:2.1.0',
       'ghcr.io/owner/app:2.1',
       'ghcr.io/owner/app:2',
       'ghcr.io/owner/app:latest',
     ])
   })
-  it('does not roll main/latest backward when an older build finishes late', () => {
-    expect(
-      imagePlan({ sha, repository, version: '2.0.1', currentMain: other, latestRelease: 'v2.1.0' })
-        .tags,
-    ).toEqual([`ghcr.io/owner/app:sha-${sha}`, 'ghcr.io/owner/app:2.0.1'])
+  it('does not roll latest backward when an older build finishes late', () => {
+    expect(imagePlan({ sha, repository, version: '2.0.1', latestRelease: 'v2.1.0' }).tags).toEqual([
+      `ghcr.io/owner/app:sha-${sha}`,
+      'ghcr.io/owner/app:2.0.1',
+    ])
   })
   it('never promotes a prerelease to stable aliases', () => {
     expect(
