@@ -282,16 +282,15 @@ worker. Keep a private copy of the previous configuration for rollback.
 | `@sha256:<digest>`      | One exact image. A newly published release does not change this reference.                 |
 | `:2.1.3`                | One numbered release; it does not move to the next version number.                         |
 | `:latest`, `:2`, `:2.1` | Moving stable-release aliases, limited to the selected major/minor series where specified. |
-| `:main`                 | The newest published main-branch commit, which may be ahead of the numbered release.       |
+| `:main`                 | Legacy snapshot; no longer updated. Choose a release tag or verified digest instead.       |
 
 For a deliberate update, follow release notifications and select a new verified
 digest. If you choose a moving tag, a NAS image checker can report changes to
 that tag. Detection, pulling an image and recreating the running container are
 separate actions. Publishing an image never upgrades this installed service by
 itself. Confirm the image has finished publishing, supports your architecture
-and contains the intended source revision; a merged PR may still be building.
-The app's displayed version alone may not distinguish different `main`
-commits. See the [image and release flow](../../docs/releasing.md).
+and contains the intended source revision. Application PR merges are accumulated
+until the Release Please PR is merged and its tagged image is published. See the [image and release flow](../../docs/releasing.md).
 
 Record the running image digest and back up the private data before updating.
 Select a new pinned image, pull it and recreate this project only. For a local
