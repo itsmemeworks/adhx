@@ -1,56 +1,106 @@
 # Self-hosted release readiness
 
-Checked 19 October 2026 at `fe03221`. This is a release record, not a claim
-that the branch is deployed or that passing unit tests establishes safety.
+Updated 19 October 2026. Merge validation, a private server trial and public
+product distribution have different requirements. Nothing in this record means
+a service has been installed or the public website has been replaced.
 
-## Outstanding before installation or public release
+## Fixes included in this PR
 
-1. **Dependency updates and triage.** `pnpm audit --prod --json` reported 14
-   advisories: one critical, six high, six moderate and one low. The lockfile
-   contains Next.js 16.3.3, within the affected range of
-   [GHSA-vcvr-r3jv-pc5j](https://github.com/advisories/GHSA-vcvr-r3jv-pc5j)
-   and other Next.js advisories. The critical issue requires particular
-   attacker-controlled SVG inputs to Node ImageResponse; package presence is
-   not proof of exploitation in this app. Update to a patched compatible Next
-   release and patch the affected sharp, source-map-js, fast-uri,
-   brace-expansion and engine.io dependency paths, then repeat the audit and
-   relevant builds/tests. Some paths come from the react-email tooling bundled
-   as a production dependency; assess whether the renderer can be packaged
-   without its development server. No dependency versions changed in this audit.
-2. **Keyword-only indexing.** `noteSaved` returns early when semantic search is
-   disabled, and keyword entries are currently written by the understanding
-   worker. A new save with `SEMANTIC_SEARCH=off` therefore has no keyword entry
-   unless it was indexed earlier. Reproduced against a migrated synthetic database
-   in production mode: the fresh save was absent from keyword results until an
-   FTS entry was explicitly written. Separate cheap text indexing from model
-   inference and cover fresh/existing saves and account isolation in tests.
-3. **Actual Linux container and hardware checks.** Build the intended fixed
-   revision for linux/arm64 and linux/amd64. Test migrations, model loading,
-   representative video/image downloads, seek playback, restart recovery and
-   memory/CPU use on the target. Select a pinned image digest after validation.
-   The published latest image inspected earlier predates this branch.
-4. **Physical phones and distribution.** Simulator/emulator evidence exists;
-   verify signed physical-device sharing, background retries and picture in
-   picture. Publish usable phone download links before advertising them as
-   available releases.
-5. **Website cutover.** The replacement static product site is in `site/` and
-   builds independently. On 19 October the public domain still served the old
-   Fly-backed application. The Pages workflow runs from main/manual dispatch;
-   configure Pages, plan the legacy service/data transition and change DNS
-   separately. Do not imply an unmerged PR has updated the public domain.
+- **Production dependencies:** Next.js/eslint-config-next 16.3.8, Vitest 4.1.12
+  and compatible transitive patches replace the affected versions. The local
+  production audit reports **zero advisories**, down from fourteen. A dedicated
+  CI gate rejects new production advisories at every severity. Frozen-lockfile
+  installation passes.
+- **Independent keyword indexing:** every save notifies a model-free text index.
+  Web startup catches up missing entries, including posts with no embeddings.
+  `SEMANTIC_SEARCH=off` stops model workers while keyword search continues for
+  new and existing saves. Regression tests use production flags and verify
+  account/platform isolation, private metadata exclusion, moderation, startup
+  recovery and that no model child starts.
+- **Reproducible setup:** the quick start keeps configuration and a stable secret
+  in a private `.env` and explicitly builds/selects the source image. It does not
+  silently test an older published `latest`. Root and NAS proxy examples remain
+  vendor-neutral.
+- **Honest phone links:** default install links lead to build instructions until
+  signed releases exist. Custom public links are build-time Docker arguments.
+  The committed Android wrapper and paid iOS App Group requirement are documented.
+- **Website separation:** PR CI builds the static site without publishing it.
+  Pages publication is manual, so merging app changes cannot replace the legacy
+  hosted service accidentally.
 
-## Quality assessment
+## Required merge checks
 
-The code has useful boundaries for authentication, download queues, retained
-files and model processes, and broad automated coverage. The fixes at fe03221
-passed 2,843 tests, production web and iOS simulator builds, type checking and
-formatting; lint had no errors and 79 warnings. A temporary production server
-also checked migrations, retained saves, authentication and byte ranges.
+Use the checks on the current PR revision, rather than results from an earlier
+commit. They cover the production web build, types/lint/format, unit and browser
+suites, both extension targets, static website build and production dependency
+audit.
 
-Maintainability still needs work: the theater component exceeds 1,700 lines,
-the migration runner exceeds 1,000, and network definitions are copied between
-clients/site/server. Prefer smaller modules, explicit shared contracts and
-cross-client contract checks as the product stabilises. Add a PR gate for the
-static website build and a dependency audit gate after the present advisory
-backlog is resolved. These are follow-ups, not reasons to rewrite working code
-before a small private trial.
+The native Linux container matrix runs on AMD64 and ARM64. It checks the assembled
+non-root image, SQLite migrations/integrity, native ONNX bindings, synthetic
+VP9-to-H.264 conversion, image/video frame processing, the actual yt-dlp wrapper,
+anonymous API rejection, media byte ranges and persisted data after container
+recreation. The `validate-models` PR label enables real pinned text/image/video
+CPU inference and prints elapsed time and peak process RSS. Keep that label for
+this PR and require both native jobs to pass before recommending merge.
+
+To repeat full container checks locally after building the selected revision:
+
+```sh
+IMAGE_TAG=adhx:local bash scripts/container-smoke.sh --models
+```
+
+This uses temporary containers and synthetic data and removes its named volume
+on completion. It does not install an application service. Standard container
+checks can omit `--models`; the model check downloads the pinned weights.
+
+## Before a private server trial
+
+After merging, choose an image built from the merged revision. Either build it
+on the intended architecture or wait for its release image and pin the digest.
+The previously inspected published `latest` predates this branch.
+
+Inspect the target's current memory, CPU, disk capacity and proxy network. Keep
+its specific paths, hostnames, accounts and credentials outside this repository.
+Use a new private data folder, a stable secret, explicit invites and the existing
+HTTPS access boundary. Start with one download and one inference thread and a
+small library. Check representative real-network downloads (including a longer
+high-resolution video), inference and conversion alongside the host's existing
+services before enabling broad backfill. Synthetic hosted CI is not a throughput
+or memory guarantee for a particular NAS.
+
+Then verify sign-in, save/search/play/seek, account isolation, restart/retry
+recovery and backup/restore at the final HTTPS address. These checks necessarily
+follow a separately authorised trial installation; they cannot be truthfully
+marked done beforehand. The browser works without native app distribution.
+
+## Before broader phone or public website release
+
+Physical-device testing is still required for signed iOS App Group/Keychain
+sharing, Android release signing, background retries, picture-in-picture and
+media export. Follow the device checklists in the platform READMEs. Simulator
+and emulator builds are not evidence of those behaviours. Publish real signed
+APK/TestFlight links only after verifying them. These distribution tasks do not
+block a private browser-based server trial.
+
+The replacement site in `site/` builds independently. On 19 October the public
+domain still served the old Fly-backed application. Plan the existing service
+and data transition, configure Pages, deliberately publish and change DNS
+separately. This is not required to install a private self-hosted instance.
+
+## Remaining maintenance
+
+The full dependency audit still reports two development-tool findings:
+
+- [braces stack exhaustion](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm),
+  high, with no patched release available at this check.
+- [postcss-selector-parser CPU exhaustion](https://github.com/advisories/GHSA-rj75-hqrm-r3gf),
+  moderate, under Tailwind 3; its patch requires a major parser change.
+
+These paths consume repository glob/CSS inputs during lint/build/watch and are
+absent from the production audit. Do not suppress them or force untested major
+overrides. Track upstream fixes and validate a separate tooling upgrade.
+
+The code has useful account boundaries, durable queues and separate model
+processes. Large theater/migration modules and copied network definitions still
+need gradual maintenance and shared contract checks. They are not a reason to
+rewrite the application before a small private trial.

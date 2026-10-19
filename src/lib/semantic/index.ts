@@ -5,6 +5,7 @@ import { captureException } from '@/lib/sentry'
 import { PRIORITY, semanticEnabled, type UnderstandingKind } from './config'
 import { enqueuePosts, enqueueBackfill, type PostKey } from './queue'
 import { wakeJobs } from './supervisor'
+import { indexSavedPosts } from './keywords'
 
 export { getUnderstandingStatus } from './status'
 export { startSemanticProcesses, embedQuery } from './supervisor'
@@ -13,11 +14,15 @@ export type { PostKey } from './queue'
 
 /**
  * Tell the pipeline posts were just saved. Fire-and-forget: never throws and
- * never slows the save itself. Fresh saves are urgent; sync imports queue
- * behind them.
+ * never waits for the model. Keywords are indexed even with the model off.
+ * Fresh saves are urgent; sync imports queue behind them.
  */
 export function noteSaved(keys: PostKey[], priority: number = PRIORITY.urgent): void {
-  if (!semanticEnabled() || keys.length === 0) return
+  if (keys.length === 0) return
+  void indexSavedPosts(keys).catch((error) =>
+    captureException(error, { endpoint: 'semantic.noteSaved.keywords' }),
+  )
+  if (!semanticEnabled()) return
   void enqueuePosts(keys, priority)
     .then(() => wakeJobs())
     .catch((error) => captureException(error, { endpoint: 'semantic.noteSaved' }))

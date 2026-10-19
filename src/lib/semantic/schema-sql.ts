@@ -18,7 +18,8 @@
  * meaning and named ("Made for you"). Private, derived, recomputed when stale.
  *
  * `post_text_fts` is the keyword side of hybrid search: the same post text the
- * model reads (never tags), one row per post, written by the text job.
+ * model reads (never tags), one row per post, written on save independently
+ * of the model. A model-free startup pass fills any missing rows.
  */
 export const UNDERSTANDING_DDL = `
   CREATE TABLE IF NOT EXISTS post_embeddings (

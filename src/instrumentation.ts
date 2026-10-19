@@ -34,6 +34,11 @@ export async function register(): Promise<void> {
   const { initSentry } = await import('@/lib/sentry')
   initSentry()
 
+  // Keyword search works independently of the optional model. Catch up saves
+  // made before the keyword index existed or while inference was disabled.
+  const { startKeywordIndex } = await import('@/lib/semantic/keywords')
+  startKeywordIndex()
+
   // Understanding pipeline: child processes resume the durable queue, backfill
   // older saves and embed search queries. The model never runs in this
   // process. No-op when SEMANTIC_SEARCH=off or under test.

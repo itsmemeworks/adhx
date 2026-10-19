@@ -13,7 +13,7 @@ import { embedTexts } from '../src/lib/semantic/model'
 import { searchPosts } from '../src/lib/semantic/search'
 import { loadSearchItems } from '../src/lib/semantic/items'
 import { rerank, rerankAvailable } from '../src/lib/semantic/rerank'
-import { backfillKeywordIndex } from '../src/lib/semantic/worker'
+import { backfillKeywordIndex } from '../src/lib/semantic/keywords'
 
 type Labelled = { query: string; expected: string[] }
 

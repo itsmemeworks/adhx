@@ -59,16 +59,24 @@ You need:
 
 ```bash
 git clone https://github.com/itsmemeworks/adhx && cd adhx
-export SESSION_SECRET=$(openssl rand -base64 32)
-export NEXT_PUBLIC_APP_URL=https://adhx.your-domain.example
-export ALLOWED_EMAILS='you@example.com, @your-family.example'
-export EMAIL_LINKS_TO_ADMIN=1   # or SMTP_URL / RESEND_API_KEY, see Sign-in links
+cp .env.example .env
+openssl rand -base64 32
+```
+
+Edit `.env`: put the generated value in `SESSION_SECRET`, set `NEXT_PUBLIC_APP_URL` to your final HTTPS address, set `ALLOWED_EMAILS` to your invited addresses and set `EMAIL_LINKS_TO_ADMIN=1` (or configure SMTP/Resend). Create this file once and keep it private and stable; do not generate a new secret on each restart.
+
+For this source checkout, build and select its image explicitly:
+
+```bash
+docker build -t adhx:local .
+# Add ADHX_IMAGE=adhx:local to .env before the following commands.
+docker compose config --quiet
 docker compose up -d
 ```
 
 The root example publishes ADHX on `127.0.0.1:3000` (`ADHX_PORT` changes the host port). Put it behind your usual host-based reverse proxy for HTTPS; sign-in needs HTTPS outside `localhost`. The [`docker-compose.yml`](docker-compose.yml) keeps everything in one volume mounted at `/data`: the database, the search model and every kept file. Migrations run on start.
 
-To pin a release, set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx:<version>`. You can also build the image yourself with `docker build -t adhx .`.
+Once a release containing this code is published and tested, set `ADHX_IMAGE=ghcr.io/itsmemeworks/adhx@sha256:<digest>` to pin it. An older published `latest` does not contain an unmerged branch; using it is not a test of this checkout.
 
 **On a Docker host or NAS**, the [deployment guide](deploy/nas/README.md) explains persistent storage, permissions, resource controls, backups and connecting your own HTTPS proxy. The container-proxy example publishes no host port and requires no particular NAS vendor, VPN or public tunnel.
 
@@ -109,7 +117,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `KEEP_MEDIA=off`                             | Stop downloading altogether. Files already kept still play.                                                                    |
 | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | Optional: lets people connect X and bring in their bookmarks (see below).                                                      |
 | `AUTO_SYNC_EVERY_MINUTES`                    | Minutes between automatic X bookmark syncs per person, default `50`; `0` turns it off.                                         |
-| `SEMANTIC_SEARCH=off`                        | Stop model workers. Existing keyword entries remain searchable; new keyword indexing currently needs the worker.               |
+| `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                          |
 | `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                             |
 | `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                            |
 | `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                           |
@@ -215,7 +223,7 @@ The code works once, for 10 minutes. Open ADHX at an address your phone can reac
 There's no App Store version. Install it one of two ways:
 
 - **TestFlight.** If whoever runs your ADHX has set up TestFlight, use their invite link (it's on Settings → Phone app when `NEXT_PUBLIC_IOS_APP_URL` is set).
-- **Build it yourself** with a Mac, Xcode 16 or newer and an Apple account (a free one works, but the app then stops opening after 7 days until you build it again):
+- **Build it yourself** with a Mac, Xcode 16 or newer and an Apple Developer account. The full app/share-extension flow needs App Groups, which require paid membership. A free account can try the main app with that capability removed, but the share extension cannot read its connection:
   1. Open `apps/ios/Config/Base.xcconfig`. Set `ADHX_BUNDLE_PREFIX` to something only you use, like `com.yourname.adhxshare`, and `DEVELOPMENT_TEAM` to your team ID (Xcode → Settings → Accounts).
   2. Open `apps/ios/ADHXShare.xcodeproj`, plug in your phone, pick it at the top, and press Run.
   3. On the phone, trust your developer profile in Settings → General → VPN & Device Management.
@@ -226,16 +234,17 @@ To check it builds without a phone:
 xcodebuild -project apps/ios/ADHXShare.xcodeproj -scheme "ADHX Share" -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
-More in [`apps/ios/README.md`](apps/ios/README.md), including TestFlight.
+More in [`apps/ios/README.md`](apps/ios/README.md), including TestFlight. Optional `NEXT_PUBLIC_IOS_APP_URL` and `NEXT_PUBLIC_ANDROID_APP_URL` install links are compiled into the web client: pass matching `--build-arg` values when building Docker, or set them before a local `pnpm build`. Changing only a running container’s environment does not update these links.
 
 ### Android
 
-Download the APK from this project's [GitHub releases](https://github.com/itsmemeworks/adhx/releases) and open it (allow installing from your browser or files app when asked). [Obtainium](https://github.com/ImranR98/Obtainium) can watch the releases and keep it up to date: add the repository's address.
+No signed APK release was published as part of this PR. Build a debug APK for a private trial using the steps below. When a signed APK is attached to a [GitHub release](https://github.com/itsmemeworks/adhx/releases), it can be opened on the phone (allow installation from your browser or files app when asked). [Obtainium](https://github.com/ImranR98/Obtainium) can then watch those releases for updates.
 
-To build it yourself you need JDK 17 or newer and the Android SDK (Android Studio has both). Opening `apps/android` in Android Studio is simplest. From a terminal, make the Gradle wrapper once (it isn't in the repository yet), then build:
+To build it yourself you need JDK 17 or newer and the Android SDK (Android Studio has both). Opening `apps/android` in Android Studio is simplest. The Gradle wrapper is committed; from a terminal:
 
 ```bash
-cd apps/android && gradle wrapper --gradle-version 8.11.1 && ./gradlew assembleDebug
+cd apps/android
+./gradlew assembleDebug
 ```
 
 The APK lands in `app/build/outputs/apk/debug/`. Signing a release build is in [`apps/android/README.md`](apps/android/README.md).
@@ -291,9 +300,9 @@ ADHX is for keeping posts for yourself and the people you share your server with
 
 ## The website
 
-The replacement product site for [adhx.com](https://adhx.com) lives in [`site/`](site/). Run it with `pnpm site:dev` or build it with `pnpm site:build`. `.github/workflows/site.yml` publishes changes from `main` once GitHub Pages is configured; moving an existing domain also requires a deliberate DNS cutover. Source changes in an unmerged PR do not update the live website. Your self-hosted ADHX does not serve this site.
+The replacement product site for [adhx.com](https://adhx.com) lives in [`site/`](site/). Run it with `pnpm site:dev` or build it with `pnpm site:build`. `.github/workflows/site.yml` publishes only when manually dispatched after GitHub Pages is configured; moving an existing domain also requires a deliberate DNS cutover. Source changes in an unmerged PR do not update the live website. Your self-hosted ADHX does not serve this site.
 
-Before a release or installation, review the [release-readiness record](docs/rollout/self-hosted-release.md), including dependency updates, keyword-only indexing and Linux/phone validation still outstanding.
+Before a release or installation, review the [release-readiness record](docs/rollout/self-hosted-release.md), including automated merge gates and the separate checks for a private trial and a public release.
 
 ## Contributing
 

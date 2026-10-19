@@ -155,6 +155,21 @@ everything else. The app uses the system serif and system sans unless
 under `UIAppFonts` in both `Config/App-Info.plist` and
 `Config/ShareExtension-Info.plist`.
 
+## Before testing on a physical phone
+
+A simulator build does not establish device signing, App Group/Keychain sharing,
+background execution or picture-in-picture. Before distributing a build:
+
+- Pair at the final HTTPS origin, revoke the key and confirm the phone disconnects.
+- Share a real supported post from another app, then repeat offline and retry.
+- Confirm the main app and Share Extension use the same connection.
+- Play and seek a retained video, test picture-in-picture and save to Photos.
+- Search beyond the first results page, change queries during loading and retry
+  a failed page.
+
+These are device checks to complete with the operator; an unsigned simulator
+build is not evidence that they passed.
+
 ## TestFlight
 
 1. Set `ADHX_BUNDLE_PREFIX` and `DEVELOPMENT_TEAM` as above.

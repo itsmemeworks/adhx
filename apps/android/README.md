@@ -162,6 +162,15 @@ scrolling page. A video that can't play says why, in the server's words.
 only by the exact words: type, and after a moment a two-column grid of posters
 shows how close each one is. Tap one to play the results from there.
 
+## Before distributing a phone build
+
+A debug build or emulator run does not establish signed physical-device behaviour.
+On a physical phone, verify pairing/revocation at the final HTTPS origin, sharing
+from another app, offline queuing/retries, seek playback, picture-in-picture,
+saving media to the gallery and search pagination. Keep the release signing key
+private and reuse it for updates. No signed APK or store release is published by
+merging this server PR.
+
 ## Layout
 
 ```

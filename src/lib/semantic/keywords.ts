@@ -1,5 +1,9 @@
 import { sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
+import { captureException } from '@/lib/sentry'
+import { buildPostDocument } from './documents'
+import { loadPostItem } from './posts'
+import type { PostKey } from './queue'
 
 /**
  * Keyword side of hybrid search: SQLite FTS5 over the same post text the
@@ -25,6 +29,48 @@ export function hasPostText(platform: string, postId: string): boolean {
     sql`SELECT 1 AS one FROM post_text_fts WHERE platform = ${platform} AND post_id = ${postId} LIMIT 1`,
   )
   return rows.length > 0
+}
+
+/** Index shared post content immediately, without waiting for model inference. */
+export async function indexSavedPosts(keys: PostKey[]): Promise<number> {
+  const unique = new Map(keys.map((key) => [`${key.platform || 'twitter'}:${key.postId}`, key]))
+  let indexed = 0
+  for (const key of unique.values()) {
+    const platform = key.platform || 'twitter'
+    const item = await loadPostItem(platform, key.postId)
+    if (!item) continue
+    indexPostText(platform, key.postId, buildPostDocument(item).keywords)
+    indexed++
+    if (indexed % 50 === 0) await new Promise((resolve) => setImmediate(resolve))
+  }
+  return indexed
+}
+
+/**
+ * Catch up all saved posts missing keyword text, including saves made while
+ * the model was disabled or before FTS existed. No embeddings are required.
+ * Re-running after a restart only visits missing rows.
+ */
+export async function backfillKeywordIndex(): Promise<number> {
+  const rows = db.all<{ platform: string; postId: string }>(sql`
+    SELECT platform, id AS postId FROM bookmarks
+    EXCEPT
+    SELECT platform, post_id AS postId FROM post_text_fts
+  `)
+  return indexSavedPosts(rows)
+}
+
+const keywordStartup = globalThis as unknown as { __adhxKeywordBackfill?: Promise<void> }
+
+/** Start a model-free catch-up once per web process, without delaying startup. */
+export function startKeywordIndex(): void {
+  if (process.env.NODE_ENV === 'test' || process.env['VITEST']) return
+  keywordStartup.__adhxKeywordBackfill ??= backfillKeywordIndex()
+    .then(() => undefined)
+    .catch((error) => {
+      keywordStartup.__adhxKeywordBackfill = undefined
+      captureException(error, { endpoint: 'semantic.keywordBackfill' })
+    })
 }
 
 /**

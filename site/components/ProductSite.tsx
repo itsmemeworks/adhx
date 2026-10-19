@@ -15,10 +15,12 @@ import { HeroReel } from './HeroReel'
 export const GITHUB_URL = 'https://github.com/itsmemeworks/adhx'
 
 const SETUP = `git clone https://github.com/itsmemeworks/adhx && cd adhx
-export SESSION_SECRET=$(openssl rand -base64 32)
-export NEXT_PUBLIC_APP_URL=https://adhx.your-domain.example
-export ALLOWED_EMAILS='you@example.com, @your-friends.example'
-export EMAIL_LINKS_TO_ADMIN=1
+cp .env.example .env
+openssl rand -base64 32
+# Edit .env: keep that secret, set your HTTPS address,
+# invited emails, EMAIL_LINKS_TO_ADMIN=1, ADHX_IMAGE=adhx:local
+docker build -t adhx:local .
+docker compose config --quiet
 docker compose up -d`
 
 function GitHubMark({ className }: { className?: string }) {
@@ -612,6 +614,17 @@ export function ProductSite() {
                 Connect a phone by scanning a code in Settings. Play and search your saves in the
                 app; your server downloads, understands and streams the media.
               </p>
+              <p className="m-0">
+                The apps are currently available to build from source. Follow the{' '}
+                <a href={`${GITHUB_URL}/blob/main/apps/ios/README.md`} className="underline">
+                  iPhone setup
+                </a>{' '}
+                or{' '}
+                <a href={`${GITHUB_URL}/blob/main/apps/android/README.md`} className="underline">
+                  Android setup
+                </a>{' '}
+                guide; there are no store downloads in this release.
+              </p>
             </>
           }
         >
@@ -654,7 +667,7 @@ export function ProductSite() {
               </h2>
               <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[17px] leading-relaxed text-nx-soft">
                 {[
-                  'One Docker container and one folder of data. Back it up like anything else.',
+                  'One Docker container and one folder of data. Keep its secret in your private .env file; stop the app or use a coordinated SQLite backup before copying its data.',
                   'Invite only the people you choose. No email service needed: you can hand sign-in links over yourself.',
                   'Search runs on your server. Nothing goes to an AI company unless you add the optional TypeSafe key, which sharpens search and names channels.',
                   'Kept media and shared previews play without sign-in to anyone who can reach the server. Use private networking when that is your intended boundary.',

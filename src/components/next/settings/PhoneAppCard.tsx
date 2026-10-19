@@ -24,8 +24,12 @@ const IOS_URL =
   process.env.NEXT_PUBLIC_IOS_APP_URL ||
   'https://github.com/itsmemeworks/adhx/blob/main/apps/ios/README.md'
 const ANDROID_URL =
-  process.env.NEXT_PUBLIC_ANDROID_APP_URL || 'https://github.com/itsmemeworks/adhx/releases'
+  process.env.NEXT_PUBLIC_ANDROID_APP_URL ||
+  'https://github.com/itsmemeworks/adhx/blob/main/apps/android/README.md'
 const IOS_LABEL = process.env.NEXT_PUBLIC_IOS_APP_URL ? 'iPhone (TestFlight)' : 'iPhone (build it)'
+const ANDROID_LABEL = process.env.NEXT_PUBLIC_ANDROID_APP_URL
+  ? 'Android (APK)'
+  : 'Android (build it)'
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '0.0.0.0'])
 
@@ -145,7 +149,7 @@ export function PhoneAppCard() {
                   {IOS_LABEL}
                 </a>
                 <a href={ANDROID_URL} target="_blank" rel="noreferrer" className={SECONDARY}>
-                  Android (download)
+                  {ANDROID_LABEL}
                 </a>
               </div>
             </div>

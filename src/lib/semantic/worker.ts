@@ -207,30 +207,6 @@ async function withKeptState(
 }
 
 /**
- * Posts understood before the keyword index existed have no keyword row.
- * Fill them in without the model (no re-embedding). Exported for tests.
- */
-export async function backfillKeywordIndex(): Promise<number> {
-  const rows = db.all<{ platform: string; post_id: string }>(sql`
-    SELECT e.platform AS platform, e.post_id AS post_id
-    FROM post_embeddings e
-    WHERE e.kind = 'text'
-      AND NOT EXISTS (
-        SELECT 1 FROM post_text_fts f WHERE f.platform = e.platform AND f.post_id = e.post_id
-      )
-  `)
-  let done = 0
-  for (const row of rows) {
-    const item = await loadPostItem(row.platform, row.post_id)
-    if (!item) continue
-    indexPostText(row.platform, row.post_id, buildPostDocument(item).keywords)
-    done++
-    if (done % 50 === 0) await new Promise((resolve) => setImmediate(resolve))
-  }
-  return done
-}
-
-/**
  * Posts understood as words before "no words of its own" became 'none'
  * (`PostDocument.hasWords`): mark them so they stop matching on an author
  * line. Short keyword rows are the only candidates, so this stays cheap.
@@ -262,7 +238,6 @@ export async function clearWordlessText(): Promise<number> {
 async function loop(): Promise<void> {
   try {
     await enqueueBackfill()
-    await backfillKeywordIndex()
     await clearWordlessText()
   } catch (error) {
     captureException(error, { endpoint: 'semantic.backfill' })

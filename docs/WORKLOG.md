@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Pre-installation fixes and native Linux validation gates
+
+- Patch production dependencies (Next 16.3.8 and compatible transitives): local production audit now zero; retain two documented development-tool advisories rather than forcing major overrides.
+- Index shared post text on save and at web startup independently of model inference; cover production disabled flags, startup recovery, privacy/moderation and no model forks.
+- Add native Linux AMD64/ARM64 container checks for media/download tools, ONNX, migrations, ranges, auth and persistent-volume recreation; enable real model inference with the `validate-models` label, replacing obsolete workflow-string assertions.
+- Gate PRs on static website build and production dependency audit; keep Pages publication manual.
+- Persist quick-start configuration, select the checkout's image explicitly, correct phone build/signing guidance and default links, and expose public install destinations as image build arguments.
+- Readiness now distinguishes merge checks from target workload/restore checks after a private trial and later phone/public-site distribution. No service installation, image publication or domain change.
+
 ## 2026-10-19 — Guide, website and release-quality audit
 
 - Correct stale self-hosting orientation, backup/dev-secret instructions, extension setup and privacy descriptions; separate website source from live deployment.

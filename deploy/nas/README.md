@@ -79,7 +79,23 @@ docker build -t adhx:local .
 # Set ADHX_IMAGE=adhx:local in the chosen Compose project's .env.
 ```
 
-This builds an image; it does not prove that model inference, source downloads
+The PR's native AMD64/ARM64 CI validates the assembled image with synthetic
+media, migrations, persisted state, byte ranges and authentication. Full model
+inference is available through the CI workflow's `check_models` input. To repeat
+these checks on a local builder without installing an application service:
+
+```sh
+IMAGE_TAG=adhx:local bash scripts/container-smoke.sh --models
+```
+
+Run from the repository root with Docker available. This creates temporary
+containers and a named volume, downloads the pinned model and removes the test
+containers/volume afterward. It uses synthetic data, not an existing library.
+For custom public phone install links, add `--build-arg NEXT_PUBLIC_IOS_APP_URL=...`
+and/or `--build-arg NEXT_PUBLIC_ANDROID_APP_URL=...` to the image build; they are
+compiled into the web client and cannot be changed by container runtime env.
+
+A build alone does not prove that model inference, source downloads
 or media playback work on the target hardware. Do not label an untested image
 as a verified release.
 
@@ -155,9 +171,9 @@ use several cores and substantial temporary disk space, especially at 4K.
   once with backfill enabled clears that boundary for a later activation.
 - `KEEP_H264=off`: skip conversion, preserving source resolution and codec;
   some browsers may not play that codec.
-- `SEMANTIC_SEARCH=off`: stop model workers. Existing keyword entries remain
-  searchable, but new saves currently need the worker to populate that index.
-  See the [release-readiness record](../../docs/rollout/self-hosted-release.md).
+- `SEMANTIC_SEARCH=off`: stop model workers while continuing keyword indexing
+  for new saves. Startup catches up saved posts missing from the keyword index,
+  without downloading a model.
 
 The first model download is about 400 MB and persists in `/data/models`.
 Kept media dominates storage. Provision room for the library and scratch

@@ -12,6 +12,11 @@ on:
         description: 'Git ref to run CI on'
         required: false
         type: string
+      check_models:
+        description: 'Run full pinned text/image/video CPU inference on both Linux architectures'
+        required: false
+        default: false
+        type: boolean
   # Trigger when Release Please workflow completes (to run CI on release PRs)
   # This works because workflow_run events ARE triggered even when the
   # original workflow used GITHUB_TOKEN
@@ -131,96 +136,78 @@ jobs:
       - name: Validate emitted manifests
         run: pnpm --dir extension validate:manifests
 
+  # Native builds exercise the actual installed architecture, including SQLite,
+  # FFmpeg, yt-dlp and ONNX bindings. No QEMU inference and no image publishing.
   container-smoke:
     if: |
       github.event_name != 'workflow_run' &&
       (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     env:
-      IMAGE_TAG: adhx-ci:${{ github.sha }}
-      CONTAINER_NAME: adhx-container-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+      IMAGE_TAG: adhx-ci:${{ github.sha }}-${{ matrix.arch }}
+      CHECK_MODELS: ${{ inputs.check_models || contains(github.event.pull_request.labels.*.name, 'validate-models') }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Build assembled runner image
         run: |
           docker build \
+            --platform linux/${{ matrix.arch }} \
             --target runner \
             --build-arg SENTRY_RELEASE="$GITHUB_SHA" \
             --tag "$IMAGE_TAG" \
             .
 
-      - name: Verify runner dependencies and migration
+      - name: Check native media, auth, migrations and volume persistence
         run: |
-          docker run --rm \
-            --env DATABASE_PATH=/tmp/adhx-migration-smoke.db \
-            --entrypoint sh \
-            "$IMAGE_TAG" \
-            -euc '
-              test "$(id -u)" = "1001"
-              test -x ./node_modules/.bin/tsx
-              ./node_modules/.bin/tsx --version
-              node -e '"'"'
-                const Database = require("better-sqlite3")
-                const db = new Database(":memory:")
-                if (db.prepare("select 1 as value").get().value !== 1) process.exit(1)
-                db.close()
-              '"'"'
-              ./node_modules/.bin/tsx src/lib/db/migrate.ts
-              node -e '"'"'
-                const Database = require("better-sqlite3")
-                const db = new Database(process.env.DATABASE_PATH)
-                const integrity = db.pragma("integrity_check", { simple: true })
-                const users = db.prepare(
-                  "select name from sqlite_master where type = ? and name = ?"
-                ).get("table", "users")
-                if (integrity !== "ok" || users?.name !== "users") process.exit(1)
-                db.close()
-              '"'"'
-            '
+          if [ "$CHECK_MODELS" = 'true' ]; then
+            bash scripts/container-smoke.sh --models
+          else
+            bash scripts/container-smoke.sh
+          fi
 
-      - name: Start runner and verify health
-        run: |
-          docker run --detach \
-            --name "$CONTAINER_NAME" \
-            --publish 127.0.0.1:3000:3000 \
-            --env DATABASE_PATH=/tmp/adhx-health-smoke.db \
-            --env NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 \
-            --env SESSION_SECRET=ci-container-smoke-session-secret \
-            --env TWITTER_CLIENT_ID=ci-container-smoke \
-            --env TWITTER_CLIENT_SECRET=ci-container-smoke \
-            "$IMAGE_TAG"
+  site-build:
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # Validation only: Pages publishing remains a separate manual workflow.
+      - run: pnpm site:build
 
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:3000/api/health \
-              --output /tmp/adhx-health.json; then
-              if python3 -c '
-          import json
-          with open("/tmp/adhx-health.json", encoding="utf-8") as response:
-              data = json.load(response)
-          assert data.get("status") == "healthy"
-          assert data.get("checks", {}).get("database", {}).get("status") == "healthy"
-          '; then
-                exit 0
-              fi
-            fi
-            echo "Health check attempt ${attempt}/30 not healthy yet"
-            sleep 2
-          done
-
-          echo "Runner did not become healthy within 60 seconds"
-          exit 1
-
-      - name: Show runner diagnostics
-        if: failure()
-        run: |
-          docker ps --all --filter "name=^/${CONTAINER_NAME}$"
-          docker inspect "$CONTAINER_NAME" || true
-          docker logs "$CONTAINER_NAME" || true
-
-      - name: Clean up runner
-        if: always()
-        run: docker rm --force "$CONTAINER_NAME" 2>/dev/null || true
+  dependency-audit:
+    if: |
+      github.event_name != 'workflow_run' &&
+      (github.event_name == 'push' || !startsWith(github.head_ref || '', 'release-please--'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Reject known production dependency advisories
+        run: pnpm audit --prod --audit-level low
 
   # Dedicated formatting gate. Kept as its own job (rather than a step in `test`)
   # so it surfaces as a distinct required status check on PRs.

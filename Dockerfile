@@ -24,6 +24,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # Build the application with the lockfile-resolved toolchain.
 FROM deps AS builder
 ARG SENTRY_RELEASE
+# Public phone download destinations are compiled into the client bundle.
+# Leave blank to use the source/build instructions; these are never secrets.
+ARG NEXT_PUBLIC_IOS_APP_URL=""
+ARG NEXT_PUBLIC_ANDROID_APP_URL=""
+ENV NEXT_PUBLIC_IOS_APP_URL=${NEXT_PUBLIC_IOS_APP_URL}
+ENV NEXT_PUBLIC_ANDROID_APP_URL=${NEXT_PUBLIC_ANDROID_APP_URL}
 COPY . .
 RUN pnpm run build
 
