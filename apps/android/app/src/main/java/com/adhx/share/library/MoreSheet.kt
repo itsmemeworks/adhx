@@ -64,7 +64,8 @@ import kotlinx.coroutines.launch
 
 /**
  * More: the post at a glance, then Share the video (the kept file, not the
- * link), Copy link, Copy the words and Open in my ADHX.
+ * link), Copy link, Copy the words, Share an ADHX link (for people on the
+ * same server) and Open in my ADHX.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,6 +146,19 @@ fun MoreSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
                     title = "Copy the words",
                     subtitle = words.lineSequence().first(),
                     onClick = { copy("Words", words, "Words copied") },
+                )
+            }
+            val adhxLink = post.openPath?.takeIf { it.isNotBlank() }?.let { AdhxApi.resolve(server, it)?.toString() }
+            if (adhxLink != null) {
+                MoreRow(
+                    icon = rememberVectorPainter(Icons.Filled.Share),
+                    title = "Share an ADHX link",
+                    subtitle = "Only opens for people on your ADHX",
+                    onClick = {
+                        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, adhxLink)
+                        context.startActivity(Intent.createChooser(send, null))
+                        close()
+                    },
                 )
             }
             post.openPath?.takeIf { it.isNotBlank() }?.let { path ->

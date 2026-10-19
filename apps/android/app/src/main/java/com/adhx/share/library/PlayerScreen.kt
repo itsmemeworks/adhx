@@ -3,6 +3,7 @@ package com.adhx.share.library
 import android.content.Context
 import android.content.Intent
 import android.view.LayoutInflater
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +49,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -175,6 +177,9 @@ fun PlayerScreen(
     var hidden by rememberSaveable { mutableStateOf(false) }
     var notice by remember { mutableStateOf<Notice?>(null) }
     var saving by remember { mutableStateOf<String?>(null) }
+    // The post whose files are coming down for Share, and how far (null: unknown).
+    var sharing by remember { mutableStateOf<String?>(null) }
+    var shareProgress by remember { mutableStateOf<Float?>(null) }
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     val playback = remember { Playback() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
@@ -368,6 +373,8 @@ fun PlayerScreen(
                 repeat = repeat,
                 hidden = hidden,
                 saving = saving == post.key,
+                sharing = sharing == post.key,
+                shareProgress = shareProgress,
                 pip = inPip,
                 scrub = if (page == settled) scrub else null,
                 chrome = chrome,
@@ -390,13 +397,24 @@ fun PlayerScreen(
                     repeat = !repeat
                     notice = Notice(if (repeat) "Repeating this one" else "Plays the next save when this ends")
                 },
-                onSave = { url, name ->
+                onSave = {
                     if (saving == null) {
                         saving = post.key
                         scope.launch {
-                            val ok = SaveToPhone.save(context, url, name)
+                            val said = ShareKept.save(context, server, post)
                             saving = null
-                            notice = Notice(if (ok) "Saved to your phone" else "Couldn’t save this to your phone")
+                            if (said == ShareKept.COPIED) Toast.makeText(context, said, Toast.LENGTH_SHORT).show() else notice = Notice(said)
+                        }
+                    }
+                },
+                onShare = {
+                    if (sharing == null) {
+                        sharing = post.key
+                        shareProgress = null
+                        scope.launch {
+                            val problem = ShareKept.share(context, server, post) { shareProgress = it }
+                            sharing = null
+                            problem?.let { notice = Notice(it) }
                         }
                     }
                 },
@@ -491,6 +509,8 @@ private fun PostPage(
     repeat: Boolean,
     hidden: Boolean,
     saving: Boolean,
+    sharing: Boolean,
+    shareProgress: Float?,
     pip: Boolean,
     scrub: Float?,
     chrome: Float,
@@ -501,7 +521,8 @@ private fun PostPage(
     onPip: (() -> Unit)?,
     onToggleMute: () -> Unit,
     onToggleRepeat: () -> Unit,
-    onSave: (url: String, name: String) -> Unit,
+    onSave: () -> Unit,
+    onShare: () -> Unit,
     onSeek: (Long) -> Unit,
     onHide: () -> Unit,
 ) {
@@ -515,20 +536,8 @@ private fun PostPage(
     val album = rememberPagerState { photos.size }
     val plays = PostKind.plays(post.kind)
 
-    // What Save keeps: the video (or sound), or the photo on screen.
-    val save: (() -> Unit)? = when {
-        !SaveToPhone.supported -> null
-        plays -> post.media.firstOrNull()?.url?.let { AdhxApi.resolve(server, it)?.toString() }?.let { url ->
-            { onSave(url, SaveToPhone.fileName(post.platform, post.id)) }
-        }
-        photos.isNotEmpty() -> {
-            {
-                val index = album.currentPage.coerceIn(0, photos.lastIndex)
-                onSave(photos[index], SaveToPhone.fileName(post.platform, post.id, index.takeIf { photos.size > 1 }))
-            }
-        }
-        else -> null
-    }
+    // Save keeps the video, sound or every photo; a text post's words are copied.
+    val canSave = remember(post.key, server) { ShareKept.files(post, server).isEmpty() || SaveToPhone.supported }
 
     Box(
         Modifier
@@ -588,9 +597,12 @@ private fun PostPage(
                 muted = if (plays) muted else null,
                 repeat = if (plays) repeat else null,
                 saving = saving,
+                sharing = sharing,
+                shareProgress = shareProgress,
                 onToggleMute = onToggleMute,
                 onToggleRepeat = onToggleRepeat,
-                onSave = save,
+                onSave = if (canSave) onSave else null,
+                onShare = onShare,
                 onMore = onMore,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -872,9 +884,12 @@ private fun ActionColumn(
     muted: Boolean?,
     repeat: Boolean?,
     saving: Boolean,
+    sharing: Boolean,
+    shareProgress: Float?,
     onToggleMute: () -> Unit,
     onToggleRepeat: () -> Unit,
     onSave: (() -> Unit)?,
+    onShare: () -> Unit,
     onMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -901,14 +916,33 @@ private fun ActionColumn(
             }
         }
         if (onSave != null) {
-            ActionButton(label = "Save", description = "Save to your phone", onClick = { if (!saving) onSave() }) {
+            val words = post.media.isEmpty()
+            ActionButton(
+                label = "Save",
+                description = if (words) "Copy the words" else "Save to your phone",
+                onClick = { if (!saving) onSave() },
+            ) {
                 if (saving) Spinner(size = 20.dp, stroke = 2.dp) else ActionIcon(painterResource(R.drawable.ic_save_to_phone))
             }
         }
-        if (source != null) {
-            ActionButton(label = "Share", description = "Share", onClick = { shareLink(context, source) }) {
-                ActionIcon(rememberVectorPainter(Icons.Filled.Share), size = 21)
+        // The kept file itself (or the words): an ADHX link only opens for people on it.
+        ActionButton(label = "Share", description = "Share", onClick = { if (!sharing) onShare() }) {
+            when {
+                !sharing -> ActionIcon(rememberVectorPainter(Icons.Filled.Share), size = 21)
+                shareProgress == null -> Spinner(size = 20.dp, stroke = 2.dp)
+                else -> {
+                    val fraction by animateFloatAsState(shareProgress.coerceIn(0f, 1f), label = "share")
+                    CircularProgressIndicator(
+                        progress = { fraction },
+                        modifier = Modifier.size(22.dp),
+                        color = AdhxColors.Accent,
+                        trackColor = AdhxColors.White.copy(alpha = 0.18f),
+                        strokeWidth = 2.5.dp,
+                    )
+                }
             }
+        }
+        if (source != null) {
             ActionButton(
                 label = "Original",
                 description = "Open on ${Networks.name(post.platform) ?: "its site"}",
@@ -1123,12 +1157,6 @@ private fun clock(ms: Long): String {
     val m = (total % 3600) / 60
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
-}
-
-/** The system share sheet, with the post's own link. */
-private fun shareLink(context: Context, url: String) {
-    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url)
-    context.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 /** A round button over the player (the top bar). */

@@ -51,28 +51,58 @@ object SaveToPhone {
     /**
      * Fetch [url] with `download=1` into the app's cache (cache/shared, which
      * the FileProvider hands out) for the share sheet. Earlier ones are cleared
-     * first, so only one copy is ever kept.
+     * first, so only one share's files are ever kept.
      */
-    suspend fun fetchToShare(context: Context, url: String, name: String): Pair<File, String>? = withContext(Dispatchers.IO) {
-        val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
-            ?: return@withContext null
+    suspend fun fetchToShare(context: Context, url: String, name: String): Pair<File, String>? =
+        fetchAllToShare(context, listOf(url), listOf(name))?.firstOrNull()
+
+    /**
+     * The same for several files (an album), with [onProgress] from 0 to 1
+     * as they come in (null while a file's size isn't known). Null when any
+     * of them didn't come.
+     */
+    suspend fun fetchAllToShare(
+        context: Context,
+        urls: List<String>,
+        names: List<String>,
+        onProgress: (Float?) -> Unit = {},
+    ): List<Pair<File, String>>? = withContext(Dispatchers.IO) {
         val folder = File(context.cacheDir, "shared").apply {
             deleteRecursively()
             mkdirs()
         }
-        try {
-            client.newCall(Request.Builder().url(address).build()).execute().use { response ->
-                val body = response.body
-                if (!response.isSuccessful || body == null) return@withContext null
-                val type = body.contentType()?.let { "${it.type}/${it.subtype}" } ?: "video/mp4"
-                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "mp4"
-                val file = File(folder, "$name.$extension")
-                file.outputStream().use { out -> body.byteStream().copyTo(out) }
-                file to type
+        val got = mutableListOf<Pair<File, String>>()
+        for ((i, url) in urls.withIndex()) {
+            val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
+                ?: return@withContext null
+            try {
+                client.newCall(Request.Builder().url(address).build()).execute().use { response ->
+                    val body = response.body
+                    if (!response.isSuccessful || body == null) return@withContext null
+                    val type = body.contentType()?.let { "${it.type}/${it.subtype}" } ?: "application/octet-stream"
+                    val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(type) ?: "bin"
+                    val file = File(folder, "${names.getOrElse(i) { "adhx-$i" }}.$extension")
+                    val length = body.contentLength().takeIf { it > 0 }
+                    var read = 0L
+                    body.byteStream().use { input ->
+                        file.outputStream().use { out ->
+                            val buffer = ByteArray(64 * 1024)
+                            while (true) {
+                                val n = input.read(buffer)
+                                if (n < 0) break
+                                out.write(buffer, 0, n)
+                                read += n
+                                onProgress(length?.let { (i + read.toFloat() / it) / urls.size })
+                            }
+                        }
+                    }
+                    got += file to type
+                }
+            } catch (e: IOException) {
+                return@withContext null
             }
-        } catch (e: IOException) {
-            null
         }
+        got
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
