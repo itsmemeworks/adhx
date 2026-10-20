@@ -1,10 +1,12 @@
+import { adminOnlyResponse } from '@/lib/admin/only'
 import { ok } from '@/lib/api/response'
 import { getTrendingItems, LIVE_WINDOW_HOURS } from '@/lib/trending/query'
 import { publicReadRateLimit } from '@/lib/rate-limit'
 import type { NextResponse } from 'next/server'
 
 /**
- * GET /api/activity — the public, anonymous pulse for the landing + Discover.
+ * GET /api/activity — admins only: the anonymous pulse the retired landing and
+ * Discover used. A private friends server has no public audience for it.
  *
  * Thin wrapper over `getTrendingItems()` (the single audited choke point for
  * the anonymity invariant — `userId` is never selected there). Returns the
@@ -29,6 +31,8 @@ function noStore(response: NextResponse): NextResponse {
 }
 
 export async function GET(request?: Request) {
+  const denied = await adminOnlyResponse()
+  if (denied) return noStore(denied)
   if (request) {
     const limited = publicReadRateLimit(request)
     if (limited) return noStore(limited)

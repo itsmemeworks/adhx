@@ -29,7 +29,7 @@ export interface SendPerson {
   username: string
   name: string | null
   avatarUrl: string | null
-  /** They already have a save of it they can see (their own save, any visibility). */
+  /** They already have a shared save of it (a Just for me save is never revealed). */
   has: boolean
   /** You've already sent it to them. */
   sent: boolean
@@ -83,11 +83,15 @@ export function postAccess(
   return 'none'
 }
 
-/** Members (not you) who already have their own save of the post. */
+/**
+ * Members who already have a shared save of the post. A Just for me save
+ * doesn't count: the sender must not learn about it, so that person is
+ * offered and can be sent the post like anyone else.
+ */
 function holders(platform: string, id: string): Set<string> {
   const rows = db.all<{ user_id: string }>(sql`
-    SELECT DISTINCT user_id FROM bookmarks
-    WHERE platform = ${platform} AND id = ${id} AND COALESCE(source, '') != 'quoted'
+    SELECT DISTINCT b.user_id FROM bookmarks b
+    WHERE b.platform = ${platform} AND b.id = ${id} AND ${visibleSave('b')}
   `)
   return new Set(rows.map((r) => r.user_id))
 }
