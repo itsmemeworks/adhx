@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.2.0](https://github.com/itsmemeworks/adhx/compare/v2.1.2...v2.2.0) (2026-10-20)
+
+
+### Features
+
+* **admin:** the new admin area ([#571](https://github.com/itsmemeworks/adhx/issues/571)) ([9b94762](https://github.com/itsmemeworks/adhx/commit/9b94762109159c9960eb45da6d8ae4383f3cb94d))
+* curate generated channels with optional typesafe images ([#570](https://github.com/itsmemeworks/adhx/issues/570)) ([75b32f7](https://github.com/itsmemeworks/adhx/commit/75b32f7f1e6b852f7db06b14bafcddc826597b17))
+* move app strings to the new voice ([#559](https://github.com/itsmemeworks/adhx/issues/559)) ([3ede6e5](https://github.com/itsmemeworks/adhx/commit/3ede6e555a41d92204501082c8ba624fe61eba32))
+* **site:** the new adhx.com for the friends feed ([#563](https://github.com/itsmemeworks/adhx/issues/563)) ([085c196](https://github.com/itsmemeworks/adhx/commit/085c196b237a24eb3ffff83ba51e60d7ff4e4d6d))
+* the friends feed ([#562](https://github.com/itsmemeworks/adhx/issues/562)) ([99e6850](https://github.com/itsmemeworks/adhx/commit/99e685000120c17a5a746e895c2348a04029f558))
+
+
+### Bug Fixes
+
+* **android:** match the phone boards in a final parity pass ([#574](https://github.com/itsmemeworks/adhx/issues/574)) ([14ac279](https://github.com/itsmemeworks/adhx/commit/14ac2797cee64561aea0a70d35c48951ca35390c))
+* **app:** show kept posters in shared lately and on their way ([#575](https://github.com/itsmemeworks/adhx/issues/575)) ([59e841a](https://github.com/itsmemeworks/adhx/commit/59e841a0eaa8007995775c2a0cc804713a17bc81))
+* **feed:** let a post sent to you skip the kind filter ([#576](https://github.com/itsmemeworks/adhx/issues/576)) ([8eeffc8](https://github.com/itsmemeworks/adhx/commit/8eeffc8b3ee443f169b2a2a478e50dff504c5e15))
+* **ios:** match the phone boards in a final parity pass ([#572](https://github.com/itsmemeworks/adhx/issues/572)) ([b56fb8a](https://github.com/itsmemeworks/adhx/commit/b56fb8af0975a97b2b170d13908904b848691e29))
+* **privacy:** close the just for me gaps ([#569](https://github.com/itsmemeworks/adhx/issues/569)) ([07e1a70](https://github.com/itsmemeworks/adhx/commit/07e1a70eb2537e86c8d49ab301dd390323483fd0))
+
+
+### Performance Improvements
+
+* reduce mac model memory and benchmark video processing ([#568](https://github.com/itsmemeworks/adhx/issues/568)) ([c147c44](https://github.com/itsmemeworks/adhx/commit/c147c4445948db945f5b35b422d6f2baff8278f8))
+
 ## [2.1.2](https://github.com/itsmemeworks/adhx/compare/v2.1.1...v2.1.2) (2026-10-19)
 
 
