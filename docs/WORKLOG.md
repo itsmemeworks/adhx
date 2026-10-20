@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
+
+- In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.
+- Native M4 shared-host trials repeated a lower physical footprint (1.9–2.2 vs 2.6–2.8 GiB), with byte-identical CPU vectors; inference speed improvement did not repeat reliably.
+- CoreML compiled but rejected absent-modality tensors at inference. Dispose the accelerated session before one warm CPU fallback; CPU failures still propagate. A vision-only prototype hit the memory guard and was discarded.
+- Synthetic-only harnesses compare representative frames, batched FFmpeg extraction and one-batch-ahead preparation. These prototypes never enter production claims or change light/normal/deep sampling; quality/fairness/cleanup gates remain explicit.
+- Optional TypeSafe image smoke test sends generated colours only; experimental typed judgments are not search vectors. No private media uploaded.
+- Regression tests cover allocation options, runtime fallback, timestamp validation, representative coverage, exact batch/reference frames and abort/EOF cleanup. Setup/architecture docs link measured results and reproduction steps.
+- No installed worker, server, queue, model cache, private credential or network setting changed. Release-matched rollout and real-library retrieval evaluation remain separate follow-ups.
+
 ## 2026-10-20 — Just for me privacy gaps closed
 
 - **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.

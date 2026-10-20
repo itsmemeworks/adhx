@@ -109,6 +109,10 @@ For a published image, verify its source revision and architecture, then set `AD
 
 For UGREEN's Docker interface, use the optional [UGOS Pro walkthrough](deploy/nas/ugreen.md), including data-folder permissions and the first sign-in.
 
+For a Mac processing companion, the [performance guide](docs/mac-processing-performance.md)
+covers memory tuning and measured frame-extraction experiments alongside the
+[Mac setup guide](deploy/mac/README.md).
+
 On a shared NAS, start with `SEMANTIC_THREADS=1` and `KEEP_CONCURRENCY=1`.
 The [resource guide](deploy/nas/README.md#resource-and-storage-controls) shows
 how to budget CPU, RAM and swap, and check search/playback while a bulk import
