@@ -170,7 +170,7 @@ export function QuickSearch() {
 
 /**
  * The header's search: a field you type into on desktop (Enter searches, `/`
- * focuses it), a button that opens the search sheet on phones and tablets.
+ * focuses it), a button that opens the search sheet on phones.
  */
 export function HeaderSearch({
   className,
@@ -212,7 +212,7 @@ export function HeaderSearch({
         aria-label="Search"
         onClick={openQuickSearch}
         className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-nx-surface text-nx-cream lg:hidden',
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-nx-surface text-nx-cream md:hidden',
           className,
         )}
       >
@@ -230,7 +230,7 @@ export function HeaderSearch({
           router.push(searchUrl(q))
         }}
         className={cn(
-          'hidden h-11 w-[340px] min-w-[200px] shrink items-center gap-2.5 rounded-full border border-white/[0.08] bg-nx-surface pl-4 pr-2 text-nx-muted focus-within:border-nx-accent lg:flex',
+          'hidden h-11 w-[340px] min-w-[140px] shrink items-center gap-2.5 rounded-full border border-white/[0.08] bg-nx-surface pl-4 pr-2 text-nx-muted focus-within:border-nx-accent md:flex',
           className,
         )}
       >

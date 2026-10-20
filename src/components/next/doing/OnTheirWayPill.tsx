@@ -49,7 +49,7 @@ export function OnTheirWayPill({ className }: { className?: string }) {
           className="block h-[18px] w-[18px] shrink-0 animate-nx-spin rounded-full border-[2.5px] border-[#4a453e] border-t-nx-accent"
         />
       )}
-      <span className="hidden md:inline">{label}</span>
+      <span className="hidden lg:inline">{label}</span>
       {!!summary?.needsYou && (
         <span
           aria-hidden

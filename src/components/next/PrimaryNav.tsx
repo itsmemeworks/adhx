@@ -56,7 +56,10 @@ export function NxLogo({ className, busy = false }: { className?: string; busy?:
     >
       {/* The body fills 76 of Gob's 96 units: 40 draws the boards' ~32px mark. */}
       <Gob size={40} mood={busy || working ? 'busy' : 'idle'} className="-mx-1" />
-      <span className="font-nx-serif text-[30px] leading-none text-nx-cream">adhx</span>
+      {/* Tablets keep the mark and drop the name, so the header stays one row. */}
+      <span className="font-nx-serif text-[30px] leading-none text-nx-cream md:max-lg:hidden">
+        adhx
+      </span>
     </Link>
   )
 }
@@ -87,7 +90,7 @@ export function PrimaryNav({
             href={n.href}
             aria-current={on ? 'page' : undefined}
             className={cn(
-              'flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-[18px] text-[15px] transition-colors',
+              'flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm transition-colors lg:h-11 lg:px-[18px] lg:text-[15px]',
               'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-nx-accent',
               on
                 ? 'bg-nx-accent font-extrabold text-black'
