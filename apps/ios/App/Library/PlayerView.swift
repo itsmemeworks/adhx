@@ -1031,16 +1031,33 @@ struct NoteBubble: View {
             .padding(.vertical, 6)
             .frame(minHeight: 44)
             .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color(hex: 0xF4F1EA)))
-            .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
+            // The tail tucks 2 pt into the bubble, so the two read as one shape.
+            NoteTail()
                 .fill(Color(hex: 0xF4F1EA))
-                .frame(width: 14, height: 14)
-                .rotationEffect(.degrees(45))
-                .padding(.leading, 18)
-                .padding(.top, -8)
+                .frame(width: 16, height: 10)
+                .padding(.leading, 20)
+                .padding(.top, -2)
         }
+        // One shadow for the bubble and its tail together.
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(saver.displayName)’s note: \(note)")
+    }
+}
+
+/// The note bubble's tail: a short triangle pointing down at the byline,
+/// with a softened tip.
+private struct NoteTail: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX + 2, y: rect.maxY - 1.5))
+        path.addQuadCurve(to: CGPoint(x: rect.midX - 2, y: rect.maxY - 1.5),
+                          control: CGPoint(x: rect.midX, y: rect.maxY + 0.5))
+        path.closeSubpath()
+        return path
     }
 }
 

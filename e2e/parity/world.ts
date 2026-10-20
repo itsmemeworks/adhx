@@ -613,6 +613,25 @@ export const post = (key: string): WorldPost => {
 }
 
 /** Posts Pete has already seen, so New says "12 you haven't seen". */
+/**
+ * "Pete sent you this" (send straight to your people): Ana sent Pete her
+ * bridge photo a few minutes ago, so New leads with "Ana sent you this".
+ */
+export const SENT_TO_PETE = { from: 'ana' as PersonKey, post: 'bridgeAna', minutesAgo: 3 }
+
+/**
+ * A forming group on Right now (boards j7-1, j7-3): once Next is up,
+ * `parity:serve` has Ben and then Jo save two synth posts they hadn't saved
+ * (forss and Ana's paper plane). Forming groups are made only from saves that
+ * land while the engine runs, so they can't be seeded before it starts. These
+ * two posts keep the week's visible synth posts at three, under the four a
+ * regroup needs to make a moment of them, so the group stays forming.
+ */
+export const FORMING_SAVES: { who: PersonKey; post: string }[] = [
+  { who: 'ben', post: 'forss' },
+  { who: 'jo', post: 'planeAna' },
+]
+
 export const PETE_SEEN = [
   'charlieFull',
   'choc2',

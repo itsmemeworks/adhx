@@ -24,7 +24,7 @@ import { articleHeadline, postCoverSrc, postText, TITLED_NETWORKS } from '../pos
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { orderedSavers, saverName } from '../savers'
 import { Faces } from '../moments/LiveTogether'
-import { WhyIcon, whyKind, whyLabel, FeedSwitch } from './FeedParts'
+import { LikeThumb, WhyIcon, WhyLead, whyKind, whyLabel, FeedSwitch } from './FeedParts'
 import { Sheet, SwitchLook } from './TheaterSheets'
 import type { NavId } from '../PrimaryNav'
 
@@ -195,6 +195,15 @@ function FeedWhy({ item, current }: { item: SearchResultItem; current: boolean }
   const kind = whyKind(item.post)
   const label = whyLabel(item.post)
   if (!label) return null
+  // "Pete sent you this", led by Pete's face.
+  if (kind === 'sent') {
+    return (
+      <span className="flex min-w-0 items-center gap-1.5 text-xs text-nx-muted">
+        <WhyLead post={item.post} size={14} />
+        <span className="truncate">{label}</span>
+      </span>
+    )
+  }
   const ago = savedAgo(savers)
   const solo = savers.filter((s) => !s.isYou)
   // "Mum saved this · 1h", led by Mum's face.
@@ -417,6 +426,7 @@ export function NextCard({
 // ——— Why it's on your feed (desktop) ———
 
 const WHY_TITLES: Record<string, string> = {
+  sent: 'Sent to you',
   together: 'Saved together',
   close: 'Close to you',
   fresh: 'Fresh',
@@ -445,9 +455,10 @@ const COUNT_WORDS = [
  * reasons keep the feed's own words.
  */
 export function whyDetail(
-  reason: { kind: string; text: string },
+  reason: { kind: string; text: string; note?: string },
   savers: readonly Saver[] | undefined,
 ): string {
+  if (reason.kind === 'sent' && reason.note) return `${reason.text}: “${reason.note}”`
   if (reason.kind !== 'together' || !savers || savers.length < 2) return reason.text
   // Friends first, newest first; you last, in lower case mid-sentence.
   const names = [
@@ -515,8 +526,11 @@ export function WhyPanel({
             </span>
             <span className="text-xs text-nx-muted">strongest signal</span>
           </span>
-          <span className="text-sm leading-[1.45] text-nx-cream">
-            {whyDetail(first, item.post.savers)}
+          <span className="flex items-center gap-3">
+            <span className="min-w-0 flex-1 text-sm leading-[1.45] text-nx-cream">
+              {whyDetail(first, item.post.savers)}
+            </span>
+            {first.kind === 'like' && <LikeThumb post={first.post} />}
           </span>
         </div>
       )}
@@ -526,8 +540,11 @@ export function WhyPanel({
           className="flex flex-col gap-1.5 rounded-[20px] bg-nx-surface px-4 py-3.5"
         >
           <span className="text-sm font-extrabold">{WHY_TITLES[reason.kind] ?? 'Why'}</span>
-          <span className="text-sm leading-[1.45] text-nx-soft">
-            {whyDetail(reason, item.post.savers)}
+          <span className="flex items-center gap-3">
+            <span className="min-w-0 flex-1 text-sm leading-[1.45] text-nx-soft">
+              {whyDetail(reason, item.post.savers)}
+            </span>
+            {reason.kind === 'like' && <LikeThumb post={reason.post} />}
           </span>
         </div>
       ))}

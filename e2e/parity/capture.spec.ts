@@ -405,6 +405,39 @@ const BOARDS: Board[] = [
     },
   },
   {
+    // No web board: the phone's Why this one (j2-2) against mobile web's sheet.
+    name: 'j2-2-web-why',
+    as: 'pete',
+    shows:
+      'New, Why this one: saved together, like what you keep (with its thumbnail), close to you',
+    path: '/play?feed=new',
+    phone: 'j2-2-phone-why-sheet',
+    seek: 3,
+    known: [
+      'The board’s post (the hamster, “Like the baby videos you kept”) has no like reason with the seeded vectors; the capture opens the steak, whose like reason names dark chocolate.',
+    ],
+    setup: async (ctx) => {
+      const { page } = ctx
+      await attempt(ctx, 'theater ready', () => theaterReady(page))
+      await playItem(ctx, 'It’s all about the sauce')
+      await pausePlayback(page)
+      await attempt(ctx, 'Why this one open', () =>
+        page
+          .getByRole('button', { name: /^Why this one:/ })
+          .locator('visible=true')
+          .first()
+          .click({ timeout: 10_000 }),
+      )
+      await attempt(ctx, 'like thumbnail', () =>
+        page
+          .getByRole('link', { name: 'Open the post you kept' })
+          .locator('visible=true')
+          .first()
+          .waitFor({ timeout: 10_000 }),
+      )
+    },
+  },
+  {
     name: 'j2-6-web-caught-up',
     as: 'pete',
     shows: 'New, the caught-up end card',
@@ -554,6 +587,13 @@ const BOARDS: Board[] = [
       await attempt(ctx, 'theater ready', () => theaterReady(ctx.page))
       await playItem(ctx, 'It’s all about the sauce')
       await pausePlayback(ctx.page)
+      await attempt(ctx, 'Keep this channel', () =>
+        ctx.page
+          .getByRole('button', { name: 'Keep this channel' })
+          .locator('visible=true')
+          .first()
+          .waitFor({ timeout: 10_000 }),
+      )
     },
   },
   {
@@ -565,6 +605,7 @@ const BOARDS: Board[] = [
     known: [
       'Moment names come from the shared word without the model (“Baby”, not “Babies vs objects”): the board’s names aren’t in MOMENT_TOPICS and the no-model fallback is one shared word.',
       '“N saves in M min” counts from the seed’s save times, so the span grows the longer the server has run (10 min right after seeding).',
+      'The forming group (Ben and Jo saving two synth posts once the server is up) is named “Something new”: without the model there’s no topic, and the two posts share no word. With MOMENT_MIN_SAVERS=1 it counts saves, so it reads “2 more saves” over four segments, not the board’s “1 more save” over three.',
     ],
     setup: async (ctx) => {
       await attempt(ctx, 'LIVE · N saves in M min', () =>
@@ -582,6 +623,13 @@ const BOARDS: Board[] = [
         await ctx.page.waitForTimeout(1_000)
         ctx.hit(`Ana and Ben watching ${moment.slug}`)
       } else ctx.miss('no live moment to watch')
+      await attempt(ctx, 'forming card with Tell me when it’s live', () =>
+        ctx.page
+          .getByRole('button', { name: 'Tell me when it’s live' })
+          .locator('visible=true')
+          .first()
+          .waitFor({ timeout: 10_000 }),
+      )
     },
   },
   {

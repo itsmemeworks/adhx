@@ -70,7 +70,8 @@ pair for real: Settings → Phone app on the web as that member makes a code.
   counts and channel sizes match the boards (Ana 96, Ben 212, Mum 54, Jo 31,
   Pete 212; Cats with opinions 38, Food you'll cook one day 41, Kitchen synths
   17, Babies vs objects 26). Each borrows a hero post's still for its topic.
-- **New**: Pete has 12 he hasn't seen.
+- **New**: Pete has 12 he hasn't seen. Ana sent Pete her bridge photo 3
+  minutes ago (`post_sends`), so New leads with "Ana sent you this".
 - **Channels**: From everyone (`group_channels`) and Pete's Made for you
   (`auto_channels`) are stored directly (naming needs the model) and stamped 30
   days ahead so they don't recompute while the server runs.
@@ -81,6 +82,15 @@ pair for real: Settings → Phone app on the web as that member makes a code.
   shared word, so the seed can't reach them through the normal naming path.
   The lead card's "3 saves in 10 min" counts from the seed's save times, so
   the span grows the longer the server runs (15, then 30 min).
+- **Forming** (j7-1): forming groups are only made from saves that land while
+  the engine runs, so once Next is up `parity:serve` looks at `/api/moments`
+  (starting the engine), then has Ben and then Jo save forss and Ana's paper
+  plane (`FORMING_SAVES`, copies of an existing save's row). The card shows
+  Jo and Ben's faces and "Tell me when it's live". Those two posts keep the
+  week's visible synth posts at three, under the four a regroup needs, so it
+  stays forming. Without the model it's named "Something new", and with
+  `MOMENT_MIN_SAVERS=1` it counts saves ("2 more saves", four segments), not
+  the board's "1 more save" over three people.
 - **/doing**: keeping (dark chocolate, at 62%), converting (the synth patch),
   listening (the second hamster video), needs you (a private Instagram post),
   waiting (an Instagram Reel on attempt 2), and ready (recent saves). Keep is
@@ -148,5 +158,6 @@ miss is recorded rather than failing the run), `seek` for a stable video frame,
 - **j5-5**: the server is on 127.0.0.1, so the page rightly warns that a phone can't reach it.
 - **j8-2**: Pete has no X connected, so "Use your X picture" isn't offered.
 - **j8-3**: "Needs you" sorts first on purpose (it must survive the 60-row cut), and Pete can't retry Mum's post (only people who saved it can).
-- **j7-1**: the lead reads RISING or LIVE from real save times, and a forming group (Kitchen synths) can't exist with `MOMENT_MIN_SAVERS=1`.
+- **j7-1**: the lead reads RISING or LIVE from real save times; the forming group is "Something new" with "2 more saves" (see Forming above).
+- **j2-2** (no web board): the mobile web's Why this one is compared with the phone board. The capture opens the steak, whose like reason (with its thumbnail) names dark chocolate; the board's hamster has no like reason with the seeded vectors.
 - Phone boards include native chrome (two-row header, no web tab bar, store buttons) that mobile web doesn't copy.

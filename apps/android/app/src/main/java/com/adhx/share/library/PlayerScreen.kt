@@ -42,6 +42,7 @@ import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -69,7 +70,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.selected
@@ -1031,6 +1031,15 @@ private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Un
     }
 }
 
+/** The note bubble's tail: a triangle pointing down, with a softened tip. */
+private val NoteTailShape = GenericShape { size, _ ->
+    moveTo(0f, 0f)
+    lineTo(size.width, 0f)
+    lineTo(size.width / 2f + 2f, size.height - 1.5f)
+    quadraticTo(size.width / 2f, size.height + 0.5f, size.width / 2f - 2f, size.height - 1.5f)
+    close()
+}
+
 /**
  * A friend's note on their save ("you're welcome"), as a cream speech bubble
  * with their face, pointing down at the byline.
@@ -1061,15 +1070,14 @@ private fun NoteBubble(saver: Saver, note: String, server: String, modifier: Mod
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        // The tail: a small square turned 45°, tucked under the bubble.
+        // The tail: a short triangle pointing down at the byline, tucked
+        // 2dp into the bubble so the two read as one shape.
         Box(
             Modifier
-                .padding(start = 18.dp)
-                .offset(y = (-8).dp)
-                .size(14.dp)
-                .rotate(45f)
-                .clip(RoundedCornerShape(2.dp))
-                .background(AdhxColors.White),
+                .padding(start = 20.dp)
+                .offset(y = (-2).dp)
+                .size(width = 16.dp, height = 10.dp)
+                .background(AdhxColors.White, NoteTailShape),
         )
     }
 }
