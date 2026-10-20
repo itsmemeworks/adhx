@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/lib/db/schema'
 import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '@/lib/sends/schema-sql'
+import { CHANNEL_VISUAL_DDL } from '@/lib/channels/visual-schema'
 import { ADMIN_COUNTS_DDL } from '@/lib/admin/schema-sql'
 
 /**
@@ -413,6 +414,7 @@ export const FULL_SCHEMA_SQL = `
 
 ${SAVE_VISIBILITY_DDL}
 ${BOARD_FEATURES_DDL}
+${CHANNEL_VISUAL_DDL}
 ${ADMIN_COUNTS_DDL}
 `
 

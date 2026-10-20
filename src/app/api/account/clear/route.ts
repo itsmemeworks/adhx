@@ -17,7 +17,7 @@ import {
   autoChannels,
   activity,
 } from '@/lib/db/schema'
-import { and, eq, or } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
 import { metrics } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
@@ -58,6 +58,7 @@ export const POST = withAuth(async (_req, userId) => {
       db.delete(reactionCounts).where(eq(reactionCounts.userId, userId)).run()
       // Made for you is built from the saves that are now gone.
       db.delete(autoChannels).where(eq(autoChannels.userId, userId)).run()
+      db.run(sql`DELETE FROM channel_visual_jobs WHERE user_id = ${userId}`)
       // The public "saved" pulses go with the saves; other events keep their
       // anonymous counts without the account.
       db.delete(activity)

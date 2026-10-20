@@ -100,13 +100,13 @@ export async function autoChannelCovers(
   userId: string,
   channels: AutoChannelView[],
 ): Promise<Map<string, SearchItem[]>> {
-  const keys = channels.flatMap((c) => c.keys.slice(0, COVER_POSTS))
+  const keys = channels.flatMap((c) => (c.coverKeys ?? c.keys).slice(0, COVER_POSTS))
   const items = await loadSearchItems(keysToHits(keys), userId)
   const byKey = new Map(items.map((i) => [`${i.post.platform ?? 'twitter'}:${i.post.id}`, i]))
   return new Map(
     channels.map((c) => [
       c.slug,
-      c.keys
+      (c.coverKeys ?? c.keys)
         .slice(0, COVER_POSTS)
         .map((k) => byKey.get(k))
         .filter((i): i is SearchItem => !!i),

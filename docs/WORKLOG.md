@@ -6,6 +6,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Channel curation reconciled with current main
+
+- Integrated the latest privacy, admin and phone updates without replacing their schema or documentation. Both admin counters and image-curation tables install together; account-reference regression expectations include both sets of guards.
+- Image refinement now honours the admin processing pause; Clear data removes only that account’s private curation jobs. Regressions cover pause/resume without spending budget and scoped cache removal. Updated the new privacy page and policy for the separate image opt-in. No live service or private setting changed.
+
+## 2026-10-20 — Optional image-aware generated channel curation
+
+- In flight: `TYPESAFE_CHANNEL_IMAGES=on` plus a key enables background naming, conservative borderline checks, repeat spacing and channel cover-post selection for Made for you/From everyone. Default off; slugs, saves, files and manual/friend channels stay intact.
+- One durable scoped queue/cache: one task/minute, 48 attempts/UTC day, 256 entries/7 days, max8 existing stills, 15s requests, three tries. No page waits, remote thumbnail fetch, FFmpeg or local inference for this pass.
+- Upload only eligible public-source captions/posters/photos using opaque ids; private-only/quoted/hidden/banned/orphaned sources, saver details, notes, tags and extracted words stay out. Visibility/media/policy revisions and leases reject stale results; account deletion cascades private jobs.
+- Known-name choices, confidence gates, a four-member floor, transitive duplicate spacing/cover diversity and collision fallback keep changes conservative. Poster-only/video posts cannot be excluded based on one still. Covers select existing posts, not new video frames; repetition checks are sampled, not exhaustive.
+- Regression coverage includes opt-in, bounded transport, account/privacy races, original/path safety, budgets, restart/stale-claim recovery, uncertainty and no-loss playback ordering. A real synthetic-only eight-image request completed in ~0.5s; no real-library quality claim.
+- README, architecture, environment/Compose examples and `docs/channel-image-curation.md` explain the opt-in cloud boundary and evaluation steps. No live service, private configuration or network was changed.
+
 ## 2026-10-20 — A sent post skips "What's in your feed"
 
 - New's kind filter (videos and photos by default) hid text posts and articles someone sent you, so "Pete sent you this" never arrived for most people. A post with an unseen send now passes the filter in every mode that shows sends (`inFeed` in `src/lib/feed/blend-db.ts`); it isn't counted as "waiting". Found by the Android parity pass (#574).

@@ -131,10 +131,20 @@ afterEach(() => {
 
 describe('what goes when saves go', () => {
   it('clearing data drops your save pulses, unlinks your other events and your Made for you', async () => {
+    for (const userId of [USER_A, USER_B, null]) {
+      testInstance.db.run(sql`INSERT INTO channel_visual_jobs
+        (scope, slug, user_id, revision, payload, available_at, updated_at)
+        VALUES (${userId ? `user:${userId}` : 'everyone'}, 'cats', ${userId}, 'r1', '{}', 0, 0)`)
+    }
     const { POST } = await import('@/app/api/account/clear/route')
     const res = await POST()
     expect(res.status).toBe(200)
     expect((await res.json()).message).not.toMatch(/Twitter/)
+    expect(
+      testInstance.db.all<{ scope: string }>(
+        sql`SELECT scope FROM channel_visual_jobs ORDER BY scope`,
+      ),
+    ).toEqual([{ scope: 'everyone' }, { scope: `user:${USER_B}` }])
     expect(pulses()).toEqual([
       { user_id: null, action: 'preview', bookmark_id: 'other' },
       { user_id: USER_B, action: 'save', bookmark_id: 'shared' },

@@ -117,9 +117,14 @@ export default function PrivacyPage() {
           me” saves are left out except your own. “Made for you” channels are private to you. With
           optional refinement, your search text and the public words of the top results go to
           TypeSafe (Jev) to reorder them, and public words from small samples of posts are used to
-          name channels and moments. Media files, transcripts, text read off pictures, savers,
-          notes, tags and account details are never sent. Search data made from a post is deleted
-          when the last person removes it.
+          name channels and moments. Separately enabled image-aware channels can send up to eight
+          small retained public-post thumbnails and their public source captions to TypeSafe for
+          generated channel names, borderline membership, repeat spacing and covers. A refinement
+          key alone enables no image uploads; private-only, quoted, hidden and banned-saver posts
+          are excluded. Transcripts, text read off pictures, savers, notes, tags and account details
+          are never sent. Image-curation decisions expire after seven days; clearing data or
+          deleting your account removes your private channel jobs. Search data made from a post is
+          deleted when the last person removes it.
         </Section>
 
         <Section title="Public pages and logs">

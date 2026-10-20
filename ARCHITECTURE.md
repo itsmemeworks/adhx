@@ -348,6 +348,19 @@ them with the channel's name, and leaves the channel private. Keeping a Made
 for you channel (`POST /api/channels/auto/{slug}/keep`) tags your own posts.
 Clones of a public channel apply the recipient's Just for me by default.
 
+An independent, off-by-default `TYPESAFE_CHANNEL_IMAGES=on` refinement pass can
+improve generated channel display names, borderline membership, repetition
+spacing and cover-post selection. `channels/visual.ts` enqueues bounded durable
+work during local reads; instrumentation starts one async worker that prepares
+existing retained public-post stills and calls the pinned TypeSafe image API.
+It never loads a local model or extracts video on the NAS. Cached decisions are
+an overlay: original channel slugs, user saves, files and manual channels stay
+intact. The shared channel APIs serve web and phone. Visibility/media/policy
+fingerprints invalidate stale results; private-only posts, saver identities,
+tags, notes and extracted words are excluded from uploads. See
+[image-aware channel curation](docs/channel-image-curation.md) for limits,
+confidence gates, retries and the evaluation boundary.
+
 ## Who sees what
 
 ```mermaid
