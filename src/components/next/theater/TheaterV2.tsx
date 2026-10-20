@@ -392,6 +392,9 @@ export function TheaterV2({
   useBusyLogo('theater', load.status === 'loading')
   /** A channel's name, once its queue loads. */
   const [title, setTitle] = useState<string | null>(null)
+  /** Phones: where the top-left chips end, so a toast never covers a wrapped row. */
+  const chipsRef = useRef<HTMLDivElement>(null)
+  const [chipsBottom, setChipsBottom] = useState(0)
   /** A From everyone channel you already kept: its tag and your channel's link. */
   const [groupKept, setGroupKept] = useState<{ tag: string; url: string } | null>(null)
   const [items, setItems] = useState<SearchResultItem[]>([])
@@ -1622,6 +1625,18 @@ export function TheaterV2({
           : source.recent
             ? 'saves'
             : 'search'
+  // Where the top-left chips end on a phone: LIVE and the watchers can wrap onto two rows.
+  useEffect(() => {
+    const el = chipsRef.current
+    if (wide || !source.moment || !el) return
+    const measure = () => setChipsBottom(Math.round(el.getBoundingClientRect().bottom))
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [wide, source.moment, load.status])
+
   if (load.status === 'ready' && !current && source.feed === 'new' && caughtUp) {
     // Opened New with nothing left you haven't seen.
     return (
@@ -2210,6 +2225,7 @@ export function TheaterV2({
 
                   {/* What's playing, at the stage's top-left. */}
                   <div
+                    ref={chipsRef}
                     className={cn(
                       'pointer-events-none absolute z-10 flex flex-wrap items-start gap-2',
                       wide
@@ -2335,6 +2351,12 @@ export function TheaterV2({
                           wide && layout === 'panel' && 'gap-2.5 pb-3.5',
                         )}
                       >
+                        {!wide && source.moment && title && (
+                          <span className="flex h-[26px] items-center gap-1.5 self-start whitespace-nowrap rounded-full bg-black/45 px-2.5 text-xs font-semibold backdrop-blur-md [text-shadow:none]">
+                            <span className="text-nx-soft">In</span>
+                            <span className="min-w-0 truncate font-extrabold">{title}</span>
+                          </span>
+                        )}
                         {!wide && whyChip && (
                           <WhyChip
                             post={current.post}
@@ -3018,14 +3040,18 @@ export function TheaterV2({
         )}
 
         {!wide && source.moment && arrival && (arrival.now || arrivals === 1) && (
-          <ArrivalToast
-            saver={arrival.saver}
-            post={arrival.post}
-            hue={momentHue}
-            now={arrival.now}
-            onPlay={arrival.now ? undefined : () => goTo(index + 1)}
+          <div
             className="absolute right-3 top-[max(116px,calc(env(safe-area-inset-top)+108px))] z-30 max-w-[calc(100%-24px)]"
-          />
+            style={chipsBottom > 0 ? { top: `max(116px, ${chipsBottom + 8}px)` } : undefined}
+          >
+            <ArrivalToast
+              saver={arrival.saver}
+              post={arrival.post}
+              hue={momentHue}
+              now={arrival.now}
+              onPlay={arrival.now ? undefined : () => goTo(index + 1)}
+            />
+          </div>
         )}
         {source.moment && arrivals > 0 && !(arrivals === 1 && arrival) && (
           <div

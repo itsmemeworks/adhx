@@ -174,6 +174,7 @@ miss is recorded rather than failing the run), `seek` for a stable video frame,
 ## Known limits (left as they are)
 
 - **Moment names**: "Baby", "Dark" rather than "Babies vs objects" (see Right now above). Don't add the boards' names to `MOMENT_TOPICS`.
+- **Moment lifetime**: the babies moment drops out of `/api/moments` about 25 minutes after seeding (the seed's save times age out of the regroup). Capture j7 screens, web and phone, from a freshly started server.
 - **j3-2**: the grid is the board's (row-first masonry: newest along the top, then the shortest column; the note card in the last column under its first tile; upright tiles). The tiles aren't the board's eight: Ana's channel also holds the zoo, the second hamster, the bird and the synth patch, which other boards need her to have saved, and the board's own time labels ("2h ago", "5h ago", "3 days ago") contradict its order, so no newest-first seed reproduces it. Hence "8 you haven't seen", not 4.
 - **j4-1 / j4-2**: without the model the lead is the best keyword match. "the baby that bites his brother’s finger" has no words in Charlie's speech (the real transcript has none of them), so "Same baby, same hamster" leads; dark chocolate's on-screen words repeat its caption, so the match is credited to the caption ("In the words"), not "On screen". Changing the caption would break j1-4/j1-5.
 - **j5-5**: the server is on 127.0.0.1, so the page rightly warns that a phone can't reach it.

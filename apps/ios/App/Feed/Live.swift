@@ -284,6 +284,10 @@ private struct LiveCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(moment.name)
                     .font(Theme.serif(32))
+                    .tightLines(32)
+                    // Where the board's letters sit: 12 below the strip, 8 above the meta line.
+                    .padding(.top, 3)
+                    .padding(.bottom, 1.5)
                     .foregroundStyle(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
@@ -304,7 +308,8 @@ private struct LiveCard: View {
             .buttonStyle(PillButtonStyle(kind: .primary))
             .accessibilityLabel("Tune in to \(moment.name)")
         }
-        .padding(8)
+        // The board's 2 pt border sits outside its 8 of padding; strokeBorder draws inside this frame.
+        .padding(10)
         .background(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Theme.surface))
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
             .strokeBorder(Theme.hue(moment.hue) ?? Color(hex: 0xFF8FA3), lineWidth: 2))
