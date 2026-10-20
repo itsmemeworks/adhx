@@ -120,7 +120,7 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
                 lineHeight = 34.sp,
                 color = AdhxColors.White,
                 modifier = Modifier
-                    .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 9.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 9.dp)
                     .semantics { heading() },
             )
         }
