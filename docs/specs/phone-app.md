@@ -476,7 +476,9 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
   `{ "kind": "sent", "text": "Pete sent you this", "username": "pete" }`
   (plus `note` when the sender wrote one) until it's seen (`/api/app/seen`).
   With a note, the item's saver for Pete carries it as `note`. Treat an
-  unknown `kind` as a plain reason.
+  unknown `kind` as a plain reason. The server sends it whatever kinds New
+  asks for; an app that also filters by kind on the phone must let an item
+  with a `sent` reason through (both apps do: `sentToYou`).
 - The `like` reason gains `"post": { "platform", "id", "posterUrl" }`: your
   own kept post it's most like. `posterUrl` is a path from the server root
   (or a full URL, or null); show it as a 38 pt Gob-shaped square at the

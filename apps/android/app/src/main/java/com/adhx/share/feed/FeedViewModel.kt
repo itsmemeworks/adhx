@@ -232,8 +232,9 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                     val had = current.items.mapTo(HashSet()) { it.key }
                     val page = result.value
                     val fresh = page.items.filter { it.key !in had }
-                    // A server that ignores `types` still gets filtered here.
-                    val (shown, left) = fresh.partition { MediaType.of(it.kind) in types }
+                    // A server that ignores `types` still gets filtered here. A post
+                    // someone sent you shows whatever its kind, as the server's New does.
+                    val (shown, left) = fresh.partition { MediaType.of(it.kind) in types || it.sentToYou }
                     val hiddenHere = current.hiddenHere.toMutableMap()
                     left.forEach { val t = MediaType.of(it.kind); hiddenHere[t] = (hiddenHere[t] ?: 0) + 1 }
                     current.copy(

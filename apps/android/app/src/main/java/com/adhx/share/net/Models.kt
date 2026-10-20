@@ -153,6 +153,9 @@ data class PhonePost(
     /** You haven't saved or seen it ("New" on a channel tile). Only on group and friend channels. */
     val isNew: Boolean = false,
 ) {
+    /** Someone sent it to you and you haven't seen it yet ("Pete sent you this"). */
+    val sentToYou: Boolean get() = whyReasons.any { it.kind == WhyKind.SENT }
+
     val key: String get() = "$platform:$id"
 
     /** The reason for the why chip: the feed's headline, else its first reason. */
