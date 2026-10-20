@@ -1235,25 +1235,36 @@ private struct Album: View {
     @Binding var page: Int
 
     var body: some View {
-        TabView(selection: $page) {
-            ForEach(Array(urls.enumerated()), id: \.offset) { index, url in
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFit()
-                    } else if phase.error != nil {
-                        Text("This photo couldn’t load.")
-                            .font(Theme.sans(14))
-                            .foregroundStyle(Theme.muted)
-                    } else {
-                        RingSpinner().frame(width: 30, height: 30)
-                    }
+        if urls.count == 1, let url = urls.first {
+            // One photo needs no pager: a page view in the vertical feed can
+            // swallow the up and down swipes that move to the next save.
+            photo(url)
+                .accessibilityLabel("Photo")
+        } else {
+            TabView(selection: $page) {
+                ForEach(Array(urls.enumerated()), id: \.offset) { index, url in
+                    photo(url)
+                        .tag(index)
+                        .accessibilityLabel("Photo \(index + 1) of \(urls.count)")
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .tag(index)
-                .accessibilityLabel("Photo \(index + 1) of \(urls.count)")
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+        }
+    }
+
+    private func photo(_ url: URL) -> some View {
+        AsyncImage(url: url) { phase in
+            if let image = phase.image {
+                image.resizable().scaledToFit()
+            } else if phase.error != nil {
+                Text("This photo couldn’t load.")
+                    .font(Theme.sans(14))
+                    .foregroundStyle(Theme.muted)
+            } else {
+                RingSpinner().frame(width: 30, height: 30)
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: urls.count > 1 ? .always : .never))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
