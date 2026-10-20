@@ -153,7 +153,13 @@ object Copy {
     }
 
     /** "You, Ana, Mum and Jo". */
-    fun youAnd(names: List<String>): String = list(listOf("You") + names, max = 5)
+    /** "You, Ana, Jo, Ben and 1 other": four names at most, like the iPhone. */
+    fun youAnd(names: List<String>): String {
+        val all = listOf("You") + names
+        if (all.size <= 4) return list(all, max = 4)
+        val rest = all.size - 4
+        return all.take(4).joinToString(", ") + " and $rest other" + if (rest == 1) "" else "s"
+    }
     const val YOU_SAVED_TOO = "You saved this too"
     const val PLAY_ALL = "Play all"
 
