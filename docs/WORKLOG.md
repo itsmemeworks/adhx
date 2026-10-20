@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — A sent post skips "What's in your feed"
+
+- New's kind filter (videos and photos by default) hid text posts and articles someone sent you, so "Pete sent you this" never arrived for most people. A post with an unseen send now passes the filter in every mode that shows sends (`inFeed` in `src/lib/feed/blend-db.ts`); it isn't counted as "waiting". Found by the Android parity pass (#574).
+
+## 2026-10-20 — Phone posters through kept files
+
+- `posterFor()` (`src/lib/app/phone-app.ts`, behind Shared lately's `posterUrl` and On their way's `thumbnail`) now always returns an `/api/files/…/poster` path for Instagram, TikTok and X posts with a picture or video, so a kept poster shows instead of a network thumbnail that may be unreachable (iOS j8-5 showed placeholders).
+
 ## 2026-10-20 — iPhone: final design-parity pass
 
 - Compared every phone board (j1-2, j1-3, j2-1–j2-4, j2-7, j3-3, j4-3, j4-4, j5-6, j6-3, j7-3, j7-4, j8-4, j8-5, the note bubble) side by side with the app in the simulator against a fresh parity server.

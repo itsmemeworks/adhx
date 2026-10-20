@@ -343,7 +343,8 @@ describe('POST /api/app/save', () => {
       network: 'X',
       alreadySaved: true,
       savedAt: '2026-10-01T00:00:00.000Z',
-      posterUrl: 'https://pbs.twimg.com/media/abc.jpg',
+      // Through /api/files: the kept poster, or X's picture until it's kept.
+      posterUrl: '/api/files/twitter/2110000000000000001/poster?a=someone',
       openPath: '/someone/status/2110000000000000001',
     })
   })
