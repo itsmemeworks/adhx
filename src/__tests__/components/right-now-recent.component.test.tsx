@@ -92,3 +92,19 @@ describe('Right now lead card', () => {
     expect(after.moments[0]).toMatchObject({ posts: 27, recentSaves: 3, windowMinutes: 10 })
   })
 })
+
+describe('Right now with many moments', () => {
+  it('keeps two beside the lead and wraps the rest underneath, losing none', () => {
+    const names = ['AI music', 'Marketing', 'Gym and lifting', 'Startups', 'Wiki', 'Cats']
+    state.snapshot = {
+      ...snapshot(moment()),
+      moments: names.map((title, i) => moment({ slug: `m-${i}`, title })),
+    }
+    const { container } = render(<RightNow headingLevel="h1" />)
+    for (const name of names) expect(screen.getAllByText(name).length).toBeGreaterThan(0)
+    // The lead's row holds the lead and two cards; three more wrap below it.
+    const below = container.querySelector('.lg\\:col-span-2')
+    expect(below).not.toBeNull()
+    expect(below!.querySelectorAll('article').length).toBe(3)
+  })
+})

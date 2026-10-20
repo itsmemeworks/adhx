@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Right now: the lead card keeps its size on a busy server
+
+- With many moments, every one stacked beside the lead, so the lead card stretched to their height and left a huge empty card (seen on real data: AI music beside six moments). Now two sit beside the lead, as on the board, and the rest wrap into a three-column row below (`SIDE_CARDS` in `RightNow.tsx`). Component test covers six moments.
+
 ## 2026-10-20 — Moment titles checked with the boards' real names
 
 - The parity server names moments without the model ("Baby", "Dark"), so a proxy swapped in the boards' names ("Babies vs objects", "Sunday roast energy", "Kitchen synths") to check how they lay out on web, iPhone and Android. Every name fits on one line as on the boards.
