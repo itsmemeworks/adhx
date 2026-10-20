@@ -21,8 +21,69 @@ export type ArtId =
   | 'hamster'
   | 'bird'
   | 'grass'
+  | 'chocolate'
 
 const SCENES: Record<ArtId, ReactNode> = {
+  chocolate: (
+    <>
+      <rect width="300" height="400" fill="#9ccbe0" />
+      <circle cx="56" cy="92" r="46" fill="#5f9a4c" />
+      <circle cx="252" cy="78" r="54" fill="#6fa95a" />
+      <rect x="248" y="110" width="12" height="120" fill="#6b4a2e" />
+      <path d="M0 250 q80 -26 150 -8 t150 -6 V400 H0z" fill="#7cc35e" />
+      <path d="M58 400 q4 -86 92 -96 q88 10 92 96z" fill="#2f63c8" />
+      <circle cx="102" cy="346" r="13" fill="#ff8fa3" />
+      <circle cx="198" cy="336" r="11" fill="#ffd23f" />
+      <circle cx="150" cy="378" r="12" fill="#ff8fa3" />
+      <circle cx="226" cy="382" r="9" fill="#7fd1ae" />
+      <path d="M134 304 l16 26 l16 -26" fill="#f2c7a5" />
+      <ellipse cx="150" cy="214" rx="66" ry="76" fill="#f2c7a5" />
+      <ellipse cx="86" cy="220" rx="10" ry="16" fill="#e8b48f" />
+      <ellipse cx="214" cy="220" rx="10" ry="16" fill="#e8b48f" />
+      <path d="M82 170 q4 -60 68 -62 q64 2 68 62z" fill="#1f2a44" />
+      <path d="M150 166 q70 0 96 12 q-24 8 -96 4z" fill="#1f2a44" />
+      <circle cx="122" cy="140" r="5" fill="#f4f1ea" />
+      <circle cx="146" cy="130" r="5" fill="#f4f1ea" />
+      <circle cx="170" cy="138" r="5" fill="#ff5a3c" />
+      <path
+        d="M106 186 l22 10 M194 186 l-22 10"
+        stroke="#141414"
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M110 204 q12 8 24 0 M166 204 q12 8 24 0"
+        stroke="#141414"
+        strokeWidth="5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M112 236 q38 -16 76 0 q-4 58 -38 60 q-34 -2 -38 -60z" fill="#5a1f1f" />
+      <path d="M118 236 q32 -11 64 0 v9 q-32 -8 -64 0z" fill="#f4f1ea" />
+      <ellipse cx="150" cy="282" rx="18" ry="8" fill="#e0607a" />
+      <g transform="rotate(-24 196 270)">
+        <rect x="172" y="236" width="48" height="70" rx="4" fill="#3b2316" />
+        <path
+          d="M172 236 h48 v10 l-6 -6 l-6 7 l-6 -6 l-6 7 l-6 -6 l-6 7 l-6 -6 l-6 7z"
+          fill="#3b2316"
+        />
+        <rect x="172" y="266" width="48" height="40" fill="#cfd3d6" />
+        <rect x="176" y="272" width="40" height="20" rx="3" fill="#1d1d22" />
+        <text
+          x="196"
+          y="286"
+          textAnchor="middle"
+          fontSize="13"
+          fontWeight="800"
+          fill="#ffd23f"
+          fontFamily="sans-serif"
+        >
+          85%
+        </text>
+      </g>
+      <ellipse cx="206" cy="300" rx="18" ry="14" fill="#f2c7a5" />
+    </>
+  ),
   frog: (
     <>
       <rect width="300" height="400" fill="#1f4d3a" />
