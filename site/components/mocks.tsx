@@ -8,6 +8,7 @@ import { Ring, Toggle } from './frames'
 import {
   Bookmark,
   Check,
+  Dots,
   Heart,
   LinkIcon,
   Lock,
@@ -125,64 +126,80 @@ function KindChip({ label, on }: { label: string; on: boolean }) {
   )
 }
 
+function KindChips({ className }: { className?: string }) {
+  return (
+    <div className={cn('flex flex-wrap gap-[5px] md:gap-1.5', className)}>
+      <KindChip label="Videos" on />
+      <KindChip label="Photos" on />
+      <KindChip label="Text" on={false} />
+      <KindChip label="Articles" on={false} />
+    </div>
+  )
+}
+
 export function NewMock() {
   return (
-    <Mock label="The New list, showing videos and photos, with why each post is next: saved together, close to you, like the birds you kept. It ends on a meme of Gob in a field: You're all caught up. Now go touch grass.">
+    <Mock label="The New list, showing videos and photos, with why each post is next: saved together, close to you, like the birds you kept. It ends on Gob: You're all caught up. Go touch grass.">
       <div
-        className={cn(card, 'flex gap-2.5 rounded-[22px] p-3 md:gap-4 md:rounded-[28px] md:p-5')}
+        className={cn(
+          card,
+          'flex flex-col gap-2.5 rounded-[22px] p-3 md:flex-row md:gap-4 md:rounded-[28px] md:p-5',
+        )}
       >
-        <div className="flex min-w-0 flex-1 flex-col gap-2.5 md:gap-3">
-          <div className="hidden items-baseline justify-between gap-3 md:flex">
-            <span className="font-nx-serif text-[34px] leading-none">New</span>
-            <span className="whitespace-nowrap text-[13px] font-semibold text-nx-soft">
-              3 you haven’t seen
+        <KindChips className="md:hidden" />
+        <div className="flex gap-2.5 md:contents">
+          <div className="flex min-w-0 flex-1 flex-col gap-2.5 md:gap-3">
+            <div className="hidden items-baseline justify-between gap-3 md:flex">
+              <span className="font-nx-serif text-[34px] leading-none">New</span>
+              <span className="whitespace-nowrap text-[13px] font-semibold text-nx-soft">
+                3 you haven’t seen
+              </span>
+            </div>
+            <KindChips className="hidden md:flex" />
+            <div className="flex flex-col gap-1.5 md:gap-1">
+              <WhyRow
+                art="frog"
+                title="The frog won’t move"
+                why="Saved together"
+                icon={<Together size={12} />}
+                active
+              />
+              <WhyRow
+                art="steak"
+                title="All about the sauce"
+                why="Close to you · Mum"
+                icon={<Heart size={12} />}
+              />
+              <WhyRow
+                art="bird"
+                title="A cormorant with opinions"
+                why="Like the birds you kept"
+                icon={<Bookmark size={12} />}
+                className="hidden md:flex"
+              />
+            </div>
+          </div>
+          <div className="relative flex w-[42%] min-w-[116px] max-w-[146px] shrink-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-[14px] border border-white/10 bg-nx-ink p-2.5 text-center md:max-w-[252px] md:gap-0 md:rounded-[22px] md:px-5 md:py-6">
+            <span className="pointer-events-none absolute -left-[60px] -top-2.5 hidden h-[260px] w-[372px] rounded-full bg-[radial-gradient(rgba(255,210,63,0.14),rgba(255,210,63,0)_65%)] md:block" />
+            <Gob size={36} className="relative md:hidden" />
+            <span className="relative hidden flex-col items-center md:flex">
+              <Gob size={72} className="drop-shadow-[0_14px_30px_rgba(255,210,63,0.18)]" />
+              <span className="mt-2 h-1.5 w-[54px] rounded-[50%] bg-black/70" />
             </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <KindChip label="Videos" on />
-            <KindChip label="Photos" on />
-            <KindChip label="Text" on={false} />
-            <KindChip label="Articles" on={false} />
-          </div>
-          <div className="flex flex-col gap-1.5 md:gap-1">
-            <WhyRow
-              art="frog"
-              title="The frog won’t move"
-              why="Saved together"
-              icon={<Together size={12} />}
-              active
-            />
-            <WhyRow
-              art="steak"
-              title="All about the sauce"
-              why="Close to you · Mum"
-              icon={<Heart size={12} />}
-            />
-            <WhyRow
-              art="bird"
-              title="A cormorant with opinions"
-              why="Like the birds you kept"
-              icon={<Bookmark size={12} />}
-              className="hidden md:flex"
-            />
-          </div>
-        </div>
-        <div className="flex w-[42%] max-w-[252px] shrink-0 flex-col overflow-hidden rounded-[14px] border border-white/10 bg-nx-ink md:rounded-[22px]">
-          <span className="relative block min-h-[150px] flex-1 md:min-h-[200px]">
-            <Art id="grass" className="absolute inset-0 h-full w-full" />
-            <span className="absolute inset-0 flex items-center justify-center">
-              <Gob size={64} className="h-[22%] w-auto md:h-[26%]" />
+            <span className="relative font-nx-serif text-[16px] leading-[0.95] min-[360px]:text-[18px] md:mt-3.5 md:text-[32px]">
+              <span className="block whitespace-nowrap md:whitespace-normal">
+                You’re all <br className="md:hidden" />
+                caught up.
+              </span>
+              <span className="block whitespace-nowrap text-nx-accent">Go touch grass.</span>
             </span>
-            <Meme top="You’re all caught up" bottom="Now go touch grass" size={10.5} />
-          </span>
-          <span className="hidden flex-col items-center gap-3 p-4 text-center md:flex">
-            <span className="text-[13px] leading-snug text-nx-soft">
+            <span className="relative mt-2.5 hidden text-[13px] leading-[1.4] text-nx-soft md:block">
               That’s everything since you last looked.
             </span>
-            <span className="flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-nx-accent text-[14px] font-extrabold text-black">
+            <span className="relative mt-4 hidden h-10 w-full items-center justify-center whitespace-nowrap rounded-full bg-nx-accent text-[14px] font-extrabold text-black md:flex">
               Browse channels
             </span>
-          </span>
+          </div>
         </div>
       </div>
     </Mock>
@@ -206,13 +223,13 @@ export function FacesMock() {
             inset={{ bottom: 64 }}
           />
           <span className="nx-scrim absolute inset-x-0 bottom-0 flex flex-col gap-1.5 px-2.5 pb-2.5 pt-8 md:gap-2 md:px-3.5 md:pb-4">
-            <span className="flex items-center gap-2">
+            <span className="flex flex-col items-start gap-1.5 md:flex-row md:items-center md:gap-2">
               <Faces who={['ana', 'ben']} size={24} />
-              <span className="truncate text-[12px] font-extrabold md:text-[14px]">
+              <span className="text-[12px] font-extrabold leading-tight min-[360px]:whitespace-nowrap md:text-[14px]">
                 Ana and Ben saved this
               </span>
             </span>
-            <span className="text-[12px] text-nx-soft md:text-[13px]">TikTok</span>
+            <span className="hidden text-[13px] text-nx-soft md:block">TikTok</span>
           </span>
         </Tile>
         <span
@@ -310,7 +327,16 @@ export function VaultMock() {
       <div className="flex gap-3 md:gap-5">
         <span className="flex w-[46%] shrink-0 flex-col overflow-hidden rounded-[20px] bg-nx-surface md:w-[40%] md:rounded-[24px]">
           <Tile art="cat" className="h-[150px] md:h-[300px]">
-            <Meme top="Deleted the original?" bottom="Cute. We kept a copy." size={10} />
+            <Meme
+              top="Deleted the original?"
+              bottom="Cute. We kept a copy."
+              size={10}
+              inset={{ top: 30 }}
+            />
+            <span className="absolute left-2 top-2 inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full bg-nx-accent px-2 text-[11px] font-extrabold text-black shadow-[0_4px_12px_rgba(0,0,0,0.35)] md:left-2.5 md:top-2.5 md:h-7 md:gap-1.5 md:px-2.5 md:text-[12px]">
+              <Check size={12} />
+              <span>Kept on your ADHX</span>
+            </span>
           </Tile>
           <span className="flex flex-col gap-1 px-2.5 py-2.5 md:gap-1.5 md:px-3.5 md:py-3">
             <span className="flex items-center gap-1.5">
@@ -392,6 +418,28 @@ function Match({ icon, label }: { icon: ReactNode; label: string }) {
   )
 }
 
+/** How a search hit matched, over the post: the chip at the top, the words at the bottom. */
+function MatchOver({
+  icon,
+  label,
+  children,
+}: {
+  icon: ReactNode
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <>
+      <span className="absolute left-2 top-2 md:left-2.5 md:top-2.5">
+        <Match icon={icon} label={label} />
+      </span>
+      <span className="nx-scrim absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-5 md:px-3 md:pb-2.5">
+        {children}
+      </span>
+    </>
+  )
+}
+
 function Hit({ before, hit, after }: { before: string; hit: string; after: string }) {
   return (
     <span className="text-[12px] font-semibold leading-snug md:text-[15px]">
@@ -410,16 +458,18 @@ export function SearchMock() {
           <Query text="it bit me" caret />
           <Tile
             art="hamster"
-            className="h-[150px] rounded-[16px] ring-2 ring-nx-accent md:h-[230px] md:rounded-[18px] md:ring-[3px]"
+            className="h-[160px] rounded-[16px] ring-2 ring-nx-accent md:h-[230px] md:rounded-[18px] md:ring-[3px]"
           >
             <Meme
               top="Nobody remembers the caption"
               bottom="Everybody remembers the bite"
               size={9}
+              inset={{ top: 30, bottom: 30 }}
             />
+            <MatchOver icon={<Wave size={12} />} label="Said in the video">
+              <Hit before="“Ouch! It " hit="bit me" after="!”" />
+            </MatchOver>
           </Tile>
-          <Match icon={<Wave size={12} />} label="Said in the video" />
-          <Hit before="“Ouch! It " hit="bit me" after="!”" />
           <span className="hidden min-w-0 items-center gap-2 md:flex">
             <Face who="ben" size={20} />
             <span className="truncate text-[12px] text-nx-muted">
@@ -429,15 +479,16 @@ export function SearchMock() {
         </span>
         <span className="flex min-w-0 flex-col gap-2 md:gap-2.5">
           <Query text="all about the sauce" />
-          <Tile art="steak" className="h-[150px] rounded-[16px] md:h-[230px] md:rounded-[18px]">
-            <span className="absolute inset-x-2 bottom-[10%] text-center">
+          <Tile art="steak" className="h-[160px] rounded-[16px] md:h-[230px] md:rounded-[18px]">
+            <span className="absolute inset-x-2 top-[30%] text-center md:top-[26%]">
               <span className="inline-block rounded-[6px] bg-black/70 px-2 py-0.5 text-[12px] font-extrabold leading-tight text-white md:text-[15px]">
                 it’s all about the sauce
               </span>
             </span>
+            <MatchOver icon={<Screen size={12} />} label="On screen">
+              <Hit before="“it’s " hit="all about the sauce" after="”" />
+            </MatchOver>
           </Tile>
-          <Match icon={<Screen size={12} />} label="On screen" />
-          <Hit before="“it’s " hit="all about the sauce" after="”" />
           <span className="hidden min-w-0 items-center gap-2 md:flex">
             <Face who="mum" size={20} />
             <span className="truncate text-[12px] text-nx-muted">
@@ -554,12 +605,14 @@ function Reaction({
   fade = 1,
   delay = 0,
   hot = false,
+  className,
 }: {
   who: PersonId
   text: string
   fade?: number
   delay?: number
   hot?: boolean
+  className?: string
 }) {
   return (
     <span
@@ -568,6 +621,7 @@ function Reaction({
         hot
           ? 'border-[1.5px] border-[#ff8fa3]/70 shadow-[0_10px_24px_rgba(0,0,0,0.4)]'
           : 'border border-white/15',
+        className,
       )}
       style={{ opacity: fade, animationDelay: `${delay}ms` }}
     >
@@ -590,16 +644,18 @@ export function LiveMock() {
           {/* The video */}
           <Tile
             art="frog"
-            className="h-[200px] w-[40%] shrink-0 rounded-[14px] shadow-[0_0_0_2px_rgba(127,209,174,0.5)] md:order-2 md:h-[348px] md:w-[34%] md:rounded-[20px]"
+            className="h-[156px] w-[90px] shrink-0 rounded-[14px] shadow-[0_0_0_2px_rgba(127,209,174,0.5)] md:order-2 md:h-[348px] md:w-[34%] md:rounded-[20px]"
           >
-            <Meme
-              top="Ben: trust me, this one’s good"
-              bottom="It was not a good one"
-              size={10.5}
-              inset={{ bottom: 58 }}
-            />
-            <span className="nx-scrim absolute inset-x-0 bottom-0 flex flex-col gap-1 px-2 pb-2 pt-6 md:gap-1.5 md:px-3 md:pb-3.5">
-              <span className="flex min-w-0 items-center gap-1.5">
+            <span className="hidden md:block">
+              <Meme
+                top="Ben: trust me, this one’s good"
+                bottom="It was not a good one"
+                size={10.5}
+                inset={{ bottom: 58 }}
+              />
+            </span>
+            <span className="absolute inset-x-0 bottom-0 nx-scrim flex flex-col gap-1 px-1.5 pb-1.5 pt-4 md:gap-1.5 md:px-3 md:pb-3.5 md:pt-6">
+              <span className="hidden min-w-0 items-center gap-1.5 md:flex">
                 <Face who="ben" size={20} ring="#000" />
                 <span className="truncate text-[11px] font-extrabold md:text-[12px]">
                   Ben saved this
@@ -616,8 +672,8 @@ export function LiveMock() {
               <span className="nx-pulse h-2 w-2 rounded-full bg-[#ff5a3c]" />
               <span>LIVE</span>
             </span>
-            <span className="flex flex-col gap-2 md:rounded-[18px] md:border md:border-white/10 md:bg-black/50 md:p-3">
-              <span className="flex items-center gap-1">
+            <span className="flex items-center gap-2 md:flex-col md:items-start md:rounded-[18px] md:border md:border-white/10 md:bg-black/50 md:p-3">
+              <span className="flex shrink-0 items-center gap-1">
                 <Face
                   who="ana"
                   size={24}
@@ -631,18 +687,33 @@ export function LiveMock() {
                   style={{ marginLeft: 3, boxShadow: '0 0 0 2px #111, 0 0 0 3.5px #5ee38a' }}
                 />
               </span>
-              <span className="text-[12px] leading-snug md:text-[13px]">
+              <span className="text-[12px] leading-snug min-[360px]:whitespace-nowrap md:whitespace-normal md:text-[13px]">
                 <span className="font-extrabold">Ana and Jo</span>
-                <span className="text-nx-soft"> are watching with you</span>
+                <span className="text-nx-soft"> are watching</span>
+                <span className="hidden text-nx-soft md:inline"> with you</span>
               </span>
             </span>
             <span className="mt-auto flex flex-col gap-1.5 md:gap-2">
-              <Reaction who="jo" text="who sent this" fade={0.4} delay={0} />
+              <Reaction
+                who="jo"
+                text="who sent this"
+                fade={0.4}
+                delay={0}
+                className="hidden md:inline-flex"
+              />
               <Reaction who="ana" text="again" fade={0.7} delay={600} />
               <Reaction who="you" text="ha" hot delay={1200} />
             </span>
           </div>
-          {/* Up next and React */}
+          {/* Up next, on phones */}
+          <span className="absolute bottom-3 right-2.5 hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#ffb35c]/45 bg-nx-surface/90 pl-1 pr-3 text-[12px] min-[360px]:flex md:!hidden">
+            <Tile art="steak" className="h-7 w-7 rounded-full" />
+            <span>
+              <span className="font-extrabold">Mum’s</span>
+              <span className="text-nx-soft"> is next</span>
+            </span>
+          </span>
+          {/* Up next and Say something */}
           <div className="hidden min-w-0 flex-1 flex-col justify-between gap-3 md:order-3 md:flex">
             <span className="flex items-center gap-2.5 rounded-[18px] border border-[#ffb35c]/45 bg-nx-surface/90 p-2 pr-3 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
               <span className="relative shrink-0">
@@ -661,7 +732,7 @@ export function LiveMock() {
             </span>
             <span className="flex flex-col gap-2">
               <span className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-nx-soft">
-                React
+                Say something
               </span>
               <span className="flex h-10 items-center gap-2 rounded-full border border-white/20 bg-nx-surface/90 pl-3.5 pr-1">
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
@@ -836,7 +907,7 @@ export function StepShare({ compact = false }: { compact?: boolean }) {
         <span className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-nx-muted">
           Share
         </span>
-        <span className="flex gap-4">
+        <span className="flex gap-[18px]">
           <span className="flex flex-col items-center gap-1.5">
             <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[16px] bg-nx-ink shadow-[0_0_0_2px_rgb(var(--nx-accent))]">
               <Gob size={30} />
@@ -852,6 +923,12 @@ export function StepShare({ compact = false }: { compact?: boolean }) {
           <span className="flex flex-col items-center gap-1.5">
             <span className="h-[52px] w-[52px] rounded-[16px] bg-[#262320]" />
             <span className="mt-1 h-2 w-10 rounded bg-[#262320]" />
+          </span>
+          <span className="hidden flex-col items-center gap-1.5 text-nx-soft xl:flex">
+            <span className="flex h-[52px] w-[52px] items-center justify-center rounded-[16px] bg-[#262320]">
+              <Dots size={22} />
+            </span>
+            <span className="whitespace-nowrap text-[12px]">More</span>
           </span>
         </span>
       </span>
