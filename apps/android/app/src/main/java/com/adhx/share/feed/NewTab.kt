@@ -81,7 +81,15 @@ import com.adhx.share.main.Reach
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.FeedMode
 import com.adhx.share.net.PhonePost
+import com.adhx.share.net.ReasonPost
+import com.adhx.share.net.Saver
+import com.adhx.share.net.WhyKind
 import com.adhx.share.net.WhyReason
+import com.adhx.share.library.Route
+import com.adhx.share.ui.Avatar
+import com.adhx.share.ui.GobShape
+import com.adhx.share.ui.NetworkMark
+import androidx.compose.ui.semantics.Role
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Glyphs
@@ -191,7 +199,7 @@ fun NewTab(
             },
             topBar = { header(badge, page >= ui.items.size) },
             onSaver = actions.openPerson,
-            aboveCaption = { post -> WhyChip(post) { why = post } },
+            aboveCaption = { post -> WhyChip(post, server) { why = post } },
             end = if (ui.ended) end else null,
         )
     }
@@ -213,6 +221,7 @@ fun NewTab(
             weights = feed.weights,
             weightBusy = feed.weightBusy,
             onWeight = feed::setWeight,
+            onOpenPost = { platform, id -> actions.open(Route.PostLink(platform, id)) },
         )
         LaunchedEffect(Unit) { feed.loadWeights() }
     }
@@ -233,7 +242,7 @@ fun NewTab(
 
 /** The first reason the feed gives, as a chip over the caption ("Saved together ›"); tapping it explains. */
 @Composable
-private fun WhyChip(post: PhonePost, onClick: () -> Unit) {
+private fun WhyChip(post: PhonePost, server: String, onClick: () -> Unit) {
     val reason = whyChipLabel(post) ?: return
     Row(
         Modifier
@@ -245,7 +254,13 @@ private fun WhyChip(post: PhonePost, onClick: () -> Unit) {
             .padding(start = 10.dp, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(whyIcon(post.whyKind, chip = true), contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
+        val sender = sender(post)
+        if (sender != null) {
+            // "Pete sent you this", with Pete's face.
+            Avatar(sender, server, size = 24.dp)
+        } else {
+            Icon(whyIcon(post.whyKind, chip = true), contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
+        }
         Spacer(Modifier.width(8.dp))
         Text(
             reason,
@@ -271,12 +286,23 @@ internal fun whyChipLabel(post: PhonePost): String? {
     }
 }
 
+/**
+ * Who sent you the post, when the headline reason is `sent`: their saver on
+ * the post (for their picture), else just their username.
+ */
+internal fun sender(post: PhonePost): Saver? {
+    val reason = post.whyReasons.firstOrNull()?.takeIf { it.kind == WhyKind.SENT } ?: return null
+    val username = reason.username ?: return null
+    return post.savers.firstOrNull { it.username.equals(username, ignoreCase = true) } ?: Saver(username = username)
+}
+
 /** The icon for a kind of reason; on the chip, "close" is a heart. */
 private fun whyIcon(kind: String?, chip: Boolean = false) = when (kind) {
     "together" -> Glyphs.People
     "close" -> if (chip) Glyphs.Heart else Glyphs.PlayCircle
     "more" -> Glyphs.Plus
     "like", "yours" -> Glyphs.Bookmark
+    WhyKind.SENT -> Glyphs.Send
     else -> Glyphs.Again
 }
 
@@ -308,6 +334,8 @@ private fun WhySheet(
     weights: Map<String, Int>? = null,
     weightBusy: String? = null,
     onWeight: (String, Int) -> Unit = { _, _ -> },
+    /** The thumbnail beside "Like … you kept": that post of yours. */
+    onOpenPost: (platform: String, id: String) -> Unit = { _, _ -> },
 ) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -354,6 +382,7 @@ private fun WhySheet(
                     val faces = when {
                         reason.kind == "together" || (reason.kind == null && i == 0) -> others
                         reason.username != null -> post.savers.filter { it.username == reason.username }
+                            .ifEmpty { if (reason.kind == WhyKind.SENT) listOf(Saver(username = reason.username)) else emptyList() }
                         else -> emptyList()
                     }
                     Row(
@@ -378,7 +407,14 @@ private fun WhySheet(
                             color = AdhxColors.White,
                             modifier = Modifier.weight(1f),
                         )
-                        if (faces.isNotEmpty()) Faces(faces, server, size = 26.dp, ring = AdhxColors.Surface)
+                        val like = reason.post?.takeIf { reason.kind == WhyKind.LIKE }
+                        if (like != null) {
+                            LikeThumb(like, server) {
+                                scope.launch { state.hide() }.invokeOnCompletion { onOpenPost(like.platform, like.id) }
+                            }
+                        } else if (faces.isNotEmpty()) {
+                            Faces(faces, server, size = 26.dp, ring = AdhxColors.Surface)
+                        }
                     }
                 }
             }
@@ -437,6 +473,30 @@ private fun WhySheet(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             )
+        }
+    }
+}
+
+/**
+ * The post of yours a `like` reason is most like: 38dp, in Gob's shape, at
+ * the reason's right. Opens that post. Without a poster, its network's mark.
+ */
+@Composable
+private fun LikeThumb(post: ReasonPost, server: String, onClick: () -> Unit) {
+    val url = post.posterUrl?.let { AdhxApi.resolve(server, it)?.toString() }
+    Box(
+        Modifier
+            .size(38.dp)
+            .clip(GobShape)
+            .background(AdhxColors.Placeholder)
+            .clickable(onClickLabel = Copy.OPEN_YOUR_SAVE, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = Copy.OPEN_YOUR_SAVE },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (url != null) {
+            AsyncImage(url, null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+        } else {
+            NetworkMark(post.platform, size = 16.dp)
         }
     }
 }

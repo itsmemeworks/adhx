@@ -14,6 +14,11 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import com.adhx.share.net.FriendNote
+import android.widget.Toast
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import com.adhx.share.net.PhonePost
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.GobShape
@@ -68,6 +73,7 @@ import com.adhx.share.ui.Spinner
  * their face and how many you haven't seen, or a channel's name; Play; then
  * a grid of posters. A poster plays the channel from there.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChannelScreen(
     feed: FeedViewModel,
@@ -81,7 +87,10 @@ fun ChannelScreen(
     onOpenPost: (platform: String, id: String) -> Unit = { _, _ -> },
     /** The pages' header (Channels lit); null keeps a back button. */
     header: (@Composable () -> Unit)? = null,
+    /** "Kept · Open": your channel made from this group channel (its tag), with its name. */
+    onOpenKept: (tag: String, title: String) -> Unit = { _, _ -> },
 ) {
+    val context = LocalContext.current
     LaunchedEffect(route) {
         val person = if (route.kind == ChannelKind.FRIEND) Saver(username = route.slug, name = route.title, avatarUrl = route.avatarUrl) else null
         feed.openChannel(route.kind, route.slug, route.title, person)
@@ -145,11 +154,23 @@ fun ChannelScreen(
                             }
                         }
                     }
-                    if (ui.items.isNotEmpty()) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            PlayButton { onPlay(0) }
+                    val group = route.kind == ChannelKind.GROUP
+                    if (ui.items.isNotEmpty() || (group && ui.kept != null)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (ui.items.isNotEmpty()) PlayButton { onPlay(0) }
                             val fresh = ui.fresh.size
                             if (fresh > 0) PlayNewButton(fresh, onPlayNew)
+                            // A group channel can become one of yours.
+                            if (group) {
+                                val kept = ui.kept
+                                KeepButton(kept = kept != null, busy = ui.keeping) {
+                                    if (kept != null) {
+                                        onOpenKept(kept.tag, route.title)
+                                    } else {
+                                        feed.keepChannel { said -> Toast.makeText(context, said, Toast.LENGTH_SHORT).show() }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -264,6 +285,29 @@ private fun PlayNewButton(count: Int, onClick: () -> Unit) {
         Box(Modifier.size(7.dp).clip(CircleShape).background(AdhxColors.Accent))
         Spacer(Modifier.width(8.dp))
         Text(Copy.playNew(count), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream)
+    }
+}
+
+/** "Keep this channel" (a plus), then "Kept · Open" (a tick) once it's one of yours. */
+@Composable
+private fun KeepButton(kept: Boolean, busy: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(50))
+            .background(AdhxColors.Button)
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))
+            .clickable(enabled = !busy, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (busy) {
+            Spinner(size = 16.dp, stroke = 2.dp)
+        } else {
+            Icon(if (kept) Glyphs.Check else Glyphs.Plus, contentDescription = null, tint = if (kept) AdhxColors.Accent else AdhxColors.Cream, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(if (kept) Copy.KEPT_OPEN else Copy.KEEP_CHANNEL, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream)
     }
 }
 

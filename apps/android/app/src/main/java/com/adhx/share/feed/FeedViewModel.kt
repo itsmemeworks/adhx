@@ -86,6 +86,10 @@ data class ChannelUi(
     val items: List<PhonePost> = emptyList(),
     /** A friend's latest note, for the paper tile. */
     val note: FriendNote? = null,
+    /** A group channel you've kept as one of yours ("Kept · Open"). */
+    val kept: com.adhx.share.net.KeptChannel? = null,
+    /** "Keep this channel" is on its way. */
+    val keeping: Boolean = false,
     val loading: Boolean = false,
     val error: String? = null,
 ) {
@@ -451,6 +455,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 is ApiResult.Ok -> current.copy(
                     items = result.value.items,
                     note = result.value.note,
+                    kept = result.value.kept ?: current.kept,
                     size = current.size.takeIf { it > 0 } ?: result.value.items.size,
                     loading = false,
                 )
@@ -463,7 +468,85 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * "Keep this channel" on a group channel: its posts become one of your
+     * channels (saving the ones you hadn't). [onDone] gets what to say.
+     */
+    fun keepChannel(onDone: (String) -> Unit) {
+        val connection = store.current() ?: return
+        val now = _channel.value
+        if (now.kind != com.adhx.share.net.ChannelKind.GROUP || now.keeping || now.kept != null) return
+        _channel.value = now.copy(keeping = true)
+        viewModelScope.launch {
+            val result = AdhxApi(connection).keepGroupChannel(now.slug)
+            val current = _channel.value
+            val same = current.slug == now.slug && current.kind == now.kind
+            when (result) {
+                is ApiResult.Ok -> {
+                    val kept = com.adhx.share.net.KeptChannel(result.value.tag.ifBlank { now.slug }, result.value.url)
+                    if (same) _channel.value = current.copy(keeping = false, kept = kept)
+                    // It's one of yours now: Channels lists it next time.
+                    loadChannels(force = true)
+                    onDone(Copy.keptCount(result.value.added))
+                }
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    if (same) _channel.value = current.copy(keeping = false)
+                    onDone(result.message?.takeIf { it.isNotBlank() } ?: Copy.KEEP_FAILED)
+                }
+                ApiResult.Offline -> {
+                    if (same) _channel.value = current.copy(keeping = false)
+                    onDone(OFFLINE)
+                }
+            }
+        }
+    }
+
     // Live
+
+    /** The forming group whose bell is being changed. */
+    var alertBusy by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * Ring the bell on a forming group ("Tell me when it's live"), or stop.
+     * Shown at once; a failure puts it back, and a group that's gone drops
+     * from the list. [onDone] gets what to say.
+     */
+    fun setAlert(id: String, on: Boolean, onDone: (String) -> Unit) {
+        val connection = store.current() ?: return
+        val forming = _live.value.forming.firstOrNull { it.id == id } ?: return
+        if (alertBusy != null || id.isBlank()) return
+        fun mark(value: Boolean) {
+            _live.value = _live.value.copy(forming = _live.value.forming.map { if (it.id == id) it.copy(alert = value) else it })
+        }
+        mark(on)
+        alertBusy = id
+        viewModelScope.launch {
+            when (val result = AdhxApi(connection).setFormingAlert(id, on)) {
+                is ApiResult.Ok -> {
+                    mark(result.value.alert)
+                    if (result.value.alert) com.adhx.share.alerts.LiveAlerts.want(getApplication())
+                    onDone(if (result.value.alert) Copy.willTell(forming.title) else Copy.WONT_TELL)
+                }
+                is ApiResult.Failed -> {
+                    signedOut(result, connection)
+                    if (result.status == 404) {
+                        _live.value = _live.value.copy(forming = _live.value.forming.filterNot { it.id == id })
+                        onDone(Copy.FORMING_GONE)
+                    } else {
+                        mark(forming.alert)
+                        onDone(result.message?.takeIf { it.isNotBlank() } ?: Copy.ALERT_FAILED)
+                    }
+                }
+                ApiResult.Offline -> {
+                    mark(forming.alert)
+                    onDone(OFFLINE)
+                }
+            }
+            alertBusy = null
+        }
+    }
 
     fun loadLive() {
         val now = _live.value
@@ -473,7 +556,13 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val result = AdhxApi(connection).live()
             _live.value = when (result) {
-                is ApiResult.Ok -> LiveUi(moments = result.value.moments, forming = result.value.forming, loadedOnce = true)
+                is ApiResult.Ok -> {
+                    // A bell being changed keeps the state shown until the server answers.
+                    val busy = alertBusy
+                    val shown = _live.value.forming.firstOrNull { it.id == busy }?.alert
+                    val forming = result.value.forming.map { if (busy != null && it.id == busy && shown != null) it.copy(alert = shown) else it }
+                    LiveUi(moments = result.value.moments, forming = forming, loadedOnce = true)
+                }
                 is ApiResult.Failed -> {
                     signedOut(result, connection)
                     // No Live on this server yet: nothing's live, as far as the phone can tell.

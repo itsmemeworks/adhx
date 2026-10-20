@@ -169,6 +169,7 @@ object Copy {
     const val WHY_TITLE = "Why this one"
     const val WHOSE_SAVES = "Whose saves"
     const val WHY_NOTE = "No engagement bait. These are the only reasons."
+    const val OPEN_YOUR_SAVE = "Open your save"
     const val WHY_NONE = "It’s new to you. That’s the whole reason."
     val WHOSE = listOf("Everyone", "Friends only", "Mine")
 
@@ -300,6 +301,56 @@ object Copy {
         val thing = if (unit == "people") (if (left == 1) "person" else "people") else (if (left == 1) "save" else "saves")
         return "$left more $thing to go live"
     }
+
+    /** The bell on a forming row. */
+    const val TELL_ME = "Tell me when it’s live"
+
+    /** What a screen reader hears for the bell: "Tell me when Kitchen synths is live". */
+    fun tellMeWhen(title: String) = "Tell me when $title is live"
+
+    /** After the bell is turned on. */
+    fun willTell(title: String) = "We’ll tell you when $title goes live."
+    const val WONT_TELL = "Okay, no alert."
+    const val FORMING_GONE = "That one fizzled out before it went live."
+    const val ALERT_FAILED = "Couldn’t set that just now. Try again."
+
+    /** The notification: "Kitchen synths is live". */
+    fun isLive(title: String) = "$title is live"
+    const val LIVE_ALERT_TEXT = "Tune in"
+    const val LIVE_CHANNEL = "Live"
+    const val LIVE_CHANNEL_NOTE = "When a group you asked about goes live"
+
+    // Send straight to your people
+
+    const val STRAIGHT_TO_PEOPLE = "OR STRAIGHT TO YOUR PEOPLE"
+    const val SEND_PRIVATE = "Just for you. Share it first to send it."
+    const val SEND_FAILED = "That didn’t send. Try again."
+
+    /** "Jo already has it.", "Jo and Mum already have it.", "Jo, Mum and 2 others already have it." */
+    fun alreadyHave(labels: List<String>): String? = when {
+        labels.isEmpty() -> null
+        labels.size == 1 -> "${labels[0]} already has it."
+        else -> "${list(labels)} already have it."
+    }
+
+    /** "Sent to Ana". */
+    fun sentTo(label: String) = "Sent to $label"
+
+    /** A face in the row, for a screen reader. */
+    fun sendTo(label: String, has: Boolean, sent: Boolean) = when {
+        sent -> "Sent to $label"
+        has -> "$label already has it"
+        else -> "Send to $label"
+    }
+
+    // Keep this channel
+
+    const val KEEP_CHANNEL = "Keep this channel"
+    const val KEPT_OPEN = "Kept · Open"
+    const val KEEP_FAILED = "Couldn’t keep it just now. Try again."
+
+    /** "Kept. 37 posts are in your channel now." */
+    fun keptCount(added: Int) = if (added == 1) "Kept. 1 post is in your channel now." else "Kept. $added posts are in your channel now."
 
     const val YOU = "You"
     const val REACT = "React"

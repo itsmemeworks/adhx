@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android: send to your people, forming alerts, like thumbnail, Keep this channel
+
+- Send sheet (j4-4): "Or straight to your people" from `GET /api/app/send`: 52dp faces, dimmed with "Jo already has it." when they have it, a tap posts `/api/app/send` and leaves a tick; a private save says "Just for you. Share it first to send it." The sheet expands once the row loads (M3 sheets don't grow on their own). New's `sent` reason is the why chip "Pete sent you this" with his face.
+- Live (j7-3): forming rows show `people` faces and a bell (`PUT|DELETE /api/app/live/forming/{id}/alert`); the first bell asks for POST_NOTIFICATIONS. `alerts/LiveAlerts.kt` reads `/api/app/alerts` every minute while open and from a 15-minute WorkManager job, posts "X is live · Tune in" on a "Live" channel (opens `adhx://live?slug=`), then marks them seen; without permission the open app toasts instead.
+- Why this one (j2-2): a `like` reason's `post.posterUrl` is a 38dp Gob thumbnail that opens that post. Group channels have Keep this channel → Kept · Open (opens your channel).
+- Verified live on a :3610 parity server with the server branch merged in; JVM tests in `BoardFeaturesTest`. Text posts still skip the send sheet, so they can't be sent to people from the phone yet.
+
 ## 2026-10-20 — iPhone: send to your people, live alerts, like thumbnail, keep channel
 
 - Send sheet (j4-4): "Or straight to your people" from `GET/POST /api/app/send`; 52 pt faces, has-it dimmed with "Jo already has it." (beside the faces up to four, else under), a yellow tick on send, "Just for you. Share it first to send it." when not `sendable`. New's `sent` reason is the why chip "Pete sent you this" with the sender's face (a paper plane in the why sheet); unknown reason kinds show as their words.

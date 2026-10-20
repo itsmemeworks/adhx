@@ -174,10 +174,33 @@ data class PhonePost(
 @Serializable
 data class WhyReason(
     val text: String = "",
-    /** together · more · like · close · fresh · yours */
+    /** together · more · like · close · fresh · yours · sent; anything else reads as a plain reason. */
     val kind: String? = null,
     val username: String? = null,
+    /** A `like` reason: your own kept post it's most like, for the thumbnail beside it. */
+    val post: ReasonPost? = null,
 )
+
+/** The post behind a reason ("Like the baby videos you kept"): yours, with its poster (relative). */
+@Serializable
+data class ReasonPost(
+    val platform: String = "",
+    val id: String = "",
+    val posterUrl: String? = null,
+)
+
+/** The kinds of reason the app draws differently. Any other kind is shown as its words. */
+object WhyKind {
+    const val TOGETHER = "together"
+    const val MORE = "more"
+    const val LIKE = "like"
+    const val CLOSE = "close"
+    const val FRESH = "fresh"
+    const val YOURS = "yours"
+
+    /** Someone sent you the post ("Pete sent you this"); `username` is who. */
+    const val SENT = "sent"
+}
 
 /** One member who saved a post. `avatarUrl` may be relative; null means draw their initial. */
 @Serializable
@@ -429,6 +452,22 @@ data class ChannelItemsResponse(
     /** A friend's channel: their latest note on a save you may see. Read loosely. */
     @Serializable(with = FriendNoteSerializer::class)
     val note: FriendNote? = null,
+    /** A group channel you've kept as one of yours (`{ tag, url }`), else null. Read loosely. */
+    @Serializable(with = KeptChannelSerializer::class)
+    val kept: KeptChannel? = null,
+)
+
+/** Your channel made from a group channel ("Keep this channel"): its tag, and its page on your ADHX. */
+@Serializable
+data class KeptChannel(val tag: String = "", val url: String? = null)
+
+/** `POST /api/app/channels/group/{slug}/keep`. */
+@Serializable
+data class KeepChannelResponse(
+    val tag: String = "",
+    val url: String? = null,
+    /** How many posts it tagged (some may have been saved for you first). */
+    val added: Int = 0,
 )
 
 /** A friend's note for the channel's paper tile: "the original and still the best", on which post. */
@@ -489,6 +528,11 @@ data class FormingMoment(
     val unit: String = "saves",
     @Serializable(with = CoversSerializer::class)
     val covers: List<String> = emptyList(),
+    /** Members saving into it, newest first (at most 4). Older servers send none. */
+    @Serializable(with = LenientSaversSerializer::class)
+    val people: List<Saver> = emptyList(),
+    /** You asked to be told when it goes live. */
+    val alert: Boolean = false,
 ) {
     /** How many more it takes, at least one. */
     val left: Int get() = (need - have).coerceAtLeast(1)
@@ -501,6 +545,31 @@ data class LiveResponse(
     @Serializable(with = LenientFormingSerializer::class)
     val forming: List<FormingMoment> = emptyList(),
 )
+
+/** `PUT|DELETE /api/app/live/forming/{id}/alert`: whether you'll be told now. */
+@Serializable
+data class AlertState(val alert: Boolean = false)
+
+/** A forming group you asked about went live (`GET /api/app/alerts`). */
+@Serializable
+data class LiveAlert(
+    val id: String = "",
+    /** The moment to tune in to. */
+    val slug: String = "",
+    val title: String = "",
+    val at: String? = null,
+)
+
+/** `GET /api/app/alerts`: unseen, newest first. */
+@Serializable
+data class AlertsResponse(
+    @Serializable(with = LenientAlertsSerializer::class)
+    val alerts: List<LiveAlert> = emptyList(),
+)
+
+/** `POST /api/app/alerts/seen`. */
+@Serializable
+data class AlertsSeenRequest(val ids: List<String>)
 
 /** `GET /api/app/live/{slug}`. */
 @Serializable
@@ -711,6 +780,50 @@ object DoingScope {
     const val MINE = "mine"
     const val NEEDS = "needs"
 }
+
+// Send straight to your people (the send sheet's "Or straight to your people").
+
+/** One member you could send a post to. */
+@Serializable
+data class SendPerson(
+    val username: String = "",
+    val name: String? = null,
+    val avatarUrl: String? = null,
+    /** They already have a save of it ("Jo already has it."). */
+    val has: Boolean = false,
+    /** You've sent it to them already. */
+    val sent: Boolean = false,
+) {
+    val label: String get() = name?.trim()?.takeIf { it.isNotEmpty() } ?: username
+    val asSaver: Saver get() = Saver(username = username, name = name, avatarUrl = avatarUrl)
+}
+
+/** `GET /api/app/send?platform=&id=`: who it can go to. `sendable` is false for your own private save. */
+@Serializable
+data class SendTargets(
+    val sendable: Boolean = true,
+    @Serializable(with = LenientSendPeopleSerializer::class)
+    val people: List<SendPerson> = emptyList(),
+)
+
+/** `POST /api/app/send`. */
+@Serializable
+data class SendRequest(
+    val platform: String,
+    val id: String,
+    val to: List<String>,
+    val note: String? = null,
+)
+
+/** Someone it didn't go to, and why: has · sent · unknown. */
+@Serializable
+data class SendSkip(val username: String = "", val reason: String = "")
+
+@Serializable
+data class SendResult(
+    val sent: List<String> = emptyList(),
+    val skipped: List<SendSkip> = emptyList(),
+)
 
 /** `POST /api/app/doing/retry` → `{ retried }`: false when it was already on its way. */
 @Serializable
