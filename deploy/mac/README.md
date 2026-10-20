@@ -71,14 +71,15 @@ deploy/mac/install.sh "$HOME/Library/Application Support/ADHX-worker/worker.env"
 
 Configuration:
 
-| Mac setting                               | Value                                                                                  |
-| ----------------------------------------- | -------------------------------------------------------------------------------------- |
-| `ADHX_SERVER_URL`                         | Existing HTTPS origin, for example `https://adhx.example.com`, without a path or query |
-| `ADHX_WORKER_TOKEN`                       | Exact server `PROCESSING_WORKER_TOKEN` value                                           |
-| `ADHX_WORKER_ID`                          | A readable identifier such as `mac-worker`                                             |
-| `SEMANTIC_DEVICE`                         | `cpu` initially                                                                        |
-| `SEMANTIC_THREADS`                        | `2` initially; tune separately from the NAS query-model threads                        |
-| `SEMANTIC_SPEECH`, `SEMANTIC_SCREEN_TEXT` | Optional `off` to leave speech or on-screen text to another worker                     |
+| Mac setting                               | Value                                                                                        |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `ADHX_SERVER_URL`                         | Existing HTTPS origin, for example `https://adhx.example.com`, without a path or query       |
+| `ADHX_WORKER_TOKEN`                       | Exact server `PROCESSING_WORKER_TOKEN` value                                                 |
+| `ADHX_WORKER_ID`                          | A readable identifier such as `mac-worker`                                                   |
+| `SEMANTIC_DEVICE`                         | `cpu` initially                                                                              |
+| `SEMANTIC_THREADS`                        | `2` initially; tune separately from the NAS query-model threads                              |
+| `SEMANTIC_MEMORY_PROFILE`                 | Optional `compact` to disable CPU arenas and memory patterns; application default `standard` |
+| `SEMANTIC_SPEECH`, `SEMANTIC_SCREEN_TEXT` | Optional `off` to leave speech or on-screen text to another worker                           |
 
 The example lists optional absolute scratch/model paths and budget overrides.
 Keep reusable model weights separate from disposable scratch, preferably
@@ -121,6 +122,14 @@ service as well as foreground runs when tuning your host.
 For an existing installation, rerun `deploy/mac/install.sh` with the private
 environment-file path after updating the checkout. Pulling source or restarting
 the old service alone leaves its persisted `Background` plist unchanged.
+
+On memory-constrained Macs, the example opts into `SEMANTIC_MEMORY_PROFILE=compact`.
+This changes ONNX allocation, preserving the pinned model, precision and frame
+coverage. It is not a hard memory cap or a guaranteed speed increase. Compare
+physical footprint, system memory pressure and end-to-end section times before
+and after; RSS alone omits compressed memory. Leave other active applications
+alone when measuring a shared host. See the [benchmark results and experiments](../../docs/mac-processing-performance.md)
+for reproduction steps, quality limits and why CoreML should remain opt-in.
 
 Source downloads and cheap metadata probes still run on the NAS. Keep download
 concurrency conservative and budget those separately. With `KEEP_H264=on` in
