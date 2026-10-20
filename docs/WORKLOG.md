@@ -13,6 +13,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Why this one (j2-2): a `like` reason's `post.posterUrl` is a 38dp Gob thumbnail that opens that post. Group channels have Keep this channel → Kept · Open (opens your channel).
 - Verified live on a :3610 parity server with the server branch merged in; JVM tests in `BoardFeaturesTest`. Text posts still skip the send sheet, so they can't be sent to people from the phone yet.
 
+## 2026-10-20 — Board features: send to your people, forming bells, like thumbnail, keep group channels
+
+- **Send** (j4-4): `post_sends` + `GET|POST /api/posts/send` and `/api/app/send` (`src/lib/sends/`): every other member with `has`/`sent`; a post only you keep privately isn't sendable, another person's private post is 404. New leads with `{ kind: 'sent', text: 'Pete sent you this', username }` until seen (`markSeen` sets `seen_at`), however old; the note rides on the sender's saver (and on the reason). Web: "Or straight to your people" in the Share sheet; the why chip shows the sender's face.
+- **Forming** (j7-1/j7-3): `FormingView.people` (≤4 faces from the group's own saves) and `alert`, members only; `PUT|DELETE /api/moments/forming/{id}/alert` (+ phone), alerts at `/api/moments/alerts` (+ phone). Bells are carried by `reconcileForming` after merges/regroups and fire once when the group goes live. Forming ids now carry a per-process part. Web: faces + "Tell me when it's live" on the card, `MomentAlerts` toast + browser notification on every signed-in page.
+- **Like thumbnail** (j2-2): the like reason's `post: { platform, id, posterUrl }` (`cover.ts`, shared with the phone live view); `LikeThumb` in Why this one. **Keep this channel** (j6-2): `POST /api/channels/group/{slug}/keep` (+ phone) saves what you lack (`channel_keep`, not private) and tags it `food-youll-cook`; queues carry `kept`.
+- Parity: Ana sends Pete the bridge; `parity:serve` makes a forming group after Next starts; new j2-2 capture (mobile web vs the phone why sheet). Scores before → after: j6-2 9.4 → 9.0, j7-1 7.8 → 8.2 (web) and 22.3 → 22.2 (mobile), j2-2 11.4 → 11.6 (mobile); the forming card, Keep this channel and the thumbnail are now reached.
+- Follow-ups: forming names stay "Something new" without the model; group keep isn't on the phone-width web side panel (same as Made for you keep).
+
 ## 2026-10-20 — Android: Show less/more, New marks, note card, live span, second parity pass
 
 - New server fields used: Why this one has Show less/more pills (`/api/app/feed/weights`, last and first friend who saved it); channels mark `isNew` tiles, add Play the N new and the friend's `note` as a paper tile; Live says "3 saves in 10 min · names" (`recentSaves`/`windowMinutes`) and lists `forming` groups as dashed rows.

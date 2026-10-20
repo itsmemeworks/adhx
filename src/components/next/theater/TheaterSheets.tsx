@@ -30,7 +30,8 @@ import { NoteField } from '../NoteField'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { isVideoItem, viaLabel } from './queue'
 import { channelTitle } from '../channels/ChannelParts'
-import { WhyIcon, whyKind, whyLabel } from './FeedParts'
+import { LikeThumb, WhyIcon, WhyLead, whyKind, whyLabel } from './FeedParts'
+import { SendToPeople } from './SendToPeople'
 import type { FeedWeight } from '@/lib/feed/blend'
 
 /**
@@ -599,11 +600,14 @@ export function PrivateRow({
  */
 export function ShareSheet({
   url,
+  post = null,
   waiting = false,
   onClose,
   anchor = null,
 }: {
   url: string
+  /** Members only: the post, for "Or straight to your people". */
+  post?: { platform: string; id: string } | null
   /** Whether playback is held while this is open (says so). */
   waiting?: boolean
   onClose: () => void
@@ -666,6 +670,13 @@ export function ShareSheet({
         )}
         {waiting && copied !== 'blocked' && (
           <span className="text-[13px] text-white/55">Paused until you close this.</span>
+        )}
+        {post && (
+          <SendToPeople
+            platform={post.platform}
+            id={post.id}
+            className="mt-1 border-t border-white/10 pt-3"
+          />
         )}
       </div>
     </Sheet>
@@ -742,9 +753,18 @@ export function WhySheet({
                 aria-hidden
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-nx-accent"
               >
-                <WhyIcon kind={reason.kind} className="h-[18px] w-[18px]" />
+                {reason.kind === 'sent' ? (
+                  <WhyLead post={item.post} size={28} />
+                ) : (
+                  <WhyIcon kind={reason.kind} className="h-[18px] w-[18px]" />
+                )}
               </span>
-              <span className="min-w-0 flex-1">{reason.text}</span>
+              <span className="min-w-0 flex-1">
+                {reason.kind === 'sent' && reason.note
+                  ? `${reason.text}: “${reason.note}”`
+                  : reason.text}
+              </span>
+              {reason.kind === 'like' && <LikeThumb post={reason.post} />}
             </li>
           )
         })}

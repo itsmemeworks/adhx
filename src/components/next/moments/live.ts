@@ -104,8 +104,16 @@ export function applyEvent(snapshot: MomentsSnapshot, event: MomentEvent): Momen
       let forming = snapshot.forming
       if (event.forming) {
         const has = forming.some((f) => f.id === event.forming!.id)
+        // Keep the faces and bell a card already had when the event carries none.
+        const next = (prev: FormingView): FormingView => ({
+          ...event.forming!,
+          ...(event.forming!.people === undefined && prev.people ? { people: prev.people } : {}),
+          ...(event.forming!.alert === undefined && prev.alert !== undefined
+            ? { alert: prev.alert }
+            : {}),
+        })
         forming = has
-          ? forming.map((f) => (f.id === event.forming!.id ? event.forming! : f))
+          ? forming.map((f) => (f.id === event.forming!.id ? next(f) : f))
           : [...forming, event.forming].slice(-3)
       }
       return { ...snapshot, stream, moments, forming }

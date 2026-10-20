@@ -446,6 +446,54 @@ working|waiting|needs_you|ready, playable, reason, quality, learned, retry,
 finishedAt }], summary: { onTheirWay, keeping, learning, needsYou, ready,
 freeBytes, processing, remoteConnected } }`. `POST /api/app/doing/retry
 { platform, id }` → `{ retried }`, for people who saved it (`retry: true`).
+- `GET /api/app/send?platform=&id=` → the send sheet's "Or straight to your
+  people" (board j4-4), one face per member (not you):
+
+  ```json
+  {
+    "sendable": true,
+    "people": [{ "username": "jo", "name": "Jo", "avatarUrl": null, "has": true, "sent": false }]
+  }
+  ```
+
+  `has`: they already have a save of it they can see (their own save, any
+  visibility), shown dimmed with "Jo already has it."; `sent`: you've already
+  sent it to them. `sendable` is false (and `people` is `[]`) when the only
+  save you can see is your own private one: say "Just for you. Share it
+  first to send it." 404 `not_found` when you can't see any save of it.
+
+- `POST /api/app/send { "platform", "id", "to": ["ana","ben"], "note"?: string ≤140 }`
+  → `{ "sent": ["ana"], "skipped": [ { "username": "ben", "reason": "has" | "sent" | "unknown" } ] }`.
+  60 a minute per user, then 429 `busy` with `Retry-After`; 403 `private`
+  for a post only you keep privately; 400 `bad_request` for a bad body.
+- New's sent posts: an unseen send leads New with the reason
+  `{ "kind": "sent", "text": "Pete sent you this", "username": "pete" }`
+  (plus `note` when the sender wrote one) until it's seen (`/api/app/seen`).
+  With a note, the item's saver for Pete carries it as `note`. Treat an
+  unknown `kind` as a plain reason.
+- The `like` reason gains `"post": { "platform", "id", "posterUrl" }`: your
+  own kept post it's most like. `posterUrl` is a path from the server root
+  (or a full URL, or null); show it as a 38 pt Gob-shaped square at the
+  reason's right; tapping it opens that post.
+- `GET /api/app/live` `forming[]` entries add `"people": [ { "username",
+"name", "avatarUrl" } ]` (members only, newest saver first, at most 4,
+  visible saves only) and `"alert": true|false` (you asked to be told).
+  `PUT|DELETE /api/app/live/forming/{id}/alert` → `{ "alert": true|false }`,
+  or 404 `forming_gone`. The bell survives regroups and merges.
+- `GET /api/app/alerts` → `{ "alerts": [ { "id": "a1", "slug":
+"kitchen-synths-x1y2", "title": "Kitchen synths", "at": "ISO" } ] }`
+  (unseen only, newest first, at most 20; older than 24 h expire). Notify
+  "Kitchen synths is live" (tapping it opens Tune in for that slug), then
+  `POST /api/app/alerts/seen { "ids": [...] }` → `{ "ok": true }`. iOS: a
+  local notification from the foreground poll and a BGAppRefreshTask (ask on
+  the first bell tap). Android: NotificationCompat on a "Live" channel from
+  the foreground poll and a 15-minute WorkManager check (POST_NOTIFICATIONS
+  on the first bell tap).
+- `POST /api/app/channels/group/{slug}/keep` → `{ "tag": "food-youll-cook",
+"url": "/t/pete/food-youll-cook", "added": 37 }` ("Keep this channel",
+  board j6-2; not made public; posts you haven't saved are saved for you).
+  `GET /api/app/channels/group/{slug}` adds `"kept": { "tag", "url" } | null`;
+  once kept the button reads "Kept · Open".
 - Faces: `avatarUrl` is `/api/files/avatar/<hash>`, members only, so the app
   loads it with `Authorization: Bearer <phone key>` (only to its own server)
   and keeps it in memory; the address changes with each new picture.
