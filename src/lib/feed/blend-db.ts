@@ -35,6 +35,8 @@ import {
   type WhyReason,
 } from './blend'
 import { seenKeys } from './views'
+import { coverImage } from './cover'
+import { unseenSendsTo, type IncomingSend } from '@/lib/sends/sends'
 import { postKinds, readFeedTypes } from './kinds'
 
 /**
@@ -116,8 +118,16 @@ function split(key: string): { platform: string; id: string } {
 
 type KeyRow = { platform: string; id: string }
 
-/** Which posts the mode looks at, newest save first. */
-function candidateKeys(viewerId: string, mode: BlendMode, now: number): string[] {
+/**
+ * Which posts the mode looks at, newest save first. New also takes every
+ * post sent to the viewer that they haven't seen, however old.
+ */
+function candidateKeys(
+  viewerId: string,
+  mode: BlendMode,
+  now: number,
+  sent: ReadonlyMap<string, IncomingSend[]> = new Map(),
+): string[] {
   if (mode === 'mine') {
     const rows = db.all<KeyRow>(sql`
       SELECT b.platform, b.id FROM bookmarks b
@@ -135,8 +145,12 @@ function candidateKeys(viewerId: string, mode: BlendMode, now: number): string[]
     GROUP BY b.platform, b.id
     ORDER BY MAX(b.processed_at) DESC LIMIT ${MAX_POSTS}
   `)
-  if (mode === 'new' || recent.length >= MIN_POSTS)
-    return recent.map((r) => `${r.platform}:${r.id}`)
+  if (mode === 'new') {
+    const keys = recent.map((r) => `${r.platform}:${r.id}`)
+    const have = new Set(keys)
+    return [...[...sent.keys()].filter((k) => !have.has(k)), ...keys]
+  }
+  if (recent.length >= MIN_POSTS) return recent.map((r) => `${r.platform}:${r.id}`)
   const older = db.all<KeyRow>(sql`
     SELECT b.platform, b.id FROM bookmarks b
     WHERE ${seenBy(viewerId, 'b')}
@@ -328,9 +342,12 @@ function keptLabels(
 function tasteFor(
   viewerId: string,
   keys: string[],
-): { similarity: Map<string, number>; like: Map<string, { label: string; topic: string | null }> } {
+): {
+  similarity: Map<string, number>
+  like: Map<string, NonNullable<BlendCandidate['like']>>
+} {
   const similarity = new Map<string, number>()
-  const like = new Map<string, { label: string; topic: string | null }>()
+  const like = new Map<string, NonNullable<BlendCandidate['like']>>()
   const kept = db
     .select({ platform: bookmarks.platform, id: bookmarks.id })
     .from(bookmarks)
@@ -369,7 +386,7 @@ function tasteFor(
   const labels = keptLabels(viewerId, [...new Set(nearest.values())])
   for (const [key, keptKey] of nearest) {
     const label = labels.get(keptKey)
-    if (label) like.set(key, label)
+    if (label) like.set(key, { ...label, post: split(keptKey) })
   }
   return { similarity, like }
 }
@@ -445,7 +462,9 @@ export async function computeBlend(
   const now = opts.now ?? Date.now()
   const moderated = readModeratedPostKeys()
   if (!moderated.ok) throw moderated.error
-  let keys = candidateKeys(viewerId, mode, now).filter((k) => !moderated.value.has(k))
+  // Posts sent to you that you haven't seen yet ("Pete sent you this").
+  const sends = mode === 'mine' ? new Map<string, IncomingSend[]>() : unseenSendsTo(viewerId)
+  let keys = candidateKeys(viewerId, mode, now, sends).filter((k) => !moderated.value.has(k))
   const gone = await goneKeys(keys)
   if (gone.size) keys = keys.filter((k) => !gone.has(k))
   const saves = savesFor(keys, viewerId)
@@ -461,7 +480,18 @@ export async function computeBlend(
         saves: list,
         similarity: similarity.get(key) ?? null,
         like: like.get(key) ?? null,
-        seen: seen.has(key),
+        // A send you haven't seen keeps it unseen, even if you saw the post before.
+        seen: seen.has(key) && !sends.has(key),
+        ...(sends.has(key)
+          ? {
+              sent: sends.get(key)!.map((x) => ({
+                username: x.username,
+                name: x.name,
+                at: x.at,
+                note: x.note,
+              })),
+            }
+          : {}),
         kind: kinds.get(key) ?? 'text',
       },
     ]
@@ -496,6 +526,32 @@ function remember(key: string, snapshot: Snapshot): void {
   snapshots.delete(key)
   snapshots.set(key, snapshot)
   while (snapshots.size > MAX_SNAPSHOTS) snapshots.delete(snapshots.keys().next().value!)
+}
+
+/**
+ * The thumbnails beside "Like … you kept": each like reason's kept post's
+ * cover, as an address from this ADHX's root (the feed's thumbnail rules).
+ */
+async function likePosters(
+  picks: BlendPick[],
+  viewerId: string,
+): Promise<Map<string, string | null>> {
+  const keys = [
+    ...new Set(
+      picks.flatMap((p) =>
+        p.reasons.flatMap((r) =>
+          r.kind === 'like' && r.post ? [`${r.post.platform}:${r.post.id}`] : [],
+        ),
+      ),
+    ),
+  ]
+  const out = new Map<string, string | null>()
+  if (keys.length === 0) return out
+  const loaded = await loadSearchItems(keysToHits(keys), viewerId, { savers: false })
+  for (const item of loaded) {
+    out.set(`${item.post.platform ?? 'twitter'}:${item.post.id}`, coverImage(item.post))
+  }
+  return out
 }
 
 export class BadCursorError extends Error {
@@ -585,9 +641,25 @@ export async function blendPage(
     loaded.map((i) => i.post),
     viewerId,
   )
+  const posters = await likePosters(slice, viewerId)
   const items: BlendItem[] = posts.flatMap((post) => {
     const pick = byKey.get(`${post.platform ?? 'twitter'}:${post.id}`)
-    return pick ? [{ ...post, why: pick.why, whyReasons: pick.reasons }] : []
+    if (!pick) return []
+    const reasons = pick.reasons.map((r) =>
+      r.kind === 'like' && r.post
+        ? {
+            ...r,
+            post: { ...r.post, posterUrl: posters.get(`${r.post.platform}:${r.post.id}`) ?? null },
+          }
+        : r,
+    )
+    // "When a note is given, the item's saver for Pete carries it."
+    const sent = reasons.find((r) => r.kind === 'sent')
+    const savers =
+      sent?.note && post.savers
+        ? post.savers.map((s) => (s.username === sent.username ? { ...s, note: sent.note } : s))
+        : post.savers
+    return [{ ...post, ...(savers ? { savers } : {}), why: pick.why, whyReasons: reasons }]
   })
   return {
     items,

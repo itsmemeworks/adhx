@@ -3,6 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/lib/db/schema'
 import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
+import { BOARD_FEATURES_DDL } from '@/lib/sends/schema-sql'
 
 /**
  * Shared test database setup for API tests.
@@ -408,6 +409,7 @@ export const FULL_SCHEMA_SQL = `
     );
 
 ${SAVE_VISIBILITY_DDL}
+${BOARD_FEATURES_DDL}
 `
 
 export interface TestDbInstance {

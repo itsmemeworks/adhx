@@ -10,6 +10,7 @@ import {
   Clock,
   Plus,
   RotateCcw,
+  Send,
   SlidersHorizontal,
   Users,
   type LucideIcon,
@@ -39,6 +40,7 @@ import { Gob } from '../Gob'
 
 /** Icon for a reason, as on the chip, Up next and "Why this one". */
 export const WHY_ICON: Record<WhyKind, LucideIcon> = {
+  sent: Send,
   together: Users,
   more: Plus,
   like: Bookmark,
