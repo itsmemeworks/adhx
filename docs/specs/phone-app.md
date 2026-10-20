@@ -552,6 +552,33 @@ out so the server's own choice still applies.
   (never a repeat share).
 - Shared lately sits in Settings with how many links are waiting.
 
+### iPhone notes
+
+- Why this one, What's in your feed and On their way are the boards' bottom
+  sheets (full width, joined to the bottom edge), not system sheets. Why
+  this one has "− Show less from Ben" / "+ Show more from Ana"
+  (`/api/app/feed/weights`, loaded when it opens): more is the first friend
+  who saved it, less the second (the same one when alone), or whoever you
+  already chose; the chosen one is cream and a tap goes back to normal; a
+  long press picks another friend. A post only you saved shows What's in
+  your feed there instead.
+- A friend's channel opens under Home's header (tap Channels, or swipe in
+  from the left edge, to go back) with New on unseen tiles, **Play the N
+  new** and their note as a paper card third in the grid (opens that post).
+  Your people has **See all** (the people list) and **Invite** (when
+  `canInvite`; it opens Settings → Your people on the web).
+- Live: the first moment is the big card ("3 saves in 10 min · …" from
+  `recentSaves`/`windowMinutes`, else "4 saves"); the rest are rows labelled
+  with the window ("Right now", "Last few days") or "Live · 1 save in 5 min";
+  `forming` groups show as dashed "Forming" rows with "1 more save to go
+  live". Forming groups carry no faces and there's no route to be told when
+  one goes live, so the row has neither.
+- Share on the player opens **Sending the video itself**: the kept file
+  downloads with a progress line, then goes out through Messages, Mail,
+  Files, Photos or the system share sheet (Messages/Mail fall back to it when
+  the phone can't send them). The boards' "Or straight to your people" needs
+  a route to send a post to a member, which doesn't exist yet.
+
 ## The share sheet (both platforms)
 
 1. **Open**: read the shared link (or the first link in shared text); show the

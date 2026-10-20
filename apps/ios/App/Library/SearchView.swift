@@ -367,6 +367,15 @@ struct PostTile: View {
             .overlay(alignment: .topTrailing) {
                 if privacy.isPrivate(post) {
                     PrivateLock(size: 24).padding(8)
+                } else if post.isNew == true {
+                    // In a channel: you haven't saved or seen it.
+                    Text("New")
+                        .font(Theme.sans(10, .heavy))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Theme.accent))
+                        .padding(8)
                 } else if let strength = post.match?.strength {
                     MatchMeter(level: strength == "strong" ? 3 : strength == "good" ? 2 : 1)
                         .padding(8)
@@ -438,7 +447,7 @@ extension PostTile {
     fileprivate var accessibilityText: String {
         var parts = [Network.name(post.platform), post.author.handle]
         if let saversLine { parts.append(saversLine) }
-        if privacy.isPrivate(post) { parts.append("just for me") }
+        if privacy.isPrivate(post) { parts.append("just for me") } else if post.isNew == true { parts.append("new to you") }
         parts.append(post.article?.title ?? post.text)
         return parts.joined(separator: ", ")
     }

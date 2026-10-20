@@ -248,6 +248,15 @@ server sends it, which it does for members only.
   `/api/app/live/{slug}/react` and float up after acknowledgement. Failed words
   remain available for Retry against the original post. They are ephemeral
   reactions, not stored messages.
+- Why this one has Show less / Show more from a friend
+  (`/api/app/feed/weights`); a friend's channel marks what you haven't seen
+  (`isNew`), plays just those, and shows their latest note; Live says how
+  busy a moment is (`recentSaves` in `windowMinutes`) and lists groups still
+  forming. Details in `docs/specs/phone-app.md` → iPhone notes.
+- The why, filter and On their way sheets are the boards' own bottom sheets
+  (`App/BoardSheet.swift`); Share opens the send sheet
+  (`App/Library/SendSheet.swift`), which downloads the kept file and hands it
+  to Messages, Mail, Files, Photos or the share sheet.
 - On an ADHX without these endpoints yet (404), New plays your saves as
   before, and Channels and Live say the server needs an update.
 

@@ -83,15 +83,11 @@ struct SettingsView: View {
         } message: { _ in
             Text("They won’t get in with this invite.")
         }
-        .sheet(isPresented: $filtering) {
+        .boardSheet(isPresented: $filtering, height: 590) {
             if let feed {
                 FeedFilterSheet(types: feed.types, mode: feed.mode, newCount: nil, hidden: feed.hidden,
                                 setTypes: { types in Task { await feed.setTypes(types) } },
                                 choose: { mode in Task { await feed.setMode(mode) } })
-                    .presentationDetents([.height(580), .large])
-                    .presentationDragIndicator(.visible)
-                    .presentationBackground(Theme.surface)
-                    .presentationCornerRadius(28)
             }
         }
     }
@@ -272,17 +268,19 @@ struct SettingsView: View {
                     PeopleListView(settings: settings, server: server, invite: invite)
                 } label: {
                     SettingsRow(title: "Your people") {
-                        if !settings.members.isEmpty {
-                            FaceStack(savers: settings.members.filter { !$0.isYou }.map(\.face),
+                        let others = settings.members.filter { !$0.isYou }
+                        if !others.isEmpty {
+                            FaceStack(savers: others.map(\.face),
                                       server: server, size: 24, ring: Theme.surface)
-                            Text("\(settings.members.count)")
+                            // Everyone but you, like the boards' "4".
+                            Text("\(others.count)")
                                 .font(Theme.sans(14))
                                 .foregroundStyle(Theme.faint)
                         }
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityValue(settings.members.isEmpty ? "" : "\(settings.members.count) people")
+                .accessibilityValue(settings.members.count > 1 ? "\(settings.members.count - 1) others" : "")
                 divider
             }
             if settings.people?.canInvite ?? true {

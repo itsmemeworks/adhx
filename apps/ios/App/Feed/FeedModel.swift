@@ -44,6 +44,45 @@ final class FeedModel: ObservableObject {
 
     var onBadKey: () -> Void = {}
 
+    // MARK: Show more / less from someone
+
+    /// Who you asked to see more (1) or less (-1) of; nil until loaded, or on
+    /// a server without `/api/app/feed/weights`.
+    @Published private(set) var weights: [String: Int]?
+    /// The person a change is on its way for.
+    @Published private(set) var weighing: String?
+    @Published private(set) var weightError: String?
+
+    /// Asks once (and again after a change elsewhere is likely: each Why).
+    func loadWeights() async {
+        guard let client = Store.client() else { return }
+        do {
+            weights = try await client.feedWeights()
+        } catch APIError.badKey {
+            onBadKey()
+        } catch {
+            // A 404 (older server) or a blip: the buttons stay away.
+        }
+    }
+
+    /// "Show more from Ana" (1), "Show less" (-1), or back to normal (0).
+    func setWeight(_ username: String, _ weight: Int) async {
+        guard let client = Store.client(), weighing == nil else { return }
+        weighing = username
+        weightError = nil
+        defer { weighing = nil }
+        do {
+            weights = try await client.setFeedWeight(username, weight)
+        } catch APIError.badKey {
+            onBadKey()
+        } catch let error as APIError {
+            weightError = error.code == "no_member" ? "They’re not on your ADHX any more."
+                : error.isMissing ? "Your ADHX needs an update for that." : error.message
+        } catch {
+            weightError = APIError.offline.message
+        }
+    }
+
     // MARK: Filter
 
     private static let typesKey = "feedTypes"

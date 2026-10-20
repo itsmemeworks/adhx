@@ -44,12 +44,18 @@ struct LibraryHome: View {
     @State private var onScreen = false
     /// The "On their way" sheet is up.
     @State private var showingDoing = false
+    /// Everything your ADHX is doing, pushed from that sheet.
+    @State private var seeAllDoing = false
 
     /// The player is showing, so its "On their way" pill asks every 5 s.
     private var watchingDoing: Bool { onScreen && scenePhase == .active && tab == .new }
 
-    /// The player's own buttons are hidden (Hide, or dragging through a video).
-    private var playerChromeHidden: Bool { tab == .new && (clean || scrubbing) }
+    /// The player has its send sheet up.
+    @State private var playerSheet = false
+
+    /// The player's own buttons are hidden (Hide, or dragging through a video),
+    /// or its sheet is over everything.
+    private var playerChromeHidden: Bool { tab == .new && (clean || scrubbing || playerSheet) }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -70,6 +76,7 @@ struct LibraryHome: View {
                 }
             }
             .transition(.opacity)
+            .onPreferenceChange(PlayerSheetUp.self) { up in playerSheet = up }
             if !playerChromeHidden {
                 header
                 if tab == .new { newPills.padding(.top, headerHeight + 6) }
@@ -108,6 +115,7 @@ struct LibraryHome: View {
         }
         .onChange(of: tab) { old, new in
             if old == .new { feed.pause() }
+            if old == .channels { channels.openFriend = nil }
             if new == .channels { Task { await channels.reload() } }
             if new == .live { Task { await live.reload() } }
             clean = false
@@ -143,34 +151,33 @@ struct LibraryHome: View {
                 PlayerScreen(posts: [item.post], server: server, start: item.post.key)
             }
         }
-        .sheet(item: $why) { post in
+        .boardSheet(item: $why, height: 600) { post in
             if let server = model.server {
                 WhySheet(post: post, server: server, mode: feed.mode, choose: { mode in
                     Task { await feed.setMode(mode) }
-                }, filter: { filtering = true })
-                .presentationDetents([.height(600), .large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(Theme.surface)
-                .presentationCornerRadius(28)
+                }, filter: { filtering = true },
+                   weights: feed.weights, weighing: feed.weighing, weightError: feed.weightError,
+                   setWeight: { username, weight in Task { await feed.setWeight(username, weight) } })
+                .task { await feed.loadWeights() }
             }
         }
-        .sheet(isPresented: $showingDoing) {
+        .boardSheet(isPresented: $showingDoing, height: 540) {
             if let server = model.server {
-                OnTheirWaySheet(doing: doing, server: server)
-                    .presentationDetents([.height(520), .large])
-                    .presentationDragIndicator(.visible)
-                    .presentationBackground(Theme.surface)
-                    .presentationCornerRadius(28)
+                OnTheirWaySheet(doing: doing, server: server) {
+                    showingDoing = false
+                    seeAllDoing = true
+                }
             }
         }
-        .sheet(isPresented: $filtering) {
+        .boardSheet(isPresented: $filtering, height: 590) {
             FeedFilterSheet(types: feed.types, mode: feed.mode, newCount: newBadge, hidden: feed.hidden,
                             setTypes: { types in Task { await feed.setTypes(types) } },
                             choose: { mode in Task { await feed.setMode(mode) } })
-                .presentationDetents([.height(580), .large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(Theme.surface)
-                .presentationCornerRadius(28)
+        }
+        .navigationDestination(isPresented: $seeAllDoing) {
+            if let server = model.server {
+                DoingScreen(doing: doing, server: server)
+            }
         }
     }
 
@@ -356,7 +363,14 @@ struct LibraryHome: View {
             TabPills(tab: $tab, liveDot: live.anyLive, newBadge: newBadge,
                      overMedia: tab == .new && !feed.items.isEmpty) { item in
                 // The New tab again: what's in your feed.
-                if item == .new && tab == .new && !feed.unsupported { filtering = true } else { switchTab(item) }
+                if item == .new && tab == .new && !feed.unsupported {
+                    filtering = true
+                } else if item == .channels && tab == .channels {
+                    // Back from a friend's channel to the list.
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { channels.openFriend = nil }
+                } else {
+                    switchTab(item)
+                }
             }
                 .layoutPriority(1)
             Spacer(minLength: 0)

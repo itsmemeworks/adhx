@@ -10,7 +10,16 @@ swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift \
 /tmp/adhx-live-tests
 ```
 
-It checks compact saver/privacy updates, explicit removals, preserving the playing
+The friends-feed parity suite (weights, channel new marks and notes, Live's
+busy line and forming groups) runs the same way:
+
+```sh
+swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift \
+  apps/ios/Tests/FriendsParityTests.swift -o /tmp/adhx-friends-parity-tests
+/tmp/adhx-friends-parity-tests
+```
+
+The live suite checks compact saver/privacy updates, explicit removals, preserving the playing
 post and older cached posts, the 200-post cache bound, compatible decoding, and
 40-code-point message clipping without splitting emoji.
 

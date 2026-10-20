@@ -5,6 +5,10 @@ import UIKit
 @MainActor
 final class LiveModel: ObservableObject {
     @Published private(set) var moments: [LiveMoment] = []
+    /// Groups not live yet ("1 more save to go live").
+    @Published private(set) var forming: [FormingMoment] = []
+    /// The window the moments come from: "Right now", "Last few days".
+    @Published private(set) var label: String?
     @Published private(set) var loadedOnce = false
     @Published private(set) var loadError: String?
     @Published private(set) var unsupported = false
@@ -15,7 +19,10 @@ final class LiveModel: ObservableObject {
     func reload() async {
         guard let client = Store.client() else { return }
         do {
-            moments = try await client.live()
+            let snapshot = try await client.live()
+            moments = snapshot.moments
+            forming = snapshot.forming
+            label = snapshot.label
             loadError = nil
             unsupported = false
             KnownPeople.remember(moments.flatMap(\.savers))
@@ -63,24 +70,32 @@ struct LiveView: View {
                     EmptyNote(title: "Can’t see what’s live", message: error) {
                         Task { await model.reload() }
                     }
-                } else if model.moments.isEmpty {
+                } else if model.moments.isEmpty && model.forming.isEmpty {
                     EmptyNote(title: "Nothing’s live right now",
                               message: "When a few of your lot save around the same thing, it shows up here.")
                 } else {
-                    Text("What your lot are into tonight")
+                    Text("What your lot are into\ntonight")
                         .font(Theme.serif(36))
                         .lineSpacing(-3)
                         .foregroundStyle(Theme.ink)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.horizontal, 16)
-                        .padding(.bottom, 0)
-                    ForEach(model.moments) { moment in
-                        if moment.live {
+                        .padding(.top, 10)
+                        .padding(.bottom, 4)
+                    // The first one big; the quieter ones (and older servers'
+                    // not-live ones) as rows, then what's still forming.
+                    ForEach(Array(model.moments.enumerated()), id: \.element.id) { index, moment in
+                        if index == 0 && moment.live {
                             LiveCard(moment: moment, server: server) { tuned = moment }
                         } else {
-                            QuietMomentRow(moment: moment, server: server) { tuned = moment }
+                            QuietMomentRow(moment: moment, server: server,
+                                           label: moment.label ?? quietLabel(moment)) { tuned = moment }
                         }
+                    }
+                    .padding(.horizontal, 16)
+                    ForEach(model.forming) { group in
+                        FormingRow(group: group, server: server)
                     }
                     .padding(.horizontal, 16)
                 }
@@ -96,6 +111,12 @@ struct LiveView: View {
         .fullScreenCover(item: $tuned) { moment in
             TunedInScreen(moment: moment, server: server)
         }
+    }
+
+    /// Over a quieter row: how busy it is now, else the window it's from.
+    private func quietLabel(_ moment: LiveMoment) -> String? {
+        if let busy = moment.busyLine { return "Live · \(busy)" }
+        return model.label
     }
 }
 
@@ -224,10 +245,14 @@ private struct LiveCard: View {
         return count == 1 ? "1 watching" : "\(count) of you watching"
     }
 
-    /// "3 saves · Ana, Ben and Jo".
+    /// "3 saves in 10 min · Ana, Ben and Jo" (or "4 saves · …" when it's quiet).
     private var metaLine: String {
         var parts: [String] = []
-        if let posts = moment.posts { parts.append(posts == 1 ? "1 save" : "\(posts) saves") }
+        if let busy = moment.busyLine {
+            parts.append(busy)
+        } else if let posts = moment.posts {
+            parts.append(posts == 1 ? "1 save" : "\(posts) saves")
+        }
         if !moment.savers.isEmpty {
             parts.append(SaverWords.names(SaverWords.ordered(moment.savers).map(\.displayName)))
         } else if let people = moment.people, people > 0 {
@@ -241,9 +266,10 @@ private struct LiveCard: View {
 private struct QuietMomentRow: View {
     let moment: LiveMoment
     let server: URL
+    var label: String?
     let play: () -> Void
 
-    private var forming: Bool { moment.label?.localizedCaseInsensitiveContains("forming") == true }
+    private var forming: Bool { label?.localizedCaseInsensitiveContains("forming") == true }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -252,7 +278,7 @@ private struct QuietMomentRow: View {
                 .saturation(forming ? 0.75 : 1)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             VStack(alignment: .leading, spacing: 5) {
-                if let label = moment.label {
+                if let label {
                     if forming {
                         Text(label)
                             .font(Theme.sans(11, .heavy))
@@ -304,6 +330,54 @@ private struct QuietMomentRow: View {
                 RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.08))
             }
         }
+    }
+}
+
+/// A group still forming: a few saves close together, not live yet. There's
+/// nothing to tune in to until it is, and no phone route asks to be told.
+private struct FormingRow: View {
+    let group: FormingMoment
+    let server: URL
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CoverImage(url: ADHXClient.resolve(group.covers.first, against: server))
+                .frame(width: 76, height: 88)
+                .saturation(0.75)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Forming")
+                    .font(Theme.sans(11, .heavy))
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 9)
+                    .frame(height: 22)
+                    .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.6),
+                                                    style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+                Text(group.name)
+                    .font(Theme.sans(17, .heavy))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(2)
+                HStack(spacing: 7) {
+                    if !group.savers.isEmpty {
+                        FaceStack(savers: group.savers, server: server, size: 20, ring: Theme.surface)
+                    }
+                    Text(group.toGoLine)
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.leading, 8)
+        .padding(.trailing, 10)
+        .padding(.vertical, 8)
+        .frame(minHeight: 104)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .strokeBorder(.white.opacity(0.18), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(group.name), forming, \(group.toGoLine)")
     }
 }
 
@@ -408,9 +482,20 @@ final class TunedInModel: ObservableObject {
     /// you tuned in don't. Yours floated when you sent them.
     private func take(_ reactions: [LiveReactionEvent], quietly: Bool) {
         if shownReactions.count > 1000 { shownReactions = Set(reactions.map(\.id).filter { shownReactions.contains($0) }) }
+        var queued = 0
         for reaction in reactions where shownReactions.insert(reaction.id).inserted {
             guard !quietly, !reaction.saver.isYou else { continue }
-            float(reaction)
+            // Ones that arrive together rise 0.7 s apart.
+            let delay = UInt64(queued) * 700_000_000
+            queued += 1
+            if delay == 0 {
+                float(reaction)
+            } else {
+                Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: delay)
+                    self?.float(reaction)
+                }
+            }
         }
     }
 
@@ -794,17 +879,20 @@ private struct FloatingReactions: View {
         let rise: CGFloat
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @State private var up = false
+        @State private var gone = false
 
         var body: some View {
             content
                 .offset(y: up && !reduceMotion ? -rise : 0)
                 .scaleEffect(up && !reduceMotion ? 1 : 0.85, anchor: .bottomLeading)
-                .opacity(up ? 0 : 1)
+                .opacity(gone ? 0 : 1)
                 .onAppear {
                     let seconds = Double(FloatingReaction.lifeNanos) / 1_000_000_000 - 0.2
-                    withAnimation(reduceMotion ? .easeIn(duration: seconds).delay(0) : .easeOut(duration: seconds)) {
-                        up = true
+                    if !reduceMotion {
+                        withAnimation(.easeOut(duration: seconds)) { up = true }
                     }
+                    // Whole for most of the rise, then fading (the boards' faces are solid mid-way).
+                    withAnimation(.easeIn(duration: seconds * 0.4).delay(seconds * 0.6)) { gone = true }
                 }
         }
 

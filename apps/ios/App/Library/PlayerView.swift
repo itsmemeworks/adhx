@@ -48,6 +48,8 @@ struct PlayerView: View {
     @StateObject private var playback = Playback()
     /// A friend's channel, opened from the faces on a post.
     @State private var friend: Saver?
+    /// The post whose file is being sent.
+    @State private var sending: PhonePost?
     @State private var current: String?
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
@@ -87,6 +89,12 @@ struct PlayerView: View {
         .fullScreenCover(item: $friend) { saver in
             FriendChannelScreen(friend: saver, server: server)
         }
+        // Sending the file itself, over the player (and over Home's bar,
+        // which steps aside while it's up).
+        .boardSheet(item: $sending, height: 520) { post in
+            SendSheet(post: post, server: server, say: say)
+        }
+        .preference(key: PlayerSheetUp.self, value: sending != nil)
     }
 
     private var pager: some View {
@@ -95,7 +103,7 @@ struct PlayerView: View {
                 ForEach(posts, id: \.key) { post in
                     PostPage(post: post, server: server, onScreen: post.key == current,
                              playback: playback, clean: $clean, extras: extras, say: say,
-                             openFriend: { friend = $0 })
+                             openFriend: { friend = $0 }, send: { sending = $0 })
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(post.key)
                 }
@@ -182,6 +190,8 @@ private struct PostPage: View {
     var extras = PlayerExtras()
     let say: (String) -> Void
     var openFriend: (Saver) -> Void = { _ in }
+    /// Opens the send sheet for this post's file.
+    var send: (PhonePost) -> Void = { _ in }
     @Environment(\.openURL) private var openURL
     @ObservedObject private var privacy = PrivacyStore.shared
     @State private var choosingFriend = false
@@ -352,7 +362,8 @@ private struct PostPage: View {
                     } else if privacy.isPrivate(post) {
                         PrivateLock()
                     }
-                    sourceLine
+                    // Live puts the network on the savers' line instead.
+                    if extras.inMoment == nil || post.savers.isEmpty { sourceLine }
                     if overMedia, !post.text.isEmpty {
                         Text(post.text)
                             .font(Theme.sans(16))
@@ -540,15 +551,19 @@ private struct PostPage: View {
             sharing = ShareItems(items: [post.text])
             return
         }
-        guard !sharingBusy else { return }
-        sharingBusy = true
-        Task {
-            if let export = await KeptFiles.download(post, server: server) {
-                sharing = ShareItems(items: export.files.map(\.url), export: export)
-            } else {
-                say("Still being kept on your ADHX. Try again in a moment.")
-            }
-            sharingBusy = false
+        send(post)
+    }
+
+    /// Tuned in: "4 min ago", "2h ago" for the newest save.
+    private var liveWhen: String? {
+        guard extras.inMoment != nil,
+              let newest = post.savers.compactMap({ Format.date($0.savedAt) }).max() else { return nil }
+        let seconds = max(0, Date().timeIntervalSince(newest))
+        switch seconds {
+        case ..<60: return "just now"
+        case ..<3600: return "\(Int(seconds / 60)) min ago"
+        case ..<86_400: return "\(Int(seconds / 3600))h ago"
+        default: return "\(Int(seconds / 86_400))d ago"
         }
     }
 
@@ -571,7 +586,15 @@ private struct PostPage: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .overMediaShadow(overMedia)
-                if let when = SaverWords.when(post.savers) {
+                if let when = liveWhen {
+                    // Live: "· 4 min ago · Reddit" (the boards' tuned-in byline).
+                    Text("· \(when) · \(Network.name(post.platform))")
+                        .font(Theme.sans(14))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .overMediaShadow(overMedia)
+                } else if let when = SaverWords.when(post.savers) {
                     Text("· \(when)")
                         .font(Theme.sans(14))
                         .foregroundStyle(Theme.muted)
@@ -1005,6 +1028,12 @@ struct NoteBubble: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(saver.displayName)’s note: \(note)")
     }
+}
+
+/// The player has a sheet of its own up (Home's bar steps aside).
+struct PlayerSheetUp: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
 
 /// Files or words for the share sheet, from the player's rail.

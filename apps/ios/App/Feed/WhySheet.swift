@@ -9,10 +9,17 @@ struct WhySheet: View {
     let choose: (FeedMode) -> Void
     /// Opens "What's in your feed".
     var filter: () -> Void = {}
-    @Environment(\.dismiss) private var dismiss
+    /// Show more (1) / less (-1) from someone: nil on a server without it.
+    var weights: [String: Int]? = nil
+    /// The person a change is on its way for.
+    var weighing: String? = nil
+    var weightError: String? = nil
+    var setWeight: (String, Int) -> Void = { _, _ in }
+    @Environment(\.dismiss) private var systemDismiss
+    @Environment(\.boardDismiss) private var boardDismiss
+    private var dismiss: SheetCloser { SheetCloser(board: boardDismiss, system: systemDismiss) }
 
     var body: some View {
-        ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text("Why this one")
@@ -33,15 +40,33 @@ struct WhySheet: View {
                     dismiss()
                 }
                 .padding(.top, 4)
-                Button {
-                    dismiss()
-                    // After this sheet has gone, so the next one can come up.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { filter() }
-                } label: {
-                    Label("What’s in your feed", systemImage: "slider.horizontal.3")
+                if weights != nil, let more = moreFrom, let less = lessFrom {
+                    // The boards' pair: less from one friend, more from another.
+                    HStack(spacing: 10) {
+                        WeightButton(direction: -1, person: less, friends: friends, weights: weights ?? [:],
+                                     busy: weighing != nil, set: setWeight)
+                        WeightButton(direction: 1, person: more, friends: friends, weights: weights ?? [:],
+                                     busy: weighing != nil, set: setWeight)
+                    }
+                    if let weightError {
+                        Text(weightError)
+                            .font(Theme.sans(13))
+                            .foregroundStyle(Theme.warn)
+                            .frame(maxWidth: .infinity)
+                            .multilineTextAlignment(.center)
+                    }
+                } else {
+                    // Nobody else saved it (or an older server): what's in your feed instead.
+                    Button {
+                        dismiss()
+                        // After this sheet has gone, so the next one can come up.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { filter() }
+                    } label: {
+                        Label("What’s in your feed", systemImage: "slider.horizontal.3")
+                    }
+                    .buttonStyle(PillButtonStyle(kind: .raised, height: 48, fontSize: 14))
+                    .accessibilityHint("Choose videos, photos, text posts and articles")
                 }
-                .buttonStyle(PillButtonStyle(kind: .raised, height: 48, fontSize: 14))
-                .accessibilityHint("Choose videos, photos, text posts and articles")
                 Text("No engagement bait. These are the only reasons.")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.faint)
@@ -50,10 +75,8 @@ struct WhySheet: View {
                     .padding(.top, 2)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 29)
+            .padding(.top, 12)
             .padding(.bottom, 24)
-        }
-        .scrollIndicators(.hidden)
     }
 
     private var postRow: some View {
@@ -77,6 +100,24 @@ struct WhySheet: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// The friends who saved it (not you), first saver first.
+    private var friends: [Saver] {
+        var seen = Set<String>()
+        return post.savers.filter { !$0.isYou && seen.insert($0.username).inserted }
+    }
+
+    /// "Show more from …": whoever you already asked for more of, else the
+    /// first friend who saved it.
+    private var moreFrom: Saver? {
+        friends.first { weights?[$0.username] == 1 } ?? friends.first
+    }
+
+    /// "Show less from …": whoever you already asked for less of, else the
+    /// second friend (the first, when they're the only one).
+    private var lessFrom: Saver? {
+        friends.first { weights?[$0.username] == -1 } ?? (friends.count > 1 ? friends[1] : friends.first)
+    }
+
     /// "Reddit · 2h".
     private var postLine: String {
         var parts = [Network.name(post.platform)]
@@ -94,9 +135,7 @@ struct WhySheet: View {
                 out.append(Reason(icon: Self.icon(for: reason.kind), text: reason.text,
                                   savers: Self.savers(for: reason, lead: index == 0, in: post.savers)))
             }
-            if mode == .new, !post.whyReasons.contains(where: { $0.kind == "fresh" }) {
-                out.append(Reason(icon: "eye.slash", text: "You haven’t seen it yet", savers: []))
-            }
+            // These are the only reasons: nothing added on the phone but the lock.
             if PrivacyStore.shared.isPrivate(post) {
                 out.append(Reason(icon: "lock.fill", text: "One of yours, just for you", savers: []))
             }
@@ -201,7 +240,9 @@ struct FeedFilterSheet: View {
     var hidden: [FeedType: Int] = [:]
     let setTypes: (Set<FeedType>) -> Void
     let choose: (FeedMode) -> Void
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss) private var systemDismiss
+    @Environment(\.boardDismiss) private var boardDismiss
+    private var dismiss: SheetCloser { SheetCloser(board: boardDismiss, system: systemDismiss) }
     @State private var picked: Set<FeedType>
 
     init(types: Set<FeedType>, mode: FeedMode, newCount: String?, hidden: [FeedType: Int],
@@ -216,7 +257,6 @@ struct FeedFilterSheet: View {
     }
 
     var body: some View {
-        ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("What’s in your feed")
@@ -252,10 +292,8 @@ struct FeedFilterSheet: View {
                     .buttonStyle(PillButtonStyle(kind: .primary))
             }
             .padding(.horizontal, 20)
-            .padding(.top, 29)
+            .padding(.top, 12)
             .padding(.bottom, 24)
-        }
-        .scrollIndicators(.hidden)
         .onDisappear { if picked != types { setTypes(picked) } }
     }
 
@@ -337,6 +375,79 @@ struct FeedFilterSheet: View {
     }
 }
 
+/// "− Show less from Ben" / "+ Show more from Ana". Pressed (cream) when
+/// that's already your choice for them; tapping it again goes back to normal.
+/// With several friends on the post, a long press picks someone else.
+private struct WeightButton: View {
+    let direction: Int
+    let person: Saver
+    let friends: [Saver]
+    let weights: [String: Int]
+    let busy: Bool
+    let set: (String, Int) -> Void
+
+    private var on: Bool { weights[person.username] == direction }
+
+    private func title(_ saver: Saver) -> String {
+        "Show \(direction > 0 ? "more" : "less") from \(saver.displayName)"
+    }
+
+    var body: some View {
+        Group {
+            if friends.count > 1 {
+                Menu {
+                    ForEach(friends) { friend in
+                        let chosen = weights[friend.username] == direction
+                        Button {
+                            set(friend.username, chosen ? 0 : direction)
+                        } label: {
+                            if chosen { Label(title(friend), systemImage: "checkmark") } else { Text(title(friend)) }
+                        }
+                    }
+                } label: {
+                    face
+                } primaryAction: {
+                    set(person.username, on ? 0 : direction)
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    set(person.username, on ? 0 : direction)
+                } label: {
+                    face
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .disabled(busy)
+        .accessibilityLabel(title(person))
+        .accessibilityValue(on ? "On" : "")
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityHint(friends.count > 1 ? "Touch and hold to choose someone else" : "")
+    }
+
+    private var face: some View {
+        HStack(spacing: 8) {
+            Image(systemName: direction > 0 ? "plus" : "minus")
+                .font(.system(size: 14, weight: .bold))
+                .accessibilityHidden(true)
+            Text(title(person))
+                .font(Theme.sans(14, .semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+        }
+        .foregroundStyle(on ? .black : Theme.ink)
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .background(Capsule().fill(on ? Theme.ink : Theme.plate))
+        .overlay(Capsule().strokeBorder(.white.opacity(on ? 0 : 0.12)))
+        .contentShape(Capsule())
+        .opacity(busy ? 0.6 : 1)
+    }
+}
+
 private struct Reason {
     let icon: String
     let text: String
@@ -363,7 +474,7 @@ private struct ReasonRow: View {
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             if !reason.savers.isEmpty {
-                FaceStack(savers: reason.savers, server: server, size: 26, ring: Theme.surface)
+                FaceStack(savers: reason.savers, server: server, size: 28, ring: Theme.surface)
             }
         }
         .frame(minHeight: 56)

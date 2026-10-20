@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — iPhone app: the rest of the phone boards
+
+- Why this one: Show less / Show more from a friend (`/api/app/feed/weights`, chosen state in cream, long press for another friend); only the server's reasons are listed. Why, filter and On their way are now the boards' bottom-attached sheets (`BoardSheet.swift`), not inset system sheets.
+- Channels: a friend's channel opens under Home's header with New tiles (`isNew`), Play the N new and the note as a paper card (opens the post); Your people has See all and Invite. Made for you rows say "N saves · from what you keep".
+- Live: first moment big with "3 saves in 10 min" (`recentSaves`/`windowMinutes`), the rest as labelled rows, `forming` groups as dashed rows. Tuned in: byline "· 4 min ago · Reddit"; reactions that land together rise 0.7 s apart and stay solid until late in the rise.
+- Share opens the send sheet (j4-4): download progress, then Messages/Mail/Files/Photos/share sheet. On their way lists movers before needs-you. Settings counts your people without you.
+- Correction to the 2026-10-20 iPhone entry: face colours already match the boards (the web's FNV-1a order); that line was stale.
+- Left as is: the boards disagree on the header (most show a two-row "adhx" bar with a settings button, j2-3/j2-7 the spec's one row); the apps keep the spec's one row. Gaps needing server work: "Or straight to your people" (no send-to-member route), faces and a notify bell on forming groups, the "like" reason's thumbnail. Tests: `apps/ios/Tests/FriendsParityTests.swift`.
+
 ## 2026-10-20 — Design-parity gaps closed: getting ready, new marks, note card, phone weights, live span
 
 - **Getting it ready** (j1-4/j1-5): `GET /api/activity/processing/posts` (`processing/keep-status.ts`, `seenBy` only) says whether each post is `waiting | keeping | converting | kept | none` with step and percent; the theater (`useKeepStatus`, `GettingReadyStage`) covers the stage until the copy is kept, then plays (`POST_KEPT` reloads a failed load). Chips: "Shared with your people" (faces) while yours gets ready, "Kept on your ADHX" on a just-kept post. `keep_jobs.progress` (guarded ALTER) keeps the last written percent; `/doing` uses it too.

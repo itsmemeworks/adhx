@@ -184,6 +184,9 @@ struct PhonePost: Decodable, Hashable {
     let why: String?
     /// Every reason, the headline first (feed items on newer servers).
     let whyReasons: [WhyReason]
+    /// In a group or friend channel: you haven't saved or seen it ("New" on
+    /// the tile). Nil elsewhere and on older servers.
+    var isNew: Bool?
 
     /// Unique across networks (the same number can be an X and a TikTok id).
     var key: String { "\(platform):\(postId)" }
@@ -193,14 +196,14 @@ struct PhonePost: Decodable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case platform, postId = "id", kind, author, text, postedAt, savedAt, sourceUrl, openPath,
-             media, article, match, learning, savers, isPrivate, why, whyReasons
+             media, article, match, learning, savers, isPrivate, why, whyReasons, isNew
     }
 
     init(platform: String, postId: String, kind: String, author: PhoneAuthor, text: String,
          postedAt: String? = nil, savedAt: String? = nil, sourceUrl: String? = nil, openPath: String = "/",
          media: [PhoneMedia] = [], article: PhoneArticle? = nil, match: PhoneMatch? = nil,
          learning: Bool? = nil, savers: [Saver] = [], isPrivate: Bool = false, why: String? = nil,
-         whyReasons: [WhyReason] = []) {
+         whyReasons: [WhyReason] = [], isNew: Bool? = nil) {
         self.platform = platform
         self.postId = postId
         self.kind = kind
@@ -218,6 +221,7 @@ struct PhonePost: Decodable, Hashable {
         self.isPrivate = isPrivate
         self.why = why
         self.whyReasons = whyReasons
+        self.isNew = isNew
     }
 
     init(from decoder: Decoder) throws {
@@ -238,6 +242,7 @@ struct PhonePost: Decodable, Hashable {
         // Defensive: a server mid-upgrade may leave these out or get them wrong.
         savers = (try? c.decodeIfPresent(Lossy<Saver>.self, forKey: .savers))?.items ?? []
         isPrivate = (try? c.decodeIfPresent(Bool.self, forKey: .isPrivate)) ?? false
+        isNew = (try? c.decodeIfPresent(Bool.self, forKey: .isNew)) ?? nil
         let reasons = (try? c.decodeIfPresent(Lossy<WhyReason>.self, forKey: .whyReasons))?.items ?? []
         whyReasons = reasons
         let why = (try? c.decodeIfPresent(String.self, forKey: .why)) ?? nil

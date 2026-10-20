@@ -10,6 +10,10 @@ final class ChannelsModel: ObservableObject {
     @Published private(set) var unsupported = false
     /// A queue being fetched, so its tile can show a spinner.
     @Published private(set) var opening: String?
+    /// A friend's channel open in place of the list (under Home's header).
+    @Published var openFriend: FriendSummary?
+    /// Whether you may invite people (from `/api/app/people`), for Invite.
+    @Published private(set) var canInvite = false
 
     var onBadKey: () -> Void = {}
 
@@ -21,6 +25,7 @@ final class ChannelsModel: ObservableObject {
             loadError = nil
             unsupported = false
             if !index.friends.isEmpty { KnownPeople.replace(with: index.friends.map(\.asSaver)) }
+            if let people = try? await client.people() { canInvite = people.canInvite }
         } catch APIError.badKey {
             onBadKey()
         } catch is CancellationError {
@@ -64,12 +69,48 @@ struct PlayQueue: Identifiable {
 struct ChannelsView: View {
     @ObservedObject var model: ChannelsModel
     let server: URL
+    /// Your people, everyone (Settings' list).
+    @StateObject private var people = SettingsModel()
+    @Environment(\.openURL) private var openURL
     @State private var playing: PlayQueue?
-    @State private var friend: FriendSummary?
     @State private var problem: String?
+    @State private var seeAll = false
 
     var body: some View {
         ScrollView {
+            if let friend = model.openFriend {
+                FriendChannelBody(friend: friend.asSaver, server: server, size: friend.size,
+                                  newCount: friend.newCount)
+                    .id(friend.username)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 40)
+                    .accessibilityAction(.escape) { model.openFriend = nil }
+            } else {
+                list
+            }
+        }
+        .scrollIndicators(.hidden)
+        .refreshable { await model.reload() }
+        // From the left edge: back to Channels.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    guard model.openFriend != nil, value.startLocation.x < 40,
+                          value.translation.width > 80, abs(value.translation.height) < 60 else { return }
+                    model.openFriend = nil
+                }
+        )
+        .fullScreenCover(item: $playing) { queue in
+            PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "")
+        }
+        .navigationDestination(isPresented: $seeAll) {
+            PeopleListView(settings: people, server: server, invite: invite)
+                .task { await people.load() }
+        }
+    }
+
+    private var list: some View {
             VStack(alignment: .leading, spacing: 24) {
                 if !model.loadedOnce {
                     HStack { Spacer(); RingSpinner(size: 34, lineWidth: 3); Spacer() }
@@ -98,16 +139,11 @@ struct ChannelsView: View {
             }
             .padding(.top, 8)
             .padding(.bottom, 40)
-        }
-        .scrollIndicators(.hidden)
-        .refreshable { await model.reload() }
-        .fullScreenCover(item: $playing) { queue in
-            PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "")
-        }
-        .fullScreenCover(item: $friend) { friend in
-            FriendChannelScreen(friend: friend.asSaver, server: server, size: friend.size,
-                                newCount: friend.newCount)
-        }
+    }
+
+    /// No phone route makes invites yet: Settings → Your people on the web does.
+    private func invite() {
+        if let url = ADHXClient.resolve("/settings#people", against: server) { openURL(url) }
     }
 
     // MARK: Rows
@@ -133,20 +169,54 @@ struct ChannelsView: View {
 
     private var yourPeople: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "Your people", detail: nil, size: 28)
-            ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: 14) {
-                    ForEach(model.index.friends) { person in
-                        Button { friend = person } label: {
-                            PersonButton(person: person, server: server)
-                        }
-                        .buttonStyle(.plain)
+            HStack(alignment: .firstTextBaseline) {
+                SectionTitle(title: "Your people", detail: nil, size: 28)
+                Spacer(minLength: 8)
+                Button("See all") { seeAll = true }
+                    .font(Theme.sans(14, .semibold))
+                    .foregroundStyle(Theme.accent)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 8)
+                    .contentShape(Rectangle())
+                    .padding(.vertical, -12)
+                    .padding(.trailing, 8)
+                    .accessibilityHint("Everyone on your ADHX")
+            }
+            // Spread across the row while they fit (the boards'), else a scroll.
+            let count = model.index.friends.count + (model.canInvite ? 1 : 0)
+            if count <= 5 {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(model.index.friends.enumerated()), id: \.element.id) { index, person in
+                        if index > 0 { Spacer(minLength: 4) }
+                        personButton(person)
                     }
+                    if model.canInvite {
+                        Spacer(minLength: 4)
+                        InviteButton(action: invite)
+                    }
+                    if count < 5 { Spacer(minLength: 0) }
                 }
                 .padding(.horizontal, 16)
+            } else {
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: 14) {
+                        ForEach(model.index.friends) { personButton($0) }
+                        if model.canInvite { InviteButton(action: invite) }
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
         }
+    }
+
+    private func personButton(_ person: FriendSummary) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { model.openFriend = person }
+        } label: {
+            PersonButton(person: person, server: server)
+        }
+        .buttonStyle(.plain)
     }
 
     private var madeForYou: some View {
@@ -381,6 +451,32 @@ private struct PersonButton: View {
     }
 }
 
+/// "+ Invite" at the end of Your people (opens your ADHX in the browser).
+private struct InviteButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .medium))
+                    .frame(width: 60, height: 60)
+                    .overlay(Circle().strokeBorder(Theme.accent.opacity(0.6),
+                                                   style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
+                    .padding(4)
+                Text("Invite")
+                    .font(Theme.sans(13, .semibold))
+            }
+            .foregroundStyle(Theme.accent)
+            .frame(width: 68)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Invite someone")
+        .accessibilityHint("Makes a link on your ADHX, in the browser")
+    }
+}
+
 private struct MineRow: View {
     let channel: ChannelSummary
     let server: URL
@@ -426,48 +522,60 @@ private struct MineRow: View {
     private var detail: String {
         if let note = channel.note, !note.isEmpty { return note }
         guard let size = channel.size else { return "From what you keep" }
-        return size == 1 ? "1 save" : "\(size) saves"
+        return (size == 1 ? "1 save" : "\(size) saves") + " · from what you keep"
     }
 }
 
 // MARK: - A friend's channel
 
-/// "Ana's saves": everything one of your people shared, as a grid, with Play all.
-struct FriendChannelScreen: View {
+/// One thing in a friend's channel grid: a post, or their note card.
+private enum FriendTile: Identifiable {
+    case post(PhonePost)
+    case note(FriendNote)
+
+    var id: String {
+        switch self {
+        case .post(let post): return post.key
+        case .note(let note): return "note:\(note.key)"
+        }
+    }
+
+    /// Height for width, to even out the two columns.
+    var shape: CGFloat {
+        switch self {
+        case .note: return 0.8
+        case .post(let post):
+            var aspect: CGFloat = 0.75
+            if let media = post.media.first, let w = media.width, let h = media.height, w > 0, h > 0 {
+                aspect = min(max(CGFloat(w) / CGFloat(h), 0.6), 1)
+            }
+            return 1 / aspect
+        }
+    }
+}
+
+/// "Ana's saves": everything one of your people shared, as a grid, with Play
+/// all, Play the N new (what you haven't saved or seen) and their latest note.
+/// Inline under Home's header (from Channels) or on its own (`FriendChannelScreen`).
+struct FriendChannelBody: View {
     let friend: Saver
     let server: URL
     var size: Int?
     var newCount: Int?
-    @Environment(\.dismiss) private var dismiss
-    @State private var posts: [PhonePost] = []
-    @State private var loaded = false
+    @State private var queue: ChannelQueue?
     @State private var error: String?
     @State private var playing: PlayQueue?
 
+    private var posts: [PhonePost] { queue?.items ?? [] }
+    /// The server's marks, once they've come; the channel list's count before.
+    private var unseen: Int { queue.map { $0.fresh.count } ?? (newCount ?? 0) }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
-                            .background(Circle().fill(Theme.surface))
-                    }
-                    .accessibilityLabel("Close")
-                    Spacer()
-                }
-                header
-                content
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 40)
+        VStack(alignment: .leading, spacing: 16) {
+            header
+            content
         }
-        .scrollIndicators(.hidden)
-        .background(Theme.app.ignoresSafeArea())
-        .task { await load() }
+        .task(id: friend.username) { await load() }
         .fullScreenCover(item: $playing) { queue in
             PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "")
         }
@@ -496,25 +604,40 @@ struct FriendChannelScreen: View {
                 }
             }
             if !posts.isEmpty {
-                Button {
-                    playing = PlayQueue(posts: posts)
-                } label: {
-                    Label("Play all", systemImage: "play.fill")
+                HStack(spacing: 8) {
+                    Button {
+                        playing = PlayQueue(posts: posts)
+                    } label: {
+                        Label("Play all", systemImage: "play.fill")
+                            .labelStyle(TightLabel())
+                    }
+                    .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false, fontSize: 15))
+                    if let fresh = queue?.fresh, !fresh.isEmpty {
+                        Button {
+                            playing = PlayQueue(posts: fresh)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Circle().fill(Theme.accent).frame(width: 7, height: 7).accessibilityHidden(true)
+                                Text(fresh.count == 1 ? "Play the new one" : "Play the \(fresh.count) new")
+                            }
+                        }
+                        .buttonStyle(PillButtonStyle(kind: .raised, height: 48, fullWidth: false, fontSize: 15))
+                        .accessibilityHint("Plays the ones you haven’t seen")
+                    }
                 }
-                .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false, fontSize: 15))
             }
         }
     }
 
     @ViewBuilder
     private var countLine: some View {
-        let count = size ?? (loaded ? posts.count : nil)
-        if count != nil || (newCount ?? 0) > 0 {
+        let count = size ?? (queue != nil ? posts.count : nil)
+        if count != nil || unseen > 0 {
             HStack(spacing: 0) {
                 if let count { Text(count == 1 ? "1 save" : "\(count) saves").foregroundStyle(Theme.muted) }
-                if let newCount, newCount > 0 {
+                if unseen > 0 {
                     Text(count == nil ? "" : " · ").foregroundStyle(Theme.muted)
-                    Text("\(newCount) you haven’t seen").foregroundStyle(Theme.accent)
+                    Text("\(unseen) you haven’t seen").foregroundStyle(Theme.accent)
                 }
             }
             .font(Theme.sans(13, .semibold))
@@ -524,9 +647,9 @@ struct FriendChannelScreen: View {
 
     @ViewBuilder
     private var content: some View {
-        if !loaded {
+        if queue == nil && error == nil {
             HStack { Spacer(); RingSpinner(size: 30, lineWidth: 3); Spacer() }.padding(.top, 30)
-        } else if let error {
+        } else if let error, queue == nil {
             Text(error).font(Theme.sans(15)).foregroundStyle(Theme.muted)
             Button("Try again") { Task { await load() } }
                 .buttonStyle(PillButtonStyle(kind: .outline, height: 44, fullWidth: false))
@@ -535,19 +658,32 @@ struct FriendChannelScreen: View {
                 .font(Theme.sans(15))
                 .foregroundStyle(Theme.muted)
         } else {
-            // Two columns of posters in their own shapes, each post going to
-            // the shorter column (the boards' masonry).
-            let columns = Self.columns(posts)
+            // Two columns of posters in their own shapes, each to the column
+            // that's shorter so far (the boards' masonry); the note sits third.
+            let columns = Self.columns(tiles)
             HStack(alignment: .top, spacing: 10) {
                 ForEach(0..<2, id: \.self) { column in
                     LazyVStack(spacing: 10) {
-                        ForEach(columns[column], id: \.key) { post in
-                            Button {
-                                playing = PlayQueue(posts: posts, start: post.key)
-                            } label: {
-                                PostTile(post: post, server: server, hiddenSaver: friend.username)
+                        ForEach(columns[column]) { tile in
+                            switch tile {
+                            case .post(let post):
+                                Button {
+                                    playing = PlayQueue(posts: posts, start: post.key)
+                                } label: {
+                                    PostTile(post: post, server: server, hiddenSaver: friend.username)
+                                }
+                                .buttonStyle(.plain)
+                            case .note(let note):
+                                Button {
+                                    let start = posts.contains { $0.key == note.key } ? note.key : posts.first?.key
+                                    playing = PlayQueue(posts: posts, start: start)
+                                } label: {
+                                    NoteCard(note: note, friend: friend, server: server,
+                                             post: posts.first { $0.key == note.key })
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("Plays that post")
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -555,18 +691,23 @@ struct FriendChannelScreen: View {
         }
     }
 
-    /// Posts split into two columns, each to the one that's shorter so far.
-    static func columns(_ posts: [PhonePost]) -> [[PhonePost]] {
-        var out: [[PhonePost]] = [[], []]
+    /// The posts, with the note card after the first two.
+    private var tiles: [FriendTile] {
+        var out = posts.map(FriendTile.post)
+        if let note = queue?.note, !friend.isYou {
+            out.insert(.note(note), at: min(2, out.count))
+        }
+        return out
+    }
+
+    /// Tiles split into two columns, each to the one that's shorter so far.
+    private static func columns(_ tiles: [FriendTile]) -> [[FriendTile]] {
+        var out: [[FriendTile]] = [[], []]
         var heights: [CGFloat] = [0, 0]
-        for post in posts {
-            var aspect: CGFloat = 0.75
-            if let media = post.media.first, let w = media.width, let h = media.height, w > 0, h > 0 {
-                aspect = min(max(CGFloat(w) / CGFloat(h), 0.6), 1)
-            }
+        for tile in tiles {
             let column = heights[0] <= heights[1] ? 0 : 1
-            out[column].append(post)
-            heights[column] += 1 / aspect + 0.06
+            out[column].append(tile)
+            heights[column] += tile.shape + 0.06
         }
         return out
     }
@@ -574,7 +715,7 @@ struct FriendChannelScreen: View {
     private func load() async {
         guard let client = Store.client() else { return }
         do {
-            posts = try await client.channel(.friend, slug: friend.username)
+            queue = try await client.channelQueue(.friend, slug: friend.username)
             error = nil
         } catch let failure as APIError {
             error = failure.isMissing ? "Your ADHX needs an update before it can show this." : failure.message
@@ -583,6 +724,93 @@ struct FriendChannelScreen: View {
         } catch {
             self.error = APIError.offline.message
         }
-        loaded = true
+    }
+}
+
+/// A friend's note, on paper: their face, "Ana's note", the words in the
+/// serif, and what it's on.
+private struct NoteCard: View {
+    let note: FriendNote
+    let friend: Saver
+    let server: URL
+    let post: PhonePost?
+
+    private static let paper = Color(hex: 0xE4DAC8)
+    private static let ink = Color(hex: 0x141414)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Face(saver: friend, server: server, size: 22, ring: .clear)
+                Text("\(friend.displayName)’s note")
+                    .font(Theme.sans(12, .heavy))
+            }
+            Text("“\(note.text)”")
+                .font(Theme.serif(26))
+                .lineSpacing(-2)
+                .fixedSize(horizontal: false, vertical: true)
+            if let detail {
+                Text(detail)
+                    .font(Theme.sans(12))
+                    .foregroundStyle(Color(hex: 0x3A352D))
+                    .lineLimit(2)
+            }
+        }
+        .foregroundStyle(Self.ink)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Self.paper))
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "on Charlie bit my finger · 3 days ago".
+    private var detail: String? {
+        var parts: [String] = []
+        if let post {
+            let words = (post.article?.title ?? post.text)
+                .split(separator: "\n", omittingEmptySubsequences: true).first.map(String.init) ?? ""
+            if !words.isEmpty { parts.append("on \(words)") }
+        }
+        if note.savedAt != nil {
+            // "Saved 3 days ago" → "3 days ago".
+            let saved = Format.savedAgo(note.savedAt)
+            parts.append(saved.hasPrefix("Saved ") ? String(saved.dropFirst(6)) : saved)
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+
+/// A friend's channel on its own screen (from a face, or Your people), with a
+/// close button.
+struct FriendChannelScreen: View {
+    let friend: Saver
+    let server: URL
+    var size: Int?
+    var newCount: Int?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Button { dismiss() } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Theme.surface))
+                    }
+                    .accessibilityLabel("Close")
+                    Spacer()
+                }
+                FriendChannelBody(friend: friend, server: server, size: size, newCount: newCount)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 40)
+        }
+        .scrollIndicators(.hidden)
+        .background(Theme.app.ignoresSafeArea())
     }
 }

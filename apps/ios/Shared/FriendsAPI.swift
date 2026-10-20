@@ -353,11 +353,72 @@ struct ChannelsIndex: Decodable {
     var isEmpty: Bool { group.isEmpty && friends.isEmpty && mine.isEmpty }
 }
 
-private struct ItemsAnswer: Decodable {
-    let items: [PhonePost]
-    private enum Keys: String, CodingKey { case items }
+/// A friend's latest note on a save you may see (the note card on their
+/// channel): `{ text, platform, id, savedAt }`.
+struct FriendNote: Decodable, Hashable {
+    let text: String
+    let platform: String
+    let id: String
+    let savedAt: String?
+
+    var key: String { "\(platform):\(id)" }
+
+    private enum Keys: String, CodingKey { case text, note, platform, id, savedAt }
+
+    init(text: String, platform: String, id: String, savedAt: String? = nil) {
+        self.text = text
+        self.platform = platform
+        self.id = id
+        self.savedAt = savedAt
+    }
+
     init(from decoder: Decoder) throws {
-        items = try decoder.container(keyedBy: Keys.self).posts(.items)
+        let c = try decoder.container(keyedBy: Keys.self)
+        guard let text = Saver.clean(c.loose(String.self, .text) ?? c.loose(String.self, .note)) else {
+            throw DecodingError.dataCorruptedError(forKey: .text, in: c, debugDescription: "No note")
+        }
+        self.text = text
+        platform = try c.decode(String.self, forKey: .platform)
+        id = try c.decode(String.self, forKey: .id)
+        savedAt = c.loose(String.self, .savedAt)
+    }
+}
+
+/// A channel's play queue (`/api/app/channels/{kind}/{slug}`): its posts, each
+/// with `isNew` on group and friend channels, and a friend's `note`.
+struct ChannelQueue: Decodable {
+    let items: [PhonePost]
+    let note: FriendNote?
+
+    private enum Keys: String, CodingKey { case items, note }
+
+    init(items: [PhonePost], note: FriendNote? = nil) {
+        self.items = items
+        self.note = note
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        items = c.posts(.items)
+        note = c.loose(FriendNote.self, .note)
+    }
+
+    /// The posts you haven't saved or seen, in queue order.
+    var fresh: [PhonePost] { items.filter { $0.isNew == true } }
+}
+
+/// "Show less / Show more from Ana": -1, 0 (normal) or 1 per username.
+struct FeedWeights: Decodable {
+    let weights: [String: Int]
+    private enum Keys: String, CodingKey { case weights }
+    init(weights: [String: Int]) { self.weights = weights }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        var out: [String: Int] = [:]
+        if let raw = c.loose([String: Double].self, .weights) {
+            for (name, value) in raw where value != 0 { out[name] = value > 0 ? 1 : -1 }
+        }
+        weights = out
     }
 }
 
@@ -381,16 +442,27 @@ struct LiveMoment: Decodable, Hashable, Identifiable {
     let hue: String?
     /// A short line instead of LIVE ("Last few days", "Forming").
     let label: String?
+    /// Saves into it in the last `windowMinutes` ("3 saves in 10 min"); 0 (or
+    /// nil, from an older server) means say something else.
+    let recentSaves: Int?
+    let windowMinutes: Int?
 
     var id: String { slug }
 
+    /// "3 saves in 10 min", or nil when nothing landed lately.
+    var busyLine: String? {
+        guard let recent = recentSaves, recent > 0, let window = windowMinutes, window > 0 else { return nil }
+        return (recent == 1 ? "1 save" : "\(recent) saves") + " in \(window) min"
+    }
+
     private enum Keys: String, CodingKey {
-        case slug, name, title, people, posts, savers, watching, watchers, covers, live, hue, label
+        case slug, name, title, people, posts, savers, watching, watchers, covers, live, hue, label,
+             recentSaves, windowMinutes
     }
 
     init(slug: String, name: String, people: Int? = nil, posts: Int? = nil, savers: [Saver] = [],
          watching: Int? = nil, watchers: [Saver] = [], covers: [String] = [], live: Bool = true,
-         hue: String? = nil, label: String? = nil) {
+         hue: String? = nil, label: String? = nil, recentSaves: Int? = nil, windowMinutes: Int? = nil) {
         self.slug = slug
         self.name = name
         self.people = people
@@ -402,6 +474,8 @@ struct LiveMoment: Decodable, Hashable, Identifiable {
         self.live = live
         self.hue = hue
         self.label = label
+        self.recentSaves = recentSaves
+        self.windowMinutes = windowMinutes
     }
 
     init(from decoder: Decoder) throws {
@@ -422,15 +496,79 @@ struct LiveMoment: Decodable, Hashable, Identifiable {
         live = c.loose(Bool.self, .live) ?? true
         hue = c.loose(String.self, .hue)
         label = c.loose(String.self, .label)
+        recentSaves = c.looseInt(.recentSaves)
+        windowMinutes = c.looseInt(.windowMinutes)
     }
 }
 
-private struct LiveAnswer: Decodable {
+/// A group still forming: a few saves close together, not live yet
+/// (`forming` in `/api/app/live`). It has no slug, so nothing to tune in to.
+struct FormingMoment: Decodable, Hashable, Identifiable {
+    let id: String
+    let name: String
+    let hue: String?
+    let have: Int
+    let need: Int
+    /// "people" or "saves".
+    let unit: String
+    let covers: [String]
+    let savers: [Saver]
+
+    private enum Keys: String, CodingKey { case id, title, name, hue, have, need, unit, covers, savers }
+
+    init(id: String, name: String, hue: String? = nil, have: Int, need: Int, unit: String = "saves",
+         covers: [String] = [], savers: [Saver] = []) {
+        self.id = id
+        self.name = name
+        self.hue = hue
+        self.have = have
+        self.need = need
+        self.unit = unit
+        self.covers = covers
+        self.savers = savers
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        id = c.loose(String.self, .id) ?? c.looseInt(.id).map(String.init) ?? UUID().uuidString
+        name = c.loose(String.self, .title) ?? c.loose(String.self, .name) ?? "Something new"
+        hue = c.loose(String.self, .hue)
+        have = c.looseInt(.have) ?? 0
+        need = c.looseInt(.need) ?? 0
+        unit = c.loose(String.self, .unit) ?? "saves"
+        covers = c.covers(.covers)
+        savers = c.savers(.savers)
+    }
+
+    /// "1 more save to go live", "2 more people to go live".
+    var toGoLine: String {
+        let left = max(need - have, 1)
+        let people = unit == "people"
+        let noun = people ? (left == 1 ? "person" : "people") : (left == 1 ? "save" : "saves")
+        return "\(left) more \(noun) to go live"
+    }
+}
+
+/// Live: the moments, the groups still forming, and the window's label
+/// ("Right now", "Last few days", "This week").
+struct LiveSnapshot: Decodable {
     let moments: [LiveMoment]
-    private enum Keys: String, CodingKey { case moments }
+    let forming: [FormingMoment]
+    let label: String?
+
+    private enum Keys: String, CodingKey { case moments, forming, label }
+
+    init(moments: [LiveMoment], forming: [FormingMoment] = [], label: String? = nil) {
+        self.moments = moments
+        self.forming = forming
+        self.label = label
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
         moments = c.loose(Lossy<LiveMoment>.self, .moments)?.items ?? []
+        forming = c.loose(Lossy<FormingMoment>.self, .forming)?.items ?? []
+        label = c.loose(String.self, .label)
     }
 }
 
@@ -570,14 +708,29 @@ extension ADHXClient {
 
     /// A channel's play queue.
     func channel(_ kind: ChannelKind, slug: String) async throws -> [PhonePost] {
-        let answer: ItemsAnswer = try await send(
-            "GET", "/api/app/channels/\(kind.rawValue)/\(Self.pathPart(slug))")
-        return answer.items
+        try await channelQueue(kind, slug: slug).items
     }
 
-    func live() async throws -> [LiveMoment] {
-        let answer: LiveAnswer = try await send("GET", "/api/app/live")
-        return answer.moments
+    /// A channel's play queue with its new marks and (a friend's) note.
+    func channelQueue(_ kind: ChannelKind, slug: String) async throws -> ChannelQueue {
+        try await send("GET", "/api/app/channels/\(kind.rawValue)/\(Self.pathPart(slug))")
+    }
+
+    /// Who you asked to see more or less of (`{ ana: 1, ben: -1 }`).
+    func feedWeights() async throws -> [String: Int] {
+        let answer: FeedWeights = try await send("GET", "/api/app/feed/weights")
+        return answer.weights
+    }
+
+    /// Show more (1), less (-1) or the usual (0) from someone; the weights after.
+    func setFeedWeight(_ username: String, _ weight: Int) async throws -> [String: Int] {
+        let answer: FeedWeights = try await send(
+            "PUT", "/api/app/feed/weights", body: ["username": username, "weight": max(-1, min(1, weight))])
+        return answer.weights
+    }
+
+    func live() async throws -> LiveSnapshot {
+        try await send("GET", "/api/app/live")
     }
 
     func live(slug: String, watching session: String? = nil, known: [String] = []) async throws -> LiveDetail {

@@ -52,11 +52,11 @@ struct OnTheirWayPill: View {
 struct OnTheirWaySheet: View {
     @ObservedObject var doing: DoingModel
     let server: URL
+    /// Opens the full list (the sheet closes first).
+    let seeAll: () -> Void
     private static let shown = 6
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(title)
@@ -77,7 +77,7 @@ struct OnTheirWaySheet: View {
                             .padding(.vertical, 8)
                     } else {
                         VStack(spacing: 10) {
-                            ForEach(doing.active.prefix(Self.shown)) { item in
+                            ForEach(shownRows) { item in
                                 DoingRow(item: item, server: server, doing: doing)
                             }
                         }
@@ -87,11 +87,7 @@ struct OnTheirWaySheet: View {
                                 .foregroundStyle(Theme.faint)
                         }
                     }
-                    NavigationLink {
-                        DoingScreen(doing: doing, server: server)
-                    } label: {
-                        Text("See everything your ADHX is doing")
-                    }
+                    Button("See everything your ADHX is doing", action: seeAll)
                     .buttonStyle(PillButtonStyle(kind: .outline, height: 48))
                     .padding(.top, 2)
                     Text("All on your server. Nothing sent anywhere.")
@@ -100,15 +96,18 @@ struct OnTheirWaySheet: View {
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 29)
+                .padding(.top, 12)
                 .padding(.bottom, 24)
-            }
-            .scrollIndicators(.hidden)
-            .background(Theme.surface.ignoresSafeArea())
-            .toolbar(.hidden, for: .navigationBar)
-        }
         .onAppear { doing.watch("sheet") }
         .onDisappear { doing.unwatch("sheet") }
+    }
+
+    /// What's moving first, then what needs you (the boards' order), always
+    /// keeping the ones that need you in view.
+    private var shownRows: [DoingItem] {
+        let needs = doing.active.filter(\.needsYou)
+        let moving = doing.active.filter { !$0.needsYou }
+        return Array(moving.prefix(max(Self.shown - needs.count, 0))) + needs.prefix(Self.shown)
     }
 
     private var title: String {
