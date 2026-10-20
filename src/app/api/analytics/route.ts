@@ -79,15 +79,18 @@ export async function POST(request: NextRequest) {
       return new NextResponse(null, { status: 204 })
     }
 
-    recordPostAnalytic(name as 'post.send' | 'post.play' | 'post.copy' | 'post.open', {
-      userId,
-      platform,
-      bookmarkId,
-      contentType: trustedPost.contentType,
-      surface: typeof surface === 'string' ? surface : null,
-      source: typeof source === 'string' ? source : null,
-      tag: typeof tag === 'string' ? tag : null,
-    })
+    recordPostAnalytic(
+      name as 'post.send' | 'post.play' | 'post.finish' | 'post.copy' | 'post.open',
+      {
+        userId,
+        platform,
+        bookmarkId,
+        contentType: trustedPost.contentType,
+        surface: typeof surface === 'string' ? surface : null,
+        source: typeof source === 'string' ? source : null,
+        tag: typeof tag === 'string' ? tag : null,
+      },
+    )
   } else {
     recordAnalytic({
       name,

@@ -56,6 +56,13 @@ export type AdminAuditAction =
   | 'decline_join'
   | 'set_invite_mode'
   | 'clear_note'
+  | 'make_admin'
+  | 'remove_admin'
+  | 'remove_phone'
+  | 'pause_work'
+  | 'resume_work'
+  | 'retry_failed'
+  | 'keep_link_only'
 
 function nowIso(): string {
   return new Date().toISOString()

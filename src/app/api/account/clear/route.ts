@@ -13,6 +13,7 @@ import {
   postSends,
   momentAlertSubs,
   momentAlerts,
+  reactionCounts,
 } from '@/lib/db/schema'
 import { eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
@@ -52,6 +53,7 @@ export const POST = withAuth(async (_req, userId) => {
         .run()
       db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
       db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
+      db.delete(reactionCounts).where(eq(reactionCounts.userId, userId)).run()
     })
 
     metrics.dataCleared()

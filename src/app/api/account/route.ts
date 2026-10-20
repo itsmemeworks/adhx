@@ -12,6 +12,7 @@ import {
   postSends,
   momentAlertSubs,
   momentAlerts,
+  reactionCounts,
   accessKeys,
   appPairCodes,
   invites,
@@ -95,6 +96,7 @@ export const DELETE = withAuth(async (_req, userId) => {
         .run()
       db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
       db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
+      db.delete(reactionCounts).where(eq(reactionCounts.userId, userId)).run()
 
       // 11. Delete public tag-share settings
       db.delete(tagShares).where(eq(tagShares.userId, userId)).run()

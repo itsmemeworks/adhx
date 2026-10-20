@@ -7,6 +7,7 @@ import { addedAtForIndex } from '@/lib/sync/added-at'
 import { getUsernameForUserId } from '@/lib/users/lookup'
 import { MAX_TAGS_PER_POST, sanitizeTag } from '@/lib/utils/tag'
 import { groupChannelKeys } from './group'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 /**
  * "Keep this channel" on a From everyone channel (board j6-2): every visible
@@ -182,5 +183,6 @@ export async function keepGroupChannel(
     }
   })
   if (saved.length) noteSaved(saved, PRIORITY.sync)
+  recordAnalytic({ name: 'channel.keep', surface: 'group', bookmarkId: slug, userId })
   return { tag, url: keptUrl(username, tag), added }
 }

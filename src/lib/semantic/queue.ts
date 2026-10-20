@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, lte, sql, type SQLWrapper } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { videoResultCurrent } from '@/lib/processing/config'
+import { newWorkPaused } from '@/lib/processing/pause'
 import {
   bookmarks,
   postEmbeddings,
@@ -148,6 +149,8 @@ export function kindOrderSql(column: SQLWrapper) {
  * first); then oldest first.
  */
 export async function nextJob(now = new Date()): Promise<UnderstandingJob | undefined> {
+  // An admin paused new work (Processing).
+  if (newWorkPaused()) return undefined
   const [job] = await db
     .select()
     .from(understandingQueue)
