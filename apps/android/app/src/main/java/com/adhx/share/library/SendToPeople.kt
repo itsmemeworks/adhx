@@ -97,7 +97,7 @@ internal data class SendRow(
  * on a server without the route, or for a post you can't see.
  */
 @Composable
-fun SendToPeople(post: PhonePost, server: String) {
+fun SendToPeople(post: PhonePost, server: String, onShown: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var row by remember(post.key) { mutableStateOf<SendRow?>(null) }
@@ -105,7 +105,11 @@ fun SendToPeople(post: PhonePost, server: String) {
     LaunchedEffect(post.key) {
         val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect
         val result = AdhxApi(connection).sendTargets(post.platform, post.id)
-        if (result is ApiResult.Ok) row = SendRow.of(result.value)
+        if (result is ApiResult.Ok) {
+            row = SendRow.of(result.value)
+            // The sheet was measured without the row: let it grow to fit.
+            if (row?.shown == true) onShown()
+        }
     }
 
     val now = row ?: return

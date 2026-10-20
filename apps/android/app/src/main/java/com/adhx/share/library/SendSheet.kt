@@ -177,7 +177,7 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
                     Choice(Glyphs.More, "More", waiting = pending == Target.More) { pick(Target.More) }
                 }
             }
-            SendToPeople(post, server)
+            SendToPeople(post, server, onShown = { scope.launch { state.expand() } })
         }
     }
 }
