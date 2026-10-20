@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — iPhone: send to your people, live alerts, like thumbnail, keep channel
+
+- Send sheet (j4-4): "Or straight to your people" from `GET/POST /api/app/send`; 52 pt faces, has-it dimmed with "Jo already has it." (beside the faces up to four, else under), a yellow tick on send, "Just for you. Share it first to send it." when not `sendable`. New's `sent` reason is the why chip "Pete sent you this" with the sender's face (a paper plane in the why sheet); unknown reason kinds show as their words.
+- Live (j7-3): forming rows show `people` faces and a bell (`PUT|DELETE /api/app/live/forming/{id}/alert`); the first bell asks for notifications. `App/Feed/LiveAlerts.swift` polls `/api/app/alerts` every 60 s while open and from a BGAppRefreshTask (`<prefix>.alerts`, scheduled 48 h after a bell), posts local notifications, marks them seen, remembers the last 100 shown; a tap tunes in (`-adhxTuneIn <slug>` does the same in Debug).
+- Why sheet (j2-2): the `like` reason's 38 pt Gob-shaped thumbnail opens that post. Group channels play with their name and Keep this channel → Kept · Open (plays `/api/app/channels/mine/{tag}`).
+- Verified live in the simulator against the merged server branch on a parity server: send to Mum/Ana with ticks, Ana's New leads with Pete's sent post, like thumbnail, bell → permission → subscription, a fired alert as a notification (the alert row was inserted by hand: the seed has no group that forms), tune in, keep. Fixture tests: `apps/ios/Tests/BoardFeaturesTests.swift`.
+- Follow-ups: tapping a notification in the simulator's shade wasn't drivable, so the tap path was checked through the debug argument; "Just for you" was checked by API and fixtures, not on screen.
+
 ## 2026-10-20 — Board features: send to your people, forming bells, like thumbnail, keep group channels
 
 - **Send** (j4-4): `post_sends` + `GET|POST /api/posts/send` and `/api/app/send` (`src/lib/sends/`): every other member with `has`/`sent`; a post only you keep privately isn't sendable, another person's private post is 404. New leads with `{ kind: 'sent', text: 'Pete sent you this', username }` until seen (`markSeen` sets `seen_at`), however old; the note rides on the sender's saver (and on the reason). Web: "Or straight to your people" in the Share sheet; the why chip shows the sender's face.
