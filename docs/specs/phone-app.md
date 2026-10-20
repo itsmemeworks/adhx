@@ -397,7 +397,9 @@ mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
 
   ```json
   {
-    "items": [{ "platform": "youtube", "id": "_OBlgSz8sSM", "kind": "video", "isNew": false, "…": "…" }],
+    "items": [
+      { "platform": "youtube", "id": "_OBlgSz8sSM", "kind": "video", "isNew": false, "…": "…" }
+    ],
     "note": {
       "text": "the original and still the best",
       "platform": "youtube",
@@ -408,6 +410,7 @@ mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
   ```
 
   `mine` items carry neither.
+
 - `GET /api/app/live` → `{ moments: [{ slug, name (or title), people, savers?,
 watching, watchers?, covers, live, recentSaves, windowMinutes }] }`; a 404
   reads as nothing live. `recentSaves` and `windowMinutes` say how busy it is
