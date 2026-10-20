@@ -85,8 +85,6 @@ private val Green = Color(0xFF7FD1AE)
 fun ConnectedScreen(
     connection: Connection,
     people: PeopleViewModel,
-    onSearch: () -> Unit,
-    onSettings: () -> Unit,
     onStart: () -> Unit,
 ) {
     LaunchedEffect(Unit) { people.load() }
@@ -121,18 +119,9 @@ fun ConnectedScreen(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // The pages' top row only: Gob and "adhx", Search and Settings.
-            Box(Modifier.statusBarsPadding().fillMaxWidth().height(52.dp).padding(horizontal = 16.dp)) {
-                Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically) {
-                    Image(rememberVectorPainter(GobNeutralSmall), null, Modifier.size(30.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("adhx", fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 28.sp, color = AdhxColors.White)
-                }
-                Row(Modifier.align(Alignment.CenterEnd), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    com.adhx.share.library.BarButton(Glyphs.Search, Copy.SEARCH, onSearch, background = AdhxColors.Surface)
-                    com.adhx.share.library.BarButton(Glyphs.Settings, Copy.OPEN_SETTINGS, onSettings, background = AdhxColors.Surface)
-                }
-            }
+            // No header here, as on iPhone: the welcome is its own moment and
+            // Start watching is the way in (the app has no "adhx" wordmark row).
+            Spacer(Modifier.statusBarsPadding().height(20.dp))
             Column(
                 Modifier
                     .weight(1f)
@@ -314,16 +303,6 @@ private val GobHappy: ImageVector = ImageVector.Builder(defaultWidth = 92.dp, de
         line("M10.5 17.5 q3 -4 6 0", Color.Black, 2.4f)
         line("M21.5 17 q4.5 -6 9 0", Color.Black, 2.6f)
         line("M13.5 25 q6.5 6 13 -0.5", Color.Black, 2.4f, fill = Color.Black)
-    }
-    .build()
-
-/** Gob as in the header. */
-private val GobNeutralSmall: ImageVector = ImageVector.Builder(defaultWidth = 30.dp, defaultHeight = 30.dp, viewportWidth = 40f, viewportHeight = 40f)
-    .group(rotate = -4f, pivotX = 20f, pivotY = 20f) {
-        blob(rect(3f, 3f, 34f, 34f, 14f), AdhxColors.Accent)
-        blob(circle(14f, 17f, 2.6f), Color.Black)
-        blob(circle(26.5f, 16f, 4f), Color.Black)
-        line("M15 27.5 q5 2.6 10 -1.2", Color.Black, 2.2f)
     }
     .build()
 
