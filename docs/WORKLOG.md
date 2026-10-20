@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android uses Hanken Grotesk
+
+- The Android app's sans is now Hanken Grotesk, like the web and iOS: `res/font/hanken_grotesk.ttf` is the web's `src/app/fonts/HankenGrotesk-latin-variable.woff2` decoded to TrueType (Brotli plus the WOFF2 glyf/loca reconstruction), with nothing downloaded. Chromium renders both files pixel-identically at weights 100–900.
+- `SansFamily` in `ui/Theme.kt` maps each weight to the same variable file at that point on its weight axis (API 26+). Every Material type style and the two text fields use it; licence in `assets/licenses/HankenGrotesk-OFL.txt`.
+
 ## 2026-10-20 — iPhone app: the rest of the phone boards
 
 - Why this one: Show less / Show more from a friend (`/api/app/feed/weights`, chosen state in cream, long press for another friend); only the server's reasons are listed. Why, filter and On their way are now the boards' bottom-attached sheets (`BoardSheet.swift`), not inset system sheets.

@@ -8,8 +8,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import com.adhx.share.R
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import com.adhx.share.R
 import androidx.compose.ui.unit.sp
 
 /** The ADHX colours (docs/specs/phone-app.md → Colours and type). */
@@ -40,10 +41,24 @@ object AdhxColors {
 }
 
 /**
- * Headings are Instrument Serif, as on the web (bundled in res/font, with its
- * licence in assets/licenses); everything else is the system sans.
+ * Headings are Instrument Serif and everything else is Hanken Grotesk, as on
+ * the web (both bundled in res/font, with their licences in assets/licenses).
  */
 val SerifFamily: FontFamily = FontFamily(Font(R.font.instrument_serif, FontWeight.Normal))
+
+/**
+ * Hanken Grotesk is one variable font (the web's latin subset, weights
+ * 100–900): each weight is the same file at that point on its weight axis.
+ */
+val SansFamily: FontFamily = FontFamily(
+    listOf(100, 200, 300, 400, 500, 600, 700, 800, 900).map { weight ->
+        Font(
+            R.font.hanken_grotesk,
+            weight = FontWeight(weight),
+            variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
+        )
+    },
+)
 
 private val colors = darkColorScheme(
     primary = AdhxColors.Accent,
@@ -63,13 +78,28 @@ private val colors = darkColorScheme(
     onError = AdhxColors.Black,
 )
 
-private val typography = Typography(
+private val sans = Typography().let { base ->
+    fun TextStyle.sans() = copy(fontFamily = SansFamily)
+    base.copy(
+        displayLarge = base.displayLarge.sans(),
+        displayMedium = base.displayMedium.sans(),
+        headlineLarge = base.headlineLarge.sans(),
+        headlineMedium = base.headlineMedium.sans(),
+        titleLarge = base.titleLarge.sans(),
+        titleMedium = base.titleMedium.sans(),
+        titleSmall = base.titleSmall.sans(),
+        labelMedium = base.labelMedium.sans(),
+        labelSmall = base.labelSmall.sans(),
+    )
+}
+
+private val typography = sans.copy(
     displaySmall = TextStyle(fontFamily = SerifFamily, fontWeight = FontWeight.Normal, fontSize = 40.sp, lineHeight = 40.sp),
     headlineSmall = TextStyle(fontFamily = SerifFamily, fontWeight = FontWeight.Normal, fontSize = 30.sp, lineHeight = 32.sp),
-    bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 22.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
-    labelLarge = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold),
+    bodyLarge = TextStyle(fontFamily = SansFamily, fontSize = 15.sp, lineHeight = 22.sp),
+    bodyMedium = TextStyle(fontFamily = SansFamily, fontSize = 14.sp, lineHeight = 20.sp),
+    bodySmall = TextStyle(fontFamily = SansFamily, fontSize = 13.sp, lineHeight = 18.sp),
+    labelLarge = TextStyle(fontFamily = SansFamily, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold),
 )
 
 @Composable
