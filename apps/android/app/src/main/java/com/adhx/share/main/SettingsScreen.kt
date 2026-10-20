@@ -286,7 +286,7 @@ fun SettingsScreen(
         // This phone, then Shared lately (the spec's order; the boards end on This phone).
         Section {
             Row(
-                Modifier.padding(start = 16.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
+                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -306,6 +306,7 @@ fun SettingsScreen(
                     Text(
                         SettingsCopy.connectedTo(list?.owner),
                         fontSize = 14.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = AdhxColors.White,
                         maxLines = 1,
@@ -314,14 +315,13 @@ fun SettingsScreen(
                     Text(
                         Links.host(connection.server),
                         fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         color = AdhxColors.Faint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                TextButton(onClick = { confirmRemove = true }) {
-                    Text(SettingsCopy.REMOVE_PHONE, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger)
-                }
+                QuietButton(SettingsCopy.REMOVE_PHONE) { confirmRemove = true }
             }
         }
 
@@ -410,7 +410,7 @@ private fun WaitingCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.semantics(mergeDescendants = true) { heading() },
         ) {
-            Text(SettingsCopy.WAITING_FOR_YOU, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp, color = AdhxColors.Accent)
+            Text(SettingsCopy.WAITING_FOR_YOU, fontSize = 13.sp, lineHeight = 17.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.8.sp, color = AdhxColors.Accent)
             Spacer(Modifier.width(8.dp))
             Box(
                 Modifier
@@ -430,16 +430,14 @@ private fun WaitingCard(
                 Avatar(request.username, request.label, null, server, 44.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(SettingsCopy.wantsIn(request), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
-                    Text(SettingsCopy.requestLine(request), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(SettingsCopy.wantsIn(request), fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
+                    Text(SettingsCopy.requestLine(request), fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (busy) {
                     CircularProgressIndicator(Modifier.size(20.dp), color = AdhxColors.Accent, strokeWidth = 2.dp)
                 } else {
                     // Decline sits quietly at the end of the row, so the two buttons stay as on the boards.
-                    TextButton(onClick = { onDecide(request, JoinDecision.DECLINE) }) {
-                        Text(SettingsCopy.DECLINE, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger)
-                    }
+                    QuietButton(SettingsCopy.DECLINE) { onDecide(request, JoinDecision.DECLINE) }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -460,6 +458,21 @@ private fun WaitingCard(
             }
             errors[request.id]?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Warn) }
         }
+    }
+}
+
+/** A quiet red text action at a row's end (Remove this phone, Decline): 36dp tall, as on the boards. */
+@Composable
+private fun QuietButton(text: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(50))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, maxLines = 1)
     }
 }
 

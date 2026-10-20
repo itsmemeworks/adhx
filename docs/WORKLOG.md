@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android: final phone-board parity pass
+
+- Side by side of every phone board (j1-2/3, j2-1/2/3/4/7, j3-3, j4-3/4, j5-6, j6-3, j7-3/4, j8-4/5, the note bubble) at 390dp against a :3613 parity server.
+- Fixed: words over the player and the search field fell back to Roboto (no `fontFamily`), now Hanken Grotesk; Instrument Serif headings set tighter than the font kept its full ascent/descent, so `serifLineBox` trims them to the CSS line box (share card title, caught-up title); the caught-up shadow is an ellipse, not a pill; Settings' Remove this phone / Decline are 36dp quiet buttons and the This phone card has the boards' padding and line heights; the share card's keep line and bar sit together at the poster's foot.
+- Left as is: the one-row player header, data-only differences (moment names, counts, order), system UI.
+
 ## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
 
 - In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.
