@@ -31,7 +31,7 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  # The only automatic publisher: run after Release Please creates a release.
+  # Publish the container image after Release Please creates a release.
   # Explicit calls work even though GITHUB_TOKEN suppresses downstream events.
   publish-release:
     needs: release-please
@@ -44,3 +44,15 @@ jobs:
     uses: ./.github/workflows/image-publish.yml
     with:
       version: ${{ needs.release-please.outputs.version }}
+
+  # Attach a signed Android APK to the same release (skips until the signing
+  # secrets exist). Explicit for the same reason as publish-release.
+  android-apk:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/android-release.yml
+    with:
+      version: ${{ needs.release-please.outputs.version }}
+    secrets: inherit

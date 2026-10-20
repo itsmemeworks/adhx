@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — A signed Android APK on every release
+
+- `.github/workflows/android-release.yml` builds the release tag's app with `assembleRelease`, signs it with the owner's key from four repository secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, optional `ANDROID_KEY_PASSWORD`), checks it with apksigner and attaches `adhx-<version>.apk` + `.sha256` to the GitHub release. Version code = major×10000 + minor×100 + patch.
+- Release Please calls it after creating a release (explicitly, like the image publisher, since `GITHUB_TOKEN` releases fire no events); it skips with a notice until the secrets exist. Manual: `gh workflow run android-release.yml -f version=2.2.0`. Friends install from the latest release page or Obtainium. Verified locally with a throwaway key: signed, versionCode 20200 / versionName 2.2.0.
+
 ## 2026-10-20 — Right now: the lead card keeps its size on a busy server
 
 - With many moments, every one stacked beside the lead, so the lead card stretched to their height and left a huge empty card (seen on real data: AI music beside six moments). Now two sit beside the lead, as on the board, and the rest wrap into a three-column row below (`SIDE_CARDS` in `RightNow.tsx`). Component test covers six moments.

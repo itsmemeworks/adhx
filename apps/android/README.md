@@ -89,6 +89,42 @@ export ADHX_VERSION_NAME=1.0.1    # optional
 
 The signed APK is `app/build/outputs/apk/release/app-release.apk`.
 
+## Release APKs
+
+Every GitHub release gets a signed `adhx-<version>.apk` (and its `.sha256`)
+attached by `.github/workflows/android-release.yml`, which Release Please calls
+after it makes a release. The version name is the release (`2.2.0`) and the
+version code comes from it (`20200`), so each release installs over the last.
+
+It needs your key as four repository secrets (Settings → Secrets and variables
+→ Actions). Until they exist, the job skips with a notice and the release still
+ships.
+
+| Secret                      | Value                                                                    |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `ANDROID_KEYSTORE_BASE64`   | The keystore, base64: `base64 -i adhx-release.keystore \| pbcopy`        |
+| `ANDROID_KEYSTORE_PASSWORD` | The keystore's password                                                  |
+| `ANDROID_KEY_ALIAS`         | The key's alias (`adhx` if you used the command above)                   |
+| `ANDROID_KEY_PASSWORD`      | The key's password; optional when it's the same as the keystore password |
+
+Make the keystore with the `keytool` command above, once. **Keep the keystore
+and its passwords somewhere safe and use the same key forever:** a phone only
+installs an update signed with the key it already has, so a new key means
+everyone uninstalls and starts again.
+
+To attach an APK to a release that already exists (for example the one before
+the secrets were added):
+
+```sh
+gh workflow run android-release.yml -f version=2.2.0
+```
+
+Friends install it from
+[the latest release](https://github.com/itsmemeworks/adhx/releases/latest) (tap
+the `.apk`, allow installs from the browser once), or add the repository's URL
+to Obtainium to get each new release as an update. Then they pair the app with
+the code from their invite's "You're in" page.
+
 ## Install it
 
 - **Straight from a file:** copy the APK to the phone and open it. Android asks
