@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AudioLines, Captions, Play } from 'lucide-react'
 import { networkLabel } from '@/lib/platform/networks'
 import { SaverFaces } from '../SaverFaces'
@@ -193,6 +193,7 @@ export function Masonry({
   showStrength = true,
   owner,
   isNew,
+  extra,
 }: {
   items: SearchResultItem[]
   columns?: string
@@ -203,10 +204,19 @@ export function Masonry({
   owner?: string
   /** Which tiles get "New". */
   isNew?: (item: SearchResultItem) => boolean
+  /** One more tile (a friend's note card), placed before the item at `at`. */
+  extra?: { key: string; at: number; node: ReactNode }
 }) {
+  const extraAt = extra ? Math.min(Math.max(0, extra.at), items.length) : -1
+  const extraTile = extra ? (
+    <li key={extra.key} className="mb-2 break-inside-avoid md:mb-3.5">
+      {extra.node}
+    </li>
+  ) : null
   return (
     <ul className={cn('list-none gap-2 p-0 md:gap-3.5', columns)}>
-      {items.map((item) => (
+      {items.map((item, i) => [
+        i === extraAt ? extraTile : null,
         <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3.5">
           <ResultTile
             item={item}
@@ -216,8 +226,9 @@ export function Masonry({
             owner={owner}
             isNew={isNew?.(item) ?? false}
           />
-        </li>
-      ))}
+        </li>,
+      ])}
+      {extraAt === items.length ? extraTile : null}
     </ul>
   )
 }

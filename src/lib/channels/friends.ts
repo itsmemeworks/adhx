@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { visibleSave } from '@/lib/people/savers'
 import { newTo } from '@/lib/feed/views'
+import { goneKeys } from '@/lib/semantic/gone'
 import type { Member } from '@/lib/people/members'
 
 /**
@@ -74,7 +75,7 @@ export function friendChannelKeys(
   members: Member[],
   username: string,
   opts: { onlyNew?: boolean } = {},
-): { friend: FriendChannelView; keys: string[] } | null {
+): { friend: FriendChannelView; keys: string[]; userId: string } | null {
   if (!viewerId) return null
   const lower = username.toLowerCase()
   const member = members.find((m) => m.username.toLowerCase() === lower)
@@ -88,5 +89,40 @@ export function friendChannelKeys(
         ORDER BY b.processed_at DESC, b.id DESC
         LIMIT ${QUEUE_LIMIT}`,
   )
-  return { friend, keys: rows.map((r) => `${r.platform}:${r.id}`) }
+  return { friend, keys: rows.map((r) => `${r.platform}:${r.id}`), userId: member.userId }
+}
+
+export interface FriendNote {
+  /** Their words on the save (`bookmarks.note`, already cleaned). */
+  text: string
+  platform: string
+  id: string
+  /** When they saved it. */
+  savedAt: string
+}
+
+/**
+ * A friend's latest note on a save other members may see (`visibleSave`:
+ * never a note on a private save), for the note card on their channel.
+ * Null when they have none, or when that post is gone upstream.
+ */
+export async function friendNote(friendUserId: string): Promise<FriendNote | null> {
+  if (!friendUserId) return null
+  const rows = db.all<{ platform: string; id: string; note: string; processed_at: string | null }>(
+    sql`SELECT b.platform, b.id, b.note, b.processed_at FROM bookmarks b
+        WHERE b.user_id = ${friendUserId} AND ${visibleSave('b')}
+        AND b.note IS NOT NULL AND TRIM(b.note) != ''
+        ORDER BY b.processed_at DESC, b.id DESC
+        LIMIT 5`,
+  )
+  if (rows.length === 0) return null
+  const gone = await goneKeys(rows.map((r) => `${r.platform}:${r.id}`))
+  const row = rows.find((r) => !gone.has(`${r.platform}:${r.id}`))
+  if (!row) return null
+  return {
+    text: row.note.trim(),
+    platform: row.platform,
+    id: row.id,
+    savedAt: row.processed_at ?? '',
+  }
 }

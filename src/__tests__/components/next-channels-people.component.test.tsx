@@ -184,6 +184,71 @@ describe('friend channel page', () => {
     )
     expect(screen.getByText('Only people on this server can see this page.')).toBeInTheDocument()
   })
+
+  it('marks new tiles from the queue’s isNew, with one request, and shows the note card', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            items: [
+              { ...post('n1'), saved: false, matched: [], strength: 'strong', isNew: true },
+              { ...post('n2'), saved: false, matched: [], strength: 'strong', isNew: false },
+              { ...post('n3'), saved: false, matched: [], strength: 'strong', isNew: true },
+            ],
+            friend: { username: 'ana', size: 3, newCount: 2 },
+            note: {
+              text: 'the original and still the best',
+              platform: 'twitter',
+              id: 'n2',
+              savedAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+            },
+          }),
+        ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    render(<FriendChannelPage username="ana" name="Ana" avatarUrl={null} size={3} />)
+    const note = await screen.findByRole('link', { name: /^Ana’s note:/ })
+    expect(note).toHaveAttribute('href', '/play?friend=ana&start=twitter%3An2')
+    expect(within(note).getByText('“the original and still the best”')).toBeInTheDocument()
+    expect(within(note).getByText('on post n2 · 3 days ago')).toBeInTheDocument()
+    // The card is the second tile, after their newest save.
+    const tiles = within(screen.getByRole('region', { name: 'Ana’s saves' })).getAllByRole(
+      'listitem',
+    )
+    expect(within(tiles[1]).getByRole('link', { name: /^Ana’s note:/ })).toBeInTheDocument()
+    // "New" on the two new ones only.
+    const grid = screen.getByRole('region', { name: 'Ana’s saves' })
+    expect(within(grid).getAllByText('New')).toHaveLength(2)
+    expect(screen.getByRole('link', { name: 'Play the 2 new ones' })).toBeInTheDocument()
+    // One request: the marks come with the queue.
+    const channelCalls = fetchMock.mock.calls.filter((c) =>
+      String((c as unknown[])[0]).startsWith('/api/channels/friend/'),
+    )
+    expect(channelCalls.map((c) => String((c as unknown[])[0]))).toEqual([
+      '/api/channels/friend/ana',
+    ])
+  })
+
+  it('has no note card when the friend has no note', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              items: [{ ...post('n1'), saved: false, matched: [], strength: 'strong' }],
+              friend: { username: 'ana', size: 1, newCount: 0 },
+              note: null,
+            }),
+          ),
+      ),
+    )
+    render(<FriendChannelPage username="ana" name="Ana" avatarUrl={null} size={1} />)
+    await screen.findByText('post n1')
+    expect(screen.queryByRole('link', { name: /note/ })).not.toBeInTheDocument()
+    const grid = screen.getByRole('region', { name: 'Ana’s saves' })
+    expect(within(grid).queryByText('New')).not.toBeInTheDocument()
+  })
 })
 
 describe('theater sources', () => {

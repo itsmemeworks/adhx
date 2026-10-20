@@ -91,3 +91,29 @@ export function newTo(viewerId: string, alias: string): SQL {
     WHERE mine.user_id = ${viewerId} AND mine.platform = ${a}.platform AND mine.id = ${a}.id
   ) AND ${notSeenBy(viewerId, alias)})`
 }
+
+/**
+ * Of these posts (`platform:id`), the ones new to the viewer: not in their
+ * saves and not seen (`post_views`), the same reading as `newTo`. Channel
+ * queues mark each item with it (`isNew`), so the tiles' "New" marks and
+ * "Play the N new ones" agree.
+ */
+export function newKeysFor(viewerId: string, keys: string[]): Set<string> {
+  const out = new Set<string>()
+  if (!viewerId || keys.length === 0) return out
+  const seen = seenKeys(viewerId, keys)
+  const saved = new Set<string>()
+  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
+  for (let i = 0; i < ids.length; i += 400) {
+    const rows = db.all<{ platform: string; id: string }>(
+      sql`SELECT platform, id FROM bookmarks
+          WHERE user_id = ${viewerId} AND id IN (${sql.join(
+            ids.slice(i, i + 400).map((id) => sql`${id}`),
+            sql`, `,
+          )})`,
+    )
+    for (const r of rows) saved.add(`${r.platform}:${r.id}`)
+  }
+  for (const key of keys) if (!seen.has(key) && !saved.has(key)) out.add(key)
+  return out
+}

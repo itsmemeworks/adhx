@@ -6,15 +6,87 @@ import { cn } from '@/lib/utils'
 import { networkLabel } from '@/lib/platform/networks'
 import { ChevronLeft, Lock, Play } from 'lucide-react'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
+import { postWords } from '../theater/TheaterLayout'
 import { Masonry } from '../search/ResultViews'
 import { NxAvatar } from '../primitives'
 import { savesOf } from '../savers'
 import { friendPlayHref, recentPlayHref } from '../theater/queue'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { personColour } from '../moments/people'
+import { timeAgo } from '../moments/live'
 import { NxHeader } from './ChannelParts'
 
 type Show = 'all' | 'videos' | 'photos' | 'music' | 'posts'
+
+/** A channel tile, marked when you haven't saved or seen it (`isNew` from the queue). */
+type FriendItem = SearchResultItem & { isNew?: boolean }
+
+/** Their latest note on a save you may see (`note` on the friend queue). */
+export interface FriendNoteCard {
+  text: string
+  platform: string
+  id: string
+  savedAt: string
+}
+
+/** A post's title line, short enough for one line under a note. */
+function shortTitle(title: string): string | null {
+  const t = title.trim()
+  if (!t) return null
+  return t.length > 48 ? `${t.slice(0, 47).trimEnd()}…` : t
+}
+
+/** "3 days ago", "5h ago", "just now". */
+function noteAge(iso: string): string {
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return ''
+  const days = Math.floor((Date.now() - t) / 86_400_000)
+  if (days < 1) return timeAgo(iso)
+  if (days === 1) return 'yesterday'
+  if (days < 14) return `${days} days ago`
+  return `${Math.floor(days / 7)} weeks ago`
+}
+
+/**
+ * The note card (j3-2): a paper tile quoting a friend's latest note, linking
+ * to the post it's on. Only shown when they have a note other members may see.
+ */
+export function FriendNoteTile({
+  note,
+  friend,
+  title,
+  href,
+}: {
+  note: FriendNoteCard
+  friend: { username: string; name: string | null; avatarUrl: string | null }
+  /** The post's title, when it's in the channel. */
+  title: string | null
+  href: string
+}) {
+  const who = friend.name?.trim() || friend.username
+  const age = noteAge(note.savedAt)
+  const on = [title ? `on ${title}` : null, age].filter(Boolean).join(' · ')
+  return (
+    <Link
+      href={href}
+      aria-label={`${who}’s note: “${note.text}”${title ? `, on ${title}` : ''}`}
+      className="flex flex-col gap-2.5 rounded-[20px] bg-[#e4dac8] p-[18px] font-nx-sans text-[#141414] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent"
+    >
+      <span className="flex items-center gap-2 text-[12px] font-extrabold">
+        <NxAvatar
+          author={{ avatarUrl: friend.avatarUrl, handle: friend.username, name: who }}
+          size={22}
+        />
+        <span>{`${who}’s note`}</span>
+      </span>
+      <span
+        className="whitespace-pre-line break-words font-nx-serif text-[26px] leading-[0.95]"
+        translate="no"
+      >{`“${note.text}”`}</span>
+      {on && <span className="line-clamp-2 text-[12px] text-[#3a352d]">{on}</span>}
+    </Link>
+  )
+}
 
 const SHOW_LABEL: Record<Show, string> = {
   all: 'All',
@@ -66,11 +138,11 @@ export function FriendChannelPage({
   avatarUrl: string | null
   size: number
 }) {
-  const [items, setItems] = useState<SearchResultItem[] | null>(null)
+  const [items, setItems] = useState<FriendItem[] | null>(null)
   const [total, setTotal] = useState(size)
   const [newCount, setNewCount] = useState(0)
   const [failed, setFailed] = useState(false)
-  const [fresh, setFresh] = useState<Set<string>>(new Set())
+  const [note, setNote] = useState<FriendNoteCard | null>(null)
   const [show, setShow] = useState<Show>('all')
   const title = savesOf({ name, username, isYou: false })
   const paste = usePasteToSave({
@@ -89,13 +161,15 @@ export function FriendChannelPage({
       .then((r) =>
         r.ok
           ? (r.json() as Promise<{
-              items: SearchResultItem[]
+              items: FriendItem[]
               friend?: { size: number; newCount: number }
+              note?: FriendNoteCard | null
             }>)
           : Promise.reject(new Error('load')),
       )
       .then((d) => {
         setItems(d.items)
+        setNote(d.note ?? null)
         if (d.friend) {
           setTotal(d.friend.size)
           setNewCount(d.friend.newCount)
@@ -106,14 +180,6 @@ export function FriendChannelPage({
         setFailed(true)
         setItems([])
       })
-    // Which of them you haven't seen yet, for the "New" marks.
-    fetch(`/api/channels/friend/${encodeURIComponent(username)}?new=1`, {
-      signal: controller.signal,
-      credentials: 'same-origin',
-    })
-      .then((r) => (r.ok ? (r.json() as Promise<{ items: SearchResultItem[] }>) : null))
-      .then((d) => d && setFresh(new Set(d.items.map(resultKey))))
-      .catch(() => {})
     return () => controller.abort()
   }, [username])
 
@@ -130,6 +196,24 @@ export function FriendChannelPage({
     [items, show],
   )
   const mostly = useMemo(() => mostlyFrom(items ?? []), [items])
+  // The note card sits second, after their newest save (only under All).
+  const noteTile = useMemo(() => {
+    if (!note || show !== 'all') return undefined
+    const key = `${note.platform}:${note.id}`
+    const on = items?.find((i) => resultKey(i) === key)
+    return {
+      key: `note:${key}`,
+      at: 1,
+      node: (
+        <FriendNoteTile
+          note={note}
+          friend={{ username, name, avatarUrl }}
+          title={on ? shortTitle(postWords(on.post).title) : null}
+          href={friendPlayHref(username, { start: key })}
+        />
+      ),
+    }
+  }, [note, show, items, username, name, avatarUrl])
   const ring = personColour(username)
 
   const savesLabel = total === 1 ? '1 save' : `${total.toLocaleString('en-GB')} saves`
@@ -261,7 +345,8 @@ export function FriendChannelPage({
               hrefFor={(item) => friendPlayHref(username, { start: resultKey(item) })}
               showStrength={false}
               owner={username}
-              isNew={(item) => fresh.has(resultKey(item))}
+              isNew={(item) => (item as FriendItem).isNew === true}
+              extra={noteTile}
             />
           )}
         </section>

@@ -493,4 +493,134 @@ describe('routes', () => {
       ).status,
     ).toBe(401)
   })
+
+  it('isNew on every friend and group queue item (web and phone), from post_views', async () => {
+    await computeGroupChannels(deps)
+    // Ana has seen one of Ben's posts; t1p1 is in her own saves.
+    markSeen(ANA, [{ platform: 'twitter', id: 't0p3' }])
+    viewer = ANA
+    type Web = { post: { id: string }; isNew: boolean }
+    const newOf = (items: { id?: string; post?: { id: string }; isNew: boolean }[]) =>
+      Object.fromEntries(items.map((i) => [i.post?.id ?? i.id, i.isNew]))
+
+    const { GET: friend } = await import('@/app/api/channels/friend/[username]/route')
+    const f = await (
+      await friend(new NextRequest(`${BASE}/api/channels/friend/ben`), {
+        params: Promise.resolve({ username: 'ben' }),
+      })
+    ).json()
+    const fNew = newOf(f.items as Web[])
+    expect(fNew['t0p3']).toBe(false) // seen
+    expect(fNew['t1p1']).toBe(false) // in her saves
+    expect(fNew['t0p1']).toBe(true)
+    // The marks and "Play the N new ones" agree.
+    expect(Object.values(fNew).filter(Boolean)).toHaveLength(f.friend.newCount)
+    const onlyNew = await (
+      await friend(new NextRequest(`${BASE}/api/channels/friend/ben?new=1`), {
+        params: Promise.resolve({ username: 'ben' }),
+      })
+    ).json()
+    expect(onlyNew.items.every((i: Web) => i.isNew)).toBe(true)
+    expect(onlyNew.items).toHaveLength(f.friend.newCount)
+
+    const { GET: group } = await import('@/app/api/channels/group/[slug]/route')
+    const g = await (
+      await group(new NextRequest(`${BASE}/api/channels/group/cats`), {
+        params: Promise.resolve({ slug: 'cats' }),
+      })
+    ).json()
+    const gNew = newOf(g.items as Web[])
+    expect(gNew['t0p0']).toBe(false) // Ana's own
+    expect(gNew['t0p3']).toBe(false) // seen
+    expect(gNew['t0p1']).toBe(true)
+
+    // Seeing it later clears the mark.
+    markSeen(ANA, [{ platform: 'twitter', id: 't0p1' }])
+    const again = await (
+      await group(new NextRequest(`${BASE}/api/channels/group/cats`), {
+        params: Promise.resolve({ slug: 'cats' }),
+      })
+    ).json()
+    expect(newOf(again.items)['t0p1']).toBe(false)
+
+    // The phone gets the same marks; `mine` channels don't carry them.
+    const { createAccessKey } = await import('@/lib/auth/access-keys')
+    const key = createAccessKey(ANA, 'Phone', 'phone')!.key
+    viewer = null
+    const { GET: one } = await import('@/app/api/app/channels/[kind]/[slug]/route')
+    const call = async (kind: string, slug: string) =>
+      (
+        await one(
+          new Request(`${BASE}/api/app/channels/${kind}/${slug}`, {
+            headers: { authorization: `Bearer ${key}` },
+          }),
+          { params: Promise.resolve({ kind, slug }) },
+        )
+      ).json()
+    const pf = await call('friend', 'ben')
+    expect(newOf(pf.items)).toEqual({ ...fNew, t0p1: false })
+    const pg = await call('group', 'cats')
+    expect(newOf(pg.items)['t0p5']).toBe(true)
+    expect(pg.items.every((i: { isNew: unknown }) => typeof i.isNew === 'boolean')).toBe(true)
+    expect(pg).not.toHaveProperty('note')
+
+    // Isolation: Ben's views never change what's new to Ana.
+    markSeen(BEN, [{ platform: 'twitter', id: 't0p5' }])
+    expect(newOf((await call('group', 'cats')).items)['t0p5']).toBe(true)
+  })
+
+  it('the note card: a friend’s latest note on a save you may see', async () => {
+    viewer = ANA
+    const { GET: friend } = await import('@/app/api/channels/friend/[username]/route')
+    const load = async () =>
+      (
+        await friend(new NextRequest(`${BASE}/api/channels/friend/ben`), {
+          params: Promise.resolve({ username: 'ben' }),
+        })
+      ).json()
+    // No notes yet: no card.
+    expect((await load()).note).toBeNull()
+
+    testInstance.sqlite.exec(`
+      UPDATE bookmarks SET note = 'older words' WHERE user_id = 'u_ben' AND id = 't0p1';
+      UPDATE bookmarks SET note = 'you’re welcome' WHERE user_id = 'u_ben' AND id = 't1p1';
+      UPDATE bookmarks SET note = 'whisper words' WHERE user_id = 'u_ben' AND id = 'secret2';
+      UPDATE bookmarks SET note = 'quoted words' WHERE user_id = 'u_ben' AND id = 'quoted1';
+    `)
+    const body = await load()
+    // Newer notes on a private save and a quoted copy are skipped.
+    expect(body.note).toEqual({
+      text: 'you’re welcome',
+      platform: 'twitter',
+      id: 't1p1',
+      savedAt: expect.any(String),
+    })
+    expect(JSON.stringify(body)).not.toMatch(/whisper|quoted words/)
+
+    // A post gone upstream falls back to the next note.
+    await saveEmbedding({
+      platform: 'twitter',
+      postId: 't1p1',
+      kind: 'video',
+      contentHash: null,
+      status: 'none',
+      error: 'gone (404)',
+    })
+    expect((await load()).note).toMatchObject({ text: 'older words', id: 't0p1' })
+
+    // The phone's friend channel carries the same card.
+    const { createAccessKey } = await import('@/lib/auth/access-keys')
+    const key = createAccessKey(ANA, 'Phone', 'phone')!.key
+    viewer = null
+    const { GET: one } = await import('@/app/api/app/channels/[kind]/[slug]/route')
+    const phone = await (
+      await one(
+        new Request(`${BASE}/api/app/channels/friend/ben`, {
+          headers: { authorization: `Bearer ${key}` },
+        }),
+        { params: Promise.resolve({ kind: 'friend', slug: 'ben' }) },
+      )
+    ).json()
+    expect(phone.note).toMatchObject({ text: 'older words', id: 't0p1' })
+  })
 })
