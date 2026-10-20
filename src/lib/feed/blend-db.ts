@@ -408,6 +408,25 @@ export function writeFeedWeight(
   return weights
 }
 
+/**
+ * "Show more / less from …" by username, for the web and the phone: only
+ * another member (not yourself). Returns the weights, or null when there's
+ * no one else by that name.
+ */
+export function setFeedWeightFor(
+  userId: string,
+  username: string,
+  weight: FeedWeight,
+): Record<string, FeedWeight> | null {
+  const [member] = db
+    .select({ id: users.id, username: users.username })
+    .from(users)
+    .where(eq(users.username, username))
+    .all()
+  if (!member || member.id === userId) return null
+  return writeFeedWeight(userId, member.username, weight)
+}
+
 // ——— Snapshots and pages ———
 
 /** Everything the blend needs for one viewer and mode, then the blend itself. */

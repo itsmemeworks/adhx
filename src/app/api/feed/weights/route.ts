@@ -1,11 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { isFeedWeight } from '@/lib/feed/blend'
-import { readFeedWeights, writeFeedWeight } from '@/lib/feed/blend-db'
+import { readFeedWeights, setFeedWeightFor } from '@/lib/feed/blend-db'
 
 /**
  * GET /api/feed/weights → `{ weights: { username: -1 | 1 } }`: the friends
@@ -36,15 +33,9 @@ export const PUT = withAuth(async (request: NextRequest, userId) => {
     return NextResponse.json({ error: 'Send { username, weight: -1, 0 or 1 }.' }, { status: 400 })
   }
   try {
-    const [member] = db
-      .select({ id: users.id, username: users.username })
-      .from(users)
-      .where(eq(users.username, username))
-      .all()
-    if (!member || member.id === userId) {
-      return NextResponse.json({ error: 'No one by that name here.' }, { status: 404 })
-    }
-    return NextResponse.json({ weights: writeFeedWeight(userId, member.username, body.weight) })
+    const weights = setFeedWeightFor(userId, username, body.weight)
+    if (!weights) return NextResponse.json({ error: 'No one by that name here.' }, { status: 404 })
+    return NextResponse.json({ weights })
   } catch (error) {
     return handleRouteError(error, {
       endpoint: '/api/feed/weights',

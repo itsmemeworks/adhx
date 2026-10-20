@@ -401,6 +401,70 @@ describe('feed weights', () => {
   })
 })
 
+describe('phone: /api/app/feed/weights', () => {
+  const req = (key: string | null, body?: unknown) =>
+    new NextRequest(`${BASE}/api/app/feed/weights`, {
+      method: body === undefined ? 'GET' : 'PUT',
+      headers: {
+        ...(key ? { authorization: `Bearer ${key}` } : {}),
+        'Content-Type': 'application/json',
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    })
+
+  it('reads and sets the same choice as the web, and it moves the feed', async () => {
+    const phone = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const { GET, PUT } = await import('@/app/api/app/feed/weights/route')
+    const get = await GET(req(phone))
+    expect(get.status).toBe(200)
+    expect(get.headers.get('Cache-Control')).toBe('no-store')
+    expect(await get.json()).toEqual({ weights: {} })
+    expect(await (await PUT(req(phone, { username: 'ana', weight: 1 }))).json()).toEqual({
+      weights: { ana: 1 },
+    })
+    expect(await (await PUT(req(phone, { username: ' ben ', weight: -1 }))).json()).toEqual({
+      weights: { ana: 1, ben: -1 },
+    })
+    // The web sees the phone's choice, and New says why.
+    viewer = PETE
+    const { GET: webGet } = await import('@/app/api/feed/weights/route')
+    expect(await (await webGet(new NextRequest(`${BASE}/api/feed/weights`))).json()).toEqual({
+      weights: { ana: 1, ben: -1 },
+    })
+    const p1 = (await feed('mode=new')).body.items.find((i) => i.id === 'p1')!
+    expect(p1.whyReasons.map((r) => r.text)).toContain('You asked for more from Ana')
+    expect(await (await PUT(req(phone, { username: 'ana', weight: 0 }))).json()).toEqual({
+      weights: { ben: -1 },
+    })
+  })
+
+  it('is per account: one member’s choice never reaches another', async () => {
+    const pete = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const ana = createAccessKey(ANA, 'Phone', 'phone')!.key
+    const { GET, PUT } = await import('@/app/api/app/feed/weights/route')
+    await PUT(req(pete, { username: 'ben', weight: -1 }))
+    expect(await (await GET(req(ana))).json()).toEqual({ weights: {} })
+  })
+
+  it('refuses no key, a search key, yourself, strangers and bad weights', async () => {
+    const phone = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const search = createAccessKey(PETE, 'Claude', 'search')!.key
+    const { GET, PUT } = await import('@/app/api/app/feed/weights/route')
+    expect((await GET(req(null))).status).toBe(401)
+    expect((await GET(req(search))).status).toBe(401)
+    expect((await PUT(req(search, { username: 'ana', weight: 1 }))).status).toBe(401)
+    const self = await PUT(req(phone, { username: 'pete', weight: 1 }))
+    expect(self.status).toBe(404)
+    expect(await self.json()).toMatchObject({ code: 'no_member' })
+    expect((await PUT(req(phone, { username: 'nobody', weight: 1 }))).status).toBe(404)
+    const bad = await PUT(req(phone, { username: 'ana', weight: 2 }))
+    expect(bad.status).toBe(400)
+    expect(await bad.json()).toMatchObject({ code: 'bad_weight' })
+    expect((await PUT(req(phone, { weight: 1 }))).status).toBe(400)
+    expect(await (await GET(req(phone))).json()).toEqual({ weights: {} })
+  })
+})
+
 describe('phone: /api/app/feed and /api/app/seen', () => {
   const key = (scope: 'phone' | 'search') => createAccessKey(PETE, 'Phone', scope)!.key
   const call = async (path: string, auth?: string, body?: unknown) => {
