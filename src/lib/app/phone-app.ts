@@ -7,6 +7,7 @@ import { keepEnabled } from '@/lib/keep/config'
 import { keepCutoff } from '@/lib/keep/worker'
 import { isKeepConverting, keepProgress } from '@/lib/keep/progress'
 import { keptSrc } from '@/lib/keep/src'
+import { withFileToken } from '@/lib/keep/file-access'
 
 /**
  * What the phone app sees of a saved post and of its kept copy. Addresses
@@ -92,7 +93,8 @@ export function appPost(row: Bookmark, alreadySaved: boolean): AppPost {
     authorName: row.authorName ?? null,
     text: row.text ?? '',
     category: row.category ?? null,
-    posterUrl: posterFor(row),
+    // A Just for me save's kept poster is its owner's alone (see file-access.ts).
+    posterUrl: row.isPrivate ? withFileToken(posterFor(row), row.platform, row.id) : posterFor(row),
     openPath: previewPath(row.platform, row.author, row.id, row.category),
     alreadySaved,
     savedAt: row.processedAt,

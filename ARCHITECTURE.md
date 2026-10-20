@@ -414,12 +414,16 @@ Join approval requests are anchored to the invite identity on the joining
 account. Deleting an inviter removes its invite records without removing
 another person's pending request; the admin can still approve or decline it.
 
-**Known exceptions**, documented in [`PRIVACY.md`](PRIVACY.md) rather than
-hidden: the send sheet's `has` flag (`holders()` in `src/lib/sends/sends.ts`)
-counts every non-quoted save, private ones included; admin post and member
-counts include private saves; kept files are served without sign-in and the
-404 reason says whether anyone saved a post; X sync and Keep this channel do
-not apply Just for me by default.
+**Just for me reaches files too.** `src/lib/keep/file-access.ts` decides who
+may fetch `/api/files/{platform}/{id}/{slot}`: a shared post (or a quoted copy)
+is served to anyone; a post whose only saves are Just for me only to an owner
+(session, phone key, or the post's HMAC file token, which `toPhonePost` and
+Shared lately add to the owner's own URLs because phone video players can't
+send headers), with `private, no-store`. Anyone else gets the answer for an
+unsaved post, and why a file is missing is only told to members. The send
+sheet's `has` counts shared saves only; X sync and Keep this channel apply Just
+for me by default. **Known exception**, documented in
+[`PRIVACY.md`](PRIVACY.md): admin post and member counts include private saves.
 
 ## Accounts and authentication
 
@@ -492,12 +496,14 @@ Account deletion (`DELETE /api/account`) is one transaction. It removes
 user-owned content, identities, OAuth material, preferences, tags, aliases,
 viewing marks, sends in both directions, bells and alerts, keys, pairing codes,
 the phone queue, invites made or used, owner-keyed channel statistics and
-picture files; nullable actor IDs in retained activity, analytics and
-channel-view history are set to null. `auto_channels`, `admin_audit` and
-post-keyed understanding rows are not removed (see
-[`PRIVACY.md`](PRIVACY.md#clearing-and-deleting)). Clear data
-(`POST /api/account/clear`) removes saves and their per-user state but keeps
-the account, keys and invites. SQLite triggers reject every future insert or account-ID
+picture files and Made for you channels (`auto_channels`); the account's
+"saved" pulse rows are deleted and nullable actor IDs in the remaining activity,
+analytics and channel-view history are set to null. `admin_audit` stays. Clear
+data (`POST /api/account/clear`) removes saves and their per-user state, Made
+for you and "saved" pulses, but keeps the account, keys and invites. Removing
+one save removes its "saved" pulse. Post-keyed understanding rows (vectors,
+queue, keyword row, extracted words) go with the post's last save, by
+`AFTER DELETE ON bookmarks` triggers in `src/lib/semantic/schema-sql.ts`. SQLite triggers reject every future insert or account-ID
 change that references the deleted `users.id`, closing the race between an
 already-authenticated request and deletion commit.
 
@@ -634,11 +640,11 @@ enrichment cannot erase an existing article body, image, title or
 description, and concurrent complementary writes converge.
 
 **Account guards.** `src/lib/db/account-invariants.ts` installs idempotent
-SQLite triggers on 27 user-linked tables: every insert, or change of account
-ID, must reference a live `users` row. This closes the race where a request
-authenticated before `DELETE /api/account` writes after the deletion commits.
-`auto_channels` and `group_channels` are not guarded (the second has no user
-column; its saver counts are rechecked on read).
+SQLite triggers on 28 user-linked tables (`auto_channels` included): every
+insert, or change of account ID, must reference a live `users` row. This
+closes the race where a request authenticated before `DELETE /api/account`
+writes after the deletion commits. `group_channels` is not guarded (it has no
+user column; its saver counts are rechecked on read).
 
 **Visibility revision.** Triggers from `bookmarks/visibility-sql.ts` bump a
 durable `server_settings` counter on every save insert, delete or privacy
@@ -881,7 +887,8 @@ server state. `userId` may be stored for abuse controls but is never selected
 by a public read.
 
 `getTrendingItems()` is the publication choke point used by the signed-out
-home's crawlable list, `/api/activity` and `/api/trending`. It explicitly
+home's crawlable list and the admin-only `/api/activity` and `/api/trending`
+(GET `/api/analytics` is admin-only too, via `src/lib/admin/only.ts`). It explicitly
 shapes public columns, enriches saved posts, removes hidden/banned sources,
 and deduplicates to one row per `platform:bookmarkId`. Bots and unfurl
 crawlers do not write preview pulses. Archive and Just for me saves never
@@ -1064,8 +1071,10 @@ The root Compose example exposes a loopback port for a host-based HTTPS proxy;
 network, with no host port or public tunnel. Both explicitly pass media/search
 controls and include restart and database-health settings. The deployment guide
 covers permissions, private access, resource sizing and consistent backups.
-Kept-file URLs and shared previews are intentionally unauthenticated; source
-post IDs are predictable, so network privacy must be selected by the operator.
+Kept-file URLs of shared posts and shared previews are intentionally
+unauthenticated; source post IDs are predictable, so network privacy must be
+selected by the operator. Files of Just for me-only posts are owner-only (see
+Who sees what).
 
 ## Friends-feed reliability
 

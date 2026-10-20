@@ -23,17 +23,30 @@ vi.mock('@/lib/keep/download', () => ({
 }))
 
 vi.mock('@/lib/semantic', () => ({ noteSaved: vi.fn(), PRIORITY: { sync: 1 } }))
+
+/** The signed-in caller for /api/files, or null for a stranger. */
+let viewer: string | null = null
+vi.mock('@/lib/auth/session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/auth/session')>()),
+  getCurrentUserId: async () => viewer,
+}))
 vi.mock('@/lib/sentry', () => ({ captureException: vi.fn() }))
 
 const now = () => new Date().toISOString()
 
-function save(platform: string, id: string, author = 'alice', processedAt = now()) {
+function save(
+  platform: string,
+  id: string,
+  author = 'alice',
+  processedAt = now(),
+  { userId = 'u1', isPrivate = false }: { userId?: string; isPrivate?: boolean } = {},
+) {
   testInstance.sqlite
     .prepare(
-      `INSERT INTO bookmarks (id, user_id, platform, author, text, tweet_url, processed_at, category)
-       VALUES (?, 'u1', ?, ?, '', '', ?, 'video')`,
+      `INSERT INTO bookmarks (id, user_id, platform, author, text, tweet_url, processed_at, category, is_private)
+       VALUES (?, ?, ?, ?, '', '', ?, 'video', ?)`,
     )
-    .run(id, platform, author, processedAt)
+    .run(id, userId, platform, author, processedAt, isPrivate ? 1 : 0)
 }
 
 function keep(platform: string, id: string, slot: string, contents: string, mime: string) {
@@ -66,6 +79,7 @@ describe('kept media', () => {
   })
 
   afterEach(() => {
+    viewer = null
     vi.unstubAllEnvs()
     testInstance.close()
     fs.rmSync(mediaRoot, { recursive: true, force: true })
@@ -155,6 +169,7 @@ describe('kept media', () => {
     })
 
     it('tells the player why a video isn’t here on a network with no proxy', async () => {
+      viewer = 'u1'
       const unsaved = await get('/api/files/vimeo/1/video-1')
       expect(unsaved.status).toBe(404)
       expect((await unsaved.json()).reason).toMatch(/Nobody here has saved this yet/)
@@ -180,6 +195,64 @@ describe('kept media', () => {
       const later = await get('/api/files/vimeo/3/video-1')
       expect(later.status).toBe(404)
       expect((await later.json()).reason).toMatch(/will try again/)
+    })
+
+    it('tells a stranger nothing about why a video isn’t here', async () => {
+      save('vimeo', '2')
+      testInstance.sqlite
+        .prepare(
+          `INSERT INTO keep_jobs (platform, post_id, status, attempts, updated_at) VALUES ('vimeo', '2', 'unavailable', 9, ?)`,
+        )
+        .run(now())
+      for (const id of ['1', '2']) {
+        const res = await get(`/api/files/vimeo/${id}/video-1`)
+        expect(res.status).toBe(404)
+        expect(await res.json()).toEqual({ error: 'Not found' })
+      }
+    })
+
+    it('serves a Just for me post only to its owner, uncached, and hides it from everyone else', async () => {
+      const { fileToken } = await import('@/lib/keep/file-access')
+      save('youtube', 'secret', 'alice', now(), { userId: 'owner', isPrivate: true })
+      keep('youtube', 'secret', 'video-1', 'private video', 'video/mp4')
+      keep('youtube', 'secret', 'poster', 'private poster', 'image/jpeg')
+
+      // A stranger and another member get what a post nobody saved gets.
+      for (const who of [null, 'u1']) {
+        viewer = who
+        const video = await get('/api/files/youtube/secret/video-1')
+        expect(video.status).toBe(404)
+        expect(await video.json()).toEqual({ error: 'Not found' })
+        expect((await get('/api/files/youtube/secret/poster')).status).toBe(404)
+        // A wrong or another post's token doesn't help.
+        const wrong = await get(
+          `/api/files/youtube/secret/video-1?k=${fileToken('youtube', 'other')}`,
+        )
+        expect(wrong.status).toBe(404)
+      }
+
+      // The owner signed in on the web.
+      viewer = 'owner'
+      const web = await get('/api/files/youtube/secret/video-1')
+      expect(web.status).toBe(200)
+      expect(web.headers.get('Cache-Control')).toBe('private, no-store')
+      expect(await web.text()).toBe('private video')
+
+      // A phone player, which sends no key: the token on the owner's own URL.
+      viewer = null
+      const phone = await get(
+        `/api/files/youtube/secret/video-1?k=${fileToken('youtube', 'secret')}`,
+        { range: 'bytes=0-6' },
+      )
+      expect(phone.status).toBe(206)
+      expect(phone.headers.get('Cache-Control')).toBe('private, no-store')
+      expect(await phone.text()).toBe('private')
+
+      // Once someone shares a save of it, it's served to anyone as before.
+      save('youtube', 'secret', 'alice', now(), { userId: 'u1' })
+      const shared = await get('/api/files/youtube/secret/video-1')
+      expect(shared.status).toBe(200)
+      expect(shared.headers.get('Cache-Control')).toBe('public, max-age=604800')
     })
 
     it('makes a poster for a video kept without one, once', async () => {
