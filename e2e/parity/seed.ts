@@ -372,8 +372,10 @@ async function seedKept(): Promise<Record<string, string[]>> {
     job(w.key, { status: 'done', updatedAt: iso(Math.max(0, newest - 1)) })
   }
   job(DOING.ready, { status: 'done', updatedAt: iso(2) })
-  // Kept already (so it plays everywhere), but /doing shows it being kept.
-  job(DOING.keeping, { status: 'running', updatedAt: iso(1) })
+  // Its files are here, but the job is still running at 62% (the percent the
+  // worker last wrote): /doing shows it being kept and the theater shows
+  // "Getting it ready" over it (board j1-4).
+  job(DOING.keeping, { status: 'running', progress: 62, updatedAt: iso(1) })
   job(DOING.converting, { status: 'converting', updatedAt: iso(5) })
   job(DOING.needsYou, {
     status: 'unavailable',

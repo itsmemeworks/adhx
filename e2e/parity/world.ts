@@ -630,7 +630,7 @@ export const PETE_SEEN = [
  * so the keep worker never downloads anything.
  */
 export const DOING = {
-  keeping: 'choc', // kept already (plays everywhere), but its keep job shows "Keeping a copy"
+  keeping: 'choc', // its keep job is running at 62%: "Keeping a copy" on /doing, "Getting it ready" in the theater
   converting: 'synth', // keep job converting → "Making it play everywhere"
   listening: 'hamster2', // speech queued → "Listening to what's said · plays now"
   needsYou: 'igPrivate', // keep gave up: private on Instagram

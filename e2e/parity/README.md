@@ -20,7 +20,10 @@ pnpm parity:compare                      # PARITY_REF_DIR=… for other boards
 
 `parity:capture` reuses a server already on :3600, or starts `parity:serve`
 itself. Restarting `parity:serve` rebuilds the database from scratch (new
-session cookies and phone keys, times relative to now).
+session cookies and phone keys, times relative to now) and clears the
+`.next-parity` dev cache (a stale one sent open pages into a reload loop after
+a restart). `PARITY_PORT=3604` (on serve, capture and compare alike) runs a second
+server beside another one.
 
 ## What it writes (`e2e/parity/.out/`, gitignored)
 
@@ -73,12 +76,21 @@ pair for real: Settings → Phone app on the web as that member makes a code.
   days ahead so they don't recompute while the server runs.
 - **Right now**: synthetic vectors per topic; with `MOMENT_MIN_SAVERS=1` the
   babies and chocolate posts form live moments. Without the model they're named
-  by their shared word ("Baby", "Dark"), not "Babies vs objects".
-- **/doing**: keeping (dark chocolate), converting (the synth patch), listening
-  (the second hamster video), needs you (a private Instagram post), waiting (an
-  Instagram Reel on attempt 2), and ready (recent saves). Keep is on, but the
-  seed pins the `KEEP_BACKFILL=off` cutoff in the year 2999, so the keep worker
-  never downloads anything.
+  by their shared word ("Baby", "Dark"), not "Babies vs objects": the boards'
+  names aren't in `MOMENT_TOPICS`, and the no-model fallback is a single
+  shared word, so the seed can't reach them through the normal naming path.
+  The lead card's "3 saves in 10 min" counts from the seed's save times, so
+  the span grows the longer the server runs (15, then 30 min).
+- **/doing**: keeping (dark chocolate, at 62%), converting (the synth patch),
+  listening (the second hamster video), needs you (a private Instagram post),
+  waiting (an Instagram Reel on attempt 2), and ready (recent saves). Keep is
+  on, but the seed pins the `KEEP_BACKFILL=off` cutoff in the year 2999, so the
+  keep worker never downloads anything. The worker turns `running` jobs back to
+  `pending` when it starts, so `parity:serve` puts dark chocolate's job back to
+  running at 62% (`keep_jobs.progress`) once Next is up: the theater shows
+  "Getting it ready · 62%" on it (j1-4). Board j1-5 lets the browser (only) see
+  it kept on the next look, so the switch to playing and "Kept on your ADHX"
+  are the real ones.
 - **Notes on saves**: Ana's "the original and still the best" on Charlie,
   Ben's "you’re welcome" on the Rickroll, Mum's "making this Sunday" on the
   sauce video and Pete's "this is so you, Ben" on the dark chocolate Reel.
@@ -97,7 +109,8 @@ Without it (CI), every file is a generated ffmpeg placeholder and
 ## Captures never change the server
 
 `/api/views`, `/api/app/seen` and `/api/understanding/prioritize` are answered
-in the browser, and the new invite on board 5.1 is mocked, so captures can run
+in the browser, the new invite on board 5.1 is mocked, and j1-5's "kept" is a
+rewrite of `/api/activity/processing/posts` in the browser, so captures can run
 again and again. People using the web app by hand do change it: playing your
 own saves queues understanding work that nothing drains (the model is off), so
 `/doing` grows "learning" rows. Restart `parity:serve` to reset.

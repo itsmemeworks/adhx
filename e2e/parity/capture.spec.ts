@@ -173,6 +173,32 @@ async function playItem(ctx: Ctx, title: string): Promise<void> {
   })
 }
 
+/**
+ * In this browser only: a post that was on its way the last time the theater
+ * asked (`/api/activity/processing/posts`) is kept the next time, as if its
+ * download had just finished. The server is never changed.
+ */
+async function keptOnNextLook(ctx: Ctx): Promise<void> {
+  const seen = new Set<string>()
+  await ctx.page.route('**/api/activity/processing/posts*', async (route) => {
+    const res = await route.fetch()
+    const body = (await res.json()) as {
+      posts: Array<{ platform: string; id: string; state: string; [k: string]: unknown }>
+      people: unknown[]
+    }
+    body.posts = body.posts.map((p) => {
+      const key = `${p.platform}:${p.id}`
+      if (!['waiting', 'keeping', 'converting'].includes(p.state)) return p
+      if (!seen.has(key)) {
+        seen.add(key)
+        return p
+      }
+      return { ...p, state: 'kept', step: null, percent: null, keptAt: new Date().toISOString() }
+    })
+    await route.fulfill({ response: res, json: body })
+  })
+}
+
 async function pausePlayback(page: Page): Promise<void> {
   const pause = page.getByRole('button', { name: 'Pause', exact: true }).locator('visible=true')
   if (await pause.count())
@@ -267,25 +293,42 @@ const BOARDS: Board[] = [
   {
     name: 'j1-4-web-getting-ready',
     as: 'pete',
-    shows: 'My saves playing the dark chocolate Reel while it is being kept (62%)',
+    shows: 'My saves on the dark chocolate Reel while it is being kept (62%)',
     path: '/play?recent=1',
     seek: 4,
-    known: ['The "Getting it ready… 62%" overlay needs a live download; the post is shown kept.'],
     setup: async (ctx) => {
       await attempt(ctx, 'theater ready', () => theaterReady(ctx.page))
       await playItem(ctx, 'Trying dark chocolate')
-      await pausePlayback(ctx.page)
+      // The seed keeps its job running at 62%, so the stage waits for the copy.
+      await attempt(ctx, 'Getting it ready · 62%', async () => {
+        await ctx.page.getByText('Getting it ready…').locator('visible=true').first().waitFor()
+        await ctx.page.getByText('62%').locator('visible=true').first().waitFor()
+      })
+      await attempt(ctx, 'Shared with your people', () =>
+        ctx.page.getByText('Shared with your people').locator('visible=true').first().waitFor(),
+      )
     },
   },
   {
     name: 'j1-5-web-saved-menu',
     as: 'pete',
-    shows: 'My saves, dark chocolate playing, ⋯ menu open',
+    shows: 'My saves, dark chocolate just kept and playing, ⋯ menu open',
     path: '/play?recent=1',
     seek: 4,
     setup: async (ctx) => {
+      // The seed's copy of dark chocolate is still on its way (j1-4). In the
+      // browser only, the next look after "Getting it ready" finds it kept,
+      // so the real switch to playing (and "Kept on your ADHX") happens.
+      await keptOnNextLook(ctx)
       await attempt(ctx, 'theater ready', () => theaterReady(ctx.page))
       await playItem(ctx, 'Trying dark chocolate')
+      await attempt(ctx, 'Kept on your ADHX', () =>
+        ctx.page
+          .getByText('Kept on your ADHX')
+          .locator('visible=true')
+          .first()
+          .waitFor({ timeout: 10_000 }),
+      )
       await pausePlayback(ctx.page)
       await attempt(ctx, '⋯ menu open', () => clickText(ctx.page, 'More options'))
     },
@@ -365,7 +408,25 @@ const BOARDS: Board[] = [
     shows: 'Ana’s saves (friend channel)',
     path: '/channels/friend/ana',
     phone: 'j3-3-phone-friend-channel',
-    known: ['Ana’s note card (a tile quoting her note) isn’t built yet.'],
+    setup: async (ctx) => {
+      await attempt(ctx, 'Ana’s note card', () =>
+        ctx.page
+          .getByRole('link', { name: /^Ana’s note:/ })
+          .locator('visible=true')
+          .first()
+          .waitFor(),
+      )
+      await attempt(ctx, 'New marks', () =>
+        ctx.page.getByText('New', { exact: true }).locator('visible=true').nth(1).waitFor(),
+      )
+      await attempt(ctx, 'Play the new ones', () =>
+        ctx.page
+          .getByRole('link', { name: /^Play the (\d+ new ones|new one)$/ })
+          .locator('visible=true')
+          .first()
+          .waitFor(),
+      )
+    },
   },
   {
     name: 'j4-1-web-search-said',
@@ -444,9 +505,17 @@ const BOARDS: Board[] = [
     path: '/now',
     phone: 'j7-3-phone-live',
     known: [
-      'Moment names come from the shared word without the model (“Baby”, not “Babies vs objects”).',
+      'Moment names come from the shared word without the model (“Baby”, not “Babies vs objects”): the board’s names aren’t in MOMENT_TOPICS and the no-model fallback is one shared word.',
+      '“N saves in M min” counts from the seed’s save times, so the span grows the longer the server has run (10 min right after seeding).',
     ],
     setup: async (ctx) => {
+      await attempt(ctx, 'LIVE · N saves in M min', () =>
+        ctx.page
+          .getByText(/^\d+ saves? in \d+ min$/)
+          .locator('visible=true')
+          .first()
+          .waitFor(),
+      )
       const moment = await babiesMoment(ctx)
       if (moment) {
         watchMoment(ctx, 'ana', moment.slug)
@@ -533,10 +602,7 @@ const BOARDS: Board[] = [
     shows: 'What your ADHX is doing: keeping, converting, listening, needs you, waiting, ready',
     path: '/doing',
     phone: 'j8-5-phone-processing',
-    known: [
-      'Keeping shows no percent (it comes from a live download).',
-      '“Mac helper connected” needs remote processing.',
-    ],
+    known: ['“Mac helper connected” needs remote processing.'],
   },
 ]
 
