@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Design-parity gaps closed: getting ready, new marks, note card, phone weights, live span
+
+- **Getting it ready** (j1-4/j1-5): `GET /api/activity/processing/posts` (`processing/keep-status.ts`, `seenBy` only) says whether each post is `waiting | keeping | converting | kept | none` with step and percent; the theater (`useKeepStatus`, `GettingReadyStage`) covers the stage until the copy is kept, then plays (`POST_KEPT` reloads a failed load). Chips: "Shared with your people" (faces) while yours gets ready, "Kept on your ADHX" on a just-kept post. `keep_jobs.progress` (guarded ALTER) keeps the last written percent; `/doing` uses it too.
+- **Channels**: friend/group queues (web + phone) carry `isNew` (`newKeysFor`: not saved or seen); friend queues add `note` (latest visible note). The friend page reads the marks from one request and shows the note as a paper tile.
+- **Phones**: `GET|PUT /api/app/feed/weights` mirrors `/api/feed/weights` (shared `setFeedWeightFor`). `/api/moments` (members) and `/api/app/live` add `recentSaves` + `windowMinutes`; the Right now lead card says "LIVE · 3 saves in 10 min".
+- **Harness**: `parity:serve` re-pins dark chocolate's keep job to running at 62% after Next starts (the worker resets running jobs) and clears `.next-parity` (a stale dev cache looped page reloads after restarts); j1-5 rewrites the status in the browser to see the real switch. Moment names stay a harness limit (the board names aren't in `MOMENT_TOPICS`).
+- Follow-ups: the phone apps can now build Show less/more, New marks, the note card and the live span; the j3-2 score is about tile order (CSS columns), not missing pieces.
+
 ## 2026-10-20 — Theater controls kept reachable after the design restyle
 
 - Four e2e specs caught controls the web theater restyle had dropped. Phones (and the dimmed rooms) get a small play/pause glyph at the start of the thin line; a moment's room shows small Previous/Next glyphs after it (the channel room's `xl` stack would sit under a moment's taller rail at 1280).

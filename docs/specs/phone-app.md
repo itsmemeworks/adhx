@@ -375,6 +375,13 @@ it; on a server without these endpoints (404) the app falls back as noted.
 - `GET /api/app/feed/types` → `{ types }` and `PUT` the same: the feed
   filter. It may 404 until the blend lands; the phone keeps its own copy and
   the default is videos and photos.
+- `GET /api/app/feed/weights` → `{ weights: { "ana": 1, "ben": -1 } }` and
+  `PUT { username: "ana", weight: -1 | 0 | 1 }` → `{ weights }`: "Show less /
+  Show more from Ana" (board j2-2), the same stored choice as the web's
+  `/api/feed/weights` (1 more, -1 less, 0 back to normal, which drops the
+  name). Only other members: yourself or no such member is 404
+  `no_member`; a bad body is 400 `bad_weight`. New's `whyReasons` then say
+  "You asked for more from Ana".
 - `POST /api/app/seen { posts: [{ platform, id }] }` → 204. The app sends at
   most 50 at a time, as soon as 10 are waiting, else within 5 s, and when it
   goes to the background. A batch that fails is sent again.
@@ -383,8 +390,32 @@ friends: [{ username, name, avatarUrl, size, newCount, covers }],
 mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
   accepted too, their poster is used).
 - `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`.
+  On `group` and `friend` every item adds `isNew: boolean` (you haven't
+  saved or seen it; "New" on the tile, and what `?new=1` plays). `friend`
+  also adds `note`: the friend's latest note on a save you may see, for the
+  note card, or null:
+
+  ```json
+  {
+    "items": [{ "platform": "youtube", "id": "_OBlgSz8sSM", "kind": "video", "isNew": false, "…": "…" }],
+    "note": {
+      "text": "the original and still the best",
+      "platform": "youtube",
+      "id": "_OBlgSz8sSM",
+      "savedAt": "2026-10-17T02:09:01.940Z"
+    }
+  }
+  ```
+
+  `mine` items carry neither.
 - `GET /api/app/live` → `{ moments: [{ slug, name (or title), people, savers?,
-watching, watchers?, covers, live }] }`; a 404 reads as nothing live.
+watching, watchers?, covers, live, recentSaves, windowMinutes }] }`; a 404
+  reads as nothing live. `recentSaves` and `windowMinutes` say how busy it is
+  lately: "LIVE · 3 saves in 10 min" (`{ "recentSaves": 3, "windowMinutes":
+10 }`). The window is the smallest of 5, 10, 15, 30 or 60 minutes that holds
+  the visible saves of the last hour (whole minutes, like "10 min ago");
+  with none it is `0` in `60`, and the app shows its other line. The detail's
+  `moment` carries them too.
 - `GET /api/app/live/{slug}` → `{ moment, items, watchers, reactions }`.
   Items may be `{ post, … }` wrappers. `reactions` is the last 15 s, oldest
   first: `[{ id, at, saver: Saver, emoji? | text?, post: { platform, id } }]`.
