@@ -63,6 +63,9 @@ The runner uses native Node.js, ONNX Runtime and FFmpeg. VideoToolbox provides
 hardware decoding/encoding where supported, with software fallbacks. CPU is the
 inference baseline; CoreML is opt-in and needs latency and memory tests.
 Docker and Apple Container are not required on the Mac.
+The optional `SEMANTIC_MEMORY_PROFILE=compact` allocation policy reduces retained
+CPU arenas without changing model inputs or stored vectors. See the
+[Mac performance measurements](mac-processing-performance.md) before tuning.
 
 ## A shared link becomes a playable save
 

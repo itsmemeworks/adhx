@@ -8,6 +8,7 @@ import {
 import { normalize } from './vectors'
 import { stat } from 'node:fs/promises'
 import path from 'node:path'
+import { semanticMemoryOptions } from './runtime'
 
 /**
  * The one EmbeddingGemma 2 instance for this process (text + vision; speech
@@ -68,6 +69,7 @@ async function load(): Promise<Loaded> {
   tf.env.cacheDir = modelCacheDir()
   tf.env.allowLocalModels = true
   const threads = Math.max(1, Number(process.env['SEMANTIC_THREADS'] || 2))
+  const memoryOptions = semanticMemoryOptions()
   const textOnly = process.env['SEMANTIC_TEXT_ONLY'] === '1'
   // Transformers' tokenizer registry probes `main` even when a revision was
   // supplied. A complete pinned cache must therefore be loaded as a local
@@ -95,22 +97,44 @@ async function load(): Promise<Loaded> {
       session_options: {
         intraOpNumThreads: threads,
         interOpNumThreads: 1,
+        ...memoryOptions,
         ...(accelerated
           ? { executionProviders: [{ name: 'coreml', coreMlFlags: 0x010 }, 'cpu'] }
           : {}),
       },
     } as Parameters<typeof tf.AutoModel.from_pretrained>[1])
+  let accelerated = nativeCoreML
   const modelPromise = createModel(nativeCoreML).catch((error: unknown) => {
     if (!nativeCoreML) throw error
     // Quantized operators may not compile under CoreML on every macOS/model
     // combination. Keep this fallback hot rather than retrying each job.
     console.warn('[semantic] CoreML model initialization failed; using native CPU')
+    accelerated = false
     return createModel(false)
   })
   const [processor, model] = await Promise.all([
     tf.AutoProcessor.from_pretrained(source, options),
     modelPromise,
   ])
+  // Some CoreML graphs compile successfully but fail on their first real input
+  // (for example an absent modality's zero-length tensor). Release that session
+  // before allocating a CPU replacement, then keep the replacement warm.
+  let cpuFallback: Promise<typeof model> | undefined
+  const infer: Loaded['model'] = async (inputs) => {
+    if (cpuFallback) return (await cpuFallback)(inputs)
+    try {
+      return await model(inputs)
+    } catch (error) {
+      if (!accelerated) throw error
+      accelerated = false
+      console.warn('[semantic] CoreML inference failed; using native CPU')
+      cpuFallback = (async () => {
+        await model.dispose()
+        return createModel(false)
+      })()
+      return (await cpuFallback)(inputs)
+    }
+  }
   // Video frames at 70 vision tokens instead of the default 140 (Gemma 4's
   // smallest budget): half the cost per frame, near-identical vectors.
   const frames = (
@@ -126,7 +150,7 @@ async function load(): Promise<Loaded> {
   }
   return {
     processor: processor as unknown as Loaded['processor'],
-    model: model as unknown as Loaded['model'],
+    model: infer,
     RawImage: tf.RawImage as unknown as Loaded['RawImage'],
     RawVideo: tf.RawVideo as unknown as Loaded['RawVideo'],
     RawVideoFrame: tf.RawVideoFrame as unknown as Loaded['RawVideoFrame'],
@@ -167,12 +191,32 @@ export function embedVideoFrames(
   files: string[],
   duration: number,
   secondsPerFrame: number,
+  timestamps?: readonly number[],
 ): Promise<Float32Array> {
+  if (
+    timestamps &&
+    (!Number.isFinite(duration) ||
+      duration <= 0 ||
+      timestamps.length !== files.length ||
+      timestamps.some(
+        (time, i) =>
+          !Number.isFinite(time) ||
+          time < 0 ||
+          time >= duration ||
+          (i > 0 && time <= timestamps[i - 1]),
+      ))
+  )
+    throw new Error('Invalid video frame timestamps')
   return serialize(async () => {
     const m = await loaded()
     const frames = []
     for (let i = 0; i < files.length; i++) {
-      frames.push(new m.RawVideoFrame(await m.RawImage.read(files[i]), i * secondsPerFrame))
+      frames.push(
+        new m.RawVideoFrame(
+          await m.RawImage.read(files[i]),
+          timestamps?.[i] ?? i * secondsPerFrame,
+        ),
+      )
     }
     const video = new m.RawVideo(frames, duration)
     const out = await m.model(await m.processor(null, null, null, video))

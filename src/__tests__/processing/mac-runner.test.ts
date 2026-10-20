@@ -18,6 +18,7 @@ import {
 } from '@/lib/processing/mac-runner'
 import { createVideoPlan, type VideoPlan } from '@/lib/processing/profiles'
 import type { ProcessingJob } from '@/lib/processing/protocol'
+import { sampleBatchedFrames } from '../../../scripts/experiments/batched-frames'
 import {
   SEMANTIC_MODEL_VERSION,
   SEMANTIC_MODEL_ID,
@@ -26,6 +27,7 @@ import {
 
 const modelMocks = vi.hoisted(() => ({
   create: vi.fn(),
+  frameTimes: [] as number[],
   processor: Object.assign(async () => ({}), {
     video_processor: { frame_processor: { max_soft_tokens: 140 } },
   }),
@@ -35,9 +37,13 @@ vi.mock('@huggingface/transformers', () => ({
   AutoConfig: { from_pretrained: async () => ({}) },
   AutoProcessor: { from_pretrained: async () => modelMocks.processor },
   AutoModel: { from_pretrained: modelMocks.create },
-  RawImage: {},
+  RawImage: { read: async () => ({}) },
   RawVideo: class {},
-  RawVideoFrame: class {},
+  RawVideoFrame: class {
+    constructor(_image: unknown, timestamp: number) {
+      modelMocks.frameTimes.push(timestamp)
+    }
+  },
 }))
 
 let dir: string
@@ -107,6 +113,26 @@ describe('native model initialization', () => {
     })
   })
 
+  it('can release CPU arenas without changing the pinned model or frame budget', async () => {
+    vi.stubEnv('SEMANTIC_DEVICE', 'cpu')
+    vi.stubEnv('SEMANTIC_MEMORY_PROFILE', 'compact')
+    modelMocks.create.mockResolvedValue(embedding)
+    const { embedTexts } = await import('@/lib/semantic/model')
+    await embedTexts(['same prompt'])
+    expect(modelMocks.create.mock.calls[0][1]).toMatchObject({
+      dtype: { model: 'q4', vision_encoder: 'q8' },
+      session_options: { enableCpuMemArena: false, enableMemPattern: false },
+    })
+    expect(modelMocks.processor.video_processor.frame_processor.max_soft_tokens).toBe(70)
+  })
+
+  it('rejects an unknown allocation policy before creating a model', async () => {
+    vi.stubEnv('SEMANTIC_MEMORY_PROFILE', 'unlimited')
+    const { embedTexts } = await import('@/lib/semantic/model')
+    await expect(embedTexts(['prompt'])).rejects.toThrow('SEMANTIC_MEMORY_PROFILE')
+    expect(modelMocks.create).not.toHaveBeenCalled()
+  })
+
   it('falls back once when CoreML creation fails and keeps the native CPU model warm', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     modelMocks.create
@@ -117,6 +143,53 @@ describe('native model initialization', () => {
     await embedTexts(['second'])
     expect(modelMocks.create).toHaveBeenCalledTimes(2)
     expect(modelMocks.create.mock.calls.map((call) => call[1].device)).toEqual(['coreml', 'cpu'])
+  })
+
+  it('disposes a compiled CoreML model before retrying an inference failure on a warm CPU model', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const accelerated = Object.assign(vi.fn().mockRejectedValue(new Error('zero-length input')), {
+      dispose: vi.fn().mockResolvedValue(undefined),
+    })
+    const cpu = vi.fn(embedding)
+    modelMocks.create.mockResolvedValueOnce(accelerated).mockImplementationOnce(async () => {
+      expect(accelerated.dispose).toHaveBeenCalledOnce()
+      return cpu
+    })
+    const { embedTexts } = await import('@/lib/semantic/model')
+    await embedTexts(['first'])
+    await embedTexts(['second'])
+    expect(accelerated).toHaveBeenCalledOnce()
+    expect(cpu).toHaveBeenCalledTimes(2)
+    expect(modelMocks.create.mock.calls.map((call) => call[1].device)).toEqual(['coreml', 'cpu'])
+  })
+
+  it('propagates CPU inference failures without repeatedly allocating replacement models', async () => {
+    vi.stubEnv('SEMANTIC_DEVICE', 'cpu')
+    modelMocks.create.mockResolvedValue(vi.fn().mockRejectedValue(new Error('invalid input')))
+    const { embedTexts } = await import('@/lib/semantic/model')
+    await expect(embedTexts(['first'])).rejects.toThrow('invalid input')
+    await expect(embedTexts(['second'])).rejects.toThrow('invalid input')
+    expect(modelMocks.create).toHaveBeenCalledOnce()
+  })
+
+  it('preserves explicit frame times when representative samples are unevenly spaced', async () => {
+    modelMocks.frameTimes.length = 0
+    modelMocks.create.mockResolvedValue(embedding)
+    const { embedVideoFrames } = await import('@/lib/semantic/model')
+    await embedVideoFrames(['a.jpg', 'b.jpg', 'c.jpg'], 60, 4, [0, 20, 56])
+    expect(modelMocks.frameTimes).toEqual([0, 20, 56])
+    modelMocks.frameTimes.length = 0
+    await embedVideoFrames(['a.jpg', 'b.jpg', 'c.jpg'], 60, 4)
+    expect(modelMocks.frameTimes).toEqual([0, 4, 8])
+  })
+
+  it('rejects mismatched or invalid frame times before creating the model', async () => {
+    const { embedVideoFrames } = await import('@/lib/semantic/model')
+    for (const times of [[0], [0, 0], [4, 2], [-1, 4], [0, 60], [0, NaN]]) {
+      expect(() => embedVideoFrames(['a.jpg', 'b.jpg'], 60, 4, times)).toThrow('timestamps')
+    }
+    expect(() => embedVideoFrames(['a.jpg'], NaN, 4, [0])).toThrow('timestamps')
+    expect(modelMocks.create).not.toHaveBeenCalled()
   })
 
   it('never requests CoreML on a Linux server even when the environment contains that value', async () => {
@@ -219,6 +292,22 @@ describe('real native frame extraction', () => {
       try {
         expect(sampled.files).toHaveLength(plan.framesPerSegment)
         for (const frame of sampled.files) expect((await stat(frame)).size).toBeGreaterThan(0)
+        const batched = await sampleBatchedFrames(
+          source,
+          plan,
+          0,
+          new AbortController().signal,
+          cache,
+          binary,
+        )
+        try {
+          expect(batched.files).toHaveLength(sampled.files.length)
+          for (let i = 0; i < sampled.files.length; i++)
+            expect(await readFile(batched.files[i])).toEqual(await readFile(sampled.files[i]))
+          expect(batched.fallback).toBe(fps === 0.2 || duration === 0.04)
+        } finally {
+          await batched.cleanup()
+        }
         if (fps === 0.2 || duration === 0.04) {
           const expected = path.join(dir, 'expected-last.jpg')
           await execute(
@@ -276,6 +365,17 @@ describe('real native frame extraction', () => {
       )
       expect(await readdir(cache)).toEqual([])
       expect(await readFile(source)).toEqual(original)
+      await expect(
+        sampleBatchedFrames(
+          source,
+          createVideoPlan(1, 'deep'),
+          0,
+          controller.signal,
+          cache,
+          await ffmpegPath(),
+        ),
+      ).rejects.toThrow()
+      expect(await readdir(cache)).toEqual([])
     },
   )
 })
