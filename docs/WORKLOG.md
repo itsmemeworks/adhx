@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Theater controls kept reachable after the design restyle
+
+- Four e2e specs caught controls the web theater restyle had dropped. Phones (and the dimmed rooms) get a small play/pause glyph at the start of the thin line; a moment's room shows small Previous/Next glyphs after it (the channel room's `xl` stack would sit under a moment's taller rail at 1280).
+- Where the boards show no Previous/Next, the transport carries `sr-only` buttons revealed on keyboard focus; the header Paste pill is the same on wide screens (`PasteButton keyboardOnlyFrom`), next to ⌘V. ⋯ rows with a value are named "Repeat: This post".
+- Specs changed only where a control moved on purpose: `preview-repeat` opens ⋯ for Repeat; desktop `paste-save-failure` focuses the pill and presses Enter. New component test covers the phone buttons.
+
 ## 2026-10-20 — Android brought to the phone design boards
 
 - Ran the Android app on an emulator (390dp wide) against the seeded parity server and compared every phone board side by side; reads went to the server, share-card writes to a local mock so the seed stayed untouched.

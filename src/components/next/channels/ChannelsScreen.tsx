@@ -109,8 +109,8 @@ export function ChannelsScreen() {
     <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader>
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
-        {/* Desktop pastes anywhere on the page (⌘V); phones need the button. */}
-        <PasteButton onClick={paste.pasteFromClipboard} className="md:hidden" />
+        {/* Desktop pastes anywhere on the page (⌘V), the pill kept for keyboards; phones need it. */}
+        <PasteButton onClick={paste.pasteFromClipboard} keyboardOnlyFrom="md" />
       </NxHeader>
       <main className="mx-auto flex max-w-[1600px] flex-col gap-[30px] px-4 pb-16 pt-5 md:px-10 md:pt-[26px]">
         <h1 className="sr-only">Channels</h1>

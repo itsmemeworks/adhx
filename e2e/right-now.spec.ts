@@ -135,7 +135,11 @@ test('Tune in waits when caught up, then plays the next save as it lands', async
 
   await apiAddByUrl(saver, tweetUrl(FROG_TUNE_IN))
 
+  // The boards say so in the arrival toast ("… just saved one · playing now"),
+  // which replaced the stage's "Just saved · just now" chip.
+  const arrived = watcher.getByRole('status').filter({ hasText: 'playing now' })
+  await expect(arrived).toBeVisible()
+  await expect(arrived).toContainText('just saved one')
   await expect(caughtUp).toBeHidden()
   await expect(watcher.getByText(FROG_TUNE_IN.text).first()).toBeVisible()
-  await expect(watcher.getByText('Just saved · just now').first()).toBeVisible()
 })

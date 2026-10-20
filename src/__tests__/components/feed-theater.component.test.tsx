@@ -437,6 +437,22 @@ describe('New in the theater', () => {
     expect(router.push).toHaveBeenCalledWith('/play?feed=mine')
   })
 
+  it('on phones, pausing, moving on, Repeat and Paste are all still buttons', async () => {
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
+    // The glyph at the start of the thin line.
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument()
+    // Swipe moves on; screen readers and keyboards get the buttons.
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('b'))
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    expect(screen.getByRole('menuitem', { name: 'Repeat: Off' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Paste a link' })).toBeInTheDocument()
+  })
+
   it('asks for the kinds you pick, remembers them, and offers the ones held back', async () => {
     wideScreen()
     pages.first = {

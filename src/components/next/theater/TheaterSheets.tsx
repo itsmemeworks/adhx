@@ -312,6 +312,8 @@ export function MoreSheet({
                 type="button"
                 role={switchRow ? 'menuitemcheckbox' : 'menuitem'}
                 aria-checked={switchRow ? row.checked : undefined}
+                // "Repeat: This post", read as one setting rather than two words.
+                aria-label={row.value ? `${row.label}: ${row.value}` : undefined}
                 onClick={row.onSelect}
                 className={cn(
                   'flex shrink-0 items-center gap-3 rounded-[14px] px-3.5 text-left text-[15px] font-semibold hover:bg-white/[0.06]',

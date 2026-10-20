@@ -45,6 +45,8 @@ import {
   Plus,
   Send,
   Share,
+  SkipBack,
+  SkipForward,
   Check,
   Copy,
   Download,
@@ -1702,7 +1704,7 @@ export function TheaterV2({
       checked: stick,
       onSelect: () => setStick((v) => !v),
     },
-    // Wide screens have Up next beside the stage, and ⌘V for pasting.
+    // Wide screens have Up next beside the stage, and ⌘V (or the header's keyboard Paste).
     ...(!wide ? [{ label: 'Up next', onSelect: () => setPanel('queue') }] : []),
     ...(isVideo && video.pip.supported
       ? [{ label: 'Picture in picture', onSelect: () => stage.togglePip() }]
@@ -1784,6 +1786,36 @@ export function TheaterV2({
         <Volume2 aria-hidden className="h-5 w-5" />
       )}
     </ControlButton>
+  )
+
+  // Previous and Next as small glyphs on the transport, after play/pause (a
+  // channel's room has its own stack at xl). A moment's room shows them: with
+  // a mouse, tuning in has no other way past a post. Everywhere else the boards
+  // move on by swipe, J and ←, so they stay out of sight until a keyboard
+  // reaches them. Screen readers always have them.
+  const transportSkips = (shown: boolean) => (
+    <span
+      className={cn(
+        'flex shrink-0 gap-0.5',
+        !shown && 'sr-only focus-within:not-sr-only',
+        !shown && layout === 'panel' && !source.moment && 'xl:hidden',
+      )}
+    >
+      <ControlButton
+        label="Previous"
+        onClick={prev}
+        className="-my-2.5 h-8 w-8 text-white/90 hover:bg-white/10"
+      >
+        <SkipBack aria-hidden className="h-4 w-4" fill="currentColor" />
+      </ControlButton>
+      <ControlButton
+        label="Next"
+        onClick={() => void next()}
+        className="-my-2.5 h-8 w-8 text-white/90 hover:bg-white/10"
+      >
+        <SkipForward aria-hidden className="h-4 w-4" fill="currentColor" />
+      </ControlButton>
+    </span>
   )
 
   const backChip = (
@@ -2403,6 +2435,7 @@ export function TheaterV2({
                             />
                           )}
                         </ControlButton>
+                        {transportSkips(false)}
                         {timeNow ? (
                           <span className="text-[13px] font-semibold tabular-nums">{timeNow}</span>
                         ) : null}
@@ -2460,6 +2493,7 @@ export function TheaterV2({
                             />
                           )}
                         </ControlButton>
+                        {transportSkips(false)}
                         <SeekBar
                           value={progress}
                           onSeek={seekTo}
@@ -2470,8 +2504,31 @@ export function TheaterV2({
                         </span>
                       </div>
                     ) : (
-                      // Phones and the dimmed room: a thin line; tap the picture to pause.
+                      // Phones and the dimmed room: a thin line; tap the picture to pause,
+                      // or the quiet glyph at its start (the one screen readers find).
                       <div className="pointer-events-auto flex items-center gap-2.5">
+                        <ControlButton
+                          label={paused ? 'Play' : 'Pause'}
+                          onClick={togglePlay}
+                          className="-my-2.5 -ml-2 h-8 w-8 text-white/90 hover:bg-white/10"
+                        >
+                          {paused ? (
+                            <Play
+                              aria-hidden
+                              className="h-4 w-4"
+                              fill="currentColor"
+                              strokeWidth={0}
+                            />
+                          ) : (
+                            <Pause
+                              aria-hidden
+                              className="h-4 w-4"
+                              fill="currentColor"
+                              strokeWidth={0}
+                            />
+                          )}
+                        </ControlButton>
+                        {transportSkips(wide && !!source.moment)}
                         <SeekBar
                           value={progress}
                           onSeek={seekTo}
@@ -3052,6 +3109,12 @@ export function TheaterV2({
           icon={PhoneSearchIcon}
           onClick={openQuickSearch}
           className={cn('pointer-events-auto lg:hidden', source.feed && 'hidden md:flex')}
+        />
+        {/* Wide screens paste with ⌘V (the pill kept for keyboards); below lg it's in ⋯. */}
+        <PasteButton
+          onClick={paste.pasteFromClipboard}
+          keyboardOnlyFrom="lg"
+          className="pointer-events-auto hidden lg:flex"
         />
         <div className="pointer-events-auto hidden lg:flex">
           <HeaderSearch shortcut className="md:w-[260px] xl:w-[340px]" />
