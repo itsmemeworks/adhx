@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { noteSearch } from '@/lib/admin/counts'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { checkRateLimit } from '@/lib/rate-limit'
@@ -68,6 +69,13 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
 
   try {
     const result = await findPosts({ q, scope, type, wordsOnly, userId, limit, offset, refine })
+    // The settled search (after a pause) counts for admins: found or not, and its mode.
+    if (refine) {
+      noteSearch(userId, {
+        mode: wordsOnly || !result.understood ? 'words' : 'meaning',
+        found: result.items.length > 0 && result.close !== false,
+      })
+    }
     return noStore(NextResponse.json(result))
   } catch (error) {
     return noStore(

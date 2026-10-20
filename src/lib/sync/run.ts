@@ -6,6 +6,7 @@ import { captureException, captureMessage, metrics } from '@/lib/sentry'
 import { SYNC_IN_PROGRESS_MESSAGE } from '@/lib/sync/messages'
 import { isReauthError, toTwitterCallError } from '@/lib/twitter/errors'
 import { recordActivity, previewPath } from '@/lib/activity/record'
+import { privateByDefault } from '@/lib/bookmarks/privacy'
 import { saveBookmark } from '@/lib/sync/save-bookmark'
 import { addedAtForIndex } from '@/lib/sync/added-at'
 import { recordAnalytic } from '@/lib/analytics/record'
@@ -68,6 +69,9 @@ export async function runBookmarkSync(
   let total = 0
   let newBookmarks = 0
   let duplicatesSkipped = 0
+  // New X bookmarks follow the owner's "Just for me by default", like any
+  // other save; a private save writes no public pulse.
+  const syncPrivate = privateByDefault(userId)
 
   const keepAlive = setInterval(() => {
     if (isAborted()) {
@@ -200,6 +204,7 @@ export async function runBookmarkSync(
           userId,
           insertedDuringSync,
           addedAtForIndex(syncStartTime, i),
+          syncPrivate,
         )
         if (leaseLost) break
         insertedDuringSync.add(tweet.id)
@@ -221,7 +226,7 @@ export async function runBookmarkSync(
         // Feed the public pulse, same as a manual save — a newly-synced tweet
         // is a new save. Capped (freshest first) so a big backfill can't flood
         // the shared feed. Fire-and-forget (recordActivity swallows errors).
-        if (newBookmarks <= SYNC_PULSE_CAP) {
+        if (!syncPrivate && newBookmarks <= SYNC_PULSE_CAP) {
           recordActivity({
             action: 'save',
             platform: 'twitter',

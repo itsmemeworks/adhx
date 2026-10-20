@@ -22,7 +22,11 @@ export async function phoneCaller(request: Request): Promise<PhoneCaller | null>
   // An account still waiting to be let in is signed out here too.
   const { accountApproval } = await import('@/lib/auth/account-state')
   if ((await accountApproval(row.userId)) !== 'approved') return null
-  return { userId: row.userId, keyId: row.id, name: row.name }
+  const caller = { userId: row.userId, keyId: row.id, name: row.name }
+  // Last seen, the kind of phone and opens, for admins (throttled, counts only).
+  const { notePhoneRequest } = await import('@/lib/people/last-seen')
+  notePhoneRequest(caller, request.headers.get('user-agent'))
+  return caller
 }
 
 /** An app error: plain words to show, plus a code the app branches on. */

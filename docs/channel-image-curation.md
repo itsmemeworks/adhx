@@ -28,6 +28,10 @@ procedure, and open Channels to enqueue eligible generated channels. No extra
 Mac setting, new model, GPU service or database mount is needed. It uses the
 pinned `jev-1.14.0` model and the required experimental-image header.
 
+Admins can use **Pause new work** to stop new image-curation claims alongside
+downloads and understanding. In-flight work finishes; queued work resumes when
+unpaused. Clearing an account’s data also removes its private image-curation jobs.
+
 Set `TYPESAFE_CHANNEL_IMAGES=off` and recreate ADHX to stop uploads and return to
 the baseline channels. No library reset or re-index is required. Only small
 derived jobs/decisions are cached; disabling does not erase the bounded cache

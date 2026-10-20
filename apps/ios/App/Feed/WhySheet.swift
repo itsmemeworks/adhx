@@ -190,6 +190,8 @@ extension WhySheet {
     /// Faces next to a reason: the friend it's about, or (on the headline)
     /// the people who saved it.
     static func savers(for reason: WhyReason, lead: Bool, in savers: [Saver]) -> [Saver] {
+        // "Ana and Ben both saved it": everyone who saved it, not just the one named.
+        if reason.kind == "together", savers.count > 1 { return savers }
         if let username = reason.username {
             let named = savers.filter { $0.username == username }
             // Whoever sent it to you, even if their save isn't on the post.
@@ -539,7 +541,8 @@ struct CaughtUpView: View {
                     .frame(width: 70, height: 8)
                     .padding(.top, 10)
                     .accessibilityHidden(true)
-                VStack(spacing: -6) {
+                // The boards' line-height 0.95: the two lines nearly touch.
+                VStack(spacing: -17) {
                     Text("You’re all caught up.")
                         .foregroundStyle(.white)
                     Text("Go touch grass.")
@@ -549,7 +552,7 @@ struct CaughtUpView: View {
                 .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 18)
+                .padding(.top, 13)
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isHeader)
                 Text("That’s everything your people saved since you last looked.")
@@ -558,7 +561,7 @@ struct CaughtUpView: View {
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
-                    .padding(.top, 14)
+                    .padding(.top, 6)
                 if watched > 0 && !people.isEmpty {
                     summary.padding(.top, 22)
                 }

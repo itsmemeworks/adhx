@@ -33,6 +33,19 @@ export const ANALYTIC_EVENTS = [
   'theater.open',
   'shortcut.install',
   'welcome.complete',
+  // Admin analytics (counts only). `app.open`: someone came back after half an
+  // hour away (source = web | ios | android | phone). `search.found` /
+  // `search.none`: a finished search, with its mode as the source (meaning |
+  // words), never its words. `post.finish`: a video played to its end.
+  // `channel.play` / `channel.keep`: a shared channel's queue was played or
+  // kept (surface = group | channel; the channel's key, `slug` or
+  // `username/tag`, goes in bookmark_id).
+  'app.open',
+  'search.found',
+  'search.none',
+  'post.finish',
+  'channel.play',
+  'channel.keep',
 ] as const
 
 export type AnalyticEventName = (typeof ANALYTIC_EVENTS)[number]
@@ -41,6 +54,7 @@ export type AnalyticEventName = (typeof ANALYTIC_EVENTS)[number]
 export const CLIENT_ANALYTIC_EVENTS = [
   'post.send',
   'post.play',
+  'post.finish',
   'post.copy',
   'post.open',
   'shortcut.install',
@@ -64,6 +78,8 @@ export const ANALYTIC_SURFACES = [
   'preview',
   'welcome',
   'settings',
+  'group',
+  'channel',
 ] as const
 export type AnalyticSurface = (typeof ANALYTIC_SURFACES)[number]
 
@@ -79,6 +95,12 @@ export const ANALYTIC_SOURCES = [
   'invite',
   'share',
   'download',
+  'web',
+  'ios',
+  'android',
+  'phone',
+  'meaning',
+  'words',
 ] as const
 export type AnalyticSource = (typeof ANALYTIC_SOURCES)[number]
 

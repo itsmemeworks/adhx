@@ -27,20 +27,41 @@ server beside another one.
 
 ## What it writes (`e2e/parity/.out/`, gitignored)
 
-| Path                                        | What                                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `credentials.json`                          | `server`, and per member (`pete` admin, `ana`, `ben`, `mum`, `jo`): `session` (the `adhx_session` cookie value), `cookie` (ready-made `Cookie` header), `phoneKey` (paired through the real pairing-code flow; `Authorization: Bearer …`), `phones` (Ana has two). Plus `pending` (the waiting join request). |
-| `parity.db`, `media/`                       | The scratch database and `MEDIA_DIR` (files are APFS clones of the source, so they cost no disk)                                                                                                                                                                                                              |
-| `media-cache/`                              | Videos made from stills and grabbed frames, reused across runs                                                                                                                                                                                                                                                |
-| `server.log`                                | When you start the server with `nohup … > .out/server.log`                                                                                                                                                                                                                                                    |
-| `web/<board>.png`, `web-mobile/<board>.png` | Captures, with `<board>.json` beside each: who it ran as, the URL, which states were reached, which weren't, and known gaps                                                                                                                                                                                   |
-| `compare/<board>.png`                       | design \| app, at 1280×800                                                                                                                                                                                                                                                                                    |
-| `compare-mobile/<board>.png`                | the closest phone board \| mobile web                                                                                                                                                                                                                                                                         |
-| `report.json`, `report.md`                  | Every pair with a score, worst first                                                                                                                                                                                                                                                                          |
+| Path                                        | What                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `credentials.json`                          | `server`, and per member (`pete` and `ana` admins, `ben`, `mum`, `jo`): `session` (the `adhx_session` cookie value), `cookie` (ready-made `Cookie` header), `phoneKey` (paired through the real pairing-code flow; `Authorization: Bearer …`), `phones` (Ana has two). Plus `pending` (the waiting join request). |
+| `parity.db`, `media/`                       | The scratch database and `MEDIA_DIR` (files are APFS clones of the source, so they cost no disk)                                                                                                                                                                                                                  |
+| `media-cache/`                              | Videos made from stills and grabbed frames, reused across runs                                                                                                                                                                                                                                                    |
+| `server.log`                                | When you start the server with `nohup … > .out/server.log`                                                                                                                                                                                                                                                        |
+| `web/<board>.png`, `web-mobile/<board>.png` | Captures, with `<board>.json` beside each: who it ran as, the URL, which states were reached, which weren't, and known gaps                                                                                                                                                                                       |
+| `compare/<board>.png`                       | design \| app, at 1280×800                                                                                                                                                                                                                                                                                        |
+| `compare-mobile/<board>.png`                | the closest phone board \| mobile web                                                                                                                                                                                                                                                                             |
+| `report.json`, `report.md`                  | Every pair with a score, worst first                                                                                                                                                                                                                                                                              |
 
 The score is the mean absolute difference of small greyscale thumbnails (0 =
 same, 100 = opposite). It flags a wrong screen or a missing panel, nothing
 finer. Judge the side-by-sides by eye.
+
+## The admin boards (`admin-1` … `admin-10`)
+
+`seed-admin.ts` adds the admin world on top (figures in `ADMIN`, `world.ts`):
+joined dates, last seen and who invited whom (used invites), Ana an admin,
+12 of Pete's own filler saves Just for me, notes on older shared saves,
+members' channels (23, six public, never Pete's), reactions counted per day
+and kind, the live-moment log (this week's five named moments, alerts, tune-ins
+by day), 30 days of opens/plays/finishes/searches/file sends/shares and
+channel plays, sends (the unseen ones only to Mum and Jo), Ana's watched
+count (older filler), two hidden posts (not any board's posts) with the admin
+log, and the Mac helper's name. Once Next is up, `parity:serve` puts four
+bells (not Pete's) on the forming group. Each admin capture runs as Pete;
+board 10.8 types the dark chocolate link and "ben" into the lookups.
+
+Admin limits: the server name is the parity host; saves per day follow the
+seed's save times (the filler is older than 16 days); X leads By network
+(the filler is X posts); sign-in links held for an admin need
+`EMAIL_LINKS_TO_ADMIN`, which the parity server doesn't set; Ana has no Just
+for me saves (they'd change her channel counts on other boards). Making Ana an
+admin adds the admin cards to her own Settings (j5-1).
 
 ## Using it from the phone apps
 
@@ -55,7 +76,7 @@ pair for real: Settings → Phone app on the web as that member makes a code.
 
 ## The world (`world.ts`, `seed.ts`)
 
-- **Members**: Pete (admin, no email), Ana, Ben, Mum, Jo, with generated
+- **Members**: Pete (admin, no email), Ana (admin), Ben, Mum, Jo, with generated
   avatars. Who can invite is **Anyone, I approve**; a second account named Ben
   (`benji`, invited by Jo 10 minutes ago) is waiting. The member Ben stays a
   member because every other board needs his saves and phone.

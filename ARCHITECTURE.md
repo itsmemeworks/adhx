@@ -2,242 +2,448 @@
 
 This is the human-facing technical tour of ADHX: the shape of the system, the
 important state transitions, and the boundaries that keep it safe. It is
-intended to be linked from the README. For route-by-route operational notes,
-security recipes, migration history, and deployment commands, use
-[`CLAUDE.md`](CLAUDE.md). Focused behavior lives in
-[`docs/specs/theater-first.md`](docs/specs/theater-first.md),
-[`docs/specs/discovery-leaderboards.md`](docs/specs/discovery-leaderboards.md),
-and [`docs/specs/translation-safety.md`](docs/specs/translation-safety.md).
+linked from the README. For route-by-route operational notes, security
+recipes and gotchas, use [`CLAUDE.md`](CLAUDE.md). The per-feature contracts
+live in the specs:
 
-ADHX is one Next.js 16 App Router application running React 19 and a Node
-runtime. The Next.js route handlers are the backend. They use Drizzle over one
-`better-sqlite3` connection and a persistent SQLite file; there is no separate
-API service, Redis tier, or object store. The one exception is the
-understanding pipeline below: the web server forks two child processes on the
-same machine that run the embedding model, because inference blocks its thread.
-With `PROCESSING_MODE=remote`, only the lightweight query child remains there;
-a native Mac companion claims background work through authenticated HTTPS.
+- [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md): members, Just for
+  me, notes, New, sends, channels, live names, forming bells, Getting it ready.
+- [`docs/specs/phone-app.md`](docs/specs/phone-app.md): the `/api/app/*` API
+  and the iOS and Android apps.
+- [`docs/remote-processing.md`](docs/remote-processing.md): the optional native
+  Mac helper and the processing protocol.
+- [`docs/specs/translation-safety.md`](docs/specs/translation-safety.md): the
+  rendering rule that keeps browser translation from crashing React.
 
-## Current product and legacy sections
+ADHX is one Next.js 16 App Router application running React 19 on Node. The
+route handlers are the backend. They use Drizzle over one `better-sqlite3`
+connection and a persistent SQLite file; there is no separate API service,
+Redis tier or object store. Kept media lives in a folder on the same volume
+(`MEDIA_DIR`). The exceptions are the model processes: the web server forks
+child processes on the same machine for search-by-meaning inference, because
+inference blocks its thread. With `PROCESSING_MODE=remote`, only the
+lightweight query child stays there and an optional native Mac helper claims
+the heavy work over authenticated HTTPS.
 
-The current self-hosted product keeps media from fourteen networks and has native
-iOS/Android clients. Right now is the home; the theater, search and channels
-remain, while the previous Live/trending/leaderboard surfaces are retired.
-Several route tables and UI-flow sections below describe those earlier surfaces
-and remain historical context, not the current navigation contract. For current
-setup use [`README.md`](README.md) and
-[`deploy/nas/README.md`](deploy/nas/README.md); release blockers are recorded in
-[`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md).
+## What ADHX is now
+
+ADHX is a self-hosted, private, curated feed across fourteen social networks,
+for one group of close friends and family per server. Everyone who can sign in
+to a server is one group: a **member** is a signed-in, approved, non-banned
+account. Saves are shared with members by default, and any save can be marked
+**Just for me**. Every saved post's media is downloaded once and served by the
+server itself. Native iOS and Android apps put ADHX in the share sheet and play
+the same feed, and an optional native Mac helper takes the heavy processing off
+a small NAS.
+
+The privacy rule is **named to friends, never to strangers**: members see who
+saved what (and their notes); signed-out visitors only ever see counts, and a
+Just for me save is never shown, counted or named to anyone else. See
+[Who sees what](#who-sees-what).
+
+The earlier X-first hosted product (the library grid, `TheaterShell`, Discover
+at `/live`, `/trending` and `/leaderboard`) is gone. Its URLs redirect, and the
+few tables that still carry its data are marked as legacy below.
 
 ## System context
 
 ```mermaid
 flowchart LR
-  B[Browser / PWA] --> N[Next.js pages and route handlers]
-  E[Desktop extension] -->|navigate to /share| N
-  N --> D[(SQLite on persistent volume)]
-  N --> X[X API and FxTwitter]
-  N --> I[Instagram metadata and mirror]
-  N --> T[tnktok and TikTok CDN]
-  N --> R[Resend]
-  N --> S[Sentry]
+  subgraph People["Your people"]
+    Browser["Browser or installed PWA"]
+    Phones["iOS and Android apps"]
+    Sheets["Share sheets and share extension"]
+    Ext["Desktop extension"]
+  end
+  Sheets --> Phones
+  Ext -->|"opens /share?url="| Browser
+  Proxy["Reverse proxy or Tailscale in front of the NAS"]
+  Browser -->|"HTTPS, session cookie"| Proxy
+  Phones -->|"HTTPS, phone key"| Proxy
+  Mac["Optional Mac helper"] -->|"HTTPS, PROCESSING_WORKER_TOKEN"| Proxy
+
+  subgraph Host["NAS or Docker host"]
+    Web["Next.js: pages, route handlers, keep worker, moments engine"]
+    DB[("SQLite")]
+    Media[("MEDIA_DIR: kept files and avatars")]
+    Query["query child: words-only model"]
+    Jobs["jobs child: understanding worker"]
+    Extract["extract child: speech and screen text"]
+    Web <--> DB
+    Web <--> Media
+    Web <-->|"IPC"| Query
+    Web <-->|"IPC"| Jobs
+    Jobs --> Extract
+  end
+  Proxy --> Web
+
+  Web -->|"yt-dlp, FxTwitter, vxreddit, link previews"| Nets["Upstream networks"]
+  Web -->|"optional bookmark sync"| X["X API"]
+  Web -->|"optional sign-in links"| Mail["Resend or SMTP"]
+  Web -->|"optional rerank and names"| Jev["TypeSafe Jev"]
+  Web -->|"optional errors"| Sentry["Sentry"]
+  Jobs -->|"model weights, once"| HF["Hugging Face"]
 ```
 
-The product separates personal saves from community discovery:
+- **Browser.** Sessions are a signed `adhx_session` cookie. The installed PWA
+  registers `/share` as an Android share target; iPhones use the native app or
+  a Shortcut. The desktop extension only navigates to `/share?url=…`.
+- **Phone apps.** They talk only to `/api/app/*` with a phone key
+  (`Authorization: Bearer`). See [Phone app API and auth](#phone-app-api-and-auth).
+- **Model processes.** `jobs` (full model, nice 10) and `query` (words only)
+  are forked by `src/lib/semantic/supervisor.ts`; `jobs` forks a short-lived
+  `extract-child.ts` for Whisper and Florence-2. In remote mode `jobs` is not
+  started and the Mac does that work.
+- **Reverse proxy.** The root Compose example publishes a loopback port for a
+  host proxy; [`deploy/nas/`](deploy/nas/README.md) joins an existing proxy
+  network and publishes nothing. Neither requires a tunnel; Tailscale is one
+  way to keep the server private.
 
-- **Saved** is the theater on one user's newest saves at `/play?recent=1`,
-  and the default destination for signed-in visitors.
-- **Discover** is the secondary community theater at `/live`.
-- **Search** (`/search`) finds saves by what's in them.
-- A **channel** is exactly one tag, public ones viewable at
-  `/t/{username}/{tag}`. Database and API names that predate this terminology
-  may still say “collection.”
+## Product surfaces
 
-Archive is private removal from the Saved queue. It is not a public
-activity signal and does not delete the bookmark.
+Signed in, the primary navigation (`src/components/next/PrimaryNav.tsx`, and
+`BottomNav` on phones) has five places:
 
-The visible timestamp answers a different question on each surface:
+| Place         | Route                     | What it is                                                                                               |
+| ------------- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **New**       | `/play?feed=new`          | The blended feed of what your people saved that you haven't seen, with why-reasons; ends on "caught up". |
+| **Right now** | `/now`, `/moments/{slug}` | Live moments: recent saves grouped by meaning, forming groups with bells, Tune in (`/play?moment=`).     |
+| **Channels**  | `/channels`               | From everyone (group channels), Your people (one per friend), Made for you, and your own tag channels.   |
+| **My saves**  | `/play?recent=1`          | Your own saves, newest first.                                                                            |
+| **Search**    | `/search`                 | Search by meaning across everyone's saves or yours: words, pictures, frames, speech and on-screen text.  |
 
-| Surface             | Timestamp                                                              |
-| ------------------- | ---------------------------------------------------------------------- |
-| Discover / Trending | When the post first entered ADHX through any saver or public activity. |
-| Saved / Library     | When this user saved it (`bookmarks.processed_at`).                    |
-| Playlist            | When the curator added it to that tag (`bookmark_tags.created_at`).    |
+Signed-in `/` redirects to New (`src/app/page.tsx`). Everything plays in one
+theater, `TheaterV2` at `/play`, whose queue comes from the query: `feed=`,
+`recent=1`, `q=`, `channel=`, `auto=`, `group=`, `friend=` or `moment=`.
 
-## Product routes
+Other signed-in pages:
 
-| Route                       | Role                                                                                                                  |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `/`                         | Signed-out public discovery theater plus crawlable static content. A signed-in request redirects to `/play?recent=1`. |
-| `/live`                     | Signed-in Discover community theater. Signed-out requests return to `/`.                                              |
-| `/saved`, `/collection`     | Old Saved links: redirect to `/play?recent=1` (`?open=` becomes `&start=`).                                           |
-| `/start`                    | Sign up/in with an email link, then import X bookmarks with live progress.                                            |
-| `/channels`                 | Your channels, "Made for you" channels and Top channels.                                                              |
-| `/play`                     | The theater, playing a search's results as its queue.                                                                 |
-| `/search`                   | Search saves by meaning, with bento, groups and queue layouts.                                                        |
-| `/moments/{slug}`           | A live "Right now" moment: what people are saving on one theme, newest first; Tune in plays it (`/play?moment=`).     |
-| `/library`, `/tags`         | Old links: redirect to `/search` and `/channels`.                                                                     |
-| `/{user}/status/{id}`       | X post preview.                                                                                                       |
-| `/p/{id}`                   | Instagram image post; ordered carousels use the same theater album controls as X.                                     |
-| `/reel/{id}`, `/reels/{id}` | Equivalent Instagram Reel preview routes.                                                                             |
-| `/@{user}/video/{id}`       | TikTok video preview.                                                                                                 |
-| `/trending`                 | Public dark ranked list with the Latest membership lens initially selected.                                           |
-| `/trending/{filter}`        | Crawlable `popular`, `videos`, `photos`, `text`, or `articles` lens.                                                  |
-| `/trending/archive`         | Index of permanent ISO-week snapshots.                                                                                |
-| `/trending/archive/{week}`  | Frozen weekly ranked snapshot, capped to 50 posts.                                                                    |
-| `/leaderboard`              | Public playlist leaderboard for this week.                                                                            |
-| `/leaderboard/{window}`     | `today`, `month`, or `all-time` playlist ranking.                                                                     |
-| `/settings`                 | Account, reading, appearance, X connection, install, and deletion settings.                                           |
-| `/admin`                    | Persisted-admin-only analytics and moderation console.                                                                |
-| `/share`                    | PWA/extension/share-sheet URL router; it does not store content itself.                                               |
-| `/welcome`                  | One-shot, noindex username choice after a new email account is created.                                               |
-| `/t/{username}`             | Public curator hub containing that account's public playlists.                                                        |
-| `/t/{username}/{tag}`       | A channel's page (public, or private to its owner), playable and saveable.                                            |
-| `/{username}`               | Public X-author hub built from posts ADHX already knows publicly.                                                     |
+| Route                                                | Role                                                                                                       |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/doing`                                             | What your ADHX is doing: every post being kept, converted, listened to, read or learned.                   |
+| `/settings`                                          | You (picture, name, Just for me by default), Your people (invites, approvals), phone app, keys.            |
+| `/channels/friend/{username}`                        | A friend's channel (members only).                                                                         |
+| `/admin/*`                                           | Admin-role area: overview, people, posts, channels, live, analytics, processing, moderation, invites.      |
+| `/start`, `/welcome`                                 | Email sign-in, then a one-shot username choice for new email accounts.                                     |
+| `/invite/{token}`, `/invite/done`, `/invite/waiting` | Invite confirmation (a script-free route handler), the "You're in." pairing screen, and the approval wait. |
 
-Legacy routes stay as redirects: `/collection` → `/saved`, `/discover` →
-`/trending`, `/collections` → `/leaderboard`, and `/trending/play` → `/live`.
-Username aliases permanently redirect old curator and playlist URLs after a
-rename.
+Public pages (no account needed, never naming savers): the preview pages
+(`/{user}/status/{id}`, `/p/{id}`, `/reel(s)/{id}`, `/@{user}/video/{id}`,
+`/s/{platform}/{id}`), signed-out `/` (`PublicHome`), `/now` and
+`/moments/{slug}` in their anonymous shape, `/play?moment=` and
+`/play?channel=`, public channels `/t/{username}/{tag}`, curator hubs
+`/t/{username}`, author hubs `/{handle}`, `/privacy`, `/share` and the sitemap.
+`src/proxy.ts` turns a full source URL pasted after the host into the clean
+preview route.
 
-The source preview shapes are first-class public pages, not modals:
+Retired routes redirect permanently in `next.config.js`: `/live`, `/discover`
+and `/trending/*` go to `/now`; `/leaderboard/*` and `/collections/*` go to
+`/channels`. `/saved`, `/collection`, `/library` and `/tags` are small redirect
+pages.
 
-| Source URL                      | ADHX URL                      |
-| ------------------------------- | ----------------------------- |
-| `x.com/{user}/status/{id}`      | `adhx.com/{user}/status/{id}` |
-| `instagram.com/p/{id}`          | `adhx.com/p/{id}`             |
-| `instagram.com/reel(s)/{id}`    | `adhx.com/reels/{id}`         |
-| `tiktok.com/@{user}/video/{id}` | `adhx.com/@{user}/video/{id}` |
-
-`src/proxy.ts` also recognizes a complete source URL pasted after
-`adhx.com/` and issues a 307 to the clean route. TikTok short links go through
-the bounded server resolver because their path does not contain the video ID.
-
-## Save ingress and read flow
+## Save to watch
 
 ```mermaid
 flowchart TD
-  U[URL prefix / paste / share target / extension] --> P[Shared preview theater]
-  P -->|new signed-in open| A[Autosave lead]
-  P -->|explicit Save| ADD[/api/bookmarks/add]
-  A --> ADD
-  IP[Paste inside Discover or Saved] --> ADD
-  XS[X bookmark sync] --> SSE[/api/sync SSE]
-  ADD --> DB[(bookmarks + media + links)]
-  SSE --> DB
-  DB --> F[/api/feed: Library and Saved]
-  DB --> L[Discover / Trending / playlist seeds]
+  Ingress["Share sheet, paste, extension, URL prefix, X sync, channel keep"] --> Save["Save: /api/bookmarks/add, /api/app/save, /api/sync"]
+  Save --> B[("bookmarks: one row per saver, private flag, note")]
+  B --> KJ[("keep_jobs: one per post")]
+  B --> UQ[("understanding_queue")]
+  KJ --> DL["Keep worker downloads once: FxTwitter for X, yt-dlp for the rest"]
+  DL --> H{"Already H.264?"}
+  H -->|"yes"| KF[("kept_files in MEDIA_DIR")]
+  H -->|"no"| Conv["Convert: local ffmpeg, or media_conversions for the Mac"]
+  Conv --> KF
+  KF -->|"learn again from the original"| UQ
+  UQ --> U["Understand: words, picture, frames, speech, screen text"]
+  U --> E[("post_embeddings, post_extracted_text, post_text_fts")]
+  KJ --> GR["Getting it ready: /api/activity/processing/posts"]
+  GR -->|"waiting, keeping, converting"| Wait["Theater waits with a progress ring"]
+  GR -->|"kept"| Play["Theater plays /api/files/..."]
+  KF --> Play
+  B --> Out["New, Right now, Channels, Search"]
+  E --> Out
 ```
 
-`POST /api/bookmarks/add` is the platform-neutral save boundary. X delegates
-over loopback to `/api/tweets/add` for article, quote, media, and link
-enrichment. Instagram and TikTok use their own metadata adapters but
-write the same bookmark/media model.
+`POST /api/bookmarks/add` is the platform-neutral save boundary for the web;
+`POST /api/app/save` is the phone's, with a durable queue (`phone_save_queue`)
+so a share sheet can acknowledge quickly. X delegates over loopback to
+`/api/tweets/add` for article, quote, media and link enrichment; the link
+networks use `describeNetworkPost` (yt-dlp metadata or link-preview tags), or
+reuse an existing retained copy's public metadata. Every save path takes
+`private` and `note`, and honours the saver's "Just for me by default".
 
-A signed-in **new open** of a preview autosaves its lead. “New open” means a
-URL-prefix navigation, paste/share intent, extension navigation, or explicit
-`?save=1` return after sign-in. Reload, back/forward, and an in-app hop such as
-Trending → preview do not autosave. This distinction is based on navigation
-type, document path, and a one-shot `sessionStorage` intent; an in-session key
-claim prevents React Strict Mode from posting twice.
+A save wakes three pieces of background work, each keyed by **post** rather
+than saver, so one download and one understanding pass serve everyone who
+saved it:
 
-Pasting a supported URL while signed in on `/live` or `/saved` saves without
-leaving the theater. A same-tab paste takes the stage immediately and pins the
-interrupted post as Next. An add from another tab prepends in LIFO order
-without stealing the current stage. If a type lens would hide the arrival, the
-lens resets to All. Collection mutations notify the header, library, tags, and
-other theaters through scoped window events and a `BroadcastChannel`.
-Each envelope carries the immutable ADHX account ID. A tab ignores events while
-authentication is unresolved or when the account does not match; account
-changes invalidate and retry the auth snapshot before events resume. This stops
-a stale signed-in tab from applying another account's saves or tags.
+1. **Keep** (`src/lib/keep/`): the download job, the optional H.264
+   conversion and the recorded files. See [Kept media](#kept-media).
+2. **Understand** (`src/lib/semantic/`): vectors and extracted words. See
+   [Understanding pipeline](#understanding-pipeline-search-by-meaning).
+3. **Live** (`src/lib/moments/`): the moments engine reads new visible saves
+   from `bookmarks` past a watermark. See [Right now](#right-now-live-moments).
 
-Sync is the second ingress. It imports the user's X bookmarks, but it is not
-required for manually saving or viewing any supported platform.
+**Getting it ready.** When the post on stage is still on its way
+(`waiting`, `keeping` or `converting`), the theater asks
+`GET /api/activity/processing/posts` (`src/lib/processing/keep-status.ts`)
+when the post arrives and every 1.5 s, covers the stage with
+`GettingReadyStage` (blurred poster, real percent from the live download or
+`keep_jobs.progress`), and plays the moment the copy is kept. Only posts the
+viewer may see are answered. **What your ADHX is doing** (`/doing`,
+`GET /api/activity/processing`, phone `GET /api/app/doing`) is the full list
+with steps, reasons and Retry / Keep the link only for people who saved it.
 
-## The theater runtime
+X bookmark sync is a second ingress (see [X bookmark sync](#x-bookmark-sync));
+it is optional and never required to save or watch.
 
-`TheaterShell` is the orchestrator shared by four modes:
+## The theater
 
-| Mode       | Feed and end behavior                                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `home`     | Signed-out discovery feed from the anonymous activity query.                                                              |
-| `shared`   | Opened preview pinned as the lead, followed by community items.                                                           |
-| `personal` | Signed-in Discover or Saved route. Saved defaults to All posts; Discover to Videos + Hide watched. Repeat is independent. |
-| `playlist` | One public tag ordered by curator-add time and looping at the boundary.                                                   |
+`TheaterV2` (`src/components/next/theater/`) plays every queue. Media playback
+is the shared `Stage` from `src/components/theater/` (one persistent
+`<video>`, the Instagram Range probe, the YouTube iframe); `TheaterV2` drives it
+only through window events (`theater-pause`, `theater-resume`,
+`theater-set-muted`, …). One persistent `<video>` slot is kept across posts
+because mobile browsers grant audible autoplay to the element the user
+touched; source generations stop a stale `play()`, `ended` or `error` from
+touching the next clip. Posts and articles render on word stages; long ones
+are read, not timed.
 
-Discover and Saved are ordered newest first by the time a post entered that
-surface, not by source publication time. `AuthedTheater` loads every page of
-`/api/feed?filter=all&hideArchived=true`, at 100 posts per request, before
-mounting the personal queue. This is a page size, not a collection cap. An
-incomplete or inconsistent page fails the load rather than silently presenting
-a partial collection. The library's `?open=` links can still open an archived
-post explicitly.
+Preview pages render `PreviewTheater`: the page paints immediately and passes
+a not-awaited `sharedResolve` promise for the upstream post, while
+`generateMetadata` awaits trusted metadata for crawlers and a Suspense sibling
+streams JSON-LD and a semantic static copy. The opened post loops until you
+move on; then similar posts from everyone follow, anonymised. A signed-in new
+open of a preview autosaves it (`autosave-shared.ts`).
 
-`useTheaterQueueTypes` owns independent destination filters. New Discover visitors get
-Videos + Hide watched; Saved starts with All posts and Hide watched off. The labelled
-control beside Queue opens single-choice Post type controls and one Hide watched switch.
-`filter-preferences.ts` reads and validates the versioned per-destination localStorage
-records, retaining an explicit empty type list as All. Legacy type choices migrate;
-blocked or malformed storage falls back to destination defaults.
+A post counts as seen after 2 seconds on stage or a skip. Seen marks are
+batched through an account-scoped local outbox to `POST /api/views` (phones:
+`POST /api/app/seen`) and stored in `post_views`.
 
-Hide watched uses the browser-local seen history, independent of Repeat. Leaving a saved
-post marks it seen without a public activity event. History retains up to 500 recent
-identities and is not a cross-device viewing record. Repeat off completes one pass;
-Discover also tracks departures within that pass when historical watched posts are
-included. Repeat all loops only the selected list. **Watch again** explicitly includes
-watched posts and restarts without deleting history. Public playlists omit these filters;
-shared previews use an independent unfiltered type selection and preserve the opened lead.
-
-The first-visit hint and empty-account actions teach paste → watch → send. Media sharing
-has a direct action (icon-only on mobile), with Share link retained separately. Browser
-downloads verify nonempty media bytes before reporting a successful handoff; OS-level
-file saving cannot be observed. `post.play` is recorded from confirmed native playing events, deduplicated across pause/resume and looping the same post.
-`post.view` remains a preview/dwell signal, not proof that a video played.
-
-Shared previews optimize first paint without sacrificing crawler output:
+## New: the blended feed
 
 ```mermaid
-sequenceDiagram
-  participant R as Preview page RSC
-  participant T as TheaterShell
-  participant U as Upstream resolver
-  participant C as Crawler/SEO sibling
-  R->>T: render URL stub + feed seed immediately
-  R->>U: start sharedResolve Promise
-  U-->>T: replace stub in place
-  U-->>C: stream JSON-LD + semantic static post
-  Note over R,U: generateMetadata awaits trusted metadata separately
+flowchart LR
+  C["Candidates: others' saves from 14 days, plus unseen sends"] --> V["Visible to you, not moderated, not gone, kinds you chose"]
+  V --> Score["Score: fresh 1, together 0.9, like 0.7, close 0.6, small jitter"]
+  Score --> W["Weights: Show more x1.6, all savers Show less x0.4, seen x0.35, only yours x0.3"]
+  W --> Var["Variety: at most 2 in a row per friend or topic, own posts at most 1 in 4"]
+  Var --> Lead["New: unseen sends first, newest send first"]
+  Lead --> Page["Page of up to 50 with why and whyReasons"]
+  Page --> Seen["Seen after 2 s or a skip: post_views"]
+  Seen -.->|"left out next time"| C
 ```
 
-An unresolved X source becomes a timed “unavailable” stage and noindex
-metadata; an admin-hidden source uses a different “removed from ADHX” tombstone.
-Thin non-X results remain playable as a URL-derived stage but are not
-indexable unless trusted upstream or saved-local metadata resolved. The opened
-shared lead gets one landing-only playable exemption even if it was previously
-seen; every departure path releases it.
+`src/lib/feed/blend.ts` is pure (signals, `BLEND_WEIGHTS`, variety, why words,
+cursor); `blend-db.ts` loads candidates and context. Routes:
+`GET /api/feed/blend?mode=new|everyone|friends|mine&types=…` and the phone's
+`GET /api/app/feed`; `GET|PUT /api/feed/weights` and `/api/feed/types` (and
+their `/api/app/` twins) store Show more / Show less and "What's in your feed"
+in `user_preferences` (`feed.weights`, `feed.types`).
 
-Seen state is browser-local to avoid per-user server cost. Immutable V2
-operations form per-post last-writer-wins registers and converge through
-`storage` events. The readable `adhx-seen-v1` array is only a compatibility
-projection. Compaction keeps the newest 500 marks and 500 tombstones; bulk
-unmark operations write one batch. Watch again preserves these records. `adhx-last-visit` is recorded only when a page hides
-or unloads.
+- **Candidates.** `new`: posts someone else saved in the last 14 days that you
+  haven't seen, plus every unseen send to you however old. `everyone`: all
+  visible saves, yours sparingly, reaching back to the newest 300 on a quiet
+  server. `friends`: what friends saved that you haven't. `mine`: your newest
+  500, not archived.
+- **Signals**, each 0–1: `fresh` (decay from the newest other save, 24 h
+  scale), `together` (two or more voices), `close` (how much of that friend's
+  saves you've watched or saved over 180 days), `like` (cosine to the mean of
+  your last 50 saves, ranked within the pool), plus a seeded jitter. There are
+  no engagement signals.
+- **Why-reasons.** Every item carries `why` and `whyReasons`
+  (`sent | together | more | like | close | fresh | yours`), for example
+  "Pete sent you this", "Ana and Ben saved this", "Like the frog videos you
+  kept", "You watch most of Ben's saves". The `like` reason carries the kept
+  post it resembles, for a thumbnail.
+- **Snapshots.** The first page fixes the order under a random seed for about
+  five minutes (in memory, per viewer); later pages re-read savers, moderation
+  and gone posts, so only ordering is cached, never authorization. A weight
+  change clears that viewer's snapshots.
+- **End states.** `caughtUp` ("You're all caught up. Go touch grass."),
+  `nothingYet` (nobody else saved anything in the window) and `waiting`
+  (unseen posts the kinds filter held back, "4 text posts waiting").
 
-One persistent `<video>` slot is retained across X, TikTok, ready Instagram
-MP4s, and intervening non-video stages. Mobile browsers grant audible autoplay
-to the element the user touched, so remounting per item would lose sound.
-Source generations and lifecycle guards prevent a stale `play()` result,
-`ended`, `error`, or `pause` from mutating the replacement clip.
+## Sends
 
-Theater navigation, actions, queue overlays, album controls, Read/Watch mode,
-and keyboard shortcuts are detailed in the
-[theater-first specification](docs/specs/theater-first.md).
+"Send straight to your people" (`src/lib/sends/`, table `post_sends`):
+`GET|POST /api/posts/send` and `GET|POST /api/app/send`. The GET lists every
+other member with `has` (they have their own save of it) and `sent` (you
+already sent it). A post whose only save you can see is your own private one
+is not sendable ("Just for you. Share it first to send it."); someone else's
+private save is not found. Sends skip people who have it or were already sent
+it, accept an optional note cleaned like a save note, and are limited to 60 a
+minute.
+
+In New, unseen sends from approved, non-banned senders lead (newest first)
+with the reason "Pete sent you this" and the sender's note on their face,
+until the recipient sees the post; `markSeen` sets `post_sends.seen_at`.
+
+## Right now: live moments
+
+```mermaid
+flowchart TD
+  Saves["New visible saves"] -->|"every 3 s, once the first vector exists"| Engine["Moments engine in the web process"]
+  Regroup["Regroup from scratch every 5 min"] --> Engine
+  Engine --> Near{"Close to a live moment?"}
+  Near -->|"yes"| M["Moment"]
+  Near -->|"no"| F["Forming group"]
+  F -->|"enough people and posts"| M
+  Bell["Bell: Tell me when it's live"] -->|"moment_alert_subs"| F
+  M -->|"one per bell owner"| A[("moment_alerts")]
+  Engine -->|"SSE /api/moments/stream"| WebLive["Right now and Tune in on the web"]
+  Engine -->|"poll /api/app/live"| AppLive["Live on the phones"]
+  A -->|"poll every 60 s"| Toast["Web toast and browser notification"]
+  A -->|"poll /api/app/alerts, background refresh"| Notif["Phone notification"]
+```
+
+- **Engine** (`engine.ts`, global state in the web process, running only
+  while someone listens and idling after 10 minutes): new saves past a
+  watermark wait up to three minutes for their first vector, then join the
+  closest moment or a forming group; forming groups become moments with
+  `MOMENT_MIN_SAVERS` distinct people (default 3). Every 5 minutes it regroups
+  recent saves from scratch over widening windows (24 h, 72 h, 7 d). Moments
+  live in memory only. Only visible saves count (`visibleSave`: not private,
+  not a quoted copy, saver not banned).
+- **Anonymous engine, named per request.** Saver ids never leave the engine
+  and its broadcasts. `src/lib/moments/people.ts` adds faces (`savers`,
+  `watchers`, forming `people`, `recentSaves`) per request for members only;
+  signed-out responses keep the anonymous shape.
+- **Watching together.** `presence.ts` counts watchers per account across web
+  streams and 15-second phone leases. Members can react (six emoji, or up to
+  40 cleaned characters, 20 a minute, 6 of them words); reactions go only to
+  members watching that moment and are never stored.
+- **Bells and alerts** (`alerts.ts`): `PUT|DELETE
+/api/moments/forming/{id}/alert` (phone: `/api/app/live/forming/{id}/alert`)
+  stores a bell. Bells follow merges and regroups (`reconcileForming`), fire
+  one `moment_alerts` row per subscriber when the group goes live, and vanish
+  silently when it dissolves. `GET /api/moments/alerts` (phone
+  `/api/app/alerts`) lists unseen alerts from the last 24 hours;
+  `POST …/alerts/seen` marks them. On the web, `MomentAlerts` in AppShell
+  polls every minute and shows a toast plus a browser notification when
+  permission was granted at the bell; iOS polls and schedules a background
+  refresh, Android polls and runs a 15-minute WorkManager job, both posting
+  local notifications.
+- **Names.** Moments and forming groups are named locally from a topic list
+  and shared words; with `TYPESAFE_API_KEY` Jev picks among the candidates.
+
+## Channels
+
+A channel is either a tag or a derived group; there is no second channel
+system (`src/lib/channels/`, overview in `overview.ts` for both
+`GET /api/channels` and `GET /api/app/channels`).
+
+| Kind              | Source                                                                                                      | Who sees it                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **From everyone** | `group_channels`: the server's visible saves clustered and named (at most 8), recomputed in the background. | Members. Reads recheck each post's visible savers.               |
+| **Your people**   | One per other member with visible saves (`friends.ts`), with "N new" and their latest note.                 | Members.                                                         |
+| **Made for you**  | `auto_channels`: your saves clustered by meaning, per user.                                                 | Only you.                                                        |
+| **Your channels** | Tags (`bookmark_tags`), public via `tag_shares.is_public` at `/t/{username}/{tag}`.                         | You; anyone, once you make one public. Never your private saves. |
+
+**Keep this channel** on a From everyone channel
+(`POST /api/channels/group/{slug}/keep`, phone
+`/api/app/channels/group/{slug}/keep`) saves the posts you don't have from a
+member's visible save (`source = 'channel_keep'`, never copying a note), tags
+them with the channel's name, and leaves the channel private. Keeping a Made
+for you channel (`POST /api/channels/auto/{slug}/keep`) tags your own posts.
+Clones of a public channel apply the recipient's Just for me by default.
+
+An independent, off-by-default `TYPESAFE_CHANNEL_IMAGES=on` refinement pass can
+improve generated channel display names, borderline membership, repetition
+spacing and cover-post selection. `channels/visual.ts` enqueues bounded durable
+work during local reads; instrumentation starts one async worker that prepares
+existing retained public-post stills and calls the pinned TypeSafe image API.
+It never loads a local model or extracts video on the NAS. Cached decisions are
+an overlay: original channel slugs, user saves, files and manual channels stay
+intact. The shared channel APIs serve web and phone. Visibility/media/policy
+fingerprints invalidate stale results; private-only posts, saver identities,
+tags, notes and extracted words are excluded from uploads. See
+[image-aware channel curation](docs/channel-image-curation.md) for limits,
+confidence gates, retries and the evaluation boundary.
+
+## Who sees what
+
+```mermaid
+flowchart LR
+  Save["A save"] --> Private{"Just for me?"}
+  Private -->|"no"| Members["Members: post, saver name, face, note, time"]
+  Private -->|"no"| Strangers["Signed-out visitors: post and a saver count"]
+  Private -->|"yes"| Owner["Owner only, plus has-it in the Send sheet and admin counts"]
+  Send["A send"] --> Pair["Sender and recipient only"]
+  Personal["Views, weights, bells, alerts, archive"] --> Self["That account only"]
+  Files["Kept files at /api/files"] --> Anyone["Anyone who can reach the server, moderated posts excepted"]
+  Admin["Admins"] --> Counts["Counts, invites, join requests, held sign-in links, audit"]
+```
+
+The rule is **named to friends, never to strangers**
+([`docs/specs/friends-feed.md`](docs/specs/friends-feed.md),
+[`PRIVACY.md`](PRIVACY.md)). Saves are shared with the server's members
+(signed-in, approved, non-banned accounts). `bookmarks.is_private` marks a save "Just
+for me": its owner still searches and plays it, but no one else sees, counts
+or is told about it, and it writes no activity pulse (going private also
+deletes the owner's earlier `save` pulse rows for it).
+
+- **One condition.** `visibleSave()` / `visibleSaveFilter` is the SQL for "a
+  save other people may see or count". Moments, the blend, group and friend
+  channels, trending save counts, Everyone
+  search (`publishable`), `loadSearchItems`' choice of another saver's copy,
+  similar posts, the sitemap, author hubs, the public post JSON and the
+  pulse's own-play fallback all use it.
+- **Names for members only.** `saversFor(keys, viewerId)` returns savers
+  (username, display name, avatar, when, `isYou`) newest first, the viewer's
+  own save included even when private; empty for a signed-out viewer.
+  `loadSearchItems` attaches `savers` and `isPrivate` when the viewer is
+  signed in, so `/api/feed`, `/api/search`, `/api/search/similar`, channel
+  queues and the phone's `PhonePost` carry them; nothing public does.
+  `listMembers(viewerId)` lists members with the saves the viewer can see.
+- **Switching.** Every save path takes `private` (`/api/bookmarks/add`,
+  `/api/tweets/add`, `/api/app/save` and its queue); a repeat save with
+  `private` updates the flag. `PATCH /api/bookmarks/[id]/private` and
+  `POST /api/app/private` switch an existing save.
+
+Privacy changes also invalidate public caches immediately. SQLite triggers in
+`bookmarks/visibility-sql.ts` increment a durable `server_settings` revision on
+save insertion, deletion or visibility changes; public channels, curator/author
+profiles, trending and leaderboards check it even on warm cache hits. This is a
+constant-time read and works across web processes. Feed snapshots keep their
+original cursor positions, but recheck moderation, savers, explanations and
+counts on every page. Active live streams recheck membership and their phone
+key before events and on each 20-second heartbeat, closing on revocation.
+
+Both native share sheets can acknowledge a link before their privacy choice is
+settled: `deferPublish: true` stages new saves privately, then
+`PATCH /api/app/save { id, private? }` durably confirms the current choice.
+Changes made while metadata is being fetched are read at completion, in the
+same transaction that publishes the save. Closing the extension waits for the
+intent request; interrupted acknowledgements are retried from Shared lately.
+Android delivery belongs to durable WorkManager and resumes the same receipt.
+Both persist a monotonic intent version, so retrying an accepted request with a
+lost response cannot undo a newer intent or a later web privacy change.
+Without an acknowledgement a new save stays private. Repeat shares preserve
+existing privacy unless an explicit choice changes it. Keeping a public
+channel applies the recipient's private-by-default setting to new copies.
+
+Join approval requests are anchored to the invite identity on the joining
+account. Deleting an inviter removes its invite records without removing
+another person's pending request; the admin can still approve or decline it.
+
+**Just for me reaches files too.** `src/lib/keep/file-access.ts` decides who
+may fetch `/api/files/{platform}/{id}/{slot}`: a shared post (or a quoted copy)
+is served to anyone; a post whose only saves are Just for me only to an owner
+(session, phone key, or the post's HMAC file token, which `toPhonePost` and
+Shared lately add to the owner's own URLs because phone video players can't
+send headers), with `private, no-store`. Anyone else gets the answer for an
+unsaved post, and why a file is missing is only told to members. The send
+sheet's `has` counts shared saves only; X sync and Keep this channel apply Just
+for me by default. **Known exception**, documented in
+[`PRIVACY.md`](PRIVACY.md): admin post and member counts include private saves.
 
 ## Accounts and authentication
 
-Email is the account and sign-in source of truth. X is an optional linked
-identity used to sync bookmarks; it never creates a session or account.
+Accounts are created by an invite link (see [Invites and approval](#invites-and-approval))
+or an email magic link; email links are also how people sign back in. X is an
+optional linked identity used to sync bookmarks; it never creates a session or
+account.
 `GET /api/auth/me` is the client-side source of truth for the account,
 identities, X connection, username state, and persisted admin role.
 
@@ -273,8 +479,8 @@ that has not already chosen a username.
 
 The `adhx_session` cookie is an HS256 JWT with a 30-day expiry, `httpOnly`,
 `sameSite=lax`, and `secure` in production. A valid signature is not sufficient
-authorization: `getCurrentUserId()` also requires a live `users` row and a
-successful, negative ban lookup. A deleted-account JWT or an unavailable
+authorization: `getCurrentUserId()` also requires a live `users` row,
+`approval = 'approved'` and a successful, negative ban lookup. A deleted-account JWT or an unavailable
 moderation store is treated as signed out.
 
 X OAuth uses PKCE. Each `oauth_state` row is bound to the initiating ADHX
@@ -299,47 +505,173 @@ entry point:
 - a fatal 400/401 deletes only the exact leased row X rejected, leaving the
   ADHX session intact.
 
-Account deletion is one transaction. It removes user-owned content,
-identities, OAuth material, preferences, tags, aliases, and owner-keyed
-playlist statistics; nullable actor IDs in retained activity/analytics history
-are anonymized. SQLite triggers reject every future insert or account-ID
+Account deletion (`DELETE /api/account`) is one transaction. It removes
+user-owned content, identities, OAuth material, preferences, tags, aliases,
+viewing marks, sends in both directions, bells and alerts, keys, pairing codes,
+the phone queue, invites made or used, owner-keyed channel statistics and
+picture files and Made for you channels (`auto_channels`); the account's
+"saved" pulse rows are deleted and nullable actor IDs in the remaining activity,
+analytics and channel-view history are set to null. `admin_audit` stays. Clear
+data (`POST /api/account/clear`) removes saves and their per-user state, Made
+for you and "saved" pulses, but keeps the account, keys and invites. Removing
+one save removes its "saved" pulse. Post-keyed understanding rows (vectors,
+queue, keyword row, extracted words) go with the post's last save, by
+`AFTER DELETE ON bookmarks` triggers in `src/lib/semantic/schema-sql.ts`. SQLite triggers reject every future insert or account-ID
 change that references the deleted `users.id`, closing the race between an
 already-authenticated request and deletion commit.
 
+## Invites and approval
+
+Invites are the easy way in (`src/lib/auth/invites.ts`, table `invites`).
+
+1. A member makes a link: `POST /api/invites` (admins always; other members
+   when **Who can invite** isn't "Only me"). The link is shown once; only the
+   SHA-256 of its token is stored. It works once, for 7 days, and can be
+   revoked or reissued (`POST /api/invites/{id}/link` swaps in a fresh token).
+2. `GET /invite/{token}` is a script-free route handler ("Ana wants you in.")
+   with a name field. Link previews and `HEAD` never spend it.
+3. A same-origin `POST /invite/{token}` claims the invite with one conditional
+   write and, in the same transaction, creates an account with no email (its
+   identity is `('invite', <invite id>)`) and sets the session cookie.
+   `ALLOWED_EMAILS` doesn't apply: the invite is the permission.
+4. The browser lands on `/invite/done` ("You're in.") with a phone pairing code
+   already on screen, or on `/invite/waiting` when approval is needed.
+
+**Who can invite** (`admin | approve | anyone`) is stored in `server_settings`
+(`invites.who`) and changed by admins with `PATCH /api/people`; `INVITES=members`
+only sets the first default. Under **Anyone, I approve**, someone a non-admin
+invited joins with `users.approval = 'pending'`. `getCurrentUserId()`, phone
+keys and access keys treat any account that isn't `approved` as signed out;
+only `/invite/waiting` and `GET /api/auth/approval` see it. Admins answer under
+Settings → Your people → Waiting for you (`POST /api/people/requests/{id}`
+with `approve | not_now | decline`; phone `/api/app/people/requests/{id}`),
+and every answer is audited. Requests are anchored to the invite identity, so
+deleting the inviter doesn't strand them.
+
+Email sign-in is how people get back in on a new browser. `ALLOWED_EMAILS`
+limits who may create an account by email; existing accounts can always sign
+in. Links go by Resend or SMTP, or (with `EMAIL_LINKS_TO_ADMIN`) wait on the
+admin page for an admin to pass on.
+
+## Phone app API and auth
+
+```mermaid
+sequenceDiagram
+  participant W as Web Settings or invite done page
+  participant S as ADHX server
+  participant P as Phone app
+  W->>S: POST /api/app/pairing with the session cookie
+  S-->>W: 8-character code for 10 minutes, only its hash stored
+  W-->>P: QR code adhx://pair, or the address and code typed in
+  P->>S: POST /api/app/pair with the code
+  S-->>P: phone key, shown once, stored as a hash with scope phone
+  P->>S: /api/app/... with Authorization Bearer key
+  S->>S: check key, ban and approval on every request
+  Note over W,S: Settings, Phone app, Remove deletes the key at once
+```
+
+- **Pairing.** `POST /api/app/pairing` (session) makes a one-time code in
+  `app_pair_codes`; a new code cancels the old one. `POST /api/app/pair`
+  spends it with one conditional write and returns a phone key: an
+  `access_keys` row with scope `phone`, stored as a SHA-256 hash with its last
+  four characters, at most 10 per account. Settings lists phones
+  (`GET /api/app/phones`) and removes them (`DELETE /api/app/phones/{id}`).
+- **Every request.** `phoneCaller` (`src/lib/api/phone-auth.ts`) reads
+  `Authorization: Bearer adhx_…`, then refuses banned and not-yet-approved
+  accounts. `withPhoneKey` routes take only a key; `withPhoneKeyOrSession`
+  routes (channels) also take a session, but a request that brings a key uses
+  only the key. Members' pictures (`/api/files/avatar/{hash}`) accept a phone
+  key too. Phone keys never authorize the processing protocol, and named live
+  streams close when their key is revoked.
+- **Routes** (all under `/api/app/`): `me`, `status`, `save` (POST, receipt
+  GET, privacy-intent PATCH), `saves`, `search`, `private`, `note`, `send`,
+  `feed`, `feed/types`, `feed/weights`, `seen`, `channels`,
+  `channels/{kind}/{slug}` and its `keep`, `live`, `live/{slug}` (GET, foreground
+  POST lease, DELETE), `live/{slug}/stream`, `live/{slug}/react`,
+  `live/forming/{id}/alert`, `alerts`, `alerts/seen`, `people`,
+  `people/requests/{id}`, `doing`, `doing/retry`. Shapes are in
+  [`docs/specs/phone-app.md`](docs/specs/phone-app.md) and the friends-feed
+  spec.
+- **Share sheets.** The iOS share extension and Android's share activity post
+  to `/api/app/save` with a request id. With `Prefer: respond-async` the save
+  goes through `phone_save_queue` (5-second worker, retries over about 13
+  minutes, receipts kept 7 days); a retried request id returns the original
+  receipt. `deferPublish: true` stages a new save privately until
+  `PATCH /api/app/save` confirms the Just for me choice with a monotonic
+  `intentVersion`. A link the phone can't deliver waits on the phone (App
+  Group queue and background task on iOS, WorkManager on Android).
+- **On the phone.** The key lives in the Keychain (iOS) or a Keystore-backed
+  encrypted file (Android) and is sent only to the paired server. The apps are
+  built from source (see [`apps/ios`](apps/ios/README.md) and
+  [`apps/android`](apps/android/README.md)).
+
 ## Persistence planes
 
-The schema is in `src/lib/db/schema.ts`. Tables are easier to understand by
-plane than as one long list.
+Drizzle definitions are in `src/lib/db/schema.ts`. Startup
+(`src/lib/db/migrate.ts`) applies the historical Drizzle SQL, then raw DDL,
+guarded `ALTER`s, `UNDERSTANDING_DDL` (`src/lib/semantic/schema-sql.ts`),
+the sends/moments DDL (`src/lib/sends/schema-sql.ts`), the save-visibility
+triggers (`src/lib/bookmarks/visibility-sql.ts`) and finally the account
+guards. Tables are easier to understand by plane than as one long list.
 
-| Plane               | Tables                                                                             | Purpose                                                                                              |
-| ------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Account             | `users`, `user_identities`, `username_aliases`, `login_tokens`                     | Immutable account identity, email/X links, durable rename redirects, one-time sign-in/change tokens. |
-| X connection        | `oauth_state`, `oauth_tokens`                                                      | Bound PKCE state and encrypted rotating credentials with refresh lease.                              |
-| User content        | `bookmarks`, `bookmark_media`, `bookmark_links`, `bookmark_tags`, `archived_posts` | Saved posts, media, rich links/articles, tags, and private archive state.                            |
-| User settings       | `user_preferences`, `tag_shares`                                                   | Reading/theme preferences and public playlist visibility.                                            |
-| Sync                | `sync_logs`                                                                        | Durable claim, heartbeat, outcome, and counts.                                                       |
-| Public discovery    | `activity`                                                                         | Anonymous post-level preview/save/share pulse.                                                       |
-| Private measurement | `analytics_events`                                                                 | Allowlisted product/growth events not suitable for the public pulse.                                 |
-| Playlist ranking    | `collection_events`, `collection_aggregates`                                       | Retained view/clone detail and viewer-free all-time totals.                                          |
-| Moderation          | `moderated_posts`, `user_bans`, `admin_audit`                                      | Post tombstones, account bans, and immutable-ID admin actions.                                       |
+| Plane                      | Tables                                                                                                                                       | Purpose                                                                                                                                            |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Accounts and sign-in       | `users`, `user_identities`, `username_aliases`, `login_tokens`, `admin_sign_in_links`                                                        | Immutable account IDs, role, approval state, picture; email / X / invite identities; rename redirects; hashed sign-in links; admin-held links.     |
+| X connection               | `oauth_state`, `oauth_tokens`                                                                                                                | Bound PKCE state and encrypted rotating credentials with a refresh lease.                                                                          |
+| People and server          | `invites`, `server_settings`, `user_preferences`                                                                                             | Hashed invite tokens; Who can invite and other server-wide keys; per-person settings, including `feed.weights` and `feed.types`.                   |
+| Saves                      | `bookmarks`, `bookmark_media`, `bookmark_links`, `bookmark_tags`, `archived_posts`                                                           | One save per saver, with `is_private` (Just for me) and `note`; media rows, rich links, tags, private archive state.                               |
+| Feed                       | `post_views`                                                                                                                                 | Each member's watched list (pruned after 180 days).                                                                                                |
+| Sends                      | `post_sends`                                                                                                                                 | Member-to-member sends with an optional note and `seen_at`.                                                                                        |
+| Moments and alerts         | `moment_alert_subs`, `moment_alerts`                                                                                                         | Bells on forming groups and the alerts they fire. Moments themselves live in memory.                                                               |
+| Channels                   | `tag_shares`, `group_channels`, `auto_channels`                                                                                              | Public/private tag channels; server-wide From everyone channels (no `user_id`); per-person Made for you channels.                                  |
+| Phone and keys             | `access_keys`, `app_pair_codes`, `phone_save_queue`                                                                                          | Hashed phone (`phone`) and search (`search`) keys; one-time pairing codes; the share sheet's durable save queue.                                   |
+| Sync                       | `sync_logs`                                                                                                                                  | X sync claim, heartbeat, outcome and counts.                                                                                                       |
+| Kept media                 | `keep_jobs`, `kept_files`, `keep_settings`, `media_conversions`                                                                              | One download job per post (with progress), the files in `MEDIA_DIR`, the backfill cutoff, leased H.264 conversions.                                |
+| Understanding              | `post_embeddings`, `understanding_queue`, `post_extracted_text`, `post_text_fts`, `video_index_state`, `video_segments`, `processing_leases` | Vectors, the work queue, speech and on-screen words, keyword index, sectioned video progress and vectors, remote-worker leases. All keyed by post. |
+| Moderation and admin       | `moderated_posts`, `user_bans`, `admin_audit`                                                                                                | Hidden posts, banned accounts, every admin action.                                                                                                 |
+| Admin counts               | `reaction_counts`, `moment_log`                                                                                                              | Reactions per member, day and kind (counts only) and the live-moment log (no user ids).                                                            |
+| Public pulse and analytics | `activity`, `analytics_events`, `collection_events`, `collection_aggregates`                                                                 | Anonymous post pulse (30 days), private product log (90 days), channel view/clone detail (90 days) and all-time totals. Partly legacy, below.      |
+| Bookkeeping                | `migration_state`, `__drizzle_migrations`                                                                                                    | One-time backfill flags and applied SQL migrations.                                                                                                |
 
-The main isolation key is `(userId, platform, sourceId)`. `bookmarks` uses
-`(userId, platform, id)`; media, tags, links, and archive rows carry the same
-owner/platform identity. This lets two users save the same post independently
-and prevents a numeric TikTok ID colliding with a tweet ID. Every user-data
-query must filter by `userId`; every bookmark-child lookup must also filter by
-`platform`. Multi-table mutations use `runInTransaction()` and synchronous
-`.run()` calls inside the `better-sqlite3` transaction.
+Sessions are a signed cookie, so there is no session table. Worker presence
+for the Mac helper is in memory. The legacy `collections`, `collection_tweets`
+and `sync_state` tables are dropped at every start, `read_status` was renamed
+to `archived_posts`, and `bookmarks_fts` was replaced by `post_text_fts`.
+`users.last_seen_at` (at most every 5 minutes, from sessions and phone keys),
+`access_keys.platform` (`ios`/`android` when a phone's requests say) and the
+`server_settings` key `processing.paused` (Pause new work) feed the admin area;
+see the [admin specification](docs/specs/admin.md).
 
-`bookmark_links` has a unique
-`(userId, platform, bookmarkId, expandedUrl)` boundary. Manual save and sync
-both use field-wise upserts: null/sparse enrichment cannot erase an existing
-article body, image, title, or description, and concurrent complementary
-writes converge on a deterministic richer value.
+The main isolation key for saves is `(userId, platform, sourceId)`.
+`bookmarks` uses `(userId, platform, id)`; media, tags, links and archive rows
+carry the same owner and platform. Two people can save the same post
+independently, and a numeric TikTok ID can't collide with a tweet ID. Every
+user-data query filters by `userId`; every bookmark-child lookup also filters
+by `platform`. Reading other people's saves goes through one condition,
+`visibleSave` (see [Who sees what](#who-sees-what)). Keep, understanding,
+`group_channels` and the moments engine are keyed by post or server, never by
+saver.
 
-SQLite runs in WAL mode with foreign keys enabled. Container startup runs
-migrations before the server listens and stops on a failed security- or
-integrity-critical step. Local development does not migrate automatically;
+`bookmark_links` has a unique `(userId, platform, bookmarkId, expandedUrl)`
+boundary. Manual save and sync both use field-wise upserts: null or sparse
+enrichment cannot erase an existing article body, image, title or
+description, and concurrent complementary writes converge.
+
+**Account guards.** `src/lib/db/account-invariants.ts` installs idempotent
+SQLite triggers on 28 user-linked tables (`auto_channels` included): every
+insert, or change of account ID, must reference a live `users` row. This
+closes the race where a request authenticated before `DELETE /api/account`
+writes after the deletion commits. `group_channels` is not guarded (it has no
+user column; its saver counts are rechecked on read).
+
+**Visibility revision.** Triggers from `bookmarks/visibility-sql.ts` bump a
+durable `server_settings` counter on every save insert, delete or privacy
+change. Public caches compare it on every read, including warm hits in other
+web processes.
+
+SQLite runs in WAL mode with foreign keys on. Container startup migrates
+before the server listens and stops on a failed security- or
+integrity-critical step. Local development does not migrate automatically:
 run `pnpm db:migrate` before `pnpm dev`.
 
 ## X bookmark sync
@@ -349,8 +681,10 @@ checks the configurable cooldown (one hour by default), confirms X credentials,
 and atomically claims a `sync_logs.status = 'running'` row. A partial unique
 index permits one running sync per user across processes. A second connection
 observes that run through user-scoped persisted counters and its terminal result;
-closing an observer does not cancel the owner. Settings opens the Header-owned
-progress dialog, revealing an existing silent background sync when present.
+closing an observer does not cancel the owner. Settings' Sync card and `/start`
+(`useXSync`) attach to a sync that is already running instead of starting a
+second one. An automatic sync runs about hourly for people who connected X and
+left it on.
 
 The stream renews `heartbeat_at` and emits an SSE ping every 10 seconds. A
 claim with no heartbeat for 30 minutes is reaped as failed. Completion and
@@ -365,7 +699,29 @@ clients. Repeated pagination tokens fail the run instead of looping or claiming
 completion. This imports everything X exposes, not posts absent from its API.
 The bookmark insert result—not a stale preloaded ID set—is authoritative for “new” counts, analytics, client events, and public
 pulses. At most the freshest 25 new rows from one sync enter the public pulse,
-so a first-time backfill cannot flood Discover.
+so a first-time backfill cannot flood it. A Just for me save writes no pulse.
+
+## Kept media
+
+Every saved post's media is downloaded once and served by ADHX itself (`src/lib/keep`):
+
+- **Queue.** `keep_jobs` holds one row per post (not per saver). The in-process worker (`startKeeping`, started from `instrumentation.ts`) scans for saved posts without a job every 30 s and runs `KEEP_CONCURRENCY` jobs at a time, newest save first. Failures back off (1 min → 24 h), then the job is marked `unavailable`. Saves wake it immediately. With backfill disabled, `keep_settings.backfill_cutoff` persists the activation boundary across restarts; enabling backfill clears it.
+- **Download.** X uses fxtwitter's original files (photos `name=orig`, the best MP4 variant, up to 4K). Instagram uses yt-dlp, then instafix images and the public mirror. Everything else uses yt-dlp (`-S res,fps,vcodec:h264`), with the page's `og:image` for picture posts. Special cases: Vimeo goes through `player.vimeo.com`; Reddit finds its v.redd.it playlist through vxreddit; Threads only uses link-preview tags.
+- **Re-encoding.** Non-H.264 video is re-encoded to H.264 at the same size (CRF 20) unless `KEEP_H264=off`.
+- **Recording.** Files land in a scratch folder, are probed with ffmpeg, then moved into `MEDIA_DIR/{platform}/{id}-{hash}/` as slots `video-N`, `photo-N`, `audio-N` and `poster`. `kept_files` records each one. In the same transaction, `reconcileKeptMedia` updates each saver's public category/media descriptors to the actual file kinds and counts, preserving private tags, archive state and summaries. Article categories stay articles.
+- **Serving.** `/api/files/{platform}/{id}/{slot}` serves the kept file with Range support. `poster` falls back to `photo-1`, and `video-1` to `audio-1`. Until a file is kept, X, Instagram and TikTok hand off (307, relative) to the old proxies; other networks wait up to 25 s for a running download. Every client media URL is built by `keptSrc()` (`src/lib/keep/src.ts`). The route checks moderation but not sign-in: anyone who can reach the server and knows a post's platform and source ID can fetch its kept files, including a post saved only Just for me.
+- **Progress.** `keep_jobs.progress` holds the last download percent (in steps of 5) so Getting it ready and `/doing` survive restarts; in remote mode a post stays `converting` until every `media_conversions` slot is done.
+- **Clean-up.** An hourly pass deletes files for posts nobody has saved any more.
+- **Understanding.** The understanding worker reads kept files straight from disk. Its content hash gains `:kept` once a file is kept, so posts are learned again from the original.
+
+### Link networks
+
+YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky live in `src/lib/platform/networks.ts`:
+
+- **Recognising links.** That file holds link detection, canonical links and labels. `detectPlatformPost` falls through to it.
+- **Saving.** `/api/bookmarks/add` first reuses public metadata and file counts from an existing retained copy (`retainedDescription`, excluding hidden posts and banned savers). Otherwise it calls `describeNetworkPost`: yt-dlp metadata, or link-preview tags for picture posts. It stores a fresh per-user save and one media row per file; it never copies another user's tags, summary or archive state.
+- **Previews.** Preview pages are `/s/{network}/{id}`, with `?by=author` where the network needs it.
+- **Short links.** `/api/links/resolve` follows short share links.
 
 ## Understanding pipeline (search by meaning)
 
@@ -379,16 +735,16 @@ remote Mac processing uses the length-aware segment plans described below.
 
 ```mermaid
 flowchart LR
-  S[Save / paste / X sync / clone] -->|noteSaved| Q[(understanding_queue)]
-  B[Startup + status backfill] --> Q
-  Q --> W[jobs child: one job at a time]
-  W -->|words| T[Text vector]
-  W -->|poster / photo| I[Image vector]
-  W -->|ffmpeg: 16 frames over 32 s| V[Video vector]
-  W -->|extract process| X[(post_extracted_text)]
-  X -->|said / on screen| T
-  X --> K[(post_text_fts)]
-  T --> E[(post_embeddings)]
+  S["Save, paste, X sync, clone"] -->|"noteSaved"| Q[("understanding_queue")]
+  B["Startup and status backfill"] --> Q
+  Q --> W["jobs child: one job at a time"]
+  W -->|"words"| T["Text vector"]
+  W -->|"poster or photo"| I["Image vector"]
+  W -->|"ffmpeg, 16 frames over 32 s"| V["Video vector"]
+  W -->|"extract process"| X[("post_extracted_text")]
+  X -->|"said and on screen"| T
+  X --> K[("post_text_fts")]
+  T --> E[("post_embeddings")]
   I --> E
   V --> E
 ```
@@ -501,14 +857,14 @@ bounded for retry. See [`deploy/mac/README.md`](deploy/mac/README.md).
 
 ```mermaid
 flowchart LR
-  Q[query text] --> C[query child: words-only model]
-  C --> V[(vector index: 256-dim, in memory)]
-  Q --> K[(post_text_fts)]
-  V -->|words / picture / video| F[standardise + fuse]
-  K -->|keywords| F
-  F --> P[scope + moderation + type filters]
-  P --> I[feed-shaped posts]
-  I -->|refine=1| J[Jev graded rerank, top 20]
+  Q["Query text"] --> C["query child: words-only model"]
+  C --> V[("Vector index: 256 dims, in memory")]
+  Q --> K[("post_text_fts")]
+  V -->|"words, picture, video, sections"| F["Standardise and fuse"]
+  K -->|"keywords, speech, screen text"| F
+  F --> P["Scope, visibility, moderation, type filters"]
+  P --> I["Feed-shaped posts with savers for members"]
+  I -->|"refine=1"| J["Jev graded rerank of the top 20"]
 ```
 
 - **Hybrid signals.** One query vector is compared with every post's words,
@@ -533,84 +889,12 @@ flowchart LR
   so visual matches keep more of their fused rank. With it hit@1 rose from
   0.58 to 0.77 on the labelled queries; any failure keeps the fused order.
 
-## Named to friends, never to strangers
+## Public pulse and analytics (partly legacy)
 
-Saves are shared with the server's members (signed-in, non-banned accounts);
-see `docs/specs/friends-feed.md`. `bookmarks.is_private` marks a save "Just
-for me": its owner still searches and plays it, but no one else sees, counts
-or is told about it, and it writes no activity pulse (going private also
-deletes the owner's earlier `save` pulse rows for it).
-
-- **One condition.** `visibleSave()` / `visibleSaveFilter` is the SQL for "a
-  save other people may see or count". Moments, trending save counts, Everyone
-  search (`publishable`), `loadSearchItems`' choice of another saver's copy,
-  similar posts, the sitemap, author hubs, the public post JSON and the
-  pulse's own-play fallback all use it.
-- **Names for members only.** `saversFor(keys, viewerId)` returns savers
-  (username, display name, avatar, when, `isYou`) newest first, the viewer's
-  own save included even when private; empty for a signed-out viewer.
-  `loadSearchItems` attaches `savers` and `isPrivate` when the viewer is
-  signed in, so `/api/feed`, `/api/search`, `/api/search/similar`, channel
-  queues and the phone's `PhonePost` carry them; nothing public does.
-  `listMembers(viewerId)` lists members with the saves the viewer can see.
-- **Switching.** Every save path takes `private` (`/api/bookmarks/add`,
-  `/api/tweets/add`, `/api/app/save` and its queue); a repeat save with
-  `private` updates the flag. `PATCH /api/bookmarks/[id]/private` and
-  `POST /api/app/private` switch an existing save.
-
-Privacy changes also invalidate public caches immediately. SQLite triggers in
-`bookmarks/visibility-sql.ts` increment a durable `server_settings` revision on
-save insertion, deletion or visibility changes; public channels, curator/author
-profiles, trending and leaderboards check it even on warm cache hits. This is a
-constant-time read and works across web processes. Feed snapshots keep their
-original cursor positions, but recheck moderation, savers, explanations and
-counts on every page. Active live streams recheck membership and their phone
-key before events and on each 20-second heartbeat, closing on revocation.
-
-Both native share sheets can acknowledge a link before their privacy choice is
-settled: `deferPublish: true` stages new saves privately, then
-`PATCH /api/app/save { id, private? }` durably confirms the current choice.
-Changes made while metadata is being fetched are read at completion, in the
-same transaction that publishes the save. Closing the extension waits for the
-intent request; interrupted acknowledgements are retried from Shared lately.
-Android delivery belongs to durable WorkManager and resumes the same receipt.
-Both persist a monotonic intent version, so retrying an accepted request with a
-lost response cannot undo a newer intent or a later web privacy change.
-Without an acknowledgement a new save stays private. Repeat shares preserve
-existing privacy unless an explicit choice changes it. Keeping a public
-channel applies the recipient's private-by-default setting to new copies.
-
-Join approval requests are anchored to the invite identity on the joining
-account. Deleting an inviter removes its invite records without removing
-another person's pending request; the admin can still approve or decline it.
-
-## Channels (redesign)
-
-A channel is a tag: its posts are the tagged saves, its public page is
-`/t/{username}/{tag}`, and Top channels is the existing collection
-leaderboard, so publishing, cloning and ranking keep their audited rules.
-"Made for you" channels are private and derived: a user's saves are grouped
-by meaning (k-means over each save's averaged vectors, oversized groups split
-again) and each group is named from a fixed list of plain names (the closest
-few by meaning, Jev picks among them). Keeping one turns it into a normal,
-public tag channel. Anyone can watch a public channel at `/play?channel=…`.
-
-An independent, off-by-default `TYPESAFE_CHANNEL_IMAGES=on` refinement pass can
-improve generated channel display names, borderline membership, repetition
-spacing and cover-post selection. `channels/visual.ts` enqueues bounded durable
-work during local reads; instrumentation starts one async worker that prepares
-existing retained public-post stills and calls the pinned TypeSafe image API.
-It never loads a local model or extracts video on the NAS. Cached decisions are
-an overlay: original channel slugs, user saves, files and manual channels stay
-intact. The shared channel APIs serve web and phone. Visibility/media/policy
-fingerprints invalidate stale results; private-only posts, saver identities,
-tags, notes and extracted words are excluded from uploads. See
-[image-aware channel curation](docs/channel-image-curation.md) for limits,
-confidence gates, retries and the evaluation boundary.
-
-## Discovery and measurement planes
-
-These are intentionally separate logs with different privacy contracts.
+These are intentionally separate logs with different privacy contracts. They
+were built for the earlier public discovery pages (Discover, Trending and the
+playlist leaderboard), which are retired; the logs and their JSON endpoints
+remain, and nothing in them names a saver.
 
 ### Public post activity
 
@@ -620,13 +904,13 @@ text, authors, images, type, and URLs are resolved or copied from trusted
 server state. `userId` may be stored for abuse controls but is never selected
 by a public read.
 
-`getTrendingItems()` is the publication choke point used by `/`,
-`/trending`, `/api/activity`, and `/api/trending`. It explicitly shapes public
-columns, enriches saved posts, removes hidden/banned sources, and deduplicates
-to one row per `platform:bookmarkId`. Discover uses a 24-hour window and newest
-ADHX arrival order; the Trending page ranks by interaction count with recency
-as a tie-break. Bots and unfurl crawlers do not write preview pulses. Archive
-never writes one.
+`getTrendingItems()` is the publication choke point used by the signed-out
+home's crawlable list and the admin-only `/api/activity` and `/api/trending`
+(GET `/api/analytics` is admin-only too, via `src/lib/admin/only.ts`). It explicitly
+shapes public columns, enriches saved posts, removes hidden/banned sources,
+and deduplicates to one row per `platform:bookmarkId`. Bots and unfurl
+crawlers do not write preview pulses. Archive and Just for me saves never
+write one. Rows older than 30 days are pruned at startup.
 
 ### Private product analytics
 
@@ -634,13 +918,18 @@ never writes one.
 send/copy/open/tag/archive, auth, sync, shortcut, theater, and playlist events.
 Free-form client display data is not accepted. Post events require a canonical
 platform and ID, and their content type is server-resolved. Public aggregate
-rollups never select `userId`; the admin console reads the same query layer.
+rollups never select `userId`; the admin area (`src/lib/admin/boards/*`)
+counts them without ever showing who. Admin-only events: `app.open` (after
+30 minutes away, with the client), `search.found`/`search.none` (mode only,
+never the words), `post.finish`, and `channel.play`/`channel.keep` for shared
+channels.
 Rows older than 90 days are pruned during startup migration. Writes are
 best-effort so measurement failure cannot fail the user action.
 
-### Playlist leaderboard
+### Channel views (Top channels)
 
-`collection_events` records public-playlist `view` and `clone` events. Self
+`collection_events` records public-channel `view` and `clone` events, read
+by Top channels and `/api/collections/trending`. Self
 events do not count; signed-in viewers dedupe for 30 minutes and anonymous
 views for 60 seconds. `viewerId` is write-only private data and is never
 selected by `src/lib/discovery/rank.ts`.
@@ -651,7 +940,8 @@ and preserves all-time totals without viewer identifiers or an unbounded event
 scan. A playlist made private immediately becomes ineligible at read time.
 Raw events older than 90 days are pruned at startup and by an hourly,
 process-local maintenance pass outside the event-write transaction.
-See the [leaderboard specification](docs/specs/discovery-leaderboards.md).
+The [leaderboard specification](docs/specs/discovery-leaderboards.md) is
+history for the retired page; the ranking rules still apply.
 
 ## Moderation fails closed
 
@@ -659,41 +949,25 @@ Moderation reads return either a typed successful result or “store
 unavailable”; unavailable is never translated to visible/not-banned. The same
 rule applies on cached and uncached paths.
 
-- Hidden posts are tombstoned and noindexed on preview pages, omitted from
-  Discover, Trending, author hubs, playlists, APIs, and sitemap output, while
-  remaining in owners' private libraries.
-- Banned accounts lose authenticated access and are withheld from curator
-  hubs, playlists, leaderboards, sitemap entries, and sign-in completion.
-- Playlist hiding updates raw ranking detail and durable aggregates.
+- Hidden posts are tombstoned and noindexed on preview pages, their kept
+  files are not served, and they are left out of New, Right now, Everyone
+  search, author hubs, sends, public APIs and the sitemap, while
+  remaining in owners' own saves.
+- Banned accounts lose authenticated access (sessions, phone keys and
+  access keys), are never counted or named as savers, and are withheld from
+  curator hubs, public channels, Top channels, sitemap entries and sign-in
+  completion. Their invites stop working.
+- Channel hiding updates raw ranking detail and durable aggregates.
 - Post hide/unhide updates `moderated_posts`, matching `activity.hidden`, and
   `admin_audit` in one transaction.
 - Public cache hits re-read moderation and compare a moderation fingerprint
   before serving. Failures are non-cacheable.
 
 Admin authorization is `users.role = 'admin'` on immutable account IDs, never
-a runtime username allowlist. Startup verifies required moderation storage and
+a runtime username allowlist. The admin area (`/admin/*`, `src/lib/admin/`)
+counts Just for me saves but builds every list from shared saves only
+(`visibleSave`), and never shows what anyone searched or watched. Startup verifies required moderation storage and
 terminates if it cannot enforce this boundary.
-
-## Kept media
-
-Every saved post's media is downloaded once and served by ADHX itself (`src/lib/keep`):
-
-- **Queue.** `keep_jobs` holds one row per post (not per saver). The in-process worker (`startKeeping`, started from `instrumentation.ts`) scans for saved posts without a job every 30 s and runs `KEEP_CONCURRENCY` jobs at a time, newest save first. Failures back off (1 min → 24 h), then the job is marked `unavailable`. Saves wake it immediately. With backfill disabled, `keep_settings.backfill_cutoff` persists the activation boundary across restarts; enabling backfill clears it.
-- **Download.** X uses fxtwitter's original files (photos `name=orig`, the best MP4 variant, up to 4K). Instagram uses yt-dlp, then instafix images and the public mirror. Everything else uses yt-dlp (`-S res,fps,vcodec:h264`), with the page's `og:image` for picture posts. Special cases: Vimeo goes through `player.vimeo.com`; Reddit finds its v.redd.it playlist through vxreddit; Threads only uses link-preview tags.
-- **Re-encoding.** Non-H.264 video is re-encoded to H.264 at the same size (CRF 20) unless `KEEP_H264=off`.
-- **Recording.** Files land in a scratch folder, are probed with ffmpeg, then moved into `MEDIA_DIR/{platform}/{id}-{hash}/` as slots `video-N`, `photo-N`, `audio-N` and `poster`. `kept_files` records each one. In the same transaction, `reconcileKeptMedia` updates each saver's public category/media descriptors to the actual file kinds and counts, preserving private tags, archive state and summaries. Article categories stay articles.
-- **Serving.** `/api/files/{platform}/{id}/{slot}` serves the kept file with Range support. `poster` falls back to `photo-1`, and `video-1` to `audio-1`. Until a file is kept, X, Instagram and TikTok hand off (307, relative) to the old proxies; other networks wait up to 25 s for a running download. Every client media URL is built by `keptSrc()` (`src/lib/keep/src.ts`).
-- **Clean-up.** An hourly pass deletes files for posts nobody has saved any more.
-- **Understanding.** The understanding worker reads kept files straight from disk. Its content hash gains `:kept` once a file is kept, so posts are learned again from the original.
-
-### Link networks
-
-YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky live in `src/lib/platform/networks.ts`:
-
-- **Recognising links.** That file holds link detection, canonical links and labels. `detectPlatformPost` falls through to it.
-- **Saving.** `/api/bookmarks/add` first reuses public metadata and file counts from an existing retained copy (`retainedDescription`, excluding hidden posts and banned savers). Otherwise it calls `describeNetworkPost`: yt-dlp metadata, or link-preview tags for picture posts. It stores a fresh per-user save and one media row per file; it never copies another user's tags, summary or archive state.
-- **Previews.** Preview pages are `/s/{network}/{id}`, with `?by=author` where the network needs it.
-- **Short links.** `/api/links/resolve` follows short share links.
 
 ## Media and outbound-network boundaries
 
@@ -768,23 +1042,26 @@ the server resolver. The service worker exists only to satisfy installability:
 its fetch handler never calls `respondWith`, so it provides no offline cache
 and cannot serve stale application data.
 
-iOS uses a Share Sheet shortcut because Safari does not support Web Share
-Target. Android uses the installed PWA. All ingress paths converge on preview
-and `/api/bookmarks/add`.
+The native apps are the main phone path (see
+[Phone app API and auth](#phone-app-api-and-auth)). Without them, iPhones can use
+a Share Sheet shortcut (Safari does not support Web Share Target) and Android
+the installed PWA. Browser ingress converges on the preview pages and
+`/api/bookmarks/add`; the apps use `/api/app/save`.
 
 ## Rendering, SEO, and runtime SQLite
 
 Public pages combine visual UI with semantic server output: preview metadata,
 JSON-LD (`SocialMediaPosting` or `VideoObject`), public tweet JSON, author and
-curator hubs, Trending/playlist `CollectionPage` lists, and a dynamic sitemap.
+curator hubs, public channel `CollectionPage` lists, and a dynamic sitemap.
+None of them name savers.
 Public APIs and preview metadata recheck moderation and avoid caching a
 transient upstream miss as a durable publication decision.
 
 The SQLite file is migrated only when the container starts. It is absent or
 table-less during `next build`, so every DB-reading public surface must remain
-runtime-rendered: `/`, `/live`, `/saved`, preview pages, `/trending` and its
-archive/filter routes, `/leaderboard`, curator/author hubs, `/admin`, and
-`/sitemap.xml` use `force-dynamic` where Next could otherwise prerender them.
+runtime-rendered: `/`, `/now`, `/moments/{slug}`, preview pages, public
+channels, curator/author hubs, `/admin` and `/sitemap.xml` use
+`force-dynamic` where Next could otherwise prerender them.
 Do not add `generateStaticParams` or convert these pages to static generation;
 doing so either fails the build or bakes empty database output into HTML.
 
@@ -802,9 +1079,11 @@ CI checks source quality, unit and browser behavior, the production build, both
 extension targets, and the runnable container (including migrations and the
 health endpoint).
 
-The legacy hosted staging and production are separate Fly applications with separate volumes,
-secrets, deploy credentials, Sentry environments, and health checks. Release
-automation deploys to staging; production remains an explicit action.
+Release Please creates a tagged release and calls the container publisher,
+which builds AMD64 and ARM64 images for `ghcr.io/itsmemeworks/adhx`. Installing
+a release on a server is a separate, explicit step; see
+[`docs/releasing.md`](docs/releasing.md). The legacy hosted Fly apps remain in
+the repository and deploy only when run by hand.
 
 For exact environment variables, migration recovery, deploy commands, and
 incident procedures, see [`CLAUDE.md`](CLAUDE.md).
@@ -816,8 +1095,10 @@ The root Compose example exposes a loopback port for a host-based HTTPS proxy;
 network, with no host port or public tunnel. Both explicitly pass media/search
 controls and include restart and database-health settings. The deployment guide
 covers permissions, private access, resource sizing and consistent backups.
-Kept-file URLs and shared previews are intentionally unauthenticated; source
-post IDs are predictable, so network privacy must be selected by the operator.
+Kept-file URLs of shared posts and shared previews are intentionally
+unauthenticated; source post IDs are predictable, so network privacy must be
+selected by the operator. Files of Just for me-only posts are owner-only (see
+Who sees what).
 
 ## Friends-feed reliability
 

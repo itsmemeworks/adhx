@@ -15,6 +15,7 @@ import {
 } from '@/lib/channels/visual-policy'
 import { CHANNEL_NAMES } from '@/lib/channels/names'
 import { autoChannelCovers } from '@/lib/channels/channels'
+import { setNewWorkPaused } from '@/lib/processing/pause'
 
 let instance: TestDbInstance
 vi.mock('@/lib/db', () => ({
@@ -183,6 +184,21 @@ describe('durable optional image work', () => {
     expect(visualChannel(view(), USER_A)).toEqual(view())
     expect(row().status).toBe('pending')
   })
+  it('honours the admin processing pause without claiming jobs or spending budget, then resumes', async () => {
+    await seed()
+    visualChannel(view(), USER_A)
+    const ask = vi.fn().mockResolvedValue({})
+    setNewWorkPaused(true)
+    await processVisualChannel({ ask })
+    expect(ask).not.toHaveBeenCalled()
+    expect(row()).toMatchObject({ status: 'pending', attempts: 0 })
+    expect(instance.db.all(sql`SELECT * FROM channel_visual_budget`)).toEqual([])
+    setNewWorkPaused(false)
+    await processVisualChannel({ ask })
+    expect(ask).toHaveBeenCalledOnce()
+    expect(row()).toMatchObject({ status: 'ready', attempts: 1 })
+  })
+
   it('uses public source words + local images only, with opaque ids and durable cached decisions', async () => {
     await seed(7)
     visualChannel(view(), USER_A)

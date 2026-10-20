@@ -73,6 +73,22 @@ describe('saveBookmark insert awareness', () => {
     expect(second.inserted).toBe(false)
   })
 
+  it("starts the save Just for me when asked (the owner's default), and shared otherwise", async () => {
+    const { saveBookmark } = await import('@/lib/sync/save-bookmark')
+    await saveBookmark(tweet(), 'user-1', new Set<string>(), undefined, true)
+    await saveBookmark(tweet(), 'user-2', new Set<string>())
+    const rows = testInstance.db
+      .select({ userId: schema.bookmarks.userId, isPrivate: schema.bookmarks.isPrivate })
+      .from(schema.bookmarks)
+      .where(eq(schema.bookmarks.id, 'tweet-1'))
+      .all()
+      .sort((a, b) => a.userId.localeCompare(b.userId))
+    expect(rows).toEqual([
+      { userId: 'user-1', isPrivate: true },
+      { userId: 'user-2', isPrivate: false },
+    ])
+  })
+
   it('deduplicates links and does not add child rows after a lost insert race', async () => {
     const { saveBookmark } = await import('@/lib/sync/save-bookmark')
     const insertedDuringSync = new Set<string>()

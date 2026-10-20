@@ -31,13 +31,24 @@ export async function requireAdmin(userId: string): Promise<AdminGate> {
 
 /**
  * Auth + immutable account-role gate. Use on every `/api/admin/*` route.
+ * Every response it returns is `Cache-Control: private, no-store`.
  */
 export function withAdmin<C = unknown>(
   handler: (req: NextRequest, actor: AdminActor, ctx: C) => Promise<Response> | Response,
 ): (req?: NextRequest, ctx?: C) => Promise<Response> {
-  return withAuth(async (req, userId, ctx) => {
+  const inner = withAuth(async (req, userId, ctx: C) => {
     const gate = await requireAdmin(userId)
     if (!gate.ok) return gate.response
     return handler(req, gate.actor, ctx)
   })
+  // Every admin answer (and every refusal) is private and never cached.
+  return async (req?: NextRequest, ctx?: C) => {
+    const response = await inner(req, ctx)
+    try {
+      response.headers.set('Cache-Control', 'private, no-store')
+    } catch {
+      // Immutable headers (a redirect): leave them.
+    }
+    return response
+  }
 }

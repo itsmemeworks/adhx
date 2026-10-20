@@ -15,6 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import com.adhx.share.links.Networks
 import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -152,7 +153,7 @@ fun SearchScreen(vm: LibraryViewModel, server: String, onBack: () -> Unit, onOpe
                         value = ui.query,
                         onValueChange = vm::setQuery,
                         singleLine = true,
-                        textStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White),
+                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White),
                         cursorBrush = SolidColor(AdhxColors.Accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),

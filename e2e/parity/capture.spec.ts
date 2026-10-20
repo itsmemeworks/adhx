@@ -777,6 +777,102 @@ const BOARDS: Board[] = [
     phone: 'j8-5-phone-processing',
     known: ['“Mac helper connected” needs remote processing.'],
   },
+  // ——— 10 · Admin (Pete; Ana is an admin too) ———
+  {
+    name: 'admin-1-web-overview',
+    as: 'pete',
+    shows:
+      'Admin overview: KPIs, saves per day (shared and Just for me), most saved, who’s busiest',
+    path: '/admin',
+    known: [
+      'Saves per day follow the seed’s save times (filler is older than 16 days), not the board’s bars.',
+      'Server name is the parity host (127.0.0.1), not “adhx.home”.',
+    ],
+  },
+  {
+    name: 'admin-2-web-people',
+    as: 'pete',
+    shows: 'Admin people: benji waiting, the members table, who can join, invites, phones',
+    path: '/admin/people',
+  },
+  {
+    name: 'admin-3-web-posts',
+    as: 'pete',
+    shows: 'Admin posts: by network, by kind, understood for search, needs attention, find a post',
+    path: '/admin/posts',
+    known: ['The filler posts are X posts, so X leads By network (the board leads with YouTube).'],
+  },
+  {
+    name: 'admin-4-web-channels-live',
+    as: 'pete',
+    shows: 'Admin channels and live: top channels by plays, reactions by emoji, tune-ins by day',
+    path: '/admin/channels',
+    known: ['Made for you channels are someone’s own, so they never appear in Top channels.'],
+  },
+  {
+    name: 'admin-5-web-live',
+    as: 'pete',
+    shows: 'Admin live: moments live and forming, this week’s moments, reactions, who reacts most',
+    path: '/admin/live',
+    known: ['Live moment names come from the no-model fallback (“Baby”, “Dark”).'],
+  },
+  {
+    name: 'admin-6-web-analytics',
+    as: 'pete',
+    shows:
+      'Admin analytics: opens, plays, searches, sends, where/when/search mode, funnel, saved from',
+    path: '/admin/analytics',
+    known: [
+      'Reactions are counted without their post, so the funnel’s third row is reactions sent, not posts reacted to.',
+      'Phone saves aren’t split into iPhone and Android (bookmarks.source says phone_app only).',
+    ],
+  },
+  {
+    name: 'admin-7-web-processing',
+    as: 'pete',
+    shows:
+      'Admin processing: the server-wide queue, Pause new work, Retry failed, Mac helper, settings',
+    path: '/admin/processing',
+    known: ['The parity server runs with understanding off, so Settings says “Off”.'],
+  },
+  {
+    name: 'admin-8-web-moderation',
+    as: 'pete',
+    shows: 'Admin moderation: dark chocolate looked up (Hide), Ben looked up, hidden posts, log',
+    path: '/admin/moderation',
+    setup: async (ctx) => {
+      const { page } = ctx
+      await attempt(ctx, 'post looked up', async () => {
+        const field = page.getByRole('textbox', { name: 'Post link' }).first()
+        await field.fill('https://www.instagram.com/reel/DbaFQ90SWzo')
+        await field.press('Enter')
+        await page.getByRole('button', { name: 'Hide' }).first().waitFor({ timeout: 15_000 })
+      })
+      await attempt(ctx, 'person looked up', async () => {
+        const field = page.getByRole('textbox', { name: 'Username' }).first()
+        await field.fill('ben')
+        await field.press('Enter')
+        await page.getByRole('button', { name: 'Clear notes' }).first().waitFor({ timeout: 15_000 })
+      })
+    },
+  },
+  {
+    name: 'admin-9-web-invites',
+    as: 'pete',
+    shows: 'Admin invites: who can invite, benji waiting, invite links, sign-in links',
+    path: '/admin/invites',
+    known: [
+      'Sign-in links held for an admin need EMAIL_LINKS_TO_ADMIN; the parity server prints them to its log.',
+    ],
+  },
+  {
+    name: 'admin-10-web-person',
+    as: 'pete',
+    shows:
+      'Admin, one person (Ana): KPIs, saves per day, her shared saves, phones, who she brought in',
+    path: '/admin/people/ana',
+    known: ['Ana has no Just for me saves (they’d change her channel counts on other boards).'],
+  },
 ]
 
 // ——— the run ———

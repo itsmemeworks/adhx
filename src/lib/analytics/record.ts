@@ -179,6 +179,7 @@ export function recordPostAnalytic(
     | 'post.share'
     | 'post.send'
     | 'post.play'
+    | 'post.finish'
     | 'post.copy'
     | 'post.open'
     | 'post.tag'

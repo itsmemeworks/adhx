@@ -1,7 +1,6 @@
 import { db } from '@/lib/db'
 import {
   activity,
-  adminAudit,
   bookmarkTags,
   bookmarks,
   moderatedPosts,
@@ -12,208 +11,13 @@ import {
   users,
 } from '@/lib/db/schema'
 import { and, desc, eq, sql } from 'drizzle-orm'
-import { getAnalyticsSummary, getPostAnalytics, type AnalyticsWindow } from '@/lib/analytics/query'
+import { getPostAnalytics, type AnalyticsWindow } from '@/lib/analytics/query'
 import { getUserIdForUsername } from '@/lib/users/lookup'
-import { isUserBanned, previewPathFor } from './moderation'
+import { isUserBanned } from './moderation'
 import { previewPath } from '@/lib/activity/preview-path'
-
-export interface AdminOverview {
-  generatedAt: string
-  window: AnalyticsWindow
-  analytics: ReturnType<typeof getAnalyticsSummary>
-  stats: {
-    users: number
-    bookmarks: number
-    activityVisible: number
-    activityHidden: number
-    publicPlaylists: number
-    bannedUsers: number
-    moderatedPosts: number
-  }
-  hiddenPosts: Array<{
-    platform: string
-    bookmarkId: string
-    reason: string | null
-    createdAt: string
-    previewPath: string
-  }>
-  bannedUsers: Array<{
-    username: string
-    reason: string | null
-    createdAt: string
-  }>
-  recentAudit: Array<{
-    action: string
-    target: Record<string, unknown> | null
-    createdAt: string
-    actorUsername: string | null
-  }>
-}
 
 function count(n: number | null | undefined): number {
   return Number(n) || 0
-}
-
-export function getAdminOverview(window: AnalyticsWindow = 'week'): AdminOverview {
-  const usersN = db
-    .select({ n: sql<number>`count(*)`.as('n') })
-    .from(users)
-    .all()
-  const bookmarksN = db
-    .select({ n: sql<number>`count(*)`.as('n') })
-    .from(bookmarks)
-    .all()
-  const activityVisible = db
-    .select({ n: sql<number>`count(*)`.as('n') })
-    .from(activity)
-    .where(eq(activity.hidden, 0))
-    .all()
-  const activityHidden = db
-    .select({ n: sql<number>`count(*)`.as('n') })
-    .from(activity)
-    .where(eq(activity.hidden, 1))
-    .all()
-  const publicPlaylists = db
-    .select({ n: sql<number>`count(*)`.as('n') })
-    .from(tagShares)
-    .where(eq(tagShares.isPublic, true))
-    .all()
-  const bannedN = db
-    .select({ n: sql<number>`count(*)`.as('n') })
-    .from(userBans)
-    .all()
-  const moderatedN = db
-    .select({ n: sql<number>`count(*)`.as('n') })
-    .from(moderatedPosts)
-    .where(eq(moderatedPosts.hidden, 1))
-    .all()
-
-  const hiddenRows = db
-    .select({
-      platform: moderatedPosts.platform,
-      bookmarkId: moderatedPosts.bookmarkId,
-      reason: moderatedPosts.reason,
-      contentType: moderatedPosts.contentType,
-      createdAt: moderatedPosts.createdAt,
-    })
-    .from(moderatedPosts)
-    .where(eq(moderatedPosts.hidden, 1))
-    .orderBy(desc(moderatedPosts.createdAt))
-    .limit(50)
-    .all()
-
-  const displayByPost = new Map<string, { author: string; contentType: string | null }>()
-  if (hiddenRows.length > 0) {
-    const displays = db
-      .select({
-        platform: activity.platform,
-        bookmarkId: activity.bookmarkId,
-        author: activity.author,
-        contentType: activity.contentType,
-      })
-      .from(activity)
-      .where(eq(activity.hidden, 1))
-      .all()
-    for (const row of displays) {
-      const key = `${row.platform}:${row.bookmarkId}`
-      const current = displayByPost.get(key)
-      if (row.author && (!current || row.contentType === 'photo')) {
-        displayByPost.set(key, { author: row.author, contentType: row.contentType })
-      }
-    }
-  }
-
-  const bannedRows = db
-    .select({
-      userId: userBans.userId,
-      reason: userBans.reason,
-      createdAt: userBans.createdAt,
-    })
-    .from(userBans)
-    .orderBy(desc(userBans.createdAt))
-    .limit(50)
-    .all()
-
-  const bannedUsers = bannedRows.map((row) => {
-    const [user] = db
-      .select({ username: users.username })
-      .from(users)
-      .where(eq(users.id, row.userId))
-      .limit(1)
-      .all()
-    return {
-      username: user?.username || row.userId,
-      reason: row.reason,
-      createdAt: row.createdAt,
-    }
-  })
-
-  const auditRows = db
-    .select({
-      actorUserId: adminAudit.actorUserId,
-      action: adminAudit.action,
-      target: adminAudit.target,
-      createdAt: adminAudit.createdAt,
-    })
-    .from(adminAudit)
-    .orderBy(desc(adminAudit.createdAt))
-    .limit(30)
-    .all()
-
-  const recentAudit = auditRows.map((row) => {
-    const [actor] = db
-      .select({ username: users.username })
-      .from(users)
-      .where(eq(users.id, row.actorUserId))
-      .limit(1)
-      .all()
-    let target: Record<string, unknown> | null = null
-    if (row.target) {
-      try {
-        target = JSON.parse(row.target) as Record<string, unknown>
-      } catch {
-        target = null
-      }
-    }
-    return {
-      action: row.action,
-      target,
-      createdAt: row.createdAt,
-      actorUsername: actor?.username ?? null,
-    }
-  })
-
-  return {
-    generatedAt: new Date().toISOString(),
-    window,
-    analytics: getAnalyticsSummary(window),
-    stats: {
-      users: count(usersN[0]?.n),
-      bookmarks: count(bookmarksN[0]?.n),
-      activityVisible: count(activityVisible[0]?.n),
-      activityHidden: count(activityHidden[0]?.n),
-      publicPlaylists: count(publicPlaylists[0]?.n),
-      bannedUsers: count(bannedN[0]?.n),
-      moderatedPosts: count(moderatedN[0]?.n),
-    },
-    hiddenPosts: hiddenRows.map((row) => {
-      const display = displayByPost.get(`${row.platform}:${row.bookmarkId}`)
-      return {
-        platform: row.platform,
-        bookmarkId: row.bookmarkId,
-        reason: row.reason,
-        createdAt: row.createdAt,
-        previewPath: previewPathFor(
-          row.platform,
-          display?.author || null,
-          row.bookmarkId,
-          display?.contentType || row.contentType,
-        ),
-      }
-    }),
-    bannedUsers,
-    recentAudit,
-  }
 }
 
 export interface InspectedPost {
@@ -354,6 +158,12 @@ export interface InspectedUser {
   bookmarkCount: number
   publicPlaylistCount: number
   lastSyncAt: string | null
+  /** Notes they left on shared saves (a count). */
+  notes: number
+  phones: number
+  /** Who brought them in (display name, else username), when known. */
+  invitedBy: string | null
+  avatarUrl: string | null
 }
 
 export async function inspectUser(
@@ -436,6 +246,20 @@ export async function inspectUser(
     .all()
 
   const [ban] = db.select().from(userBans).where(eq(userBans.userId, user.id)).limit(1).all()
+  const [extra] = db.all<{
+    notes: number
+    phones: number
+    inviter: string | null
+    avatar: string | null
+  }>(sql`
+    SELECT
+      (SELECT COUNT(*) FROM bookmarks WHERE user_id = ${user.id} AND note IS NOT NULL AND is_private = 0) AS notes,
+      (SELECT COUNT(*) FROM access_keys WHERE user_id = ${user.id} AND scope = 'phone') AS phones,
+      (SELECT COALESCE(m.display_name, m.username) FROM invites i JOIN users m ON m.id = i.created_by
+         WHERE i.used_by = ${user.id} ORDER BY i.used_at LIMIT 1) AS inviter,
+      (SELECT CASE WHEN p.value = 'generated' THEN NULL ELSE u.avatar_url END FROM users u
+         LEFT JOIN user_preferences p ON p.user_id = u.id AND p.key = 'avatarSource'
+         WHERE u.id = ${user.id}) AS avatar`)
 
   return {
     username: user.username,
@@ -453,5 +277,9 @@ export async function inspectUser(
     bookmarkCount: count(bookmarkCount?.n),
     publicPlaylistCount: count(publicPlaylistCount?.n),
     lastSyncAt: lastSync?.completedAt ?? null,
+    notes: count(extra?.notes),
+    phones: count(extra?.phones),
+    invitedBy: extra?.inviter ?? null,
+    avatarUrl: extra?.avatar ?? null,
   }
 }

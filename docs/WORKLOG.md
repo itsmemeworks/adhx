@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Channel curation reconciled with current main
+
+- Integrated the latest privacy, admin and phone updates without replacing their schema or documentation. Both admin counters and image-curation tables install together; account-reference regression expectations include both sets of guards.
+- Image refinement now honours the admin processing pause; Clear data removes only that account’s private curation jobs. Regressions cover pause/resume without spending budget and scoped cache removal. Updated the new privacy page and policy for the separate image opt-in. No live service or private setting changed.
+
 ## 2026-10-20 — Optional image-aware generated channel curation
 
 - In flight: `TYPESAFE_CHANNEL_IMAGES=on` plus a key enables background naming, conservative borderline checks, repeat spacing and channel cover-post selection for Made for you/From everyone. Default off; slugs, saves, files and manual/friend channels stay intact.
@@ -14,6 +19,30 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Known-name choices, confidence gates, a four-member floor, transitive duplicate spacing/cover diversity and collision fallback keep changes conservative. Poster-only/video posts cannot be excluded based on one still. Covers select existing posts, not new video frames; repetition checks are sampled, not exhaustive.
 - Regression coverage includes opt-in, bounded transport, account/privacy races, original/path safety, budgets, restart/stale-claim recovery, uncertainty and no-loss playback ordering. A real synthetic-only eight-image request completed in ~0.5s; no real-library quality claim.
 - README, architecture, environment/Compose examples and `docs/channel-image-curation.md` explain the opt-in cloud boundary and evaluation steps. No live service, private configuration or network was changed.
+
+## 2026-10-20 — A sent post skips "What's in your feed"
+
+- New's kind filter (videos and photos by default) hid text posts and articles someone sent you, so "Pete sent you this" never arrived for most people. A post with an unseen send now passes the filter in every mode that shows sends (`inFeed` in `src/lib/feed/blend-db.ts`); it isn't counted as "waiting". Found by the Android parity pass (#574).
+
+## 2026-10-20 — Phone posters through kept files
+
+- `posterFor()` (`src/lib/app/phone-app.ts`, behind Shared lately's `posterUrl` and On their way's `thumbnail`) now always returns an `/api/files/…/poster` path for Instagram, TikTok and X posts with a picture or video, so a kept poster shows instead of a network thumbnail that may be unreachable (iOS j8-5 showed placeholders).
+
+## 2026-10-20 — iPhone: final design-parity pass
+
+- Compared every phone board (j1-2, j1-3, j2-1–j2-4, j2-7, j3-3, j4-3, j4-4, j5-6, j6-3, j7-3, j7-4, j8-4, j8-5, the note bubble) side by side with the app in the simulator against a fresh parity server.
+- Fixed: two-line serif headings now sit at the boards' 0.95 line height (caught up, Live, Connected, the share card via `tightLines`, iOS 26 only for wrapping text); the note bubble's tail is the board's 45° corner; "Saved together" in Why this one shows every saver's face; the tuned-in byline keeps the names whole and drops the network, then shortens the time; the send sheet's poster is upright 54×96 with the kind on a dark disc; the connected Gob's grin uses the board's own curves.
+- Unchanged on purpose: one-row header, data-only differences (moment names, counts, order), system sheets.
+
+## 2026-10-20 — Android: final phone-board parity pass
+
+- Side by side of every phone board (j1-2/3, j2-1/2/3/4/7, j3-3, j4-3/4, j5-6, j6-3, j7-3/4, j8-4/5, the note bubble) at 390dp against a :3613 parity server.
+- Fixed: words over the player and the search field fell back to Roboto (no `fontFamily`), now Hanken Grotesk; Instrument Serif headings set tighter than the font kept its full ascent/descent, so `serifLineBox` trims them to the CSS line box (share card title, caught-up title); the caught-up shadow is an ellipse, not a pill; Settings' Remove this phone / Decline are 36dp quiet buttons and the This phone card has the boards' padding and line heights; the share card's keep line and bar sit together at the poster's foot.
+- Left as is: the one-row player header, data-only differences (moment names, counts, order), system UI.
+
+## 2026-10-20 — Android: send text posts to your people
+
+- Share on a text post or article now opens the send sheet too ("Sending the words"): Chat, Mail and More send its words, and "Or straight to your people" sends the post, as for videos and photos. Before, words went straight to the system share sheet, so text posts couldn't be sent to a member from the phone (board j4-4 gap).
 
 ## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
 
@@ -24,6 +53,32 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Optional TypeSafe image smoke test sends generated colours only; experimental typed judgments are not search vectors. No private media uploaded.
 - Regression tests cover allocation options, runtime fallback, timestamp validation, representative coverage, exact batch/reference frames and abort/EOF cleanup. Setup/architecture docs link measured results and reproduction steps.
 - No installed worker, server, queue, model cache, private credential or network setting changed. Release-matched rollout and real-library retrieval evaluation remain separate follow-ups.
+
+## 2026-10-20 — Just for me privacy gaps closed
+
+- **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.
+- **Just for me by default** now covers X sync (`saveBookmark(..., isPrivate)`, no pulse for private sync saves) and Keep this channel (`group-keep.ts`), like clones.
+- **Admin-only reads**: GET `/api/activity`, `/api/trending`, `/api/analytics` go through `adminOnlyResponse()` (`src/lib/admin/only.ts`); `public/llms.txt` rewritten for a private friends server.
+- **Kept files** (`src/lib/keep/file-access.ts`): a post whose only saves are Just for me is served only to an owner (session, phone key, or the post's HMAC `?k=` file token that `toPhonePost` and Shared lately add to the owner's own URLs, since AVPlayer/ExoPlayer send no headers), with `private, no-store`; anyone else gets the unsaved-post answer, and not-kept reasons are told to members only.
+- **Lifecycle**: clear data and account delete drop the account's "saved" pulses and `auto_channels` (now account-guarded, 56 triggers); removing one save drops its pulse; `AFTER DELETE ON bookmarks` triggers remove a post's vectors, queue and keyword rows with its last save.
+- PRIVACY.md, `/privacy`, ARCHITECTURE.md, CLAUDE.md and the NAS guide updated (on top of #567's rewrite, merged into this branch).
+
+## 2026-10-20 — Whole-system docs brought up to the friends feed
+
+- README: send to your people, notes, Show more / less, forming moments with "Tell me when it's live", Keep this channel, Getting it ready, `/doing`, invites with approval; phone app section matches the apps. Fixed stale setup lines (`ADMIN_USER_IDS` instead of `ADMIN_USERNAMES`, Android link default, PR wording, `INVITES` not passed by the Compose examples) and the garbled `KEEP_H264` comment in `.env.example`.
+- ARCHITECTURE.md rewritten around the current product: nine Mermaid diagrams (system context, save to watch, the New blend, live moments, who sees what, phone pairing and auth, plus the kept sign-in, understanding and search diagrams with quoted labels), every table by plane checked against `schema.ts`/`migrate.ts`, sections on New, sends, moments and bells, channels, invites and approval, the phone API. `TheaterShell`, Discover and the X-first flow removed or marked legacy.
+- PRIVACY.md and `/privacy` rewritten from the code: who sees what per data kind, notes, sends, viewing marks, weights, reactions, bells, invites, approvals, phone keys, avatars, kept files (unauthenticated, cached 7 days, existence visible), the Mac helper, Jev, analytics, admins, retention, clear vs delete.
+- CLAUDE.md top is now a ~25-line current overview with links; legacy sections are marked (history), the dead old-Header section is gone, test count is 3,558. AGENTS.md and `docs/remote-processing.md` overview lines corrected.
+- Privacy gaps found and documented, not fixed: the send sheet's `has` counts private saves; admin counts include private saves; kept files serve "Just for me" posts and reveal whether a post was saved; X sync and Keep this channel ignore Just for me by default; `GET /api/analytics` is public; Clear keeps `activity.user_id`; `auto_channels`, `post_embeddings` and `post_text_fts` outlive deletion.
+
+## 2026-10-20 — The admin area, to the "10 · Admin" boards
+
+- `/admin` is now nine sections plus a person page (`/admin/people/{username}`) in the new design (`components/next/admin/`, `AdminShell`: NxHeader + Admin chip, a section nav that's a chip row on phones). Server pages read `src/lib/admin/boards/*`; `GET /api/admin/boards/{board}` returns the same. The old Matter `AdminClient` is gone; every capability stayed (hide/show, ban/unban, clear notes, invites, sign-in links, playlist hide, the log). Spec: `docs/specs/admin.md`.
+- Privacy: Just for me saves are counts only (lists come from `postCards`/`sharedSavers`, shared saves only; the rest say "N Just for me"); never what anyone searched or watched; Made for you/private channels never in Top channels.
+- New data: `reaction_counts` (member/day/kind, never words/post/moment) from `react()`; `moment_log` (no user ids: formed, tune-ins once per member, peak, reactions, alerts sent/opened); `users.last_seen_at` (≤ 5 min, `/api/auth/me` + `phoneCaller`); `access_keys.platform`; events `app.open`, `search.found|none` (mode only), `post.finish`, `channel.play|keep`. `server_settings processing.paused` = Pause new work (keep worker, Mac helper claims, local understanding).
+- Actions: make/remove admin (audited; never the last admin), remove a phone, clear a member's notes, Retry failed / retry one / link only. Every `/api/admin/*` answer is `private, no-store` (`withAdmin`).
+- Parity: `seed-admin.ts` (Ana is an admin), captures `admin-1` … `admin-10`. Scores 1.5–5.3. Limits in `e2e/parity/README.md` (server name, filler save times and networks, sign-in links need `EMAIL_LINKS_TO_ADMIN`).
+- Follow-ups: PRIVACY.md got an admins-and-counts section on main's text; PR #567 rewrote PRIVACY.md, so merge by hand. The funnel's third row is reactions sent (reactions carry no post); phone saves aren't split iPhone/Android; no Mac helper Remove (its token is env).
 
 ## 2026-10-20 — Android: send to your people, forming alerts, like thumbnail, Keep this channel
 

@@ -40,6 +40,15 @@ import { unseenSendsTo, type IncomingSend } from '@/lib/sends/sends'
 import { postKinds, readFeedTypes } from './kinds'
 
 /**
+ * "What's in your feed" filters by kind, except a post someone sent you: it
+ * was picked for you, so it shows whatever the filter says (a text post sent
+ * to someone who only watches videos still reaches them).
+ */
+function inFeed(types: readonly FeedKind[], c: { kind: FeedKind; sent?: unknown[] }): boolean {
+  return types.includes(c.kind) || (c.sent?.length ?? 0) > 0
+}
+
+/**
  * The blended feed's database side (`GET /api/feed/blend`, `/api/app/feed`):
  * candidates from everyone's visible saves (`seenBy`: never someone else's
  * private, quoted or banned save), minus moderated and gone posts; the
@@ -497,7 +506,7 @@ export async function computeBlend(
     ]
   })
   // "What's in your feed": the blend, caught up and why all work inside it.
-  const candidates = all.filter((c) => types.includes(c.kind))
+  const candidates = all.filter((c) => inFeed(types, c))
   const ctx = {
     viewerId,
     now,
@@ -509,7 +518,7 @@ export async function computeBlend(
   const waiting =
     mode === 'new'
       ? waitingKinds(
-          all.filter((c) => !types.includes(c.kind)),
+          all.filter((c) => !inFeed(types, c)),
           ctx,
         )
       : {}
@@ -620,7 +629,7 @@ export async function blendPage(
       : []
   })
   const refreshed = blend(
-    current.filter((c) => types.includes(c.kind)),
+    current.filter((c) => inFeed(types, c)),
     snapshot.context,
     mode,
   )
@@ -671,7 +680,7 @@ export async function blendPage(
     waiting:
       mode === 'new'
         ? waitingKinds(
-            current.filter((c) => !types.includes(c.kind)),
+            current.filter((c) => !inFeed(types, c)),
             snapshot.context,
           )
         : {},

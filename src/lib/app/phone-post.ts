@@ -8,6 +8,7 @@ import type { FeedItemResponse } from '@/lib/feed/build-item'
 import type { Saver } from '@/lib/people/types'
 import type { WhyReason } from '@/lib/feed/blend'
 import { keepEnabled } from '@/lib/keep/config'
+import { withFileToken } from '@/lib/keep/file-access'
 import { keepCutoff } from '@/lib/keep/worker'
 
 /**
@@ -70,6 +71,10 @@ export function toPhonePost(
   { post, matched, strength, learning }: SearchItem,
   search: boolean,
 ): PhonePost {
+  // The viewer's own Just for me save: its files are theirs alone, and phone
+  // players can't send the key, so its URLs carry the post's file token.
+  const own = (url: string | null | undefined) =>
+    post.isPrivate ? withFileToken(url, post.platform, post.id) : (url ?? null)
   return {
     platform: post.platform,
     id: post.id,
@@ -87,8 +92,8 @@ export function toPhonePost(
     openPath: previewPath(post.platform, post.author, post.id, post.category),
     media: (post.media ?? []).map((m) => ({
       kind: isVideo(m.mediaType) ? 'video' : 'photo',
-      url: m.url,
-      posterUrl: m.thumbnailUrl || null,
+      url: own(m.url) ?? m.url,
+      posterUrl: own(m.thumbnailUrl || null),
       width: m.width,
       height: m.height,
       durationMs: m.durationMs,

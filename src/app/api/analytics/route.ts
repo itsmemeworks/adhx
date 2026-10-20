@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminOnlyResponse } from '@/lib/admin/only'
 import { getCurrentUserId, getSession } from '@/lib/auth/session'
 import { isAllowedActivityOrigin } from '@/lib/activity/origin'
 import { analyticsWriteLimit } from '@/lib/rate-limit'
@@ -79,15 +80,18 @@ export async function POST(request: NextRequest) {
       return new NextResponse(null, { status: 204 })
     }
 
-    recordPostAnalytic(name as 'post.send' | 'post.play' | 'post.copy' | 'post.open', {
-      userId,
-      platform,
-      bookmarkId,
-      contentType: trustedPost.contentType,
-      surface: typeof surface === 'string' ? surface : null,
-      source: typeof source === 'string' ? source : null,
-      tag: typeof tag === 'string' ? tag : null,
-    })
+    recordPostAnalytic(
+      name as 'post.send' | 'post.play' | 'post.finish' | 'post.copy' | 'post.open',
+      {
+        userId,
+        platform,
+        bookmarkId,
+        contentType: trustedPost.contentType,
+        surface: typeof surface === 'string' ? surface : null,
+        source: typeof source === 'string' ? source : null,
+        tag: typeof tag === 'string' ? tag : null,
+      },
+    )
   } else {
     recordAnalytic({
       name,
@@ -103,10 +107,14 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/analytics?window=today|week|month|all
  *
- * Aggregate growth numbers. Never includes userId. Same anonymity rule as
- * `/api/trending` — useful for future leaderboards and for curling prod.
+ * Aggregate growth numbers, for admins only. Never includes userId.
  */
 export async function GET(request: NextRequest) {
+  const denied = await adminOnlyResponse()
+  if (denied) {
+    denied.headers.set('Cache-Control', 'no-store')
+    return denied
+  }
   const window = parseAnalyticsWindow(request.nextUrl.searchParams.get('window'))
   return NextResponse.json(getAnalyticsSummary(window), {
     // topPosts is moderation-sensitive. Shared or stale caching could keep a

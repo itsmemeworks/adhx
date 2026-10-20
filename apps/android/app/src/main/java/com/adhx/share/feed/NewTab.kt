@@ -98,6 +98,7 @@ import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.Segmented
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.serifLineBox
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.rememberReducedMotion
 import kotlinx.coroutines.delay
@@ -565,6 +566,7 @@ private fun PostSummary(post: PhonePost, server: String) {
             Text(
                 (post.article?.title?.takeIf { it.isNotBlank() } ?: post.text).ifBlank { Copy.handle(post.author.handle) ?: "" },
                 fontSize = 14.sp,
+                lineHeight = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = AdhxColors.White,
                 maxLines = 1,
@@ -573,6 +575,7 @@ private fun PostSummary(post: PhonePost, server: String) {
             Text(
                 listOfNotNull(Networks.name(post.platform), Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt ?: post.savedAt)).joinToString(" · "),
                 fontSize = 12.sp,
+                lineHeight = 16.sp,
                 color = AdhxColors.Faint,
             )
         }
@@ -658,8 +661,8 @@ fun CaughtUp(
                 Modifier
                     .offset(y = (-3).dp)
                     .size(width = 70.dp, height = 8.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.6f)),
+                    // An ellipse (the boards' border-radius: 50%), not a pill.
+                    .drawBehind { drawOval(Color.Black.copy(alpha = 0.6f)) },
             )
             Column(
                 Modifier
@@ -687,6 +690,8 @@ fun CaughtUp(
                     lineHeight = 48.sp,
                     color = AdhxColors.White,
                     textAlign = TextAlign.Center,
+                    // The note sits 14dp under the last line's CSS box, as on the boards.
+                    modifier = Modifier.serifLineBox(50.sp, 48.sp, top = false),
                 )
             }
             Text(

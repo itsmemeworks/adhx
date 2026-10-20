@@ -8,6 +8,7 @@ import { db, runInTransaction } from '@/lib/db'
 import { visibleSave } from '@/lib/people/savers'
 import { absolutePath } from '@/lib/keep/store'
 import { mediaDir } from '@/lib/keep/config'
+import { newWorkPaused } from '@/lib/processing/pause'
 import {
   CHANNEL_IMAGE_MODEL,
   askJevImages,
@@ -250,7 +251,7 @@ export interface VisualDeps {
 }
 
 async function tick(deps: VisualDeps) {
-  if (!channelImagesEnabled()) return
+  if (!channelImagesEnabled() || newWorkPaused()) return
   const now = (deps.now ?? Date.now)()
   const day = new Date(now).toISOString().slice(0, 10)
   const job = runInTransaction(() => {

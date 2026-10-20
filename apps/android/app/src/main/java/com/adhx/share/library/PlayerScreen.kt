@@ -130,6 +130,7 @@ import com.adhx.share.ui.Faces
 import com.adhx.share.ui.PrivateLock
 import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.NetworkMark
+import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.openUrl
@@ -162,7 +163,7 @@ private class Playback {
 private data class Notice(val text: String, val at: Long = System.nanoTime())
 
 /** A soft dark shadow, only for words laid over a picture or video. */
-private val OverMedia = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
+private val OverMedia = TextStyle(fontFamily = SansFamily, shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 1f), 6f))
 
 /**
  * The player: one post at a time, full screen. Swipe up for the next save,
@@ -461,18 +462,8 @@ fun PlayerScreen(
                     }
                 },
                 onShare = {
-                    // Videos, sounds and photos go through the send sheet; words straight to the share sheet.
-                    if (ShareKept.files(post, server).isNotEmpty()) {
-                        sendingPost = post
-                    } else if (sharing == null) {
-                        sharing = post.key
-                        shareProgress = null
-                        scope.launch {
-                            val problem = ShareKept.share(context, server, post) { shareProgress = it }
-                            sharing = null
-                            problem?.let { notice = Notice(it) }
-                        }
-                    }
+                    // Every post goes through the send sheet: files or words, and straight to your people.
+                    sendingPost = post
                 },
                 onSeek = { ms -> player?.seekTo(ms) },
             )
