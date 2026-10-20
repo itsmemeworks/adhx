@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { and, asc, eq, gt, isNull, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNull, sql, type SQL } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { invites, userIdentities, usernameAliases, users } from '@/lib/db/schema'
 import { readServerSetting, writeServerSetting } from '@/lib/settings/server'
@@ -154,6 +154,8 @@ export interface InviteSummary {
   nameHint: string | null
   /** The maker's username. */
   createdBy: string
+  /** The maker's display name, when they set one ("Made by Ana"). */
+  createdByName: string | null
   mine: boolean
 }
 
@@ -175,6 +177,7 @@ export function listPendingInvites(
       nameHint: invites.nameHint,
       createdById: invites.createdBy,
       createdBy: users.username,
+      createdByName: users.displayName,
     })
     .from(invites)
     .innerJoin(users, eq(users.id, invites.createdBy))
@@ -187,7 +190,8 @@ export function listPendingInvites(
         makerCanInvite(),
       ),
     )
-    .orderBy(asc(invites.expiresAt))
+    // Newest first: the one you just made is on top.
+    .orderBy(desc(invites.createdAt), asc(invites.expiresAt))
     .all()
   return rows.map(({ createdById, expiresAt, ...row }) => ({
     ...row,

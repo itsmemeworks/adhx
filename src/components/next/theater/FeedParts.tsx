@@ -345,9 +345,18 @@ function useTonight(on: boolean): TonightCard[] | null {
         savers: Saver[]
         covers?: { post: FeedItem }[]
       }
-      const groups = [...((c?.group ?? []) as Group[])].sort(
-        (a, b) => b.newCount - a.newCount || b.size - a.size,
+      // A channel made of the live moment's own posts would show the same thing twice.
+      const inMoment = new Set(
+        (moment?.covers ?? []).map((p) => `${p.platform ?? 'twitter'}:${p.id}`),
       )
+      const groups = [...((c?.group ?? []) as Group[])]
+        .filter(
+          (g) =>
+            !(g.covers ?? []).some((cv) =>
+              inMoment.has(`${cv.post.platform ?? 'twitter'}:${cv.post.id}`),
+            ),
+        )
+        .sort((a, b) => b.newCount - a.newCount || b.size - a.size)
       for (const g of groups.slice(0, 3 - out.length)) {
         out.push({
           key: `g:${g.slug}`,
@@ -483,15 +492,23 @@ export function CaughtUpStage({
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-10 h-[480px] w-[min(900px,140vw)] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(rgba(255,210,63,0.10),rgba(255,210,63,0)_65%)]"
       />
-      <Gob size={84} className="relative drop-shadow-[0_18px_40px_rgba(255,210,63,0.18)]" />
+      {/* Phones: a bigger Gob with its shadow on the floor, as on the phone board. */}
+      <span className="relative flex flex-col items-center md:hidden">
+        <Gob size={96} className="drop-shadow-[0_18px_40px_rgba(255,210,63,0.18)]" />
+        <span aria-hidden className="mt-2.5 block h-2 w-[70px] rounded-[50%] bg-black/60" />
+      </span>
+      <Gob
+        size={84}
+        className="relative hidden drop-shadow-[0_18px_40px_rgba(255,210,63,0.18)] md:block"
+      />
       <h1
         id="nx-caught-up"
-        className="relative m-0 mt-[22px] font-nx-serif text-[44px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[76px]"
+        className="relative m-0 mt-[18px] font-nx-serif text-[50px] font-normal leading-[0.95] tracking-[-0.01em] md:mt-[22px] md:text-[76px]"
       >
         <span className="block">You’re all caught up.</span>
         <span className="block text-nx-accent">Go touch grass.</span>
       </h1>
-      <p className="relative m-0 mt-4 max-w-[480px] text-[15px] text-nx-soft md:text-lg">
+      <p className="relative m-0 mt-3.5 max-w-[300px] text-base leading-[1.45] text-nx-soft md:mt-4 md:max-w-[480px] md:text-lg">
         That’s everything your people saved since you last looked.
       </p>
       {waits && onShowWaiting && (

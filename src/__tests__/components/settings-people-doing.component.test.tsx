@@ -6,6 +6,7 @@
  * your ADHX is doing, and the header's "N on their way").
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { FeedItem } from '@/components/feed/types'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { AvatarDialog } from '@/components/next/settings/AvatarDialog'
 import { JoinQueue, PeopleCard, type PeopleData } from '@/components/next/settings/PeopleCard'
@@ -80,6 +81,51 @@ describe('Change picture dialog', () => {
   function choose(file: File) {
     fireEvent.change(screen.getByLabelText('Upload a photo'), { target: { files: [file] } })
   }
+
+  it('previews your face on one of your shares, the way your people see it', () => {
+    const sample = {
+      id: 'p1',
+      platform: 'pinterest',
+      author: 'cook',
+      text: 'the sauce',
+      category: 'video',
+      media: [
+        {
+          type: 'video',
+          url: '/api/files/pinterest/p1/poster',
+          thumbnailUrl: '/api/files/pinterest/p1/poster',
+        },
+      ],
+      savers: [
+        {
+          username: 'pete',
+          name: 'Pete',
+          avatarUrl: null,
+          savedAt: new Date(Date.now() - 120_000).toISOString(),
+          isYou: true,
+        },
+        {
+          username: 'ana',
+          name: 'Ana',
+          avatarUrl: null,
+          savedAt: new Date().toISOString(),
+          isYou: false,
+        },
+      ],
+    } as unknown as FeedItem
+    render(
+      <AvatarDialog
+        {...props}
+        xPicture="https://pbs.twimg.com/me.jpg"
+        xHandle="pete"
+        sample={sample}
+      />,
+    )
+    const preview = screen.getByTestId('avatar-preview')
+    expect(preview).toHaveTextContent('Pete and Ana saved this')
+    expect(preview).toHaveTextContent('· 2m')
+    expect(screen.getByRole('radio', { name: /From @pete on X/ })).toBeInTheDocument()
+  })
 
   it('offers upload, camera and a Gob, and X only with an X picture', () => {
     const { unmount } = render(<AvatarDialog {...props} />)

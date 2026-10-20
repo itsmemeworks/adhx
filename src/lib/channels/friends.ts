@@ -23,7 +23,7 @@ export interface FriendChannelView {
   size: number
   /** Of those, the ones the viewer hasn't saved (or seen, once views are kept). */
   newCount: number
-  /** `platform:id` of their newest few, for covers. */
+  /** `platform:id` of their newest few (kept ones first), for covers. */
   coverKeys: string[]
 }
 
@@ -45,7 +45,13 @@ export function friendChannels(viewerId: string, members: Member[]): FriendChann
   const covers = db.all<{ user_id: string; platform: string; id: string }>(
     sql`SELECT user_id, platform, id FROM (
           SELECT b.user_id, b.platform, b.id,
-                 ROW_NUMBER() OVER (PARTITION BY b.user_id ORDER BY b.processed_at DESC, b.id DESC) AS rn
+                 ROW_NUMBER() OVER (
+                   PARTITION BY b.user_id
+                   -- Posts with a kept picture first: one still on its way has nothing to show.
+                   ORDER BY EXISTS (
+                     SELECT 1 FROM kept_files k WHERE k.platform = b.platform AND k.post_id = b.id
+                   ) DESC, b.processed_at DESC, b.id DESC
+                 ) AS rn
           FROM bookmarks b
           WHERE b.user_id IN (${ids}) AND ${visibleSave('b')}
         ) WHERE rn <= ${COVER_POSTS}

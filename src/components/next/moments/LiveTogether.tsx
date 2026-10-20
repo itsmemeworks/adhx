@@ -336,17 +336,10 @@ export function ArrivalToast({
   className?: string
 }) {
   const cover = postCoverSrc(post)
-  return (
-    <div
-      role="status"
-      className={cn(
-        'flex items-center gap-3 rounded-[20px] bg-[#1a1814]/90 py-2.5 pl-2.5 pr-2.5 shadow-nx-toast backdrop-blur-md animate-nx-slide-in',
-        className,
-      )}
-      style={{ boxShadow: `0 0 0 1px ${hue}73, 0 16px 40px rgba(0,0,0,0.5)` }}
-    >
+  const body = (
+    <>
       <span className="relative shrink-0">
-        <span className="block h-[46px] w-[46px] overflow-hidden rounded-xl bg-[#2a2620]">
+        <span className="block h-[42px] w-[42px] overflow-hidden rounded-xl bg-[#2a2620]">
           {cover && <NxImage src={cover} alt="" className="h-full w-full object-cover" />}
         </span>
         <span aria-hidden className="absolute -bottom-1.5 -right-1.5 block">
@@ -357,19 +350,34 @@ export function ArrivalToast({
           />
         </span>
       </span>
-      <span className="flex min-w-0 flex-col gap-0.5 text-[14px]">
+      <span className="flex min-w-0 flex-col gap-0.5 text-left text-[13px]">
         <span className="truncate font-extrabold text-white">{arrivalLine(saver)}</span>
         <span className="text-white/70">{now ? 'playing now' : 'playing next'}</span>
       </span>
-      {onPlay && (
+    </>
+  )
+  // The whole toast plays it now (the board's toast has no separate button).
+  return (
+    <div
+      role="status"
+      className={cn(
+        'rounded-[18px] bg-[#1a1814]/90 shadow-nx-toast backdrop-blur-md animate-nx-slide-in',
+        className,
+      )}
+      style={{ boxShadow: `0 0 0 1px ${hue}73, 0 16px 40px rgba(0,0,0,0.5)` }}
+    >
+      {onPlay ? (
         <button
           type="button"
           onClick={onPlay}
-          className="ml-1 h-8 shrink-0 rounded-full px-3 text-[13px] font-extrabold text-black"
-          style={{ background: hue }}
+          aria-label={`Play it now: ${arrivalLine(saver)}`}
+          className="flex w-full items-center gap-3 rounded-[18px] p-2.5 pr-4 hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          style={{ outlineColor: hue }}
         >
-          <span>Play now</span>
+          {body}
         </button>
+      ) : (
+        <div className="flex items-center gap-3 p-2.5 pr-4">{body}</div>
       )}
     </div>
   )

@@ -252,6 +252,60 @@
       0 0 12px rgba(0, 0, 0, 0.45);
   }
 
+  /* A yellow slider: filled up to the value (--fill, 0–100%), a big round thumb. */
+  .nx-range {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .nx-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      #ffd23f var(--fill, 0%),
+      rgba(255, 255, 255, 0.16) var(--fill, 0%)
+    );
+  }
+  .nx-range::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+  }
+  .nx-range::-moz-range-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: #ffd23f;
+  }
+  .nx-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    margin-top: -10px;
+    border-radius: 999px;
+    background: #ffd23f;
+    box-shadow:
+      0 0 0 3px #1a1814,
+      0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+  .nx-range::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 999px;
+    background: #ffd23f;
+    box-shadow:
+      0 0 0 3px #1a1814,
+      0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+  .nx-range:focus-visible {
+    outline: 2px solid #ffd23f;
+    outline-offset: 4px;
+    border-radius: 999px;
+  }
+
   .nx-shimmer {
     background-image: linear-gradient(90deg, #1c1b19 0%, #2b2926 50%, #1c1b19 100%);
     background-size: 800px 100%;

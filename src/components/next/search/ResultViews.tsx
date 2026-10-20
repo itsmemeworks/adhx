@@ -37,7 +37,9 @@ import {
   mediaBadge,
   ResultTile,
   StrengthMeter,
+  tileAspect,
   tileTitle,
+  type TileShape,
   useReducedMotion,
 } from './ResultTile'
 
@@ -185,9 +187,193 @@ export function BestMatch({
 /** Masonry columns: 2 on phones, 3 on tablets, 4 on wide screens. */
 type HrefFor = (item: SearchResultItem) => string
 
+/** Column counts per Tailwind breakpoint (min-width), for the row-first masonry. */
+export interface MasonryColumns {
+  base: number
+  md?: number
+  lg?: number
+  xl?: number
+  '2xl'?: number
+}
+
+const BREAKPOINT_PX = { md: 768, lg: 1024, xl: 1280, '2xl': 1536 } as const
+
+/** How many columns the viewport gets right now (null before the first effect). */
+function useColumnCount(cols: MasonryColumns | undefined): number | null {
+  const [count, setCount] = useState<number | null>(null)
+  const spec = cols ? JSON.stringify(cols) : ''
+  useEffect(() => {
+    if (!spec) return
+    const c = JSON.parse(spec) as MasonryColumns
+    if (typeof window.matchMedia !== 'function') return setCount(c.base)
+    const queries = (Object.keys(BREAKPOINT_PX) as Array<keyof typeof BREAKPOINT_PX>)
+      .filter((k) => c[k])
+      .map((k) => [window.matchMedia(`(min-width: ${BREAKPOINT_PX[k]}px)`), c[k]!] as const)
+    const pick = () => {
+      let n = c.base
+      for (const [query, value] of queries) if (query.matches) n = value
+      setCount(n)
+    }
+    pick()
+    for (const [query] of queries) query.addEventListener('change', pick)
+    return () => {
+      for (const [query] of queries) query.removeEventListener('change', pick)
+    }
+  }, [spec])
+  return count
+}
+
+/** A tile's height over its width before it has been measured. */
+function estimatedRatio(item: SearchResultItem, shape: TileShape): number {
+  const kind = kindOf(item)
+  if (kind === 'post') return 1
+  if (kind === 'article') return postCoverSrc(item.post) ? 3 / 4 : 1
+  return 1 / tileAspect(item, shape)
+}
+
+interface PlacedTile {
+  key: string
+  node: ReactNode
+  ratio: number
+  /** The note card: always the last column, right under its first tile. */
+  pinLast?: boolean
+}
+
+/**
+ * Where each tile goes in a row-first masonry: in reading order, each into
+ * the shortest column (the leftmost on a tie); a pinned tile (the note card)
+ * goes in the last column, right under that column's first tile. Heights are
+ * the measured ones, else `ratio × columnWidth`. Exported for tests.
+ */
+export function placeTiles<T extends { key: string; ratio: number; pinLast?: boolean }>(
+  tiles: readonly T[],
+  count: number,
+  columnWidth: number,
+  gap: number,
+  heights: Record<string, number> = {},
+): { ordered: Array<{ tile: T; column: number; top: number }>; height: number } {
+  const tops = new Array<number>(count).fill(0)
+  const pinned = tiles.find((t) => t.pinLast)
+  let pinnedPlaced = false
+  const ordered: Array<{ tile: T; column: number; top: number }> = []
+  const place = (tile: T, column: number) => {
+    ordered.push({ tile, column, top: tops[column] })
+    tops[column] += (heights[tile.key] ?? tile.ratio * columnWidth) + gap
+  }
+  for (const tile of tiles) {
+    if (tile.pinLast) continue
+    let column = 0
+    for (let c = 1; c < count; c++) if (tops[c] < tops[column] - 0.5) column = c
+    place(tile, column)
+    if (pinned && !pinnedPlaced && column === count - 1) {
+      pinnedPlaced = true
+      place(pinned, count - 1)
+    }
+  }
+  if (pinned && !pinnedPlaced) place(pinned, count - 1)
+  return { ordered, height: Math.max(0, Math.max(...tops) - gap) }
+}
+
+/**
+ * Row-first masonry: tiles keep reading order across each row and drop into
+ * the shortest column, so the newest sit along the top (CSS columns would
+ * read down the first column). The list stays in reading order in the DOM
+ * (keyboard and screen readers); tiles are placed absolutely from measured
+ * heights. Before the width is known it renders as CSS columns.
+ */
+function RowMasonry({
+  tiles,
+  cols,
+  fallbackColumns,
+}: {
+  tiles: PlacedTile[]
+  cols: MasonryColumns
+  fallbackColumns: string
+}) {
+  const count = useColumnCount(cols)
+  const listRef = useRef<HTMLUListElement>(null)
+  const [width, setWidth] = useState(0)
+  const [gap, setGap] = useState(14)
+  const [heights, setHeights] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    const list = listRef.current
+    if (!list || typeof ResizeObserver === 'undefined') return
+    const measure = () => {
+      setWidth(list.clientWidth)
+      const g = parseFloat(getComputedStyle(list).columnGap)
+      if (Number.isFinite(g)) setGap(g)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(list)
+    return () => observer.disconnect()
+  }, [count])
+
+  const placed = count !== null && width > 0
+  const tileKeys = tiles.map((t) => t.key).join('|')
+  useEffect(() => {
+    const list = listRef.current
+    if (!placed || !list || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      setHeights((prev) => {
+        let next = prev
+        for (const entry of entries) {
+          const el = entry.target as HTMLElement
+          const key = el.dataset.tileKey
+          const h = el.offsetHeight
+          if (!key || !h || prev[key] === h) continue
+          if (next === prev) next = { ...prev }
+          next[key] = h
+        }
+        return next
+      })
+    })
+    for (const el of list.querySelectorAll<HTMLElement>('[data-tile-key]')) observer.observe(el)
+    return () => observer.disconnect()
+  }, [placed, tileKeys])
+
+  if (!placed) {
+    // Until measured: the same reading order, the note after the first row.
+    const rest = tiles.filter((t) => !t.pinLast)
+    const pin = tiles.find((t) => t.pinLast)
+    const firstRow = count ?? cols.base
+    const inOrder = pin ? [...rest.slice(0, firstRow), pin, ...rest.slice(firstRow)] : rest
+    return (
+      <ul ref={listRef} className={cn('list-none gap-2 p-0 md:gap-3.5', fallbackColumns)}>
+        {inOrder.map((tile) => (
+          <li key={tile.key} className="mb-2 break-inside-avoid md:mb-3.5">
+            {tile.node}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  const columnWidth = (width - gap * (count - 1)) / count
+  const { ordered, height } = placeTiles(tiles, count, columnWidth, gap, heights)
+
+  return (
+    <ul ref={listRef} className="relative m-0 list-none gap-2 p-0 md:gap-3.5" style={{ height }}>
+      {ordered.map(({ tile, column, top }) => (
+        <li
+          key={tile.key}
+          data-tile-key={tile.key}
+          className="absolute"
+          style={{ width: columnWidth, left: column * (columnWidth + gap), top }}
+        >
+          {tile.node}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function Masonry({
   items,
   columns = 'columns-2 md:columns-3 2xl:columns-4',
+  rowFirst,
+  shape = 'post',
   onOpen,
   hrefFor,
   showStrength = true,
@@ -197,6 +383,10 @@ export function Masonry({
 }: {
   items: SearchResultItem[]
   columns?: string
+  /** Lay tiles out row by row (reading order) in this many columns, instead of CSS columns. */
+  rowFirst?: MasonryColumns
+  /** See `TileShape` (channels use `tall`). */
+  shape?: TileShape
   onOpen?: (item: SearchResultItem) => void
   hrefFor?: HrefFor
   showStrength?: boolean
@@ -204,9 +394,32 @@ export function Masonry({
   owner?: string
   /** Which tiles get "New". */
   isNew?: (item: SearchResultItem) => boolean
-  /** One more tile (a friend's note card), placed before the item at `at`. */
+  /**
+   * One more tile (a friend's note card), placed before the item at `at`. In a
+   * row-first layout it goes in the last column, under that column's first tile.
+   */
   extra?: { key: string; at: number; node: ReactNode }
 }) {
+  const tileFor = (item: SearchResultItem) => (
+    <ResultTile
+      item={item}
+      onOpen={onOpen}
+      href={hrefFor?.(item)}
+      showStrength={showStrength}
+      owner={owner}
+      isNew={isNew?.(item) ?? false}
+      shape={shape}
+    />
+  )
+  if (rowFirst) {
+    const tiles: PlacedTile[] = items.map((item) => ({
+      key: resultKey(item),
+      node: tileFor(item),
+      ratio: estimatedRatio(item, shape),
+    }))
+    if (extra) tiles.push({ key: extra.key, node: extra.node, ratio: 0.85, pinLast: true })
+    return <RowMasonry tiles={tiles} cols={rowFirst} fallbackColumns={columns} />
+  }
   const extraAt = extra ? Math.min(Math.max(0, extra.at), items.length) : -1
   const extraTile = extra ? (
     <li key={extra.key} className="mb-2 break-inside-avoid md:mb-3.5">
@@ -218,14 +431,7 @@ export function Masonry({
       {items.map((item, i) => [
         i === extraAt ? extraTile : null,
         <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3.5">
-          <ResultTile
-            item={item}
-            onOpen={onOpen}
-            href={hrefFor?.(item)}
-            showStrength={showStrength}
-            owner={owner}
-            isNew={isNew?.(item) ?? false}
-          />
+          {tileFor(item)}
         </li>,
       ])}
       {extraAt === items.length ? extraTile : null}

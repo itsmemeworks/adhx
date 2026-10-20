@@ -159,7 +159,7 @@ describe('ReactionFloats and the arrival toast', () => {
     render(<ArrivalToast saver={jo} post={post} hue="#c4a7ff" onPlay={onPlay} />)
     expect(screen.getByRole('status')).toHaveTextContent('Jo just saved one')
     expect(screen.getByRole('status')).toHaveTextContent('playing next')
-    fireEvent.click(screen.getByRole('button', { name: 'Play now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Play it now: Jo just saved one' }))
     expect(onPlay).toHaveBeenCalled()
   })
 })

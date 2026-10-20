@@ -14,6 +14,7 @@ vi.mock('@/components/auth', () => ({
 
 import { FromEveryoneRow, YourPeopleRow, whoSavedInto } from '@/components/next/channels/PeopleRows'
 import { FriendChannelPage } from '@/components/next/channels/FriendChannelPage'
+import { placeTiles } from '@/components/next/search/ResultViews'
 import { SaverFaces, SaversButton } from '@/components/next/SaverFaces'
 import { sourceFromParams, queueUrl, backHref } from '@/components/next/theater/queue'
 
@@ -211,11 +212,11 @@ describe('friend channel page', () => {
     expect(note).toHaveAttribute('href', '/play?friend=ana&start=twitter%3An2')
     expect(within(note).getByText('“the original and still the best”')).toBeInTheDocument()
     expect(within(note).getByText('on post n2 · 3 days ago')).toBeInTheDocument()
-    // The card is the second tile, after their newest save.
+    // The card follows the first row (two columns on a phone), in reading order.
     const tiles = within(screen.getByRole('region', { name: 'Ana’s saves' })).getAllByRole(
       'listitem',
     )
-    expect(within(tiles[1]).getByRole('link', { name: /^Ana’s note:/ })).toBeInTheDocument()
+    expect(within(tiles[2]).getByRole('link', { name: /^Ana’s note:/ })).toBeInTheDocument()
     // "New" on the two new ones only.
     const grid = screen.getByRole('region', { name: 'Ana’s saves' })
     expect(within(grid).getAllByText('New')).toHaveLength(2)
@@ -266,5 +267,50 @@ describe('theater sources', () => {
     expect(queueUrl(friend, () => '/s')).toBe('/api/channels/friend/ana?new=1')
     expect(backHref(friend)).toBe('/channels/friend/ana')
     expect(friend.search.scope).toBe('everyone')
+  })
+})
+
+describe('row-first masonry (a friend’s channel)', () => {
+  const tile = (key: string, ratio: number, pinLast = false) => ({ key, ratio, pinLast })
+
+  it('keeps reading order along the top row, then fills the shortest column', () => {
+    const { ordered } = placeTiles(
+      [tile('a', 1.8), tile('b', 1.2), tile('c', 1.9), tile('d', 1.3), tile('e', 2)],
+      4,
+      100,
+      10,
+    )
+    expect(ordered.map((o) => [o.tile.key, o.column])).toEqual([
+      ['a', 0],
+      ['b', 1],
+      ['c', 2],
+      ['d', 3],
+      // b's column is the shortest after the first row.
+      ['e', 1],
+    ])
+    expect(ordered[4].top).toBe(130)
+  })
+
+  it('puts the note card in the last column, under its first tile', () => {
+    const { ordered, height } = placeTiles(
+      [tile('a', 1), tile('b', 1), tile('note', 0.5, true), tile('c', 1)],
+      2,
+      100,
+      10,
+    )
+    expect(ordered.map((o) => [o.tile.key, o.column, o.top])).toEqual([
+      ['a', 0, 0],
+      ['b', 1, 0],
+      ['note', 1, 110],
+      ['c', 0, 110],
+    ])
+    expect(height).toBe(210)
+  })
+
+  it('uses measured heights over the estimate', () => {
+    const { ordered } = placeTiles([tile('a', 1), tile('b', 1), tile('c', 1)], 2, 100, 10, {
+      a: 300,
+    })
+    expect(ordered[2]).toMatchObject({ column: 1, top: 110 })
   })
 })

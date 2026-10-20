@@ -254,6 +254,22 @@ describe('Your people (friend channels)', () => {
     expect(friendChannels('', [])).toEqual([])
   })
 
+  it('covers a friend with kept posts first, then their newest', () => {
+    const newest = friendChannels(ANA, listMembers(ANA))[0].coverKeys
+    const older = friendChannelKeys(ANA, listMembers(ANA), 'ben')!.keys.at(-1)!
+    expect(newest).not.toContain(older)
+    const [platform, id] = older.split(':')
+    testInstance.sqlite
+      .prepare(
+        `INSERT INTO kept_files (platform, post_id, slot, path, mime, bytes, created_at)
+         VALUES (?, ?, 'photo-1', 'x/photo-1.jpg', 'image/jpeg', 1, ?)`,
+      )
+      .run(platform, id, new Date().toISOString())
+    const covers = friendChannels(ANA, listMembers(ANA))[0].coverKeys
+    expect(covers[0]).toBe(older)
+    expect(covers.slice(1)).toEqual(newest.slice(0, 2))
+  })
+
   it('counts what the viewer has seen in the feed as not new', () => {
     // The same seen list New writes (`POST /api/views` → `markSeen`).
     markSeen(ANA, [{ platform: 'twitter', id: 't0p1' }])
