@@ -6,10 +6,9 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
-## 2026-10-20 — Phone posters through kept files; sends skip the type filter
+## 2026-10-20 — Phone posters through kept files
 
 - `posterFor()` (`src/lib/app/phone-app.ts`, behind Shared lately's `posterUrl` and On their way's `thumbnail`) now always returns an `/api/files/…/poster` path for Instagram, TikTok and X posts with a picture or video, so a kept poster shows instead of a network thumbnail that may be unreachable (iOS j8-5 showed placeholders).
-- New: an unseen send passes "What's in your feed" (`inFeed()` in `blend-db.ts`), so a text post Pete sends Ana leads her videos-and-photos New and isn't counted as waiting (found while checking Android text sends, #573).
 
 ## 2026-10-20 — iPhone: final design-parity pass
 

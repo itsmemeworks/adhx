@@ -446,14 +446,6 @@ export function setFeedWeightFor(
 
 // ——— Snapshots and pages ———
 
-/**
- * In the feed under "What's in your feed": its kind is on, or someone sent it
- * to you and you haven't seen it yet. A send is addressed to you, so it shows
- * whatever kinds your feed shows (a text post Pete sends you still leads New).
- */
-function inFeed(c: { kind: FeedKind; sent?: readonly unknown[] }, types: readonly FeedKind[]) {
-  return types.includes(c.kind) || !!c.sent?.length
-}
 /** Everything the blend needs for one viewer and mode, then the blend itself. */
 export async function computeBlend(
   viewerId: string,
@@ -505,7 +497,7 @@ export async function computeBlend(
     ]
   })
   // "What's in your feed": the blend, caught up and why all work inside it.
-  const candidates = all.filter((c) => inFeed(c, types))
+  const candidates = all.filter((c) => types.includes(c.kind))
   const ctx = {
     viewerId,
     now,
@@ -517,7 +509,7 @@ export async function computeBlend(
   const waiting =
     mode === 'new'
       ? waitingKinds(
-          all.filter((c) => !inFeed(c, types)),
+          all.filter((c) => !types.includes(c.kind)),
           ctx,
         )
       : {}
@@ -628,7 +620,7 @@ export async function blendPage(
       : []
   })
   const refreshed = blend(
-    current.filter((c) => inFeed(c, types)),
+    current.filter((c) => types.includes(c.kind)),
     snapshot.context,
     mode,
   )
@@ -679,7 +671,7 @@ export async function blendPage(
     waiting:
       mode === 'new'
         ? waitingKinds(
-            current.filter((c) => !inFeed(c, types)),
+            current.filter((c) => !types.includes(c.kind)),
             snapshot.context,
           )
         : {},
