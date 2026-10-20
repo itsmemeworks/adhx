@@ -1,0 +1,132 @@
+name: Android release APK
+
+# Builds the Android app for a published release, signs it with the owner's
+# key from repository secrets, and attaches `adhx-<version>.apk` (plus its
+# SHA-256) to that GitHub release, so friends can install it and Obtainium can
+# keep it updated. Release Please calls this after it creates a release; run it
+# by hand to (re)attach an APK to an existing release.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64    the release keystore, base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD  its store password
+#   ANDROID_KEY_ALIAS          the key's alias
+#   ANDROID_KEY_PASSWORD       the key's password (optional: defaults to the store password)
+# Without them the job skips with a notice instead of failing the release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing release version, for example 2.2.0'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check the version and the signing secrets
+        id: plan
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          VERSION="${VERSION#v}"
+          if ! [[ "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Version must look like 2.2.0, got '$VERSION'"
+            exit 1
+          fi
+          major="${BASH_REMATCH[1]}"; minor="${BASH_REMATCH[2]}"; patch="${BASH_REMATCH[3]}"
+          if (( minor > 99 || patch > 99 )); then
+            echo "::error::Minor and patch must stay under 100 for the Android version code"
+            exit 1
+          fi
+          # 2.2.0 → 20200: always increases with the release, as Android requires.
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$(( major * 10000 + minor * 100 + patch ))" >> "$GITHUB_OUTPUT"
+          if [[ -z "${KEYSTORE_B64}" || -z "${STORE_PASSWORD}" || -z "${KEY_ALIAS}" ]]; then
+            echo "::notice::No Android signing secrets yet, so no APK for v$VERSION. See apps/android/README.md → Release APKs."
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "sign=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.plan.outputs.sign == 'true'
+        with:
+          ref: v${{ steps.plan.outputs.version }}
+
+      - uses: actions/setup-java@v5
+        if: steps.plan.outputs.sign == 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        if: steps.plan.outputs.sign == 'true'
+        with:
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+
+      - name: Build the signed release APK
+        if: steps.plan.outputs.sign == 'true'
+        working-directory: apps/android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ADHX_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ADHX_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ADHX_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ADHX_VERSION_NAME: ${{ steps.plan.outputs.version }}
+          ADHX_VERSION_CODE: ${{ steps.plan.outputs.code }}
+        run: |
+          set -euo pipefail
+          export ADHX_KEYSTORE="$RUNNER_TEMP/adhx-release.keystore"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$ADHX_KEYSTORE"
+          trap 'rm -f "$ADHX_KEYSTORE"' EXIT
+          ./gradlew --no-daemon --max-workers=2 assembleRelease
+
+      - name: Check the signature and name the files
+        if: steps.plan.outputs.sign == 'true'
+        id: apk
+        run: |
+          set -euo pipefail
+          src="apps/android/app/build/outputs/apk/release/app-release.apk"
+          if [[ ! -f "$src" ]]; then
+            echo "::error::No signed APK was built (got: $(ls apps/android/app/build/outputs/apk/release/ || true))"
+            exit 1
+          fi
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$src" | grep -E "Signer #1 certificate (DN|SHA-256)"
+          name="adhx-${{ steps.plan.outputs.version }}.apk"
+          mkdir -p dist
+          cp "$src" "dist/$name"
+          (cd dist && sha256sum "$name" > "$name.sha256")
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Attach to the release
+        if: steps.plan.outputs.sign == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "v${{ steps.plan.outputs.version }}" \
+            "dist/${{ steps.apk.outputs.name }}" "dist/${{ steps.apk.outputs.name }}.sha256" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          echo "Attached ${{ steps.apk.outputs.name }} to v${{ steps.plan.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
