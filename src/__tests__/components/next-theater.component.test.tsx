@@ -106,11 +106,29 @@ const v1 = result('1', { video: true, matched: ['video'] })
 const p2 = result('2')
 const v3 = result('3', { video: true, matched: ['video'], saved: false })
 
+/** Render as a wide screen (the theater's columns), until the test ends. */
+const realMatchMedia = window.matchMedia
+function wideScreen() {
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(min-width: 1024px)' || query === '(hover: hover)',
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+}
+afterEach(() => {
+  window.matchMedia = realMatchMedia
+})
+
 describe('theater queue', () => {
   it('reads and writes play links, rejecting junk', () => {
     expect(
       playHref(
-        { q: 'frogs', scope: 'mine', type: 'all', wordsOnly: false },
+        { q: 'frogs', scope: 'everyone', type: 'all', wordsOnly: false },
         { group: 'video', start: 'twitter:1' },
       ),
     ).toBe('/play?q=frogs&group=video&start=twitter%3A1')
@@ -122,6 +140,8 @@ describe('theater queue', () => {
       group: 'video',
       channel: null,
       auto: null,
+      groupChannel: null,
+      friend: null,
       recent: false,
       moment: null,
       start: 'twitter:1',
@@ -235,6 +255,7 @@ describe('TheaterV2', () => {
   }
 
   it('plays the search results in their refined order', async () => {
+    wideScreen()
     render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
     const queueCall = fetchMock.mock.calls
@@ -242,9 +263,9 @@ describe('TheaterV2', () => {
       .find((u) => u.startsWith('/api/search'))
     expect(queueCall).toContain('refine=1')
     expect(screen.getByText('3 of 3')).toBeInTheDocument()
-    // One back chip for phones (in the header), one for desktop (on the stage).
+    // The back chip leads the stage's chips.
     for (const link of screen.getAllByRole('link', { name: /frogs/ })) {
-      expect(link).toHaveAttribute('href', '/search?q=frogs')
+      expect(link).toHaveAttribute('href', '/search?q=frogs&scope=mine')
     }
   })
 
@@ -277,6 +298,124 @@ describe('TheaterV2', () => {
     } finally {
       window.removeEventListener('nx-post-saved', saved)
     }
+  })
+
+  it('names who saved it and switches Just for me from the More menu', async () => {
+    const named = {
+      ...v1,
+      post: {
+        ...v1.post,
+        savers: [
+          {
+            username: 'ben',
+            name: 'Ben',
+            avatarUrl: null,
+            savedAt: '2026-10-18T10:00:00.000Z',
+            isYou: false,
+          },
+        ],
+        isPrivate: false,
+      },
+    }
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/private') && init?.method === 'PATCH') {
+        return new Response(JSON.stringify({ private: true }))
+      }
+      if (url.startsWith('/api/search') && !url.startsWith('/api/search/similar')) {
+        return new Response(
+          JSON.stringify({
+            items: [named, p2],
+            total: 2,
+            understood: true,
+            close: true,
+            refined: true,
+            nextOffset: null,
+          }),
+        )
+      }
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    expect(screen.getByText('Ben saved this')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    const row = screen.getByRole('menuitemcheckbox', { name: /Just for me/ })
+    expect(row).toHaveAttribute('aria-checked', 'false')
+    fireEvent.click(row)
+    await waitFor(() =>
+      expect(screen.getByRole('menuitemcheckbox', { name: /Just for me/ })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      ),
+    )
+    const patch = fetchMock.mock.calls.find(([u]) => String(u).includes('/private'))
+    expect(patch?.[0]).toBe('/api/bookmarks/1/private')
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ platform: 'twitter', private: true })
+    expect(screen.getAllByRole('img', { name: 'Just for me' }).length).toBeGreaterThan(0)
+  })
+
+  it('shows a friend’s note on the byline and sets yours from the Save sheet', async () => {
+    const noted = {
+      ...v1,
+      saved: true,
+      post: {
+        ...v1.post,
+        savers: [
+          {
+            username: 'ben',
+            name: 'Ben',
+            avatarUrl: null,
+            savedAt: '2026-10-18T10:00:00.000Z',
+            isYou: false,
+            note: 'you’re welcome',
+          },
+          {
+            username: 'me',
+            name: 'Me',
+            avatarUrl: null,
+            savedAt: '2026-10-17T10:00:00.000Z',
+            isYou: true,
+          },
+        ],
+      },
+    }
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/note') && init?.method === 'PATCH') {
+        return new Response(JSON.stringify({ note: 'this is so you, Ben' }))
+      }
+      if (url.startsWith('/api/search') && !url.startsWith('/api/search/similar')) {
+        return new Response(
+          JSON.stringify({
+            items: [noted, p2],
+            total: 2,
+            understood: true,
+            close: true,
+            refined: true,
+            nextOffset: null,
+          }),
+        )
+      }
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    expect(screen.getByRole('figure')).toHaveTextContent('you’re welcome')
+
+    fireEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    const input = await screen.findByLabelText('Add a note')
+    expect(input).toHaveValue('')
+    fireEvent.change(input, { target: { value: 'this is so you, Ben' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([u]) => String(u) === '/api/bookmarks/1/note')).toBe(true),
+    )
+    // Ben's note still leads the byline; yours is in Who saved it.
+    expect(screen.getByRole('figure')).toHaveTextContent('you’re welcome')
+    const sheet = screen.getByRole('dialog', { name: 'Saved. Add to a channel' })
+    fireEvent.click(within(sheet).getAllByRole('button', { name: 'Close' })[0])
+    fireEvent.click(screen.getByRole('button', { name: /saved this/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Who saved it' })
+    await waitFor(() => expect(dialog).toHaveTextContent('Your note: “this is so you, Ben”'))
   })
 
   it('remembers a mute choice over the account default', async () => {
@@ -370,11 +509,13 @@ describe('TheaterV2', () => {
   })
 
   it('plays only the chosen group', async () => {
+    wideScreen()
     render(<TheaterV2 source={{ ...source, group: 'video' }} />)
     await waitFor(() => expect(screen.getByText('1 of 2')).toBeInTheDocument())
   })
 
   it('says when it moves on from the search to similar posts', async () => {
+    wideScreen()
     const similar = [result('9', { video: true, matched: ['video'] })]
     fetchMock.mockImplementation(async (url: string) => {
       const items = url.startsWith('/api/search/similar') ? similar : [v1, p2, v3]
@@ -406,7 +547,8 @@ describe('TheaterV2', () => {
     await act(async () => {})
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     expect(screen.getByTestId('stage')).toHaveTextContent('2')
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await act(async () => {})
+    fireEvent.keyDown(window, { key: 'j' })
     expect(screen.getByTestId('stage')).toHaveTextContent('3')
     // The last video ends: the theater asks for more like it, finds none, stops.
     await act(async () => {

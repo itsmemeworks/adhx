@@ -30,10 +30,28 @@ final class ShareFlow: ObservableObject {
     /// The card's height, so the extension can ask iOS for a sheet that fits it.
     @Published var cardHeight: CGFloat = 0
 
+    /// "Add a note": said with the save, on the byline of everyone who sees it.
+    @Published var note = ""
+    static let noteLimit = 140
+    private var noteTask: Task<Void, Never>?
+
+    /// "Just for me": no one else sees, counts or is told about this save.
+    @Published private(set) var justForMe = false
+    /// Telling the server about a switch made after the save went.
+    @Published private(set) var privacyBusy = false
+    @Published private(set) var privacyError: String?
+    /// The people this phone knows (from the feed and channels), who will see
+    /// a shared save.
+    let people: [Saver] = KnownPeople.all()
+    private var privacyTouched = false
+    private var client: ADHXClient?
+
     private(set) var server: URL?
     private var recordId: String?
     private var saveTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
+    private var queueId: String?
+    private var privacyTask: Task<Void, Never>?
     private var autoCloseTask: Task<Void, Never>?
 
     /// Called once the sheet has animated away.
@@ -88,9 +106,21 @@ final class ShareFlow: ObservableObject {
             return
         }
         server = client.server
+        self.client = client
 
-        let record = ShareRecord(link: link)
-        History.upsert(record)
+        var record = ShareRecord(link: link)
+        // Settings → "Just for me by default": the switch starts on and the
+        // share goes out private.
+        if Prefs.justForMeByDefault {
+            justForMe = true
+            privacyTouched = true
+            record.wantsPrivate = true
+        }
+        record.privacyIntentVersion = 1
+        guard History.upsert(record) else {
+            phase = .problem(title: "Couldn’t save on this phone", message: "Free some space and try again.")
+            return
+        }
         recordId = record.id
         phase = .saving
         saveTask = Task { [weak self] in
@@ -101,22 +131,58 @@ final class ShareFlow: ObservableObject {
     /// Waits for the save request, so the extension can stay up for it after the sheet closes.
     func waitForSave() async {
         await saveTask?.value
+        await privacyTask?.value
+        await noteTask?.value
+    }
+
+    /// The note goes with the save once the card closes: on the saved post
+    /// (`/api/app/note`) when it has landed, else with the same share again
+    /// (same link and request id) after the first has been answered.
+    private func sendNote() {
+        guard noteTask == nil, let text = Saver.clean(note), let client, let link, let recordId else { return }
+        switch phase {
+        case .saving, .saved, .alreadySaved: break
+        default: return
+        }
+        let first = saveTask
+        noteTask = Task { [weak self] in
+            await first?.value
+            if let r = self?.result {
+                _ = try? await client.setNote(platform: r.platform, id: r.id, note: text)
+            } else {
+                _ = try? await client.save(url: link, deferPublish: true, requestId: recordId, note: text)
+            }
+        }
     }
 
     private func save(with client: ADHXClient, link: String, recordId: String) async {
         do {
-            switch try await client.save(url: link) {
+            switch try await client.save(url: link, private: privacyTouched ? justForMe : nil, deferPublish: true, requestId: recordId) {
             case .saved(let r):
                 landed(r, client: client)
             case .queued(let id):
                 // Your ADHX has it and saves it in its own time; ask how it's
                 // going while the sheet is open.
-                History.update(id: recordId) { $0.queue(id) }
-                waitForServer(client: client, queueId: id)
+                queueId = id
+                guard let intent = History.update(id: recordId, { $0.queue(id); $0.publishPending = true }) else {
+                    phase = .problem(title: "Couldn’t remember that share", message: "It stays private. Free some space and try again.")
+                    return
+                }
+                // A choice made before the POST answered is included here. The
+                // server holds new saves private until this is acknowledged.
+                privacyBusy = true
+                defer { privacyBusy = false }
+                try await client.queuedPrivacy(id: id, private: intent.wantsPrivate, intentVersion: intent.intentVersion)
+                History.update(id: recordId) { $0.acknowledgePrivacy(version: intent.intentVersion, private: intent.wantsPrivate) }
+                if !closeRequested { waitForServer(client: client, queueId: id) }
             }
         } catch APIError.offline, APIError.slow {
-            History.update(id: recordId) { $0.stage = .queued }
-            OfflineQueue.add(id: recordId, link: link)
+            // Once accepted, retry its acknowledgement rather than enqueueing
+            // a second job. StatusRefresher keeps the original privacy intent.
+            if queueId == nil {
+                History.update(id: recordId) { $0.stage = .queued }
+                OfflineQueue.add(id: recordId, link: link, isPrivate: privacyTouched ? justForMe : nil)
+            }
             phase = .offline
         } catch APIError.badKey(let message) {
             Keychain.delete()
@@ -135,6 +201,13 @@ final class ShareFlow: ObservableObject {
         if let recordId { History.update(id: recordId) { $0.apply(r) } }
         result = r
         platform = r.platform
+        let serverSays = r.isPrivate ?? false
+        if privacyTouched && serverSays != justForMe {
+            // Switched while it was saving: now the server has it, say so.
+            sendPrivacy(justForMe, platform: r.platform, id: r.id)
+        } else {
+            justForMe = serverSays
+        }
         if r.alreadySaved == true {
             phase = .alreadySaved
         } else {
@@ -220,6 +293,60 @@ final class ShareFlow: ObservableObject {
         }
     }
 
+    // MARK: Just for me
+
+    /// The switch on the card. Before the post has landed it's remembered (and
+    /// sent with a waiting link); after, it goes to `/api/app/private`.
+    func setJustForMe(_ on: Bool) {
+        touch()
+        guard on != justForMe, !privacyBusy else { return }
+        let intent: ShareRecord?
+        if let recordId {
+            intent = History.update(id: recordId) { $0.choosePrivacy(on) }
+            guard intent != nil else {
+                privacyError = "Couldn’t remember that choice. Free some space and try again."
+                return
+            }
+        } else { intent = nil }
+        privacyTouched = true
+        privacyError = nil
+        justForMe = on
+        if let queueId, let client, let recordId, let intent {
+            privacyBusy = true
+            privacyTask = Task { [weak self] in
+                do {
+                    try await client.queuedPrivacy(id: queueId, private: on, intentVersion: intent.intentVersion)
+                    History.update(id: recordId) { $0.acknowledgePrivacy(version: intent.intentVersion, private: on) }
+                } catch {
+                    self?.privacyError = "Couldn’t change that. Try again."
+                }
+                self?.privacyBusy = false
+            }
+        } else if let r = result {
+            sendPrivacy(on, platform: r.platform, id: r.id)
+        } else if let recordId {
+            OfflineQueue.setPrivate(id: recordId, on)
+        }
+    }
+
+    private func sendPrivacy(_ on: Bool, platform: String, id: String) {
+        guard let client else { return }
+        privacyBusy = true
+        Task { [weak self] in
+            do {
+                let now = try await client.setPrivate(platform: platform, id: id, private: on)
+                guard let self else { return }
+                self.justForMe = now
+                if let recordId = self.recordId { History.update(id: recordId) { $0.isPrivate = now } }
+            } catch {
+                guard let self else { return }
+                self.justForMe = !on
+                self.privacyError = "Couldn’t change that. Try again."
+            }
+            self?.privacyBusy = false
+        }
+    }
+
     // MARK: Actions
 
     func touch() {
@@ -232,6 +359,7 @@ final class ShareFlow: ObservableObject {
         guard !closeRequested else { return }
         closeRequested = true
         autoCloseTask?.cancel()
+        sendNote()
     }
 
     func openInADHX() {
@@ -243,6 +371,43 @@ final class ShareFlow: ObservableObject {
     func didClose() {
         pollTask?.cancel()
         autoCloseTask?.cancel()
-        onFinish?()
+        Task { [self] in
+            await waitForSave()
+            onFinish?()
+        }
     }
 }
+
+#if DEBUG
+extension ShareFlow {
+    /// The Saved card with a post and no network: `-adhxSharePreview saved|private`
+    /// in the app (Debug builds), to look at the card in the simulator.
+    static func preview(post: PhonePost, server: URL, private isPrivate: Bool) -> ShareFlow {
+        let flow = ShareFlow()
+        flow.server = server
+        flow.link = post.sourceUrl
+        flow.platform = post.platform
+        flow.result = SaveResult(platform: post.platform, network: nil, id: post.postId, author: post.author.handle,
+                                 authorName: post.author.name, text: post.text, category: post.kind,
+                                 posterUrl: post.posterUrl, openPath: post.openPath, alreadySaved: false,
+                                 savedAt: nil, isPrivate: isPrivate)
+        flow.keep = StatusResult(status: "keeping", percent: isPrivate ? 55 : 40)
+        flow.justForMe = isPrivate
+        flow.touched = true
+        flow.phase = .saved
+        return flow
+    }
+}
+
+extension StatusResult {
+    init(status: String, percent: Int?) {
+        platform = nil
+        id = nil
+        self.status = status
+        self.percent = percent
+        quality = nil
+        kept = nil
+        step = nil
+    }
+}
+#endif

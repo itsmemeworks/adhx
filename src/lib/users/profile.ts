@@ -1,3 +1,4 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
 import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
@@ -118,7 +119,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfileR
   const ban = readUserBan(userId)
   const moderated = readModeratedPostKeys()
   if (!ban.ok || ban.value || !moderated.ok) return { status: 'not_found' }
-  const moderationKey = moderationStateFingerprint(moderated.value)
+  const moderationKey = `${moderationStateFingerprint(moderated.value)}:${savePrivacyFingerprint()}`
 
   const cache = getCache()
   const key = username.toLowerCase()
@@ -255,6 +256,8 @@ async function fetchPublicProfile(
     .orderBy(desc(bookmarks.processedAt))
     .all()
     .filter((b) => !moderated.has(`${b.platform}:${b.id}`))
+    // Private wins: kept-just-for-me posts never count or show here.
+    .filter((b) => !b.isPrivate)
   const bookmarkByKey = new Map(bookmarkResults.map((b) => [`${b.platform}:${b.id}`, b]))
 
   // Group matched bookmarks by tag, preserving the processedAt-desc order

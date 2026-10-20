@@ -102,7 +102,7 @@ fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> 
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = AdhxColors.White, modifier = Modifier.size(22.dp))
+                Icon(com.adhx.share.ui.Glyphs.Back, contentDescription = "Back", tint = AdhxColors.White, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.weight(1f))
             AdhxBrand(markSize = 26.dp)

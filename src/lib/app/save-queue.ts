@@ -1,8 +1,11 @@
+import { recordActivity, previewPath } from '@/lib/activity/record'
+import { keptSrc } from '@/lib/keep/src'
 import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm'
 import { nanoid } from '@/lib/utils'
-import { db } from '@/lib/db'
-import { phoneSaveQueue, users } from '@/lib/db/schema'
+import { db, runInTransaction } from '@/lib/db'
+import { bookmarks, phoneSaveQueue, users } from '@/lib/db/schema'
 import { addBookmark } from '@/lib/bookmarks/add'
+import { privateByDefault, setSavePrivate, type SaveOptions } from '@/lib/bookmarks/privacy'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
 import { captureException } from '@/lib/sentry'
@@ -49,24 +52,57 @@ function state(): State {
   return g.__adhxSaveQueue
 }
 
-/** Take a shared link: it's saved in the background. */
-export function enqueueSave(userId: string, url: string, now = new Date()): QueuedSave {
+/**
+ * Take a shared link: it's saved in the background. `options.private` is kept
+ * with it, so a "Just for me" share is saved private, and so is `options.note`.
+ */
+export function enqueueSave(
+  userId: string,
+  url: string,
+  now = new Date(),
+  options: SaveOptions & { deferPublish?: boolean; requestId?: string } = {},
+): QueuedSave {
   const id = nanoid()
   const iso = now.toISOString()
-  db.insert(phoneSaveQueue)
-    .values({ id, userId, url, status: 'waiting', createdAt: iso, updatedAt: iso })
-    .run()
+  const receipt = runInTransaction(() => {
+    const inserted = db
+      .insert(phoneSaveQueue)
+      .values({
+        id,
+        userId,
+        requestId: options.requestId ?? null,
+        url,
+        status: 'waiting',
+        isPrivate: options.private === true,
+        privateChoice: options.private ?? null,
+        publishPending: options.deferPublish === true,
+        defaultPrivate: options.private === undefined && privateByDefault(userId),
+        // '' keeps "clear the note" distinct from null ("not given").
+        note: options.note === undefined ? null : (options.note ?? ''),
+        createdAt: iso,
+        updatedAt: iso,
+      })
+      .onConflictDoNothing({ target: [phoneSaveQueue.userId, phoneSaveQueue.requestId] })
+      .run()
+    if (inserted.changes === 0 && options.requestId) {
+      const existing = db
+        .select()
+        .from(phoneSaveQueue)
+        .where(
+          and(eq(phoneSaveQueue.userId, userId), eq(phoneSaveQueue.requestId, options.requestId)),
+        )
+        .get()
+      if (!existing || existing.url !== url) throw new QueuedSaveConflict()
+      return queuedSave(userId, existing.id)!
+    }
+    return queuedSave(userId, id)!
+  })
   wakeSaveQueue()
-  return {
-    id,
-    state: 'waiting',
-    platform: null,
-    postId: null,
-    alreadySaved: false,
-    errorCode: null,
-    error: null,
-  }
+  return receipt
 }
+
+/** Reusing a request id must never replace the URL or privacy intent it already accepted. */
+export class QueuedSaveConflict extends Error {}
 
 /** One of your queued saves, or null when it isn't yours (or is long gone). */
 export function queuedSave(userId: string, id: string): QueuedSave | null {
@@ -147,7 +183,14 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
         )
         .get() !== undefined
     if (!canSave()) return
-    const response = await addBookmark(row.userId, row.url, 'phone_app', canSave)
+    // New queued saves are staged privately. The final publication reads the
+    // latest durable intent, never the stale row claimed before network I/O.
+    // Repeat saves are untouched until that same atomic publication step.
+    const response = await addBookmark(row.userId, row.url, 'phone_app', canSave, {
+      defaultPrivate: true,
+      // A new save is staged private, so its note shows only once it's published.
+      ...(row.note === null ? {} : { note: row.note }),
+    })
     status = response.status
     data = (await response.json().catch(() => ({}))) as typeof data
   } catch (error) {
@@ -165,12 +208,16 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
   const platform = data.bookmark?.platform ?? data.platform
   const postId = data.bookmark?.id
   if (status >= 200 && status < 300 && platform && postId) {
-    finish(row.id, {
-      status: 'saved',
-      platform,
-      postId,
-      alreadySaved: !!data.isDuplicate,
-      attempts: row.attempts + 1,
+    runInTransaction(() => {
+      finish(row.id, {
+        status: 'saved',
+        platform,
+        postId,
+        alreadySaved: !!data.isDuplicate,
+        attempts: row.attempts + 1,
+      })
+      const latest = db.select().from(phoneSaveQueue).where(eq(phoneSaveQueue.id, row.id)).get()
+      if (latest) publishQueuedSave(latest)
     })
     // Link-network saves already woke the downloader; start the others now.
     if (!data.isDuplicate && !isLinkNetwork(platform)) wakeKeep()
@@ -187,6 +234,96 @@ export async function runQueuedSave(row: typeof phoneSaveQueue.$inferSelect): Pr
     status: 'waiting',
     attempts,
     nextAttemptAt: new Date(Date.now() + BACKOFF_MS[attempts - 1]).toISOString(),
+  })
+}
+
+/** Apply a queue's latest intent in the same transaction as completion/update.
+ * A new save remains private until the phone acknowledges its chosen intent.
+ * Omitting a choice never changes an existing private save on a repeat share.
+ */
+function publishQueuedSave(row: typeof phoneSaveQueue.$inferSelect): void {
+  if (row.publishPending || !row.platform || !row.postId) return
+  const choice = row.privateChoice ?? (row.isPrivate ? true : undefined)
+  const isPrivate = choice ?? (row.alreadySaved ? undefined : row.defaultPrivate)
+  if (isPrivate === undefined) return
+  const wasPrivate = db
+    .select({ isPrivate: bookmarks.isPrivate })
+    .from(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.userId, row.userId),
+        eq(bookmarks.platform, row.platform),
+        eq(bookmarks.id, row.postId),
+      ),
+    )
+    .get()?.isPrivate
+  setSavePrivate(row.userId, row.platform, row.postId, isPrivate)
+  if (wasPrivate && !isPrivate && !row.alreadySaved) {
+    const post = db
+      .select()
+      .from(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.userId, row.userId),
+          eq(bookmarks.platform, row.platform),
+          eq(bookmarks.id, row.postId),
+        ),
+      )
+      .get()
+    if (post)
+      recordActivity({
+        action: 'save',
+        platform: post.platform,
+        bookmarkId: post.id,
+        userId: row.userId,
+        author: post.author,
+        authorName: post.authorName,
+        text: post.text,
+        contentType: post.category,
+        thumbnailUrl:
+          post.category === 'text' ? null : keptSrc(post.platform, post.id, 'poster', post.author),
+        url: previewPath(post.platform, post.author, post.id, post.category),
+        source: 'phone_app',
+      })
+  }
+}
+
+/** A phone's privacy choice, persisted even while the downloader is working.
+ * Also acknowledges two-phase publication. Unknown/other-owner jobs fail closed.
+ */
+export function updateQueuedPrivacy(
+  userId: string,
+  id: string,
+  choice?: boolean,
+  intentVersion?: number,
+): boolean {
+  return runInTransaction(() => {
+    const current = db
+      .select()
+      .from(phoneSaveQueue)
+      .where(and(eq(phoneSaveQueue.id, id), eq(phoneSaveQueue.userId, userId)))
+      .get()
+    if (!current) return false
+    // Versioned clients persist one monotonically increasing value per intent.
+    // Accepting and applying it share this transaction. A lost response followed
+    // by a retry cannot undo a later web toggle, nor can an older request win.
+    if (intentVersion !== undefined && intentVersion <= current.privacyIntentVersion) return true
+    // Legacy omission-only acknowledgement retries stay idempotent too.
+    if (intentVersion === undefined && choice === undefined && !current.publishPending) return true
+    const row = db
+      .update(phoneSaveQueue)
+      .set({
+        ...(choice === undefined ? {} : { privateChoice: choice, isPrivate: choice }),
+        publishPending: false,
+        ...(intentVersion === undefined ? {} : { privacyIntentVersion: intentVersion }),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(and(eq(phoneSaveQueue.id, id), eq(phoneSaveQueue.userId, userId)))
+      .returning()
+      .get()
+    if (!row) return false
+    publishQueuedSave(row)
+    return true
   })
 }
 
@@ -208,7 +345,10 @@ export async function saveQueueTick(now = new Date()): Promise<number> {
       db.delete(phoneSaveQueue)
         .where(
           and(
-            inArray(phoneSaveQueue.status, ['saved', 'failed']),
+            or(
+              eq(phoneSaveQueue.status, 'failed'),
+              and(eq(phoneSaveQueue.status, 'saved'), eq(phoneSaveQueue.publishPending, false)),
+            ),
             lt(phoneSaveQueue.updatedAt, new Date(now.getTime() - KEEP_FINISHED_MS).toISOString()),
           ),
         )

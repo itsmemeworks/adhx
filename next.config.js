@@ -52,7 +52,6 @@ const nextConfig = {
     '@huggingface/transformers',
     'onnxruntime-node',
     'sharp',
-    'ffmpeg-static',
   ],
 
   // Image optimization for Twitter media
@@ -125,6 +124,18 @@ const nextConfig = {
             'frame-src https://www.instagram.com',
             "frame-ancestors 'none'",
           ].join('; '),
+        },
+      ],
+    },
+    {
+      // Invite pages (not /invite/done or /invite/waiting): script-free, token kept off referrers.
+      source: '/invite/:token((?!(?:done|waiting)$)[^/]+)',
+      headers: [
+        { key: 'Referrer-Policy', value: 'same-origin' },
+        {
+          key: 'Content-Security-Policy',
+          value:
+            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
         },
       ],
     },

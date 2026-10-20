@@ -46,6 +46,10 @@ import { fetchTweetData } from '@/lib/media/fxembed'
 import { keepStatus } from '@/lib/app/phone-app'
 import { listSaves } from '@/lib/app/phone-post'
 import { SEMANTIC_MODEL_VERSION } from '@/lib/semantic/config'
+import { claimProcessingJob } from '@/lib/processing/jobs'
+import { claimNextJob } from '@/lib/processing/scheduling'
+import { enqueuePosts } from '@/lib/semantic/queue'
+import { PRIORITY } from '@/lib/semantic/config'
 import { PROCESSING_PROTOCOL } from '@/lib/processing/protocol'
 import { execFile } from 'child_process'
 
@@ -130,6 +134,155 @@ async function upload() {
 }
 
 describe('remote conversion retaining originals', () => {
+  it.each(['video', 'speech', 'screen'] as const)(
+    'waits for every conversion slot before claiming %s against a source generation',
+    async (kind) => {
+      await saved(2)
+      await enqueuePosts([{ platform: 'twitter', postId: 'post' }], PRIORITY.urgent, [kind])
+      const learn = () =>
+        claimProcessingJob('mac-learning', SEMANTIC_MODEL_VERSION, PROCESSING_PROTOCOL, [kind])
+      expect(await learn()).toBeNull()
+      const first = (await claim())!
+      expect(await learn()).toBeNull()
+      await completeConversionUpload(first.id, first.lease, await upload())
+      // Publishing a second slot also changes the post-wide generation.
+      expect(await learn()).toBeNull()
+      const second = (await claim())!
+      expect(await learn()).toBeNull()
+      await completeConversionUpload(second.id, second.lease, await upload())
+      const job = (await learn())!
+      expect(job?.kind).toBe(kind)
+      expect(job.media?.mime).toBe('video/mp4')
+      expect(job.media?.cacheKey).not.toBe(first.media?.cacheKey)
+    },
+  )
+
+  it('lets text, pure photo OCR and audio transcription progress while another post converts', async () => {
+    await saved()
+    for (const [id, slot, mime] of [
+      ['picture', 'photo-1', 'image/jpeg'],
+      ['sound', 'audio-1', 'audio/mpeg'],
+    ] as const) {
+      instance.db
+        .insert(schema.bookmarks)
+        .values(createTestBookmark(USER_A, id, { text: 'Useful saved words' }))
+        .run()
+      const file = path.join(root, `${id}.bin`)
+      await writeFile(file, 'retained')
+      await recordKept('twitter', id, [{ slot, file, mime }])
+    }
+    await enqueuePosts([{ platform: 'twitter', postId: 'post' }], PRIORITY.urgent, ['text'])
+    await enqueuePosts([{ platform: 'twitter', postId: 'picture' }], PRIORITY.urgent, ['screen'])
+    await enqueuePosts([{ platform: 'twitter', postId: 'sound' }], PRIORITY.urgent, ['speech'])
+    const conversion = (await claim())!
+    expect(conversion.kind).toBe('convert')
+    for (const kind of ['text', 'screen', 'speech'] as const) {
+      const job = await claimProcessingJob(
+        'mac-learning',
+        SEMANTIC_MODEL_VERSION,
+        PROCESSING_PROTOCOL,
+        [kind],
+      )
+      expect(job?.kind).toBe(kind)
+      if (kind === 'screen') expect(job?.files?.map((file) => file.slot)).toEqual(['photo-1'])
+      if (kind === 'speech') expect(job?.media?.mime).toBe('audio/mpeg')
+    }
+  })
+
+  it('gives both newest playback and oldest conversion sources a turn', async () => {
+    await saved(2)
+    instance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark(USER_A, 'newest', {
+          category: 'video',
+          processedAt: new Date(Date.now() + 60_000).toISOString(),
+        }),
+      )
+      .run()
+    const file = path.join(root, 'newest.webm')
+    await writeFile(file, 'new-source')
+    await recordKept('twitter', 'newest', [
+      {
+        slot: 'video-1',
+        file,
+        mime: 'video/webm',
+        width: 1920,
+        height: 1080,
+        durationMs: 120_000,
+        videoCodec: 'vp9',
+        hasAudio: true,
+      },
+    ])
+    instance.sqlite
+      .prepare("UPDATE kept_files SET created_at='2020-01-01' WHERE post_id='post'")
+      .run()
+    instance.sqlite
+      .prepare("UPDATE media_conversions SET source_created_at='2020-01-01' WHERE post_id='post'")
+      .run()
+    const latest = (await claim())!
+    expect(
+      instance.sqlite
+        .prepare('SELECT post_id FROM media_conversions WHERE lease_id=?')
+        .get(latest.id),
+    ).toEqual({ post_id: 'newest' })
+    const oldest = (await claim())!
+    expect(
+      instance.sqlite
+        .prepare('SELECT post_id FROM media_conversions WHERE lease_id=?')
+        .get(oldest.id),
+    ).toEqual({ post_id: 'post' })
+  })
+
+  it('reserves different service classes for simultaneous worker claims', async () => {
+    vi.stubEnv('SEMANTIC_SEARCH', 'on')
+    await saved(2)
+    instance.db
+      .insert(schema.bookmarks)
+      .values(
+        createTestBookmark(USER_A, 'words', {
+          text: 'Public words to understand',
+        }),
+      )
+      .run()
+    await enqueuePosts([{ platform: 'twitter', postId: 'words' }], PRIORITY.urgent, ['text'])
+    const jobs = await Promise.all(
+      ['mac-a', 'mac-b'].map((workerId) =>
+        claimNextJob(workerId, SEMANTIC_MODEL_VERSION, PROCESSING_PROTOCOL, ['text']),
+      ),
+    )
+    expect(jobs.map((job) => job?.kind).sort()).toEqual(['convert', 'text'])
+  })
+
+  it('alternates conversion and understanding while both queues have work', async () => {
+    vi.stubEnv('SEMANTIC_SEARCH', 'on')
+    await saved(3)
+    instance.db
+      .insert(schema.bookmarks)
+      .values([
+        createTestBookmark(USER_A, 'words-1', { text: 'Useful public words' }),
+        createTestBookmark(USER_A, 'words-2', { text: 'More useful public words' }),
+      ])
+      .run()
+    await enqueuePosts(
+      [
+        { platform: 'twitter', postId: 'words-1' },
+        { platform: 'twitter', postId: 'words-2' },
+      ],
+      PRIORITY.urgent,
+      ['text'],
+    )
+    const next = () =>
+      claimNextJob('test-mac', SEMANTIC_MODEL_VERSION, PROCESSING_PROTOCOL, ['text'])
+    expect((await next())?.kind).toBe('text')
+    expect((await next())?.kind).toBe('convert')
+    expect((await next())?.kind).toBe('text')
+    expect((await next())?.kind).toBe('convert')
+    // Empty understanding yields its turn rather than blocking playback.
+    instance.sqlite.prepare('DELETE FROM understanding_queue').run()
+    expect((await next())?.kind).toBe('convert')
+  })
+
   it('skips software H264 conversion on the NAS and passes the source probe to recordKept', async () => {
     vi.mocked(probeMedia).mockResolvedValue({ ...valid, videoCodec: 'vp9' })
     vi.mocked(fetchTweetData).mockResolvedValue({

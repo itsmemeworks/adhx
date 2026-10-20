@@ -13,6 +13,7 @@ export const RESERVED_TOP_LEVEL_SEGMENTS = new Set<string>([
   'collections',
   'dev',
   'discover',
+  'invite',
   'leaderboard',
   'library',
   'live',

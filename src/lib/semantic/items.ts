@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import { withoutGone } from './gone'
 import { db } from '@/lib/db'
 import {
@@ -7,21 +7,25 @@ import {
   bookmarkMedia,
   bookmarkTags,
   bookmarks,
-  userBans,
   type Bookmark,
   type BookmarkLink,
 } from '@/lib/db/schema'
 import { buildFeedItem, type FeedItemResponse } from '@/lib/feed/build-item'
 import type { MatchSignal, MatchStrength, SearchHit } from './search'
+import { saversFor, visibleSaveFilter } from '@/lib/people/savers'
 
 /**
  * Turn search hits into feed-shaped posts.
  *
  * The viewer's own saves come from their own copy (their tags, their archive
- * state). Anyone else's post is built from one non-banned saver's copy and
- * stripped of everything about that saver: no tags, no archive state, no
- * save time, no summary, and link rows lose their `userId` and row id.
- * Nothing in the response says who saved it.
+ * state). Anyone else's post is built from one visible save's copy (never a
+ * private, quoted or banned saver's) and stripped of everything about that
+ * saver: no tags, no archive state, no save time, no summary, and link rows
+ * lose their `userId` and row id.
+ *
+ * Signed in, each post then gets `savers` (members who saved it, by name —
+ * `saversFor`) and `isPrivate` (the viewer's own save is just for them).
+ * Signed out (`viewerUserId === ''`), nothing in the response says who saved it.
  */
 
 export interface SearchItem {
@@ -56,6 +60,7 @@ function anonymize(item: FeedItemResponse): FeedItemResponse {
 export async function loadSearchItems(
   hits: SearchHit[],
   viewerUserId: string,
+  opts: { savers?: boolean } = {},
 ): Promise<SearchItem[]> {
   hits = await withoutGone(hits) // channels pass keys straight here
   if (hits.length === 0) return []
@@ -77,10 +82,9 @@ export async function loadSearchItems(
     const others = await db
       .select({ bookmark: bookmarks })
       .from(bookmarks)
-      .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
       .where(
         and(
-          isNull(userBans.userId),
+          visibleSaveFilter,
           inArray(
             bookmarks.id,
             missing.map((h) => h.postId),
@@ -152,7 +156,7 @@ export async function loadSearchItems(
   const items: SearchItem[] = []
   for (const hit of hits) {
     const owned = owners.get(hit.key)
-    if (!owned) continue // unsaved or banned-only since the search ran
+    if (!owned) continue // unsaved, private-only or banned-only since the search ran
     const related = `${owned.row.userId}|${hit.key}`
     const postLinks = links.get(related) ?? []
     const item = buildFeedItem(
@@ -169,6 +173,20 @@ export async function loadSearchItems(
       matched: hit.matched,
       strength: hit.strength,
     })
+  }
+  if (viewerUserId && opts.savers !== false && items.length > 0) {
+    const savers = saversFor(
+      items.map((i) => ({ platform: i.post.platform, id: i.post.id })),
+      viewerUserId,
+    )
+    for (const item of items) {
+      const key = `${item.post.platform}:${item.post.id}`
+      item.post = {
+        ...item.post,
+        savers: savers.get(key) ?? [],
+        isPrivate: item.saved && !!owners.get(key)?.row.isPrivate,
+      }
+    }
   }
   return items
 }

@@ -31,9 +31,11 @@ flowchart LR
   subgraph Mac["Native Apple Silicon Mac"]
     Runner["Polling worker and heartbeats"]
     Model["Inference child: text and vision"]
+    Extract["Extract child: speech and on-screen text"]
     FFmpeg["FFmpeg: sample frames / convert video"]
     Scratch[("Bounded temporary cache")]
     Runner <--> Model
+    Runner <--> Extract
     Runner <--> FFmpeg
     Runner <--> Scratch
   end
@@ -41,15 +43,15 @@ flowchart LR
   Runner -->|"HTTPS: claim / media / result"| Web
 ```
 
-| Responsibility           | NAS / Docker host                                                 | Mac worker                                             |
-| ------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------ |
-| Accounts and library     | Owns accounts, phone pairing, X credentials and saves             | Uses a separate machine credential                     |
-| Source ingestion         | Resolves shared URLs, imports X and downloads originals           | Downloads only retained content granted by its job     |
-| Playback                 | Stores and serves retained media                                  | Has temporary working copies                           |
-| Background understanding | Owns priorities, leases, checkpoints and vectors                  | Embeds text, photos and sampled video frames           |
-| Compatibility conversion | Validates uploads and promotes the result                         | Encodes full-resolution H.264/AAC                      |
-| Search                   | Encodes queries, combines keyword/vector scores and applies scope | Builds the background vectors                          |
-| Persistence              | Authoritative database and media backup                           | Disposable scratch and a separate reusable model cache |
+| Responsibility           | NAS / Docker host                                                 | Mac worker                                                                                |
+| ------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Accounts and library     | Owns accounts, phone pairing, X credentials and saves             | Uses a separate machine credential                                                        |
+| Source ingestion         | Resolves shared URLs, imports X and downloads originals           | Downloads only retained content granted by its job                                        |
+| Playback                 | Stores and serves retained media                                  | Has temporary working copies                                                              |
+| Background understanding | Owns priorities, leases, checkpoints, vectors and extracted words | Embeds text, photos and sampled video frames; transcribes speech and reads on-screen text |
+| Compatibility conversion | Validates uploads and promotes the result                         | Encodes full-resolution H.264/AAC                                                         |
+| Search                   | Encodes queries, combines keyword/vector scores and applies scope | Builds the background vectors                                                             |
+| Persistence              | Authoritative database and media backup                           | Disposable scratch and a separate reusable model cache                                    |
 
 `PROCESSING_MODE=remote` suppresses the NAS's heavy indexing child. The query
 model, keyword index, download worker and cheap media probes stay on the NAS.
@@ -96,7 +98,12 @@ sequenceDiagram
 ```
 
 The account-owned `phone_save_queue` tracks waiting, working, saved or failed
-URLs. The phone persists its receipt so it can follow the same request after an
+URLs. New native shares use `deferPublish` to stage saves privately until their
+chosen privacy is acknowledged by `PATCH /api/app/save`. The monotonic
+`intentVersion` is persisted on the phone and server; an accepted acknowledgement
+whose response was lost can be retried without undoing a later web privacy edit.
+A stable per-account `requestId` also resumes the same receipt after a lost
+initial POST response; reusing it with a different URL returns a conflict. The phone persists its receipt so it can follow the same request after an
 interruption. Older clients without `Prefer: respond-async` use the synchronous
 save path. X imports and browser saves join the downstream media/understanding
 stages without using phone receipts.
@@ -134,10 +141,10 @@ sequenceDiagram
     R->>A: Heartbeat every 20 seconds
     A->>D: Renew current lease
   and Compute one result
-    R->>C: Embed text, photo or one section of sampled frames
-    C-->>R: Embedding vector
+    R->>C: Embed text, photo or one section of sampled frames, or transcribe / read on-screen text
+    C-->>R: Embedding vector, or words
   end
-  R->>A: Complete job or submit section vector
+  R->>A: Complete job, submit section vector, or send extracted words
   A->>D: Validate generation, atomically checkpoint result and queue
   A-->>R: Acknowledge, indicate whether whole video is done
   R->>R: Remove frames, remove downloaded original when done
@@ -147,11 +154,44 @@ Claims use two-minute leases renewed by heartbeats. Results are checked against
 the current lease, pinned model, content generation and video profile. Stale
 results after a source change, deletion or moderation are rejected. The pinned
 EmbeddingGemma 2 model produces 768-dimensional vectors with q4 text weights and
-a q8 vision encoder. No audio inference is performed.
+a q8 vision encoder.
 
-Conversion claims take priority over inference. Within understanding, fresh
-saves and Up next have higher priority than imports and backfill; words precede
-pictures and video within a priority. Each completed video section releases its
+Speech and on-screen text are processed too, entirely on your own hardware: the
+NAS in local mode, the Mac in remote mode. Nothing is sent to any outside
+service for this. A `speech` job leases the retained video (or a sound-only
+post's audio); the Mac transcribes the first ten minutes with the pinned
+Whisper base model (fp32 encoder, 8-bit decoder, language detected per
+30-second window) and drops silence, music and invented outro lines. A `screen`
+job leases up to four retained pictures plus the video, fetched one at a time by
+`slot`; the Mac reads them and four frames from the first minute with the pinned
+Florence-2 base model (8-bit), dropping slivers and stray marks. The Mac sends
+back only the cleaned words with `extracted`; the NAS applies the same filter
+again, stores them in `post_extracted_text`, rewrites the post's keyword row and
+queues its text vector again in the same transaction. Video-consuming learning
+waits for all conversion slots of that post, so file replacement cannot
+immediately invalidate an expensive speech or OCR pass. Both models run in a
+separate extract process that holds one model at a time and exits when idle.
+
+The protocol is versioned. Version 2 workers send `protocol: 2` and the `kinds`
+they can do (`SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off` on the Mac leaves
+one out); the server only hands out kinds it has switched on. Optional `media.cacheKey`
+identifies one retained-file generation independently of its learning kind, so
+speech, text on screen and video sections can share one downloaded original.
+`releaseMedia` acknowledgements and bounded claim reconciliation on subsequent polls remove copies
+with no remaining consumer, including cancelled/deleted sources. Expiry and the
+scratch budget bound leftovers when the server cannot be reached. Older workers
+ignore these additive fields; older servers retain per-kind caching. A version 1
+worker is still accepted and is only ever given text, image, video and
+conversion jobs, so it never sees a kind it doesn't know. A newer kind a
+version 2 worker doesn't recognise is deferred back to the queue.
+
+Claims alternate between conversion and understanding, with the turn persisted
+on the server. An empty class yields immediately; pausing indexing still allows
+conversion. Conversion alternates newest-save and oldest-source ordering.
+Within understanding, fresh saves and Up next start above imports and backfill,
+while each minute waiting adds one effective priority point so old work cannot
+be starved indefinitely. Within a priority, words come first, then pictures,
+speech, on-screen text and video. Each completed video section releases its
 lease and returns unfinished work to backfill priority, giving new saves another
 chance to run. Failures use bounded retries with backoff and can ultimately need
 operator attention.
@@ -182,8 +222,8 @@ videos use wider spacing when the section cap is reached.
 
 For example, a ten-minute video at normal detail has ten 60-second sections,
 each with 15 samples. A 126-second video has three 42-second sections, each with
-11 samples. Both cover the ending. Sampling can miss brief events and does not
-transcribe speech.
+11 samples. Both cover the ending. Sampling can miss brief events; speech is
+transcribed by its own job (above).
 
 `video_index_state` records the plan and next section; `video_segments` stores
 acknowledged section vectors. Search can use finished sections before the whole
@@ -212,7 +252,7 @@ flowchart TD
   Upload --> Check{"NAS validates lease, source, codec, dimensions, duration and audio"}
   Check -->|"Valid"| Commit["Promote unique file and commit per-slot metadata swap"]
   Commit --> Ack["Acknowledge; remove unreferenced NAS source"]
-  Ack --> Local["Remove Mac downloaded source"]
+  Ack --> Local["Release Mac source when no queued pass still needs that generation"]
   Check -->|"Rejected"| Retry["Keep NAS source; retry or require attention"]
   Encode -->|"Failure"| Retry
   Upload -->|"Failure"| Retry
@@ -228,16 +268,19 @@ Verify promoted-file playback too: an upload log alone is insufficient evidence.
 
 | Mac data                                                     | Lifetime                                                                          |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| Downloaded photo or completed video's working copy           | Removed after final acknowledged result                                           |
+| Downloaded photo or completed video's working copy           | Shared across kinds; removed after final queued consumer acknowledges             |
 | Unfinished video's working copy                              | Reused between sections; can expire or be evicted to meet budget                  |
 | Sampled frames                                               | Removed after each section, including failures                                    |
+| Speech samples and on-screen text frames                     | Removed after each job, including failures; crash leftovers swept as scratch      |
 | Conversion output                                            | Removed after each upload attempt                                                 |
 | Partial downloads and abandoned frame/conversion directories | Startup/periodic cleanup; one-hour expiry, earlier eviction under budget pressure |
 | Orphaned originals                                           | 24-hour expiry during cleanup, earlier eviction under budget pressure             |
 | Model weights                                                | Separate reusable cache, retained across jobs and updates                         |
 
 The default worker budget is 8 GiB of scratch and 4 GiB per file, including space
-reserved for active frame or conversion output. A job that cannot fit is deferred
+reserved for active frame, OCR, audio or conversion output. Every input in the
+current job is pinned during pruning; insufficient space defers the job without
+deleting its active inputs. A job that cannot fit is deferred
 rather than allowing unbounded growth. Use one runner per cache directory.
 Cleanup runs while the worker runs; offline crash leftovers wait until startup.
 Logs need a host log-rotation policy and are separate from media scratch. NAS
@@ -268,13 +311,14 @@ settings establish different things; check all before a bulk import.
 
 ## Implementation map
 
-| Area                                  | Source                                                                                                                 |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Phone receipts and metadata queue     | [`save/route.ts`](../src/app/api/app/save/route.ts), [`save-queue.ts`](../src/lib/app/save-queue.ts)                   |
-| Phone-feed readiness                  | [`phone-post.ts`](../src/lib/app/phone-post.ts)                                                                        |
-| Authentication and protocol           | [`auth.ts`](../src/lib/processing/auth.ts), [`protocol.ts`](../src/lib/processing/protocol.ts)                         |
-| Claims and atomic checkpoints         | [`jobs.ts`](../src/lib/processing/jobs.ts)                                                                             |
-| Video plans and scoring               | [`profiles.ts`](../src/lib/processing/profiles.ts), [`segment-search.ts`](../src/lib/processing/segment-search.ts)     |
-| Native worker, conversion and scratch | [`mac-runner.ts`](../src/lib/processing/mac-runner.ts)                                                                 |
-| Upload validation and promotion       | [`result/route.ts`](../src/app/api/processing/result/route.ts), [`conversion.ts`](../src/lib/processing/conversion.ts) |
-| Model pin and runtime                 | [`config.ts`](../src/lib/semantic/config.ts), [`model.ts`](../src/lib/semantic/model.ts)                               |
+| Area                                  | Source                                                                                                                                                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phone receipts and metadata queue     | [`save/route.ts`](../src/app/api/app/save/route.ts), [`save-queue.ts`](../src/lib/app/save-queue.ts)                                                                               |
+| Phone-feed readiness                  | [`phone-post.ts`](../src/lib/app/phone-post.ts)                                                                                                                                    |
+| Authentication and protocol           | [`auth.ts`](../src/lib/processing/auth.ts), [`protocol.ts`](../src/lib/processing/protocol.ts)                                                                                     |
+| Claims and atomic checkpoints         | [`jobs.ts`](../src/lib/processing/jobs.ts)                                                                                                                                         |
+| Video plans and scoring               | [`profiles.ts`](../src/lib/processing/profiles.ts), [`segment-search.ts`](../src/lib/processing/segment-search.ts)                                                                 |
+| Native worker, conversion and scratch | [`mac-runner.ts`](../src/lib/processing/mac-runner.ts)                                                                                                                             |
+| Upload validation and promotion       | [`result/route.ts`](../src/app/api/processing/result/route.ts), [`conversion.ts`](../src/lib/processing/conversion.ts)                                                             |
+| Model pin and runtime                 | [`config.ts`](../src/lib/semantic/config.ts), [`model.ts`](../src/lib/semantic/model.ts)                                                                                           |
+| Speech and on-screen text             | [`extract-model.ts`](../src/lib/semantic/extract-model.ts), [`extract-media.ts`](../src/lib/semantic/extract-media.ts), [`extract-clean.ts`](../src/lib/semantic/extract-clean.ts) |

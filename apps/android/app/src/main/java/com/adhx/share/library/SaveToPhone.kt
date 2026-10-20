@@ -67,12 +67,15 @@ object SaveToPhone {
         urls: List<String>,
         names: List<String>,
         onProgress: (Float?) -> Unit = {},
+        /** Bytes in so far (all files), and the whole size when it's one file of known length. */
+        onBytes: (read: Long, total: Long?) -> Unit = { _, _ -> },
     ): List<Pair<File, String>>? = withContext(Dispatchers.IO) {
         val folder = try { ShareCache.create(File(context.cacheDir, "shared")) }
             catch (_: IOException) { return@withContext null }
         var complete = false
         try {
             val got = mutableListOf<Pair<File, String>>()
+            var before = 0L
             for ((i, url) in urls.withIndex()) {
                 val address = url.toHttpUrlOrNull()?.newBuilder()?.addQueryParameter("download", "1")?.build()
                     ?: return@withContext null
@@ -102,10 +105,12 @@ object SaveToPhone {
                                     read += n
                                     sinceSpaceCheck += n
                                     onProgress(length?.let { (i + read.toFloat() / it) / urls.size })
+                                    onBytes(before + read, length.takeIf { urls.size == 1 })
                                 }
                             }
                         }
                         got += file to type
+                        before += read
                     }
                 } catch (e: IOException) {
                     return@withContext null

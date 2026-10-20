@@ -4,6 +4,7 @@
  * Applies Drizzle-generated SQL migrations from ./drizzle folder
  * without requiring drizzle-orm at runtime (for standalone Next.js builds)
  */
+import { SAVE_VISIBILITY_DDL } from '../bookmarks/visibility-sql'
 import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
@@ -11,6 +12,7 @@ import { renameReadStatusToArchivedPosts } from './rename-read-status'
 import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
+import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -154,6 +156,26 @@ try {
       created_at TEXT NOT NULL,
       expires_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS invites (
+      id TEXT PRIMARY KEY,
+      token_hash TEXT NOT NULL UNIQUE,
+      created_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used_by TEXT,
+      used_at TEXT,
+      revoked_at TEXT,
+      name_hint TEXT
+    );
+    CREATE INDEX IF NOT EXISTS invites_created_by_idx ON invites(created_by);
+    CREATE TABLE IF NOT EXISTS post_views (
+      user_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      post_id TEXT NOT NULL,
+      seen_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, platform, post_id)
+    );
+    CREATE INDEX IF NOT EXISTS post_views_seen_at_idx ON post_views(seen_at);
     CREATE TABLE IF NOT EXISTS keep_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -201,7 +223,9 @@ try {
       PRIMARY KEY (platform, post_id, slot)
     );
   `)
-  console.log('[migrate] Ensured users/user_identities/login_tokens/access_keys/keep tables')
+  console.log(
+    '[migrate] Ensured users/user_identities/login_tokens/access_keys/invites/post_views/keep tables',
+  )
 } catch (error) {
   console.log('[migrate] FAILED creating account tables', error)
   db.close()
@@ -585,6 +609,96 @@ try {
   // Column already exists — nothing to do.
 }
 
+// bookmarks.is_private / phone_save_queue.is_private — "Just for me" saves.
+// Saves are shared with the server's members by default; a private one is
+// kept for its owner only. Existing rows default to 0 (shared), which is the
+// friends-feed upgrade. Guarded for re-runs (no IF NOT EXISTS).
+try {
+  db.exec('ALTER TABLE bookmarks ADD COLUMN is_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added bookmarks.is_private')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE phone_save_queue ADD COLUMN is_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added phone_save_queue.is_private')
+} catch {
+  // Column already exists — nothing to do.
+}
+
+// Join approvals: users.approval ('approved' | 'pending' | 'declined') and the
+// "Not now" snooze. Every existing account is approved (the column default).
+// server_settings holds runtime server settings such as who can invite.
+// keep_jobs.accepted_at records "Keep the link only" on a job that gave up.
+// phone_save_queue.default_private carries "Just for me by default" for a queued share.
+// Guarded for re-runs (no IF NOT EXISTS on ADD COLUMN).
+try {
+  db.exec("ALTER TABLE users ADD COLUMN approval text NOT NULL DEFAULT 'approved'")
+  console.log('[migrate] Added users.approval')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE users ADD COLUMN approval_snoozed_until integer')
+  console.log('[migrate] Added users.approval_snoozed_until')
+} catch {
+  // Column already exists — nothing to do.
+}
+try {
+  db.exec('ALTER TABLE phone_save_queue ADD COLUMN default_private integer NOT NULL DEFAULT 0')
+  console.log('[migrate] Added phone_save_queue.default_private')
+} catch {
+  // Column already exists — nothing to do.
+}
+// Queue intent is durable before a phone's share extension can disappear.
+for (const [column, definition] of [
+  ['private_choice', 'integer'],
+  ['publish_pending', 'integer NOT NULL DEFAULT 0'],
+  ['privacy_intent_version', 'integer NOT NULL DEFAULT 0'],
+  ['request_id', 'text'],
+]) {
+  const columns = db.prepare('PRAGMA table_info(phone_save_queue)').all() as { name: string }[]
+  if (!columns.some((c) => c.name === column))
+    db.exec(`ALTER TABLE phone_save_queue ADD COLUMN ${column} ${definition}`)
+}
+db.exec(
+  'CREATE UNIQUE INDEX IF NOT EXISTS phone_save_queue_request_idx ON phone_save_queue(user_id, request_id)',
+)
+// bookmarks.note / phone_save_queue.note — a few words on a save for your
+// people, shown to members only. Nullable, so existing rows have no note.
+// Guarded for re-runs (no IF NOT EXISTS on ADD COLUMN).
+for (const table of ['bookmarks', 'phone_save_queue']) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+  if (!columns.some((c) => c.name === 'note')) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN note text`)
+    console.log(`[migrate] Added ${table}.note`)
+  }
+}
+try {
+  db.exec('ALTER TABLE keep_jobs ADD COLUMN accepted_at text')
+  console.log('[migrate] Added keep_jobs.accepted_at')
+} catch {
+  // Column already exists — nothing to do.
+}
+// keep_jobs.progress: the download percent the worker last wrote, for
+// "Getting it ready · 62%" in the theater. Nullable; guarded for re-runs.
+{
+  const columns = db.prepare('PRAGMA table_info(keep_jobs)').all() as { name: string }[]
+  if (!columns.some((c) => c.name === 'progress')) {
+    db.exec('ALTER TABLE keep_jobs ADD COLUMN progress integer')
+    console.log('[migrate] Added keep_jobs.progress')
+  }
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS server_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+`)
+
+db.exec(SAVE_VISIBILITY_DDL)
+
 // Public analytics validates post existence across all bookmark owners and
 // against visible activity. The bookmarks PK begins with user_id and the
 // activity dedupe index begins with action, so neither can serve these exact
@@ -693,6 +807,18 @@ try {
   }
 } catch (error) {
   console.log('[migrate] Warning: activity pruning failed', error)
+}
+
+// post_views is the feed's watched list. New only looks back ~14 days and
+// "close to you" ~180, so older rows are never read again.
+try {
+  const cutoff = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
+  const res = db.prepare('DELETE FROM post_views WHERE seen_at < ?').run(cutoff)
+  if (res.changes > 0) {
+    console.log(`[migrate] Pruned ${res.changes} post_views rows older than 180 days`)
+  }
+} catch (error) {
+  console.log('[migrate] Warning: post_views pruning failed', error)
 }
 
 // users.role — authorization belongs to the immutable account id. Existing
@@ -1051,6 +1177,18 @@ try {
   console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
 } catch (error) {
   console.error('[migrate] FAILED ensuring admin moderation tables', error)
+  db.close()
+  process.exit(1)
+}
+
+// Sends to your people (post_sends) and "Tell me when it's live"
+// (moment_alert_subs, moment_alerts). User-linked, so they exist before the
+// account guards below are installed.
+try {
+  db.exec(BOARD_FEATURES_DDL)
+  console.log('[migrate] Ensured post_sends / moment_alert_subs / moment_alerts tables')
+} catch (error) {
+  console.log('[migrate] FAILED creating post_sends / moment alert tables', error)
   db.close()
   process.exit(1)
 }

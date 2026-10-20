@@ -27,3 +27,24 @@ updates:
     groups:
       actions:
         patterns: ['*']
+
+  - package-ecosystem: 'npm'
+    directory: '/extension'
+    schedule:
+      interval: 'weekly'
+    groups:
+      extension-tooling:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+  - package-ecosystem: 'gradle'
+    directory: '/apps/android'
+    schedule:
+      interval: 'weekly'
+    groups:
+      android-libraries:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+  - package-ecosystem: 'docker'
+    directory: '/'
+    schedule:
+      interval: 'weekly'

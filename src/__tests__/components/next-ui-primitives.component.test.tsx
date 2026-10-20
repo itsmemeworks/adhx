@@ -7,7 +7,9 @@ import {
   AdhxLoader,
   ArticleStage,
   ArticleTile,
+  GobShape,
   NextTile,
+  NxAvatar,
   PasteToast,
   PhotoTile,
   PostStage,
@@ -19,6 +21,8 @@ import {
   WideMediaStage,
   articleLede,
   displayUrl,
+  faceColour,
+  faceInitial,
   isTallMedia,
   mediaImageSrc,
   nextPostKind,
@@ -200,6 +204,63 @@ describe('tiles', () => {
     expect(fallback).not.toBeNull()
     fireEvent.error(fallback!)
     expect(container.querySelector('img[src*="pbs.twimg.com/original"]')).toBeNull()
+  })
+})
+
+describe('faces', () => {
+  it('NxAvatar is Gob shaped: a 38% rounded square tilted −4°, the photo upright inside', () => {
+    const { container } = render(
+      <NxAvatar
+        author={{ avatarUrl: 'https://pbs.twimg.com/ana.jpg', handle: 'ana', name: 'Ana' }}
+        size={40}
+        className="border-2"
+      />,
+    )
+    const frame = container.querySelector('[data-shape="gob"]') as HTMLElement
+    expect(frame.className).toContain('rounded-[38%]')
+    expect(frame.className).toContain('-rotate-[4deg]')
+    expect(frame.className).toContain('overflow-hidden')
+    expect(frame.className).toContain('border-2')
+    expect(frame.className).not.toContain('rounded-full')
+    expect(frame.style.width).toBe('40px')
+    const img = frame.querySelector('img')!
+    expect(img.parentElement!.className).toContain('rotate-[4deg]')
+    expect(img.getAttribute('src')).toBe('https://pbs.twimg.com/ana.jpg')
+  })
+
+  it('falls back to their initial on their colour, upright in the frame', () => {
+    const { container } = render(
+      <NxAvatar author={{ avatarUrl: null, handle: 'ana', name: 'Ana' }} size={30} />,
+    )
+    expect(container.querySelector('img')).toBeNull()
+    const face = container.querySelector('[data-face="initial"]') as HTMLElement
+    expect(face).toHaveAttribute('data-initial', 'A')
+    expect(face.style.background).toBe('rgb(255, 143, 163)') // Ana is pink, as on the boards
+    expect(face.parentElement!.className).toContain('rotate-[4deg]')
+  })
+
+  it('gives the boards’ people the boards’ colours, from the username alone', () => {
+    expect(['ana', 'ben', 'mum', 'jo', 'pete'].map(faceColour)).toEqual([
+      '#ff8fa3',
+      '#7fd1ae',
+      '#ffb35c',
+      '#c4a7ff',
+      '#6b8cff',
+    ])
+    expect(faceColour('@Ana')).toBe(faceColour('ana'))
+    expect(faceInitial('You', 'pete')).toBe('P')
+    expect(faceInitial('Ana', 'ana')).toBe('A')
+  })
+
+  it('GobShape takes its size from the caller', () => {
+    const { container } = render(
+      <GobShape className="h-14 w-14">
+        <span />
+      </GobShape>,
+    )
+    const frame = container.querySelector('[data-shape="gob"]') as HTMLElement
+    expect(frame.className).toContain('h-14')
+    expect(frame.style.width).toBe('')
   })
 })
 

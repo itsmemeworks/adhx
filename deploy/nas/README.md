@@ -209,12 +209,17 @@ Start with a small library. For a shared NAS, explicitly set
 while this directory's `.env.example` selects one. Measure memory and CPU
 alongside your existing services.
 Development measurements put the full inference worker near 2 GB and the
-text query worker around 600 MB, before the web server and FFmpeg. These are
+text query worker around 600 MB, before the web server and FFmpeg. While it
+transcribes speech or reads text on screen, the worker runs one more process
+that peaks near 1.5 GB (speech) or 1.8 GB (text on screen) and exits after a
+minute without that work. These are
 not memory guarantees for another CPU or Linux image. Video conversion can
 use several cores and substantial temporary disk space, especially at 4K.
 
 - `KEEP_CONCURRENCY`: simultaneous downloads/conversions.
 - `SEMANTIC_THREADS`: inference threads; the separate query worker uses one.
+- `SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off`: stop transcribing speech
+  or reading text on screen (words already found stay searchable).
 - `KEEP_MIN_FREE_GB`: pause starting downloads below the free-space reserve.
   It does not reserve space for work already running; allow extra room for
   downloads, conversion output and other services.

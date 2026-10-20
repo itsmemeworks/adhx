@@ -1,3 +1,4 @@
+import { visibleSaveFilter } from '@/lib/people/savers'
 import { ALL_PLATFORMS } from '@/lib/platform/networks'
 import { db } from '@/lib/db'
 import { activity, bookmarks, type NewActivity } from '@/lib/db/schema'
@@ -289,7 +290,9 @@ export function recordSharePulse(opts: {
         category: bookmarks.category,
       })
       .from(bookmarks)
-      .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
+      // Only a visible save may put a post in the pulse: one kept just for
+      // someone (private) never surfaces through their own plays or shares.
+      .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId), visibleSaveFilter))
       .limit(1)
       .get()
 
@@ -380,7 +383,9 @@ export function recordPreviewPulse(opts: {
         category: bookmarks.category,
       })
       .from(bookmarks)
-      .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId)))
+      // Only a visible save may put a post in the pulse: one kept just for
+      // someone (private) never surfaces through their own plays or shares.
+      .where(and(eq(bookmarks.platform, platform), eq(bookmarks.id, bookmarkId), visibleSaveFilter))
       .limit(1)
       .get()
 

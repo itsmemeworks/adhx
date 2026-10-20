@@ -3,6 +3,7 @@
  * joined media/links/tags) into the shape the feed API returns to the client.
  */
 import type { Bookmark, BookmarkLink, BookmarkMedia } from '@/lib/db/schema'
+import type { Saver } from '@/lib/people/types'
 import { keptSrc } from '@/lib/keep/src'
 import { expandUrls } from '@/lib/utils/url-expander'
 import {
@@ -55,6 +56,10 @@ export type FeedItemResponse = {
   tags: string[]
   parentTweets: FeedItemResponse[] | null
   summary: string | null
+  /** Members who saved it, newest first. Signed-in viewers only; never on a public output. */
+  savers?: Saver[]
+  /** The viewer's own save is just for them. Signed-in viewers only. */
+  isPrivate?: boolean
 }
 
 /** Build a `FeedItemResponse` from a bookmark row and its joined data. */

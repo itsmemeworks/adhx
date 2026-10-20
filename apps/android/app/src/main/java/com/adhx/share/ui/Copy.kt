@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.ShareState
 import com.adhx.share.net.KeepStatus
+import com.adhx.share.net.Saver
 import com.adhx.share.net.StatusResponse
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -24,6 +25,405 @@ object Copy {
     const val FAILED_BODY = "Something went wrong on your ADHX. Try again in a moment."
     const val GONE = "The post is gone, private or can’t be read."
     const val GAVE_UP = "Couldn’t reach your ADHX"
+
+    // Saved for your people, or just for you (the share card and More).
+
+    const val SAVED_SHARED = "Saved for your people"
+    const val ADD_A_NOTE = "Add a note"
+    const val NOTE_HINT = "Why they’ll love it"
+    const val NOTE_PRIVATE_HINT = "A note to future you"
+    const val SAVED_PRIVATE = "Saved, just for you"
+    const val JUST_FOR_ME = "Just for me"
+    const val JUST_FOR_ME_OFF = "Keep it private. Still kept, still searchable."
+    const val JUST_FOR_ME_ON = "Your people won’t see this save"
+    const val SHARED_STATE = "Shared with your people"
+    const val PRIVATE_NOTE = "Only you will see this save. It’s still kept and searchable."
+    const val PRIVATE_LABEL = "Just for you"
+    const val NOW_PRIVATE = "Just for you now"
+    const val NOW_SHARED = "Your people can see it again"
+    const val PRIVATE_FAILED = "Couldn’t change that just now. Try again."
+    const val NOT_YOURS = "That one isn’t in your saves."
+    const val PRIVATE_LATER = "Saved for later, just for you"
+
+    /** "Ana, Ben, Mum and Jo will see it", or "Your people will see it" when we don't know who. */
+    fun willSee(names: List<String>): String =
+        if (names.isEmpty()) "Your people will see it" else "${list(names, max = 4)} will see it"
+
+    // Home: New · Channels · Live
+
+    const val TAB_NEW = "New"
+    const val TAB_CHANNELS = "Channels"
+    const val TAB_LIVE = "Live"
+    val TABS = listOf(TAB_NEW, TAB_CHANNELS, TAB_LIVE)
+
+    const val CAUGHT_UP = "You’re all caught up."
+    const val TOUCH_GRASS = "Go touch grass."
+    const val CAUGHT_UP_NOTE = "That’s everything your people saved since you last looked."
+    const val END_TITLE = "That’s the lot."
+    const val END_NOTE = "You’ve seen the whole pile. It’ll be here when you’re back."
+    const val NOTHING_YET_TITLE = "Nothing new yet."
+    const val NOTHING_YET_NOTE = "Save something for your people to find."
+    const val NOTHING_NEW_NOTE = "Nothing new since you last looked. Your people must be outside."
+    const val BROWSE_CHANNELS = "Browse channels"
+    const val SEE_LIVE = "See what’s live"
+    const val WATCH_AGAIN = "Watch it all again"
+    const val FEED_CANT_LOAD = "The feed didn’t load. Try again."
+
+    /** "12 from Ana, Ben and Mum today" on the caught-up card. */
+    fun watchedSummary(count: Int, names: List<String>): String {
+        val what = if (count == 1) "1 save" else "$count saves"
+        return if (names.isEmpty()) "$what today" else "$count from ${list(names, max = 3)} today"
+    }
+
+    /**
+     * The badge on the New tab: how many unseen posts are left. [more] when
+     * another page may bring more ("19+"). Capped at "99+"; null when there's
+     * nothing to count.
+     */
+    fun newBadge(left: Int, more: Boolean): String? = when {
+        left > 99 -> "99+"
+        left <= 0 && !more -> null
+        more -> "$left+"
+        else -> left.toString()
+    }
+
+    /** "New, 7 left" for a screen reader. */
+    fun newTabDescription(badge: String?): String = when {
+        badge == null -> TAB_NEW
+        badge.endsWith("+") -> "$TAB_NEW, ${badge.dropLast(1)} or more left"
+        else -> "$TAB_NEW, $badge left"
+    }
+
+    const val OPEN_SETTINGS = "Settings"
+    const val SEARCH = "Search everyone’s saves"
+
+    // What's in your feed (the media filter)
+
+    const val FILTER = "Filter"
+    const val FILTER_TITLE = "What’s in your feed"
+    const val FILTER_NOTE = "Videos and photos to start with. Words are one switch away."
+    const val KEEP_ONE = "Keep at least one on."
+    const val DONE = "Done"
+    const val SHOW_THEM = "Show them"
+    val TYPE_LABELS = mapOf(
+        "video" to ("Videos" to "Reels, clips and tracks with sound"),
+        "photo" to ("Photos" to "Single shots, albums and memes"),
+        "text" to ("Text posts" to "Threads, tweets and hot takes"),
+        "article" to ("Articles" to "Long reads, for when you’ve got time"),
+    )
+
+    /** "Show videos and photos": the filter's button, naming what will play. */
+    fun showKinds(types: Set<String>): String {
+        val names = com.adhx.share.net.MediaType.all.filter { it in types }.map { TYPE_LABELS[it]?.first?.lowercase() ?: it }
+        return if (names.isEmpty()) DONE else "Show ${list(names, max = 4)}"
+    }
+
+    /** "12 text posts and 3 articles are waiting. They’ll still be in search and channels." */
+    fun waitingNote(hidden: Map<String, Int>): String? =
+        hiddenLine(hidden)?.removeSuffix(" waiting")?.let { "$it ${if (hidden.values.sum() == 1) "is" else "are"} waiting. They’ll still be in search and channels." }
+
+    /** "4 text posts waiting", "4 text posts and 1 article waiting". */
+    fun hiddenLine(hidden: Map<String, Int>): String? {
+        val parts = com.adhx.share.net.MediaType.all.mapNotNull { t ->
+            val n = hidden[t] ?: return@mapNotNull null
+            val (one, many) = when (t) {
+                "video" -> "video" to "videos"
+                "photo" -> "photo" to "photos"
+                "article" -> "article" to "articles"
+                else -> "text post" to "text posts"
+            }
+            if (n == 1) "1 $one" else "$n $many"
+        }
+        return if (parts.isEmpty()) null else "${list(parts, max = 4)} waiting"
+    }
+
+    const val SEE_ALL = "See all"
+
+    // Connected (just paired)
+    const val PHONE_CONNECTED = "This phone is connected"
+    const val CONNECTED_TO = "Connected to"
+    const val SAVED_THIS_WEEK = "Here’s what your people saved this week"
+    const val START_WATCHING = "Start watching"
+    const val CONNECTED_NOTE = "Share from any app to save. Your saves are shared with your people unless you make them just for you."
+
+    /** "Ana’s ADHX", "your ADHX". */
+    fun whoseAdhx(owner: String?, yours: Boolean): String = when {
+        yours || owner.isNullOrBlank() -> "your ADHX"
+        else -> "$owner’s ADHX"
+    }
+
+    /** "You, Ana, Mum and Jo". */
+    fun youAnd(names: List<String>): String = list(listOf("You") + names, max = 5)
+    const val YOU_SAVED_TOO = "You saved this too"
+    const val PLAY_ALL = "Play all"
+
+    /** "41 found" over search results. */
+    fun found(n: Int): String = "$n found"
+    const val INVITE = "Invite"
+
+    /** "3 new" on a channel's covers. */
+    fun newCount(n: Int): String = if (n > 99) "99+ new" else "$n new"
+
+    const val WHY_TOGETHER = "Saved together"
+    const val WHY_CLOSE = "Close to you"
+    const val WHY_TITLE = "Why this one"
+    const val WHOSE_SAVES = "Whose saves"
+    const val WHY_NOTE = "No engagement bait. These are the only reasons."
+    const val OPEN_YOUR_SAVE = "Open your save"
+    const val WHY_NONE = "It’s new to you. That’s the whole reason."
+    val WHOSE = listOf("Everyone", "Friends only", "Mine")
+
+    /** "Show less from Ben", or "Showing less from Ben" once chosen (tap again for normal). */
+    fun showLess(name: String, on: Boolean) = if (on) "Showing less from $name" else "Show less from $name"
+
+    /** "Show more from Ana", or "Showing more from Ana" once chosen. */
+    fun showMore(name: String, on: Boolean) = if (on) "Showing more from $name" else "Show more from $name"
+
+    // Channels
+
+    const val FROM_EVERYONE = "From everyone"
+    const val FROM_EVERYONE_NOTE = "Rabbit holes, dug by your friends"
+    const val YOUR_PEOPLE = "Your people"
+    const val MADE_FOR_YOU = "Made for you"
+    const val MADE_FOR_YOU_NOTE = "Built from what you keep. No ad tech consulted."
+    const val MY_SAVES = "My saves"
+    const val MY_SAVES_NOTE = "Everything you kept, newest first"
+    const val CHANNELS_EMPTY = "No channels yet. They grow out of what your people save."
+    const val CHANNELS_CANT_LOAD = "Channels didn’t load. Try again."
+    const val CHANNEL_EMPTY = "Nothing in here yet."
+    const val PLAY = "Play"
+
+    /** "Play the 4 new" on a channel. */
+    fun playNew(n: Int) = "Play the ${if (n > 99) "99+" else n.toString()} new"
+    const val NEW_MARK = "New"
+
+    /** "Ana's note" over the paper tile. */
+    fun notesOf(label: String) = if (label.endsWith("s")) "$label’ note" else "$label’s note"
+
+    /** "on Charlie bit my finger · 3 days ago". */
+    fun noteOn(title: String?, ago: String?): String =
+        listOfNotNull(title?.takeIf { it.isNotBlank() }?.let { "on $it" }, ago).joinToString(" · ")
+
+    fun saves(n: Int) = if (n == 1) "1 save" else "$n saves"
+
+    /** "Ana's saves" */
+    fun friendsSaves(label: String) = if (label.endsWith("s")) "$label’ saves" else "$label’s saves"
+
+    /** "96 saves · 4 you haven't seen" */
+    fun friendLine(size: Int, newCount: Int): String =
+        listOfNotNull(saves(size), newCount.takeIf { it > 0 }?.let { "$it you haven’t seen" }).joinToString(" · ")
+
+    /** "38 saves · 3 of you", "41 saves · Mum and you" */
+    fun groupLine(size: Int, savers: List<Saver>): String {
+        val who = when {
+            savers.isEmpty() -> null
+            savers.size > 2 -> "${savers.size} of you"
+            else -> names(savers)
+        }
+        return listOfNotNull(saves(size), who).joinToString(" · ")
+    }
+
+    /** "Ana's saves, 4 new" for a screen reader. */
+    fun friendDescription(label: String, newCount: Int): String =
+        friendsSaves(label) + if (newCount > 0) ", $newCount new" else ""
+
+    fun openChannelOf(saver: Saver): String = if (saver.isYou) "Open my saves" else "Open ${friendsSaves(saver.label)}"
+
+    // Live
+
+    const val LIVE_BADGE = "LIVE"
+    const val TUNE_IN = "Tune in"
+    const val LIVE_EMPTY_TITLE = "Nothing’s live right now."
+    const val LIVE_EMPTY_NOTE = "When a few of you save the same kind of thing at once, it shows up here."
+    const val LIVE_CANT_LOAD = "Live didn’t load. Try again."
+    const val LIVE_ENDED = "This one’s gone quiet."
+    const val NEW_UP_NEXT = "A new one, up next"
+    const val UP_NEXT = "up next"
+    const val LEAVE_LIVE = "Leave live"
+
+    /** "Jo just saved one" (or "You just saved one"). */
+    fun justSavedOne(saver: Saver): String = "${if (saver.isYou) "You" else saver.label} just saved one"
+
+    /** "What your lot are into tonight" (or today). */
+    fun liveTitle(hour: Int): String = if (hour >= 17 || hour < 4) "What your lot are into tonight" else "What your lot are into today"
+
+    /** "3 of you watching", or nothing when nobody is. */
+    fun watching(count: Int): String? = when {
+        count <= 0 -> null
+        count == 1 -> "1 of you watching"
+        else -> "$count of you watching"
+    }
+
+    /** "Ana and Ben are watching with you", "Just you, for now". */
+    fun watchersLine(watchers: List<Saver>, count: Int = watchers.size): String {
+        val others = watchers.filterNot { it.isYou }
+        return when {
+            others.isEmpty() && count <= 1 -> "Just you, for now"
+            others.isEmpty() -> "${count - 1} more watching with you"
+            others.size == 1 -> "${others[0].label} is watching with you"
+            else -> "${names(others)} are watching with you"
+        }
+    }
+
+    /** What the chip shows: "watching with you"; the names go to screen readers ([watchersLine]). */
+    fun watchersShort(watchers: List<Saver>, count: Int = watchers.size): String {
+        val others = watchers.count { !it.isYou }
+        return when {
+            others == 0 && count <= 1 -> "Just you, for now"
+            others == 0 -> "${count - 1} watching with you"
+            else -> "watching with you"
+        }
+    }
+
+    /**
+     * "3 saves in 10 min · Ana, Ben and Jo" under a moment: how busy it is
+     * lately when the server says (`recentSaves` in `windowMinutes`), else
+     * its save count.
+     */
+    fun momentLine(posts: Int?, people: Int, savers: List<Saver>, recentSaves: Int? = null, windowMinutes: Int? = null): String {
+        val what = recentSaves(recentSaves, windowMinutes) ?: posts?.takeIf { it > 0 }?.let(::saves)
+        val who = if (savers.isNotEmpty()) names(savers, max = 3) else if (people > 0) "$people of you" else null
+        return listOfNotNull(what, who).joinToString(" · ")
+    }
+
+    /** "3 saves in 10 min", "1 save in 5 min"; null when there were none (the other line shows). */
+    fun recentSaves(count: Int?, minutes: Int?): String? {
+        if (count == null || count <= 0) return null
+        val span = (minutes ?: 60).coerceAtLeast(1)
+        val window = if (span >= 60 && span % 60 == 0) (if (span == 60) "an hour" else "${span / 60} hours") else "$span min"
+        return "${saves(count)} in $window"
+    }
+
+    const val FORMING = "Forming"
+
+    /** "1 more save to go live", "2 more people to go live". */
+    fun toGoLive(left: Int, unit: String): String {
+        val thing = if (unit == "people") (if (left == 1) "person" else "people") else (if (left == 1) "save" else "saves")
+        return "$left more $thing to go live"
+    }
+
+    /** The bell on a forming row. */
+    const val TELL_ME = "Tell me when it’s live"
+
+    /** What a screen reader hears for the bell: "Tell me when Kitchen synths is live". */
+    fun tellMeWhen(title: String) = "Tell me when $title is live"
+
+    /** After the bell is turned on. */
+    fun willTell(title: String) = "We’ll tell you when $title goes live."
+    const val WONT_TELL = "Okay, no alert."
+    const val FORMING_GONE = "That one fizzled out before it went live."
+    const val ALERT_FAILED = "Couldn’t set that just now. Try again."
+
+    /** The notification: "Kitchen synths is live". */
+    fun isLive(title: String) = "$title is live"
+    const val LIVE_ALERT_TEXT = "Tune in"
+    const val LIVE_CHANNEL = "Live"
+    const val LIVE_CHANNEL_NOTE = "When a group you asked about goes live"
+
+    // Send straight to your people
+
+    const val STRAIGHT_TO_PEOPLE = "OR STRAIGHT TO YOUR PEOPLE"
+    const val SEND_PRIVATE = "Just for you. Share it first to send it."
+    const val SEND_FAILED = "That didn’t send. Try again."
+
+    /** "Jo already has it.", "Jo and Mum already have it.", "Jo, Mum and 2 others already have it." */
+    fun alreadyHave(labels: List<String>): String? = when {
+        labels.isEmpty() -> null
+        labels.size == 1 -> "${labels[0]} already has it."
+        else -> "${list(labels)} already have it."
+    }
+
+    /** "Sent to Ana". */
+    fun sentTo(label: String) = "Sent to $label"
+
+    /** A face in the row, for a screen reader. */
+    fun sendTo(label: String, has: Boolean, sent: Boolean) = when {
+        sent -> "Sent to $label"
+        has -> "$label already has it"
+        else -> "Send to $label"
+    }
+
+    // Keep this channel
+
+    const val KEEP_CHANNEL = "Keep this channel"
+    const val KEPT_OPEN = "Kept · Open"
+    const val KEEP_FAILED = "Couldn’t keep it just now. Try again."
+
+    /** "Kept. 37 posts are in your channel now." */
+    fun keptCount(added: Int) = if (added == 1) "Kept. 1 post is in your channel now." else "Kept. $added posts are in your channel now."
+
+    const val YOU = "You"
+    const val REACT = "React"
+    const val CLOSE_REACT = "Close reactions"
+    const val QUICK_REACTIONS = "Quick reactions"
+    const val SAY_SOMETHING = "Say something to everyone watching"
+    const val SEND = "Send"
+    const val REACT_FAILED = "That reaction didn’t send. Try again."
+    const val FLOATING_LABEL = "Reactions from people watching"
+
+    /** "Ana: fire", "Jo said: who sent this", for a screen reader. */
+    fun reactionDescription(who: String?, emoji: String?, text: String?): String {
+        val name = who ?: "Someone"
+        return when {
+            text != null -> "$name said: $text"
+            else -> "$name: ${com.adhx.share.net.Reaction.names[emoji] ?: emoji.orEmpty()}"
+        }
+    }
+
+    /** "12 of 40" under the field, once you're typing. */
+    fun charsLeft(used: Int): String = "$used/${com.adhx.share.net.Reaction.MAX_TEXT}"
+
+    // Saver faces
+
+    /** "Ana and Ben saved this", "Ana and 3 others saved this", "You saved this". */
+    fun saversLine(savers: List<Saver>): String? {
+        if (savers.isEmpty()) return null
+        return "${names(savers)} saved this"
+    }
+
+    /** A post's words as one run for the byline: paragraphs joined by a full stop when they lack one. */
+    fun oneLine(text: String): String =
+        text.trim().split(Regex("\\s*\\n+\\s*")).filter { it.isNotBlank() }.reduceOrNull { acc, next ->
+            if (acc.last() in ".!?…:;,") "$acc $next" else "$acc. $next"
+        } ?: ""
+
+    /** The note to show on the byline: a friend's first (yours when only you left one), trimmed. */
+    fun noteOf(savers: List<Saver>): Pair<Saver, String>? {
+        val withNotes = savers.mapNotNull { s -> s.note?.trim()?.takeIf { it.isNotEmpty() }?.let { s to it.take(NOTE_MAX) } }
+        return withNotes.firstOrNull { !it.first.isYou } ?: withNotes.firstOrNull()
+    }
+
+    /** What a screen reader hears for a note: "Ben's note: you're welcome". */
+    fun noteDescription(saver: Saver, note: String): String =
+        "${if (saver.isYou) "Your" else "${saver.label}’s"} note: $note"
+
+    /** Notes on saves are at most this long. */
+    const val NOTE_MAX = 140
+
+    /** "Ana", "Ana and Ben", "Ana and 3 others", with your own save as "you". */
+    fun names(savers: List<Saver>, max: Int = 2): String {
+        val labels = savers.mapIndexed { i, s -> if (s.isYou) (if (i == 0) "You" else "you") else s.label }
+        return if (labels.size > max) {
+            val rest = labels.size - (max - 1)
+            labels.take(max - 1).joinToString(", ") + " and $rest others"
+        } else {
+            list(labels, max)
+        }
+    }
+
+    /** "A", "A and B", "A, B and C"; past [max] it's "A, B and 3 others". */
+    fun list(labels: List<String>, max: Int = 3): String = when {
+        labels.isEmpty() -> ""
+        labels.size == 1 -> labels[0]
+        labels.size <= max -> labels.dropLast(1).joinToString(", ") + " and " + labels.last()
+        else -> labels.take(max - 1).joinToString(", ") + " and ${labels.size - (max - 1)} others"
+    }
+
+    // Search
+
+    const val SCOPE_EVERYONE = "Everyone’s saves"
+    const val SCOPE_MINE = "Mine"
+    const val NO_RESULTS_EVERYONE = "Nothing anyone here saved matches that yet. Try describing it another way."
 
     /** Words for a save the server turned down. */
     fun shareError(status: Int, code: String?, message: String?): String = when {
@@ -107,6 +507,12 @@ object Copy {
             else -> "${seconds / (365 * 86_400)}y"
         }
     }
+
+    /** [shortAgo] for an ISO time from the server, or null when there isn't one. */
+    fun shortAgoIso(iso: String?, now: Long = System.currentTimeMillis()): String? = parseIso(iso)?.let { shortAgo(it, now) }
+
+    /** [ago] for an ISO time from the server, or null when there isn't one. */
+    fun agoIso(iso: String?, now: Long = System.currentTimeMillis()): String? = parseIso(iso)?.let { ago(it, now) }
 
     /** "just now", "5 minutes ago", "yesterday", "3 days ago"… */
     fun ago(millis: Long, now: Long = System.currentTimeMillis()): String {

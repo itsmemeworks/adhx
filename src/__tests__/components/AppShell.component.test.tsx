@@ -202,6 +202,8 @@ describe('AppShell theater surfaces', () => {
     ['/channels', '', '/start?returnTo=%2Fchannels'],
     ['/settings', '', '/start?returnTo=%2Fsettings'],
     ['/play', '?recent=1', '/start?returnTo=%2Fplay%3Frecent%3D1'],
+    // New, the signed-in home, comes back to New after signing in.
+    ['/play', '?feed=new', '/start?returnTo=%2Fplay%3Ffeed%3Dnew'],
   ])('sends a signed-out visit to %s%s to sign in, then back', async (path, search, target) => {
     mockPathname = path
     window.history.replaceState(null, '', `${path}${search}`)

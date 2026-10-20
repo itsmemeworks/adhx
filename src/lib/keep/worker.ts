@@ -6,7 +6,12 @@ import { captureException } from '@/lib/sentry'
 import { noteSaved, PRIORITY } from '@/lib/semantic'
 import { keepBackfill, keepConcurrency, keepEnabled, keepMinFreeBytes, mediaDir } from './config'
 import { keepPost, NothingToKeep } from './download'
-import { clearKeepProgress, reportKeepConverting, reportKeepProgress } from './progress'
+import {
+  clearKeepProgress,
+  keepProgress,
+  reportKeepConverting,
+  reportKeepProgress,
+} from './progress'
 import { forgetPost, recordKept } from './store'
 import { YtdlpError } from './ytdlp'
 
@@ -22,6 +27,8 @@ const SCAN_EVERY_MS = 30_000
 const CLEAN_EVERY_MS = 60 * 60_000
 /** Waits before each retry; after the last, the job is marked unavailable. */
 const BACKOFF_MS = [60_000, 10 * 60_000, 60 * 60_000, 6 * 60 * 60_000, 24 * 60 * 60_000]
+/** Tries a download gets before it gives up: the first, then one per wait. */
+export const KEEP_MAX_ATTEMPTS = BACKOFF_MS.length + 1
 
 interface State {
   timer: ReturnType<typeof setInterval> | null
@@ -83,7 +90,7 @@ export function claimNext(
   if (!next) return null
   const claimed = db
     .update(keepJobs)
-    .set({ status: 'running', updatedAt: iso })
+    .set({ status: 'running', progress: null, updatedAt: iso })
     .where(
       and(
         eq(keepJobs.platform, next.platform),
@@ -118,6 +125,35 @@ function fail(platform: string, postId: string, error: unknown): void {
     .run()
 }
 
+/** Persisted percents move in steps of this much (one write per step at most). */
+const PROGRESS_STEP = 5
+
+/**
+ * Write the download percent to `keep_jobs.progress` once per step, so the
+ * theater's "Getting it ready" ring (`keep-status.ts`) has it even when the
+ * in-memory progress is gone (a restart, another process).
+ */
+function persistKeepProgress(platform: string, postId: string): void {
+  const percent = keepProgress(platform, postId)
+  if (percent === null) return
+  const stepped = Math.floor(percent / PROGRESS_STEP) * PROGRESS_STEP
+  try {
+    db.update(keepJobs)
+      .set({ progress: stepped })
+      .where(
+        and(
+          eq(keepJobs.platform, platform),
+          eq(keepJobs.postId, postId),
+          eq(keepJobs.status, 'running'),
+          sql`COALESCE(${keepJobs.progress}, -1) < ${stepped}`,
+        ),
+      )
+      .run()
+  } catch (error) {
+    captureException(error, { endpoint: 'keep.progress' })
+  }
+}
+
 /** Download one post now. */
 export async function runJob(platform: string, postId: string): Promise<void> {
   const [saved] = db
@@ -136,7 +172,10 @@ export async function runJob(platform: string, postId: string): Promise<void> {
       postId,
       author: saved.author,
       category: saved.category,
-      onProgress: (percent) => reportKeepProgress(platform, postId, percent),
+      onProgress: (percent) => {
+        reportKeepProgress(platform, postId, percent)
+        persistKeepProgress(platform, postId)
+      },
       onConverting: () => reportKeepConverting(platform, postId),
     })
     await recordKept(platform, postId, files)
@@ -192,13 +231,22 @@ async function tick(): Promise<void> {
 
 let warnedFull = 0
 
-/** Pause downloading while the media disk is nearly full (KEEP_MIN_FREE_GB). */
-export async function diskHasRoom(): Promise<boolean> {
+/** Free bytes on the media disk, or null when it can't be read. */
+export async function freeDiskBytes(): Promise<number | null> {
   try {
     await fs.mkdir(mediaDir(), { recursive: true })
     const stats = await fs.statfs(mediaDir())
-    const free = stats.bavail * stats.bsize
-    if (free >= keepMinFreeBytes()) return true
+    return stats.bavail * stats.bsize
+  } catch {
+    return null
+  }
+}
+
+/** Pause downloading while the media disk is nearly full (KEEP_MIN_FREE_GB). */
+export async function diskHasRoom(): Promise<boolean> {
+  try {
+    const free = await freeDiskBytes()
+    if (free === null || free >= keepMinFreeBytes()) return true
     if (Date.now() - warnedFull > 60 * 60_000) {
       warnedFull = Date.now()
       console.warn(

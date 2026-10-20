@@ -103,6 +103,50 @@ jobs:
           DIGEST=$(docker buildx imagetools inspect "$IMAGE:sha-$SOURCE_SHA" | awk '$1 == "Digest:" {print $2; exit}')
           [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
           echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+      - name: Scan the actual release digest (amd64)
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/amd64
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.digest.outputs.digest }}
+          version: v0.76.0
+          format: json
+          output: trivy-release-amd64.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          timeout: 15m
+      - name: Scan the actual release digest (arm64)
+        if: ${{ !cancelled() && steps.digest.outcome == 'success' }}
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/arm64
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.digest.outputs.digest }}
+          version: v0.76.0
+          format: json
+          output: trivy-release-arm64.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+          timeout: 15m
+      - name: Show release image findings in the job log
+        if: always()
+        run: node scripts/security/summarize-image.mjs trivy-release-amd64.json trivy-release-arm64.json
+      - name: Retain release vulnerability reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-image-security
+          path: trivy-release-*.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Attest the newly built image
         if: steps.existing.outputs.found != 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

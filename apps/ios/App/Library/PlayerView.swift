@@ -1,5 +1,30 @@
 import SwiftUI
 
+/// What a screen adds to the plain player (New, Live).
+struct PlayerExtras {
+    /// Shows the feed's why chip, and "Why this one" in More.
+    var onWhy: ((PhonePost) -> Void)?
+    /// Room under the caption for something the screen puts there (Live's reactions).
+    var bottomInset: CGFloat = 0
+    /// Where short messages sit, under whatever bar the screen has on top.
+    var toastTop: CGFloat = 64
+    /// A last page after the posts (New's "You're all caught up").
+    var endPage: AnyView?
+    /// Live: a React button at the top of the rail, lit while its picker is open.
+    var react: ReactButton?
+    /// Live: the moment's name, on a chip over the byline ("In Babies vs objects").
+    var inMoment: String?
+    /// Room between the rail's buttons (Live has one more, so they sit closer).
+    var railSpacing: CGFloat = 14
+    /// The progress line's colour (Live's is yellow, the feed's cream).
+    var progressColour: Color = Theme.ink
+
+    struct ReactButton {
+        var isOpen: Bool
+        var toggle: () -> Void
+    }
+}
+
 /// Your saves (or search results) full screen, one post at a time: swipe up for
 /// the next, down for the previous, tap to pause. A video plays the next save
 /// when it ends, unless Repeat is on. Hide clears everything but the video.
@@ -13,9 +38,18 @@ struct PlayerView: View {
     /// Set to a post's key to go straight to it (new saves at the top).
     @Binding var jumpTo: String?
     /// Called with the index on screen, so the list can load more near the end.
+    /// The end page, when there is one, is `posts.count`.
     var onShow: (Int) -> Void = { _ in }
+    let extras: PlayerExtras
+
+    /// The id of the end page in the pager.
+    static let endKey = "adhx:end"
 
     @StateObject private var playback = Playback()
+    /// A friend's channel, opened from the faces on a post.
+    @State private var friend: Saver?
+    /// The post whose file is being sent.
+    @State private var sending: PhonePost?
     @State private var current: String?
     @State private var toast: String?
     @State private var toastTask: Task<Void, Never>?
@@ -23,8 +57,10 @@ struct PlayerView: View {
 
     init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
          scrubbing: Binding<Bool> = .constant(false), jumpTo: Binding<String?> = .constant(nil),
-         start: String? = nil, onShow: @escaping (Int) -> Void = { _ in }) {
+         start: String? = nil, extras: PlayerExtras = PlayerExtras(),
+         onShow: @escaping (Int) -> Void = { _ in }) {
         self.posts = posts
+        self.extras = extras
         self.server = server
         _clean = clean
         _scrubbing = scrubbing
@@ -44,12 +80,21 @@ struct PlayerView: View {
                     .padding(.horizontal, 16)
                     .frame(minHeight: 40)
                     .background(Capsule().fill(Theme.cream))
-                    .padding(.top, 64)
+                    .padding(.top, extras.toastTop)
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: toast)
+        .fullScreenCover(item: $friend) { saver in
+            FriendChannelScreen(friend: saver, server: server)
+        }
+        // Sending the file itself, over the player (and over Home's bar,
+        // which steps aside while it's up).
+        .boardSheet(item: $sending, height: 680) { post in
+            SendSheet(post: post, server: server, say: say)
+        }
+        .preference(key: PlayerSheetUp.self, value: sending != nil)
     }
 
     private var pager: some View {
@@ -57,9 +102,15 @@ struct PlayerView: View {
             LazyVStack(spacing: 0) {
                 ForEach(posts, id: \.key) { post in
                     PostPage(post: post, server: server, onScreen: post.key == current,
-                             playback: playback, clean: $clean, say: say)
+                             playback: playback, clean: $clean, extras: extras, say: say,
+                             openFriend: { friend = $0 }, send: { sending = $0 })
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(post.key)
+                }
+                if let end = extras.endPage {
+                    end
+                        .containerRelativeFrame([.horizontal, .vertical])
+                        .id(Self.endKey)
                 }
             }
             .scrollTargetLayout()
@@ -72,7 +123,7 @@ struct PlayerView: View {
         .onChange(of: current, initial: true) { _, key in showCurrent(key) }
         .onChange(of: posts.map(\.key)) { _, keys in
             // A reload that no longer has the post on screen starts at the top.
-            if let current, !keys.contains(current) { self.current = keys.first }
+            if let current, current != Self.endKey, !keys.contains(current) { self.current = keys.first }
             showCurrent(self.current)
         }
         .onChange(of: scenePhase) { _, phase in
@@ -95,6 +146,11 @@ struct PlayerView: View {
     }
 
     private func showCurrent(_ key: String?) {
+        if key == Self.endKey {
+            playback.show(nil)
+            onShow(posts.count)
+            return
+        }
         guard let key, let index = posts.firstIndex(where: { $0.key == key }) else {
             playback.show(nil)
             return
@@ -106,9 +162,10 @@ struct PlayerView: View {
 
     /// A video ended with Repeat off: on to the next save.
     private func next() {
-        guard let current, let index = posts.firstIndex(where: { $0.key == current }),
-              index + 1 < posts.count else { return }
-        withAnimation(.easeInOut(duration: 0.35)) { self.current = posts[index + 1].key }
+        guard let current, let index = posts.firstIndex(where: { $0.key == current }) else { return }
+        let next = index + 1 < posts.count ? posts[index + 1].key : extras.endPage != nil ? Self.endKey : nil
+        guard let next else { return }
+        withAnimation(.easeInOut(duration: 0.35)) { self.current = next }
     }
 
     /// A short message near the top.
@@ -130,8 +187,14 @@ private struct PostPage: View {
     let onScreen: Bool
     @ObservedObject var playback: Playback
     @Binding var clean: Bool
+    var extras = PlayerExtras()
     let say: (String) -> Void
+    var openFriend: (Saver) -> Void = { _ in }
+    /// Opens the send sheet for this post's file.
+    var send: (PhonePost) -> Void = { _ in }
     @Environment(\.openURL) private var openURL
+    @ObservedObject private var privacy = PrivacyStore.shared
+    @State private var choosingFriend = false
     @State private var photo = 0
     @State private var saving = false
     @State private var sharingBusy = false
@@ -139,6 +202,10 @@ private struct PostPage: View {
     @State private var sharing: ShareItems?
     @State private var reading = false
     @State private var more = false
+    /// The bookmark is saving it to your ADHX.
+    @State private var keeping = false
+    /// "In your saves": Just for me and your note, from the bookmark.
+    @State private var savedSheet = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -150,13 +217,22 @@ private struct PostPage: View {
             if !clean {
                 let scrubbing = onScreen && playback.scrubTime != nil
                 if overMedia && !scrubbing {
-                    LinearGradient(colors: [.clear, .black.opacity(0.85)], startPoint: .top, endPoint: .bottom)
-                        .frame(height: 300)
-                        .allowsHitTesting(false)
+                    // The boards' scrims: dark under the top bar, darker under the words.
+                    VStack(spacing: 0) {
+                        LinearGradient(colors: [.black.opacity(0.7), .clear], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 240)
+                        Spacer(minLength: 0)
+                        LinearGradient(stops: [.init(color: .clear, location: 0),
+                                               .init(color: .black.opacity(0.55), location: 0.35),
+                                               .init(color: .black.opacity(0.92), location: 1)],
+                                       startPoint: .top, endPoint: .bottom)
+                            .frame(height: 420 + extras.bottomInset)
+                    }
+                    .allowsHitTesting(false)
                 }
                 if !scrubbing {
                     caption
-                        .padding(.bottom, 64)
+                        .padding(.bottom, 34 + extras.bottomInset)
                         .transition(.opacity)
                 }
                 if scrubbing, let at = playback.scrubTime {
@@ -171,11 +247,12 @@ private struct PostPage: View {
                         .accessibilityHidden(true)
                 }
                 bottomRow
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 16)
             } else if post.kind == "video" && onScreen {
-                ProgressLine(fraction: playback.duration > 0 ? playback.time / playback.duration : 0)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+                ProgressLine(fraction: playback.duration > 0 ? playback.time / playback.duration : 0,
+                             colour: extras.progressColour)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
             }
         }
         .clipped()
@@ -184,8 +261,17 @@ private struct PostPage: View {
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $more) {
-            MoreSheet(post: post, server: server, say: say)
-                .presentationDetents([.height(post.kind == "video" ? 400 : 330)])
+            MoreSheet(post: post, server: server, say: say, onWhy: extras.onWhy.map { open in { open(post) } },
+                      playback: post.plays && onScreen ? playback : nil,
+                      hide: { clean = true })
+                .presentationDetents([.height(moreHeight)])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Theme.surface)
+                .presentationCornerRadius(28)
+        }
+        .sheet(isPresented: $savedSheet) {
+            SavedSheet(post: post, say: say)
+                .presentationDetents([.height(privacy.canSwitch(post) ? 300 : 220)])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.surface)
                 .presentationCornerRadius(28)
@@ -197,10 +283,11 @@ private struct PostPage: View {
         switch post.kind {
         case "video", "audio":
             ZStack {
-                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: post.kind == "audio")
+                // Full bleed, like the boards: the picture covers the screen.
+                Poster(url: ADHXClient.resolve(post.posterUrl, against: server), fill: true)
                 if onScreen {
                     if post.kind == "video" {
-                        PlayerLayerView(player: playback.player) { playback.attach($0) }
+                        PlayerLayerView(player: playback.player, fill: true) { playback.attach($0) }
                     }
                     if playback.problem != nil || !playback.ready {
                         // Still being kept on your ADHX: an animated card until it's ready.
@@ -230,118 +317,176 @@ private struct PostPage: View {
         }
     }
 
-    /// Left: who posted it and the first lines. Right: the actions, like the
-    /// web player's bar. The network's own mark is the button to the original.
+    /// The More sheet grows with what it offers.
+    private var moreHeight: CGFloat {
+        var height: CGFloat = post.kind == "video" ? 400 : 330
+        if post.plays && onScreen { height += 72 }
+        if post.sourceUrl != nil { height += 64 }
+        if privacy.canSwitch(post) { height += 72 }
+        if extras.onWhy != nil { height += 64 }
+        return height
+    }
+
+    /// Left (the boards' byline): why the feed picked it, a friend's note,
+    /// who saved it, where it's from and the first lines. Right: the rail of
+    /// round frosted buttons. Sound, Repeat, the small window, Hide and the
+    /// original are in More.
     private var caption: some View {
-        HStack(alignment: .bottom, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(handle)
-                    .font(Theme.sans(17, .heavy))
+        HStack(alignment: .bottom, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                if let moment = extras.inMoment {
+                    HStack(spacing: 6) {
+                        Text("In").foregroundStyle(Theme.muted)
+                        Text(moment).font(Theme.sans(12, .heavy))
+                    }
+                    .font(Theme.sans(12, .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                if overMedia, !post.text.isEmpty {
-                    Text(post.text)
-                        .font(Theme.sans(15))
-                        .foregroundStyle(Theme.cream)
-                        .lineLimit(2)
+                    .padding(.horizontal, 10)
+                    .frame(height: 26)
+                    .frosted(Capsule(), dim: 0.45)
+                    .padding(.bottom, 8)
+                    .accessibilityElement(children: .combine)
+                }
+                if let why = post.why, let onWhy = extras.onWhy {
+                    WhyChip(text: WhyChip.label(post, why: why), kind: post.whyReasons.first?.kind,
+                            face: WhyChip.face(post), server: server) { onWhy(post) }
+                        .padding(.bottom, 12)
+                }
+                if let noted = SaverWords.noted(post.savers), let note = noted.note {
+                    NoteBubble(saver: noted, note: note, server: server)
+                        .padding(.bottom, 6)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    if !post.savers.isEmpty {
+                        saversLine
+                    } else if privacy.isPrivate(post) {
+                        PrivateLock()
+                    }
+                    // Live puts the network on the savers' line instead.
+                    if extras.inMoment == nil || post.savers.isEmpty { sourceLine }
+                    if overMedia, !post.text.isEmpty {
+                        Text(post.text)
+                            .font(Theme.sans(16))
+                            .foregroundStyle(Color(hex: 0xF4F1EA))
+                            .lineSpacing(5)
+                            .lineLimit(2)
+                            .overMediaShadow(overMedia)
+                    }
                 }
             }
-            .overMediaShadow(overMedia)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
+            .padding(.trailing, 84 - 12 - 52)
 
-            VStack(spacing: 12) {
-                if post.plays && onScreen {
-                    RailButton(label: "Sound", shadow: overMedia,
-                               accessibility: playback.muted ? "Turn sound on" : "Turn sound off") {
-                        playback.muted.toggle()
-                    } icon: {
-                        Image(systemName: playback.muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                            .font(.system(size: 19, weight: .semibold))
-                    }
-                    RailButton(label: "Repeat", on: playback.repeatOne, shadow: overMedia,
-                               accessibility: "Repeat this one") {
-                        playback.repeatOne.toggle()
-                        say(playback.repeatOne ? "Repeating this one" : "Plays the next save when this ends")
-                    } icon: {
-                        Image(systemName: "repeat.1")
-                            .font(.system(size: 19, weight: .semibold))
-                    }
-                    .accessibilityAddTraits(playback.repeatOne ? .isSelected : [])
-                }
-                if hasMedia || !post.text.isEmpty {
-                    RailButton(label: "Save", shadow: overMedia,
-                               accessibility: hasMedia ? "Save to Photos" : "Copy the words") {
-                        save()
-                    } icon: {
-                        if saving {
-                            RingSpinner().frame(width: 20, height: 20)
-                        } else {
-                            Image(systemName: "arrow.down.to.line")
-                                .font(.system(size: 19, weight: .semibold))
-                        }
-                    }
-                }
-                if hasMedia || !post.text.isEmpty {
-                    RailButton(label: "Share", shadow: overMedia,
-                               accessibility: hasMedia ? "Share the \(post.kind == "photo" ? "photos" : "file")" : "Share the words") {
-                        share()
-                    } icon: {
-                        if sharingBusy {
-                            RingSpinner().frame(width: 20, height: 20)
-                        } else {
-                            Image(systemName: shareIcon)
-                                .font(.system(size: 19, weight: .semibold))
-                        }
-                    }
-                }
-                if let source = post.sourceUrl.flatMap(URL.init(string:)) {
-                    RailButton(label: "Original", shadow: overMedia,
-                               accessibility: "Open original on \(Network.name(post.platform))") {
-                        openURL(source)
-                    } icon: {
-                        NetworkMark(platform: post.platform, size: 22)
-                    }
-                }
-                RailButton(label: "More", shadow: overMedia, accessibility: "More for this post") {
-                    more = true
-                } icon: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 19, weight: .bold))
-                }
-            }
-            .frame(width: 64)
+            rail
+                // The rail sits 6 above the words, like the boards (40 vs 34).
+                .padding(.bottom, 6)
         }
-        .padding(.leading, 18)
+        .padding(.leading, 16)
         .padding(.trailing, 12)
     }
 
-    /// The line to drag through the video, then the small window and Hide as
-    /// plain glyphs (not round buttons like the column).
-    private var bottomRow: some View {
-        HStack(spacing: 2) {
-            if post.plays, onScreen, playback.duration > 0 {
-                Scrubber(playback: playback)
+    /// "YouTube · Rick Astley": the network and who posted it. Opens the original.
+    private var sourceLine: some View {
+        let line = Text(sourceWords)
+            .font(Theme.sans(14))
+            .foregroundStyle(Theme.muted)
+            .lineLimit(1)
+            .overMediaShadow(overMedia)
+        return Group {
+            if let source = post.sourceUrl.flatMap(URL.init(string:)) {
+                Button { openURL(source) } label: { line }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(sourceWords). Open the original on \(Network.name(post.platform))")
             } else {
-                Spacer(minLength: 0)
+                line
             }
-            if post.kind == "video", onScreen, playback.pipSupported {
-                Glyph(name: "pip.enter", label: "Keep playing in a small window") {
-                    if playback.pipPossible {
-                        playback.startSmallWindow()
+        }
+    }
+
+    private var sourceWords: String {
+        let network = Network.name(post.platform)
+        let name = post.author.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let who = name.isEmpty ? post.author.handle : name
+        if who.isEmpty || who.caseInsensitiveCompare(network) == .orderedSame || who.count <= 1 {
+            return network
+        }
+        return "\(network) · \(who)"
+    }
+
+    /// Round frosted buttons, 52 across, 14 apart: React (Live), Share, Save, More.
+    private var rail: some View {
+        VStack(spacing: extras.railSpacing) {
+            if let react = extras.react, onScreen {
+                RailButton(on: react.isOpen, accessibility: react.isOpen ? "Close reactions" : "React") {
+                    react.toggle()
+                } icon: {
+                    Image(systemName: "face.smiling")
+                        .font(.system(size: 22, weight: .regular))
+                }
+                .accessibilityAddTraits(react.isOpen ? .isSelected : [])
+            }
+            if privacy.isSaved(post) || post.sourceUrl != nil {
+                let saved = privacy.isSaved(post)
+                RailButton(accessibility: saved ? "In your saves" : "Save to your ADHX") {
+                    keep()
+                } icon: {
+                    if keeping {
+                        RingSpinner().frame(width: 20, height: 20)
                     } else {
-                        say("The small window isn’t ready yet. Try again in a moment.")
+                        Image(systemName: saved ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundStyle(saved ? Theme.accent : Theme.ink)
+                    }
+                }
+                .accessibilityHint(saved ? "Just for me and your note" : "")
+                .accessibilityAddTraits(saved ? .isSelected : [])
+            }
+            if hasMedia || !post.text.isEmpty {
+                RailButton(accessibility: hasMedia ? "Share the \(post.kind == "photo" ? "photos" : post.kind == "video" ? "video" : "file")" : "Share the words") {
+                    share()
+                } icon: {
+                    if sharingBusy {
+                        RingSpinner().frame(width: 20, height: 20)
+                    } else {
+                        Image(systemName: shareIcon)
+                            .font(.system(size: 20, weight: .regular))
                     }
                 }
             }
-            Glyph(name: "arrow.up.left.and.arrow.down.right", label: "Hide buttons and caption") {
-                clean = true
+            if hasMedia || !post.text.isEmpty {
+                RailButton(accessibility: hasMedia ? "Save to phone" : "Copy the words") {
+                    save()
+                } icon: {
+                    if saving {
+                        RingSpinner().frame(width: 20, height: 20)
+                    } else {
+                        Image(systemName: "arrow.down.to.line")
+                            .font(.system(size: 20, weight: .medium))
+                    }
+                }
+            }
+            RailButton(accessibility: "More for this post") {
+                more = true
+            } icon: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 20, weight: .bold))
             }
         }
-        .padding(.leading, 20)
-        // Hide sits centred under the column's buttons.
-        .padding(.trailing, 22)
-        .animation(.easeOut(duration: 0.15), value: playback.scrubTime != nil)
+        .frame(width: 52)
+    }
+
+    /// The thin line along the bottom; drag it to move through the video.
+    @ViewBuilder
+    private var bottomRow: some View {
+        if post.plays, onScreen, playback.duration > 0 {
+            Scrubber(playback: playback, colour: extras.progressColour)
+                .padding(.horizontal, 16)
+                .animation(.easeOut(duration: 0.15), value: playback.scrubTime != nil)
+        } else if post.plays {
+            // The track is there before the video is: no jump when it starts.
+            ProgressLine(fraction: 0, colour: extras.progressColour).padding(.horizontal, 16)
+        }
     }
 
     /// The file the Save button keeps: the video, or the photo on screen.
@@ -349,15 +494,37 @@ private struct PostPage: View {
     private var shareIcon: String {
         guard hasMedia else { return "text.quote" }
         switch post.kind {
-        case "video": return "play.rectangle.fill"
+        case "video": return "video"
         case "audio": return "waveform"
-        case "photo": return post.media.count > 1 ? "photo.stack.fill" : "photo.fill"
+        case "photo": return post.media.count > 1 ? "photo.stack" : "photo"
         default: return "square.and.arrow.up"
         }
     }
 
     /// A video, sound or photos your ADHX keeps (anything else is words).
     private var hasMedia: Bool { !KeptFiles.sources(of: post, server: server).isEmpty }
+
+    /// The bookmark: someone else's post goes into your saves; one of yours
+    /// opens "In your saves" (Just for me and your note).
+    private func keep() {
+        if privacy.isSaved(post) {
+            savedSheet = true
+            return
+        }
+        guard !keeping else { return }
+        keeping = true
+        Task {
+            do {
+                try await privacy.save(post)
+                say("Saved to your ADHX")
+            } catch let error as APIError {
+                say(error.message)
+            } catch {
+                say("Couldn’t save that. Try again.")
+            }
+            keeping = false
+        }
+    }
 
     /// Save: the media to Photos (a sound to Files, through the share sheet),
     /// or the words to the clipboard.
@@ -385,21 +552,72 @@ private struct PostPage: View {
             sharing = ShareItems(items: [post.text])
             return
         }
-        guard !sharingBusy else { return }
-        sharingBusy = true
-        Task {
-            if let export = await KeptFiles.download(post, server: server) {
-                sharing = ShareItems(items: export.files.map(\.url), export: export)
-            } else {
-                say("Still being kept on your ADHX. Try again in a moment.")
-            }
-            sharingBusy = false
+        send(post)
+    }
+
+    /// Tuned in: "4 min ago", "2h ago" for the newest save.
+    private var liveWhen: String? {
+        guard extras.inMoment != nil,
+              let newest = post.savers.compactMap({ Format.date($0.savedAt) }).max() else { return nil }
+        let seconds = max(0, Date().timeIntervalSince(newest))
+        switch seconds {
+        case ..<60: return "just now"
+        case ..<3600: return "\(Int(seconds / 60)) min ago"
+        case ..<86_400: return "\(Int(seconds / 3600))h ago"
+        default: return "\(Int(seconds / 86_400))d ago"
         }
     }
 
-    private var handle: String {
-        let name = post.author.handle
-        return name.hasPrefix("@") || name.isEmpty ? name : "@\(name)"
+    /// "Ana and Ben saved this · 2h", with their faces. Tapping opens their channel.
+    private var saversLine: some View {
+        let line = SaverWords.line(post.savers)
+        let locked = privacy.isPrivate(post)
+        let friends = SaverWords.ordered(post.savers).filter { !$0.isYou }
+        return Button {
+            if friends.count == 1 {
+                openFriend(friends[0])
+            } else if friends.count > 1 {
+                choosingFriend = true
+            }
+        } label: {
+            HStack(spacing: 10) {
+                FaceStack(savers: post.savers, server: server, size: 30, ring: .black)
+                Text(line)
+                    .font(Theme.sans(15, .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .overMediaShadow(overMedia)
+                if let when = liveWhen {
+                    // Live: "· 4 min ago · Reddit" (the boards' tuned-in byline).
+                    Text("· \(when) · \(Network.name(post.platform))")
+                        .font(Theme.sans(14))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .overMediaShadow(overMedia)
+                } else if let when = SaverWords.when(post.savers) {
+                    Text("· \(when)")
+                        .font(Theme.sans(14))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .overMediaShadow(overMedia)
+                }
+                if locked { PrivateLock(size: 22) }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // Only you saved it: nothing to open, but it shouldn't look switched off.
+        .allowsHitTesting(!friends.isEmpty)
+        .accessibilityRemoveTraits(friends.isEmpty ? .isButton : [])
+        .accessibilityLabel(line + (locked ? ". Just for me" : ""))
+        .accessibilityHint(friends.isEmpty ? "" : friends.count == 1 ? "Opens their channel" : "Pick whose channel to open")
+        .confirmationDialog("Whose saves?", isPresented: $choosingFriend, titleVisibility: .visible) {
+            ForEach(friends) { saver in
+                Button("\(saver.displayName)’s saves") { openFriend(saver) }
+            }
+        }
     }
 
     private func clock(_ seconds: Double) -> String {
@@ -414,8 +632,16 @@ private struct MoreSheet: View {
     let post: PhonePost
     let server: URL
     let say: (String) -> Void
+    /// "Why this one" (the feed): opens the why sheet.
+    var onWhy: (() -> Void)?
+    /// The video or sound on screen: Sound, Repeat and the small window.
+    var playback: Playback?
+    /// Hides the buttons and caption.
+    var hide: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @ObservedObject private var privacy = PrivacyStore.shared
+    @State private var switching = false
     @State private var sharing: SharedFile?
 
     var body: some View {
@@ -451,12 +677,52 @@ private struct MoreSheet: View {
                 }
                 .accessibilityLabel("Close")
             }
+            if let playback {
+                PlayingControls(playback: playback, say: say, hide: {
+                    dismiss()
+                    hide()
+                })
+            }
             VStack(spacing: 4) {
+                if privacy.canSwitch(post) {
+                    JustForMeSwitch(isOn: privacy.isPrivate(post), busy: switching) { on in
+                        switching = true
+                        Task {
+                            do {
+                                try await privacy.set(post, private: on)
+                                say(on ? "Just for you now" : "Your people can see it now")
+                            } catch {
+                                say("Couldn’t change that. Try again.")
+                            }
+                            switching = false
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+                }
+                if let onWhy {
+                    row(icon: "sparkles", title: "Why this one", detail: "The reasons, and whose saves you see") {
+                        dismiss()
+                        // After the sheet has gone, so the next one can come up.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { onWhy() }
+                    }
+                }
                 if let open = ADHXClient.resolve(post.openPath, against: server) {
                     row(icon: "person.2", title: "Share an ADHX link",
                         detail: "For people on your ADHX: opens this post there") {
                         sharing = SharedFile(url: open)
                     }
+                }
+                if let source = post.sourceUrl, let url = URL(string: source) {
+                    Button {
+                        openURL(url)
+                        dismiss()
+                    } label: {
+                        rowFace(title: "Open the original", detail: "On \(Network.name(post.platform))") {
+                            NetworkMark(platform: post.platform, size: 20)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
                 if let source = post.sourceUrl {
                     row(icon: "link", title: "Copy link", detail: "The original post on \(Network.name(post.platform))") {
@@ -545,6 +811,262 @@ private struct MoreSheet: View {
     }
 }
 
+/// "In your saves", from the bookmark on one of yours: Just for me, and the
+/// note your people see with it.
+private struct SavedSheet: View {
+    let post: PhonePost
+    let say: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var privacy = PrivacyStore.shared
+    @State private var switching = false
+    @State private var note = ""
+    @State private var savingNote = false
+    @FocusState private var typing: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("In your saves")
+                    .font(Theme.serif(32))
+                    .foregroundStyle(Theme.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                CloseButton { dismiss() }
+            }
+            if privacy.canSwitch(post) {
+                JustForMeSwitch(isOn: privacy.isPrivate(post), busy: switching) { on in
+                    switching = true
+                    Task {
+                        do {
+                            try await privacy.set(post, private: on)
+                            say(on ? "Just for you now" : "Your people can see it now")
+                        } catch {
+                            say("Couldn’t change that. Try again.")
+                        }
+                        switching = false
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Your note")
+                    .font(Theme.sans(13, .semibold))
+                    .foregroundStyle(Theme.muted)
+                    .accessibilityHidden(true)
+                HStack(spacing: 8) {
+                    TextField("", text: $note,
+                              prompt: Text(privacy.isPrivate(post) ? "A note to future you" : "Say why they’ll like it")
+                                  .foregroundColor(Theme.faint))
+                        .font(Theme.sans(16))
+                        .foregroundStyle(Theme.ink)
+                        .tint(Theme.accent)
+                        .focused($typing)
+                        .submitLabel(.done)
+                        .onSubmit(saveNote)
+                        .onChange(of: note) { _, text in if text.count > 140 { note = String(text.prefix(140)) } }
+                        .padding(.horizontal, 16)
+                        .frame(height: 48)
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.app))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(typing ? Theme.accent.opacity(0.6) : .white.opacity(0.12), lineWidth: 1))
+                        .accessibilityLabel("Your note")
+                    Button(savingNote ? "Saving…" : "Save", action: saveNote)
+                        .buttonStyle(PillButtonStyle(kind: .primary, height: 48, fullWidth: false, fontSize: 15))
+                        .disabled(noteUnchanged)
+                        .opacity(noteUnchanged ? 0.5 : 1)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 29)
+        .onAppear { note = privacy.note(post) ?? "" }
+    }
+
+    private var noteUnchanged: Bool { savingNote || Saver.clean(note) == privacy.note(post) }
+
+    private func saveNote() {
+        guard !noteUnchanged else { return }
+        savingNote = true
+        typing = false
+        Task {
+            do {
+                try await privacy.setNote(post, Saver.clean(note))
+                say(Saver.clean(note) == nil ? "Note cleared" : "Note saved")
+                dismiss()
+            } catch {
+                say("Couldn’t save the note. Try again.")
+            }
+            savingNote = false
+        }
+    }
+}
+
+/// Sound, Repeat, the small window and Hide, for the video on screen (More).
+private struct PlayingControls: View {
+    @ObservedObject var playback: Playback
+    let say: (String) -> Void
+    let hide: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            toggle(playback.muted ? "Sound off" : "Sound on",
+                   icon: playback.muted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                   on: !playback.muted,
+                   accessibility: playback.muted ? "Turn sound on" : "Turn sound off") {
+                playback.muted.toggle()
+            }
+            toggle("Repeat", icon: "repeat.1", on: playback.repeatOne, accessibility: "Repeat this one") {
+                playback.repeatOne.toggle()
+                say(playback.repeatOne ? "Repeating this one" : "Plays the next save when this ends")
+            }
+            if playback.pipSupported {
+                toggle("Small window", icon: "pip.enter", on: false,
+                       accessibility: "Keep playing in a small window") {
+                    if playback.pipPossible {
+                        playback.startSmallWindow()
+                    } else {
+                        say("The small window isn’t ready yet. Try again in a moment.")
+                    }
+                }
+            }
+            toggle("Hide", icon: "arrow.up.left.and.arrow.down.right", on: false,
+                   accessibility: "Hide buttons and caption") { hide() }
+        }
+    }
+
+    private func toggle(_ title: String, icon: String, on: Bool, accessibility: String,
+                        action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                Text(title)
+                    .font(Theme.sans(12, .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(on ? .black : Theme.cream)
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(on ? Theme.accent : Theme.raised))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibility)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+}
+
+/// "Saved together ›": why the feed picked this one. Opens the why sheet.
+private struct WhyChip: View {
+    let text: String
+    var kind: String?
+    /// "Pete sent you this": the sender's face instead of the icon.
+    var face: Saver?
+    var server: URL?
+    let action: () -> Void
+
+    /// "Saved together" when it's saved together, else the why line (the web's `whyLabel`).
+    static func label(_ post: PhonePost, why: String) -> String {
+        post.whyReasons.first?.kind == "together" ? "Saved together" : why
+    }
+
+    /// Who sent it, when that's why it's here.
+    static func face(_ post: PhonePost) -> Saver? {
+        guard let lead = post.whyReasons.first, lead.kind == "sent", let username = lead.username else { return nil }
+        return post.savers.first { $0.username == username } ?? Saver(username: username)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                if let face {
+                    Face(saver: face, server: server, size: 24, ring: .clear)
+                } else {
+                    Image(systemName: WhySheet.icon(for: kind ?? "fresh"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 18, height: 18)
+                }
+                Text(text)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.muted)
+            }
+            .font(Theme.sans(14, .bold))
+            .foregroundStyle(Color(hex: 0xF4F1EA))
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
+            .frame(height: 40)
+            .frosted(Capsule(), dim: 0.55)
+            .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Why this one: \(text)")
+        .accessibilityHint("Shows the reasons and whose saves you see")
+    }
+}
+
+/// A friend's note on their save: a cream speech bubble with their face, its
+/// tail pointing down at the byline ("you're welcome").
+struct NoteBubble: View {
+    let saver: Saver
+    let note: String
+    var server: URL?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Face(saver: saver, server: server, size: 32, ring: .clear)
+                Text("“\(note)”")
+                    .font(Theme.sans(16, .semibold))
+                    .foregroundStyle(Color(hex: 0x141414))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.leading, 6)
+            .padding(.trailing, 16)
+            .padding(.vertical, 6)
+            .frame(minHeight: 44)
+            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color(hex: 0xF4F1EA)))
+            // The tail tucks 2 pt into the bubble, so the two read as one shape.
+            NoteTail()
+                .fill(Color(hex: 0xF4F1EA))
+                .frame(width: 16, height: 10)
+                .padding(.leading, 20)
+                .padding(.top, -2)
+        }
+        // One shadow for the bubble and its tail together.
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(saver.displayName)’s note: \(note)")
+    }
+}
+
+/// The note bubble's tail: a short triangle pointing down at the byline,
+/// with a softened tip.
+private struct NoteTail: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX + 2, y: rect.maxY - 1.5))
+        path.addQuadCurve(to: CGPoint(x: rect.midX - 2, y: rect.maxY - 1.5),
+                          control: CGPoint(x: rect.midX, y: rect.maxY + 0.5))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The player has a sheet of its own up (Home's bar steps aside).
+struct PlayerSheetUp: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
 /// Files or words for the share sheet, from the player's rail.
 private struct ShareItems: Identifiable {
     let id = UUID()
@@ -571,30 +1093,11 @@ private struct ActivitySheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
-/// A plain icon you can press: no circle, a soft shadow so it reads on video.
-private struct Glyph: View {
-    let name: String
-    let label: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: name)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.6), radius: 3, y: 1)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
-}
-
 /// The line to drag through a video. At rest a thin line with a small dot;
 /// while dragging it thickens and the time shows big in the middle.
 private struct Scrubber: View {
     @ObservedObject var playback: Playback
+    var colour: Color = Theme.ink
 
     var body: some View {
         GeometryReader { box in
@@ -603,15 +1106,17 @@ private struct Scrubber: View {
             let fraction = CGFloat(min(max(at / length, 0), 1))
             let dragging = playback.scrubTime != nil
             let thickness: CGFloat = dragging ? 6 : 3
-            let thumb: CGFloat = dragging ? 20 : 12
+            let thumb: CGFloat = dragging ? 20 : 0
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.3)).frame(height: thickness)
-                Capsule().fill(Theme.accent).frame(width: box.size.width * fraction, height: thickness)
+                Capsule().fill(.white.opacity(0.22)).frame(height: thickness)
+                Capsule().fill(dragging ? Theme.accent : colour)
+                    .frame(width: box.size.width * fraction, height: thickness)
                 Circle().fill(Theme.accent)
                     .frame(width: thumb, height: thumb)
                     .offset(x: box.size.width * fraction - thumb / 2)
             }
-            .frame(maxHeight: .infinity)
+            // On the bottom edge of a tall touch area, like the boards' line.
+            .frame(maxHeight: .infinity, alignment: .bottom)
             .contentShape(Rectangle())
             .highPriorityGesture(
                 DragGesture(minimumDistance: 0)
@@ -625,7 +1130,7 @@ private struct Scrubber: View {
                     }
             )
         }
-        .frame(height: 44)
+        .frame(height: 32)
         .accessibilityElement()
         .accessibilityLabel("Position in the video")
         .accessibilityValue("\(Int(playback.time)) of \(Int(playback.duration)) seconds")
@@ -639,11 +1144,12 @@ private struct Scrubber: View {
 /// The thin line left when the buttons are hidden.
 private struct ProgressLine: View {
     let fraction: Double
+    var colour: Color = Theme.ink
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.22))
-                Capsule().fill(Theme.accent).frame(width: geo.size.width * min(max(fraction, 0), 1))
+                Capsule().fill(colour).frame(width: geo.size.width * min(max(fraction, 0), 1))
             }
         }
         .frame(height: 3)
@@ -664,42 +1170,24 @@ private extension View {
     }
 }
 
-/// A round button in the player's action column, with its label under it.
+/// A round frosted button in the player's rail, 52 across. Yellow ring when on (React).
 private struct RailButton<Icon: View>: View {
-    let label: String
     var on = false
-    var shadow = true
     let accessibility: String
     let action: () -> Void
     @ViewBuilder let icon: () -> Icon
 
     var body: some View {
-        Button(action: action) { RailFace(label: label, on: on, shadow: shadow, icon: icon) }
-            .buttonStyle(.plain)
-            .accessibilityLabel(accessibility)
-    }
-}
-
-/// Yellow with a black mark when it's on (Repeat).
-private struct RailFace<Icon: View>: View {
-    let label: String
-    var on = false
-    var shadow = true
-    @ViewBuilder let icon: () -> Icon
-
-    var body: some View {
-        VStack(spacing: 4) {
+        Button(action: action) {
             icon()
-                .foregroundStyle(on ? .black : .white)
-                .frame(width: 48, height: 48)
-                .background(Circle().fill(on ? Theme.accent : .black.opacity(0.55)))
-                .overlay(Circle().strokeBorder(.white.opacity(on ? 0 : 0.18), lineWidth: 1))
-            Text(label)
-                .font(Theme.sans(11, .bold))
-                .foregroundStyle(Theme.cream)
-                .overMediaShadow(shadow)
-                .accessibilityHidden(true)
+                .foregroundStyle(on ? Theme.accent : Color(hex: 0xF4F1EA))
+                .frame(width: 52, height: 52)
+                .frosted(Circle(), dim: on ? 0.6 : 0.45)
+                .overlay(Circle().strokeBorder(Theme.accent, lineWidth: on ? 2 : 0))
+                .contentShape(Circle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibility)
     }
 }
 

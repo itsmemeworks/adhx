@@ -1,34 +1,22 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
-import { getAutoChannels } from '@/lib/channels/auto'
-import { autoChannelCovers, listMyChannels } from '@/lib/channels/channels'
+import { channelsOverview } from '@/lib/channels/overview'
 
 /**
- * GET /api/channels — the signed-in user's channels (their tags, with share
- * state, stats and cover posts) and their "Made for you" channels (saves
- * grouped and named automatically; private to them).
+ * GET /api/channels — everything on the Channels page, for members only:
+ *
+ * - `group`: From everyone. The server's visible saves grouped and named
+ *   (`{ slug, name, size, members, savers, newCount, covers }`).
+ * - `friends`: Your people. One channel per other member with visible saves
+ *   (`{ username, name, avatarUrl, size, newCount, covers }`).
+ * - `madeForYou`: the viewer's saves grouped and named (private to them).
+ * - `mine`: the viewer's own channels (tags), with share state and stats.
+ * - `canInvite`: whether to offer "Invite someone".
  */
 export const GET = withAuth(async (_request, userId) => {
   try {
-    const [{ username, channels }, auto] = await Promise.all([
-      listMyChannels(userId),
-      getAutoChannels(userId),
-    ])
-    const covers = await autoChannelCovers(userId, auto)
-    const response = NextResponse.json({
-      username,
-      mine: channels,
-      // A "Made for you" channel that was kept now lives under the user's own.
-      madeForYou: auto
-        .filter((c) => !channels.some((m) => m.tag === c.slug))
-        .map((c) => ({
-          slug: c.slug,
-          name: c.name,
-          size: c.size,
-          covers: covers.get(c.slug) ?? [],
-        })),
-    })
+    const response = NextResponse.json(await channelsOverview(userId))
     response.headers.set('Cache-Control', 'no-store')
     return response
   } catch (error) {

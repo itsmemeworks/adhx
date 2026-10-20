@@ -245,22 +245,47 @@ export function usePasteToSave({
   return { toast: node, pasteFromClipboard, save: (url: string) => void save(url) }
 }
 
+/**
+ * From this width up the boards paste with ⌘V and show no pill, so it stays
+ * out of sight until it has keyboard focus (like a skip link): still there to
+ * Tab to, and still read out by screen readers.
+ */
+const KEYBOARD_ONLY = {
+  md: 'md:sr-only md:focus-within:not-sr-only',
+  lg: 'lg:sr-only lg:focus-within:not-sr-only',
+} as const
+
 /** The yellow Paste pill. */
-export function PasteButton({ onClick, className }: { onClick: () => void; className?: string }) {
+export function PasteButton({
+  onClick,
+  className,
+  keyboardOnlyFrom,
+}: {
+  onClick: () => void
+  className?: string
+  /** From this width up, show the pill only while it has keyboard focus. */
+  keyboardOnlyFrom?: keyof typeof KEYBOARD_ONLY
+}) {
   // Saving needs an account; signed out, the header offers Sign in instead.
   const { me, loading } = useAuthMe()
   if (!loading && !me?.authenticated) return null
-  return (
+  const pill = (
     <button
       type="button"
       onClick={onClick}
+      aria-keyshortcuts={keyboardOnlyFrom ? 'Meta+V Control+V' : undefined}
       className={cn(
         'flex h-[38px] shrink-0 items-center gap-1.5 rounded-full bg-nx-accent px-3 text-sm font-extrabold text-black',
-        className,
+        !keyboardOnlyFrom && className,
       )}
     >
       <ClipboardPaste aria-hidden className="h-4 w-4" strokeWidth={2.2} />
       <span>Paste</span>
     </button>
+  )
+  if (!keyboardOnlyFrom) return pill
+  // The wrapper does the hiding: sr-only on the pill would undo its padding.
+  return (
+    <span className={cn('flex shrink-0', KEYBOARD_ONLY[keyboardOnlyFrom], className)}>{pill}</span>
   )
 }

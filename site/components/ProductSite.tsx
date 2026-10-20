@@ -1,15 +1,34 @@
 import type { ReactNode } from 'react'
+import { Art } from './art'
+import { cn } from './cn'
+import { CopyCommand } from './CopyCommand'
 import { Gob } from './Gob'
+import { Meme } from './Meme'
 import { NetworkIcon } from './NetworkIcon'
 import { ALL_PLATFORMS, networkLabel } from './networks'
-import { cn } from './cn'
-import { Art, type ArtId } from './art'
-import { CopyCommand } from './CopyCommand'
-import { HeroReel } from './HeroReel'
+import { Face, type PersonId } from './People'
+import { PhoneFrame, PlayerScreen, ShareCardScreen, WebFrame, u } from './frames'
+import { Arrow, Check, Chat, GitHubMark, Heart, Menu } from './icons'
+import { NavMenu } from './NavMenu'
+import {
+  ChannelsMock,
+  FacesMock,
+  InvitesMock,
+  LiveMock,
+  Mock,
+  NewMock,
+  SearchMock,
+  StepFeed,
+  StepKeep,
+  StepShare,
+  VaultMock,
+} from './mocks'
 
 /**
- * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown in
- * its own design with illustrated posts, and how to run your own.
+ * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown
+ * in its own design with illustrated posts (never anyone's real ones), and how
+ * to run your own. Fluid from 320px up: below `md` it follows the phone board,
+ * from `lg` the desktop one.
  */
 
 export const GITHUB_URL = 'https://github.com/itsmemeworks/adhx'
@@ -23,346 +42,880 @@ docker build -t adhx:local .
 docker compose config --quiet
 docker compose up -d`
 
-function GitHubMark({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3" />
-    </svg>
-  )
-}
+const WRAP = 'mx-auto w-full max-w-[1264px] px-4 md:px-8'
 
-function Section({
-  id,
-  kicker,
-  title,
-  body,
-  children,
-  flip = false,
-}: {
-  id: string
-  kicker: string
-  title: ReactNode
-  body: ReactNode
-  children: ReactNode
-  flip?: boolean
-}) {
-  return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-title`}
-      className="mx-auto grid max-w-[1200px] items-center gap-10 px-4 py-16 md:grid-cols-2 md:gap-16 md:px-8 md:py-24"
-    >
-      <div className={cn('flex flex-col gap-5', flip && 'md:order-2')}>
-        <span className="text-[13px] font-extrabold uppercase tracking-[0.16em] text-nx-accent">
-          {kicker}
-        </span>
-        <h2
-          id={`${id}-title`}
-          className="m-0 font-nx-serif text-[44px] font-normal leading-[0.98] md:text-[60px]"
-        >
-          {title}
-        </h2>
-        <div className="flex flex-col gap-4 text-[17px] leading-relaxed text-nx-soft md:text-[18px]">
-          {body}
-        </div>
-      </div>
-      <div className={cn(flip && 'md:order-1')}>{children}</div>
-    </section>
-  )
-}
+const NAV = [
+  { href: '#how', label: 'How it works' },
+  { href: '#features', label: 'Features' },
+  { href: '#apps', label: 'Apps' },
+  { href: '#self-host', label: 'Self-host' },
+]
 
-function Post({
-  art,
-  className,
-  children,
-}: {
-  art: ArtId
-  className?: string
-  children?: ReactNode
-}) {
-  return (
-    <div className={cn('relative overflow-hidden rounded-[18px] bg-nx-surface', className)}>
-      <Art id={art} className="absolute inset-0 h-full w-full" />
-      {children}
-    </div>
-  )
-}
+/* ——— Bits ——— */
 
-function Chip({ children, tone = 'plate' }: { children: ReactNode; tone?: 'plate' | 'accent' }) {
+function Kicker({ children }: { children: ReactNode }) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-extrabold',
-        tone === 'accent' ? 'bg-nx-accent text-black' : 'bg-black/60 text-white',
-      )}
-    >
+    <span className="flex items-center gap-2 whitespace-nowrap text-[12px] font-extrabold uppercase leading-[1.3] tracking-[0.16em] text-nx-accent md:text-[13px]">
       {children}
     </span>
   )
 }
 
-/* ——— Feature mockups ——— */
+function Dot({ className }: { className?: string }) {
+  return <span aria-hidden className={cn('shrink-0 rounded-full bg-nx-accent', className)} />
+}
 
-function SearchMock() {
-  const results: Array<{ art: ArtId; chip: string; on: string }> = [
-    { art: 'frog', chip: 'Strong match', on: 'in the video' },
-    { art: 'frogRain', chip: 'Strong match', on: 'in the picture' },
-    { art: 'wave', chip: 'Related', on: 'in the words' },
-  ]
+function GitHubButton({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="flex flex-col gap-4 rounded-[28px] bg-nx-surface p-4 md:p-5">
-      <div className="flex h-14 items-center gap-3 rounded-full bg-black px-5 text-[17px]">
-        <svg
-          aria-hidden
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="rgb(var(--nx-accent))"
-          strokeWidth="2.6"
-          strokeLinecap="round"
+    <a
+      href={GITHUB_URL}
+      className={cn(
+        'flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black hover:bg-white',
+        className,
+      )}
+    >
+      <GitHubMark className="h-5 w-5" />
+      <span>{children}</span>
+    </a>
+  )
+}
+
+/** A reaction floating past, as in Live. */
+function Reaction({
+  who,
+  text,
+  className,
+  delay = 0,
+  hot = false,
+}: {
+  who: PersonId
+  text: string
+  className?: string
+  delay?: number
+  hot?: boolean
+}) {
+  return (
+    <span
+      className={cn(
+        'nx-float inline-flex h-[34px] items-center gap-2 whitespace-nowrap rounded-full bg-black/65 pl-1 pr-3.5 text-[13px] font-extrabold text-white backdrop-blur-md md:h-10 md:text-[15px]',
+        hot
+          ? 'border-[1.5px] border-[#ff8fa3]/70 shadow-[0_10px_24px_rgba(0,0,0,0.45)]'
+          : 'border border-white/15',
+        className,
+      )}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <Face who={who} size={26} className="md:!h-[30px] md:!w-[30px] md:!text-[12px]" />
+      <span>{text}</span>
+    </span>
+  )
+}
+
+/* ——— Header ——— */
+
+function Header() {
+  return (
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-nx-ink/90 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-lg">
+      <div className={cn(WRAP, 'flex h-[63px] items-center gap-3 md:h-[71px] md:gap-12')}>
+        <a
+          href="#top"
+          aria-label="adhx, back to the top"
+          className="gob-host flex items-center gap-2.5 text-nx-cream"
         >
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-4-4" />
-        </svg>
-        <span>a frog in a pond</span>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {results.map((r, i) => (
-          <div key={r.art} className="flex flex-col gap-2">
-            <Post
-              art={r.art}
-              className={cn('aspect-[3/4]', i === 0 && 'ring-[3px] ring-nx-accent')}
-            />
-            <span className="flex flex-col">
-              <span
-                className={cn(
-                  'text-[13px] font-extrabold',
-                  i < 2 ? 'text-nx-accent' : 'text-nx-soft',
-                )}
-              >
-                {r.chip}
-              </span>
-              <span className="text-[12px] text-nx-muted">{r.on}</span>
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-col gap-2 rounded-[18px] bg-black p-3">
-        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-nx-muted">
-          What it saw · a frame every 2 seconds
-        </span>
-        <div className="grid grid-cols-6 gap-1.5">
-          {(['frog', 'frog', 'frogRain', 'frog', 'frogRain', 'frog'] as ArtId[]).map((a, i) => (
-            <Post key={i} art={a} className="aspect-square rounded-[8px]" />
+          <Gob size={34} />
+          <span className="font-nx-serif text-[28px] leading-none md:text-[30px]">adhx</span>
+        </a>
+        <nav aria-label="Sections" className="hidden gap-8 md:flex">
+          {NAV.map((n) => (
+            <a
+              key={n.href}
+              href={n.href}
+              className="whitespace-nowrap text-[15px] font-semibold text-nx-soft hover:text-white"
+            >
+              {n.label}
+            </a>
           ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function KeepMock() {
-  const rows: Array<{ net: string; art: ArtId; name: string; detail: string }> = [
-    { net: 'twitter', art: 'city', name: 'video-1.mp4', detail: '3840 × 2160 · 57 s · 39 MB' },
-    { net: 'facebook', art: 'peaks', name: 'video-1.mp4', detail: '1920 × 1080 · 40 s · 15 MB' },
-    {
-      net: 'instagram',
-      art: 'cat',
-      name: 'photo-1.jpg … photo-4.jpg',
-      detail: 'Full-size carousel',
-    },
-    { net: 'soundcloud', art: 'synth', name: 'audio-1.m4a', detail: 'The track and its artwork' },
-  ]
-  return (
-    <div className="flex flex-col gap-3 rounded-[28px] bg-nx-surface p-4 md:p-5">
-      <div className="flex items-center justify-between px-1">
-        <span className="font-mono text-[13px] text-nx-muted">/data/media</span>
-        <Chip tone="accent">Kept on your disk</Chip>
-      </div>
-      {rows.map((r) => (
-        <div key={r.name + r.net} className="flex items-center gap-3 rounded-[16px] bg-black p-2.5">
-          <Post art={r.art} className="h-14 w-14 shrink-0 rounded-[12px]" />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-mono text-[14px]">{r.name}</span>
-            <span className="text-[13px] text-nx-muted">{r.detail}</span>
-          </span>
-          <NetworkIcon platform={r.net} className="h-5 w-5 text-white" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function TheaterMock() {
-  return (
-    <div className="relative mx-auto aspect-[9/16] w-full max-w-[340px] overflow-hidden rounded-[36px] border-[6px] border-[#2a2620] bg-black">
-      <Art id="skate" className="absolute inset-0 h-full w-full" />
-      <div className="absolute right-3 top-1/2 flex -translate-y-1/2 flex-col gap-3">
-        {[
-          <NetworkIcon key="n" platform="tiktok" className="h-[18px] w-[18px]" />,
-          <svg
-            key="s"
-            aria-hidden
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="rgb(var(--nx-accent))"
-          >
-            <path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z" />
-          </svg>,
-          <svg key="b" aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z" />
-          </svg>,
-          <svg
-            key="d"
-            aria-hidden
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" />
-          </svg>,
-        ].map((icon, i) => (
-          <span
-            key={i}
-            className="nx-plate flex h-11 w-11 items-center justify-center rounded-full text-white"
-          >
-            {icon}
-          </span>
-        ))}
-      </div>
-      <div className="nx-scrim absolute inset-x-0 bottom-0 flex flex-col gap-2 px-4 pb-5 pt-16">
-        <span className="flex items-center gap-2 text-[14px] font-bold">
-          <span>@skatepark.daily</span>
-          <Chip tone="accent">Just saved</Chip>
-        </span>
-        <span className="text-[13px] leading-snug text-white/85">
-          First try on the big ramp, no way
-        </span>
-        <span className="h-1 overflow-hidden rounded bg-white/25">
-          <span className="block h-1 w-2/3 rounded bg-nx-accent" />
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function NowMock() {
-  const moments: Array<{ art: ArtId; name: string; n: number }> = [
-    { art: 'frogRain', name: 'Frogs in the rain', n: 4 },
-    { art: 'synth', name: 'Synth jams', n: 3 },
-  ]
-  return (
-    <div className="flex flex-col gap-3 rounded-[28px] bg-nx-surface p-4 md:p-5">
-      <span className="flex items-center gap-2 px-1 text-[15px] font-extrabold">
-        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#ff5c39]" />
-        <span>Right now on your ADHX</span>
-      </span>
-      <div className="grid grid-cols-2 gap-3">
-        {moments.map((m, i) => (
-          <div key={m.name} className="flex flex-col gap-2">
-            <Post art={m.art} className="aspect-[4/5]">
-              <span className="absolute left-2 top-2">
-                <Chip>{`${m.n} people saving`}</Chip>
-              </span>
-            </Post>
-            <span className="flex items-center justify-between gap-2">
-              <span className="text-[15px] font-extrabold">{m.name}</span>
-              {i === 0 && (
-                <span className="rounded-full bg-nx-accent px-3 py-1 text-[13px] font-extrabold text-black">
-                  Tune in
-                </span>
-              )}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function ChannelsMock() {
-  const channels: Array<{ name: string; arts: ArtId[]; count: number }> = [
-    { name: 'Frogs in the rain', arts: ['frog', 'frogRain', 'wave', 'frog'], count: 23 },
-    { name: 'Food you’ll cook one day', arts: ['steak', 'peaks', 'steak', 'cat'], count: 41 },
-  ]
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {channels.map((c) => (
-        <div key={c.name} className="flex flex-col gap-2 rounded-[24px] bg-nx-surface p-3">
-          <div className="grid aspect-square grid-cols-2 gap-1.5">
-            {c.arts.map((a, i) => (
-              <Post key={i} art={a} className="rounded-[12px]" />
-            ))}
-          </div>
-          <span className="px-1 text-[15px] font-extrabold">{c.name}</span>
-          <span className="px-1 text-[13px] text-nx-muted">{`${c.count} posts · made for you`}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function PhonesMock() {
-  return (
-    <div className="flex items-end justify-center gap-4">
-      {(
-        [
-          { net: 'tiktok', art: 'skate', os: 'iPhone', label: 'TikTok' },
-          { net: 'youtube', art: 'frogRain', os: 'Android', label: 'YouTube' },
-        ] as Array<{ net: string; art: ArtId; os: string; label: string }>
-      ).map((p, i) => (
-        <div
-          key={p.os}
-          className={cn('flex flex-col items-center gap-3', i === 1 && 'translate-y-6')}
+        </nav>
+        <span className="flex-1" />
+        <a
+          href={GITHUB_URL}
+          className="hidden min-h-[44px] items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent pl-4 pr-5 text-[15px] font-extrabold text-black hover:bg-white md:flex"
         >
-          <div className="relative aspect-[9/19] w-[170px] overflow-hidden rounded-[32px] border-[5px] border-[#2a2620] bg-black md:w-[200px]">
-            <Art id={p.art} className="absolute inset-0 h-full w-full opacity-40" />
-            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 rounded-t-[22px] bg-nx-surface p-3">
-              <span className="mx-auto h-1 w-8 rounded bg-[#4a453c]" />
-              <span className="flex items-center gap-1.5">
-                <Gob size={20} />
-                <span className="font-nx-serif text-[18px] leading-none">adhx</span>
-              </span>
-              <span className="flex items-center gap-1.5 text-[12px] font-bold text-nx-soft">
-                <NetworkIcon platform={p.net} className="h-3.5 w-3.5 text-white" />
-                <span>{p.label}</span>
-              </span>
-              <span className="rounded-[12px] bg-black px-2.5 py-2 text-[13px] font-extrabold">
-                Saved to your ADHX
-              </span>
-            </div>
-          </div>
-          <span className="text-[13px] font-bold text-nx-muted">{p.os}</span>
+          <GitHubMark className="h-[18px] w-[18px]" />
+          <span>GitHub</span>
+        </a>
+        <NavMenu
+          summary={
+            <summary
+              aria-label="Menu"
+              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-nx-surface text-nx-cream"
+            >
+              <Menu size={20} />
+            </summary>
+          }
+        >
+          {NAV.map((n) => (
+            <a
+              key={n.href}
+              href={n.href}
+              className="flex min-h-[44px] items-center rounded-[14px] px-3 text-[15px] font-semibold text-nx-cream hover:bg-[#262320]"
+            >
+              {n.label}
+            </a>
+          ))}
+          <a
+            href={GITHUB_URL}
+            className="mt-1 flex min-h-[44px] items-center gap-2 rounded-full bg-nx-accent px-4 text-[15px] font-extrabold text-black"
+          >
+            <GitHubMark className="h-[18px] w-[18px]" />
+            <span>GitHub</span>
+          </a>
+        </NavMenu>
+      </div>
+    </header>
+  )
+}
+
+/* ——— Hero ——— */
+
+function HeroComposition() {
+  return (
+    <Mock
+      label="ADHX on a laptop, playing an elephant video you, Ana and two others saved, with the meme caption: First video ever uploaded. Still better than your For You page. Next to it, ADHX on a phone playing a toy hamster video Ana and Ben saved, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved one."
+      className="mx-auto w-full max-w-[740px]"
+    >
+      <div className="relative aspect-[358/300] md:aspect-[740/488]">
+        <div className="pointer-events-none absolute -left-[10%] top-[40%] h-[120%] w-[130%] rounded-full bg-[radial-gradient(rgba(255,210,63,0.13),rgba(255,210,63,0)_62%)] md:left-[20%] md:top-[30%] md:w-[110%]" />
+        <WebFrame className="absolute left-0 top-[6.7%] w-[67%] md:top-[7.4%] md:w-[83.8%]" />
+        <PhoneFrame className="absolute left-[64%] top-0 w-[36%] md:left-[68.6%] md:w-[31.4%]">
+          <PlayerScreen
+            art="hamster"
+            savers={['ana', 'ben']}
+            savedLine="Ana and Ben saved this"
+            ago="2h"
+            network="Reddit video"
+            caption="The hamster repeats everything he says. He has not made peace with this."
+            newCount={12}
+            saved
+          />
+        </PhoneFrame>
+        <div className="absolute left-[40%] top-[47%] flex flex-col items-start gap-2 md:left-[70.6%] md:top-[36%] md:gap-2.5">
+          <Reaction who="jo" text="who sent this" className="hidden opacity-40 md:inline-flex" />
+          <Reaction who="ben" text="again" className="opacity-60" delay={700} />
+          <Reaction who="ana" text="ha" hot delay={1400} />
         </div>
-      ))}
+        <div className="absolute left-0 top-[80%] flex h-[52px] items-center gap-2.5 rounded-[16px] border border-[#ffb35c]/45 bg-[#262320]/95 py-1.5 pl-1.5 pr-3.5 shadow-[0_18px_40px_rgba(0,0,0,0.55)] backdrop-blur-md md:left-[3.8%] md:top-[82.4%] md:h-[60px] md:gap-3 md:rounded-[18px] md:pl-2 md:pr-[18px]">
+          <span className="relative shrink-0">
+            <span className="relative block h-[38px] w-[38px] overflow-hidden rounded-[10px] md:h-11 md:w-11 md:rounded-[12px]">
+              <Art id="steak" className="absolute inset-0 h-full w-full" />
+            </span>
+            <Face who="mum" size={18} ring="#262320" className="absolute -bottom-1 -right-1" />
+          </span>
+          <span className="flex flex-col gap-0.5">
+            <span className="whitespace-nowrap text-[13px] font-extrabold md:text-[14px]">
+              Mum saved one
+            </span>
+            <span className="whitespace-nowrap text-[11px] text-nx-soft md:text-[12px]">
+              Pinterest video · just now
+            </span>
+          </span>
+        </div>
+      </div>
+    </Mock>
+  )
+}
+
+function Hero() {
+  return (
+    <section
+      aria-labelledby="hero-title"
+      className="relative overflow-hidden pb-12 pt-6 md:pb-20 md:pt-12 lg:pb-11 lg:pt-16"
+    >
+      <div className={cn(WRAP, 'flex flex-col gap-4 md:gap-8')}>
+        <h1
+          id="hero-title"
+          className="m-0 font-nx-serif text-[46px] font-normal leading-[0.95] tracking-[-0.015em] md:text-[68px] lg:text-[clamp(68px,6.4vw,92px)]"
+        >
+          <span className="block">
+            <span className="block md:inline">Your friends have </span>
+            <span className="block md:inline">better taste</span>
+          </span>
+          <span className="block text-nx-accent">than the algorithm.</span>
+        </h1>
+        <div className="flex flex-col gap-7 lg:flex-row lg:items-start lg:gap-10">
+          <div className="flex flex-col items-stretch gap-6 md:items-start lg:w-[420px] lg:shrink-0 lg:gap-7 lg:pt-2">
+            <p className="m-0 max-w-[640px] text-[16px] leading-[1.45] text-nx-soft md:text-[19px] md:leading-[1.5]">
+              <span className="md:hidden">
+                A private feed of the best of every social network, picked by your closest friends
+                and family. On a box you own. Open source.
+              </span>
+              <span className="hidden md:inline">
+                A private feed of the best of every social network, picked by your closest friends
+                and family, on a box you own. Real copies, found by what you remember, sent on to
+                any app.
+              </span>
+            </p>
+            <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:gap-3 lg:flex-col lg:items-start">
+              <GitHubButton>Get it on GitHub</GitHubButton>
+              <a
+                href="#self-host"
+                className="flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full border-[1.5px] border-nx-cream px-6 text-[16px] font-extrabold text-nx-cream hover:bg-white/10"
+              >
+                <span>Start a feed for your people</span>
+                <Arrow size={18} className="hidden md:block" />
+              </a>
+            </div>
+            <ul className="m-0 hidden list-none flex-col gap-2.5 p-0 text-[15px] text-nx-muted md:flex">
+              {[
+                'Self-hosted and open source, MIT licence',
+                'No ads, no strangers, no growth meetings',
+                'Web, iPhone and Android',
+              ].map((t) => (
+                <li key={t} className="flex items-center gap-2.5">
+                  <Dot className="h-1.5 w-1.5" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href="/adhx-reel.mp4"
+              download
+              className="self-center text-[14px] font-bold text-nx-soft underline underline-offset-4 hover:text-white md:self-start"
+            >
+              Download the 30-second tour (MP4)
+            </a>
+          </div>
+          <div className="min-w-0 flex-1 lg:pt-0">
+            <HeroComposition />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ——— Networks ——— */
+
+function Networks() {
+  return (
+    <section
+      aria-labelledby="nets-title"
+      className="border-y border-white/10 bg-black py-6 md:py-12 lg:py-6"
+    >
+      <div className={cn(WRAP, 'flex flex-col gap-[18px] md:gap-6 lg:gap-[22px]')}>
+        <div className="flex flex-col gap-1.5 md:gap-2 lg:flex-row lg:items-baseline lg:justify-between lg:gap-6">
+          <h2
+            id="nets-title"
+            className="m-0 font-nx-serif text-[30px] font-normal leading-none md:whitespace-nowrap md:text-[38px]"
+          >
+            <span>Fourteen networks. </span>
+            <span className="text-nx-accent">One feed.</span>
+          </h2>
+          <p className="m-0 text-[14px] text-nx-muted md:text-[15px]">
+            Save from any of them. Watch all of them here.
+          </p>
+        </div>
+        <ul className="m-0 flex list-none flex-wrap gap-2 p-0 md:gap-2.5 xl:grid xl:grid-cols-7">
+          {ALL_PLATFORMS.map((p) => (
+            <li
+              key={p}
+              className="flex h-[34px] items-center gap-2 rounded-full border border-white/10 bg-nx-surface pl-[5px] pr-3 md:h-12 md:gap-2.5 md:pl-2 md:pr-3.5"
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-[#262320] md:h-8 md:w-8 md:rounded-[10px]">
+                <NetworkIcon
+                  platform={p}
+                  className="h-3.5 w-3.5 text-white md:h-[18px] md:w-[18px]"
+                />
+              </span>
+              <span className="whitespace-nowrap text-[13px] font-semibold md:text-[15px]">
+                {networkLabel(p)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+/* ——— How it works ——— */
+
+const STEPS: Array<{
+  n: string
+  title: string
+  body: string
+  short: string
+  Visual: (p: { compact?: boolean }) => ReactNode
+}> = [
+  {
+    n: '01',
+    title: 'Your people save from any app',
+    body: 'Hit share in whatever app you’re in and pick ADHX. Or paste the link. Anyone you invited can add to the pile.',
+    short: 'Hit share wherever you are and pick ADHX. Or paste the link.',
+    Visual: StepShare,
+  },
+  {
+    n: '02',
+    title: 'Your box keeps a real copy',
+    body: 'It downloads the actual video or photos, in the best quality going, onto a server you run. Not a link. The thing.',
+    short: 'The actual video or photos, in the best quality going. Not a link.',
+    Visual: StepKeep,
+  },
+  {
+    n: '03',
+    title: 'Everyone gets one feed',
+    body: 'Everything your lot kept, full screen, with their faces on it. No ads in between, no strangers, no “suggested for you”.',
+    short: 'Full screen, with their faces on it. No ads in between.',
+    Visual: StepFeed,
+  },
+]
+
+function HowItWorks() {
+  return (
+    <section
+      id="how"
+      aria-labelledby="how-title"
+      className="scroll-mt-16 pb-16 pt-8 md:py-16 lg:pb-10"
+    >
+      <div className={WRAP}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+          <div className="flex flex-col gap-2.5 md:gap-3.5">
+            <Kicker>How it works</Kicker>
+            <h2
+              id="how-title"
+              className="m-0 font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] md:whitespace-nowrap md:text-[60px] lg:text-[48px] xl:text-[60px]"
+            >
+              <span className="block md:inline">Three steps. </span>
+              <span className="block md:inline">No algorithm.</span>
+            </h2>
+          </div>
+          <p className="m-0 max-w-[430px] font-nx-serif text-[22px] leading-[1.1] text-nx-soft md:text-[30px] md:leading-[1.08] lg:max-w-[340px] lg:text-[26px] xl:max-w-[430px] xl:text-[30px]">
+            <span>Nothing leaves your house unless </span>
+            <span className="text-nx-cream">one of you sends it.</span>
+          </p>
+        </div>
+        <ol className="m-0 mt-5 flex list-none flex-col gap-3 p-0 md:mt-10 md:gap-5 lg:mt-11 lg:grid lg:grid-cols-3 lg:gap-6">
+          {STEPS.map(({ n, title, body, short, Visual }) => (
+            <li key={n}>
+              <div className="flex gap-3.5 lg:hidden">
+                <span aria-hidden className="shrink-0">
+                  <Visual compact />
+                </span>
+                <span className="flex min-w-0 flex-col gap-1 pt-0.5">
+                  <span className="text-[12px] font-extrabold text-nx-accent">{n}</span>
+                  <h3 className="m-0 text-[16px] font-extrabold leading-tight md:text-[19px]">
+                    {title}
+                  </h3>
+                  <p className="m-0 text-[14px] leading-snug text-nx-soft md:text-[15px]">
+                    <span className="md:hidden">{short}</span>
+                    <span className="hidden md:inline">{body}</span>
+                  </p>
+                </span>
+              </div>
+              <div className="hidden h-full overflow-hidden rounded-[24px] border border-white/10 bg-nx-surface lg:block">
+                <div aria-hidden>
+                  <Visual />
+                </div>
+                <div className="flex flex-col gap-2 px-[22px] pb-6 pt-5">
+                  <span className="text-[13px] font-extrabold text-nx-accent">{n}</span>
+                  <h3 className="m-0 text-[22px] font-extrabold leading-[1.2]">{title}</h3>
+                  <p className="m-0 text-[15px] leading-[1.5] text-nx-soft">{body}</p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
+/* ——— Features ——— */
+
+function Feature({
+  id,
+  kicker,
+  title,
+  shortTitle,
+  children,
+  short,
+  mock,
+  flip = false,
+  dark = false,
+}: {
+  id: string
+  kicker: ReactNode
+  title: string
+  /** The phone board's shorter headline, below `md`. */
+  shortTitle?: string
+  children: ReactNode
+  /** The phone board's shorter copy, below `md`. */
+  short?: ReactNode
+  mock: ReactNode
+  flip?: boolean
+  dark?: boolean
+}) {
+  return (
+    <section aria-labelledby={id} className={cn(dark && 'bg-black')}>
+      <div
+        className={cn(
+          WRAP,
+          'grid items-center gap-4 pb-9 pt-7 md:gap-8 md:py-14 lg:min-h-[440px] lg:gap-16 lg:py-[30px]',
+          flip
+            ? 'lg:grid-cols-[minmax(0,620fr)_minmax(0,516fr)]'
+            : 'lg:grid-cols-[minmax(0,516fr)_minmax(0,620fr)]',
+        )}
+      >
+        <div className={cn('flex flex-col gap-2.5 md:gap-4', flip && 'lg:order-2')}>
+          <Kicker>{kicker}</Kicker>
+          <h2
+            id={id}
+            className="m-0 font-nx-serif text-[34px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[48px] lg:text-[56px]"
+          >
+            {shortTitle ? (
+              <>
+                <span className="md:hidden">{shortTitle}</span>
+                <span className="hidden md:inline">{title}</span>
+              </>
+            ) : (
+              title
+            )}
+          </h2>
+          {short && (
+            <div className="flex flex-col gap-2 text-[15px] leading-[1.45] text-nx-soft md:hidden">
+              {short}
+            </div>
+          )}
+          <div
+            className={cn(
+              'flex-col gap-3 text-[15px] leading-[1.45] text-nx-soft md:flex md:text-[18px] md:leading-[1.55]',
+              short ? 'hidden' : 'flex',
+            )}
+          >
+            {children}
+          </div>
+        </div>
+        <div
+          className={cn(
+            'mx-auto w-full min-w-0 max-w-[620px] md:pt-2 lg:pt-0',
+            flip && 'lg:order-1',
+          )}
+        >
+          {mock}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Features() {
+  return (
+    <div id="features" className="scroll-mt-16 border-t border-white/10">
+      <Feature
+        id="f-new"
+        kicker="New"
+        title="Only what you haven’t seen. Then it stops."
+        shortTitle="Only what you haven’t seen."
+        short={
+          <p className="m-0">
+            Only what your people saved that you haven’t seen, with why each one’s next. Videos and
+            photos first. Then it stops.
+          </p>
+        }
+        mock={<NewMock />}
+      >
+        <p className="m-0">
+          New plays what your people saved that you haven’t seen yet, and every post says why it’s
+          next: saved together, close to you, like what you keep. Videos and photos by default; text
+          posts and articles when you want them. No infinite scroll, no autoplay hole.
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-faces"
+        kicker="Saver faces"
+        title="Ana and Ben saved this."
+        short={
+          <p className="m-0">
+            <span>Every post wears the faces of whoever kept it. Shared by default; flip </span>
+            <strong className="font-extrabold text-nx-cream">Just for me</strong>
+            <span> to keep one to yourself.</span>
+          </p>
+        }
+        mock={<FacesMock />}
+        flip
+        dark
+      >
+        <p className="m-0">
+          <span>
+            Every post wears the faces of whoever kept it, so you know whose taste you’re trusting.
+            Saves go to your people by default. Flip{' '}
+          </span>
+          <strong className="font-extrabold text-nx-cream">Just for me</strong>
+          <span> and it stays out of everyone else’s feed, channels and search.</span>
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-vault"
+        kicker="The meme vault"
+        title="Deleted on X. Still here."
+        short={
+          <>
+            <p className="m-0">
+              A real copy of every save, in the best quality going. Share sends the actual file to
+              any app.
+            </p>
+            <p className="m-0 text-[13px] text-nx-muted">
+              Posts that are private or DRM-protected may not download.
+            </p>
+          </>
+        }
+        mock={<VaultMock />}
+      >
+        <p className="m-0">
+          ADHX keeps a real copy of every save, in the best quality the network offers, and plays it
+          from your box. When the original gets nuked, yours doesn’t notice. Share sends the actual
+          file to any app, not a link that dies next month.
+        </p>
+        <p className="m-0 text-[14px] text-nx-muted md:text-[15px]">
+          Posts that are private or DRM-protected when you save them may not download.
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-search"
+        kicker="Search"
+        title="Nobody remembers captions."
+        short={
+          <p className="m-0">
+            ADHX hears what’s said in the video and reads the text on screen. Or ask Claude, with
+            the adhx skill.
+          </p>
+        }
+        mock={<SearchMock />}
+        flip
+        dark
+      >
+        <p className="m-0">
+          Type what you remember. ADHX hears what’s said in the video and reads the text on screen,
+          so the meme turns up by its punchline. It runs on your box: no frame or sound leaves it.
+        </p>
+        <p className="m-0 flex items-start gap-2.5 text-[14px] leading-[1.5] text-nx-muted md:text-[15px]">
+          <Chat size={18} className="mt-0.5 shrink-0 text-nx-accent" />
+          <span>
+            <strong className="font-extrabold text-nx-cream">Search from Claude too.</strong>
+            <span>
+              {' '}
+              Add the adhx skill with a read-only key and ask for anything you saved, in plain
+              words.
+            </span>
+          </span>
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-channels"
+        kicker="Channels"
+        title="Rabbit holes, dug by your friends."
+        short={
+          <p className="m-0">
+            Channels from everyone’s saves, named for what they’re about. Plus one per friend, with
+            what’s new to you on top.
+          </p>
+        }
+        mock={<ChannelsMock />}
+      >
+        <p className="m-0">
+          ADHX sorts everyone’s saves into channels by what they’re about, and names them. Every
+          friend gets one too: everything they kept, with what’s new to you on top. Make your own
+          and share it with a link.
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-live"
+        kicker={
+          <>
+            <span aria-hidden className="nx-pulse h-2 w-2 rounded-full bg-[#ff5a3c]" />
+            <span>Live</span>
+          </>
+        }
+        title="Watch together. Heckle in real time."
+        short={
+          <p className="m-0">
+            See who’s watching with you, who saved the next one, and every “ha” as it floats past.
+          </p>
+        }
+        mock={<LiveMock />}
+        flip
+        dark
+      >
+        <p className="m-0">
+          Live gathers what your lot are saving tonight into moments. Tune in and see who’s watching
+          with you, who just saved the next one, and every “ha” and “who sent this” as it floats
+          past.
+        </p>
+      </Feature>
+
+      <Feature
+        id="f-invites"
+        kicker="Invites"
+        title="One link. They’re in, phone and all."
+        short={
+          <p className="m-0">
+            It signs a friend in and pairs their phone in one go. Approve who joins, if you like.
+          </p>
+        }
+        mock={<InvitesMock />}
+      >
+        <p className="m-0">
+          Send a friend one link. It signs them in and pairs their phone in the same go. It works
+          once and runs out after a week, so nobody gets in uninvited. Approve who joins, if you
+          like.
+        </p>
+      </Feature>
     </div>
   )
 }
 
-function ClaudeMock() {
+/* ——— Apps ——— */
+
+function Apps() {
   return (
-    <div className="flex flex-col gap-3 rounded-[28px] bg-nx-surface p-5 font-mono text-[14px] leading-relaxed">
-      <span className="text-nx-muted">You</span>
-      <span className="rounded-[14px] bg-black px-4 py-3 font-nx-sans text-[15px]">
-        Find my saved videos with a frog in them
-      </span>
-      <span className="text-nx-muted">Claude, with the adhx skill</span>
-      <span className="rounded-[14px] bg-black px-4 py-3 font-nx-sans text-[15px] leading-relaxed text-nx-soft">
-        <span className="font-bold text-white">Two strong matches.</span>
-        <span>
-          {' '}
-          A frog sitting out the rain under a yellow umbrella, from YouTube, saved yesterday, and a
-          pond video from X. Here are the links.
+    <section
+      id="apps"
+      aria-labelledby="apps-title"
+      className="relative scroll-mt-16 overflow-hidden border-t border-white/10 bg-black"
+    >
+      <div className="pointer-events-none absolute -left-[15%] top-[40%] h-[380px] w-[130%] rounded-full bg-[radial-gradient(rgba(255,210,63,0.1),rgba(255,210,63,0)_62%)] lg:left-[52%] lg:top-[6%] lg:h-[520px] lg:w-[760px]" />
+      <div
+        className={cn(
+          WRAP,
+          'relative grid items-center gap-5 pb-10 pt-8 md:gap-10 md:py-16 lg:min-h-[600px] lg:grid-cols-[minmax(0,516fr)_minmax(0,620fr)] lg:gap-16 lg:py-5',
+        )}
+      >
+        <div className="flex flex-col gap-2.5 md:gap-4">
+          <Kicker>iPhone and Android</Kicker>
+          <h2
+            id="apps-title"
+            className="m-0 font-nx-serif text-[34px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[48px] lg:text-[56px]"
+          >
+            <span className="block md:inline">Share from any app. </span>
+            <span className="block md:inline">Send to any app.</span>
+          </h2>
+          <p className="m-0 text-[15px] leading-[1.45] text-nx-soft md:text-[18px] md:leading-[1.55]">
+            <span className="md:hidden">
+              Pick ADHX from any app’s share button. Watch in the full-screen player, then send the
+              actual video to the group chat.
+            </span>
+            <span className="hidden md:inline">
+              Hit share anywhere and pick ADHX. The post lands on your box, for your people or just
+              for you. Then it plays in the same full-screen player, and Share sends the actual
+              video to the group chat.
+            </span>
+          </p>
+          <ul className="m-0 mt-1 hidden list-none flex-col gap-2.5 p-0 md:flex">
+            {[
+              'Save from any app’s share button',
+              'The full-screen player, one after another',
+              'New · Channels · Live, a tap apart',
+            ].map((t) => (
+              <li key={t} className="flex items-center gap-2.5 text-[16px] font-semibold">
+                <Check size={18} className="shrink-0 text-nx-accent" />
+                <span>{t}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="m-0 mt-1 text-[13px] leading-[1.5] text-nx-muted md:text-[14px]">
+            <span className="md:hidden">No store downloads yet: build from the </span>
+            <span className="hidden md:inline">
+              The apps are build-from-source for now: there are no store downloads in this release.
+              Follow the{' '}
+            </span>
+            <a
+              href={`${GITHUB_URL}/blob/main/apps/ios/README.md`}
+              className="text-nx-accent underline underline-offset-2 hover:text-white"
+            >
+              iPhone
+            </a>
+            <span> or </span>
+            <a
+              href={`${GITHUB_URL}/blob/main/apps/android/README.md`}
+              className="text-nx-accent underline underline-offset-2 hover:text-white"
+            >
+              Android
+            </a>
+            <span className="md:hidden"> guide.</span>
+            <span className="hidden md:inline"> setup guide on GitHub.</span>
+          </p>
+        </div>
+        <Mock
+          label="Two phones: the ADHX share card keeping a copy of an X photo, 40 percent done, shared with your people with Just for me off; and New playing a steak video Mum saved, close to you."
+          className="mx-auto w-full max-w-[620px]"
+        >
+          <div className="flex items-center justify-center gap-3.5 py-2 md:gap-10 md:py-6">
+            <PhoneFrame className="w-[42%] max-w-[246px] md:-translate-y-3.5">
+              <ShareCardScreen />
+            </PhoneFrame>
+            <PhoneFrame className="w-[42%] max-w-[246px] md:translate-y-3.5">
+              <PlayerScreen
+                art="steak"
+                savers={['mum']}
+                savedLine="Mum saved this"
+                ago="1h"
+                network="Pinterest video"
+                newCount={8}
+                progress={0.28}
+                why={
+                  <>
+                    <Heart size={u(18)} className="text-nx-accent" />
+                    <span>Close to you</span>
+                  </>
+                }
+              />
+            </PhoneFrame>
+          </div>
+        </Mock>
+      </div>
+    </section>
+  )
+}
+
+/* ——— The band ——— */
+
+function Band() {
+  return (
+    <section aria-labelledby="band-title" className="relative overflow-hidden bg-black">
+      <div className="absolute inset-0 md:relative md:inset-auto md:h-[300px] lg:absolute lg:inset-y-0 lg:left-[34%] lg:right-0 lg:h-auto">
+        <Art id="elephant" className="absolute inset-0 h-full w-full" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0.6)_42%,#000_90%)] md:bg-[linear-gradient(180deg,transparent_0%,transparent_50%,#000_100%)] lg:bg-[linear-gradient(90deg,#000_0%,rgba(0,0,0,0.82)_26%,rgba(0,0,0,0.1)_52%,rgba(0,0,0,0.3)_100%)]" />
+        <span className="absolute inset-x-[18%] bottom-[22%] top-0 hidden md:block lg:bottom-0 lg:left-auto lg:right-0 lg:w-[50%]">
+          <Meme top="Zero ads were shown" bottom="During this elephant" size={7.5} />
         </span>
+      </div>
+      <span
+        aria-hidden
+        className="nx-float absolute right-4 top-[38px] flex h-11 items-center gap-2 rounded-[22px] bg-nx-cream pl-1.5 pr-4 text-[#141414] shadow-[0_14px_34px_rgba(0,0,0,0.45)] md:hidden"
+      >
+        <span className="absolute -bottom-1 left-5 h-2.5 w-2.5 rotate-45 rounded-[2px] bg-nx-cream" />
+        <Face who="ben" size={30} />
+        <span className="whitespace-nowrap text-[14px] font-semibold">“you’re welcome”</span>
       </span>
-    </div>
+      <div
+        aria-hidden
+        className="absolute right-[6%] top-1/2 hidden -translate-y-1/2 flex-col items-end gap-2.5 lg:flex"
+      >
+        <Reaction who="mum" text="who sent this" className="opacity-40" />
+        <Reaction who="ana" text="again" className="opacity-70" delay={700} />
+        <span
+          className="nx-float flex h-12 items-center gap-2 rounded-[24px] bg-nx-cream pl-[7px] pr-[18px] text-[#141414] shadow-[0_14px_34px_rgba(0,0,0,0.45)]"
+          style={{ animationDelay: '1400ms' }}
+        >
+          <Face who="ben" size={34} />
+          <span className="whitespace-nowrap text-[17px] font-semibold">“you’re welcome”</span>
+        </span>
+      </div>
+      <div
+        className={cn(
+          WRAP,
+          'relative flex min-h-[280px] flex-col justify-end gap-2.5 pb-7 pt-24 md:-mt-10 md:min-h-0 md:justify-start md:gap-4 md:pb-12 md:pt-0 lg:mt-0 lg:min-h-[360px] lg:justify-center lg:gap-[18px] lg:py-12',
+        )}
+      >
+        <h2
+          id="band-title"
+          className="m-0 max-w-[820px] font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] md:text-[56px] lg:max-w-[64%] lg:text-[clamp(52px,4.4vw,72px)] lg:tracking-[-0.015em]"
+        >
+          <span className="block">
+            <span className="block md:inline">Built for short </span>
+            <span>attention spans</span>
+            <span className="md:hidden"> and</span>
+          </span>
+          <span className="block text-nx-accent">
+            <span className="hidden md:inline">and </span>
+            <span>long friendships.</span>
+          </span>
+        </h2>
+        <p className="m-0 max-w-[520px] text-[14px] leading-[1.4] text-nx-soft md:text-[18px] md:leading-[1.5]">
+          <span>No streaks, no like counts, no strangers.</span>
+          <span className="hidden md:inline"> Just your lot, and whatever Ben found today.</span>
+        </p>
+      </div>
+    </section>
+  )
+}
+
+/* ——— Self-host ——— */
+
+function SelfHost() {
+  return (
+    <section
+      id="self-host"
+      aria-labelledby="self-title"
+      className="scroll-mt-16 border-t border-white/10"
+    >
+      <div
+        className={cn(
+          WRAP,
+          'grid items-center gap-5 pb-10 pt-8 md:gap-10 md:py-16 lg:min-h-[600px] lg:grid-cols-[minmax(0,516fr)_minmax(0,620fr)] lg:gap-16',
+        )}
+      >
+        <div className="flex flex-col gap-2.5 md:gap-4">
+          <Kicker>Self-hosted</Kicker>
+          <h2
+            id="self-title"
+            className="m-0 whitespace-nowrap font-nx-serif text-[48px] font-normal leading-[0.95] tracking-[-0.015em] md:text-[72px]"
+          >
+            <span>Yours. </span>
+            <span className="text-nx-accent">Not ours.</span>
+          </h2>
+          <p className="m-0 hidden text-[18px] leading-[1.55] text-nx-soft md:block">
+            ADHX isn’t a service you sign up to. It’s a box you run, for the people you’d actually
+            let in your house.
+          </p>
+          <ul className="m-0 mt-1.5 flex list-none flex-col gap-2 p-0 text-[15px] leading-[1.4] text-nx-cream md:gap-3 md:text-[16px] md:leading-[1.45]">
+            {[
+              {
+                long: 'One Docker container and one folder of data.',
+                short: 'One Docker container, one folder of data.',
+              },
+              {
+                long: 'Invite-only. Approve who joins, if you like.',
+                short: 'Invite-only. Approve who joins, if you like.',
+              },
+              {
+                long: 'Search runs on your server, what’s said and what’s on screen included. Nothing goes to an AI company unless you add the optional search refinement key.',
+                short: 'Search runs on your server. An AI key is optional.',
+              },
+              {
+                long: 'Kept media and shared previews play for anyone who can reach your server, so use private networking if that matters to you.',
+                short: 'Kept media plays for anyone who can reach your server.',
+              },
+              {
+                long: 'No ads, nobody selling your attention. Open source under the MIT licence.',
+                short: 'No ads. Open source, MIT licence.',
+              },
+            ].map((line) => (
+              <li key={line.long} className="flex gap-2.5 md:gap-3">
+                <Dot className="mt-[7px] h-1.5 w-1.5 md:mt-2 md:h-[7px] md:w-[7px]" />
+                <span className="md:hidden">{line.short}</span>
+                <span className="hidden md:inline">{line.long}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex min-w-0 flex-col gap-3 md:gap-4">
+          <CopyCommand text={SETUP} title="Set it up" note="on your server" />
+          <a
+            href={`${GITHUB_URL}/blob/main/deploy/nas/README.md`}
+            className="flex min-h-[52px] items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black hover:bg-white"
+          >
+            <GitHubMark className="h-5 w-5" />
+            <span>Read the setup guide on GitHub</span>
+          </a>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -370,354 +923,50 @@ function ClaudeMock() {
 
 export function ProductSite() {
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
-      <header className="sticky top-0 z-30 border-b border-white/5 bg-black/80 backdrop-blur">
-        <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3 md:px-8">
-          <a href="#top" aria-label="adhx" className="gob-host flex items-center gap-2.5">
-            <Gob size={32} />
-            <span className="font-nx-serif text-2xl leading-none">adhx</span>
-          </a>
-          <nav
-            aria-label="Sections"
-            className="ml-6 hidden gap-6 text-[14px] font-bold text-nx-soft md:flex"
-          >
-            <a href="#features" className="hover:text-white">
-              Features
-            </a>
-            <a href="#apps" className="hover:text-white">
-              Apps
-            </a>
-            <a href="#self-host" className="hover:text-white">
-              Self-host
-            </a>
-          </nav>
-          <span className="flex-1" />
-          <a
-            href={GITHUB_URL}
-            className="flex min-h-[44px] items-center gap-2 rounded-full bg-nx-accent px-4 text-[14px] font-extrabold text-black"
-          >
-            <GitHubMark className="h-[18px] w-[18px]" />
-            <span>GitHub</span>
-          </a>
-        </div>
-      </header>
-
+    <div className="min-h-dvh overflow-x-clip bg-nx-ink font-nx-sans text-nx-cream">
+      <Header />
       <main id="top">
-        <section
-          aria-labelledby="hero-title"
-          className="mx-auto flex max-w-[1200px] flex-col gap-10 px-4 pb-10 pt-12 md:px-8 md:pt-20"
-        >
-          <div className="flex flex-col items-start gap-6">
-            <h1
-              id="hero-title"
-              className="m-0 font-nx-serif text-[54px] font-normal leading-[0.95] md:text-[96px]"
-            >
-              <span>Your friends have better taste </span>
-              <span className="text-nx-accent">than the algorithm.</span>
-            </h1>
-            <p className="m-0 max-w-[720px] text-[18px] leading-relaxed text-nx-soft md:text-[21px]">
-              ADHX is a private feed of the best posts from X, Instagram, TikTok, YouTube, Reddit
-              and nine more networks, picked by your closest friends and family. Real copies on a
-              server you run, found by what you remember, sent on to any app. Open source. No ads,
-              no strangers.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={GITHUB_URL}
-                className="flex min-h-[52px] items-center gap-2.5 rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black"
-              >
-                <GitHubMark className="h-5 w-5" />
-                <span>Get it on GitHub</span>
-              </a>
-              <a
-                href="#self-host"
-                className="flex min-h-[52px] items-center rounded-full border-[1.5px] border-nx-cream px-6 text-[16px] font-extrabold text-nx-cream"
-              >
-                Start a feed for your people
-              </a>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <HeroReel />
-            <a
-              href="/adhx-reel.mp4"
-              download
-              className="self-center text-[14px] font-bold text-nx-soft underline underline-offset-4 hover:text-white"
-            >
-              Download the video (MP4, 30 seconds)
-            </a>
-          </div>
-        </section>
-
-        <section aria-labelledby="networks-title" className="border-y border-white/5 bg-[#0b0a09]">
-          <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-12 md:px-8">
-            <h2
-              id="networks-title"
-              className="m-0 text-center text-[13px] font-extrabold uppercase tracking-[0.16em] text-nx-muted"
-            >
-              Fourteen networks. One feed.
-            </h2>
-            <ul className="m-0 grid list-none grid-cols-4 gap-3 p-0 sm:grid-cols-7">
-              {ALL_PLATFORMS.map((p) => (
-                <li key={p} className="flex flex-col items-center gap-2">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-nx-surface">
-                    <NetworkIcon platform={p} className="h-6 w-6 text-white" />
-                  </span>
-                  <span className="text-[12px] text-nx-soft">{networkLabel(p)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <div id="features">
-          <Section
-            id="search"
-            kicker="Search by meaning"
-            title={<span>Nobody remembers captions.</span>}
-            body={
-              <>
-                <p className="m-0">
-                  Type what you remember, like “a frog in a pond” or “that synth video”, and ADHX
-                  finds it. It matches what posts say, what’s in their pictures, and what happens in
-                  their videos. The local worker samples the first 32 seconds; an optional Mac
-                  worker samples throughout each video with light, normal or deep detail.
-                </p>
-                <p className="m-0">
-                  It runs Google’s EmbeddingGemma 2 on your own hardware: no API key, no cost per
-                  search. A native Apple Silicon worker can handle background understanding while
-                  your server keeps your saves and serves searches.
-                </p>
-              </>
-            }
-          >
-            <SearchMock />
-          </Section>
-
-          <Section
-            id="keep"
-            flip
-            kicker="The meme vault"
-            title={<span>Deleted on X. Still here.</span>}
-            body={
-              <>
-                <p className="m-0">
-                  ADHX downloads media at the best available resolution, including 4K when offered.
-                  Once the copy is kept, it plays from your disk even if the original gets nuked.
-                  Private, deleted or DRM-protected posts may not be downloadable.
-                </p>
-                <p className="m-0">
-                  Videos can be converted to H.264 for browser playback while preserving resolution.
-                  New downloads pause below your free-space threshold, and files are tidied away
-                  when nobody has the post saved any more.
-                </p>
-              </>
-            }
-          >
-            <KeepMock />
-          </Section>
-
-          <Section
-            id="player"
-            kicker="The player"
-            title={<span>Full screen. No ads in between.</span>}
-            body={
-              <>
-                <p className="m-0">
-                  Your saves play one after another, newest first: videos, photos, threads and
-                  articles. Tap the network’s mark to open the original, tap the sparkle for more
-                  like this, or send the actual file to the group chat.
-                </p>
-              </>
-            }
-          >
-            <TheaterMock />
-          </Section>
-
-          <Section
-            id="now"
-            flip
-            kicker="Right now"
-            title={<span>What your lot are into tonight.</span>}
-            body={
-              <>
-                <p className="m-0">
-                  ADHX groups what everyone on your server is saving into moments, as it happens.
-                  Tune in to watch a moment together. For now it counts the people behind a moment
-                  instead of naming them; names on posts are next.
-                </p>
-              </>
-            }
-          >
-            <NowMock />
-          </Section>
-
-          <Section
-            id="channels"
-            kicker="Channels"
-            title={<span>Rabbit holes, dug for you.</span>}
-            body={
-              <>
-                <p className="m-0">
-                  ADHX sorts your saves into channels by what they’re about and names them. Make
-                  your own too, keep them private, or share them with a link.
-                </p>
-              </>
-            }
-          >
-            <ChannelsMock />
-          </Section>
-
-          <Section
-            id="x"
-            flip
-            kicker="X bookmarks"
-            title={<span>Bookmark on X. It’s here within the hour.</span>}
-            body={
-              <>
-                <p className="m-0">
-                  Connect X once and ADHX brings in your bookmarks, then checks for new ones every
-                  hour. This needs your own X developer app and API credits; rate limits or
-                  exhausted credits can delay syncing.
-                </p>
-              </>
-            }
-          >
-            <div className="flex flex-col gap-3 rounded-[28px] bg-nx-surface p-5">
-              {[
-                { t: '12:00', n: 3 },
-                { t: '11:00', n: 1 },
-                { t: '10:00', n: 0 },
-              ].map((r) => (
-                <div
-                  key={r.t}
-                  className="flex items-center gap-3 rounded-[16px] bg-black px-4 py-3"
-                >
-                  <NetworkIcon platform="twitter" className="h-5 w-5 text-white" />
-                  <span className="flex-1 text-[15px] font-bold">{`Automatic sync · ${r.t}`}</span>
-                  <span className="text-[15px] font-extrabold text-nx-accent">{`+${r.n} new`}</span>
-                </div>
-              ))}
-            </div>
-          </Section>
-        </div>
-
-        <Section
-          id="apps"
-          kicker="iPhone and Android"
-          title={<span>Share from any app. Send to any app.</span>}
-          body={
-            <>
-              <p className="m-0">
-                The companion apps put ADHX in your phone’s share menu. Share a post from TikTok,
-                Instagram, YouTube or anywhere else, and send it to your server in one tap. When the
-                server can’t be reached, the link waits on your phone to be retried.
-              </p>
-              <p className="m-0">
-                Share from the player sends the actual video or photos, so it lands in WhatsApp or
-                Messages as the real thing, not a link that dies next month.
-              </p>
-              <p className="m-0">
-                Connect a phone by scanning a code in Settings. Play and search your saves in the
-                app; your server downloads, understands and streams the media.
-              </p>
-              <p className="m-0">
-                The apps are currently available to build from source. Follow the{' '}
-                <a href={`${GITHUB_URL}/blob/main/apps/ios/README.md`} className="underline">
-                  iPhone setup
-                </a>{' '}
-                or{' '}
-                <a href={`${GITHUB_URL}/blob/main/apps/android/README.md`} className="underline">
-                  Android setup
-                </a>{' '}
-                guide; there are no store downloads in this release.
-              </p>
-            </>
-          }
-        >
-          <PhonesMock />
-        </Section>
-
-        <Section
-          id="claude"
-          flip
-          kicker="Search from Claude"
-          title={<span>Ask Claude about your saves.</span>}
-          body={
-            <>
-              <p className="m-0">
-                Add the adhx skill to Claude and give it a key from your Settings. Then ask for
-                anything you saved, in plain words, pictures and videos included. Keys can only
-                read.
-              </p>
-            </>
-          }
-        >
-          <ClaudeMock />
-        </Section>
-
-        <section
-          id="self-host"
-          aria-labelledby="self-host-title"
-          className="border-t border-white/5 bg-[#0b0a09]"
-        >
-          <div className="mx-auto grid max-w-[1200px] gap-10 px-4 py-16 md:grid-cols-[1fr_1.1fr] md:gap-16 md:px-8 md:py-24">
-            <div className="flex flex-col gap-5">
-              <span className="text-[13px] font-extrabold uppercase tracking-[0.16em] text-nx-accent">
-                Self-hosted
-              </span>
-              <h2
-                id="self-host-title"
-                className="m-0 font-nx-serif text-[44px] font-normal leading-[0.98] md:text-[60px]"
-              >
-                Yours. Not ours.
-              </h2>
-              <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[17px] leading-relaxed text-nx-soft">
-                {[
-                  'One Docker container and one folder of data. Keep its secret in your private .env file; stop the app or use a coordinated SQLite backup before copying its data.',
-                  'Invite only the people you choose. No email service needed: you can hand sign-in links over yourself.',
-                  'Search runs on your server. Nothing goes to an AI company unless you add the optional TypeSafe key, which sharpens search and names channels.',
-                  'Kept media and shared previews play without sign-in to anyone who can reach the server. Use private networking when that is your intended boundary.',
-                  'Open source under the MIT licence. No service account with us, no ads, and nobody selling your attention.',
-                ].map((line) => (
-                  <li key={line} className="flex gap-3">
-                    <span className="mt-[9px] h-2 w-2 shrink-0 rounded-full bg-nx-accent" />
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex min-w-0 flex-col gap-4">
-              <CopyCommand text={SETUP} />
-              <a
-                href={`${GITHUB_URL}/blob/main/deploy/nas/README.md`}
-                className="flex min-h-[52px] items-center justify-center gap-2.5 rounded-full bg-nx-accent px-6 text-[16px] font-extrabold text-black"
-              >
-                <GitHubMark className="h-5 w-5" />
-                <span>Read the setup guide on GitHub</span>
-              </a>
-            </div>
-          </div>
-        </section>
+        <Hero />
+        <Networks />
+        <HowItWorks />
+        <Features />
+        <Apps />
+        <Band />
+        <SelfHost />
       </main>
-
-      <footer className="border-t border-white/5">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-4 px-4 py-8 text-[14px] text-nx-muted md:px-8">
+      <footer className="border-t border-white/10 bg-black">
+        <div
+          className={cn(
+            WRAP,
+            'flex flex-col gap-2.5 py-[23px] md:min-h-[111px] md:flex-row md:items-center md:gap-[18px] md:py-6',
+          )}
+        >
           <span className="gob-host flex items-center gap-2">
-            <Gob size={24} />
-            <span className="font-nx-serif text-[20px] leading-none text-white">adhx</span>
+            <Gob size={28} />
+            <span className="font-nx-serif text-[22px] leading-none md:text-[24px]">adhx</span>
           </span>
-          <span>Your friends have better taste than the algorithm.</span>
-          <span className="flex-1" />
-          <a href={GITHUB_URL} className="hover:text-white">
-            GitHub
-          </a>
-          <a href={`${GITHUB_URL}/blob/main/PRIVACY.md`} className="hover:text-white">
-            Privacy
-          </a>
-          <a href={`${GITHUB_URL}/blob/main/LICENSE`} className="hover:text-white">
-            MIT licence
-          </a>
+          <span className="text-[13px] text-nx-muted md:text-[14px]">
+            Your friends have better taste than the algorithm.
+          </span>
+          <span className="hidden flex-1 md:block" />
+          <nav
+            aria-label="Footer"
+            className="-my-[13px] flex flex-wrap gap-x-[22px] gap-y-1 md:my-0 md:gap-7"
+          >
+            {[
+              { href: GITHUB_URL, label: 'GitHub' },
+              { href: `${GITHUB_URL}/blob/main/PRIVACY.md`, label: 'Privacy' },
+              { href: `${GITHUB_URL}/blob/main/LICENSE`, label: 'MIT licence' },
+            ].map((l) => (
+              <a
+                key={l.label}
+                href={l.href}
+                className="flex min-h-[44px] items-center whitespace-nowrap text-[14px] font-semibold text-nx-soft hover:text-white"
+              >
+                {l.label}
+              </a>
+            ))}
+          </nav>
         </div>
       </footer>
     </div>

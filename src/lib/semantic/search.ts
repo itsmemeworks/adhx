@@ -1,11 +1,13 @@
-import { and, eq, inArray, isNull, like, or } from 'drizzle-orm'
+import { and, eq, inArray, like, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings, userBans } from '@/lib/db/schema'
+import { bookmarkLinks, bookmarkMedia, bookmarks, postEmbeddings } from '@/lib/db/schema'
+import { seenBy } from '@/lib/people/savers'
 import { readModeratedPostKeys } from '@/lib/admin/moderation'
 import { SEMANTIC_MODEL_VERSION, type UnderstandingKind } from './config'
 import { queryPrompt } from './documents'
 import { withoutGone } from './gone'
-import { keywordSearch } from './keywords'
+import { extractedWordsFor, type ExtractedWords } from './extracted'
+import { keywordSearch, queryTokens, textTokens, tokenHits } from './keywords'
 import { embedQuery } from './supervisor'
 import { nearest, refreshIndex } from './vector-index'
 import { fromBlob } from './vectors'
@@ -16,15 +18,22 @@ import { fromBlob } from './vectors'
  * signals are fused on standardised scores (see `TUNING`).
  *
  * Scope `mine` searches only the viewer's saves. Scope `everyone` searches
- * every post anyone saved, but never says who: results are post keys only,
- * filtered to posts with at least one saver who is not banned and that are
- * not hidden by moderation (the same publication rules as the public pulse).
+ * everyone's saves: results are post keys only, filtered to posts with at
+ * least one visible save (`visibleSave`: not private, not quoted, saver not
+ * banned) — or the viewer's own save — and not hidden by moderation (the same
+ * publication rules as the public pulse). Names are attached later, and only
+ * for signed-in members (`loadSearchItems`).
  */
 
 export type SearchScope = 'mine' | 'everyone'
 /** Same vocabulary as the feed's `filter`. */
 export type SearchType = 'all' | 'videos' | 'photos' | 'text' | 'articles'
-export type MatchSignal = 'words' | 'picture' | 'video' | 'keywords'
+/**
+ * Why a post matched. `speech` (said in its video) and `screen` (text on
+ * screen) are words read out of its media: they are part of its text vector
+ * and keyword row, and are named when the query's words are found there.
+ */
+export type MatchSignal = 'words' | 'picture' | 'video' | 'keywords' | 'speech' | 'screen'
 
 export interface SearchRequest {
   q: string
@@ -142,8 +151,13 @@ async function savedKeys(userId: string): Promise<Set<string>> {
   return new Set(rows.map((r) => `${r.platform}:${r.id}`))
 }
 
-/** Posts allowed in `everyone` results. Fails closed if moderation can't be read. */
-export async function publishable(keys: string[]): Promise<Set<string>> {
+/**
+ * Posts allowed in `everyone` results: at least one visible save (never a
+ * private-only or quoted-only post), or the viewer's own save. Signed out
+ * (`viewerId` empty) only visible saves count. Fails closed if moderation
+ * can't be read.
+ */
+export async function publishable(keys: string[], viewerId = ''): Promise<Set<string>> {
   const moderated = readModeratedPostKeys()
   if (!moderated.ok) throw moderated.error
   const wanted = new Set(keys)
@@ -152,8 +166,7 @@ export async function publishable(keys: string[]): Promise<Set<string>> {
     const rows = await db
       .selectDistinct({ platform: bookmarks.platform, id: bookmarks.id })
       .from(bookmarks)
-      .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
-      .where(and(isNull(userBans.userId), inArray(bookmarks.id, part)))
+      .where(and(seenBy(viewerId), inArray(bookmarks.id, part)))
     for (const r of rows) {
       const key = `${r.platform}:${r.id}`
       if (wanted.has(key) && !moderated.value.has(key)) ok.add(key)
@@ -281,9 +294,16 @@ export async function searchPosts(
       (r) => r.score >= (r.matched[0] === 'words' ? TUNING.minWordsScore : TUNING.minScore),
     )
   }
-  ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
+  ranked = await allowedOnly(ranked, {
+    mine: !!mine,
+    type: request.type,
+    userId: request.userId,
+  })
 
-  const page = ranked.slice(request.offset, request.offset + request.limit)
+  const page = labelExtractedMatches(
+    ranked.slice(request.offset, request.offset + request.limit),
+    request.q,
+  )
   return {
     hits: page.map((r) => ({
       ...r,
@@ -297,14 +317,85 @@ export async function searchPosts(
   }
 }
 
+function flat(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+/** Each post's keyword row (its own words plus what was read out of its media). */
+function keywordBodies(keys: string[]): Map<string, string> {
+  const out = new Map<string, string>()
+  const wanted = new Set(keys)
+  for (const part of chunks([...new Set(keys.map((k) => split(k).postId))])) {
+    const rows = db.all<{ platform: string; post_id: string; body: string }>(
+      sql`SELECT platform, post_id, body FROM post_text_fts WHERE post_id IN ${part}`,
+    )
+    for (const r of rows) {
+      const key = `${r.platform}:${r.post_id}`
+      if (wanted.has(key)) out.set(key, r.body)
+    }
+  }
+  return out
+}
+
+/**
+ * Name matches made on what's said in a video (`speech`) or the text on
+ * screen (`screen`). Those words live in the post's text vector and keyword
+ * row, so fusion only knows "words" or "keywords"; here the query's words
+ * are looked for in each part. Words found only in the media lead; a post
+ * with no words of its own that matched on meaning is credited to them too.
+ * Exported for tests.
+ */
+export function labelExtractedMatches<T extends { key: string; matched: MatchSignal[] }>(
+  hits: T[],
+  q: string,
+  lookup: {
+    words?: (keys: string[]) => Map<string, ExtractedWords>
+    bodies?: (keys: string[]) => Map<string, string>
+  } = {},
+): T[] {
+  const wordy = hits.filter((h) => h.matched.some((m) => m === 'words' || m === 'keywords'))
+  if (wordy.length === 0) return hits
+  const extracted = (lookup.words ?? extractedWordsFor)(wordy.map((h) => h.key))
+  if (extracted.size === 0) return hits
+  const bodies = (lookup.bodies ?? keywordBodies)([...extracted.keys()])
+  const tokens = queryTokens(q)
+  return hits.map((hit) => {
+    const words = extracted.get(hit.key)
+    if (!words || !hit.matched.some((m) => m === 'words' || m === 'keywords')) return hit
+    let own = bodies.get(hit.key) ?? ''
+    if (words.speech) own = own.replace(flat(words.speech), ' ')
+    if (words.screen) own = own.replace(flat(words.screen), ' ')
+    const ownHits = tokenHits(textTokens(own), tokens)
+    const said = words.speech ? tokenHits(textTokens(words.speech), tokens) : 0
+    const shown = words.screen ? tokenHits(textTokens(words.screen), tokens) : 0
+    const found: MatchSignal[] = []
+    if (said && said >= shown) found.push('speech')
+    if (shown) found.push('screen')
+    if (said && said < shown) found.push('speech')
+    const wordless = !/[\p{L}\p{N}]/u.test(own.replace(/https?:\/\/\S+/g, ''))
+    if (!found.length && wordless && hit.matched[0] === 'words') {
+      if (words.speech) found.push('speech')
+      if (words.screen) found.push('screen')
+    }
+    if (!found.length) return hit
+    const rest = hit.matched.filter((m) => !found.includes(m))
+    const wordsLed = hit.matched[0] === 'words' || hit.matched[0] === 'keywords'
+    const lead = wordsLed && (wordless || Math.max(said, shown) > ownHits)
+    return { ...hit, matched: lead ? [...found, ...rest] : [...rest, ...found] }
+  })
+}
+
 /** Gone posts out, then scope (everyone: bans + moderation) and content-type filters, in rank order. */
 async function allowedOnly<T extends { key: string }>(
   ranked: T[],
-  opts: { mine: boolean; type: SearchType },
+  opts: { mine: boolean; type: SearchType; userId: string },
 ): Promise<T[]> {
   let out = await withoutGone(ranked)
   if (!opts.mine && out.length > 0) {
-    const allowed = await publishable(out.map((r) => r.key))
+    const allowed = await publishable(
+      out.map((r) => r.key),
+      opts.userId,
+    )
     out = out.filter((r) => allowed.has(r.key))
   }
   if (opts.type !== 'all' && out.length > 0) {
@@ -334,6 +425,22 @@ export interface SimilarRequest {
  */
 export async function similarPosts(request: SimilarRequest): Promise<SearchResult> {
   const self = `${request.platform}:${request.postId}`
+  // Only from a post the caller may know is saved: a visible save, or their
+  // own. A private-only post must not even read as "understood" to others.
+  const [known] = await db
+    .select({ id: bookmarks.id })
+    .from(bookmarks)
+    .where(
+      and(
+        eq(bookmarks.platform, request.platform),
+        eq(bookmarks.id, request.postId),
+        seenBy(request.userId),
+      ),
+    )
+    .limit(1)
+  if (!known) {
+    return { hits: [], total: 0, understood: false, close: false }
+  }
   const rows = await db
     .select({ kind: postEmbeddings.kind, vector: postEmbeddings.vector })
     .from(postEmbeddings)
@@ -361,7 +468,11 @@ export async function similarPosts(request: SimilarRequest): Promise<SearchResul
     }
   }
   let ranked = fuse(vectors, []).filter((r) => r.score >= TUNING.minScore)
-  ranked = await allowedOnly(ranked, { mine: !!mine, type: request.type })
+  ranked = await allowedOnly(ranked, {
+    mine: !!mine,
+    type: request.type,
+    userId: request.userId,
+  })
   return {
     hits: ranked
       .slice(0, request.limit)

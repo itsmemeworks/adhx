@@ -5,6 +5,8 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { keysToHits } from '@/lib/channels/channels'
 import { loadSearchItems, type SearchItem } from '@/lib/semantic/items'
 import type { FeedItemResponse } from '@/lib/feed/build-item'
+import type { Saver } from '@/lib/people/types'
+import type { WhyReason } from '@/lib/feed/blend'
 import { keepEnabled } from '@/lib/keep/config'
 import { keepCutoff } from '@/lib/keep/worker'
 
@@ -33,6 +35,14 @@ export interface PhonePost {
   match?: { strength: SearchItem['strength']; on: SearchItem['matched'] }
   /** Its picture or video isn't understood yet, so it matched on words. */
   learning?: boolean
+  /** Members who saved it, newest first; your own save shows with `isYou`. */
+  savers: Saver[]
+  /** Your save is just for you: no one else sees, counts or is told about it. */
+  isPrivate: boolean
+  /** The feed (`/api/app/feed`) only: why it's here, "Ana and Ben saved this". */
+  why?: string
+  /** The feed only: every reason, headline first (for "Why this one"). */
+  whyReasons?: WhyReason[]
 }
 
 export interface PhoneMedia {
@@ -92,6 +102,8 @@ export function toPhonePost(
       : null,
     ...(search ? { match: { strength, on: matched } } : {}),
     ...(learning ? { learning: true } : {}),
+    savers: post.savers ?? [],
+    isPrivate: post.isPrivate ?? false,
   }
 }
 

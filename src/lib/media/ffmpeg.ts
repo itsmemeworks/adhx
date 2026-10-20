@@ -1,12 +1,27 @@
-/** The ffmpeg binary: `FFMPEG_PATH`, the bundled ffmpeg-static, or ffmpeg on PATH. */
+import { constants } from 'node:fs'
+import { access, stat } from 'node:fs/promises'
+import path from 'node:path'
+
+/** Resolve an absolute executable: yt-dlp's --ffmpeg-location does not search PATH. */
 export async function ffmpegPath(): Promise<string> {
-  const fromEnv = process.env['FFMPEG_PATH']
-  if (fromEnv) return fromEnv
-  try {
-    const bundled = (await import('ffmpeg-static')).default as unknown as string | null
-    if (bundled) return bundled
-  } catch {
-    // fall back to ffmpeg on PATH
+  const configured = process.env['FFMPEG_PATH']
+  const name = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
+  const candidates = configured
+    ? [path.resolve(configured)]
+    : (process.env['PATH'] || '')
+        .split(path.delimiter)
+        .filter(Boolean)
+        .map((directory) => path.resolve(directory, name))
+  for (const candidate of candidates) {
+    try {
+      if (!(await stat(candidate)).isFile()) continue
+      await access(candidate, constants.X_OK)
+      return candidate
+    } catch {
+      // A missing/non-executable entry must not hide a later valid PATH entry.
+    }
   }
-  return 'ffmpeg'
+  throw new Error(
+    'FFmpeg is unavailable. Install a maintained FFmpeg or set FFMPEG_PATH to its executable.',
+  )
 }

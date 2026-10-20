@@ -53,6 +53,12 @@ describe('learning progress', () => {
     expect(summary.focus?.id).toBe('videos')
     expect(pillLabel(summary.focus!)).toBe('Learning videos · 34/271')
     expect(currentLine(status().current)).toBe('Watching a video · 16 frames')
+    expect(currentLine({ kind: 'speech', phase: 'listening', frames: 0 })).toBe(
+      'Listening to a video',
+    )
+    expect(currentLine({ kind: 'screen', phase: 'remote', frames: 0 })).toBe(
+      'Reading text on screen on the worker',
+    )
     expect(learningSummary(null)).toMatchObject({ remaining: 0, focus: null })
   })
 

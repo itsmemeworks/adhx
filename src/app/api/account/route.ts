@@ -8,8 +8,13 @@ import {
   archivedPosts,
   syncLogs,
   userPreferences,
+  postViews,
+  postSends,
+  momentAlertSubs,
+  momentAlerts,
   accessKeys,
   appPairCodes,
+  invites,
   phoneSaveQueue,
   adminSignInLinks,
   oauthTokens,
@@ -26,6 +31,7 @@ import {
 } from '@/lib/db/schema'
 import { eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
+import { removeAvatarFiles } from '@/lib/avatar/store'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { clearSessionCookie } from '@/lib/auth/session'
@@ -34,9 +40,9 @@ import { clearSessionCookie } from '@/lib/auth/session'
  * DELETE /api/account
  *
  * Deletes the user's account and associated private/product data: bookmarks,
- * tags, preferences, OAuth tokens, the `users` row,
- * and every linked sign-in identity (X + email) and outstanding magic-link
- * token. Historical moderation/audit records remain intact, but cannot be
+ * tags, preferences, the feed's seen list, OAuth tokens, the `users` row,
+ * every linked sign-in identity (X, email, invite), outstanding magic-link
+ * tokens, and invites it made or joined with. Historical moderation/audit records remain intact, but cannot be
  * used as a live account or auth identity.
  *
  * Historical activity/analytics rows survive, but their nullable private
@@ -80,6 +86,16 @@ export const DELETE = withAuth(async (_req, userId) => {
       // 9. Delete user preferences
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
 
+      // 10. Delete the feed's seen list
+      db.delete(postViews).where(eq(postViews.userId, userId)).run()
+
+      // 10b. Posts sent to or by this account, and its live bells and alerts.
+      db.delete(postSends)
+        .where(or(eq(postSends.fromUserId, userId), eq(postSends.toUserId, userId)))
+        .run()
+      db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
+      db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
+
       // 11. Delete public tag-share settings
       db.delete(tagShares).where(eq(tagShares.userId, userId)).run()
 
@@ -106,6 +122,10 @@ export const DELETE = withAuth(async (_req, userId) => {
       db.delete(accessKeys).where(eq(accessKeys.userId, userId)).run()
       db.delete(appPairCodes).where(eq(appPairCodes.userId, userId)).run()
       db.delete(phoneSaveQueue).where(eq(phoneSaveQueue.userId, userId)).run()
+      // Invites this account made (pending ones die with it) or joined with.
+      db.delete(invites)
+        .where(or(eq(invites.createdBy, userId), eq(invites.usedBy, userId)))
+        .run()
 
       // 16. Preserve aggregate history without retaining this account's
       // private actor/viewer ID.
@@ -129,6 +149,9 @@ export const DELETE = withAuth(async (_req, userId) => {
       // migrate.ts reject any later write carrying this now-dead account ID.
       db.delete(users).where(eq(users.id, userId)).run()
     })
+
+    // The picture files go too (MEDIA_DIR/avatars/<id>-*.jpg).
+    await removeAvatarFiles(userId)
 
     const response = NextResponse.json({
       success: true,

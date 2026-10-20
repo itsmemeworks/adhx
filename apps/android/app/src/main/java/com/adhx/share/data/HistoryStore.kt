@@ -12,6 +12,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import java.util.UUID
 
+/** Delivery must stop before network work when its intent could not reach disk. */
+class HistoryWriteException : IllegalStateException("Could not persist queued share")
+
 /** One link shared to ADHX from this phone. */
 @Serializable
 data class HistoryItem(
@@ -31,6 +34,7 @@ data class HistoryItem(
     val posterUrl: String? = null,
     val openPath: String? = null,
     val alreadySaved: Boolean = false,
+    val savedAt: String? = null,
     /** The server's keep status (waiting, keeping, kept…), once saved. */
     val keep: String? = null,
     val percent: Int? = null,
@@ -39,18 +43,38 @@ data class HistoryItem(
     val photos: Int = 0,
     val audio: Int = 0,
     val error: String? = null,
+    val errorStatus: Int? = null,
+    val errorCode: String? = null,
+    /** Shared "Just for me": sent as `private` with the save (the offline queue too). */
+    val isPrivate: Boolean = false,
+    /** Nullable preserves omitted/default semantics, including existing private repeats. */
+    val privateChoice: Boolean? = null,
+    val privateDefault: Boolean? = null,
+    val publishPending: Boolean = false,
+    /** Reused on retries; incremented only for a changed user intent. */
+    val privacyIntentVersion: Long = 1,
+    /** Bind waiting work to its account, without persisting the phone secret here. */
+    val ownerServer: String? = null,
+    val ownerUsername: String? = null,
+    /** "Add a note" from the share card, and whether it still has to reach the server. */
+    val note: String? = null,
+    val notePending: Boolean = false,
 ) {
+    internal fun belongsTo(connection: Connection, allowLegacy: Boolean): Boolean =
+        if (ownerServer == null && ownerUsername == null) allowLegacy
+        else ownerServer == connection.server && ownerUsername == connection.username
+
     /** Nothing more will change, so there's no need to ask the server again. */
     val isFinal: Boolean
         get() = when (state) {
             ShareState.FAILED -> true
-            ShareState.SAVED -> KeepStatus.isFinal(keep)
+            ShareState.SAVED -> !publishPending && queueId == null && KeepStatus.isFinal(keep)
             else -> false
         }
 
     fun savedWith(post: SaveResponse): HistoryItem = copy(
         state = ShareState.SAVED,
-        queueId = null,
+        queueId = if (publishPending) queueId else null,
         platform = post.platform.ifBlank { platform },
         network = post.network ?: network,
         postId = post.id.ifBlank { null },
@@ -60,9 +84,32 @@ data class HistoryItem(
         posterUrl = post.posterUrl,
         openPath = post.openPath,
         alreadySaved = post.alreadySaved,
+        savedAt = post.savedAt,
+        isPrivate = if (publishPending) privateChoice ?: privateDefault ?: post.isPrivate else post.isPrivate,
         keep = keep ?: KeepStatus.WAITING,
-        error = null,
+        error = null, errorStatus = null, errorCode = null,
     )
+
+    /** Untouched false defaults apply to new saves only; explicit false applies to repeats too. */
+    fun publicationChoice(post: SaveResponse): Boolean? =
+        privateChoice ?: privateDefault?.takeIf { !post.alreadySaved || it }
+
+    fun choosePrivate(on: Boolean): HistoryItem = copy(
+        isPrivate = on, privateChoice = on, publishPending = true, privacyIntentVersion = privacyIntentVersion + 1,
+        error = null, errorStatus = null, errorCode = null,
+    )
+
+    fun acknowledged(choice: Boolean?, post: SaveResponse, version: Long): HistoryItem {
+        // A newer toggle made during the request still needs its own acknowledgement.
+        if (privacyIntentVersion != version || publicationChoice(post) != choice) return this
+        return copy(publishPending = false, isPrivate = choice ?: post.isPrivate)
+    }
+
+    fun asPost(): SaveResponse? = postId?.let { post ->
+        SaveResponse(platform = platform.orEmpty(), id = post, network = network, author = author,
+            authorName = authorName, text = text, posterUrl = posterUrl, openPath = openPath,
+            alreadySaved = alreadySaved, savedAt = savedAt, isPrivate = isPrivate)
+    }
 
     fun queuedWith(id: String): HistoryItem = copy(state = ShareState.SAVING, queueId = id)
 
@@ -83,7 +130,7 @@ object ShareState {
     const val FAILED = "failed"
 }
 
-/** The last 50 shares, as a small JSON list in SharedPreferences. */
+/** Recent shares plus every unfinished delivery, as JSON in SharedPreferences. */
 class HistoryStore private constructor(context: Context) {
 
     private val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -97,13 +144,20 @@ class HistoryStore private constructor(context: Context) {
      * Add a fresh share at the top. Sharing the same link again moves it up
      * instead of listing it twice. Returns the item's id.
      */
-    fun addShare(link: String, platform: String?, state: String = ShareState.SAVING): String {
+    fun addShare(link: String, platform: String?, state: String = ShareState.SAVING, privateDefault: Boolean? = null, connection: Connection? = null, allowLegacy: Boolean = true): String {
         synchronized(lock) {
-            val existing = _items.value.firstOrNull { it.link == link }
-            val item = (existing ?: HistoryItem(id = UUID.randomUUID().toString(), link = link, sharedAt = 0))
-                .copy(sharedAt = System.currentTimeMillis(), state = state, platform = existing?.platform ?: platform, error = null)
-            val list = listOf(item) + _items.value.filter { it.id != item.id }
-            write(list.take(MAX))
+            val existing = _items.value.firstOrNull { it.link == link &&
+                (connection == null || it.belongsTo(connection, allowLegacy)) }
+            if (existing != null && (existing.publishPending || existing.state == ShareState.SAVING || existing.state == ShareState.QUEUED)) return existing.id
+            val item = HistoryItem(id = UUID.randomUUID().toString(), link = link, sharedAt = 0)
+                .copy(sharedAt = System.currentTimeMillis(), state = state, platform = existing?.platform ?: platform, error = null,
+                    privateDefault = privateDefault, publishPending = true, privateChoice = null,
+                    isPrivate = privateDefault ?: existing?.isPrivate ?: false,
+                    ownerServer = connection?.server, ownerUsername = connection?.username)
+            val list = listOf(item) + _items.value.filter { it.link != link }
+            // Active receipts/intent are durable work, never evicted by the recent-history cap.
+            val durable = list.filter { it.publishPending || it.queueId != null || it.state == ShareState.SAVING || it.state == ShareState.QUEUED }
+            write(durable + list.filter { it !in durable }.take(MAX))
             return item.id
         }
     }
@@ -122,12 +176,16 @@ class HistoryStore private constructor(context: Context) {
     }
 
     private fun write(list: List<HistoryItem>) {
-        val receiptChanged = list.any { next ->
-            next.queueId != null && _items.value.firstOrNull { it.id == next.id }?.queueId != next.queueId
-        }
         val edit = prefs.edit().putString(K_ITEMS, AdhxApi.json.encodeToString(serializer, list))
-        // Persist a new server receipt before a worker can be stopped and retried.
-        if (receiptChanged) edit.commit() else edit.apply()
+        // Only delivery changes require a synchronous durability boundary. Frequent keep-progress
+        // updates remain asynchronous, so a slow flash write cannot stall the share UI each poll.
+        fun deliveryState(items: List<HistoryItem>) = items.associate { item ->
+            item.id to listOf(item.queueId, item.privateChoice, item.privateDefault, item.publishPending, item.privacyIntentVersion,
+                item.ownerServer, item.ownerUsername)
+        }
+        if (deliveryState(list) != deliveryState(_items.value)) {
+            if (!edit.commit()) throw HistoryWriteException()
+        } else edit.apply()
         _items.value = list
     }
 

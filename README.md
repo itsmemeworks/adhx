@@ -22,24 +22,29 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 
 ## What you get
 
+- **New.** Open ADHX and it plays what your people saved that you haven't seen yet, blended by a few signals you can read: fresh, saved together, the friends you watch most, and what's like the things you keep. Every post says why it's there, and you can ask for more or less from anyone. Then it stops: "You're all caught up. Go touch grass." Switch to Everyone, Friends only or Mine to keep watching, and pick what's in it: videos and photos by default, text posts and articles if you like reading.
 - **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
-- **Search by what you remember.** Describe it and ADHX finds it. It matches the words, what's in the pictures, and sampled video frames. Index on your server or use the optional native Mac worker for adjustable detail throughout each video: no audio is processed, and nothing is sent to an AI service unless you add the optional search refinement key.
+- **Search by what you remember.** Describe it and ADHX finds it, across everyone's saves or just yours, with your friends' faces on what they kept. It matches the words, what's in the pictures, sampled video frames, what's said in a video and the text on screen (that meme's caption, a screenshot, burned-in subtitles). It all happens on your server, or on the optional native Mac worker: no picture, frame, sound or transcript is sent anywhere, and nothing goes to an AI service unless you add the optional search refinement key.
 - **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
-- **Channels.** Rabbit holes, dug for you: ADHX groups your saves by what they're about and names the groups. You can make your own channels too, and share them.
-- **Right now.** What your lot are saving tonight, grouped into moments, and **Tune in** to watch along. For now savers are counted, not named; names are next (see [Where it's going](#where-its-going)).
+- **Channels.** Rabbit holes, dug by your friends: ADHX groups everyone's saves by what they're about and names the groups, gives every friend a channel of everything they kept (with what's new to you), and does the same for your own saves. Make your own channels too, and share them. Anything kept just for you stays out of all of it.
+- **Names on posts.** See which of your people saved what, in the player and in search. Saves are shared with your people by default; flip **Just for me** on any you'd rather keep to yourself.
+- **Right now.** What your lot are saving tonight, grouped into moments, with the faces of who's saving them. **Tune in** to watch along: see who's watching with you, who just saved the next one, and throw a 😂 or a "who sent this 💀" at the room. Strangers on a shared link only ever see counts.
+- **See what it's doing.** **N on their way** in the header opens _What your ADHX is doing_: every post being kept, converted, listened to, read or learned, step by step, who saved it, and the ones that need you (with **Retry** or **Keep the link only**). Free disk space and whether the Mac helper is connected are on the same page.
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
 - **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
 
-## Where it's going
+## What's new
 
-ADHX is becoming one shared feed for your people. In order:
+ADHX is now one shared feed for your people:
 
-1. **Say it out loud.** This README, the site and every string in the app, in the new voice.
-2. **Names on posts.** See which of your friends saved what. Saves are shared with your people by default, with a private toggle for the ones that are just for you, and you can search the whole group's vault. When this lands, saves you've already made join the shared feed; the release notes will say so first.
-3. **One feed.** A blend of everyone's saves, ranked by a few signals you can read and change, never by engagement. **New** shows only what you haven't seen, then stops: "You're all caught up. Go touch grass."
-4. **Channels and Live.** Channels drawn from everyone's saves, one per friend, and Live with names, so you can watch together.
+- **New.** Only what your people saved that you haven't seen, with why each post is next, then "You're all caught up. Go touch grass."
+- **Saver faces and Just for me.** Every post shows who kept it. Saves are shared by default; **Just for me** keeps one out of everyone else's feed, channels and search.
+- **Channels from everyone.** Channels drawn from the whole group's saves, plus one per friend with what's new to you.
+- **Live with names.** Watch together, see who's watching and who saved the next one, and react as it plays.
+- **Search what's said and what's on screen**, across everyone's saves.
+- **Invite links** that sign a friend in and pair their phone in one go.
 
 Names stay on your server. Links you share with people outside it never show who saved anything.
 
@@ -69,7 +74,7 @@ Downloads run through [yt-dlp](https://github.com/yt-dlp/yt-dlp), plus each netw
 You need:
 
 - **Somewhere to run a container** with a persistent folder: a home server, a NAS, a small VPS, or [Fly.io](#flyio).
-- **A way to get sign-in links to people.** ADHX has no passwords; people sign in with a one-time link. Pick one (see [Sign-in links](#sign-in-links)): your own mail server, a [Resend](https://resend.com) account, or no email at all, where you pass links on yourself.
+- **A way to let people in.** ADHX has no passwords. The easy way is an [invite link](#who-can-sign-up): send it, they pick a name, done. For signing back in on a new browser, people use a one-time email link: your own mail server, a [Resend](https://resend.com) account, or no email at all, where you pass links on yourself (see [Sign-in links](#sign-in-links)).
 - **Disk space.** See [Disk space](#disk-space).
 
 ### Docker Compose
@@ -80,7 +85,7 @@ cp .env.example .env
 openssl rand -base64 32
 ```
 
-Edit `.env`: put the generated value in `SESSION_SECRET`, set `NEXT_PUBLIC_APP_URL` to your final HTTPS address, set `ALLOWED_EMAILS` to your invited addresses and set `EMAIL_LINKS_TO_ADMIN=1` (or configure SMTP/Resend). Create this file once and keep it private and stable; do not generate a new secret on each restart.
+Edit `.env`: put the generated value in `SESSION_SECRET`, set `NEXT_PUBLIC_APP_URL` to your final HTTPS address, set `ALLOWED_EMAILS` to your own email (that closes email sign-up to strangers; [invite links](#who-can-sign-up) let your people in) and set `EMAIL_LINKS_TO_ADMIN=1` (or configure SMTP/Resend). Create this file once and keep it private and stable; do not generate a new secret on each restart.
 
 For this source checkout, build and select its image explicitly:
 
@@ -117,7 +122,7 @@ service. See the [build and release flow](docs/releasing.md) for checks and reco
 
 ### Sign-in links
 
-People sign in with a one-time link. Emailed links last 15 minutes; links held for an admin to pass on last **60 minutes**. Opening a link shows a confirmation screen; press **Sign in** in the browser you want to use. Message previews cannot use the link. The one-minute countdown before requesting another link is a resend cooldown, not its expiry. Choose how links reach people:
+Invites (below) get people in. Sign-in links get them back in: on a new browser, or when a session runs out after 30 days. Emailed links last 15 minutes; links held for an admin to pass on last **60 minutes**. Opening a link shows a confirmation screen; press **Sign in** in the browser you want to use. Message previews cannot use the link. The one-minute countdown before requesting another link is a resend cooldown, not its expiry. Choose how links reach people:
 
 | Option               | Set                                                                                    | Good for                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -127,13 +132,19 @@ People sign in with a one-time link. Emailed links last 15 minutes; links held f
 
 With no email, sign in first yourself: your link is printed in the server log (`docker compose logs adhx | grep sign-in`), and confirming it makes you the admin. Your own email doesn't need to be on `ALLOWED_EMAILS` for this. After that, links show up under **Sign-in links** on the admin page. Admins' own links are also printed in the server log, so you can sign back in without another admin. Only invited emails (`ALLOWED_EMAILS`) and people who already have an account get later links, so strangers can't fill the list. Treat those logs as credentials.
 
+People who joined by invite have no email until they add one in **Settings → You**. Until then their browser session is their only way in, so nudge them to add one.
+
 ### Who can sign up
 
-By default, anyone who can reach your server can make an account. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in.
+**Invite links are the easy path.** On the admin page or in **Settings → Your people**, press **Make a link** and send it however you like. Your friend opens it, sees "Ana wants you in.", picks a name and presses **Join**. That's the whole sign-up: no email, no password, and their phone pairing code is on the next screen. Each link works once, for 7 days. Pending ones are listed by a short code with **Copy link** and **Revoke**. A banned person's invites stop working. Links are shown once, when they're made: ADHX keeps only a fingerprint of each, so **Copy link** on an older invite asks first, then makes it a fresh link (the one you sent before stops working). Message previews can open an invite without using it; only pressing **Join** does.
 
-The admin page has sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+**Who can invite** is in **Settings → Your people** (admins): **Only me**, **Anyone, I approve** or **Anyone**. With **Anyone, I approve**, someone a member invites picks a name and lands on "Waiting for Ana to let you in"; their account can't see anything else until an admin presses **Approve** under **Waiting for you** (or **Not now**, or **Decline**). Invites an admin makes always let people straight in. `INVITES=members` only sets the first choice (**Anyone**); after that, Settings wins.
 
-Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; the email allowlist protects account creation, not playback.
+Email sign-up works too. By default, anyone who can reach your server can make an account with their email. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in. Invite links work whatever `ALLOWED_EMAILS` says: the invite is the permission.
+
+The admin page has invites, sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+
+Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; invites and the email allowlist protect account creation, not playback.
 
 ### Settings
 
@@ -143,6 +154,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `SESSION_SECRET`                             | Signs sessions. `openssl rand -base64 32`.                                                                                   |
 | `RESEND_API_KEY`, `EMAIL_FROM`               | Sign-in emails. `EMAIL_FROM` must be on a domain you verified with Resend.                                                   |
 | `ALLOWED_EMAILS`                             | Who may sign up (see above).                                                                                                 |
+| `INVITES=members`                            | Start with **Who can invite: Anyone** (Settings → Your people changes it later).                                             |
 | `MOMENT_MIN_SAVERS`                          | How many people must save the same kind of thing before it shows in Right now. `1` if it's just you, `2`–`3` for friends.    |
 | `MEDIA_DIR`                                  | Where kept files live. Default: `media/` next to the database (`/data/media` in Docker).                                     |
 | `KEEP_BACKFILL=off`                          | Only download posts saved from now on, leaving older saves on the networks' own links.                                       |
@@ -156,6 +168,8 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `SEMANTIC_SEARCH=off`                        | Stop model workers; keyword search still indexes new saves and catches up missing entries on startup.                        |
 | `SEMANTIC_THREADS`                           | CPU threads the search model may use, default `2`.                                                                           |
 | `SEMANTIC_CACHE_DIR`                         | Where the search model is kept. Default: `models/` next to the database (`/data/models` in Docker).                          |
+| `SEMANTIC_SPEECH=off`                        | Stop transcribing what's said in videos. Transcripts already made stay searchable.                                           |
+| `SEMANTIC_SCREEN_TEXT=off`                   | Stop reading text on pictures and video frames. Text already read stays searchable.                                          |
 | `KEEP_MIN_FREE_GB`                           | Pause downloads while the disk has less free than this, default `2`.                                                         |
 | `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.             |
 | `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text. |
@@ -179,7 +193,7 @@ Kept media is most of the space ADHX uses. As a rough guide:
 - A short phone video (TikTok, Reel, Short) is 5–30 MB.
 - A minute of 1080p is 15–40 MB; a minute of 4K is 40–100 MB.
 - Photos are 0.1–1 MB each.
-- The search model is about 400 MB, downloaded once on first start (see [The search model](#the-search-model)).
+- The search model is about 400 MB, downloaded once on first start, plus about 410 MB for the speech and on-screen text models the first time they're needed (see [The search model](#the-search-model)).
 
 So 1,000 mixed saves come to roughly 10–30 GB. When you first run ADHX on an existing library, it downloads everything already saved, newest first. If your disk is small, start with `KEEP_BACKFILL=off`, which also stops any older downloads already waiting.
 
@@ -189,13 +203,22 @@ Downloads pause by themselves while the disk has less than 2 GB free (`KEEP_MIN_
 
 Search by meaning runs on your own server, with [EmbeddingGemma 2](https://huggingface.co/onnx-community/embeddinggemma-2-ONNX): the text model at 4-bit and its picture encoder at 8-bit, at a pinned revision. There's nothing to install. The first time the server starts, it downloads the weights from Hugging Face into `models/` next to the database: about 400 MB, so the server needs to reach `huggingface.co` once. After that it runs offline. For a server with no internet access, copy the `models/` folder from another ADHX.
 
-Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, then video frames. The default local worker samples the first 32 seconds at one frame every two seconds. Sounds are found only by their words. Local understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
+Until the model is ready, search finds posts by their words. Saves are understood in the background: words first, then pictures, what's said, text on screen, then video frames. The default local worker samples the first 32 seconds at one frame every two seconds. Local understanding uses the CPU (`SEMANTIC_THREADS`); a large existing library takes a while the first time.
 
-For a shared NAS, use the optional [native Apple Silicon worker](deploy/mac/README.md). Set `PROCESSING_MODE=remote`, a dedicated `PROCESSING_WORKER_TOKEN`, and `INDEXING_LEVEL=light|normal|deep` on the server. The Mac downloads retained media over authenticated HTTPS and samples throughout the full video in short, resumable sections. Light targets one frame per 12 seconds, normal one per four seconds and deep one per two seconds, with bounded work per section and limits for very long videos. Search can match an individual section rather than averaging away a brief detail. No audio is processed.
+#### What's said and what's on screen
+
+Two more models, also pinned and downloaded once into `SEMANTIC_CACHE_DIR`, turn media into words your server can search:
+
+- **Speech.** [Whisper base](https://huggingface.co/onnx-community/whisper-base) (multilingual, about 135 MB) transcribes the first ten minutes of each kept video or sound, in its own language. Silence, music and the lines speech models invent on them ("Thanks for watching") are dropped.
+- **Text on screen.** [Florence-2 base](https://huggingface.co/onnx-community/Florence-2-base-ft) (8-bit, about 275 MB) reads up to four of a post's pictures and four frames from the first minute of its video. Stray marks and blank pictures are dropped.
+
+The words join the post's own words, labelled "Said in the video" and "Text on screen", for both meaning and keyword search, and results say when that's where they matched. Each model runs in a short-lived process that exits after a minute without work, so only one of them is in memory at a time. Measured on an Apple M4 with two threads: about 3½ seconds per minute of speech and 1.6 seconds per picture or frame, with the extract process peaking near 1.5 GB (speech) and 1.8 GB (text on screen) on top of the search worker. Expect a slower NAS CPU to take several times longer. `SEMANTIC_SPEECH=off` or `SEMANTIC_SCREEN_TEXT=off` stops new work of that kind; words already found stay searchable.
+
+For a shared NAS, use the optional [native Apple Silicon worker](deploy/mac/README.md). Set `PROCESSING_MODE=remote`, a dedicated `PROCESSING_WORKER_TOKEN`, and `INDEXING_LEVEL=light|normal|deep` on the server. The Mac downloads retained media over authenticated HTTPS and samples throughout the full video in short, resumable sections. Light targets one frame per 12 seconds, normal one per four seconds and deep one per two seconds, with bounded work per section and limits for very long videos. Search can match an individual section rather than averaging away a brief detail. The Mac also transcribes speech and reads text on screen, sending back only the words. It reuses downloaded originals across processing passes and clears them when no work still needs them. Conversion and learning share the queue fairly, so a cold import can make progress on both.
 
 The NAS still serves searches and downloads/retains source media. In remote mode the Mac also handles H.264 compatibility conversion, using Apple’s hardware encoder with a bounded software fallback. The NAS checks the uploaded MP4’s codec, full resolution, duration and audio before switching files, and keeps the source until that succeeds. The Mac uses temporary lower-resolution samples for inference. It deletes frames after each section, conversion outputs after each upload attempt and downloaded copies after the final result is acknowledged. Conversion preserves resolution but re-encodes video; it is separate from inference sampling. Interrupted work has an 8 GiB default scratch ceiling and expiry cleanup; reusable model weights stay cached. The queue waits when the Mac is offline. `SEMANTIC_SEARCH=off` pauses model processing in either mode.
 
-`TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
+`TYPESAFE_API_KEY` is optional. Jev (TypeSafe) refines the top search results by their words and chooses names for automatic channels and Right now moments. It receives your search text and candidate posts’ own public text for search, or public text from a small sample of grouped posts for naming. It does not receive media files, what was said in them or read on screen, private tags or account identities. Local search, image/video understanding and grouping work without this key; unavailable or timed-out Jev requests fall back to local results and names.
 
 ### Video formats
 
@@ -334,14 +357,14 @@ pnpm db:migrate
 pnpm dev
 ```
 
-The dev server runs at [http://localhost:3001](http://localhost:3001). With no email set up, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install "yt-dlp[default]"`, `uv tool install "yt-dlp[default]"` or `brew install yt-dlp`); ffmpeg comes with the project. The first `pnpm dev` downloads the search model (about 400 MB) into `data/models/`, which git ignores; `SEMANTIC_SEARCH=off` skips it. With little disk space, run with `KEEP_BACKFILL=off`.
+The dev server runs at [http://localhost:3001](http://localhost:3001). With no email set up, sign-in links are printed in the terminal. Install yt-dlp to try downloads (`pipx install "yt-dlp[default]"`, `uv tool install "yt-dlp[default]"` or `brew install yt-dlp`); install a maintained FFmpeg with your OS package manager (`brew install ffmpeg` on macOS or `apt install ffmpeg` on Debian/Ubuntu). The Docker image includes its distribution-maintained FFmpeg. The first `pnpm dev` downloads the search model (about 400 MB) into `data/models/`, which git ignores; `SEMANTIC_SEARCH=off` skips it. With little disk space, run with `KEEP_BACKFILL=off`.
 
 ```bash
 pnpm typecheck && pnpm test && pnpm lint && pnpm format:check && pnpm build
 ```
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for how it fits together, and [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow. Coding agents should also read [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
-For the processing pipeline specifically, read [How NAS and Mac processing work](docs/remote-processing.md), with the phone-save flow, worker protocol and conversion/cleanup diagrams.
+For the processing pipeline specifically, read [How NAS and Mac processing work](docs/remote-processing.md), with the phone-save flow, worker protocol and conversion/cleanup diagrams. The [friends-feed verification guide](docs/rollout/friends-feed-verification.md) covers queue recovery, privacy, presence, worker cleanup and checks across browsers and phone apps. Also see [dependency maintenance](docs/rollout/dependency-maintenance.md), the [database upgrade rehearsal](docs/rollout/upgrade-rehearsal.md), [processing load and recovery](docs/rollout/processing-load-recovery.md), and the [physical phone acceptance checklist](docs/rollout/phone-device-acceptance.md).
 
 ## Use it kindly
 

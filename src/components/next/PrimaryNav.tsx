@@ -2,21 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bookmark, LayoutGrid, Radio, Search } from 'lucide-react'
+import { Bookmark, CirclePlay, LayoutGrid, Radio, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Gob } from './Gob'
 import { useLogoBusy } from './logo-busy'
 import { QuickSearch, openQuickSearch } from './QuickSearch'
 
 /**
- * The four places in ADHX, the same on every screen: Right now (what people
- * are saving, live, and where Tune in starts), Channels, My saves and Search.
+ * The places in ADHX, the same on every screen: New (what your people saved
+ * that you haven't seen; the signed-in home), Right now (what people are
+ * saving, live, and where Tune in starts), Channels, My saves and Search.
  * Desktop shows them as tabs in the header; phones get a bar along the bottom.
  */
 
-export type NavId = 'now' | 'channels' | 'saves' | 'search'
+export type NavId = 'new' | 'now' | 'channels' | 'saves' | 'search'
 
 export const NAV: { id: NavId; label: string; href: string }[] = [
+  { id: 'new', label: 'New', href: '/play?feed=new' },
   { id: 'now', label: 'Right now', href: '/now' },
   { id: 'channels', label: 'Channels', href: '/channels' },
   { id: 'saves', label: 'My saves', href: '/play?recent=1' },
@@ -36,15 +38,12 @@ function LiveDot({ className }: { className?: string }) {
   return (
     <span
       aria-hidden
-      className={cn(
-        'block h-2 w-2 shrink-0 rounded-full bg-nx-accent animate-nx-live-pulse',
-        className,
-      )}
+      className={cn('block h-2 w-2 shrink-0 rounded-full bg-[#ff5a3c]', className)}
     />
   )
 }
 
-const ICON = { now: Radio, channels: LayoutGrid, saves: Bookmark, search: Search }
+const ICON = { new: CirclePlay, now: Radio, channels: LayoutGrid, saves: Bookmark, search: Search }
 
 /** The adhx mark and name, linking home; first in every header. */
 export function NxLogo({ className, busy = false }: { className?: string; busy?: boolean }) {
@@ -53,10 +52,14 @@ export function NxLogo({ className, busy = false }: { className?: string; busy?:
     <Link
       href="/"
       aria-label="adhx home"
-      className={cn('gob-host flex shrink-0 items-center gap-2.5', className)}
+      className={cn('gob-host flex shrink-0 items-center gap-1.5', className)}
     >
-      <Gob size={32} mood={busy || working ? 'busy' : 'idle'} />
-      <span className="font-nx-serif text-2xl leading-none text-white">adhx</span>
+      {/* The body fills 76 of Gob's 96 units: 40 draws the boards' ~32px mark. */}
+      <Gob size={40} mood={busy || working ? 'busy' : 'idle'} className="-mx-1" />
+      {/* Tablets keep the mark and drop the name, so the header stays one row. */}
+      <span className="font-nx-serif text-[30px] leading-none text-nx-cream md:max-lg:hidden">
+        adhx
+      </span>
     </Link>
   )
 }
@@ -78,28 +81,27 @@ export function PrimaryNav({
   const active = current === undefined ? navFor(pathname) : current
   const items = withSearch ? NAV : NAV.filter((n) => n.id !== 'search')
   return (
-    <nav
-      aria-label="Main"
-      className={cn(
-        'hidden shrink-0 items-center gap-1 rounded-full bg-[#1c1b19] p-1 md:flex',
-        className,
-      )}
-    >
-      {items.map((n) => (
-        <Link
-          key={n.id}
-          href={n.href}
-          aria-current={active === n.id ? 'page' : undefined}
-          className={cn(
-            'flex h-9 items-center gap-2 rounded-full px-3.5 text-sm font-bold transition-colors',
-            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-nx-accent',
-            active === n.id ? 'bg-nx-cream text-black' : 'text-white/75 hover:text-white',
-          )}
-        >
-          {n.id === 'now' && <LiveDot />}
-          <span>{n.label}</span>
-        </Link>
-      ))}
+    <nav aria-label="Main" className={cn('hidden shrink-0 items-center gap-1 md:flex', className)}>
+      {items.map((n) => {
+        const on = active === n.id
+        return (
+          <Link
+            key={n.id}
+            href={n.href}
+            aria-current={on ? 'page' : undefined}
+            className={cn(
+              'flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm transition-colors lg:h-11 lg:px-[18px] lg:text-[15px]',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-nx-accent',
+              on
+                ? 'bg-nx-accent font-extrabold text-black'
+                : 'font-semibold text-nx-cream hover:bg-white/[0.06]',
+            )}
+          >
+            {n.id === 'now' && <LiveDot className={on ? 'shadow-[0_0_0_2px_#000]' : undefined} />}
+            <span>{n.label}</span>
+          </Link>
+        )
+      })}
     </nav>
   )
 }

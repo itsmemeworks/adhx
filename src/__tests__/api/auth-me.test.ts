@@ -26,6 +26,7 @@ vi.mock('@/lib/auth/session', () => ({
       .get(mockSession.userId)
     return Promise.resolve(banned ? null : mockSession.userId)
   }),
+  renewSessionCookie: vi.fn(() => Promise.resolve(false)),
 }))
 
 describe('API: /api/auth/me', () => {
@@ -84,8 +85,10 @@ describe('API: /api/auth/me', () => {
       username: 'xuser',
       displayName: 'X User',
       avatarUrl: 'https://example.com/avatar.jpg',
+      avatarSource: 'x',
       usernameChosen: true,
       usernameChangeCount: 0,
+      privateDefault: false,
     })
     expect(data.identities.x).toEqual({
       providerId: 'x-user-1',

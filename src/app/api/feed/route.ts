@@ -14,6 +14,7 @@ import { metrics } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { buildFeedItem, type FeedItemResponse } from '@/lib/feed/build-item'
+import { withSavers } from '@/lib/people/savers'
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'
 export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
@@ -566,7 +567,8 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
       : items
 
     return NextResponse.json({
-      items: shown,
+      // Members who saved each post, by name (signed in: this route needs a session).
+      items: withSavers(shown, userId),
       pagination: {
         page,
         limit,

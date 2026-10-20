@@ -370,8 +370,12 @@ so a first-time backfill cannot flood Discover.
 ## Understanding pipeline (search by meaning)
 
 `src/lib/semantic/` turns every save into vectors that power search by
-meaning. It runs EmbeddingGemma 2 on the server (text q4 + vision q8; no
-audio yet) through `@huggingface/transformers` on `onnxruntime-node`.
+meaning. It runs EmbeddingGemma 2 on the server (text q4 + vision q8; its
+audio encoder is not loaded) through `@huggingface/transformers` on
+`onnxruntime-node`. What's said in a video (Whisper base) and text on its
+pictures and frames (Florence-2 base) are read into words on the server too,
+and join the post's words. The following diagram describes local processing;
+remote Mac processing uses the length-aware segment plans described below.
 
 ```mermaid
 flowchart LR
@@ -381,6 +385,9 @@ flowchart LR
   W -->|words| T[Text vector]
   W -->|poster / photo| I[Image vector]
   W -->|ffmpeg: 16 frames over 32 s| V[Video vector]
+  W -->|extract process| X[(post_extracted_text)]
+  X -->|said / on screen| T
+  X --> K[(post_text_fts)]
   T --> E[(post_embeddings)]
   I --> E
   V --> E
@@ -390,8 +397,8 @@ flowchart LR
   or who saved it), so one row serves everyone who saved the post. Per-user
   reads join `bookmarks`, which is the isolation boundary.
 - **Durable priority queue.** Fresh saves and Up next jump the line; within a
-  priority, words run before pictures before videos so cheap results land
-  first. Failures back off and give up after three attempts; Retry re-queues.
+  priority, words run first, then pictures, speech, text on screen and videos,
+  so cheap results land first. Failures back off and give up after three attempts; Retry re-queues.
 - **Local child processes.** ONNX inference is synchronous on its thread; run
   inside the web server, one video froze every request for ~15 s. So
   `supervisor.ts` forks `child.ts` twice (`node --import tsx`, which is why the
@@ -404,9 +411,23 @@ flowchart LR
   job at a time and rests about half the last run's duration between jobs (the
   pattern pond uses). Model weights download once to `SEMANTIC_CACHE_DIR` on
   the volume.
+- **Speech and text on screen.** `speech` and `screen` jobs write words, not
+  vectors, to `post_extracted_text` (keyed by post; removed with the last
+  save). The jobs child prepares the media with ffmpeg (mono 16 kHz samples of
+  the first ten minutes; up to four pictures and four frames from the first
+  minute) and hands it to a separate extract process (`extract-child.ts`) that
+  holds one model at a time and exits after a minute idle, so its 1.5–1.8 GB
+  goes back to the system. Junk (silence, music, invented outro lines, stray
+  marks) is filtered in `extract-clean.ts`. New words rewrite the keyword row
+  and re-queue only that post's `text` vector: its text hash includes them.
+  Search names these matches `speech` / `screen` ("Said in the video", "On
+  screen") when the query's words are found there, and Jev (which never gets
+  these words) keeps their fused rank like a visual match.
+  `SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off` stop new work.
 - **Media.** Pictures come from the app's own proxies over loopback or from
   allowlisted X CDN hosts; anything else is skipped. Video frames are
-  sampled by ffmpeg (`ffmpeg-static`) reading the Range-capable video proxy.
+  sampled by a maintained system FFmpeg reading the Range-capable video proxy.
+  `FFMPEG_PATH` selects an operator-managed binary; Docker uses Debian FFmpeg.
 - **Status.** `/api/understanding/status` reports words / photos / videos
   progress for the signed-in user. "Photos" includes video posters, so every
   visual save shows progress after its quick picture pass. The item being worked on is only shown when
@@ -421,6 +442,9 @@ is covered by the [Mac setup guide](deploy/mac/README.md).
 `PROCESSING_MODE=remote` disables the local jobs child, retaining the query
 child and keyword indexing. The native ARM64 macOS runner uses the same pinned
 model with CoreML MLProgram/CPU fallback, plus VideoToolbox/software video decoding.
+On processing protocol 2 it also takes `speech` and `screen` jobs and returns
+only the cleaned words (`extracted`); protocol 1 workers are still served and
+never handed those kinds.
 It never mounts SQLite or opens an inbound port. A dedicated random machine
 credential authenticates `/api/processing/jobs` and lease-scoped retained-media
 transfers through `/api/processing/media`; account/phone tokens are not accepted.
@@ -497,14 +521,68 @@ flowchart LR
   (~1KB per post per kind) and re-scores candidates with the full vectors
   from SQLite. A linear scan stays in the tens of milliseconds into the
   hundreds of thousands of posts; beyond that it would need an ANN index.
-- **Scopes.** `mine` scans only the viewer's saves. `everyone` covers every
-  post anyone saved but never who: posts must have a non-banned saver and must
-  not be moderated, and other savers' copies are anonymised (no tags, archive
-  state, summary, save time or link owner).
+- **Scopes.** `mine` scans only the viewer's saves. `everyone` covers
+  everyone's saves: a post needs at least one visible save (`visibleSave` in
+  `src/lib/people/savers.ts`: not private, not a quoted copy, saver not
+  banned) or the viewer's own, and must not be moderated. Other savers'
+  copies are anonymised (no tags, archive state, summary, save time or link
+  owner) and never taken from a private save.
+
 - **Refine.** An optional second request reranks the first 20 with Jev
   (TypeSafe), sending only the query and public post words. Jev reads text,
   so visual matches keep more of their fused rank. With it hit@1 rose from
   0.58 to 0.77 on the labelled queries; any failure keeps the fused order.
+
+## Named to friends, never to strangers
+
+Saves are shared with the server's members (signed-in, non-banned accounts);
+see `docs/specs/friends-feed.md`. `bookmarks.is_private` marks a save "Just
+for me": its owner still searches and plays it, but no one else sees, counts
+or is told about it, and it writes no activity pulse (going private also
+deletes the owner's earlier `save` pulse rows for it).
+
+- **One condition.** `visibleSave()` / `visibleSaveFilter` is the SQL for "a
+  save other people may see or count". Moments, trending save counts, Everyone
+  search (`publishable`), `loadSearchItems`' choice of another saver's copy,
+  similar posts, the sitemap, author hubs, the public post JSON and the
+  pulse's own-play fallback all use it.
+- **Names for members only.** `saversFor(keys, viewerId)` returns savers
+  (username, display name, avatar, when, `isYou`) newest first, the viewer's
+  own save included even when private; empty for a signed-out viewer.
+  `loadSearchItems` attaches `savers` and `isPrivate` when the viewer is
+  signed in, so `/api/feed`, `/api/search`, `/api/search/similar`, channel
+  queues and the phone's `PhonePost` carry them; nothing public does.
+  `listMembers(viewerId)` lists members with the saves the viewer can see.
+- **Switching.** Every save path takes `private` (`/api/bookmarks/add`,
+  `/api/tweets/add`, `/api/app/save` and its queue); a repeat save with
+  `private` updates the flag. `PATCH /api/bookmarks/[id]/private` and
+  `POST /api/app/private` switch an existing save.
+
+Privacy changes also invalidate public caches immediately. SQLite triggers in
+`bookmarks/visibility-sql.ts` increment a durable `server_settings` revision on
+save insertion, deletion or visibility changes; public channels, curator/author
+profiles, trending and leaderboards check it even on warm cache hits. This is a
+constant-time read and works across web processes. Feed snapshots keep their
+original cursor positions, but recheck moderation, savers, explanations and
+counts on every page. Active live streams recheck membership and their phone
+key before events and on each 20-second heartbeat, closing on revocation.
+
+Both native share sheets can acknowledge a link before their privacy choice is
+settled: `deferPublish: true` stages new saves privately, then
+`PATCH /api/app/save { id, private? }` durably confirms the current choice.
+Changes made while metadata is being fetched are read at completion, in the
+same transaction that publishes the save. Closing the extension waits for the
+intent request; interrupted acknowledgements are retried from Shared lately.
+Android delivery belongs to durable WorkManager and resumes the same receipt.
+Both persist a monotonic intent version, so retrying an accepted request with a
+lost response cannot undo a newer intent or a later web privacy change.
+Without an acknowledgement a new save stays private. Repeat shares preserve
+existing privacy unless an explicit choice changes it. Keeping a public
+channel applies the recipient's private-by-default setting to new copies.
+
+Join approval requests are anchored to the invite identity on the joining
+account. Deleting an inviter removes its invite records without removing
+another person's pending request; the admin can still approve or decline it.
 
 ## Channels (redesign)
 
@@ -727,3 +805,21 @@ controls and include restart and database-health settings. The deployment guide
 covers permissions, private access, resource sizing and consistent backups.
 Kept-file URLs and shared previews are intentionally unauthenticated; source
 post IDs are predictable, so network privacy must be selected by the operator.
+
+## Friends-feed reliability
+
+Live phones renew a 15-second presence lease while in the foreground and leave
+explicitly on dismissal/background. Presence is counted by account across web
+streams and phones, checked against active credentials, and named only for
+members. A bounded known-post list refreshes saver metadata and removes posts
+the server no longer considers visible without losing older playable entries.
+Reaction drafts remain attached to their original post until acknowledged;
+failed sends keep the words and offer Retry. These are ephemeral reactions.
+
+The Doing summary counts the complete visible queue in SQLite; filters and
+status priority apply before the 60-row display limit. Summary-only requests
+skip media and face hydration. Web consumers share a foreground poll per account
+and scope, abort it on navigation, and show stale/error recovery explicitly.
+Viewing marks use an account-scoped local outbox, removing entries only after a
+successful response and retrying on reconnect. See the
+[friends-feed verification guide](docs/rollout/friends-feed-verification.md).

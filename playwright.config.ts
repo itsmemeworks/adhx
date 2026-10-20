@@ -29,12 +29,18 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: '**/mobile-webkit.spec.ts',
+      // The design-parity captures run against their own seeded server
+      // (`pnpm parity:capture`), not the e2e one.
+      testIgnore: ['**/mobile-webkit.spec.ts', '**/parity/**'],
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'webkit-mobile',
-      testMatch: ['**/mobile-webkit.spec.ts', '**/email-sign-in.spec.ts'],
+      testMatch: [
+        '**/mobile-webkit.spec.ts',
+        '**/email-sign-in.spec.ts',
+        '**/friends-reliability.spec.ts',
+      ],
       use: { ...devices['iPhone 13'], browserName: 'webkit' },
     },
   ],

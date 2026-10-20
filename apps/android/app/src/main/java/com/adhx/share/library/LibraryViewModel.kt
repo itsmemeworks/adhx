@@ -9,7 +9,9 @@ import com.adhx.share.data.ConnectionStore
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.PhonePost
+import com.adhx.share.net.SearchScope
 import com.adhx.share.net.StatusResponse
+import com.adhx.share.ui.Copy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -31,9 +33,22 @@ import kotlinx.coroutines.launch
 
 /** Where the app is. The last entry of [LibraryViewModel.stack] is on screen. */
 sealed interface Route {
-    /** My saves: the player, and the home screen. */
-    data object Saves : Route
+    /** Home: New · Channels · Live. */
+    data object Home : Route
+
+    /** My saves in the player (from Made for you, or a tap on your own face). */
+    data object MySaves : Route
     data object Search : Route
+
+    /** A channel's posts: a friend's, one made from everyone's, or one of yours ([com.adhx.share.net.ChannelKind]). */
+    data class Channel(val kind: String, val slug: String, val title: String, val avatarUrl: String? = null) : Route
+
+    /** The player on the open channel, from the one tapped. */
+    /** The open channel from [start]; [onlyNew] plays just the ones marked New ("Play the 4 new"). */
+    data class ChannelPlayer(val start: Int, val onlyNew: Boolean = false) : Route
+
+    /** Tuned in to a moment on Live. */
+    data class TunedIn(val slug: String) : Route
 
     /** The player on the search results, from the one tapped. */
     data class SearchPlayer(val start: Int) : Route
@@ -45,6 +60,12 @@ sealed interface Route {
     /** One post by its network and id (adhx://post?platform=…&id=…), fetched first. */
     data class PostLink(val platform: String, val id: String) : Route
     data object Settings : Route
+
+    /** Settings → Your people. */
+    data object People : Route
+
+    /** What your ADHX is doing: everything on its way, stuck or just finished. */
+    data object Doing : Route
 }
 
 data class SavesUi(
@@ -72,7 +93,12 @@ data class SearchUi(
     val nextOffset: Int? = null,
     val loading: Boolean = false,
     val error: String? = null,
+    /** Whose saves: [SearchScope.EVERYONE] (the default) or [SearchScope.MINE]. */
+    val scope: String = SearchScope.EVERYONE,
 ) {
+    /** What to say when nothing matched. */
+    val noResults: String get() = if (scope == SearchScope.EVERYONE) Copy.NO_RESULTS_EVERYONE else NO_RESULTS
+
     /** The line over the results, if there is something to say about them. */
     val note: String?
         get() = when {
@@ -95,7 +121,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     private val store = ConnectionStore.get(app)
 
-    val stack = mutableStateListOf<Route>(Route.Saves)
+    val stack = mutableStateListOf<Route>(Route.Home)
 
     private val _saves = MutableStateFlow(SavesUi())
     val saves: StateFlow<SavesUi> = _saves.asStateFlow()
@@ -104,21 +130,28 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     var savesPage = 0
 
     private val query = MutableStateFlow("")
+    private val searchScope = MutableStateFlow(SearchScope.EVERYONE)
     private val searchMore = MutableStateFlow<SearchUi?>(null)
     private var savesJob: Job? = null
     private var moreJob: Job? = null
 
-    private val searchFirst: StateFlow<SearchUi> = query
-        .map { it.trim() }
+    private val searchFirst: StateFlow<SearchUi> = combine(
+        query
+            .map { it.trim() }
+            .distinctUntilChanged()
+            .debounce { if (it.isEmpty()) 0L else DEBOUNCE_MS },
+        searchScope,
+    ) { q, sc -> q to sc }
         .distinctUntilChanged()
-        .debounce { if (it.isEmpty()) 0L else DEBOUNCE_MS }
-        .flatMapLatest { q -> if (q.isEmpty()) flowOf(SearchUi()) else runSearch(q) }
+        .flatMapLatest { (q, sc) -> if (q.isEmpty()) flowOf(SearchUi(scope = sc)) else runSearch(q, sc) }
         .onEach { searchMore.value = null }
         .stateIn(viewModelScope, SharingStarted.Eagerly, SearchUi())
 
     /** The search results, with any further pages loaded on the end. */
-    val search: StateFlow<SearchUi> = combine(query, searchFirst, searchMore) { typed, first, more ->
-        (more ?: first).copy(query = typed)
+    val search: StateFlow<SearchUi> = combine(query, searchScope, searchFirst, searchMore) { typed, sc, first, more ->
+        val shown = more ?: first
+        // A switch of scope shows the spinner until the other scope's results are in.
+        if (shown.scope != sc) SearchUi(query = typed, scope = sc, loading = typed.isNotBlank()) else shown.copy(query = typed)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, SearchUi())
 
     init {
@@ -132,8 +165,9 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
                 _saves.value = SavesUi()
                 savesPage = 0
                 query.value = ""
+                searchScope.value = SearchScope.EVERYONE
                 stack.clear()
-                stack.add(Route.Saves)
+                stack.add(Route.Home)
                 if (server != null && key != null) loadMoreSaves()
             }
             .launchIn(viewModelScope)
@@ -147,6 +181,11 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     fun openPostLink(platform: String, id: String) {
         val link = Route.PostLink(platform, id)
         if (stack.lastOrNull() != link) stack.add(link)
+    }
+
+    /** Straight back to home (a tab in a channel's header). */
+    fun home() {
+        while (stack.size > 1) stack.removeAt(stack.lastIndex)
     }
 
     /** Back: true when there was somewhere to go back to. */
@@ -270,6 +309,14 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 
     // Search
 
+    /** Everyone's saves or Mine. */
+    fun setScope(scope: String) {
+        if (scope == searchScope.value) return
+        moreJob?.cancel()
+        searchMore.value = null
+        searchScope.value = scope
+    }
+
     fun setQuery(text: String) {
         if (text.trim() != query.value.trim()) {
             moreJob?.cancel()
@@ -290,10 +337,11 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         if (now.loading || moreJob?.isActive == true || now.query.isBlank()) return
         val connection = store.current() ?: return
         val q = now.query.trim()
+        val sc = now.scope
         moreJob = viewModelScope.launch {
-            val result = AdhxApi(connection).search(q, offset)
+            val result = AdhxApi(connection).search(q, offset, sc)
             val current = search.value
-            if (current.query.trim() != q) return@launch
+            if (current.query.trim() != q || current.scope != sc) return@launch
             when (result) {
                 is ApiResult.Ok -> {
                     val seen = current.items.mapTo(HashSet()) { it.key }
@@ -311,15 +359,16 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun runSearch(q: String) = flow {
+    private fun runSearch(q: String, sc: String) = flow {
         val connection = store.current()
         if (connection == null) {
-            emit(SearchUi(query = q))
+            emit(SearchUi(query = q, scope = sc))
             return@flow
         }
-        emit(SearchUi(query = q, searched = q, loading = true))
-        val ui = when (val result = AdhxApi(connection).search(q)) {
+        emit(SearchUi(query = q, searched = q, loading = true, scope = sc))
+        val ui = when (val result = AdhxApi(connection).search(q, scope = sc)) {
             is ApiResult.Ok -> SearchUi(
+                scope = sc,
                 query = q,
                 searched = q,
                 items = result.value.items,
@@ -330,9 +379,9 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
             )
             is ApiResult.Failed -> {
                 signedOut(result, connection)
-                SearchUi(query = q, searched = q, error = result.message ?: CANT_SEARCH)
+                SearchUi(query = q, searched = q, error = result.message ?: CANT_SEARCH, scope = sc)
             }
-            ApiResult.Offline -> SearchUi(query = q, searched = q, error = OFFLINE)
+            ApiResult.Offline -> SearchUi(query = q, searched = q, error = OFFLINE, scope = sc)
         }
         emit(ui)
     }
@@ -340,7 +389,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
     /** A removed key sends the app back to Connect, which says why. */
     private fun signedOut(result: ApiResult.Failed, connection: Connection) {
         if (result.status == 401 || result.code == "bad_key") {
-            if (store.current()?.key == connection.key) store.clear(removedByServer = true)
+            store.clear(removedByServer = true, expected = connection)
         }
     }
 

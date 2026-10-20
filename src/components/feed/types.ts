@@ -1,6 +1,8 @@
 /**
  * Type definitions for the feed components
  */
+import type { Saver } from '@/lib/people/types'
+import type { WhyReason } from '@/lib/feed/blend'
 
 export interface MediaItem {
   id: string
@@ -141,6 +143,14 @@ export interface FeedItem {
   tags: string[]
   parentTweets?: FeedItem[] | null // Tweets that quote this one (for reverse navigation)
   summary?: string | null // AI-generated summary
+  /** Members who saved it, newest first. Set only for signed-in viewers. */
+  savers?: Saver[]
+  /** The viewer's own save is just for them ("Just for me"). Set only for signed-in viewers. */
+  isPrivate?: boolean
+  /** The blended feed only: why it's here ("Ana and Ben saved this"). */
+  why?: string
+  /** The blended feed only: every reason, headline first ("Why this one"). */
+  whyReasons?: WhyReason[]
 }
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'

@@ -11,6 +11,7 @@ import {
 import { and, eq, gt, isNull, lt, ne, sql } from 'drizzle-orm'
 import { MAX_USERNAME_CHANGES, sanitizeUsername, USERNAME_MAX_LENGTH } from './username-rules'
 import { EMAIL_LOGIN_TOKEN_TTL_MS } from './login-token-policy'
+import { isOwnPicture } from '@/lib/avatar/paths'
 
 export { MAX_USERNAME_CHANGES, sanitizeUsername }
 
@@ -301,8 +302,12 @@ function finalizeXIdentityAndProfile(params: {
     if (x.name && (onlyFillMissingProfile ? !user.displayName : x.name !== user.displayName)) {
       updates.displayName = x.name
     }
+    // A picture chosen in Settings (an upload or a Gob, served from this
+    // server) is never replaced by the X photo; "Use your X picture" brings it back.
+    const keepsOwnPicture = isOwnPicture(user.avatarUrl)
     if (
       x.profileImageUrl &&
+      !keepsOwnPicture &&
       (onlyFillMissingProfile ? !user.avatarUrl : x.profileImageUrl !== user.avatarUrl)
     ) {
       updates.avatarUrl = x.profileImageUrl

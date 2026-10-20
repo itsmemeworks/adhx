@@ -3,7 +3,18 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { AlertCircle, CheckCircle, X } from 'lucide-react'
+import {
+  AlertCircle,
+  BookOpen,
+  Bookmark,
+  CheckCircle,
+  Server,
+  Smartphone,
+  TriangleAlert,
+  User,
+  Users,
+  X,
+} from 'lucide-react'
 import { notifyStatsUpdated } from '@/lib/client-events'
 import { IosShortcutSettingsCard } from '@/components/IosShortcutInstall'
 import { AndroidSettingsCard } from '@/components/AndroidInstall'
@@ -17,6 +28,8 @@ import { PreferencesCard } from './PreferencesCard'
 import { SECONDARY, SettingsCard } from './parts'
 import { AccessKeysCard } from './AccessKeysCard'
 import { PhoneAppCard } from './PhoneAppCard'
+import { NewInviteCard, PeopleCard, usePeople } from './PeopleCard'
+import { useInvites } from './InviteCard'
 import { SyncCard, SyncHistoryCard, type SyncCounts, type SyncHistoryEntry } from './SyncCard'
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
@@ -74,6 +87,7 @@ export function SettingsScreen() {
   })
   const [waitMs, setWaitMs] = useState(0)
   const [learningOpen, setLearningOpen] = useState(false)
+  const [active, setActive] = useState('#you')
 
   const sync = useXSync()
   const learning = useLearningStatus({ fast: learningOpen || sync.status === 'running' })
@@ -187,58 +201,156 @@ export function SettingsScreen() {
     router.replace('/settings', { scroll: false })
   }, [wantSync, me, cooldown.loaded, cooldown.canSync, sync, router])
 
+  const people = usePeople()
+  const invites = useInvites()
+  const waiting = people.data?.requests?.length ?? 0
+  const showSync = !!me && (me.xConnected || me.xAvailable !== false)
+  const sections: {
+    href: string
+    label: string
+    icon: typeof User
+    badge?: number
+    danger?: boolean
+  }[] = [
+    { href: '#you', label: 'You', icon: User },
+    { href: '#people', label: 'Your people', icon: Users, badge: waiting },
+    { href: '#phone-app', label: 'Phone app', icon: Smartphone },
+    { href: '#preferences', label: 'Watching and reading', icon: BookOpen },
+    ...(showSync ? [{ href: '#sync', label: 'Your X bookmarks', icon: Bookmark }] : []),
+    { href: '#danger', label: 'Danger zone', icon: TriangleAlert, danger: true },
+  ]
+
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader>
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
       </NxHeader>
 
-      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-16 pt-3 md:px-7 md:pt-6">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="m-0 font-nx-serif text-[44px] font-normal leading-none md:text-[56px]">
+      <main className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-3 md:px-8 md:pt-5 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-x-[26px]">
+        <aside className="hidden lg:sticky lg:top-[92px] lg:flex lg:h-[calc(100dvh-112px)] lg:flex-col lg:gap-3.5 lg:self-start">
+          <span aria-hidden className="mb-1.5 mt-1 font-nx-serif text-[52px] leading-[0.95]">
             Settings
-          </h1>
-          <p className="m-0 text-[15px] text-white/60">
-            Your account, your phone, and how you watch and read.
-          </p>
-        </div>
-
-        {notice && (
-          <div
-            role={notice.type === 'error' ? 'alert' : 'status'}
-            className={cn(
-              'flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold',
-              notice.type === 'success'
-                ? 'bg-[#7ddc8a]/12 text-[#7ddc8a]'
-                : 'bg-[#ff8a7a]/12 text-[#ff8a7a]',
-            )}
-          >
-            {notice.type === 'success' ? (
-              <CheckCircle aria-hidden className="h-5 w-5 shrink-0" />
-            ) : (
-              <AlertCircle aria-hidden className="h-5 w-5 shrink-0" />
-            )}
-            <span className="min-w-0 flex-1">{notice.text}</span>
-            <button
-              type="button"
-              aria-label="Dismiss"
-              onClick={() => setNotice(null)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10"
-            >
-              <X aria-hidden className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {me === null ? (
-          <div aria-hidden className="flex flex-col gap-5">
-            {[0, 1].map((i) => (
-              <span key={i} className="nx-shimmer animate-nx-shimmer block h-56 rounded-[22px]" />
+          </span>
+          <nav aria-label="Settings sections" className="flex flex-col gap-1">
+            {sections.map(({ href, label, icon: Icon, badge, danger }) => (
+              <a
+                key={href}
+                href={href}
+                aria-current={active === href ? 'true' : undefined}
+                onClick={() => setActive(href)}
+                className={cn(
+                  'flex h-11 items-center gap-2.5 whitespace-nowrap rounded-full px-3.5 text-[15px]',
+                  active === href
+                    ? 'bg-[#262320] font-extrabold text-nx-cream'
+                    : danger
+                      ? 'font-semibold text-[#ff5a3c] hover:bg-white/5'
+                      : 'font-semibold text-[#c9bfab] hover:bg-white/5 hover:text-white',
+                )}
+              >
+                <Icon aria-hidden className="h-[18px] w-[18px] shrink-0" />
+                <span>{label}</span>
+                {!!badge && (
+                  <span
+                    aria-label={`${badge} waiting`}
+                    className="ml-auto inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-nx-accent px-[7px] text-xs font-extrabold text-black"
+                  >
+                    {badge}
+                  </span>
+                )}
+              </a>
             ))}
+          </nav>
+          <div className="mt-auto flex flex-col gap-1.5 rounded-[20px] border border-white/[0.08] bg-nx-surface p-4">
+            <span className="flex items-center gap-2 text-[13px] font-extrabold">
+              <Server aria-hidden className="h-4 w-4 text-nx-accent" />
+              <span>On your server</span>
+            </span>
+            <span className="text-[13px] leading-snug text-[#a39b8b]">
+              No ads, no tracking, no algorithm. Just your lot.
+            </span>
           </div>
-        ) : (
-          <>
-            {(me.xConnected || me.xAvailable !== false) && (
+        </aside>
+
+        <div className="flex min-w-0 flex-col gap-5">
+          <div className="flex flex-col gap-1.5 lg:sr-only">
+            <h1 className="m-0 font-nx-serif text-[44px] font-normal leading-none md:text-[56px]">
+              Settings
+            </h1>
+            <p className="m-0 text-[15px] text-white/60">
+              You, your people, your phone, and how you watch and read.
+            </p>
+          </div>
+
+          {notice && (
+            <div
+              role={notice.type === 'error' ? 'alert' : 'status'}
+              className={cn(
+                'flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold',
+                notice.type === 'success'
+                  ? 'bg-[#7ddc8a]/12 text-[#7ddc8a]'
+                  : 'bg-[#ff8a7a]/12 text-[#ff8a7a]',
+              )}
+            >
+              {notice.type === 'success' ? (
+                <CheckCircle aria-hidden className="h-5 w-5 shrink-0" />
+              ) : (
+                <AlertCircle aria-hidden className="h-5 w-5 shrink-0" />
+              )}
+              <span className="min-w-0 flex-1">{notice.text}</span>
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => setNotice(null)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10"
+              >
+                <X aria-hidden className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {me === null ? (
+            <div aria-hidden className="flex flex-col gap-5">
+              {[0, 1].map((i) => (
+                <span key={i} className="nx-shimmer animate-nx-shimmer block h-56 rounded-[22px]" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <NewInviteCard inv={invites} />
+              <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[310px_minmax(0,1fr)] xl:gap-[26px]">
+                <AccountCard me={me} refresh={() => void fetchMe()} />
+                <PeopleCard
+                  data={people.data}
+                  reload={() => void people.reload()}
+                  invites={invites}
+                />
+              </div>
+              <div className="flex max-w-[760px] flex-col gap-5">
+                <PhoneAppCard />
+                <AccessKeysCard />
+              </div>
+            </>
+          )}
+
+          <div className="flex max-w-[760px] flex-col gap-5">
+            {me?.isAdmin && (
+              <SettingsCard
+                title="Admin"
+                sub="Numbers, hidden posts and banned accounts."
+                right={
+                  <Link href="/admin" className={SECONDARY}>
+                    Open
+                  </Link>
+                }
+              />
+            )}
+
+            <IosShortcutSettingsCard />
+            <AndroidSettingsCard />
+
+            <PreferencesCard />
+
+            {me && showSync && (
               <>
                 <SyncCard
                   xConnected={me.xConnected}
@@ -253,58 +365,41 @@ export function SettingsScreen() {
                 <SyncHistoryCard syncs={history} loading={historyLoading} />
               </>
             )}
-            <AccountCard me={me} refresh={() => void fetchMe()} />
-            <PhoneAppCard />
-            <AccessKeysCard />
-          </>
-        )}
 
-        {me?.isAdmin && (
-          <SettingsCard
-            title="Admin"
-            sub="Numbers, hidden posts and banned accounts."
-            right={
-              <Link href="/admin" className={SECONDARY}>
-                Open
-              </Link>
-            }
-          />
-        )}
+            <DangerZone
+              onCleared={() => {
+                setNotice({
+                  type: 'success',
+                  text: 'Your data is cleared. You’re still signed in.',
+                })
+                setHistory([])
+                setCounts(NO_COUNTS)
+                notifyStatsUpdated()
+              }}
+              onError={(text) => setNotice({ type: 'error', text })}
+            />
 
-        <IosShortcutSettingsCard />
-        <AndroidSettingsCard />
-
-        <PreferencesCard />
-
-        <DangerZone
-          onCleared={() => {
-            setNotice({ type: 'success', text: 'Your data is cleared. You’re still signed in.' })
-            setHistory([])
-            setCounts(NO_COUNTS)
-            notifyStatsUpdated()
-          }}
-          onError={(text) => setNotice({ type: 'error', text })}
-        />
-
-        <footer className="flex flex-col items-center gap-2 pt-4 text-[13px] text-white/45">
-          <a
-            href={GITHUB_RELEASE_URL}
-            className="underline-offset-2 hover:text-white hover:underline"
-          >
-            {`ADHX v${APP_VERSION}`}
-          </a>
-          <span className="flex gap-3">
-            <a href="/privacy" className="underline-offset-2 hover:text-white hover:underline">
-              Privacy
-            </a>
-            <a
-              href="https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md"
-              className="underline-offset-2 hover:text-white hover:underline"
-            >
-              Security
-            </a>
-          </span>
-        </footer>
+            <footer className="flex flex-col items-center gap-2 pt-4 text-[13px] text-white/45">
+              <a
+                href={GITHUB_RELEASE_URL}
+                className="underline-offset-2 hover:text-white hover:underline"
+              >
+                {`ADHX v${APP_VERSION}`}
+              </a>
+              <span className="flex gap-3">
+                <a href="/privacy" className="underline-offset-2 hover:text-white hover:underline">
+                  Privacy
+                </a>
+                <a
+                  href="https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md"
+                  className="underline-offset-2 hover:text-white hover:underline"
+                >
+                  Security
+                </a>
+              </span>
+            </footer>
+          </div>
+        </div>
       </main>
 
       {learningOpen && (

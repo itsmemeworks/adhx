@@ -38,7 +38,11 @@ import com.adhx.share.data.Connection
 import com.adhx.share.links.Links
 import com.adhx.share.main.ConnectedPill
 import com.adhx.share.main.Reach
+import com.adhx.share.net.Saver
 import com.adhx.share.ui.AdhxBrand
+import com.adhx.share.ui.SerifFamily
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.Dp
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
@@ -51,15 +55,20 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.AnimatedVisibility
 
-/** Home: My saves in the player, or what to do while there's nothing to play. */
+/**
+ * My saves in the player, or what to do while there's nothing to play. [bar]
+ * is what sits at the top (the home bar and tabs when a server has no feed
+ * yet, or a back button from Made for you); [contentTop] is how far down the
+ * empty page starts, below it.
+ */
 @Composable
 fun SavesHome(
     vm: LibraryViewModel,
     connection: Connection,
     reach: Reach,
-    onSearch: () -> Unit,
-    onSharedLately: () -> Unit,
-    onSettings: () -> Unit,
+    bar: @Composable () -> Unit,
+    contentTop: Dp = 76.dp,
+    onSaver: ((Saver) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val ui by vm.saves.collectAsStateWithLifecycle()
@@ -86,15 +95,7 @@ fun SavesHome(
                 .statusBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 20.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AdhxBrand(markSize = 28.dp, modifier = Modifier.weight(1f))
-                BarButton(painterResource(R.drawable.ic_history), "Shared lately", onSharedLately)
-                BarButton(Icons.Filled.Search, "Search your saves", onSearch)
-                BarButton(Icons.Filled.Settings, "Settings", onSettings)
-            }
+            bar()
             // Only over the player: the empty page shows the whole card.
             AnimatedVisibility(
                 visible = ui.preparing > 0 && ui.items.isNotEmpty(),
@@ -115,6 +116,7 @@ fun SavesHome(
             topBar = topBar,
             newOnTop = ui.newOnTop,
             onTop = vm::seenTop,
+            onSaver = onSaver,
         )
         return
     }
@@ -125,7 +127,7 @@ fun SavesHome(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 76.dp, bottom = 16.dp),
+                .padding(start = 20.dp, end = 20.dp, top = contentTop, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             ConnectedPill(host = Links.host(connection.server), reach = reach)
@@ -161,6 +163,16 @@ fun SavesHome(
     }
 }
 
+/** A back button and a title, for My saves and channels. */
+@Composable
+fun BackTitleRow(title: String, onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        BarButton(com.adhx.share.ui.Glyphs.Back, "Back", onBack)
+        Spacer(Modifier.width(12.dp))
+        Text(title, fontFamily = SerifFamily, fontSize = 26.sp, color = AdhxColors.White, maxLines = 1)
+    }
+}
+
 /** A back button over the player, for results and single posts. */
 @Composable
 fun BoxScope.BackBar(onBack: () -> Unit) {
@@ -171,6 +183,6 @@ fun BoxScope.BackBar(onBack: () -> Unit) {
             .statusBarsPadding()
             .padding(start = 16.dp, top = 6.dp, bottom = 20.dp),
     ) {
-        BarButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
+        BarButton(com.adhx.share.ui.Glyphs.Back, "Back", onBack)
     }
 }

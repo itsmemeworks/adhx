@@ -1,115 +1,143 @@
 package com.adhx.share.data
 
 import android.content.Context
-import android.content.SharedPreferences
-import android.util.Log
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.AtomicFile
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
+import java.security.KeyStore
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 
-/** The ADHX this phone saves to, and the phone key it got when pairing. */
-data class Connection(
-    val server: String,
-    val key: String,
-    val username: String? = null,
-    val phoneName: String? = null,
-)
-
-/**
- * Keeps the server address and phone key in EncryptedSharedPreferences (the
- * encryption key lives in the Android Keystore).
- */
+/** AES-GCM record in noBackupFilesDir, with a non-exportable Android Keystore key. */
 class ConnectionStore private constructor(context: Context) {
-
-    private val prefs: SharedPreferences = open(context)
-    private val _connection = MutableStateFlow(read())
+    private val vault = ConnectionVault(
+        AndroidVaultFile(File(context.noBackupFilesDir, "connection-v1.enc")),
+        ::keystoreKey,
+        LegacyPreferences(context),
+    ).apply { load() }
+    private val _connection = MutableStateFlow(vault.record.connection)
     val connection: StateFlow<Connection?> = _connection.asStateFlow()
-
-    /** Set when the server said the key was removed, so Connect can say why. */
+    private val _allowLegacyHistory = MutableStateFlow(vault.record.allowLegacyHistory)
+    internal val allowLegacyHistory: StateFlow<Boolean> = _allowLegacyHistory.asStateFlow()
+    private val _storageError = MutableStateFlow(vault.error)
+    val storageError: StateFlow<String?> = _storageError.asStateFlow()
     private val _removedNotice = MutableStateFlow(false)
     val removedNotice: StateFlow<Boolean> = _removedNotice.asStateFlow()
 
     fun current(): Connection? = _connection.value
 
-    fun save(connection: Connection) {
-        prefs.edit()
-            .putString(K_SERVER, connection.server)
-            .putString(K_KEY, connection.key)
-            .putString(K_USERNAME, connection.username)
-            .putString(K_PHONE, connection.phoneName)
-            .apply()
-        _removedNotice.value = false
-        _connection.value = connection
+    @Synchronized
+    fun save(connection: Connection): Boolean = persist(vault.record.pairedWith(connection)).also {
+        if (it) _removedNotice.value = false
     }
 
-    fun updateIdentity(username: String?, phoneName: String?) {
-        val now = _connection.value ?: return
-        save(now.copy(username = username ?: now.username, phoneName = phoneName ?: now.phoneName))
+    @Synchronized
+    fun updateIdentity(expected: Connection, username: String?, phoneName: String?) {
+        val next = vault.record.identityUpdated(expected, username, phoneName)
+        if (next != vault.record) persist(next)
     }
 
-    /** Forget the key. The server address stays, to fill in next time. */
-    fun clear(removedByServer: Boolean = false) {
-        prefs.edit()
-            .remove(K_KEY)
-            .remove(K_USERNAME)
-            .remove(K_PHONE)
-            .apply()
-        _removedNotice.value = removedByServer
-        _connection.value = null
+    /** Forget only after a durable tombstone prevents re-importing legacy credentials. */
+    @Synchronized
+    fun clear(removedByServer: Boolean = false, expected: Connection? = null): Boolean {
+        if (expected != null && !expected.sameCredential(current())) return false
+        return persist(ConnectionRecord(lastServer = vault.record.lastServer, allowLegacyHistory = false)).also {
+            if (it) _removedNotice.value = removedByServer
+        }
     }
 
-    /** The last server address used, for the "Type the address" field. */
-    fun lastServer(): String? = prefs.getString(K_SERVER, null)
+    fun lastServer(): String? = vault.record.lastServer
+    internal fun changesAccount(next: Connection): Boolean = vault.record.changesAccount(next)
+    internal fun ownsHistory(item: HistoryItem, connection: Connection): Boolean =
+        item.belongsTo(connection, vault.record.allowLegacyHistory)
 
-    private fun read(): Connection? {
-        val server = prefs.getString(K_SERVER, null) ?: return null
-        val key = prefs.getString(K_KEY, null) ?: return null
-        return Connection(
-            server = server,
-            key = key,
-            username = prefs.getString(K_USERNAME, null),
-            phoneName = prefs.getString(K_PHONE, null),
-        )
+    private fun persist(next: ConnectionRecord): Boolean {
+        val saved = vault.write(next)
+        _storageError.value = vault.error
+        if (saved) {
+            _allowLegacyHistory.value = vault.record.allowLegacyHistory
+            _connection.value = vault.record.connection
+        }
+        return saved
     }
 
     companion object {
-        private const val FILE = "adhx_connection"
-        private const val K_SERVER = "server"
-        private const val K_KEY = "key"
-        private const val K_USERNAME = "username"
-        private const val K_PHONE = "phone_name"
-
-        @Volatile
-        private var instance: ConnectionStore? = null
-
-        fun get(context: Context): ConnectionStore =
-            instance ?: synchronized(this) {
-                instance ?: ConnectionStore(context.applicationContext).also { instance = it }
-            }
-
-        private fun open(context: Context): SharedPreferences {
-            return try {
-                create(context)
-            } catch (e: Exception) {
-                // The keystore key can go missing (e.g. after a restore). Start
-                // over rather than crash; the phone just has to pair again.
-                Log.w("ConnectionStore", "Couldn't open the key store, starting fresh", e)
-                context.deleteSharedPreferences(FILE)
-                create(context)
-            }
+        private const val KEY_ALIAS = "adhx.phone-connection.v1"
+        @Volatile private var instance: ConnectionStore? = null
+        fun get(context: Context): ConnectionStore = instance ?: synchronized(this) {
+            instance ?: ConnectionStore(context.applicationContext).also { instance = it }
         }
 
-        private fun create(context: Context): SharedPreferences {
-            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-            return EncryptedSharedPreferences.create(
-                FILE,
-                masterKeyAlias,
-                context,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+        private fun keystoreKey(create: Boolean): SecretKey {
+            val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            (store.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+            check(create) { "Connection key unavailable" }
+            return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
+                init(KeyGenParameterSpec.Builder(KEY_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setKeySize(256)
+                    .setRandomizedEncryptionRequired(true)
+                    .build())
+            }.generateKey()
         }
     }
+}
+
+private class AndroidVaultFile(private val file: File) : VaultFile {
+    private val atomic = AtomicFile(file)
+    override fun read(): ByteArray? {
+        if (!recoverableFileExists(file)) return null
+        return atomic.openRead().use {
+            val output = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(1024)
+            while (true) {
+                val count = it.read(buffer)
+                if (count == -1) break
+                require(output.size() + count <= ConnectionVault.MAX_BYTES)
+                output.write(buffer, 0, count)
+            }
+            output.toByteArray()
+        }
+    }
+    override fun write(bytes: ByteArray) {
+        val stream = atomic.startWrite()
+        try {
+            stream.write(bytes)
+            atomic.finishWrite(stream)
+        } catch (e: Exception) {
+            atomic.failWrite(stream)
+            throw e
+        }
+    }
+}
+
+/** Deprecated library is read only, retained solely to migrate already paired installations. */
+@Suppress("DEPRECATION")
+private class LegacyPreferences(private val context: Context) : LegacyConnection {
+    override fun read(): ConnectionRecord? {
+        if (!recoverableFileExists(File(context.applicationInfo.dataDir, "shared_prefs/$FILE.xml"))) return null
+        check(KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            .containsAlias(MasterKey.DEFAULT_MASTER_KEY_ALIAS))
+        val prefs = EncryptedSharedPreferences.create(FILE,
+            MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC), context,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
+        val server = prefs.getString("server", null) ?: return null
+        val key = prefs.getString("key", null)
+        val username = prefs.getString("username", null)
+        return ConnectionRecord(key?.let { Connection(server, it,
+            username, prefs.getString("phone_name", null)) }, server,
+            allowLegacyHistory = key != null && !username.isNullOrBlank())
+    }
+    override fun remove() { context.deleteSharedPreferences(FILE) }
+    private companion object { const val FILE = "adhx_connection" }
 }

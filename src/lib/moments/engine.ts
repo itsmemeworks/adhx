@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events'
+import { randomBytes } from 'crypto'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import type { FeedItemResponse as FeedItem } from '@/lib/feed/build-item'
@@ -6,6 +7,9 @@ import { captureException } from '@/lib/sentry'
 import { keysToHits } from '@/lib/channels/channels'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { publishable } from '@/lib/semantic/search'
+import { visibleSave } from '@/lib/people/savers'
+import type { Saver } from '@/lib/people/types'
+import type { ReactionEmoji } from './reactions'
 import { INDEX_DIMS, nearestPosts, postVector, refreshIndex } from '@/lib/semantic/vector-index'
 import { seedFrom } from '@/lib/channels/cluster'
 import {
@@ -36,12 +40,15 @@ import {
   peopleIn,
   pickHue,
   rank,
+  reconcileForming,
   slugFor,
   type Forming,
   type Moment,
   type RecentPost,
 } from './group'
 import { nameMoment } from './naming'
+import { carryFormingSubscriptions, dropFormingSubscriptions, fireFormingAlerts } from './alerts'
+import { namedWatchAdjustment } from './presence'
 
 /**
  * "Right now": what people are saving, grouped by meaning, live.
@@ -54,6 +61,9 @@ import { nameMoment } from './naming'
  * Anonymous by construction: savers are only counted (their ids never leave
  * this module), posts are anonymised copies, and only posts allowed in
  * Everyone search (no banned savers, not moderated, not deleted) appear.
+ * Names are added per request, for signed-in members only, by `people.ts`
+ * (from the post keys, `momentPostKeys`) — never here, so nothing the engine
+ * shares (snapshots, events) can name anyone.
  */
 
 // ——— Views sent to browsers ———
@@ -69,6 +79,20 @@ export interface MomentView {
   watching: number
   /** Newest few posts (up to 8), for the card mosaic. */
   covers: FeedItem[]
+  /**
+   * Members only (`people.ts`, never the engine): up to 5 people saving these,
+   * newest first; `people` is the full count.
+   */
+  savers?: Saver[]
+  /** Members only: members tuned in now, without the viewer. */
+  watchers?: Saver[]
+  /**
+   * Members only (`people.ts`): visible saves into it in the last
+   * `windowMinutes` ("LIVE · 3 saves in 10 min").
+   */
+  recentSaves?: number
+  /** Members only: 5, 10, 15, 30 or 60, the span `recentSaves` covers. */
+  windowMinutes?: number
 }
 
 export interface FormingView {
@@ -79,6 +103,13 @@ export interface FormingView {
   need: number
   unit: 'people' | 'saves'
   covers: FeedItem[]
+  /**
+   * Members only (`people.ts`, never the engine): up to 4 people saving these,
+   * newest first, from visible saves only.
+   */
+  people?: { username: string; name: string | null; avatarUrl: string | null }[]
+  /** Members only: whether the viewer asked to be told when it goes live. */
+  alert?: boolean
 }
 
 export interface StreamItem {
@@ -103,16 +134,49 @@ export interface MomentsSnapshot {
 
 export interface MomentDetail {
   moment: MomentView
-  items: { post: FeedItem; savedAt: string; people: number }[]
+  /** `savers`: members only (`people.ts`), newest first. */
+  items: { post: FeedItem; savedAt: string; people: number; savers?: Saver[] }[]
   bars: number[]
+  /** Members only: members tuned in now, without the viewer. */
+  watchers?: Saver[]
+}
+
+/**
+ * Who reacted, how, and to which post: exactly one of `emoji` (from
+ * `REACTION_EMOJI`) or `text` (cleaned, ≤40 characters; show it as text,
+ * never HTML). Members only, never stored.
+ */
+export interface ReactionEvent {
+  type: 'reaction'
+  slug: string
+  id: string
+  at: string
+  saver: Saver
+  emoji?: ReactionEmoji
+  text?: string
+  post: { platform: string; id: string }
 }
 
 export type MomentEvent =
   | { type: 'snapshot'; snapshot: MomentsSnapshot }
-  | { type: 'save'; item: StreamItem; moment?: MomentView; forming?: FormingView }
+  | {
+      type: 'save'
+      item: StreamItem
+      moment?: MomentView
+      forming?: FormingView
+      /** Members only: who just saved it. */
+      saver?: Saver
+    }
   | { type: 'formed'; moment: MomentView; formingId: string }
   | { type: 'stats'; stats: { today: number; lastHour: number } }
-  | { type: 'watching'; slug: string; watching: number }
+  | {
+      type: 'watching'
+      slug: string
+      watching: number
+      /** Members only: members tuned in now, without the receiver. */
+      watchers?: Saver[]
+    }
+  | ReactionEvent
 
 // ——— State ———
 
@@ -141,6 +205,11 @@ type State = {
   stats: { today: number; lastHour: number }
   bus: EventEmitter
   nextId: number
+  /**
+   * Part of every forming id, new each time the process starts, so a bell
+   * stored for an old group never lands on a new group that reused its number.
+   */
+  boot: string
 }
 
 const g = globalThis as unknown as { __adhxMoments?: State }
@@ -170,6 +239,7 @@ function fresh(): State {
     stats: { today: 0, lastHour: 0 },
     bus,
     nextId: 1,
+    boot: randomBytes(3).toString('hex'),
   }
 }
 
@@ -187,16 +257,16 @@ export function __resetMoments(): void {
 
 // ——— Reading saves ———
 
-// A quoted post is stored as its own row (`source = 'quoted'`) when the post
-// quoting it is saved; nobody chose to save it, so it never counts here.
+// Only visible saves count (`visibleSave`): not private, not banned, and not a
+// quoted post — that's stored as its own row (`source = 'quoted'`) when the
+// post quoting it is saved; nobody chose to save it.
 type SaveRow = { user_id: string; platform: string; id: string; processed_at: string }
 
 function recentSaves(sinceIso: string, limit: number): SaveRow[] {
   return db.all<SaveRow>(sql`
     SELECT b.user_id, b.platform, b.id, b.processed_at
     FROM bookmarks b
-    LEFT JOIN user_bans u ON u.user_id = b.user_id
-    WHERE u.user_id IS NULL AND COALESCE(b.source, '') != 'quoted' AND b.processed_at >= ${sinceIso}
+    WHERE ${visibleSave('b')} AND b.processed_at >= ${sinceIso}
     ORDER BY b.processed_at DESC
     LIMIT ${limit}
   `)
@@ -206,8 +276,7 @@ function newSaves(afterIso: string): SaveRow[] {
   return db.all<SaveRow>(sql`
     SELECT b.user_id, b.platform, b.id, b.processed_at
     FROM bookmarks b
-    LEFT JOIN user_bans u ON u.user_id = b.user_id
-    WHERE u.user_id IS NULL AND COALESCE(b.source, '') != 'quoted' AND b.processed_at >= ${afterIso}
+    WHERE ${visibleSave('b')} AND b.processed_at >= ${afterIso}
     ORDER BY b.processed_at ASC
     LIMIT 400
   `)
@@ -223,7 +292,7 @@ function readStats(now: number): { today: number; lastHour: number } {
     SELECT
       SUM(CASE WHEN processed_at >= ${dayIso} THEN 1 ELSE 0 END) AS today,
       SUM(CASE WHEN processed_at >= ${hour} THEN 1 ELSE 0 END) AS hour
-    FROM bookmarks WHERE processed_at >= ${since} AND COALESCE(source, '') != 'quoted'
+    FROM bookmarks b WHERE b.processed_at >= ${since} AND ${visibleSave('b')}
   `)
   return { today: row?.today ?? 0, lastHour: row?.hour ?? 0 }
 }
@@ -271,6 +340,34 @@ function centred(raw: Float32Array, mean: Float32Array | null): Float32Array {
 
 // ——— Views ———
 
+/**
+ * Which of these posts still have a visible save. Between regroups a save can
+ * go "Just for me" or its saver be banned; what's shown is checked again on
+ * every read, so such a post drops out at once (counts catch up at the next
+ * regroup).
+ */
+function stillVisible(keys: string[]): Set<string> {
+  const out = new Set<string>()
+  const ids = [...new Set(keys.map((k) => k.slice(k.indexOf(':') + 1)))]
+  for (let i = 0; i < ids.length; i += 400) {
+    const part = ids.slice(i, i + 400)
+    const rows = db.all<{ platform: string; id: string }>(sql`
+      SELECT DISTINCT b.platform, b.id FROM bookmarks b
+      WHERE ${visibleSave('b')} AND b.id IN (${sql.join(
+        part.map((id) => sql`${id}`),
+        sql`, `,
+      )})
+    `)
+    for (const r of rows) out.add(`${r.platform}:${r.id}`)
+  }
+  return out
+}
+
+function visibleOnly(keys: string[]): string[] {
+  const shown = stillVisible(keys)
+  return keys.filter((k) => shown.has(k))
+}
+
 function newestKeys(members: Map<string, { lastAt: number }>, n: number): string[] {
   return [...members.entries()]
     .sort((a, b) => b[1].lastAt - a[1].lastAt)
@@ -279,8 +376,7 @@ function newestKeys(members: Map<string, { lastAt: number }>, n: number): string
 }
 
 async function momentView(m: Moment, now = Date.now()): Promise<MomentView> {
-  const s = state()
-  const covers = await loadPosts(newestKeys(m.members, 8))
+  const covers = await loadPosts(visibleOnly(newestKeys(m.members, 8)))
   let last = 0
   for (const member of m.members.values()) last = Math.max(last, member.lastAt)
   return {
@@ -291,14 +387,14 @@ async function momentView(m: Moment, now = Date.now()): Promise<MomentView> {
     posts: m.members.size,
     lastAt: new Date(last || now).toISOString(),
     rising: isRising(m.recent, now),
-    watching: s.watching.get(m.slug) ?? 0,
+    watching: watchingCount(m.slug),
     covers: [...covers.values()].slice(0, 8),
   }
 }
 
 async function formingView(f: Forming): Promise<FormingView> {
   const progress = formingProgress(f, minSavers())
-  const covers = await loadPosts(newestKeys(f.members, 6))
+  const covers = await loadPosts(visibleOnly(newestKeys(f.members, 6)))
   return {
     id: f.id,
     title: f.title ?? 'Something new',
@@ -320,14 +416,38 @@ function visibleForming(s: State): Forming[] {
 async function snapshot(): Promise<MomentsSnapshot> {
   const s = state()
   const now = Date.now()
+  const shown = stillVisible(s.stream.map((item) => item.key))
   return {
     label: s.label,
     hours: s.hours,
     moments: await Promise.all(s.moments.map((m) => momentView(m, now))),
     forming: await Promise.all(visibleForming(s).map(formingView)),
-    stream: s.stream,
+    stream: s.stream.filter((item) => shown.has(item.key)),
     stats: s.stats,
   }
+}
+
+// ——— "Tell me when it's live" ———
+
+function formingKeys(list: Forming[]): { id: string; keys: string[] }[] {
+  return list.map((f) => ({ id: f.id, keys: [...f.members.keys()] }))
+}
+
+/**
+ * After forming groups changed (merged, regrouped, promoted, expired): move
+ * bells on a vanished group to the group that holds most of its posts, alert
+ * its subscribers when it went live, and drop the rest silently.
+ */
+function settleSubscriptions(before: { id: string; keys: string[] }[]): void {
+  const s = state()
+  const { carry, formed, dropped } = reconcileForming(
+    before,
+    formingKeys(s.forming),
+    s.moments.map((m) => ({ slug: m.slug, title: m.title, keys: [...m.members.keys()] })),
+  )
+  carryFormingSubscriptions(carry)
+  for (const f of formed) fireFormingAlerts(f.from, { slug: f.slug, title: f.title })
+  dropFormingSubscriptions(dropped)
 }
 
 function emit(event: MomentEvent): void {
@@ -443,9 +563,12 @@ async function recompute(): Promise<void> {
   s.label = chosen?.label ?? WINDOWS[0].label
   // Forming groups whose posts are now in a moment are done; stale ones expire.
   const inMoments = new Set(moments.flatMap((m) => [...m.members.keys()]))
+  const formingBefore = formingKeys(s.forming)
   s.forming = s.forming.filter(
     (f) => now - f.lastAt < FORMING_TTL_MS && ![...f.members.keys()].some((k) => inMoments.has(k)),
   )
+  // Groups a regroup made into moments go live; expired ones dissolve.
+  settleSubscriptions(formingBefore)
   s.lastRecompute = now
   s.stats = readStats(now)
   if (!s.watermark) {
@@ -557,6 +680,7 @@ async function processNewSaves(): Promise<void> {
   const min = minSavers()
 
   let streamed = 0
+  const formingBefore = formingKeys(s.forming)
   for (const p of shown) {
     const post = posts.get(p.key)
     if (!post) continue
@@ -584,7 +708,7 @@ async function processNewSaves(): Promise<void> {
         v,
         p.saver,
         p.at,
-        () => `f${s.nextId++}`,
+        () => `f${s.boot}-${s.nextId++}`,
         pickHue(s.nextId * 7, hueInUse(s)),
         raw,
       )
@@ -639,6 +763,7 @@ async function processNewSaves(): Promise<void> {
       emit({ type: 'snapshot', snapshot: await snapshot() })
     }
   }
+  settleSubscriptions(formingBefore)
   const stats = readStats(now)
   if (stats.today !== s.stats.today || stats.lastHour !== s.stats.lastHour) {
     s.stats = stats
@@ -699,7 +824,7 @@ export async function getMomentDetail(slug: string, limit = 60): Promise<MomentD
   await ensureRecomputed()
   const m = state().moments.find((x) => x.slug === slug)
   if (!m) return null
-  const keys = newestKeys(m.members, limit)
+  const keys = visibleOnly(newestKeys(m.members, limit))
   const posts = await loadPosts(keys)
   return {
     moment: await momentView(m),
@@ -712,6 +837,57 @@ export async function getMomentDetail(slug: string, limit = 60): Promise<MomentD
       })),
     bars: minuteBars(m.recent, Date.now()),
   }
+}
+
+/** Validate older cached references without hydrating their words or media. */
+export function visibleMomentKeys(slug: string, knownKeys: string[]): string[] {
+  const moment = state().moments.find((m) => m.slug === slug)
+  return moment ? visibleOnly(knownKeys.filter((key) => moment.members.has(key))) : []
+}
+
+/**
+ * A moment's post keys, newest first, and the start of its window (ISO), so
+ * `people.ts` can name savers for members. Post keys only: saver ids never
+ * leave the engine. Null when there is no such moment (nothing is computed).
+ */
+export function momentPostKeys(slug: string, limit = 60): { keys: string[]; since: string } | null {
+  const s = state()
+  const m = s.moments.find((x) => x.slug === slug)
+  if (!m) return null
+  return {
+    keys: newestKeys(m.members, limit),
+    since: new Date(Date.now() - s.hours * 3_600_000).toISOString(),
+  }
+}
+
+/**
+ * A forming group's post keys and when its first save landed (ISO), so
+ * `people.ts` can show members who's saving them now (older saves of the
+ * same posts aren't part of it). Post keys only; null when there's no such
+ * group.
+ */
+export function formingPostKeys(id: string): { keys: string[]; since: string } | null {
+  const f = state().forming.find((x) => x.id === id)
+  if (!f) return null
+  return {
+    keys: newestKeys(f.members, 60),
+    // A second's slack: save times are stored to the millisecond, parsed the same way.
+    since: new Date(f.firstAt - 1_000).toISOString(),
+  }
+}
+
+/** Whether a forming group still exists (computing first if needed). */
+export async function hasForming(id: string): Promise<boolean> {
+  ensureRunning()
+  await ensureRecomputed()
+  return state().forming.some((x) => x.id === id)
+}
+
+/** Whether a moment is live now (computing first if needed). */
+export async function hasMoment(slug: string): Promise<boolean> {
+  ensureRunning()
+  await ensureRecomputed()
+  return state().moments.some((x) => x.slug === slug)
 }
 
 /** Posts near a moment that aren't in it yet ("Wander"), best first. */
@@ -729,6 +905,16 @@ export async function getMomentNeighbours(slug: string, limit = 20): Promise<Fee
     .slice(0, limit)
 }
 
+/** Anonymous streams plus named accounts, counted once across their devices. */
+export function watchingCount(slug: string): number {
+  return Math.max(0, (state().watching.get(slug) ?? 0) + namedWatchAdjustment(slug))
+}
+
+/** Polling phones use the same anonymous event as open web streams. */
+export function announceWatching(slug: string): void {
+  emit({ type: 'watching', slug, watching: watchingCount(slug) })
+}
+
 /**
  * Listen for live events. `watch` counts this listener as watching that
  * moment (Tune in, a moment's page). Returns the unsubscribe function.
@@ -742,7 +928,7 @@ export function subscribe(listener: (event: MomentEvent) => void, watch?: string
   if (watch) {
     const n = (s.watching.get(watch) ?? 0) + 1
     s.watching.set(watch, n)
-    emit({ type: 'watching', slug: watch, watching: n })
+    announceWatching(watch)
   }
   let done = false
   return () => {
@@ -755,7 +941,7 @@ export function subscribe(listener: (event: MomentEvent) => void, watch?: string
       const n = Math.max(0, (s.watching.get(watch) ?? 1) - 1)
       if (n === 0) s.watching.delete(watch)
       else s.watching.set(watch, n)
-      emit({ type: 'watching', slug: watch, watching: n })
+      announceWatching(watch)
     }
   }
 }

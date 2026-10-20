@@ -130,6 +130,8 @@ function fetchPublicTagBackfill(existing: TheaterItem[], needed: number): Theate
     .where(
       and(
         eq(tagShares.isPublic, true),
+        // A save kept just for its owner never plays on the public theater.
+        eq(bookmarks.isPrivate, false),
         isNull(userBans.userId),
         or(isNull(moderatedPosts.hidden), eq(moderatedPosts.hidden, 0)),
       ),

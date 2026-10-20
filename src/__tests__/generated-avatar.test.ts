@@ -20,11 +20,10 @@ describe('generated-avatar', () => {
     expect(hashSeed('weedauwl')).toBe(4240133321)
     expect(generateAvatarSvg('weedauwl')).toBe(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-hidden="true">' +
-        '<defs><clipPath id="c4240133321"><circle cx="40" cy="40" r="40"/></clipPath></defs>' +
-        '<g clip-path="url(#c4240133321)"><rect width="80" height="80" fill="#118AB2"/>' +
+        '<rect width="80" height="80" fill="#118AB2"/>' +
         '<circle cx="38.5" cy="47.1" r="35.8" fill="#073B4C" fill-opacity="0.89"/>' +
         '<circle cx="57.2" cy="49.2" r="31.0" fill="#06D6A0" fill-opacity="0.77"/>' +
-        '<circle cx="33.8" cy="43.6" r="28.6" fill="#073B4C" fill-opacity="0.63"/></g></svg>',
+        '<circle cx="33.8" cy="43.6" r="28.6" fill="#073B4C" fill-opacity="0.63"/></svg>',
     )
   })
 

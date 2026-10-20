@@ -10,8 +10,8 @@ import { stat } from 'node:fs/promises'
 import path from 'node:path'
 
 /**
- * The one EmbeddingGemma 2 instance for this process (text + vision; no
- * audio). Loaded lazily on first use, then kept. Every call goes through a
+ * The one EmbeddingGemma 2 instance for this process (text + vision; speech
+ * is transcribed separately, see `extract-model.ts`). Loaded lazily on first use, then kept. Every call goes through a
  * single queue. Inference blocks the calling thread, so this module is only
  * ever loaded inside the semantic child processes (`child.ts`), never by the
  * web server.
@@ -79,7 +79,7 @@ async function load(): Promise<Loaded> {
     ...(local ? { local_files_only: true } : {}),
   }
   const config = await tf.AutoConfig.from_pretrained(source, options)
-  // Do not download or allocate the audio encoder (video frames only, for now).
+  // Do not download or allocate the audio encoder (speech is transcribed to words instead).
   // The query process is words-only and skips the vision encoder too
   // (identical text vectors, ~600MB instead of ~2GB).
   Object.assign(config, { audio_config: null, ...(textOnly ? { vision_config: null } : {}) })

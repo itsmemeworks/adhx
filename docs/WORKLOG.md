@@ -6,6 +6,270 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android: send to your people, forming alerts, like thumbnail, Keep this channel
+
+- Send sheet (j4-4): "Or straight to your people" from `GET /api/app/send`: 52dp faces, dimmed with "Jo already has it." when they have it, a tap posts `/api/app/send` and leaves a tick; a private save says "Just for you. Share it first to send it." The sheet expands once the row loads (M3 sheets don't grow on their own). New's `sent` reason is the why chip "Pete sent you this" with his face.
+- Live (j7-3): forming rows show `people` faces and a bell (`PUT|DELETE /api/app/live/forming/{id}/alert`); the first bell asks for POST_NOTIFICATIONS. `alerts/LiveAlerts.kt` reads `/api/app/alerts` every minute while open and from a 15-minute WorkManager job, posts "X is live · Tune in" on a "Live" channel (opens `adhx://live?slug=`), then marks them seen; without permission the open app toasts instead.
+- Why this one (j2-2): a `like` reason's `post.posterUrl` is a 38dp Gob thumbnail that opens that post. Group channels have Keep this channel → Kept · Open (opens your channel).
+- Verified live on a :3610 parity server with the server branch merged in; JVM tests in `BoardFeaturesTest`. Text posts still skip the send sheet, so they can't be sent to people from the phone yet.
+
+## 2026-10-20 — iPhone: send to your people, live alerts, like thumbnail, keep channel
+
+- Send sheet (j4-4): "Or straight to your people" from `GET/POST /api/app/send`; 52 pt faces, has-it dimmed with "Jo already has it." (beside the faces up to four, else under), a yellow tick on send, "Just for you. Share it first to send it." when not `sendable`. New's `sent` reason is the why chip "Pete sent you this" with the sender's face (a paper plane in the why sheet); unknown reason kinds show as their words.
+- Live (j7-3): forming rows show `people` faces and a bell (`PUT|DELETE /api/app/live/forming/{id}/alert`); the first bell asks for notifications. `App/Feed/LiveAlerts.swift` polls `/api/app/alerts` every 60 s while open and from a BGAppRefreshTask (`<prefix>.alerts`, scheduled 48 h after a bell), posts local notifications, marks them seen, remembers the last 100 shown; a tap tunes in (`-adhxTuneIn <slug>` does the same in Debug).
+- Why sheet (j2-2): the `like` reason's 38 pt Gob-shaped thumbnail opens that post. Group channels play with their name and Keep this channel → Kept · Open (plays `/api/app/channels/mine/{tag}`).
+- Verified live in the simulator against the merged server branch on a parity server: send to Mum/Ana with ticks, Ana's New leads with Pete's sent post, like thumbnail, bell → permission → subscription, a fired alert as a notification (the alert row was inserted by hand: the seed has no group that forms), tune in, keep. Fixture tests: `apps/ios/Tests/BoardFeaturesTests.swift`.
+- Follow-ups: tapping a notification in the simulator's shade wasn't drivable, so the tap path was checked through the debug argument; "Just for you" was checked by API and fixtures, not on screen.
+
+## 2026-10-20 — Board features: send to your people, forming bells, like thumbnail, keep group channels
+
+- **Send** (j4-4): `post_sends` + `GET|POST /api/posts/send` and `/api/app/send` (`src/lib/sends/`): every other member with `has`/`sent`; a post only you keep privately isn't sendable, another person's private post is 404. New leads with `{ kind: 'sent', text: 'Pete sent you this', username }` until seen (`markSeen` sets `seen_at`), however old; the note rides on the sender's saver (and on the reason). Web: "Or straight to your people" in the Share sheet; the why chip shows the sender's face.
+- **Forming** (j7-1/j7-3): `FormingView.people` (≤4 faces from the group's own saves) and `alert`, members only; `PUT|DELETE /api/moments/forming/{id}/alert` (+ phone), alerts at `/api/moments/alerts` (+ phone). Bells are carried by `reconcileForming` after merges/regroups and fire once when the group goes live. Forming ids now carry a per-process part. Web: faces + "Tell me when it's live" on the card, `MomentAlerts` toast + browser notification on every signed-in page.
+- **Like thumbnail** (j2-2): the like reason's `post: { platform, id, posterUrl }` (`cover.ts`, shared with the phone live view); `LikeThumb` in Why this one. **Keep this channel** (j6-2): `POST /api/channels/group/{slug}/keep` (+ phone) saves what you lack (`channel_keep`, not private) and tags it `food-youll-cook`; queues carry `kept`.
+- Parity: Ana sends Pete the bridge; `parity:serve` makes a forming group after Next starts; new j2-2 capture (mobile web vs the phone why sheet). Scores before → after: j6-2 9.4 → 9.0, j7-1 7.8 → 8.2 (web) and 22.3 → 22.2 (mobile), j2-2 11.4 → 11.6 (mobile); the forming card, Keep this channel and the thumbnail are now reached.
+- Follow-ups: forming names stay "Something new" without the model; group keep isn't on the phone-width web side panel (same as Made for you keep).
+
+## 2026-10-20 — Android: Show less/more, New marks, note card, live span, second parity pass
+
+- New server fields used: Why this one has Show less/more pills (`/api/app/feed/weights`, last and first friend who saved it); channels mark `isNew` tiles, add Play the N new and the friend's `note` as a paper tile; Live says "3 saves in 10 min · names" (`recentSaves`/`windowMinutes`) and lists `forming` groups as dashed rows.
+- Parity fixes from a side-by-side of every phone board at 390dp (Hanken Grotesk merged in): header shadow no longer pushes the On their way pill 240dp down; Gob drawn at the boards' size without a second −4° tilt; caught-up sliders open the filter; tighter line heights on Channels, Connected, Settings and the processing sheet (moving first, needs-you last); 68dp face rings; video quality by short side (720p); hairline outline buttons; Decline in the request row; Shared lately after This phone; Your people counts others.
+- Debug only: `DebugConnectActivity --ez noSeen true` keeps a seeded server untouched.
+- Gaps (no server route): "Or straight to your people" in the send sheet, faces and the bell on forming rows, "Saved together" chips on channel tiles. Kept on purpose: one-row header over the player (j2-3), wide videos fit rather than crop, the corner badge instead of "12 you haven't seen".
+
+## 2026-10-20 — Web design parity, round two
+
+- **Friend channel** (j3-2): `Masonry rowFirst` lays tiles out row by row into the shortest column (`placeTiles`, measured heights, DOM stays in reading order), upright `shape="tall"` tiles, the note card in the last column under its first tile; "Play the N new" on phones. Tiles of titled networks show the title only (`postTitleLine`). Friend covers prefer kept posts.
+- **Theater**: a saver's note sits on its own line over the byline (it squeezed the faces in narrow stages); the arriving-save toast is one button sitting beside the stage; a moment's byline time is plain; the why panel says "Saved together" in full (`whyDetail`). Caught up on phones follows j2-4; Tonight skips a channel made of the live moment's posts; a lone side moment on Right now keeps its half height.
+- **Settings/doing**: Change picture frames the crop inside the photo (thirds, yellow slider, "From @x on X"), and previews your face on one of your shares; invites list newest first and say "Made by Ana"; /doing says "Instagram Reel".
+- **Harness**: remote processing with a heartbeat-only helper ("Mac helper connected"), j7-2's toast played into the page's stream, j8-2 picks the pub photo through the file input, j2-5 on phones plays the hamster, j7-1's phone line matched. Remaining limits listed in `e2e/parity/README.md`.
+
+## 2026-10-20 — Android uses Hanken Grotesk
+
+- The Android app's sans is now Hanken Grotesk, like the web and iOS: `res/font/hanken_grotesk.ttf` is the web's `src/app/fonts/HankenGrotesk-latin-variable.woff2` decoded to TrueType (Brotli plus the WOFF2 glyf/loca reconstruction), with nothing downloaded. Chromium renders both files pixel-identically at weights 100–900.
+- `SansFamily` in `ui/Theme.kt` maps each weight to the same variable file at that point on its weight axis (API 26+). Every Material type style and the two text fields use it; licence in `assets/licenses/HankenGrotesk-OFL.txt`.
+
+## 2026-10-20 — iPhone app: the rest of the phone boards
+
+- Why this one: Show less / Show more from a friend (`/api/app/feed/weights`, chosen state in cream, long press for another friend); only the server's reasons are listed. Why, filter and On their way are now the boards' bottom-attached sheets (`BoardSheet.swift`), not inset system sheets.
+- Channels: a friend's channel opens under Home's header with New tiles (`isNew`), Play the N new and the note as a paper card (opens the post); Your people has See all and Invite. Made for you rows say "N saves · from what you keep".
+- Live: first moment big with "3 saves in 10 min" (`recentSaves`/`windowMinutes`), the rest as labelled rows, `forming` groups as dashed rows. Tuned in: byline "· 4 min ago · Reddit"; reactions that land together rise 0.7 s apart and stay solid until late in the rise.
+- Share opens the send sheet (j4-4): download progress, then Messages/Mail/Files/Photos/share sheet. On their way lists movers before needs-you. Settings counts your people without you.
+- Correction to the 2026-10-20 iPhone entry: face colours already match the boards (the web's FNV-1a order); that line was stale.
+- Left as is: the boards disagree on the header (most show a two-row "adhx" bar with a settings button, j2-3/j2-7 the spec's one row); the apps keep the spec's one row. Gaps needing server work: "Or straight to your people" (no send-to-member route), faces and a notify bell on forming groups, the "like" reason's thumbnail. Tests: `apps/ios/Tests/FriendsParityTests.swift`.
+
+## 2026-10-20 — Design-parity gaps closed: getting ready, new marks, note card, phone weights, live span
+
+- **Getting it ready** (j1-4/j1-5): `GET /api/activity/processing/posts` (`processing/keep-status.ts`, `seenBy` only) says whether each post is `waiting | keeping | converting | kept | none` with step and percent; the theater (`useKeepStatus`, `GettingReadyStage`) covers the stage until the copy is kept, then plays (`POST_KEPT` reloads a failed load). Chips: "Shared with your people" (faces) while yours gets ready, "Kept on your ADHX" on a just-kept post. `keep_jobs.progress` (guarded ALTER) keeps the last written percent; `/doing` uses it too.
+- **Channels**: friend/group queues (web + phone) carry `isNew` (`newKeysFor`: not saved or seen); friend queues add `note` (latest visible note). The friend page reads the marks from one request and shows the note as a paper tile.
+- **Phones**: `GET|PUT /api/app/feed/weights` mirrors `/api/feed/weights` (shared `setFeedWeightFor`). `/api/moments` (members) and `/api/app/live` add `recentSaves` + `windowMinutes`; the Right now lead card says "LIVE · 3 saves in 10 min".
+- **Harness**: `parity:serve` re-pins dark chocolate's keep job to running at 62% after Next starts (the worker resets running jobs) and clears `.next-parity` (a stale dev cache looped page reloads after restarts); j1-5 rewrites the status in the browser to see the real switch. Moment names stay a harness limit (the board names aren't in `MOMENT_TOPICS`).
+- Follow-ups: the phone apps can now build Show less/more, New marks, the note card and the live span; the j3-2 score is about tile order (CSS columns), not missing pieces.
+
+## 2026-10-20 — Theater controls kept reachable after the design restyle
+
+- Four e2e specs caught controls the web theater restyle had dropped. Phones (and the dimmed rooms) get a small play/pause glyph at the start of the thin line; a moment's room shows small Previous/Next glyphs after it (the channel room's `xl` stack would sit under a moment's taller rail at 1280).
+- Where the boards show no Previous/Next, the transport carries `sr-only` buttons revealed on keyboard focus; the header Paste pill is the same on wide screens (`PasteButton keyboardOnlyFrom`), next to ⌘V. ⋯ rows with a value are named "Repeat: This post".
+- Specs changed only where a control moved on purpose: `preview-repeat` opens ⋯ for Repeat; desktop `paste-save-failure` focuses the pill and presses Enter. New component test covers the phone buttons.
+
+## 2026-10-20 — Android brought to the phone design boards
+
+- Ran the Android app on an emulator (390dp wide) against the seeded parity server and compared every phone board side by side; reads went to the server, share-card writes to a local mock so the seed stayed untouched.
+- Bundled Instrument Serif with its licence, the boards' palette and line icons, one shared FNV-1a hash into the boards' five face colours, and the boards' switches.
+- New keeps the one-row header with the corner badge; the rail is Save, Share (by media type), Save to phone and More, with Sound, Repeat, the original, the small window and Hide moved into More. Upright videos fill the screen; wide ones still fit.
+- Byline, why chip (Saved together / Close to you), note bubble, progress line, why sheet, feed filter, caught up, channels, a friend's channel (staggered, under the Channels header), search, live, tuned in (React picker lifts the caption), settings and the share card follow their boards. Added the send sheet and a Connected welcome after pairing.
+- Save notes: the share card's Add a note rides with the save, or follows it through `POST /api/app/note` (older servers get the save again); friends' notes show over the byline. Decoded loosely.
+- Debug builds only: `DebugConnectActivity` stores a server and phone key from an intent. Remaining gaps (Show less/more, Play the N new, straight to your people, forming moments) need phone APIs that don't exist yet.
+
+## 2026-10-20 — iPhone app parity with the phone design boards
+
+- Ran the iOS app in the simulator against the seeded parity server as Pete and restyled it board by board: bundled Instrument Serif and Hanken Grotesk, the one-row header with its corner badge, full-bleed player with the boards' scrims, frosted 52 pt rail, thin progress line, why chip, why/filter/on-their-way sheets, caught up, channels, friend channel masonry, search tiles, Live cards and tuned in, settings, share card.
+- The rail is the boards': Save (bookmark: saves someone else's post to your ADHX; on yours it opens "In your saves" with Just for me and your note via `/api/app/note`), Share, Save to phone, More, plus React on Live. Sound, Repeat, the small window, Hide and the original moved into More. Faces use the boards' five colours (FNV-1a of the username, like the web).
+- Save notes: `Saver.note` decodes loosely (trimmed, 140 max) and shows as a speech bubble over the byline; the share card has "Add a note", sent when the card closes through `POST /api/app/note` once the save has landed, else as `note` on a repeat of the same save (same link and request id).
+- New "Connected to …" screen after pairing. Debug-only launch arguments connect, avoid sending seen, and preview the welcome and share card (`apps/ios/README.md`).
+- Deviations: system sheets float inset on iOS 26, the send-file sheet is still the system share sheet, a person's face colour comes from a hash (not the boards' hand-picked ones), no "Play the N new"/"See all"/"Invite" on channels.
+
+## 2026-10-19 — Notes on saves
+
+- `bookmarks.note` / `phone_save_queue.note` (guarded ALTERs, `schema.ts`, test DDL). `cleanNote` (`src/lib/people/note-text.ts`): whitespace collapsed, control/bidi dropped, ≤140 graphemes, empty → null.
+- Every save path takes `note?: string` (`/api/bookmarks/add`, `/api/tweets/add`, `/api/app/save` sync + queue); a repeat save with `note` replaces it. Edit: `PATCH /api/bookmarks/[id]/note`, `POST /api/app/note`. Admins: `POST /api/admin/posts { clearNotes: true | username }` (audited `clear_note`).
+- `Saver.note` via `saversFor`, so feed, blend, search, similar, channel queues, moment items, phone posts and the live poll carry it for members only; moment card faces strip it; a private save's note reaches only its owner; public channel clones no longer copy notes.
+- Web: `SaverNote` (byline bubble in `SaversButton`, quote in Who saved it), `NoteField` in the Save sheet; TheaterV2 only keeps your note after an edit.
+- Parity seed has the boards' notes (Ana on Charlie, Ben on the Rickroll, Mum on the sauce, Pete on dark chocolate).
+- Follow-ups: no admin console button for clearing notes (API only); the j3-2 "Ana's note" tile on a friend's channel isn't built. iOS/Android UI is with the phone agents.
+
+## 2026-10-19 — Design parity harness (`e2e/parity/`)
+
+- `pnpm parity:serve` seeds a fresh DB with the friends-feed boards' world (Pete admin, Ana, Ben, Mum, Jo; the boards' posts, times, private saves, invites, a waiting join request under "Anyone, I approve", group and Made for you channels, moments, /doing states, seen rows so New shows 12) and runs Next on :3600. Kept media is cloned from `PARITY_MEDIA_SRC` (ffmpeg placeholders without it).
+- `credentials.json` holds a session cookie and a phone key (real pairing flow) per member, so iOS/Android can point at the same server.
+- `pnpm parity:capture` screenshots all 17 `j*-web-*` boards at 1280×800 and 390×844 in their states (⋯ menu, Who saved it, caught-up card, searches, invite made, avatar dialog, tuned in with watchers and reactions), never marking anything seen. `pnpm parity:compare` writes side-by-sides and a worst-first score report.
+- Gaps: no notes in the schema; moment names come from shared words without the model; keep percent and "Mac helper connected" need live work. See `e2e/parity/README.md`.
+- No UI changed.
+
+## 2026-10-19 — Exercise release gates across platforms
+
+- Separate the Node runtime from build tools, remove unused package managers and recommended OS extras, and expose retained scanner findings directly in CI logs.
+- Refresh the pinned package manager with explicit dependency-build permissions; keep the three independent lockfiles and frozen installs.
+- Reset only the isolated browser-test development cache to prevent stale Turbopack reload loops on repeat runs.
+- Make load/recovery assertions follow actual video checkpoints while allowing fair interleaved queue work and bounded audio-container padding.
+- Add a guarded macOS rehearsal that observes real disk-full errors inside a disposable 64 MiB image, verifies retry/cleanup and removes the image. No installed service or personal data touched.
+
+## 2026-10-19 — Dependency maintenance and release rehearsals
+
+- Refresh compatible app/extension packages; all three JS lockfiles and resolved Android Maven libraries now have advisory gates, with a dated dev-only exception for the unpatched braces issue.
+- Move FFmpeg to maintained system packages, resolve absolute downloader paths, preflight/capture the Mac binary for launchd, exercise real DASH merging and handle FFmpeg 9 end-seek errors without losing short/final frames.
+- Refresh Android's toolchain/Coil; migrate credentials atomically to direct Keystore AES-GCM, retain legacy reads only for migration, and scope history/defaults across accounts and interrupted cleanup.
+- Scan existing native image builds and actual release digests for fixable high/critical advisories before tag promotion; extend dependency automation without duplicating builds or publishing on PRs.
+- Rehearse actual v2.1.2 schema migration twice, queue recovery and WAL backup/restore using synthetic accounts/media; add an offline CI fixture tied to released source.
+- Add a 10,000-save load/recovery harness, real pinned-model/end-of-video checks and 1080p/audio conversion; publish measured results and limitations in linked guides.
+- Prepare physical phone acceptance steps at the owner's request because no spare phone was available. Validation details are recorded on the PR; no service or installed app deployed.
+
+## 2026-10-19 — Harden friends-feed delivery, live rooms and processing
+
+- Android shares now use durable staged delivery; both phones reuse request IDs and monotonic privacy versions, with cross-process-safe iPhone history and retryable interrupted acknowledgements.
+- Native live rooms renew foreground presence leases, deduplicate accounts across devices, refresh compact saver/privacy metadata and remove only authoritative removals while preserving playback identity.
+- Failed reaction drafts keep their original post and offer Retry; small-screen web rails/pickers remain reachable, with bounded native pickers and Unicode limits.
+- Count the complete visible processing backlog in SQL before limiting details to 60; summary polls skip media hydration, web consumers share foreground polling, and viewed-post updates use an account-scoped acknowledged outbox.
+- Pin all active OCR inputs, distinguish unreadable pictures from model failures, reuse retained originals across passes and reconcile/expire unused cache entries.
+- Alternate conversion and understanding fairly, age old work, and wait for all source conversions before video-consuming learning.
+- Add server/web/native regressions, a native CI workflow and a linked cross-device verification guide; simulator display failure prevented a native visual claim, while unsigned native builds and automated checks are recorded on the PR. No service or installed phone app deployed.
+
+## 2026-10-19 — Close friends-feed review privacy gaps
+
+- Revalidate cached blend savers/reasons/counts and moderation without shifting cursor slots; public caches check a durable SQLite visibility revision across processes.
+- Revoke named streams on ban/deletion/approval changes or phone-key revocation, including idle heartbeats; clean up watchers and subscriptions.
+- Stage queued new saves privately and persist editable queue intent; iPhone acknowledges the latest choice before completing its extension, with interrupted acknowledgements retained for retry.
+- Channel clones respect the recipient's private default; pending approvals remain actionable after inviter deletion.
+- Add regression coverage for all seven findings, stream revocation, in-flight queue updates, owner/key isolation, acknowledgement retries and idempotent legacy schema upgrades.
+- Validation: 3,353 tests, typecheck, formatting, lint (87 existing warnings), and the unsigned iOS simulator build pass; browser/CI results are recorded on the PR. No service or installed app updated.
+
+## 2026-10-19 — Android: Settings, join approvals and "On their way"
+
+- Settings (j8-4) rebuilt: your face in Gob's shape, Waiting for you (admins: Let in / Not now / Decline via `POST /api/app/people/requests/{id}`), Your people (`GET /api/app/people`, new list screen), Invite, What's in your feed, Just for me and Sound on by default, What your ADHX is doing with its count, Shared lately, Connected to … with Remove this phone.
+- On their way (j8-5): pill over the New player while `/api/app/doing` says posts are processing (5 s polls while in front, 15 s when idle, stops on 404), a sheet with thumbnail, step, thin bar and Retry (`POST /api/app/doing/retry`), and a full list screen.
+- Avatars: Coil's OkHttp client adds the phone key for the connected server only (`ServerAuthInterceptor`), since `/api/files/avatar/*` is members only.
+- QA fixes: Why this one lists all `whyReasons`; `nothingYet` shows "Nothing new yet. Save something for your people to find."
+- No phone-key routes for avatar upload, display name, invites, removing a phone or the account's "Just for me by default": the app opens web Settings for picture and invites, and keeps its own private default (sent as `private: true` when on; off switches a new save back, never a repeat share).
+- Branch base: `ff/settings` had no Android friends feed, so `apps/android` and `docs/specs/phone-app.md` were brought over from `feat/friends-feed` first (ff/settings doesn't touch them).
+- Verified: `assembleDebug testDebugUnitTest` (51 tests). Not run on a device or emulator.
+
+## 2026-10-19 — iPhone: Settings, approvals and On their way
+
+- Branch `ff/ios-settings` (from `ff/settings`; `apps/ios` and the phone spec taken from `feat/friends-feed`, which `ff/settings` didn't have yet). Settings from Gob: you (Gob-shaped face, saves), Waiting for you (Let in / Not now / Decline via `/api/app/people/requests/[id]`), Your people list (opens a friend's channel), Invite someone, What's in your feed, Just for me by default, Sound on by default, What your ADHX is doing, Connected to … / Remove this phone, Shared lately.
+- On their way: pill under New's tabs from `/api/app/doing`, polled every 5 s only while the player is on screen; sheet with thumbnail, step and thin bar per post, Retry (`/api/app/doing/retry`) on rows that need you; full list screen. Older servers keep the old `preparing` pill.
+- Faces load through `AuthImage` (phone key as `Authorization: Bearer`, only to the paired server, memory cache), since `/api/files/avatar/<hash>` is members only.
+- QA: Why this one lists every `whyReasons` entry; `nothingYet` shows "Nothing new yet." instead of the caught-up page.
+- No phone routes yet for: changing the picture (`/api/account/avatar` is session only), invites, the `save.privateDefault` preference (kept on the phone; sends `private: true` when on), or a phone removing its own key. Picture and invites open web Settings.
+- Built for the simulator with `xcodebuild`; not tried against a live server.
+
+## 2026-10-19 — adhx.com rebuilt for the friends feed
+
+- `site/` now follows the approved desktop and phone boards: nav (a `<details>` menu below `md`), hero ("Your friends have better taste than the algorithm." with a laptop theater and an overlapping phone), fourteen networks (real marks via `NetworkIcon`), "Three steps. No algorithm.", seven feature rows (New, saver faces + Just for me, the meme vault, search by what's said / on screen, channels, Live, invites), the apps, the "short attention spans and long friendships" band, "Yours. Not ours." with the setup command, footer.
+- Responsive, not fixed boards: `max-w` containers, phone layout below `md`, desktop from `lg`. Phone and laptop mockups scale with their frame (`.nx-scale` + `--u`, `components/frames.tsx`). New: `People.tsx` (Gob-shaped faces), `Meme.tsx` (Impact-style top/bottom captions as real text, Anton/Oswald from Google Fonts as fallback), `icons.tsx`, `mocks.tsx`; `art.tsx` gains elephant, hamster, bird and grass; `CopyCommand` gains a titled, highlighted variant.
+- No third-party media: the boards' real stills are replaced by the site's own illustrations; owner-requested meme captions go over them. Copy only claims what's on `feat/friends-feed`; approvals read "Approve who joins, if you like"; the apps stay build-from-source.
+- README "Where it's going" is now "What's new". Metadata and OG description updated.
+- Checked: `pnpm site:build`, `pnpm typecheck`, `pnpm format:check`; visual pass at 1440, 1024, 800, 390, 375 and 320 (no horizontal scroll). Follow-ups: the hero reel (`/showreel`, MP4) still shows the older feature set and should be re-recorded; the small-screen menu stays open after following a link.
+
+## 2026-10-19 — QA of the merged friends feed (three members)
+
+- Walked Ana (admin), Ben (from an invite, paired phone) and Jo on a scratch DB with kept media: invite → done → pairing, Just for me, New (why, seen, filter, caught up, Show them, Watch it all again), faces and the Who saved it popover, channels (group, friend, new counts), Live with names (watchers, React, reactions both ways, signed-out shapes), search scopes, the phone API, session renewal, `pnpm build` and `pnpm site:build`.
+- Fixed: `/api/app/feed` also sends `waiting` as `hidden` (both apps read `hidden`); New's header said "1 you haven't seen" on the caught-up card; Right now's Just saved strip, covers and moment posts kept a save made private (or by a banned member) until the regroup, and the strip until 12 newer saves; search tiles hid the faces under "Words only"; Tune in's watching count was reset by the moment's older count.
+- Noted for the apps: they read only `why` (not `whyReasons`), so Why this one shows one reason; neither reads `nothingYet`, so a quiet server says caught up instead of "Nothing new yet".
+- Moment `people`/`posts` counts still catch up at the next regroup (≤5 min) after a save goes private.
+
+## 2026-10-19 — Settings for You and Your people, join approvals, What your ADHX is doing
+
+- **You**: Change picture dialog (upload, camera, X picture, a Gob in four colours; circular crop with zoom, live saver-faces preview). `POST /api/account/avatar` sniffs the type, caps 5 MB, and `sharp` re-encodes a clamped crop to a 512px metadata-free JPEG in `MEDIA_DIR/avatars/<userId>-<hash>.jpg`, served to members only at `/api/files/avatar/<hash>`; the old file goes on replace and all of them on account delete. Display name (`PATCH /api/account/profile`) and "Just for me by default" (`save.privateDefault`, honoured by every save path and settled when a phone share is queued).
+- **Your people**: members with save counts, role chip, admin ⋯ ban/unban; pending invites by a 4-character code from the invite id (owner change mid-build), and **Copy link** on an older invite confirms, then mints a fresh token (`POST /api/invites/[id]/link`), since only hashes are stored. Who can invite (`admin | approve | anyone`) lives in a new `server_settings` table; `INVITES=members` is only the first default.
+- **Approvals**: `users.approval` (+ snooze). A member's invite under "Anyone, I approve" makes a `pending` account; `getCurrentUserId()`, phone keys and access keys treat it as signed out; only `/invite/waiting` and `GET /api/auth/approval` see it. Queue: `GET /api/people/requests`, `POST /api/people/requests/[id]`, phone `/api/app/people*`. The waiting page needed `/invite/waiting` excluded from the script-free invite CSP.
+- **Doing**: `GET /api/activity/processing` / `GET /api/app/doing` (7 steps, statuses, plain reasons, retry info, savers; never another member's private save), retry and keep-the-link-only (`keep_jobs.accepted_at`), Mac helper presence from worker polls. `/doing` polls every 3 s; "N on their way" pill in `NxHeader`.
+- Skipped: non-allowlisted email sign-ins landing in the queue as "asked to join" (it would mean emailing links to any address that asks; refusals stay as before). An X relink still overwrites a custom display name (it no longer overwrites a picture stored here).
+- Verified on a scratch DB with headless Chromium: approve moves the waiting browser on to /invite/done, upload + zoom stores and serves the JPEG (401 to strangers), 375px layouts have no sideways scroll.
+- Merged with the friends-feed branch (blend, Android, Gob-shaped faces): the You picture, the dialog's crop and byline previews, Your people's members and the waiting faces use `GobShape` / `gobMask`; the channels' invite link now points at `/settings#people`.
+- Follow-ups: the phone apps don't call the new routes yet; X sync imports don't follow "Just for me by default"; the doing list caps at 60 rows / 400 candidates.
+
+## 2026-10-19 — Faces are Gob shaped
+
+- Owner request: every person's face is Gob's shape (rounded square, 38% corners, tilted −4°) instead of a circle, on web, iPhone and Android. Photos and initials stay upright inside; rings on stacks follow the shape.
+- One primitive per platform: web `GobShape` / `gobMask` / `gobContent` (`src/components/next/GobShape.tsx`, used by `NxAvatar`, `AuthorAvatar`, the Settings picture and its picker, the X picture); iOS `GobShape: InsettableShape` and Android `GobShape` (tilt baked into the path, in `Shared/People.swift` and `ui/GobShape.kt`).
+- The generated web face is now a full square (the frame clips it). Status and live dots, round buttons, badges and the OG share images stay as they were.
+- Follow-up: an avatar picker or crop preview from another branch should use `GobShape` / `gobMask` too.
+
+## 2026-10-19 — New and the blended feed
+
+- `post_views` (guarded, cleared with the account, pruned after 180 days at migrate; guard triggers now 48). `POST /api/views` / `POST /api/app/seen` (≤50, idempotent, first `seen_at` kept).
+- `src/lib/feed/blend.ts` (pure: signals, `BLEND_WEIGHTS`, variety, why words, cursor) + `blend-db.ts` (candidates via `seenBy` over 14 days, minus moderated/gone; closeness from `post_views` + co-saves; taste from `post_embeddings`; per-user 5-min snapshots by seed). `GET /api/feed/blend`, `GET|PUT /api/feed/weights`, `GET /api/app/feed`.
+- Web: `/play?feed=new|everyone|friends|mine` pages through the blend; why chip, why line in Up next, Why this one sheet with Show more / less; Everyone · Friends only · Mine; seen after 2s or skip (batched); `CaughtUpStage` when New runs out; "Nothing new yet" with Paste. **New** is the first tab and signed-in `/` → `/play?feed=new`.
+- Refined in the spec: New and Friends only leave out posts only you saved; `nothingYet` and `total` on the response.
+- What's in your feed (owner request): `types=video,photo,text,article` on both feeds (sound counts as video; default video + photo; stored as `feed.types`, `GET|PUT /api/feed/types` and `/api/app/feed/types`), `FeedTypesControl` beside the switch, and "4 text posts waiting · Show them" on the caught-up card.
+- Validation: 3,149 tests, typecheck and lint pass; walked New → Why this one → Show more → caught up → Watch it all again, and the kind filter ("6 text posts waiting · Show them"), at desktop and 375px on a scratch DB.
+- Merged with the friends-feed branch (Live with names, channels from everyone, speech/screen search, iOS): one seen list — `people/seen.ts` folded into `feed/views.ts` (`notSeenBy`, `newTo`), so a friend channel's "N new" drops what you watched in New.
+- Follow-ups: the phone apps need to adopt `/api/app/feed`; the caught-up "Tonight on your ADHX" row from the design isn't built; closeness counts seen, not watched to the end.
+
+## 2026-10-19 — Android: the friends feed (New · Channels · Live)
+
+- Home is New · Channels · Live under one light row (Gob for Settings, tabs with a 99+-capped New badge, Search). New plays `/api/app/feed`, marks posts seen after 2 s or a swipe past (`SeenBatcher`, batches of up to 50 to `/api/app/seen`), shows the why chip, Why this one, What's in your feed (videos and photos by default, `types=`, `/api/app/feed/types` with a local fallback) and ends on "You're all caught up. Go touch grass."
+- Channels (From everyone, Your people with new counts, Made for you with My saves) and channel grids; Live moments, Tune in polling `/api/app/live/{slug}` every 5 s with watchers, a React picker (6 emoji or 40 characters) and floating reactions with faces (fade in place with animations off).
+- Saver faces and "Ana and Ben saved this" on the byline and search tiles (tap opens that friend); Just for me on the share card (sent with a queued save, or `/api/app/private`) and in More; lock on private posts; search Everyone's saves · Mine. Shared lately moved into Settings.
+- Decoding is lenient (`net/Lenient.kt`); 404s fall back (no feed → My saves home, no Live → nothing live). 36 JVM tests; `assembleDebug` passes.
+- Emulator run against a scratch mock of the contract: New with faces, why chip and badge; the filter sheet (`types=` sent); Channels; Live and Tune in with the watchers chip, React picker, floating reactions and `react` sent; More's Just for me (`/api/app/private` sent); seen batches sent. `adb input swipe` doesn't page the player on that emulator (the baseline build doesn't either), so the caught-up page wasn't reached there.
+- Follow-ups: check against the real server once feed/channels/live/react/types land (field names for `why`, `hidden`, `reactions` are guesses); physical-device pass; "Add a note" and "send to your people" from the designs need endpoints.
+
+## 2026-10-19 — Channels from everyone: group channels and one per friend
+
+- `group_channels` (server-wide, no `user_id`) + `src/lib/channels/group.ts`: everyone's visible saves clustered and named with Made for you's machinery (shared `meanVectors`/`bestClusters`/`nameClusters` from `auto.ts`). Lazy, single-flight, background recompute (>12h, ±10 visible saves, model change, a counted saver gone); reads re-check each post's visible savers.
+- `src/lib/channels/friends.ts` (one channel per other member, `newCount` via `people/seen.ts`, which tolerates a missing `post_views`), `overview.ts` shared by `GET /api/channels` (+`group`, `friends`, `canInvite`) and `GET /api/app/channels`. New queues: `/api/channels/group/[slug]`, `/api/channels/friend/[username]?new=1`, `/api/app/channels/{group|friend|mine}/{slug}` (phone key or session).
+- Web: From everyone and Your people rows (+ Invite someone), `/channels/friend/[username]`, `/play?group=` / `/play?friend=` with back links and empty states, linked saver faces on tiles, theater "Who saved it" popover.
+- Private wins: public tag collection, clone, theater backfill, curator profile, leaderboard tiles, public tweet `publicTags` and the sitemap skip the owner's private saves.
+- Validation: 3,103 tests (new: 11 channels, 3 private-wins, 9 component), typecheck, lint (existing warnings only); walked the rows, friend page, queues, popover and phone width in a browser on a scratch DB.
+- Follow-ups: friend page filters (Videos/Photos/Music) and "New" tile badges from the design aren't built; group naming needs real embeddings (scratch DB used hand-made rows); `auto_channels` still isn't removed on account delete (pre-existing).
+
+## 2026-10-19 — iPhone app: New, Channels, Live, faces and Just for me
+
+- Home is one row over the player: Gob (Settings, which now holds Shared lately), New · Channels · Live with an unseen badge on New ("99+" cap), Search. New pages `/api/app/feed`, marks posts seen (2 s on screen or swiped past, batched to `/api/app/seen`), shows the why chip and a "Why this one" sheet with Everyone · Friends only · Mine, and ends on "You're all caught up. Go touch grass."
+- Media filter: New plays videos and photos by default (`types=` on the feed, filtered by kind on the phone too); tapping New again or Filter in the Why sheet opens "What's in your feed"; the choice is PUT to `/api/app/feed/types` and kept locally on a 404; the end page offers "4 text posts waiting · Show them".
+- Channels (group carousels, your people with new counts → "Ana's saves", made for you) and Live (moment cards; tuned in polls every 5 s with watchers and "up next" arrivals; a React rail button opens six emoji and a 40-character line, `{emoji}`/`{text}` to `/react`; reactions from the poll float up as ringed faces with an emoji sticker or speech bubble, fade-only under Reduce Motion).
+- Saver faces and lines on the player byline and search tiles (tap → friend channel); Search defaults to Everyone's saves; Just for me in the player's More and on the share card (remembered before the post lands, carried by waiting links).
+- Everything new decodes loosely (`Shared/FriendsAPI.swift`); a 404 falls back to My saves or an "update your ADHX" note.
+- Checked: simulator build, and a run against a sample-data stand-in for the phone API (New, header badge, media filter and its fallbacks, why sheet, modes, seen batches, More toggle, Channels, friend channel, Live, React picker, floating reactions, caught-up, search scopes). Not checked: the share extension card on a device, real feed/channels/live servers (other branches), VoiceOver by ear.
+
+## 2026-10-19 — Live with names: watch together
+
+- Names are added per request for members only (`src/lib/moments/people.ts`): `MomentView.savers` (≤5, from the moment's post keys via `saversFor`, window saves only, never a private save), `watchers`, item `savers`, detail `watchers`, `save.saver`. The engine and its broadcasts stay anonymous; signed-out shapes are unchanged (tested key by key).
+- `presence.ts` (globalThis) counts signed-in streams by account; `watching` events get `watchers` per subscriber (no receiver, no banned accounts). Shared stream code in `stream.ts`.
+- Reactions: `POST /api/moments/{slug}/react` `{ emoji | text }` (six allowlisted emoji, or ≤40 cleaned characters shown as text only; 20/min/user, words 6/min; in memory only) → `reaction` events for members watching that moment. Changed mid-build from four fixed words to this, per the owner.
+- Phone: `GET /api/app/live`, `GET /api/app/live/{slug}`, `POST …/react`, `GET …/stream` (that moment's events, `PhonePost` posts).
+- Web: faces and watchers on `RightNow` cards and `MomentScreen`, "Tune in with Ana"; theater watchers bar, named arrival toast, React button + picker, reactions rising with the reactor's face (`LiveTogether.tsx`; fade only under reduced motion).
+- Verified with two signed-in members in the browser on a scratch DB (`MOMENT_MIN_SAVERS=1`): watchers both ways, emoji and words both ways, Jo's save toast, picker at phone width.
+- Validation: 3,103 tests (with `--maxWorkers=4`; the default run timed out unrelated 5 s tests on a host at load ~60), typecheck, lint (81 existing warnings).
+- Follow-ups: the phone apps don't use these routes yet; the Right now header's "3 of your people are on" and forming-card faces from the mockups aren't built; reactions aren't tied to the post on stage.
+
+## 2026-10-19 — Search what's said in videos and the text on screen
+
+- New `speech` / `screen` queue kinds write words (not vectors) to `post_extracted_text` (keyed by post; trigger-deleted with the last save). Whisper base (`onnx-community/whisper-base@1846881b…`, fp32 encoder/q8 decoder, per-window language + no-speech check) transcribes the first 10 min; Florence-2 base (`onnx-community/Florence-2-base-ft@e88a44ea…`, q8, `<OCR_WITH_REGION>`) reads ≤4 photos + 4 frames from the first minute. Junk filter in `extract-clean.ts`, re-applied server-side to Mac results.
+- The words join the text document ("Said in the video:" / "Text on screen:") and `post_text_fts`; only posts with extracted words change text hash (no `SEMANTIC_MODEL_VERSION` bump). Search adds `speech`/`screen` signals ("Said in the video", "On screen" on tiles); Jev never receives them and treats them like visual matches.
+- Models run only in `extract-child.ts` (forked by the jobs child or the Mac runner, one model per process, exits after 60 s idle): Florence-2 alone held 1.6–2 GB and `dispose()` didn't return it. Processing protocol 2 (`kinds` on claim, `extracted`, media by `slot`); v1 workers are still served and never see the new kinds. `SEMANTIC_SPEECH` / `SEMANTIC_SCREEN_TEXT=off` switches.
+- Measured on an M4 (2 threads): 178 s of speech in 10–12 s, 1.6 s per picture/frame, extract process peak ~1.4–1.5 GB (speech) / ~1.8 GB (screen). Real end-to-end smoke (temp DB, real models): "the cat that screams at the cucumber" → the video (strong, speech+screen), a captionless meme by its caption, German speech by a German query.
+- Copy that promised "no audio is processed" now says speech and on-screen text are read on your server and none of it leaves. 3,061 tests, typecheck, lint and production build pass.
+- Follow-ups: transcripts are not shown to people (search only); no status row for speech/screen progress in the learning sheet; window boundaries can garble a word; measure on the NAS CPU before a bulk backfill.
+
+## 2026-10-19 — Friends feed foundation: savers on posts, private saves, search everyone's saves
+
+- `bookmarks.is_private` / `phone_save_queue.is_private` (guarded ALTERs). Every save path takes `private`; private saves write no pulse, and going private deletes the owner's `save` pulse rows. `PATCH /api/bookmarks/[id]/private`, `POST /api/app/private`.
+- `src/lib/people/`: `saversFor`, `visibleSave`/`visibleSaveFilter`, `seenBy`, `withSavers`, `listMembers`. The filter now gates moments, trending counts, Everyone search, `loadSearchItems` copies, similar, sitemap, author hubs, public tweet JSON and the own-play pulse fallback (quoted-only posts drop out of these too).
+- Signed-in outputs carry `savers`/`isPrivate` (feed, search, similar, channel queues, `PhonePost`, `/api/app/search?scope=`); public outputs never do.
+- Web: `SaverFaces` + lock on theater and search tiles, "Just for me" in More and the Save sheet, one-time notice on `/now`, search defaults to Everyone's saves (old scope-less `/play?q=` links now mean everyone).
+- Docs moved to "named to friends, never to strangers" (CLAUDE, PRIVACY, ARCHITECTURE, `/privacy`, README, phone spec).
+- Follow-ups: public tag channels still list privately saved tagged posts; the moments engine keeps a just-privatised save until its next regroup (≤5 min); Live names, blend, invites and group/friend channels are other branches.
+
+## 2026-10-19 — Invite links that pair a phone
+
+- New `invites` table (sha256 token hash, 7-day expiry, single use, revocable, account-guarded, removed on account deletion) and `/api/invites` (make: admins or `INVITES=members`, 30/hour, 20 waiting; list without links; revoke).
+- `GET /invite/<token>` is a script-free "Ana wants you in." page; only a same-origin form POST spends it in one conditional write, creating an email-less account (`'invite'` identity) with a `/welcome`-validated name. Bad/taken names leave it unused. Ignores `ALLOWED_EMAILS`; dies with a banned/deleted maker or when member invites are switched off.
+- `/invite/done` shows "You're in." with the phone pairing QR/code (shared `PairCode.tsx`, also used by Settings → Phone app), configured app links and "Skip, take me to the feed". Invite cards in Settings and on the admin page.
+- Email change already worked for email-less accounts; covered by a test. Docs: README invites-first sign-up, CLAUDE.md auth, spec columns (`id`, `revoked_at`).
+- Validation: 3,044 tests, typecheck, production build and lint (79 existing warnings) pass; walked the flow in a browser on a scratch DB (taken name, join, done page, simulated phone pairing, used link, email add, Settings/admin cards, 375px width).
+- Follow-ups: sessions aren't rolling, so an invite account that never adds an email is locked out after 30 days; `post_views` will also bump the guard-trigger count (46 here).
+
 ## 2026-10-19 — Move the app's own strings to the new voice
 
 - Phase 1 ("say it out loud"), app half: the tagline is now "Your friends have better taste than the algorithm." in metadata titles, the OG/Twitter cards, the magic-link email, the signed-out home, `/start`, the crawler list, `manifest.json`, `robots.txt`, AGENTS.md and CLAUDE.md. README, `site/` and `brand/BRAND.md` moved in the docs/new-voice PR.

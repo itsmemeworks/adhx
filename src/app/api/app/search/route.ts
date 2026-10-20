@@ -3,11 +3,12 @@ import { appError, withPhoneKey } from '@/lib/api/phone-auth'
 import { toPhonePost } from '@/lib/app/phone-post'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { findPosts } from '@/lib/semantic/find'
-import type { SearchType } from '@/lib/semantic/search'
+import type { SearchScope, SearchType } from '@/lib/semantic/search'
 import { captureException } from '@/lib/sentry'
 
 const MAX_QUERY = 200
 const TYPES: readonly SearchType[] = ['all', 'videos', 'photos', 'text', 'articles']
+const SCOPES: readonly SearchScope[] = ['mine', 'everyone']
 // A phone searches as you type (debounced), so a little more than an assistant.
 const LIMIT = { windowMs: 60_000, max: 120 }
 const REFINE_LIMIT = { windowMs: 60_000, max: 30 }
@@ -18,9 +19,12 @@ function int(value: string | null, fallback: number, min: number, max: number): 
 }
 
 /**
- * GET /api/app/search?q=… — search your own saves by meaning from the phone
- * app: `{ items, total, understood, close, nextOffset }`. Pictures and video
- * frames are matched as well as words.
+ * GET /api/app/search?q=… — search saves by meaning from the phone app:
+ * `{ items, total, understood, close, nextOffset }`. Pictures and video frames
+ * are matched as well as words. Each item names its `savers`.
+ *
+ * - `scope`: `mine` (default, your saves) or `everyone` (everyone's saves; never
+ *   other people's private ones).
  *
  * - `understood: false`: meaning isn't ready on this ADHX; these matched on words.
  * - `close: false`: nothing matched closely; these are the nearest.
@@ -33,6 +37,10 @@ export const GET = withPhoneKey(async (request, { userId }) => {
   const type = (params.get('type') ?? 'all') as SearchType
   if (!TYPES.includes(type)) {
     return appError(400, 'bad_type', `type must be one of ${TYPES.join(', ')}.`)
+  }
+  const scope = (params.get('scope') ?? 'mine') as SearchScope
+  if (!SCOPES.includes(scope)) {
+    return appError(400, 'bad_scope', `scope must be one of ${SCOPES.join(', ')}.`)
   }
   const limit = int(params.get('limit'), 30, 1, 40)
   const offset = int(params.get('offset'), 0, 0, 800)
@@ -48,7 +56,7 @@ export const GET = withPhoneKey(async (request, { userId }) => {
   try {
     const result = await findPosts({
       q,
-      scope: 'mine',
+      scope,
       type,
       wordsOnly: false,
       userId,

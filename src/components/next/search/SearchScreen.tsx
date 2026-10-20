@@ -5,7 +5,20 @@ import { BottomNav, NxLogo, PrimaryNav } from '../PrimaryNav'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Clock, LayoutGrid, List, Play, Rows3, Search, Users, X } from 'lucide-react'
+import {
+  AudioLines,
+  Captions,
+  Check,
+  Clock,
+  Image as ImageIcon,
+  LayoutGrid,
+  List,
+  Play,
+  Rows3,
+  Search,
+  Server,
+  X,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   countLabel,
@@ -36,6 +49,7 @@ import {
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { recentPlayHref } from '../theater/queue'
 import { useBusyLogo } from '../logo-busy'
+import { Gob } from '../Gob'
 
 const TYPES: SearchType[] = ['all', 'videos', 'photos', 'text', 'articles']
 const VIEWS: { id: SearchView; label: string; icon: typeof LayoutGrid }[] = [
@@ -116,6 +130,240 @@ function Segment<T extends string>({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+const NUMBER_WORDS = [
+  'No',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+]
+
+/**
+ * The results' title: "Two strong matches"; "Nobody remembers captions"
+ * when the best one was read on screen; else the count ("7 matches").
+ */
+function headingFor(
+  items: SearchResultItem[],
+  type: SearchType,
+  data: { total: number; close: boolean } | null | undefined,
+  note: string | null,
+): { title: string; sub: string | null } {
+  const total = data?.total ?? 0
+  const strong = items.filter((i) => strengthOfItem(i) === 'strong').length
+  const related = items.filter((i) => strengthOfItem(i) === 'related').length
+  if (items[0]?.matched[0] === 'screen' && strong > 0) {
+    return {
+      title: 'Nobody remembers captions',
+      sub: `ADHX does. ${strong} spot-on${related ? `, ${related} related` : ''}.`,
+    }
+  }
+  if (strong > 0) {
+    const n = strong < NUMBER_WORDS.length ? NUMBER_WORDS[strong] : String(strong)
+    return { title: `${n} strong ${strong === 1 ? 'match' : 'matches'}`, sub: note }
+  }
+  return {
+    title: `${data?.close || total === 0 ? '' : 'Nearest '}${countLabel(total, type)}`,
+    sub: note,
+  }
+}
+
+const LOOKED_IN: { signals: MatchSignal[]; label: string; icon: typeof AudioLines }[] = [
+  { signals: ['speech'], label: 'what’s said', icon: AudioLines },
+  { signals: ['screen'], label: 'what’s on screen', icon: Captions },
+  { signals: ['picture', 'video'], label: 'the pictures', icon: ImageIcon },
+]
+
+/** "Looked in what's said · what's on screen · the pictures", lit where the matches came from. */
+function LookedIn({ items, className }: { items: SearchResultItem[]; className?: string }) {
+  const found = new Set(
+    items.filter((i) => strengthOfItem(i) !== 'related').flatMap((i) => i.matched.slice(0, 1)),
+  )
+  return (
+    <p className={cn('m-0 items-center gap-3.5 text-[13px] text-nx-muted', className)}>
+      <span>Looked in</span>
+      {LOOKED_IN.map(({ signals, label, icon: Icon }) => {
+        const lit = signals.some((s) => found.has(s))
+        return (
+          <span
+            key={label}
+            className={cn(
+              'flex items-center gap-1.5 whitespace-nowrap',
+              lit && 'font-semibold text-nx-cream',
+            )}
+          >
+            <Icon aria-hidden className={cn('h-4 w-4', lit && 'text-nx-accent')} />
+            <span>{label}</span>
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
+const HOW: {
+  id: 'screen' | 'speech' | 'pictures'
+  signals: MatchSignal[]
+  title: string
+  icon: typeof AudioLines
+}[] = [
+  { id: 'screen', signals: ['screen'], title: 'Read the words on screen', icon: Captions },
+  { id: 'speech', signals: ['speech'], title: 'Listened to what’s said', icon: AudioLines },
+  {
+    id: 'pictures',
+    signals: ['picture', 'video'],
+    title: 'Looked at the pictures',
+    icon: ImageIcon,
+  },
+]
+
+function postsWord(n: number): string {
+  return n === 1 ? 'one post' : `${n} posts`
+}
+
+/** Beside a few results: where ADHX looked, what it found, and that it all stayed home. */
+function HowFound({
+  items,
+  query,
+  understood,
+  ready,
+  total,
+  className,
+}: {
+  items: SearchResultItem[]
+  query: string
+  understood: boolean
+  ready: number | null
+  total: number | null
+  className?: string
+}) {
+  const close = items.filter((i) => strengthOfItem(i) !== 'related')
+  const lead = close[0]?.matched[0]
+  const q = query.trim()
+  return (
+    <aside
+      aria-label="How ADHX found these"
+      className={cn(
+        'w-[340px] shrink-0 flex-col gap-1.5 self-stretch rounded-[26px] border border-white/[0.08] bg-nx-surface px-6 py-[26px]',
+        className,
+      )}
+    >
+      <h2 className="m-0 mb-3.5 font-nx-serif text-[36px] font-normal leading-[0.95]">
+        How ADHX found these
+      </h2>
+      {HOW.map(({ id, signals, title, icon: Icon }) => {
+        const found = close.filter((i) => i.matched.some((m) => signals.includes(m))).length
+        const leads = !!lead && signals.includes(lead)
+        const desc =
+          id === 'pictures' && !understood
+            ? 'Back in a moment: matching words for now.'
+            : found === 0
+              ? 'Nothing there this time.'
+              : id === 'screen'
+                ? `Found “${q}” written on screen in ${postsWord(found)}.`
+                : id === 'speech'
+                  ? `Someone says it in ${postsWord(found)}.`
+                  : `${found === 1 ? 'One looks' : `${found} look`} like what you described.`
+        return (
+          <div
+            key={id}
+            className={cn('flex gap-3.5 rounded-[18px] p-3.5', leads && 'bg-[#262320]')}
+          >
+            <span
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+                leads ? 'bg-nx-accent text-black' : 'bg-[#262320] text-nx-soft',
+              )}
+            >
+              <Icon aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.2} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-[15px] font-extrabold">{title}</span>
+                {found > 0 ? (
+                  <Check
+                    aria-label="Found"
+                    className="h-[18px] w-[18px] shrink-0 text-nx-accent"
+                    strokeWidth={2.5}
+                  />
+                ) : (
+                  <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-nx-muted">
+                    No match
+                  </span>
+                )}
+              </span>
+              <span
+                className={cn(
+                  'text-[13px] leading-[1.45]',
+                  found > 0 ? 'text-nx-soft' : 'text-nx-muted',
+                )}
+              >
+                {desc}
+              </span>
+            </span>
+          </div>
+        )
+      })}
+      <div className="mt-auto flex flex-col gap-3 border-t border-white/[0.08] pt-[18px]">
+        <span className="flex items-center gap-2.5">
+          <Server aria-hidden className="h-5 w-5 shrink-0 text-nx-accent" />
+          <span className="text-[15px] font-extrabold">
+            All on your server. Nothing sent anywhere.
+          </span>
+        </span>
+        <span className="text-[13px] leading-normal text-nx-muted">
+          No cloud, no ad tech, nobody else’s computer.
+        </span>
+        {ready !== null && total !== null && total > 0 && (
+          <>
+            <span aria-hidden className="h-1 overflow-hidden rounded-full bg-white/[0.12]">
+              <span
+                className="block h-full rounded-full bg-nx-accent"
+                style={{ width: `${Math.min(100, Math.round((ready / total) * 100))}%` }}
+              />
+            </span>
+            <span className="text-xs font-semibold text-nx-muted">
+              {`${ready.toLocaleString('en-GB')} of ${total.toLocaleString('en-GB')} saves searchable`}
+            </span>
+          </>
+        )}
+      </div>
+    </aside>
+  )
+}
+
+/** After a few results: describe it differently. */
+function NotIt({ suggestions, onPick }: { suggestions: string[]; onPick: (q: string) => void }) {
+  return (
+    <div className="flex h-full flex-col gap-3.5 rounded-[22px] border border-dashed border-white/[0.16] p-5">
+      <Gob size={64} className="-m-1.5" />
+      <span className="font-nx-serif text-[30px] leading-[0.95]">
+        Not it? Describe what you saw.
+      </span>
+      <span className="text-[13px] leading-normal text-nx-muted">
+        Faces, places, the bit that made you laugh. It doesn’t need the right words.
+      </span>
+      <span className="mt-auto flex flex-col items-start gap-2">
+        {suggestions.map((x) => (
+          <button
+            key={x}
+            type="button"
+            onClick={() => onPick(x)}
+            className="min-h-11 rounded-full bg-[#262320] px-3.5 text-left text-[13px] font-semibold text-nx-cream"
+          >
+            {x}
+          </button>
+        ))}
+      </span>
     </div>
   )
 }
@@ -201,93 +449,104 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
     return state.scope === 'everyone' ? 'Across everyone’s saves' : 'In your saves'
   })()
 
+  const heading = headingFor(items, state.type, data, note)
+  // A handful of close matches leaves room to say how they were found.
+  const closeCount = items.filter((i) => strengthOfItem(i) !== 'related').length
+  const sparse = !!data && !stale && closeCount > 0 && closeCount <= 2
+
   return (
     <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
-      <header className="sticky top-0 z-20 border-b border-nx-hairline bg-nx-ink/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-3 md:gap-5 md:px-8">
-          <NxLogo className="hidden xl:flex" busy={results.status === 'loading'} />
-          <PrimaryNav current="search" />
-          <form
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault()
-              setRecent(rememberRecent(state.q))
-              inputRef.current?.blur()
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-nx-ink/95 px-3 backdrop-blur md:h-[72px] md:gap-7 md:px-8">
+        <NxLogo className="hidden md:flex" busy={results.status === 'loading'} />
+        <PrimaryNav current="search" className="hidden lg:flex" />
+        <span className="hidden flex-1 md:block" />
+        <form
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setRecent(rememberRecent(state.q))
+            inputRef.current?.blur()
+          }}
+          className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full border-2 border-nx-accent bg-nx-surface pl-4 pr-1.5 shadow-[0_0_0_5px_rgba(255,210,63,0.16)] md:h-12 md:w-[450px] md:flex-none"
+        >
+          <Search aria-hidden className="h-[18px] w-[18px] shrink-0 text-nx-accent" />
+          <label htmlFor="nx-search" className="sr-only">
+            Describe what you’re looking for
+          </label>
+          <input
+            ref={inputRef}
+            id="nx-search"
+            type="search"
+            value={state.q}
+            autoFocus={!initial.q}
+            autoComplete="off"
+            enterKeyHint="search"
+            maxLength={200}
+            placeholder="Search everyone’s saves"
+            onChange={(e) => set({ q: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && state.q) {
+                e.preventDefault()
+                set({ q: '' })
+              }
             }}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-nx-surface py-1 pl-3 pr-1 md:gap-3 md:rounded-2xl md:border-[1.5px] md:border-nx-accent md:pl-[18px]"
-          >
-            <Search
-              aria-hidden
-              className="h-[18px] w-[18px] shrink-0 text-nx-soft md:h-5 md:w-5 md:text-nx-accent"
-            />
-            <label htmlFor="nx-search" className="sr-only">
-              Describe what you’re looking for
-            </label>
-            <input
-              ref={inputRef}
-              id="nx-search"
-              type="search"
-              value={state.q}
-              autoFocus={!initial.q}
-              autoComplete="off"
-              enterKeyHint="search"
-              maxLength={200}
-              placeholder="Describe it…"
-              onChange={(e) => set({ q: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape' && state.q) {
-                  e.preventDefault()
-                  set({ q: '' })
-                }
+            className="h-10 min-w-0 flex-1 appearance-none bg-transparent text-[15px] font-semibold text-nx-cream caret-nx-accent outline-none placeholder:font-normal placeholder:text-nx-muted [&::-webkit-search-cancel-button]:hidden"
+          />
+          {state.q && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => {
+                set({ q: '' })
+                inputRef.current?.focus()
               }}
-              className="h-10 min-w-0 flex-1 appearance-none bg-transparent text-base text-nx-cream outline-none placeholder:text-nx-muted md:h-11 md:text-lg [&::-webkit-search-cancel-button]:hidden"
-            />
-            {state.q && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => {
-                  set({ q: '' })
-                  inputRef.current?.focus()
-                }}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-nx-soft hover:text-nx-cream"
-              >
-                <X aria-hidden className="h-4 w-4" />
-              </button>
-            )}
-            <Segment<SearchScope>
-              label="Search in"
-              className="hidden md:flex"
-              value={state.scope}
-              onChange={(scope) => set({ scope })}
-              options={[
-                { id: 'mine', label: 'My saves' },
-                { id: 'everyone', label: 'Everyone' },
-              ]}
-            />
-          </form>
-          <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
-          <PasteButton onClick={paste.pasteFromClipboard} className="hidden md:flex" />
-          <AccountMenu className="hidden md:block" />
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="h-11 shrink-0 px-1 text-[15px] text-nx-cream md:hidden"
-          >
-            Cancel
-          </button>
-        </div>
+              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#262320] text-nx-soft hover:text-nx-cream"
+            >
+              <X aria-hidden className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </button>
+          )}
+        </form>
+        <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
+        <AccountMenu className="hidden md:block" />
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="h-11 shrink-0 px-1 text-[15px] text-nx-cream md:hidden"
+        >
+          Cancel
+        </button>
+      </header>
 
-        <div className="mx-auto flex max-w-[1600px] items-center gap-2 overflow-x-auto px-3 pb-3 [scrollbar-width:none] md:flex-wrap md:gap-3 md:px-8 [&::-webkit-scrollbar]:hidden">
-          <Pill
-            on={state.scope === 'everyone'}
-            onClick={() => set({ scope: state.scope === 'mine' ? 'everyone' : 'mine' })}
-            className="md:hidden"
-          >
-            <Users aria-hidden className="h-3.5 w-3.5" />
-            <span>{state.scope === 'everyone' ? 'Everyone' : 'My saves'}</span>
-          </Pill>
-          <span aria-hidden className="h-6 w-px shrink-0 bg-nx-hairline md:hidden" />
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-3 pt-4 md:flex-row md:flex-wrap md:items-center md:px-8 md:pt-[22px]">
+        <div
+          role="group"
+          aria-label="Whose saves"
+          className="flex shrink-0 gap-1 rounded-full bg-nx-surface p-1"
+        >
+          {(
+            [
+              { id: 'everyone', label: 'Everyone’s saves' },
+              { id: 'mine', label: 'Mine' },
+            ] as { id: SearchScope; label: string }[]
+          ).map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              aria-pressed={state.scope === o.id}
+              onClick={() => set({ scope: o.id })}
+              className={cn(
+                'flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm md:flex-none md:px-[18px]',
+                state.scope === o.id
+                  ? 'bg-nx-cream font-extrabold text-black'
+                  : 'font-semibold text-nx-cream hover:bg-white/[0.06]',
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <div className="-mx-3 flex items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] md:mx-0 md:gap-3 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
+          <span aria-hidden className="hidden h-6 w-px shrink-0 bg-nx-hairline md:block" />
           <div role="group" aria-label="Show" className="flex shrink-0 gap-1.5">
             {TYPES.map((t) => (
               <Pill key={t} on={state.type === t} onClick={() => set({ type: t })}>
@@ -298,17 +557,13 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
           <Pill on={state.wordsOnly} onClick={() => set({ wordsOnly: !state.wordsOnly })}>
             <span>Words only</span>
           </Pill>
-          <Segment<SearchView>
-            label="Layout"
-            className="ml-auto hidden bg-nx-surface md:flex"
-            value={state.view}
-            onChange={setView}
-            options={VIEWS}
-          />
         </div>
-      </header>
+        {typed && data && !stale && items.length > 0 && !sparse && (
+          <LookedIn items={items} className="ml-auto hidden xl:flex" />
+        )}
+      </div>
 
-      <main className="mx-auto max-w-[1600px] px-3 pb-28 pt-4 md:px-8 md:pb-10">
+      <main className="mx-auto max-w-[1600px] px-3 pb-28 pt-4 md:px-8 md:pb-10 md:pt-[18px]">
         {!typed && (
           <div className="flex max-w-2xl flex-col gap-8 py-4 md:py-10">
             <h1 className="m-0 font-nx-serif text-[34px] font-normal leading-[1.05] md:text-[48px]">
@@ -367,85 +622,122 @@ export function SearchScreen({ initial }: { initial: SearchState }) {
         )}
 
         {typed && (
-          <>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pb-3 md:items-baseline md:pb-4">
-              <h1
-                aria-live="polite"
-                className="m-0 font-nx-serif text-[22px] font-normal md:text-[30px]"
-              >
-                {data && !stale
-                  ? `${data.close || data.total === 0 ? '' : 'Nearest '}${countLabel(data.total, state.type)}`
-                  : 'Searching…'}
-              </h1>
-              {note && <span className="text-[13px] text-nx-muted">{note}</span>}
-              <Segment<SearchView>
-                label="Layout"
-                iconOnly
-                className="ml-auto bg-transparent md:hidden"
-                value={state.view}
-                onChange={setView}
-                options={VIEWS}
-              />
-              {items.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => play()}
-                  className="ml-auto hidden h-11 items-center gap-2 rounded-full bg-nx-accent px-[18px] text-sm font-bold text-nx-ink md:flex"
-                >
-                  <Play aria-hidden className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
-                  <span>{`Play all ${items.length}`}</span>
-                </button>
-              )}
-            </div>
-
-            {results.status === 'error' && !data && (
-              <p className="py-16 text-center text-[15px] text-nx-soft">
-                Search isn’t answering right now. Try again in a moment.
-              </p>
-            )}
-            {results.status === 'loading' && !data && <Skeleton />}
-
-            {data && !stale && items.length === 0 && (
-              <div className="flex flex-col items-center gap-3 py-16 text-center md:py-20">
-                <span className="font-nx-serif text-[28px] md:text-[34px]">
-                  {state.type === 'all'
-                    ? 'Nothing matches that yet'
-                    : `No ${TYPE_LABELS[state.type].toLowerCase()} match this`}
-                </span>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {state.type !== 'all' && (
-                    <Pill on={false} onClick={() => set({ type: 'all' })}>
-                      <span>Show everything</span>
-                    </Pill>
-                  )}
-                  {state.scope === 'mine' && (
-                    <Pill on={false} onClick={() => set({ scope: 'everyone' })}>
-                      <span>Search everyone’s saves</span>
-                    </Pill>
+          <div className={cn(sparse && 'xl:flex xl:items-start xl:gap-8')}>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-4 pb-4 md:pb-[18px]">
+                <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-4 gap-y-1">
+                  <h1
+                    aria-live="polite"
+                    className="m-0 font-nx-serif text-[28px] font-normal leading-[0.95] md:text-[48px]"
+                  >
+                    {data && !stale ? heading.title : 'Searching…'}
+                  </h1>
+                  {data && !stale && heading.sub && (
+                    <span className="text-[13px] text-nx-muted md:text-[15px]">{heading.sub}</span>
                   )}
                 </div>
-              </div>
-            )}
-
-            {items.length > 0 && (
-              <div className={cn('transition-opacity duration-150', stale && 'opacity-60')}>
-                {state.view === 'bento' && (
-                  <BentoView items={items} query={state.q} onOpen={onOpen} hrefFor={hrefFor} />
-                )}
-                {state.view === 'groups' && (
-                  <GroupsView
-                    items={items}
-                    onPlayGroup={(group) => play({ group })}
-                    onOpen={onOpen}
-                    hrefFor={hrefFor}
+                <span className="flex shrink-0 items-center gap-3">
+                  <Segment<SearchView>
+                    label="Layout"
+                    iconOnly
+                    className="bg-transparent md:bg-nx-surface"
+                    value={state.view}
+                    onChange={setView}
+                    options={VIEWS}
                   />
-                )}
-                {state.view === 'queue' && (
-                  <QueueView items={items} onOpen={onOpen} hrefFor={hrefFor} />
-                )}
+                  {items.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => play()}
+                      className="hidden h-11 items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-[18px] text-sm font-extrabold text-nx-ink md:flex"
+                    >
+                      <Play
+                        aria-hidden
+                        className="h-3.5 w-3.5"
+                        fill="currentColor"
+                        strokeWidth={0}
+                      />
+                      <span>{`Play all ${items.length}`}</span>
+                    </button>
+                  )}
+                </span>
               </div>
+
+              {results.status === 'error' && !data && (
+                <p className="py-16 text-center text-[15px] text-nx-soft">
+                  Search isn’t answering right now. Try again in a moment.
+                </p>
+              )}
+              {results.status === 'loading' && !data && <Skeleton />}
+
+              {data && !stale && items.length === 0 && (
+                <div className="flex flex-col items-center gap-3 py-16 text-center md:py-20">
+                  <span className="font-nx-serif text-[28px] md:text-[34px]">
+                    {state.type === 'all'
+                      ? 'Nothing matches that yet'
+                      : `No ${TYPE_LABELS[state.type].toLowerCase()} match this`}
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {state.type !== 'all' && (
+                      <Pill on={false} onClick={() => set({ type: 'all' })}>
+                        <span>Show everything</span>
+                      </Pill>
+                    )}
+                    {state.scope === 'mine' && (
+                      <Pill on={false} onClick={() => set({ scope: 'everyone' })}>
+                        <span>Search everyone’s saves</span>
+                      </Pill>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {items.length > 0 && (
+                <div className={cn('transition-opacity duration-150', stale && 'opacity-60')}>
+                  {state.view === 'bento' && (
+                    <BentoView
+                      items={items}
+                      query={state.q}
+                      onOpen={onOpen}
+                      hrefFor={hrefFor}
+                      extra={
+                        sparse ? (
+                          <NotIt
+                            suggestions={SEARCH_SUGGESTIONS.filter((x) => x !== state.q).slice(
+                              0,
+                              2,
+                            )}
+                            onPick={(q) => set({ q })}
+                          />
+                        ) : null
+                      }
+                    />
+                  )}
+                  {state.view === 'groups' && (
+                    <GroupsView
+                      items={items}
+                      onPlayGroup={(group) => play({ group })}
+                      onOpen={onOpen}
+                      hrefFor={hrefFor}
+                    />
+                  )}
+                  {state.view === 'queue' && (
+                    <QueueView items={items} onOpen={onOpen} hrefFor={hrefFor} />
+                  )}
+                </div>
+              )}
+            </div>
+            {sparse && (
+              <HowFound
+                items={items}
+                query={state.q}
+                understood={!!data?.understood}
+                ready={learning.status?.ready ?? null}
+                total={learning.status?.totalSaves ?? null}
+                className="hidden xl:flex"
+              />
             )}
-          </>
+          </div>
         )}
       </main>
 

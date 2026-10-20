@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 
 # Shared Node + pnpm toolchain. Keep this version aligned with packageManager.
-FROM node:24-slim AS base
+FROM node:24-trixie-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.7 --activate
 
 # Install dependencies separately so source-only changes reuse this layer.
 FROM base AS deps
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
@@ -57,15 +57,23 @@ COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder /app/tsconfig.json ./
 
 # Production stage - minimal runtime image
-FROM base AS runner
+FROM node:24-trixie-slim AS runner
+
+# Runtime only needs Node. Do not ship the build stage's pnpm/Corepack cache
+# or npm's independent dependency graph; migrations use the local tsx binary.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+        /opt/yarn-* \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+        /usr/local/bin/pnpm /usr/local/bin/pnpx /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 # Install sqlite3 CLI and runtime dependencies. Python runs yt-dlp, which
 # downloads each saved post's media (see src/lib/keep).
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     sqlite3 \
     python3 \
     python3-venv \
+    ffmpeg \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 

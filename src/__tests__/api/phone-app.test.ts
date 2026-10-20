@@ -746,3 +746,97 @@ describe('saving in the background (Prefer: respond-async)', () => {
     expect(body).toMatchObject({ platform: 'youtube', id: VIDEO_ID })
   })
 })
+
+describe('Just for me (private saves from the phone)', () => {
+  const pulse = () =>
+    testInstance.db
+      .select()
+      .from(schema.activity)
+      .all()
+      .filter((r) => r.action === 'save')
+
+  it('saves a private share without a pulse, and says it is private', async () => {
+    const key = await phoneKey()
+    const { status: code, body } = await save(
+      { url: `https://youtu.be/${VIDEO_ID}`, private: true },
+      key,
+    )
+    expect(code).toBe(200)
+    expect(body).toMatchObject({ platform: 'youtube', id: VIDEO_ID, isPrivate: true })
+    const [row] = testInstance.db.select().from(schema.bookmarks).all()
+    expect(row.isPrivate).toBe(true)
+    expect(pulse()).toHaveLength(0)
+  })
+
+  it('keeps a queued private share private', async () => {
+    const key = await phoneKey()
+    const { POST } = await import('@/app/api/app/save/route')
+    const res = await POST(
+      new NextRequest(`${BASE}/api/app/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: `Bearer ${key}`,
+          prefer: 'respond-async',
+        },
+        body: JSON.stringify({ url: `https://youtu.be/${VIDEO_ID}`, private: true }),
+      }),
+    )
+    expect(res.status).toBe(202)
+    expect(testInstance.db.select().from(schema.phoneSaveQueue).all()[0].isPrivate).toBe(true)
+    const { saveQueueTick } = await import('@/lib/app/save-queue')
+    expect(await saveQueueTick()).toBe(1)
+    const [row] = testInstance.db.select().from(schema.bookmarks).all()
+    expect(row).toMatchObject({ userId: 'user-1', isPrivate: true })
+    expect(pulse()).toHaveLength(0)
+  })
+
+  it('switches a save private and back with POST /api/app/private, only for your own', async () => {
+    const key = await phoneKey()
+    await save({ url: `https://youtu.be/${VIDEO_ID}` }, key)
+    expect(pulse()).toHaveLength(1)
+    const { POST } = await import('@/app/api/app/private/route')
+    const on = await POST(
+      json('/api/app/private', { platform: 'youtube', id: VIDEO_ID, private: true }, key),
+    )
+    expect(on.status).toBe(200)
+    expect(await on.json()).toEqual({ private: true })
+    // The earlier public pulse goes with it.
+    expect(pulse()).toHaveLength(0)
+    const off = await POST(
+      json('/api/app/private', { platform: 'youtube', id: VIDEO_ID, private: false }, key),
+    )
+    expect(await off.json()).toEqual({ private: false })
+    expect(testInstance.db.select().from(schema.bookmarks).all()[0].isPrivate).toBe(false)
+
+    const missing = await POST(
+      json('/api/app/private', { platform: 'youtube', id: 'nope', private: true }, key),
+    )
+    expect(missing.status).toBe(404)
+    const bad = await POST(json('/api/app/private', { platform: 'youtube', id: VIDEO_ID }, key))
+    expect(bad.status).toBe(400)
+    const noKey = await POST(json('/api/app/private', { platform: 'youtube', id: VIDEO_ID }))
+    expect(noKey.status).toBe(401)
+  })
+
+  it('searches everyone’s saves with scope=everyone and refuses other scopes', async () => {
+    const key = await phoneKey()
+    const { findPosts } = await import('@/lib/semantic/find')
+    vi.mocked(findPosts).mockResolvedValue({
+      items: [],
+      total: 0,
+      understood: true,
+      close: false,
+      refined: false,
+      nextOffset: null,
+    } as never)
+    const { GET } = await import('@/app/api/app/search/route')
+    const ok = await GET(get('/api/app/search?q=frog&scope=everyone', key))
+    expect(ok.status).toBe(200)
+    expect(vi.mocked(findPosts)).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'everyone', userId: 'user-1' }),
+    )
+    const bad = await GET(get('/api/app/search?q=frog&scope=friends', key))
+    expect(bad.status).toBe(400)
+  })
+})

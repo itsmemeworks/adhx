@@ -1,5 +1,7 @@
 package com.adhx.share.net
 
+import kotlinx.serialization.builtins.serializer
+
 import com.adhx.share.data.Connection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -52,9 +54,9 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), MeResponse.serializer())
     }
 
-    suspend fun save(link: String): ApiResult<SaveResponse> {
+    suspend fun save(link: String, justForMe: Boolean = false): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
-        val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link))
+        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe))
         return send(authed(url).post(body.toRequestBody(JSON)).build(), SaveResponse.serializer())
     }
 
@@ -70,10 +72,18 @@ class AdhxApi(private val server: String, private val key: String?) {
         link: String,
         interval: () -> Long,
         limitMs: Long = FOLLOW_LIMIT_MS,
+        justForMe: Boolean = false,
+        explicit: Boolean = false,
         onQueued: (String) -> Unit = {},
+        deferPublish: Boolean = false,
+        requestId: String? = null,
+        note: String? = null,
     ): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
-        val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link))
+        val body = json.encodeToString(
+            SaveRequest.serializer(),
+            saveRequest(link, justForMe, explicit).copy(deferPublish = deferPublish, requestId = requestId, note = cleanNote(note)),
+        )
         val request = authed(url).header("Prefer", "respond-async").post(body.toRequestBody(JSON)).build()
         val started = send(request) { code, text ->
             if (code == 202) json.decodeFromString(QueuedBody.serializer(), text).id
@@ -123,6 +133,13 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), QueuedSave.serializer())
     }
 
+    /** Acknowledge the latest durable choice without ever submitting the link again. */
+    suspend fun queuedPrivacy(id: String, choice: Boolean?, intentVersion: Long? = null): ApiResult<Unit> {
+        val url = url("api/app/save") ?: return badAddress
+        val body = json.encodeToString(QueuedPrivacyRequest.serializer(), QueuedPrivacyRequest(id, choice, intentVersion))
+        return send(authed(url).patch(body.toRequestBody(JSON)).build()) { _, _ -> Unit }
+    }
+
     suspend fun status(platform: String, id: String): ApiResult<StatusResponse> {
         val base = url("api/app/status") ?: return badAddress
         val url = base.newBuilder()
@@ -152,15 +169,218 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), SavedPostResponse.serializer())
     }
 
-    /** Search your saves by meaning. */
-    suspend fun search(q: String, offset: Int = 0): ApiResult<SearchResponse> {
+    /** Search saves by meaning: yours, or everyone's on this server ([SearchScope]). */
+    suspend fun search(q: String, offset: Int = 0, scope: String = SearchScope.MINE): ApiResult<SearchResponse> {
         val base = url("api/app/search") ?: return badAddress
         val url = base.newBuilder()
             .addQueryParameter("q", q)
             .addQueryParameter("offset", offset.toString())
+            .addQueryParameter("scope", scope)
             .build()
         return send(authed(url).get().build(), SearchResponse.serializer())
     }
+
+    /** Switch one of your saves "Just for me" (or back). Answers what it is now. */
+    suspend fun setPrivate(platform: String, id: String, justForMe: Boolean): ApiResult<Boolean> {
+        val url = url("api/app/private") ?: return badAddress
+        val body = json.encodeToString(PrivateRequest.serializer(), PrivateRequest(platform, id, justForMe))
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, text ->
+            if (text.isBlank()) justForMe else json.decodeFromString(PrivateResponse.serializer(), text).isPrivate
+        }
+    }
+
+    /** A page of the friends feed ([FeedMode]), only of [types] ([MediaType]) when given. */
+    suspend fun feed(mode: String, cursor: String? = null, types: Collection<String>? = null): ApiResult<FeedResponse> {
+        val base = url("api/app/feed") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("mode", mode)
+            .apply { if (cursor != null) addQueryParameter("cursor", cursor) }
+            .apply { if (!types.isNullOrEmpty()) addQueryParameter("types", MediaType.all.filter { it in types }.joinToString(",")) }
+            .build()
+        return send(authed(url).get().build(), FeedResponse.serializer())
+    }
+
+    /** Your feed filter, as the server keeps it. */
+    suspend fun feedTypes(): ApiResult<FeedTypesBody> {
+        val url = url("api/app/feed/types") ?: return badAddress
+        return send(authed(url).get().build(), FeedTypesBody.serializer())
+    }
+
+    /** Keep your feed filter on the server. */
+    suspend fun setFeedTypes(types: Collection<String>): ApiResult<Unit> {
+        val url = url("api/app/feed/types") ?: return badAddress
+        val body = json.encodeToString(FeedTypesBody.serializer(), FeedTypesBody(MediaType.all.filter { it in types }))
+        return send(authed(url).put(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    /** "Show less / more from …": your choices so far. */
+    suspend fun feedWeights(): ApiResult<FeedWeights> {
+        val url = url("api/app/feed/weights") ?: return badAddress
+        return send(authed(url).get().build(), FeedWeights.serializer())
+    }
+
+    /** More (1), less (-1) or back to normal (0) from one member; answers with every choice. */
+    suspend fun setFeedWeight(username: String, weight: Int): ApiResult<FeedWeights> {
+        val url = url("api/app/feed/weights") ?: return badAddress
+        val body = json.encodeToString(FeedWeightRequest.serializer(), FeedWeightRequest(username, weight.coerceIn(-1, 1)))
+        return send(authed(url).put(body.toRequestBody(JSON)).build(), FeedWeights.serializer())
+    }
+
+    /** Mark posts seen (204). At most [SeenBatcher.MAX_BATCH] at a time. */
+    suspend fun seen(posts: List<PostRef>): ApiResult<Unit> {
+        val url = url("api/app/seen") ?: return badAddress
+        val body = json.encodeToString(SeenRequest.serializer(), SeenRequest(posts))
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    suspend fun channels(): ApiResult<ChannelsResponse> {
+        val url = url("api/app/channels") ?: return badAddress
+        return send(authed(url).get().build(), ChannelsResponse.serializer())
+    }
+
+    /** One channel's posts: [ChannelKind] and its slug (a friend's is their username). */
+    suspend fun channel(kind: String, slug: String): ApiResult<ChannelItemsResponse> {
+        val base = url("api/app/channels") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(kind).addPathSegment(slug).build()
+        return send(authed(url).get().build(), ChannelItemsResponse.serializer())
+    }
+
+    suspend fun live(): ApiResult<LiveResponse> {
+        val url = url("api/app/live") ?: return badAddress
+        return send(authed(url).get().build(), LiveResponse.serializer())
+    }
+
+    suspend fun liveMoment(slug: String, session: String? = null, known: List<String> = emptyList()): ApiResult<LiveDetail> {
+        val base = url("api/app/live") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).build()
+        val body = "{\"known\":" + json.encodeToString(kotlinx.serialization.builtins.ListSerializer(String.serializer()), known.take(200)) + "}"
+        val request = authed(url).post(body.toRequestBody(JSON))
+        if (session != null) request.header("X-ADHX-Watch", session)
+        val result = send(request.build(), LiveDetail.serializer())
+        return if (result is ApiResult.Failed && result.status == 405) send(authed(url).get().build(), LiveDetail.serializer()) else result
+    }
+
+    suspend fun leaveLive(slug: String, session: String): ApiResult<Unit> {
+        val base = url("api/app/live") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).build()
+        return send(authed(url).header("X-ADHX-Watch", session).delete().build()) { _, _ -> }
+    }
+
+    /** React to a post in a moment: one [Reaction.emoji], or a few words (at most [Reaction.MAX_TEXT]). */
+    suspend fun react(slug: String, platform: String, id: String, emoji: String? = null, text: String? = null): ApiResult<Unit> {
+        val base = url("api/app/live") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).addPathSegment("react").build()
+        val request = ReactRequest(emoji = emoji, text = text?.trim()?.let(Reaction::clip), platform = platform, id = id)
+        val body = json.encodeToString(ReactRequest.serializer(), request)
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    /** Ask to be told when a forming group goes live ([on]), or stop. 404 `forming_gone` when it's gone. */
+    suspend fun setFormingAlert(id: String, on: Boolean): ApiResult<AlertState> {
+        val base = url("api/app/live/forming") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(id).addPathSegment("alert").build()
+        val request = if (on) authed(url).put("{}".toRequestBody(JSON)) else authed(url).delete()
+        return send(request.build()) { _, text ->
+            if (text.isBlank()) AlertState(on) else json.decodeFromString(AlertState.serializer(), text)
+        }
+    }
+
+    /** Groups you asked about that have gone live since (unseen, newest first). */
+    suspend fun alerts(): ApiResult<AlertsResponse> {
+        val url = url("api/app/alerts") ?: return badAddress
+        return send(authed(url).get().build(), AlertsResponse.serializer())
+    }
+
+    /** The alerts were shown: don't send them again. */
+    suspend fun alertsSeen(ids: List<String>): ApiResult<Unit> {
+        val url = url("api/app/alerts/seen") ?: return badAddress
+        val body = json.encodeToString(AlertsSeenRequest.serializer(), AlertsSeenRequest(ids.take(50)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    /** Who a post can go to straight from the send sheet. */
+    suspend fun sendTargets(platform: String, id: String): ApiResult<SendTargets> {
+        val base = url("api/app/send") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("platform", platform)
+            .addQueryParameter("id", id)
+            .build()
+        return send(authed(url).get().build(), SendTargets.serializer())
+    }
+
+    /** Send a post to members ([to] are usernames), with an optional note. */
+    suspend fun sendTo(platform: String, id: String, to: List<String>, note: String? = null): ApiResult<SendResult> {
+        val url = url("api/app/send") ?: return badAddress
+        val body = json.encodeToString(SendRequest.serializer(), SendRequest(platform, id, to, cleanNote(note)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), SendResult.serializer())
+    }
+
+    /** Keep a group channel as one of yours ("Keep this channel"). */
+    suspend fun keepGroupChannel(slug: String): ApiResult<KeepChannelResponse> {
+        val base = url("api/app/channels/group") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).addPathSegment("keep").build()
+        return send(authed(url).post("{}".toRequestBody(JSON)).build(), KeepChannelResponse.serializer())
+    }
+
+    /** Your people and, for an admin, who's waiting to be let in. */
+    suspend fun people(): ApiResult<PeopleResponse> {
+        val url = url("api/app/people") ?: return badAddress
+        return send(authed(url).get().build(), PeopleResponse.serializer())
+    }
+
+    /** An admin's answer to a join request ([JoinDecision]). Answers what the account is now. */
+    suspend fun decideJoin(requestId: String, decision: String): ApiResult<JoinDecisionResponse> {
+        val base = url("api/app/people/requests") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(requestId).build()
+        val body = json.encodeToString(JoinDecisionRequest.serializer(), JoinDecisionRequest(decision))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), JoinDecisionResponse.serializer())
+    }
+
+    /** What your ADHX is doing: posts on their way, stuck, or just finished ([DoingScope]). */
+    suspend fun doing(scope: String = DoingScope.ALL): ApiResult<DoingResponse> {
+        val base = url("api/app/doing") ?: return badAddress
+        val url = base.newBuilder().addQueryParameter("scope", scope).build()
+        return send(authed(url).get().build(), DoingResponse.serializer())
+    }
+
+    /** Try a stuck post again (for someone who saved it). */
+    suspend fun retry(platform: String, id: String): ApiResult<RetryResponse> {
+        val url = url("api/app/doing/retry") ?: return badAddress
+        val body = json.encodeToString(PostRef.serializer(), PostRef(platform, id))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), RetryResponse.serializer())
+    }
+
+    /**
+     * `private` is sent when it's on, or when [explicit] (the phone has its
+     * own "Just for me by default", or the switch was touched). Otherwise
+     * it's left out and the server's default for the account applies.
+     */
+    /**
+     * Add [note] to a save that's already done (the share card's "Add a note",
+     * typed after the save went out): the same `POST /api/app/save` with
+     * `note`, and the save's privacy said outright so it can't change. A
+     * server without notes ignores the field.
+     */
+    suspend fun saveNote(link: String, note: String, justForMe: Boolean): ApiResult<SaveResponse> {
+        val url = url("api/app/save") ?: return badAddress
+        val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link, isPrivate = justForMe, note = cleanNote(note)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), SaveResponse.serializer())
+    }
+
+    /**
+     * `POST /api/app/note { platform, id, note }`: set your own note on a
+     * save. Answers `{ note }`, the server's cleaned copy.
+     */
+    suspend fun setNote(platform: String, id: String, note: String): ApiResult<NoteResponse> {
+        val url = url("api/app/note") ?: return badAddress
+        val body = json.encodeToString(NoteRequest.serializer(), NoteRequest(platform, id, cleanNote(note) ?: return ApiResult.Failed(400, "empty_note", null)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), NoteResponse.serializer())
+    }
+
+    private fun cleanNote(note: String?): String? = note?.trim()?.takeIf { it.isNotEmpty() }?.take(NOTE_MAX)
+
+    private fun saveRequest(link: String, justForMe: Boolean, explicit: Boolean = false) =
+        SaveRequest(link, isPrivate = if (justForMe) true else if (explicit) false else null)
 
     private fun url(path: String): HttpUrl? = resolve(server, path)
 
@@ -211,6 +431,9 @@ class AdhxApi(private val server: String, private val key: String?) {
 
         /** The server retries a queued save for about 15 minutes. */
         const val FOLLOW_LIMIT_MS = 16 * 60 * 1_000L
+
+        /** Notes on saves are at most this long. */
+        const val NOTE_MAX = 140
         private val JSON = "application/json; charset=utf-8".toMediaType()
         private const val NOT_ADHX = "That address didn’t answer like an ADHX."
 
