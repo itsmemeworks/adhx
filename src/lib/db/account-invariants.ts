@@ -27,6 +27,7 @@ const ACCOUNT_GUARDS: AccountGuard[] = [
   { table: 'app_pair_codes', references: [{ column: 'user_id' }] },
   { table: 'phone_save_queue', references: [{ column: 'user_id' }] },
   { table: 'post_views', references: [{ column: 'user_id' }] },
+  { table: 'channel_visual_jobs', references: [{ column: 'user_id', nullable: true }] },
   {
     table: 'post_sends',
     references: [{ column: 'from_user_id' }, { column: 'to_user_id' }],

@@ -595,6 +595,19 @@ again) and each group is named from a fixed list of plain names (the closest
 few by meaning, Jev picks among them). Keeping one turns it into a normal,
 public tag channel. Anyone can watch a public channel at `/play?channel=…`.
 
+An independent, off-by-default `TYPESAFE_CHANNEL_IMAGES=on` refinement pass can
+improve generated channel display names, borderline membership, repetition
+spacing and cover-post selection. `channels/visual.ts` enqueues bounded durable
+work during local reads; instrumentation starts one async worker that prepares
+existing retained public-post stills and calls the pinned TypeSafe image API.
+It never loads a local model or extracts video on the NAS. Cached decisions are
+an overlay: original channel slugs, user saves, files and manual channels stay
+intact. The shared channel APIs serve web and phone. Visibility/media/policy
+fingerprints invalidate stale results; private-only posts, saver identities,
+tags, notes and extracted words are excluded from uploads. See
+[image-aware channel curation](docs/channel-image-curation.md) for limits,
+confidence gates, retries and the evaluation boundary.
+
 ## Discovery and measurement planes
 
 These are intentionally separate logs with different privacy contracts.

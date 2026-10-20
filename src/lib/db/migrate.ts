@@ -13,6 +13,7 @@ import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-in
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
+import { CHANNEL_VISUAL_DDL } from '../channels/visual-schema'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -1186,6 +1187,7 @@ try {
 // account guards below are installed.
 try {
   db.exec(BOARD_FEATURES_DDL)
+  db.exec(CHANNEL_VISUAL_DDL)
   console.log('[migrate] Ensured post_sends / moment_alert_subs / moment_alerts tables')
 } catch (error) {
   console.log('[migrate] FAILED creating post_sends / moment alert tables', error)

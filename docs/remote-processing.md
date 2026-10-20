@@ -239,6 +239,9 @@ Search stays on the NAS: its query child embeds the query, then search combines
 word matches with text, image and video scores under account and moderation
 filters. Optional Jev refinement receives query and candidate public text, not
 media files. It is separate from the Mac processing protocol.
+The separately enabled [channel image pass](channel-image-curation.md) uploads
+selected retained public-post thumbnails for curation. It uses no Mac job lease
+and adds no NAS video extraction or local inference.
 
 ## Original quality, conversion and cleanup
 

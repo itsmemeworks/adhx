@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Optional image-aware generated channel curation
+
+- In flight: `TYPESAFE_CHANNEL_IMAGES=on` plus a key enables background naming, conservative borderline checks, repeat spacing and channel cover-post selection for Made for you/From everyone. Default off; slugs, saves, files and manual/friend channels stay intact.
+- One durable scoped queue/cache: one task/minute, 48 attempts/UTC day, 256 entries/7 days, max8 existing stills, 15s requests, three tries. No page waits, remote thumbnail fetch, FFmpeg or local inference for this pass.
+- Upload only eligible public-source captions/posters/photos using opaque ids; private-only/quoted/hidden/banned/orphaned sources, saver details, notes, tags and extracted words stay out. Visibility/media/policy revisions and leases reject stale results; account deletion cascades private jobs.
+- Known-name choices, confidence gates, a four-member floor, transitive duplicate spacing/cover diversity and collision fallback keep changes conservative. Covers select existing posts, not new video frames; repetition checks are sampled, not exhaustive.
+- Regression coverage includes opt-in, bounded transport, account/privacy races, original/path safety, budgets, restart/stale-claim recovery, uncertainty and no-loss playback ordering. A real synthetic-only eight-image request completed in ~0.5s; no real-library quality claim.
+- README, architecture, environment/Compose examples and `docs/channel-image-curation.md` explain the opt-in cloud boundary and evaluation steps. No live service, private configuration or network was changed.
+
 ## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
 
 - In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.

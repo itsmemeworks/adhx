@@ -18,6 +18,7 @@ import { embedQueries } from '@/lib/semantic/supervisor'
 import { fromBlob } from '@/lib/semantic/vectors'
 import { groupSaves, seedFrom, type Cluster } from './cluster'
 import { CHANNEL_NAMES } from './names'
+import { visualChannels } from './visual'
 
 /**
  * "Made for you" channels: one user's saves grouped by what they're about
@@ -44,6 +45,8 @@ export interface AutoChannelView {
   size: number
   /** `platform:id`, most typical first. */
   keys: string[]
+  /** Optional curated channel mosaic, independent of playback order. */
+  coverKeys?: string[]
 }
 
 export interface AutoChannelDeps {
@@ -262,7 +265,7 @@ export async function computeAutoChannels(
     )
   })
   if (views.length === 0) state.lastEmpty.set(userId, now.getTime())
-  return views
+  return visualChannels(views, userId)
 }
 
 function isStale(rows: AutoChannel[], saves: number, now: number): boolean {
@@ -289,13 +292,13 @@ export async function getAutoChannels(
     .where(eq(autoChannels.userId, userId))
     .orderBy(autoChannels.position)
   if (rows.length === 0 && now - (state.lastEmpty.get(userId) ?? 0) < RETRY_EMPTY_MS) return []
-  if (!isStale(rows, await saveCount(userId), now)) return rows.map(toView)
+  if (!isStale(rows, await saveCount(userId), now)) return visualChannels(rows.map(toView), userId)
   let pending = state.inFlight.get(userId)
   if (!pending) {
     pending = computeAutoChannels(userId, deps)
       .catch((error) => {
         captureException(error, { endpoint: 'channels.auto' })
-        return rows.map(toView)
+        return visualChannels(rows.map(toView), userId)
       })
       .finally(() => state.inFlight.delete(userId))
     state.inFlight.set(userId, pending)
@@ -307,12 +310,8 @@ export async function getAutoChannel(
   userId: string,
   slug: string,
 ): Promise<AutoChannelView | null> {
-  const [row] = await db
-    .select()
-    .from(autoChannels)
-    .where(and(eq(autoChannels.userId, userId), eq(autoChannels.slug, slug)))
-    .limit(1)
-  return row ? toView(row) : null
+  const rows = await db.select().from(autoChannels).where(eq(autoChannels.userId, userId))
+  return visualChannels(rows.map(toView), userId).find((row) => row.slug === slug) ?? null
 }
 
 /**

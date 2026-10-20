@@ -161,11 +161,12 @@ running process; choose monitoring appropriate to your host.
 
 Start with the local features, then add the services you want:
 
-| Feature                                            | Additional credentials                           | Setup                                                                                                                                                          |
-| -------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Kept media and local text/picture/video search     | None beyond the instance's sign-in configuration | Keep `/data` persistent and permit the initial model download.                                                                                                 |
-| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../README.md#the-search-model).                                              |
-| X bookmark import                                  | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`     | Create an OAuth 2.0 confidential Web App, register the exact callback below, then connect the intended X account in ADHX Settings. X API credits are separate. |
+| Feature                                            | Additional credentials                           | Setup                                                                                                                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kept media and local text/picture/video search     | None beyond the instance's sign-in configuration | Keep `/data` persistent and permit the initial model download.                                                                                                                        |
+| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../README.md#the-search-model).                                                                     |
+| Experimental image-aware generated channels        | `TYPESAFE_CHANNEL_IMAGES=on` plus the Jev key    | Separate opt-in uploads selected public-post thumbnails for naming, borderline membership, repeat spacing and covers. See [limits and privacy](../../docs/channel-image-curation.md). |
+| X bookmark import                                  | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`     | Create an OAuth 2.0 confidential Web App, register the exact callback below, then connect the intended X account in ADHX Settings. X API credits are separate.                        |
 
 For X, register `https://adhx.example.com/api/auth/twitter/callback`, replacing
 the origin with your final `NEXT_PUBLIC_APP_URL`. Use the OAuth 2.0 Client ID
