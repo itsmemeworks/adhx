@@ -128,20 +128,24 @@ struct PhoneMatch: Decodable, Hashable {
 }
 
 /// One reason the feed picked a post (`whyReasons`): the first is the
-/// headline (`why`). `kind` is together · more · like · close · fresh · yours.
+/// headline (`why`). `kind` is together · more · like · close · fresh · yours
+/// · sent; any other kind is shown as its words.
 struct WhyReason: Decodable, Hashable {
     let kind: String?
     let text: String
-    /// The friend the reason is about.
+    /// The friend the reason is about (who sent it, for `sent`).
     let username: String?
+    /// `like`: the post of yours it's most like, for the thumbnail.
+    let post: ReasonPost?
 
-    init(kind: String? = nil, text: String, username: String? = nil) {
+    init(kind: String? = nil, text: String, username: String? = nil, post: ReasonPost? = nil) {
         self.kind = kind
         self.text = text
         self.username = username
+        self.post = post
     }
 
-    private enum Keys: String, CodingKey { case kind, text, username }
+    private enum Keys: String, CodingKey { case kind, text, username, post }
 
     /// An object with `text`, or just a line.
     init(from decoder: Decoder) throws {
@@ -151,11 +155,38 @@ struct WhyReason: Decodable, Hashable {
             let c = try decoder.container(keyedBy: Keys.self)
             self.init(kind: (try? c.decodeIfPresent(String.self, forKey: .kind)) ?? nil,
                       text: try c.decode(String.self, forKey: .text),
-                      username: (try? c.decodeIfPresent(String.self, forKey: .username)) ?? nil)
+                      username: (try? c.decodeIfPresent(String.self, forKey: .username)) ?? nil,
+                      post: (try? c.decodeIfPresent(ReasonPost.self, forKey: .post)) ?? nil)
         }
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "empty reason"))
         }
+    }
+}
+
+/// The post a `like` reason points at: `{ platform, id, posterUrl }`.
+struct ReasonPost: Decodable, Hashable {
+    let platform: String
+    let id: String
+    /// Relative to the server; nil when it has no picture.
+    let posterUrl: String?
+
+    var ref: PostRef { PostRef(platform: platform, id: id) }
+
+    init(platform: String, id: String, posterUrl: String? = nil) {
+        self.platform = platform
+        self.id = id
+        self.posterUrl = posterUrl
+    }
+
+    private enum Keys: String, CodingKey { case platform, id, posterUrl }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        platform = try c.decode(String.self, forKey: .platform)
+        id = try c.decode(String.self, forKey: .id)
+        let poster = (try? c.decodeIfPresent(String.self, forKey: .posterUrl)) ?? nil
+        posterUrl = poster?.isEmpty == false ? poster : nil
     }
 }
 

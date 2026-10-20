@@ -91,7 +91,7 @@ struct PlayerView: View {
         }
         // Sending the file itself, over the player (and over Home's bar,
         // which steps aside while it's up).
-        .boardSheet(item: $sending, height: 520) { post in
+        .boardSheet(item: $sending, height: 680) { post in
             SendSheet(post: post, server: server, say: say)
         }
         .preference(key: PlayerSheetUp.self, value: sending != nil)
@@ -349,7 +349,8 @@ private struct PostPage: View {
                     .accessibilityElement(children: .combine)
                 }
                 if let why = post.why, let onWhy = extras.onWhy {
-                    WhyChip(text: WhyChip.label(post, why: why), kind: post.whyReasons.first?.kind) { onWhy(post) }
+                    WhyChip(text: WhyChip.label(post, why: why), kind: post.whyReasons.first?.kind,
+                            face: WhyChip.face(post), server: server) { onWhy(post) }
                         .padding(.bottom, 12)
                 }
                 if let noted = SaverWords.noted(post.savers), let note = noted.note {
@@ -960,6 +961,9 @@ private struct PlayingControls: View {
 private struct WhyChip: View {
     let text: String
     var kind: String?
+    /// "Pete sent you this": the sender's face instead of the icon.
+    var face: Saver?
+    var server: URL?
     let action: () -> Void
 
     /// "Saved together" when it's saved together, else the why line (the web's `whyLabel`).
@@ -967,13 +971,23 @@ private struct WhyChip: View {
         post.whyReasons.first?.kind == "together" ? "Saved together" : why
     }
 
+    /// Who sent it, when that's why it's here.
+    static func face(_ post: PhonePost) -> Saver? {
+        guard let lead = post.whyReasons.first, lead.kind == "sent", let username = lead.username else { return nil }
+        return post.savers.first { $0.username == username } ?? Saver(username: username)
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: WhySheet.icon(for: kind ?? "fresh"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 18, height: 18)
+                if let face {
+                    Face(saver: face, server: server, size: 24, ring: .clear)
+                } else {
+                    Image(systemName: WhySheet.icon(for: kind ?? "fresh"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 18, height: 18)
+                }
                 Text(text)
                     .lineLimit(1)
                 Image(systemName: "chevron.right")

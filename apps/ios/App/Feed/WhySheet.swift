@@ -15,6 +15,8 @@ struct WhySheet: View {
     var weighing: String? = nil
     var weightError: String? = nil
     var setWeight: (String, Int) -> Void = { _, _ in }
+    /// Opens one of your posts (the thumbnail beside "Like … you kept").
+    var openPost: ((PostRef) -> Void)? = nil
     @Environment(\.dismiss) private var systemDismiss
     @Environment(\.boardDismiss) private var boardDismiss
     private var dismiss: SheetCloser { SheetCloser(board: boardDismiss, system: systemDismiss) }
@@ -32,7 +34,7 @@ struct WhySheet: View {
                 postRow
                 VStack(spacing: 4) {
                     ForEach(Array(reasons.enumerated()), id: \.offset) { index, reason in
-                        ReasonRow(reason: reason, lead: index == 0, server: server)
+                        ReasonRow(reason: reason, lead: index == 0, server: server, open: openThumb)
                     }
                 }
                 WhoseSaves(mode: mode) { picked in
@@ -77,6 +79,13 @@ struct WhySheet: View {
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 24)
+    }
+
+    /// The thumbnail's post: this sheet closes, then it opens.
+    private func openThumb(_ ref: PostRef) {
+        guard let openPost else { return }
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openPost(ref) }
     }
 
     private var postRow: some View {
@@ -133,7 +142,8 @@ struct WhySheet: View {
         if !post.whyReasons.isEmpty {
             for (index, reason) in post.whyReasons.enumerated() {
                 out.append(Reason(icon: Self.icon(for: reason.kind), text: reason.text,
-                                  savers: Self.savers(for: reason, lead: index == 0, in: post.savers)))
+                                  savers: Self.savers(for: reason, lead: index == 0, in: post.savers),
+                                  thumb: reason.kind == "like" ? reason.post : nil))
             }
             // These are the only reasons: nothing added on the phone but the lock.
             if PrivacyStore.shared.isPrivate(post) {
@@ -172,6 +182,7 @@ extension WhySheet {
         case "like", "yours": return "bookmark"
         case "close": return "play.circle"
         case "fresh": return "clock"
+        case "sent": return "paperplane"
         default: return "sparkles"
         }
     }
@@ -180,7 +191,9 @@ extension WhySheet {
     /// the people who saved it.
     static func savers(for reason: WhyReason, lead: Bool, in savers: [Saver]) -> [Saver] {
         if let username = reason.username {
-            return savers.filter { $0.username == username }
+            let named = savers.filter { $0.username == username }
+            // Whoever sent it to you, even if their save isn't on the post.
+            return named.isEmpty && reason.kind == "sent" ? [Saver(username: username)] : named
         }
         return lead || reason.kind == "together" ? savers : []
     }
@@ -452,12 +465,15 @@ private struct Reason {
     let icon: String
     let text: String
     let savers: [Saver]
+    /// "Like … you kept": the post of yours it's like.
+    var thumb: ReasonPost? = nil
 }
 
 private struct ReasonRow: View {
     let reason: Reason
     let lead: Bool
     let server: URL
+    var open: (PostRef) -> Void = { _ in }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -473,12 +489,23 @@ private struct ReasonRow: View {
                 .foregroundStyle(Theme.ink)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
-            if !reason.savers.isEmpty {
+            if let thumb = reason.thumb {
+                // 38 pt, Gob shaped, at the reason's right (j2-2). Opens that post.
+                Button { open(thumb.ref) } label: {
+                    CoverImage(url: ADHXClient.resolve(thumb.posterUrl, against: server))
+                        .frame(width: 38, height: 38)
+                        .clipShape(GobShape())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open the one you kept")
+            } else if !reason.savers.isEmpty {
                 FaceStack(savers: reason.savers, server: server, size: 28, ring: Theme.surface)
             }
         }
         .frame(minHeight: 56)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: reason.thumb == nil ? .combine : .contain)
     }
 }
 

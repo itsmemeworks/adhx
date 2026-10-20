@@ -13,15 +13,67 @@ final class LiveModel: ObservableObject {
     @Published private(set) var loadError: String?
     @Published private(set) var unsupported = false
 
+    /// A forming group whose bell is being rung (or unrung).
+    @Published private(set) var ringing: Set<String> = []
+    /// Words for a bell that didn't take.
+    @Published private(set) var alertProblem: String?
+    /// A moment to tune in to as soon as Live is on screen (a tapped notification).
+    @Published var tuneIn: LiveMoment?
+
     var onBadKey: () -> Void = {}
     var anyLive: Bool { moments.contains(where: \.live) }
+
+    /// "Tell me when it's live": on the first one, asks to show notifications.
+    func toggleAlert(_ group: FormingMoment) async {
+        guard let client = Store.client(), !ringing.contains(group.id) else { return }
+        let on = !group.alert
+        ringing.insert(group.id)
+        alertProblem = nil
+        defer { ringing.remove(group.id) }
+        if on { await AlertCenter.shared.askPermission() }
+        setAlert(group.id, on)
+        do {
+            let now = try await client.setFormingAlert(group.id, on: on)
+            setAlert(group.id, now)
+            if now { LiveAlertDelivery.watch() }
+        } catch APIError.badKey {
+            onBadKey()
+        } catch let error as APIError where error.isMissing {
+            // forming_gone: it formed or fell apart. Show what's there now.
+            setAlert(group.id, !on)
+            if error.code == "forming_gone" {
+                alertProblem = "\(group.name) isn’t forming any more."
+                await reload()
+            } else {
+                alertProblem = "Your ADHX needs an update before it can tell you."
+            }
+        } catch let error as APIError {
+            setAlert(group.id, !on)
+            alertProblem = error.message
+        } catch {
+            setAlert(group.id, !on)
+            alertProblem = APIError.offline.message
+        }
+    }
+
+    private func setAlert(_ id: String, _ on: Bool) {
+        guard let index = forming.firstIndex(where: { $0.id == id }) else { return }
+        forming[index].alert = on
+    }
 
     func reload() async {
         guard let client = Store.client() else { return }
         do {
             let snapshot = try await client.live()
             moments = snapshot.moments
-            forming = snapshot.forming
+            // A bell being rung keeps its state until the answer comes.
+            forming = snapshot.forming.map { group in
+                guard ringing.contains(group.id), let mine = forming.first(where: { $0.id == group.id }) else { return group }
+                var kept = group
+                kept.alert = mine.alert
+                return kept
+            }
+            if forming.contains(where: \.alert) { LiveAlertDelivery.watch() }
             label = snapshot.label
             loadError = nil
             unsupported = false
@@ -95,9 +147,17 @@ struct LiveView: View {
                     }
                     .padding(.horizontal, 16)
                     ForEach(model.forming) { group in
-                        FormingRow(group: group, server: server)
+                        FormingRow(group: group, server: server, ringing: model.ringing.contains(group.id)) {
+                            Task { await model.toggleAlert(group) }
+                        }
                     }
                     .padding(.horizontal, 16)
+                    if let problem = model.alertProblem {
+                        Text(problem)
+                            .font(Theme.sans(13))
+                            .foregroundStyle(Theme.warn)
+                            .padding(.horizontal, 20)
+                    }
                 }
             }
             .padding(.top, 8)
@@ -110,6 +170,12 @@ struct LiveView: View {
         }
         .fullScreenCover(item: $tuned) { moment in
             TunedInScreen(moment: moment, server: server)
+        }
+        .onChange(of: model.tuneIn, initial: true) { _, moment in
+            guard let moment else { return }
+            model.tuneIn = nil
+            // The full moment when the list has it, else what the notification said.
+            tuned = model.moments.first { $0.slug == moment.slug } ?? moment
         }
     }
 
@@ -333,41 +399,48 @@ private struct QuietMomentRow: View {
     }
 }
 
-/// A group still forming: a few saves close together, not live yet. There's
-/// nothing to tune in to until it is, and no phone route asks to be told.
+/// A group still forming: a few saves close together, not live yet, with
+/// the people saving into it and a bell: "Tell me when it's live" (j7-3).
 private struct FormingRow: View {
     let group: FormingMoment
     let server: URL
+    var ringing = false
+    var ring: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 12) {
-            CoverImage(url: ADHXClient.resolve(group.covers.first, against: server))
-                .frame(width: 76, height: 88)
-                .saturation(0.75)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Forming")
-                    .font(Theme.sans(11, .heavy))
-                    .foregroundStyle(Theme.accent)
-                    .padding(.horizontal, 9)
-                    .frame(height: 22)
-                    .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.6),
-                                                    style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
-                Text(group.name)
-                    .font(Theme.sans(17, .heavy))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(2)
-                HStack(spacing: 7) {
-                    if !group.savers.isEmpty {
-                        FaceStack(savers: group.savers, server: server, size: 20, ring: Theme.surface)
+            HStack(spacing: 12) {
+                CoverImage(url: ADHXClient.resolve(group.covers.first, against: server))
+                    .frame(width: 76, height: 88)
+                    .saturation(0.75)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Forming")
+                        .font(Theme.sans(11, .heavy))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 9)
+                        .frame(height: 22)
+                        .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.6),
+                                                        style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+                    Text(group.name)
+                        .font(Theme.sans(17, .heavy))
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(2)
+                    HStack(spacing: 7) {
+                        if !group.savers.isEmpty {
+                            FaceStack(savers: group.savers, server: server, size: 20, ring: Theme.surface, limit: 4)
+                        }
+                        Text(group.toGoLine)
+                            .font(Theme.sans(13))
+                            .foregroundStyle(Theme.muted)
+                            .lineLimit(1)
                     }
-                    Text(group.toGoLine)
-                        .font(Theme.sans(13))
-                        .foregroundStyle(Theme.muted)
-                        .lineLimit(1)
                 }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilityWords)
+            bell
         }
         .padding(.leading, 8)
         .padding(.trailing, 10)
@@ -376,8 +449,32 @@ private struct FormingRow: View {
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous)
             .strokeBorder(.white.opacity(0.18), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(group.name), forming, \(group.toGoLine)")
+    }
+
+    /// "Kitchen synths, forming, Jo and Ben, 1 more save to go live".
+    private var accessibilityWords: String {
+        var parts = [group.name, "forming"]
+        if !group.savers.isEmpty { parts.append(SaverWords.who(group.savers)) }
+        parts.append(group.toGoLine)
+        return parts.joined(separator: ", ")
+    }
+
+    private var bell: some View {
+        Button(action: ring) {
+            Image(systemName: group.alert ? "bell.fill" : "bell")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(group.alert ? .black : Theme.ink)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(group.alert ? Theme.accent : Theme.plate))
+                .contentShape(Circle())
+                .opacity(ringing ? 0.6 : 1)
+                .animation(.easeInOut(duration: 0.15), value: group.alert)
+        }
+        .buttonStyle(.plain)
+        .disabled(ringing)
+        .accessibilityLabel("Tell me when \(group.name) is live")
+        .accessibilityValue(group.alert ? "On" : "Off")
+        .accessibilityAddTraits(group.alert ? .isSelected : [])
     }
 }
 

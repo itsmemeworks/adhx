@@ -584,13 +584,36 @@ out so the server's own choice still applies.
   `recentSaves`/`windowMinutes`, else "4 saves"); the rest are rows labelled
   with the window ("Right now", "Last few days") or "Live · 1 save in 5 min";
   `forming` groups show as dashed "Forming" rows with "1 more save to go
-  live". Forming groups carry no faces and there's no route to be told when
-  one goes live, so the row has neither.
+  live", the `people` saving into it (up to 4 faces) and a bell: **Tell me
+  when it's live** (`PUT|DELETE /api/app/live/forming/{id}/alert`, lit
+  yellow while on). The first bell tap asks to show notifications. Fired
+  alerts (`GET /api/app/alerts`) become local notifications, "Kitchen synths
+  is live · Tune in", from a 60 s poll while the app is open and a
+  BGAppRefreshTask (`<prefix>.alerts`, scheduled for 48 h after a bell is
+  on); then `POST /api/app/alerts/seen`. The phone remembers the last 100
+  shown so one that wasn't marked seen isn't shown twice; without
+  notification permission they're left unseen. Tapping one opens Live and
+  tunes in to that slug.
 - Share on the player opens **Sending the video itself**: the kept file
   downloads with a progress line, then goes out through Messages, Mail,
   Files, Photos or the system share sheet (Messages/Mail fall back to it when
-  the phone can't send them). The boards' "Or straight to your people" needs
-  a route to send a post to a member, which doesn't exist yet.
+  the phone can't send them). Below, **Or straight to your people**
+  (`GET /api/app/send`): a 52 pt face per member; tapping one sends it
+  (`POST /api/app/send`) and puts a yellow tick on the face. Someone who
+  already has it is dimmed, with "Jo already has it." beside the faces (under
+  them when there are more than four). Not `sendable` (your own private save):
+  "Just for you. Share it first to send it." The row is left out on an ADHX
+  without the route.
+- In New, a post someone sent you leads with the `sent` reason: the why chip
+  says "Pete sent you this" with Pete's face; the why sheet has a paper plane
+  and their face. Reasons of a kind the app doesn't know show as their words.
+- Why this one: the `like` reason shows the post of yours it's like
+  (`post.posterUrl`) as a 38 pt Gob-shaped thumbnail on the right; tapping it
+  closes the sheet and opens that post.
+- A From everyone channel plays with its name and **Keep this channel** over
+  the player (`POST /api/app/channels/group/{slug}/keep`); after keeping (or
+  when the queue says `kept`) it reads **Kept · Open**, which plays your
+  channel (`/api/app/channels/mine/{tag}`).
 
 ## The share sheet (both platforms)
 

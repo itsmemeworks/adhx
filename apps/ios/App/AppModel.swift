@@ -146,6 +146,7 @@ final class AppModel: ObservableObject {
 
     func disconnect() {
         Store.disconnect()
+        LiveAlertDelivery.forget()
         AuthImageLoader.shared.clear()
         connection = .checking
         reload()

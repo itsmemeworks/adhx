@@ -11,6 +11,7 @@ struct ADHXShareApp: App {
         DebugLaunch.connectIfAsked()
         #endif
         _model = StateObject(wrappedValue: AppModel())
+        AlertCenter.shared.install()
     }
 
     var body: some Scene {
@@ -28,8 +29,11 @@ struct ADHXShareApp: App {
                     await model.checkConnection()
                     await model.refresh()
                 }
+                AlertCenter.shared.startPolling()
             case .background:
                 BackgroundFlush.schedule()
+                AlertCenter.shared.stopPolling()
+                LiveAlertRefresh.schedule()
             default:
                 break
             }
@@ -39,6 +43,10 @@ struct ADHXShareApp: App {
             await StatusRefresher.refresh()
             if OfflineQueue.count > 0 { BackgroundFlush.schedule() }
         }
+        .backgroundTask(.appRefresh(LiveAlertRefresh.identifier)) {
+            await LiveAlertDelivery.check()
+            LiveAlertRefresh.schedule()
+        }
     }
 }
 
@@ -46,7 +54,7 @@ struct ADHXShareApp: App {
 enum BackgroundFlush {
     static let identifier: String = {
         let ids = Bundle.main.object(forInfoDictionaryKey: "BGTaskSchedulerPermittedIdentifiers") as? [String]
-        return ids?.first ?? ((Bundle.main.bundleIdentifier ?? "adhx") + ".flush")
+        return ids?.first { $0.hasSuffix(".flush") } ?? ((Bundle.main.bundleIdentifier ?? "adhx") + ".flush")
     }()
 
     static func schedule() {

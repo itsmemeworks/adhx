@@ -24,6 +24,8 @@ struct LibraryHome: View {
     @StateObject private var channels = ChannelsModel()
     @StateObject private var live = LiveModel()
     @StateObject private var doing = DoingModel()
+    /// A tapped "… is live" notification.
+    @ObservedObject private var alerts = AlertCenter.shared
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -137,6 +139,14 @@ struct LibraryHome: View {
                 await library.reload()
             }
         }
+        .onChange(of: alerts.tuneIn, initial: true) { _, moment in
+            guard let moment else { return }
+            alerts.tuneIn = nil
+            opened = nil
+            why = nil
+            live.tuneIn = moment
+            switchTab(.live)
+        }
         .onChange(of: model.openPost, initial: true) { _, ref in
             guard let ref else { return }
             model.openPost = nil
@@ -157,7 +167,8 @@ struct LibraryHome: View {
                     Task { await feed.setMode(mode) }
                 }, filter: { filtering = true },
                    weights: feed.weights, weighing: feed.weighing, weightError: feed.weightError,
-                   setWeight: { username, weight in Task { await feed.setWeight(username, weight) } })
+                   setWeight: { username, weight in Task { await feed.setWeight(username, weight) } },
+                   openPost: { ref in model.openPost = ref })
                 .task { await feed.loadWeights() }
             }
         }

@@ -17,6 +17,15 @@ final class SendModel: ObservableObject {
     @Published private(set) var failed = false
     private var task: Task<Void, Never>?
 
+    /// "Or straight to your people": nil until it loads, or when this ADHX
+    /// can't send (an older server, or a post you can't see).
+    @Published private(set) var targets: SendTargets?
+    /// People a send is on its way to.
+    @Published private(set) var sendingTo: Set<String> = []
+    /// Words for a send that didn't go.
+    @Published private(set) var sendProblem: String?
+    var onBadKey: () -> Void = {}
+
     init(post: PhonePost, server: URL) {
         self.post = post
         self.server = server
@@ -55,6 +64,53 @@ final class SendModel: ObservableObject {
     func stop() {
         task?.cancel()
         task = nil
+    }
+
+    // MARK: Straight to your people
+
+    func loadTargets() async {
+        guard targets == nil, let client = Store.client() else { return }
+        do {
+            targets = try await client.sendTargets(post.ref)
+        } catch APIError.badKey {
+            onBadKey()
+        } catch {
+            // 404: an older ADHX, or no save of it you can see. Leave the row out.
+            targets = nil
+        }
+    }
+
+    /// Sends the post to one person; their face gets a tick when it lands.
+    func send(to person: SendPerson) async {
+        guard let client = Store.client(), let current = targets, current.sendable,
+              !person.has, !person.sent, !sendingTo.contains(person.username) else { return }
+        sendingTo.insert(person.username)
+        sendProblem = nil
+        defer { sendingTo.remove(person.username) }
+        do {
+            let result = try await client.sendPost(post.ref, to: [person.username])
+            let skipped = result.skipped.first { $0.username == person.username }
+            update(person.username) { someone in
+                if result.sent.contains(person.username) || skipped?.reason == "sent" { someone.sent = true }
+                if skipped?.reason == "has" { someone.has = true }
+            }
+            if skipped?.reason == "unknown" { sendProblem = "\(person.displayName) isn’t on your ADHX any more." }
+        } catch APIError.badKey {
+            onBadKey()
+        } catch APIError.server(status: 429, code: _, message: _) {
+            sendProblem = "That’s a lot of sending. Try again in a minute."
+        } catch let error as APIError {
+            sendProblem = error.message
+        } catch {
+            sendProblem = APIError.offline.message
+        }
+    }
+
+    private func update(_ username: String, _ change: (inout SendPerson) -> Void) {
+        guard let current = targets else { return }
+        var people = current.people
+        if let index = people.firstIndex(where: { $0.username == username }) { change(&people[index]) }
+        targets = SendTargets(sendable: current.sendable, people: people)
     }
 }
 
@@ -96,11 +152,15 @@ struct SendSheet: View {
                 Spacer(minLength: 4)
                 target("More", icon: "ellipsis") { open(.more) }
             }
+            if let targets = model.targets, !targets.sendable || !targets.people.isEmpty {
+                yourPeople(targets)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 20)
         .onAppear { model.start() }
+        .task { await model.loadTargets() }
         .onDisappear {
             model.stop()
             if composing == nil { model.export?.cleanup() }
@@ -211,6 +271,102 @@ struct SendSheet: View {
         let mb = Double(bytes) / 1_000_000
         if mb < 1 { return "\(max(1, Int((Double(bytes) / 1000).rounded()))) KB" }
         return String(format: mb < 10 ? "%.1f MB" : "%.0f MB", mb)
+    }
+
+    // MARK: Straight to your people
+
+    /// "OR STRAIGHT TO YOUR PEOPLE": a face each; tap one to send it to
+    /// them. Someone who has it already is dimmed, and said so.
+    private func yourPeople(_ targets: SendTargets) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("OR STRAIGHT TO YOUR PEOPLE")
+                .font(Theme.sans(12, .heavy))
+                .tracking(0.72)
+                .foregroundStyle(Theme.faint)
+                .accessibilityAddTraits(.isHeader)
+            if !targets.sendable {
+                Text("Just for you. Share it first to send it.")
+                    .font(Theme.sans(14))
+                    .foregroundStyle(Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                // The boards' row: the note beside the faces while they fit, else under them.
+                let note = targets.alreadyLine
+                if targets.people.count <= 4, (note?.count ?? 0) <= 22 {
+                    HStack(alignment: .center, spacing: 18) {
+                        ForEach(targets.people) { personButton($0) }
+                        if let note { alreadyNote(note).frame(maxWidth: .infinity, alignment: .trailing) }
+                    }
+                } else {
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .top, spacing: 18) {
+                            ForEach(targets.people) { personButton($0) }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                    .scrollIndicators(.hidden)
+                    .padding(.horizontal, -16)
+                    if let note { alreadyNote(note) }
+                }
+                if let problem = model.sendProblem {
+                    Text(problem)
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private func alreadyNote(_ text: String) -> some View {
+        Text(text)
+            .font(Theme.sans(12))
+            .lineSpacing(2)
+            .foregroundStyle(Theme.faint)
+            .multilineTextAlignment(.trailing)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func personButton(_ person: SendPerson) -> some View {
+        let busy = model.sendingTo.contains(person.username)
+        return Button {
+            Task { await model.send(to: person) }
+        } label: {
+            VStack(spacing: 6) {
+                Face(saver: person.asSaver, server: model.server, size: 52, ring: .clear)
+                    .overlay(alignment: .bottomTrailing) {
+                        if person.sent {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .heavy))
+                                .foregroundStyle(.black)
+                                .frame(width: 22, height: 22)
+                                .background(Circle().fill(Theme.accent))
+                                .overlay(Circle().strokeBorder(Theme.surface, lineWidth: 2))
+                                .offset(x: 4, y: 4)
+                                .transition(.scale.combined(with: .opacity))
+                        } else if busy {
+                            RingSpinner(size: 18, lineWidth: 2)
+                                .padding(2)
+                                .background(Circle().fill(Theme.surface))
+                                .offset(x: 4, y: 4)
+                        }
+                    }
+                Text(person.displayName)
+                    .font(Theme.sans(12, .semibold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+            }
+            .frame(minWidth: 52)
+            .opacity(person.has ? 0.4 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: person.sent)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(person.has || person.sent || busy)
+        .accessibilityLabel(person.displayName)
+        .accessibilityValue(person.has ? "Already has it" : person.sent ? "Sent" : busy ? "Sending" : "")
+        .accessibilityHint(person.has || person.sent ? "" : "Sends it to \(person.displayName)")
     }
 
     // MARK: Where it goes

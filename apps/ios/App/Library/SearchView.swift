@@ -215,28 +215,174 @@ struct PlayerScreen: View {
     let server: URL
     let start: String
     var onShow: (Int) -> Void = { _ in }
+    /// A From everyone channel: its name and "Keep this channel" on top.
+    var group: GroupChannelRef? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
 
     var body: some View {
         PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start, onShow: onShow)
-            .overlay(alignment: .topLeading) {
+            .overlay(alignment: .top) {
                 if !clean && !scrubbing {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Theme.ink)
-                        .frame(width: 44, height: 44)
-                        .frosted(Circle(), dim: 0.45)
-                }
-                .accessibilityLabel("Close")
-                .padding(.leading, 16)
-                .padding(.top, 4)
+                    HStack(spacing: 10) {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(Theme.ink)
+                                .frame(width: 44, height: 44)
+                                .frosted(Circle(), dim: 0.45)
+                        }
+                        .accessibilityLabel("Close")
+                        if let group {
+                            KeepChannelBar(group: group, server: server)
+                        } else {
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
                 }
             }
+    }
+}
+
+/// Keeping a From everyone channel as one of yours
+/// (`POST /api/app/channels/group/{slug}/keep`).
+@MainActor
+final class KeepChannelModel: ObservableObject {
+    let slug: String
+    @Published private(set) var kept: KeptChannel?
+    @Published private(set) var busy = false
+    @Published var problem: String?
+
+    init(group: GroupChannelRef) {
+        slug = group.slug
+        kept = group.kept
+    }
+
+    func keep() async {
+        guard kept == nil, !busy, let client = Store.client() else { return }
+        busy = true
+        problem = nil
+        defer { busy = false }
+        do {
+            kept = try await client.keepGroupChannel(slug).kept
+        } catch let error as APIError where error.isMissing {
+            problem = "Your ADHX needs an update before it can keep channels."
+        } catch let error as APIError {
+            problem = error.message
+        } catch {
+            problem = APIError.offline.message
+        }
+    }
+
+    /// Your kept channel's posts, to play.
+    func open() async -> [PhonePost]? {
+        guard let kept, let client = Store.client() else { return nil }
+        busy = true
+        defer { busy = false }
+        do {
+            let posts = try await client.channel(.mine, slug: kept.tag)
+            if posts.isEmpty { problem = "Nothing in it just now." }
+            return posts.isEmpty ? nil : posts
+        } catch let error as APIError {
+            problem = error.message
+        } catch {
+            problem = APIError.offline.message
+        }
+        return nil
+    }
+}
+
+/// "Channel · Food you'll cook one day" and Keep this channel, which turns
+/// into "Kept · Open" (j6-2).
+private struct KeepChannelBar: View {
+    let group: GroupChannelRef
+    let server: URL
+    @StateObject private var model: KeepChannelModel
+    @State private var playing: PlayQueue?
+
+    init(group: GroupChannelRef, server: URL) {
+        self.group = group
+        self.server = server
+        _model = StateObject(wrappedValue: KeepChannelModel(group: group))
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(group.name)
+                    .font(Theme.sans(13, .heavy))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                    .padding(.horizontal, 12)
+                    .frame(height: 34)
+                    .frosted(Capsule(), dim: 0.45)
+                    .accessibilityLabel("Channel: \(group.name)")
+                Spacer(minLength: 0)
+                button
+            }
+            if let problem = model.problem {
+                Text(problem)
+                    .font(Theme.sans(12, .semibold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Theme.cream))
+                    .onTapGesture { model.problem = nil }
+            }
+        }
+        .fullScreenCover(item: $playing) { queue in
+            PlayerScreen(posts: queue.posts, server: server, start: queue.posts.first?.key ?? "")
+        }
+    }
+
+    @ViewBuilder
+    private var button: some View {
+        if model.kept != nil {
+            Button {
+                Task { if let posts = await model.open() { playing = PlayQueue(posts: posts) } }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark").font(.system(size: 13, weight: .heavy))
+                    Text("Kept · Open")
+                }
+                .font(Theme.sans(14, .heavy))
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 14)
+                .frame(height: 40)
+                .frosted(Capsule(), dim: 0.45)
+                .overlay(Capsule().strokeBorder(.white.opacity(0.14)))
+                .opacity(model.busy ? 0.6 : 1)
+            }
+            .buttonStyle(.plain)
+            .disabled(model.busy)
+            .accessibilityLabel("Kept. Open your channel")
+        } else {
+            Button {
+                Task { await model.keep() }
+            } label: {
+                HStack(spacing: 6) {
+                    if model.busy {
+                        ProgressView().controlSize(.mini).tint(.black)
+                    } else {
+                        Image(systemName: "plus").font(.system(size: 13, weight: .heavy))
+                    }
+                    Text("Keep this channel")
+                }
+                .font(Theme.sans(14, .heavy))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 14)
+                .frame(height: 40)
+                .background(Capsule().fill(Theme.accent))
+            }
+            .buttonStyle(.plain)
+            .disabled(model.busy)
+            .accessibilityHint("Adds its posts to a channel of your own")
+        }
     }
 }
 

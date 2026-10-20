@@ -29,6 +29,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>$(ADHX_BUNDLE_PREFIX).flush</string>
+		<string>$(ADHX_BUNDLE_PREFIX).alerts</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

@@ -385,22 +385,26 @@ struct FriendNote: Decodable, Hashable {
 }
 
 /// A channel's play queue (`/api/app/channels/{kind}/{slug}`): its posts, each
-/// with `isNew` on group and friend channels, and a friend's `note`.
+/// with `isNew` on group and friend channels, a friend's `note`, and on a
+/// group channel the channel of yours you kept it into (`kept`).
 struct ChannelQueue: Decodable {
     let items: [PhonePost]
     let note: FriendNote?
+    let kept: KeptChannel?
 
-    private enum Keys: String, CodingKey { case items, note }
+    private enum Keys: String, CodingKey { case items, note, kept }
 
-    init(items: [PhonePost], note: FriendNote? = nil) {
+    init(items: [PhonePost], note: FriendNote? = nil, kept: KeptChannel? = nil) {
         self.items = items
         self.note = note
+        self.kept = kept
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
         items = c.posts(.items)
         note = c.loose(FriendNote.self, .note)
+        kept = c.loose(KeptChannel.self, .kept)
     }
 
     /// The posts you haven't saved or seen, in queue order.
@@ -502,7 +506,8 @@ struct LiveMoment: Decodable, Hashable, Identifiable {
 }
 
 /// A group still forming: a few saves close together, not live yet
-/// (`forming` in `/api/app/live`). It has no slug, so nothing to tune in to.
+/// (`forming` in `/api/app/live`). It has no slug, so nothing to tune in to,
+/// but you can ask to be told when it goes live (`alert`).
 struct FormingMoment: Decodable, Hashable, Identifiable {
     let id: String
     let name: String
@@ -512,12 +517,16 @@ struct FormingMoment: Decodable, Hashable, Identifiable {
     /// "people" or "saves".
     let unit: String
     let covers: [String]
+    /// The members saving into it, newest first (at most 4; `people` on
+    /// newer servers, `savers` before).
     let savers: [Saver]
+    /// You asked to be told when it goes live.
+    var alert: Bool
 
-    private enum Keys: String, CodingKey { case id, title, name, hue, have, need, unit, covers, savers }
+    private enum Keys: String, CodingKey { case id, title, name, hue, have, need, unit, covers, savers, people, alert }
 
     init(id: String, name: String, hue: String? = nil, have: Int, need: Int, unit: String = "saves",
-         covers: [String] = [], savers: [Saver] = []) {
+         covers: [String] = [], savers: [Saver] = [], alert: Bool = false) {
         self.id = id
         self.name = name
         self.hue = hue
@@ -526,6 +535,7 @@ struct FormingMoment: Decodable, Hashable, Identifiable {
         self.unit = unit
         self.covers = covers
         self.savers = savers
+        self.alert = alert
     }
 
     init(from decoder: Decoder) throws {
@@ -537,7 +547,9 @@ struct FormingMoment: Decodable, Hashable, Identifiable {
         need = c.looseInt(.need) ?? 0
         unit = c.loose(String.self, .unit) ?? "saves"
         covers = c.covers(.covers)
-        savers = c.savers(.savers)
+        let people = c.savers(.people)
+        savers = people.isEmpty ? c.savers(.savers) : people
+        alert = c.loose(Bool.self, .alert) ?? false
     }
 
     /// "1 more save to go live", "2 more people to go live".
@@ -762,5 +774,247 @@ extension ADHXClient {
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove(charactersIn: "/?#%")
         return text.addingPercentEncoding(withAllowedCharacters: allowed) ?? text
+    }
+}
+
+// MARK: - Straight to your people (board j4-4)
+
+/// One of your people in the send sheet's "Or straight to your people" row.
+/// `has`: they already have a save of it they can see. `sent`: you've sent it
+/// to them already.
+struct SendPerson: Decodable, Hashable, Identifiable {
+    let username: String
+    let name: String?
+    let avatarUrl: String?
+    var has: Bool
+    var sent: Bool
+
+    var id: String { username }
+    var asSaver: Saver { Saver(username: username, name: name, avatarUrl: avatarUrl) }
+    var displayName: String { asSaver.displayName }
+
+    private enum Keys: String, CodingKey { case username, name, avatarUrl, has, sent }
+
+    init(username: String, name: String? = nil, avatarUrl: String? = nil, has: Bool = false, sent: Bool = false) {
+        self.username = username
+        self.name = name
+        self.avatarUrl = avatarUrl
+        self.has = has
+        self.sent = sent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        username = try c.decode(String.self, forKey: .username)
+        name = c.loose(String.self, .name)
+        avatarUrl = c.loose(String.self, .avatarUrl)
+        has = c.loose(Bool.self, .has) ?? false
+        sent = c.loose(Bool.self, .sent) ?? false
+    }
+}
+
+/// `GET /api/app/send`: who you can send a post to. Not `sendable` when the
+/// only save you can see is your own private one ("Just for you").
+struct SendTargets: Decodable {
+    let sendable: Bool
+    let people: [SendPerson]
+
+    private enum Keys: String, CodingKey { case sendable, people }
+
+    init(sendable: Bool, people: [SendPerson]) {
+        self.sendable = sendable
+        self.people = people
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        people = c.loose(Lossy<SendPerson>.self, .people)?.items ?? []
+        sendable = c.loose(Bool.self, .sendable) ?? true
+    }
+
+    /// "Jo already has it.", "Jo and Ben already have it.", nil when nobody does.
+    var alreadyLine: String? {
+        let names = people.filter(\.has).map(\.displayName)
+        guard !names.isEmpty else { return nil }
+        return SendTargets.names(names) + (names.count == 1 ? " already has it." : " already have it.")
+    }
+
+    /// "Ana", "Ana and Ben", "Ana, Ben and Mum", "Ana, Ben, Mum and 2 others".
+    static func names(_ names: [String], upTo limit: Int = 3) -> String {
+        guard names.count > 1 else { return names.first ?? "" }
+        if names.count <= limit { return names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1] }
+        let rest = names.count - limit
+        return names.prefix(limit).joined(separator: ", ") + " and \(rest) other" + (rest == 1 ? "" : "s")
+    }
+}
+
+/// `POST /api/app/send`: who got it, and who didn't (`has`, `sent`, `unknown`).
+struct SendResult: Decodable {
+    struct Skipped: Decodable, Hashable {
+        let username: String
+        let reason: String
+    }
+
+    let sent: [String]
+    let skipped: [Skipped]
+
+    private enum Keys: String, CodingKey { case sent, skipped }
+
+    init(sent: [String], skipped: [Skipped] = []) {
+        self.sent = sent
+        self.skipped = skipped
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        sent = c.loose([String].self, .sent) ?? []
+        skipped = c.loose(Lossy<Skipped>.self, .skipped)?.items ?? []
+    }
+}
+
+// MARK: - "Tell me when it's live" (board j7-3)
+
+/// A forming group went live: one alert per subscriber (`GET /api/app/alerts`).
+struct LiveAlert: Decodable, Hashable, Identifiable {
+    let id: String
+    let slug: String
+    let title: String
+    let at: String?
+
+    private enum Keys: String, CodingKey { case id, slug, title, name, at }
+
+    init(id: String, slug: String, title: String, at: String? = nil) {
+        self.id = id
+        self.slug = slug
+        self.title = title
+        self.at = at
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        guard let id = c.loose(String.self, .id) ?? c.looseInt(.id).map(String.init),
+              let slug = c.loose(String.self, .slug), !slug.isEmpty else {
+            throw DecodingError.dataCorruptedError(forKey: .slug, in: c, debugDescription: "No moment")
+        }
+        self.id = id
+        self.slug = slug
+        title = c.loose(String.self, .title) ?? c.loose(String.self, .name) ?? "A moment"
+        at = c.loose(String.self, .at)
+    }
+
+    /// "Kitchen synths is live".
+    var headline: String { "\(title) is live" }
+}
+
+struct LiveAlerts: Decodable {
+    let alerts: [LiveAlert]
+    private enum Keys: String, CodingKey { case alerts }
+    init(alerts: [LiveAlert]) { self.alerts = alerts }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        alerts = c.loose(Lossy<LiveAlert>.self, .alerts)?.items ?? []
+    }
+}
+
+/// The alerts this phone has already shown, so one that fails to be marked
+/// seen (offline, or the background task cut short) isn't shown twice.
+struct AlertLedger: Equatable {
+    static let limit = 100
+    private(set) var told: [String]
+
+    init(told: [String] = []) { self.told = Array(told.suffix(Self.limit)) }
+
+    func untold(_ alerts: [LiveAlert]) -> [LiveAlert] {
+        let known = Set(told)
+        return alerts.filter { !known.contains($0.id) }
+    }
+
+    mutating func remember(_ alerts: [LiveAlert]) {
+        let known = Set(told)
+        told.append(contentsOf: alerts.map(\.id).filter { !known.contains($0) })
+        told = Array(told.suffix(Self.limit))
+    }
+}
+
+private struct AlertAnswer: Decodable {
+    let alert: Bool
+    private enum Keys: String, CodingKey { case alert }
+    init(from decoder: Decoder) throws {
+        alert = (try? decoder.container(keyedBy: Keys.self).decode(Bool.self, forKey: .alert)) ?? false
+    }
+}
+
+// MARK: - Keep this channel (board j6-2)
+
+/// Your channel a group channel was kept into: `{ tag, url }`.
+struct KeptChannel: Decodable, Hashable {
+    let tag: String
+    let url: String?
+
+    private enum Keys: String, CodingKey { case tag, url }
+
+    init(tag: String, url: String? = nil) {
+        self.tag = tag
+        self.url = url
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        guard let tag = c.loose(String.self, .tag), !tag.isEmpty else {
+            throw DecodingError.dataCorruptedError(forKey: .tag, in: c, debugDescription: "No tag")
+        }
+        self.tag = tag
+        url = c.loose(String.self, .url)
+    }
+}
+
+/// `POST /api/app/channels/group/{slug}/keep`: the channel and how many posts went in.
+struct KeepAnswer: Decodable {
+    let kept: KeptChannel
+    let added: Int?
+
+    private enum Keys: String, CodingKey { case added }
+
+    init(from decoder: Decoder) throws {
+        kept = try KeptChannel(from: decoder)
+        added = try decoder.container(keyedBy: Keys.self).looseInt(.added)
+    }
+}
+
+extension ADHXClient {
+    /// Who you can send a post to (`GET /api/app/send`).
+    func sendTargets(_ post: PostRef) async throws -> SendTargets {
+        try await send("GET", "/api/app/send", query: [URLQueryItem(name: "platform", value: post.platform),
+                                                        URLQueryItem(name: "id", value: post.id)])
+    }
+
+    /// Sends a post straight to some of your people (`POST /api/app/send`).
+    func sendPost(_ post: PostRef, to people: [String], note: String? = nil) async throws -> SendResult {
+        var body: [String: Any] = ["platform": post.platform, "id": post.id, "to": people]
+        if let note = Saver.clean(note) { body["note"] = note }
+        return try await send("POST", "/api/app/send", body: body)
+    }
+
+    /// Asks (or stops asking) to be told when a forming group goes live; what's set after.
+    func setFormingAlert(_ id: String, on: Bool) async throws -> Bool {
+        let answer: AlertAnswer = try await send(on ? "PUT" : "DELETE",
+                                                 "/api/app/live/forming/\(Self.pathPart(id))/alert")
+        return answer.alert
+    }
+
+    /// Moments you asked about that went live and you haven't been told about.
+    func liveAlerts() async throws -> [LiveAlert] {
+        let page: LiveAlerts = try await send("GET", "/api/app/alerts")
+        return page.alerts
+    }
+
+    func markAlertsSeen(_ ids: [String]) async throws {
+        guard !ids.isEmpty else { return }
+        let _: Nothing = try await send("POST", "/api/app/alerts/seen", body: ["ids": Array(ids.prefix(50))])
+    }
+
+    /// Keeps a group channel as one of yours (`POST /api/app/channels/group/{slug}/keep`).
+    func keepGroupChannel(_ slug: String) async throws -> KeepAnswer {
+        try await send("POST", "/api/app/channels/group/\(Self.pathPart(slug))/keep")
     }
 }

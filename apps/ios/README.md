@@ -256,7 +256,16 @@ server sends it, which it does for members only.
 - The why, filter and On their way sheets are the boards' own bottom sheets
   (`App/BoardSheet.swift`); Share opens the send sheet
   (`App/Library/SendSheet.swift`), which downloads the kept file and hands it
-  to Messages, Mail, Files, Photos or the share sheet.
+  to Messages, Mail, Files, Photos or the share sheet, or sends the post
+  straight to one of your people (it shows in their New as "Pete sent you
+  this").
+- Forming groups on Live have a bell, "Tell me when it's live". When one goes
+  live you get a local notification (`App/Feed/LiveAlerts.swift`), from a
+  poll while the app is open and a background refresh task
+  (`<prefix>.alerts`, beside `<prefix>.flush` in `Config/App-Info.plist`);
+  tapping it tunes in. The app asks to show notifications on the first bell.
+- A From everyone channel can be kept as one of yours (Keep this channel,
+  then Kept · Open).
 - On an ADHX without these endpoints yet (404), New plays your saves as
   before, and Channels and Live say the server needs an update.
 

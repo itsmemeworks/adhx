@@ -41,12 +41,12 @@ final class ChannelsModel: ObservableObject {
     }
 
     /// A channel's queue to play, or nil (and a message) when it won't come.
-    func queue(_ kind: ChannelKind, slug: String) async -> Result<[PhonePost], APIError> {
+    func queue(_ kind: ChannelKind, slug: String) async -> Result<ChannelQueue, APIError> {
         guard let client = Store.client() else { return .failure(.offline) }
         opening = "\(kind.rawValue):\(slug)"
         defer { opening = nil }
         do {
-            return .success(try await client.channel(kind, slug: slug))
+            return .success(try await client.channelQueue(kind, slug: slug))
         } catch APIError.badKey {
             onBadKey()
             return .failure(.offline)
@@ -64,6 +64,16 @@ struct PlayQueue: Identifiable {
     let id = UUID()
     let posts: [PhonePost]
     var start: String? = nil
+    /// A group channel, which you can keep as one of yours.
+    var group: GroupChannelRef? = nil
+}
+
+/// A From everyone channel being played: its name, and the channel of yours
+/// it was kept into (`kept`), if it was.
+struct GroupChannelRef: Hashable {
+    let slug: String
+    let name: String
+    var kept: KeptChannel?
 }
 
 struct ChannelsView: View {
@@ -102,7 +112,8 @@ struct ChannelsView: View {
                 }
         )
         .fullScreenCover(item: $playing) { queue in
-            PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "")
+            PlayerScreen(posts: queue.posts, server: server, start: queue.start ?? queue.posts.first?.key ?? "",
+                         group: queue.group)
         }
         .navigationDestination(isPresented: $seeAll) {
             PeopleListView(settings: people, server: server, invite: invite)
@@ -154,7 +165,7 @@ struct ChannelsView: View {
             ScrollView(.horizontal) {
                 LazyHStack(alignment: .top, spacing: 12) {
                     ForEach(model.index.group) { channel in
-                        Button { play(.group, channel.slug) } label: {
+                        Button { play(.group, channel.slug, name: channel.name) } label: {
                             GroupTile(channel: channel, server: server,
                                       opening: model.opening == "group:\(channel.slug)")
                         }
@@ -234,13 +245,14 @@ struct ChannelsView: View {
         }
     }
 
-    private func play(_ kind: ChannelKind, _ slug: String) {
+    private func play(_ kind: ChannelKind, _ slug: String, name: String? = nil) {
         guard model.opening == nil else { return }
         problem = nil
         Task {
             switch await model.queue(kind, slug: slug) {
-            case .success(let posts) where !posts.isEmpty:
-                playing = PlayQueue(posts: posts)
+            case .success(let queue) where !queue.items.isEmpty:
+                let group = kind == .group ? GroupChannelRef(slug: slug, name: name ?? slug, kept: queue.kept) : nil
+                playing = PlayQueue(posts: queue.items, group: group)
             case .success:
                 problem = "Nothing in that one right now."
             case .failure(let error):

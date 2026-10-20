@@ -19,6 +19,16 @@ swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift \
 /tmp/adhx-friends-parity-tests
 ```
 
+The board-features suite (send straight to your people, the sent reason,
+forming faces and alerts, the like thumbnail, keeping a group channel) runs
+the same way:
+
+```sh
+swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift \
+  apps/ios/Tests/BoardFeaturesTests.swift -o /tmp/adhx-board-features-tests
+/tmp/adhx-board-features-tests
+```
+
 The live suite checks compact saver/privacy updates, explicit removals, preserving the playing
 post and older cached posts, the 200-post cache bound, compatible decoding, and
 40-code-point message clipping without splitting emoji.
