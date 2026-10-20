@@ -82,10 +82,18 @@ object WhyReasonsSerializer : KSerializer<List<WhyReason>> {
         is JsonPrimitive -> listOfNotNull(element.text()?.let { WhyReason(it) })
         is JsonArray -> element.flatMap { reasons(it) }
         is JsonObject -> element.firstText("text", "label", "reason", "line")
-            ?.let { listOf(WhyReason(it, element["kind"]?.text(), element["username"]?.text())) }
+            ?.let { listOf(WhyReason(it, element["kind"]?.text(), element["username"]?.text(), reasonPost(element["post"]))) }
             ?: (element["reasons"] ?: element["lines"])?.let { reasons(it) }
             ?: emptyList()
     }
+}
+
+/** A reason's `post` (`{ platform, id, posterUrl }`), or null when it's missing or can't be opened. */
+private fun reasonPost(element: JsonElement?): ReasonPost? {
+    val obj = element as? JsonObject ?: return null
+    val platform = obj.firstText("platform") ?: return null
+    val id = obj.firstText("id") ?: (obj["id"] as? JsonPrimitive)?.contentOrNull ?: return null
+    return ReasonPost(platform, id, obj.firstText("posterUrl", "thumbnailUrl", "poster"))
 }
 
 /**
@@ -254,6 +262,34 @@ object LenientDoingItemsSerializer : LenientListSerializer<DoingItem>(DoingItem.
 
 object LenientFormingSerializer : LenientListSerializer<FormingMoment>(FormingMoment.serializer()) {
     override fun keep(item: FormingMoment) = item.title.isNotBlank()
+}
+
+object LenientSaversSerializer : LenientListSerializer<Saver>(Saver.serializer()) {
+    override fun keep(item: Saver) = item.username.isNotBlank()
+}
+
+object LenientSendPeopleSerializer : LenientListSerializer<SendPerson>(SendPerson.serializer()) {
+    override fun keep(item: SendPerson) = item.username.isNotBlank()
+}
+
+object LenientAlertsSerializer : LenientListSerializer<LiveAlert>(LiveAlert.serializer()) {
+    override fun keep(item: LiveAlert) = item.id.isNotBlank() && item.slug.isNotBlank()
+}
+
+/** A kept channel (`{ tag, url }`), or null when it's missing or has no tag. */
+object KeptChannelSerializer : KSerializer<KeptChannel?> {
+    override val descriptor: SerialDescriptor = KeptChannel.serializer().nullable.descriptor
+
+    override fun serialize(encoder: Encoder, value: KeptChannel?) {
+        if (value != null) KeptChannel.serializer().serialize(encoder, value) else encoder.encodeNull()
+    }
+
+    override fun deserialize(decoder: Decoder): KeptChannel? {
+        val json = decoder as? JsonDecoder ?: return null
+        val element = json.decodeJsonElement() as? JsonObject ?: return null
+        val tag = element.firstText("tag", "slug") ?: return null
+        return KeptChannel(tag, element.firstText("url"))
+    }
 }
 
 /** A friend's note, or null when it's missing, empty or not an object with `text`. */

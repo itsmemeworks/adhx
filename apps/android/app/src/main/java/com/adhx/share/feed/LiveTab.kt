@@ -60,7 +60,16 @@ import coil3.compose.AsyncImage
 import com.adhx.share.R
 import com.adhx.share.library.Route
 import com.adhx.share.net.AdhxApi
+import com.adhx.share.net.FormingMoment
 import com.adhx.share.net.LiveMoment
+import com.adhx.share.alerts.LiveAlerts
+import android.Manifest
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Faces
@@ -89,6 +98,17 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
         }
     }
     val tuneIn: (LiveMoment) -> Unit = { actions.open(Route.TunedIn(it.slug)) }
+    val context = LocalContext.current
+    // Asked once, on the first bell tap; the bell works either way (the app says it in the app when it can't notify).
+    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val ring: (FormingMoment) -> Unit = { forming ->
+        val on = !forming.alert
+        if (on && LiveAlerts.shouldAsk(context)) {
+            LiveAlerts.asked(context)
+            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        feed.setAlert(forming.id, on) { said -> Toast.makeText(context, said, Toast.LENGTH_SHORT).show() }
+    }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 32.dp)) {
         item(key = "header") { header() }
@@ -120,7 +140,7 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
             if (i == 0) BigMoment(moment, server) { tuneIn(moment) } else SmallMoment(moment, server) { tuneIn(moment) }
         }
         itemsIndexed(ui.forming, key = { _, f -> "forming:" + f.id.ifBlank { f.title } }) { _, forming ->
-            FormingRow(forming, server)
+            FormingRow(forming, server, busy = feed.alertBusy == forming.id, onBell = { ring(forming) }.takeIf { forming.id.isNotBlank() })
         }
         item(key = "bottom") { Spacer(Modifier.navigationBarsPadding()) }
     }
@@ -317,11 +337,12 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
 }
 
 /**
- * A group on its way to being a moment: its cover, a dashed edge, "Forming"
- * and "1 more save to go live". Not playable yet, so not a button.
+ * A group on its way to being a moment: its cover, a dashed edge, "Forming",
+ * the people saving into it and "1 more save to go live", and a bell for
+ * "Tell me when it's live" (yellow while it's on). Not playable yet.
  */
 @Composable
-private fun FormingRow(forming: com.adhx.share.net.FormingMoment, server: String) {
+private fun FormingRow(forming: FormingMoment, server: String, busy: Boolean = false, onBell: (() -> Unit)? = null) {
     val url = forming.covers.firstOrNull()?.let { AdhxApi.resolve(server, it)?.toString() }
     val line = Copy.toGoLive(forming.left, forming.unit)
     val shape = RoundedCornerShape(22.dp)
@@ -332,26 +353,65 @@ private fun FormingRow(forming: com.adhx.share.net.FormingMoment, server: String
             .clip(shape)
             .background(AdhxColors.Surface)
             .drawBehind { dashedOutline(Color.White.copy(alpha = 0.2f), 22.dp.toPx()) }
-            .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
-            .semantics(mergeDescendants = true) { contentDescription = "${forming.title}, ${Copy.FORMING.lowercase()}, $line" },
+            .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(RoundedCornerShape(16.dp)))
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(
-                Copy.FORMING,
-                fontSize = 11.sp,
-                lineHeight = 13.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = AdhxColors.Accent,
-                modifier = Modifier
-                    .drawBehind { dashedOutline(AdhxColors.Accent.copy(alpha = 0.7f), size.height / 2) }
-                    .padding(horizontal = 9.dp, vertical = 4.dp),
-            )
-            Text(forming.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(line, fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(
+            Modifier
+                .weight(1f)
+                .semantics(mergeDescendants = true) {
+                    contentDescription = listOfNotNull(
+                        forming.title,
+                        Copy.FORMING.lowercase(),
+                        forming.people.takeIf { it.isNotEmpty() }?.let { Copy.names(it, max = 3) },
+                        line,
+                    ).joinToString(", ")
+                },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(RoundedCornerShape(16.dp)))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    Copy.FORMING,
+                    fontSize = 11.sp,
+                    lineHeight = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AdhxColors.Accent,
+                    modifier = Modifier
+                        .drawBehind { dashedOutline(AdhxColors.Accent.copy(alpha = 0.7f), size.height / 2) }
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                )
+                Text(forming.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (forming.people.isNotEmpty()) {
+                        Faces(forming.people, server, size = 20.dp, max = 4, ring = AdhxColors.Surface)
+                        Spacer(Modifier.width(7.dp))
+                    }
+                    Text(line, fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
+        if (onBell != null) {
+            Spacer(Modifier.width(12.dp))
+            BellButton(forming.title, on = forming.alert, busy = busy, onClick = onBell)
+        }
+    }
+}
+
+/** "Tell me when it's live": a 44dp round button; yellow with a dark bell while it's on. */
+@Composable
+private fun BellButton(title: String, on: Boolean, busy: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(if (on) AdhxColors.Accent else AdhxColors.Card)
+            .toggleable(value = on, enabled = !busy, role = Role.Switch, onValueChange = { onClick() })
+            .semantics { contentDescription = Copy.tellMeWhen(title) },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Glyphs.Bell, contentDescription = null, tint = if (on) Color.Black else AdhxColors.White, modifier = Modifier.size(18.dp))
     }
 }
 

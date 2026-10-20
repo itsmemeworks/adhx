@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.adhx.share.alerts.LiveAlerts
 import com.adhx.share.data.Connection
 import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.ShareState
@@ -54,6 +55,7 @@ import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.openInAdhx
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -110,7 +112,8 @@ class MainActivity : ComponentActivity() {
 
     /**
      * adhx://pair?server=…&code=… from the phone's camera or a browser, or
-     * adhx://post?platform=…&id=… (the share card's Open in ADHX).
+     * adhx://post?platform=…&id=… (the share card's Open in ADHX), or
+     * adhx://live?slug=… (a "now live" notification: Tune in).
      */
     private fun handleLink(intent: Intent?) {
         val data = intent?.data ?: return
@@ -120,6 +123,11 @@ class MainActivity : ComponentActivity() {
                 val platform = data.getQueryParameter("platform")?.takeIf { it.isNotBlank() } ?: return
                 val id = data.getQueryParameter("id")?.takeIf { it.isNotBlank() } ?: return
                 library.openPostLink(platform, id)
+            }
+            "live" -> {
+                val slug = data.getQueryParameter("slug")?.takeIf { it.isNotBlank() } ?: return
+                val route = Route.TunedIn(slug)
+                if (library.stack.lastOrNull() != route) library.open(route)
             }
             else -> vm.pairFromLink(data.toString())
         }
@@ -148,6 +156,16 @@ private fun MainApp(
     val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
     LaunchedEffect(resumed, connection?.key) {
         if (resumed && connection != null) vm.checkMe()
+    }
+    // "Tell me when it's live": while the app is open, look for groups that went live.
+    LaunchedEffect(resumed, connection?.key) {
+        val now = connection ?: return@LaunchedEffect
+        while (resumed && LiveAlerts.wanted(context)) {
+            LiveAlerts.check(context, now, foreground = true).forEach { alert ->
+                Toast.makeText(context, LiveAlerts.inAppLine(alert), Toast.LENGTH_LONG).show()
+            }
+            delay(LiveAlerts.FOREGROUND_MS)
+        }
     }
 
     val current = connection
@@ -227,6 +245,7 @@ private fun MainApp(
                 onPlay = { library.open(Route.ChannelPlayer(it)) },
                 onPlayNew = { library.open(Route.ChannelPlayer(0, onlyNew = true)) },
                 onOpenPost = { platform, id -> library.open(Route.PostLink(platform, id)) },
+                onOpenKept = { tag, title -> library.open(Route.Channel(ChannelKind.MINE, tag, title)) },
                 // A channel sits under Channels: the pages' header, and a tab goes home to it.
                 header = {
                     PageHeader(

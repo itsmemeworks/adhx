@@ -562,8 +562,28 @@ out so the server's own choice still applies.
   (or opens it on its own when it isn't in the grid).
 - Live: the moment line is "3 saves in 10 min · names" from `recentSaves` /
   `windowMinutes`, else the save count; smaller moments keep just the faces and
-  names. `forming` groups are dashed rows ("Forming", "1 more save to go
-  live"); they aren't playable, and have no bell (there's no route to be told).
+  names. `forming` groups are dashed rows ("Forming", the `people` faces, "1
+  more save to go live"); they aren't playable. Their bell is "Tell me when
+  it's live" (`PUT|DELETE /api/app/live/forming/{id}/alert`, yellow while on;
+  a 404 drops the row). The first bell tap asks for POST_NOTIFICATIONS on
+  Android 13+. From then on the app reads `GET /api/app/alerts` every minute
+  while it's open and every 15 minutes in WorkManager, shows each alert as a
+  notification on the "Live" channel ("Kitchen synths is live · Tune in",
+  opening Tune in through `adhx://live?slug=`), and marks them seen
+  (`POST /api/app/alerts/seen`). Without permission the open app says it in a
+  toast instead; the background check leaves them for later.
+- Send sheet: under Send with, "Or straight to your people" (`GET /api/app/send`):
+  a 52dp face per member; one who has it is dimmed with "Jo already has it.",
+  a tap sends it (`POST /api/app/send`) and leaves a tick. A private save
+  says "Just for you. Share it first to send it." A server without the route
+  shows no row. Text posts still go straight to the share sheet.
+- New: a `sent` headline is the why chip "Pete sent you this" with Pete's
+  face; Why this one gives it a send icon and his face. Unknown kinds show
+  their words. A `like` reason shows its `post.posterUrl` as a 38dp Gob-shaped
+  thumbnail on the right, which opens that post.
+- A group channel has **Keep this channel** (`POST
+  /api/app/channels/group/{slug}/keep`) beside Play all; with `kept` it reads
+  **Kept · Open** and opens your channel.
 
 ### iPhone notes
 

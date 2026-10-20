@@ -72,6 +72,8 @@ private val Tile = Color(0xFF3A352D)
  * ADHX kept comes down to the phone ("Sending the video itself", with how
  * far along), then goes to an app: Chat, Mail, Files, Save to phone, or
  * More (the share sheet). A choice made while it's downloading waits for it.
+ * Under them, "Or straight to your people" ([SendToPeople]) sends the post
+ * itself to a member.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,6 +177,7 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
                     Choice(Glyphs.More, "More", waiting = pending == Target.More) { pick(Target.More) }
                 }
             }
+            SendToPeople(post, server)
         }
     }
 }

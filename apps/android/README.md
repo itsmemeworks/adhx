@@ -193,6 +193,9 @@ behaviour and the endpoints are in
   Everyone · Friends only · Mine, and **Show less from Ben** / **Show more
   from Ana**: the last and first friend who saved it, through
   `GET/PUT /api/app/feed/weights`, cream while chosen, tap again for normal).
+  A post someone sent you leads with "Pete sent you this" and their face; a
+  "Like … you kept" reason shows that post of yours as a small thumbnail
+  (tap to open it).
   Tap New again for What's in your feed: videos and photos by default, text posts and articles if you want them
   (`types=` on the feed, kept with `/api/app/feed/types` and on the phone). Posts count as seen after 2 s on
   stage or when you swipe past, sent in batches to `POST /api/app/seen`. It
@@ -203,12 +206,19 @@ behaviour and the endpoints are in
   and plays from the one you tap. Posts you haven't saved or seen carry a yellow
   **New** (`isNew`), and **Play the 4 new** plays just those. A friend's channel
   shows their latest note as a paper tile ("Ana's note", in quotes, "on Charlie
-  bit my finger · 3 days ago") a few tiles in; it opens that post.
+  bit my finger · 3 days ago") a few tiles in; it opens that post. A From
+  everyone channel has **Keep this channel**
+  (`POST /api/app/channels/group/{slug}/keep`), which makes it one of yours
+  and turns into **Kept · Open**.
 - **Live** (`GET /api/app/live`): the moments your lot are saving into, with how busy
   each is lately ("3 saves in 10 min · Ana, Ben and Jo", from `recentSaves` and
   `windowMinutes`; the save count when there were none). Groups still forming
-  (`forming`) follow as dashed rows: "Forming", their name and "1 more save to go
-  live". Tune
+  (`forming`) follow as dashed rows: "Forming", their name, who's saving into
+  them and "1 more save to go live", with a bell for **Tell me when it's live**
+  (`PUT|DELETE /api/app/live/forming/{id}/alert`). The first bell asks to show
+  notifications (Android 13+); after that the app checks `GET /api/app/alerts`
+  every minute while open and every 15 minutes with WorkManager, and each one
+  arrives on the "Live" notification channel. Tapping it tunes in. Tune
   in plays one, asks `/api/app/live/{slug}` every 5 s for new posts, who's
   watching and reactions, and adds React (emoji or a few words,
   `POST /api/app/live/{slug}/react`). Reactions float up with the sender's face.
@@ -275,7 +285,9 @@ on Android 10 and up; a text post's words go to the clipboard) and **More**.
 Live adds **React** on top. Your ADHX is private, so Share sends what it kept
 rather than a link: a video, sound or photos open the send sheet, which fetches
 the file (`?download=1`, with how far along) and hands it to Chat, Mail, Files,
-Save to phone or the share sheet; a text post's words go straight to the share
+Save to phone or the share sheet, or sends the post straight to one of your
+people (a face each, from `GET /api/app/send`; a tap is `POST /api/app/send`
+and leaves a tick; someone who has it is dimmed); a text post's words go straight to the share
 sheet. A post whose copy is still being kept says so instead. Share downloads use separate private
 cache batches, so starting another share keeps earlier recipients' files usable.
 Failed batches are removed immediately; batches older than 24 hours are removed

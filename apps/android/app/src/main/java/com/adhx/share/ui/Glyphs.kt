@@ -42,6 +42,7 @@ object Glyphs {
     val Check = stroke("M5 12l5 5 9-10", width = 3f)
     val Again = stroke("M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4", width = 2.2f)
     val Smile = stroke(circle(12f, 12f, 9f) + "M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2" + circle(9f, 10f, 0.6f) + circle(15f, 10f, 0.6f))
+    val Send = stroke("M21 3L3 10.5l7 3 3 7zM21 3L10 13.5")
     val Bell = stroke("M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4")
     val Pencil = stroke("M4 20h4L19 9l-4-4L4 16z", width = 2.6f)
     val Chat = stroke("M4 5h16v11H9l-5 4z")

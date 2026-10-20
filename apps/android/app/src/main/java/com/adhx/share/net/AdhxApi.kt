@@ -275,6 +275,53 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
     }
 
+    /** Ask to be told when a forming group goes live ([on]), or stop. 404 `forming_gone` when it's gone. */
+    suspend fun setFormingAlert(id: String, on: Boolean): ApiResult<AlertState> {
+        val base = url("api/app/live/forming") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(id).addPathSegment("alert").build()
+        val request = if (on) authed(url).put("{}".toRequestBody(JSON)) else authed(url).delete()
+        return send(request.build()) { _, text ->
+            if (text.isBlank()) AlertState(on) else json.decodeFromString(AlertState.serializer(), text)
+        }
+    }
+
+    /** Groups you asked about that have gone live since (unseen, newest first). */
+    suspend fun alerts(): ApiResult<AlertsResponse> {
+        val url = url("api/app/alerts") ?: return badAddress
+        return send(authed(url).get().build(), AlertsResponse.serializer())
+    }
+
+    /** The alerts were shown: don't send them again. */
+    suspend fun alertsSeen(ids: List<String>): ApiResult<Unit> {
+        val url = url("api/app/alerts/seen") ?: return badAddress
+        val body = json.encodeToString(AlertsSeenRequest.serializer(), AlertsSeenRequest(ids.take(50)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
+    /** Who a post can go to straight from the send sheet. */
+    suspend fun sendTargets(platform: String, id: String): ApiResult<SendTargets> {
+        val base = url("api/app/send") ?: return badAddress
+        val url = base.newBuilder()
+            .addQueryParameter("platform", platform)
+            .addQueryParameter("id", id)
+            .build()
+        return send(authed(url).get().build(), SendTargets.serializer())
+    }
+
+    /** Send a post to members ([to] are usernames), with an optional note. */
+    suspend fun sendTo(platform: String, id: String, to: List<String>, note: String? = null): ApiResult<SendResult> {
+        val url = url("api/app/send") ?: return badAddress
+        val body = json.encodeToString(SendRequest.serializer(), SendRequest(platform, id, to, cleanNote(note)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), SendResult.serializer())
+    }
+
+    /** Keep a group channel as one of yours ("Keep this channel"). */
+    suspend fun keepGroupChannel(slug: String): ApiResult<KeepChannelResponse> {
+        val base = url("api/app/channels/group") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(slug).addPathSegment("keep").build()
+        return send(authed(url).post("{}".toRequestBody(JSON)).build(), KeepChannelResponse.serializer())
+    }
+
     /** Your people and, for an admin, who's waiting to be let in. */
     suspend fun people(): ApiResult<PeopleResponse> {
         val url = url("api/app/people") ?: return badAddress
