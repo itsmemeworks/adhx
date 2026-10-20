@@ -122,14 +122,15 @@ fun OutlineButton(
         enabled = enabled,
         modifier = modifier.defaultMinSize(minHeight = minHeight),
         shape = RoundedCornerShape(minHeight / 2),
-        border = BorderStroke(1.5.dp, if (enabled) color else AdhxColors.Hairline),
+        // The boards' outline is a 1dp hairline; a coloured button keeps an edge in its colour.
+        border = BorderStroke(1.dp, if (enabled && color != AdhxColors.Cream) color else AdhxColors.Hairline),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = color,
             disabledContentColor = AdhxColors.Faint,
         ),
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
-        Text(text, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+        Text(text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }
 

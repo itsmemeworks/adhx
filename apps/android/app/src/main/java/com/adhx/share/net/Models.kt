@@ -150,6 +150,8 @@ data class PhonePost(
      */
     @Serializable(with = WhyReasonsSerializer::class)
     val whyReasons: List<WhyReason> = emptyList(),
+    /** You haven't saved or seen it ("New" on a channel tile). Only on group and friend channels. */
+    val isNew: Boolean = false,
 ) {
     val key: String get() = "$platform:$id"
 
@@ -424,7 +426,32 @@ object ChannelKind {
 data class ChannelItemsResponse(
     @Serializable(with = LenientPostsSerializer::class)
     val items: List<PhonePost> = emptyList(),
+    /** A friend's channel: their latest note on a save you may see. Read loosely. */
+    @Serializable(with = FriendNoteSerializer::class)
+    val note: FriendNote? = null,
 )
+
+/** A friend's note for the channel's paper tile: "the original and still the best", on which post. */
+@Serializable
+data class FriendNote(
+    val text: String = "",
+    val platform: String = "",
+    val id: String = "",
+    val savedAt: String? = null,
+) {
+    val key: String get() = "$platform:$id"
+}
+
+/** `GET/PUT /api/app/feed/weights`: more (1) or less (-1) from a member; 0 or missing is normal. */
+@Serializable
+data class FeedWeights(
+    @Serializable(with = WeightsSerializer::class)
+    val weights: Map<String, Int> = emptyMap(),
+)
+
+/** `PUT /api/app/feed/weights`. */
+@Serializable
+data class FeedWeightRequest(val username: String, val weight: Int)
 
 /** A moment: something your lot are saving right now. The field set is tentative. */
 @Serializable
@@ -443,13 +470,37 @@ data class LiveMoment(
     @Serializable(with = CoversSerializer::class)
     val covers: List<String> = emptyList(),
     val live: Boolean = true,
+    /** Visible saves into it in the last [windowMinutes] ("3 saves in 10 min"); null on older servers. */
+    val recentSaves: Int? = null,
+    /** 5, 10, 15, 30 or 60: the span [recentSaves] covers. */
+    val windowMinutes: Int? = null,
 ) {
     val label: String get() = name?.takeIf { it.isNotBlank() } ?: title?.takeIf { it.isNotBlank() } ?: slug
 }
 
+/** A group on its way to being a moment ("Kitchen synths · 1 more save to go live"). */
+@Serializable
+data class FormingMoment(
+    val id: String = "",
+    val title: String = "",
+    val have: Int = 0,
+    val need: Int = 0,
+    /** people · saves: what [need] counts. */
+    val unit: String = "saves",
+    @Serializable(with = CoversSerializer::class)
+    val covers: List<String> = emptyList(),
+) {
+    /** How many more it takes, at least one. */
+    val left: Int get() = (need - have).coerceAtLeast(1)
+}
+
 /** `GET /api/app/live`. */
 @Serializable
-data class LiveResponse(val moments: List<LiveMoment> = emptyList())
+data class LiveResponse(
+    val moments: List<LiveMoment> = emptyList(),
+    @Serializable(with = LenientFormingSerializer::class)
+    val forming: List<FormingMoment> = emptyList(),
+)
 
 /** `GET /api/app/live/{slug}`. */
 @Serializable

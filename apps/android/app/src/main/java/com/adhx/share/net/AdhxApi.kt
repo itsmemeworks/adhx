@@ -213,6 +213,19 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).put(body.toRequestBody(JSON)).build()) { _, _ -> }
     }
 
+    /** "Show less / more from …": your choices so far. */
+    suspend fun feedWeights(): ApiResult<FeedWeights> {
+        val url = url("api/app/feed/weights") ?: return badAddress
+        return send(authed(url).get().build(), FeedWeights.serializer())
+    }
+
+    /** More (1), less (-1) or back to normal (0) from one member; answers with every choice. */
+    suspend fun setFeedWeight(username: String, weight: Int): ApiResult<FeedWeights> {
+        val url = url("api/app/feed/weights") ?: return badAddress
+        val body = json.encodeToString(FeedWeightRequest.serializer(), FeedWeightRequest(username, weight.coerceIn(-1, 1)))
+        return send(authed(url).put(body.toRequestBody(JSON)).build(), FeedWeights.serializer())
+    }
+
     /** Mark posts seen (204). At most [SeenBatcher.MAX_BATCH] at a time. */
     suspend fun seen(posts: List<PostRef>): ApiResult<Unit> {
         val url = url("api/app/seen") ?: return badAddress

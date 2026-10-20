@@ -13,6 +13,8 @@ import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.ChannelsResponse
 import com.adhx.share.net.FeedMode
+import com.adhx.share.net.FormingMoment
+import com.adhx.share.net.FriendNote
 import com.adhx.share.net.LiveMoment
 import com.adhx.share.net.LiveSaverUpdate
 import com.adhx.share.net.LiveReaction
@@ -82,12 +84,22 @@ data class ChannelUi(
     val size: Int = 0,
     val newCount: Int = 0,
     val items: List<PhonePost> = emptyList(),
+    /** A friend's latest note, for the paper tile. */
+    val note: FriendNote? = null,
     val loading: Boolean = false,
     val error: String? = null,
-)
+) {
+    /** The posts marked New, in the channel's order ("Play the 4 new"). */
+    val fresh: List<PhonePost> get() = items.filter { it.isNew }
+
+    /** How many you haven't seen: the marks once they're in, else the overview's count. */
+    val unseen: Int get() = if (items.any { it.isNew }) fresh.size else newCount
+}
 
 data class LiveUi(
     val moments: List<LiveMoment> = emptyList(),
+    /** Groups not live yet ("1 more save to go live"). */
+    val forming: List<FormingMoment> = emptyList(),
     val loading: Boolean = false,
     val loadedOnce: Boolean = false,
     val error: String? = null,
@@ -148,6 +160,14 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     private val _live = MutableStateFlow(LiveUi())
     val live: StateFlow<LiveUi> = _live.asStateFlow()
 
+    /** "Show less / more from …" (`/api/app/feed/weights`): username → -1 or 1. Null until read. */
+    var weights by mutableStateOf<Map<String, Int>?>(null)
+        private set
+
+    /** The member whose weight is being changed. */
+    var weightBusy by mutableStateOf<String?>(null)
+        private set
+
     private val _tuned = MutableStateFlow(TunedUi())
     val tuned: StateFlow<TunedUi> = _tuned.asStateFlow()
 
@@ -180,6 +200,8 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 feedPage = 0
                 tab = HomeTab.New
                 filterOpen = false
+                weights = null
+                weightBusy = null
                 if (server != null && key != null) {
                     loadMoreFeed()
                     syncTypes()
@@ -328,7 +350,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     private fun flushSeen() {
         val connection = store.current() ?: return
         val batch = seen.drain()
-        if (batch.isEmpty()) return
+        if (batch.isEmpty() || !sendSeen) return
         viewModelScope.launch {
             when (val result = AdhxApi(connection).seen(batch)) {
                 is ApiResult.Ok -> Unit
@@ -336,6 +358,36 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 is ApiResult.Failed -> if (result.status != 404 && result.status != 400) seen.failed(batch)
                 ApiResult.Offline -> seen.failed(batch)
             }
+        }
+    }
+
+    // Show less / more from …
+
+    /** Read the weights once (Why this one asks); an older server (404) has none to show. */
+    fun loadWeights() {
+        if (weights != null) return
+        val connection = store.current() ?: return
+        viewModelScope.launch {
+            val result = AdhxApi(connection).feedWeights()
+            if (result is ApiResult.Ok) weights = result.value.weights
+            else if (result is ApiResult.Failed) signedOut(result, connection)
+        }
+    }
+
+    /**
+     * More (1), less (-1) or back to normal (0) from [username]. Shown at once,
+     * then the server's answer wins; a failure puts the old choice back.
+     */
+    fun setWeight(username: String, weight: Int) {
+        val connection = store.current() ?: return
+        val before = weights ?: emptyMap()
+        weights = if (weight == 0) before - username else before + (username to weight)
+        weightBusy = username
+        viewModelScope.launch {
+            val result = AdhxApi(connection).setFeedWeight(username, weight)
+            weights = if (result is ApiResult.Ok) result.value.weights else before
+            if (result is ApiResult.Failed) signedOut(result, connection)
+            weightBusy = null
         }
     }
 
@@ -379,7 +431,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
             title = title,
             person = person ?: friend?.asSaver,
             size = size,
-            newCount = friend?.newCount ?: 0,
+            newCount = friend?.newCount ?: _channels.value.channels.group.firstOrNull { it.slug == slug && kind == com.adhx.share.net.ChannelKind.GROUP }?.newCount ?: 0,
             loading = true,
         )
         loadChannel()
@@ -398,6 +450,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
             _channel.value = when (result) {
                 is ApiResult.Ok -> current.copy(
                     items = result.value.items,
+                    note = result.value.note,
                     size = current.size.takeIf { it > 0 } ?: result.value.items.size,
                     loading = false,
                 )
@@ -420,7 +473,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val result = AdhxApi(connection).live()
             _live.value = when (result) {
-                is ApiResult.Ok -> LiveUi(moments = result.value.moments, loadedOnce = true)
+                is ApiResult.Ok -> LiveUi(moments = result.value.moments, forming = result.value.forming, loadedOnce = true)
                 is ApiResult.Failed -> {
                     signedOut(result, connection)
                     // No Live on this server yet: nothing's live, as far as the phone can tell.
@@ -538,6 +591,10 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        /** Debug builds can turn this off to look around a test server without marking anything seen. */
+        @Volatile
+        var sendSeen: Boolean = true
+
         private const val NEAR_END = 5
         private const val MAX_FLOATING = 12
 

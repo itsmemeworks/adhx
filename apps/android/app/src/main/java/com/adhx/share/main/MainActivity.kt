@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -224,6 +225,8 @@ private fun MainApp(
                 server = current.server,
                 onBack = back,
                 onPlay = { library.open(Route.ChannelPlayer(it)) },
+                onPlayNew = { library.open(Route.ChannelPlayer(0, onlyNew = true)) },
+                onOpenPost = { platform, id -> library.open(Route.PostLink(platform, id)) },
                 // A channel sits under Channels: the pages' header, and a tab goes home to it.
                 header = {
                     PageHeader(
@@ -243,11 +246,13 @@ private fun MainApp(
             )
             is Route.ChannelPlayer -> {
                 val channel by feed.channel.collectAsStateWithLifecycle()
-                if (channel.items.isEmpty()) {
+                // "Play the 4 new" keeps the ones it started with, even as they turn seen.
+                val posts = remember(channel.slug, channel.items.isEmpty()) { if (route.onlyNew) channel.fresh else channel.items }
+                if (posts.isEmpty()) {
                     LaunchedEffect(Unit) { library.back() }
                 } else {
                     PlayerScreen(
-                        posts = channel.items,
+                        posts = posts,
                         server = current.server,
                         startIndex = route.start,
                         onPage = {},

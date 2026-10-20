@@ -155,7 +155,8 @@ fun DoingSheet(
     onDismiss: () -> Unit,
 ) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val shown = ui.items.filterNot { it.ready }.take(SHEET_MAX)
+    // What's moving first, then what needs you (as on the boards).
+    val shown = ui.items.filterNot { it.ready }.sortedBy { it.needsYou }.take(SHEET_MAX)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = state,
@@ -168,9 +169,9 @@ fun DoingSheet(
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(verticalAlignment = Alignment.Bottom) {
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 4.dp)) {
                 Text(
                     if (ui.onTheirWay > 0) SettingsCopy.onTheirWay(ui.onTheirWay) else SettingsCopy.DOING,
                     fontFamily = SerifFamily,
@@ -235,10 +236,11 @@ fun DoingRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Thumb(item, server)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (item.needsYou) 3.dp else 6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(if (item.needsYou) 2.dp else 5.dp)) {
             Text(
                 SettingsCopy.doingTitle(item),
                 fontSize = 14.sp,
+                lineHeight = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = AdhxColors.White,
                 maxLines = 1,
@@ -248,6 +250,7 @@ fun DoingRow(
             Text(
                 note ?: SettingsCopy.doingLine(item),
                 fontSize = 12.sp,
+                lineHeight = 15.sp,
                 color = AdhxColors.Muted,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

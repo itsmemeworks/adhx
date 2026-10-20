@@ -138,7 +138,7 @@ fun ConnectedScreen(
                 Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(top = 10.dp),
+                    .padding(top = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(Modifier.size(width = 240.dp, height = 92.dp), contentAlignment = Alignment.Center) {
@@ -169,10 +169,10 @@ fun ConnectedScreen(
                     lineHeight = 46.sp,
                     color = AdhxColors.White,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp).semantics { heading() },
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 6.dp).semantics { heading() },
                 )
                 if (others.isNotEmpty()) {
-                    Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Faces(others, connection.server, size = 30.dp, max = 4, ring = AdhxColors.Background)
                         Spacer(Modifier.width(10.dp))
                         Text(Copy.youAnd(others.map { it.label }), fontSize = 14.sp, color = AdhxColors.Muted)
@@ -184,7 +184,7 @@ fun ConnectedScreen(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = AdhxColors.White,
-                        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 22.dp, bottom = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 12.dp),
                     )
                     val list = rememberLazyListState()
                     LazyRow(

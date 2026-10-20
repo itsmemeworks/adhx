@@ -13,6 +13,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import com.adhx.share.net.FriendNote
 import com.adhx.share.net.PhonePost
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.GobShape
@@ -74,6 +75,10 @@ fun ChannelScreen(
     server: String,
     onBack: () -> Unit,
     onPlay: (Int) -> Unit,
+    /** "Play the 4 new": just the ones marked New. */
+    onPlayNew: () -> Unit = {},
+    /** The note's post when it isn't in the grid. */
+    onOpenPost: (platform: String, id: String) -> Unit = { _, _ -> },
     /** The pages' header (Channels lit); null keeps a back button. */
     header: (@Composable () -> Unit)? = null,
 ) {
@@ -100,7 +105,8 @@ fun ChannelScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             item(span = StaggeredGridItemSpan.FullLine, key = "head") {
-                Column(Modifier.padding(top = 18.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // The face's ring sits outside its 64dp on the boards; here it's part of the row, so the gaps are 5dp less.
+                Column(Modifier.padding(top = 13.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val person = ui.person
                         if (route.kind == ChannelKind.FRIEND && person != null) {
@@ -127,9 +133,9 @@ fun ChannelScreen(
                                 Text(
                                     buildAnnotatedString {
                                         append(Copy.saves(size))
-                                        if (route.kind == ChannelKind.FRIEND && ui.newCount > 0) {
+                                        if (route.kind == ChannelKind.FRIEND && ui.unseen > 0) {
                                             append(" · ")
-                                            withStyle(SpanStyle(color = AdhxColors.Accent)) { append("${ui.newCount} you haven’t seen") }
+                                            withStyle(SpanStyle(color = AdhxColors.Accent)) { append("${ui.unseen} you haven’t seen") }
                                         }
                                     },
                                     fontSize = 13.sp,
@@ -139,7 +145,13 @@ fun ChannelScreen(
                             }
                         }
                     }
-                    if (ui.items.isNotEmpty()) PlayButton { onPlay(0) }
+                    if (ui.items.isNotEmpty()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            PlayButton { onPlay(0) }
+                            val fresh = ui.fresh.size
+                            if (fresh > 0) PlayNewButton(fresh, onPlayNew)
+                        }
+                    }
                 }
             }
             when {
@@ -156,8 +168,26 @@ fun ChannelScreen(
                     Text(Copy.CHANNEL_EMPTY, fontSize = 15.sp, color = AdhxColors.Muted)
                 }
             }
-            itemsIndexed(ui.items, key = { _, post -> post.key }) { index, post ->
-                PosterCard(post, server, height = tileHeight(post), owner = owner) { onPlay(index) }
+            // The friend's note sits among their posts, a few tiles in.
+            val note = ui.note?.takeIf { route.kind == ChannelKind.FRIEND }
+            val noteAt = if (note != null) minOf(NOTE_AFTER, ui.items.size) else -1
+            val split = if (noteAt >= 0) noteAt else ui.items.size
+            itemsIndexed(ui.items.take(split), key = { _, post -> post.key }) { index, post ->
+                PosterCard(post, server, height = tileHeight(post), owner = owner, newMark = post.isNew) { onPlay(index) }
+            }
+            if (note != null && ui.items.isNotEmpty()) {
+                item(key = "note") {
+                    val at = ui.items.indexOfFirst { it.key == note.key }
+                    NoteTile(
+                        note = note,
+                        person = ui.person,
+                        title = ui.items.getOrNull(at)?.let(::postTitle),
+                        server = server,
+                    ) { if (at >= 0) onPlay(at) else onOpenPost(note.platform, note.id) }
+                }
+            }
+            itemsIndexed(ui.items.drop(split), key = { _, post -> post.key }) { i, post ->
+                PosterCard(post, server, height = tileHeight(post), owner = owner, newMark = post.isNew) { onPlay(split + i) }
             }
         }
     }
@@ -170,6 +200,71 @@ internal fun tileHeight(post: PhonePost): Dp {
     val h = media.height ?: return 230.dp
     if (w <= 0 || h <= 0) return 230.dp
     return (174 * (h / w)).toFloat().coerceIn(180f, 290f).dp
+}
+
+/** The note tile's paper and ink (the boards' #e4dac8, #141414, #3a352d). */
+private val NotePaper = Color(0xFFE4DAC8)
+private val NoteInk = Color(0xFF141414)
+private val NoteInkSoft = Color(0xFF3A352D)
+
+/** How many tiles come before the note. */
+private const val NOTE_AFTER = 3
+
+/** A post's title for a line: an article's, else its first line of words. */
+private fun postTitle(post: PhonePost): String? =
+    (post.article?.title?.takeIf { it.isNotBlank() } ?: post.text).trim().lineSequence().firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        if (it.length > 40) it.take(39).trimEnd() + "…" else it
+    }
+
+/**
+ * The friend's note as a paper tile: their face and "Ana's note", the note
+ * in large serif quotes, and which post it's on. Opens that post.
+ */
+@Composable
+private fun NoteTile(note: FriendNote, person: Saver?, title: String?, server: String, onClick: () -> Unit) {
+    val who = person?.label ?: ""
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(NotePaper)
+            .clickable(onClickLabel = Copy.PLAY, onClick = onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (person != null) Avatar(person, server, size = 22.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(Copy.notesOf(who), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = NoteInk)
+        }
+        Text(
+            "“${note.text}”",
+            fontFamily = SerifFamily,
+            fontSize = 24.sp,
+            lineHeight = 23.sp,
+            color = NoteInk,
+        )
+        val on = Copy.noteOn(title, Copy.agoIso(note.savedAt))
+        if (on.isNotBlank()) Text(on, fontSize = 12.sp, lineHeight = 16.sp, color = NoteInkSoft)
+    }
+}
+
+/** "Play the 4 new": dark, with a yellow dot. */
+@Composable
+private fun PlayNewButton(count: Int, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(50))
+            .background(AdhxColors.Button)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(AdhxColors.Accent))
+        Spacer(Modifier.width(8.dp))
+        Text(Copy.playNew(count), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.Cream)
+    }
 }
 
 /** "Play all": yellow, with a play mark. */

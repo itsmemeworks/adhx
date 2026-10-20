@@ -317,6 +317,8 @@ fun PosterCard(
     label: String? = Networks.name(post.platform),
     lit: Boolean = false,
     owner: String? = null,
+    /** The yellow "New" in the top corner (channels: you haven't saved or seen it). */
+    newMark: Boolean = false,
     onClick: () -> Unit,
 ) {
     val media = post.media.firstOrNull()
@@ -406,7 +408,22 @@ fun PosterCard(
             }
         }
         post.match?.let { Strength(it.strength, Modifier.align(Alignment.TopEnd).padding(8.dp)) }
-        if (lit) Box(Modifier.matchParentSize().border(2.dp, AdhxColors.Accent, RoundedCornerShape(18.dp)))
+        if (newMark && post.match == null) {
+            Text(
+                com.adhx.share.ui.Copy.NEW_MARK,
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.Black,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(AdhxColors.Accent)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
     }
 }
 

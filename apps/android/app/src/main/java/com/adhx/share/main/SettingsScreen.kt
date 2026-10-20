@@ -248,11 +248,12 @@ fun SettingsScreen(
                     Faces(
                         savers = others.map { it.asSaver },
                         server = connection.server,
-                        size = 24.dp,
+                        size = 26.dp,
                         ring = AdhxColors.Surface,
                     )
                 }
-                list?.members?.count { !it.banned }?.let { Value(it.toString()) }
+                // Your people are everyone else let in ("4": Ana, Ben, Mum and Jo), as on the boards.
+                list?.members?.count { !it.banned && !it.isYou }?.let { Value(it.toString()) }
             }
             if (list == null || list.canInvite) {
                 Divider()
@@ -280,25 +281,9 @@ fun SettingsScreen(
                 Divider()
                 NavRow(SettingsCopy.DOING, note = SettingsCopy.doingSummary(doingUi.view?.summary), onClick = actions.onDoing)
             }
-            Divider()
-            NavRow(SettingsCopy.SHARED_LATELY, note = SettingsCopy.waitingLinks(waiting), onClick = actions.onSharedLately)
         }
 
-        if (waiting > 0 || notice != null) {
-            OutlineButton(
-                SettingsCopy.SEND_WAITING,
-                onClick = {
-                    val sent = vm.sendWaitingNow()
-                    notice = SettingsCopy.sending(sent)
-                },
-                enabled = waiting > 0,
-                minHeight = 44.dp,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            notice?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Faint) }
-        }
-
-        // This phone
+        // This phone, then Shared lately (the spec's order; the boards end on This phone).
         Section {
             Row(
                 Modifier.padding(start = 16.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
@@ -338,6 +323,23 @@ fun SettingsScreen(
                     Text(SettingsCopy.REMOVE_PHONE, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger)
                 }
             }
+        }
+
+        Section {
+            NavRow(SettingsCopy.SHARED_LATELY, note = SettingsCopy.waitingLinks(waiting), onClick = actions.onSharedLately)
+        }
+        if (waiting > 0 || notice != null) {
+            OutlineButton(
+                SettingsCopy.SEND_WAITING,
+                onClick = {
+                    val sent = vm.sendWaitingNow()
+                    notice = SettingsCopy.sending(sent)
+                },
+                enabled = waiting > 0,
+                minHeight = 44.dp,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            notice?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Faint) }
         }
 
         Text(
@@ -431,7 +433,14 @@ private fun WaitingCard(
                     Text(SettingsCopy.wantsIn(request), fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
                     Text(SettingsCopy.requestLine(request), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                if (busy) CircularProgressIndicator(Modifier.size(20.dp), color = AdhxColors.Accent, strokeWidth = 2.dp)
+                if (busy) {
+                    CircularProgressIndicator(Modifier.size(20.dp), color = AdhxColors.Accent, strokeWidth = 2.dp)
+                } else {
+                    // Decline sits quietly at the end of the row, so the two buttons stay as on the boards.
+                    TextButton(onClick = { onDecide(request, JoinDecision.DECLINE) }) {
+                        Text(SettingsCopy.DECLINE, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger)
+                    }
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PillButton(
@@ -448,13 +457,6 @@ private fun WaitingCard(
                     onClick = { onDecide(request, JoinDecision.NOT_NOW) },
                     modifier = Modifier.weight(1f),
                 )
-            }
-            TextButton(
-                onClick = { onDecide(request, JoinDecision.DECLINE) },
-                enabled = !busy,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            ) {
-                Text(SettingsCopy.DECLINE, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Danger)
             }
             errors[request.id]?.let { Text(it, fontSize = 13.sp, color = AdhxColors.Warn) }
         }
@@ -522,7 +524,7 @@ private fun NavRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = if (note != null) 64.dp else 56.dp)
+            .heightIn(min = if (note != null) 60.dp else 56.dp)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -548,7 +550,7 @@ private fun SwitchRow(title: String, on: Boolean, onChange: (Boolean) -> Unit, n
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = if (note != null) 64.dp else 56.dp)
+            .heightIn(min = if (note != null) 60.dp else 56.dp)
             .toggleable(value = on, role = Role.Switch, onValueChange = onChange)
             .semantics(mergeDescendants = true) { stateDescription = if (on) "On" else "Off" }
             .padding(horizontal = 16.dp),

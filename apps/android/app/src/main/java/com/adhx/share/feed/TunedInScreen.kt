@@ -150,7 +150,7 @@ fun TunedInScreen(
                             .semantics(mergeDescendants = true) { contentDescription = "adhx home" },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(32.dp).rotate(-4f))
+                        Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(GOB_MARK))
                         Spacer(Modifier.width(9.dp))
                         Text("adhx", fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 28.sp, color = Color.White)
                     }

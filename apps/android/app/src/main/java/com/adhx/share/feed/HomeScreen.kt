@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -109,7 +110,7 @@ fun HomeScreen(
             header = { b, atEnd ->
                 if (atEnd) {
                     // Caught up is a page of its own: the pages' header, the tabs hugging their words.
-                    PageHeader(tab, onTab, onHome = {}, onSearch = actions.onSearch, onSettings = actions.onSettings, centered = true)
+                    PageHeader(tab, onTab, onHome = {}, onSearch = actions.onSearch, onSettings = actions.onSettings, centered = true, onFilter = { feed.filterOpen = true })
                 } else {
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         HomeHeader(tab, onTab, actions, overMedia = true, newBadge = b)
@@ -152,6 +153,9 @@ fun BoxScope.BottomFade() {
     )
 }
 
+/** Gob in a header: the drawable's body is 76 of its 96 units, so this draws it 30dp wide, as on the boards. */
+internal val GOB_MARK = 38.dp
+
 /** The New tab's badge for the feed at [page]: only in New mode, and only while there's something to count. */
 internal fun newBadge(ui: FeedUi, page: Int): String? {
     if (ui.mode != FeedMode.NEW || ui.unavailable || ui.items.isEmpty()) return null
@@ -178,21 +182,21 @@ fun HomeHeader(
         PageHeader(tab, onTab, onHome = { onTab(HomeTab.New) }, onSearch = actions.onSearch, onSettings = actions.onSettings)
         return
     }
-    Box(Modifier.fillMaxWidth()) {
-        // The shadow under the row: 240dp from the top, black at 70% fading out.
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .windowInsetsTopHeight(WindowInsets.statusBars)
-                .background(Color.Black.copy(alpha = 0.7f)),
-        )
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(240.dp)
-                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent))),
-        )
+    val statusTop = WindowInsets.statusBars.getTop(androidx.compose.ui.platform.LocalDensity.current).toFloat()
+    Box(
+        Modifier
+            .fillMaxWidth()
+            // The shadow under the row: the status bar at 70% black, then 240dp fading out. Drawn, not
+            // laid out, so what sits under the header (the "on their way" pill) stays close to it.
+            .drawBehind {
+                drawRect(Color.Black.copy(alpha = 0.7f), size = androidx.compose.ui.geometry.Size(size.width, statusTop))
+                drawRect(
+                    Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent), startY = statusTop, endY = statusTop + 240.dp.toPx()),
+                    topLeft = androidx.compose.ui.geometry.Offset(0f, statusTop),
+                    size = androidx.compose.ui.geometry.Size(size.width, 240.dp.toPx()),
+                )
+            },
+    ) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -210,7 +214,7 @@ fun HomeHeader(
                     .semantics { contentDescription = Copy.OPEN_SETTINGS },
                 contentAlignment = Alignment.Center,
             ) {
-                Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(32.dp).rotate(-4f))
+                Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(GOB_MARK))
             }
             Spacer(Modifier.weight(1f))
             HomeTabs(
@@ -239,6 +243,8 @@ fun PageHeader(
     newBadge: String? = null,
     /** The tabs hug their words in the middle (caught up) instead of filling the width. */
     centered: Boolean = false,
+    /** New's own page (caught up): the sliders open What's in your feed instead of Settings. */
+    onFilter: (() -> Unit)? = null,
 ) {
     Column(Modifier.fillMaxWidth().statusBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
@@ -256,13 +262,17 @@ fun PageHeader(
                     .semantics(mergeDescendants = true) { contentDescription = "adhx home" },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(32.dp).rotate(-4f))
+                Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(GOB_MARK))
                 Spacer(Modifier.width(9.dp))
                 Text("adhx", fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 28.sp, color = AdhxColors.White)
             }
             Spacer(Modifier.weight(1f))
             BarButton(Glyphs.Search, Copy.SEARCH, onSearch, background = AdhxColors.Surface)
-            BarButton(Glyphs.Settings, Copy.OPEN_SETTINGS, onSettings, background = AdhxColors.Surface)
+            if (onFilter != null) {
+                BarButton(Glyphs.Sliders, Copy.FILTER_TITLE, onFilter, background = AdhxColors.Surface)
+            } else {
+                BarButton(Glyphs.Settings, Copy.OPEN_SETTINGS, onSettings, background = AdhxColors.Surface)
+            }
         }
         HomeTabs(
             tab = tab,

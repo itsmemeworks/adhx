@@ -550,7 +550,20 @@ out so the server's own choice still applies.
 - "Just for me by default" left unset sends no `private`; switched off, a
   new save that comes back private is switched back with `/api/app/private`
   (never a repeat share).
-- Shared lately sits in Settings with how many links are waiting.
+- Shared lately sits in Settings with how many links are waiting, after This
+  phone; Decline sits at the end of the waiting request's row.
+- Why this one shows one pair of pills: Show less from the last friend who
+  saved the post and Show more from the first (the same friend when there's
+  one), from `/api/app/feed/weights`; a chosen one turns cream and tapping it
+  again sets 0. On a server without weights (404) the Filter pill shows instead.
+- Channels: `isNew` posts get a yellow "New" in their top corner and **Play
+  the N new** plays only those (the ones marked when the channel opened). The
+  friend's `note` is a paper tile after the third post and plays that post
+  (or opens it on its own when it isn't in the grid).
+- Live: the moment line is "3 saves in 10 min · names" from `recentSaves` /
+  `windowMinutes`, else the save count; smaller moments keep just the faces and
+  names. `forming` groups are dashed rows ("Forming", "1 more save to go
+  live"); they aren't playable, and have no bell (there's no route to be told).
 
 ## The share sheet (both platforms)
 

@@ -251,3 +251,45 @@ object LenientJoinRequestsSerializer : LenientListSerializer<JoinRequest>(JoinRe
 object LenientDoingItemsSerializer : LenientListSerializer<DoingItem>(DoingItem.serializer()) {
     override fun keep(item: DoingItem) = item.platform.isNotBlank() && item.id.isNotBlank()
 }
+
+object LenientFormingSerializer : LenientListSerializer<FormingMoment>(FormingMoment.serializer()) {
+    override fun keep(item: FormingMoment) = item.title.isNotBlank()
+}
+
+/** A friend's note, or null when it's missing, empty or not an object with `text`. */
+object FriendNoteSerializer : KSerializer<FriendNote?> {
+    override val descriptor: SerialDescriptor = FriendNote.serializer().nullable.descriptor
+
+    override fun serialize(encoder: Encoder, value: FriendNote?) {
+        if (value != null) FriendNote.serializer().serialize(encoder, value) else encoder.encodeNull()
+    }
+
+    override fun deserialize(decoder: Decoder): FriendNote? {
+        val json = decoder as? JsonDecoder ?: return null
+        val element = json.decodeJsonElement() as? JsonObject ?: return null
+        val text = element.firstText("text", "note") ?: return null
+        return FriendNote(
+            text = text,
+            platform = element.firstText("platform").orEmpty(),
+            id = element.firstText("id").orEmpty(),
+            savedAt = element.firstText("savedAt"),
+        )
+    }
+}
+
+/** `weights`: `{ "ana": 1, "ben": -1 }`; anything but -1 or 1 is left out. */
+object WeightsSerializer : KSerializer<Map<String, Int>> {
+    private val delegate = kotlinx.serialization.builtins.MapSerializer(String.serializer(), Int.serializer())
+    override val descriptor: SerialDescriptor = delegate.descriptor
+
+    override fun serialize(encoder: Encoder, value: Map<String, Int>) = delegate.serialize(encoder, value)
+
+    override fun deserialize(decoder: Decoder): Map<String, Int> {
+        val json = decoder as? JsonDecoder ?: return delegate.deserialize(decoder)
+        val element = json.decodeJsonElement() as? JsonObject ?: return emptyMap()
+        return element.mapNotNull { (name, value) ->
+            val w = (value as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()?.toInt()
+            if (w == 1 || w == -1) name to w else null
+        }.toMap()
+    }
+}

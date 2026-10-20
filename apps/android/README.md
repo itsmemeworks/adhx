@@ -41,8 +41,9 @@ adb shell am start -n com.adhx.share/.debug.DebugConnectActivity \
   --es server http://127.0.0.1:3600 --es key "$PHONE_KEY" [--ez welcome true]
 ```
 
-`welcome` opens on the Connected screen, as after pairing. The activity is in
-`src/debug`, so release builds don't have it.
+`welcome` opens on the Connected screen, as after pairing. `--ez noSeen true`
+marks nothing seen while that process lives, so a seeded server stays as it
+was. The activity is in `src/debug`, so release builds don't have it.
 
 Tell Gradle where the SDK is, either with `ANDROID_HOME` or a
 `local.properties` file (not committed):
@@ -189,16 +190,25 @@ behaviour and the endpoints are in
 
 - **New** (`GET /api/app/feed?mode=new`) plays what you haven't seen, with a
   count on the tab and a why chip over the byline (tap it for Why this one,
-  and Everyone · Friends only · Mine). Tap New again for What's in your
-  feed: videos and photos by default, text posts and articles if you want them
+  Everyone · Friends only · Mine, and **Show less from Ben** / **Show more
+  from Ana**: the last and first friend who saved it, through
+  `GET/PUT /api/app/feed/weights`, cream while chosen, tap again for normal).
+  Tap New again for What's in your feed: videos and photos by default, text posts and articles if you want them
   (`types=` on the feed, kept with `/api/app/feed/types` and on the phone). Posts count as seen after 2 s on
   stage or when you swipe past, sent in batches to `POST /api/app/seen`. It
   ends on "You're all caught up. Go touch grass."
 - **Channels** (`GET /api/app/channels`): From everyone, Your people (a face
   per friend, with how many of theirs you haven't seen) and Made for you
-  (My saves first). A channel opens as a grid (`/api/app/channels/{kind}/{slug}`)
-  and plays from the one you tap.
-- **Live** (`GET /api/app/live`): the moments your lot are saving into. Tune
+  (My saves first), with See all (Your people) and Invite. A channel opens as a grid (`/api/app/channels/{kind}/{slug}`)
+  and plays from the one you tap. Posts you haven't saved or seen carry a yellow
+  **New** (`isNew`), and **Play the 4 new** plays just those. A friend's channel
+  shows their latest note as a paper tile ("Ana's note", in quotes, "on Charlie
+  bit my finger · 3 days ago") a few tiles in; it opens that post.
+- **Live** (`GET /api/app/live`): the moments your lot are saving into, with how busy
+  each is lately ("3 saves in 10 min · Ana, Ben and Jo", from `recentSaves` and
+  `windowMinutes`; the save count when there were none). Groups still forming
+  (`forming`) follow as dashed rows: "Forming", their name and "1 more save to go
+  live". Tune
   in plays one, asks `/api/app/live/{slug}` every 5 s for new posts, who's
   watching and reactions, and adds React (emoji or a few words,
   `POST /api/app/live/{slug}/react`). Reactions float up with the sender's face.
@@ -215,13 +225,13 @@ this one lists every reason in `whyReasons`.
 
 Gob opens **Settings**: your face (in Gob's shape) and name, then rows for
 Your people, Invite someone, What's in your feed, Just for me by default,
-Sound on by default, What your ADHX is doing (with its count), Shared lately,
-and "Connected to Ana's ADHX" with **Remove this phone**.
+Sound on by default, What your ADHX is doing (with its count), then
+"Connected to Ana's ADHX" with **Remove this phone**, and Shared lately.
 
 - **Your people** (`GET /api/app/people`): everyone let in, with faces, save
   counts and when they last saved; a row opens their saves.
 - **Waiting for you** (admins, from `requests` on the same answer): Let in,
-  Not now and Decline (`POST /api/app/people/requests/{id} { decision }`).
+  Not now, and Decline at the end of the request's row (`POST /api/app/people/requests/{id} { decision }`).
 - **Change picture** and **Invite someone** open Settings on your ADHX
   (`/settings#you`, `/settings#invite`): their routes take a signed-in
   browser, not a phone key.

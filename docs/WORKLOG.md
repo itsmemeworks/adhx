@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android: Show less/more, New marks, note card, live span, second parity pass
+
+- New server fields used: Why this one has Show less/more pills (`/api/app/feed/weights`, last and first friend who saved it); channels mark `isNew` tiles, add Play the N new and the friend's `note` as a paper tile; Live says "3 saves in 10 min · names" (`recentSaves`/`windowMinutes`) and lists `forming` groups as dashed rows.
+- Parity fixes from a side-by-side of every phone board at 390dp (Hanken Grotesk merged in): header shadow no longer pushes the On their way pill 240dp down; Gob drawn at the boards' size without a second −4° tilt; caught-up sliders open the filter; tighter line heights on Channels, Connected, Settings and the processing sheet (moving first, needs-you last); 68dp face rings; video quality by short side (720p); hairline outline buttons; Decline in the request row; Shared lately after This phone; Your people counts others.
+- Debug only: `DebugConnectActivity --ez noSeen true` keeps a seeded server untouched.
+- Gaps (no server route): "Or straight to your people" in the send sheet, faces and the bell on forming rows, "Saved together" chips on channel tiles. Kept on purpose: one-row header over the player (j2-3), wide videos fit rather than crop, the corner badge instead of "12 you haven't seen".
+
 ## 2026-10-20 — Android uses Hanken Grotesk
 
 - The Android app's sans is now Hanken Grotesk, like the web and iOS: `res/font/hanken_grotesk.ttf` is the web's `src/app/fonts/HankenGrotesk-latin-variable.woff2` decoded to TrueType (Brotli plus the WOFF2 glyf/loca reconstruction), with nothing downloaded. Chromium renders both files pixel-identically at weights 100–900.

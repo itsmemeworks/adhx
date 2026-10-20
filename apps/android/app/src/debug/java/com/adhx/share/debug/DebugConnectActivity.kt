@@ -26,6 +26,8 @@ class DebugConnectActivity : Activity() {
             Log.i("AdhxDebug", "connected to $server: $saved")
             // As if it had just paired: "Connected to …" first.
             if (intent.getBooleanExtra("welcome", false)) Welcome.pending = true
+            // Look without touching the server: nothing is marked seen while this process lives.
+            com.adhx.share.feed.FeedViewModel.sendSeen = !intent.getBooleanExtra("noSeen", false)
             startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         }
         finish()
