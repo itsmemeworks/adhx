@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
+import { privateByDefault } from '@/lib/bookmarks/privacy'
 import { db, runInTransaction } from '@/lib/db'
 import { bookmarkLinks, bookmarkMedia, bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { visibleSave } from '@/lib/people/savers'
@@ -7,6 +8,7 @@ import { addedAtForIndex } from '@/lib/sync/added-at'
 import { getUsernameForUserId } from '@/lib/users/lookup'
 import { MAX_TAGS_PER_POST, sanitizeTag } from '@/lib/utils/tag'
 import { groupChannelKeys } from './group'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 /**
  * "Keep this channel" on a From everyone channel (board j6-2): every visible
@@ -116,6 +118,8 @@ export async function keepGroupChannel(
 
   const startedAt = Date.now()
   const createdAt = new Date(startedAt).toISOString()
+  // New copies follow the keeper's "Just for me by default", like a clone.
+  const isPrivate = privateByDefault(userId)
   let added = 0
   const saved: { platform: string; postId: string }[] = []
   runInTransaction(() => {
@@ -126,7 +130,7 @@ export async function keepGroupChannel(
           ...src,
           userId,
           source: 'channel_keep',
-          isPrivate: false,
+          isPrivate,
           // A note is its writer's own words, never copied to someone else's save.
           note: null,
           processedAt: addedAtForIndex(startedAt, i++),
@@ -182,5 +186,6 @@ export async function keepGroupChannel(
     }
   })
   if (saved.length) noteSaved(saved, PRIORITY.sync)
+  recordAnalytic({ name: 'channel.keep', surface: 'group', bookmarkId: slug, userId })
   return { tag, url: keptUrl(username, tag), added }
 }

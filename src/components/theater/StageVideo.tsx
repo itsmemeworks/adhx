@@ -30,7 +30,7 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { usePostPlayback } from './usePostPlayback'
+import { usePostFinished, usePostPlayback } from './usePostPlayback'
 import { useVideoPictureInPicture } from './useVideoPictureInPicture'
 import { Play, RotateCcw } from 'lucide-react'
 import { logSV } from './AvDebugOverlay'
@@ -141,6 +141,7 @@ export function StageVideo({
   const [playing, setPlaying] = useState(false)
   const [reloadVersion, setReloadVersion] = useState(0)
   const recordPlayback = usePostPlayback(item)
+  const recordFinished = usePostFinished(item)
   // Mirrors the live element's `.muted`. Initialized from the `muted` prop,
   // which is only the extern/initial signal from here on — once the user
   // (or a fallback below) changes the element's mute state directly, this is
@@ -624,6 +625,7 @@ export function StageVideo({
     catchUpPendingRef.current = false
     setEnded(true)
     setPlaying(false)
+    recordFinished()
     window.dispatchEvent(new CustomEvent('theater-video-progress', { detail: { progress: 1 } }))
     const finishEnded = () => {
       if (!repeat && albumCount > 1 && albumIndex < albumCount - 1 && onAlbumIndexChange) {

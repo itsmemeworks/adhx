@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, runInTransaction } from '@/lib/db'
 import {
+  activity,
   bookmarks,
   bookmarkLinks,
   bookmarkTags,
@@ -239,6 +240,16 @@ export const DELETE = withAuth(
               eq(bookmarks.userId, userId),
               eq(bookmarks.platform, platform),
               eq(bookmarks.id, id),
+            ),
+          )
+          .run() // The public "saved" pulse for a save that no longer exists.
+        db.delete(activity)
+          .where(
+            and(
+              eq(activity.userId, userId),
+              eq(activity.action, 'save'),
+              eq(activity.platform, platform),
+              eq(activity.bookmarkId, id),
             ),
           )
           .run()

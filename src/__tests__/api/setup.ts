@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/lib/db/schema'
 import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '@/lib/sends/schema-sql'
+import { ADMIN_COUNTS_DDL } from '@/lib/admin/schema-sql'
 
 /**
  * Shared test database setup for API tests.
@@ -268,7 +269,8 @@ export const FULL_SCHEMA_SQL = `
     x_link_version INTEGER NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     approval TEXT NOT NULL DEFAULT 'approved',
-    approval_snoozed_until INTEGER
+    approval_snoozed_until INTEGER,
+    last_seen_at TEXT
   );
 
   CREATE TABLE server_settings (
@@ -313,7 +315,8 @@ export const FULL_SCHEMA_SQL = `
       hint TEXT NOT NULL,
       created_at TEXT NOT NULL,
       last_used_at TEXT,
-      scope TEXT NOT NULL DEFAULT 'search'
+      scope TEXT NOT NULL DEFAULT 'search',
+      platform TEXT
     );
     CREATE INDEX access_keys_user_id_idx ON access_keys(user_id);
   CREATE TABLE app_pair_codes (
@@ -410,6 +413,7 @@ export const FULL_SCHEMA_SQL = `
 
 ${SAVE_VISIBILITY_DDL}
 ${BOARD_FEATURES_DDL}
+${ADMIN_COUNTS_DDL}
 `
 
 export interface TestDbInstance {

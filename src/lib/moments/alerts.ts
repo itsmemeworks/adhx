@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm'
+import { noteAlertsOpened, noteMomentAlerts } from '@/lib/admin/counts'
 import { db, runInTransaction } from '@/lib/db'
 import { captureException } from '@/lib/sentry'
 
@@ -114,6 +115,8 @@ export function fireFormingAlerts(
         fired++
       }
       db.run(sql`DELETE FROM moment_alert_subs WHERE forming_id = ${formingId}`)
+      // Counted for admins (Live): how many alerts this moment sent.
+      noteMomentAlerts(moment.slug, moment.title, fired, now.getTime())
       // Expired alerts go on the next write.
       db.run(sql`
         DELETE FROM moment_alerts WHERE created_at < ${new Date(now.getTime() - ALERT_TTL_MS).toISOString()}
@@ -156,6 +159,7 @@ export function parseSeenIds(body: unknown): number[] | { error: string } {
 /** Mark the member's own alerts seen (anyone else's ids are ignored). */
 export function markAlertsSeen(userId: string, ids: number[], now = new Date()): void {
   if (!userId || ids.length === 0) return
+  noteAlertsOpened(userId, ids)
   db.run(sql`
     UPDATE moment_alerts SET seen_at = ${now.toISOString()}
     WHERE user_id = ${userId} AND seen_at IS NULL AND id IN (${sql.join(

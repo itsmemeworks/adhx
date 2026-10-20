@@ -150,6 +150,7 @@ describe('GET /api/sync locking', () => {
         'user-1',
         expect.any(Set),
         expect.any(String),
+        false,
       )
       expect(body).toContain('event: complete')
       expect(body).toContain('"total":51,"new":1,"duplicates":50')
