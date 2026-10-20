@@ -52,6 +52,9 @@ function keepPeople(next: MomentView, prev: MomentView | undefined): MomentView 
     ...next,
     ...(next.savers === undefined && prev.savers ? { savers: prev.savers } : {}),
     ...(next.watchers === undefined && prev.watchers ? { watchers: prev.watchers } : {}),
+    ...(next.recentSaves === undefined && prev.recentSaves !== undefined
+      ? { recentSaves: prev.recentSaves, windowMinutes: prev.windowMinutes }
+      : {}),
   }
 }
 

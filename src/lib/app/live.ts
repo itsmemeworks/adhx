@@ -35,6 +35,10 @@ export interface PhoneMoment {
   savers: Saver[]
   /** Members tuned in now, without you. */
   watchers: Saver[]
+  /** Visible saves into it in the last `windowMinutes` ("3 saves in 10 min"). */
+  recentSaves: number
+  /** 5, 10, 15, 30 or 60: the span `recentSaves` covers (60 when there are none). */
+  windowMinutes: number
 }
 
 export interface PhoneForming {
@@ -109,6 +113,8 @@ export function phoneMoment(m: MomentView): PhoneMoment {
     covers: covers(m.covers),
     savers: m.savers ?? [],
     watchers: m.watchers ?? [],
+    recentSaves: m.recentSaves ?? 0,
+    windowMinutes: m.windowMinutes ?? 60,
   }
 }
 

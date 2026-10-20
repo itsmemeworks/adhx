@@ -62,16 +62,30 @@ export function momentSaverUpdates(
   return keys.map((key) => ({ key, savers: savers.get(key) ?? [], isPrivate: ownPrivate.has(key) }))
 }
 
-/** Up to 5 people saving a moment's posts in its window, newest first. */
-export function momentSavers(slug: string, viewerId: string): Saver[] {
-  if (!viewerId) return []
+/** Steps for "N saves in M min": the smallest one holding the recent saves. */
+export const RECENT_WINDOWS_MINUTES = [5, 10, 15, 30, 60] as const
+
+/** How busy a moment is lately: visible saves into it, and over how many minutes. */
+export interface MomentRecent {
+  /** Visible saves into the moment's posts in the last `windowMinutes`. */
+  recentSaves: number
+  /** 5, 10, 15, 30 or 60: the smallest step that holds them (60 when there are none). */
+  windowMinutes: number
+}
+
+/** Each post's visible savers inside the moment's window, or null for no such moment. */
+function momentSaves(slug: string, viewerId: string): Saver[][] | null {
   const found = momentPostKeys(slug)
-  if (!found) return []
+  if (!found) return null
   const byKey = visibleSavers(found.keys, viewerId)
+  return [...byKey.values()].map((list) => list.filter((s) => s.savedAt >= found.since))
+}
+
+/** Up to 5 people saving these, newest first (no notes: faces are the moment's, not a post's). */
+function facesOf(saves: Saver[][]): Saver[] {
   const newest = new Map<string, Saver>()
-  for (const list of byKey.values()) {
+  for (const list of saves) {
     for (const s of list) {
-      if (s.savedAt < found.since) continue
       const had = newest.get(s.username)
       if (!had || had.savedAt < s.savedAt) newest.set(s.username, s)
     }
@@ -83,6 +97,36 @@ export function momentSavers(slug: string, viewerId: string): Saver[] {
       // Faces on the whole moment, not one post: a note belongs with its post.
       .map(({ note: _note, ...face }) => face)
   )
+}
+
+/**
+ * "3 saves in 10 min": the visible saves of the last hour, counted over the
+ * smallest step (`RECENT_WINDOWS_MINUTES`) that holds the oldest of them.
+ */
+export function recentOf(saves: Saver[][], now = Date.now()): MomentRecent {
+  const longest = RECENT_WINDOWS_MINUTES[RECENT_WINDOWS_MINUTES.length - 1]
+  const from = now - longest * 60_000
+  const times = saves
+    .flat()
+    .map((s) => Date.parse(s.savedAt))
+    .filter((t) => Number.isFinite(t) && t >= from && t <= now)
+  if (times.length === 0) return { recentSaves: 0, windowMinutes: longest }
+  const age = (now - Math.min(...times)) / 60_000
+  const windowMinutes = RECENT_WINDOWS_MINUTES.find((m) => m >= age) ?? longest
+  return { recentSaves: times.length, windowMinutes }
+}
+
+/** Up to 5 people saving a moment's posts in its window, newest first. */
+export function momentSavers(slug: string, viewerId: string): Saver[] {
+  if (!viewerId) return []
+  const saves = momentSaves(slug, viewerId)
+  return saves ? facesOf(saves) : []
+}
+
+/** How busy a moment is lately, for a member ("3 saves in 10 min"). */
+export function momentRecent(slug: string, viewerId: string, now = Date.now()): MomentRecent {
+  const saves = viewerId ? momentSaves(slug, viewerId) : null
+  return recentOf(saves ?? [], now)
 }
 
 /** Revocation takes effect on the next response/event, rather than waiting for lease expiry. */
@@ -132,12 +176,14 @@ function coversWithSavers(covers: MomentView['covers'], viewerId: string): Momen
 
 export function withMomentPeople(moment: MomentView, viewerId: string): MomentView {
   if (!viewerId) return moment
+  const saves = momentSaves(moment.slug, viewerId) ?? []
   return {
     ...moment,
     covers: coversWithSavers(moment.covers, viewerId),
     watching: memberWatchingCount(moment.slug),
-    savers: momentSavers(moment.slug, viewerId),
+    savers: facesOf(saves),
     watchers: watchersFor(moment.slug, viewerId),
+    ...recentOf(saves),
   }
 }
 

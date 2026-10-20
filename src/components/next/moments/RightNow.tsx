@@ -19,7 +19,7 @@ import {
   type StreamItem,
 } from './live'
 import { Faces } from './LiveTogether'
-import { namesOf, personColour, savingLine, tuneInLabel, watchingLine } from './people'
+import { namesOf, personColour, recentLine, savingLine, tuneInLabel, watchingLine } from './people'
 import { saverName } from '../savers'
 
 /**
@@ -192,6 +192,8 @@ function LeadMoment({
   const arriving = flash ? asFeed(flash.item.post) : null
   const savers = moment.savers ?? []
   const watchers = moment.watchers ?? []
+  // Members: "3 saves in 10 min" instead of the totals.
+  const recent = recentLine(moment)
   // Who saved what, newest first (members only: covers carry savers then).
   const rows = moment.covers
     .map(asFeed)
@@ -278,8 +280,14 @@ function LeadMoment({
           <span aria-hidden className="text-nx-soft">
             ·
           </span>
-          <span className="tabular-nums">{plural(moment.people, 'person', 'people')}</span>
-          <span className="text-nx-soft">{`· ${plural(moment.posts, 'save')}`}</span>
+          {recent ? (
+            <span className="tabular-nums">{recent}</span>
+          ) : (
+            <>
+              <span className="tabular-nums">{plural(moment.people, 'person', 'people')}</span>
+              <span className="text-nx-soft">{`· ${plural(moment.posts, 'save')}`}</span>
+            </>
+          )}
           {flash && (
             <span
               key={flash.item.id}
@@ -298,7 +306,7 @@ function LeadMoment({
         </Link>
         {/* Phones: one short line instead of the LIVE pill and the faces. */}
         <p className="-mt-1.5 m-0 truncate text-[13px] text-nx-soft lg:hidden">
-          {`${plural(moment.people, 'person', 'people')} · ${plural(moment.posts, 'save')}${savers.length ? ` · ${namesOf(savers.map(saverName), moment.people)}` : ''}`}
+          {`${recent ?? `${plural(moment.people, 'person', 'people')} · ${plural(moment.posts, 'save')}`}${savers.length ? ` · ${namesOf(savers.map(saverName), moment.people)}` : ''}`}
         </p>
         {savers.length > 0 && (
           // Members only: the server sends `savers` to signed-in members alone.

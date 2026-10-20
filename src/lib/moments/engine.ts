@@ -83,6 +83,13 @@ export interface MomentView {
   savers?: Saver[]
   /** Members only: members tuned in now, without the viewer. */
   watchers?: Saver[]
+  /**
+   * Members only (`people.ts`): visible saves into it in the last
+   * `windowMinutes` ("LIVE · 3 saves in 10 min").
+   */
+  recentSaves?: number
+  /** Members only: 5, 10, 15, 30 or 60, the span `recentSaves` covers. */
+  windowMinutes?: number
 }
 
 export interface FormingView {

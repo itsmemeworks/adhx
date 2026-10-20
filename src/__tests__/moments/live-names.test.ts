@@ -854,3 +854,63 @@ describe('notes in moments', () => {
     await stranger.close()
   })
 })
+
+describe('how busy a moment is lately ("3 saves in 10 min")', () => {
+  const at = (minutesAgo: number, now: number) =>
+    ({
+      username: `u${minutesAgo}`,
+      name: null,
+      avatarUrl: null,
+      savedAt: new Date(now - minutesAgo * 60_000).toISOString(),
+      isYou: false,
+    }) as const
+
+  it('counts the last hour over the smallest step that holds it', async () => {
+    const { recentOf } = await import('@/lib/moments/people')
+    const now = Date.parse('2026-10-20T20:00:00.000Z')
+    expect(recentOf([], now)).toEqual({ recentSaves: 0, windowMinutes: 60 })
+    expect(recentOf([[at(4, now), at(7, now)], [at(10, now)]], now)).toEqual({
+      recentSaves: 3,
+      windowMinutes: 10,
+    })
+    expect(recentOf([[at(1, now)]], now)).toEqual({ recentSaves: 1, windowMinutes: 5 })
+    expect(recentOf([[at(12, now), at(2, now)]], now)).toEqual({
+      recentSaves: 2,
+      windowMinutes: 15,
+    })
+    // Older than an hour doesn't count; a save "from the future" neither.
+    expect(recentOf([[at(90, now), at(-5, now), at(40, now)]], now)).toEqual({
+      recentSaves: 1,
+      windowMinutes: 60,
+    })
+  })
+
+  it('members get recentSaves and windowMinutes; private and old saves never count', async () => {
+    await seedFrogs()
+    // Cal's private saves of two frogs: not counted, not even for Cal.
+    save(USER_C, 'frog2', 'frog video number 2', { isPrivate: true })
+    save(USER_C, 'frog3', 'frog video number 3', { isPrivate: true })
+    await frogSlug()
+    for (const who of [USER_A, USER_C]) {
+      const [frog] = (await snapshotAs(who)).moments
+      // Ana's six and Ben's two, all just now.
+      expect(frog).toMatchObject({ recentSaves: 8, windowMinutes: 5 })
+    }
+    // Strangers keep the old shape (see "moments signed out").
+    const [anon] = (await snapshotAs(null)).moments
+    expect(anon).not.toHaveProperty('recentSaves')
+    expect(anon).not.toHaveProperty('windowMinutes')
+  })
+
+  it('the phone’s live snapshot carries the same figure', async () => {
+    await seedFrogs()
+    await frogSlug()
+    const k = createAccessKey(USER_A, 'iPhone', 'phone')!.key
+    const live = await (
+      await appLiveGET(
+        new Request(`${BASE}/api/app/live`, { headers: { authorization: `Bearer ${k}` } }),
+      )
+    ).json()
+    expect(live.moments[0]).toMatchObject({ recentSaves: 8, windowMinutes: 5 })
+  })
+})

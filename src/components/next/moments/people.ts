@@ -59,3 +59,16 @@ export function arrivalLine(saver: Saver): string {
 export function personColour(username: string): string {
   return faceColour(username)
 }
+
+/**
+ * "3 saves in 10 min" from a moment's recent figure (members only), or null
+ * when there's none or nothing landed lately.
+ */
+export function recentLine(moment: {
+  recentSaves?: number
+  windowMinutes?: number
+}): string | null {
+  const n = moment.recentSaves ?? 0
+  if (n <= 0 || !moment.windowMinutes) return null
+  return `${n.toLocaleString('en-GB')} ${n === 1 ? 'save' : 'saves'} in ${moment.windowMinutes} min`
+}
