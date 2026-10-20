@@ -124,9 +124,10 @@ ordinary private tailnet access with an existing proxy; Funnel is a separate
 public-publishing feature and is not part of these examples.
 
 **Media privacy:** account sign-in protects personal save lists and search.
-Kept files and shared post previews are available without sign-in to anyone
-who can reach the server. File paths include source post IDs and are not
-secret tokens. The email allowlist does not make playback private. Keep the
+Kept files of shared posts and shared post previews are available without
+sign-in to anyone who can reach the server. File paths include source post IDs
+and are not secret tokens. (A post only saved Just for me is served to its
+owner alone.) The email allowlist does not make playback private. Keep the
 network private if that is your intended boundary.
 
 ## Start and verify

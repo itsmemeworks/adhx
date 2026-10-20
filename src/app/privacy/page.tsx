@@ -40,16 +40,17 @@ export default function PrivacyPage() {
             </li>
             <li>
               “Just for me” keeps a save out of everyone else’s feed, channels, search, Right now
-              and counts, with two exceptions: the Send sheet tells a sender you “already have it”,
-              and admins’ counts include it.
+              and counts, and its kept files are yours alone. One exception: admins’ counts include
+              it.
             </li>
             <li>
               People who aren’t signed in see posts and counts, never who saved them. Right now,
               previews, public channels and the sitemap do show which posts people here shared.
             </li>
             <li>
-              Kept media files are not behind sign-in. Anyone who can reach this server and knows a
-              post’s network and ID can fetch its files, including a post saved “Just for me”.
+              Kept media files of shared posts are not behind sign-in. Anyone who can reach this
+              server and knows a post’s network and ID can fetch them. A post only saved “Just for
+              me” is served to its owner alone.
             </li>
             <li>
               Your archive, tags (until you make a channel public), what you’ve watched, Show more
@@ -71,8 +72,8 @@ export default function PrivacyPage() {
           to members, and deleted when you change it or delete your account. Saves, notes, tags,
           archive and preferences are keyed by your account. A “Just for me” save writes no public
           pulse, and making a save private removes its earlier ones. “Just for me by default” covers
-          new saves from the web and the phone apps, but not X bookmark sync or Keep this channel.
-          If X is connected, we check it for new bookmarks about every hour.
+          every new save: the web, the phone apps, X bookmark sync and Keep this channel. If X is
+          connected, we check it for new bookmarks about every hour.
         </Section>
 
         <Section title="Notes, sends and what you watch">
@@ -80,7 +81,7 @@ export default function PrivacyPage() {
           a “Just for me” save only to you; it is never shown signed out, copied to anyone else or
           sent to an outside service. Admins can clear notes. A send stores who sent what to whom,
           the note and when it was seen, and only the two of you see it; while choosing, the sender
-          sees who already has their own save of the post, private ones included. What you’ve
+          sees who already has a shared save of the post, never a “Just for me” one. What you’ve
           watched is stored so New can leave it out and say whose saves you watch most; nobody else
           sees it, and it is deleted after 180 days. Show more and Show less are your preferences
           and only you see them.
@@ -95,14 +96,16 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="Kept media and phones">
-          Each saved post’s files are downloaded once and kept on this server, “Just for me” saves
-          included. They play without sign-in for anyone who can reach the server and knows the
-          post’s network and ID, may be cached for up to 7 days, and the server’s answer shows
-          whether anyone here saved a post. Those IDs are not secret, and invites restrict accounts,
-          not playback: private access needs a private network. Hidden posts are not served, and
-          files go within the hour once nobody has the post saved. Pairing codes and phone keys are
-          stored only as hashes; a phone key acts as you in the phone app until you remove it in
-          Settings. Access keys for searching from Claude can only search your own saves.
+          Each saved post’s files are downloaded once and kept on this server. A shared post’s files
+          play without sign-in for anyone who can reach the server and knows the post’s network and
+          ID, and may be cached for up to 7 days. Those IDs are not secret, and invites restrict
+          accounts, not playback: private access needs a private network. A post only saved “Just
+          for me” is served only to the people who saved it, never cached, and to anyone else looks
+          like a post nobody saved; why a file is missing is only told to members. Hidden posts are
+          not served, and files go within the hour once nobody has the post saved. Pairing codes and
+          phone keys are stored only as hashes; a phone key acts as you in the phone app until you
+          remove it in Settings. Access keys for searching from Claude can only search your own
+          saves.
         </Section>
 
         <Section title="Search by meaning">
@@ -114,18 +117,18 @@ export default function PrivacyPage() {
           optional refinement, your search text and the public words of the top results go to
           TypeSafe (Jev) to reorder them, and public words from small samples of posts are used to
           name channels and moments. Media files, transcripts, text read off pictures, savers,
-          notes, tags and account details are never sent. Search data made from a post stays in the
-          database after the last person removes it.
+          notes, tags and account details are never sent. Search data made from a post is deleted
+          when the last person removes it.
         </Section>
 
         <Section title="Public pages and logs">
           Previews, Right now, Tune in, public channels, curator and author pages, the sitemap and
           public JSON work without an account and never name savers. Once you have a public channel,
           your username, display name, picture and join date are public on your curator page. Three
-          older logs remain: an anonymous post pulse (30 days, public without account ids),
-          public-channel views (90 days of detail) and product analytics (90 days, totals public
-          without account ids). Captions and thumbnails are resolved on the server; your browser
-          cannot invent what appears there.
+          older logs remain: an anonymous post pulse (30 days, on the signed-out home page without
+          account ids), public-channel views (90 days of detail) and product analytics (90 days,
+          totals for admins only). Removing a save removes its “saved” pulse. Captions and
+          thumbnails are resolved on the server; your browser cannot invent what appears there.
         </Section>
 
         <Section title="Admins">
@@ -145,11 +148,11 @@ export default function PrivacyPage() {
 
         <Section title="Clearing and deleting">
           Clear data deletes your saves, notes, tags, archive, preferences, viewing history, sends,
-          bells and alerts, X sync history and queued phone shares, and keeps your account, keys,
-          invites and Made for you channels. Delete account also removes your account, sign-in
-          methods, tokens, keys, invites, picture and public channel statistics; pulse and analytics
-          rows stay without your account id, and your Made for you list, the admin log and search
-          data made from posts remain.
+          bells and alerts, X sync history, queued phone shares, Made for you channels and your
+          “saved” pulses, and keeps your account, keys and invites. Delete account also removes your
+          account, sign-in methods, tokens, keys, invites, picture and public channel statistics;
+          other pulse and analytics rows stay without your account id, and the admin log remains.
+          Search data made from a post goes once nobody has it saved.
         </Section>
 
         <Section title="Your choices">

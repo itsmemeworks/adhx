@@ -7,9 +7,9 @@ Last updated: 20 October 2026.
 ## Short version
 
 - **Named to friends, never to strangers.** A _member_ is anyone who can sign in to your server (approved and not banned). Your saves are shared with members by default: they see the post, your username, display name, picture, when you saved it and your note.
-- **Just for me** keeps a save out of everyone else's feed, channels, search, Right now and counts, with two exceptions you should know about: the **Send** sheet tells a sender that you "already have it", and admins' post and member counts include it.
+- **Just for me** keeps a save out of everyone else's feed, channels, search, Right now and counts, and its kept files are yours alone. One exception you should know about: admins' post and member counts include it.
 - **Strangers** (anyone not signed in) see posts and counts, never who saved them. Right now, preview pages, public channels and the sitemap do show _which posts_ people on your server shared.
-- **Kept media files are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch its kept files, including a post saved Just for me. Keep the server on a private network if that matters to you.
+- **Kept media files of shared posts are not behind sign-in.** Anyone who can reach your server and knows a post's network and ID can fetch them. A post only saved Just for me is served to its owner alone. Keep the server on a private network if that matters to you.
 - Your archive, tags (until you make a channel public), viewing history, Show more / less choices, bells and alerts are yours alone. A send is seen by you and the person you sent it to.
 - No ads, no advertising pixels, nothing sold. Search by meaning runs on your server (or the operator's own Mac). Only the optional search refinement service receives text, described below.
 
@@ -18,7 +18,7 @@ Last updated: 20 October 2026.
 | What                                 | Other members                                         | Signed-out visitors                                                 | Admins                                           |
 | ------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
 | A shared save                        | The post, your name, face, note and save time         | The post (where a public page shows it) and a saver count           | Same as members                                  |
-| A Just for me save                   | Nothing, except "already has it" in the Send sheet    | Nothing (but see Kept media)                                        | Counted in post and member numbers, never listed |
+| A Just for me save                   | Nothing                                               | Nothing                                                             | Counted in post and member numbers, never listed |
 | Your note on a save                  | Yes, on a shared save                                 | Never                                                               | Can clear notes; no admin page shows them        |
 | A send                               | Only the person you sent it to (who, when, your note) | Never                                                               | Never                                            |
 | What you've watched (`post_views`)   | Never                                                 | Never                                                               | Never                                            |
@@ -26,7 +26,7 @@ Last updated: 20 October 2026.
 | Watching a moment, reactions         | Yes, while it happens (not stored)                    | A watcher count only                                                | Same as members                                  |
 | Bells and alerts                     | Never                                                 | Never                                                               | Never                                            |
 | Your picture (uploaded or made here) | Yes                                                   | No, unless you have a public channel (see below)                    | Yes                                              |
-| Kept media files                     | Yes                                                   | **Yes, to anyone who can reach the server and knows the post's ID** | Yes                                              |
+| Kept media files of a shared post    | Yes                                                   | **Yes, to anyone who can reach the server and knows the post's ID** | Yes                                              |
 | A public channel (`/t/{you}/{tag}`)  | Yes                                                   | Yes, with your username                                             | Yes                                              |
 
 ## What we store
@@ -49,17 +49,15 @@ Sign-in links are stored as a hash and expire after 15 minutes (60 minutes when 
 
 **Your picture.** If you upload or take one (Settings → You → Change picture), the server keeps a 512-pixel square JPEG of your crop, re-made without the photo's metadata (no location or camera details), in the media folder's `avatars/`. The original photo is not kept. A Gob picture is made the same way. Only members can load it (signed in, or with a phone key). It is deleted when you change or remove it, and when you delete your account. If you choose your X picture instead, ADHX stores X's address for it, which anyone can load from X.
 
-If you connect X, ADHX checks your X bookmarks for new ones about every hour. You can turn this off in Settings. **Bookmarks brought in from X are shared with your people even when Just for me by default is on**; make them private one by one if you need to.
+If you connect X, ADHX checks your X bookmarks for new ones about every hour. You can turn this off in Settings. Bookmarks brought in from X follow **Just for me by default** like any other save; make them private or shared one by one if you need to.
 
 ### Your saves, notes, tags and archive
 
 Saves (`bookmarks`), their media and link rows, tags, archive state and preferences are keyed by your account.
 
 - **Members** see which posts you saved, when, with your username, display name, picture and note: on posts, in Everyone's saves search, in New, in your channel under Your people and in From everyone channels. They never see your tags (unless you make a channel public), archive state or preferences.
-- **Just for me** (`bookmarks.is_private`): the save stays yours to search and play. No other member sees it in a feed, channel, search result or moment, it is never counted on public pages, and it writes no public pulse event. Making an existing save private also removes your earlier pulse events for it. Two places still reflect it:
-  - the **Send** sheet marks you as already having the post ("Jo already has it."), so someone who tries to send it to you can tell;
-  - **admins** see saver and save counts that include private saves (never the save itself).
-- **Just for me by default** (Settings → You) makes new saves start private, from the web and the phone apps. It does not apply to X bookmark sync (above) or to **Keep this channel** (below).
+- **Just for me** (`bookmarks.is_private`): the save stays yours to search and play. No other member sees it in a feed, channel, search result or moment, it is never counted on public pages, and it writes no public pulse event. Making an existing save private also removes your earlier pulse events for it. Its kept files are served only to you (see Kept media). One place still reflects it: **admins** see saver and save counts that include private saves (never the save itself).
+- **Just for me by default** (Settings → You) makes new saves start private: from the web, the phone apps, X bookmark sync, **Keep this channel** and saving someone's public channel.
 - **Notes** (up to 140 characters, text only) are shown to members next to your face. A Just for me save's note is shown only to you. Notes are never shown to signed-out visitors, never copied when someone saves a public channel or keeps a channel, and never sent to any outside service. Admins can clear notes; the audit log records that they did, not the note.
 - **Archive** is private and writes no public event.
 - Existing saves joined the shared feed when the friends feed arrived; the web app says so once.
@@ -71,7 +69,7 @@ Saves (`bookmarks`), their media and link rows, tags, archive state and preferen
 
 ### Sends
 
-**Send straight to your people** stores who sent what to whom, with the optional note and when the recipient saw it (`post_sends`). Only the sender and the recipient see a send. While choosing, the sender sees which members already have their own save of the post (any visibility, see above) and whom they already sent it to, never whether the recipient watched it. You can't send a post you only have as Just for me. Sends are kept until either person clears their data or deletes their account.
+**Send straight to your people** stores who sent what to whom, with the optional note and when the recipient saw it (`post_sends`). Only the sender and the recipient see a send. While choosing, the sender sees which members already have a shared save of the post (never a Just for me one) and whom they already sent it to, never whether the recipient watched it. You can't send a post you only have as Just for me. Sends are kept until either person clears their data or deletes their account.
 
 ### Right now, watching together, bells
 
@@ -84,14 +82,16 @@ Saves (`bookmarks`), their media and link rows, tags, archive state and preferen
 
 - **Your people** gives every member a channel of what another member shared (members only, with their latest note). **From everyone** groups everyone's shared saves (members only). Just for me saves are in neither, and leave them as soon as you switch.
 - **Made for you** channels are private to you and are worked out from all your saves, including Just for me ones.
-- **Keep this channel** saves the posts you don't have as shared saves, even when Just for me by default is on, without copying anyone's note. Saving someone's public channel follows Just for me by default.
+- **Keep this channel** saves the posts you don't have, following Just for me by default, without copying anyone's note. Saving someone's public channel does the same.
 - **Your channels** (tags) stay private until you make one **public** on its page; you can make it private again. A public channel never lists a post you saved Just for me, even if you tagged it.
 
 ### Kept media
 
 When a post is saved, the server downloads its video, pictures and sound once, from the network it came from, and keeps them in its media folder. One copy is kept per post, however many people saved it, Just for me saves included.
 
-**Kept files are served without sign-in.** Anyone who can reach the server and knows a post's network and source ID can fetch them at `/api/files/…`, and browsers and proxies may cache them for up to 7 days. Those IDs come from the original networks and are not secret. The answer for a post nobody here saved also differs from the answer for one somebody did, so a determined stranger can tell whether anyone on the server saved a particular post. Kept files of hidden (moderated) posts are not served. Invites and the email allowlist control who can make an account, not who can play files: if that matters to you, run the server on a private network (LAN, VPN or tailnet).
+**Kept files of shared posts are served without sign-in.** Anyone who can reach the server and knows a post's network and source ID can fetch them at `/api/files/…`, and browsers and proxies may cache them for up to 7 days. Those IDs come from the original networks and are not secret, so a determined stranger can tell that someone on the server shared a particular post.
+
+A post that is only saved **Just for me** is different: its files are served only to the people who saved it (signed in, with their phone key, or through a link the server adds to their own phone's copy, which works for that post alone), and are never cached. To anyone else the server answers exactly as if nobody had saved the post. Why a file isn't available ("couldn't be downloaded", "nobody here has saved this yet") is only told to members. Kept files of hidden (moderated) posts are not served. Invites and the email allowlist control who can make an account, not who can play files: if that matters to you, run the server on a private network (LAN, VPN or tailnet).
 
 Kept files are deleted within about an hour once nobody on the server has the post saved.
 
@@ -118,19 +118,19 @@ So you can find saves by what is in them, each post's words, pictures, video fra
   - your search text and the public words of the top 20 results (post text, the original author's name, article and link-preview text, quoted text, picture descriptions), to put them in a better order;
   - public words from a small sample of posts, to name Made for you channels (from your own saves), From everyone channels and Right now moments.
   - It never receives media files, transcripts, text read off pictures, who saved anything, notes, tags or account details. If it is unavailable, local results and names are used.
-- The numbers and words made from a post (and its keyword index) stay in the database after the last person removes the post; they are only ever used to find posts someone still has saved.
+- The numbers and words made from a post (its vectors, keyword index, transcript and text read off its pictures) are deleted when the last person removes the post.
 
 ### Public pulse, channel views and analytics
 
 ADHX keeps three logs from its earlier public pages. None of them names anyone in public.
 
-| Log                 | What it holds                                                                                            | Public?                                                                                       | Kept for                                       |
-| ------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `activity`          | Previews, shared saves and file shares of posts, with the post's details; your account id for moderation | Yes, without the account id, at `/api/activity`, `/api/trending` and the signed-out home page | 30 days (pruned when the server starts)        |
-| `collection_events` | Views and copies of public channels, with the viewer's account id for de-duplication                     | Counts only, on public channels and `/api/collections/trending`                               | 90 days of detail; all-time totals per channel |
-| `analytics_events`  | Product events (views, saves, file shares, copies, tags, archive, sign-ins, syncs), with your account id | Totals and top posts by ID at `/api/analytics`, without account ids                           | 90 days (pruned when the server starts)        |
+| Log                 | What it holds                                                                                            | Public?                                                                            | Kept for                                       |
+| ------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `activity`          | Previews, shared saves and file shares of posts, with the post's details; your account id for moderation | Yes, without the account id, on the signed-out home page; admins can read the feed | 30 days (pruned when the server starts)        |
+| `collection_events` | Views and copies of public channels, with the viewer's account id for de-duplication                     | Counts only, on public channels and `/api/collections/trending`                    | 90 days of detail; all-time totals per channel |
+| `analytics_events`  | Product events (views, saves, file shares, copies, tags, archive, sign-ins, syncs), with your account id | No: totals and top posts by ID for admins only, without account ids                | 90 days (pruned when the server starts)        |
 
-Display text and pictures on the pulse are copied from the post on the server; nobody can make up what shows there. Just for me saves and archive write no pulse event. Removing a save does not remove its earlier pulse events, which age out after 30 days.
+Display text and pictures on the pulse are copied from the post on the server; nobody can make up what shows there. Just for me saves and archive write no pulse event. Removing a save removes its "saved" pulse event.
 
 ### Admins
 
@@ -164,8 +164,8 @@ These work without an account. None of them names who saved a post.
 - public channels `/t/{username}/{tag}` and curator pages `/t/{username}`: once you have a public channel, your username, display name, picture and when you joined are public there and in its share image
 - author pages `/{handle}` (the original posters, not members)
 - the sitemap, which lists preview pages of posts members have shared
-- public JSON: `/api/share/…` (a post's details, how many members shared it, and public channels holding it with their curators' usernames), `/api/activity`, `/api/trending`, `/api/analytics`, `/api/collections/trending` and signed-out moments. **No account ids.**
-- kept media files (see Kept media)
+- public JSON: `/api/share/…` (a post's details, how many members shared it, and public channels holding it with their curators' usernames), `/api/collections/trending` and signed-out moments. **No account ids.** (`/api/activity`, `/api/trending` and `/api/analytics` are for admins.)
+- kept media files of shared posts (see Kept media)
 
 Viewing a preview does not require an account. Saving does.
 
@@ -180,8 +180,8 @@ Until you remove it, clear your data or delete your account, except:
 
 ## Clearing and deleting
 
-- **Clear data** (Settings) deletes your saves and their media rows, tags, links, archive state, preferences (including Show more / less and Just for me by default), viewing marks, sends to and from you, bells and alerts, X sync history and queued phone shares. It keeps your account, sign-in methods, phone and access keys, invites, Made for you channels and public channel settings (now empty). Pulse events from your saves keep your account id until they age out.
-- **Delete account** removes all of that plus your account, sign-in methods, X tokens, phone and access keys, pairing codes, invites you made or used, your picture files, your public channels' statistics and any ban record. Pulse, analytics and channel-view events stay but no longer carry your account id. A few things remain: your Made for you channel list (which posts it grouped), the admin audit log (and, if you were an admin, records of what you hid or banned), other members' Show more / less entries for your username, and the search data made from posts (above). Kept files go within the hour if nobody else saved the post.
+- **Clear data** (Settings) deletes your saves and their media rows, tags, links, archive state, preferences (including Show more / less and Just for me by default), viewing marks, sends to and from you, bells and alerts, X sync history and queued phone shares. It also deletes your Made for you channels and your "saved" pulse events; your other pulse events stay, without your account id. It keeps your account, sign-in methods, phone and access keys, invites and public channel settings (now empty).
+- **Delete account** removes all of that plus your account, sign-in methods, X tokens, phone and access keys, pairing codes, invites you made or used, your picture files, your public channels' statistics and any ban record. Your "saved" pulse events and Made for you channels are deleted; other pulse, analytics and channel-view events stay but no longer carry your account id. A few things remain: the admin audit log (and, if you were an admin, records of what you hid or banned) and other members' Show more / less entries for your username. Search data made from a post goes once nobody has it saved (above). Kept files go within the hour if nobody else saved the post.
 
 ## Your choices
 

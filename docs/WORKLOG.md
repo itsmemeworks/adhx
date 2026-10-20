@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Just for me privacy gaps closed
+
+- **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.
+- **Just for me by default** now covers X sync (`saveBookmark(..., isPrivate)`, no pulse for private sync saves) and Keep this channel (`group-keep.ts`), like clones.
+- **Admin-only reads**: GET `/api/activity`, `/api/trending`, `/api/analytics` go through `adminOnlyResponse()` (`src/lib/admin/only.ts`); `public/llms.txt` rewritten for a private friends server.
+- **Kept files** (`src/lib/keep/file-access.ts`): a post whose only saves are Just for me is served only to an owner (session, phone key, or the post's HMAC `?k=` file token that `toPhonePost` and Shared lately add to the owner's own URLs, since AVPlayer/ExoPlayer send no headers), with `private, no-store`; anyone else gets the unsaved-post answer, and not-kept reasons are told to members only.
+- **Lifecycle**: clear data and account delete drop the account's "saved" pulses and `auto_channels` (now account-guarded, 56 triggers); removing one save drops its pulse; `AFTER DELETE ON bookmarks` triggers remove a post's vectors, queue and keyword rows with its last save.
+- PRIVACY.md, `/privacy`, ARCHITECTURE.md, CLAUDE.md and the NAS guide updated (on top of #567's rewrite, merged into this branch).
+
 ## 2026-10-20 — Whole-system docs brought up to the friends feed
 
 - README: send to your people, notes, Show more / less, forming moments with "Tell me when it's live", Keep this channel, Getting it ready, `/doing`, invites with approval; phone app section matches the apps. Fixed stale setup lines (`ADMIN_USER_IDS` instead of `ADMIN_USERNAMES`, Android link default, PR wording, `INVITES` not passed by the Compose examples) and the garbled `KEEP_H264` comment in `.env.example`.
