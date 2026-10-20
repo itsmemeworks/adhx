@@ -28,12 +28,28 @@ export function isBlendMode(value: unknown): value is BlendMode {
 }
 
 /** Why a post is in the feed, as one reason. The first is the headline (`why`). */
-export type WhyKind = 'together' | 'more' | 'like' | 'close' | 'fresh' | 'yours'
+export type WhyKind = 'sent' | 'together' | 'more' | 'like' | 'close' | 'fresh' | 'yours'
 export interface WhyReason {
   kind: WhyKind
   text: string
-  /** The friend the reason is about (for "Show more / less from …"). */
+  /** The friend the reason is about (for "Show more / less from …"; the sender of `sent`). */
   username?: string
+  /**
+   * `like` only: the viewer's own kept post it's most like, for the thumbnail
+   * beside "Like … you kept" (`posterUrl` is added by `blend-db.ts`).
+   */
+  post?: { platform: string; id: string; posterUrl?: string | null }
+  /** `sent` only: the sender's note, when they wrote one. */
+  note?: string
+}
+
+/** Someone sent the viewer this post and they haven't seen it yet. */
+export interface BlendSend {
+  username: string
+  name: string | null
+  /** When they sent it (epoch ms). */
+  at: number
+  note: string | null
 }
 
 /** One save of a candidate post: a member's visible save, or the viewer's own. */
@@ -51,8 +67,10 @@ export interface BlendCandidate {
   saves: BlendSave[]
   /** Cosine to the mean of the viewer's recent saves; null when not understood. */
   similarity: number | null
-  /** The kept post it's most like: "the frog videos", "@ana’s video". */
-  like?: { label: string; topic: string | null } | null
+  /** The kept post it's most like: "the frog videos", "@ana’s video", and which post. */
+  like?: { label: string; topic: string | null; post?: { platform: string; id: string } } | null
+  /** Unseen sends of it to the viewer, newest first ("Pete sent you this"). */
+  sent?: BlendSend[]
   /** The viewer has a `post_views` row for it. */
   seen: boolean
 }
@@ -80,6 +98,8 @@ export interface BlendPick {
   topic: string | null
   /** Only the viewer saved it. */
   ownOnly: boolean
+  /** Newest unseen send to the viewer (epoch ms), when someone sent it. */
+  sentAt?: number
 }
 
 export const BLEND_WEIGHTS = {
@@ -122,6 +142,14 @@ export function shortAgo(at: number, now: number): string {
 
 function nameOf(save: BlendSave): string {
   return save.name?.trim() || save.username
+}
+
+/** "Pete sent you this", "Pete and Ana sent you this", "Pete and 2 others sent you this". */
+export function sentLine(names: string[]): string {
+  if (names.length === 0) return ''
+  if (names.length === 1) return `${names[0]} sent you this`
+  if (names.length === 2) return `${names[0]} and ${names[1]} sent you this`
+  return `${names[0]} and ${names.length - 1} others sent you this`
 }
 
 /** "Ana and Ben saved this", "You and Ana saved this", "Ana and 2 others saved this". */
@@ -236,8 +264,24 @@ export function scoreCandidate(
     score *= BLEND_WEIGHTS.less
   }
 
-  // Reasons, strongest kind first; the first one is the headline.
+  // Reasons, strongest kind first; the first one is the headline. A post
+  // someone sent you leads with who sent it until you've seen it.
   const reasons: WhyReason[] = []
+  const senders = mode === 'mine' ? [] : (c.sent ?? [])
+  if (senders.length > 0) {
+    const names: string[] = []
+    for (const s of senders) {
+      const n = s.name?.trim() || s.username
+      if (!names.includes(n)) names.push(n)
+    }
+    const note = senders.find((s) => s.note)?.note
+    reasons.push({
+      kind: 'sent',
+      text: sentLine(names),
+      username: senders[0].username,
+      ...(note ? { note } : {}),
+    })
+  }
   if (voices >= 2) {
     const names = [...(mine ? ['You'] : []), ...people.map(nameOf)]
     reasons.push({
@@ -254,7 +298,11 @@ export function scoreCandidate(
     })
   }
   if (like >= LIKE_SHOWN && c.like?.label) {
-    reasons.push({ kind: 'like', text: `Like ${c.like.label} you kept` })
+    reasons.push({
+      kind: 'like',
+      text: `Like ${c.like.label} you kept`,
+      ...(c.like.post ? { post: { ...c.like.post } } : {}),
+    })
   }
   if (closest && close >= CLOSE_SHOWN) {
     reasons.push({
@@ -340,6 +388,7 @@ export function blend(
       // Only a post that's clearly like a topic you keep counts as that topic.
       topic: (likes.get(c.key) ?? 0) >= LIKE_SHOWN ? (c.like?.topic ?? null) : null,
       ownOnly: scored.ownOnly,
+      ...(mode !== 'mine' && c.sent?.length ? { sentAt: c.sent[0].at } : {}),
     })
   }
   picks.sort(
@@ -348,7 +397,13 @@ export function blend(
       (newest.get(b.key) ?? 0) - (newest.get(a.key) ?? 0) ||
       (a.key < b.key ? -1 : a.key > b.key ? 1 : 0),
   )
-  return applyVariety(picks, mode)
+  const varied = applyVariety(picks, mode)
+  if (mode !== 'new') return varied
+  // New plays what your people sent you first, newest send first.
+  const sent = varied
+    .filter((p) => p.sentAt !== undefined)
+    .sort((a, b) => (b.sentAt ?? 0) - (a.sentAt ?? 0))
+  return sent.length ? [...sent, ...varied.filter((p) => p.sentAt === undefined)] : varied
 }
 
 // ——— Cursors: an opaque handle on one snapshot ———

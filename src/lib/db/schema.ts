@@ -237,6 +237,62 @@ export const postViews = sqliteTable(
   }),
 )
 
+// "Send straight to your people" (`post_sends`): one member sent a post to
+// another. The recipient sees it first in New ("Pete sent you this") until
+// `seen_at` (set when they see the post). PK: (fromUserId, toUserId,
+// platform, postId). Both user columns are account-guarded; rows go with
+// either account. DDL: `src/lib/sends/schema-sql.ts`.
+export const postSends = sqliteTable(
+  'post_sends',
+  {
+    fromUserId: text('from_user_id').notNull(),
+    toUserId: text('to_user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    note: text('note'),
+    createdAt: text('created_at').notNull(),
+    seenAt: text('seen_at'),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.fromUserId, table.toUserId, table.platform, table.postId],
+    }),
+    toIdx: index('post_sends_to_idx').on(table.toUserId, table.seenAt),
+  }),
+)
+
+// "Tell me when it's live": a member's bell on a forming group (an engine
+// id, carried across regroups and merges by `src/lib/moments/alerts.ts`).
+export const momentAlertSubs = sqliteTable(
+  'moment_alert_subs',
+  {
+    userId: text('user_id').notNull(),
+    formingId: text('forming_id').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.formingId] }),
+    formingIdx: index('moment_alert_subs_forming_idx').on(table.formingId),
+  }),
+)
+
+// One alert per subscriber when their forming group goes live. Unseen ones
+// are listed for 24 hours (`GET /api/moments/alerts`, `/api/app/alerts`).
+export const momentAlerts = sqliteTable(
+  'moment_alerts',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: text('user_id').notNull(),
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    createdAt: text('created_at').notNull(),
+    seenAt: text('seen_at'),
+  },
+  (table) => ({
+    userIdx: index('moment_alerts_user_idx').on(table.userId, table.createdAt),
+  }),
+)
+
 // Tag shares - track which tags are shared publicly
 export const tagShares = sqliteTable(
   'tag_shares',

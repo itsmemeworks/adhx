@@ -9,6 +9,9 @@ import {
   syncLogs,
   userPreferences,
   postViews,
+  postSends,
+  momentAlertSubs,
+  momentAlerts,
   accessKeys,
   appPairCodes,
   invites,
@@ -85,6 +88,13 @@ export const DELETE = withAuth(async (_req, userId) => {
 
       // 10. Delete the feed's seen list
       db.delete(postViews).where(eq(postViews.userId, userId)).run()
+
+      // 10b. Posts sent to or by this account, and its live bells and alerts.
+      db.delete(postSends)
+        .where(or(eq(postSends.fromUserId, userId), eq(postSends.toUserId, userId)))
+        .run()
+      db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
+      db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
 
       // 11. Delete public tag-share settings
       db.delete(tagShares).where(eq(tagShares.userId, userId)).run()

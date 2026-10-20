@@ -3,9 +3,12 @@ import { db } from '@/lib/db'
 import { privateKeysFor, saversFor } from '@/lib/people/savers'
 import { membersById } from '@/lib/people/by-id'
 import type { Saver } from '@/lib/people/types'
+import { formingAlertsFor } from './alerts'
 import {
+  formingPostKeys,
   momentPostKeys,
   watchingCount,
+  type FormingView,
   type MomentDetail,
   type MomentEvent,
   type MomentView,
@@ -189,9 +192,44 @@ export function withMomentPeople(moment: MomentView, viewerId: string): MomentVi
   }
 }
 
+/** Faces on a forming card ("Jo and Ben"), at most this many. */
+export const MAX_FORMING_PEOPLE = 4
+
+/**
+ * Members only: who's saving a forming group (visible saves in the window,
+ * newest saver first, at most 4, names and faces only) and whether the viewer
+ * asked to be told when it goes live.
+ */
+export function withFormingPeople(
+  forming: FormingView,
+  viewerId: string,
+  alerts?: ReadonlySet<string>,
+): FormingView {
+  if (!viewerId) return forming
+  const found = formingPostKeys(forming.id)
+  const saves = found
+    ? [...visibleSavers(found.keys, viewerId).values()].map((list) =>
+        list.filter((x) => x.savedAt >= found.since),
+      )
+    : []
+  const people = facesOf(saves)
+    .slice(0, MAX_FORMING_PEOPLE)
+    .map((p) => ({ username: p.username, name: p.name, avatarUrl: p.avatarUrl }))
+  const alert = (alerts ?? formingAlertsFor(viewerId, [forming.id])).has(forming.id)
+  return { ...forming, people, alert }
+}
+
 export function withSnapshotPeople(snapshot: MomentsSnapshot, viewerId: string): MomentsSnapshot {
   if (!viewerId) return snapshot
-  return { ...snapshot, moments: snapshot.moments.map((m) => withMomentPeople(m, viewerId)) }
+  const alerts = formingAlertsFor(
+    viewerId,
+    snapshot.forming.map((f) => f.id),
+  )
+  return {
+    ...snapshot,
+    moments: snapshot.moments.map((m) => withMomentPeople(m, viewerId)),
+    forming: snapshot.forming.map((f) => withFormingPeople(f, viewerId, alerts)),
+  }
 }
 
 export function withDetailPeople(detail: MomentDetail, viewerId: string): MomentDetail {
@@ -228,6 +266,7 @@ export function eventForViewer(event: MomentEvent, viewerId: string): MomentEven
       return {
         ...event,
         ...(event.moment ? { moment: withMomentPeople(event.moment, viewerId) } : {}),
+        ...(event.forming ? { forming: withFormingPeople(event.forming, viewerId) } : {}),
         ...(saver ? { saver } : {}),
       }
     }

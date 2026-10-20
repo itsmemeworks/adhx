@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events'
+import { randomBytes } from 'crypto'
 import { sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import type { FeedItemResponse as FeedItem } from '@/lib/feed/build-item'
@@ -39,12 +40,14 @@ import {
   peopleIn,
   pickHue,
   rank,
+  reconcileForming,
   slugFor,
   type Forming,
   type Moment,
   type RecentPost,
 } from './group'
 import { nameMoment } from './naming'
+import { carryFormingSubscriptions, dropFormingSubscriptions, fireFormingAlerts } from './alerts'
 import { namedWatchAdjustment } from './presence'
 
 /**
@@ -100,6 +103,13 @@ export interface FormingView {
   need: number
   unit: 'people' | 'saves'
   covers: FeedItem[]
+  /**
+   * Members only (`people.ts`, never the engine): up to 4 people saving these,
+   * newest first, from visible saves only.
+   */
+  people?: { username: string; name: string | null; avatarUrl: string | null }[]
+  /** Members only: whether the viewer asked to be told when it goes live. */
+  alert?: boolean
 }
 
 export interface StreamItem {
@@ -195,6 +205,11 @@ type State = {
   stats: { today: number; lastHour: number }
   bus: EventEmitter
   nextId: number
+  /**
+   * Part of every forming id, new each time the process starts, so a bell
+   * stored for an old group never lands on a new group that reused its number.
+   */
+  boot: string
 }
 
 const g = globalThis as unknown as { __adhxMoments?: State }
@@ -224,6 +239,7 @@ function fresh(): State {
     stats: { today: 0, lastHour: 0 },
     bus,
     nextId: 1,
+    boot: randomBytes(3).toString('hex'),
   }
 }
 
@@ -411,6 +427,29 @@ async function snapshot(): Promise<MomentsSnapshot> {
   }
 }
 
+// ——— "Tell me when it's live" ———
+
+function formingKeys(list: Forming[]): { id: string; keys: string[] }[] {
+  return list.map((f) => ({ id: f.id, keys: [...f.members.keys()] }))
+}
+
+/**
+ * After forming groups changed (merged, regrouped, promoted, expired): move
+ * bells on a vanished group to the group that holds most of its posts, alert
+ * its subscribers when it went live, and drop the rest silently.
+ */
+function settleSubscriptions(before: { id: string; keys: string[] }[]): void {
+  const s = state()
+  const { carry, formed, dropped } = reconcileForming(
+    before,
+    formingKeys(s.forming),
+    s.moments.map((m) => ({ slug: m.slug, title: m.title, keys: [...m.members.keys()] })),
+  )
+  carryFormingSubscriptions(carry)
+  for (const f of formed) fireFormingAlerts(f.from, { slug: f.slug, title: f.title })
+  dropFormingSubscriptions(dropped)
+}
+
 function emit(event: MomentEvent): void {
   state().bus.emit('event', event)
 }
@@ -524,9 +563,12 @@ async function recompute(): Promise<void> {
   s.label = chosen?.label ?? WINDOWS[0].label
   // Forming groups whose posts are now in a moment are done; stale ones expire.
   const inMoments = new Set(moments.flatMap((m) => [...m.members.keys()]))
+  const formingBefore = formingKeys(s.forming)
   s.forming = s.forming.filter(
     (f) => now - f.lastAt < FORMING_TTL_MS && ![...f.members.keys()].some((k) => inMoments.has(k)),
   )
+  // Groups a regroup made into moments go live; expired ones dissolve.
+  settleSubscriptions(formingBefore)
   s.lastRecompute = now
   s.stats = readStats(now)
   if (!s.watermark) {
@@ -638,6 +680,7 @@ async function processNewSaves(): Promise<void> {
   const min = minSavers()
 
   let streamed = 0
+  const formingBefore = formingKeys(s.forming)
   for (const p of shown) {
     const post = posts.get(p.key)
     if (!post) continue
@@ -665,7 +708,7 @@ async function processNewSaves(): Promise<void> {
         v,
         p.saver,
         p.at,
-        () => `f${s.nextId++}`,
+        () => `f${s.boot}-${s.nextId++}`,
         pickHue(s.nextId * 7, hueInUse(s)),
         raw,
       )
@@ -720,6 +763,7 @@ async function processNewSaves(): Promise<void> {
       emit({ type: 'snapshot', snapshot: await snapshot() })
     }
   }
+  settleSubscriptions(formingBefore)
   const stats = readStats(now)
   if (stats.today !== s.stats.today || stats.lastHour !== s.stats.lastHour) {
     s.stats = stats
@@ -814,6 +858,28 @@ export function momentPostKeys(slug: string, limit = 60): { keys: string[]; sinc
     keys: newestKeys(m.members, limit),
     since: new Date(Date.now() - s.hours * 3_600_000).toISOString(),
   }
+}
+
+/**
+ * A forming group's post keys and the start of the window (ISO), so
+ * `people.ts` can show members who's saving them. Post keys only; null when
+ * there's no such group.
+ */
+export function formingPostKeys(id: string): { keys: string[]; since: string } | null {
+  const s = state()
+  const f = s.forming.find((x) => x.id === id)
+  if (!f) return null
+  return {
+    keys: newestKeys(f.members, 60),
+    since: new Date(Date.now() - s.hours * 3_600_000).toISOString(),
+  }
+}
+
+/** Whether a forming group still exists (computing first if needed). */
+export async function hasForming(id: string): Promise<boolean> {
+  ensureRunning()
+  await ensureRecomputed()
+  return state().forming.some((x) => x.id === id)
 }
 
 /** Whether a moment is live now (computing first if needed). */
