@@ -6,6 +6,23 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-19 — Notes on saves
+
+- `bookmarks.note` / `phone_save_queue.note` (guarded ALTERs, `schema.ts`, test DDL). `cleanNote` (`src/lib/people/note-text.ts`): whitespace collapsed, control/bidi dropped, ≤140 graphemes, empty → null.
+- Every save path takes `note?: string` (`/api/bookmarks/add`, `/api/tweets/add`, `/api/app/save` sync + queue); a repeat save with `note` replaces it. Edit: `PATCH /api/bookmarks/[id]/note`, `POST /api/app/note`. Admins: `POST /api/admin/posts { clearNotes: true | username }` (audited `clear_note`).
+- `Saver.note` via `saversFor`, so feed, blend, search, similar, channel queues, moment items, phone posts and the live poll carry it for members only; moment card faces strip it; a private save's note reaches only its owner; public channel clones no longer copy notes.
+- Web: `SaverNote` (byline bubble in `SaversButton`, quote in Who saved it), `NoteField` in the Save sheet; TheaterV2 only keeps your note after an edit.
+- Parity seed has the boards' notes (Ana on Charlie, Ben on the Rickroll, Mum on the sauce, Pete on dark chocolate).
+- Follow-ups: no admin console button for clearing notes (API only); the j3-2 "Ana's note" tile on a friend's channel isn't built. iOS/Android UI is with the phone agents.
+
+## 2026-10-19 — Design parity harness (`e2e/parity/`)
+
+- `pnpm parity:serve` seeds a fresh DB with the friends-feed boards' world (Pete admin, Ana, Ben, Mum, Jo; the boards' posts, times, private saves, invites, a waiting join request under "Anyone, I approve", group and Made for you channels, moments, /doing states, seen rows so New shows 12) and runs Next on :3600. Kept media is cloned from `PARITY_MEDIA_SRC` (ffmpeg placeholders without it).
+- `credentials.json` holds a session cookie and a phone key (real pairing flow) per member, so iOS/Android can point at the same server.
+- `pnpm parity:capture` screenshots all 17 `j*-web-*` boards at 1280×800 and 390×844 in their states (⋯ menu, Who saved it, caught-up card, searches, invite made, avatar dialog, tuned in with watchers and reactions), never marking anything seen. `pnpm parity:compare` writes side-by-sides and a worst-first score report.
+- Gaps: no notes in the schema; moment names come from shared words without the model; keep percent and "Mac helper connected" need live work. See `e2e/parity/README.md`.
+- No UI changed.
+
 ## 2026-10-19 — Exercise release gates across platforms
 
 - Separate the Node runtime from build tools, remove unused package managers and recommended OS extras, and expose retained scanner findings directly in CI logs.

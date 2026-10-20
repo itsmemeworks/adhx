@@ -335,6 +335,70 @@ describe('TheaterV2', () => {
     expect(screen.getAllByRole('img', { name: 'Just for me' }).length).toBeGreaterThan(0)
   })
 
+  it('shows a friend’s note on the byline and sets yours from the Save sheet', async () => {
+    const noted = {
+      ...v1,
+      saved: true,
+      post: {
+        ...v1.post,
+        savers: [
+          {
+            username: 'ben',
+            name: 'Ben',
+            avatarUrl: null,
+            savedAt: '2026-10-18T10:00:00.000Z',
+            isYou: false,
+            note: 'you’re welcome',
+          },
+          {
+            username: 'me',
+            name: 'Me',
+            avatarUrl: null,
+            savedAt: '2026-10-17T10:00:00.000Z',
+            isYou: true,
+          },
+        ],
+      },
+    }
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/note') && init?.method === 'PATCH') {
+        return new Response(JSON.stringify({ note: 'this is so you, Ben' }))
+      }
+      if (url.startsWith('/api/search') && !url.startsWith('/api/search/similar')) {
+        return new Response(
+          JSON.stringify({
+            items: [noted, p2],
+            total: 2,
+            understood: true,
+            close: true,
+            refined: true,
+            nextOffset: null,
+          }),
+        )
+      }
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    expect(screen.getByRole('figure')).toHaveTextContent('you’re welcome')
+
+    fireEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    const input = await screen.findByLabelText('Add a note')
+    expect(input).toHaveValue('')
+    fireEvent.change(input, { target: { value: 'this is so you, Ben' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([u]) => String(u) === '/api/bookmarks/1/note')).toBe(true),
+    )
+    // Ben's note still leads the byline; yours is in Who saved it.
+    expect(screen.getByRole('figure')).toHaveTextContent('you’re welcome')
+    const sheet = screen.getByRole('dialog', { name: 'Saved. Add to a channel' })
+    fireEvent.click(within(sheet).getAllByRole('button', { name: 'Close' })[0])
+    fireEvent.click(screen.getByRole('button', { name: /saved this/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Who saved it' })
+    await waitFor(() => expect(dialog).toHaveTextContent('Your note: “this is so you, Ben”'))
+  })
+
   it('remembers a mute choice over the account default', async () => {
     prefs.current = {
       preferences: { soundOn: true, bionicReading: false, bodyFont: 'ibm-plex' },

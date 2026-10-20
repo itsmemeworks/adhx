@@ -71,3 +71,7 @@ site/next-env.d.ts
 
 # A NAS install's database and kept media (deploy/nas)
 deploy/nas/data/
+
+# Design parity harness (e2e/parity): scratch DB, media, captures
+e2e/parity/.out/
+.next-parity/

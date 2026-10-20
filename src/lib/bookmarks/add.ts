@@ -25,7 +25,8 @@ import { expandShortLink, isShortLink } from '@/lib/keep/shortlinks'
 import { keptSrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
 import { cancelledSave, type SaveGuard } from './save-guard'
-import { applyRepeatPrivacy, newSavePrivate, withPrivateDefault, type SaveOptions } from './privacy'
+import { applyRepeatSave, newSavePrivate, withPrivateDefault, type SaveOptions } from './privacy'
+import { newSaveNote } from './note'
 
 /**
  * Save the post a link points to for `userId` — the platform-agnostic save
@@ -161,7 +162,7 @@ async function addInstagramPost(
             success: false,
             isDuplicate: true,
             platform: 'instagram',
-            bookmark: applyRepeatPrivacy(current, options),
+            bookmark: applyRepeatSave(current, options),
           },
           { status: 200 },
         )
@@ -206,6 +207,7 @@ async function addInstagramPost(
         category: contentType,
         source,
         isPrivate: newSavePrivate(options),
+        note: newSaveNote(options),
       })
       .onConflictDoNothing()
       .run()
@@ -309,7 +311,7 @@ async function addInstagramPost(
         success: false,
         isDuplicate: true,
         platform: 'instagram',
-        bookmark: applyRepeatPrivacy(result.bookmark, options),
+        bookmark: applyRepeatSave(result.bookmark, options),
       },
       { status: 200 },
     )
@@ -388,7 +390,7 @@ async function addTikTokVideo(
             success: false,
             isDuplicate: true,
             platform: 'tiktok',
-            bookmark: applyRepeatPrivacy(current, options),
+            bookmark: applyRepeatSave(current, options),
           },
           { status: 200 },
         )
@@ -419,6 +421,7 @@ async function addTikTokVideo(
         category: 'video',
         source,
         isPrivate: newSavePrivate(options),
+        note: newSaveNote(options),
       })
       .onConflictDoNothing()
       .run()
@@ -468,7 +471,7 @@ async function addTikTokVideo(
         success: false,
         isDuplicate: true,
         platform: 'tiktok',
-        bookmark: applyRepeatPrivacy(result.bookmark, options),
+        bookmark: applyRepeatSave(result.bookmark, options),
       },
       { status: 200 },
     )
@@ -531,7 +534,7 @@ async function addNetworkPost(
         success: false,
         isDuplicate: true,
         platform,
-        bookmark: applyRepeatPrivacy(existing, options),
+        bookmark: applyRepeatSave(existing, options),
       },
       { status: 200 },
     )
@@ -592,6 +595,7 @@ async function addNetworkPost(
         category: described.category,
         source,
         isPrivate: newSavePrivate(options),
+        note: newSaveNote(options),
       })
       .onConflictDoNothing()
       .run()
@@ -627,7 +631,7 @@ async function addNetworkPost(
         success: false,
         isDuplicate: true,
         platform,
-        bookmark: applyRepeatPrivacy(result.bookmark, options),
+        bookmark: applyRepeatSave(result.bookmark, options),
       },
       { status: 200 },
     )

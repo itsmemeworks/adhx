@@ -55,6 +55,7 @@ export type AdminAuditAction =
   | 'approve_join'
   | 'decline_join'
   | 'set_invite_mode'
+  | 'clear_note'
 
 function nowIso(): string {
   return new Date().toISOString()

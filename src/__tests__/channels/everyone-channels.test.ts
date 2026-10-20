@@ -433,4 +433,64 @@ describe('routes', () => {
     viewer = ANA
     expect((await GET(new Request(`${BASE}/api/app/channels`))).status).toBe(200)
   })
+
+  it('notes: members see them on channel queues (web and phone), never a private save’s', async () => {
+    testInstance.sqlite.exec(`
+      UPDATE bookmarks SET note = 'you’re welcome' WHERE user_id = 'u_ben' AND id = 't1p1';
+      UPDATE bookmarks SET note = 'whisper words' WHERE user_id = 'u_ben' AND id = 'secret1';
+      UPDATE bookmarks SET note = 'banned words' WHERE user_id = 'u_cal' AND id = 'banned1';
+    `)
+    await computeGroupChannels(deps)
+    viewer = ANA
+    const { GET: friend } = await import('@/app/api/channels/friend/[username]/route')
+    const f = await friend(new NextRequest(`${BASE}/api/channels/friend/ben`), {
+      params: Promise.resolve({ username: 'ben' }),
+    })
+    const fBody = await f.json()
+    const t1p1 = fBody.items.find((i: { post: { id: string } }) => i.post.id === 't1p1')
+    expect(t1p1.post.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    const { GET: group } = await import('@/app/api/channels/group/[slug]/route')
+    const g = await group(new NextRequest(`${BASE}/api/channels/group/synths`), {
+      params: Promise.resolve({ slug: 'synths' }),
+    })
+    const gText = await g.text()
+    expect(gText).toContain('you’re welcome')
+    const { GET: all } = await import('@/app/api/channels/route')
+    const overview = await (await all(new NextRequest(`${BASE}/api/channels`))).text()
+    // Faces on a channel card aren't one post's: no notes there.
+    expect(overview).not.toMatch(/welcome|whisper|banned words/)
+    for (const text of [JSON.stringify(fBody), gText]) {
+      expect(text).not.toMatch(/whisper|banned words/)
+    }
+
+    // The phone's queues carry the same notes as PhonePosts.
+    const { createAccessKey } = await import('@/lib/auth/access-keys')
+    const key = createAccessKey(ANA, 'Phone', 'phone')!.key
+    viewer = null
+    const { GET: one } = await import('@/app/api/app/channels/[kind]/[slug]/route')
+    const phone = await (
+      await one(
+        new Request(`${BASE}/api/app/channels/friend/ben`, {
+          headers: { authorization: `Bearer ${key}` },
+        }),
+        { params: Promise.resolve({ kind: 'friend', slug: 'ben' }) },
+      )
+    ).json()
+    const p = phone.items.find((i: { id: string }) => i.id === 't1p1')
+    expect(p.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(JSON.stringify(phone)).not.toMatch(/whisper|banned words/)
+
+    // Signed out: no queue at all.
+    expect(
+      (
+        await friend(new NextRequest(`${BASE}/api/channels/friend/ben`), {
+          params: Promise.resolve({ username: 'ben' }),
+        })
+      ).status,
+    ).toBe(401)
+  })
 })

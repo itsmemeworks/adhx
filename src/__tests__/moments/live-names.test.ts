@@ -744,3 +744,113 @@ describe('phone room leases and cached post refresh', () => {
     expect(JSON.stringify((await snapshotAs(null)).moments)).not.toContain('username')
   })
 })
+
+describe('notes in moments', () => {
+  const session = 'phone-room-notes-12345'
+  const WORDS = /welcome|whisper|original|jump in/
+
+  async function seedNotes() {
+    await seedFrogs()
+    save(USER_C, 'frog2', 'frog video number 2', { isPrivate: true, note: 'whisper words' })
+    testInstance.sqlite.exec(`
+      UPDATE bookmarks SET note = 'you’re welcome' WHERE user_id = '${USER_B}' AND id = 'frog0';
+      UPDATE bookmarks SET note = 'the original' WHERE user_id = '${USER_A}' AND id = 'frog1';
+    `)
+    return frogSlug()
+  }
+
+  it('members see notes on each post’s savers; strangers and private saves never', async () => {
+    const slug = await seedNotes()
+    const outside = [await snapshotAs(null), await detailAs(null, slug)]
+    for (const out of outside) expect(JSON.stringify(out)).not.toMatch(WORDS)
+
+    const detail = await detailAs(USER_A, slug)
+    const frog0 = detail.items.find((i: { post: { id: string } }) => i.post.id === 'frog0')
+    expect(frog0.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(JSON.stringify(detail)).not.toContain('whisper')
+    // Moments never name a private save, so its note stays out even for its owner.
+    expect(JSON.stringify(await detailAs(USER_C, slug))).not.toContain('whisper')
+
+    // The faces on a moment card stand for the whole moment: no one post's note.
+    const [frog] = (await snapshotAs(USER_A)).moments
+    expect(frog.savers.length).toBeGreaterThan(0)
+    for (const s of frog.savers) expect(s).not.toHaveProperty('note')
+  })
+
+  it('the phone: live posts and the poll carry notes for members only', async () => {
+    const slug = await seedNotes()
+    const key = createAccessKey(USER_A, 'Phone', 'phone')!.key
+    const req = new Request(`${BASE}/api/app/live/${slug}`, {
+      headers: { authorization: `Bearer ${key}` },
+    })
+    const detail = await (await appMomentGET(req, params(slug))).json()
+    const frog0 = detail.items.find((p: { id: string }) => p.id === 'frog0')
+    expect(frog0.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(JSON.stringify(detail)).not.toContain('whisper')
+
+    const live = await (
+      await appLiveGET(
+        new Request(`${BASE}/api/app/live`, { headers: { authorization: `Bearer ${key}` } }),
+      )
+    ).json()
+    expect(JSON.stringify(live)).not.toContain('whisper')
+
+    const poll = await (
+      await appMomentPOST(
+        new NextRequest(`${BASE}/api/app/live/${slug}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${key}`,
+            'X-ADHX-Watch': session,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ known: ['twitter:frog0', 'twitter:frog2'] }),
+        }),
+        params(slug),
+      )
+    ).json()
+    // frog0 is still among the posts sent; older cached ones come as saverUpdates.
+    const polled =
+      poll.saverUpdates.find((u: { key: string }) => u.key === 'twitter:frog0') ??
+      poll.items.find((p: { id: string }) => p.id === 'frog0')
+    expect(polled.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(JSON.stringify(poll)).not.toContain('whisper')
+    // The cached-post refresh the poll sends for older posts.
+    const { momentSaverUpdates } = await import('@/lib/moments/people')
+    const updates = momentSaverUpdates(['twitter:frog0', 'twitter:frog2'], USER_A)
+    expect(updates[0].savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(usernames(updates[1].savers)).toEqual(['ana'])
+    expect(JSON.stringify(updates)).not.toContain('whisper')
+    expect(JSON.stringify(momentSaverUpdates(['twitter:frog2'], USER_C))).not.toContain('whisper')
+    expect(
+      (await appMomentGET(new Request(`${BASE}/api/app/live/${slug}`), params(slug))).status,
+    ).toBe(401)
+  })
+
+  it('an arriving save carries its note to members, never to strangers', async () => {
+    const slug = await seedNotes()
+    const stranger = await openStream(null, slug)
+    const ana = await openStream(USER_A, slug)
+    save(USER_C, 'frog9', 'frog video number 9', { note: 'jump in' })
+    await understood('frog9', topic(0, 9))
+    await __moments.processNewSaves()
+    await settle()
+    const [mine] = ana.of('save')
+    expect(mine.data.saver).toMatchObject({ username: 'cal', note: 'jump in' })
+    // The moment's faces stay note-free.
+    expect(JSON.stringify((mine.data.moment as { savers: unknown }).savers)).not.toContain(
+      'jump in',
+    )
+    expect(JSON.stringify(stranger.events)).not.toMatch(WORDS)
+    await ana.close()
+    await stranger.close()
+  })
+})

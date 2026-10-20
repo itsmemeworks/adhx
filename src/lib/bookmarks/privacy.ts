@@ -8,6 +8,7 @@ import {
   userPreferences,
   type Bookmark,
 } from '@/lib/db/schema'
+import { applyRepeatNote } from './note'
 
 /**
  * "Just for me" saves (docs/specs/friends-feed.md). A private save is kept,
@@ -24,6 +25,11 @@ export type SaveOptions = {
    * "Just for me by default" (`withPrivateDefault`); never changes a repeat save.
    */
   defaultPrivate?: boolean
+  /**
+   * A note for your people (`bookmarks/note.ts`). A string sets it (cleaned;
+   * empty clears it), null clears it, undefined leaves a repeat save's note.
+   */
+  note?: string | null
 }
 
 /** `user_preferences` key for Settings → You → "Just for me by default" ('true' | 'false'). */
@@ -120,6 +126,16 @@ export function applyRepeatPrivacy<
   if (!!row.isPrivate === options.private) return row
   const next = setSavePrivate(row.userId, row.platform, row.id, options.private)
   return next === null ? row : { ...row, isPrivate: next }
+}
+
+/** A repeat save: apply `options.private` and `options.note` when they were passed. */
+export function applyRepeatSave<
+  T extends Pick<Bookmark, 'userId' | 'platform' | 'id'> & {
+    isPrivate?: boolean | null
+    note?: string | null
+  },
+>(row: T | undefined, options: SaveOptions): T | undefined {
+  return applyRepeatNote(applyRepeatPrivacy(row, options), options)
 }
 
 /** A DB-backed fingerprint for public caches, including across web processes.

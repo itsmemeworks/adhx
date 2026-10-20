@@ -3,6 +3,7 @@ import { appError, withPhoneKey } from '@/lib/api/phone-auth'
 import { appPost, firstLink, savedPost } from '@/lib/app/phone-app'
 import { addBookmark } from '@/lib/bookmarks/add'
 import { privateFlag } from '@/lib/bookmarks/privacy'
+import { noteOption } from '@/lib/bookmarks/note'
 import { isLinkNetwork } from '@/lib/platform/networks'
 import { wakeKeep } from '@/lib/keep/worker'
 import {
@@ -14,9 +15,11 @@ import {
 } from '@/lib/app/save-queue'
 
 /**
- * POST /api/app/save { url, private? } — the phone app's share sheet. `url` is
- * a link, or text with one in it. `private: true` keeps it just for you (in the
- * queue too); on a repeat save, `private` updates the flag.
+ * POST /api/app/save { url, private?, note? } — the phone app's share sheet. `url`
+ * is a link, or text with one in it. `private: true` keeps it just for you (in
+ * the queue too); on a repeat save, `private` updates the flag. `note` is a few
+ * words for your people (≤140 characters, kept with a queued share too); on a
+ * repeat save it replaces the note, and an empty one clears it.
  *
  * With `Prefer: respond-async` (the current apps), the link is queued and the
  * answer comes at once: 202 `{ queued: true, id, state }`. The post is read and
@@ -28,10 +31,12 @@ export const POST = withPhoneKey(async (request, { userId }) => {
   const body = (await request.json().catch(() => ({}))) as {
     url?: unknown
     private?: unknown
+    note?: unknown
     deferPublish?: unknown
     requestId?: unknown
   }
   const isPrivate = privateFlag(body)
+  const note = noteOption(body)
   const url = firstLink(body?.url)
   if (!url) return appError(400, 'no_link', 'There’s no link in what was shared.')
 
@@ -49,6 +54,7 @@ export const POST = withPhoneKey(async (request, { userId }) => {
     try {
       queued = enqueueSave(userId, url, undefined, {
         private: isPrivate,
+        note,
         deferPublish: body?.deferPublish === true,
         requestId: body.requestId as string | undefined,
       })
@@ -70,7 +76,10 @@ export const POST = withPhoneKey(async (request, { userId }) => {
     )
   }
 
-  const response = await addBookmark(userId, url, 'phone_app', undefined, { private: isPrivate })
+  const response = await addBookmark(userId, url, 'phone_app', undefined, {
+    private: isPrivate,
+    note,
+  })
   const data = (await response.json().catch(() => ({}))) as {
     success?: boolean
     isDuplicate?: boolean

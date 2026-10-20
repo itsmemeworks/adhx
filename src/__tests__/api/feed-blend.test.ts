@@ -621,3 +621,68 @@ describe("what's in your feed", () => {
     expect((await types('GET')).body).toEqual({ types: ['video', 'text'] })
   })
 })
+
+describe('notes on the blended feed', () => {
+  beforeEach(() => {
+    testInstance.sqlite.exec(`
+      UPDATE bookmarks SET note = 'you’re welcome' WHERE user_id = 'u_ben' AND id = 'p3';
+      UPDATE bookmarks SET note = 'whisper words' WHERE user_id = 'u_ben' AND id = 'p2';
+      UPDATE bookmarks SET note = 'banned words' WHERE user_id = 'u_mum' AND id = 'p4';
+    `)
+  })
+
+  it('members see each saver’s note in every mode; never a private or banned one', async () => {
+    viewer = PETE
+    for (const mode of ['new', 'everyone', 'friends']) {
+      const items = await allOf(mode)
+      const p3 = items.find((i) => i.id === 'p3')!
+      expect(p3.savers).toContainEqual(
+        expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+      )
+      expect(JSON.stringify(items)).not.toMatch(/whisper|banned words/)
+    }
+    // Ben sees his own private note in Mine.
+    viewer = BEN
+    const mine = await allOf('mine')
+    expect(mine.find((i) => i.id === 'p2')!.savers).toEqual([
+      expect.objectContaining({ isYou: true, note: 'whisper words' }),
+    ])
+  })
+
+  it('a changed note shows on the next page of the same snapshot', async () => {
+    viewer = PETE
+    const first = await feed('mode=everyone&limit=1')
+    expect(first.status).toBe(200)
+    testInstance.sqlite.exec(
+      "UPDATE bookmarks SET note = 'changed my mind' WHERE user_id = 'u_ben' AND id = 'p3'",
+    )
+    const rest = await allOf('everyone')
+    expect(JSON.stringify(rest)).toContain('changed my mind')
+    expect(JSON.stringify(rest)).not.toContain('you’re welcome')
+  })
+
+  it('the phone’s feed carries them as PhonePost savers; no key, no feed', async () => {
+    const key = createAccessKey(PETE, 'Phone', 'phone')!.key
+    const { GET } = await import('@/app/api/app/feed/route')
+    const res = await GET(
+      new NextRequest(`${BASE}/api/app/feed?mode=everyone&${ALL_KINDS}`, {
+        headers: { authorization: `Bearer ${key}` },
+      }),
+    )
+    const body = (await res.json()) as { items: Item[] }
+    expect(body.items.find((i) => i.id === 'p3')!.savers).toContainEqual(
+      expect.objectContaining({ username: 'ben', note: 'you’re welcome' }),
+    )
+    expect(JSON.stringify(body)).not.toMatch(/whisper|banned words/)
+    const anon = await GET(new NextRequest(`${BASE}/api/app/feed?mode=everyone`))
+    expect(anon.status).toBe(401)
+    expect(await anon.text()).not.toMatch(/welcome|whisper/)
+    const search = createAccessKey(PETE, 'Script', 'search')!.key
+    const wrong = await GET(
+      new NextRequest(`${BASE}/api/app/feed?mode=everyone`, {
+        headers: { authorization: `Bearer ${search}` },
+      }),
+    )
+    expect(wrong.status).toBe(401)
+  })
+})

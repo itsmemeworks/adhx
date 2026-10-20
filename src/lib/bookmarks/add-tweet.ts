@@ -11,7 +11,8 @@ import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { recordActivity, previewPath } from '@/lib/activity/record'
 import { noteSaved } from '@/lib/semantic'
 import { cancelledSave, type SaveGuard } from './save-guard'
-import { applyRepeatPrivacy, newSavePrivate, withPrivateDefault, type SaveOptions } from './privacy'
+import { applyRepeatSave, newSavePrivate, withPrivateDefault, type SaveOptions } from './privacy'
+import { newSaveNote } from './note'
 
 /**
  * Save a tweet by its URL for `userId` (POST /api/tweets/add, and the X branch
@@ -68,7 +69,7 @@ export async function addTweet(
       // thumbnail from stored media so a saved photo/video tweet still reads
       // rich (getTrendingItems also derives type/cover from the bookmark).
       if (!canSave()) return cancelledSave()
-      const dup = applyRepeatPrivacy(existing[0], options)!
+      const dup = applyRepeatSave(existing[0], options)!
       const [firstMedia] = await db
         .select({ previewUrl: bookmarkMedia.previewUrl, originalUrl: bookmarkMedia.originalUrl })
         .from(bookmarkMedia)
@@ -329,6 +330,7 @@ export async function addTweet(
           category,
           source, // 'manual' or 'url_prefix'
           isPrivate: newSavePrivate(options),
+          note: newSaveNote(options),
           isQuote,
           quoteContext,
           quotedTweetId,
@@ -432,7 +434,7 @@ export async function addTweet(
           success: false,
           isDuplicate: true,
           message: 'This tweet is already in your bookmarks',
-          bookmark: applyRepeatPrivacy(newBookmark[0], options),
+          bookmark: applyRepeatSave(newBookmark[0], options),
         },
         { status: 200 },
       )

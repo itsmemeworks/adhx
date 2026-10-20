@@ -46,6 +46,7 @@ export function createTestDatabase(): BetterSQLite3Database<typeof schema> & { c
       retweet_context TEXT,
       summary TEXT,
       is_private INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
       raw_json TEXT,
       PRIMARY KEY (user_id, platform, id)
     );

@@ -590,3 +590,39 @@ it('upgrades queued privacy intent idempotently and shares visibility revisions 
     migrated.close()
   }
 })
+
+it('adds notes on saves (bookmarks.note, phone_save_queue.note) idempotently', () => {
+  const { databasePath, migrationsPath, sqlite } = createMigrationFixture()
+  sqlite.exec(`ALTER TABLE bookmarks DROP COLUMN note;
+    ALTER TABLE phone_save_queue DROP COLUMN note;`)
+  sqlite.prepare("INSERT INTO users(id,username) VALUES('note-owner','noteowner')").run()
+  sqlite
+    .prepare(
+      `INSERT INTO bookmarks(id,user_id,platform,author,text,tweet_url,processed_at)
+      VALUES('old','note-owner','twitter','author','words','https://x.com/author/status/old',CURRENT_TIMESTAMP)`,
+    )
+    .run()
+  sqlite.close()
+  for (let i = 0; i < 2; i++) {
+    const result = runMigration(databasePath, migrationsPath)
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0)
+  }
+  const migrated = new Database(databasePath)
+  const expected = new Database(':memory:')
+  try {
+    expected.exec(FULL_SCHEMA_SQL)
+    expect(migrated.prepare("SELECT note FROM bookmarks WHERE id='old'").get()).toEqual({
+      note: null,
+    })
+    const columns = (db: Database.Database, table: string) =>
+      (db.prepare(`PRAGMA table_info(${table})`).all() as { cid: number; name: string }[])
+        .map(({ cid: _cid, ...column }) => column)
+        .sort((a, b) => a.name.localeCompare(b.name))
+    for (const table of ['bookmarks', 'phone_save_queue']) {
+      expect(columns(migrated, table)).toEqual(columns(expected, table))
+    }
+  } finally {
+    expected.close()
+    migrated.close()
+  }
+})

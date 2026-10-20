@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { articleHeadline, postCoverSrc, postText } from '../post'
 import { NxImage } from '../primitives'
+import { NoteField } from '../NoteField'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { isVideoItem, viaLabel } from './queue'
 import { channelTitle } from '../channels/ChannelParts'
@@ -262,6 +263,8 @@ export function SaveSheet({
   isPrivate,
   privateBusy = false,
   onPrivate,
+  note,
+  onNote,
 }: {
   channels: ChannelOption[] | null
   selected: ReadonlySet<string>
@@ -276,6 +279,9 @@ export function SaveSheet({
   isPrivate?: boolean
   privateBusy?: boolean
   onPrivate?: (on: boolean) => void
+  /** "Add a note": shown for the viewer's own save. */
+  note?: { platform: string; id: string; value: string | null }
+  onNote?: (note: string | null) => void
 }) {
   const [query, setQuery] = useState('')
   const needle = sanitizeTag(query)
@@ -327,6 +333,15 @@ export function SaveSheet({
           <X aria-hidden className="h-4 w-4" />
         </button>
       </div>
+      {note && (
+        <NoteField
+          key={`${note.platform}:${note.id}`}
+          platform={note.platform}
+          id={note.id}
+          initial={note.value}
+          onSaved={onNote}
+        />
+      )}
       {onPrivate && <PrivateRow on={!!isPrivate} busy={privateBusy} onChange={onPrivate} />}
       <form
         onSubmit={(e) => {

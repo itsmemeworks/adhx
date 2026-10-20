@@ -54,6 +54,11 @@ export const bookmarks = sqliteTable(
     // member sees it, counts it or is told who saved it.
     isPrivate: integer('is_private', { mode: 'boolean' }).notNull().default(false),
 
+    // A few words for your people ("making this Sunday"), shown next to your
+    // face to members only, never to strangers. Cleaned and capped at 140
+    // characters (`cleanNote`); null when there's none.
+    note: text('note'),
+
     // Original JSON for debugging
     rawJson: text('raw_json'),
   },
@@ -320,6 +325,8 @@ export const phoneSaveQueue = sqliteTable(
     publishPending: integer('publish_pending', { mode: 'boolean' }).notNull().default(false),
     /** Highest acknowledged phone intent; replay never overrides a later web edit. */
     privacyIntentVersion: integer('privacy_intent_version').notNull().default(0),
+    /** The note shared with it (cleaned): '' clears an existing note; null leaves it. */
+    note: text('note'),
     /** Set once failed: a code the apps know, and words fit to show. */
     errorCode: text('error_code'),
     error: text('error'),

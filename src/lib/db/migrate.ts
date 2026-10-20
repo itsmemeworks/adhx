@@ -663,6 +663,16 @@ for (const [column, definition] of [
 db.exec(
   'CREATE UNIQUE INDEX IF NOT EXISTS phone_save_queue_request_idx ON phone_save_queue(user_id, request_id)',
 )
+// bookmarks.note / phone_save_queue.note — a few words on a save for your
+// people, shown to members only. Nullable, so existing rows have no note.
+// Guarded for re-runs (no IF NOT EXISTS on ADD COLUMN).
+for (const table of ['bookmarks', 'phone_save_queue']) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+  if (!columns.some((c) => c.name === 'note')) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN note text`)
+    console.log(`[migrate] Added ${table}.note`)
+  }
+}
 try {
   db.exec('ALTER TABLE keep_jobs ADD COLUMN accepted_at text')
   console.log('[migrate] Added keep_jobs.accepted_at')
