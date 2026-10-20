@@ -192,7 +192,7 @@ private fun Heading(
                 color = AdhxColors.White,
                 modifier = Modifier.semantics { heading() },
             )
-            if (note != null) Text(note, fontSize = 14.sp, color = AdhxColors.Faint)
+            if (note != null) Text(note, fontSize = 14.sp, lineHeight = 18.sp, color = AdhxColors.Faint)
         }
         trailing?.invoke()
     }
@@ -259,6 +259,7 @@ private fun GroupTile(channel: GroupChannel, server: String, onClick: () -> Unit
         Text(
             channel.name,
             fontSize = 15.sp,
+            lineHeight = 19.sp,
             fontWeight = FontWeight.ExtraBold,
             color = AdhxColors.White,
             maxLines = 1,
@@ -269,7 +270,7 @@ private fun GroupTile(channel: GroupChannel, server: String, onClick: () -> Unit
                 Faces(channel.savers, server, size = 20.dp, ring = AdhxColors.Background)
                 Spacer(Modifier.width(7.dp))
             }
-            Text(line, fontSize = 12.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(line, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -290,16 +291,14 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // 60dp face, a 2dp gap, then a 4dp ring: 72dp across, overhanging the 62dp column a little.
-        Box(Modifier.requiredSize(72.dp), contentAlignment = Alignment.Center) {
+        // As on the boards: a 60dp face, a 2dp gap, then a 2dp ring (yellow when there's something new): 68dp across.
+        Box(Modifier.requiredSize(68.dp), contentAlignment = Alignment.Center) {
             Box(
                 Modifier
-                    .size(72.dp)
-                    .border(2.dp, if (fresh) AdhxColors.Accent else AdhxColors.Card, GobShape)
-                    .padding(2.dp)
+                    .size(68.dp)
                     .border(2.dp, if (fresh) AdhxColors.Accent else AdhxColors.Card, GobShape),
             )
-            Avatar(friend.username, friend.label, friend.avatarUrl, server, size = 64.dp, modifier = Modifier.padding(2.dp))
+            Avatar(friend.username, friend.label, friend.avatarUrl, server, size = 60.dp)
             if (fresh) {
                 Box(
                     Modifier
@@ -323,7 +322,7 @@ private fun PersonBubble(friend: FriendChannel, server: String, onClick: () -> U
                 }
             }
         }
-        Text(friend.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(friend.label, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -339,7 +338,7 @@ private fun InviteBubble(onClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(Modifier.requiredSize(72.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.requiredSize(68.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.size(60.dp)) {
                 drawCircle(
                     AdhxColors.Accent.copy(alpha = 0.6f),
@@ -349,7 +348,7 @@ private fun InviteBubble(onClick: () -> Unit) {
             }
             Icon(Glyphs.Plus, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(24.dp))
         }
-        Text(Copy.INVITE, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Accent, maxLines = 1)
+        Text(Copy.INVITE, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Accent, maxLines = 1)
     }
 }
 
@@ -387,8 +386,8 @@ private fun MineRow(title: String, line: String, cover: String?, server: String,
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(line, fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = 15.sp, lineHeight = 19.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(line, fontSize = 13.sp, lineHeight = 17.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(12.dp))
         Box(

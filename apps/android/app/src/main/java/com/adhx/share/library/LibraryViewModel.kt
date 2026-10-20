@@ -44,7 +44,8 @@ sealed interface Route {
     data class Channel(val kind: String, val slug: String, val title: String, val avatarUrl: String? = null) : Route
 
     /** The player on the open channel, from the one tapped. */
-    data class ChannelPlayer(val start: Int) : Route
+    /** The open channel from [start]; [onlyNew] plays just the ones marked New ("Play the 4 new"). */
+    data class ChannelPlayer(val start: Int, val onlyNew: Boolean = false) : Route
 
     /** Tuned in to a moment on Live. */
     data class TunedIn(val slug: String) : Route

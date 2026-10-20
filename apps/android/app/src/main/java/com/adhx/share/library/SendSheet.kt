@@ -179,6 +179,12 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
     }
 }
 
+/** "1080p": the short side, as video sizes are named (an upright 1080×1920 is 1080p too). */
+internal fun videoQuality(width: Int?, height: Int?): String? {
+    val sides = listOfNotNull(width, height).filter { it > 0 }
+    return sides.minOrNull()?.let { "${it}p" }
+}
+
 /** The post, what's being sent ("1080p · 12 MB · not a link that dies next month"), and the download. */
 @Composable
 private fun Sending(post: PhonePost, server: String, progress: Float?, read: Long, total: Long?, done: Boolean) {
@@ -189,7 +195,7 @@ private fun Sending(post: PhonePost, server: String, progress: Float?, read: Lon
         PostKind.AUDIO -> "Sending the sound itself"
         else -> if (post.media.size > 1) "Sending the photos themselves" else "Sending the photo itself"
     }
-    val quality = media?.height?.toInt()?.takeIf { post.kind == PostKind.VIDEO && it > 0 }?.let { "${it}p" }
+    val quality = if (post.kind == PostKind.VIDEO) videoQuality(media?.width?.toInt(), media?.height?.toInt()) else null
     val size = total?.let(::megabytes)
     val line = listOfNotNull(quality, size, "not a link that dies next month").joinToString(" · ")
     Column(

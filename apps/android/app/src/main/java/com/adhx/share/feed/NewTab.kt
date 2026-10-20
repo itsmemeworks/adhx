@@ -57,6 +57,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -209,7 +210,11 @@ fun NewTab(
                 feed.filterOpen = true
             },
             onDismiss = { why = null },
+            weights = feed.weights,
+            weightBusy = feed.weightBusy,
+            onWeight = feed::setWeight,
         )
+        LaunchedEffect(Unit) { feed.loadWeights() }
     }
 
     if (feed.filterOpen) {
@@ -299,6 +304,10 @@ private fun WhySheet(
     onMode: (String) -> Unit,
     onFilter: () -> Unit,
     onDismiss: () -> Unit,
+    /** username → -1 or 1; null on a server without weights (the Filter row shows instead). */
+    weights: Map<String, Int>? = null,
+    weightBusy: String? = null,
+    onWeight: (String, Int) -> Unit = { _, _ -> },
 ) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -386,8 +395,27 @@ private fun WhySheet(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            // Where the boards have "Show less / more from …" (not on the phone API yet): what's in your feed.
-            Row(
+            val pair = weightPair(others)
+            if (weights != null && pair != null) {
+                // "Show less from Ben" · "Show more from Ana": the last friend to save it and the first.
+                val (less, more) = pair
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    WeightButton(
+                        label = Copy.showLess(less.label, weights[less.username] == -1),
+                        icon = Glyphs.Minus,
+                        on = weights[less.username] == -1,
+                        enabled = weightBusy == null,
+                        modifier = Modifier.weight(1f),
+                    ) { onWeight(less.username, if (weights[less.username] == -1) 0 else -1) }
+                    WeightButton(
+                        label = Copy.showMore(more.label, weights[more.username] == 1),
+                        icon = Glyphs.Plus,
+                        on = weights[more.username] == 1,
+                        enabled = weightBusy == null,
+                        modifier = Modifier.weight(1f),
+                    ) { onWeight(more.username, if (weights[more.username] == 1) 0 else 1) }
+                }
+            } else Row(
                 Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -410,6 +438,44 @@ private fun WhySheet(
                 modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             )
         }
+    }
+}
+
+/**
+ * Who "Show less" and "Show more" are about: the last friend to save it and
+ * the first (the same one when there's one); null with no friends on it.
+ */
+internal fun weightPair(others: List<com.adhx.share.net.Saver>): Pair<com.adhx.share.net.Saver, com.adhx.share.net.Saver>? {
+    val friends = others.filterNot { it.isYou }.distinctBy { it.username }
+    if (friends.isEmpty()) return null
+    return friends.last() to friends.first()
+}
+
+/** A "Show less / more from …" pill; cream while chosen (tap again for normal). */
+@Composable
+private fun WeightButton(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, on: Boolean, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(
+        modifier
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(50))
+            .background(if (on) AdhxColors.Cream else AdhxColors.Button)
+            .border(1.dp, Color.White.copy(alpha = if (on) 0f else 0.12f), RoundedCornerShape(50))
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics { selected = on }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = if (on) Color.Black else AdhxColors.Cream, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            label,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (on) Color.Black else AdhxColors.Cream,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -496,7 +562,7 @@ fun CaughtUp(
                 .verticalScroll(rememberScrollState())
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 136.dp, bottom = 24.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 118.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Gob bobs gently, unless animations are off.
@@ -506,24 +572,39 @@ fun CaughtUp(
                 val t = rememberInfiniteTransition(label = "gob")
                 t.animateFloat(0f, -6f, infiniteRepeatable(tween(1400), RepeatMode.Reverse), label = "bob").value
             }
+            // The drawable's body is 76 of 96 units: 121dp draws the boards' 96dp Gob, with its soft
+            // yellow glow 18dp below (the boards' box-shadow).
             Image(
                 painterResource(R.drawable.ic_gob),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(96.dp)
+                    .size(121.dp)
                     .offset(y = bob.dp)
-                    .rotate(-4f),
+                    .drawBehind {
+                        val c = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2 + 18.dp.toPx())
+                        drawCircle(
+                            Brush.radialGradient(
+                                0f to AdhxColors.Accent.copy(alpha = 0.18f),
+                                1f to Color.Transparent,
+                                center = c,
+                                radius = 78.dp.toPx(),
+                            ),
+                            radius = 78.dp.toPx(),
+                            center = c,
+                        )
+                    },
             )
             Box(
                 Modifier
-                    .padding(top = 10.dp)
+                    .offset(y = (-3).dp)
                     .size(width = 70.dp, height = 8.dp)
                     .clip(CircleShape)
                     .background(Color.Black.copy(alpha = 0.6f)),
             )
             Column(
                 Modifier
-                    .padding(top = 18.dp)
+                    // The boards' 18px gap, less the serif's own leading above the first line.
+                    .padding(top = 4.dp)
                     .semantics(mergeDescendants = true) { heading() },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {

@@ -172,6 +172,12 @@ object Copy {
     const val WHY_NONE = "It’s new to you. That’s the whole reason."
     val WHOSE = listOf("Everyone", "Friends only", "Mine")
 
+    /** "Show less from Ben", or "Showing less from Ben" once chosen (tap again for normal). */
+    fun showLess(name: String, on: Boolean) = if (on) "Showing less from $name" else "Show less from $name"
+
+    /** "Show more from Ana", or "Showing more from Ana" once chosen. */
+    fun showMore(name: String, on: Boolean) = if (on) "Showing more from $name" else "Show more from $name"
+
     // Channels
 
     const val FROM_EVERYONE = "From everyone"
@@ -185,6 +191,17 @@ object Copy {
     const val CHANNELS_CANT_LOAD = "Channels didn’t load. Try again."
     const val CHANNEL_EMPTY = "Nothing in here yet."
     const val PLAY = "Play"
+
+    /** "Play the 4 new" on a channel. */
+    fun playNew(n: Int) = "Play the ${if (n > 99) "99+" else n.toString()} new"
+    const val NEW_MARK = "New"
+
+    /** "Ana's note" over the paper tile. */
+    fun notesOf(label: String) = if (label.endsWith("s")) "$label’ note" else "$label’s note"
+
+    /** "on Charlie bit my finger · 3 days ago". */
+    fun noteOn(title: String?, ago: String?): String =
+        listOfNotNull(title?.takeIf { it.isNotBlank() }?.let { "on $it" }, ago).joinToString(" · ")
 
     fun saves(n: Int) = if (n == 1) "1 save" else "$n saves"
 
@@ -257,11 +274,31 @@ object Copy {
         }
     }
 
-    /** "3 saves · Ana, Ben and Jo" under a moment. */
-    fun momentLine(posts: Int?, people: Int, savers: List<Saver>): String {
-        val what = posts?.takeIf { it > 0 }?.let(::saves)
+    /**
+     * "3 saves in 10 min · Ana, Ben and Jo" under a moment: how busy it is
+     * lately when the server says (`recentSaves` in `windowMinutes`), else
+     * its save count.
+     */
+    fun momentLine(posts: Int?, people: Int, savers: List<Saver>, recentSaves: Int? = null, windowMinutes: Int? = null): String {
+        val what = recentSaves(recentSaves, windowMinutes) ?: posts?.takeIf { it > 0 }?.let(::saves)
         val who = if (savers.isNotEmpty()) names(savers, max = 3) else if (people > 0) "$people of you" else null
         return listOfNotNull(what, who).joinToString(" · ")
+    }
+
+    /** "3 saves in 10 min", "1 save in 5 min"; null when there were none (the other line shows). */
+    fun recentSaves(count: Int?, minutes: Int?): String? {
+        if (count == null || count <= 0) return null
+        val span = (minutes ?: 60).coerceAtLeast(1)
+        val window = if (span >= 60 && span % 60 == 0) (if (span == 60) "an hour" else "${span / 60} hours") else "$span min"
+        return "${saves(count)} in $window"
+    }
+
+    const val FORMING = "Forming"
+
+    /** "1 more save to go live", "2 more people to go live". */
+    fun toGoLive(left: Int, unit: String): String {
+        val thing = if (unit == "people") (if (left == 1) "person" else "people") else (if (left == 1) "save" else "saves")
+        return "$left more $thing to go live"
     }
 
     const val YOU = "You"
@@ -422,6 +459,9 @@ object Copy {
 
     /** [shortAgo] for an ISO time from the server, or null when there isn't one. */
     fun shortAgoIso(iso: String?, now: Long = System.currentTimeMillis()): String? = parseIso(iso)?.let { shortAgo(it, now) }
+
+    /** [ago] for an ISO time from the server, or null when there isn't one. */
+    fun agoIso(iso: String?, now: Long = System.currentTimeMillis()): String? = parseIso(iso)?.let { ago(it, now) }
 
     /** "just now", "5 minutes ago", "yesterday", "3 days ago"… */
     fun ago(millis: Long, now: Long = System.currentTimeMillis()): String {

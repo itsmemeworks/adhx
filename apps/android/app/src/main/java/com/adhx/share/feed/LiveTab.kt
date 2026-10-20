@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -113,10 +114,13 @@ fun LiveTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @
                     OutlineButton("Try again", onClick = feed::loadLive, minHeight = 44.dp)
                 }
             }
-            ui.moments.isEmpty() -> item(key = "empty") { NothingLive() }
+            ui.moments.isEmpty() && ui.forming.isEmpty() -> item(key = "empty") { NothingLive() }
         }
         itemsIndexed(ui.moments, key = { _, m -> m.slug }) { i, moment ->
             if (i == 0) BigMoment(moment, server) { tuneIn(moment) } else SmallMoment(moment, server) { tuneIn(moment) }
+        }
+        itemsIndexed(ui.forming, key = { _, f -> "forming:" + f.id.ifBlank { f.title } }) { _, forming ->
+            FormingRow(forming, server)
         }
         item(key = "bottom") { Spacer(Modifier.navigationBarsPadding()) }
     }
@@ -181,7 +185,7 @@ val WatchingGreen = Color(0xFF5EE38A)
 private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) {
     val urls = moment.covers.mapNotNull { AdhxApi.resolve(server, it)?.toString() }
     val watching = Copy.watching(moment.watching.coerceAtLeast(moment.watchers.size))
-    val line = Copy.momentLine(moment.posts, moment.people, moment.savers)
+    val line = Copy.momentLine(moment.posts, moment.people, moment.savers, moment.recentSaves, moment.windowMinutes)
     Column(
         Modifier
             .fillMaxWidth()
@@ -266,7 +270,8 @@ private fun Cover(url: String?, modifier: Modifier) {
 @Composable
 private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) {
     val url = moment.covers.firstOrNull()?.let { AdhxApi.resolve(server, it)?.toString() }
-    val line = Copy.momentLine(moment.posts, moment.people, moment.savers)
+    // Next to the faces, their names are enough ("Mum and you"); without faces, how busy it is.
+    val line = if (moment.savers.isNotEmpty()) Copy.names(moment.savers, max = 3) else Copy.momentLine(moment.posts, moment.people, moment.savers, moment.recentSaves, moment.windowMinutes)
     Row(
         Modifier
             .fillMaxWidth()
@@ -309,4 +314,58 @@ private fun SmallMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit
             Icon(Glyphs.Play, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
         }
     }
+}
+
+/**
+ * A group on its way to being a moment: its cover, a dashed edge, "Forming"
+ * and "1 more save to go live". Not playable yet, so not a button.
+ */
+@Composable
+private fun FormingRow(forming: com.adhx.share.net.FormingMoment, server: String) {
+    val url = forming.covers.firstOrNull()?.let { AdhxApi.resolve(server, it)?.toString() }
+    val line = Copy.toGoLive(forming.left, forming.unit)
+    val shape = RoundedCornerShape(22.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clip(shape)
+            .background(AdhxColors.Surface)
+            .drawBehind { dashedOutline(Color.White.copy(alpha = 0.2f), 22.dp.toPx()) }
+            .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+            .semantics(mergeDescendants = true) { contentDescription = "${forming.title}, ${Copy.FORMING.lowercase()}, $line" },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Cover(url, Modifier.size(width = 76.dp, height = 88.dp).clip(RoundedCornerShape(16.dp)))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(
+                Copy.FORMING,
+                fontSize = 11.sp,
+                lineHeight = 13.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = AdhxColors.Accent,
+                modifier = Modifier
+                    .drawBehind { dashedOutline(AdhxColors.Accent.copy(alpha = 0.7f), size.height / 2) }
+                    .padding(horizontal = 9.dp, vertical = 4.dp),
+            )
+            Text(forming.title, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(line, fontSize = 13.sp, color = AdhxColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** A 1dp dashed rounded outline just inside the bounds. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.dashedOutline(color: Color, radius: Float) {
+    val stroke = 1.dp.toPx()
+    drawRoundRect(
+        color = color,
+        topLeft = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2),
+        size = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke),
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(
+            width = stroke,
+            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx())),
+        ),
+    )
 }
