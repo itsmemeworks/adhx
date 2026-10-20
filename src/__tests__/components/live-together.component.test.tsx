@@ -146,7 +146,7 @@ describe('ReactionFloats and the arrival toast', () => {
     const list = screen.getByRole('list', { name: 'Reactions from people watching' })
     const items = within(list).getAllByRole('listitem')
     expect(items[0]).toHaveTextContent('Ben: Laughing')
-    expect(items[0].querySelector('img')).not.toBeNull()
+    expect(items[0].querySelector('[data-shape="gob"]')).not.toBeNull()
     expect(items[1]).toHaveTextContent('Jo said:<b>who sent this</b> 💀')
     expect(items[1].querySelector('b')).toBeNull()
     expect(items[2]).toHaveTextContent('You: Fire')

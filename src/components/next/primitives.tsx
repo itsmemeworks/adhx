@@ -2,7 +2,8 @@
 
 import { useCallback, useState, type CSSProperties, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { faceColour, faceInitial } from './faces'
 import { GobShape } from './GobShape'
 import type { PostAuthor } from './post'
 
@@ -90,7 +91,10 @@ function NxImageInner({
   )
 }
 
-/** A person's face, Gob shaped (see `GobShape`): their photo, else one made from their handle. */
+/**
+ * A person's face, Gob shaped (see `GobShape`): their photo, else their
+ * initial on their colour (`faceColour`, the same on every screen and app).
+ */
 export function NxAvatar({
   author,
   size,
@@ -105,18 +109,33 @@ export function NxAvatar({
 }) {
   const remote = usableAvatarUrl(author.avatarUrl)
   const [broken, setBroken] = useState(false)
-  const src = remote && !broken ? remote : generateAvatarDataUri(author.handle || author.name)
+  const username = author.handle || author.name
   return (
     <GobShape size={size} className={className} style={style}>
-      <img
-        src={src}
-        alt=""
-        width={size}
-        height={size}
-        referrerPolicy="no-referrer"
-        onError={() => setBroken(true)}
-        className="block h-full w-full object-cover"
-      />
+      {remote && !broken ? (
+        <img
+          src={remote}
+          alt=""
+          width={size}
+          height={size}
+          referrerPolicy="no-referrer"
+          onError={() => setBroken(true)}
+          className="block h-full w-full object-cover"
+        />
+      ) : (
+        // The letter is drawn, not text: faces are decorative (the name is said
+        // beside them) and a page translator must not touch it.
+        <span
+          aria-hidden
+          data-face="initial"
+          data-initial={faceInitial(author.name, username)}
+          className="flex h-full w-full items-center justify-center font-nx-sans font-extrabold leading-none text-black before:content-[attr(data-initial)]"
+          style={{
+            background: faceColour(username),
+            fontSize: Math.max(8, Math.round(size * 0.42)),
+          }}
+        />
+      )}
     </GobShape>
   )
 }

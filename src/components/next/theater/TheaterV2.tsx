@@ -19,31 +19,42 @@ import type { ReactionEmoji } from '@/lib/moments/reactions'
 import { AccountMenu } from '../AccountMenu'
 import { BottomNav, NxLogo, PrimaryNav } from '../PrimaryNav'
 import { NxHeader } from '../channels/ChannelParts'
-import { HeaderSearch, focusHeaderSearch } from '../QuickSearch'
+import { HeaderSearch, focusHeaderSearch, openQuickSearch } from '../QuickSearch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import {
   Bookmark,
+  ChevronDown,
   ChevronLeft,
+  ChevronUp,
   Ellipsis,
-  ListVideo,
+  Image as ImageIcon,
   Maximize,
   Minimize,
   Pause,
-  PictureInPicture2,
   Play,
-  Repeat,
+  Plus,
   Send,
+  Share,
   Check,
   Copy,
   Download,
-  SkipBack,
-  SkipForward,
   Radio,
   Sparkles,
+  Target,
+  Video,
   Volume2,
   VolumeX,
+  Waves,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FeedItem } from '@/components/feed/types'
@@ -55,7 +66,7 @@ import { useTheaterSoundPreference } from '@/components/theater/useTheaterSoundP
 import { usePreferencesOptional } from '@/lib/preferences-context'
 import { useMobileSwipeNavigation } from '@/components/theater/useMobileSwipeNavigation'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
-import { articleHeadline, postAuthor, postText } from '../post'
+import { articleHeadline, mediaAspect, postAuthor, postCoverSrc } from '../post'
 import { NxAvatar } from '../primitives'
 import { PrivateLock, SaversButton } from '../SaverFaces'
 import type { Saver } from '@/lib/people/types'
@@ -105,17 +116,50 @@ import {
   type MenuRow,
   type WhyFriend,
 } from './TheaterSheets'
-import { CaughtUpStage, FeedSwitch, FeedTypesControl, WhyChip } from './FeedParts'
+import {
+  CaughtUpStage,
+  FeedSwitch,
+  FeedTypesControl,
+  WhyChip,
+  type CaughtUpRecap,
+} from './FeedParts'
+import {
+  ChannelChip,
+  FaceStack,
+  FeedFilterSheet,
+  KeyHints,
+  NextCard,
+  PanelDivider,
+  PhoneFilterIcon,
+  PhoneGob,
+  PhoneSearchIcon,
+  PhoneTabs,
+  QuickWords,
+  ReactionStack,
+  RoundIconButton,
+  SeekBar,
+  UpNextList,
+  WatchersCard,
+  WhyPanel,
+  bylineLine,
+  momentPace,
+  postWords,
+  queueSavers,
+  savedAgo,
+  sourceLine,
+  useWide,
+} from './TheaterLayout'
 import { SEEN_AFTER_MS, useSeenPosts } from './useSeenPosts'
 import {
   DEFAULT_FEED_KINDS,
   FEED_KINDS,
+  feedTypesSummary,
+  waitingLine,
   type BlendMode,
   type FeedKind,
   type FeedWeight,
 } from '@/lib/feed/blend'
 import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
-import { LearningPill, LearningSheet, useLearningStatus } from '../onboarding/learning'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { channelTitle } from '../channels/ChannelParts'
 import { useBusyLogo } from '../logo-busy'
@@ -290,33 +334,6 @@ function similarUrl(item: SearchResultItem, source: PlaySource, videosOnly: bool
   return `/api/search/similar?${params}`
 }
 
-function RailButton({
-  label,
-  onClick,
-  children,
-  active = false,
-}: {
-  label: string
-  onClick: () => void
-  children: ReactNode
-  active?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={cn(
-        'nx-plate flex h-12 w-12 items-center justify-center rounded-full md:h-[52px] md:w-[52px]',
-        active ? 'text-nx-accent' : 'text-white',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
 function ControlButton({
   label,
   onClick,
@@ -362,6 +379,8 @@ export function TheaterV2({
 }) {
   const router = useRouter()
   const rootRef = useRef<HTMLDivElement>(null)
+  /** The stage's frame (full screen goes to it). */
+  const frameRef = useRef<HTMLDivElement>(null)
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   useBusyLogo('theater', load.status === 'loading')
   /** A channel's name, once its queue loads. */
@@ -375,7 +394,6 @@ export function TheaterV2({
     soundOnByDefault: preferenceContext?.preferences.soundOn ?? false,
     ready: !preferenceContext || !preferenceContext.loading,
   })
-  const [volume, setVolume] = useState(1)
   // A shared post loops until you move on, like the old preview pages.
   const [repeat, setRepeat] = useState<RepeatMode>(source.shared ? 'one' : 'off')
   const [videosOnly, setVideosOnly] = useState(source.search.type === 'videos')
@@ -981,8 +999,6 @@ export function TheaterV2({
     },
     savedAction: () => ({ label: 'Add to channel', onClick: () => void save() }),
   })
-  const [learningOpen, setLearningOpen] = useState(false)
-  const learning = useLearningStatus({ fast: learningOpen })
 
   const moreLikeThis = useCallback(async (): Promise<boolean> => {
     if (!current) return false
@@ -1093,7 +1109,7 @@ export function TheaterV2({
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
-    else void rootRef.current?.requestFullscreen?.().catch(() => {})
+    else void frameRef.current?.requestFullscreen?.().catch(() => {})
   }, [])
   useEffect(() => {
     const onChange = () => setFullscreen(!!document.fullscreenElement)
@@ -1449,6 +1465,104 @@ export function TheaterV2({
     onNext: () => void next(),
   })
 
+  // ——— The frame around the stage (design boards) ———
+  // Wide screens get the columns; only leaf placement depends on it, never the stage.
+  const wide = useWide()
+  const moreRef = useRef<HTMLButtonElement>(null)
+  const [moreAnchor, setMoreAnchor] = useState<CSSProperties | null>(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  /** The quick word last said here (it stays lit). */
+  const [said, setSaid] = useState<string | null>(null)
+  // The video's own shape, for posts that didn't say how big they are.
+  const [measured, setMeasured] = useState<{ key: string; aspect: number } | null>(null)
+  const loaded = load.status === 'ready'
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const onMeta = (e: Event) => {
+      const v = e.target
+      if (!(v instanceof HTMLVideoElement) || !v.videoWidth || !v.videoHeight) return
+      setMeasured({ key: currentKeyRef.current, aspect: v.videoWidth / v.videoHeight })
+    }
+    root.addEventListener('loadedmetadata', onMeta, true)
+    return () => root.removeEventListener('loadedmetadata', onMeta, true)
+  }, [loaded, caughtUp])
+
+  /** Wide screens: menus open beside the rail, level with the button's bottom. */
+  const railAnchor = useCallback(
+    (button: HTMLElement | null) => {
+      const rect = button?.getBoundingClientRect()
+      setMoreAnchor(
+        wide && rect
+          ? {
+              right: Math.max(12, window.innerWidth - rect.left + 14),
+              bottom: Math.max(16, window.innerHeight - rect.bottom - 8),
+            }
+          : null,
+      )
+    },
+    [wide],
+  )
+  const toggleMore = useCallback(() => {
+    if (panel === 'more') {
+      setPanel(null)
+      return
+    }
+    railAnchor(moreRef.current)
+    setPanel('more')
+  }, [panel, railAnchor])
+
+  /** Made for you: "Keep this channel" (private until you share it). */
+  const [keeping, setKeeping] = useState(false)
+  const [kept, setKept] = useState(false)
+  const keepChannel = useCallback(async () => {
+    if (!source.auto) return
+    setKeeping(true)
+    try {
+      const res = await fetch(`/api/channels/auto/${encodeURIComponent(source.auto)}/keep`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublic: false }),
+      })
+      if (!res.ok) throw new Error('keep')
+      setKept(true)
+      flash('It’s one of your channels now. Private until you share it.', 4000)
+    } catch {
+      flash('Couldn’t keep that channel. Try again.')
+    } finally {
+      setKeeping(false)
+    }
+  }, [source.auto, flash])
+
+  const sayWord = useCallback(
+    (text: string) => {
+      setSaid(text)
+      reactionTarget.current = itemsRef.current[indexRef.current]?.post ?? null
+      void sendReaction({ text })
+    },
+    [sendReaction],
+  )
+
+  /** What New played today, from the people who saved it (the caught-up card). */
+  const recap = useMemo<CaughtUpRecap | null>(() => {
+    if (source.feed !== 'new') return null
+    const day = Date.now() - 86_400_000
+    const today = items.filter((i) =>
+      (i.post.savers ?? []).some((s) => !s.isYou && Date.parse(s.savedAt) > day),
+    )
+    if (today.length === 0) return null
+    const people = new Map<string, Saver>()
+    for (const i of today)
+      for (const s of i.post.savers ?? [])
+        if (!s.isYou && !people.has(s.username)) people.set(s.username, s)
+    return {
+      count: today.length,
+      savers: [...people.values()],
+      covers: today.map((i) => postCoverSrc(i.post)).filter((c): c is string => !!c),
+      onPlay: () => goTo(items.indexOf(today[0])),
+    }
+  }, [source.feed, items, goTo])
+
   // ——— Render ———
   const back = backHref(source)
   const navHere = source.shared
@@ -1473,6 +1587,7 @@ export function TheaterV2({
             onWatchAgain={() => switchFeed('everyone')}
             waiting={feedWaiting}
             onShowWaiting={showWaiting}
+            tonight={wide}
           />
         </main>
       </div>
@@ -1532,22 +1647,43 @@ export function TheaterV2({
     !!current.post.why &&
     !((whyFirst === 'fresh' || whyFirst === 'yours') && savers && savers.length > 0)
   const author = postAuthor(current.post)
-  const caption = postText(current.post)
+  const words = postWords(current.post)
+  const caption = words.rest || words.title
   const overlay = kind === 'post' || kind === 'article'
   const textOnly = !send.supported
+
+  // Where the post came from: the byline's network line opens the original.
+  const originalUrl = sourceUrl(
+    current.post.platform ?? 'twitter',
+    current.post.author,
+    current.post.id,
+    kind === 'photo' ? 'photo' : null,
+  )
+  const networkName = networkLabel(current.post.platform)
+
   const menu: MenuRow[] = [
     // The blended feed says why each post is here.
     ...(current.post.why ? [{ label: 'Why this one', onSelect: openWhy }] : []),
-    { label: 'Add to a channel', onSelect: () => void save() },
-    { label: 'Copy link', onSelect: () => void copyLink() },
+    { label: 'Add to a channel', more: true, onSelect: () => void save() },
     // Members only (savers come with a session): keep this save to yourself.
     ...(saved || savers
       ? [
           {
             label: 'Just for me',
-            value: isPrivate ? 'On' : 'Off',
+            hint: 'Your people won’t see this save',
             checked: isPrivate,
             onSelect: () => void setPostPrivate(!isPrivate),
+          },
+        ]
+      : []),
+    { label: 'Copy link', onSelect: () => void copyLink() },
+    { label: 'More like this', onSelect: () => void moreLikeThis() },
+    ...(originalUrl
+      ? [
+          {
+            label: `Open on ${networkName}`,
+            icon: <NetworkIcon platform={current.post.platform} className="h-4 w-4" />,
+            onSelect: () => void window.open(originalUrl, '_blank', 'noopener,noreferrer'),
           },
         ]
       : []),
@@ -1558,248 +1694,1208 @@ export function TheaterV2({
     },
     {
       label: 'Videos only',
-      value: videosOnly ? 'On' : 'Off',
       checked: videosOnly,
       onSelect: () => setVideosOnly((v) => !v),
     },
     {
       label: 'Stick to this vibe',
-      value: stick ? 'On' : 'Off',
       checked: stick,
       onSelect: () => setStick((v) => !v),
     },
-    ...(current.saved ? [{ label: 'Archive', danger: true, onSelect: () => void archive() }] : []),
+    // Wide screens have Up next beside the stage, and ⌘V for pasting.
+    ...(!wide ? [{ label: 'Up next', onSelect: () => setPanel('queue') }] : []),
+    ...(isVideo && video.pip.supported
+      ? [{ label: 'Picture in picture', onSelect: () => stage.togglePip() }]
+      : []),
+    ...(!wide ? [{ label: 'Paste a link', onSelect: () => void paste.pasteFromClipboard() }] : []),
+    ...(current.saved ? [{ label: 'Archive', divider: true, onSelect: () => void archive() }] : []),
   ]
 
-  // Where the post came from: its network's mark on the rail opens the original.
-  const originalUrl = sourceUrl(
-    current.post.platform ?? 'twitter',
-    current.post.author,
-    current.post.id,
-    kind === 'photo' ? 'photo' : null,
+  // ——— The frame's shape ———
+  // feed: New's column on the left · list: Up next on the right · panel: a
+  // channel or moment, its own panel on the right and the stage in a dimmed room.
+  const layout: 'feed' | 'list' | 'panel' = source.feed
+    ? 'feed'
+    : source.moment || isChannelSource(source)
+      ? 'panel'
+      : 'list'
+  const after = nextIndex(items, index, { repeat: 'off', videosOnly })
+  const upNext = after !== null && after !== index ? items[after] : null
+  const textFrame = overlay
+  const aspect = Math.min(
+    16 / 9,
+    Math.max(
+      9 / 16,
+      mediaAspect(current.post) ?? (measured?.key === currentKey ? measured.aspect : 9 / 16),
+    ),
   )
-  const networkName = networkLabel(current.post.platform)
+  const tallFrame = !textFrame && aspect < 1
+  const showNextCard = wide && layout === 'feed' && !!upNext && !caughtUp
+  const reserve = !wide ? 0 : showNextCard ? 78 : layout === 'panel' && source.moment ? 72 : 0
+  const secondsLeft =
+    repeat === 'one'
+      ? null
+      : isVideo && video.duration
+        ? (1 - video.progress) * video.duration
+        : timed
+          ? (1 - dwell.progress) * dwellSeconds(current)
+          : null
+  const timeNow = isVideo && video.duration ? clock(video.progress * video.duration) : null
+  const timeAll = isVideo && video.duration ? clock(video.duration) : null
+  const timeLabel = timeNow
+    ? `${timeNow} / ${timeAll}`
+    : timed
+      ? `${clock(dwell.progress * dwellSeconds(current))} / ${clock(dwellSeconds(current))}`
+      : reading
+        ? `${Math.round(articleProgress * 100)}% read`
+        : ''
+  const fullTransport = wide && layout !== 'panel' && !tallFrame
+  const muteOnFrame = isVideo && !fullTransport
+  const unseen = source.feed === 'new' ? (caughtUp ? 0 : Math.max(0, feedTotal - index)) : null
+  const countLine =
+    source.feed === 'new'
+      ? `${unseen ?? 0} you haven’t seen`
+      : source.feed
+        ? `${index + 1} of ${Math.max(feedTotal, items.length)}`
+        : `${position.n} of ${position.of}`
+  const cover = postCoverSrc(current.post)
+  const channelKind = source.groupChannel
+    ? 'From everyone'
+    : source.auto
+      ? 'Made for you'
+      : source.friend
+        ? 'Your people'
+        : 'Channel'
+  const inQueue = queueSavers(items)
+  const momentNow = !!current.savedAt && Date.now() - Date.parse(current.savedAt) < 3_600_000
+
+  const muteButton = (
+    <ControlButton
+      label={shownMuted ? 'Unmute' : 'Mute'}
+      onClick={toggleMute}
+      className={cn(
+        'pointer-events-auto absolute z-20 border-0 bg-black/55 backdrop-blur-md hover:bg-black/70',
+        wide ? 'right-4 top-4' : 'right-3 top-[max(68px,calc(env(safe-area-inset-top)+60px))]',
+      )}
+    >
+      {shownMuted ? (
+        <VolumeX aria-hidden className="h-5 w-5" />
+      ) : (
+        <Volume2 aria-hidden className="h-5 w-5" />
+      )}
+    </ControlButton>
+  )
+
+  const backChip = (
+    <Link
+      href={back}
+      className="pointer-events-auto flex h-9 min-w-0 max-w-[320px] items-center gap-1.5 rounded-full border border-white/[0.14] bg-black/50 pl-2 pr-4 text-[13px] font-bold backdrop-blur-md"
+    >
+      <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
+      <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
+    </Link>
+  )
+
+  const viaNote = !source.moment && position.via && (
+    // Not from the source: say what it is like and why it's playing.
+    <div
+      role="note"
+      className="flex min-w-0 max-w-full items-center gap-2.5 rounded-2xl border border-white/[0.14] bg-black/55 py-2 pl-3 pr-4 backdrop-blur-md md:max-w-[420px]"
+    >
+      <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-nx-accent" fill="currentColor" />
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
+        <span className="truncate text-xs text-white/65">
+          {`${viaReason(position.via, source.shared ? 'post' : isChannelSource(source) ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
+        </span>
+      </span>
+    </div>
+  )
+
+  const liveChip = source.moment && (
+    <span className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[#ff5a3c]/50 bg-black/55 pl-3 pr-3.5 text-[13px] font-extrabold tracking-[0.08em] backdrop-blur-md">
+      <span
+        aria-hidden
+        className="block h-[9px] w-[9px] rounded-full bg-[#ff5a3c] shadow-[0_0_0_4px_rgba(255,90,60,0.28),0_0_0_8px_rgba(255,90,60,0.1)]"
+      />
+      <span>LIVE</span>
+      {!wide && watching > 0 && (
+        <span className="font-semibold tracking-normal text-white/80">{`${watching} watching`}</span>
+      )}
+    </span>
+  )
+
+  const tunedChip = source.moment && (
+    <button
+      type="button"
+      onClick={() => toggleWander(!wander)}
+      aria-pressed={wander}
+      className="pointer-events-auto flex h-9 items-center gap-[7px] whitespace-nowrap rounded-full border border-white/[0.12] bg-black/55 pl-2.5 pr-3.5 text-[13px] backdrop-blur-md"
+    >
+      <Check aria-hidden className="h-3.5 w-3.5 text-[#5ee38a]" strokeWidth={3} />
+      <span className="font-extrabold">Tuned in</span>
+      <span aria-hidden className="text-nx-soft">
+        ·
+      </span>
+      <span className="text-nx-soft">{wander ? 'Wandering' : 'Staying close'}</span>
+    </button>
+  )
+
+  const railStyle = (on = false, ring = false) =>
+    cn(
+      'pointer-events-auto flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full transition-colors',
+      wide && layout !== 'panel'
+        ? on
+          ? 'bg-nx-accent text-black'
+          : 'bg-[#262320] text-nx-cream hover:bg-[#2f2b27]'
+        : wide
+          ? cn(
+              'border border-white/[0.14] bg-white/10 backdrop-blur-md hover:bg-white/[0.16]',
+              on ? 'text-nx-accent' : 'text-white',
+            )
+          : cn('bg-black/45 backdrop-blur-md', on ? 'text-nx-accent' : 'text-white'),
+      ring && 'ring-2 ring-inset ring-nx-accent',
+    )
+  const railItem = (button: ReactNode, label: string) =>
+    wide && layout === 'panel' ? (
+      <span className="flex flex-col items-center gap-[5px]">
+        {button}
+        <span className="text-xs text-nx-soft">{label}</span>
+      </span>
+    ) : (
+      button
+    )
+  const ShareIcon = isVideo ? Video : kind === 'photo' ? ImageIcon : Send
 
   return (
     <>
       <div
         ref={rootRef}
-        className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] top-0 z-40 overflow-hidden bg-nx-stage font-nx-sans text-white md:bottom-0 md:top-20"
+        className={cn(
+          'fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] top-0 z-40 overflow-hidden bg-nx-stage font-nx-sans text-white md:bottom-0 md:top-[72px]',
+          wide && 'flex',
+          wide && layout !== 'panel' && 'gap-8 px-8 py-6',
+        )}
         onTouchStart={swipe.onTouchStart}
         onTouchMove={swipe.onTouchMove}
         onTouchEnd={swipe.onTouchEnd}
         onTouchCancel={swipe.onTouchCancel}
       >
-        <div className="absolute inset-0">
-          <Stage
-            item={theaterItem}
-            muted={muted}
-            onRequestUnmute={() => setMuted(false)}
-            onEnded={() => void next()}
-            photoCaption={false}
-            repeat={repeat === 'one'}
-            covered={overlay || caughtUp || (panel !== null && !isVideo)}
-          />
-          {kind === 'post' && (
-            // Room on the right so the rail never sits on the words.
-            <div className="absolute inset-0 bg-nx-cream pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16">
-              <PostStage
-                item={current.post}
-                onLong={setLongPost}
-                onScrollProgress={setArticleProgress}
-                seekRef={articleSeek}
+        {wide && layout === 'feed' && source.feed && (
+          // New's own column: whose saves, and what's coming up and why.
+          <aside aria-label="Up next" className="flex min-h-0 w-[280px] shrink-0 flex-col gap-3">
+            <div className="flex items-baseline gap-2">
+              <h1 className="m-0 flex-1 font-nx-serif text-[40px] font-normal leading-[0.95]">
+                {FEED_TITLES[source.feed]}
+              </h1>
+              <span className="whitespace-nowrap text-[13px] font-semibold text-nx-soft">
+                {countLine}
+              </span>
+              <FeedTypesControl
+                types={shownTypes}
+                onChange={changeTypes}
+                compact
+                className="self-center [&>button]:h-9 [&>button]:w-9"
               />
             </div>
-          )}
-          {kind === 'article' &&
-            (hasFullArticle(current.post) ? (
-              // The whole article, right on the stage: scroll to read, Next or Skip to move on.
-              <div className="absolute inset-0 bg-nx-ink pb-24 pr-[68px] pt-14 md:pb-20 md:pr-24 md:pt-16">
-                <ArticleReader
-                  item={current.post}
-                  inline
-                  onNext={() => void next()}
-                  onProgress={setArticleProgress}
-                  seekRef={articleSeek}
-                />
-              </div>
-            ) : (
-              <div className="absolute inset-0 bg-nx-ink pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16">
-                <ArticleStage item={current.post} onSkip={() => void next()} />
-              </div>
-            ))}
-        </div>
-
-        {source.feed && (
-          // Below xl, whose saves and what's in the feed sit on the stage (the header has no room).
-          <div className="pointer-events-none absolute inset-x-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-20 flex flex-wrap items-start gap-2 md:left-7 md:right-24 md:top-4 xl:hidden">
-            <FeedSwitch mode={source.feed} onChange={switchFeed} className="pointer-events-auto" />
-            <FeedTypesControl
-              types={shownTypes}
-              onChange={changeTypes}
-              className="pointer-events-auto"
+            <FeedSwitch
+              mode={source.feed}
+              onChange={switchFeed}
+              className="gap-1 bg-nx-surface [&>button]:h-10 [&>button]:flex-1"
             />
-          </div>
+            <h2 className="m-0 mt-2 text-xs font-extrabold uppercase tracking-[0.08em] text-nx-muted">
+              Up next
+            </h2>
+            <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:none]">
+              <UpNextList items={items} index={index} variant="feed" onPlay={goTo} />
+            </div>
+            {source.feed === 'new' && items.length - index > 6 && (
+              <span className="px-2.5 text-[13px] text-nx-muted">
+                {`${Math.max(0, (unseen ?? 0) - 6)} more after these. Then you’re caught up.`}
+              </span>
+            )}
+          </aside>
         )}
-        {/* Where this queue is from and what's playing, in one row at the stage's top-left. */}
-        <div
+
+        <section
+          aria-label="Now playing"
           className={cn(
-            'pointer-events-none absolute inset-x-3 top-[max(64px,calc(env(safe-area-inset-top)+56px))] z-10 flex flex-wrap items-start gap-2 md:left-7 md:right-24 md:top-4',
-            // Below xl the feed's own controls take the first row.
-            source.feed &&
-              'top-[max(116px,calc(env(safe-area-inset-top)+108px))] md:top-[68px] xl:top-4',
-            // On a cream page see-through chips turn muddy grey: make them solid,
-            // and on desktop join them into one pill split by thin lines.
-            overlay &&
-              '[&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none md:right-auto md:flex-nowrap md:items-stretch md:gap-0 md:divide-x md:divide-white/15 md:overflow-hidden md:rounded-[20px] md:bg-[#1c1b19] md:[&>*]:!rounded-none md:[&>*]:!bg-transparent md:[&>*]:!text-white',
+            'absolute inset-0',
+            wide && 'relative inset-auto flex min-w-0 flex-1 flex-col',
+            wide && layout === 'panel' && 'overflow-hidden',
           )}
         >
-          {!source.recent && !source.shared && !source.feed && (
-            <Link
-              href={back}
-              className="nx-plate pointer-events-auto hidden h-9 min-w-0 max-w-[320px] items-center gap-1.5 rounded-full pl-2 pr-4 text-[13px] font-bold md:flex"
-            >
-              <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
-              <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
-            </Link>
+          {wide && layout === 'panel' && cover && (
+            // The room the stage sits in: its own picture, blurred and dimmed.
+            <img
+              src={cover}
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute -inset-[60px] h-[calc(100%+120px)] w-[calc(100%+120px)] max-w-none object-cover blur-[48px] brightness-[0.32] saturate-[1.2]"
+            />
           )}
-          {whyChip && <WhyChip post={current.post} onOpen={openWhy} />}
-          {overlay && (isPrivate || (savers && savers.length > 0)) && (
-            // Who saved it, by the chips: text and article stages have no byline scrim.
-            <span className="pointer-events-auto flex h-9 min-w-0 items-center gap-1.5">
-              {isPrivate && <PrivateLock className="h-7 w-7" />}
-              {savers && savers.length > 0 && (
-                <SaversButton
-                  savers={savers}
-                  tone="plate"
-                  placement="below"
-                  className="h-9 max-w-[280px]"
-                  facesClassName="h-9 pl-1.5 pr-3.5"
+          {wide && layout === 'panel' && !source.moment && (
+            <>
+              {/* Under the stage, which may cover its end (as on the board). */}
+              <div className="absolute left-6 top-5 max-w-[calc(50%-24px)]">
+                <ChannelChip
+                  href={back}
+                  label={source.groupChannel || source.auto || source.channel ? 'Channel' : 'Saves'}
+                  name={title ?? 'Channel'}
+                  position={`${position.n} of ${Math.max(position.of, feedTotal)}`}
+                  covers={items}
+                />
+              </div>
+              {/* Only where the room is wide enough to keep clear of the rail. */}
+              <div className="absolute right-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col gap-2.5 xl:flex">
+                <button
+                  type="button"
+                  aria-label="Previous"
+                  onClick={prev}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-black/50 text-white"
+                >
+                  <ChevronUp aria-hidden className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next"
+                  onClick={() => void next()}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-nx-cream text-black"
+                >
+                  <ChevronDown aria-hidden className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="absolute bottom-[22px] left-6">
+                <KeyHints />
+              </div>
+            </>
+          )}
+          {wide && layout === 'panel' && source.moment && (
+            <>
+              <div className="absolute left-6 top-5 z-10 flex w-[220px] flex-col items-start gap-2">
+                {liveChip}
+                {tunedChip}
+                {member && <WatchersCard watchers={watchers} />}
+              </div>
+              {member && (
+                <ReactionStack reactions={floats} className="absolute bottom-24 left-6 z-10" />
+              )}
+              {arrival && (arrival.now || arrivals === 1) && (
+                <ArrivalToast
+                  saver={arrival.saver}
+                  post={arrival.post}
+                  hue={momentHue}
+                  now={arrival.now}
+                  onPlay={arrival.now ? undefined : () => goTo(index + 1)}
+                  className="absolute right-6 top-5 z-30 max-w-[260px]"
                 />
               )}
-            </span>
-          )}
-          {source.moment && (kind === 'post' || kind === 'article' || !tuneIntro) && (
-            // A small chip, so nothing covers the post (after the first few seconds on media).
-            <button
-              type="button"
-              onClick={() => toggleWander(!wander)}
-              aria-pressed={wander}
-              className="nx-plate pointer-events-auto hidden h-9 items-center gap-2 rounded-full px-3.5 text-[13px] font-bold md:flex"
-            >
-              <Radio
-                aria-hidden
-                className="h-4 w-4"
-                style={{ color: momentHue }}
-                strokeWidth={2.4}
-              />
-              <span>{wander ? 'Tuned in · Wandering' : 'Tuned in · Staying close'}</span>
-            </button>
-          )}
-          {source.moment && (kind === 'post' || kind === 'article') && current?.savedAt && (
-            <span
-              className={cn(
-                'hidden h-9 items-center rounded-full px-3.5 text-[13px] font-extrabold md:flex',
-                Date.now() - Date.parse(current.savedAt) < 3_600_000 ? 'text-black' : 'nx-plate',
-              )}
-              style={
-                Date.now() - Date.parse(current.savedAt) < 3_600_000
-                  ? { background: momentHue }
-                  : undefined
-              }
-            >
-              {Date.now() - Date.parse(current.savedAt) < 3_600_000
-                ? `Just saved · ${timeAgo(current.savedAt)}`
-                : `Saved ${timeAgo(current.savedAt)}`}
-            </span>
-          )}
-          {source.moment && kind !== 'post' && kind !== 'article' && tuneIntro && (
-            <div
-              role="note"
-              className="nx-plate pointer-events-auto hidden w-[330px] flex-col gap-2.5 rounded-2xl px-4 py-3.5 md:flex"
-            >
-              <span className="flex items-center gap-2 text-sm font-extrabold">
-                <Radio
-                  aria-hidden
-                  className="h-4 w-4"
-                  style={{ color: momentHue }}
-                  strokeWidth={2.4}
-                />
-                <span>Tuned in</span>
-              </span>
-              <span className="text-[13px] leading-[1.4] text-white/75">
-                Playing what people are saving like this, newest first. It keeps going as new saves
-                land.
-              </span>
               <div
-                role="group"
-                aria-label="How close to stay"
-                className="flex gap-1 rounded-full bg-white/10 p-[3px]"
+                role="radiogroup"
+                aria-label="When this moment runs out"
+                className="absolute bottom-5 left-1/2 z-10 flex h-[52px] -translate-x-1/2 gap-1 rounded-full border border-white/[0.12] bg-black/55 p-1 backdrop-blur-md"
               >
                 {[
-                  { on: !wander, label: 'Stay close', pick: () => toggleWander(false) },
-                  { on: wander, label: 'Wander', pick: () => toggleWander(true) },
+                  {
+                    on: !wander,
+                    label: 'Stay close',
+                    icon: Target,
+                    pick: () => toggleWander(false),
+                  },
+                  { on: wander, label: 'Wander', icon: Waves, pick: () => toggleWander(true) },
                 ].map((b) => (
                   <button
                     key={b.label}
                     type="button"
-                    aria-pressed={b.on}
+                    role="radio"
+                    aria-checked={b.on}
                     onClick={b.pick}
                     className={cn(
-                      'h-8 flex-1 rounded-full text-[13px] font-bold',
-                      b.on ? 'bg-white text-black' : 'text-white',
+                      'flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-[22px] text-[15px]',
+                      b.on
+                        ? 'bg-nx-cream font-extrabold text-black'
+                        : 'font-semibold text-nx-cream',
                     )}
                   >
-                    {b.label}
+                    <b.icon aria-hidden className="h-4 w-4" />
+                    <span>{b.label}</span>
                   </button>
                 ))}
               </div>
-              <span className="text-xs text-white/60">
-                {wander
-                  ? 'This moment first, then drifting to posts near it.'
-                  : 'Only this moment. New saves play as they land.'}
-              </span>
-            </div>
+            </>
           )}
-          {source.moment && watchers.length > 0 && (
-            // Members only: the server names watchers to signed-in members alone.
-            <WatchersBar watchers={watchers} className="pointer-events-auto" />
-          )}
-          {!source.moment && position.via && (
-            // Not from the source: say what it is like and why it's playing.
-            <div
-              role="note"
-              className="nx-plate flex min-w-0 max-w-full items-center gap-2.5 rounded-2xl py-2 pl-3 pr-4 md:max-w-[420px]"
-            >
-              <Sparkles
-                aria-hidden
-                className="h-4 w-4 shrink-0 text-nx-accent"
-                fill="currentColor"
-              />
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-bold">{viaLabel(position.via)}</span>
-                <span className="truncate text-xs text-white/65">
-                  {`${viaReason(position.via, source.shared ? 'post' : isChannelSource(source) ? 'channel' : source.recent ? 'saves' : 'search')} · ${position.n} of ${position.of}`}
-                </span>
-              </span>
-            </div>
-          )}
-        </div>
 
-        {source.moment && arrival && (arrival.now || arrivals === 1) && (
+          <div
+            className={cn(
+              'absolute inset-0',
+              wide &&
+                'relative inset-auto flex min-h-0 flex-1 items-center justify-center [container-type:size]',
+              wide && layout === 'panel' && 'pt-5',
+            )}
+            style={
+              {
+                '--nx-ar': String(aspect),
+                '--nx-reserve': `${reserve + (wide && layout === 'panel' ? 20 : 0)}px`,
+                '--nx-side': layout === 'panel' ? '160px' : '72px',
+              } as CSSProperties
+            }
+          >
+            <div
+              className={cn('absolute inset-0', wide && 'relative inset-auto flex items-end gap-5')}
+              // The dimmed room centres the stage itself; the rail hangs beside it.
+              style={
+                wide
+                  ? { marginBottom: reserve, paddingLeft: layout === 'panel' ? 80 : 0 }
+                  : undefined
+              }
+            >
+              <div className={cn('absolute inset-0', wide && 'relative inset-auto')}>
+                <div
+                  ref={frameRef}
+                  className={cn(
+                    'absolute inset-0 overflow-hidden bg-nx-stage',
+                    wide &&
+                      'relative inset-auto shrink-0 rounded-[24px] bg-nx-surface [&:fullscreen]:rounded-none',
+                    wide &&
+                      (textFrame
+                        ? 'h-[calc(100cqh_-_var(--nx-reserve))] w-[min(calc(100cqw_-_var(--nx-side)),720px)]'
+                        : 'w-[min(calc(100cqw_-_var(--nx-side)),calc((100cqh_-_var(--nx-reserve))_*_var(--nx-ar)))] [aspect-ratio:var(--nx-ar)]'),
+                    wide && layout === 'panel' && 'shadow-[0_30px_80px_rgba(0,0,0,0.6)]',
+                  )}
+                  style={
+                    wide && source.moment
+                      ? { boxShadow: `0 0 0 2px ${momentHue}8c, 0 30px 80px rgba(0,0,0,0.6)` }
+                      : undefined
+                  }
+                >
+                  <h2 className="sr-only">{words.title || author.handle || author.name}</h2>
+                  <div className="absolute inset-0">
+                    <Stage
+                      item={theaterItem}
+                      muted={muted}
+                      onRequestUnmute={() => setMuted(false)}
+                      onEnded={() => void next()}
+                      photoCaption={false}
+                      repeat={repeat === 'one'}
+                      covered={overlay || caughtUp || (panel !== null && !isVideo)}
+                    />
+                    {kind === 'post' && (
+                      // Room on the right so the rail never sits on the words.
+                      <div
+                        className={cn(
+                          'absolute inset-0 bg-nx-cream',
+                          wide
+                            ? 'px-2 pb-20 pt-16'
+                            : 'pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16',
+                        )}
+                      >
+                        <PostStage
+                          item={current.post}
+                          onLong={setLongPost}
+                          onScrollProgress={setArticleProgress}
+                          seekRef={articleSeek}
+                        />
+                      </div>
+                    )}
+                    {kind === 'article' &&
+                      (hasFullArticle(current.post) ? (
+                        // The whole article, right on the stage: scroll to read, Next or Skip to move on.
+                        <div
+                          className={cn(
+                            'absolute inset-0 bg-nx-ink',
+                            wide
+                              ? 'px-2 pb-20 pt-16'
+                              : 'pb-24 pr-[68px] pt-14 md:pb-20 md:pr-24 md:pt-16',
+                          )}
+                        >
+                          <ArticleReader
+                            item={current.post}
+                            inline
+                            onNext={() => void next()}
+                            onProgress={setArticleProgress}
+                            seekRef={articleSeek}
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            'absolute inset-0 bg-nx-ink',
+                            wide
+                              ? 'px-2 pb-20 pt-16'
+                              : 'pb-28 pr-[68px] pt-14 md:pb-24 md:pr-24 md:pt-16',
+                          )}
+                        >
+                          <ArticleStage item={current.post} onSkip={() => void next()} />
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* What's playing, at the stage's top-left. */}
+                  <div
+                    className={cn(
+                      'pointer-events-none absolute z-10 flex flex-wrap items-start gap-2',
+                      wide
+                        ? 'inset-x-4 top-4 pr-14'
+                        : 'inset-x-3 top-[max(68px,calc(env(safe-area-inset-top)+60px))] pr-14',
+                      // On a cream page see-through chips turn muddy grey: make them solid.
+                      overlay &&
+                        '[&>[role=note]]:!bg-[#1c1b19] [&>a]:!bg-[#1c1b19] [&>button]:!bg-[#1c1b19] [&_.nx-plate]:!bg-[#1c1b19] [&_.nx-plate]:![backdrop-filter:none] [&_.nx-plate]:![text-shadow:none] [&_.nx-plate]:!shadow-none',
+                    )}
+                  >
+                    {!wide && source.moment && (
+                      <>
+                        {liveChip}
+                        {member && watchers.length > 0 && (
+                          <WatchersBar
+                            watchers={watchers}
+                            className="pointer-events-auto !py-1.5"
+                          />
+                        )}
+                      </>
+                    )}
+                    {layout === 'list' && !source.recent && !source.shared && backChip}
+                    {!wide && layout === 'panel' && !source.moment && backChip}
+                    {wide && whyChip && <WhyChip post={current.post} onOpen={openWhy} />}
+                    {overlay && (isPrivate || (savers && savers.length > 0)) && (
+                      // Who saved it, by the chips: text and article stages have no byline scrim.
+                      <span className="pointer-events-auto flex h-9 min-w-0 items-center gap-1.5">
+                        {isPrivate && <PrivateLock className="h-7 w-7" />}
+                        {savers && savers.length > 0 && (
+                          <SaversButton
+                            savers={savers}
+                            tone="plate"
+                            placement="below"
+                            className="h-9 max-w-[280px]"
+                            facesClassName="h-9 pl-1.5 pr-3.5"
+                          />
+                        )}
+                      </span>
+                    )}
+                    {!wide && source.moment && tuneIntro && !overlay && (
+                      <div
+                        role="note"
+                        className="nx-plate pointer-events-auto hidden w-[330px] flex-col gap-2.5 rounded-2xl px-4 py-3.5 md:flex"
+                      >
+                        <span className="flex items-center gap-2 text-sm font-extrabold">
+                          <Radio
+                            aria-hidden
+                            className="h-4 w-4"
+                            style={{ color: momentHue }}
+                            strokeWidth={2.4}
+                          />
+                          <span>Tuned in</span>
+                        </span>
+                        <span className="text-[13px] leading-[1.4] text-white/75">
+                          Playing what people are saving like this, newest first. It keeps going as
+                          new saves land.
+                        </span>
+                        <div
+                          role="group"
+                          aria-label="How close to stay"
+                          className="flex gap-1 rounded-full bg-white/10 p-[3px]"
+                        >
+                          {[
+                            { on: !wander, label: 'Stay close', pick: () => toggleWander(false) },
+                            { on: wander, label: 'Wander', pick: () => toggleWander(true) },
+                          ].map((b) => (
+                            <button
+                              key={b.label}
+                              type="button"
+                              aria-pressed={b.on}
+                              onClick={b.pick}
+                              className={cn(
+                                'h-8 flex-1 rounded-full text-[13px] font-bold',
+                                b.on ? 'bg-white text-black' : 'text-white',
+                              )}
+                            >
+                              {b.label}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-xs text-white/60">
+                          {wander
+                            ? 'This moment first, then drifting to posts near it.'
+                            : 'Only this moment. New saves play as they land.'}
+                        </span>
+                      </div>
+                    )}
+                    {viaNote}
+                  </div>
+                  {muteOnFrame && muteButton}
+
+                  {source.moment && member && !wide && (
+                    // Rising from just above the byline, clear of the rail.
+                    <ReactionFloats
+                      reactions={floats}
+                      className="absolute bottom-[200px] left-0 right-[72px] z-20"
+                    />
+                  )}
+
+                  {/* The byline and transport, on the stage's bottom scrim. */}
+                  <div
+                    className={cn(
+                      // Taps fall through to the stage except on the controls and caption.
+                      'pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col bg-gradient-to-b from-transparent to-black/90',
+                      !wide && 'gap-2 px-4 pb-3 pt-24',
+                      wide && layout === 'panel' && 'gap-2.5 px-[18px] pb-3 pt-[110px]',
+                      wide && layout !== 'panel' && tallFrame && 'gap-2 px-5 pb-[18px] pt-[110px]',
+                      wide && layout !== 'panel' && !tallFrame && 'gap-2 px-6 pb-[18px] pt-[120px]',
+                    )}
+                  >
+                    {!overlay && (
+                      <div
+                        className={cn(
+                          'nx-text-shadow flex min-w-0 flex-col',
+                          wide ? 'max-w-[760px] gap-2' : 'gap-2 pr-[68px]',
+                          wide && layout === 'panel' && 'gap-2.5 pb-3.5',
+                        )}
+                      >
+                        {!wide && whyChip && (
+                          <WhyChip
+                            post={current.post}
+                            onOpen={openWhy}
+                            chevron
+                            className="self-start [text-shadow:none]"
+                          />
+                        )}
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          {savers && savers.length > 0 ? (
+                            <SaversButton
+                              savers={savers}
+                              placement="above"
+                              framed
+                              faces={
+                                <FaceStack
+                                  savers={savers}
+                                  size={wide && layout !== 'panel' ? 30 : 28}
+                                />
+                              }
+                            />
+                          ) : (
+                            <NxAvatar
+                              author={author}
+                              size={28}
+                              style={{ boxShadow: '0 0 0 2px #000' }}
+                            />
+                          )}
+                          <span
+                            className={cn(
+                              'min-w-0 truncate font-bold',
+                              wide && layout === 'feed' ? 'text-[15px]' : 'text-sm',
+                              layout === 'panel' && 'font-extrabold',
+                            )}
+                          >
+                            {savers && savers.length > 0
+                              ? bylineLine(savers)
+                              : author.handle || author.name}
+                          </span>
+                          {isPrivate && <PrivateLock tone="scrim" />}
+                          {(() => {
+                            const when = current.savedAt
+                              ? timeAgo(current.savedAt)
+                              : layout === 'panel'
+                                ? null
+                                : savedAgo(savers)
+                            const bits = [when, layout === 'panel' ? networkName : null].filter(
+                              Boolean,
+                            )
+                            return bits.length > 0 ? (
+                              <span
+                                className={cn(
+                                  'shrink-0 whitespace-nowrap text-nx-soft',
+                                  wide && layout === 'feed' ? 'text-sm' : 'text-[13px]',
+                                  momentNow && source.moment && 'font-bold',
+                                )}
+                                style={
+                                  momentNow && source.moment ? { color: momentHue } : undefined
+                                }
+                              >
+                                {`· ${bits.join(' · ')}`}
+                              </span>
+                            ) : null
+                          })()}
+                          {current.wander && (
+                            <span className="nx-plate rounded-full px-2.5 py-0.5 text-xs font-bold">
+                              Wandering
+                            </span>
+                          )}
+                        </div>
+                        {layout !== 'panel' &&
+                          (originalUrl ? (
+                            <a
+                              href={originalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Open on ${networkName}`}
+                              data-network={current.post.platform ?? 'twitter'}
+                              className="pointer-events-auto self-start text-sm text-nx-soft hover:text-white hover:underline"
+                            >
+                              {sourceLine(current.post)}
+                            </a>
+                          ) : (
+                            <span className="text-sm text-nx-soft">{sourceLine(current.post)}</span>
+                          ))}
+                        {caption &&
+                          (captionOpen ? (
+                            <span className="pointer-events-auto block max-h-[42vh] overflow-y-auto pr-2 text-[15px] leading-[1.45] md:text-[17px]">
+                              <RichText
+                                text={postBody(current.post)}
+                                platform={current.post.platform ?? 'twitter'}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setCaptionOpen(false)}
+                                className="mt-1.5 text-[13px] font-bold text-white/80 underline underline-offset-2"
+                              >
+                                Show less
+                              </button>
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setCaptionOpen(true)}
+                                aria-label="Show the full caption"
+                                className={cn(
+                                  'pointer-events-auto line-clamp-2 text-left leading-[1.4]',
+                                  wide && layout === 'feed' && !tallFrame
+                                    ? 'text-[17px]'
+                                    : wide && layout === 'panel'
+                                      ? 'text-[15px]'
+                                      : 'text-base',
+                                )}
+                              >
+                                {caption}
+                              </button>
+                              {caption.length > 110 && !wide && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCaptionOpen(true)}
+                                  className="pointer-events-auto -mt-1 self-start text-[13px] font-bold text-white/85 underline underline-offset-2"
+                                >
+                                  More
+                                </button>
+                              )}
+                            </>
+                          ))}
+                      </div>
+                    )}
+                    {fullTransport ? (
+                      <div className="pointer-events-auto mt-1.5 flex items-center gap-3">
+                        <ControlButton
+                          label={paused ? 'Play' : 'Pause'}
+                          onClick={togglePlay}
+                          className="bg-white/[0.14] hover:bg-white/20"
+                        >
+                          {paused ? (
+                            <Play
+                              aria-hidden
+                              className="h-5 w-5"
+                              fill="currentColor"
+                              strokeWidth={0}
+                            />
+                          ) : (
+                            <Pause
+                              aria-hidden
+                              className="h-5 w-5"
+                              fill="currentColor"
+                              strokeWidth={0}
+                            />
+                          )}
+                        </ControlButton>
+                        {timeNow ? (
+                          <span className="text-[13px] font-semibold tabular-nums">{timeNow}</span>
+                        ) : null}
+                        <SeekBar
+                          value={progress}
+                          onSeek={seekTo}
+                          disabled={kind === 'article' && !reading}
+                        />
+                        <span className="whitespace-nowrap text-[13px] font-semibold tabular-nums text-nx-soft">
+                          {timeAll ?? timeLabel}
+                        </span>
+                        {isVideo && (
+                          <ControlButton
+                            label={shownMuted ? 'Unmute' : 'Mute'}
+                            onClick={toggleMute}
+                          >
+                            {shownMuted ? (
+                              <VolumeX aria-hidden className="h-5 w-5" />
+                            ) : (
+                              <Volume2 aria-hidden className="h-5 w-5" />
+                            )}
+                          </ControlButton>
+                        )}
+                        <ControlButton
+                          label={fullscreen ? 'Exit full screen' : 'Full screen'}
+                          onClick={toggleFullscreen}
+                        >
+                          {fullscreen ? (
+                            <Minimize aria-hidden className="h-5 w-5" />
+                          ) : (
+                            <Maximize aria-hidden className="h-5 w-5" />
+                          )}
+                        </ControlButton>
+                      </div>
+                    ) : wide && layout !== 'panel' ? (
+                      <div className="pointer-events-auto mt-1.5 flex items-center gap-2.5">
+                        <ControlButton
+                          label={paused ? 'Play' : 'Pause'}
+                          onClick={togglePlay}
+                          className="bg-white/[0.14] hover:bg-white/20"
+                        >
+                          {paused ? (
+                            <Play
+                              aria-hidden
+                              className="h-5 w-5"
+                              fill="currentColor"
+                              strokeWidth={0}
+                            />
+                          ) : (
+                            <Pause
+                              aria-hidden
+                              className="h-5 w-5"
+                              fill="currentColor"
+                              strokeWidth={0}
+                            />
+                          )}
+                        </ControlButton>
+                        <SeekBar
+                          value={progress}
+                          onSeek={seekTo}
+                          disabled={kind === 'article' && !reading}
+                        />
+                        <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-nx-soft">
+                          {timeLabel}
+                        </span>
+                      </div>
+                    ) : (
+                      // Phones and the dimmed room: a thin line; tap the picture to pause.
+                      <div className="pointer-events-auto flex items-center gap-2.5">
+                        <SeekBar
+                          value={progress}
+                          onSeek={seekTo}
+                          disabled={kind === 'article' && !reading}
+                          thin
+                        />
+                        {overlay && timeLabel && (
+                          <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-white/85">
+                            {timeLabel}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {source.moment && waiting && (
+                    // Dim what's behind, so the note doesn't read over the last post.
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 z-[15] bg-black/60 backdrop-blur-[2px]"
+                    />
+                  )}
+                  {source.moment && waiting && (
+                    <div
+                      role="status"
+                      className="nx-plate absolute left-1/2 top-1/2 z-20 flex w-[min(320px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 rounded-3xl px-6 py-5 text-center"
+                    >
+                      <span
+                        aria-hidden
+                        className="block h-3 w-3 rounded-full animate-nx-live-pulse"
+                        style={{ background: momentHue }}
+                      />
+                      <span className="font-nx-serif text-[28px] leading-tight">
+                        You’re all caught up. Go touch grass.
+                      </span>
+                      <span className="text-sm text-white/75">
+                        New saves play here as they land.
+                      </span>
+                    </div>
+                  )}
+                  {ended && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black/75 px-6 text-center">
+                      <span className="font-nx-serif text-[32px]">{`That’s all ${items.length}`}</span>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void moreLikeThis().then((added) => {
+                              if (added) goTo(index + 1)
+                            })
+                          }
+                          className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
+                        >
+                          Keep going with more like this
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => goTo(0)}
+                          className="rounded-full border border-white/30 px-5 py-3 text-sm"
+                        >
+                          Play again
+                        </button>
+                        <Link
+                          href={back}
+                          className="rounded-full border border-white/30 px-5 py-3 text-sm"
+                        >
+                          {source.feed ? 'Browse channels' : 'Back to search'}
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                  {source.moment && member && reactOpen && (
+                    <ReactionPicker
+                      onEmoji={(emoji) => sendReaction({ emoji })}
+                      onText={(text) => sendReaction({ text })}
+                      onClose={() => setReactOpen(false)}
+                      disabled={reacting}
+                      error={reactionError}
+                      className="absolute inset-x-3 bottom-[max(16px,env(safe-area-inset-bottom))] z-40"
+                    />
+                  )}
+                </div>
+                {showNextCard && upNext && (
+                  <NextCard
+                    item={upNext}
+                    seconds={secondsLeft}
+                    onSkip={() => void next()}
+                    className={cn(
+                      'absolute top-full mt-4',
+                      tallFrame ? 'left-1/2 w-[520px] -translate-x-1/2' : 'inset-x-0',
+                    )}
+                  />
+                )}
+              </div>
+
+              <nav
+                aria-label="Post actions"
+                className={cn(
+                  'z-10 flex flex-col',
+                  wide && layout === 'panel'
+                    ? 'w-[60px] items-center gap-3.5 pb-3.5'
+                    : wide
+                      ? 'gap-3.5 pb-2'
+                      : 'absolute bottom-[34px] right-3 max-h-[calc(100%-150px)] gap-3 overflow-y-auto overscroll-contain [scrollbar-width:none]',
+                )}
+              >
+                {source.moment && member && (
+                  <ReactButton
+                    open={reactOpen}
+                    className={railStyle(false, reactOpen).replace('pointer-events-auto ', '')}
+                    onToggle={() => {
+                      if (!reactOpen) {
+                        reactionTarget.current = itemsRef.current[indexRef.current]?.post ?? null
+                        setReactionError(null)
+                      }
+                      setReactOpen((o) => !o)
+                    }}
+                  />
+                )}
+                {railItem(
+                  <button
+                    type="button"
+                    aria-label={saved ? 'Saved. Add to a channel' : 'Save'}
+                    title={saved ? 'Saved. Add to a channel' : 'Save'}
+                    aria-pressed={saved}
+                    onClick={() => void save()}
+                    className={railStyle(saved)}
+                  >
+                    <Bookmark
+                      aria-hidden
+                      className="h-[22px] w-[22px]"
+                      fill={saved ? 'currentColor' : 'none'}
+                    />
+                  </button>,
+                  saved ? 'Saved' : 'Save',
+                )}
+                {copied && (
+                  <span role="status" className="sr-only">
+                    {kind === 'article' ? 'Article copied' : 'Text copied'}
+                  </span>
+                )}
+                {railItem(
+                  <button
+                    type="button"
+                    aria-label="Share"
+                    title="Share"
+                    onClick={(e) => {
+                      railAnchor(e.currentTarget)
+                      shareIt()
+                    }}
+                    className={railStyle()}
+                  >
+                    <ShareIcon aria-hidden className="h-[22px] w-[22px]" />
+                  </button>,
+                  'Share',
+                )}
+                {railItem(
+                  <button
+                    type="button"
+                    aria-label={
+                      textOnly
+                        ? copied
+                          ? 'Copied'
+                          : kind === 'article'
+                            ? 'Copy the article'
+                            : 'Copy the text'
+                        : 'Download'
+                    }
+                    title={textOnly ? 'Copy the text' : 'Download'}
+                    onClick={() => void downloadIt()}
+                    className={railStyle()}
+                  >
+                    {textOnly ? (
+                      copied ? (
+                        <Check
+                          aria-hidden
+                          className="h-[22px] w-[22px] text-nx-accent"
+                          strokeWidth={2.6}
+                        />
+                      ) : (
+                        <Copy aria-hidden className="h-[21px] w-[21px]" />
+                      )
+                    ) : (
+                      <Download
+                        aria-hidden
+                        className={cn('h-[21px] w-[21px]', send.sending && 'animate-pulse')}
+                      />
+                    )}
+                  </button>,
+                  textOnly ? 'Copy' : 'Download',
+                )}
+                {railItem(
+                  <button
+                    ref={moreRef}
+                    type="button"
+                    aria-label="More options"
+                    title="More options"
+                    aria-haspopup="menu"
+                    aria-expanded={panel === 'more'}
+                    onClick={toggleMore}
+                    className={railStyle(false, panel === 'more')}
+                  >
+                    <Ellipsis aria-hidden className="h-[22px] w-[22px]" />
+                  </button>,
+                  'More',
+                )}
+              </nav>
+            </div>
+          </div>
+        </section>
+
+        {wide && layout === 'feed' && panel === 'why' && (
+          <WhyPanel
+            item={current}
+            onClose={() => setPanel(null)}
+            friends={
+              whyFriends.length > 0 ? (
+                <div className="flex flex-col gap-1.5">
+                  {whyFriends.map((friend) => {
+                    const weight = weights?.[friend.username] ?? 0
+                    return (
+                      <div key={friend.username} className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                          {friend.name}
+                        </span>
+                        {([-1, 1] as const).map((w) => (
+                          <button
+                            key={w}
+                            type="button"
+                            aria-pressed={weight === w}
+                            aria-label={`Show ${w === 1 ? 'more' : 'less'} from ${friend.name}`}
+                            disabled={weights === null || weightBusy === friend.username}
+                            onClick={() => void setFriendWeight(friend, weight === w ? 0 : w)}
+                            className={cn(
+                              'h-8 shrink-0 whitespace-nowrap rounded-full border px-3 text-[13px] font-semibold disabled:opacity-50',
+                              weight === w
+                                ? 'border-nx-cream bg-nx-cream text-black'
+                                : 'border-white/[0.08] text-nx-muted',
+                            )}
+                          >
+                            {w === 1 ? 'Show more' : 'Show less'}
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : null
+            }
+          />
+        )}
+
+        {wide && layout === 'list' && (
+          <aside aria-label="Up next" className="flex min-h-0 w-[320px] shrink-0 flex-col gap-1.5">
+            <div className="flex items-baseline justify-between gap-3 px-2 pb-2">
+              <h2 className="m-0 font-nx-serif text-[32px] font-normal leading-none">Up next</h2>
+              <span className="truncate whitespace-nowrap text-[13px] text-nx-muted">
+                {source.recent ? 'From My saves' : source.shared ? 'More like this' : countLine}
+              </span>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none]">
+              <UpNextList items={items} index={index} variant="saves" onPlay={goTo} />
+            </div>
+          </aside>
+        )}
+
+        {wide && layout === 'panel' && (
+          <aside
+            aria-label={source.moment ? 'This moment' : 'Channel'}
+            className="relative z-10 flex min-h-0 w-[400px] shrink-0 flex-col gap-3.5 overflow-y-auto border-l border-white/[0.08] bg-nx-ink px-7 py-6 [scrollbar-width:none]"
+          >
+            {source.moment ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold uppercase tracking-[0.1em] text-nx-muted">
+                    Right now
+                  </span>
+                  <Link
+                    href="/now"
+                    className="flex h-11 items-center rounded-full border border-white/[0.22] px-4 text-sm font-extrabold text-nx-cream"
+                  >
+                    Leave
+                  </Link>
+                </div>
+                <h1 className="m-0 -mt-1.5 font-nx-serif text-[44px] font-normal leading-[0.95]">
+                  {title ?? 'Right now'}
+                </h1>
+                <span className="flex items-center gap-2 text-sm text-nx-soft">
+                  <span aria-hidden className="block h-2 w-2 rounded-full bg-[#ff5a3c]" />
+                  <span className="font-extrabold text-nx-cream">LIVE</span>
+                  <span aria-hidden>·</span>
+                  <span>{momentPace(items)}</span>
+                  {watching > 0 && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span>{`${watching} watching`}</span>
+                    </>
+                  )}
+                </span>
+                <PanelDivider />
+                <h2 className="m-0 text-[15px] font-extrabold">Up next</h2>
+                <UpNextList
+                  items={items}
+                  index={index}
+                  variant="moment"
+                  hue={momentHue}
+                  onPlay={goTo}
+                  limit={6}
+                />
+                {member && (
+                  <>
+                    <PanelDivider />
+                    <h2 className="m-0 text-[15px] font-extrabold">Say something</h2>
+                    <QuickWords onSay={sayWord} disabled={reacting} said={said} />
+                    {reactionError && (
+                      <p role="status" className="m-0 text-sm text-[#ffb891]">
+                        {reactionError}
+                      </p>
+                    )}
+                  </>
+                )}
+                <p className="m-0 text-[13px] leading-[1.45] text-nx-muted">
+                  <span className="font-extrabold text-nx-soft">Stay close</span>
+                  <span> keeps you on this moment. </span>
+                  <span className="font-extrabold text-nx-soft">Wander</span>
+                  <span> drifts into nearby saves when it runs out.</span>
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-extrabold uppercase tracking-[0.1em] text-nx-muted">
+                  {channelKind}
+                </span>
+                <h1 className="m-0 font-nx-serif text-[42px] font-normal leading-[0.95]">
+                  {title ?? 'Channel'}
+                </h1>
+                <div className="flex items-center gap-2.5 text-sm text-nx-soft">
+                  {inQueue.length > 0 && (
+                    <FaceStack savers={inQueue} size={26} ring="#0f0e0c" max={3} />
+                  )}
+                  <span>
+                    {[
+                      `${Math.max(position.of, feedTotal)} saves`,
+                      inQueue.length > 0 ? bylineLine(inQueue, false) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </div>
+                <div className="mt-1 flex gap-2.5">
+                  {source.auto && (
+                    // Made for you: keep it as one of your own channels (private until shared).
+                    <button
+                      type="button"
+                      disabled={keeping || kept}
+                      onClick={() => void keepChannel()}
+                      className="flex h-[52px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-5 text-[15px] font-extrabold text-black disabled:opacity-70"
+                    >
+                      {kept ? (
+                        <Check aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.6} />
+                      ) : (
+                        <Plus aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.6} />
+                      )}
+                      <span>{kept ? 'Kept' : 'Keep this channel'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void navigator.clipboard
+                        ?.writeText(window.location.href)
+                        .then(() => flash('Link copied'))
+                        .catch(() => flash('Couldn’t copy the link'))
+                    }
+                    className="flex h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/[0.22] px-[18px] text-[15px] font-extrabold text-nx-cream"
+                  >
+                    <Share aria-hidden className="h-[18px] w-[18px]" />
+                    <span>Share channel</span>
+                  </button>
+                </div>
+                <PanelDivider />
+                <div className="flex items-baseline justify-between">
+                  <h2 className="m-0 text-[15px] font-extrabold">Up next</h2>
+                  <span className="text-[13px] text-nx-muted">
+                    {`${Math.max(0, Math.max(position.of, feedTotal) - position.n)} to go`}
+                  </span>
+                </div>
+                <UpNextList
+                  items={items}
+                  index={index}
+                  variant="channel"
+                  onPlay={goTo}
+                  limit={12}
+                />
+              </>
+            )}
+          </aside>
+        )}
+
+        {caughtUp && (
+          <CaughtUpStage
+            className="absolute inset-0 z-20"
+            onWatchAgain={() => switchFeed('everyone')}
+            waiting={feedWaiting}
+            onShowWaiting={showWaiting}
+            recap={recap}
+            tonight={wide}
+          />
+        )}
+
+        {!wide && source.moment && arrival && (arrival.now || arrivals === 1) && (
           <ArrivalToast
             saver={arrival.saver}
             post={arrival.post}
             hue={momentHue}
             now={arrival.now}
             onPlay={arrival.now ? undefined : () => goTo(index + 1)}
-            className="absolute right-3 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 max-w-[calc(100%-24px)] md:right-24 md:top-4"
+            className="absolute right-3 top-[max(116px,calc(env(safe-area-inset-top)+108px))] z-30 max-w-[calc(100%-24px)]"
           />
         )}
         {source.moment && arrivals > 0 && !(arrivals === 1 && arrival) && (
           <div
             role="status"
-            className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex md:top-16 -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in"
+            className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in md:top-4"
           >
             <span
               aria-hidden
@@ -1819,368 +2915,6 @@ export function TheaterV2({
               Play now
             </button>
           </div>
-        )}
-
-        {source.moment && waiting && (
-          // Dim what's behind, so the note doesn't read over the last post.
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 z-[5] bg-black/60 backdrop-blur-[2px]"
-          />
-        )}
-        {source.moment && waiting && (
-          <div
-            role="status"
-            className="nx-plate absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 rounded-3xl px-6 py-5 text-center"
-          >
-            <span
-              aria-hidden
-              className="block h-3 w-3 rounded-full animate-nx-live-pulse"
-              style={{ background: momentHue }}
-            />
-            <span className="font-nx-serif text-[28px]">You’re all caught up. Go touch grass.</span>
-            <span className="text-sm text-white/75">New saves play here as they land.</span>
-          </div>
-        )}
-
-        {source.moment && member && (
-          // Rising from just above the bottom bar, clear of the rail.
-          <ReactionFloats
-            reactions={floats}
-            className="absolute bottom-[200px] left-0 right-[72px] z-20 md:bottom-[150px] md:right-28"
-          />
-        )}
-        {source.moment && member && reactOpen && (
-          <ReactionPicker
-            onEmoji={(emoji) => sendReaction({ emoji })}
-            onText={(text) => sendReaction({ text })}
-            onClose={() => setReactOpen(false)}
-            disabled={reacting}
-            error={reactionError}
-            className="absolute inset-x-3 bottom-[max(16px,env(safe-area-inset-bottom))] z-40 md:inset-x-auto md:bottom-auto md:right-24 md:top-1/2 md:w-[400px] md:-translate-y-1/2"
-          />
-        )}
-
-        <nav
-          aria-label="Post actions"
-          className="absolute bottom-[min(164px,calc(100%-144px))] right-2 z-10 flex max-h-[max(48px,calc(100%-260px))] flex-col gap-3 overflow-y-auto overscroll-contain px-1 py-1 [scrollbar-width:thin] [&>*]:shrink-0 md:bottom-auto md:right-5 md:top-1/2 md:max-h-[calc(100%-32px)] md:-translate-y-1/2"
-        >
-          {source.moment && member && (
-            <ReactButton
-              open={reactOpen}
-              onToggle={() => {
-                if (!reactOpen) {
-                  reactionTarget.current = itemsRef.current[indexRef.current]?.post ?? null
-                  setReactionError(null)
-                }
-                setReactOpen((o) => !o)
-              }}
-            />
-          )}
-          {originalUrl && (
-            <a
-              href={originalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Open on ${networkName}`}
-              title={`Open on ${networkName}`}
-              data-network={current.post.platform ?? 'twitter'}
-              className="nx-plate flex h-12 w-12 items-center justify-center rounded-full text-white md:h-[52px] md:w-[52px]"
-            >
-              <NetworkIcon platform={current.post.platform} className="h-[20px] w-[20px]" />
-            </a>
-          )}
-          <RailButton label="More like this" onClick={() => void moreLikeThis()} active>
-            <Sparkles
-              aria-hidden
-              className="h-[22px] w-[22px]"
-              fill="currentColor"
-              strokeWidth={1.5}
-            />
-          </RailButton>
-          <RailButton
-            label={saved ? 'Saved. Add to a channel' : 'Save'}
-            onClick={() => void save()}
-            active={saved}
-          >
-            <Bookmark
-              aria-hidden
-              className="h-[22px] w-[22px]"
-              fill={saved ? 'currentColor' : 'none'}
-            />
-          </RailButton>
-          {copied && (
-            <span role="status" className="sr-only">
-              {kind === 'article' ? 'Article copied' : 'Text copied'}
-            </span>
-          )}
-          <RailButton label="Share" onClick={shareIt}>
-            <Send aria-hidden className="h-[21px] w-[21px]" />
-          </RailButton>
-          <RailButton
-            label={
-              textOnly
-                ? copied
-                  ? 'Copied'
-                  : kind === 'article'
-                    ? 'Copy the article'
-                    : 'Copy the text'
-                : 'Download'
-            }
-            onClick={() => void downloadIt()}
-          >
-            {textOnly ? (
-              copied ? (
-                <Check aria-hidden className="h-[22px] w-[22px] text-nx-accent" strokeWidth={2.6} />
-              ) : (
-                <Copy aria-hidden className="h-[21px] w-[21px]" />
-              )
-            ) : (
-              <Download
-                aria-hidden
-                className={cn('h-[21px] w-[21px]', send.sending && 'animate-pulse')}
-              />
-            )}
-          </RailButton>
-          <RailButton label="Up next" onClick={() => setPanel(panel === 'queue' ? null : 'queue')}>
-            <ListVideo aria-hidden className="h-[22px] w-[22px]" />
-          </RailButton>
-          <RailButton
-            label="More options"
-            onClick={() => setPanel(panel === 'more' ? null : 'more')}
-          >
-            <Ellipsis aria-hidden className="h-[22px] w-[22px]" />
-          </RailButton>
-        </nav>
-
-        <div
-          className={cn(
-            // One bar in one place for every kind: the same fade, padding and buttons.
-            // Taps fall through to the stage except on the controls and caption.
-            'nx-scrim pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2.5 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-20 md:gap-3 md:px-7 md:pb-5',
-          )}
-        >
-          {!overlay && (
-            <div className="nx-text-shadow flex max-w-[calc(100%-64px)] items-end gap-3 md:max-w-[760px]">
-              <NxAvatar author={author} size={40} className="border-2 border-white" />
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="flex flex-wrap items-center gap-2 text-[15px] font-bold">
-                  <span>{author.handle || author.name}</span>
-                  {isPrivate && <PrivateLock tone="scrim" />}
-                  {current.savedAt && (
-                    <span
-                      className={cn(
-                        'rounded-full px-2.5 py-0.5 text-xs font-extrabold [text-shadow:none]',
-                        Date.now() - Date.parse(current.savedAt) < 3_600_000
-                          ? 'text-black'
-                          : 'nx-plate',
-                      )}
-                      style={
-                        Date.now() - Date.parse(current.savedAt) < 3_600_000
-                          ? { background: momentHue }
-                          : undefined
-                      }
-                    >
-                      {Date.now() - Date.parse(current.savedAt) < 3_600_000
-                        ? `Just saved · ${timeAgo(current.savedAt)}`
-                        : `Saved ${timeAgo(current.savedAt)}`}
-                    </span>
-                  )}
-                  {current.wander && (
-                    <span className="nx-plate rounded-full px-2.5 py-0.5 text-xs font-bold">
-                      Wandering
-                    </span>
-                  )}
-                </span>
-                {savers && savers.length > 0 && <SaversButton savers={savers} tone="scrim" />}
-                {caption &&
-                  (captionOpen ? (
-                    <span className="pointer-events-auto block max-h-[42vh] overflow-y-auto pr-2 text-[15px] leading-[1.45] md:text-[17px]">
-                      <RichText
-                        text={postBody(current.post)}
-                        platform={current.post.platform ?? 'twitter'}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCaptionOpen(false)}
-                        className="mt-1.5 text-[13px] font-bold text-white/80 underline underline-offset-2"
-                      >
-                        Show less
-                      </button>
-                    </span>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setCaptionOpen(true)}
-                        aria-label="Show the full caption"
-                        className="pointer-events-auto line-clamp-2 text-left text-[15px] leading-[1.35] md:text-[17px]"
-                      >
-                        {caption}
-                      </button>
-                      {caption.length > 110 && (
-                        <button
-                          type="button"
-                          onClick={() => setCaptionOpen(true)}
-                          className="pointer-events-auto mt-0.5 self-start text-[13px] font-bold text-white/85 underline underline-offset-2"
-                        >
-                          More
-                        </button>
-                      )}
-                    </>
-                  ))}
-              </span>
-            </div>
-          )}
-          <div className={cn('pointer-events-auto flex flex-col gap-1')}>
-            <label htmlFor="nx-seek" className="sr-only">
-              Seek
-            </label>
-            <input
-              id="nx-seek"
-              type="range"
-              min={0}
-              max={1000}
-              value={Math.round(progress * 1000)}
-              onChange={(e) => seekTo(Number(e.target.value) / 1000)}
-              disabled={kind === 'article' && !reading}
-              className="nx-seek h-3.5 w-full cursor-pointer accent-nx-accent"
-            />
-            <div className="flex items-center gap-0.5 md:gap-1">
-              <ControlButton label="Previous" onClick={prev}>
-                <SkipBack aria-hidden className="h-5 w-5" fill="currentColor" />
-              </ControlButton>
-              <ControlButton
-                label={paused ? 'Play' : 'Pause'}
-                onClick={togglePlay}
-                className="h-12 w-12"
-              >
-                {paused ? (
-                  <Play aria-hidden className="h-6 w-6" fill="currentColor" strokeWidth={0} />
-                ) : (
-                  <Pause aria-hidden className="h-6 w-6" fill="currentColor" strokeWidth={0} />
-                )}
-              </ControlButton>
-              <ControlButton label="Next" onClick={() => void next()}>
-                <SkipForward aria-hidden className="h-5 w-5" fill="currentColor" />
-              </ControlButton>
-              <ControlButton
-                label={shownMuted ? 'Unmute' : 'Mute'}
-                onClick={toggleMute}
-                className="hidden md:flex"
-              >
-                {shownMuted ? (
-                  <VolumeX aria-hidden className="h-5 w-5" />
-                ) : (
-                  <Volume2 aria-hidden className="h-5 w-5" />
-                )}
-              </ControlButton>
-              <label htmlFor="nx-volume" className="sr-only">
-                Volume
-              </label>
-              <input
-                id="nx-volume"
-                type="range"
-                min={0}
-                max={100}
-                value={shownMuted ? 0 : Math.round(volume * 100)}
-                onChange={(e) => {
-                  const v = Number(e.target.value) / 100
-                  setVolume(v)
-                  stage.setVolume(v)
-                  if (v > 0 && shownMuted) {
-                    stage.setMuted(false)
-                    setMuted(false)
-                  }
-                }}
-                className="hidden w-[90px] accent-white md:block"
-              />
-              <span className="ml-2 text-[13px] tabular-nums text-white/85">
-                {isVideo && video.duration
-                  ? `${clock(video.progress * video.duration)} / ${clock(video.duration)}`
-                  : timed
-                    ? `${clock(dwell.progress * dwellSeconds(current))} / ${clock(dwellSeconds(current))}`
-                    : reading
-                      ? `${Math.round(articleProgress * 100)}% read`
-                      : ''}
-              </span>
-              <span className="flex-1" />
-              <ControlButton
-                label={`Repeat: ${REPEAT_LABELS[repeat]}`}
-                pressed={repeat !== 'off'}
-                onClick={() => setRepeat((r) => REPEAT_ORDER[(REPEAT_ORDER.indexOf(r) + 1) % 3])}
-                className={cn('relative hidden md:flex', repeat !== 'off' && 'text-nx-accent')}
-              >
-                <Repeat aria-hidden className="h-5 w-5" />
-                {repeat === 'one' && (
-                  <span
-                    aria-hidden
-                    className="absolute right-1.5 top-1.5 rounded-full bg-nx-accent px-1 text-[9px] font-bold leading-[14px] text-black"
-                  >
-                    1
-                  </span>
-                )}
-              </ControlButton>
-              {isVideo && video.pip.supported && (
-                <ControlButton
-                  label="Picture in picture"
-                  pressed={video.pip.active}
-                  onClick={stage.togglePip}
-                >
-                  <PictureInPicture2 aria-hidden className="h-5 w-5" />
-                </ControlButton>
-              )}
-              <ControlButton
-                label={fullscreen ? 'Exit full screen' : 'Full screen'}
-                onClick={toggleFullscreen}
-                className="hidden md:flex"
-              >
-                {fullscreen ? (
-                  <Minimize aria-hidden className="h-5 w-5" />
-                ) : (
-                  <Maximize aria-hidden className="h-5 w-5" />
-                )}
-              </ControlButton>
-            </div>
-          </div>
-        </div>
-
-        {ended && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black/75 px-6 text-center">
-            <span className="font-nx-serif text-[32px]">{`That’s all ${items.length}`}</span>
-            <div className="flex flex-wrap justify-center gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  void moreLikeThis().then((added) => {
-                    if (added) goTo(index + 1)
-                  })
-                }
-                className="rounded-full bg-nx-accent px-5 py-3 text-sm font-bold text-nx-ink"
-              >
-                Keep going with more like this
-              </button>
-              <button
-                type="button"
-                onClick={() => goTo(0)}
-                className="rounded-full border border-white/30 px-5 py-3 text-sm"
-              >
-                Play again
-              </button>
-              <Link href={back} className="rounded-full border border-white/30 px-5 py-3 text-sm">
-                {source.feed ? 'Browse channels' : 'Back to search'}
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {caughtUp && (
-          <CaughtUpStage
-            className="absolute inset-0 z-20"
-            onWatchAgain={() => switchFeed('everyone')}
-            waiting={feedWaiting}
-            onShowWaiting={showWaiting}
-          />
         )}
 
         {panel === 'queue' && (
@@ -2225,7 +2959,7 @@ export function TheaterV2({
             }}
           />
         )}
-        {panel === 'why' && (
+        {panel === 'why' && !(wide && layout === 'feed') && (
           <WhySheet
             item={current}
             friends={whyFriends}
@@ -2240,6 +2974,7 @@ export function TheaterV2({
         )}
         {panel === 'share' && (
           <ShareSheet
+            anchor={wide ? moreAnchor : null}
             url={publicUrl()}
             waiting={pausedForShare.current || timed}
             onClose={() => setPanel(null)}
@@ -2247,15 +2982,17 @@ export function TheaterV2({
         )}
         {panel === 'more' && (
           <MoreSheet
+            anchor={wide ? moreAnchor : null}
             rows={menu.map((row) => ({
               ...row,
               onSelect: () => {
                 row.onSelect()
-                // Repeat cycles in place; Why this one opens its own sheet.
+                // Switches and Repeat change in place; Why this one and Up next open their own.
                 if (
                   row.checked === undefined &&
                   row.label !== 'Repeat' &&
-                  row.label !== 'Why this one'
+                  row.label !== 'Why this one' &&
+                  row.label !== 'Up next'
                 ) {
                   setPanel(null)
                 }
@@ -2264,10 +3001,22 @@ export function TheaterV2({
             onClose={() => setPanel(null)}
           />
         )}
-        {paste.toast}
-        {learningOpen && (
-          <LearningSheet status={learning.status} onClose={() => setLearningOpen(false)} />
+        {filterOpen && source.feed && (
+          <FeedFilterSheet
+            types={shownTypes}
+            onTypes={changeTypes}
+            mode={source.feed}
+            onMode={(mode) => {
+              setFilterOpen(false)
+              switchFeed(mode)
+            }}
+            unseen={unseen}
+            waiting={waitingLine(feedWaiting) || null}
+            summary={feedTypesSummary(shownTypes)}
+            onClose={() => setFilterOpen(false)}
+          />
         )}
+        {paste.toast}
         {toast && (
           <div
             role="status"
@@ -2277,81 +3026,37 @@ export function TheaterV2({
           </div>
         )}
       </div>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2 bg-gradient-to-b from-black/70 to-transparent px-3 pb-8 pt-[max(12px,env(safe-area-inset-top))] md:h-20 md:gap-4 md:bg-black md:bg-none md:px-7 md:py-0">
-        {/* The same header as every other screen: logo and tabs, then tools. */}
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-[41] flex items-center gap-2.5 bg-gradient-to-b from-black/60 to-transparent px-4 pb-6 pt-[max(12px,env(safe-area-inset-top))] md:h-[72px] md:gap-4 md:border-b md:border-white/[0.08] md:bg-nx-ink md:bg-none md:px-8 md:py-0 lg:gap-7">
+        {/* Phones: Gob, New · Channels · Live, and one tool. */}
+        <PhoneGob className="pointer-events-auto md:hidden" />
+        <PhoneTabs
+          current={navHere}
+          unseen={unseen}
+          className="pointer-events-auto min-w-0 md:hidden"
+        />
+        {/* Wide: the same header as every other screen, logo, tabs and search. */}
         <NxLogo className="pointer-events-auto hidden md:flex" />
         <PrimaryNav current={navHere} className="pointer-events-auto" />
-        {source.feed ? (
-          <>
-            <FeedSwitch
-              mode={source.feed}
-              onChange={switchFeed}
-              className="pointer-events-auto hidden xl:flex"
-            />
-            <FeedTypesControl
-              types={shownTypes}
-              onChange={changeTypes}
-              className="pointer-events-auto hidden xl:flex"
-            />
-          </>
-        ) : (
-          <Link
-            href={back}
-            // Phones only; on desktop it leads the row of chips on the stage.
-            className="nx-plate pointer-events-auto flex h-10 min-w-0 max-w-[60vw] items-center gap-1.5 rounded-full pl-2 pr-4 text-sm md:hidden"
-          >
-            <ChevronLeft aria-hidden className="h-4 w-4 shrink-0" />
-            <span className="truncate">{title ?? (source.search.q || 'Search')}</span>
-          </Link>
-        )}
         <span className="flex-1" />
-        {source.moment ? (
-          <span className="nx-plate flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-xs font-extrabold">
-            <span
-              aria-hidden
-              className="block h-2 w-2 rounded-full animate-nx-live-pulse"
-              style={{ background: momentHue }}
-            />
-            <span>LIVE</span>
-            {watching > 0 && (
-              <span className="hidden font-medium text-white/80 md:inline">{`${watching} watching`}</span>
-            )}
-          </span>
-        ) : (
-          !position.via && (
-            <span
-              className={cn(
-                'nx-plate hidden h-8 items-center whitespace-nowrap rounded-full px-3 text-xs tabular-nums text-white/85',
-                source.feed ? 'xl:flex' : 'md:flex',
-              )}
-            >
-              {source.feed === 'new'
-                ? `${caughtUp ? 0 : Math.max(0, feedTotal - index)} you haven’t seen`
-                : source.feed
-                  ? `${index + 1} of ${Math.max(feedTotal, items.length)}`
-                  : `${position.n} of ${position.of}`}
-            </span>
-          )
+        {source.feed && (
+          <RoundIconButton
+            label={`What’s in your feed: ${feedTypesSummary(shownTypes)}`}
+            icon={PhoneFilterIcon}
+            onClick={() => setFilterOpen(true)}
+            className="pointer-events-auto lg:hidden"
+          />
         )}
-        <LearningPill
-          status={learning.status}
-          onOpen={() => setLearningOpen(true)}
-          className="pointer-events-auto hidden md:flex"
+        {/* Phones show one tool (the feed's filter wins); tablets have room for both. */}
+        <RoundIconButton
+          label="Search"
+          icon={PhoneSearchIcon}
+          onClick={openQuickSearch}
+          className={cn('pointer-events-auto lg:hidden', source.feed && 'hidden md:flex')}
         />
-        <PasteButton onClick={paste.pasteFromClipboard} className="pointer-events-auto" />
-        <HeaderSearch shortcut className="pointer-events-auto" />
+        <div className="pointer-events-auto hidden lg:flex">
+          <HeaderSearch shortcut className="md:w-[260px] xl:w-[340px]" />
+        </div>
         <AccountMenu className="pointer-events-auto" avatarOnPhones={false} />
-        <ControlButton
-          label={shownMuted ? 'Unmute' : 'Mute'}
-          onClick={toggleMute}
-          className="nx-plate pointer-events-auto md:hidden"
-        >
-          {shownMuted ? (
-            <VolumeX aria-hidden className="h-5 w-5" />
-          ) : (
-            <Volume2 aria-hidden className="h-5 w-5" />
-          )}
-        </ControlButton>
       </header>
       <BottomNav current={navHere} />
     </>

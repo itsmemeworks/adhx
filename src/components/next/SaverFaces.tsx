@@ -1,9 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { ChevronRight, Lock } from 'lucide-react'
+import { ChevronRight, ChevronUp, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Saver } from '@/lib/people/types'
 import { timeAgo } from './moments/live'
@@ -169,6 +176,8 @@ export function SaversButton({
   placement = 'above',
   className,
   facesClassName,
+  faces,
+  framed = false,
 }: {
   savers: readonly Saver[]
   tone?: 'scrim' | 'plate'
@@ -176,6 +185,10 @@ export function SaversButton({
   className?: string
   /** Passed to the faces themselves. */
   facesClassName?: string
+  /** Draw the faces yourself (the theater byline's bigger stack). */
+  faces?: ReactNode
+  /** A frosted pill with a chevron, ringed in yellow while open. */
+  framed?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [at, setAt] = useState<{ left: number; top?: number; bottom?: number } | null>(null)
@@ -187,7 +200,7 @@ export function SaversButton({
   const place = () => {
     const rect = root.current?.getBoundingClientRect()
     if (!rect) return
-    const left = Math.max(12, Math.min(rect.left, window.innerWidth - 348))
+    const left = Math.max(12, Math.min(rect.left - (framed ? 8 : 0), window.innerWidth - 348))
     setAt(
       placement === 'above'
         ? { left, bottom: window.innerHeight - rect.top + 12 }
@@ -232,9 +245,19 @@ export function SaversButton({
           if (!open) place()
           setOpen((o) => !o)
         }}
-        className="flex min-w-0 rounded-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-nx-accent"
+        aria-label={faces ? `Who saved it: ${saversLine(savers)}` : undefined}
+        className={cn(
+          'flex min-w-0 rounded-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-nx-accent',
+          framed && 'h-10 shrink-0 items-center gap-1 py-[3px]',
+          framed &&
+            open &&
+            '-ml-[3px] bg-white/[0.16] pl-[3px] pr-2.5 outline outline-2 outline-offset-1 outline-nx-accent backdrop-blur-md',
+        )}
       >
-        <SaverFaces savers={savers} tone={tone} className={cn('max-w-full', facesClassName)} />
+        {faces ?? (
+          <SaverFaces savers={savers} tone={tone} className={cn('max-w-full', facesClassName)} />
+        )}
+        {framed && open && <ChevronUp aria-hidden className="h-4 w-4 shrink-0 text-white" />}
       </button>
       {open &&
         at &&
@@ -244,8 +267,14 @@ export function SaversButton({
             role="dialog"
             aria-label="Who saved it"
             style={at}
-            className="fixed z-[60] flex w-[min(336px,calc(100vw-24px))] flex-col gap-0.5 rounded-[22px] border border-white/10 bg-nx-surface p-2 font-nx-sans text-nx-cream shadow-[0_24px_60px_rgba(0,0,0,0.65)] [text-shadow:none]"
+            className="fixed z-[60] flex w-[min(336px,calc(100vw-24px))] flex-col gap-0.5 rounded-[22px] border border-white/[0.08] bg-nx-surface p-2 font-nx-sans text-nx-cream shadow-[0_24px_60px_rgba(0,0,0,0.65)] [text-shadow:none]"
           >
+            {framed && placement === 'above' && (
+              <span
+                aria-hidden
+                className="absolute -bottom-2 left-[34px] block h-3.5 w-3.5 rotate-45 border-b border-r border-white/[0.08] bg-nx-surface"
+              />
+            )}
             <span className="px-3 pb-1.5 pt-2.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/55">
               Who saved it
             </span>
@@ -253,10 +282,7 @@ export function SaversButton({
               {list.map((s, i) => (
                 <li
                   key={s.username}
-                  className={cn(
-                    'flex gap-3 rounded-[14px] px-3 py-2.5',
-                    i === 0 && 'bg-white/[0.06]',
-                  )}
+                  className={cn('flex gap-3 rounded-[14px] px-3 py-2.5', i === 0 && 'bg-[#262320]')}
                 >
                   <NxAvatar
                     author={{ avatarUrl: s.avatarUrl, handle: s.username, name: saverName(s) }}
@@ -282,7 +308,7 @@ export function SaversButton({
               ))}
             </ul>
             {others > 0 && list.length > 1 && (
-              <span className="mt-1 flex items-center gap-2.5 border-t border-white/10 px-3 pb-2 pt-3 text-sm font-semibold text-white/70">
+              <span className="mt-1 flex items-center gap-2.5 border-t border-white/[0.08] px-3 pb-2 pt-3 text-sm font-semibold text-nx-soft">
                 <SaverFaces
                   savers={savers}
                   tone="plate"

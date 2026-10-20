@@ -1,7 +1,27 @@
 'use client'
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Bookmark, Check, Lock, Minus, Plus, Sparkles, X } from 'lucide-react'
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  Archive,
+  Bookmark,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  Clapperboard,
+  ClipboardPaste,
+  FolderPlus,
+  Link2,
+  ListVideo,
+  Lock,
+  Minus,
+  PictureInPicture2,
+  Plus,
+  Repeat,
+  Sparkles,
+  Waves,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sanitizeTag } from '@/lib/utils/tag'
 import { articleHeadline, postCoverSrc, postText } from '../post'
@@ -22,12 +42,15 @@ export function Sheet({
   onClose,
   children,
   side = 'right',
+  anchor = null,
 }: {
   label: string
   onClose: () => void
   children: ReactNode
   /** Desktop placement: a full-height side panel or a small menu by the rail. */
   side?: 'right' | 'menu'
+  /** Wide screens: where the menu sits (fixed, from the rail it opened from). */
+  anchor?: CSSProperties | null
 }) {
   const ref = useRef<HTMLDivElement>(null)
   // Callers pass a new onClose on every render (the theater re-renders several
@@ -57,23 +80,32 @@ export function Sheet({
         aria-label="Close"
         tabIndex={-1}
         onClick={onClose}
-        className="fixed inset-0 z-40 cursor-default bg-black/50 md:bg-black/20"
+        className={cn(
+          'fixed inset-0 z-40 cursor-default bg-black/50',
+          anchor ? 'md:bg-transparent' : 'md:bg-black/20',
+        )}
       />
       <div
         ref={ref}
         role="dialog"
         aria-label={label}
         tabIndex={-1}
+        style={anchor ?? undefined}
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col gap-3 overflow-y-auto rounded-t-[22px] bg-[#1c1b19]/[0.98] p-4 pb-[max(16px,env(safe-area-inset-bottom))] text-white shadow-[0_-10px_40px_rgba(0,0,0,0.5)] outline-none',
-          side === 'right'
-            ? 'md:bottom-4 md:left-auto md:right-24 md:top-24 md:max-h-none md:w-[360px] md:rounded-[20px]'
-            : 'md:inset-x-auto md:bottom-auto md:right-24 md:top-1/2 md:w-[280px] md:-translate-y-1/3 md:rounded-[14px] md:p-1.5',
+          'fixed inset-x-0 bottom-0 z-50 flex max-h-[78dvh] flex-col gap-3 overflow-y-auto rounded-t-[22px] bg-[#1c1b19]/[0.98] p-4 pb-[max(16px,env(safe-area-inset-bottom))] font-nx-sans text-white shadow-[0_-10px_40px_rgba(0,0,0,0.5)] outline-none',
+          anchor
+            ? 'md:left-auto md:top-auto md:max-h-[calc(100dvh-96px)] md:w-[308px] md:gap-0.5 md:rounded-[22px] md:border md:border-white/10 md:bg-nx-surface/[0.94] md:p-2 md:shadow-[0_24px_60px_rgba(0,0,0,0.6)] md:backdrop-blur-xl'
+            : side === 'right'
+              ? 'md:bottom-4 md:left-auto md:right-24 md:top-24 md:max-h-none md:w-[360px] md:rounded-[20px]'
+              : 'md:inset-x-auto md:bottom-auto md:right-24 md:top-1/2 md:w-[280px] md:-translate-y-1/3 md:rounded-[14px] md:p-1.5',
         )}
       >
         <span
           aria-hidden
-          className="mx-auto h-1 w-10 shrink-0 rounded-full bg-white/25 md:hidden"
+          className={cn(
+            'mx-auto h-1 w-10 shrink-0 rounded-full bg-white/25 md:hidden',
+            anchor && 'hidden',
+          )}
         />
         {children}
       </div>
@@ -198,44 +230,132 @@ export function UpNextSheet({
 
 export interface MenuRow {
   label: string
-  /** Shown on the right (e.g. On / Off, the repeat mode). */
+  /** Shown on the right (e.g. the repeat mode). */
   value?: string
+  /** A switch row: on or off. */
   checked?: boolean
+  /** A second line under the label ("Your people won't see this save"). */
+  hint?: string
+  /** Opens something further (a chevron on the right). */
+  more?: boolean
   danger?: boolean
+  /** A line above this row. */
+  divider?: boolean
+  /** Its own icon, else the one for its label. */
+  icon?: ReactNode
+  /** Extra classes (e.g. phones only). */
+  className?: string
   onSelect: () => void
 }
 
-export function MoreSheet({ rows, onClose }: { rows: MenuRow[]; onClose: () => void }) {
+/** Icons for the ⋯ menu's rows, by label. */
+export const MENU_ICONS: Record<string, LucideIcon> = {
+  'Why this one': CircleHelp,
+  'Add to a channel': FolderPlus,
+  'Just for me': Lock,
+  'Copy link': Link2,
+  'More like this': Sparkles,
+  Repeat: Repeat,
+  'Videos only': Clapperboard,
+  'Stick to this vibe': Waves,
+  'Up next': ListVideo,
+  'Picture in picture': PictureInPicture2,
+  'Paste a link': ClipboardPaste,
+  Archive: Archive,
+}
+
+/** A switch's look (the row carries the role). */
+export function SwitchLook({ on }: { on: boolean }) {
   return (
-    <Sheet label="Options" onClose={onClose} side="menu">
-      <div role="menu" aria-label="Options" className="flex flex-col">
-        {rows.map((row) => (
-          <button
-            key={row.label}
-            type="button"
-            role={row.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
-            aria-checked={row.checked === undefined ? undefined : row.checked}
-            onClick={row.onSelect}
-            className={cn(
-              'flex min-h-12 items-center gap-3 rounded-[10px] px-3 text-left text-[15px] hover:bg-white/[0.06]',
-              row.danger ? 'text-[#ff8a7a]' : 'text-white',
-            )}
-          >
-            <span className="flex-1">{row.label}</span>
-            {row.value && (
-              <span
+    <span
+      aria-hidden
+      className={cn(
+        'relative h-[26px] w-11 shrink-0 rounded-full transition-colors',
+        on ? 'bg-nx-accent' : 'bg-[#4a453e]',
+      )}
+    >
+      <span
+        className={cn(
+          'absolute top-[3px] h-5 w-5 rounded-full transition-[left]',
+          on ? 'left-[21px] bg-black' : 'left-[3px] bg-nx-cream',
+        )}
+      />
+    </span>
+  )
+}
+
+export function MoreSheet({
+  rows,
+  onClose,
+  anchor = null,
+}: {
+  rows: MenuRow[]
+  onClose: () => void
+  /** Wide screens: beside the rail. */
+  anchor?: CSSProperties | null
+}) {
+  return (
+    <Sheet label="Options" onClose={onClose} side="menu" anchor={anchor}>
+      <div role="menu" aria-label="Options" className="flex flex-col gap-0.5">
+        {rows.map((row) => {
+          const Icon = MENU_ICONS[row.label]
+          const switchRow = row.checked !== undefined
+          return (
+            <Fragment key={row.label}>
+              {row.divider && (
+                <span
+                  aria-hidden
+                  className={cn('mx-2.5 my-1 block h-px bg-white/[0.08]', row.className)}
+                />
+              )}
+              <button
+                type="button"
+                role={switchRow ? 'menuitemcheckbox' : 'menuitem'}
+                aria-checked={switchRow ? row.checked : undefined}
+                onClick={row.onSelect}
                 className={cn(
-                  'text-[13px] font-semibold',
-                  row.checked || row.value === 'All' || row.value === 'This post'
-                    ? 'text-nx-accent'
-                    : 'text-white/50',
+                  'flex shrink-0 items-center gap-3 rounded-[14px] px-3.5 text-left text-[15px] font-semibold hover:bg-white/[0.06]',
+                  row.hint ? 'min-h-[60px] bg-[#262320] py-2 hover:bg-[#2c2925]' : 'min-h-12',
+                  row.danger ? 'text-[#ff8a7a]' : 'text-nx-cream',
+                  row.className,
                 )}
               >
-                {row.value}
-              </span>
-            )}
-          </button>
-        ))}
+                {row.icon ? (
+                  <span
+                    aria-hidden
+                    className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"
+                  >
+                    {row.icon}
+                  </span>
+                ) : Icon ? (
+                  <Icon aria-hidden className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+                ) : null}
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span>{row.label}</span>
+                  {row.hint && (
+                    <span className="text-xs font-normal text-nx-muted">{row.hint}</span>
+                  )}
+                </span>
+                {row.value && (
+                  <span
+                    className={cn(
+                      'shrink-0 whitespace-nowrap text-[13px] font-semibold',
+                      row.value === 'All' || row.value === 'This post'
+                        ? 'text-nx-accent'
+                        : 'text-white/50',
+                    )}
+                  >
+                    {row.value}
+                  </span>
+                )}
+                {switchRow && <SwitchLook on={!!row.checked} />}
+                {row.more && (
+                  <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-white/60" />
+                )}
+              </button>
+            </Fragment>
+          )
+        })}
       </div>
     </Sheet>
   )
@@ -479,11 +599,14 @@ export function ShareSheet({
   url,
   waiting = false,
   onClose,
+  anchor = null,
 }: {
   url: string
   /** Whether playback is held while this is open (says so). */
   waiting?: boolean
   onClose: () => void
+  /** Wide screens: beside the rail. */
+  anchor?: CSSProperties | null
 }) {
   const [copied, setCopied] = useState<'yes' | 'blocked' | null>(null)
   const field = useRef<HTMLInputElement>(null)
@@ -503,7 +626,7 @@ export function ShareSheet({
     }
   }
   return (
-    <Sheet label="Share" onClose={onClose} side="menu">
+    <Sheet label="Share" onClose={onClose} side="menu" anchor={anchor}>
       <div className="flex flex-col gap-3 md:p-2.5">
         <span className="text-[15px] font-bold">Share this post</span>
         <label className="sr-only" htmlFor="nx-share-link">

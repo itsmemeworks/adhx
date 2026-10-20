@@ -106,6 +106,24 @@ const v1 = result('1', { video: true, matched: ['video'] })
 const p2 = result('2')
 const v3 = result('3', { video: true, matched: ['video'], saved: false })
 
+/** Render as a wide screen (the theater's columns), until the test ends. */
+const realMatchMedia = window.matchMedia
+function wideScreen() {
+  window.matchMedia = ((query: string) => ({
+    matches: query === '(min-width: 1024px)' || query === '(hover: hover)',
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+}
+afterEach(() => {
+  window.matchMedia = realMatchMedia
+})
+
 describe('theater queue', () => {
   it('reads and writes play links, rejecting junk', () => {
     expect(
@@ -237,6 +255,7 @@ describe('TheaterV2', () => {
   }
 
   it('plays the search results in their refined order', async () => {
+    wideScreen()
     render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
     const queueCall = fetchMock.mock.calls
@@ -244,7 +263,7 @@ describe('TheaterV2', () => {
       .find((u) => u.startsWith('/api/search'))
     expect(queueCall).toContain('refine=1')
     expect(screen.getByText('3 of 3')).toBeInTheDocument()
-    // One back chip for phones (in the header), one for desktop (on the stage).
+    // The back chip leads the stage's chips.
     for (const link of screen.getAllByRole('link', { name: /frogs/ })) {
       expect(link).toHaveAttribute('href', '/search?q=frogs&scope=mine')
     }
@@ -490,11 +509,13 @@ describe('TheaterV2', () => {
   })
 
   it('plays only the chosen group', async () => {
+    wideScreen()
     render(<TheaterV2 source={{ ...source, group: 'video' }} />)
     await waitFor(() => expect(screen.getByText('1 of 2')).toBeInTheDocument())
   })
 
   it('says when it moves on from the search to similar posts', async () => {
+    wideScreen()
     const similar = [result('9', { video: true, matched: ['video'] })]
     fetchMock.mockImplementation(async (url: string) => {
       const items = url.startsWith('/api/search/similar') ? similar : [v1, p2, v3]
@@ -526,7 +547,8 @@ describe('TheaterV2', () => {
     await act(async () => {})
     fireEvent.keyDown(window, { key: 'ArrowRight' })
     expect(screen.getByTestId('stage')).toHaveTextContent('2')
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await act(async () => {})
+    fireEvent.keyDown(window, { key: 'j' })
     expect(screen.getByTestId('stage')).toHaveTextContent('3')
     // The last video ends: the theater asks for more like it, finds none, stops.
     await act(async () => {
