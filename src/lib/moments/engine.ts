@@ -861,17 +861,18 @@ export function momentPostKeys(slug: string, limit = 60): { keys: string[]; sinc
 }
 
 /**
- * A forming group's post keys and the start of the window (ISO), so
- * `people.ts` can show members who's saving them. Post keys only; null when
- * there's no such group.
+ * A forming group's post keys and when its first save landed (ISO), so
+ * `people.ts` can show members who's saving them now (older saves of the
+ * same posts aren't part of it). Post keys only; null when there's no such
+ * group.
  */
 export function formingPostKeys(id: string): { keys: string[]; since: string } | null {
-  const s = state()
-  const f = s.forming.find((x) => x.id === id)
+  const f = state().forming.find((x) => x.id === id)
   if (!f) return null
   return {
     keys: newestKeys(f.members, 60),
-    since: new Date(Date.now() - s.hours * 3_600_000).toISOString(),
+    // A second's slack: save times are stored to the millisecond, parsed the same way.
+    since: new Date(f.firstAt - 1_000).toISOString(),
   }
 }
 

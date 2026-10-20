@@ -32,6 +32,7 @@ import {
 } from '@/lib/feed/blend'
 import type { FeedItem } from '@/components/feed/types'
 import { Gob } from '../Gob'
+import { GobShape } from '../GobShape'
 
 /**
  * Pieces of the blended feed in the theater (`/play?feed=`): whose saves it
@@ -70,6 +71,63 @@ export function whyLabel(post: Pick<FeedItem, 'why' | 'whyReasons'>): string {
 
 export function whyKind(post: Pick<FeedItem, 'whyReasons'>): WhyKind {
   return post.whyReasons?.[0]?.kind ?? 'fresh'
+}
+
+/**
+ * Who sent you this post ("Pete sent you this"), as a face to show: their
+ * saver entry when they have a save you can see, else their generated face.
+ */
+export function sentBy(
+  post: Pick<FeedItem, 'whyReasons' | 'savers'>,
+): { avatarUrl: string | null; handle: string; name: string } | null {
+  const reason = post.whyReasons?.[0]
+  if (reason?.kind !== 'sent' || !reason.username) return null
+  const saver = post.savers?.find((s) => s.username === reason.username)
+  return {
+    avatarUrl: saver?.avatarUrl ?? null,
+    handle: reason.username,
+    name: saver ? saverName(saver) : reason.text.split(/ (?:and|sent) /)[0] || reason.username,
+  }
+}
+
+/** The face before a reason: the sender's for "sent", else the reason's icon. */
+export function WhyLead({
+  post,
+  size = 18,
+  className,
+}: {
+  post: Pick<FeedItem, 'whyReasons' | 'savers'>
+  size?: number
+  className?: string
+}) {
+  const sender = sentBy(post)
+  if (sender) return <NxAvatar author={sender} size={size} />
+  return <WhyIcon kind={whyKind(post)} className={className} />
+}
+
+/**
+ * The thumbnail beside "Like … you kept": your own kept post it's most like,
+ * a Gob-shaped square that opens it in My saves.
+ */
+export function LikeThumb({
+  post,
+  size = 38,
+}: {
+  post: { platform: string; id: string; posterUrl?: string | null } | undefined
+  size?: number
+}) {
+  if (!post?.posterUrl) return null
+  return (
+    <Link
+      href={`/play?recent=1&start=${encodeURIComponent(`${post.platform}:${post.id}`)}`}
+      aria-label="Open the post you kept"
+      className="shrink-0"
+    >
+      <GobShape size={size} className="bg-[#2a2620]">
+        <NxImage src={post.posterUrl} alt="" className="h-full w-full object-cover" />
+      </GobShape>
+    </Link>
+  )
 }
 
 const SWITCH: { mode: Exclude<BlendMode, 'new'>; label: string }[] = [
@@ -230,7 +288,7 @@ export function WhyChip({
   chevron = false,
   className,
 }: {
-  post: Pick<FeedItem, 'why' | 'whyReasons'>
+  post: Pick<FeedItem, 'why' | 'whyReasons' | 'savers'>
   onOpen: () => void
   /** A chevron after the words (phones: it opens a sheet). */
   chevron?: boolean
@@ -248,7 +306,7 @@ export function WhyChip({
         className,
       )}
     >
-      <WhyIcon kind={whyKind(post)} className="h-4 w-4 shrink-0 text-nx-accent" />
+      <WhyLead post={post} size={22} className="h-4 w-4 shrink-0 text-nx-accent" />
       <span className="truncate">{label}</span>
       {chevron && <ChevronRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/70" />}
     </button>

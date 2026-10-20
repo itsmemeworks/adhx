@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Play } from 'lucide-react'
+import { useState } from 'react'
+import { BellRing, Play } from 'lucide-react'
 import type { Saver } from '@/lib/people/types'
 import { networkLabel } from '@/lib/platform/networks'
 import type { FeedItem } from '@/components/feed/types'
@@ -481,6 +482,74 @@ function OtherMoment({
   )
 }
 
+/** Faces on a forming card: the people saving it (members only). */
+function formingFaces(forming: FormingView): Saver[] {
+  return (forming.people ?? []).map((p) => ({ ...p, savedAt: '', isYou: false }))
+}
+
+/**
+ * Ask the browser to show a notification when it goes live, inside the bell's
+ * click (the only time a browser lets a page ask). Fine to say no: the toast
+ * still shows on any page.
+ */
+function askToNotify(): void {
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      void Notification.requestPermission().catch(() => {})
+    }
+  } catch {
+    // Some browsers throw outside a secure context.
+  }
+}
+
+/** "Tell me when it's live": the bell on a forming group (members only). */
+export function FormingBell({ forming }: { forming: FormingView }) {
+  const [on, setOn] = useState<boolean | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [gone, setGone] = useState(false)
+  if (forming.alert === undefined) return null
+  const lit = on ?? forming.alert
+  const toggle = async () => {
+    if (busy) return
+    const next = !lit
+    if (next) askToNotify()
+    setBusy(true)
+    setOn(next)
+    try {
+      const res = await fetch(`/api/moments/forming/${encodeURIComponent(forming.id)}/alert`, {
+        method: next ? 'PUT' : 'DELETE',
+      })
+      if (res.status === 404) {
+        setGone(true)
+        setOn(false)
+      } else if (!res.ok) {
+        setOn(!next)
+      }
+    } catch {
+      setOn(!next)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <button
+      type="button"
+      aria-pressed={lit}
+      disabled={busy || gone}
+      onClick={() => void toggle()}
+      className={cn(
+        'flex h-11 max-w-full items-center gap-2 self-start whitespace-nowrap rounded-full px-[18px] text-sm font-extrabold disabled:opacity-60',
+        lit ? 'bg-nx-accent text-black' : 'border border-white/[0.22] text-nx-cream',
+      )}
+    >
+      {lit && <BellRing aria-hidden className="h-4 w-4 shrink-0" strokeWidth={2.4} />}
+      <span className="truncate">
+        {gone ? 'It’s not forming any more' : lit ? 'We’ll tell you' : 'Tell me when it’s live'}
+      </span>
+    </button>
+  )
+}
+
 function FormingCard({
   forming,
   flash,
@@ -493,6 +562,7 @@ function FormingCard({
   const left = Math.max(0, forming.need - forming.have)
   const unit =
     forming.unit === 'people' ? (left === 1 ? 'person' : 'people') : left === 1 ? 'save' : 'saves'
+  const faces = formingFaces(forming)
   return (
     <SideCard hue={forming.hue} cover={pictureFirst(forming.covers, 1)[0]} flash={flash} dashed>
       <span className="flex h-[26px] items-center self-start whitespace-nowrap rounded-full border border-dashed border-nx-accent/60 px-2.5 text-xs font-extrabold text-nx-accent">
@@ -501,7 +571,10 @@ function FormingCard({
       <Title className="m-0 truncate text-[17px] font-extrabold leading-tight lg:font-nx-serif lg:text-[34px] lg:font-normal lg:leading-[0.95]">
         {forming.title}
       </Title>
-      <span className="text-sm text-nx-soft">{`${left} more ${unit} to go live`}</span>
+      <span className="flex min-w-0 items-center gap-2 text-sm text-nx-soft">
+        {faces.length > 0 && <Faces people={faces} size={24} max={4} />}
+        <span className="truncate">{`${left} more ${unit} to go live`}</span>
+      </span>
       <span
         role="img"
         aria-label={`${forming.have} of ${forming.need} ${forming.unit}`}
@@ -515,6 +588,12 @@ function FormingCard({
           />
         ))}
       </span>
+      {forming.alert !== undefined && (
+        <>
+          <span className="hidden flex-1 lg:block" />
+          <FormingBell forming={forming} />
+        </>
+      )}
     </SideCard>
   )
 }

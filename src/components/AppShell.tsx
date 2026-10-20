@@ -7,6 +7,7 @@ import { isSavedPath } from '@/lib/theater/collection-href'
 import { startClientEventBridge } from '@/lib/client-events'
 import { useAuthMe } from '@/components/auth'
 import { PreferencesProvider } from '@/lib/preferences-context'
+import { MomentAlerts } from '@/components/next/moments/MomentAlerts'
 
 interface AppAccountScope {
   serverAccountId: string | null
@@ -154,6 +155,8 @@ export function AppShell({
             >
               {scopedChildren}
             </div>
+            {/* "Kitchen synths is live · Tune in", on any signed-in page. */}
+            {trusted && serverAccountId !== null && <MomentAlerts />}
           </FontProvider>
         </PreferencesProvider>
       </Fragment>
