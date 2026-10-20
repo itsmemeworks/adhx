@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Shared Node + pnpm toolchain. Keep this version aligned with packageManager.
-FROM node:24-trixie-slim AS base
+FROM node:26-trixie-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@10.34.7 --activate
@@ -57,7 +57,7 @@ COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
 COPY --from=builder /app/tsconfig.json ./
 
 # Production stage - minimal runtime image
-FROM node:24-trixie-slim AS runner
+FROM node:26-trixie-slim AS runner
 
 # Runtime only needs Node. Do not ship the build stage's pnpm/Corepack cache
 # or npm's independent dependency graph; migrations use the local tsx binary.
