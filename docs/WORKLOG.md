@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android brought to the phone design boards
+
+- Ran the Android app on an emulator (390dp wide) against the seeded parity server and compared every phone board side by side; reads went to the server, share-card writes to a local mock so the seed stayed untouched.
+- Bundled Instrument Serif with its licence, the boards' palette and line icons, one shared FNV-1a hash into the boards' five face colours, and the boards' switches.
+- New keeps the one-row header with the corner badge; the rail is Save, Share (by media type), Save to phone and More, with Sound, Repeat, the original, the small window and Hide moved into More. Upright videos fill the screen; wide ones still fit.
+- Byline, why chip (Saved together / Close to you), note bubble, progress line, why sheet, feed filter, caught up, channels, a friend's channel (staggered, under the Channels header), search, live, tuned in (React picker lifts the caption), settings and the share card follow their boards. Added the send sheet and a Connected welcome after pairing.
+- Save notes: the share card's Add a note rides with the save, or follows it through `POST /api/app/note` (older servers get the save again); friends' notes show over the byline. Decoded loosely.
+- Debug builds only: `DebugConnectActivity` stores a server and phone key from an intent. Remaining gaps (Show less/more, Play the N new, straight to your people, forming moments) need phone APIs that don't exist yet.
+
 ## 2026-10-19 — Exercise release gates across platforms
 
 - Separate the Node runtime from build tools, remove unused package managers and recommended OS extras, and expose retained scanner findings directly in CI logs.
