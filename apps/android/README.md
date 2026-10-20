@@ -32,6 +32,18 @@ cd apps/android
 The Gradle wrapper (9.6.0) is committed, so no separate Gradle install is
 needed: `./gradlew` downloads it the first time.
 
+Debug builds can be connected to a test server without pairing (for example
+the design parity server in `e2e/parity`), from a script:
+
+```sh
+adb reverse tcp:3600 tcp:3600
+adb shell am start -n com.adhx.share/.debug.DebugConnectActivity \
+  --es server http://127.0.0.1:3600 --es key "$PHONE_KEY" [--ez welcome true]
+```
+
+`welcome` opens on the Connected screen, as after pairing. The activity is in
+`src/debug`, so release builds don't have it.
+
 Tell Gradle where the SDK is, either with `ANDROID_HOME` or a
 `local.properties` file (not committed):
 
@@ -245,26 +257,30 @@ and with nothing else saved yet the page shows a shimmering card ("Getting it
 ready… it'll be here in a moment."). The app looks again every 15 s, and at
 the top the new post slides in from above.
 
-On the right, top to bottom: **Sound** (videos start muted, unless Sound
-on by default is set), **Repeat** (off,
-a video that ends moves on to the next save; on, it loops), **Save** (puts the
+On the right, top to bottom (as on the design boards): **Save** (a bookmark,
+yellow when the post is in your saves; on a friend's post it saves it to yours
+too), **Share** (its icon says what it sends), **Save to phone** (puts the
 video, sound or every photo of an album into the phone's gallery under ADHX,
-on Android 10 and up; a text post's words go to the clipboard), **Share** and
-**Original** (the network's logo; opens the post there). Your ADHX is
-private, so Share sends what it kept rather than a link: the video file, all
-of an album's photos or the sound (fetched with `?download=1`, with a ring on
-the button while it comes down), or the words of a text post. A post whose
-copy is still being kept says so instead. Share downloads use separate private
+on Android 10 and up; a text post's words go to the clipboard) and **More**.
+Live adds **React** on top. Your ADHX is private, so Share sends what it kept
+rather than a link: a video, sound or photos open the send sheet, which fetches
+the file (`?download=1`, with how far along) and hands it to Chat, Mail, Files,
+Save to phone or the share sheet; a text post's words go straight to the share
+sheet. A post whose copy is still being kept says so instead. Share downloads use separate private
 cache batches, so starting another share keeps earlier recipients' files usable.
 Failed batches are removed immediately; batches older than 24 hours are removed
 on later exports, excluding downloads still active in the app. Share downloads check
 for a 64 MiB free-space reserve before starting and periodically while streaming.
-There is no additional per-file size limit. **More** keeps **Share an ADHX
-link** for people on the same server. Along the bottom: the author and the first lines of text, the time, a
-bar to seek, and **Hide**, which clears everything but a thin progress line
-until the next tap. Next to Hide, a video can **keep playing in a small window**
-(picture-in-picture), with buttons for the previous and next save; it also
-goes there by itself when you leave the app while a video plays. A text post
+There is no additional per-file size limit. **More** has the player's own
+switches, **Sound** (videos start muted, unless Sound on by default is set) and
+**Repeat** (off, a video that ends moves on to the next save; on, it loops),
+**Open on** the network, **Keep playing in a small window** (picture-in-picture,
+with buttons for the previous and next save; it also goes there by itself when
+you leave the app while a video plays) and **Hide controls** (everything but a
+thin progress line until the next tap), then **Share an ADHX link** for people
+on the same server. Along the bottom: who saved it (with a friend's note in a
+speech bubble), where it's from, the first lines of text, and a thin line you
+can drag to seek. A text post
 too long for the page fades out with **Read all**, which opens it as a
 scrolling page. A video that can't play says why, in the server's words.
 

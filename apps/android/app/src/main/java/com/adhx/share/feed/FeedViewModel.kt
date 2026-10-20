@@ -103,6 +103,8 @@ data class TunedUi(
     val error: String? = null,
     /** Posts that arrived while tuned in (the "new one, up next" note). */
     val arrived: Int = 0,
+    /** The newest of them, for "Jo just saved one". */
+    val arrival: PhonePost? = null,
 )
 
 /** A reaction floating up the screen while tuned in. [lane] (0–1) is where across it rises. */
@@ -465,6 +467,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                     loadedOnce = true,
                     error = null,
                     arrived = if (current.loadedOnce && fresh.isNotEmpty()) current.arrived + fresh.size else current.arrived,
+                    arrival = if (current.loadedOnce && fresh.isNotEmpty()) fresh.last() else current.arrival,
                 )
             }
             is ApiResult.Failed -> {
@@ -481,7 +484,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun seenArrivals() {
-        if (_tuned.value.arrived != 0) _tuned.value = _tuned.value.copy(arrived = 0)
+        if (_tuned.value.arrived != 0) _tuned.value = _tuned.value.copy(arrived = 0, arrival = null)
     }
 
     /**

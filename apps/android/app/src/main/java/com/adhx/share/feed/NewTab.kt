@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -47,14 +48,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,8 +80,10 @@ import com.adhx.share.main.Reach
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.FeedMode
 import com.adhx.share.net.PhonePost
+import com.adhx.share.net.WhyReason
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Faces
 import com.adhx.share.ui.OutlineButton
 import com.adhx.share.ui.PrimaryButton
@@ -99,7 +107,8 @@ fun NewTab(
     connection: Connection,
     reach: Reach,
     actions: HomeActions,
-    header: @Composable (newBadge: String?) -> Unit,
+    /** Over the player; [atEnd] is the end page (caught up), which gets the pages' header. */
+    header: @Composable (newBadge: String?, atEnd: Boolean) -> Unit,
 ) {
     val ui by feed.feed.collectAsStateWithLifecycle()
     val server = connection.server
@@ -127,7 +136,7 @@ fun NewTab(
             vm = library,
             connection = connection,
             reach = reach,
-            bar = { header(null) },
+            bar = { header(null, false) },
             contentTop = 90.dp,
             onSaver = actions.openPerson,
         )
@@ -152,7 +161,7 @@ fun NewTab(
     when {
         ui.items.isEmpty() && (!ui.loadedOnce || ui.loading) -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 34.dp, stroke = 3.dp) }
-            header(null)
+            header(null, false)
         }
         ui.items.isEmpty() && ui.error != null -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Column(
@@ -165,11 +174,11 @@ fun NewTab(
                 Text(ui.error ?: Copy.FEED_CANT_LOAD, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
                 OutlineButton("Try again", onClick = feed::reloadFeed, minHeight = 44.dp)
             }
-            header(null)
+            header(null, false)
         }
         ui.items.isEmpty() -> Box(Modifier.fillMaxSize()) {
             end()
-            header(null)
+            header(null, true)
         }
         else -> PlayerScreen(
             posts = ui.items,
@@ -179,7 +188,7 @@ fun NewTab(
                 feed.onFeedPage(it)
                 page = it
             },
-            topBar = { header(badge) },
+            topBar = { header(badge, page >= ui.items.size) },
             onSaver = actions.openPerson,
             aboveCaption = { post -> WhyChip(post) { why = post } },
             end = if (ui.ended) end else null,
@@ -211,35 +220,59 @@ fun NewTab(
                 feed.filterOpen = false
                 feed.applyFilter(types, mode)
             },
+            newCount = badge,
+            hidden = ui.hidden,
         )
     }
 }
 
-/** The first reason the feed gives, as a chip over the caption; tapping it explains. */
+/** The first reason the feed gives, as a chip over the caption ("Saved together ›"); tapping it explains. */
 @Composable
 private fun WhyChip(post: PhonePost, onClick: () -> Unit) {
-    val reason = post.headline ?: return
+    val reason = whyChipLabel(post) ?: return
     Row(
         Modifier
-            .heightIn(min = 40.dp)
+            .height(40.dp)
             .clip(RoundedCornerShape(50))
-            .background(Color.Black.copy(alpha = 0.5f))
+            .background(Color.Black.copy(alpha = 0.55f))
             .border(1.dp, AdhxColors.White.copy(alpha = 0.14f), RoundedCornerShape(50))
             .clickable(onClickLabel = Copy.WHY_TITLE, onClick = onClick)
             .padding(start = 10.dp, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Filled.Info, contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
+        Icon(whyIcon(post.whyKind, chip = true), contentDescription = null, tint = AdhxColors.Accent, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
         Text(
             reason,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = AdhxColors.Cream,
+            color = AdhxColors.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
+        Spacer(Modifier.width(8.dp))
+        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(14.dp))
     }
+}
+
+/** The chip's short words: "Saved together", "Close to you", else the headline itself. */
+internal fun whyChipLabel(post: PhonePost): String? {
+    val headline = post.headline ?: return null
+    return when (post.whyKind) {
+        "together" -> Copy.WHY_TOGETHER
+        "close" -> Copy.WHY_CLOSE
+        else -> headline
+    }
+}
+
+/** The icon for a kind of reason; on the chip, "close" is a heart. */
+private fun whyIcon(kind: String?, chip: Boolean = false) = when (kind) {
+    "together" -> Glyphs.People
+    "close" -> if (chip) Glyphs.Heart else Glyphs.PlayCircle
+    "more" -> Glyphs.Plus
+    "like", "yours" -> Glyphs.Bookmark
+    else -> Glyphs.Again
 }
 
 /** The Why sheet's Everyone · Friends only · Mine, as feed modes. */
@@ -275,65 +308,106 @@ private fun WhySheet(
         sheetState = state,
         containerColor = AdhxColors.Surface,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(color = AdhxColors.Hairline) },
+        dragHandle = { SheetHandle() },
     ) {
         Column(
             Modifier
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                Copy.WHY_TITLE,
-                fontFamily = SerifFamily,
-                fontSize = 40.sp,
-                lineHeight = 40.sp,
-                color = AdhxColors.White,
-                modifier = Modifier.semantics { heading() },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    Copy.WHY_TITLE,
+                    fontFamily = SerifFamily,
+                    fontSize = 40.sp,
+                    lineHeight = 40.sp,
+                    color = AdhxColors.White,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(AdhxColors.Card)
+                        .clickable(onClickLabel = "Close") { scope.launch { state.hide() }.invokeOnCompletion { onDismiss() } }
+                        .semantics { contentDescription = "Close" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Glyphs.Close, contentDescription = null, tint = AdhxColors.Muted, modifier = Modifier.size(18.dp))
+                }
+            }
             PostSummary(post, server)
-            val reasons = post.reasons.ifEmpty { listOf(Copy.WHY_NONE) }
-            Column {
+            val reasons = post.whyReasons.ifEmpty { post.reasons.map { WhyReason(it) } }.ifEmpty { listOf(WhyReason(Copy.WHY_NONE)) }
+            Column(Modifier.padding(top = 2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 reasons.forEachIndexed { i, reason ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // The people behind a reason: everyone for "together", else the one it names.
+                    val faces = when {
+                        reason.kind == "together" || (reason.kind == null && i == 0) -> others
+                        reason.username != null -> post.savers.filter { it.username == reason.username }
+                        else -> emptyList()
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(if (i == 0) AdhxColors.Accent else AdhxColors.Card),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(whyIcon(reason.kind), contentDescription = null, tint = if (i == 0) Color.Black else AdhxColors.White, modifier = Modifier.size(20.dp))
+                        }
                         Text(
-                            reason,
+                            reason.text,
                             fontSize = 16.sp,
                             lineHeight = 21.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = AdhxColors.White,
                             modifier = Modifier.weight(1f),
                         )
-                        // The people behind the first reason.
-                        if (i == 0 && others.isNotEmpty()) {
-                            Spacer(Modifier.width(14.dp))
-                            Faces(others, server, size = 26.dp, ring = AdhxColors.Surface)
-                        }
+                        if (faces.isNotEmpty()) Faces(faces, server, size = 26.dp, ring = AdhxColors.Surface)
                     }
                 }
             }
-            Text(Copy.WHOSE_SAVES, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
-            Segmented(
-                options = Copy.WHOSE,
-                selected = whoseIndex(mode),
-                onSelect = { i ->
-                    scope.launch { state.hide() }.invokeOnCompletion { onMode(WHOSE_MODES[i]) }
-                },
-                background = AdhxColors.Background,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlineButton(
-                Copy.FILTER,
-                onClick = { scope.launch { state.hide() }.invokeOnCompletion { onFilter() } },
-                minHeight = 44.dp,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(Copy.WHOSE_SAVES, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Muted)
+                Segmented(
+                    options = Copy.WHOSE,
+                    selected = whoseIndex(mode),
+                    onSelect = { i ->
+                        scope.launch { state.hide() }.invokeOnCompletion { onMode(WHOSE_MODES[i]) }
+                    },
+                    background = AdhxColors.Background,
+                    fontSize = 14,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            // Where the boards have "Show less / more from …" (not on the phone API yet): what's in your feed.
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(AdhxColors.Card)
+                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))
+                    .clickable { scope.launch { state.hide() }.invokeOnCompletion { onFilter() } },
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Glyphs.Sliders, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(Copy.FILTER_TITLE, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
+            }
             Text(
                 Copy.WHY_NOTE,
                 fontSize = 13.sp,
                 color = AdhxColors.Faint,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
             )
         }
     }
@@ -401,12 +475,20 @@ fun CaughtUp(
         Modifier
             .fillMaxSize()
             .background(AdhxColors.Background)
-            .background(
-                Brush.radialGradient(
-                    listOf(AdhxColors.Accent.copy(alpha = 0.12f), Color.Transparent),
-                    radius = 900f,
-                ),
-            ),
+            .drawBehind {
+                // A soft yellow glow behind Gob: 520×420 around a point 360dp down.
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, 360.dp.toPx())
+                drawOval(
+                    Brush.radialGradient(
+                        0f to AdhxColors.Accent.copy(alpha = 0.12f),
+                        0.65f to Color.Transparent,
+                        center = center,
+                        radius = 260.dp.toPx(),
+                    ),
+                    topLeft = androidx.compose.ui.geometry.Offset(center.x - 260.dp.toPx(), center.y - 210.dp.toPx()),
+                    size = androidx.compose.ui.geometry.Size(520.dp.toPx(), 420.dp.toPx()),
+                )
+            },
     ) {
         Column(
             Modifier
@@ -414,7 +496,7 @@ fun CaughtUp(
                 .verticalScroll(rememberScrollState())
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 96.dp, bottom = 24.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 136.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Gob bobs gently, unless animations are off.
@@ -445,28 +527,26 @@ fun CaughtUp(
                     .semantics(mergeDescendants = true) { heading() },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // One paragraph, so the two lines sit at the boards' 0.95 line height.
+                val title = when {
+                    nothingYet -> Copy.NOTHING_YET_TITLE
+                    isNew -> Copy.CAUGHT_UP
+                    else -> Copy.END_TITLE
+                }
                 Text(
-                    when {
-                        nothingYet -> Copy.NOTHING_YET_TITLE
-                        isNew -> Copy.CAUGHT_UP
-                        else -> Copy.END_TITLE
+                    buildAnnotatedString {
+                        append(title)
+                        if (!nothingYet) {
+                            append("\n")
+                            withStyle(SpanStyle(color = AdhxColors.Accent)) { append(Copy.TOUCH_GRASS) }
+                        }
                     },
                     fontFamily = SerifFamily,
-                    fontSize = 46.sp,
-                    lineHeight = 46.sp,
+                    fontSize = 50.sp,
+                    lineHeight = 48.sp,
                     color = AdhxColors.White,
                     textAlign = TextAlign.Center,
                 )
-                if (!nothingYet) {
-                    Text(
-                        Copy.TOUCH_GRASS,
-                        fontFamily = SerifFamily,
-                        fontSize = 46.sp,
-                        lineHeight = 46.sp,
-                        color = AdhxColors.Accent,
-                        textAlign = TextAlign.Center,
-                    )
-                }
             }
             Text(
                 when {
@@ -494,11 +574,30 @@ fun CaughtUp(
                     LiveButton(onLive, Modifier.weight(1f))
                     // Nothing saved yet: there's nothing to watch again.
                     if (!nothingYet) {
-                        OutlineButton(Copy.WATCH_AGAIN, onClick = onAgain, minHeight = 48.dp, modifier = Modifier.weight(1f))
+                        AgainButton(onAgain, Modifier.weight(1f))
                     }
                 }
             }
         }
+    }
+}
+
+/** "Watch it all again", a faint outline with a turning arrow. */
+@Composable
+private fun AgainButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(50))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Glyphs.Again, contentDescription = null, tint = AdhxColors.White, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(Copy.WATCH_AGAIN, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White, maxLines = 1)
     }
 }
 
@@ -507,7 +606,7 @@ fun CaughtUp(
 private fun LiveButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier
-            .heightIn(min = 48.dp)
+            .height(48.dp)
             .clip(RoundedCornerShape(50))
             .background(AdhxColors.Button)
             .clickable(onClick = onClick)
@@ -551,18 +650,20 @@ private fun WatchedCard(watched: List<PhonePost>, server: String, modifier: Modi
                             .offset(x = (30 * i).dp)
                             .rotate(listOf(-5f, -1f, 3f, 6f)[i])
                             .size(width = 40.dp, height = 58.dp)
+                            .background(AdhxColors.Surface, RoundedCornerShape(11.dp))
+                            .padding(2.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .border(2.dp, AdhxColors.Surface, RoundedCornerShape(10.dp))
                             .background(AdhxColors.Placeholder),
                     )
                 }
             }
             Spacer(Modifier.width(14.dp))
         }
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (people.isNotEmpty()) Faces(people, server, size = 22.dp, ring = AdhxColors.Surface)
-            Text(line, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.Cream)
+            Text(line, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.SemiBold, color = AdhxColors.White)
         }
+        Icon(Glyphs.Chevron, contentDescription = null, tint = AdhxColors.Faint, modifier = Modifier.size(16.dp))
     }
 }
 

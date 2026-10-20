@@ -77,9 +77,13 @@ class AdhxApi(private val server: String, private val key: String?) {
         onQueued: (String) -> Unit = {},
         deferPublish: Boolean = false,
         requestId: String? = null,
+        note: String? = null,
     ): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
-        val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe, explicit).copy(deferPublish = deferPublish, requestId = requestId))
+        val body = json.encodeToString(
+            SaveRequest.serializer(),
+            saveRequest(link, justForMe, explicit).copy(deferPublish = deferPublish, requestId = requestId, note = cleanNote(note)),
+        )
         val request = authed(url).header("Prefer", "respond-async").post(body.toRequestBody(JSON)).build()
         val started = send(request) { code, text ->
             if (code == 202) json.decodeFromString(QueuedBody.serializer(), text).id
@@ -291,6 +295,30 @@ class AdhxApi(private val server: String, private val key: String?) {
      * own "Just for me by default", or the switch was touched). Otherwise
      * it's left out and the server's default for the account applies.
      */
+    /**
+     * Add [note] to a save that's already done (the share card's "Add a note",
+     * typed after the save went out): the same `POST /api/app/save` with
+     * `note`, and the save's privacy said outright so it can't change. A
+     * server without notes ignores the field.
+     */
+    suspend fun saveNote(link: String, note: String, justForMe: Boolean): ApiResult<SaveResponse> {
+        val url = url("api/app/save") ?: return badAddress
+        val body = json.encodeToString(SaveRequest.serializer(), SaveRequest(link, isPrivate = justForMe, note = cleanNote(note)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), SaveResponse.serializer())
+    }
+
+    /**
+     * `POST /api/app/note { platform, id, note }`: set your own note on a
+     * save. Answers `{ note }`, the server's cleaned copy.
+     */
+    suspend fun setNote(platform: String, id: String, note: String): ApiResult<NoteResponse> {
+        val url = url("api/app/note") ?: return badAddress
+        val body = json.encodeToString(NoteRequest.serializer(), NoteRequest(platform, id, cleanNote(note) ?: return ApiResult.Failed(400, "empty_note", null)))
+        return send(authed(url).post(body.toRequestBody(JSON)).build(), NoteResponse.serializer())
+    }
+
+    private fun cleanNote(note: String?): String? = note?.trim()?.takeIf { it.isNotEmpty() }?.take(NOTE_MAX)
+
     private fun saveRequest(link: String, justForMe: Boolean, explicit: Boolean = false) =
         SaveRequest(link, isPrivate = if (justForMe) true else if (explicit) false else null)
 
@@ -343,6 +371,9 @@ class AdhxApi(private val server: String, private val key: String?) {
 
         /** The server retries a queued save for about 15 minutes. */
         const val FOLLOW_LIMIT_MS = 16 * 60 * 1_000L
+
+        /** Notes on saves are at most this long. */
+        const val NOTE_MAX = 140
         private val JSON = "application/json; charset=utf-8".toMediaType()
         private const val NOT_ADHX = "That address didn’t answer like an ADHX."
 

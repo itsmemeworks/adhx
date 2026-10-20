@@ -124,6 +124,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     _reach.value = Reach.Connected
                     _connect.value = ConnectUi()
+                    Welcome.pending = true
                 }
                 is ApiResult.Failed -> showError(
                     result.message?.takeIf { it.isNotBlank() }

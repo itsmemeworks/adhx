@@ -48,14 +48,14 @@ class SaveWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         }
         if ((item.ownerServer != null && item.ownerServer != connection.server) ||
             (item.ownerUsername != null && item.ownerUsername != connection.username)) return Result.failure()
-        if (!item.publishPending && item.queueId == null && item.postId != null) return Result.success()
         val api = AdhxApi(connection)
+        if (!item.publishPending && item.queueId == null && item.postId != null) return sendNote(api, history, itemId)
         val follow = QueuedSaveDelivery(api, { history.find(itemId) }, { change -> history.update(itemId, change) })
             .run(interval = { 1_500L }, limitMs = FOLLOW_MS)
         return when (val result = follow) {
             is ApiResult.Ok -> {
                 history.update(itemId) { it.savedWith(result.value) }
-                Result.success()
+                sendNote(api, history, itemId)
             }
             is ApiResult.Offline -> retryOrGiveUp(history, itemId)
             is ApiResult.Failed -> {
@@ -77,6 +77,38 @@ class SaveWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 } else {
                     retryOrGiveUp(history, itemId)
                 }
+            }
+        }
+    }
+
+    /**
+     * A note added on the share card after the save went out: sent once the
+     * save is published (`POST /api/app/note`; on an older server, the save
+     * again with `note` and its privacy said outright). A server that says no
+     * drops the note; the save itself stays saved.
+     */
+    private suspend fun sendNote(api: AdhxApi, history: HistoryStore, itemId: String?): Result {
+        val item = history.find(itemId) ?: return Result.success()
+        val note = item.note?.takeIf { item.notePending && it.isNotBlank() } ?: return Result.success()
+        val platform = item.platform
+        val id = item.postId
+        // The note endpoint when the server has it; an older one gets the save again with `note`.
+        var sent: ApiResult<*> = if (platform != null && id != null) api.setNote(platform, id, note) else ApiResult.Failed(404, null, null)
+        if (sent is ApiResult.Failed && (sent.status == 404 || sent.status == 405)) {
+            sent = api.saveNote(item.link, note, justForMe = item.isPrivate)
+        }
+        return when (sent) {
+            is ApiResult.Ok -> {
+                history.update(itemId) { if (it.note == note) it.copy(notePending = false) else it }
+                Result.success()
+            }
+            ApiResult.Offline -> if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.success()
+            is ApiResult.Failed -> {
+                if (sent.status == 408 || sent.status == 429 || sent.status >= 500) {
+                    if (runAttemptCount < MAX_ATTEMPTS) return Result.retry()
+                }
+                history.update(itemId) { if (it.note == note) it.copy(notePending = false) else it }
+                Result.success()
             }
         }
     }

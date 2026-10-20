@@ -6,7 +6,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import com.adhx.share.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
@@ -17,14 +19,18 @@ object AdhxColors {
     val Surface = Color(0xFF1A1814)
     val Raised = Color(0xFF2A2620)
     val Placeholder = Color(0xFF2A2825)
-    val Hairline = Color(0xFF4A453C)
+    val Hairline = Color(0xFF4A453E)
     val Accent = Color(0xFFFFD23F)
-    val Cream = Color(0xFFF2EAD9)
+    val Cream = Color(0xFFF4F1EA)
     val Muted = Color(0xFFC9BFAB)
-    val Faint = Color(0xFFA89F8D)
+    val Faint = Color(0xFFA39B8B)
     val Good = Color(0xFF7DDC8A)
     val Warn = Color(0xFFFFB59A)
-    val White = Color(0xFFFFFFFF)
+    /** The designs' "white" for words and icons is a warm off-white (#f4f1ea). */
+    val White = Color(0xFFF4F1EA)
+
+    /** A card on a card (the share card's people row, the why sheet's post). */
+    val Card = Color(0xFF262320)
 
     /** The red dot of Live. */
     val Live = Color(0xFFFF5A3C)
@@ -34,10 +40,10 @@ object AdhxColors {
 }
 
 /**
- * Headings are Instrument Serif on the web; the phone uses the system serif
- * (and the system sans for everything else) so nothing has to be bundled.
+ * Headings are Instrument Serif, as on the web (bundled in res/font, with its
+ * licence in assets/licenses); everything else is the system sans.
  */
-val SerifFamily: FontFamily = FontFamily.Serif
+val SerifFamily: FontFamily = FontFamily(Font(R.font.instrument_serif, FontWeight.Normal))
 
 private val colors = darkColorScheme(
     primary = AdhxColors.Accent,

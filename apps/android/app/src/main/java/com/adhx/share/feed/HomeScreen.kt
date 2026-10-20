@@ -6,6 +6,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,13 +21,14 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,6 +62,8 @@ import com.adhx.share.net.FeedMode
 import com.adhx.share.net.Saver
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
+import com.adhx.share.ui.Glyphs
+import com.adhx.share.ui.SerifFamily
 
 /** What every tab of home can do: open a screen, or open a person's channel. */
 class HomeActions(
@@ -66,6 +73,10 @@ class HomeActions(
     val onSettings: () -> Unit,
     /** What your ADHX is doing, in full (from the "On their way" sheet). */
     val onDoing: () -> Unit = {},
+    /** Your people, all of them (Channels → See all). */
+    val onPeople: () -> Unit = {},
+    /** Invite someone (Channels → Invite); null when you can't. */
+    val onInvite: (() -> Unit)? = null,
 )
 
 /**
@@ -95,23 +106,50 @@ fun HomeScreen(
             connection = connection,
             reach = reach,
             actions = actions,
-            header = { b ->
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    HomeHeader(tab, onTab, actions, overMedia = true, newBadge = b)
-                    // "3 on their way" over the player, while posts are processing.
-                    if (doing != null) {
-                        DoingPillHost(doing, connection.server, onSeeAll = actions.onDoing, modifier = Modifier.offset(y = (-14).dp))
+            header = { b, atEnd ->
+                if (atEnd) {
+                    // Caught up is a page of its own: the pages' header, the tabs hugging their words.
+                    PageHeader(tab, onTab, onHome = {}, onSearch = actions.onSearch, onSettings = actions.onSettings, centered = true)
+                } else {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        HomeHeader(tab, onTab, actions, overMedia = true, newBadge = b)
+                        // "3 on their way" over the player, while posts are processing.
+                        if (doing != null) {
+                            DoingPillHost(doing, connection.server, onSeeAll = actions.onDoing, modifier = Modifier.offset(y = (-14).dp))
+                        }
                     }
                 }
             },
         )
         HomeTab.Channels -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             ChannelsTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions, overMedia = false, newBadge = badge) })
+            BottomFade()
         }
         HomeTab.Live -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             LiveTab(feed, connection.server, actions, header = { HomeHeader(tab, onTab, actions, overMedia = false, newBadge = badge) })
+            BottomFade()
         }
     }
+}
+
+/** The pages fade into the bottom edge (48dp, over the navigation bar). */
+@Composable
+fun BoxScope.BottomFade() {
+    Box(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .windowInsetsBottomHeight(WindowInsets.navigationBars)
+            .background(AdhxColors.Background),
+    )
+    Box(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .fillMaxWidth()
+            .height(48.dp)
+            .background(Brush.verticalGradient(listOf(AdhxColors.Background.copy(alpha = 0f), AdhxColors.Background))),
+    )
 }
 
 /** The New tab's badge for the feed at [page]: only in New mode, and only while there's something to count. */
@@ -122,8 +160,10 @@ internal fun newBadge(ui: FeedUi, page: Int): String? {
 }
 
 /**
- * The one row: Gob (opens Settings) on the left, the tabs in the middle and
- * Search on the right. Over the player it sits on a soft shadow.
+ * Home's top. Over the player (New) it's one row: Gob (opens Settings), the
+ * tabs in the middle and Search, on a soft shadow. On the pages (Channels,
+ * Live) it's two: Gob and "adhx", Search and Settings, then the tabs across
+ * the whole width.
  */
 @Composable
 fun HomeHeader(
@@ -133,41 +173,108 @@ fun HomeHeader(
     overMedia: Boolean,
     newBadge: String? = null,
 ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .then(
-                if (overMedia) {
-                    Modifier.background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent)))
-                } else {
-                    Modifier
-                },
-            )
-            .statusBarsPadding()
-            .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = if (overMedia) 24.dp else 6.dp)
-            .height(52.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    if (!overMedia) {
+        // The pages' tabs are plain, as on the boards: New's count is only over the player.
+        PageHeader(tab, onTab, onHome = { onTab(HomeTab.New) }, onSearch = actions.onSearch, onSettings = actions.onSettings)
+        return
+    }
+    Box(Modifier.fillMaxWidth()) {
+        // The shadow under the row: 240dp from the top, black at 70% fading out.
         Box(
             Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .clickable(onClickLabel = Copy.OPEN_SETTINGS, onClick = actions.onSettings)
-                .semantics { contentDescription = Copy.OPEN_SETTINGS },
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .windowInsetsTopHeight(WindowInsets.statusBars)
+                .background(Color.Black.copy(alpha = 0.7f)),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .height(240.dp)
+                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent))),
+        )
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 28.dp)
+                .height(52.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(30.dp).rotate(-4f))
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .offset(x = (-7).dp)
+                    .clip(CircleShape)
+                    .clickable(onClickLabel = Copy.OPEN_SETTINGS, onClick = actions.onSettings)
+                    .semantics { contentDescription = Copy.OPEN_SETTINGS },
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(32.dp).rotate(-4f))
+            }
+            Spacer(Modifier.weight(1f))
+            HomeTabs(
+                tab = tab,
+                onTab = onTab,
+                newBadge = newBadge,
+                background = Color.Black.copy(alpha = 0.5f),
+            )
+            Spacer(Modifier.weight(1f))
+            BarButton(Glyphs.Search, Copy.SEARCH, actions.onSearch)
         }
-        Spacer(Modifier.weight(1f))
+    }
+}
+
+/**
+ * The pages' top (Channels, Live, a friend's saves): Gob and "adhx" (home),
+ * Search and Settings, then New · Channels · Live across the whole width.
+ */
+@Composable
+fun PageHeader(
+    tab: HomeTab,
+    onTab: (HomeTab) -> Unit,
+    onHome: () -> Unit,
+    onSearch: () -> Unit,
+    onSettings: () -> Unit,
+    newBadge: String? = null,
+    /** The tabs hug their words in the middle (caught up) instead of filling the width. */
+    centered: Boolean = false,
+) {
+    Column(Modifier.fillMaxWidth().statusBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .padding(start = 16.dp, end = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClickLabel = Copy.TABS[0], onClick = onHome)
+                    .semantics(mergeDescendants = true) { contentDescription = "adhx home" },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(painterResource(R.drawable.ic_gob), contentDescription = null, modifier = Modifier.size(32.dp).rotate(-4f))
+                Spacer(Modifier.width(9.dp))
+                Text("adhx", fontFamily = SerifFamily, fontSize = 28.sp, lineHeight = 28.sp, color = AdhxColors.White)
+            }
+            Spacer(Modifier.weight(1f))
+            BarButton(Glyphs.Search, Copy.SEARCH, onSearch, background = AdhxColors.Surface)
+            BarButton(Glyphs.Settings, Copy.OPEN_SETTINGS, onSettings, background = AdhxColors.Surface)
+        }
         HomeTabs(
             tab = tab,
             onTab = onTab,
             newBadge = newBadge,
-            background = if (overMedia) Color.Black.copy(alpha = 0.5f) else AdhxColors.Surface,
-            modifier = Modifier.weight(8f, fill = false),
+            background = AdhxColors.Surface,
+            fill = !centered,
+            wide = centered,
+            modifier = Modifier
+                .padding(start = 16.dp, end = 16.dp, top = if (centered) 8.dp else 4.dp)
+                .then(if (centered) Modifier else Modifier.fillMaxWidth()),
         )
-        Spacer(Modifier.weight(1f))
-        BarButton(Icons.Filled.Search, Copy.SEARCH, actions.onSearch)
     }
 }
 
@@ -182,6 +289,9 @@ private fun HomeTabs(
     newBadge: String?,
     background: Color,
     modifier: Modifier = Modifier,
+    fill: Boolean = false,
+    /** 44dp tabs with 20dp sides, as on caught up. */
+    wide: Boolean = false,
 ) {
     // Not clipped: the badge reaches past the pill's edge.
     Row(
@@ -189,17 +299,17 @@ private fun HomeTabs(
             .background(background, RoundedCornerShape(50))
             .padding(4.dp)
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (fill || wide) 4.dp else 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HomeTab.entries.forEach { t ->
             val on = t == tab
             val label = Copy.TABS[t.ordinal]
             val badge = newBadge.takeIf { t == HomeTab.New }
-            Box {
+            Box(if (fill) Modifier.weight(1f) else Modifier) {
                 Row(
-                    Modifier
-                        .height(40.dp)
+                    (if (fill) Modifier.fillMaxWidth() else Modifier)
+                        .height(if (fill || wide) 44.dp else 40.dp)
                         .clip(RoundedCornerShape(50))
                         .background(if (on) AdhxColors.Cream else Color.Transparent)
                         .selectable(selected = on, role = Role.Tab, onClick = { onTab(t) })
@@ -212,12 +322,20 @@ private fun HomeTabs(
                                 }
                             }
                         }
-                        .padding(horizontal = if (t == HomeTab.New) 16.dp else 14.dp),
+                        .padding(horizontal = if (wide) 20.dp else if (t == HomeTab.New) 16.dp else 14.dp),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (t == HomeTab.Live) {
-                        Box(Modifier.size(7.dp).clip(CircleShape).background(AdhxColors.Live))
-                        Spacer(Modifier.width(6.dp))
+                        // On the pages the dot has a soft red ring.
+                        Box(
+                            Modifier
+                                .size(if (fill) 13.dp else 7.dp)
+                                .then(if (fill) Modifier.background(AdhxColors.Live.copy(alpha = 0.25f), CircleShape).padding(3.dp) else Modifier)
+                                .clip(CircleShape)
+                                .background(AdhxColors.Live),
+                        )
+                        Spacer(Modifier.width(if (fill) 4.dp else 6.dp))
                     }
                     Text(
                         label,
@@ -230,24 +348,29 @@ private fun HomeTabs(
                     )
                 }
                 if (badge != null) {
-                    Text(
-                        badge,
-                        fontSize = 11.sp,
-                        lineHeight = 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.Black,
-                        maxLines = 1,
-                        softWrap = false,
-                        modifier = Modifier
+                    Box(
+                        Modifier
                             .align(Alignment.TopEnd)
                             .offset(x = 8.dp, y = (-9).dp)
-                            .border(2.dp, Color.Black, RoundedCornerShape(50))
+                            .height(20.dp)
+                            .defaultMinSize(minWidth = 20.dp)
+                            .background(Color.Black, RoundedCornerShape(50))
                             .padding(2.dp)
                             .background(AdhxColors.Accent, RoundedCornerShape(50))
-                            .defaultMinSize(minWidth = 16.dp)
-                            .padding(horizontal = 4.dp, vertical = 2.5.dp)
+                            .padding(horizontal = 3.dp)
                             .clearAndSetSemantics { },
-                    )
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            badge,
+                            fontSize = 11.sp,
+                            lineHeight = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.Black,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    }
                 }
             }
         }

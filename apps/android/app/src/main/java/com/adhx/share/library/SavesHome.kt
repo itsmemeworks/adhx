@@ -167,7 +167,7 @@ fun SavesHome(
 @Composable
 fun BackTitleRow(title: String, onBack: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        BarButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
+        BarButton(com.adhx.share.ui.Glyphs.Back, "Back", onBack)
         Spacer(Modifier.width(12.dp))
         Text(title, fontFamily = SerifFamily, fontSize = 26.sp, color = AdhxColors.White, maxLines = 1)
     }
@@ -183,6 +183,6 @@ fun BoxScope.BackBar(onBack: () -> Unit) {
             .statusBarsPadding()
             .padding(start = 16.dp, top = 6.dp, bottom = 20.dp),
     ) {
-        BarButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onBack)
+        BarButton(com.adhx.share.ui.Glyphs.Back, "Back", onBack)
     }
 }

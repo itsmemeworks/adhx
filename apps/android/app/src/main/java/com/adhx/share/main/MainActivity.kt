@@ -32,6 +32,8 @@ import com.adhx.share.feed.ChannelScreen
 import com.adhx.share.feed.FeedViewModel
 import com.adhx.share.feed.HomeActions
 import com.adhx.share.feed.HomeScreen
+import com.adhx.share.feed.HomeTab
+import com.adhx.share.feed.PageHeader
 import com.adhx.share.feed.TunedInScreen
 import com.adhx.share.library.BackTitleRow
 import com.adhx.share.net.ChannelKind
@@ -47,6 +49,7 @@ import com.adhx.share.library.SavesHome
 import com.adhx.share.library.SearchScreen
 import com.adhx.share.net.ApiResult
 import com.adhx.share.ui.AdhxTheme
+import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.openInAdhx
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.CoroutineScope
@@ -152,6 +155,24 @@ private fun MainApp(
         return
     }
 
+    val peopleUi by people.ui.collectAsStateWithLifecycle()
+    if (Welcome.pending) {
+        BackHandler { Welcome.pending = false }
+        ConnectedScreen(
+            connection = current,
+            people = people,
+            onSearch = {
+                Welcome.pending = false
+                library.open(Route.Search)
+            },
+            onSettings = {
+                Welcome.pending = false
+                library.open(Route.Settings)
+            },
+            onStart = { Welcome.pending = false },
+        )
+        return
+    }
     BackHandler(enabled = library.stack.size > 1) { library.back() }
     val back = { library.back(); Unit }
     val route = library.stack.lastOrNull() ?: Route.Home
@@ -178,6 +199,15 @@ private fun MainApp(
                     onSearch = { library.open(Route.Search) },
                     onSettings = { library.open(Route.Settings) },
                     onDoing = { library.open(Route.Doing) },
+                    onPeople = { library.open(Route.People) },
+                    onInvite = if (peopleUi.people?.canInvite != false) {
+                        {
+                            Toast.makeText(context, SettingsCopy.INVITE_NOTE, Toast.LENGTH_SHORT).show()
+                            openInAdhx(context, current.server, "/settings#invite")
+                        }
+                    } else {
+                        null
+                    },
                 ),
                 doing = doing,
             )
@@ -194,6 +224,22 @@ private fun MainApp(
                 server = current.server,
                 onBack = back,
                 onPlay = { library.open(Route.ChannelPlayer(it)) },
+                // A channel sits under Channels: the pages' header, and a tab goes home to it.
+                header = {
+                    PageHeader(
+                        tab = HomeTab.Channels,
+                        onTab = { t ->
+                            feed.tab = t
+                            library.home()
+                        },
+                        onHome = {
+                            feed.tab = HomeTab.New
+                            library.home()
+                        },
+                        onSearch = { library.open(Route.Search) },
+                        onSettings = { library.open(Route.Settings) },
+                    )
+                },
             )
             is Route.ChannelPlayer -> {
                 val channel by feed.channel.collectAsStateWithLifecycle()
@@ -216,6 +262,8 @@ private fun MainApp(
                 server = current.server,
                 onBack = back,
                 onSaver = openPerson,
+                onSearch = { library.open(Route.Search) },
+                onSettings = { library.open(Route.Settings) },
             )
             Route.Search -> SearchScreen(
                 vm = library,

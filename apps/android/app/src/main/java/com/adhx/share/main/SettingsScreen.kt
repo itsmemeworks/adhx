@@ -72,6 +72,8 @@ import com.adhx.share.links.Links
 import com.adhx.share.net.JoinDecision
 import com.adhx.share.net.JoinRequest
 import com.adhx.share.ui.AdhxColors
+import com.adhx.share.ui.AdhxSwitch
+import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Faces
 import com.adhx.share.ui.OutlineButton
@@ -156,7 +158,7 @@ fun SettingsScreen(
                     .semantics { contentDescription = SettingsCopy.BACK },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = AdhxColors.Cream, modifier = Modifier.size(20.dp))
+                Icon(Glyphs.Back, contentDescription = null, tint = AdhxColors.Cream, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(10.dp))
             Text(SettingsCopy.TITLE, fontFamily = SerifFamily, fontSize = 32.sp, color = AdhxColors.White, modifier = Modifier.semantics { heading() })
@@ -557,18 +559,7 @@ private fun SwitchRow(title: String, on: Boolean, onChange: (Boolean) -> Unit, n
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Cream)
             note?.let { Text(it, fontSize = 12.sp, color = AdhxColors.Faint) }
         }
-        Switch(
-            checked = on,
-            onCheckedChange = null,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = AdhxColors.Black,
-                checkedTrackColor = AdhxColors.Accent,
-                checkedBorderColor = AdhxColors.Accent,
-                uncheckedThumbColor = AdhxColors.Cream,
-                uncheckedTrackColor = AdhxColors.Hairline,
-                uncheckedBorderColor = AdhxColors.Hairline,
-            ),
-        )
+        AdhxSwitch(on)
     }
 }
 
