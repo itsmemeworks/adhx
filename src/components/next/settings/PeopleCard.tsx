@@ -327,7 +327,7 @@ function InviteRow({
 }) {
   const [copied, setCopied] = useState<null | 'copied' | 'renewed'>(null)
   const code = invite.code ?? invite.id.replace(/^inv_/, '').slice(0, 4).toUpperCase()
-  const maker = invite.mine ? 'you' : `@${invite.createdBy}`
+  const maker = invite.mine ? 'you' : invite.createdByName?.trim() || `@${invite.createdBy}`
   return (
     <li className="flex min-h-[64px] flex-wrap items-center gap-x-3.5 gap-y-2 border-t border-white/[0.08] py-2.5">
       <span

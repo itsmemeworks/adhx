@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Web design parity, round two
+
+- **Friend channel** (j3-2): `Masonry rowFirst` lays tiles out row by row into the shortest column (`placeTiles`, measured heights, DOM stays in reading order), upright `shape="tall"` tiles, the note card in the last column under its first tile; "Play the N new" on phones. Tiles of titled networks show the title only (`postTitleLine`). Friend covers prefer kept posts.
+- **Theater**: a saver's note sits on its own line over the byline (it squeezed the faces in narrow stages); the arriving-save toast is one button sitting beside the stage; a moment's byline time is plain; the why panel says "Saved together" in full (`whyDetail`). Caught up on phones follows j2-4; Tonight skips a channel made of the live moment's posts; a lone side moment on Right now keeps its half height.
+- **Settings/doing**: Change picture frames the crop inside the photo (thirds, yellow slider, "From @x on X"), and previews your face on one of your shares; invites list newest first and say "Made by Ana"; /doing says "Instagram Reel".
+- **Harness**: remote processing with a heartbeat-only helper ("Mac helper connected"), j7-2's toast played into the page's stream, j8-2 picks the pub photo through the file input, j2-5 on phones plays the hamster, j7-1's phone line matched. Remaining limits listed in `e2e/parity/README.md`.
+
 ## 2026-10-20 — Android uses Hanken Grotesk
 
 - The Android app's sans is now Hanken Grotesk, like the web and iOS: `res/font/hanken_grotesk.ttf` is the web's `src/app/fonts/HankenGrotesk-latin-variable.woff2` decoded to TrueType (Brotli plus the WOFF2 glyf/loca reconstruction), with nothing downloaded. Chromium renders both files pixel-identically at weights 100–900.

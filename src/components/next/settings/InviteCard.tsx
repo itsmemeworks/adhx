@@ -12,6 +12,8 @@ export interface PendingInvite {
   expiresAt: string
   nameHint: string | null
   createdBy: string
+  /** The maker's display name, when set. */
+  createdByName?: string | null
   mine: boolean
 }
 

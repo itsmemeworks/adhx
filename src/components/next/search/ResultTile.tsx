@@ -17,6 +17,7 @@ import {
   postCoverSrc,
   postDurationLabel,
   postText,
+  postTitleLine,
 } from '../post'
 import { NxImage } from '../primitives'
 import { PrivateLock, SaverFaces } from '../SaverFaces'
@@ -46,11 +47,33 @@ export function useReducedMotion(): boolean {
   return reduced
 }
 
+/**
+ * How a masonry tile is shaped: `post` keeps each post's shape (search);
+ * `tall` is a channel's staggered wall, every tile upright, wide videos and
+ * photos cropped to one of a few upright shapes picked from the post's key so
+ * neighbouring columns don't line up.
+ */
+export type TileShape = 'post' | 'tall'
+
+const TALL_ASPECTS = [0.56, 0.64, 0.72, 0.8] as const
+
+function keyHash(key: string): number {
+  let h = 2166136261
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619)
+  return h >>> 0
+}
+
 /** Masonry tiles keep each post's shape, within limits so a column stays readable. */
-function tileAspect(item: SearchResultItem): number {
+export function tileAspect(item: SearchResultItem, shape: TileShape = 'post'): number {
   const aspect = mediaAspect(item.post)
-  if (aspect) return Math.min(1.6, Math.max(0.56, aspect))
-  return isTallMedia(item.post) ? 9 / 16 : 4 / 3
+  const natural = aspect
+    ? Math.min(1.6, Math.max(0.56, aspect))
+    : isTallMedia(item.post)
+      ? 9 / 16
+      : 4 / 3
+  if (shape === 'post' || natural <= TALL_ASPECTS[TALL_ASPECTS.length - 1]) return natural
+  const key = `${item.post.platform ?? 'twitter'}:${item.post.id}`
+  return TALL_ASPECTS[keyHash(key) % TALL_ASPECTS.length]
 }
 
 /** Serif size for a cream post card by length (short posts read as headlines). */
@@ -213,7 +236,9 @@ export function networkKind(item: SearchResultItem): string {
 /** A result's few words: its text or headline, else what it is. */
 export function tileTitle(item: SearchResultItem): string {
   const kind = kindOf(item)
-  const text = (kind === 'article' ? articleHeadline(item.post) : postText(item.post))
+  // YouTube, Reddit…: the title, not the description run on after it.
+  const titled = kind === 'article' ? null : postTitleLine(item.post)
+  const text = (titled ?? (kind === 'article' ? articleHeadline(item.post) : postText(item.post)))
     .replace(/https?:\/\/\S+/g, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -252,6 +277,7 @@ export function ResultTile({
   owner,
   isNew = false,
   fill = false,
+  shape = 'post',
 }: {
   item: SearchResultItem
   /** The top match gets the yellow ring. */
@@ -268,6 +294,8 @@ export function ResultTile({
   isNew?: boolean
   /** Fill the parent's height instead of keeping the post's shape. */
   fill?: boolean
+  /** See `TileShape`. */
+  shape?: TileShape
 }) {
   const kind = kindOf(item)
   const { post } = item
@@ -430,7 +458,7 @@ export function ResultTile({
         style={
           fill
             ? undefined
-            : { aspectRatio: (kind === 'article' ? 4 / 3 : tileAspect(item)).toFixed(4) }
+            : { aspectRatio: (kind === 'article' ? 4 / 3 : tileAspect(item, shape)).toFixed(4) }
         }
       >
         <NxImage

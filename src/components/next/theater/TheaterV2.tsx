@@ -71,6 +71,7 @@ import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
 import { articleHeadline, mediaAspect, postAuthor, postCoverSrc } from '../post'
 import { NxAvatar } from '../primitives'
 import { PrivateLock, SaversButton } from '../SaverFaces'
+import { bylineNote, SaverNote } from '../SaverNote'
 import type { Saver } from '@/lib/people/types'
 import { useAuthMe } from '@/components/auth'
 import { AdhxLoader } from '../loader'
@@ -1788,7 +1789,6 @@ export function TheaterV2({
         ? 'Your people'
         : 'Channel'
   const inQueue = queueSavers(items)
-  const momentNow = !!current.savedAt && Date.now() - Date.parse(current.savedAt) < 3_600_000
 
   const muteButton = (
     <ControlButton
@@ -2038,7 +2038,7 @@ export function TheaterV2({
                   hue={momentHue}
                   now={arrival.now}
                   onPlay={arrival.now ? undefined : () => goTo(index + 1)}
-                  className="absolute right-6 top-5 z-30 max-w-[260px]"
+                  className="absolute right-0 top-5 z-30 max-w-[240px]"
                 />
               )}
               <div
@@ -2319,13 +2319,19 @@ export function TheaterV2({
                             className="self-start [text-shadow:none]"
                           />
                         )}
+                        {/* The note sits on its own line over the whole byline. */}
+                        {savers && savers.length > 0 && !gettingReady && bylineNote(savers) && (
+                          <SaverNote
+                            saver={bylineNote(savers)!}
+                            className="self-start [text-shadow:none]"
+                          />
+                        )}
                         <div className="flex min-w-0 items-center gap-2.5">
                           {savers && savers.length > 0 ? (
                             <SaversButton
                               savers={savers}
                               placement="above"
-                              // "Getting it ready" fills the stage; the note shows once it plays.
-                              noteBubble={!gettingReady}
+                              noteBubble={false}
                               framed
                               faces={
                                 <FaceStack
@@ -2367,11 +2373,7 @@ export function TheaterV2({
                                 className={cn(
                                   'shrink-0 whitespace-nowrap text-nx-soft',
                                   wide && layout === 'feed' ? 'text-sm' : 'text-[13px]',
-                                  momentNow && source.moment && 'font-bold',
                                 )}
-                                style={
-                                  momentNow && source.moment ? { color: momentHue } : undefined
-                                }
                               >
                                 {`· ${bits.join(' · ')}`}
                               </span>

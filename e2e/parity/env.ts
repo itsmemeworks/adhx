@@ -17,6 +17,12 @@ export const PARITY_MEDIA_DIR = path.join(PARITY_OUT, 'media')
 export const PARITY_MEDIA_CACHE = path.join(PARITY_OUT, 'media-cache')
 export const PARITY_CREDENTIALS = path.join(PARITY_OUT, 'credentials.json')
 export const PARITY_SESSION_SECRET = 'adhx-parity-dev-session-secret'
+/**
+ * The machine token a Mac helper would use (`PROCESSING_WORKER_TOKEN`). The
+ * parity server runs in remote processing mode and `parity:serve` polls with
+ * it, so /doing shows "Mac helper connected" (board j8-3). Local only.
+ */
+export const PARITY_WORKER_TOKEN = 'parity-mac-helper-token-local-only-0123456789'
 
 /** The design boards rendered to PNG (one per board, named like the board). */
 export const PARITY_REF_DIR = process.env.PARITY_REF_DIR || '/private/tmp/claude-501/parity/ref'
@@ -51,6 +57,9 @@ export function parityProcessEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessE
     // the backfill cutoff far in the future, so nothing is ever downloaded.
     KEEP_BACKFILL: 'off',
     AUTO_SYNC_EVERY_MINUTES: '0',
+    // A Mac helper does the learning and converting; serve.ts keeps one "connected".
+    PROCESSING_MODE: 'remote',
+    PROCESSING_WORKER_TOKEN: PARITY_WORKER_TOKEN,
     FXTWITTER_API_BASE: DEAD_ORIGIN,
     INSTAGRAM_OG_BASE: DEAD_ORIGIN,
     TNKTOK_API_BASE: DEAD_ORIGIN,

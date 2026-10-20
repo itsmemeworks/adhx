@@ -88,6 +88,9 @@ export function FriendNoteTile({
   )
 }
 
+/** The board's grid: newest along the top row, then the shortest column. */
+const ROW_COLUMNS = { base: 2, md: 3, xl: 4 }
+
 const SHOW_LABEL: Record<Show, string> = {
   all: 'All',
   videos: 'Videos',
@@ -196,7 +199,7 @@ export function FriendChannelPage({
     [items, show],
   )
   const mostly = useMemo(() => mostlyFrom(items ?? []), [items])
-  // The note card sits second, after their newest save (only under All).
+  // The note card sits in the last column under its first tile (only under All).
   const noteTile = useMemo(() => {
     if (!note || show !== 'all') return undefined
     const key = `${note.platform}:${note.id}`
@@ -281,10 +284,17 @@ export function FriendChannelPage({
             {newCount > 0 && (
               <Link
                 href={friendPlayHref(username, { onlyNew: true })}
+                aria-label={newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}
                 className="flex h-12 min-w-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-white/[0.08] bg-[#262320] px-5 text-base font-extrabold text-nx-cream lg:h-[52px]"
               >
                 <span aria-hidden className="h-2 w-2 rounded-full bg-nx-accent" />
-                <span>{newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}</span>
+                {/* Phones say it shorter, as the phone app does. */}
+                <span aria-hidden className="lg:hidden">
+                  {newCount === 1 ? 'Play the new one' : `Play the ${newCount} new`}
+                </span>
+                <span aria-hidden className="hidden lg:inline">
+                  {newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}
+                </span>
               </Link>
             )}
           </div>
@@ -342,6 +352,8 @@ export function FriendChannelPage({
             <Masonry
               items={shown}
               columns="columns-2 md:columns-3 xl:columns-4"
+              rowFirst={ROW_COLUMNS}
+              shape="tall"
               hrefFor={(item) => friendPlayHref(username, { start: resultKey(item) })}
               showStrength={false}
               owner={username}

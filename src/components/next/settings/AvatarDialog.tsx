@@ -1,13 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { Camera, Check, ImageUp, Minus, Plus, X } from 'lucide-react'
+import { Camera, Check, Square, Upload, X } from 'lucide-react'
+import type { FeedItem } from '@/components/feed/types'
+import { shortAgo } from '@/lib/feed/blend'
+import { networkLabel } from '@/lib/platform/networks'
+import type { Saver } from '@/lib/people/types'
 import { cn } from '@/lib/utils'
 import { GOB_COLOURS, gobDataUri, type GobColour } from '@/lib/avatar/gob'
 import { FaceInitial } from '../FaceInitial'
 import { GobShape, gobMask } from '../GobShape'
 import { SaverFaces } from '../SaverFaces'
-import { XLogo } from '../primitives'
+import { NxImage, XLogo } from '../primitives'
+import { postCoverSrc } from '../post'
+import { KIND_WORD, kindOf } from '../search/model'
 import { PRIMARY, SECONDARY } from './parts'
 
 /**
@@ -20,8 +26,11 @@ import { PRIMARY, SECONDARY } from './parts'
 export const AVATAR_MAX_BYTES = 5 * 1024 * 1024
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
 const MAX_ZOOM = 4
-/** The crop window, in CSS pixels. */
-const BOX = 260
+/** The crop frame, in CSS pixels: the photo around the crop shows, dimmed. */
+const BOX = 300
+/** The crop itself (the square the server keeps), centred in the frame. */
+const WINDOW = 248
+const PAD = (BOX - WINDOW) / 2
 
 type Source = 'upload' | 'camera' | 'x' | 'gob'
 type Crop = { x: number; y: number; zoom: number }
@@ -57,8 +66,12 @@ export interface AvatarDialogProps {
   displayName: string | null
   /** The X photo, when X is connected. */
   xPicture: string | null
+  /** The X username behind it ("From @pete on X"). */
+  xHandle?: string | null
   /** What's shown now, to start from. */
   current: { source: 'upload' | 'gob' | 'x' | 'generated'; url: string | null }
+  /** One of your shared saves, as the backdrop for "How you'll look" (`useRecentSave`). */
+  sample?: FeedItem | null
   onClose: () => void
   onSaved: () => void
 }
@@ -67,7 +80,9 @@ export function AvatarDialog({
   username,
   displayName,
   xPicture,
+  xHandle = null,
   current,
+  sample = null,
   onClose,
   onSaved,
 }: AvatarDialogProps) {
@@ -157,7 +172,7 @@ export function AvatarDialog({
 
   const shown = photo ? clampCrop(photo, crop) : crop
   const side = photo ? Math.min(photo.width, photo.height) / shown.zoom : 1
-  const scale = BOX / side
+  const scale = WINDOW / side
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (!photo) return
@@ -313,7 +328,7 @@ export function AvatarDialog({
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
               className={cn(
-                'relative shrink-0 touch-none select-none overflow-hidden rounded-[24px] bg-black outline-none focus-visible:ring-2 focus-visible:ring-nx-accent',
+                'relative shrink-0 touch-none select-none overflow-hidden rounded-[20px] bg-black outline-none focus-visible:ring-2 focus-visible:ring-nx-accent',
                 photo && 'cursor-grab active:cursor-grabbing',
               )}
               style={{ width: BOX, height: BOX }}
@@ -327,8 +342,8 @@ export function AvatarDialog({
                   style={{
                     width: photo.width * scale,
                     height: photo.height * scale,
-                    left: -(shown.x * photo.width - side / 2) * scale,
-                    top: -(shown.y * photo.height - side / 2) * scale,
+                    left: PAD - (shown.x * photo.width - side / 2) * scale,
+                    top: PAD - (shown.y * photo.height - side / 2) * scale,
                   }}
                 />
               ) : faceUrl ? (
@@ -336,24 +351,47 @@ export function AvatarDialog({
                   src={faceUrl}
                   alt="Your picture"
                   referrerPolicy="no-referrer"
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute object-cover"
+                  style={{ left: PAD, top: PAD, width: WINDOW, height: WINDOW }}
                 />
               ) : (
-                <span role="img" aria-label="Your picture" className="absolute inset-0 block">
-                  <FaceInitial username={username} name={displayName} size={BOX} />
+                <span
+                  role="img"
+                  aria-label="Your picture"
+                  className="absolute block"
+                  style={{ left: PAD, top: PAD, width: WINDOW, height: WINDOW }}
+                >
+                  <FaceInitial username={username} name={displayName} size={WINDOW} />
                 </span>
               )}
               {/* The picture shows in Gob's shape everywhere, so the crop window is that shape too. */}
               <span
                 aria-hidden
-                className={cn('pointer-events-none absolute inset-[6px]', gobMask)}
-                style={{ boxShadow: '0 0 0 2px #f4f1ea, 0 0 0 999px rgba(0,0,0,0.6)' }}
-              />
+                className={cn('pointer-events-none absolute overflow-hidden', gobMask)}
+                style={{
+                  left: PAD,
+                  top: PAD,
+                  width: WINDOW,
+                  height: WINDOW,
+                  boxShadow: '0 0 0 2px #f4f1ea, 0 0 0 999px rgba(0,0,0,0.45)',
+                }}
+              >
+                {photo && (
+                  // Thirds, to line a face up.
+                  <span
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage:
+                        'linear-gradient(to right, transparent calc(33.333% - 0.5px), rgba(255,255,255,0.28) calc(33.333% - 0.5px), rgba(255,255,255,0.28) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255,255,255,0.28) calc(66.666% - 0.5px), rgba(255,255,255,0.28) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px)), linear-gradient(to bottom, transparent calc(33.333% - 0.5px), rgba(255,255,255,0.28) calc(33.333% - 0.5px), rgba(255,255,255,0.28) calc(33.333% + 0.5px), transparent calc(33.333% + 0.5px), transparent calc(66.666% - 0.5px), rgba(255,255,255,0.28) calc(66.666% - 0.5px), rgba(255,255,255,0.28) calc(66.666% + 0.5px), transparent calc(66.666% + 0.5px))',
+                    }}
+                  />
+                )}
+              </span>
             </div>
             {photo && (
               <>
                 <div className="flex w-full max-w-[300px] items-center gap-3">
-                  <Minus aria-hidden className="h-4 w-4 shrink-0 text-[#c9bfab]" />
+                  <Square aria-hidden className="h-2.5 w-2.5 shrink-0 text-[#c9bfab]" />
                   <input
                     type="range"
                     aria-label="Zoom"
@@ -365,9 +403,14 @@ export function AvatarDialog({
                     onChange={(e) =>
                       setCrop(clampCrop(photo, { ...shown, zoom: Number(e.target.value) }))
                     }
-                    className="h-11 min-w-0 flex-1 accent-nx-accent"
+                    className="nx-range h-11 min-w-0 flex-1"
+                    style={
+                      {
+                        '--fill': `${((shown.zoom - 1) / (MAX_ZOOM - 1)) * 100}%`,
+                      } as React.CSSProperties
+                    }
                   />
-                  <Plus aria-hidden className="h-4 w-4 shrink-0 text-[#c9bfab]" />
+                  <Square aria-hidden className="h-[18px] w-[18px] shrink-0 text-[#c9bfab]" />
                 </div>
                 <span className="text-[13px] text-[#a39b8b]">Drag to move. Slide to zoom.</span>
               </>
@@ -392,7 +435,7 @@ export function AvatarDialog({
                     source === 'upload' ? 'bg-nx-accent text-black' : 'bg-[#0f0e0c]',
                   )}
                 >
-                  <ImageUp className="h-5 w-5" />
+                  <Upload className="h-5 w-5" />
                 </span>
                 <span className="text-[15px] font-extrabold">Upload a photo</span>
                 <span className="max-w-full truncate text-[13px] text-[#a39b8b]">
@@ -419,7 +462,10 @@ export function AvatarDialog({
                   <Camera className="h-5 w-5" />
                 </span>
                 <span className="text-[15px] font-extrabold">Take one</span>
-                <span className="text-[13px] text-[#a39b8b]">Uses your camera</span>
+                <span className="text-[13px] text-[#a39b8b] md:hidden">Uses your camera</span>
+                <span className="hidden text-[13px] text-[#a39b8b] md:inline">
+                  Uses this computer’s camera
+                </span>
                 {source === 'camera' && tick}
               </button>
               {xPicture && (
@@ -437,7 +483,9 @@ export function AvatarDialog({
                     <XLogo className="h-4 w-4" />
                   </span>
                   <span className="text-[15px] font-extrabold">Use your X picture</span>
-                  <span className="text-[13px] text-[#a39b8b]">From your X account</span>
+                  <span className="max-w-full truncate text-[13px] text-[#a39b8b]">
+                    {xHandle ? `From @${xHandle} on X` : 'From your X account'}
+                  </span>
                   {source === 'x' && tick}
                 </button>
               )}
@@ -507,29 +555,7 @@ export function AvatarDialog({
             />
 
             <span className="mt-2 text-[13px] font-semibold text-[#c9bfab]">How you’ll look</span>
-            <div
-              data-testid="avatar-preview"
-              className="relative flex h-[112px] items-end overflow-hidden rounded-[20px] bg-gradient-to-b from-[#2a2620] to-black p-4"
-            >
-              <span className="absolute right-3 top-3 flex h-7 items-center rounded-full bg-black/55 px-3 text-xs font-extrabold">
-                Preview
-              </span>
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <SaverFaces
-                  size={32}
-                  savers={[
-                    {
-                      username,
-                      name,
-                      avatarUrl: faceUrl,
-                      savedAt: new Date().toISOString(),
-                      isYou: false,
-                    },
-                  ]}
-                />
-                <span className="text-[13px] text-[#c9bfab]">How your people see your saves</span>
-              </div>
-            </div>
+            <AvatarPreview sample={sample} you={{ username, name, avatarUrl: faceUrl }} />
           </div>
         </div>
 
@@ -565,5 +591,82 @@ export function AvatarDialog({
         </div>
       </section>
     </>
+  )
+}
+
+/** Your newest shared save with a picture, for "How you'll look" (asked for while `on`). */
+export function useRecentSave(on: boolean): FeedItem | null {
+  const [item, setItem] = useState<FeedItem | null>(null)
+  useEffect(() => {
+    if (!on) return
+    const controller = new AbortController()
+    fetch('/api/feed?limit=5', { signal: controller.signal, credentials: 'same-origin' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ items?: FeedItem[] }>) : null))
+      .then((d) => {
+        const pick = d?.items?.find((i) => !i.isPrivate && postCoverSrc(i))
+        if (pick) setItem(pick)
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [on])
+  return item
+}
+
+/**
+ * "How you'll look": your face on one of your saves, the way your people see
+ * it ("Pete and Ana saved this · 2m"). Without a save to show, a plain card.
+ */
+function AvatarPreview({
+  sample,
+  you,
+}: {
+  sample: FeedItem | null
+  you: { username: string; name: string; avatarUrl: string | null }
+}) {
+  const others = (sample?.savers ?? []).filter((s) => !s.isYou && s.username !== you.username)
+  const mine = sample?.savers?.find((s) => s.isYou)
+  const savers: Saver[] = [
+    {
+      username: you.username,
+      name: you.name,
+      avatarUrl: you.avatarUrl,
+      savedAt: mine?.savedAt ?? new Date().toISOString(),
+      isYou: false,
+    },
+    ...others.slice(0, 2),
+  ]
+  const cover = sample ? postCoverSrc(sample) : null
+  const at = Date.parse(mine?.savedAt ?? '')
+  const ago = Number.isFinite(at) ? shortAgo(at, Date.now()) : null
+  const kind = sample
+    ? `${networkLabel(sample.platform)} ${KIND_WORD[kindOf({ post: sample, saved: true, matched: [] })].toLowerCase()}`
+    : null
+  return (
+    <div
+      data-testid="avatar-preview"
+      className="relative flex h-[112px] items-end overflow-hidden rounded-[20px] bg-gradient-to-b from-[#2a2620] to-black p-4"
+    >
+      {cover && (
+        <>
+          <NxImage src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/85"
+          />
+        </>
+      )}
+      <span className="absolute right-3 top-3 flex h-7 items-center rounded-full bg-black/55 px-3 text-xs font-extrabold">
+        Preview
+      </span>
+      <div className="relative flex min-w-0 flex-col gap-1">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <SaverFaces size={32} savers={savers} className="[&>span:last-child]:text-[14px]" />
+          {ago && <span className="shrink-0 text-[13px] text-[#c9bfab]">{`· ${ago}`}</span>}
+        </span>
+        <span className="text-[13px] text-[#c9bfab]">
+          {kind ?? 'How your people see your saves'}
+        </span>
+      </div>
+    </div>
   )
 }

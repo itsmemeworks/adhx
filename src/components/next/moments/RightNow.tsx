@@ -654,6 +654,10 @@ export function RightNow({
               {forming.map((f) => (
                 <FormingCard key={f.id} forming={f} flash={flashes.get(f.id)} Title={Title} />
               ))}
+              {/* One card alone keeps the size it has beside a second, not the lead's full height. */}
+              {others.length + forming.length === 1 && (
+                <span aria-hidden className="hidden lg:block lg:flex-1" />
+              )}
             </div>
           )}
         </div>

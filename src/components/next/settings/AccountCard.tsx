@@ -8,7 +8,7 @@ import { UsernameChooser } from '@/components/auth/UsernameChooser'
 import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
 import { GobShape } from '../GobShape'
-import { AvatarDialog } from './AvatarDialog'
+import { AvatarDialog, useRecentSave } from './AvatarDialog'
 import { INPUT, PRIMARY, SECONDARY, SettingsCard, Switch } from './parts'
 
 /** `user_preferences` key for "Just for me by default" (as in lib/bookmarks/privacy.ts). */
@@ -59,6 +59,7 @@ function PictureRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
   const username = me.user?.username || 'adhx'
   const shown = !broken ? usableAvatarUrl(me.user?.avatarUrl) : null
   const xPicture = usableAvatarUrl(me.identities.x?.avatarUrl)
+  const sample = useRecentSave(open)
   return (
     <Row>
       <div className="flex items-center gap-4">
@@ -94,7 +95,9 @@ function PictureRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
           username={username}
           displayName={me.user?.displayName ?? null}
           xPicture={me.xConnected ? xPicture : null}
+          xHandle={me.xConnected ? (me.identities.x?.username ?? null) : null}
           current={{ source: me.user?.avatarSource ?? 'generated', url: shown }}
+          sample={sample}
           onClose={() => setOpen(false)}
           onSaved={() => {
             setBroken(false)

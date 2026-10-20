@@ -20,7 +20,7 @@ import type { FeedItem } from '@/components/feed/types'
 import type { Saver } from '@/lib/people/types'
 import { Gob } from '../Gob'
 import { NxAvatar, NxImage } from '../primitives'
-import { articleHeadline, postCoverSrc, postText } from '../post'
+import { articleHeadline, postCoverSrc, postText, TITLED_NETWORKS } from '../post'
 import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { orderedSavers, saverName } from '../savers'
 import { Faces } from '../moments/LiveTogether'
@@ -57,9 +57,6 @@ export function useWide(query = WIDE_QUERY): boolean {
 
 // ——— Words ———
 
-/** Networks whose posts carry a title line before the description. */
-const TITLED = new Set(['youtube', 'vimeo', 'reddit', 'pinterest', 'soundcloud', 'twitch'])
-
 /**
  * A post's title and the words after it. Titled networks (YouTube, Reddit…)
  * keep "Title\n\nDescription"; everything else is one run of words.
@@ -71,7 +68,7 @@ export function postWords(post: FeedItem): { title: string; rest: string } {
   const text = postText(post)
   const raw = (post.text || '').trim()
   const cut = raw.indexOf('\n\n')
-  if (TITLED.has(post.platform ?? 'twitter') && cut > 0 && cut <= 140) {
+  if (TITLED_NETWORKS.has(post.platform ?? 'twitter') && cut > 0 && cut <= 140) {
     const [first, ...more] = text.split('\n')
     return { title: first.trim(), rest: more.join(' ').trim() }
   }
@@ -428,6 +425,44 @@ const WHY_TITLES: Record<string, string> = {
   yours: 'Yours',
 }
 
+const COUNT_WORDS = [
+  '',
+  'One',
+  'Two',
+  'Three',
+  'Four',
+  'Five',
+  'Six',
+  'Seven',
+  'Eight',
+  'Nine',
+  'Ten',
+]
+
+/**
+ * "Saved together", said in full when the panel knows who: "Ana, Ben and you
+ * all kept it. Three people don't agree on anything by accident." Other
+ * reasons keep the feed's own words.
+ */
+export function whyDetail(
+  reason: { kind: string; text: string },
+  savers: readonly Saver[] | undefined,
+): string {
+  if (reason.kind !== 'together' || !savers || savers.length < 2) return reason.text
+  // Friends first, newest first; you last, in lower case mid-sentence.
+  const names = [
+    ...savers.filter((s) => !s.isYou).map(saverName),
+    ...(savers.some((s) => s.isYou) ? ['you'] : []),
+  ]
+  if (names.length === 2) return `${names[0]} and ${names[1]} both kept it.`
+  const list =
+    names.length > 4
+      ? `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`
+      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+  const count = COUNT_WORDS[names.length] ?? String(names.length)
+  return `${list} all kept it. ${count} people don’t agree on anything by accident.`
+}
+
 /** Every reason the feed has, as cards beside the stage (wide screens). */
 export function WhyPanel({
   item,
@@ -480,7 +515,9 @@ export function WhyPanel({
             </span>
             <span className="text-xs text-nx-muted">strongest signal</span>
           </span>
-          <span className="text-sm leading-[1.45] text-nx-cream">{first.text}</span>
+          <span className="text-sm leading-[1.45] text-nx-cream">
+            {whyDetail(first, item.post.savers)}
+          </span>
         </div>
       )}
       {rest.map((reason) => (
@@ -489,7 +526,9 @@ export function WhyPanel({
           className="flex flex-col gap-1.5 rounded-[20px] bg-nx-surface px-4 py-3.5"
         >
           <span className="text-sm font-extrabold">{WHY_TITLES[reason.kind] ?? 'Why'}</span>
-          <span className="text-sm leading-[1.45] text-nx-soft">{reason.text}</span>
+          <span className="text-sm leading-[1.45] text-nx-soft">
+            {whyDetail(reason, item.post.savers)}
+          </span>
         </div>
       ))}
       {friends}

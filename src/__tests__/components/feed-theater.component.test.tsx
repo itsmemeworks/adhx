@@ -52,6 +52,7 @@ import {
   WhyChip,
 } from '@/components/next/theater/FeedParts'
 import { UpNextSheet, WhySheet } from '@/components/next/theater/TheaterSheets'
+import { whyDetail } from '@/components/next/theater/TheaterLayout'
 import { feedPlayHref, queueUrl, sourceFromParams } from '@/components/next/theater/queue'
 
 const together: WhyReason[] = [
@@ -592,5 +593,30 @@ describe('Tune in', () => {
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
     expect(screen.getByText('2 watching')).toBeInTheDocument()
     expect(screen.getByText(/is watching with you/)).toBeInTheDocument()
+  })
+})
+
+describe('why it’s on your feed, in full', () => {
+  const saver = (username: string, isYou = false) => ({
+    username,
+    name: username[0].toUpperCase() + username.slice(1),
+    avatarUrl: null,
+    savedAt: new Date().toISOString(),
+    isYou,
+  })
+  const together = { kind: 'together', text: 'You and 2 others saved this' }
+
+  it('names who kept it together, you last', () => {
+    expect(whyDetail(together, [saver('pete', true), saver('ben'), saver('ana')])).toBe(
+      'Ben, Ana and you all kept it. Three people don’t agree on anything by accident.',
+    )
+    expect(whyDetail(together, [saver('ana'), saver('ben')])).toBe('Ana and Ben both kept it.')
+  })
+
+  it('keeps the feed’s words for other reasons, or without savers', () => {
+    expect(whyDetail({ kind: 'close', text: 'You watch most of Ana’s saves' }, [])).toBe(
+      'You watch most of Ana’s saves',
+    )
+    expect(whyDetail(together, undefined)).toBe('You and 2 others saved this')
   })
 })

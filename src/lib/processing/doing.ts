@@ -497,7 +497,11 @@ export async function processingActivity(
       platform: c.platform,
       id: c.id,
       title: titleOf(row),
-      network: `${network} ${kindNoun(row.category)}`,
+      // "Instagram Reel", as the theater says it.
+      network:
+        c.platform === 'instagram' && row.category === 'video'
+          ? 'Instagram Reel'
+          : `${network} ${kindNoun(row.category)}`,
       thumbnail: post.posterUrl,
       openPath: post.openPath,
       savers: saverMap.get(c.k) ?? [],
