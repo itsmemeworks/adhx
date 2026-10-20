@@ -332,6 +332,12 @@ describe('durable optional image work', () => {
     }
     await writeFile(path.join(directory, 'invalid.jpg'), 'invalid')
     expect(await prepareChannelImage({ file: 'invalid.jpg', bytes: 7 })).toBeNull()
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="448" height="448"><image href="file:///etc/passwd"/></svg>'
+    await writeFile(path.join(directory, 'vector.jpg'), svg)
+    expect(
+      await prepareChannelImage({ file: 'vector.jpg', bytes: Buffer.byteLength(svg) }),
+    ).toBeNull()
     expect(await prepareChannelImage({ file: 'poster.jpg', bytes: 9 * 1024 * 1024 })).toBeNull()
   })
   it('does not give generated channels conflicting display names', async () => {

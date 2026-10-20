@@ -201,6 +201,18 @@ export async function prepareChannelImage(source: {
       offset += read.bytesRead
     }
     if ((await handle.stat()).size !== stat.size) return null
+    // Decode raster media only: never render SVG/PDF or their resource references.
+    const header = bytes.subarray(0, 16)
+    const raster =
+      header.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff])) ||
+      header.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ||
+      (header.toString('ascii', 0, 4) === 'RIFF' && header.toString('ascii', 8, 12) === 'WEBP') ||
+      ['GIF87a', 'GIF89a'].includes(header.toString('ascii', 0, 6)) ||
+      (header.toString('ascii', 4, 8) === 'ftyp' &&
+        ['avif', 'avis', 'heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1'].includes(
+          header.toString('ascii', 8, 12),
+        ))
+    if (!raster) return null
     const image = await sharp(bytes, {
       limitInputPixels: 16_000_000,
       failOn: 'error',

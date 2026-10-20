@@ -81,7 +81,8 @@ existing shares keep their slug. Display-name collisions retain baseline names.
 - Local image preparation is sequential. Input is limited to 8 MiB/16 million
   pixels; each prepared JPEG is upright, stripped of metadata, padded to
   448×448 and capped at 96 KiB. There is no thumbnail download or FFmpeg/model
-  invocation on the server for this pass.
+  invocation on the server for this pass. Only raster image signatures are
+  accepted; SVG/PDF and their resource references are never rendered.
 - The API request has a 15-second deadline; response bodies cap at 64 KiB.
   The client makes no immediate retries. Jobs retry after five then thirty
   minutes, with at most three attempts before keeping the baseline.
