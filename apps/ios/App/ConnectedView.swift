@@ -27,7 +27,8 @@ struct ConnectedView: View {
                 .background(Capsule().fill(Color(hex: 0x7FD1AE, opacity: 0.14)))
                 .padding(.top, 12)
 
-            VStack(spacing: -4) {
+            // The boards' line-height 0.95: the two lines nearly touch.
+            VStack(spacing: -16) {
                 Text("Connected to").foregroundStyle(Theme.ink)
                 Text(whose).foregroundStyle(Theme.accent)
             }

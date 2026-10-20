@@ -102,6 +102,23 @@ enum BundledFonts {
 }
 
 extension View {
+    /// The boards' serif headings that wrap (`line-height: 0.95`): lines that
+    /// nearly touch. Text can only tighten its leading from iOS 26; earlier it
+    /// keeps the font's own.
+    @ViewBuilder
+    func tightLines(_ size: CGFloat, factor: CGFloat = 0.95) -> some View {
+        if #available(iOS 26.0, *) {
+            // An exact line height keeps the font's full ascent above the first
+            // line, where CSS splits the cut between top and bottom: move the
+            // glyphs back to where the boards put them (measured at 34 pt).
+            lineHeight(.exact(points: size * factor))
+                .padding(.top, -size * 0.29)
+                .padding(.bottom, size * 0.15)
+        } else {
+            self
+        }
+    }
+
     /// The boards' frosted glass: a blur of what's behind, darkened
     /// (`background: rgba(0,0,0,dim); backdrop-filter: blur(12px)`).
     func frosted<S: Shape>(_ shape: S, dim: Double = 0.45) -> some View {
@@ -187,11 +204,12 @@ struct Gob: View {
             path.addQuadCurve(to: CGPoint(x: x + w, y: y), control: CGPoint(x: x + w / 2, y: y - rise))
             context.stroke(path, with: .color(ink), style: StrokeStyle(lineWidth: line, lineCap: .round))
         }
-        arc(10.5, 17.5, 6, 8, 2.4)
-        arc(21.5, 17, 9, 12, 2.6)
+        // The board's own quadratic control points (`q3 -4 6 0`, `q4.5 -6 9 0`, `q6.5 6 13 -0.5`).
+        arc(10.5, 17.5, 6, 4, 2.4)
+        arc(21.5, 17, 9, 6, 2.6)
         var mouth = Path()
         mouth.move(to: CGPoint(x: 13.5, y: 25))
-        mouth.addQuadCurve(to: CGPoint(x: 26.5, y: 24.5), control: CGPoint(x: 20, y: 37))
+        mouth.addQuadCurve(to: CGPoint(x: 26.5, y: 24.5), control: CGPoint(x: 20, y: 31))
         mouth.closeSubpath()
         context.fill(mouth, with: .color(ink))
         context.stroke(mouth, with: .color(ink), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round))

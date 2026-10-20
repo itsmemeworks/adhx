@@ -176,16 +176,18 @@ struct SendSheet: View {
 
     private var card: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .center, spacing: 14) {
+                // An upright poster, 54 × 96, with the kind on a small dark disc.
                 CoverImage(url: ADHXClient.resolve(post.posterUrl ?? post.media.first?.url, against: model.server))
-                    .frame(width: 56, height: 72)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .frame(width: 54, height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(alignment: .bottomLeading) {
                         Image(systemName: post.kind == "photo" ? "photo" : "video")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.6), radius: 3)
-                            .padding(6)
+                            .frame(width: 22, height: 22)
+                            .background(Circle().fill(.black.opacity(0.6)))
+                            .padding(4)
                     }
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)

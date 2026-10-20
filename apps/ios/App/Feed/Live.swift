@@ -126,15 +126,21 @@ struct LiveView: View {
                     EmptyNote(title: "Nothing’s live right now",
                               message: "When a few of your lot save around the same thing, it shows up here.")
                 } else {
-                    Text("What your lot are into\ntonight")
-                        .font(Theme.serif(36))
-                        .lineSpacing(-3)
-                        .foregroundStyle(Theme.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-                        .padding(.bottom, 4)
+                    // Two lines that nearly touch (the boards' line-height 0.95):
+                    // Text can't tighten its own leading before iOS 26.
+                    VStack(alignment: .leading, spacing: -12) {
+                        Text("What your lot are into")
+                        Text("tonight")
+                    }
+                    .font(Theme.serif(36))
+                    .foregroundStyle(Theme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 5)
+                    // The last line's descent is room enough above the first card.
+                    .padding(.bottom, -3)
                     // The first one big; the quieter ones (and older servers'
                     // not-live ones) as rows, then what's still forming.
                     ForEach(Array(model.moments.enumerated()), id: \.element.id) { index, moment in
