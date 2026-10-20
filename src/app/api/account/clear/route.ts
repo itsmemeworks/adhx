@@ -14,8 +14,10 @@ import {
   momentAlertSubs,
   momentAlerts,
   reactionCounts,
+  autoChannels,
+  activity,
 } from '@/lib/db/schema'
-import { eq, or } from 'drizzle-orm'
+import { and, eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
 import { metrics } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
@@ -25,7 +27,7 @@ import { handleRouteError } from '@/lib/api/response'
  * POST /api/account/clear
  *
  * Clears all user data (bookmarks, tags, preferences, etc.)
- * but preserves OAuth tokens so the user stays connected.
+ * but keeps the account, its sign-in and its X connection.
  *
  * Useful for:
  * - Starting fresh with a clean slate
@@ -54,13 +56,21 @@ export const POST = withAuth(async (_req, userId) => {
       db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
       db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
       db.delete(reactionCounts).where(eq(reactionCounts.userId, userId)).run()
+      // Made for you is built from the saves that are now gone.
+      db.delete(autoChannels).where(eq(autoChannels.userId, userId)).run()
+      // The public "saved" pulses go with the saves; other events keep their
+      // anonymous counts without the account.
+      db.delete(activity)
+        .where(and(eq(activity.userId, userId), eq(activity.action, 'save')))
+        .run()
+      db.update(activity).set({ userId: null }).where(eq(activity.userId, userId)).run()
     })
 
     metrics.dataCleared()
 
     return NextResponse.json({
       success: true,
-      message: 'All data cleared successfully. Your Twitter connection is preserved.',
+      message: 'All your data is cleared. Your account and your X connection stay.',
     })
   } catch (error) {
     return handleRouteError(error, {

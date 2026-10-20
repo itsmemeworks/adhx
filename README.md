@@ -22,31 +22,36 @@ ADHX isn't a hosted service: you run it. Once a post's media has been kept, that
 
 ## What you get
 
-- **New.** Open ADHX and it plays what your people saved that you haven't seen yet, blended by a few signals you can read: fresh, saved together, the friends you watch most, and what's like the things you keep. Every post says why it's there, and you can ask for more or less from anyone. Then it stops: "You're all caught up. Go touch grass." Switch to Everyone, Friends only or Mine to keep watching, and pick what's in it: videos and photos by default, text posts and articles if you like reading.
-- **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it.
+- **New.** Open ADHX and it plays what your people saved that you haven't seen yet, blended by a few signals you can read: fresh, saved together, sent to you, the friends you watch most, and what's like the things you keep. Every post says why it's there. **Show more** or **Show less** from anyone and the blend listens to you, not to an ad budget. Then it stops: "You're all caught up. Go touch grass." Switch to Everyone, Friends only or Mine to keep watching, and pick what's in it: videos and photos by default, text posts and articles if you like reading.
+- **The meme vault.** Every save is downloaded once, at the highest resolution available (4K from X when the post has it), and served by ADHX. Nothing streams from the networks at watch time, and nothing vanishes when they delete it. Hit play before the copy has landed and the player says **Getting it ready…** with the real percent, then plays the moment it's kept.
 - **Fourteen networks.** X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch clips, Threads, Imgur and Bluesky. The list matches what [linktokeep.com](https://linktokeep.com) supports, plus Bluesky.
 - **Search by what you remember.** Describe it and ADHX finds it, across everyone's saves or just yours, with your friends' faces on what they kept. It matches the words, what's in the pictures, sampled video frames, what's said in a video and the text on screen (that meme's caption, a screenshot, burned-in subtitles). It all happens on your server, or on the optional native Mac worker: no picture, frame, sound or transcript is sent anywhere, and nothing goes to an AI service unless you add the optional search refinement key.
-- **A full-screen player.** Your saves play one after another, newest first, with search, channels and a share button. No ads in between.
-- **Channels.** Rabbit holes, dug by your friends: ADHX groups everyone's saves by what they're about and names the groups, gives every friend a channel of everything they kept (with what's new to you), and does the same for your own saves. Make your own channels too, and share them. Anything kept just for you stays out of all of it.
+- **A full-screen player.** New, channels, moments, search results and your own saves all play one after another, with a share button. No ads in between.
 - **Names on posts.** See which of your people saved what, in the player and in search. Saves are shared with your people by default; flip **Just for me** on any you'd rather keep to yourself.
-- **Right now.** What your lot are saving tonight, grouped into moments, with the faces of who's saving them. **Tune in** to watch along: see who's watching with you, who just saved the next one, and throw a 😂 or a "who sent this 💀" at the room. Strangers on a shared link only ever see counts.
-- **See what it's doing.** **N on their way** in the header opens _What your ADHX is doing_: every post being kept, converted, listened to, read or learned, step by step, who saved it, and the ones that need you (with **Retry** or **Keep the link only**). Free disk space and whether the Mac helper is connected are on the same page.
+- **Notes.** Add a line when you save ("making this Sunday"). Your people see it in a speech bubble by your face. Strangers never do.
+- **Send it straight to your people.** The Share sheet ends with your people's faces: tap one and the post leads their New with "Pete sent you this" (plus your note). It knows who already has it, so nobody gets the same cat twice.
+- **Channels.** Rabbit holes, dug by your friends: ADHX groups everyone's saves by what they're about and names the groups, gives every friend a channel of everything they kept (what's new to you, and their latest note), and does the same for your own saves. Like one of the group's? **Keep this channel** makes it yours. Make your own channels too, and share them. Anything kept just for you stays out of all of it.
+- **Right now.** What your lot are saving tonight, grouped into moments, with the faces of who's saving them. Something brewing? A forming moment shows who started it and a **Tell me when it's live** bell, which pings your browser or phone when it lands. **Tune in** to watch along: see who's watching with you, who just saved the next one, and throw a 😂 or a "who sent this 💀" at the room. Strangers on a shared link only ever see counts.
+- **See what it's doing.** **N on their way** in the header opens _What your ADHX is doing_ (`/doing`): every post being kept, converted, listened to, read or learned, step by step, who saved it, and the ones that need you (with **Retry** or **Keep the link only**). Free disk space and whether the Mac helper is connected are on the same page.
+- **Invites, with a bouncer if you want one.** Make a link, send it, they pick a name and they're in, phone pairing included. Set **Anyone, I approve** and you get the last word on who joins.
 - **X bookmarks, automatically.** Connect X once. Anything you bookmark there shows up in ADHX within the hour.
-- **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android. Save from any app, play and search your saves, and send the real file on to any chat.
+- **Phone apps.** [ADHX Share](#phone-app-adhx-share) puts ADHX in the share menu on iPhone and Android, and plays New, Channels and Live full screen. Save from any app, search, and send the real file on to any chat.
 - **Search from Claude.** Make an access key and the [adhx skill](#search-from-claude) can find things in your saves for you.
 
 ## What's new
 
 ADHX is now one shared feed for your people:
 
-- **New.** Only what your people saved that you haven't seen, with why each post is next, then "You're all caught up. Go touch grass."
-- **Saver faces and Just for me.** Every post shows who kept it. Saves are shared by default; **Just for me** keeps one out of everyone else's feed, channels and search.
-- **Channels from everyone.** Channels drawn from the whole group's saves, plus one per friend with what's new to you.
-- **Live with names.** Watch together, see who's watching and who saved the next one, and react as it plays.
+- **New.** Only what your people saved that you haven't seen, with why each post is next, **Show more / Show less** per friend, then "You're all caught up. Go touch grass."
+- **Saver faces, notes and Just for me.** Every post shows who kept it and what they said about it. Saves are shared by default; **Just for me** keeps one out of everyone else's feed, channels and search.
+- **Send straight to your people**, with a note. It leads their New until they've seen it.
+- **Channels from everyone.** Channels drawn from the whole group's saves (with **Keep this channel**), plus one per friend with what's new to you.
+- **Live with names.** Watch together, see who's watching and who saved the next one, and react as it plays. Forming moments get a **Tell me when it's live** bell.
 - **Search what's said and what's on screen**, across everyone's saves.
-- **Invite links** that sign a friend in and pair their phone in one go.
+- **Getting it ready.** The player waits for the kept copy with a real progress ring instead of giving up.
+- **Invite links** that sign a friend in and pair their phone in one go, with optional approval.
 
-Names stay on your server. Links you share with people outside it never show who saved anything.
+Built for short attention spans and long friendships. Names stay on your server. Links you share with people outside it never show who saved anything.
 
 ## Supported networks
 
@@ -104,10 +109,14 @@ For a published image, verify its source revision and architecture, then set `AD
 
 For UGREEN's Docker interface, use the optional [UGOS Pro walkthrough](deploy/nas/ugreen.md), including data-folder permissions and the first sign-in.
 
+For a Mac processing companion, the [performance guide](docs/mac-processing-performance.md)
+covers memory tuning and measured frame-extraction experiments alongside the
+[Mac setup guide](deploy/mac/README.md).
+
 On a shared NAS, start with `SEMANTIC_THREADS=1` and `KEEP_CONCURRENCY=1`.
 The [resource guide](deploy/nas/README.md#resource-and-storage-controls) shows
 how to budget CPU, RAM and swap, and check search/playback while a bulk import
-is being understood. Local picture/video search needs no external AI key;
+is being understood. Local picture and video search needs no external AI key.
 For a lighter NAS, the optional [native Apple Silicon worker](deploy/mac/README.md) moves background inference, video sampling and H.264 conversion to a Mac. The NAS keeps the database, retained media and a small query model.
 The [NAS and Mac processing overview](docs/remote-processing.md) explains the
 queues, network boundary, full-video sampling and file lifecycle with diagrams.
@@ -138,11 +147,11 @@ People who joined by invite have no email until they add one in **Settings → Y
 
 **Invite links are the easy path.** On the admin page or in **Settings → Your people**, press **Make a link** and send it however you like. Your friend opens it, sees "Ana wants you in.", picks a name and presses **Join**. That's the whole sign-up: no email, no password, and their phone pairing code is on the next screen. Each link works once, for 7 days. Pending ones are listed by a short code with **Copy link** and **Revoke**. A banned person's invites stop working. Links are shown once, when they're made: ADHX keeps only a fingerprint of each, so **Copy link** on an older invite asks first, then makes it a fresh link (the one you sent before stops working). Message previews can open an invite without using it; only pressing **Join** does.
 
-**Who can invite** is in **Settings → Your people** (admins): **Only me**, **Anyone, I approve** or **Anyone**. With **Anyone, I approve**, someone a member invites picks a name and lands on "Waiting for Ana to let you in"; their account can't see anything else until an admin presses **Approve** under **Waiting for you** (or **Not now**, or **Decline**). Invites an admin makes always let people straight in. `INVITES=members` only sets the first choice (**Anyone**); after that, Settings wins.
+**Who can invite** is in **Settings → Your people** (admins): **Only me**, **Anyone, I approve** or **Anyone**. With **Anyone, I approve**, someone a member invites picks a name and lands on "Waiting for Ana to let you in"; their account can't see anything else until an admin presses **Approve** under **Waiting for you** (or **Not now**, or **Decline**). Invites an admin makes always let people straight in. `INVITES=members` only sets the first choice (**Anyone**); after that, Settings wins. The example Compose files don't pass `INVITES` through, so add it to their `environment:` if you want it.
 
 Email sign-up works too. By default, anyone who can reach your server can make an account with their email. For a private group, set `ALLOWED_EMAILS` to a comma-separated list of emails and/or `@domain` entries. Everyone else gets "This ADHX is for invited people". Accounts that already exist can always sign in. Invite links work whatever `ALLOWED_EMAILS` says: the invite is the permission.
 
-The admin page has invites, sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, then set `ADMIN_USERNAMES=yourname` and restart once.
+The admin page has invites, sign-in links, numbers, hiding posts and banning accounts. With no email you get it on your first sign-in (see above). With email, sign up first, open `/api/auth/me` while signed in, put your `user.id` in `ADMIN_USER_IDS` and restart once. (`ADMIN_USERNAMES` is only a bridge for older installs.)
 
 Kept media and shared post previews do not require sign-in for anyone who can reach the server. Media URLs contain source post IDs, not secret tokens. Use private LAN/VPN access if that is your intended privacy boundary; invites and the email allowlist protect account creation, not playback.
 
@@ -174,7 +183,7 @@ Kept media and shared post previews do not require sign-in for anyone who can re
 | `TRUST_PROXY_IP_HEADERS=true`                | Use `X-Forwarded-For` for the visitor's address (for rate limits). Only when a proxy you run is the only way in.             |
 | `TYPESAFE_API_KEY`                           | Optional: refines search order and chooses names for automatic channels and moments, using search text and public post text. |
 | `NEXT_PUBLIC_IOS_APP_URL`                    | Optional: your TestFlight invite link, shown in Settings → Phone app.                                                        |
-| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: this project's GitHub releases.                                    |
+| `NEXT_PUBLIC_ANDROID_APP_URL`                | Optional: where people download the Android app. Default: the Android build guide in this repo.                              |
 
 Every setting is in [`.env.example`](.env.example).
 
@@ -280,14 +289,14 @@ Short share links (`pin.it`, Reddit's `/s/` links, `on.soundcloud.com`, `youtu.b
 
 ADHX Share puts ADHX in the share menu of every app on your phone. Share a post from X, Instagram, TikTok, YouTube or any of the other networks and a small sheet slides up: it saves the post to your ADHX, shows what was saved, and shows the copy being made. If your ADHX can't be reached, the link waits on the phone and goes when it can.
 
-The apps also play your saves full screen (swipe up for the next, Repeat, Save to your phone, a small window that keeps playing in other apps) and search them by meaning, with a reader for long posts. Your server does the work: downloading, understanding and streaming. The phone only ever talks to your own ADHX. The code is in [`apps/ios`](apps/ios) and [`apps/android`](apps/android); the API it uses is in [`docs/specs/phone-app.md`](docs/specs/phone-app.md).
+The apps open on **New**, full screen (swipe up for the next) until you're caught up, with **Channels** and **Live** beside it: faces on every post, notes, Why this one with Show more / Show less, sending to your people, forming moments with a bell that becomes a phone notification, and tuning in together with reactions. They search everyone's saves or just yours, show what's on its way, and handle Settings (your people, approvals, Just for me by default). Your server does the work: downloading, understanding and streaming. The phone only ever talks to your own ADHX. The code is in [`apps/ios`](apps/ios) and [`apps/android`](apps/android); the API it uses is in [`docs/specs/phone-app.md`](docs/specs/phone-app.md).
 
 ### Connect it
 
 1. On your computer, open your ADHX and go to **Settings → Phone app**. Press **Show the code**.
 2. Open ADHX Share on your phone and scan the code. Or scan it with the phone's own camera, or tap **Type the address instead** and type your ADHX's address and the 8-character code.
 
-The code works once, for 10 minutes. Open ADHX at an address your phone can reach when you make it: `localhost` won't work from a phone. Your connected phones are listed under the code, and **Remove** stops a phone from saving straight away.
+The code works once, for 10 minutes. Open ADHX at an address your phone can reach when you make it: `localhost` won't work from a phone. Joining from an invite link? The same code is on the "You're in." screen. Your connected phones are listed under the code, and **Remove** cuts a phone off straight away.
 
 ### iPhone
 
@@ -309,7 +318,7 @@ More in [`apps/ios/README.md`](apps/ios/README.md), including TestFlight. Option
 
 ### Android
 
-No signed APK release was published as part of this PR. Build a debug APK for a private trial using the steps below. When a signed APK is attached to a [GitHub release](https://github.com/itsmemeworks/adhx/releases), it can be opened on the phone (allow installation from your browser or files app when asked). [Obtainium](https://github.com/ImranR98/Obtainium) can then watch those releases for updates.
+There's no signed APK release yet. Build a debug APK for a private trial using the steps below. When a signed APK is attached to a [GitHub release](https://github.com/itsmemeworks/adhx/releases), it can be opened on the phone (allow installation from your browser or files app when asked). [Obtainium](https://github.com/ImranR98/Obtainium) can then watch those releases for updates.
 
 To build it yourself you need JDK 17 or newer and the Android SDK (Android Studio has both). Opening `apps/android` in Android Studio is simplest. The Gradle wrapper is committed; from a terminal:
 

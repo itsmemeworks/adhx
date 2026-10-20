@@ -6,6 +6,33 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
+
+- In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.
+- Native M4 shared-host trials repeated a lower physical footprint (1.9–2.2 vs 2.6–2.8 GiB), with byte-identical CPU vectors; inference speed improvement did not repeat reliably.
+- CoreML compiled but rejected absent-modality tensors at inference. Dispose the accelerated session before one warm CPU fallback; CPU failures still propagate. A vision-only prototype hit the memory guard and was discarded.
+- Synthetic-only harnesses compare representative frames, batched FFmpeg extraction and one-batch-ahead preparation. These prototypes never enter production claims or change light/normal/deep sampling; quality/fairness/cleanup gates remain explicit.
+- Optional TypeSafe image smoke test sends generated colours only; experimental typed judgments are not search vectors. No private media uploaded.
+- Regression tests cover allocation options, runtime fallback, timestamp validation, representative coverage, exact batch/reference frames and abort/EOF cleanup. Setup/architecture docs link measured results and reproduction steps.
+- No installed worker, server, queue, model cache, private credential or network setting changed. Release-matched rollout and real-library retrieval evaluation remain separate follow-ups.
+
+## 2026-10-20 — Just for me privacy gaps closed
+
+- **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.
+- **Just for me by default** now covers X sync (`saveBookmark(..., isPrivate)`, no pulse for private sync saves) and Keep this channel (`group-keep.ts`), like clones.
+- **Admin-only reads**: GET `/api/activity`, `/api/trending`, `/api/analytics` go through `adminOnlyResponse()` (`src/lib/admin/only.ts`); `public/llms.txt` rewritten for a private friends server.
+- **Kept files** (`src/lib/keep/file-access.ts`): a post whose only saves are Just for me is served only to an owner (session, phone key, or the post's HMAC `?k=` file token that `toPhonePost` and Shared lately add to the owner's own URLs, since AVPlayer/ExoPlayer send no headers), with `private, no-store`; anyone else gets the unsaved-post answer, and not-kept reasons are told to members only.
+- **Lifecycle**: clear data and account delete drop the account's "saved" pulses and `auto_channels` (now account-guarded, 56 triggers); removing one save drops its pulse; `AFTER DELETE ON bookmarks` triggers remove a post's vectors, queue and keyword rows with its last save.
+- PRIVACY.md, `/privacy`, ARCHITECTURE.md, CLAUDE.md and the NAS guide updated (on top of #567's rewrite, merged into this branch).
+
+## 2026-10-20 — Whole-system docs brought up to the friends feed
+
+- README: send to your people, notes, Show more / less, forming moments with "Tell me when it's live", Keep this channel, Getting it ready, `/doing`, invites with approval; phone app section matches the apps. Fixed stale setup lines (`ADMIN_USER_IDS` instead of `ADMIN_USERNAMES`, Android link default, PR wording, `INVITES` not passed by the Compose examples) and the garbled `KEEP_H264` comment in `.env.example`.
+- ARCHITECTURE.md rewritten around the current product: nine Mermaid diagrams (system context, save to watch, the New blend, live moments, who sees what, phone pairing and auth, plus the kept sign-in, understanding and search diagrams with quoted labels), every table by plane checked against `schema.ts`/`migrate.ts`, sections on New, sends, moments and bells, channels, invites and approval, the phone API. `TheaterShell`, Discover and the X-first flow removed or marked legacy.
+- PRIVACY.md and `/privacy` rewritten from the code: who sees what per data kind, notes, sends, viewing marks, weights, reactions, bells, invites, approvals, phone keys, avatars, kept files (unauthenticated, cached 7 days, existence visible), the Mac helper, Jev, analytics, admins, retention, clear vs delete.
+- CLAUDE.md top is now a ~25-line current overview with links; legacy sections are marked (history), the dead old-Header section is gone, test count is 3,558. AGENTS.md and `docs/remote-processing.md` overview lines corrected.
+- Privacy gaps found and documented, not fixed: the send sheet's `has` counts private saves; admin counts include private saves; kept files serve "Just for me" posts and reveal whether a post was saved; X sync and Keep this channel ignore Just for me by default; `GET /api/analytics` is public; Clear keeps `activity.user_id`; `auto_channels`, `post_embeddings` and `post_text_fts` outlive deletion.
+
 ## 2026-10-20 — The admin area, to the "10 · Admin" boards
 
 - `/admin` is now nine sections plus a person page (`/admin/people/{username}`) in the new design (`components/next/admin/`, `AdminShell`: NxHeader + Admin chip, a section nav that's a chip row on phones). Server pages read `src/lib/admin/boards/*`; `GET /api/admin/boards/{board}` returns the same. The old Matter `AdminClient` is gone; every capability stayed (hide/show, ban/unban, clear notes, invites, sign-in links, playlist hide, the log). Spec: `docs/specs/admin.md`.

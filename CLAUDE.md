@@ -37,7 +37,28 @@ Use org `your-org` and project `your-project`.
 
 **Your friends have better taste than the algorithm.**
 
-A private feed of the best posts from every network, kept on a server you run for your friends and family. UI copy follows the Voice section of `brand/BRAND.md` (punch up at ad tech, edgy not mean, clear first and funny second) and only describes what ships today. A self-hosted keeper for the posts you and your friends love, built with Next.js 16. It saves posts from X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky. It downloads their media once in the best quality and serves it itself (see "Kept media and link networks" below). `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
+A self-hosted, private, curated feed across fourteen social networks (X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur, Bluesky) for one group of close friends and family per server. UI copy follows the Voice section of `brand/BRAND.md` (punch up at ad tech, edgy not mean, clear first and funny second) and only describes what ships today.
+
+**The system in one breath.** One Next.js 16 container (React 19, route handlers as the backend) with one SQLite file (Drizzle over `better-sqlite3`) and a media folder (`MEDIA_DIR`). Every save's media is downloaded once (FxTwitter for X, yt-dlp for the rest) and served by `/api/files/…` (`keptSrc()`); search by meaning runs in forked model child processes, never in the web process; an optional native Mac helper (`PROCESSING_MODE=remote`) takes the heavy processing over HTTPS. Native iOS and Android apps (`apps/`) use `/api/app/*` with a phone key. `site/` is the separate adhx.com product site and builds on its own.
+
+**The rule: named to friends, never to strangers.** A member is a signed-in, approved, non-banned account; everyone on a server is one group. Saves are shared with members by default and named (face, name, note); **Just for me** (`bookmarks.is_private`) hides a save from everyone else. Signed-out surfaces (previews, signed-out Right now, public channels, public JSON, OG images, sitemap) only ever count savers. Every query over other people's saves uses `visibleSave` / `visibleSaveFilter` (`src/lib/people/savers.ts`); names come only from `saversFor(keys, viewerId)`. Kept files of shared posts are not behind sign-in; a Just for me-only post's files are owner-only (`src/lib/keep/file-access.ts`: session, phone key or the post's `?k=` file token on the owner's phone URLs).
+
+**Main surfaces** (nav in `src/components/next/PrimaryNav.tsx`; signed-in `/` → `/play?feed=new`):
+
+- **New** (`/play?feed=new`): the blended feed (`src/lib/feed/blend.ts`, `blend-db.ts`) of unseen posts your people saved, with why-reasons, Show more / less weights, sends first, then "caught up". Seen = `post_views`.
+- **Right now** (`/now`, `/moments/{slug}`, Tune in `/play?moment=`): live moments from the in-memory engine (`src/lib/moments/`), forming groups with "Tell me when it's live" bells (`moment_alert_subs` → `moment_alerts`), watchers and ephemeral reactions.
+- **Channels** (`/channels`): From everyone (`group_channels`), Your people (one per friend), Made for you (`auto_channels`), your own tags; Keep this channel (`src/lib/channels/`).
+- **My saves** (`/play?recent=1`) and **Search** (`/search`, by words, pictures, frames, speech and on-screen text).
+- Also: notes on saves, sends (`src/lib/sends/`, `post_sends`), Getting it ready (`processing/keep-status.ts`), `/doing` (`processing/doing.ts`), invites with optional approval (`src/lib/auth/invites.ts`, `approval.ts`), phone pairing (`auth/phone-pairing.ts`), Settings (picture, people, approvals). Everything plays in `TheaterV2` (`src/components/next/theater/`).
+
+**Where to read next:**
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md): system diagrams, every table by plane, the save-to-watch flow, the blend, moments, privacy boundary, phone auth.
+- Specs: [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md) (the contract for members, privacy, New, sends, channels, live, bells), [`docs/specs/phone-app.md`](docs/specs/phone-app.md) (`/api/app/*`), [`docs/remote-processing.md`](docs/remote-processing.md) (Mac helper and processing protocol), [`docs/specs/translation-safety.md`](docs/specs/translation-safety.md).
+- Setup: [`README.md`](README.md), [`deploy/nas/README.md`](deploy/nas/README.md), [`deploy/mac/README.md`](deploy/mac/README.md); release blockers in [`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md).
+- What users may know: [`PRIVACY.md`](PRIVACY.md) (keep `/privacy` in step).
+
+**History.** ADHX began as an X-first hosted bookmark app (library grid, `TheaterShell`, Discover at `/live`, `/trending`, `/leaderboard`). Those surfaces are removed and redirect (`next.config.js`). Sections below marked **(history)** describe them; keep them only for context on old data (`activity`, `collection_events`) and old URLs. `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
 
 ## Agent Context Protocol
 
@@ -49,71 +70,6 @@ This repo carries its own cumulative context so any fresh session — new branch
 4. **Always commit, push, and open/update a PR** after substantive work. Do not wait to be asked. Use the GitHub account named in gitignored `CLAUDE.local.md`. PR titles use Conventional Commit syntax with a lowercase subject and are verified via `gh pr view --json title` before handoff. Never merge — the user merges manually. This overrides any global “don't push unless asked” preference.
 
 `AGENTS.md` at the repo root is the cross-tool entry point (for agents that don't read CLAUDE.md) and points here.
-
-## Current deployment reference
-
-Use [`README.md`](README.md) and [`deploy/nas/README.md`](deploy/nas/README.md)
-for current setup, and [`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md)
-for unresolved release blockers. The legacy diagram and route notes below still
-include the earlier X-first hosted application; they are historical context,
-not a complete description of the present fourteen-network product. Sign-in is
-by email; X is an optional connection. The current home is Right now, with the
-theater, search and channels alongside it. `site/` builds separately; editing
-it does not publish adhx.com.
-
-For the current phone-save, NAS-retention and native Mac processing flows, use
-[`docs/remote-processing.md`](docs/remote-processing.md). It links the installation
-and verification guides and maps the protocol to its implementation.
-
-## Architecture Overview (legacy X-first flow)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                  BROWSER                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Landing Page          Main Feed              URL Prefix Feature            │
-│  ┌─────────────┐      ┌─────────────┐        ┌─────────────────────┐       │
-│  │ /           │      │ / (auth'd)  │        │ /{user}/status/{id} │       │
-│  │ Marketing   │      │ FeedGrid    │        │ Quick-save tweet    │       │
-│  │ OAuth Start │      │ Lightbox    │        │ → Add & redirect    │       │
-│  └─────────────┘      │ FilterBar   │        └─────────────────────┘       │
-│                       └─────────────┘                                       │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              NEXT.JS API ROUTES                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Auth                    Data                      Media                     │
-│  ┌──────────────┐       ┌──────────────┐         ┌──────────────┐          │
-│  │ /auth/twitter│       │ /api/feed    │         │ /api/media/  │          │
-│  │ /auth/callback       │ /api/sync    │◄──SSE   │   video      │          │
-│  │ /auth/status │       │ /api/tweets/ │         └──────┬───────┘          │
-│  └──────┬───────┘       │   add        │                │                   │
-│         │               │ /api/bookmarks               │                   │
-│         │               └──────┬───────┘                │                   │
-│         │                      │                        │                   │
-└─────────┼──────────────────────┼────────────────────────┼───────────────────┘
-          │                      │                        │
-          ▼                      ▼                        ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────┐
-│   Twitter API   │    │  SQLite + Drizzle│    │    FxTwitter API    │
-│   (OAuth 2.0)   │    │                  │    │ (Media proxy/embed) │
-│                 │    │  bookmarks       │    │                     │
-│  • Auth tokens  │    │  bookmark_media  │    │  • Video URLs       │
-│  • User info    │    │  bookmark_tags   │    │  • Photo URLs       │
-│  • Bookmarks    │    │  read_status     │    │  • Tweet enrichment │
-│                 │    │  sync_logs       │    │                     │
-└─────────────────┘    └─────────────────┘    └─────────────────────┘
-```
-
-**Data Flow:**
-
-1. **Sync**: Twitter API → Process tweets → SQLite (via `/api/sync` SSE stream)
-2. **Add**: URL → FxTwitter enrichment → SQLite (via `/api/tweets/add`)
-3. **View**: SQLite → Feed API → React components
-4. **Media**: FxTwitter proxy → Video/Photo display (bypasses Twitter CORS)
 
 ## Quick Start
 
@@ -159,7 +115,7 @@ Accounts are first-class (`users` table). **There are two ways in: an invite lin
 - **X start + callback**: `GET /api/auth/twitter` requires a session; unsigned visitors redirect `/?auth_error=x_link_only`. OAuth state is durably bound to that initiating ADHX user and its X-link generation; a callback under a different session is rejected without consuming the initiator's state, and disconnect increments the generation so an in-flight callback cannot silently reconnect. The callback calls `findOrCreateUserForX(x, existingSession.userId)`: signed-in users get X **linked** for bookmark sync; no session or `sign_in_required` → `/?auth_error=x_link_only` (no user created); an X identity already on another account redirects `/settings?auth_error=x_already_linked` without touching the session. Identity, generation, token, and X-derived profile writes finalize atomically. After a successful link, honor `adhx_return_url` if safe, else land on `/settings` (not `/?firstLogin=true` — signed-in `/` redirects to `/now` and drops the query).
 - **Status route semantics** (`/api/auth/twitter/status`): `authenticated` = valid session + users row (independent of X). A **fatal token-refresh error CAS-deletes only the rejected credential row and keeps the session** — a concurrent relink/rotation always wins; `xConnected`/`needsReconnect` describe the X state. X profile metadata updates use the same identity/generation/token guard. Sync for users without X tokens surfaces SSE `code: 'reauth'` with a Connect-with-X prompt (already-signed-in reconnect, not sign-in).
 - **Link lifetime**: 60 minutes for `admin` delivery, 15 minutes for email/development log. Resend cooldown remains 60 seconds and uses creation timestamps, including legacy UTC SQLite values. GET/HEAD previews cannot consume links. Unfinished accounts still go to `/welcome` on their next confirmed sign-in.
-- **Invites** (`src/lib/auth/invites.ts`, table `invites`): `POST /api/invites { nameHint? }` → `{ id, url, expiresAt }` (admins; any member when **Who can invite** isn't "Only me"; 30/hour per account and at most 20 waiting), `GET /api/invites` → `{ canInvite, invites }` (working ones only, never the link: everyone's for an admin, your own otherwise), `DELETE /api/invites/[id]` revokes (your own, or any for an admin). Only the token's SHA-256 is stored; 7-day expiry, single use. `GET /invite/<token>` (route handler, not a page) is a script-free confirmation ("Ana wants you in.") with a name field — previews and HEAD never consume it. Only a same-origin, ≤1 KiB URL-encoded `POST /invite/<token>` does: one conditional `UPDATE … WHERE unused AND unrevoked AND unexpired AND maker still exists, isn't banned and may invite` claims it, then (same transaction) creates a `users` row with **no email** (`usernameChosen = true`, name validated like `/welcome`) and a `user_identities` row `('invite', <invite id>)`. A bad or taken name rolls the claim back, leaving the invite unused. `ALLOWED_EMAILS` does not apply: the invite is the permission. Success sets the session cookie like the email callback and 303s to `/invite/done` ("You're in.", the phone pairing code/QR from the shared `components/next/settings/PairCode.tsx`, and "Skip, take me to the feed"). Invite accounts add an email later through the normal Settings email change. Their only sign-in is the 30-day session cookie until they do, so the done page and Settings nudge them. Cards: Settings → Your people (`PeopleCard`: rows show `inviteCode(id)`, the first 4 characters of the public id, never the token) and the admin area's Invites section (`/admin/invites`, `components/next/admin/InvitesView.tsx`, calling the same routes). Links are only known when made, so **Copy link** on an older invite confirms, then `POST /api/invites/[id]/link` swaps in a fresh token (same id, code and expiry; the old link stops working). Tests: `src/__tests__/api/invites.test.ts`, `join-approvals.test.ts`.
+- **Invites** (`src/lib/auth/invites.ts`, table `invites`): `POST /api/invites { nameHint? }` → `{ id, url, expiresAt }` (admins; any member when **Who can invite** isn't "Only me"; 30/hour per account and at most 20 waiting), `GET /api/invites` → `{ canInvite, invites }` (working ones only, never the link: everyone's for an admin, your own otherwise), `DELETE /api/invites/[id]` revokes (your own, or any for an admin). Only the token's SHA-256 is stored; 7-day expiry, single use. `GET /invite/<token>` (route handler, not a page) is a script-free confirmation ("Ana wants you in.") with a name field — previews and HEAD never consume it. Only a same-origin, ≤1 KiB URL-encoded `POST /invite/<token>` does: one conditional `UPDATE … WHERE unused AND unrevoked AND unexpired AND maker still exists, isn't banned and may invite` claims it, then (same transaction) creates a `users` row with **no email** (`usernameChosen = true`, name validated like `/welcome`) and a `user_identities` row `('invite', <invite id>)`. A bad or taken name rolls the claim back, leaving the invite unused. `ALLOWED_EMAILS` does not apply: the invite is the permission. Success sets the session cookie like the email callback and 303s to `/invite/done` ("You're in.", the phone pairing code/QR from the shared `components/next/settings/PairCode.tsx`, and "Skip, take me to the feed"). Invite accounts add an email later through the normal Settings email change. Their only sign-in is the 30-day session cookie until they do, so the done page and Settings nudge them. Cards: Settings → Your people (`PeopleCard`: rows show `inviteCode(id)`, the first 4 characters of the public id, never the token) and the admin area's Invites section (`/admin/invites`, `components/next/admin/InvitesView.tsx`, calling the same routes), both on `useInvites`. Links are only known when made, so **Copy link** on an older invite confirms, then `POST /api/invites/[id]/link` swaps in a fresh token (same id, code and expiry; the old link stops working). Tests: `src/__tests__/api/invites.test.ts`, `join-approvals.test.ts`.
 - **Who can invite and join approvals** (`inviteMode()` in `invites.ts`, `src/lib/auth/approval.ts`): `admin` (Only me) · `approve` (Anyone, I approve) · `anyone`, stored in `server_settings` key `invites.who` (`src/lib/settings/server.ts`); `INVITES=members` is only the first default (`anyone`). `PATCH /api/people { inviteMode }` (admins). With `approve`, someone a non-admin invited joins with `users.approval = 'pending'` and 303s to `/invite/waiting` ("Waiting for Ana to let you in", polls `GET /api/auth/approval` every 5 s). **`getCurrentUserId()` returns null for any account that isn't `approved`** (so every route, page and `withAuth` treats it as signed out); only the waiting page and `/api/auth/approval` use `getWaitingAccount()`. Phone keys (`phoneCaller`) and access keys (`accessKeyUser`) refuse them too; `listMembers`, `membersById` and invite makers (`makerCanInvite`) require `approved`. Admins answer under Settings → Your people → Waiting for you: `GET /api/people/requests`, `POST /api/people/requests/[id] { decision: approve | not_now | decline }` (id = the invite they joined with; `not_now` snoozes the card 3 days via `approval_snoozed_until`, `decline` sets `declined`, kept so the waiting page can say "Not this time."). Audited (`approve_join`/`decline_join`/`set_invite_mode`). Phone: `GET /api/app/people`, `POST /api/app/people/requests/[id]`. Non-allowlisted email sign-ins are still refused, not queued (that would mean emailing strangers' addresses).
 - **Sign-in UI**: `SignInModal` + `useAuthMe` in `src/components/auth/` — always-dark modal, **email magic link only** (no Continue with X). Opened at **save-intent** (theater Save buttons, collection Save CTA); viewing never requires an account. Link X later in Settings.
 
@@ -416,7 +372,7 @@ Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts
 
 All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`).
 
-All preview routes render the shared-mode theater (`SharedPostStatic` + `<TheaterShell mode="shared">` — see "Preview pages ARE the theater" under the Theater section). The per-platform media-resolution notes below still apply.
+All preview routes render `SharedPreviewPage`: crawler output (`generateMetadata`, JSON-LD, `SharedPostStatic`) plus `PreviewTheater` → `TheaterV2` (see "Preview pages now play in the new theater" below; the `TheaterShell` notes there are history). The per-platform media-resolution notes below still apply.
 
 **Tweet preview**:
 
@@ -444,7 +400,7 @@ All preview routes render the shared-mode theater (`SharedPostStatic` + `<Theate
 
 **Save-to-collection**: a signed-in new-open of a preview autosaves the lead (see Tweet preview above). The chrome Save button still POSTs `/api/bookmarks/add` and flips to Saved. Saved Instagram images/carousels, Reels, and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
 
-**AppShell** suppresses the global Header for these preview paths via the `isFullWidth` regex — see `src/components/AppShell.tsx`. Add new preview paths there to avoid the double-header issue.
+AppShell (`src/components/AppShell.tsx`) draws no header; preview pages render their own chrome. Private pages that should send signed-out visitors to `/start` are listed there.
 
 **OG Image Selection** (`getOgImage()` in `src/lib/utils/og-image.ts`):
 When generating Open Graph metadata for social unfurling, images are selected in priority order:
@@ -461,7 +417,9 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - `summary_large_image` — tweets with rich media (photos, videos, article covers, external thumbnails)
 - `summary` — text-only tweets where OG image is the author's avatar (small square card fits avatars better than a stretched banner)
 
-### Trending & Activity Pulse (the SEO growth loop)
+### Trending & Activity Pulse (history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 `/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`popular` / `videos` / `photos` / `text` / `articles` — see `FILTER_SLUGS` in `src/lib/trending/filter.ts`) are public, **anonymous**, crawlable feeds of what the community is watching and sending right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the dark ranked list (`TrendingRankedList` — see the Theater section) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
 
@@ -715,17 +673,6 @@ The find-by-meaning redesign (phases 0–7) is the only UI for signed-in people:
 - Legacy `localStorage.theme` values are never read, so old `light` / `system` preferences cannot affect rendering.
 - There are no theme controls in public navigation, account dropdowns, theater menus, or Settings. The former theme context, resolver, `ThemeToggle` component, and Matter-light token set were removed.
 
-### Mobile Header (overflow-safe)
-
-The authed `Header` (`src/components/Header.tsx`) packs many controls. On phones, keep the row from overflowing the viewport:
-
-- Secondary actions (theme toggle + sync) are hidden in the bar (`hidden sm:*`) and moved into the **avatar dropdown menu** (`sm:hidden` section there).
-- The Collection entry hides its streak segment below `sm`.
-- There is **no** separate mobile hamburger — the avatar menu already has Saved / Discover / Search / Channels / Leaderboard / Settings (Saved → `/play?recent=1`, Search → `/search`, Channels → `/channels`).
-- The old header has no search field any more (search is `/search`).
-
-When adding header controls, verify the cluster's minimum width still fits ~360px (macOS Chrome won't render below ~500px, so measure item widths in the DOM rather than trusting a visual check).
-
 ### UI Patterns
 
 **Mobile Input Zoom Prevention:**
@@ -766,7 +713,9 @@ useEffect(() => {
 
 This avoids prop drilling and keeps keyboard logic centralized while allowing distributed UI responses.
 
-### Home routing & the Theater (`/` is the theater, signed in or out)
+### Home routing & the old Theater (history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 **Terminology (owner decision):** a **playlist** is a single shared tag — the thing at `/t/{username}/{tag}`, the thing `/leaderboard` ranks, the thing you clone with **Save playlist**. A user's own pile of saved posts is **Saved** (the theater tab at `/saved`; `/collection` 308s there). The grid that browses it is the **Library**. Keep those three words straight in UI copy: playlist = one shared tag, Saved = your saves, library = the grid over them. APIs, DB columns (`collection_events`, `tag_shares`) and the `/api/collections/*` endpoints still say "collection" — they're indexed, in sitemaps, and public contracts.
 
@@ -815,7 +764,9 @@ The library grid (`AuthedHome`, `FeedGrid`, `FilterBar`, `FeedCard`) was removed
 
 - **No gamification.** The streak card, its API route and the flame badges were REMOVED (owner: "we don't want to gamify things — we've added that with the leaderboard"). Don't reintroduce a streak.
 
-### Quote Tweet Handling
+### Quote Tweet Handling (partly history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 Quote tweets display embedded content showing the quoted tweet. Two data sources:
 
@@ -873,7 +824,9 @@ sanitizeTag('AI/ML') // → 'ai-ml'
 
 **UI Preview**: The `TagInput` component shows a real-time preview of the sanitized tag as users type (e.g., "Test Tag!" → "→ test-tag").
 
-### Landing Page Optimization
+### Landing Page Optimization (history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 Signed-out `/` now renders the theater (see "Home routing & the Theater" above); Unauthenticated visitors still trigger no authenticated API calls:
 
@@ -1023,7 +976,9 @@ Key files:
 
 ### Database (SQLite + Drizzle)
 
-Database location: `./data/adhdone.db`
+Every current table, grouped by plane (people, feed, sends, moments, phone, keep, understanding, channels, …), is in [`ARCHITECTURE.md` → Persistence planes](ARCHITECTURE.md#persistence-planes). The table below covers the core account and save tables.
+
+Database location: `./data/adhdone.db` locally (`DATABASE_PATH`, `/data/adhx.db` in Docker)
 
 **Multi-user schema with composite primary keys:**
 
@@ -1094,57 +1049,61 @@ export async function GET() {
 
 ## Key API Routes
 
-| Route                                           | Method      | Auth | Description                                                                                                                                                                                                                                                            |
-| ----------------------------------------------- | ----------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/health`                                   | GET         | No   | Health check for monitoring                                                                                                                                                                                                                                            |
-| `/api/activity`                                 | GET         | No   | Public anonymous activity pulse (recent previews/saves/reads/shares, no userId, `no-store`; in-process burst cache is moderation-gated)                                                                                                                                |
-| `/api/analytics`                                | GET         | No   | Aggregate growth rollups (`?window=today\|week\|month\|all`) — totals, by platform, by type, top posts. Never includes userId                                                                                                                                          |
-| `/api/analytics`                                | POST        | No   | Client UI events (copy / open / send / shortcut). Identifiers + allowlisted dimensions only. Same-origin + rate-limited                                                                                                                                                |
-| `/api/activity/share`                           | POST        | No   | Record a send/download. Body `{ platform, id }` only — display fields copied server-side. 204.                                                                                                                                                                         |
-| `/api/trending`                                 | GET         | No   | Public anonymous trending JSON (wraps `getTrendingItems`, optional `?platform=`, no userId, `no-store`) — for GEO/AI search                                                                                                                                            |
-| `/api/feed`                                     | GET         | Yes  | Main feed with filtering (`?id=` returns one bookmark regardless of read state — used to open a saved tweet in the collection theater). Default hides archived; `hideArchived=false` includes them; `archivedOnly=true` is archived posts only (library Show archived) |
-| `/api/feed/blend`                               | GET         | Yes  | The blended feed: `?mode=new\|everyone\|friends\|mine&types=&limit=&cursor=` → `{ items, nextCursor, caughtUp, nothingYet, total, types, waiting }`; items carry `savers`, `why`, `whyReasons` (see "New and the blended feed")                                        |
-| `/api/feed/types`                               | GET/PUT     | Yes  | "What's in your feed": `{ types }` (`video`, `photo`, `text`, `article`; default video + photo); PUT `{ types }` with at least one                                                                                                                                     |
-| `/api/feed/weights`                             | GET/PUT     | Yes  | "Show more / less from …": `{ weights: { username: -1\|1 } }`; PUT `{ username, weight: -1\|0\|1 }` (other members only)                                                                                                                                               |
-| `/api/views`                                    | POST        | Yes  | Mark posts seen `{ posts: [{ platform, id }] }` (≤50) → 204; idempotent (`post_views`, first `seen_at` kept, pruned after 180 days at migrate)                                                                                                                         |
-| `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes  | Toggle read status                                                                                                                                                                                                                                                     |
-| `/api/bookmarks/[id]/tags`                      | POST/DELETE | Yes  | Add/remove tags                                                                                                                                                                                                                                                        |
-| `/api/bookmarks/[id]/private`                   | PATCH       | Yes  | "Just for me": `{ platform, private }` → `{ private }` (private saves are hidden from other members and the pulse)                                                                                                                                                     |
-| `/api/bookmarks/[id]/note`                      | PATCH       | Yes  | Note on your save: `{ platform, note }` → `{ note }` (≤140 characters, empty or null clears; shown to members only)                                                                                                                                                    |
-| `/api/sync`                                     | GET         | Yes  | SSE sync stream                                                                                                                                                                                                                                                        |
-| `/api/tweets/add`                               | POST        | Yes  | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`)                                                                                                                                                                                                   |
-| `/api/bookmarks/add`                            | POST        | Yes  | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver                                                                                                                                                                          |
-| `/api/tags`                                     | GET         | Yes  | List user's tags with counts and share URLs                                                                                                                                                                                                                            |
-| `/api/tags`                                     | PATCH       | Yes  | Toggle tag public sharing (returns `shareUrl`)                                                                                                                                                                                                                         |
-| `/api/tags`                                     | DELETE      | Yes  | Delete tag from all bookmarks                                                                                                                                                                                                                                          |
-| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No   | View a shared playlist (friendly URL)                                                                                                                                                                                                                                  |
-| `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes  | Clone shared tag to user's account                                                                                                                                                                                                                                     |
-| `/api/share/tag/[code]`                         | GET         | No   | View shared tag (legacy random code)                                                                                                                                                                                                                                   |
-| `/api/share/tweet/[username]/[id]`              | GET         | No   | Public tweet JSON API (LLM-friendly, `no-store` so moderation runs per request)                                                                                                                                                                                        |
-| `/api/og/playlist/[username]/[tag]`             | GET         | No   | Dynamic 1200×630 playlist social card; public playlists get adaptive mosaics/text tiles, private/missing playlists get a generic non-identifying card                                                                                                                  |
-| `/api/auth/twitter`                             | GET         | Yes  | Start X OAuth to _link_ bookmark sync (session required; unsigned → `/?auth_error=x_link_only`)                                                                                                                                                                        |
-| `/api/auth/twitter/callback`                    | GET         | Yes  | X OAuth callback (browser bounce; session required to link)                                                                                                                                                                                                            |
-| `/api/auth/twitter/status`                      | GET         | No   | Check auth status and refresh tokens                                                                                                                                                                                                                                   |
-| `/api/media/instagram/video`                    | GET         | No   | Stream Instagram Reel MP4 inline (Range supported)                                                                                                                                                                                                                     |
-| `/api/media/instagram/video/download`           | GET         | No   | Stream Reel MP4 with `Content-Disposition: attachment`                                                                                                                                                                                                                 |
-| `/api/media/tiktok/video`                       | GET         | No   | Stream TikTok MP4 inline (Range supported)                                                                                                                                                                                                                             |
-| `/api/media/tiktok/video/download`              | GET         | No   | Stream TikTok MP4 with `Content-Disposition: attachment`                                                                                                                                                                                                               |
-| `/api/media/tiktok/thumbnail`                   | GET         | No   | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover                                                                                                                                                                  |
-| `/api/media/instagram/thumbnail`                | GET         | No   | Resolve + proxy an Instagram image/poster from `id`; `index=1..20` selects an ordered carousel slide and `download=1` serves an attachment                                                                                                                             |
-| `/api/collections/trending`                     | GET         | No   | Public anonymous collection leaderboard JSON (`?window=today\|week\|month\|all-time`, wraps `getCollectionLeaderboard`, `no-store`)                                                                                                                                    |
-| `/api/invites`                                  | GET/POST    | Yes  | List working invites (no links) / make one (admin, or members with `INVITES=members`)                                                                                                                                                                                  |
-| `/api/invites/[id]`                             | DELETE      | Yes  | Revoke an unused invite                                                                                                                                                                                                                                                |
-| `/invite/[token]`                               | GET/POST    | No   | Script-free invite page; same-origin form POST spends it, makes an email-less account, signs in → `/invite/done`                                                                                                                                                       |
-| `/api/admin/overview`                           | GET         | Yes  | Admin Overview board (`?range=` or `?window=`). Every `/api/admin/*` answer is `private, no-store`                                                                                                                                                                     |
-| `/api/admin/boards/[board]`                     | GET         | Yes  | Admin: one section's numbers (`overview`, `people`, `posts`, `channels`, `live`, `analytics`, `processing`, `moderation`, `invites`; `?range=`)                                                                                                                        |
-| `/api/admin/people/[username]`                  | GET/POST    | Yes  | Admin: one person's board / `{ role: 'admin' \| 'user' }` (audited; 409 for the last admin). `DELETE …/phones/[id]` removes a phone                                                                                                                                    |
-| `/api/admin/processing`                         | POST        | Yes  | Admin: `pause` / `resume` new work, `retry_failed`, or `retry` / `link_only` one post (audited)                                                                                                                                                                        |
-| `/api/admin/posts`                              | GET/POST    | Yes  | Admin: inspect a post (`?url=` or `platform`+`id`) / hide or restore it (writes `moderated_posts` + `activity.hidden`); `clearNotes` (true, or a username) clears notes                                                                                                |
-| `/api/admin/users`                              | GET/POST    | Yes  | Admin: inspect a username (counts only, no email/userId) / ban or unban / `clearNotes: true` clears every note they left                                                                                                                                               |
-| `/api/admin/activity/hide`                      | POST        | Yes  | Admin: hide/unhide a post from the pulse (same as POST `/api/admin/posts`)                                                                                                                                                                                             |
-| `/api/admin/collections/hide`                   | POST        | Yes  | Admin: hide/unhide a playlist from leaderboards (`{ username, tag, hidden? }`)                                                                                                                                                                                         |
+The friends-feed routes (`/api/feed/blend`, `/api/views`, `/api/posts/send`, `/api/moments/*`, `/api/channels/*`, `/api/invites`, `/api/people`, `/api/activity/processing*`) are listed in [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md); the phone's `/api/app/*` in [`docs/specs/phone-app.md`](docs/specs/phone-app.md). The table below is the older core.
 
-### Discovery leaderboards (`/leaderboard`)
+| Route                                           | Method      | Auth  | Description                                                                                                                                                                                                                                                            |
+| ----------------------------------------------- | ----------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/health`                                   | GET         | No    | Health check for monitoring                                                                                                                                                                                                                                            |
+| `/api/activity`                                 | GET         | Admin | Public anonymous activity pulse (recent previews/saves/reads/shares, no userId, `no-store`; in-process burst cache is moderation-gated)                                                                                                                                |
+| `/api/analytics`                                | GET         | Admin | Aggregate growth rollups (`?window=today\|week\|month\|all`) — totals, by platform, by type, top posts. Never includes userId                                                                                                                                          |
+| `/api/analytics`                                | POST        | No    | Client UI events (copy / open / send / shortcut). Identifiers + allowlisted dimensions only. Same-origin + rate-limited                                                                                                                                                |
+| `/api/activity/share`                           | POST        | No    | Record a send/download. Body `{ platform, id }` only — display fields copied server-side. 204.                                                                                                                                                                         |
+| `/api/trending`                                 | GET         | Admin | Public anonymous trending JSON (wraps `getTrendingItems`, optional `?platform=`, no userId, `no-store`) — for GEO/AI search                                                                                                                                            |
+| `/api/feed`                                     | GET         | Yes   | Main feed with filtering (`?id=` returns one bookmark regardless of read state — used to open a saved tweet in the collection theater). Default hides archived; `hideArchived=false` includes them; `archivedOnly=true` is archived posts only (library Show archived) |
+| `/api/feed/blend`                               | GET         | Yes   | The blended feed: `?mode=new\|everyone\|friends\|mine&types=&limit=&cursor=` → `{ items, nextCursor, caughtUp, nothingYet, total, types, waiting }`; items carry `savers`, `why`, `whyReasons` (see "New and the blended feed")                                        |
+| `/api/feed/types`                               | GET/PUT     | Yes   | "What's in your feed": `{ types }` (`video`, `photo`, `text`, `article`; default video + photo); PUT `{ types }` with at least one                                                                                                                                     |
+| `/api/feed/weights`                             | GET/PUT     | Yes   | "Show more / less from …": `{ weights: { username: -1\|1 } }`; PUT `{ username, weight: -1\|0\|1 }` (other members only)                                                                                                                                               |
+| `/api/views`                                    | POST        | Yes   | Mark posts seen `{ posts: [{ platform, id }] }` (≤50) → 204; idempotent (`post_views`, first `seen_at` kept, pruned after 180 days at migrate)                                                                                                                         |
+| `/api/bookmarks/[id]/read`                      | POST/DELETE | Yes   | Toggle read status                                                                                                                                                                                                                                                     |
+| `/api/bookmarks/[id]/tags`                      | POST/DELETE | Yes   | Add/remove tags                                                                                                                                                                                                                                                        |
+| `/api/bookmarks/[id]/private`                   | PATCH       | Yes   | "Just for me": `{ platform, private }` → `{ private }` (private saves are hidden from other members and the pulse)                                                                                                                                                     |
+| `/api/bookmarks/[id]/note`                      | PATCH       | Yes   | Note on your save: `{ platform, note }` → `{ note }` (≤140 characters, empty or null clears; shown to members only)                                                                                                                                                    |
+| `/api/sync`                                     | GET         | Yes   | SSE sync stream                                                                                                                                                                                                                                                        |
+| `/api/tweets/add`                               | POST        | Yes   | Add single tweet (Twitter-only, delegates from `/api/bookmarks/add`)                                                                                                                                                                                                   |
+| `/api/bookmarks/add`                            | POST        | Yes   | Platform-agnostic add — accepts X / Instagram / TikTok URLs, dispatches to the right resolver                                                                                                                                                                          |
+| `/api/tags`                                     | GET         | Yes   | List user's tags with counts and share URLs                                                                                                                                                                                                                            |
+| `/api/tags`                                     | PATCH       | Yes   | Toggle tag public sharing (returns `shareUrl`)                                                                                                                                                                                                                         |
+| `/api/tags`                                     | DELETE      | Yes   | Delete tag from all bookmarks                                                                                                                                                                                                                                          |
+| `/api/share/tag/by-name/[username]/[tag]`       | GET         | No    | View a shared playlist (friendly URL)                                                                                                                                                                                                                                  |
+| `/api/share/tag/by-name/[username]/[tag]/clone` | POST        | Yes   | Clone shared tag to user's account                                                                                                                                                                                                                                     |
+| `/api/share/tag/[code]`                         | GET         | No    | View shared tag (legacy random code)                                                                                                                                                                                                                                   |
+| `/api/share/tweet/[username]/[id]`              | GET         | No    | Public tweet JSON API (LLM-friendly, `no-store` so moderation runs per request)                                                                                                                                                                                        |
+| `/api/og/playlist/[username]/[tag]`             | GET         | No    | Dynamic 1200×630 playlist social card; public playlists get adaptive mosaics/text tiles, private/missing playlists get a generic non-identifying card                                                                                                                  |
+| `/api/auth/twitter`                             | GET         | Yes   | Start X OAuth to _link_ bookmark sync (session required; unsigned → `/?auth_error=x_link_only`)                                                                                                                                                                        |
+| `/api/auth/twitter/callback`                    | GET         | Yes   | X OAuth callback (browser bounce; session required to link)                                                                                                                                                                                                            |
+| `/api/auth/twitter/status`                      | GET         | No    | Check auth status and refresh tokens                                                                                                                                                                                                                                   |
+| `/api/media/instagram/video`                    | GET         | No    | Stream Instagram Reel MP4 inline (Range supported)                                                                                                                                                                                                                     |
+| `/api/media/instagram/video/download`           | GET         | No    | Stream Reel MP4 with `Content-Disposition: attachment`                                                                                                                                                                                                                 |
+| `/api/media/tiktok/video`                       | GET         | No    | Stream TikTok MP4 inline (Range supported)                                                                                                                                                                                                                             |
+| `/api/media/tiktok/video/download`              | GET         | No    | Stream TikTok MP4 with `Content-Disposition: attachment`                                                                                                                                                                                                               |
+| `/api/media/tiktok/thumbnail`                   | GET         | No    | Resolve + proxy a TikTok poster JPEG from `username`+`id` (via tiktxk → CDN); used by feed + Discover                                                                                                                                                                  |
+| `/api/media/instagram/thumbnail`                | GET         | No    | Resolve + proxy an Instagram image/poster from `id`; `index=1..20` selects an ordered carousel slide and `download=1` serves an attachment                                                                                                                             |
+| `/api/collections/trending`                     | GET         | No    | Public anonymous collection leaderboard JSON (`?window=today\|week\|month\|all-time`, wraps `getCollectionLeaderboard`, `no-store`)                                                                                                                                    |
+| `/api/invites`                                  | GET/POST    | Yes   | List working invites (no links) / make one (admin, or members with `INVITES=members`)                                                                                                                                                                                  |
+| `/api/invites/[id]`                             | DELETE      | Yes   | Revoke an unused invite                                                                                                                                                                                                                                                |
+| `/invite/[token]`                               | GET/POST    | No    | Script-free invite page; same-origin form POST spends it, makes an email-less account, signs in → `/invite/done`                                                                                                                                                       |
+| `/api/admin/overview`                           | GET         | Yes   | Admin Overview board (`?range=` or `?window=`). Every `/api/admin/*` answer is `private, no-store`                                                                                                                                                                     |
+| `/api/admin/boards/[board]`                     | GET         | Yes   | Admin: one section's numbers (`overview`, `people`, `posts`, `channels`, `live`, `analytics`, `processing`, `moderation`, `invites`; `?range=`)                                                                                                                        |
+| `/api/admin/people/[username]`                  | GET/POST    | Yes   | Admin: one person's board / `{ role: 'admin' \| 'user' }` (audited; 409 for the last admin). `DELETE …/phones/[id]` removes a phone                                                                                                                                    |
+| `/api/admin/processing`                         | POST        | Yes   | Admin: `pause` / `resume` new work, `retry_failed`, or `retry` / `link_only` one post (audited)                                                                                                                                                                        |
+| `/api/admin/posts`                              | GET/POST    | Yes   | Admin: inspect a post (`?url=` or `platform`+`id`) / hide or restore it (writes `moderated_posts` + `activity.hidden`); `clearNotes` (true, or a username) clears notes                                                                                                |
+| `/api/admin/users`                              | GET/POST    | Yes   | Admin: inspect a username (counts only, no email/userId) / ban or unban / `clearNotes: true` clears every note they left                                                                                                                                               |
+| `/api/admin/activity/hide`                      | POST        | Yes   | Admin: hide/unhide a post from the pulse (same as POST `/api/admin/posts`)                                                                                                                                                                                             |
+| `/api/admin/collections/hide`                   | POST        | Yes   | Admin: hide/unhide a playlist from leaderboards (`{ username, tag, hidden? }`)                                                                                                                                                                                         |
+
+### Discovery leaderboards (history: `/leaderboard` now redirects to `/channels`)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 Public playlists (shared tags) are ranked on `/leaderboard` (+ `/leaderboard/{today|month|all-time}`;
 week is the default at the bare path) — the "podium" leaderboard per
@@ -1329,7 +1288,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 943 tests
+pnpm test         # Run all 3,558 tests
 pnpm test:watch   # Watch mode
 pnpm test:e2e     # Playwright against an isolated Next on :3002 (not `pnpm dev`)
 pnpm test:e2e:install  # download Chromium and WebKit once

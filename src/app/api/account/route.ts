@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import {
+  autoChannels,
   bookmarks,
   bookmarkLinks,
   bookmarkTags,
@@ -30,7 +31,7 @@ import {
   collectionEvents,
   userBans,
 } from '@/lib/db/schema'
-import { eq, or } from 'drizzle-orm'
+import { and, eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
 import { removeAvatarFiles } from '@/lib/avatar/store'
 import { withAuth } from '@/lib/api/with-auth'
@@ -129,8 +130,14 @@ export const DELETE = withAuth(async (_req, userId) => {
         .where(or(eq(invites.createdBy, userId), eq(invites.usedBy, userId)))
         .run()
 
+      // 15b. Made for you channels, built from this account's saves.
+      db.delete(autoChannels).where(eq(autoChannels.userId, userId)).run()
+
       // 16. Preserve aggregate history without retaining this account's
-      // private actor/viewer ID.
+      // private actor/viewer ID. Its public "saved" pulses go with its saves.
+      db.delete(activity)
+        .where(and(eq(activity.userId, userId), eq(activity.action, 'save')))
+        .run()
       db.update(activity).set({ userId: null }).where(eq(activity.userId, userId)).run()
       db.update(analyticsEvents)
         .set({ userId: null })

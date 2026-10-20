@@ -9,6 +9,7 @@ import {
   LegacyAdminBootstrapError,
 } from '@/lib/db/account-invariants'
 import { FULL_SCHEMA_SQL } from './api/setup'
+import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
 
 describe('account-reference write guards', () => {
   let sqlite: Database.Database
@@ -16,6 +17,7 @@ describe('account-reference write guards', () => {
   beforeEach(() => {
     sqlite = new Database(':memory:')
     sqlite.exec(FULL_SCHEMA_SQL)
+    sqlite.exec(UNDERSTANDING_DDL)
   })
 
   afterEach(() => sqlite.close())
@@ -91,7 +93,7 @@ describe('account-reference write guards', () => {
          WHERE type = 'trigger' AND name LIKE 'guard_%_account_%'`,
       )
       .get() as { count: number }
-    expect(row.count).toBe(56)
+    expect(row.count).toBe(58)
   })
 
   it('enforces the persisted trigger from a separate database connection', () => {
@@ -102,6 +104,7 @@ describe('account-reference write guards', () => {
 
     try {
       primary.exec(FULL_SCHEMA_SQL)
+      primary.exec(UNDERSTANDING_DDL)
       primary.prepare(`INSERT INTO users (id, username) VALUES ('account', 'account')`).run()
       installAccountWriteGuards(primary)
       primary.prepare(`DELETE FROM users WHERE id = 'account'`).run()

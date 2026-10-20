@@ -1,4 +1,5 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
+import { privateByDefault } from '@/lib/bookmarks/privacy'
 import { db, runInTransaction } from '@/lib/db'
 import { bookmarkLinks, bookmarkMedia, bookmarkTags, bookmarks } from '@/lib/db/schema'
 import { visibleSave } from '@/lib/people/savers'
@@ -117,6 +118,8 @@ export async function keepGroupChannel(
 
   const startedAt = Date.now()
   const createdAt = new Date(startedAt).toISOString()
+  // New copies follow the keeper's "Just for me by default", like a clone.
+  const isPrivate = privateByDefault(userId)
   let added = 0
   const saved: { platform: string; postId: string }[] = []
   runInTransaction(() => {
@@ -127,7 +130,7 @@ export async function keepGroupChannel(
           ...src,
           userId,
           source: 'channel_keep',
-          isPrivate: false,
+          isPrivate,
           // A note is its writer's own words, never copied to someone else's save.
           note: null,
           processedAt: addedAtForIndex(startedAt, i++),
