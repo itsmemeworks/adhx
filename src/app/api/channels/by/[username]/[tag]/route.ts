@@ -3,6 +3,7 @@ import { getCurrentUserId } from '@/lib/auth/session'
 import { handleRouteError } from '@/lib/api/response'
 import { publicReadRateLimit } from '@/lib/rate-limit'
 import { channelQueue } from '@/lib/channels/channels'
+import { recordAnalytic } from '@/lib/analytics/record'
 
 function noStore(response: NextResponse): NextResponse {
   response.headers.set('Cache-Control', 'no-store')
@@ -26,6 +27,15 @@ export async function GET(
     const result = await channelQueue(decodeURIComponent(username), decodeURIComponent(tag), viewer)
     if (result.status !== 'ok') {
       return noStore(NextResponse.json({ error: 'Channel not found' }, { status: 404 }))
+    }
+    // A play of a public channel, counted for admins' Top channels.
+    if (result.isPublic) {
+      recordAnalytic({
+        name: 'channel.play',
+        surface: 'channel',
+        bookmarkId: `${result.username}/${result.tag}`,
+        userId: viewer,
+      })
     }
     return noStore(
       NextResponse.json({

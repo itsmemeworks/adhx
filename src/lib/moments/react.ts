@@ -1,4 +1,5 @@
 import { checkRateLimit } from '@/lib/rate-limit'
+import { countReaction, reactionKind } from '@/lib/admin/counts'
 import { hasMoment } from './engine'
 import { sendReaction } from './presence'
 import {
@@ -100,5 +101,7 @@ export async function react(userId: string, slug: string, body: unknown): Promis
     ...(emoji ? { emoji } : { text }),
     post: { platform, id },
   })
+  // Counted for admins (who, which kind, which day), never kept.
+  countReaction(userId, reactionKind(emoji), slug)
   return { ok: true, id: signal.id, at: signal.at }
 }

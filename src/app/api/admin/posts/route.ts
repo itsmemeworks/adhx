@@ -3,7 +3,7 @@ import { withAdmin } from '@/lib/admin/guard'
 import { hidePost, writeAudit } from '@/lib/admin/moderation'
 import { clearPostNotes } from '@/lib/bookmarks/note'
 import { parseAdminPostRef } from '@/lib/admin/parse-post'
-import { inspectPost } from '@/lib/admin/query'
+import { lookUpPost } from '@/lib/admin/boards/posts'
 import { parseAnalyticsWindow } from '@/lib/analytics/query'
 import { handleRouteError } from '@/lib/api/response'
 
@@ -37,7 +37,7 @@ export const GET = withAdmin(async (request: NextRequest, actor) => {
       return NextResponse.json({ error: 'url or platform+id is required' }, { status: 400 })
     }
     const window = parseAnalyticsWindow(request.nextUrl.searchParams.get('window'))
-    return NextResponse.json(inspectPost(ref.platform, ref.id, window, ref.contentType), {
+    return NextResponse.json(lookUpPost(ref.platform, ref.id, window, ref.contentType), {
       headers: { 'Cache-Control': 'private, no-store' },
     })
   } catch (error) {

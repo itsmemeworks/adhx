@@ -90,8 +90,9 @@ export default function PrivacyPage() {
         <Section title="Right now and watching together">
           Right now groups recent shared saves into moments in the server’s memory; “Just for me”
           saves are never counted or named, not even to you. Members see who is saving a moment and
-          who is watching, and can react; who is watching and reactions are never stored and reach
-          only members watching that moment. Signed out, moments show counts only. “Tell me when
+          who is watching, and can react; who is watching and what reactions say are never stored
+          and reach only members watching that moment. Only how many reactions each member sends per
+          day, by kind, is counted, for admins. Signed out, moments show counts only. “Tell me when
           it’s live” stores your bell and the alert it fires (listed for 24 hours), for you alone.
         </Section>
 
@@ -132,10 +133,18 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="Admins">
-          Admins can invite, approve or decline join requests, see sign-in links held for them, look
-          up a post or a member (counts include private saves; never an email address), hide posts,
-          clear notes and ban accounts. Every admin action is logged. No admin page shows another
-          member’s private saves, notes, viewing history, sends or alerts.
+          Admins can invite, approve or decline join requests, see sign-in links held for them, hide
+          posts, clear notes, keep someone out, remove a phone, make or remove admins and pause or
+          retry processing; every admin action is logged. They see each member’s name and picture,
+          role, when they joined, who invited them, when they were last seen (updated at most every
+          5 minutes) and how many saves (and how many are “Just for me”), notes, sends, reactions,
+          channels and phones they have, with each phone’s kind and the last four characters of its
+          key; never an email address. They see posts with a shared save and who saved them; a “Just
+          for me” save is only ever a count, never the post. Everything else is counts: opens and
+          from which kind of device, plays and finishes, searches (by meaning or by words, and
+          whether they found something; what you searched for is never stored), sends, shares,
+          reactions per day and kind (never the words, the post or the moment), how many posts each
+          member watched (never which), and a log of live moments with no account ids.
         </Section>
 
         <Section title="Third parties">
@@ -148,11 +157,11 @@ export default function PrivacyPage() {
 
         <Section title="Clearing and deleting">
           Clear data deletes your saves, notes, tags, archive, preferences, viewing history, sends,
-          bells and alerts, X sync history, queued phone shares, Made for you channels and your
-          “saved” pulses, and keeps your account, keys and invites. Delete account also removes your
-          account, sign-in methods, tokens, keys, invites, picture and public channel statistics;
-          other pulse and analytics rows stay without your account id, and the admin log remains.
-          Search data made from a post goes once nobody has it saved.
+          bells and alerts, reaction counts, X sync history, queued phone shares, Made for you
+          channels and your “saved” pulses, and keeps your account, keys and invites. Delete account
+          also removes your account, sign-in methods, tokens, keys, invites, picture, last-seen time
+          and public channel statistics; other pulse and analytics rows stay without your account
+          id, and the admin log remains. Search data made from a post goes once nobody has it saved.
         </Section>
 
         <Section title="Your choices">

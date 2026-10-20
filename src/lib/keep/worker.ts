@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { newWorkPaused } from '@/lib/processing/pause'
 import { and, eq, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { bookmarks, keepJobs, keepSettings } from '@/lib/db/schema'
@@ -214,6 +215,8 @@ async function tick(): Promise<void> {
       scanForNewSaves(1000, s.since)
     }
     if (!(await diskHasRoom())) return
+    // An admin paused new work (Processing): running downloads finish, nothing new starts.
+    if (newWorkPaused()) return
     while (s.running < keepConcurrency()) {
       const job = claimNext(new Date(), s.since)
       if (!job) break

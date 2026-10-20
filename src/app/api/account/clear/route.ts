@@ -13,6 +13,7 @@ import {
   postSends,
   momentAlertSubs,
   momentAlerts,
+  reactionCounts,
   autoChannels,
   activity,
 } from '@/lib/db/schema'
@@ -54,6 +55,7 @@ export const POST = withAuth(async (_req, userId) => {
         .run()
       db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
       db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
+      db.delete(reactionCounts).where(eq(reactionCounts.userId, userId)).run()
       // Made for you is built from the saves that are now gone.
       db.delete(autoChannels).where(eq(autoChannels.userId, userId)).run()
       // The public "saved" pulses go with the saves; other events keep their

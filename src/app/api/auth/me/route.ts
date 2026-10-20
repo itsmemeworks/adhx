@@ -6,6 +6,7 @@ import { pendingAdminSignInLinks, signInDelivery } from '@/lib/email/magic-link'
 import { memberAvatar } from '@/lib/people/savers'
 import { avatarSourceOf, readPreferences } from '@/lib/preferences/server'
 import { PRIVATE_DEFAULT_KEY } from '@/lib/bookmarks/privacy'
+import { noteOpen, touchLastSeen } from '@/lib/people/last-seen'
 
 const SIGNED_OUT = {
   authenticated: false,
@@ -28,6 +29,10 @@ export async function GET() {
   if (!account) {
     return NextResponse.json(SIGNED_OUT)
   }
+
+  // Last seen (at most every 5 minutes) and opens, for admins. Counts only.
+  touchLastSeen(userId)
+  noteOpen(userId, 'web')
 
   const isAdmin = await isAdminUserId(userId)
   const prefs = readPreferences(userId, ['avatarSource', PRIVATE_DEFAULT_KEY])

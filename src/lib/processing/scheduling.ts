@@ -5,6 +5,7 @@ import { supportedProtocol } from './protocol'
 import { claimConversionJob } from './conversion'
 import { claimProcessingJob, ProcessingConflict, ProcessingInputError } from './jobs'
 import { indexingPaused } from './config'
+import { newWorkPaused } from './pause'
 
 /** Durable alternating service classes: keep playback useful without making a
  * cold conversion import block every understanding job. The first claim favors
@@ -22,6 +23,8 @@ export async function claimNextJob(
     throw new ProcessingInputError('Invalid worker name')
   if (kinds !== undefined && !Array.isArray(kinds))
     throw new ProcessingInputError('Invalid worker kinds')
+  // An admin paused new work (Processing): hand out nothing new.
+  if (newWorkPaused()) return null
   // Reserve the turn synchronously before any asynchronous content load. Two
   // concurrent workers must not both read the same previous service class.
   const preferred = runInTransaction(() => {

@@ -34,6 +34,7 @@ vi.mock('@/lib/sentry', () => ({
 }))
 
 import { GET as getOverview } from '@/app/api/admin/overview/route'
+import { GET as getBoard } from '@/app/api/admin/boards/[board]/route'
 import { GET as getPost, POST as postPost } from '@/app/api/admin/posts/route'
 import { GET as getUser, POST as postUser } from '@/app/api/admin/users/route'
 import { hidePost } from '@/lib/admin/moderation'
@@ -100,10 +101,11 @@ describe('admin console APIs', () => {
       new NextRequest('http://localhost/api/admin/overview?window=week'),
     )
     expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
     const data = await res.json()
-    expect(data.stats.users).toBe(2)
-    expect(data.analytics.totals['post.view']).toBe(1)
-    expect(data).not.toHaveProperty('userId')
+    expect(data.range).toBe('week')
+    expect(data.people.count).toBe(2)
+    expect(JSON.stringify(data)).not.toContain(USER_A)
   })
 
   it('inspects a post and hides it from the pulse', async () => {
@@ -184,10 +186,15 @@ describe('admin console APIs', () => {
       contentType: 'photo',
     })
 
-    const overview = await getOverview(new NextRequest('http://localhost/api/admin/overview'))
-    expect((await overview.json()).hiddenPosts).toContainEqual(
+    const moderation = await getBoard(
+      new NextRequest('http://localhost/api/admin/boards/moderation'),
+      {
+        params: Promise.resolve({ board: 'moderation' }),
+      },
+    )
+    expect((await moderation.json()).hidden).toContainEqual(
       expect.objectContaining({
-        bookmarkId: 'DcHXej3lt5W',
+        id: 'DcHXej3lt5W',
         previewPath: '/p/DcHXej3lt5W',
       }),
     )

@@ -48,6 +48,7 @@ import {
   parityMediaSource,
 } from './env'
 import { prepareMedia, usingMediaSource } from './media'
+import { seedAdminPhones, seedAdminWorld } from './seed-admin'
 import {
   DOING,
   FILLER_STILLS,
@@ -247,6 +248,8 @@ interface Filler {
   category: 'photo'
   who: PersonKey
   topic: Topic
+  /** A person's own filler, in no shared channel. */
+  general?: boolean
 }
 
 let fillerSeq = 0
@@ -313,7 +316,10 @@ function planFillers() {
     const have = fillers.filter((f) => f.who === p.key).length
     const need = p.totalSaves - heroSaves - have
     for (let i = 0; i < need; i++)
-      fillers.push(makeFiller(p.key, general[(i + p.key.length) % general.length]))
+      fillers.push({
+        ...makeFiller(p.key, general[(i + p.key.length) % general.length]),
+        general: true,
+      })
   }
 }
 
@@ -658,7 +664,9 @@ export async function seedParityDb(): Promise<void> {
   seedChannels()
   seedViews()
   seedSends()
+  seedAdminWorld(fillers.map((f) => ({ ...f, general: !!f.general })))
   await writeCredentials(placeholders)
+  seedAdminPhones()
   const [{ n }] = db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM bookmarks`)
   console.log(
     `[parity] seeded ${PEOPLE.length} members, ${POSTS.length} posts + ${fillers.length} filler, ${n} saves` +

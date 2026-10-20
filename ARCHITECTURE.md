@@ -123,7 +123,7 @@ Other signed-in pages:
 | `/doing`                                             | What your ADHX is doing: every post being kept, converted, listened to, read or learned.                   |
 | `/settings`                                          | You (picture, name, Just for me by default), Your people (invites, approvals), phone app, keys.            |
 | `/channels/friend/{username}`                        | A friend's channel (members only).                                                                         |
-| `/admin`                                             | Admin-role console: invites, sign-in links, numbers, hiding posts, banning accounts.                       |
+| `/admin/*`                                           | Admin-role area: overview, people, posts, channels, live, analytics, processing, moderation, invites.      |
 | `/start`, `/welcome`                                 | Email sign-in, then a one-shot username choice for new email accounts.                                     |
 | `/invite/{token}`, `/invite/done`, `/invite/waiting` | Invite confirmation (a script-free route handler), the "You're in." pairing screen, and the approval wait. |
 
@@ -616,6 +616,7 @@ guards. Tables are easier to understand by plane than as one long list.
 | Kept media                 | `keep_jobs`, `kept_files`, `keep_settings`, `media_conversions`                                                                              | One download job per post (with progress), the files in `MEDIA_DIR`, the backfill cutoff, leased H.264 conversions.                                |
 | Understanding              | `post_embeddings`, `understanding_queue`, `post_extracted_text`, `post_text_fts`, `video_index_state`, `video_segments`, `processing_leases` | Vectors, the work queue, speech and on-screen words, keyword index, sectioned video progress and vectors, remote-worker leases. All keyed by post. |
 | Moderation and admin       | `moderated_posts`, `user_bans`, `admin_audit`                                                                                                | Hidden posts, banned accounts, every admin action.                                                                                                 |
+| Admin counts               | `reaction_counts`, `moment_log`                                                                                                              | Reactions per member, day and kind (counts only) and the live-moment log (no user ids).                                                            |
 | Public pulse and analytics | `activity`, `analytics_events`, `collection_events`, `collection_aggregates`                                                                 | Anonymous post pulse (30 days), private product log (90 days), channel view/clone detail (90 days) and all-time totals. Partly legacy, below.      |
 | Bookkeeping                | `migration_state`, `__drizzle_migrations`                                                                                                    | One-time backfill flags and applied SQL migrations.                                                                                                |
 
@@ -623,6 +624,10 @@ Sessions are a signed cookie, so there is no session table. Worker presence
 for the Mac helper is in memory. The legacy `collections`, `collection_tweets`
 and `sync_state` tables are dropped at every start, `read_status` was renamed
 to `archived_posts`, and `bookmarks_fts` was replaced by `post_text_fts`.
+`users.last_seen_at` (at most every 5 minutes, from sessions and phone keys),
+`access_keys.platform` (`ios`/`android` when a phone's requests say) and the
+`server_settings` key `processing.paused` (Pause new work) feed the admin area;
+see the [admin specification](docs/specs/admin.md).
 
 The main isolation key for saves is `(userId, platform, sourceId)`.
 `bookmarks` uses `(userId, platform, id)`; media, tags, links and archive rows
@@ -900,7 +905,11 @@ write one. Rows older than 30 days are pruned at startup.
 send/copy/open/tag/archive, auth, sync, shortcut, theater, and playlist events.
 Free-form client display data is not accepted. Post events require a canonical
 platform and ID, and their content type is server-resolved. Public aggregate
-rollups never select `userId`; the admin console reads the same query layer.
+rollups never select `userId`; the admin area (`src/lib/admin/boards/*`)
+counts them without ever showing who. Admin-only events: `app.open` (after
+30 minutes away, with the client), `search.found`/`search.none` (mode only,
+never the words), `post.finish`, and `channel.play`/`channel.keep` for shared
+channels.
 Rows older than 90 days are pruned during startup migration. Writes are
 best-effort so measurement failure cannot fail the user action.
 
@@ -942,7 +951,9 @@ rule applies on cached and uncached paths.
   before serving. Failures are non-cacheable.
 
 Admin authorization is `users.role = 'admin'` on immutable account IDs, never
-a runtime username allowlist. Startup verifies required moderation storage and
+a runtime username allowlist. The admin area (`/admin/*`, `src/lib/admin/`)
+counts Just for me saves but builds every list from shared saves only
+(`visibleSave`), and never shows what anyone searched or watched. Startup verifies required moderation storage and
 terminates if it cannot enforce this boundary.
 
 ## Media and outbound-network boundaries

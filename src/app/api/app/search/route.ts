@@ -5,6 +5,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { findPosts } from '@/lib/semantic/find'
 import type { SearchScope, SearchType } from '@/lib/semantic/search'
 import { captureException } from '@/lib/sentry'
+import { noteSearch } from '@/lib/admin/counts'
 
 const MAX_QUERY = 200
 const TYPES: readonly SearchType[] = ['all', 'videos', 'photos', 'text', 'articles']
@@ -64,6 +65,12 @@ export const GET = withPhoneKey(async (request, { userId }) => {
       offset,
       refine,
     })
+    if (offset === 0) {
+      noteSearch(userId, {
+        mode: result.understood ? 'meaning' : 'words',
+        found: result.items.length > 0 && result.close !== false,
+      })
+    }
     return NextResponse.json(
       {
         items: result.items.map((item) => toPhonePost(item, true)),
