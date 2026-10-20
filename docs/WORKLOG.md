@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android Connected faces row includes you
+
+- The j5-6 board's faces row starts with your own face. Android's left it out and listed every name. It now shows you first, then everyone else, up to 5 faces. `Copy.youAnd` stops at four names and then says "and N other(s)". Both now match the iPhone ("You, Ana, Jo, Ben and 1 other").
+
 ## 2026-10-20 — Connected screen has no header on Android either
 
 - Android's just-paired screen (`main/ConnectedScreen.kt`) dropped its Gob + "adhx" + Search/Settings row, as iPhone and the updated j5-6 board have it: the welcome is its own moment and Start watching is the way in. The unused header Gob vector and the `onSearch`/`onSettings` parameters are gone.

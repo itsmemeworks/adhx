@@ -91,7 +91,8 @@ fun ConnectedScreen(
     val peopleUi by people.ui.collectAsStateWithLifecycle()
     val members = peopleUi.people?.members.orEmpty().filterNot { it.banned }
     val owner = members.firstOrNull { it.role == com.adhx.share.net.PersonRole.OWNER }
-    val others = members.filterNot { it.isYou }.map { it.asSaver }
+    // You first, then everyone else: the board's faces row includes your own face.
+    val people = (members.filter { it.isYou } + members.filterNot { it.isYou }).map { it.asSaver }
     var posts by remember { mutableStateOf<List<PhonePost>>(emptyList()) }
     LaunchedEffect(connection.key) {
         // Everyone's latest, keeping the ones a friend saved.
@@ -159,11 +160,16 @@ fun ConnectedScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 6.dp).semantics { heading() },
                 )
-                if (others.isNotEmpty()) {
+                if (people.isNotEmpty()) {
                     Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Faces(others, connection.server, size = 30.dp, max = 4, ring = AdhxColors.Background)
+                        Faces(people, connection.server, size = 30.dp, max = 5, ring = AdhxColors.Background)
                         Spacer(Modifier.width(10.dp))
-                        Text(Copy.youAnd(others.map { it.label }), fontSize = 14.sp, color = AdhxColors.Muted)
+                        Text(
+                            Copy.youAnd(people.filterNot { it.isYou }.map { it.label }),
+                            fontSize = 14.sp,
+                            color = AdhxColors.Muted,
+                            maxLines = 1,
+                        )
                     }
                 }
                 if (posts.isNotEmpty()) {
