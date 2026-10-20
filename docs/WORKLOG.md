@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Moment titles checked with the boards' real names
+
+- The parity server names moments without the model ("Baby", "Dark"), so a proxy swapped in the boards' names ("Babies vs objects", "Sunday roast energy", "Kitchen synths") to check how they lay out on web, iPhone and Android. Every name fits on one line as on the boards.
+- Mobile web Tuned in now has the boards' "In {moment}" chip over the byline (TheaterV2), and "Jo just saved one" moves below the top chips when LIVE and the watchers wrap onto two rows, instead of covering them.
+- Live lead card, measured against j7-3 to within 0.5: iPhone's title uses `tightLines(32)` plus a small nudge. Android's uses `serifLineBox(32.sp, 30.4.sp)`, and a new `sansLineBox` trims Hanken Grotesk's taller Compose line on the meta line (22dp against CSS's 17.6). Both cards are padded 10, because the board's 2px ring sits outside its 8px padding while iOS `strokeBorder` and Compose `border` draw inside.
+- Parity server limit: the babies moment drops out about 25 minutes after seeding, so capture j7 screens from a freshly started server.
+
 ## 2026-10-20 — Android Connected faces row includes you
 
 - The j5-6 board's faces row starts with your own face. Android's left it out and listed every name. It now shows you first, then everyone else, up to 5 faces. `Copy.youAnd` stops at four names and then says "and N other(s)". Both now match the iPhone ("You, Ana, Jo, Ben and 1 other").

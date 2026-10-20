@@ -78,6 +78,8 @@ import com.adhx.share.ui.PrimaryButton
 import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
 import com.adhx.share.ui.rememberReducedMotion
+import com.adhx.share.ui.sansLineBox
+import com.adhx.share.ui.serifLineBox
 import kotlinx.coroutines.delay
 import java.util.Calendar
 
@@ -214,7 +216,8 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
             .background(AdhxColors.Surface)
             .then(if (moment.live) Modifier.border(2.dp, LiveRing, RoundedCornerShape(26.dp)) else Modifier)
             .clickable(onClickLabel = Copy.TUNE_IN, onClick = onTuneIn)
-            .padding(8.dp)
+            // The board's 2dp ring sits outside its 8dp of padding; border() draws inside this box.
+            .padding(if (moment.live) 10.dp else 8.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription = listOfNotNull(moment.label, if (moment.live) Copy.LIVE_BADGE.lowercase() else null, watching, line).joinToString(", ")
             },
@@ -259,8 +262,16 @@ private fun BigMoment(moment: LiveMoment, server: String, onTuneIn: () -> Unit) 
             }
         }
         Column(Modifier.padding(horizontal = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(moment.label, fontFamily = SerifFamily, fontSize = 32.sp, lineHeight = 31.sp, color = AdhxColors.White)
-            if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.Muted)
+            // The board's `line-height: 0.95`, its line box split evenly as CSS does.
+            Text(
+                moment.label,
+                fontFamily = SerifFamily,
+                fontSize = 32.sp,
+                lineHeight = 30.4.sp,
+                color = AdhxColors.White,
+                modifier = Modifier.serifLineBox(32.sp, 30.4.sp),
+            )
+            if (line.isNotBlank()) Text(line, fontSize = 13.sp, color = AdhxColors.Muted, modifier = Modifier.sansLineBox(13.sp))
         }
         Row(
             Modifier

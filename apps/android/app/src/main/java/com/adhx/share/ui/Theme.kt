@@ -68,6 +68,20 @@ fun Modifier.serifLineBox(fontSize: TextUnit, lineHeight: TextUnit, top: Boolean
     }
 
 /**
+ * Hanken Grotesk's full height in Compose is about 1.69em, where a CSS `normal`
+ * line is about 1.35em (13sp: 22dp against the boards' 17.6). This trims the
+ * difference evenly off the first line's top and the last line's bottom.
+ */
+fun Modifier.sansLineBox(fontSize: TextUnit): Modifier =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        val trim = (0.169f * fontSize.toPx()).roundToInt()
+        layout(placeable.width, (placeable.height - 2 * trim).coerceAtLeast(0)) {
+            placeable.place(0, -trim)
+        }
+    }
+
+/**
  * Hanken Grotesk is one variable font (the web's latin subset, weights
  * 100–900): each weight is the same file at that point on its weight axis.
  */
