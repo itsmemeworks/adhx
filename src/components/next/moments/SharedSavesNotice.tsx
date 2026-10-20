@@ -1,8 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Users, X } from 'lucide-react'
+import { Users } from 'lucide-react'
 import { useAuthMe } from '@/components/auth'
 
 export const SHARED_SAVES_NOTICE_KEY = 'adhx:notice:shared-saves'
@@ -40,29 +39,24 @@ export function SharedSavesNotice() {
   return (
     <div
       role="note"
-      className="mb-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-[#1c1b19] px-4 py-3.5 md:mb-6"
+      className="mb-5 flex items-center gap-3.5 rounded-[22px] bg-[#e4dac8] py-2.5 pl-[18px] pr-2.5 text-[#141414] md:min-h-16"
     >
-      <Users aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-nx-accent" />
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5 text-[14px] leading-[1.45]">
-        <span>
-          Your saves are now shared with your people. Make any of them private from the post’s ⋯
-          menu.
-        </span>
-        <Link
-          href="/play?recent=1"
-          onClick={remember}
-          className="self-start text-[13px] font-bold text-nx-accent underline underline-offset-2"
-        >
-          Open my saves
-        </Link>
+      <span
+        aria-hidden
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#141414]/[0.08]"
+      >
+        <Users className="h-5 w-5" strokeWidth={2} />
       </span>
+      <p className="m-0 min-w-0 flex-1 text-[15px] leading-[1.35]">
+        <span className="font-extrabold">Your saves are now shared with your people.</span>
+        <span>{' Make any of them private from the post’s ⋯ menu.'}</span>
+      </p>
       <button
         type="button"
-        aria-label="Dismiss"
         onClick={close}
-        className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+        className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-full bg-[#141414] px-[22px] text-[15px] font-extrabold text-nx-cream"
       >
-        <X aria-hidden className="h-4 w-4" />
+        Got it
       </button>
     </div>
   )

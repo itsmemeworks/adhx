@@ -26,7 +26,7 @@ export function PublicHome() {
     )
   }, [])
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader current="now" />
       {notice && (
         <p

@@ -122,10 +122,19 @@ export function watchersFor(slug: string, viewerId: string): Saver[] {
   return out
 }
 
+/** Who saved each cover (newest first), so a card can say "Ana · Reddit video · 4 min ago". */
+function coversWithSavers(covers: MomentView['covers'], viewerId: string): MomentView['covers'] {
+  if (covers.length === 0) return covers
+  const keys = covers.map((c) => `${c.platform ?? 'twitter'}:${c.id}`)
+  const savers = visibleSavers(keys, viewerId)
+  return covers.map((c, i) => ({ ...c, savers: savers.get(keys[i]) ?? [] }))
+}
+
 export function withMomentPeople(moment: MomentView, viewerId: string): MomentView {
   if (!viewerId) return moment
   return {
     ...moment,
+    covers: coversWithSavers(moment.covers, viewerId),
     watching: memberWatchingCount(moment.slug),
     savers: momentSavers(moment.slug, viewerId),
     watchers: watchersFor(moment.slug, viewerId),

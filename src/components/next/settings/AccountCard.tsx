@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, type FormEvent } from 'react'
-import { Image as ImageIcon, LogOut } from 'lucide-react'
-import { generateAvatarDataUri, usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { Camera, Lock, LogOut, Mail } from 'lucide-react'
+import { usableAvatarUrl } from '@/lib/avatar/generated-avatar'
+import { FaceInitial } from '../FaceInitial'
 import { UsernameChooser } from '@/components/auth/UsernameChooser'
 import { MAX_USERNAME_CHANGES } from '@/lib/auth/username-rules'
 import { cn } from '@/lib/utils'
@@ -37,18 +38,18 @@ export interface AuthMe {
   isAdmin?: boolean
 }
 
-function Row({ children }: { children: React.ReactNode }) {
+function Row({ children, divided = false }: { children: React.ReactNode; divided?: boolean }) {
   return (
-    <div className="flex flex-col gap-3 border-t border-white/10 pt-4 first:border-0 first:pt-0">
+    <div
+      className={cn('flex flex-col gap-1.5', divided && 'border-t border-white/[0.08] pt-[18px]')}
+    >
       {children}
     </div>
   )
 }
 
 function RowLabel({ children }: { children: string }) {
-  return (
-    <span className="text-xs font-bold uppercase tracking-[0.08em] text-white/45">{children}</span>
-  )
+  return <span className="text-[13px] font-semibold text-nx-soft">{children}</span>
 }
 
 /** Your picture, and the dialog that changes it. */
@@ -57,26 +58,35 @@ function PictureRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
   const [broken, setBroken] = useState(false)
   const username = me.user?.username || 'adhx'
   const shown = !broken ? usableAvatarUrl(me.user?.avatarUrl) : null
-  const src = shown ?? generateAvatarDataUri(username)
   const xPicture = usableAvatarUrl(me.identities.x?.avatarUrl)
   return (
     <Row>
       <div className="flex items-center gap-4">
         <GobShape size={96} className="shadow-[0_0_0_3px_#1a1814,0_0_0_5px_rgba(255,255,255,0.12)]">
-          <img
-            src={src}
-            alt="Your picture"
-            referrerPolicy="no-referrer"
-            onError={() => setBroken(true)}
-            className="h-full w-full object-cover"
-          />
+          {shown ? (
+            <img
+              src={shown}
+              alt="Your picture"
+              referrerPolicy="no-referrer"
+              onError={() => setBroken(true)}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span role="img" aria-label="Your picture" className="block h-full w-full">
+              <FaceInitial username={username} name={me.user?.displayName} size={96} />
+            </span>
+          )}
         </GobShape>
         <span className="flex min-w-0 flex-col items-start gap-2">
-          <button type="button" onClick={() => setOpen(true)} className={SECONDARY}>
-            <ImageIcon aria-hidden className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-nx-cream px-[18px] text-sm font-extrabold text-nx-cream hover:bg-white/10"
+          >
+            <Camera aria-hidden className="h-4 w-4" />
             <span>Change picture</span>
           </button>
-          <span className="text-[13px] text-white/55">Shows on your saves</span>
+          <span className="whitespace-nowrap text-[13px] text-nx-muted">Shows on your saves</span>
         </span>
       </div>
       {open && (
@@ -132,7 +142,7 @@ function DisplayNameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
         }}
         className="flex flex-col gap-1.5"
       >
-        <label htmlFor="display-name" className="text-[13px] font-semibold text-white/70">
+        <label htmlFor="display-name" className="text-[13px] font-semibold text-nx-soft">
           Display name
         </label>
         <input
@@ -151,7 +161,7 @@ function DisplayNameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
         />
         <span
           role={state === 'error' ? 'alert' : 'status'}
-          className={cn('text-[13px]', state === 'error' ? 'text-[#ff8a7a]' : 'text-white/55')}
+          className={cn('text-[13px]', state === 'error' ? 'text-[#ff8a7a]' : 'text-nx-muted')}
         >
           {state === 'saving'
             ? 'Saving…'
@@ -189,13 +199,13 @@ function PrivateDefaultRow({ me }: { me: AuthMe }) {
   }
 
   return (
-    <Row>
+    <Row divided>
       <div className="flex items-center gap-3">
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span id="private-default" className="text-[15px] font-extrabold">
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span id="private-default" className="whitespace-nowrap text-[15px] font-extrabold">
             Just for me by default
           </span>
-          <span className="text-[13px] leading-snug text-white/55">
+          <span className="text-[13px] leading-snug text-nx-muted">
             New saves start private. You can share any of them later.
           </span>
         </span>
@@ -243,17 +253,19 @@ function EmailRow({ me }: { me: AuthMe }) {
     }
   }
 
-  const showForm = !current || editing
+  const showForm = editing
 
   return (
     <Row>
       <div className="flex items-center gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <RowLabel>Email</RowLabel>
           {current ? (
-            <span className="truncate text-[15px] font-bold">{current}</span>
+            <span className="truncate text-base font-extrabold">{current}</span>
           ) : (
-            <span className="text-sm text-white/70">Add an email. It’s how you sign in.</span>
+            editing && (
+              <span className="text-sm text-nx-soft">Add an email. It’s how you sign in.</span>
+            )
           )}
         </div>
         {current && !editing && (
@@ -272,12 +284,30 @@ function EmailRow({ me }: { me: AuthMe }) {
           </button>
         )}
       </div>
+      {!current && !editing && !sent && (
+        <button
+          type="button"
+          onClick={() => {
+            setError(null)
+            setEditing(true)
+          }}
+          className="flex min-h-16 items-center gap-3 rounded-[20px] border-[1.5px] border-dashed border-[#4a453e] py-2.5 pl-2.5 pr-4 text-left text-sm font-semibold leading-[1.35] text-nx-cream hover:border-nx-muted"
+        >
+          <span
+            aria-hidden
+            className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-nx-accent/[0.14] text-nx-accent"
+          >
+            <Mail className="h-[18px] w-[18px]" />
+          </span>
+          <span>Add an email so you can always get back in</span>
+        </button>
+      )}
       {showForm && (
         <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-2.5">
           <input
             type="email"
             required
-            autoFocus={editing}
+            autoFocus
             autoComplete="email"
             inputMode="email"
             aria-label={current ? 'New email' : 'Email'}
@@ -290,11 +320,9 @@ function EmailRow({ me }: { me: AuthMe }) {
             <button type="submit" disabled={busy} className={PRIMARY}>
               {busy ? 'Sending…' : current ? 'Send confirmation link' : 'Add email'}
             </button>
-            {current && (
-              <button type="button" onClick={() => setEditing(false)} className={SECONDARY}>
-                Cancel
-              </button>
-            )}
+            <button type="button" onClick={() => setEditing(false)} className={SECONDARY}>
+              Cancel
+            </button>
           </div>
         </form>
       )}
@@ -330,10 +358,15 @@ function UsernameRow({ me, refresh }: { me: AuthMe; refresh: () => void }) {
   return (
     <Row>
       <div className="flex items-center gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <RowLabel>Username</RowLabel>
-          <span className="truncate text-[15px] font-bold">{`@${username}`}</span>
-          <span className="text-[13px] text-white/55">{hint}</span>
+          <span className="flex min-w-0 items-center gap-2 text-base font-extrabold">
+            <span className="truncate">{`@${username}`}</span>
+            {!canChange && (
+              <Lock aria-label="Can’t change" className="h-3.5 w-3.5 shrink-0 text-nx-muted" />
+            )}
+          </span>
+          <span className="text-[13px] text-nx-muted">{hint}</span>
         </div>
         {canChange && !editing && (
           <button
@@ -374,8 +407,12 @@ export function AccountCard({ me, refresh }: { me: AuthMe; refresh: () => void }
       id="you"
       title="You"
       right={
-        <button type="button" onClick={signOut} className={SECONDARY}>
-          <LogOut aria-hidden className="h-4 w-4" />
+        <button
+          type="button"
+          onClick={signOut}
+          className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold text-nx-muted hover:bg-white/10 hover:text-nx-cream"
+        >
+          <LogOut aria-hidden className="h-3.5 w-3.5" />
           <span>Sign out</span>
         </button>
       }

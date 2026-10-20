@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { Users } from 'lucide-react'
+import { Lock, Users } from 'lucide-react'
+import { networkLabel } from '@/lib/platform/networks'
+import { timeAgo } from '../moments/live'
 import { feedItemAccessibleDescription } from '@/components/feed/feedItemMeta'
 import { cn } from '@/lib/utils'
 import {
@@ -16,11 +18,12 @@ import {
   postDurationLabel,
   postText,
 } from '../post'
-import { MediaChip, NxImage } from '../primitives'
+import { NxImage } from '../primitives'
 import { PrivateLock, SaverFaces } from '../SaverFaces'
 import { saversLine } from '../savers'
 import {
   heardOrRead,
+  KIND_WORD,
   kindOf,
   openHref,
   previewVideoSrc,
@@ -115,6 +118,7 @@ export function StrengthMeter({
   tone = 'plate',
   withLabel = false,
   where,
+  spoken,
 }: {
   strength: MatchStrength
   className?: string
@@ -122,10 +126,13 @@ export function StrengthMeter({
   withLabel?: boolean
   /** Where the match was found when the tile can't show it ("Said in the video", "On screen"). */
   where?: string | null
+  /** Where it matched, said but not shown (the tile shows it elsewhere). */
+  spoken?: string | null
 }) {
   const bars = strength === 'strong' ? 3 : strength === 'good' ? 2 : 1
-  const label = where
-    ? `${STRENGTH_LABEL[strength]}, ${where.toLowerCase()}`
+  const said = where ?? spoken
+  const label = said
+    ? `${STRENGTH_LABEL[strength]}, ${said.toLowerCase()}`
     : STRENGTH_LABEL[strength]
   return (
     <span
@@ -133,7 +140,7 @@ export function StrengthMeter({
       aria-label={label}
       title={label}
       className={cn(
-        'pointer-events-auto flex h-6 shrink-0 items-end gap-[3px] rounded-full px-2 pb-[7px] pt-1.5',
+        'pointer-events-auto flex h-6 shrink-0 items-end gap-[3px] rounded-full px-[9px] pb-[6px] pt-1',
         tone === 'plate' ? 'nx-plate' : 'bg-nx-ink/10',
         className,
       )}
@@ -143,14 +150,14 @@ export function StrengthMeter({
           key={i}
           aria-hidden
           className={cn(
-            'w-[3px] rounded-sm',
-            ['h-[5px]', 'h-[8px]', 'h-[11px]'][i],
+            'w-1 rounded-[2px]',
+            ['h-[6px]', 'h-[9px]', 'h-[12px]'][i],
             i < bars
               ? tone === 'plate'
                 ? 'bg-nx-accent'
                 : 'bg-nx-ink'
               : tone === 'plate'
-                ? 'bg-white/35'
+                ? 'bg-white/30'
                 : 'bg-nx-ink/25',
           )}
         />
@@ -198,9 +205,42 @@ export function mediaBadge(item: SearchResultItem): string | null {
   return null
 }
 
+/** Network then kind: "YouTube video", "X photo". */
+export function networkKind(item: SearchResultItem): string {
+  return `${networkLabel(item.post.platform)} ${KIND_WORD[kindOf(item)].toLowerCase()}`
+}
+
+/** A result's few words: its text or headline, else what it is. */
+export function tileTitle(item: SearchResultItem): string {
+  const kind = kindOf(item)
+  const text = (kind === 'article' ? articleHeadline(item.post) : postText(item.post))
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text || networkKind(item)
+}
+
+/** Where a search result matched, for the chip on its corner ("In the video"). */
+export function tileWhere(item: SearchResultItem): string {
+  if (strengthOfItem(item) === 'related') return 'Related'
+  if (item.post.isPrivate) return 'Just for you'
+  const lead = item.matched[0] ?? 'words'
+  if (lead === 'speech' || lead === 'video') return 'In the video'
+  if (lead === 'picture') return 'In the picture'
+  if (lead === 'screen') return 'On screen'
+  return 'In the words'
+}
+
+const CHIP =
+  'pointer-events-none absolute flex h-6 max-w-[calc(100%-16px)] items-center gap-1 whitespace-nowrap rounded-full bg-black/55 px-[9px] text-[11px] font-extrabold text-white backdrop-blur-md'
+
 /**
- * One result in the masonry grid. The whole tile is a link to the post
- * (your saves open in the theater; anyone else's on its public page).
+ * One result in a grid of tiles: the picture, a chip in each top corner, and
+ * its title and who saved it along the bottom. The whole tile is a link to
+ * the post (your saves open in the theater; anyone else's on its public page).
+ *
+ * Search tiles (`showStrength`) say where it matched and how sure; channel
+ * tiles say which network, how long, and whether it's new to you.
  */
 export function ResultTile({
   item,
@@ -209,6 +249,9 @@ export function ResultTile({
   onOpen,
   href,
   showStrength = true,
+  owner,
+  isNew = false,
+  fill = false,
 }: {
   item: SearchResultItem
   /** The top match gets the yellow ring. */
@@ -219,12 +262,20 @@ export function ResultTile({
   href?: string
   /** Search-only marks: the confidence meter and "Everyone" (off on channels). */
   showStrength?: boolean
+  /** A friend's channel: their save goes without saying; others "saved this too". */
+  owner?: string
+  /** You haven't seen it yet (channels). */
+  isNew?: boolean
+  /** Fill the parent's height instead of keeping the post's shape. */
+  fill?: boolean
 }) {
   const kind = kindOf(item)
   const { post } = item
   const author = postAuthor(post)
   const heard = heardOrRead(item)
   const savers = post.savers ?? []
+  const others = owner ? savers.filter((s) => s.username !== owner) : savers
+  const ownerSave = owner ? savers.find((s) => s.username === owner) : undefined
   const savedBy = savers.length
     ? `, ${saversLine(savers)}`
     : item.saved || !showStrength
@@ -232,9 +283,10 @@ export function ResultTile({
       : ', saved by someone else'
   const label = `${feedItemAccessibleDescription(post)}${savedBy}${post.isPrivate ? ', just for you' : ''}${showStrength ? `, ${STRENGTH_LABEL[strengthOfItem(item)].toLowerCase()}${heard ? `, ${heard.toLowerCase()}` : ''}` : ''}`
   const frame = cn(
-    'group relative block w-full overflow-hidden rounded-nx-tile bg-nx-surface text-left font-nx-sans',
+    'group relative block w-full overflow-hidden rounded-[20px] bg-nx-surface text-left font-nx-sans',
     'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nx-accent',
     best && 'outline outline-2 outline-offset-2 outline-nx-accent',
+    fill && 'h-full',
     className,
   )
   const cover = postCoverSrc(post)
@@ -251,34 +303,136 @@ export function ResultTile({
   }, [hovering])
   const onCream = kind === 'post' || (kind === 'article' && !cover)
 
+  // "You and Ben saved this too" on a friend's channel; "Mum saved this · Reddit" in search.
+  const network = networkLabel(post.platform)
+  const facesLine = owner
+    ? others.length
+      ? `${saversLine(others).replace(/ saved this$/, '')} saved this too`
+      : null
+    : savers.length
+      ? `${saversLine(savers)} · ${network}`
+      : null
+  const metaLine = owner
+    ? `${networkKind(item)}${ownerSave ? ` · ${timeAgo(ownerSave.savedAt)}` : ''}`
+    : `${network} · ${author.handle || author.name}`
+
+  const footer = (
+    <span className="flex min-w-0 items-center gap-2">
+      {facesLine ? (
+        <SaverFaces
+          savers={owner ? others : savers}
+          size={16}
+          linked
+          line={facesLine}
+          className="min-w-0"
+        />
+      ) : !item.saved && showStrength && !post.isPrivate ? (
+        <span className="flex min-w-0 items-center gap-1.5 text-[12px] font-semibold text-nx-cream">
+          <Users aria-hidden className="h-3.5 w-3.5 shrink-0" />
+          <span>Everyone</span>
+        </span>
+      ) : (
+        <span className="truncate text-[12px] text-nx-soft">{metaLine}</span>
+      )}
+      {post.isPrivate && <PrivateLock tone="scrim" className="ml-auto" />}
+    </span>
+  )
+
+  const topLeft = showStrength ? (
+    <span className={cn(CHIP, 'left-2.5 top-2.5')}>
+      {post.isPrivate && strength !== 'related' && (
+        <Lock aria-hidden className="h-3 w-3 shrink-0" strokeWidth={2.6} />
+      )}
+      <span>{tileWhere(item)}</span>
+    </span>
+  ) : (
+    <span className={cn(CHIP, 'left-2.5 top-2.5')}>{network}</span>
+  )
+  const topRight = showStrength ? (
+    <StrengthMeter
+      strength={strength}
+      where={null}
+      className="pointer-events-none absolute right-2.5 top-2.5 bg-black/55 backdrop-blur-md"
+      spoken={where}
+    />
+  ) : (
+    (badge || isNew) && (
+      <span className="pointer-events-none absolute right-2.5 top-2.5 flex gap-1.5">
+        {badge && (
+          <span className="flex h-6 items-center whitespace-nowrap rounded-full bg-black/55 px-[9px] text-[11px] font-extrabold tabular-nums text-white backdrop-blur-md">
+            {badge}
+          </span>
+        )}
+        {isNew && (
+          <span className="flex h-6 items-center whitespace-nowrap rounded-full bg-nx-accent px-[9px] text-[11px] font-extrabold text-black">
+            New
+          </span>
+        )}
+      </span>
+    )
+  )
+
   let body
-  if (kind === 'post' || (kind === 'article' && !cover)) {
+  if (onCream) {
     const text = kind === 'article' ? articleHeadline(post) : postText(post)
     body = (
-      <span className="flex flex-col gap-2 bg-nx-cream p-4 text-nx-ink">
+      <span className={cn('flex flex-col gap-2 bg-nx-cream p-4 text-nx-ink', fill && 'h-full')}>
         <span className="flex items-center gap-2">
           <span className="min-w-0 flex-1 truncate text-[11px] font-bold">
             {author.handle || author.name}
           </span>
-          {showStrength && <StrengthMeter strength={strength} tone="cream" where={where} />}
+          {showStrength ? (
+            <StrengthMeter strength={strength} tone="cream" where={where} />
+          ) : (
+            isNew && (
+              <span className="flex h-6 items-center rounded-full bg-nx-accent px-[9px] text-[11px] font-extrabold text-black">
+                New
+              </span>
+            )
+          )}
         </span>
         <span className={cn('line-clamp-[7] font-nx-serif', postTextSize(text.length))}>
           {text || 'Post'}
         </span>
-      </span>
-    )
-  } else if (kind === 'article') {
-    body = (
-      <span className="relative block aspect-[4/3]">
-        <NxImage src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <span className="nx-scrim nx-text-shadow absolute inset-x-0 bottom-0 px-3 pb-3 pt-10 font-nx-serif text-[19px] leading-[1.1] text-white">
-          <span className="line-clamp-3">{articleHeadline(post)}</span>
+        <span className="mt-auto flex min-w-0 flex-wrap items-center gap-2">
+          {savers.length > 0 ? (
+            <SaverFaces
+              savers={owner ? (others.length ? others : savers) : savers}
+              tone="cream"
+              size={16}
+              linked
+              line={facesLine ?? undefined}
+              className="min-w-0"
+            />
+          ) : (
+            !item.saved &&
+            showStrength &&
+            !post.isPrivate && (
+              <span className="flex items-center gap-1.5 text-[12px] font-bold">
+                <Users aria-hidden className="h-3.5 w-3.5 shrink-0" />
+                <span>Everyone</span>
+              </span>
+            )
+          )}
+          {post.isPrivate && <PrivateLock tone="cream" />}
+          {item.learning && (
+            <span className="flex h-6 items-center whitespace-nowrap rounded-full bg-nx-ink/10 px-2 text-[11px] font-bold">
+              Words only
+            </span>
+          )}
         </span>
       </span>
     )
   } else {
     body = (
-      <span className="relative block" style={{ aspectRatio: tileAspect(item).toFixed(4) }}>
+      <span
+        className={cn('relative block', fill && 'h-full')}
+        style={
+          fill
+            ? undefined
+            : { aspectRatio: (kind === 'article' ? 4 / 3 : tileAspect(item)).toFixed(4) }
+        }
+      >
         <NxImage
           src={cover}
           fallbackSrc={mediaFallbackSrc(post)}
@@ -302,7 +456,12 @@ export function ResultTile({
             )}
           />
         )}
-        {badge && <MediaChip className="bottom-2 right-2">{badge}</MediaChip>}
+        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-b from-transparent to-black/90 px-3 pb-3 pt-12 text-white">
+          <span className="line-clamp-2 text-[14px] font-extrabold leading-[1.25] [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
+            {tileTitle(item)}
+          </span>
+          {footer}
+        </span>
       </span>
     )
   }
@@ -319,13 +478,11 @@ export function ResultTile({
       onBlur={() => setHovering(false)}
     >
       {body}
-      <SaversMark item={item} everyone={showStrength} className="right-2 top-2" />
-      {item.learning && (
-        // Below the faces when there are some: "Ana and Ben saved this" fills the top of a small tile.
-        <WordsOnlyBadge className={cn('left-2', item.post.savers?.length ? 'top-10' : 'top-2')} />
-      )}
-      {showStrength && !onCream && (
-        <StrengthMeter strength={strength} where={where} className="absolute bottom-2 left-2" />
+      {!onCream && topLeft}
+      {!onCream && topRight}
+      {item.learning && !onCream && (
+        // Under the corner chip, so the two never overlap.
+        <WordsOnlyBadge className="left-2.5 top-10" />
       )}
     </Link>
   )

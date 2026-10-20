@@ -85,7 +85,7 @@ test('a save by someone else lands in the moment on Right now', async () => {
     (title) =>
       [...document.querySelectorAll('article')].some(
         (article) =>
-          article.querySelector('h3')?.textContent === title &&
+          article.querySelector('h2, h3')?.textContent === title &&
           [...article.querySelectorAll('span')].some((s) => s.textContent === 'Just saved'),
       ),
     FROG_TITLE,

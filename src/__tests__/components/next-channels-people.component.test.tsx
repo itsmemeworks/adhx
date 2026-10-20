@@ -105,7 +105,10 @@ describe('Your people row', () => {
 
   it('has a big card per friend and an Invite someone card', () => {
     render(<YourPeopleRow friends={[ben]} canInvite />)
-    const card = screen.getByRole('link', { name: 'Ben’s saves, 212 saves, 4 new' })
+    // A face on phones, a card on wider screens (CSS shows one).
+    const [face, card] = screen.getAllByRole('link', { name: 'Ben’s saves, 212 saves, 4 new' })
+    expect(face).toHaveAttribute('href', '/channels/friend/ben')
+    expect(within(face).getByText('4')).toBeInTheDocument()
     expect(card).toHaveAttribute('href', '/channels/friend/ben')
     expect(within(card).getByText('4 new')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Invite someone/ })).toHaveAttribute(

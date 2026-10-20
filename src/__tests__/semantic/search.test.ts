@@ -135,6 +135,29 @@ describe('keywords', () => {
     expect(ftsQuery('  ...  ')).toBeNull()
   })
 
+  it('drops possessive endings, lone letters and filler', () => {
+    expect(ftsQuery('the baby that bites his brother’s finger')).toBe(
+      '"baby" OR "bites" OR "brother" OR "finger"*',
+    )
+    expect(ftsQuery("brother's ")).toBe('"brother"')
+    expect(ftsQuery("don't stop me now ")).toBe('"don" OR "stop" OR "now"')
+    expect(ftsQuery('plan b ')).toBe('"plan"')
+    // A lone digit still counts.
+    expect(ftsQuery('3 cats ')).toBe('"3" OR "cats"')
+    // Nothing but a letter: nothing to look for.
+    expect(ftsQuery('s ')).toBeNull()
+  })
+
+  it("doesn't rank a post first for sharing only an 's", () => {
+    save(USER_A, 'charlie')
+    save(USER_A, 'cats')
+    indexPostText('twitter', 'charlie', 'Charlie bit my finger, again! The baby bites his brother')
+    indexPostText('twitter', 'cats', "Ana's cat's opinions on Jo's dog's bed")
+    expect(keywordSearch('the baby that bites his brother’s finger', 10).map((h) => h.key)).toEqual(
+      ['twitter:charlie'],
+    )
+  })
+
   it('matches post words, and only the viewer saves when asked', () => {
     save(USER_A, '1')
     save(USER_B, '2')

@@ -8,7 +8,7 @@ import {
   BookOpen,
   Bookmark,
   CheckCircle,
-  ShieldCheck,
+  Server,
   Smartphone,
   TriangleAlert,
   User,
@@ -28,7 +28,8 @@ import { PreferencesCard } from './PreferencesCard'
 import { SECONDARY, SettingsCard } from './parts'
 import { AccessKeysCard } from './AccessKeysCard'
 import { PhoneAppCard } from './PhoneAppCard'
-import { PeopleCard, usePeople } from './PeopleCard'
+import { NewInviteCard, PeopleCard, usePeople } from './PeopleCard'
+import { useInvites } from './InviteCard'
 import { SyncCard, SyncHistoryCard, type SyncCounts, type SyncHistoryEntry } from './SyncCard'
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
@@ -201,6 +202,7 @@ export function SettingsScreen() {
   }, [wantSync, me, cooldown.loaded, cooldown.canSync, sync, router])
 
   const people = usePeople()
+  const invites = useInvites()
   const waiting = people.data?.requests?.length ?? 0
   const showSync = !!me && (me.xConnected || me.xAvailable !== false)
   const sections: {
@@ -219,13 +221,13 @@ export function SettingsScreen() {
   ]
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader>
         <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
       </NxHeader>
 
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-3 md:px-8 md:pt-5 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-x-[26px]">
-        <aside className="hidden lg:sticky lg:top-24 lg:flex lg:flex-col lg:gap-3.5 lg:self-start">
+        <aside className="hidden lg:sticky lg:top-[92px] lg:flex lg:h-[calc(100dvh-112px)] lg:flex-col lg:gap-3.5 lg:self-start">
           <span aria-hidden className="mb-1.5 mt-1 font-nx-serif text-[52px] leading-[0.95]">
             Settings
           </span>
@@ -239,9 +241,9 @@ export function SettingsScreen() {
                 className={cn(
                   'flex h-11 items-center gap-2.5 whitespace-nowrap rounded-full px-3.5 text-[15px]',
                   active === href
-                    ? 'bg-[#262320] font-extrabold text-white'
+                    ? 'bg-[#262320] font-extrabold text-nx-cream'
                     : danger
-                      ? 'font-semibold text-[#ff8a7a] hover:bg-white/5'
+                      ? 'font-semibold text-[#ff5a3c] hover:bg-white/5'
                       : 'font-semibold text-[#c9bfab] hover:bg-white/5 hover:text-white',
                 )}
               >
@@ -258,9 +260,9 @@ export function SettingsScreen() {
               </a>
             ))}
           </nav>
-          <div className="mt-4 flex flex-col gap-1.5 rounded-[20px] border border-white/[0.08] bg-[#1a1814] p-4">
+          <div className="mt-auto flex flex-col gap-1.5 rounded-[20px] border border-white/[0.08] bg-nx-surface p-4">
             <span className="flex items-center gap-2 text-[13px] font-extrabold">
-              <ShieldCheck aria-hidden className="h-4 w-4 text-nx-accent" />
+              <Server aria-hidden className="h-4 w-4 text-nx-accent" />
               <span>On your server</span>
             </span>
             <span className="text-[13px] leading-snug text-[#a39b8b]">
@@ -314,9 +316,14 @@ export function SettingsScreen() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+              <NewInviteCard inv={invites} />
+              <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[310px_minmax(0,1fr)] xl:gap-[26px]">
                 <AccountCard me={me} refresh={() => void fetchMe()} />
-                <PeopleCard data={people.data} reload={() => void people.reload()} />
+                <PeopleCard
+                  data={people.data}
+                  reload={() => void people.reload()}
+                  invites={invites}
+                />
               </div>
               <div className="flex max-w-[760px] flex-col gap-5">
                 <PhoneAppCard />

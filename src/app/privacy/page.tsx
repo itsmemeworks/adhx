@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 /** Privacy, in the new design. The canonical copy is PRIVACY.md in the repo; keep them in step. */
 export default function PrivacyPage() {
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader current={null} />
       <article className="mx-auto flex max-w-[720px] flex-col gap-4 px-5 pb-20 pt-6 text-[17px] leading-[1.65] text-white/80 md:pt-10">
         <h1 className="m-0 font-nx-serif text-[52px] font-normal leading-none text-white md:text-[64px]">

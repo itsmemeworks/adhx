@@ -2,9 +2,18 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { Play } from 'lucide-react'
+import { AudioLines, Captions, Play } from 'lucide-react'
+import { networkLabel } from '@/lib/platform/networks'
+import { SaverFaces } from '../SaverFaces'
 import { cn } from '@/lib/utils'
-import { articleHeadline, postAuthor, postCoverSrc, postText } from '../post'
+import {
+  articleHeadline,
+  isTallMedia,
+  mediaFallbackSrc,
+  postAuthor,
+  postCoverSrc,
+  postText,
+} from '../post'
 import { MediaChip, NxImage, Scrim } from '../primitives'
 import { saversLine } from '../savers'
 import {
@@ -23,7 +32,14 @@ import {
   type MatchSignal,
   type SearchResultItem,
 } from './model'
-import { SaversMark, mediaBadge, ResultTile, StrengthMeter, useReducedMotion } from './ResultTile'
+import {
+  SaversMark,
+  mediaBadge,
+  ResultTile,
+  StrengthMeter,
+  tileTitle,
+  useReducedMotion,
+} from './ResultTile'
 
 /** "Video · 0:41 · in the video" (no repeated words when there is no duration). */
 function queueMeta(item: SearchResultItem): string {
@@ -175,22 +191,30 @@ export function Masonry({
   onOpen,
   hrefFor,
   showStrength = true,
+  owner,
+  isNew,
 }: {
   items: SearchResultItem[]
   columns?: string
   onOpen?: (item: SearchResultItem) => void
   hrefFor?: HrefFor
   showStrength?: boolean
+  /** A friend's channel: whose it is (see `ResultTile`). */
+  owner?: string
+  /** Which tiles get "New". */
+  isNew?: (item: SearchResultItem) => boolean
 }) {
   return (
-    <ul className={cn('list-none gap-2 p-0 md:gap-3', columns)}>
+    <ul className={cn('list-none gap-2 p-0 md:gap-3.5', columns)}>
       {items.map((item) => (
-        <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3">
+        <li key={resultKey(item)} className="mb-2 break-inside-avoid md:mb-3.5">
           <ResultTile
             item={item}
             onOpen={onOpen}
             href={hrefFor?.(item)}
             showStrength={showStrength}
+            owner={owner}
+            isNew={isNew?.(item) ?? false}
           />
         </li>
       ))}
@@ -216,40 +240,249 @@ export function RelatedHeading({ query, count }: { query: string; count: number 
   )
 }
 
-/** Bento: the best match large beside a masonry of the rest (stacked on phones). */
+/** The query's own words in a title, marked (longer than two letters, not filler). */
+function Highlighted({ text, query }: { text: string; query: string }) {
+  const words = query
+    .toLowerCase()
+    .match(/[\p{L}\p{N}]{3,}/gu)
+    ?.filter((w) => !['the', 'and', 'that', 'this', 'for', 'with', 'his', 'her'].includes(w))
+  if (!words?.length) return <>{text}</>
+  const pattern = new RegExp(
+    `(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+    'giu',
+  )
+  return (
+    <>
+      {text.split(pattern).map((part, i) =>
+        i % 2 === 1 ? (
+          <mark key={i} className="rounded bg-nx-accent px-[3px] text-black">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  )
+}
+
+const WHERE_ICON = { speech: AudioLines, screen: Captions } as const
+
+/**
+ * The best match, large: its picture (a video plays muted on a loop), where
+ * it matched, how sure, who saved it and Play. Tall videos stand up; the
+ * rest sit over their details.
+ */
+export function LeadResult({
+  item,
+  query,
+  href,
+  onOpen,
+}: {
+  item: SearchResultItem
+  query: string
+  href: string
+  onOpen?: (item: SearchResultItem) => void
+}) {
+  const { post } = item
+  const kind = kindOf(item)
+  const cover = postCoverSrc(post)
+  const reduced = useReducedMotion()
+  const videoSrc = reduced ? null : previewVideoSrc(post)
+  const [playing, setPlaying] = useState(false)
+  useEffect(() => setPlaying(false), [videoSrc])
+  const author = postAuthor(post)
+  const title = tileTitle(item)
+  const where = heardOrRead(item)
+  const lead = item.matched[0]
+  const WhereIcon = lead === 'speech' || lead === 'screen' ? WHERE_ICON[lead] : null
+  const strength = strengthOfItem(item)
+  const savers = post.savers ?? []
+  const badge = mediaBadge(item)
+  const tall = isTallMedia(post) && !!cover
+  const meta = [networkLabel(post.platform), author.handle || author.name, badge]
+    .filter(Boolean)
+    .join(' · ')
+
+  const media = cover ? (
+    <>
+      <NxImage
+        src={cover}
+        fallbackSrc={mediaFallbackSrc(post)}
+        alt=""
+        reveal="fade"
+        loading="eager"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      {videoSrc && (
+        <video
+          key={videoSrc}
+          src={videoSrc}
+          poster={cover}
+          muted
+          loop
+          playsInline
+          autoPlay
+          preload="metadata"
+          aria-hidden
+          onPlaying={() => setPlaying(true)}
+          onError={() => setPlaying(false)}
+          className={cn(
+            'absolute inset-0 h-full w-full object-cover transition-opacity duration-300',
+            playing ? 'opacity-100' : 'opacity-0',
+          )}
+        />
+      )}
+    </>
+  ) : (
+    <span className="absolute inset-0 flex flex-col justify-center gap-3 bg-nx-cream p-8 text-nx-ink">
+      <span className="text-sm font-bold">{author.handle || author.name}</span>
+      <span className="line-clamp-6 font-nx-serif text-[30px] leading-[1.08]">
+        {kind === 'article' ? articleHeadline(post) : postText(post)}
+      </span>
+    </span>
+  )
+
+  const whereChip = (
+    <span className="pointer-events-none absolute left-4 top-4 flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-nx-accent px-3 text-[13px] font-extrabold text-black">
+      {WhereIcon && <WhereIcon aria-hidden className="h-[15px] w-[15px]" strokeWidth={2.5} />}
+      <span>{where ?? (playing ? `Playing${badge ? ` · ${badge}` : ''}` : 'Best match')}</span>
+    </span>
+  )
+  const corner = (
+    <span className="pointer-events-none absolute right-4 top-4 flex gap-1.5">
+      {where && (
+        <span className="flex h-[30px] items-center whitespace-nowrap rounded-full bg-black/55 px-3 text-xs font-extrabold text-white backdrop-blur-md">
+          Best match
+        </span>
+      )}
+      <StrengthMeter
+        strength={strength}
+        spoken={where}
+        className="h-[30px] bg-black/55 backdrop-blur-md"
+      />
+    </span>
+  )
+  const saved =
+    savers.length > 0 ? (
+      <SaverFaces savers={savers} size={22} linked className="min-w-0" />
+    ) : (
+      <span className="truncate text-[13px] text-nx-soft">
+        {item.saved ? 'You saved this' : 'Saved by someone else'}
+      </span>
+    )
+
+  if (tall) {
+    return (
+      <Link
+        href={href}
+        onClick={onOpen ? () => onOpen(item) : undefined}
+        aria-label={`Best match: ${author.name}. ${title}`}
+        className="relative block h-[552px] w-full shrink-0 overflow-hidden rounded-[24px] bg-nx-stage outline outline-2 outline-offset-[3px] outline-nx-accent sm:w-[310px]"
+      >
+        {media}
+        {whereChip}
+        {corner}
+        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-2.5 bg-gradient-to-b from-transparent to-black/90 px-[18px] pb-[18px] pt-[90px] text-white">
+          <span className="line-clamp-3 text-lg font-extrabold leading-[1.35]">
+            <Highlighted text={title} query={query} />
+          </span>
+          <span className="text-[13px] text-nx-soft">{meta}</span>
+          <span className="flex items-center justify-between gap-3">
+            {saved}
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-nx-accent text-black">
+              <Play aria-hidden className="ml-0.5 h-4 w-4" fill="currentColor" strokeWidth={0} />
+            </span>
+          </span>
+        </span>
+      </Link>
+    )
+  }
+
+  return (
+    <article className="flex w-full shrink-0 flex-col overflow-hidden rounded-[26px] border border-nx-accent/35 bg-nx-surface lg:h-[552px] lg:w-[min(640px,50%)]">
+      <Link
+        href={href}
+        onClick={onOpen ? () => onOpen(item) : undefined}
+        aria-label={`Best match: ${author.name}. ${title}`}
+        className="relative block aspect-video shrink-0 bg-nx-stage lg:aspect-auto lg:h-[360px]"
+      >
+        {media}
+        {whereChip}
+        {corner}
+      </Link>
+      <div className="flex flex-1 flex-col gap-3 px-5 pb-5 pt-[18px]">
+        <div className="flex items-start justify-between gap-4">
+          <span className="flex min-w-0 flex-col gap-1">
+            <span className="line-clamp-2 text-xl font-extrabold leading-tight">
+              <Highlighted text={title} query={query} />
+            </span>
+            <span className="truncate text-sm text-nx-muted">{meta}</span>
+          </span>
+          <span className="hidden shrink-0 items-center gap-2 text-[13px] font-semibold text-nx-soft sm:flex">
+            {STRENGTH_LABEL[strength]}
+          </span>
+        </div>
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-2.5 text-sm text-nx-soft">{saved}</span>
+          <Link
+            href={href}
+            onClick={onOpen ? () => onOpen(item) : undefined}
+            className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-[18px] text-sm font-extrabold text-black"
+          >
+            <Play aria-hidden className="h-3.5 w-3.5" fill="currentColor" strokeWidth={0} />
+            <span>Play</span>
+          </Link>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+/** Bento: the best match large beside a grid of the rest (stacked on phones). */
 export function BentoView({
   items,
   query = '',
   onOpen,
   hrefFor,
+  extra,
 }: {
   items: SearchResultItem[]
-  /** For the "Related to …" heading. */
+  /** For the "Related to …" heading and the marked words. */
   query?: string
   onOpen?: (item: SearchResultItem) => void
   hrefFor?: HrefFor
+  /** One more card after the rest ("Not it?"). */
+  extra?: React.ReactNode
 }) {
   const { matches, related } = splitByStrength(items)
   const [lead, ...rest] = matches
   if (!lead) return null
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-        <BestMatch
-          item={lead}
-          href={hrefFor?.(lead)}
-          className="h-[min(62vh,560px)] w-full shrink-0 lg:sticky lg:top-4 lg:h-[640px] lg:w-[46%]"
-        />
-        {rest.length > 0 && (
-          <div className="min-w-0 flex-1">
-            <Masonry
-              items={rest}
-              columns="columns-2 md:columns-3 lg:columns-2 xl:columns-3"
-              onOpen={onOpen}
-              hrefFor={hrefFor}
-            />
-          </div>
-        )}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
+        {/* Wide screens: the best match large. Phones: it leads the grid. */}
+        <div className="hidden lg:contents">
+          <LeadResult
+            item={lead}
+            query={query}
+            href={hrefFor?.(lead) ?? openHref(lead)}
+            onOpen={onOpen}
+          />
+        </div>
+        {
+          <ul className="m-0 grid min-w-0 flex-1 list-none grid-cols-2 gap-2 p-0 md:grid-cols-3 md:gap-4 lg:auto-rows-[268px] lg:grid-cols-2 2xl:grid-cols-3">
+            <li className="h-[260px] min-w-0 md:h-[268px] lg:hidden">
+              <ResultTile item={lead} best onOpen={onOpen} href={hrefFor?.(lead)} fill />
+            </li>
+            {rest.map((item) => (
+              <li key={resultKey(item)} className="h-[260px] min-w-0 md:h-[268px] lg:h-auto">
+                <ResultTile item={item} onOpen={onOpen} href={hrefFor?.(item)} fill />
+              </li>
+            ))}
+            {extra && <li className="col-span-2 min-w-0 md:col-span-1 lg:row-span-2">{extra}</li>}
+          </ul>
+        }
       </div>
       {related.length > 0 && (
         <section className="flex flex-col gap-3">

@@ -106,22 +106,36 @@ describe('ResultTile', () => {
     expect(screen.getByRole('link', { name: /Ben and Ana saved this/ })).toBeInTheDocument()
   })
 
-  it('keeps "Words only" clear of the faces on a small tile', () => {
+  it('keeps "Words only" clear of the corner chip and the faces', () => {
+    const photo = post({
+      media: [
+        {
+          id: 'p',
+          mediaType: 'photo',
+          url: 'https://x/p.jpg',
+          thumbnailUrl: 'https://x/p.jpg',
+          shareUrl: 'https://x/p.jpg',
+          width: 800,
+          height: 600,
+        },
+      ],
+    })
     const { unmount } = render(
       <ResultTile
         item={{
-          post: post({ savers: [saver('ben'), saver('ana', { isYou: true })] }),
+          post: { ...photo, savers: [saver('ben'), saver('ana', { isYou: true })] },
           saved: true,
           matched: ['words'],
           learning: true,
         }}
       />,
     )
+    // Over media: under the corner chip.
     expect(screen.getByText('Words only')).toHaveClass('top-10')
-    expect(screen.getByText('Words only')).not.toHaveClass('top-2')
     unmount()
+    // On a words-only card: in line with the faces, not over the handle.
     render(<ResultTile item={{ post: post(), saved: false, matched: ['words'], learning: true }} />)
-    expect(screen.getByText('Words only')).toHaveClass('top-2')
+    expect(screen.getByText('Words only')).not.toHaveClass('absolute')
   })
 
   it('keeps "Everyone" when no names are known, and locks a private post', () => {
@@ -163,7 +177,7 @@ describe('SharedSavesNotice', () => {
   it('tells members once, and remembers the dismissal', () => {
     const { unmount } = render(<SharedSavesNotice />)
     expect(screen.getByText(/Your saves are now shared with your people\./)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
     expect(window.localStorage.getItem(SHARED_SAVES_NOTICE_KEY)).toBe('1')
     unmount()
@@ -185,7 +199,7 @@ describe('SharedSavesNotice', () => {
       throw new Error('blocked')
     })
     render(<SharedSavesNotice />)
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
     get.mockRestore()
     set.mockRestore()

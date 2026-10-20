@@ -248,7 +248,8 @@ export function renewInviteLink(
 export type InviteProblem = 'bad' | 'used' | 'expired' | 'revoked' | 'dead'
 
 export type InviteLookup =
-  { ok: true; inviter: string; nameHint: string | null } | { ok: false; problem: InviteProblem }
+  | { ok: true; inviter: string; inviterUsername: string; nameHint: string | null }
+  | { ok: false; problem: InviteProblem }
 
 /** Why this token can't be used, or who it's from. Never changes anything. */
 export function readInvite(token: unknown, now = Date.now()): InviteLookup {
@@ -275,6 +276,7 @@ export function readInvite(token: unknown, now = Date.now()): InviteLookup {
   return {
     ok: true,
     inviter: row.displayName?.trim() || row.username,
+    inviterUsername: row.username,
     nameHint: row.nameHint,
   }
 }

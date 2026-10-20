@@ -12,7 +12,7 @@ import { NxHeader } from '../channels/ChannelParts'
 
 export function ProfileLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader current={null} />
       <main className="mx-auto flex max-w-[1600px] flex-col gap-8 px-4 pb-16 pt-4 md:px-7 md:pt-8">
         {children}

@@ -265,14 +265,15 @@ export function NxHeader({
 }) {
   return (
     <>
-      <header className="sticky top-0 z-20 flex items-center gap-4 bg-black/90 px-4 py-3 backdrop-blur md:px-7 md:py-[18px]">
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-nx-ink/95 px-4 backdrop-blur md:h-[72px] md:gap-3 lg:gap-7 lg:px-8">
         <NxLogo />
         <PrimaryNav current={current} />
-        <span className="flex-1" />
-        <OnTheirWayPill />
-        {children}
-        <HeaderSearch />
-        <AccountMenu />
+        <div className="ml-auto flex min-w-0 items-center gap-2 md:gap-3 lg:gap-3.5">
+          <OnTheirWayPill />
+          {children}
+          <HeaderSearch />
+          <AccountMenu />
+        </div>
       </header>
       <BottomNav current={current} />
     </>

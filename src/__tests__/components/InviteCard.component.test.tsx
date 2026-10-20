@@ -127,12 +127,17 @@ describe('InviteCard', () => {
 describe('InviteDoneClient', () => {
   it('says you’re in and shows the phone code without being asked', async () => {
     render(<InviteDoneClient username="cleo" hasEmail={false} />)
-    expect(screen.getByRole('heading', { name: 'You’re in.' })).toBeInTheDocument()
-    const qr = await screen.findByRole('img', { name: 'QR code to connect the phone app' })
+    expect(screen.getByRole('heading', { name: /^You’re in, ?Cleo\.$/ })).toBeInTheDocument()
+    const qr = await screen.findByRole('img', { name: 'QR code to connect your phone' })
     expect(atob(qr.getAttribute('src')!.split(',')[1])).toBe(
       `adhx://pair?server=${encodeURIComponent(window.location.origin)}&code=ABCD2345`,
     )
-    expect(screen.getByText('ABCD-2345')).toBeInTheDocument()
+    expect(screen.getAllByText('ABCD-2345').length).toBeGreaterThan(0)
+    // On a phone, the app opens with the code filled in.
+    expect(screen.getByRole('link', { name: 'Connect this phone' })).toHaveAttribute(
+      'href',
+      `adhx://pair?server=${encodeURIComponent(window.location.origin)}&code=ABCD2345`,
+    )
     expect(screen.getByRole('link', { name: 'Skip, take me to the feed' })).toHaveAttribute(
       'href',
       '/',

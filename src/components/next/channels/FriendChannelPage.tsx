@@ -1,15 +1,53 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { networkLabel } from '@/lib/platform/networks'
 import { ChevronLeft, Lock, Play } from 'lucide-react'
-import { resultKey, type SearchResultItem } from '../search/model'
+import { kindOf, resultKey, type SearchResultItem } from '../search/model'
 import { Masonry } from '../search/ResultViews'
 import { NxAvatar } from '../primitives'
 import { savesOf } from '../savers'
 import { friendPlayHref, recentPlayHref } from '../theater/queue'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
+import { personColour } from '../moments/people'
 import { NxHeader } from './ChannelParts'
+
+type Show = 'all' | 'videos' | 'photos' | 'music' | 'posts'
+
+const SHOW_LABEL: Record<Show, string> = {
+  all: 'All',
+  videos: 'Videos',
+  photos: 'Photos',
+  music: 'Music',
+  posts: 'Posts',
+}
+
+/** Which filter a post falls under (SoundCloud is music, whatever its media). */
+function showOf(item: SearchResultItem): Exclude<Show, 'all'> {
+  if ((item.post.platform as string | undefined) === 'soundcloud') return 'music'
+  const kind = kindOf(item)
+  if (kind === 'video' || kind === 'gif') return 'videos'
+  if (kind === 'photo') return 'photos'
+  return 'posts'
+}
+
+/** "Mostly YouTube, X and SoundCloud." from the networks they save from most. */
+function mostlyFrom(items: SearchResultItem[]): string | null {
+  if (items.length < 3) return null
+  const counts = new Map<string, number>()
+  for (const i of items) {
+    const n = networkLabel(i.post.platform)
+    counts.set(n, (counts.get(n) ?? 0) + 1)
+  }
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([n]) => n)
+  const list = top.length > 1 ? `${top.slice(0, -1).join(', ')} and ${top[top.length - 1]}` : top[0]
+  return `Mostly ${list}.`
+}
 
 /**
  * A friend's channel (`/channels/friend/{username}`): their face, how many
@@ -32,6 +70,8 @@ export function FriendChannelPage({
   const [total, setTotal] = useState(size)
   const [newCount, setNewCount] = useState(0)
   const [failed, setFailed] = useState(false)
+  const [fresh, setFresh] = useState<Set<string>>(new Set())
+  const [show, setShow] = useState<Show>('all')
   const title = savesOf({ name, username, isYou: false })
   const paste = usePasteToSave({
     savedAction: (post) => ({
@@ -66,49 +106,90 @@ export function FriendChannelPage({
         setFailed(true)
         setItems([])
       })
+    // Which of them you haven't seen yet, for the "New" marks.
+    fetch(`/api/channels/friend/${encodeURIComponent(username)}?new=1`, {
+      signal: controller.signal,
+      credentials: 'same-origin',
+    })
+      .then((r) => (r.ok ? (r.json() as Promise<{ items: SearchResultItem[] }>) : null))
+      .then((d) => d && setFresh(new Set(d.items.map(resultKey))))
+      .catch(() => {})
     return () => controller.abort()
   }, [username])
+
+  const counts = useMemo(() => {
+    const c: Record<Show, number> = { all: 0, videos: 0, photos: 0, music: 0, posts: 0 }
+    for (const i of items ?? []) {
+      c.all++
+      c[showOf(i)]++
+    }
+    return c
+  }, [items])
+  const shown = useMemo(
+    () => (show === 'all' ? items : items?.filter((i) => showOf(i) === show)) ?? null,
+    [items, show],
+  )
+  const mostly = useMemo(() => mostlyFrom(items ?? []), [items])
+  const ring = personColour(username)
 
   const savesLabel = total === 1 ? '1 save' : `${total.toLocaleString('en-GB')} saves`
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader current="channels">
-        <PasteButton onClick={paste.pasteFromClipboard} />
+        {/* Desktop pastes anywhere on the page (⌘V); phones need the button. */}
+        <PasteButton onClick={paste.pasteFromClipboard} className="md:hidden" />
       </NxHeader>
-      <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-4 pb-16 pt-2 md:px-7 lg:flex-row lg:items-start lg:gap-8">
+      <main className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 pb-16 pt-5 md:px-8 md:pt-7 lg:flex-row lg:items-start lg:gap-8">
         <aside
           aria-label="About this channel"
-          className="flex flex-col lg:sticky lg:top-24 lg:w-[320px] lg:shrink-0"
+          className="flex flex-col lg:sticky lg:top-[100px] lg:min-h-[calc(100dvh-128px)] lg:w-[320px] lg:shrink-0"
         >
           <Link
             href="/channels"
-            className="flex h-6 items-center gap-1.5 text-sm font-semibold text-white/70 hover:text-white"
+            className="hidden h-6 items-center gap-1.5 text-sm font-semibold text-nx-soft hover:text-nx-cream lg:flex"
           >
             <ChevronLeft aria-hidden className="h-4 w-4" />
             <span>All channels</span>
           </Link>
-          <NxAvatar
-            author={{ avatarUrl, handle: username, name: name ?? username }}
-            size={112}
-            className="mt-5 shadow-[0_0_0_6px_#000,0_0_0_8px_rgb(var(--nx-accent)/0.35)]"
-          />
-          <h1 className="m-0 mt-5 font-nx-serif text-[44px] font-normal leading-[0.95] md:text-[62px]">
-            {title}
-          </h1>
-          <p className="m-0 mt-3 text-[17px] font-semibold text-white/75">
-            <span>{savesLabel}</span>
-            {newCount > 0 && (
-              <>
-                <span> · </span>
-                <span className="text-nx-accent">{`${newCount} you haven’t seen`}</span>
-              </>
-            )}
+          {/* Phones: the face beside the title, as on the phone app. */}
+          <div className="flex items-center gap-4 lg:block">
+            <NxAvatar
+              author={{ avatarUrl, handle: username, name: name ?? username }}
+              size={64}
+              className="lg:hidden"
+              style={{ boxShadow: `0 0 0 3px #0f0e0c, 0 0 0 5px ${ring}59` }}
+            />
+            <NxAvatar
+              author={{ avatarUrl, handle: username, name: name ?? username }}
+              size={112}
+              className="mt-[22px] hidden lg:block"
+              style={{ boxShadow: `0 0 0 6px #0f0e0c, 0 0 0 8px ${ring}59` }}
+            />
+            <div className="min-w-0 lg:contents">
+              <h1 className="m-0 truncate font-nx-serif text-[36px] font-normal leading-[0.95] tracking-[-0.01em] lg:mt-[22px] lg:whitespace-nowrap lg:text-[62px]">
+                {title}
+              </h1>
+              <p className="m-0 mt-1.5 text-[13px] font-semibold text-nx-soft lg:mt-3 lg:text-[17px]">
+                <span>{savesLabel}</span>
+                {newCount > 0 && (
+                  <>
+                    <span> · </span>
+                    <span className="text-nx-accent">{`${newCount} you haven’t seen`}</span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <p className="m-0 mt-2 hidden text-sm leading-normal text-nx-muted lg:block">
+            {mostly
+              ? `${mostly} Picked by hand, one at a time, like it’s 2009.`
+              : 'Picked by hand, one at a time, like it’s 2009.'}
           </p>
-          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row lg:flex-col">
+          <div className="mt-4 flex gap-2.5 lg:mt-[22px] lg:flex-col">
             <Link
               href={friendPlayHref(username)}
-              className="flex h-[52px] items-center justify-center gap-2.5 rounded-full sm:flex-1 lg:flex-none bg-nx-accent text-base font-extrabold text-black"
+              className="flex h-12 items-center justify-center gap-2.5 whitespace-nowrap rounded-full bg-nx-accent px-5 text-base font-extrabold text-black lg:h-[52px]"
             >
               <Play aria-hidden className="h-4 w-4" fill="currentColor" strokeWidth={0} />
               <span>Play all</span>
@@ -116,21 +197,50 @@ export function FriendChannelPage({
             {newCount > 0 && (
               <Link
                 href={friendPlayHref(username, { onlyNew: true })}
-                className="flex h-[52px] items-center justify-center gap-2.5 rounded-full sm:flex-1 lg:flex-none border border-white/[0.08] bg-white/[0.08] text-base font-extrabold text-nx-cream"
+                className="flex h-12 min-w-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-white/[0.08] bg-[#262320] px-5 text-base font-extrabold text-nx-cream lg:h-[52px]"
               >
                 <span aria-hidden className="h-2 w-2 rounded-full bg-nx-accent" />
                 <span>{newCount === 1 ? 'Play the new one' : `Play the ${newCount} new ones`}</span>
               </Link>
             )}
           </div>
-          <p className="m-0 mt-6 flex items-center gap-2 text-[13px] text-white/55">
+          {counts.all > 0 && (
+            <div
+              role="group"
+              aria-label="Show"
+              className="-mx-4 mt-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] lg:mx-0 lg:mt-[22px] lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden"
+            >
+              {(Object.keys(SHOW_LABEL) as Show[])
+                .filter((k) => k === 'all' || counts[k] > 0)
+                .map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={show === k}
+                    onClick={() => setShow(k)}
+                    className={cn(
+                      'h-9 shrink-0 whitespace-nowrap rounded-full px-3.5 text-[13px]',
+                      show === k
+                        ? 'bg-nx-cream font-extrabold text-black'
+                        : 'bg-nx-surface font-semibold text-nx-cream',
+                    )}
+                  >
+                    {k === 'all' ? SHOW_LABEL[k] : `${SHOW_LABEL[k]} ${counts[k]}`}
+                  </button>
+                ))}
+            </div>
+          )}
+          <p className="m-0 mt-3 flex items-center gap-2 text-[13px] text-nx-muted lg:mt-auto lg:pt-6">
             <Lock aria-hidden className="h-3.5 w-3.5 shrink-0" />
             <span>Only people on this server can see this page.</span>
           </p>
         </aside>
         <section aria-label={title} className="min-w-0 flex-1">
-          {items === null ? (
-            <div aria-hidden className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3">
+          {shown === null ? (
+            <div
+              aria-hidden
+              className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-3.5 xl:grid-cols-4"
+            >
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <span
                   key={i}
@@ -138,7 +248,7 @@ export function FriendChannelPage({
                 />
               ))}
             </div>
-          ) : items.length === 0 ? (
+          ) : shown.length === 0 ? (
             <p className="m-0 text-white/65">
               {failed
                 ? 'Their saves didn’t load. Refresh to try again.'
@@ -146,10 +256,12 @@ export function FriendChannelPage({
             </p>
           ) : (
             <Masonry
-              items={items}
-              columns="columns-2 md:columns-3 2xl:columns-4"
+              items={shown}
+              columns="columns-2 md:columns-3 xl:columns-4"
               hrefFor={(item) => friendPlayHref(username, { start: resultKey(item) })}
               showStrength={false}
+              owner={username}
+              isNew={(item) => fresh.has(resultKey(item))}
             />
           )}
         </section>
