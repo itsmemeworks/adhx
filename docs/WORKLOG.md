@@ -20,6 +20,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Fixed: two-line serif headings now sit at the boards' 0.95 line height (caught up, Live, Connected, the share card via `tightLines`, iOS 26 only for wrapping text); the note bubble's tail is the board's 45° corner; "Saved together" in Why this one shows every saver's face; the tuned-in byline keeps the names whole and drops the network, then shortens the time; the send sheet's poster is upright 54×96 with the kind on a dark disc; the connected Gob's grin uses the board's own curves.
 - Unchanged on purpose: one-row header, data-only differences (moment names, counts, order), system sheets.
 
+## 2026-10-20 — Android: final phone-board parity pass
+
+- Side by side of every phone board (j1-2/3, j2-1/2/3/4/7, j3-3, j4-3/4, j5-6, j6-3, j7-3/4, j8-4/5, the note bubble) at 390dp against a :3613 parity server.
+- Fixed: words over the player and the search field fell back to Roboto (no `fontFamily`), now Hanken Grotesk; Instrument Serif headings set tighter than the font kept its full ascent/descent, so `serifLineBox` trims them to the CSS line box (share card title, caught-up title); the caught-up shadow is an ellipse, not a pill; Settings' Remove this phone / Decline are 36dp quiet buttons and the This phone card has the boards' padding and line heights; the share card's keep line and bar sit together at the poster's foot.
+- Left as is: the one-row player header, data-only differences (moment names, counts, order), system UI.
+
+## 2026-10-20 — Android: send text posts to your people
+
+- Share on a text post or article now opens the send sheet too ("Sending the words"): Chat, Mail and More send its words, and "Or straight to your people" sends the post, as for videos and photos. Before, words went straight to the system share sheet, so text posts couldn't be sent to a member from the phone (board j4-4 gap).
+
 ## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
 
 - In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.

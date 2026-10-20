@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -78,6 +79,11 @@ private val Tile = Color(0xFF3A352D)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDismiss: () -> Unit) {
+    // A text post or article has no file: send its words, or straight to your people.
+    if (remember(post.key, server) { ShareKept.files(post, server).isEmpty() }) {
+        WordsSendSheet(post, server, onNotice, onDismiss)
+        return
+    }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -175,6 +181,82 @@ fun SendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDis
                     }
                     if (SaveToPhone.supported) Choice(Glyphs.Photo, "Save to phone", waiting = saving) { pick(Target.Phone) }
                     Choice(Glyphs.More, "More", waiting = pending == Target.More) { pick(Target.More) }
+                }
+            }
+            SendToPeople(post, server, onShown = { scope.launch { state.expand() } })
+        }
+    }
+}
+
+/** The send sheet for a post with no file: its words through Chat, Mail or More, and your people. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WordsSendSheet(post: PhonePost, server: String, onNotice: (String) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val words = remember(post.key) { ShareKept.words(post) }
+
+    fun close() {
+        scope.launch { state.hide() }.invokeOnCompletion { onDismiss() }
+    }
+
+    fun send(target: Target) {
+        if (words.isBlank()) {
+            onNotice("There’s nothing to share in this one")
+            return close()
+        }
+        val intent = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, words)
+        when (target) {
+            Target.Chat -> Telephony.Sms.getDefaultSmsPackage(context)?.let { intent.setPackage(it) }
+            Target.Mail -> intent.selector = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
+            else -> return ShareKept.send(context, intent).also { close() }
+        }
+        try {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: ActivityNotFoundException) {
+            ShareKept.send(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, words))
+        } catch (_: SecurityException) {
+            ShareKept.send(context, Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, words))
+        }
+        close()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = state,
+        containerColor = AdhxColors.Surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { SheetHandle(AdhxColors.Hairline) },
+    ) {
+        Column(
+            Modifier
+                .navigationBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(AdhxColors.Card)
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    if (post.kind == PostKind.ARTICLE) "Sending the article" else "Sending the words",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AdhxColors.White,
+                )
+                Text(words.ifBlank { "Nothing to send" }, fontSize = 13.sp, lineHeight = 19.sp, color = AdhxColors.Muted, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Label("SEND WITH")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Choice(Glyphs.Chat, "Chat", waiting = false) { send(Target.Chat) }
+                    Choice(Glyphs.Mail, "Mail", waiting = false) { send(Target.Mail) }
+                    Choice(Glyphs.More, "More", waiting = false) { send(Target.More) }
                 }
             }
             SendToPeople(post, server, onShown = { scope.launch { state.expand() } })

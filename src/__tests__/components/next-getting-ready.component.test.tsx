@@ -289,7 +289,8 @@ describe('the theater while a post is being kept', () => {
     expect(screen.getByText('Kept on your ADHX')).toBeInTheDocument()
     expect(screen.queryByText('Shared with your people')).not.toBeInTheDocument()
     expect(screen.getByTestId('stage')).toHaveAttribute('data-covered', 'false')
-    expect(kept).toHaveBeenCalledTimes(1)
+    // The kept event can land a tick after the overlay goes (slow CI runners).
+    await waitFor(() => expect(kept).toHaveBeenCalledTimes(1))
     expect((kept.mock.calls[0][0] as CustomEvent).detail).toEqual({ key: 'instagram:choc' })
     // Polling stops once it's kept.
     const asked = fetchMock.mock.calls.filter(([u]) =>

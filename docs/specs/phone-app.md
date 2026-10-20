@@ -630,7 +630,8 @@ out so the server's own choice still applies.
   a 52dp face per member; one who has it is dimmed with "Jo already has it.",
   a tap sends it (`POST /api/app/send`) and leaves a tick. A private save
   says "Just for you. Share it first to send it." A server without the route
-  shows no row. Text posts still go straight to the share sheet.
+  shows no row. A text post or article gets the same sheet with "Sending the
+  words": Chat, Mail and More send its words, and the row sends the post.
 - New: a `sent` headline is the why chip "Pete sent you this" with Pete's
   face; Why this one gives it a send icon and his face. Unknown kinds show
   their words. A `like` reason shows its `post.posterUrl` as a 38dp Gob-shaped
