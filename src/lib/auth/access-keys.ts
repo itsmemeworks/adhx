@@ -146,7 +146,7 @@ export function userIdFromAccessKey(
   return accessKeyFromHeader(authorization, scope)?.userId ?? null
 }
 
-/** Like `userIdFromAccessKey`, and fails closed for a banned account, as sessions do. */
+/** Like `userIdFromAccessKey`, and fails closed for a banned or waiting account, as sessions do. */
 export async function accessKeyUser(
   authorization: string | null | undefined,
   scope: AccessKeyScope = 'search',
@@ -155,5 +155,8 @@ export async function accessKeyUser(
   if (!userId) return null
   const { readUserBan } = await import('@/lib/admin/moderation')
   const ban = readUserBan(userId)
-  return ban.ok && !ban.value ? userId : null
+  if (!ban.ok || ban.value) return null
+  // Waiting to be let in counts as signed out, as it does for sessions.
+  const { accountApproval } = await import('./account-state')
+  return (await accountApproval(userId)) === 'approved' ? userId : null
 }

@@ -105,6 +105,27 @@ export function postText(item: FeedItem): string {
     .trim()
 }
 
+/** Networks whose posts carry a title line before the description. */
+export const TITLED_NETWORKS: ReadonlySet<string> = new Set([
+  'youtube',
+  'vimeo',
+  'reddit',
+  'pinterest',
+  'soundcloud',
+  'twitch',
+])
+
+/**
+ * The title of a titled network's post ("Title\n\nDescription", YouTube,
+ * Reddit…), or null when the post is one run of words.
+ */
+export function postTitleLine(item: FeedItem): string | null {
+  const raw = (item.text || '').trim()
+  const cut = raw.indexOf('\n\n')
+  if (!TITLED_NETWORKS.has(item.platform ?? 'twitter') || cut <= 0 || cut > 140) return null
+  return postText(item).split('\n')[0]?.trim() || null
+}
+
 export interface PostAuthor {
   /** Display name, falling back to the handle. */
   name: string

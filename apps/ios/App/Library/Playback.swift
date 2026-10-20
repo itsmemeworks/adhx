@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 /// One player for the whole pager: it moves to whichever post is on screen,
-/// loops it, and starts muted. Files stream from your ADHX (`/api/files/…`).
+/// loops it, and starts muted (unless Sound on by default is on). Files stream from your ADHX (`/api/files/…`).
 @MainActor
 final class Playback: ObservableObject {
     let player = AVPlayer()
@@ -42,7 +42,9 @@ final class Playback: ObservableObject {
     private var stallWatch: NSObjectProtocol?
 
     init() {
-        player.isMuted = true
+        // Settings → "Sound on by default".
+        muted = !Prefs.soundOn
+        player.isMuted = muted
         player.automaticallyWaitsToMinimizeStalling = true
         // Sound plays with the ring/silent switch off, like other video apps.
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)

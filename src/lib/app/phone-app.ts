@@ -27,6 +27,8 @@ export interface AppPost {
   openPath: string
   alreadySaved: boolean
   savedAt: string
+  /** Kept just for you: no one else sees, counts or is told about this save. */
+  isPrivate: boolean
 }
 
 export type KeepState = 'waiting' | 'keeping' | 'kept' | 'retrying' | 'unavailable' | 'off'
@@ -94,6 +96,7 @@ export function appPost(row: Bookmark, alreadySaved: boolean): AppPost {
     openPath: previewPath(row.platform, row.author, row.id, row.category),
     alreadySaved,
     savedAt: row.processedAt,
+    isPrivate: !!row.isPrivate,
   }
 }
 

@@ -8,11 +8,18 @@
  * (`SELECT 1` still passes, `activity` / `users` do not).
  */
 import { spawn } from 'node:child_process'
+import { rmSync } from 'node:fs'
+import path from 'node:path'
 import { E2E_FX_PORT, E2E_PORT } from './constants'
 import { E2E_ROOT, e2eProcessEnv } from './env'
 import { startFxMock } from './fx-mock'
 import { prepareE2eDatabase } from './prepare-db'
 
+// This process starts from freshly migrated synthetic data. Also discard its
+// generated development cache: reusing a previous Turbopack session can keep
+// sending stale entry-chunk restart messages, endlessly reloading every page.
+// Only the isolated Playwright output is disposable; the owner's .next is not.
+rmSync(path.join(E2E_ROOT, '.next-e2e', 'dev'), { recursive: true, force: true })
 prepareE2eDatabase()
 
 const fx = startFxMock(E2E_FX_PORT)

@@ -7,6 +7,7 @@ import { isSavedPath } from '@/lib/theater/collection-href'
 import { startClientEventBridge } from '@/lib/client-events'
 import { useAuthMe } from '@/components/auth'
 import { PreferencesProvider } from '@/lib/preferences-context'
+import { MomentAlerts } from '@/components/next/moments/MomentAlerts'
 
 interface AppAccountScope {
   serverAccountId: string | null
@@ -28,7 +29,7 @@ export function useAppAccountScope(): AppAccountScope | null {
 }
 
 /** New-design pages that sign you in and bring you back, rather than going home. */
-const SIGN_IN_FIRST = new Set(['/search', '/play', '/channels', '/settings'])
+const SIGN_IN_FIRST = new Set(['/search', '/play', '/channels', '/settings', '/doing'])
 
 function isPublicPlay(search: string): boolean {
   const params = new URLSearchParams(search)
@@ -101,9 +102,12 @@ export function AppShell({
     pathname === '/search' ||
     pathname === '/play' ||
     pathname === '/channels' ||
+    pathname.startsWith('/channels/') ||
     pathname === '/tags' ||
     pathname === '/settings' ||
+    pathname === '/doing' ||
     pathname === '/welcome' ||
+    pathname === '/invite/done' ||
     pathname === '/admin' ||
     pathname.startsWith('/admin/')
 
@@ -125,7 +129,7 @@ export function AppShell({
       if (pathname === '/play' && isPublicPlay(search)) return
       // The new design signs you in and brings you back; older pages go home.
       router.replace(
-        SIGN_IN_FIRST.has(pathname)
+        SIGN_IN_FIRST.has(pathname) || pathname.startsWith('/channels/')
           ? `/start?${new URLSearchParams({ returnTo: `${pathname}${search}` })}`
           : '/',
       )
@@ -151,6 +155,8 @@ export function AppShell({
             >
               {scopedChildren}
             </div>
+            {/* "Kitchen synths is live · Tune in", on any signed-in page. */}
+            {trusted && serverAccountId !== null && <MomentAlerts />}
           </FontProvider>
         </PreferencesProvider>
       </Fragment>

@@ -31,10 +31,15 @@ Offline, Shared lately, Android sheet).
 Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
-accepted by `/api/app/save`, `/api/app/status`, `/api/app/me`,
-`/api/app/saves` and `/api/app/search` only; a search key is not accepted
+accepted by `/api/app/save`, `/api/app/private`, `/api/app/note`, `/api/app/status`,
+`/api/app/me`, `/api/app/saves`, `/api/app/search` and the friends feed
+endpoints below (`feed`, `seen`, `channels`, `live`) only; a search key is not accepted
+`/api/app/me`, `/api/app/saves`, `/api/app/search`, the friends feed
+endpoints below (`feed`, `seen`, `channels`, `live`), Settings' `people` and
+`doing`, and members' pictures (`/api/files/avatar/<hash>`) only; a search key is not accepted
 there, and a phone key is not accepted by `/api/agent/search`. A phone key
-only ever reads its own account's saves. Removing a phone in Settings deletes
+acts only for its own account: it reads that account's saves, and everyone's
+saves only where a signed-in member could (`/api/app/search?scope=everyone`). Removing a phone in Settings deletes
 its key.
 
 ## API
@@ -56,13 +61,21 @@ The code is case-insensitive and may contain a dash or spaces.
 - `200 { username, name }` — who the key saves for, and the phone's name
 - `401 { code: 'bad_key' }` the key was removed (the app goes back to Connect)
 
-### `POST /api/app/save` — `{ url }`
+### `POST /api/app/save` — `{ url, private?, note? }`
 
 `url` is a link, or text containing one (the first `http(s)://` link is used).
-Short links are followed on the server.
+Short links are followed on the server. `private: true` saves it "Just for
+me" (also through the `respond-async` queue): no one else sees, counts or is
+told about it. On a repeat save, `private` updates the flag.
+
+`note` is a few words for your people ("this is so you, Ben"), kept with a
+queued share too (`phone_save_queue.note`). The server collapses whitespace,
+drops control and direction characters, trims it and keeps at most 140
+characters (an emoji counts as one); an empty note means none. On a repeat
+save, `note` replaces the note and `""` clears it; leaving it out keeps it.
 
 - `200 { platform, network, id, author, authorName, text, category, posterUrl,
-openPath, alreadySaved, savedAt }`
+openPath, alreadySaved, savedAt, isPrivate }`
   - `network` is the display name ("TikTok", "X").
   - `posterUrl` (or null) and `openPath` may be relative; resolve them against
     the server address. `openPath` opens the post in ADHX.
@@ -78,6 +91,41 @@ The app treats no answer, a timeout, and 502/503/504 as **offline**: the link
 is queued on the phone and sent when the server can be reached.
 
 **Saving in the background** (current apps): send `Prefer: respond-async`.
+Both apps send a stable `requestId` with each initial asynchronous save: the
+persisted history UUID (a 21-character nanoid is also accepted). Retrying the
+same account/id/link returns the original receipt, including after a lost POST
+response or process restart, without changing its original default or intent.
+Reusing the id for a different link returns `409 request_conflict`; another
+account can use the same id independently. Keep the id until delivery ends;
+only a new user-initiated share allocates another. Receipt deduplication lasts
+for the queue's seven-day finished-row retention; a saved row still awaiting
+publication acknowledgement is retained until it is acknowledged. Older clients may omit it.
+
+For an editable share card, also send `deferPublish: true` (both apps do).
+A new save stays private until `PATCH /api/app/save { id, private?, intentVersion? }`
+acknowledges the current choice. The endpoint accepts a choice as soon as the
+queue id is known, including before metadata lands. iPhone sends it then and
+again for later switches. Android keeps a new save staged until metadata is
+available, then acknowledges the latest persisted choice before showing Saved;
+this also lets an untouched off default preserve a repeat save's privacy.
+The route accepts only that phone's own queue rows, including working and
+completed ones. Omitting `private` confirms the captured default for a new
+save and preserves a repeat save's existing privacy. Acknowledgements are
+idempotent; an interrupted acknowledgement leaves a new save private. Keep
+pending acknowledgements on disk and retry them when the app resumes. New
+clients send a positive safe-integer `intentVersion`, starting at 1 and changing
+only with a new explicit choice. The server atomically accepts only a higher
+version: equal/stale replays succeed without changing privacy, even after a
+manual web edit. A never-accepted newer explicit choice is a normal mutation;
+this is replay protection, not conflict resolution between simultaneous edits.
+Unversioned older clients retain their existing behaviour.
+
+On iPhone, history migrates automatically from the old app-group preference to
+an atomic JSON file in the private app-group container. Cross-process file
+locking protects intent/version updates by the app and extension; pending
+receipts and acknowledgements remain beyond the 100-completed-share limit.
+Android retains unfinished delivery beyond its 50-completed-share limit too.
+
 The server answers at once, before reading the post (which can take a while
 from a home server; Instagram is slow to answer one):
 
@@ -119,6 +167,23 @@ How the copy of a saved post is coming along.
   - `kept`: `{ videos, photos, audio }` counts of kept files
 - `404 { code: 'not_saved' }` not in this account's saves
 
+### `POST /api/app/private` — `{ platform, id, private }`
+
+Switch one of your saves "Just for me" or back to shared with your people.
+
+- `200 { private }`
+- `400 { code: 'bad_request' }` · `401 { code: 'bad_key' }` ·
+  `404 { code: 'not_saved' }`
+
+### `POST /api/app/note` — `{ platform, id, note }`
+
+Set or clear the note on one of your saves ("Add a note"). `note` is a string
+(cleaned as above; empty clears it) or `null`.
+
+- `200 { note }` — the note as stored, or `null`
+- `400 { code: 'bad_request' }` · `401 { code: 'bad_key' }` ·
+  `404 { code: 'not_saved' }`
+
 ### `GET /api/app/saves?offset&limit`
 
 Your saves for the player, newest first, without archived ones (like My saves
@@ -134,10 +199,12 @@ on the web). `limit` 1–50 (default 20).
   archived or not (Shared lately opens it in the player), or
   `404 { code: 'not_saved' }`.
 
-### `GET /api/app/search?q&type&offset&limit`
+### `GET /api/app/search?q&scope&type&offset&limit`
 
-Search your saves by meaning: words, pictures and video frames
-(`src/lib/semantic/find.ts`). `type`: `all` · `videos` · `photos` · `text` ·
+Search saves by meaning: words, pictures and video frames
+(`src/lib/semantic/find.ts`). `scope`: `mine` (default, your saves) or
+`everyone` (everyone's saves on this server; other people's "Just for me"
+saves never appear). `type`: `all` · `videos` · `photos` · `text` ·
 `articles`; `limit` 1–40 (default 30). 120 searches a minute per account.
 
 - `200 { items: PhonePost[], total, understood, close, nextOffset }`
@@ -146,13 +213,23 @@ Search your saves by meaning: words, pictures and video frames
   - `close: false`: nothing matched closely; these are the nearest.
   - each item has `match: { strength: strong|good|related, on: [...] }`, and
     `learning: true` when its picture or video isn't understood yet.
-- `400 no_query` · `400 bad_type` · `429 busy` (with `Retry-After`)
+- `400 no_query` · `400 bad_scope` · `400 bad_type` · `429 busy` (with `Retry-After`)
 
 ### `PhonePost` (`src/lib/app/phone-post.ts`)
 
 `{ platform, id, kind, author: { handle, name, avatarUrl }, text, postedAt,
 savedAt, sourceUrl, openPath, media: [{ kind: video|photo, url, posterUrl,
-width, height, durationMs }], article }`
+width, height, durationMs }], article, savers, isPrivate }`
+
+- `savers`: `[{ username, name, avatarUrl, savedAt, isYou, note? }]`, newest
+  first — the members who saved it (your own save shows with `isYou`).
+  `avatarUrl` null means draw the generated icon from `username`. `note` is
+  that member's note on their save, present only when they left one; it is
+  only ever sent to members, and a private save's note only to its owner.
+  Your own note is the `isYou` saver's `note`. Moment cards' `savers` (faces
+  for the whole moment) never carry notes; a moment's items and the `save`
+  event's `saver` do.
+- `isPrivate`: your save is "Just for me".
 
 - `kind`: `video` · `audio` (SoundCloud: play `media[0].url`, it's the sound)
   · `photo` (swipe `media` sideways) · `article` · `text`
@@ -163,10 +240,93 @@ width, height, durationMs }], article }`
   `{ reason }` to show ("Nobody here has saved this yet", "This one couldn't
   be downloaded. The original may still play.").
 - `sourceUrl` is the post on its own network ("Open original").
+- `why` (feed items only): the feed's reason, shown as the why chip.
+
+### The friends feed (`docs/specs/friends-feed.md` → Phone API additions)
+
+Apps decode these loosely: unknown fields are ignored, one unreadable item is
+skipped rather than failing the page, and a 404 means "this ADHX doesn't have
+it yet" (New falls back to My saves, Channels and Live say the server needs
+an update).
+
+- `GET /api/app/feed?mode=new|everyone|friends|mine&types=video,photo,text,article&cursor` →
+  `{ items: (PhonePost & { why, whyReasons })[], nextCursor, caughtUp,
+nothingYet, total, types, waiting, hidden }`. `types` defaults to
+  `video,photo` (a sound counts as a video); `hidden` (the same as `waiting`)
+  counts the unseen posts the filter left out (`{ text: 4 }`). Apps filter by
+  `{ items: (PhonePost & { why })[], nextCursor, caughtUp, hidden? }`. `types`
+  defaults to `video,photo` (a sound counts as a video); `hidden`, when
+  given, counts what the filter left out (`{ text: 4 }`). Apps filter by
+  `kind` too, so an older server that ignores `types` still plays the
+  right things.
+- `GET /api/app/feed/types` → `{ types }` and `PUT` the same body: the saved
+  filter. On a 404 the phone keeps it on its own.
+- `POST /api/app/seen` `{ posts: [{ platform, id }] }` (at most 50) → 204. A
+  post counts as seen after 2 s on screen or when you swipe past it; apps send
+  them in batches (10, or 5 s after the last, or on leaving New or the app).
+- `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
+friends: [{ username, name, avatarUrl, size, newCount, covers }],
+mine: [{ slug, name, size, covers }] }`. `covers` are addresses (or posts to
+  take a poster from), relative to the server.
+- `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`
+  (a friend's slug is their username).
+- `GET /api/app/live` → `{ moments: [{ slug, name|title, people, savers?,
+watching, watchers?, covers, live, hue?, label? }] }`; the field set is still
+  settling, so only `slug` is required.
+- `GET /api/app/live/{slug}` → `{ moment, items: PhonePost[], watchers: Saver[],
+reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
+  tuned in. New reactions (not yours, not ones already there when you tuned
+  in) float up the screen.
+- `POST /api/app/live/{slug}/react` `{ emoji }` (😂 🔥 😭 👀 💀 ❤️) or
+  `{ text }` (at most 40 characters), plus `platform` and `id` of the post on
+  screen.
 
 ## The player and search (both platforms)
 
-- **Home is My saves**: full screen, one post at a time. Swipe up for the
+- **Home** has one row on top: Gob (opens Settings, where Shared lately now
+  lives), the **New · Channels · Live** tabs, and Search everyone's saves.
+  New carries a small yellow badge over its top-right corner with the unseen
+  posts left ("7", "20+" while more pages are coming, "99+" at most); the tab
+  stays sized for its label.
+  - **New** (the default) plays `/api/app/feed?mode=new` in the player below.
+    A why chip sits above the byline; it (and **Why this one** in More) opens
+    a sheet with the reasons and **Whose saves: Everyone · Friends only ·
+    Mine** (modes `new`/`everyone`, `friends`, `mine`), and **Filter**.
+    Tapping New again opens **What's in your feed**: switches for Videos,
+    Photos, Text posts and Articles (videos and photos by default; one always
+    stays on), Whose saves, "12 text posts and 3 articles are waiting.
+    They'll still be in search and channels." and **Show videos and photos**.
+    The end is a page of its own:
+    "You're all caught up." / "Go touch grass." (accent), "12 from Ana, Ben
+    and Mum", "4 text posts waiting · Show them" when the filter hid some, and
+    **Browse channels**, **See what's live** and **Watch it all again** (mode
+    `everyone`).
+  - **Channels**: "From everyone" carousels (2×2 cover mosaics, faces, "38
+    saves · 3 of you"), "Your people" (faces with new-count badges, opening
+    "Ana's saves" with Play all) and "Made for you". Tapping a group or yours
+    plays its queue.
+  - **Live**: "What your lot are into tonight": live moments with a LIVE mark,
+    faces and "3 of you watching", and **Tune in**; quieter ones as rows.
+    Tuned in: LIVE, "Ana and Ben · watching with you", "Jo just saved one · up
+    next" when a save lands (slotted in after the one on screen), and Leave.
+    **React** (a smiley at the top of the rail) opens a card with six emoji
+    and "Say something to everyone watching" (40 characters, Send).
+    Reactions float up and fade: the reactor's face (44–56 pt, ringed in
+    their colour) with the emoji as a sticker on its corner, or with a speech
+    bubble in their colour for words. Under Reduce Motion they only fade.
+- **Saver faces**: up to 3 overlapping faces (the photo, or a coloured
+  initial) and "Ana and Ben saved this · 2h" / "You and 2 others" above the
+  @handle; tapping opens that friend's channel (a choice when there are
+  several). A private post shows a lock. Search tiles show faces too.
+- **Just for me** in the player's More sheet (for your own saves) calls
+  `/api/app/private`.
+- **Notes**: the share card's "Add a note" field (140 characters, a counter
+  near the limit) sends `note` with the save; the player's More sheet edits
+  yours with `/api/app/note`. The player shows the newest friend's note as a
+  speech bubble (their face, in their colour) above the faces line; Who saved
+  it lists each note under the saver's name.
+- **My saves** (home before the friends feed; now under Channels → Made for
+  you, and home on a server without the feed): full screen, one post at a time. Swipe up for the
   next, down for the previous; tap to pause (a play mark shows) or, with the
   buttons hidden, to bring them back. Pages of 20 load as you near the end.
   Videos start muted. Photo albums swipe sideways. Text and articles fill the
@@ -188,11 +348,340 @@ width, height, durationMs }], article }`
   Sound carries on. On Android the window has Previous and Next save. Photos
   and words don't get one. (The iPhone Simulator has no small window; check
   it on a phone.)
-- **Search**: a field ("Describe what you're looking for") with the TRY
-  DESCRIBING prompts, a two-column grid of posters, then the player on those
-  results from the one you tapped.
-- **Shared lately** (the old home) is a list behind a button; its rows open the
+- **Search**: a field ("Describe what you're looking for"), an **Everyone's
+  saves · Mine** switch (Everyone by default), the TRY DESCRIBING prompts, a
+  two-column grid of posters with faces, then the player on those results
+  from the one you tapped.
+- **Shared lately** (the old home) is a list in Settings; its rows open the
   post in the player.
+
+## The friends feed on the phone
+
+The phone side of [`friends-feed.md`](friends-feed.md). Android has all of
+it; on a server without these endpoints (404) the app falls back as noted.
+
+### API
+
+- `GET /api/app/feed?mode=new|everyone|friends|mine&cursor&types=video,photo,text,article`
+  → `{ items: PhonePost[] (each with why?), nextCursor, caughtUp, hidden? }`.
+  `hidden` (also sent as `waiting`) counts what the filter left out, `{ text: 4 }`. The
+  app also filters on the phone, for a server that ignores `types`. `why` is
+  read loosely: a line, a list of lines, or objects with `text`. A 404 means
+  the server has no feed yet: home plays My saves as before. `whyReasons`
+  (`[{ kind, text, username? }]`, read the same way) lists every reason for
+  Why this one; `nothingYet: true` (nothing anyone saved yet) shows "Nothing
+  new yet. Save something for your people to find." instead of the
+  caught-up page.
+- `GET /api/app/feed/types` → `{ types }` and `PUT` the same: the feed
+  filter. It may 404 until the blend lands; the phone keeps its own copy and
+  the default is videos and photos.
+- `GET /api/app/feed/weights` → `{ weights: { "ana": 1, "ben": -1 } }` and
+  `PUT { username: "ana", weight: -1 | 0 | 1 }` → `{ weights }`: "Show less /
+  Show more from Ana" (board j2-2), the same stored choice as the web's
+  `/api/feed/weights` (1 more, -1 less, 0 back to normal, which drops the
+  name). Only other members: yourself or no such member is 404
+  `no_member`; a bad body is 400 `bad_weight`. New's `whyReasons` then say
+  "You asked for more from Ana".
+- `POST /api/app/seen { posts: [{ platform, id }] }` → 204. The app sends at
+  most 50 at a time, as soon as 10 are waiting, else within 5 s, and when it
+  goes to the background. A batch that fails is sent again.
+- `GET /api/app/channels` → `{ group: [{ slug, name, size, covers, savers? }],
+friends: [{ username, name, avatarUrl, size, newCount, covers }],
+mine: [{ slug, name, size, covers }] }`; covers are addresses (posts are
+  accepted too, their poster is used).
+- `GET /api/app/channels/{group|friend|mine}/{slug}` → `{ items: PhonePost[] }`.
+  On `group` and `friend` every item adds `isNew: boolean` (you haven't
+  saved or seen it; "New" on the tile, and what `?new=1` plays). `friend`
+  also adds `note`: the friend's latest note on a save you may see, for the
+  note card, or null:
+
+  ```json
+  {
+    "items": [
+      { "platform": "youtube", "id": "_OBlgSz8sSM", "kind": "video", "isNew": false, "…": "…" }
+    ],
+    "note": {
+      "text": "the original and still the best",
+      "platform": "youtube",
+      "id": "_OBlgSz8sSM",
+      "savedAt": "2026-10-17T02:09:01.940Z"
+    }
+  }
+  ```
+
+  `mine` items carry neither.
+
+- `GET /api/app/live` → `{ moments: [{ slug, name (or title), people, savers?,
+watching, watchers?, covers, live, recentSaves, windowMinutes }] }`; a 404
+  reads as nothing live. `recentSaves` and `windowMinutes` say how busy it is
+  lately: "LIVE · 3 saves in 10 min" (`{ "recentSaves": 3, "windowMinutes":
+10 }`). The window is the smallest of 5, 10, 15, 30 or 60 minutes that holds
+  the visible saves of the last hour (whole minutes, like "10 min ago");
+  with none it is `0` in `60`, and the app shows its other line. The detail's
+  `moment` carries them too.
+- `GET /api/app/live/{slug}` → `{ moment, items, watchers, reactions }`.
+  Items may be `{ post, … }` wrappers. `reactions` is the last 15 s, oldest
+  first: `[{ id, at, saver: Saver, emoji? | text?, post: { platform, id } }]`.
+  The app floats each `id` once and skips `isYou` (yours showed when sent).
+  Current apps POST `{ known: [platform:id, ...] }` (at most 200) to the same
+  route every 5 s in the foreground, with `X-ADHX-Watch: <screen UUID>`.
+  The response refreshes known post metadata and includes authoritative
+  `removedKeys` and compact `saverUpdates: [{ key, savers, isPrivate }]` for
+  older known posts; absence from the newest 60 alone is not a removal. POST falls
+  back to GET on older servers. `DELETE` with the same screen UUID leaves;
+  disconnected/background phones expire after 15 s. Accounts count once across
+  web tabs and phones. `GET /api/app/live/{slug}/stream` remains available.
+- `POST /api/app/live/{slug}/react { emoji } | { text }, platform, id` (text at
+  most 40 characters).
+- `GET /api/app/people` → `{ members: [{ username, name, avatarUrl, saves,
+lastSavedAt, role: owner|admin|member, banned, isYou }], isAdmin, canInvite,
+inviteMode, requests? }`; `requests` (admins only) are
+  `[{ id, username, name, askedAt, invitedBy: { username, name } | null }]`.
+  `POST /api/app/people/requests/{id} { decision: approve | not_now | decline }`
+  → `{ approval }` (403 `forbidden` for non-admins, 404 `not_found` when
+  someone else answered first).
+- `GET /api/app/doing?scope=all` → `{ items: [{ platform, id, title, network,
+thumbnail, savers, savedAt, step (1–7), stepLabel, steps, percent, status:
+working|waiting|needs_you|ready, playable, reason, quality, learned, retry,
+finishedAt }], summary: { onTheirWay, keeping, learning, needsYou, ready,
+freeBytes, processing, remoteConnected } }`. `POST /api/app/doing/retry
+{ platform, id }` → `{ retried }`, for people who saved it (`retry: true`).
+- `GET /api/app/send?platform=&id=` → the send sheet's "Or straight to your
+  people" (board j4-4), one face per member (not you):
+
+  ```json
+  {
+    "sendable": true,
+    "people": [{ "username": "jo", "name": "Jo", "avatarUrl": null, "has": true, "sent": false }]
+  }
+  ```
+
+  `has`: they already have a save of it they can see (their own save, any
+  visibility), shown dimmed with "Jo already has it."; `sent`: you've already
+  sent it to them. `sendable` is false (and `people` is `[]`) when the only
+  save you can see is your own private one: say "Just for you. Share it
+  first to send it." 404 `not_found` when you can't see any save of it.
+
+- `POST /api/app/send { "platform", "id", "to": ["ana","ben"], "note"?: string ≤140 }`
+  → `{ "sent": ["ana"], "skipped": [ { "username": "ben", "reason": "has" | "sent" | "unknown" } ] }`.
+  60 a minute per user, then 429 `busy` with `Retry-After`; 403 `private`
+  for a post only you keep privately; 400 `bad_request` for a bad body.
+- New's sent posts: an unseen send leads New with the reason
+  `{ "kind": "sent", "text": "Pete sent you this", "username": "pete" }`
+  (plus `note` when the sender wrote one) until it's seen (`/api/app/seen`).
+  With a note, the item's saver for Pete carries it as `note`. Treat an
+  unknown `kind` as a plain reason.
+- The `like` reason gains `"post": { "platform", "id", "posterUrl" }`: your
+  own kept post it's most like. `posterUrl` is a path from the server root
+  (or a full URL, or null); show it as a 38 pt Gob-shaped square at the
+  reason's right; tapping it opens that post.
+- `GET /api/app/live` `forming[]` entries add `"people": [ { "username",
+"name", "avatarUrl" } ]` (members only, newest saver first, at most 4,
+  visible saves only) and `"alert": true|false` (you asked to be told).
+  `PUT|DELETE /api/app/live/forming/{id}/alert` → `{ "alert": true|false }`,
+  or 404 `forming_gone`. The bell survives regroups and merges.
+- `GET /api/app/alerts` → `{ "alerts": [ { "id": "a1", "slug":
+"kitchen-synths-x1y2", "title": "Kitchen synths", "at": "ISO" } ] }`
+  (unseen only, newest first, at most 20; older than 24 h expire). Notify
+  "Kitchen synths is live" (tapping it opens Tune in for that slug), then
+  `POST /api/app/alerts/seen { "ids": [...] }` → `{ "ok": true }`. iOS: a
+  local notification from the foreground poll and a BGAppRefreshTask (ask on
+  the first bell tap). Android: NotificationCompat on a "Live" channel from
+  the foreground poll and a 15-minute WorkManager check (POST_NOTIFICATIONS
+  on the first bell tap).
+- `POST /api/app/channels/group/{slug}/keep` → `{ "tag": "food-youll-cook",
+"url": "/t/pete/food-youll-cook", "added": 37 }` ("Keep this channel",
+  board j6-2; not made public; posts you haven't saved are saved for you).
+  `GET /api/app/channels/group/{slug}` adds `"kept": { "tag", "url" } | null`;
+  once kept the button reads "Kept · Open".
+- Faces: `avatarUrl` is `/api/files/avatar/<hash>`, members only, so the app
+  loads it with `Authorization: Bearer <phone key>` (only to its own server)
+  and keeps it in memory; the address changes with each new picture.
+
+### Home: New · Channels · Live
+
+- **One light row on top**: Gob (opens Settings) on the left, the tabs in the
+  middle, Search on the right. New carries a small yellow badge over its
+  top-right corner with how many unseen posts are left ("7", "19+" while
+  more pages may come, capped at "99+"). Shared lately moved into Settings.
+- **New** (the default) plays the feed in the player. A post counts as seen
+  after 2 s on stage, or as soon as you swipe past it (not when you go back).
+  The why chip sits over the byline; tapping it opens **Why this one**: the
+  post, every reason, and Whose saves (Everyone · Friends only · Mine:
+  Everyone is `new`, the others switch the mode) and Filter.
+- **What's in your feed**: tap New again (or Filter in Why this one) for
+  switches for Videos, Photos, Text posts and Articles (videos and photos by
+  default; at least one stays on) and Whose saves. The feed starts over once,
+  when the sheet closes. The feed ends on "You're
+  all caught up. / Go touch grass." with Gob, what you watched, and Browse
+  channels, See what's live and Watch it all again (mode `everyone`), and
+  "4 text posts waiting · Show them" when the filter left some out.
+- **Channels**: From everyone (2×2 cover tiles with faces), Your people
+  (round faces, a yellow ring and a count for what you haven't seen), Made
+  for you (My saves first, then your own channels). A channel is a header
+  (a friend's face, "96 saves · 4 you haven't seen"), Play, and a poster grid.
+- **Live**: the moments, the first one big with its covers, LIVE, faces and
+  "3 of you watching". Tune in plays it, asks again every 5 s, shows "Ana and
+  Ben are watching with you" (the chip shows "watching with you"; the names
+  go to screen readers), and adds **React** (a smiley) to the button
+  column: six emoji (😂 🔥 😭 👀 💀 ❤️) or "Say something to everyone
+  watching" with Send. Reactions float up the left of the screen and fade,
+  each as the sender's face ringed in their colour, with the emoji as a
+  sticker on its corner or the words in a bubble of their colour. Yours shows
+  after acknowledgement; failed words stay in the composer with Retry, bound
+  to the original post even if playback advances. Reactions are ephemeral, not
+  stored chat. Ones that arrive together rise 0.7 s apart.
+- **Faces**: up to 3 overlapping avatars (their photo, or their initial on
+  their colour) and "Ana and Ben saved this" / "Ana and 3 others saved this"
+  on the player byline and search tiles. Tapping a face opens that friend's
+  channel (yours opens My saves).
+- **Just for me**: a switch on the share card (with "Only you will see this
+  save. It's still kept and searchable." when on) and in More. Flipped
+  while the save is on its way, its intent is persisted before publication; a link
+  waiting offline sends `private` with it. A private save shows a lock.
+- **Search** has Everyone's saves · Mine, Everyone first.
+- With Remove animations on, pages jump instead of sliding, nothing pulses,
+  and reactions fade in place instead of rising.
+
+### Settings
+
+Gob opens Settings, in this order:
+
+- **You**: your face (Gob shaped, ringed in your colour, with a pencil),
+  name, "@pete · 214 saves" and **Change picture**. There's no phone route
+  for pictures yet (`/api/account/avatar` takes a signed-in browser), so it
+  opens Settings on your ADHX in the browser (`/settings#you`).
+- **Waiting for you** (admins with someone waiting): "Ben wants in",
+  "Invited by Jo · 10m ago", **Let Ben in**, **Not now** (hides it for a few
+  days) and **Decline** (asks first: "Keep Ben out?").
+- Rows: **Your people** (faces and a count; the list has everyone with their
+  saves, role and when they last saved, and opens a friend's channel),
+  **Invite someone** (when you may invite; no phone route makes invites yet,
+  so it opens `/settings#people` in the browser), **What's in your feed**
+  (the New filter sheet), **Just for me by default**, **Sound on by
+  default** (videos start with sound), **What your ADHX is doing** ("3 on
+  their way · 1 needs you", opening the full list).
+- **This phone**: "Connected to Ana's ADHX" (the owner; "your ADHX" when it's
+  you), the address and **Remove this phone**, which forgets the key here.
+  No phone route removes its own key on the server yet, so the dialog says to
+  remove it from Settings → Phone app on the web as well.
+- **Shared lately**, then the version.
+
+Just for me by default is kept on the phone: the server keeps the same choice
+for the web (`save.privateDefault`) but has no phone route to read or set it.
+On, shares from this phone (and links waiting offline) go out with
+`private: true` and the share card's switch starts on; off, `private` is left
+out so the server's own choice still applies.
+
+### On their way
+
+- While New's player is on screen (and the app is in front), the app asks
+  `/api/app/doing` every 5 s, and stops when it's hidden. When posts are on
+  their way, a pill sits under the tabs: a spinning ring and "3 on their way"
+  (or "1 needs you" when nothing else is moving). An older server (404) gets
+  the old "2 on their way" from `/api/app/saves`' `preparing` instead.
+- Tapping it opens a sheet: "3 on their way" and "1 needs you", then one row
+  per post: its picture, title, a thin bar (yellow, green once it plays) and
+  the step ("Keeping a copy · 62%", "Making it play everywhere · Jo", "Plays
+  now · listening to what's said"). A row that needs you is outlined in red,
+  titled with the plain reason ("It's private on Instagram."), says "Couldn't
+  keep it · Mum's save", and has **Retry** when you saved it. Then **See
+  everything your ADHX is doing** and "All on your server. Nothing sent
+  anywhere."
+- The full list: Needs you, On their way and Done lately (with quality and
+  what was learned), whether the Mac helper is connected, and the free space.
+
+### Android differences
+
+- The "On their way" pill asks `/api/app/doing` every 5 s while something is
+  on its way and every 15 s otherwise, and stops on a 404.
+- "Just for me by default" left unset sends no `private`; switched off, a
+  new save that comes back private is switched back with `/api/app/private`
+  (never a repeat share).
+- Shared lately sits in Settings with how many links are waiting, after This
+  phone; Decline sits at the end of the waiting request's row.
+- Why this one shows one pair of pills: Show less from the last friend who
+  saved the post and Show more from the first (the same friend when there's
+  one), from `/api/app/feed/weights`; a chosen one turns cream and tapping it
+  again sets 0. On a server without weights (404) the Filter pill shows instead.
+- Channels: `isNew` posts get a yellow "New" in their top corner and **Play
+  the N new** plays only those (the ones marked when the channel opened). The
+  friend's `note` is a paper tile after the third post and plays that post
+  (or opens it on its own when it isn't in the grid).
+- Live: the moment line is "3 saves in 10 min · names" from `recentSaves` /
+  `windowMinutes`, else the save count; smaller moments keep just the faces and
+  names. `forming` groups are dashed rows ("Forming", the `people` faces, "1
+  more save to go live"); they aren't playable. Their bell is "Tell me when
+  it's live" (`PUT|DELETE /api/app/live/forming/{id}/alert`, yellow while on;
+  a 404 drops the row). The first bell tap asks for POST_NOTIFICATIONS on
+  Android 13+. From then on the app reads `GET /api/app/alerts` every minute
+  while it's open and every 15 minutes in WorkManager, shows each alert as a
+  notification on the "Live" channel ("Kitchen synths is live · Tune in",
+  opening Tune in through `adhx://live?slug=`), and marks them seen
+  (`POST /api/app/alerts/seen`). Without permission the open app says it in a
+  toast instead; the background check leaves them for later.
+- Send sheet: under Send with, "Or straight to your people" (`GET /api/app/send`):
+  a 52dp face per member; one who has it is dimmed with "Jo already has it.",
+  a tap sends it (`POST /api/app/send`) and leaves a tick. A private save
+  says "Just for you. Share it first to send it." A server without the route
+  shows no row. Text posts still go straight to the share sheet.
+- New: a `sent` headline is the why chip "Pete sent you this" with Pete's
+  face; Why this one gives it a send icon and his face. Unknown kinds show
+  their words. A `like` reason shows its `post.posterUrl` as a 38dp Gob-shaped
+  thumbnail on the right, which opens that post.
+- A group channel has **Keep this channel** (`POST
+/api/app/channels/group/{slug}/keep`) beside Play all; with `kept` it reads
+  **Kept · Open** and opens your channel.
+
+### iPhone notes
+
+- Why this one, What's in your feed and On their way are the boards' bottom
+  sheets (full width, joined to the bottom edge), not system sheets. Why
+  this one has "− Show less from Ben" / "+ Show more from Ana"
+  (`/api/app/feed/weights`, loaded when it opens): more is the first friend
+  who saved it, less the second (the same one when alone), or whoever you
+  already chose; the chosen one is cream and a tap goes back to normal; a
+  long press picks another friend. A post only you saved shows What's in
+  your feed there instead.
+- A friend's channel opens under Home's header (tap Channels, or swipe in
+  from the left edge, to go back) with New on unseen tiles, **Play the N
+  new** and their note as a paper card third in the grid (opens that post).
+  Your people has **See all** (the people list) and **Invite** (when
+  `canInvite`; it opens Settings → Your people on the web).
+- Live: the first moment is the big card ("3 saves in 10 min · …" from
+  `recentSaves`/`windowMinutes`, else "4 saves"); the rest are rows labelled
+  with the window ("Right now", "Last few days") or "Live · 1 save in 5 min";
+  `forming` groups show as dashed "Forming" rows with "1 more save to go
+  live", the `people` saving into it (up to 4 faces) and a bell: **Tell me
+  when it's live** (`PUT|DELETE /api/app/live/forming/{id}/alert`, lit
+  yellow while on). The first bell tap asks to show notifications. Fired
+  alerts (`GET /api/app/alerts`) become local notifications, "Kitchen synths
+  is live · Tune in", from a 60 s poll while the app is open and a
+  BGAppRefreshTask (`<prefix>.alerts`, scheduled for 48 h after a bell is
+  on); then `POST /api/app/alerts/seen`. The phone remembers the last 100
+  shown so one that wasn't marked seen isn't shown twice; without
+  notification permission they're left unseen. Tapping one opens Live and
+  tunes in to that slug.
+- Share on the player opens **Sending the video itself**: the kept file
+  downloads with a progress line, then goes out through Messages, Mail,
+  Files, Photos or the system share sheet (Messages/Mail fall back to it when
+  the phone can't send them). Below, **Or straight to your people**
+  (`GET /api/app/send`): a 52 pt face per member; tapping one sends it
+  (`POST /api/app/send`) and puts a yellow tick on the face. Someone who
+  already has it is dimmed, with "Jo already has it." beside the faces (under
+  them when there are more than four). Not `sendable` (your own private save):
+  "Just for you. Share it first to send it." The row is left out on an ADHX
+  without the route.
+- In New, a post someone sent you leads with the `sent` reason: the why chip
+  says "Pete sent you this" with Pete's face; the why sheet has a paper plane
+  and their face. Reasons of a kind the app doesn't know show as their words.
+- Why this one: the `like` reason shows the post of yours it's like
+  (`post.posterUrl`) as a 38 pt Gob-shaped thumbnail on the right; tapping it
+  closes the sheet and opens that post.
+- A From everyone channel plays with its name and **Keep this channel** over
+  the player (`POST /api/app/channels/group/{slug}/keep`); after keeping (or
+  when the queue says `kept`) it reads **Kept · Open**, which plays your
+  channel (`/api/app/channels/mine/{tag}`).
 
 ## The share sheet (both platforms)
 
@@ -202,7 +691,8 @@ width, height, durationMs }], article }`
    `GET /api/app/save?id=` until saved or failed. "Saving to your ADHX…" and
    "You can close this. Your ADHX carries on, and the post shows up in My
    saves once it's ready."
-3. **Saved**: poster, network, author, words; "Saved to your ADHX" and
+3. **Saved**: poster, network, author, words; "Saved for your people" (or
+   "Saved, just for you") and
    "Keeping a copy · 720p · 60%" with a bar, polling `/api/app/status` every
    1.5 s while the sheet is open. **Open in ADHX** and **Done**. The sheet
    closes itself 3 s after Saved unless touched.
@@ -215,8 +705,21 @@ width, height, durationMs }], article }`
 7. **Not connected**: "Connect the app first" / "Open ADHX Share and scan the
    code in Settings → Phone app on your ADHX."
 
-Channels ("Add to a channel"), Right now and saving for offline are not in
-this version.
+**Just for me** (Saving, Saved and Already saved): off (the default) shows
+"Ana, Ben, Mum and Jo will see it" with their faces (the people the app last
+saw in Channels or the feed, kept on the phone), or "Your people will see it";
+on shows a lock and "Only you will see this save. It's still kept and
+searchable." The save goes out as soon as the sheet opens, so the switch
+uses `PATCH /api/app/save { id, private?, intentVersion }` for an accepted
+queue receipt, including while metadata is still being fetched, and
+`/api/app/private` for a directly saved post. Both apps persist the receipt,
+choice and monotonic intent version before sending. New shares stage privately
+until acknowledgement. iPhone dismissal waits for the intent request; Android
+hands delivery to durable WorkManager before network work starts. Interrupted
+acknowledgements retry the same version without submitting a duplicate save or
+undoing a later web privacy edit. A changed choice increments the version.
+
+Adding to a channel and saving for offline are not in this version.
 
 ## Colours and type
 

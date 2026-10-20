@@ -1,18 +1,22 @@
-import { and, asc, desc, eq, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, lte, sql, type SQLWrapper } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { videoResultCurrent } from '@/lib/processing/config'
 import {
   bookmarks,
   postEmbeddings,
+  postExtractedText,
   understandingQueue,
   type UnderstandingJob,
 } from '@/lib/db/schema'
 import {
-  KINDS,
+  EXTRACT_KINDS,
+  KIND_ORDER,
   MAX_ATTEMPTS,
   PRIORITY,
   SEMANTIC_MODEL_VERSION,
-  type UnderstandingKind,
+  extractVersion,
+  jobKinds,
+  type JobKind,
 } from './config'
 
 export interface PostKey {
@@ -30,7 +34,7 @@ const BATCH = 200
 export async function enqueuePosts(
   keys: PostKey[],
   priority: number,
-  kinds: readonly UnderstandingKind[] = KINDS,
+  kinds: readonly JobKind[] = jobKinds(),
 ): Promise<number> {
   if (keys.length === 0) return 0
   const now = new Date().toISOString()
@@ -93,17 +97,32 @@ export async function enqueueBackfill(userId?: string): Promise<number> {
     })
     .from(understandingQueue)
   for (const q of queued) have.add(`${q.platform}:${q.postId}:${q.kind}`)
+  const extracted = await db
+    .select({
+      platform: postExtractedText.platform,
+      postId: postExtractedText.postId,
+      kind: postExtractedText.kind,
+      model: postExtractedText.model,
+    })
+    .from(postExtractedText)
+  for (const e of extracted) {
+    const kind = EXTRACT_KINDS.find((k) => k === e.kind)
+    if (kind && e.model === extractVersion(kind)) have.add(`${e.platform}:${e.postId}:${e.kind}`)
+  }
+  const kinds = jobKinds()
   const now = new Date().toISOString()
   const missing = saved.flatMap((s) =>
-    KINDS.filter((kind) => !have.has(`${s.platform}:${s.postId}:${kind}`)).map((kind) => ({
-      platform: s.platform,
-      postId: s.postId,
-      kind,
-      priority: PRIORITY.backfill,
-      attempts: 0,
-      enqueuedAt: now,
-      nextAttemptAt: now,
-    })),
+    kinds
+      .filter((kind) => !have.has(`${s.platform}:${s.postId}:${kind}`))
+      .map((kind) => ({
+        platform: s.platform,
+        postId: s.postId,
+        kind,
+        priority: PRIORITY.backfill,
+        attempts: 0,
+        enqueuedAt: now,
+        nextAttemptAt: now,
+      })),
   )
   for (let i = 0; i < missing.length; i += BATCH) {
     await db
@@ -114,9 +133,19 @@ export async function enqueueBackfill(userId?: string): Promise<number> {
   return missing.length
 }
 
+/** `CASE kind …` in `KIND_ORDER`: within a priority, cheap results land first. */
+export function kindOrderSql(column: SQLWrapper) {
+  return sql`CASE ${column} ${sql.raw(
+    Object.entries(KIND_ORDER)
+      .map(([kind, order]) => `WHEN '${kind}' THEN ${order}`)
+      .join(' '),
+  )} ELSE 9 END`
+}
+
 /**
- * The next due job: highest priority first; within a priority, words before
- * pictures before videos (cheap results land first); then oldest first.
+ * The next due job: highest priority first; within a priority, words, then
+ * a picture, what is said, text on screen and the video (cheap results land
+ * first); then oldest first.
  */
 export async function nextJob(now = new Date()): Promise<UnderstandingJob | undefined> {
   const [job] = await db
@@ -125,7 +154,7 @@ export async function nextJob(now = new Date()): Promise<UnderstandingJob | unde
     .where(lte(understandingQueue.nextAttemptAt, now.toISOString()))
     .orderBy(
       desc(understandingQueue.priority),
-      sql`CASE ${understandingQueue.kind} WHEN 'text' THEN 0 WHEN 'image' THEN 1 ELSE 2 END`,
+      kindOrderSql(understandingQueue.kind),
       asc(understandingQueue.enqueuedAt),
     )
     .limit(1)

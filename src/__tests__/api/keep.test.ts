@@ -461,6 +461,45 @@ describe('kept media', () => {
       ])
     })
 
+    it('writes the percent to keep_jobs in steps, and a new claim starts it over', async () => {
+      save('youtube', 'slow')
+      const { keepPost } = await import('@/lib/keep/download')
+      const stored: Array<number | null> = []
+      const look = () =>
+        stored.push(
+          (
+            testInstance.sqlite
+              .prepare(`SELECT progress FROM keep_jobs WHERE post_id='slow'`)
+              .get() as { progress: number | null }
+          ).progress,
+        )
+      vi.mocked(keepPost).mockImplementation(async (t) => {
+        look()
+        t.onProgress?.(12.4)
+        look()
+        t.onProgress?.(13.9) // same step: no write
+        look()
+        t.onProgress?.(62.2)
+        look()
+        throw new Error('network down')
+      })
+      const { scanForNewSaves, claimNext, runJob } = await import('@/lib/keep/worker')
+      scanForNewSaves()
+      const job = claimNext()!
+      await runJob(job.platform, job.postId)
+      expect(stored).toEqual([null, 10, 10, 60])
+      // Claimed again (after its backoff): the old percent is gone.
+      testInstance.sqlite.prepare(`UPDATE keep_jobs SET next_attempt_at=NULL`).run()
+      expect(claimNext()?.postId).toBe('slow')
+      expect(
+        (
+          testInstance.sqlite
+            .prepare(`SELECT progress FROM keep_jobs WHERE post_id='slow'`)
+            .get() as { progress: number | null }
+        ).progress,
+      ).toBeNull()
+    })
+
     it('retries a failure later, and gives up at once when there is nothing to keep', async () => {
       save('youtube', 'flaky')
       save('vimeo', 'drm')

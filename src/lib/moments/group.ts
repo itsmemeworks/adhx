@@ -341,3 +341,63 @@ export function isRising(recent: number[], now: number): boolean {
   }
   return last >= 2 && last > before
 }
+
+/** A group's id and its post keys, before or after a change. */
+export interface GroupKeys {
+  id: string
+  keys: string[]
+}
+
+/**
+ * What became of forming groups that are gone after a change (a merge, a
+ * regroup, a promotion), for "Tell me when it's live": each `before` id
+ * missing from `after` moves to the forming group that now holds most of its
+ * posts (`carry`), else is reported as formed into the moment that holds most
+ * of them (`formed`), else dissolved (`dropped`). Ties go to the first.
+ */
+export function reconcileForming(
+  before: GroupKeys[],
+  after: GroupKeys[],
+  moments: { slug: string; title: string; keys: string[] }[],
+): {
+  carry: { from: string; to: string }[]
+  formed: { from: string; slug: string; title: string }[]
+  dropped: string[]
+} {
+  const still = new Set(after.map((g) => g.id))
+  const out = {
+    carry: [] as { from: string; to: string }[],
+    formed: [] as { from: string; slug: string; title: string }[],
+    dropped: [] as string[],
+  }
+  const overlap = (keys: Set<string>, other: string[]) => other.filter((k) => keys.has(k)).length
+  for (const old of before) {
+    if (still.has(old.id)) continue
+    const keys = new Set(old.keys)
+    let bestGroup: GroupKeys | null = null
+    let bestN = 0
+    for (const g of after) {
+      const n = overlap(keys, g.keys)
+      if (n > bestN) {
+        bestN = n
+        bestGroup = g
+      }
+    }
+    if (bestGroup) {
+      out.carry.push({ from: old.id, to: bestGroup.id })
+      continue
+    }
+    let bestMoment: (typeof moments)[number] | null = null
+    for (const m of moments) {
+      const n = overlap(keys, m.keys)
+      if (n > bestN) {
+        bestN = n
+        bestMoment = m
+      }
+    }
+    if (bestMoment)
+      out.formed.push({ from: old.id, slug: bestMoment.slug, title: bestMoment.title })
+    else out.dropped.push(old.id)
+  }
+  return out
+}

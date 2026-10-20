@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SignInLinks } from './SignInLinks'
+import { AdminInvites } from './Invites'
 import type { AnalyticsWindow } from '@/lib/analytics/query'
 import type { AdminOverview, InspectedPost, InspectedUser } from '@/lib/admin/query'
 
@@ -308,6 +309,7 @@ export function AdminClient() {
           </div>
         )}
 
+        <AdminInvites />
         <SignInLinks />
 
         <section className="bg-surface rounded-card border border-hairline shadow-m-sm p-5">

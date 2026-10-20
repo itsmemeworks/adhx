@@ -297,7 +297,7 @@ describe('Right now, live', () => {
 
     save(USER_C, 'frog9', 'frog video number 9')
     await understood('frog9', topic(0, 9))
-    // Saves that aren't someone's choice, or are by a banned account, never count.
+    // Saves that aren't someone's choice, are by a banned account, or are private never count.
     save(USER_C, 'frog10', 'frog video number 10', { source: 'quoted' })
     await understood('frog10', topic(0, 10))
     testInstance.db
@@ -311,6 +311,9 @@ describe('Right now, live', () => {
       .run()
     save(USER_B, 'frog11', 'frog video number 11')
     await understood('frog11', topic(0, 11))
+    // Nor does a save kept just for its owner.
+    save(USER_A, 'frog12', 'frog video number 12', { isPrivate: true })
+    await understood('frog12', topic(0, 12))
 
     await __moments.processNewSaves()
     const saves = events.filter((e) => e.type === 'save')
@@ -347,6 +350,40 @@ describe('Right now, live', () => {
     expect(formed.moment).toMatchObject({ title: 'Duckling', people: 2, posts: 2 })
     expect((await getMomentsSnapshot()).moments.map((m) => m.title)).toContain('Duckling')
     stop()
+  })
+
+  it('drops a post at once when its only save goes private or its saver is banned', async () => {
+    await seedLibrary()
+    await __moments.recompute()
+    const before = await getMomentsSnapshot()
+    const [frog] = before.moments
+    const strip = before.stream.map((i) => i.key)
+    expect(frog.covers.map((p) => p.id)).toContain('frog5')
+    expect(strip.length).toBeGreaterThan(1)
+
+    // frog5 and the newest strip post are only USER_A's; frog0 is USER_B's too.
+    const [newest] = strip
+    testInstance.sqlite
+      .prepare(`UPDATE bookmarks SET is_private = 1 WHERE id IN ('frog5', ?)`)
+      .run(newest.slice(newest.indexOf(':') + 1))
+    testInstance.db
+      .insert(schema.userBans)
+      .values({
+        userId: USER_B,
+        reason: 'spam',
+        createdAt: new Date().toISOString(),
+        createdBy: 'a',
+      })
+      .run()
+
+    const after = await getMomentsSnapshot()
+    expect(after.stream.map((i) => i.key)).toEqual(strip.slice(1))
+    const covers = after.moments[0].covers.map((p) => p.id)
+    expect(covers).not.toContain('frog5')
+    expect(covers).toContain('frog0')
+    const detail = await getMomentDetail(frog.slug)
+    expect(detail?.items.map((i) => i.post.id)).not.toContain('frog5')
+    expect(detail?.items).toHaveLength(5)
   })
 
   it('widens the window and says so when the last day is quiet', async () => {

@@ -1,9 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import QRCode from 'qrcode'
-import { Check, QrCode, RefreshCw, Smartphone, Trash2 } from 'lucide-react'
-import { PRIMARY, SECONDARY, SettingsCard, timeSince } from './parts'
+import { Check, Smartphone, Trash2 } from 'lucide-react'
+import { SECONDARY, SettingsCard, timeSince } from './parts'
+import {
+  APP_DOWNLOADS,
+  LocalOnlyWarning,
+  PairCodeBox,
+  Step,
+  useLocalOnly,
+  usePairCode,
+} from './PairCode'
 
 interface Phone {
   id: string
@@ -12,46 +19,17 @@ interface Phone {
   lastUsedAt: string | null
 }
 
-interface PairCode {
-  code: string
-  expiresAt: string
-  /** What the QR code holds: this address and the code. */
-  link: string
-  qr: string
-}
-
-const IOS_URL =
-  process.env.NEXT_PUBLIC_IOS_APP_URL ||
-  'https://github.com/itsmemeworks/adhx/blob/main/apps/ios/README.md'
-const ANDROID_URL =
-  process.env.NEXT_PUBLIC_ANDROID_APP_URL ||
-  'https://github.com/itsmemeworks/adhx/blob/main/apps/android/README.md'
-const IOS_LABEL = process.env.NEXT_PUBLIC_IOS_APP_URL ? 'iPhone (TestFlight)' : 'iPhone (build it)'
-const ANDROID_LABEL = process.env.NEXT_PUBLIC_ANDROID_APP_URL
-  ? 'Android (APK)'
-  : 'Android (build it)'
-
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '0.0.0.0'])
-
-/** `ABCDEFGH` → `ABCD-EFGH`, easier to read off the screen. */
-const spaced = (code: string) => `${code.slice(0, 4)}-${code.slice(4)}`
-
-function minutesLeft(expiresAt: string, now: number): number {
-  return Math.max(0, Math.ceil((Date.parse(expiresAt) - now) / 60_000))
-}
-
 /**
  * Settings → Phone app: install ADHX Share, scan a one-time code to connect
  * it, and see or remove the phones that can save here.
  */
 export function PhoneAppCard() {
   const [phones, setPhones] = useState<Phone[] | null>(null)
-  const [pairing, setPairing] = useState<PairCode | null>(null)
-  const [now, setNow] = useState(() => Date.now())
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [connected, setConnected] = useState<string | null>(null)
-  const [localOnly, setLocalOnly] = useState(false)
+  const localOnly = useLocalOnly()
+  const pair = usePairCode()
+  const { pairing, expired, clear } = pair
   const knownIds = useRef<Set<string> | null>(null)
 
   const load = useCallback(async (): Promise<Phone[] | null> => {
@@ -71,53 +49,28 @@ export function PhoneAppCard() {
 
   useEffect(() => {
     void load()
-    setLocalOnly(LOCAL_HOSTS.has(window.location.hostname))
   }, [load])
 
-  const expired = pairing ? Date.parse(pairing.expiresAt) <= now : false
-
-  // While a code is up: tick the minutes down and watch for the phone arriving.
+  // While a code is up, watch for the phone arriving.
   useEffect(() => {
     if (!pairing || expired) return
-    const tick = setInterval(() => setNow(Date.now()), 1000)
     const poll = setInterval(async () => {
       const list = await load()
       const known = knownIds.current
       const fresh = list?.find((p) => known && !known.has(p.id))
       if (fresh) {
         setConnected(fresh.name)
-        setPairing(null)
+        clear()
       }
     }, 3000)
-    return () => {
-      clearInterval(tick)
-      clearInterval(poll)
-    }
-  }, [pairing, expired, load])
+    return () => clearInterval(poll)
+  }, [pairing, expired, load, clear])
 
   async function showCode() {
-    setBusy(true)
     setError(null)
     setConnected(null)
-    try {
-      const res = await fetch('/api/app/pairing', { method: 'POST' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || typeof data.code !== 'string') throw new Error()
-      const link = `adhx://pair?server=${encodeURIComponent(window.location.origin)}&code=${data.code}`
-      const qr = await QRCode.toDataURL(link, {
-        margin: 0,
-        width: 336,
-        errorCorrectionLevel: 'M',
-        color: { dark: '#000000', light: '#ffffff' },
-      })
-      knownIds.current = new Set((phones ?? []).map((p) => p.id))
-      setNow(Date.now())
-      setPairing({ code: data.code, expiresAt: data.expiresAt, link, qr })
-    } catch {
-      setError('Couldn’t make a code. Try again.')
-    } finally {
-      setBusy(false)
-    }
+    const known = new Set((phones ?? []).map((p) => p.id))
+    if (await pair.show()) knownIds.current = known
   }
 
   async function remove(phone: Phone) {
@@ -129,8 +82,6 @@ export function PhoneAppCard() {
     if (!res.ok) setError('Couldn’t remove that phone. Try again.')
     await load()
   }
-
-  const left = pairing ? minutesLeft(pairing.expiresAt, now) : 0
 
   return (
     <SettingsCard
@@ -145,11 +96,21 @@ export function PhoneAppCard() {
             <div className="flex flex-col gap-2">
               <span className="text-[15px] font-bold">Install the app</span>
               <div className="flex flex-wrap gap-2">
-                <a href={IOS_URL} target="_blank" rel="noreferrer" className={SECONDARY}>
-                  {IOS_LABEL}
+                <a
+                  href={APP_DOWNLOADS.ios.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={SECONDARY}
+                >
+                  {APP_DOWNLOADS.ios.label}
                 </a>
-                <a href={ANDROID_URL} target="_blank" rel="noreferrer" className={SECONDARY}>
-                  {ANDROID_LABEL}
+                <a
+                  href={APP_DOWNLOADS.android.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={SECONDARY}
+                >
+                  {APP_DOWNLOADS.android.label}
                 </a>
               </div>
             </div>
@@ -161,54 +122,12 @@ export function PhoneAppCard() {
               <span className="text-[13px] leading-relaxed text-white/65">
                 The code connects the app to this ADHX. It works once, for 10 minutes.
               </span>
-              {localOnly && (
-                <span className="text-[13px] leading-relaxed text-[#ffb59a]">
-                  Your phone can’t reach this address. Open ADHX at one it can reach (your
-                  computer’s network address, or your ADHX’s web address) and make the code there.
-                </span>
-              )}
+              {localOnly && <LocalOnlyWarning />}
             </div>
           </li>
         </ol>
 
-        <div className="flex shrink-0 flex-col items-center gap-2 sm:w-[196px]">
-          {pairing && !expired ? (
-            <>
-              <img
-                src={pairing.qr}
-                alt="QR code to connect the phone app"
-                width={196}
-                height={196}
-                className="h-[196px] w-[196px] rounded-2xl bg-white p-3.5"
-              />
-              <span className="font-mono text-[17px] font-bold tracking-[0.12em] text-nx-cream">
-                {spaced(pairing.code)}
-              </span>
-              <span className="text-xs text-white/55" role="status">
-                {left === 1 ? '1 minute left' : `${left} minutes left`}
-              </span>
-            </>
-          ) : (
-            <div className="flex h-[196px] w-full flex-col items-center justify-center gap-3 rounded-2xl bg-black/40 p-4 text-center sm:w-[196px]">
-              {pairing && expired && (
-                <span className="text-[13px] text-white/65">That code ran out.</span>
-              )}
-              <button
-                type="button"
-                onClick={() => void showCode()}
-                disabled={busy}
-                className={`${PRIMARY} whitespace-nowrap px-4`}
-              >
-                {busy ? (
-                  <RefreshCw aria-hidden className="h-4 w-4 animate-spin" />
-                ) : (
-                  <QrCode aria-hidden className="h-[18px] w-[18px]" />
-                )}
-                <span>{pairing ? 'New code' : 'Show the code'}</span>
-              </button>
-            </div>
-          )}
-        </div>
+        <PairCodeBox state={pair} onShow={() => void showCode()} />
       </div>
 
       {connected && (
@@ -258,22 +177,11 @@ export function PhoneAppCard() {
         )}
       </div>
 
-      {error && (
+      {(error ?? pair.error) && (
         <p role="alert" className="m-0 text-[13px] text-[#ff8a7a]">
-          {error}
+          {error ?? pair.error}
         </p>
       )}
     </SettingsCard>
-  )
-}
-
-function Step({ n }: { n: number }) {
-  return (
-    <span
-      aria-hidden
-      className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-nx-accent text-[13px] font-extrabold text-black"
-    >
-      {n}
-    </span>
   )
 }

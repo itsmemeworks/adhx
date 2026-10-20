@@ -28,6 +28,7 @@ runtime=(--mount "type=volume,source=$volume,target=/data"
 docker run --rm "${runtime[@]}" --entrypoint sh "$image" -euc '
   ./node_modules/.bin/tsx src/lib/db/migrate.ts
   ./node_modules/.bin/tsx scripts/container-runtime-check.mjs seed
+  ./node_modules/.bin/tsx scripts/verify-downloader.mjs
 '
 
 start() {

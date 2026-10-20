@@ -61,6 +61,9 @@ async function seedUserData(userId: string) {
     .insert(schema.userPreferences)
     .values([{ userId, key: 'theme', value: 'dark' }])
   await testInstance.db
+    .insert(schema.postViews)
+    .values([{ userId, platform: 'twitter', postId: 't1', seenAt: '2024-01-01T10:00:00Z' }])
+  await testInstance.db
     .insert(schema.syncLogs)
     .values([
       { id: `log-${userId}`, userId, startedAt: '2024-01-01T10:00:00Z', status: 'completed' },
@@ -182,6 +185,10 @@ describe('API: /api/account/clear', () => {
     expect(archivedPostses).toHaveLength(0)
     expect(prefs).toHaveLength(0)
     expect(syncLogs).toHaveLength(0)
+    // The feed's seen list starts over; the other account's is untouched.
+    const views = await testInstance.db.select().from(schema.postViews)
+    expect(views.map((v) => v.userId)).not.toContain(USER_A)
+    expect(views.map((v) => v.userId)).toContain(USER_B)
 
     // OAuth token should still exist
     const oauth = await testInstance.db
@@ -334,6 +341,8 @@ describe('API: /api/account', () => {
     const response = await DELETE()
 
     expect(response.status).toBe(200)
+    const views = await testInstance.db.select().from(schema.postViews)
+    expect(views.map((v) => v.userId)).toEqual([USER_B])
 
     // Verify User A's bookmark data is completely deleted
     const bookmarks = await testInstance.db

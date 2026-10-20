@@ -1,3 +1,4 @@
+import { visibleSaveFilter } from '@/lib/people/savers'
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchTweetData, extractUrlsFromFacets, type FxTwitterResponse } from '@/lib/media/fxembed'
 import { fetchOgMetadata } from '@/lib/utils/og-fetch'
@@ -146,7 +147,8 @@ function buildAdhxContext(tweetId: string, bannedUserIds: Set<string>) {
     const saveOwners = db
       .selectDistinct({ userId: bookmarks.userId })
       .from(bookmarks)
-      .where(and(eq(bookmarks.id, tweetId), eq(bookmarks.platform, 'twitter')))
+      // Visible saves only: private and quoted copies are never counted.
+      .where(and(eq(bookmarks.id, tweetId), eq(bookmarks.platform, 'twitter'), visibleSaveFilter))
       .all()
 
     const savedByCount = saveOwners.filter((row) => !bannedUserIds.has(row.userId)).length
@@ -169,6 +171,16 @@ function buildAdhxContext(tweetId: string, bannedUserIds: Set<string>) {
         ),
       )
       .innerJoin(users, eq(tagShares.userId, users.id))
+      // Private wins: a curator's private save never lists their channel here.
+      .innerJoin(
+        bookmarks,
+        and(
+          eq(bookmarks.userId, bookmarkTags.userId),
+          eq(bookmarks.platform, bookmarkTags.platform),
+          eq(bookmarks.id, bookmarkTags.bookmarkId),
+          eq(bookmarks.isPrivate, false),
+        ),
+      )
       .where(and(eq(bookmarkTags.bookmarkId, tweetId), eq(bookmarkTags.platform, 'twitter')))
       .all()
 

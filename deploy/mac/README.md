@@ -7,7 +7,9 @@ mount, inbound listener or public port.
 
 Use a native Apple Silicon Mac, macOS and ARM64 Node.js 22 or newer. A Docker
 container cannot use macOS CoreML or VideoToolbox. Install this repository's
-dependencies with `pnpm install --frozen-lockfile` in a stable checkout; do not
+dependencies with `pnpm install --frozen-lockfile` in a stable checkout. Install
+a maintained FFmpeg (`brew install ffmpeg` with Homebrew, or your trusted package
+manager), then set its absolute path in `FFMPEG_PATH` when needed; do not
 delete or move that checkout while the service is installed.
 
 Follow the [rollout verification checklist](VERIFY.md) to match the released
@@ -58,15 +60,25 @@ cp deploy/mac/worker.env.example "$HOME/Library/Application Support/ADHX-worker/
 chmod 600 "$HOME/Library/Application Support/ADHX-worker/worker.env"
 ```
 
-Edit that private `worker.env` before running anything:
+Edit that private `worker.env` before running anything. Set `FFMPEG_PATH` to your
+maintained FFmpeg binary (normally `/opt/homebrew/bin/ffmpeg` on Apple Silicon).
+The installer captures that absolute binary for launchd, whose default PATH
+does not include Homebrew. Check prerequisites without installing a service:
 
-| Mac setting         | Value                                                                                  |
-| ------------------- | -------------------------------------------------------------------------------------- |
-| `ADHX_SERVER_URL`   | Existing HTTPS origin, for example `https://adhx.example.com`, without a path or query |
-| `ADHX_WORKER_TOKEN` | Exact server `PROCESSING_WORKER_TOKEN` value                                           |
-| `ADHX_WORKER_ID`    | A readable identifier such as `mac-worker`                                             |
-| `SEMANTIC_DEVICE`   | `cpu` initially                                                                        |
-| `SEMANTIC_THREADS`  | `2` initially; tune separately from the NAS query-model threads                        |
+```sh
+deploy/mac/install.sh "$HOME/Library/Application Support/ADHX-worker/worker.env" --check
+```
+
+Configuration:
+
+| Mac setting                               | Value                                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ADHX_SERVER_URL`                         | Existing HTTPS origin, for example `https://adhx.example.com`, without a path or query |
+| `ADHX_WORKER_TOKEN`                       | Exact server `PROCESSING_WORKER_TOKEN` value                                           |
+| `ADHX_WORKER_ID`                          | A readable identifier such as `mac-worker`                                             |
+| `SEMANTIC_DEVICE`                         | `cpu` initially                                                                        |
+| `SEMANTIC_THREADS`                        | `2` initially; tune separately from the NAS query-model threads                        |
+| `SEMANTIC_SPEECH`, `SEMANTIC_SCREEN_TEXT` | Optional `off` to leave speech or on-screen text to another worker                     |
 
 The example lists optional absolute scratch/model paths and budget overrides.
 Keep reusable model weights separate from disposable scratch, preferably
@@ -125,25 +137,41 @@ The polling process downloads retained originals over authenticated HTTPS into a
 private cache, then runs one inference segment at a time in a separate native
 child. Heartbeats remain responsive while inference runs. A completed segment
 releases its job so urgent saves can run before the next segment of a long video.
+Conversion and understanding claims alternate while both have work, so a
+large import cannot monopolise the worker with compatibility conversions.
+Understanding retains urgent-save priority, with one priority point per waiting
+minute so old backfill eventually gets a turn. Conversion claims alternate
+between newest saves for playback and oldest sources to prevent starvation. This is fairness between jobs, not interruption of an encoding in progress.
 Inference creates temporary 448px JPEG samples without changing the NAS copy.
 Compatibility conversion creates a separate full-resolution temporary MP4 and
 re-encodes video, so it is not byte-for-byte lossless. File and cache limits default to 4 GiB and 8 GiB. Oversized files
 remain queued/failed for operator attention, rather than consuming unbounded RAM
 or disk. Cached originals expire during subsequent work after 24 hours and may be
-evicted earlier to meet the disk budget. A successful final result immediately
-deletes that job's original from the Mac; it is retained only between unfinished
-video segments. Temporary frames are deleted after every segment, including
+evicted earlier to meet the disk budget. A server-issued file identity lets speech, on-screen text and video understanding
+reuse one original even though their result hashes differ. A successful result
+releases that original as soon as its last queued/leased consumer finishes. A
+replacement NAS file has a new identity and is downloaded again. Older servers
+still work with per-kind caching. Abandoned or unacknowledged generations remain
+subject to the same 24-hour expiry and disk ceiling. Each claim also reconciles
+a bounded batch of cached identities: deleted/replaced sources and posts with no
+remaining media consumers are removed on the next poll. Keys identify reusable
+local copies only; every NAS download still requires the machine key and a current lease. Temporary frames are deleted after every segment, including
 failures. Conversion outputs are deleted after each upload attempt; after a
 validated final acknowledgement the downloaded conversion source is deleted too.
 Invalidated conversion capabilities also discard stale local sources. Startup and periodic cleanup remove abandoned frame/conversion directories and
-partial downloads after one hour and orphan originals after 24 hours. Reusable
+partial downloads after one hour and orphan originals after 24 hours. On-screen text decoding may skip one corrupt picture when others are readable.
+Model loading/inference errors, and a job with no readable inputs, fail for retry
+and preserve previously extracted words rather than recording "no text".
+Reusable
 model weights are stored separately and remain cached across jobs.
 Use one worker per cache directory. Its disk ceiling counts originals, partial
 downloads, temporary conversion outputs and frame contents, including recent crash leftovers; those
 leftovers can be evicted before their expiry when space is needed. Native video
 sampling reserves 64 MiB of frame scratch space and caps each JPEG at 4 MiB. A
 cache too small for the current original plus that reserve rejects the work
-without deleting its active original. Model weights and unrelated files are
+without deleting any of its active inputs. All pictures and videos for one
+on-screen-text job remain pinned through downloads and the scratch reservation;
+if the full set cannot fit, the job retries instead of silently dropping images. Model weights and unrelated files are
 outside the scratch ceiling and are never removed by scratch cleanup.
 
 Light targets 120-second segments with roughly one sample every 12 seconds;
@@ -151,7 +179,18 @@ normal targets 60-second segments with one every four seconds; deep targets
 30-second segments with one every two seconds. Every level samples the entire
 duration, including the ending. A segment contains at most 16 frames. Videos are
 limited to 24 hours and 512 segments, so very long videos use wider spacing.
-These are visual samples, not a promise to capture every event or spoken word.
+These are visual samples, not a promise to capture every event.
+
+The worker also transcribes what's said (the first ten minutes of each video or
+sound, with the pinned Whisper base model) and reads text on screen (up to four
+pictures and four frames from the first minute, with the pinned Florence-2 base
+model), and sends back only the cleaned words. Both run on CPU in a separate
+process that holds one model at a time and exits after a minute without work;
+on an M4 it peaked near 1.5 GB for speech and 1.8 GB for text on screen. This
+needs a server and worker on processing protocol 2: an older worker keeps
+claiming words, pictures, video and conversions and is never handed these jobs.
+Set `SEMANTIC_SPEECH=off` or `SEMANTIC_SCREEN_TEXT=off` in `worker.env` to leave
+that work for another worker.
 
 Native CPU is the default, using the same pinned q4/q8 model as the server. Set
 `SEMANTIC_DEVICE=coreml` only after measuring memory and latency on your Mac.

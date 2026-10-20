@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getCurrentUserId } from '@/lib/auth/session'
+import { getCurrentUserId, renewSessionCookie } from '@/lib/auth/session'
 import { getAccount } from '@/lib/auth/account'
 import { isAdminUserId } from '@/lib/admin/guard'
 import { pendingAdminSignInLinks, signInDelivery } from '@/lib/email/magic-link'
+import { memberAvatar } from '@/lib/people/savers'
+import { avatarSourceOf, readPreferences } from '@/lib/preferences/server'
+import { PRIVATE_DEFAULT_KEY } from '@/lib/bookmarks/privacy'
 
 const SIGNED_OUT = {
   authenticated: false,
@@ -27,15 +30,19 @@ export async function GET() {
   }
 
   const isAdmin = await isAdminUserId(userId)
-  return NextResponse.json({
+  const prefs = readPreferences(userId, ['avatarSource', PRIVATE_DEFAULT_KEY])
+  const response = NextResponse.json({
     authenticated: true,
     user: {
       id: account.user.id,
       username: account.user.username,
       displayName: account.user.displayName,
-      avatarUrl: account.user.avatarUrl,
+      // The picture to show (null: draw the face made from the username).
+      avatarUrl: memberAvatar(account.user.avatarUrl, prefs.avatarSource ?? null),
+      avatarSource: avatarSourceOf(account.user.avatarUrl, prefs.avatarSource ?? null),
       usernameChosen: account.user.usernameChosen,
       usernameChangeCount: account.user.usernameChangeCount,
+      privateDefault: prefs[PRIVATE_DEFAULT_KEY] === 'true',
     },
     identities: account.identities,
     xConnected: account.xConnected,
@@ -47,4 +54,7 @@ export async function GET() {
       ? { waitingSignIns: pendingAdminSignInLinks().length }
       : {}),
   })
+  // Every page asks this, so an active session never runs out.
+  await renewSessionCookie(response)
+  return response
 }

@@ -29,4 +29,19 @@ describe('account state', () => {
 
     expect(await hasLiveAccount('user-1')).toBe(false)
   })
+
+  it('reports whether an account has been let in', async () => {
+    await testInstance.db.insert(users).values([
+      { id: 'old', username: 'old_hand' },
+      { id: 'new', username: 'newcomer', approval: 'pending' },
+      { id: 'no', username: 'turned_away', approval: 'declined' },
+    ])
+    const { accountApproval, hasLiveAccount } = await import('@/lib/auth/account-state')
+    expect(await accountApproval('old')).toBe('approved')
+    expect(await accountApproval('new')).toBe('pending')
+    expect(await accountApproval('no')).toBe('declined')
+    expect(await accountApproval('gone')).toBeNull()
+    // Waiting accounts still exist: only `getCurrentUserId` refuses them.
+    expect(await hasLiveAccount('new')).toBe(true)
+  })
 })

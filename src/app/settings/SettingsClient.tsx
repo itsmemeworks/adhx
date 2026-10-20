@@ -5,7 +5,7 @@ import { SettingsScreen } from '@/components/next/settings/SettingsScreen'
 
 export function SettingsClient() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-black" />}>
+    <Suspense fallback={<div className="min-h-dvh bg-nx-ink" />}>
       <SettingsScreen />
     </Suspense>
   )

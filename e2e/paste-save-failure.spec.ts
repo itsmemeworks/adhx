@@ -20,7 +20,15 @@ for (const mobile of [false, true]) {
         }),
       )
       await page.goto('/now')
-      await page.getByRole('button', { name: 'Paste', exact: true }).click()
+      const paste = page.getByRole('button', { name: 'Paste', exact: true })
+      if (mobile) {
+        await paste.click()
+      } else {
+        // Desktop pastes with ⌘V; the pill is there for keyboards, shown once focused.
+        await paste.focus()
+        expect((await paste.boundingBox())?.width ?? 0).toBeGreaterThan(20)
+        await page.keyboard.press('Enter')
+      }
       const input = page.getByPlaceholder(/Paste a (post )?link/)
       await input.fill(reelUrl)
       await input.press('Enter')

@@ -9,7 +9,12 @@ test.describe('a shared post repeats until you move on', () => {
     await page.goto(previewPath)
     await expectPreviewReady(page)
     await expect(page.getByText(POST.preview.text).first()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Repeat: This post' })).toBeVisible()
+    // Repeat lives in ⋯ (an open menu holds the post's timer, so close it again).
+    const more = page.getByRole('button', { name: 'More options' })
+    await more.click()
+    await expect(page.getByRole('menuitem', { name: 'Repeat: This post' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('menu', { name: 'Options' })).toBeHidden()
 
     // Longer than any post's timer: it's still here.
     await page.waitForTimeout(11_000)
@@ -17,7 +22,8 @@ test.describe('a shared post repeats until you move on', () => {
     await expect(page).toHaveURL(new RegExp(`/${POST.preview.author}/status/${POST.preview.id}`))
 
     // Choosing the repeat mode is still yours.
-    await page.getByRole('button', { name: 'Repeat: This post' }).click()
-    await expect(page.getByRole('button', { name: /^Repeat: (Off|All)$/ })).toBeVisible()
+    await more.click()
+    await page.getByRole('menuitem', { name: 'Repeat: This post' }).click()
+    await expect(page.getByRole('menuitem', { name: /^Repeat: (Off|All)$/ })).toBeVisible()
   })
 })

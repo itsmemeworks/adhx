@@ -75,6 +75,8 @@ function createTestDatabase() {
       retweet_context TEXT,
       summary TEXT,
       source TEXT DEFAULT 'sync',
+      is_private INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
       raw_json TEXT,
       PRIMARY KEY (user_id, platform, id)
     );

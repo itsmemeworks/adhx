@@ -9,8 +9,9 @@ import { useAuthMe } from '@/components/auth'
  * "Getting to know your saves": how far the understanding pipeline has got
  * with this user's saves (`/api/understanding/status`). A quiet ring while
  * it works; tap it for the details. Copy says only what is true: words are
- * read, pictures looked at, videos watched a frame every two seconds (no
- * audio), all on ADHX's own servers.
+ * read, pictures looked at, videos watched a frame every two seconds, what's
+ * said in them transcribed and text on screen read, all on the user's own
+ * server (Jev, when set up, gets the post's own words only).
  */
 
 export interface LearningStatus {
@@ -23,7 +24,7 @@ export interface LearningStatus {
   failed: number
   queued: number
   current: {
-    kind: 'text' | 'image' | 'video'
+    kind: 'text' | 'image' | 'video' | 'speech' | 'screen'
     phase: string
     frames: number
     segments?: number
@@ -107,6 +108,14 @@ export function currentLine(current: LearningStatus['current']): string | null {
     return 'Opening a video'
   }
   if (current.kind === 'image') return 'Looking at a picture'
+  if (current.kind === 'speech')
+    return current.phase === 'remote'
+      ? 'Listening to a video on the worker'
+      : 'Listening to a video'
+  if (current.kind === 'screen')
+    return current.phase === 'remote'
+      ? 'Reading text on screen on the worker'
+      : 'Reading the text on screen'
   return 'Reading a post'
 }
 
@@ -234,7 +243,7 @@ export function LearningSheet({
               Getting to know your saves
             </span>
             <span className="text-sm text-white/65">
-              So you can find things by what’s in them, even inside videos.
+              So you can find things by what’s in them, even what’s said in a video.
             </span>
           </span>
           <button
@@ -293,7 +302,8 @@ export function LearningSheet({
           Up next and new saves jump the line, so what you’re about to watch gets learned first.
         </p>
         <p className="m-0 text-xs text-white/45">
-          Pictures and videos are understood on ADHX’s own servers.
+          Pictures, videos, what’s said in them and text on screen are understood on your own
+          server, and none of that leaves it.
         </p>
       </div>
     </>

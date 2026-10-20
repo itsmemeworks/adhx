@@ -42,7 +42,7 @@ import {
 } from './useTheaterStageEvents'
 import { nextAlbumIndex, StageAlbumDots, StageAlbumScroller } from './StageAlbumChrome'
 import type { TheaterItem } from './types'
-import { POST_SAVED } from '@/lib/theater/client-events'
+import { POST_KEPT, POST_SAVED } from '@/lib/theater/client-events'
 
 /**
  * How long a failed video stays on screen before the queue moves on. Matches
@@ -223,7 +223,12 @@ export function StageVideo({
       setReloadVersion((version) => version + 1)
     }
     window.addEventListener(POST_SAVED, onSaved)
-    return () => window.removeEventListener(POST_SAVED, onSaved)
+    // The same when its copy has just been kept ("Getting it ready" ended).
+    window.addEventListener(POST_KEPT, onSaved)
+    return () => {
+      window.removeEventListener(POST_SAVED, onSaved)
+      window.removeEventListener(POST_KEPT, onSaved)
+    }
   }, [item.platform, item.bookmarkId, src, covered])
 
   // The top progress line is an interactive scrubber. Seek the persistent

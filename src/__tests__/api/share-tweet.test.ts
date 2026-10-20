@@ -433,6 +433,29 @@ describe('API: /api/share/tweet/[username]/[id]', () => {
       expect(data.adhxContext.savedByCount).toBe(2)
     })
 
+    it('never carries a saver’s note', async () => {
+      testInstance.db
+        .insert(schema.bookmarks)
+        .values({
+          id: '123456789',
+          userId: USER_A,
+          author: 'testuser',
+          text: 'A tweet',
+          tweetUrl: 'https://x.com/testuser/status/123456789',
+          processedAt: new Date().toISOString(),
+          note: 'this is so you, Ben',
+        })
+        .run()
+      mockFetchTweetData.mockResolvedValue(buildFxResponse())
+      const { GET } = await import('@/app/api/share/tweet/[username]/[id]/route')
+      const response = await GET(createRequest('testuser', '123456789'), {
+        params: Promise.resolve({ username: 'testuser', id: '123456789' }),
+      })
+      const data = await response.json()
+      expect(data.adhxContext.savedByCount).toBe(1)
+      expect(JSON.stringify(data)).not.toContain('so you')
+    })
+
     it('does not leak user IDs in adhxContext', async () => {
       testInstance.db
         .insert(schema.bookmarks)

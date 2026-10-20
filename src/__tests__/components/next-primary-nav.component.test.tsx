@@ -20,24 +20,32 @@ describe('primary navigation', () => {
     expect(navFor('/settings')).toBeNull()
   })
 
-  it('leads with Right now and lights the current place', () => {
+  it('leads with New and lights the current place', () => {
     nav.pathname = '/channels'
     render(<PrimaryNav />)
     const links = within(screen.getByRole('navigation', { name: 'Main' })).getAllByRole('link')
-    expect(links.map((l) => l.textContent)).toEqual(['Right now', 'Channels', 'My saves'])
-    expect(links[0]).toHaveAttribute('href', '/now')
+    expect(links.map((l) => l.textContent)).toEqual(['New', 'Right now', 'Channels', 'My saves'])
+    expect(links[0]).toHaveAttribute('href', '/play?feed=new')
+    expect(links[1]).toHaveAttribute('href', '/now')
     expect(screen.getByRole('link', { name: 'Channels' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('puts all four places, Search included, along the bottom on phones', () => {
+  it('puts every place, Search included, along the bottom on phones', () => {
     render(<BottomNav current="saves" />)
     const links = within(screen.getByRole('navigation', { name: 'Main' })).getAllByRole('link')
     expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
+      ['New', '/play?feed=new'],
       ['Right now', '/now'],
       ['Channels', '/channels'],
       ['My saves', '/play?recent=1'],
       ['Search', '/search'],
     ])
     expect(screen.getByRole('link', { name: 'My saves' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('lights New for the feed', () => {
+    render(<BottomNav current="new" />)
+    expect(screen.getByRole('link', { name: 'New' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Right now' })).not.toHaveAttribute('aria-current')
   })
 })

@@ -121,7 +121,7 @@ export function ChannelPage({
   }
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-white">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader>{signedIn && <PasteButton onClick={paste.pasteFromClipboard} />}</NxHeader>
       <main className="mx-auto flex max-w-[1600px] flex-col gap-7 px-0 pb-16 md:px-7 lg:flex-row lg:items-start">
         <section aria-label="Channel" className="flex min-w-0 flex-1 flex-col gap-4 md:gap-[18px]">

@@ -38,7 +38,8 @@ function intParam(value: string | null, fallback: number, min: number, max: numb
  *
  * - `q`: what to look for (1–200 characters; a trailing space means the last
  *   word is finished, otherwise it also matches as a prefix).
- * - `scope`: `mine` (default) or `everyone` (posts anyone saved; never who).
+ * - `scope`: `mine` (default) or `everyone` (everyone's saves, with `savers` named;
+ *   never private saves but your own).
  * - `type`: `all` (default), `videos`, `photos`, `text`, `articles`.
  * - `wordsOnly=1`: match on what posts say, not their pictures or video.
  * - `limit` (1–60, default 30), `offset` for the next page.

@@ -1,8 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
 import { captureException } from '@/lib/sentry'
-import { buildPostDocument } from './documents'
-import { loadPostItem } from './posts'
+import { loadPostDocument } from './posts'
 import type { PostKey } from './queue'
 
 /**
@@ -37,9 +36,9 @@ export async function indexSavedPosts(keys: PostKey[]): Promise<number> {
   let indexed = 0
   for (const key of unique.values()) {
     const platform = key.platform || 'twitter'
-    const item = await loadPostItem(platform, key.postId)
-    if (!item) continue
-    indexPostText(platform, key.postId, buildPostDocument(item).keywords)
+    const loaded = await loadPostDocument(platform, key.postId)
+    if (!loaded) continue
+    indexPostText(platform, key.postId, loaded.doc.keywords)
     indexed++
     if (indexed % 50 === 0) await new Promise((resolve) => setImmediate(resolve))
   }
@@ -79,10 +78,22 @@ export function startKeywordIndex(): void {
  * library it's often the best keyword hit there is).
  */
 const FILLER = new Set(
-  'a an the and or but of to in on at by for with from about into as is are was were be been being it its this that these those i me my you your we our they their he she his her some something any thing one'.split(
+  'a an the and or but of to in on at by for with from about into as is are was were be been being it its this that these those i me my you your we our they their he him she his her them us some something any thing one has have had do does did so than then just very'.split(
     ' ',
   ),
 )
+
+/**
+ * What an apostrophe leaves behind: "brother's" → "brother", "don't" → "don".
+ * Without this the tokenizer splits off a lone "s" (or "t", "ll" …) that
+ * matches every possessive in the library.
+ */
+const CLITIC = /(?<=[\p{L}\p{N}])['’ʼ](?:s|t|d|m|ll|re|ve)(?![\p{L}\p{N}])/giu
+
+/** A single letter on its own says nothing ("s", "x"); a lone digit can ("3 cats"). */
+function isLoneLetter(token: string): boolean {
+  return token.length === 1 && /\p{L}/u.test(token)
+}
 
 /**
  * Build an FTS5 query from free text. Every token is quoted (so user input
@@ -91,18 +102,54 @@ const FILLER = new Set(
  * Filler words are left out unless that's all there is.
  */
 export function ftsQuery(input: string): string | null {
-  const all =
+  const tokens = queryTokens(input)
+  if (tokens.length === 0) return null
+  return tokens.map((t) => (t.prefix ? `"${t.token}"*` : `"${t.token}"`)).join(' OR ')
+}
+
+/**
+ * The words a keyword search looks for, the last one a prefix while typing.
+ * Possessive and contraction endings, lone letters and filler are dropped;
+ * if nothing is left, the filler words stand in (a search for "the who").
+ */
+export function queryTokens(input: string): { token: string; prefix: boolean }[] {
+  const all = (
     input
       .toLowerCase()
-      .match(/[\p{L}\p{N}]+/gu)
-      ?.slice(0, MAX_TOKENS) ?? []
+      .replace(CLITIC, '')
+      .match(/[\p{L}\p{N}]+/gu) ?? []
+  ).filter((t) => !isLoneLetter(t))
   const meaningful = all.filter((t) => !FILLER.has(t))
-  const tokens = meaningful.length ? meaningful : all
-  if (tokens.length === 0) return null
+  const tokens = (meaningful.length ? meaningful : all).slice(0, MAX_TOKENS)
   const typing = !/\s$/.test(input)
-  return tokens
-    .map((t, i) => (typing && i === tokens.length - 1 && t.length >= 2 ? `"${t}"*` : `"${t}"`))
-    .join(' OR ')
+  return tokens.map((token, i) => ({
+    token,
+    prefix: typing && i === tokens.length - 1 && token.length >= 2,
+  }))
+}
+
+/** Words of a text the way FTS (`unicode61 remove_diacritics 2`) sees them. */
+export function textTokens(text: string): Set<string> {
+  return new Set(
+    text
+      .normalize('NFKD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase()
+      .match(/[\p{L}\p{N}]+/gu) ?? [],
+  )
+}
+
+/** How many of the query's words this text contains. */
+export function tokenHits(
+  words: Set<string>,
+  tokens: { token: string; prefix: boolean }[],
+): number {
+  let hits = 0
+  for (const { token, prefix } of tokens) {
+    const bare = token.normalize('NFKD').replace(/\p{M}/gu, '')
+    if (words.has(bare) || (prefix && [...words].some((w) => w.startsWith(bare)))) hits++
+  }
+  return hits
 }
 
 export interface KeywordHit {

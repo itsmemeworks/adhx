@@ -18,14 +18,28 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.adhx.share.alerts.LiveAlerts
 import com.adhx.share.data.Connection
 import com.adhx.share.data.HistoryItem
 import com.adhx.share.data.ShareState
+import com.adhx.share.doing.DoingScreen
+import com.adhx.share.doing.DoingViewModel
+import com.adhx.share.feed.ChannelScreen
+import com.adhx.share.feed.FeedViewModel
+import com.adhx.share.feed.HomeActions
+import com.adhx.share.feed.HomeScreen
+import com.adhx.share.feed.HomeTab
+import com.adhx.share.feed.PageHeader
+import com.adhx.share.feed.TunedInScreen
+import com.adhx.share.library.BackTitleRow
+import com.adhx.share.net.ChannelKind
+import com.adhx.share.net.Saver
 import com.adhx.share.library.BackBar
 import com.adhx.share.library.LibraryViewModel
 import com.adhx.share.library.LocalPip
@@ -37,16 +51,24 @@ import com.adhx.share.library.SavesHome
 import com.adhx.share.library.SearchScreen
 import com.adhx.share.net.ApiResult
 import com.adhx.share.ui.AdhxTheme
+import com.adhx.share.ui.SettingsCopy
 import com.adhx.share.ui.openInAdhx
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** The host app: Connect, then My saves (the player), Search, Shared lately and Settings. */
+/**
+ * The host app: Connect, then home (New · Channels · Live), My saves,
+ * channels, Live, Search, Shared lately and Settings.
+ */
 class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
     private val library: LibraryViewModel by viewModels()
+    private val feed: FeedViewModel by viewModels()
+    private val doing: DoingViewModel by viewModels()
+    private val people: PeopleViewModel by viewModels()
     private val pip by lazy { PipHost(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,7 +83,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AdhxTheme {
                 CompositionLocalProvider(LocalPip provides pip) {
-                    MainApp(vm, library)
+                    MainApp(vm, library, feed, doing, people)
                 }
             }
         }
@@ -90,7 +112,8 @@ class MainActivity : ComponentActivity() {
 
     /**
      * adhx://pair?server=…&code=… from the phone's camera or a browser, or
-     * adhx://post?platform=…&id=… (the share card's Open in ADHX).
+     * adhx://post?platform=…&id=… (the share card's Open in ADHX), or
+     * adhx://live?slug=… (a "now live" notification: Tune in).
      */
     private fun handleLink(intent: Intent?) {
         val data = intent?.data ?: return
@@ -101,23 +124,48 @@ class MainActivity : ComponentActivity() {
                 val id = data.getQueryParameter("id")?.takeIf { it.isNotBlank() } ?: return
                 library.openPostLink(platform, id)
             }
+            "live" -> {
+                val slug = data.getQueryParameter("slug")?.takeIf { it.isNotBlank() } ?: return
+                val route = Route.TunedIn(slug)
+                if (library.stack.lastOrNull() != route) library.open(route)
+            }
             else -> vm.pairFromLink(data.toString())
         }
     }
 }
 
 @Composable
-private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
+private fun MainApp(
+    vm: MainViewModel,
+    library: LibraryViewModel,
+    feed: FeedViewModel,
+    doing: DoingViewModel,
+    people: PeopleViewModel,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val connection by vm.connection.collectAsStateWithLifecycle()
     val reach by vm.reach.collectAsStateWithLifecycle()
+    val storageError by vm.storageError.collectAsStateWithLifecycle()
+    LaunchedEffect(storageError) {
+        storageError?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+    }
 
     // While the app is in front, check the key: a removed one goes back to Connect.
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
     LaunchedEffect(resumed, connection?.key) {
         if (resumed && connection != null) vm.checkMe()
+    }
+    // "Tell me when it's live": while the app is open, look for groups that went live.
+    LaunchedEffect(resumed, connection?.key) {
+        val now = connection ?: return@LaunchedEffect
+        while (resumed && LiveAlerts.wanted(context)) {
+            LiveAlerts.check(context, now, foreground = true).forEach { alert ->
+                Toast.makeText(context, LiveAlerts.inAppLine(alert), Toast.LENGTH_LONG).show()
+            }
+            delay(LiveAlerts.FOREGROUND_MS)
+        }
     }
 
     val current = connection
@@ -126,18 +174,119 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
         return
     }
 
+    val peopleUi by people.ui.collectAsStateWithLifecycle()
+    if (Welcome.pending) {
+        BackHandler { Welcome.pending = false }
+        ConnectedScreen(
+            connection = current,
+            people = people,
+            onSearch = {
+                Welcome.pending = false
+                library.open(Route.Search)
+            },
+            onSettings = {
+                Welcome.pending = false
+                library.open(Route.Settings)
+            },
+            onStart = { Welcome.pending = false },
+        )
+        return
+    }
     BackHandler(enabled = library.stack.size > 1) { library.back() }
     val back = { library.back(); Unit }
-    val route = library.stack.lastOrNull() ?: Route.Saves
+    val route = library.stack.lastOrNull() ?: Route.Home
+
+    // A face opens that person's saves; your own opens My saves.
+    val openPerson: (Saver) -> Unit = { saver ->
+        if (saver.isYou) {
+            library.open(Route.MySaves)
+        } else {
+            library.open(Route.Channel(ChannelKind.FRIEND, saver.username, saver.label, saver.avatarUrl))
+        }
+    }
 
     key(route) {
         when (route) {
-            Route.Saves -> SavesHome(
+            Route.Home -> HomeScreen(
+                feed = feed,
+                library = library,
+                connection = current,
+                reach = reach,
+                actions = HomeActions(
+                    open = library::open,
+                    openPerson = openPerson,
+                    onSearch = { library.open(Route.Search) },
+                    onSettings = { library.open(Route.Settings) },
+                    onDoing = { library.open(Route.Doing) },
+                    onPeople = { library.open(Route.People) },
+                    onInvite = if (peopleUi.people?.canInvite != false) {
+                        {
+                            Toast.makeText(context, SettingsCopy.INVITE_NOTE, Toast.LENGTH_SHORT).show()
+                            openInAdhx(context, current.server, "/settings#invite")
+                        }
+                    } else {
+                        null
+                    },
+                ),
+                doing = doing,
+            )
+            Route.MySaves -> SavesHome(
                 vm = library,
                 connection = current,
                 reach = reach,
+                bar = { BackTitleRow(com.adhx.share.ui.Copy.MY_SAVES, back) },
+                onSaver = openPerson,
+            )
+            is Route.Channel -> ChannelScreen(
+                feed = feed,
+                route = route,
+                server = current.server,
+                onBack = back,
+                onPlay = { library.open(Route.ChannelPlayer(it)) },
+                onPlayNew = { library.open(Route.ChannelPlayer(0, onlyNew = true)) },
+                onOpenPost = { platform, id -> library.open(Route.PostLink(platform, id)) },
+                onOpenKept = { tag, title -> library.open(Route.Channel(ChannelKind.MINE, tag, title)) },
+                // A channel sits under Channels: the pages' header, and a tab goes home to it.
+                header = {
+                    PageHeader(
+                        tab = HomeTab.Channels,
+                        onTab = { t ->
+                            feed.tab = t
+                            library.home()
+                        },
+                        onHome = {
+                            feed.tab = HomeTab.New
+                            library.home()
+                        },
+                        onSearch = { library.open(Route.Search) },
+                        onSettings = { library.open(Route.Settings) },
+                    )
+                },
+            )
+            is Route.ChannelPlayer -> {
+                val channel by feed.channel.collectAsStateWithLifecycle()
+                // "Play the 4 new" keeps the ones it started with, even as they turn seen.
+                val posts = remember(channel.slug, channel.items.isEmpty()) { if (route.onlyNew) channel.fresh else channel.items }
+                if (posts.isEmpty()) {
+                    LaunchedEffect(Unit) { library.back() }
+                } else {
+                    PlayerScreen(
+                        posts = posts,
+                        server = current.server,
+                        startIndex = route.start,
+                        onPage = {},
+                        topBar = { BackBar(back) },
+                        onSaver = openPerson,
+                    )
+                }
+            }
+            is Route.TunedIn -> TunedInScreen(
+                feed = feed,
+                slug = route.slug,
+                server = current.server,
+                onBack = back,
+                onSaver = openPerson,
                 onSearch = { library.open(Route.Search) },
-                onSharedLately = { library.open(Route.SharedLately) },
                 onSettings = { library.open(Route.Settings) },
             )
             Route.Search -> SearchScreen(
@@ -157,6 +306,7 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
                         startIndex = route.start,
                         onPage = library::onSearchPage,
                         topBar = { BackBar(back) },
+                        onSaver = openPerson,
                     )
                 }
             }
@@ -179,8 +329,28 @@ private fun MainApp(vm: MainViewModel, library: LibraryViewModel) {
                 startIndex = 0,
                 onPage = {},
                 topBar = { BackBar(back) },
+                onSaver = openPerson,
             )
-            Route.Settings -> SettingsScreen(vm = vm, connection = current, onBack = back)
+            Route.Settings -> SettingsScreen(
+                vm = vm,
+                people = people,
+                doing = doing,
+                feed = feed,
+                connection = current,
+                actions = SettingsActions(
+                    onBack = back,
+                    onPeople = { library.open(Route.People) },
+                    onDoing = { library.open(Route.Doing) },
+                    onSharedLately = { library.open(Route.SharedLately) },
+                ),
+            )
+            Route.People -> PeopleScreen(
+                people = people,
+                server = current.server,
+                onBack = back,
+                onPerson = openPerson,
+            )
+            Route.Doing -> DoingScreen(doing = doing, server = current.server, onBack = back)
         }
     }
 }

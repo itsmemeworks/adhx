@@ -1,3 +1,4 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
 import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
@@ -211,7 +212,14 @@ function getTileDataForTags(
   const bookmarkResults = db
     .select()
     .from(bookmarks)
-    .where(and(inArray(bookmarks.userId, userIds), inArray(bookmarks.id, allBookmarkIds)))
+    .where(
+      and(
+        inArray(bookmarks.userId, userIds),
+        inArray(bookmarks.id, allBookmarkIds),
+        // Private wins: a public channel's tiles and count skip private saves.
+        eq(bookmarks.isPrivate, false),
+      ),
+    )
     .orderBy(desc(bookmarks.processedAt))
     .all()
   const bookmarkByKey = new Map(
@@ -522,6 +530,7 @@ function getCachedLeaderboard(window: RankWindow, mode: RankMode): LeaderboardEn
   const now = Date.now()
   const moderation = readLeaderboardModeration()
   if (!moderation) return []
+  moderation.key += `:${savePrivacyFingerprint()}`
   const hit = cache.get(key)
   if (hit && hit.expiresAt > now && hit.moderationKey === moderation.key) return hit.value
 

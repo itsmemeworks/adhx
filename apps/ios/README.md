@@ -9,15 +9,28 @@ The app only ever talks to your own ADHX.
 
 It has two parts:
 
-- **The app** (`App/`): connects to your ADHX, plays your saves full screen
-  (swipe up for the next, `App/Library/`), searches them by meaning, lists what
-  you’ve shared lately and how each copy is coming along, and has Settings.
+- **The app** (`App/`): connects to your ADHX and opens on **New**, what
+  your people saved that you haven’t seen, full screen (swipe up for the next)
+  until “You’re all caught up.” Next to it, **Channels** (rabbit holes from
+  everyone, one per friend, and ones made from what you keep) and **Live**
+  (what a few of you are saving right now, to tune in to together). It
+  searches everyone’s saves or just yours by meaning, lists what you’ve shared
+  lately (in Settings) and how each copy is coming along, and has Settings
+  (you, your people, letting people in, defaults, this phone). A pill on the
+  player says what's **on its way** (being kept and learned on your ADHX),
+  with Retry for what needs you. `App/Feed/` is New, Channels and Live;
+  `App/Library/` is the player, search and your saves; `App/Settings/` is
+  Settings and Your people; `App/Doing/` is On their way.
 - **The Share Extension** (`ShareExtension/`): the sheet you see after picking
   ADHX in the share menu: Saving, Saved, Already in your saves, That’s not one
-  post, Saved for later, Connect the app first.
+  post, Saved for later, Connect the app first. It says who will see the save
+  and has a **Just for me** switch.
 
-Code both of them use is in `Shared/`: talking to your ADHX, storage, the list
-of waiting links, network marks, colours and the sheet itself. The API and the
+Code both of them use is in `Shared/`: talking to your ADHX (`API.swift`, and
+the friends feed in `FriendsAPI.swift`), people’s faces and names
+(`People.swift`), members' pictures loaded with the phone key
+(`AuthImage.swift`), storage, the list of waiting links, network marks, colours
+and the sheet itself. The API and the
 sheet’s states are described in `docs/specs/phone-app.md` at the repo root.
 
 It uses only Apple’s frameworks. No packages or other tools are needed.
@@ -112,8 +125,9 @@ Share Extension can’t see the connection.
    the address instead” and type both.
 3. The app sends the code to `POST /api/app/pair` with the phone’s model
    name, and gets back a phone key. That key can save links, read their
-   status, and read and search your own saves (`/api/app/saves`,
-   `/api/app/search`); nothing else.
+   status, read and search saves (`/api/app/saves`, `/api/app/search`), and
+   play the friends feed (`/api/app/feed`, `channels`, `live`), as a
+   signed-in member could; nothing else.
 4. The Home screen checks the key with `GET /api/app/me` when it opens. If you
    removed the phone on your ADHX, the app forgets the key and goes back to
    Connect.
@@ -149,11 +163,26 @@ from `node_modules/simple-icons/icons/<name>.svg` into `NetworkPaths.swift`.
 ## Fonts
 
 The designs use Instrument Serif for headings and Hanken Grotesk for
-everything else. The app uses the system serif and system sans unless
-`InstrumentSerif-Regular` is installed. To use it, add
-`InstrumentSerif-Regular.ttf` (SIL Open Font License) to `Shared/`, and add it
-under `UIAppFonts` in both `Config/App-Info.plist` and
-`Config/ShareExtension-Info.plist`.
+everything else. Both are bundled in `Shared/Fonts/` (SIL Open Font License,
+licences beside them) and registered for the app and the Share Extension on
+first use (`BundledFonts` in `Shared/Theme.swift`). Hanken Grotesk is one
+variable `.woff2`; each weight is picked on its `wght` axis. Without them the
+app falls back to the system serif and sans.
+
+## Debug launch arguments
+
+Debug builds read a few launch arguments, for the simulator and design checks
+(`xcrun simctl launch <device> <bundle id> …`):
+
+- `-adhxServer <url> -adhxKey <phone key> [-adhxUser <name>]` connects
+  without pairing.
+- `-adhxDryRun YES` never tells the server what you've watched, so a shared
+  test server stays as it was.
+- `-adhxWelcome YES` shows the "Connected to …" screen that follows pairing.
+- `-adhxSharePreview saved|private` shows the share card's Saved state over
+  a post, without sharing anything.
+- `-adhxTuneIn <slug>` does what tapping a "… is live" notification does
+  (opens Live and tunes in to that moment).
 
 ## Before testing on a physical phone
 
@@ -198,6 +227,71 @@ apps/ios/
   Shared/                used by both: API, storage, queue, marks, theme, the sheet
 ```
 
+## The friends feed
+
+Your people see what you save, named, unless you switch **Just for me** (on
+the share sheet, or in the player’s More). The app only shows names the
+server sends it, which it does for members only.
+
+- **New** plays videos and photos unless you switch on text posts or
+  articles (tap New again). The choice is saved on your ADHX
+  (`/api/app/feed/types`) and on the phone, for servers that don’t keep it.
+- **New** marks a post seen after 2 seconds on screen, or as soon as you swipe
+  past it, and sends them to `/api/app/seen` in batches.
+- The share sheet names your people from the last Channels or feed the app
+  loaded (kept on the phone in the App Group, cleared on Disconnect), or says
+  “Your people will see it”.
+- Live refreshes every 5 seconds while you’re tuned in and in the foreground.
+  A screen-specific presence lease expires after 15 seconds if the phone
+  disconnects; leaving/backgrounding sends an explicit leave. Existing saver
+  metadata refreshes without jumping playback, and explicit removals are
+  distinguished from posts falling outside the latest page.
+- Reactions (an emoji, or up to 40 Unicode code points) go to
+  `/api/app/live/{slug}/react` and float up after acknowledgement. Failed words
+  remain available for Retry against the original post. They are ephemeral
+  reactions, not stored messages.
+- Why this one has Show less / Show more from a friend
+  (`/api/app/feed/weights`); a friend's channel marks what you haven't seen
+  (`isNew`), plays just those, and shows their latest note; Live says how
+  busy a moment is (`recentSaves` in `windowMinutes`) and lists groups still
+  forming. Details in `docs/specs/phone-app.md` → iPhone notes.
+- The why, filter and On their way sheets are the boards' own bottom sheets
+  (`App/BoardSheet.swift`); Share opens the send sheet
+  (`App/Library/SendSheet.swift`), which downloads the kept file and hands it
+  to Messages, Mail, Files, Photos or the share sheet, or sends the post
+  straight to one of your people (it shows in their New as "Pete sent you
+  this").
+- Forming groups on Live have a bell, "Tell me when it's live". When one goes
+  live you get a local notification (`App/Feed/LiveAlerts.swift`), from a
+  poll while the app is open and a background refresh task
+  (`<prefix>.alerts`, beside `<prefix>.flush` in `Config/App-Info.plist`);
+  tapping it tunes in. The app asks to show notifications on the first bell.
+- A From everyone channel can be kept as one of yours (Keep this channel,
+  then Kept · Open).
+- On an ADHX without these endpoints yet (404), New plays your saves as
+  before, and Channels and Live say the server needs an update.
+
 Search follows the server's `nextOffset` as you reach the end of the result
 grid or its player. Further-page failures keep the results already loaded and
 offer a retry. Changing the query cancels the older page request.
+
+The share card confirms its privacy choice against the server queue before
+finishing the extension. New saves stay private until that confirmation, even
+if metadata finishes first. An interrupted confirmation is kept in Shared
+lately and retried on the next refresh. Each changed choice gets a persisted
+monotonic version; retries reuse it so an already accepted request cannot undo
+a later web privacy edit. A genuinely new explicit choice is a new mutation.
+This uses `deferPublish` and `PATCH /api/app/save` from the matching server
+release; update the server before testing this flow with a newly built app.
+
+History automatically moves from the old app-group preference into an atomic
+JSON file in the same private app-group container. A file lock protects each
+read/change/write across the app and extension, and unfinished receipts and
+acknowledgements are retained beyond the recent-history limit. The queue
+records an accepted receipt before removing its offline entry. Each initial
+save reuses its stored history UUID as `requestId`, so a lost initial response
+returns the same receipt after a restart. Unfinished offline entries can be
+reconstructed from history if interrupted.
+
+For regression commands and the cross-device recovery matrix, see
+[Friends-feed reliability checks](../../docs/rollout/friends-feed-verification.md).

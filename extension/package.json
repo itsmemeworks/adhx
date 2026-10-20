@@ -6,9 +6,9 @@
   "license": "MIT",
   "type": "module",
   "devDependencies": {
-    "@types/chrome": "^0.1.4",
-    "extension": "^4.1.5",
-    "typescript": "^5.9.2"
+    "@types/chrome": "^0.1.43",
+    "extension": "^4.1.34",
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "dev": "extension dev",
@@ -19,5 +19,9 @@
     "build:firefox": "extension build --browser firefox",
     "typecheck": "tsc --noEmit",
     "validate:manifests": "node scripts/validate-manifests.mjs"
+  },
+  "packageManager": "pnpm@10.34.7",
+  "pnpm": {
+    "allowBuilds": {}
   }
 }

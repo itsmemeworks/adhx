@@ -32,7 +32,8 @@ function Tools() {
   return (
     <>
       <LearningPill status={learning.status} onOpen={() => setLearningOpen(true)} />
-      <PasteButton onClick={paste.pasteFromClipboard} />
+      {/* Desktop pastes anywhere on the page (⌘V), the pill kept for keyboards; phones need it. */}
+      <PasteButton onClick={paste.pasteFromClipboard} keyboardOnlyFrom="md" />
       {mounted &&
         createPortal(
           <>

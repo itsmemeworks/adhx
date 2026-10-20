@@ -9,8 +9,12 @@ import {
   syncLogs,
   userPreferences,
   phoneSaveQueue,
+  postViews,
+  postSends,
+  momentAlertSubs,
+  momentAlerts,
 } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 import { runInTransaction } from '@/lib/db'
 import { metrics } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
@@ -40,6 +44,14 @@ export const POST = withAuth(async (_req, userId) => {
       db.delete(syncLogs).where(eq(syncLogs.userId, userId)).run()
       db.delete(userPreferences).where(eq(userPreferences.userId, userId)).run()
       db.delete(phoneSaveQueue).where(eq(phoneSaveQueue.userId, userId)).run()
+      // What you've seen in the feed starts over too.
+      db.delete(postViews).where(eq(postViews.userId, userId)).run()
+      // Posts sent to or by you, and your live bells and alerts.
+      db.delete(postSends)
+        .where(or(eq(postSends.fromUserId, userId), eq(postSends.toUserId, userId)))
+        .run()
+      db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
+      db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
     })
 
     metrics.dataCleared()

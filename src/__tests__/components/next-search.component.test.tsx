@@ -19,7 +19,9 @@ import {
   DEFAULT_STATE,
   countLabel,
   groupResults,
+  heardOrRead,
   matchReason,
+  matchShort,
   openHref,
   paramsFromState,
   orderByStrength,
@@ -91,11 +93,13 @@ describe('search model', () => {
     const state = {
       ...DEFAULT_STATE,
       q: 'squirrels',
-      scope: 'everyone' as const,
+      scope: 'mine' as const,
       view: 'queue' as const,
     }
     const params = paramsFromState(state)
-    expect(params.toString()).toBe('q=squirrels&scope=everyone&view=queue')
+    expect(params.toString()).toBe('q=squirrels&scope=mine&view=queue')
+    // Members search everyone's saves unless they ask for their own.
+    expect(DEFAULT_STATE.scope).toBe('everyone')
     expect(stateFromParams(params)).toEqual(state)
     expect(stateFromParams({ scope: 'all-users', type: 'gifs' })).toEqual(DEFAULT_STATE)
   })
@@ -110,6 +114,33 @@ describe('search model', () => {
     )
     expect(countLabel(1, 'videos')).toBe('1 video')
     expect(countLabel(3, 'all')).toBe('3 matches')
+  })
+
+  it('says when a match was said in the video or written on screen', () => {
+    const said: SearchResultItem = { ...squirrel, matched: ['speech', 'keywords'] }
+    const meme: SearchResultItem = { ...community, matched: ['screen'] }
+    expect(groupResults([said, meme, community]).map((g) => g.name)).toEqual([
+      'Said in the video',
+      'On screen',
+      'What it’s about',
+    ])
+    expect(matchReason({ ...said, matched: ['speech'] })).toBe('Someone says it in the video.')
+    expect(matchReason({ ...meme, matched: ['screen', 'picture'] })).toBe(
+      'It’s written on screen, and the picture agrees.',
+    )
+    expect(matchReason({ ...squirrel, matched: ['video', 'speech'] })).toBe(
+      'What happens in the video matches what you described, and what’s said in it agrees.',
+    )
+    expect(matchShort(meme)).toBe('on screen')
+    expect(matchShort(said)).toBe('said in the video')
+    expect(heardOrRead(said)).toBe('Said in the video')
+    expect(heardOrRead(meme)).toBe('On screen')
+    expect(heardOrRead(squirrel)).toBeNull()
+    render(<BentoView items={[{ ...said, strength: 'strong' }, meme]} query="cucumber" />)
+    expect(
+      screen.getAllByRole('img', { name: 'Strong match, said in the video' }).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getAllByText('On screen').length).toBeGreaterThan(0)
   })
 
   it('opens your saves in the theater and anyone else’s on its public page', () => {
@@ -203,7 +234,7 @@ describe('SearchScreen', () => {
   })
 
   it('searches as you type, then swaps in the refined order', async () => {
-    render(<SearchScreen initial={DEFAULT_STATE} />)
+    render(<SearchScreen initial={{ ...DEFAULT_STATE, scope: 'mine' }} />)
     fireEvent.change(screen.getByLabelText('Describe what you’re looking for'), {
       target: { value: 'squirrels eating biscuits' },
     })
@@ -224,15 +255,15 @@ describe('SearchScreen', () => {
     // Every result opens the theater with this search as its queue.
     expect(screen.getByRole('link', { name: /Best match: James Melville/ })).toHaveAttribute(
       'href',
-      '/play?q=squirrels+eating+biscuits&start=twitter%3A1001',
+      '/play?q=squirrels+eating+biscuits&scope=mine&start=twitter%3A1001',
     )
     fireEvent.click(screen.getByRole('button', { name: 'Play all 1' }))
-    expect(push).toHaveBeenCalledWith('/play?q=squirrels+eating+biscuits')
+    expect(push).toHaveBeenCalledWith('/play?q=squirrels+eating+biscuits&scope=mine')
   })
 
   it('marks posts from other people’s saves when searching everyone', async () => {
-    render(<SearchScreen initial={{ ...DEFAULT_STATE, q: 'synth' }} />)
-    fireEvent.click(screen.getAllByRole('button', { name: 'Everyone' })[0])
+    render(<SearchScreen initial={{ ...DEFAULT_STATE, scope: 'mine', q: 'synth' }} />)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Everyone’s saves' })[0])
     await act(async () => {
       await vi.advanceTimersByTimeAsync(600)
     })
@@ -241,7 +272,7 @@ describe('SearchScreen', () => {
     )
     expect(screen.getByRole('link', { name: /saved by someone else/ })).toHaveAttribute(
       'href',
-      '/play?q=synth&scope=everyone&start=twitter%3A2002',
+      '/play?q=synth&start=twitter%3A2002',
     )
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes('scope=everyone'))).toBe(true)
   })
@@ -252,7 +283,9 @@ describe('SearchScreen', () => {
         ? new Response(JSON.stringify({ enabled: false, groups: [] }))
         : new Response(JSON.stringify(response([]))),
     )
-    render(<SearchScreen initial={{ ...DEFAULT_STATE, q: 'nothing', type: 'videos' }} />)
+    render(
+      <SearchScreen initial={{ ...DEFAULT_STATE, scope: 'mine', q: 'nothing', type: 'videos' }} />,
+    )
     await act(async () => {
       await vi.advanceTimersByTimeAsync(600)
     })

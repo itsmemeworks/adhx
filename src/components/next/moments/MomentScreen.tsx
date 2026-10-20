@@ -11,6 +11,10 @@ import { momentPlayHref } from '../theater/queue'
 import { NxHeader } from '../channels/ChannelParts'
 import { SaveTools } from '../onboarding/SaveTools'
 import { plural, timeAgo, useMoment } from './live'
+import { Faces } from './LiveTogether'
+import { savingLine, tuneInLabel, watchingLine } from './people'
+import { SaverFaces } from '../SaverFaces'
+import type { Saver } from '@/lib/people/types'
 
 /**
  * One moment's page (`/moments/{slug}`): what it is, how fast it's moving,
@@ -28,6 +32,7 @@ function Tile({
   fresh,
   hue,
   slug,
+  savers,
 }: {
   post: FeedItem
   savedAt: string
@@ -35,6 +40,8 @@ function Tile({
   fresh: boolean
   hue: string
   slug: string
+  /** Members only. */
+  savers?: Saver[]
 }) {
   const src = postCoverSrc(post)
   const key = `${post.platform ?? 'twitter'}:${post.id}`
@@ -67,10 +74,14 @@ function Tile({
       >
         {fresh ? 'Just saved' : timeAgo(savedAt)}
       </span>
-      {people > 1 && (
-        <span className="absolute right-2.5 top-2.5 rounded-full bg-nx-cream px-2.5 py-1 text-[11px] font-extrabold text-black">
-          {`Saved by ${people}`}
-        </span>
+      {savers && savers.length > 0 ? (
+        <SaverFaces savers={savers} tone="plate" compact className="absolute right-2.5 top-2" />
+      ) : (
+        people > 1 && (
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-nx-cream px-2.5 py-1 text-[11px] font-extrabold text-black">
+            {`Saved by ${people}`}
+          </span>
+        )
       )}
       {nextPostKind(post) === 'video' && (
         <span className="nx-plate absolute bottom-2.5 right-2.5 rounded-md px-2 py-0.5 text-[11px] font-bold text-white">
@@ -87,7 +98,7 @@ function Tile({
 }
 
 export function MomentScreen({ slug }: { slug: string }) {
-  const { detail, missing, fresh, watching } = useMoment(slug)
+  const { detail, missing, fresh, watching, watchers } = useMoment(slug)
   const [copied, setCopied] = useState(false)
 
   if (missing) {
@@ -113,7 +124,7 @@ export function MomentScreen({ slug }: { slug: string }) {
     : 0
 
   return (
-    <div className="min-h-dvh bg-black font-nx-sans text-nx-cream">
+    <div className="min-h-dvh bg-nx-ink font-nx-sans text-nx-cream">
       <NxHeader current="now">
         <SaveTools />
       </NxHeader>
@@ -142,6 +153,18 @@ export function MomentScreen({ slug }: { slug: string }) {
                 }. Last save ${timeAgo(m.lastAt)}.`}
               </p>
             )}
+            {m?.savers && m.savers.length > 0 && (
+              <p className="m-0 flex items-center gap-2.5 text-[15px] text-nx-soft">
+                <Faces people={m.savers} size={30} ring="#000" max={5} />
+                <span>{savingLine(m.savers, m.people)}</span>
+              </p>
+            )}
+            {watchers.length > 0 && (
+              <p className="m-0 flex items-center gap-2.5 text-[14px] text-nx-soft">
+                <Faces people={watchers} size={26} live ring="#000" />
+                <span>{watchingLine(watchers)}</span>
+              </p>
+            )}
             <div className="flex flex-wrap gap-2.5 pt-1.5">
               <Link
                 href={momentPlayHref(slug)}
@@ -149,7 +172,7 @@ export function MomentScreen({ slug }: { slug: string }) {
                 style={{ background: hue }}
               >
                 <Radio aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.4} />
-                <span>Tune in</span>
+                <span>{tuneInLabel(watchers)}</span>
               </Link>
               <button
                 type="button"
@@ -196,7 +219,9 @@ export function MomentScreen({ slug }: { slug: string }) {
               ))}
             </div>
             <span className="text-xs text-nx-muted">
-              Counts are anonymous. Nobody sees who saved what.
+              {m?.savers
+                ? 'Only your people see who saved what. Private saves never count.'
+                : 'Counts are anonymous. Nobody sees who saved what.'}
             </span>
           </aside>
         </section>
@@ -216,6 +241,7 @@ export function MomentScreen({ slug }: { slug: string }) {
                   fresh={!!fresh && fresh.startsWith(`${key}@`)}
                   hue={hue}
                   slug={slug}
+                  savers={item.savers}
                 />
               )
             })}
