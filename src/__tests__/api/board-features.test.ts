@@ -288,6 +288,25 @@ describe('send straight to your people', () => {
     expect((await newFeed()).map((i) => i.id)).not.toContain('old')
   })
 
+  it('shows a sent text post even when New is set to videos and photos', async () => {
+    save(BEN, 'words', 1)
+    save(JO, 'other-words', 1)
+    viewer = PETE
+    await send({ platform: 'twitter', id: 'words', to: ['ana'] })
+
+    viewer = ANA
+    const { GET } = await import('@/app/api/feed/blend/route')
+    const res = await GET(
+      new NextRequest(`${BASE}/api/feed/blend?mode=new&limit=50&types=video,photo`),
+    )
+    const body = await res.json()
+    // Only the send gets through the filter. Jo's text post and the shared
+    // "sauce" wait, and the send isn't counted among them.
+    expect(body.items.map((i: Item) => i.id)).toEqual(['words'])
+    expect(body.items[0].why).toBe('Pete sent you this')
+    expect(body.waiting).toEqual({ text: 2 })
+  })
+
   it('reaches the phone the same way', async () => {
     save(BEN, 'fresh1', 0.1)
     const pete = createAccessKey(PETE, 'Phone', 'phone')!.key

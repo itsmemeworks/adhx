@@ -448,7 +448,9 @@ inviteMode, requests? }`; `requests` (admins only) are
 thumbnail, savers, savedAt, step (1–7), stepLabel, steps, percent, status:
 working|waiting|needs_you|ready, playable, reason, quality, learned, retry,
 finishedAt }], summary: { onTheirWay, keeping, learning, needsYou, ready,
-freeBytes, processing, remoteConnected } }`. `POST /api/app/doing/retry
+freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
+  `posterUrl`) is an `/api/files/…/poster` path: the kept poster, or the
+  network's picture until it's kept; null for a post with nothing to show. `POST /api/app/doing/retry
 { platform, id }` → `{ retried }`, for people who saved it (`retry: true`).
 - `GET /api/app/send?platform=&id=` → the send sheet's "Or straight to your
   people" (board j4-4), one face per member (not you):
