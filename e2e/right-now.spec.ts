@@ -69,10 +69,11 @@ test('a save by someone else lands in the moment on Right now', async () => {
     has: watcher.getByRole('heading', { name: FROG_TITLE, exact: true }),
   })
   await expect(card).toBeVisible({ timeout: 60_000 })
-  // Two seeded people on a fresh server; more after a retry.
-  const people = card.getByText(/^\d+ people$/)
-  const before = Number.parseInt(await people.innerText(), 10)
-  expect(before).toBeGreaterThanOrEqual(2)
+  // Members see how busy it is lately ("3 saves in 10 min"); with nothing
+  // in the last hour, the totals ("2 people"). Either way a save adds one.
+  const busy = card.getByText(/^(\d+ people|\d+ saves? in \d+ min)$/).first()
+  const said = await busy.innerText()
+  const recentBefore = / in \d+ min$/.test(said) ? Number.parseInt(said, 10) : 0
   // The "Just saved" strip, newest first (keeps earlier attempts' saves).
   const strip = watcher.locator('ul[aria-live="polite"] > li')
   const chips = strip.filter({ hasText: FROG_LIVE.text })
@@ -98,7 +99,9 @@ test('a save by someone else lands in the moment on Right now', async () => {
   await expect(chips).toHaveCount(chipsBefore + 1)
   await expect(strip.first()).toContainText(FROG_LIVE.text)
   await expect(strip.first()).toContainText(`→ ${FROG_TITLE}`)
-  await expect(people).toHaveText(`${before + 1} people`)
+  await expect(card.getByText(/ in \d+ min$/).first()).toHaveText(
+    new RegExp(`^${recentBefore + 1} saves? in \\d+ min$`),
+  )
 })
 
 test('Tune in waits when caught up, then plays the next save as it lands', async () => {
