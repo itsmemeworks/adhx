@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.adhx.share.data.Connection
-import com.adhx.share.feed.PageHeader
 import com.adhx.share.feed.HomeTab
 import com.adhx.share.links.Networks
 import com.adhx.share.net.AdhxApi

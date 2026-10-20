@@ -99,7 +99,7 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
             }
         }
         if (channels.group.isNotEmpty()) {
-            item(key = "group-h") { Heading(Copy.FROM_EVERYONE, Copy.FROM_EVERYONE_NOTE, size = 32, top = 20) }
+            item(key = "group-h") { Heading(Copy.FROM_EVERYONE, Copy.FROM_EVERYONE_NOTE, size = 32, top = 4) }
             item(key = "group") {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),

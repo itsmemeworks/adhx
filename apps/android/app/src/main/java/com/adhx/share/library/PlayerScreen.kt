@@ -197,6 +197,8 @@ fun PlayerScreen(
     reacting: Boolean = false,
     /** Live privacy/metadata refreshes keep the keyed page rather than jumping to New's top. */
     preservePlaybackOnRefresh: Boolean = false,
+    /** [topBar] steps aside while the send sheet is up (home's row, as on iPhone). */
+    hideTopBarWhileSending: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -468,7 +470,7 @@ fun PlayerScreen(
                 onSeek = { ms -> player?.seekTo(ms) },
             )
         }
-        if (!hidden && !inPip) {
+        if (!hidden && !inPip && !(hideTopBarWhileSending && sendingPost != null)) {
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) { topBar() }
         }
         if (newOnTop > 0 && !hidden && !inPip && scrub == null) {

@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android: one-row header everywhere
+
+- Caught up, Channels, a friend's channel and Live used the old two-row header (Gob + "adhx", Search and Settings/sliders, then a tabs pill). They now share the player's one row, as on iPhone: Gob (Settings), New · Channels · Live with New's 99+ badge, Search. `HomeHeader(overMedia)` is the only header: see-through pill over the player, surface (#1a1814) pill and Search on solid pages. `PageHeader` is gone.
+- Tuned in shows only the LIVE row (LIVE, watching with you, Leave); New's row steps aside while the send sheet is up (`PlayerScreen(hideTopBarWhileSending)`). Content tops moved up to match (caught up, Channels, Live, a friend's channel).
+- Checked at 390dp on a :3620 parity server against the iPhone captures (j2-1, j2-4, j3-3, j4-4, j6-3, j7-3, j7-4).
+
 ## 2026-10-20 — iPhone: swipe past a single photo
 
 - In New, swiping up on a one-photo post didn't move to the next save: the photo sat in a paging `TabView`, which swallowed the vertical swipe. A single photo is now drawn without the pager (albums keep it). Checked in the simulator: the same 500 pt swipe from the middle of the photo stays put on `main` and moves on with the fix.

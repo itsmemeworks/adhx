@@ -117,7 +117,7 @@ fun NewTab(
     connection: Connection,
     reach: Reach,
     actions: HomeActions,
-    /** Over the player; [atEnd] is the end page (caught up), which gets the pages' header. */
+    /** Over the player; [atEnd] is a solid page (caught up, loading, can't load), whose row sits on the surface colour. */
     header: @Composable (newBadge: String?, atEnd: Boolean) -> Unit,
 ) {
     val ui by feed.feed.collectAsStateWithLifecycle()
@@ -171,7 +171,7 @@ fun NewTab(
     when {
         ui.items.isEmpty() && (!ui.loadedOnce || ui.loading) -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 34.dp, stroke = 3.dp) }
-            header(null, false)
+            header(null, true)
         }
         ui.items.isEmpty() && ui.error != null -> Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {
             Column(
@@ -184,7 +184,7 @@ fun NewTab(
                 Text(ui.error ?: Copy.FEED_CANT_LOAD, fontSize = 15.sp, lineHeight = 22.sp, color = AdhxColors.Muted)
                 OutlineButton("Try again", onClick = feed::reloadFeed, minHeight = 44.dp)
             }
-            header(null, false)
+            header(null, true)
         }
         ui.items.isEmpty() -> Box(Modifier.fillMaxSize()) {
             end()
@@ -199,6 +199,7 @@ fun NewTab(
                 page = it
             },
             topBar = { header(badge, page >= ui.items.size) },
+            hideTopBarWhileSending = true,
             onSaver = actions.openPerson,
             aboveCaption = { post -> WhyChip(post, server) { why = post } },
             end = if (ui.ended) end else null,
@@ -605,8 +606,8 @@ fun CaughtUp(
             .fillMaxSize()
             .background(AdhxColors.Background)
             .drawBehind {
-                // A soft yellow glow behind Gob: 520×420 around a point 360dp down.
-                val center = androidx.compose.ui.geometry.Offset(size.width / 2, 360.dp.toPx())
+                // A soft yellow glow behind Gob: 520×420 around a point 326dp down (under home's one-row header).
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, 326.dp.toPx())
                 drawOval(
                     Brush.radialGradient(
                         0f to AdhxColors.Accent.copy(alpha = 0.12f),
@@ -625,7 +626,7 @@ fun CaughtUp(
                 .verticalScroll(rememberScrollState())
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 118.dp, bottom = 24.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 84.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Gob bobs gently, unless animations are off.
