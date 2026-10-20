@@ -12,6 +12,7 @@ import { renameReadStatusToArchivedPosts } from './rename-read-status'
 import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-invariants'
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
+import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -1176,6 +1177,18 @@ try {
   console.log('[migrate] Ensured moderated_posts / user_bans / admin_audit tables')
 } catch (error) {
   console.error('[migrate] FAILED ensuring admin moderation tables', error)
+  db.close()
+  process.exit(1)
+}
+
+// Sends to your people (post_sends) and "Tell me when it's live"
+// (moment_alert_subs, moment_alerts). User-linked, so they exist before the
+// account guards below are installed.
+try {
+  db.exec(BOARD_FEATURES_DDL)
+  console.log('[migrate] Ensured post_sends / moment_alert_subs / moment_alerts tables')
+} catch (error) {
+  console.log('[migrate] FAILED creating post_sends / moment alert tables', error)
   db.close()
   process.exit(1)
 }

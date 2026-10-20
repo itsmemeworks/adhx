@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql, type SQL } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { postViews } from '@/lib/db/schema'
+import { markSendsSeen } from '@/lib/sends/sends'
 
 /**
  * The feed's watched list (`post_views`): a post counts as seen after 2s on
@@ -39,7 +40,10 @@ export function parseViewBody(body: unknown): { posts: PostRef[] } | { error: st
   return { posts: [...out.values()] }
 }
 
-/** Mark posts seen. Idempotent: a post keeps the time it was first seen. */
+/**
+ * Mark posts seen. Idempotent: a post keeps the time it was first seen. Posts
+ * sent to you stop leading New once seen (`post_sends.seen_at`).
+ */
 export function markSeen(userId: string, posts: PostRef[], now = new Date()): void {
   if (!userId || posts.length === 0) return
   const seenAt = now.toISOString()
@@ -47,6 +51,7 @@ export function markSeen(userId: string, posts: PostRef[], now = new Date()): vo
     .values(posts.map((p) => ({ userId, platform: p.platform, postId: p.id, seenAt })))
     .onConflictDoNothing()
     .run()
+  markSendsSeen(userId, posts, now)
 }
 
 /** Which of these posts (`platform:id`) the viewer has seen. */

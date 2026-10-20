@@ -5,13 +5,15 @@ import { groupChannelKeys } from '@/lib/channels/group'
 import { keysToHits } from '@/lib/channels/channels'
 import { loadSearchItems } from '@/lib/semantic/items'
 import { newKeysFor } from '@/lib/feed/views'
+import { keptGroupChannel } from '@/lib/channels/group-keep'
 
 const SLUG = /^[a-z0-9-]{1,64}$/
 
 /**
  * GET /api/channels/group/{slug} — a From everyone channel as a play queue:
  * its posts newest save first, each with its savers and `isNew` (you
- * haven't saved or seen it, from `post_views`). Members only.
+ * haven't saved or seen it, from `post_views`). Members only. `kept` is
+ * `{ tag, url }` once you've kept it as one of your channels, else null.
  */
 export const GET = withAuth(
   async (_request: NextRequest, userId, { params }: { params: Promise<{ slug: string }> }) => {
@@ -29,8 +31,10 @@ export const GET = withAuth(
         ...i,
         isNew: fresh.has(`${i.post.platform}:${i.post.id}`),
       }))
+      const kept = await keptGroupChannel(userId, { name: channel.name, slug })
       const response = NextResponse.json({
         name: channel.name,
+        kept,
         items,
         total: items.length,
         understood: true,
