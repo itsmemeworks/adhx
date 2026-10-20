@@ -92,6 +92,7 @@ import com.adhx.share.net.SaveResponse
 import com.adhx.share.net.StatusResponse
 import com.adhx.share.ui.AdhxBrand
 import com.adhx.share.ui.AdhxColors
+import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Faces
 import com.adhx.share.ui.JustForMeRow
@@ -409,7 +410,7 @@ private fun NoteField(note: String, onNote: (String) -> Unit, justForMe: Boolean
                 value = note,
                 onValueChange = { onNote(it.take(Copy.NOTE_MAX)) },
                 singleLine = true,
-                textStyle = TextStyle(fontSize = 16.sp, color = AdhxColors.White),
+                textStyle = TextStyle(fontFamily = SansFamily, fontSize = 16.sp, color = AdhxColors.White),
                 cursorBrush = SolidColor(AdhxColors.Accent),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 modifier = Modifier

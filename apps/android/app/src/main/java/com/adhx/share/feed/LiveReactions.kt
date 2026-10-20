@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import com.adhx.share.net.Reaction
 import com.adhx.share.net.Saver
 import com.adhx.share.ui.AdhxColors
+import com.adhx.share.ui.SansFamily
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.GobShape
@@ -147,7 +148,7 @@ fun ReactPicker(words: String, onWordsChange: (String) -> Unit, sending: Boolean
                         value = words,
                         onValueChange = { onWordsChange(Reaction.clip(it)) },
                         singleLine = true,
-                        textStyle = TextStyle(fontSize = 15.sp, color = AdhxColors.Cream),
+                        textStyle = TextStyle(fontFamily = SansFamily, fontSize = 15.sp, color = AdhxColors.Cream),
                         cursorBrush = SolidColor(AdhxColors.Accent),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = { send() }),

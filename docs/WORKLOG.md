@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android uses Hanken Grotesk
+
+- The Android app's sans is now Hanken Grotesk, like the web and iOS: `res/font/hanken_grotesk.ttf` is the web's `src/app/fonts/HankenGrotesk-latin-variable.woff2` decoded to TrueType (Brotli plus the WOFF2 glyf/loca reconstruction), with nothing downloaded. Chromium renders both files pixel-identically at weights 100–900.
+- `SansFamily` in `ui/Theme.kt` maps each weight to the same variable file at that point on its weight axis (API 26+). Every Material type style and the two text fields use it; licence in `assets/licenses/HankenGrotesk-OFL.txt`.
+
 ## 2026-10-20 — Design-parity gaps closed: getting ready, new marks, note card, phone weights, live span
 
 - **Getting it ready** (j1-4/j1-5): `GET /api/activity/processing/posts` (`processing/keep-status.ts`, `seenBy` only) says whether each post is `waiting | keeping | converting | kept | none` with step and percent; the theater (`useKeepStatus`, `GettingReadyStage`) covers the stage until the copy is kept, then plays (`POST_KEPT` reloads a failed load). Chips: "Shared with your people" (faces) while yours gets ready, "Kept on your ADHX" on a just-kept post. `keep_jobs.progress` (guarded ALTER) keeps the last written percent; `/doing` uses it too.
