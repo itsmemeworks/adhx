@@ -41,6 +41,12 @@ enum SaverWords {
         return names.prefix(limit).joined(separator: ", ") + " and \(rest) other" + (rest == 1 ? "" : "s")
     }
 
+    /// The saver whose note the byline shows: a friend's first (newest
+    /// first), else yours.
+    static func noted(_ savers: [Saver]) -> Saver? {
+        savers.first { !$0.isYou && $0.note != nil } ?? savers.first { $0.note != nil }
+    }
+
     /// The newest saver's time: "2h", "20m".
     static func when(_ savers: [Saver]) -> String? {
         let newest = savers.compactMap { Format.date($0.savedAt) }.max()
@@ -129,15 +135,27 @@ struct Face: View {
     /// The ring that separates overlapping faces (the colour behind them).
     var ring: Color = .black
 
-    private static let colours: [Color] = [
-        Color(hex: 0xFF8FA3), Color(hex: 0x7FD1AE), Color(hex: 0xFFB35C),
-        Color(hex: 0xC4A7FF), Color(hex: 0x6B8CFF), Color(hex: 0xFFD23F),
-    ]
+    /// The boards' five face colours, in the web's `FACE_COLOURS` order
+    /// (`src/components/next/faces.ts`), so a person has one colour everywhere.
+    static let colourHexes: [UInt32] = [0x7FD1AE, 0xFF8FA3, 0x6B8CFF, 0xC4A7FF, 0xFFB35C]
+    private static let colours: [Color] = colourHexes.map { Color(hex: $0) }
 
-    /// The same colour for the same person, every time.
+    /// The same colour for the same person on every device: FNV-1a over the
+    /// lowercased username without "@", modulo the five colours (the web's
+    /// `faceColour`). Ana, Ben, Mum, Jo and Pete get their board colours.
+    static func colourIndex(for username: String) -> Int {
+        var name = username.lowercased()
+        if name.hasPrefix("@") { name.removeFirst() }
+        var hash: UInt32 = 0x811C_9DC5
+        for unit in name.utf16 {
+            hash ^= UInt32(unit)
+            hash = hash &* 0x0100_0193
+        }
+        return Int(hash % UInt32(colourHexes.count))
+    }
+
     static func colour(for username: String) -> Color {
-        let sum = username.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
-        return colours[sum % colours.count]
+        colours[colourIndex(for: username)]
     }
 
     var body: some View {
@@ -158,8 +176,10 @@ struct Face: View {
         Rectangle()
             .fill(Self.colour(for: saver.username))
             .overlay(
-                Text(String(saver.displayName.prefix(1)).uppercased())
-                    .font(.system(size: size * 0.44, weight: .heavy))
+                // Your own face shows your initial, not the "Y" of "You".
+                Text(String((saver.isYou ? (saver.name?.isEmpty == false ? saver.name! : saver.username)
+                                         : saver.displayName).prefix(1)).uppercased())
+                    .font(Theme.sans(size * 0.42, .heavy))
                     .foregroundStyle(.black)
             )
     }

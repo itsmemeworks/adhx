@@ -376,14 +376,25 @@ struct ADHXClient {
 
     /// `isPrivate` saves it "Just for me"; nil leaves the server's default
     /// (shared with your people, or what a repeat save already had).
-    func save(url: String, private isPrivate: Bool? = nil, deferPublish: Bool = false, requestId: String? = nil) async throws -> SaveAnswer {
+    /// `note` is what you say with it (at most 140 characters; older servers ignore it).
+    func save(url: String, private isPrivate: Bool? = nil, deferPublish: Bool = false, requestId: String? = nil,
+              note: String? = nil) async throws -> SaveAnswer {
         var body: [String: Any] = ["url": url]
+        if let note = Saver.clean(note) { body["note"] = note }
         if let isPrivate { body["private"] = isPrivate }
         if deferPublish { body["deferPublish"] = true }
         if let requestId { body["requestId"] = requestId }
         let answer: SaveOrQueued = try await send(
             "POST", "/api/app/save", body: body, headers: ["Prefer": "respond-async"])
         return answer.answer
+    }
+
+    /// Sets (or, with nil, clears) your note on one of your saves. Answers the
+    /// note the server kept (cleaned, at most 140 characters).
+    func setNote(platform: String, id: String, note: String?) async throws -> String? {
+        let answer: NoteAnswer = try await send(
+            "POST", "/api/app/note", body: ["platform": platform, "id": id, "note": Saver.clean(note) ?? NSNull()])
+        return answer.note
     }
 
     /// Switches one of your saves "Just for me" or back to shared. Answers the
@@ -615,4 +626,8 @@ enum Links {
     static func normalizedCode(_ code: String) -> String {
         code.uppercased().filter { $0.isLetter || $0.isNumber }
     }
+}
+
+private struct NoteAnswer: Decodable {
+    let note: String?
 }

@@ -52,7 +52,7 @@ struct LiveView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
                 if !model.loadedOnce {
                     HStack { Spacer(); RingSpinner(size: 34, lineWidth: 3); Spacer() }
                         .padding(.top, 60)
@@ -69,10 +69,12 @@ struct LiveView: View {
                 } else {
                     Text("What your lot are into tonight")
                         .font(Theme.serif(36))
-                        .foregroundStyle(.white)
+                        .lineSpacing(-3)
+                        .foregroundStyle(Theme.ink)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.horizontal, 16)
+                        .padding(.bottom, 0)
                     ForEach(model.moments) { moment in
                         if moment.live {
                             LiveCard(moment: moment, server: server) { tuned = moment }
@@ -83,7 +85,7 @@ struct LiveView: View {
                     .padding(.horizontal, 16)
                 }
             }
-            .padding(.top, 12)
+            .padding(.top, 8)
             .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
@@ -97,33 +99,63 @@ struct LiveView: View {
     }
 }
 
-/// The red LIVE mark: a dot with soft rings (still under Reduce Motion).
+/// The red LIVE mark: a dot with soft rings that pulse (still under Reduce Motion).
 struct LiveBadge: View {
+    var height: CGFloat = 30
+    /// A red edge, over a video (tuned in).
+    var bordered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var glow = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 9) {
             Circle()
                 .fill(Theme.live)
-                .frame(width: 8, height: 8)
-                .background(Circle().fill(Theme.live.opacity(glow ? 0.35 : 0.15)).frame(width: 18, height: 18))
+                .frame(width: 9, height: 9)
+                .background(Circle().fill(Theme.live.opacity(0.3)).frame(width: 17, height: 17))
+                .background(Circle().fill(Theme.live.opacity(glow ? 0.2 : 0.08))
+                    .frame(width: glow ? 27 : 21, height: glow ? 27 : 21))
             Text("LIVE")
                 .font(Theme.sans(12, .heavy))
-                .tracking(1)
+                .tracking(0.96)
                 .foregroundStyle(.white)
         }
-        .padding(.leading, 11)
+        .padding(.leading, bordered ? 11 : 10)
         .padding(.trailing, 12)
-        .frame(height: 32)
-        .background(Capsule().fill(.black.opacity(0.55)))
-        .overlay(Capsule().strokeBorder(Theme.live.opacity(0.5), lineWidth: 1))
+        .frame(height: height)
+        .frosted(Capsule(), dim: bordered ? 0.55 : 0.6)
+        .overlay(Capsule().strokeBorder(Theme.live.opacity(bordered ? 0.5 : 0), lineWidth: 1))
         .onAppear {
             guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) { glow = true }
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { glow = true }
         }
         .accessibilityElement()
         .accessibilityLabel("Live")
+    }
+}
+
+/// A live moment's covers: a tall one, two small, a wide one (the boards' grid).
+private struct LiveMosaic: View {
+    let covers: [String]
+    let server: URL
+
+    var body: some View {
+        let urls = covers.prefix(4).map { ADHXClient.resolve($0, against: server) }
+        if urls.count < 4 {
+            Mosaic(covers: covers, server: server)
+        } else {
+            GeometryReader { box in
+                let unit = (box.size.width - 4) / 3.3
+                HStack(spacing: 2) {
+                    CoverImage(url: urls[0]).frame(width: unit * 1.3)
+                    VStack(spacing: 2) {
+                        HStack(spacing: 2) { CoverImage(url: urls[1]); CoverImage(url: urls[2]) }
+                        CoverImage(url: urls[3])
+                    }
+                }
+            }
+            .accessibilityHidden(true)
+        }
     }
 }
 
@@ -134,23 +166,24 @@ private struct LiveCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Mosaic(covers: moment.covers, server: server)
-                .frame(height: 220)
+            LiveMosaic(covers: moment.covers, server: server)
+                .frame(height: 178)
                 .overlay(alignment: .topLeading) { LiveBadge().padding(10) }
-                .overlay(alignment: .bottomLeading) {
+                .overlay(alignment: .bottomTrailing) {
                     if let watching = watchingLine {
-                        HStack(spacing: 7) {
+                        HStack(spacing: 8) {
                             if !moment.watchers.isEmpty {
-                                FaceStack(savers: moment.watchers, server: server, size: 24, ring: .black)
+                                FaceStack(savers: moment.watchers, server: server, size: 24,
+                                          ring: Color(hex: 0x5EE38A))
                             }
                             Text(watching)
-                                .font(Theme.sans(13, .heavy))
+                                .font(Theme.sans(13, .semibold))
                                 .foregroundStyle(.white)
                         }
-                        .padding(.leading, 4)
+                        .padding(.leading, moment.watchers.isEmpty ? 12 : 5)
                         .padding(.trailing, 12)
-                        .frame(minHeight: 32)
-                        .background(Capsule().fill(.black.opacity(0.55)))
+                        .frame(height: 34)
+                        .frosted(Capsule(), dim: 0.6)
                         .padding(10)
                     }
                 }
@@ -158,25 +191,22 @@ private struct LiveCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(moment.name)
                     .font(Theme.serif(32))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 if !metaLine.isEmpty {
-                    HStack(spacing: 7) {
-                        if !moment.savers.isEmpty {
-                            FaceStack(savers: moment.savers, server: server, size: 20, ring: Theme.surface)
-                        }
-                        Text(metaLine)
-                            .font(Theme.sans(13))
-                            .foregroundStyle(Theme.muted)
-                            .lineLimit(2)
-                    }
-                    .accessibilityElement(children: .combine)
+                    Text(metaLine)
+                        .font(Theme.sans(13))
+                        .foregroundStyle(Theme.muted)
+                        .lineLimit(2)
                 }
             }
             .padding(.horizontal, 6)
             Button(action: tuneIn) {
-                Label("Tune in", systemImage: "play.fill")
+                HStack(spacing: 10) {
+                    Image(systemName: "play.fill").font(.system(size: 14))
+                    Text("Tune in")
+                }
             }
             .buttonStyle(PillButtonStyle(kind: .primary))
             .accessibilityLabel("Tune in to \(moment.name)")
@@ -184,7 +214,7 @@ private struct LiveCard: View {
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 26, style: .continuous).fill(Theme.surface))
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-            .strokeBorder(Theme.hue(moment.hue) ?? Theme.live.opacity(0.6), lineWidth: 2))
+            .strokeBorder(Theme.hue(moment.hue) ?? Color(hex: 0xFF8FA3), lineWidth: 2))
     }
 
     /// "3 of you watching".
@@ -203,7 +233,7 @@ private struct LiveCard: View {
         } else if let people = moment.people, people > 0 {
             parts.append(people == 1 ? "1 person" : "\(people) people")
         }
-        return parts.joined(separator: " · ")
+        return parts.joined(separator: "  ·  ")
     }
 }
 
@@ -213,23 +243,37 @@ private struct QuietMomentRow: View {
     let server: URL
     let play: () -> Void
 
+    private var forming: Bool { moment.label?.localizedCaseInsensitiveContains("forming") == true }
+
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             CoverImage(url: ADHXClient.resolve(moment.covers.first, against: server))
-                .frame(width: 72, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .frame(width: 76, height: 88)
+                .saturation(forming ? 0.75 : 1)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             VStack(alignment: .leading, spacing: 5) {
                 if let label = moment.label {
-                    Text(label)
-                        .font(Theme.sans(12, .bold))
-                        .foregroundStyle(Theme.faint)
+                    if forming {
+                        Text(label)
+                            .font(Theme.sans(11, .heavy))
+                            .foregroundStyle(Theme.accent)
+                            .padding(.horizontal, 9)
+                            .frame(height: 22)
+                            .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.6),
+                                                            style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+                    } else {
+                        Text(label.uppercased())
+                            .font(Theme.sans(11, .heavy))
+                            .tracking(0.88)
+                            .foregroundStyle(Theme.faint)
+                    }
                 }
                 Text(moment.name)
-                    .font(Theme.serif(26))
-                    .foregroundStyle(.white)
+                    .font(Theme.sans(17, .heavy))
+                    .foregroundStyle(Theme.ink)
                     .lineLimit(2)
                 if !moment.savers.isEmpty {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
                         FaceStack(savers: moment.savers, server: server, size: 20, ring: Theme.surface)
                         Text(SaverWords.who(moment.savers))
                             .font(Theme.sans(13))
@@ -241,15 +285,25 @@ private struct QuietMomentRow: View {
             Spacer(minLength: 0)
             Button(action: play) {
                 Image(systemName: "play.fill")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.black)
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(Theme.accent))
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.ink)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Theme.plate))
             }
             .accessibilityLabel("Play \(moment.name)")
         }
-        .padding(10)
+        .padding(.leading, 8)
+        .padding(.trailing, 10)
+        .padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
+        .overlay {
+            if forming {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(.white.opacity(0.18), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+            } else {
+                RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.08))
+            }
+        }
     }
 }
 
@@ -268,6 +322,8 @@ final class TunedInModel: ObservableObject {
     @Published private(set) var loadError: String?
     /// "Jo just saved one", for a few seconds after a new save lands.
     @Published private(set) var arrival: Saver?
+    /// The poster of the save that just landed, beside "Jo just saved one".
+    @Published private(set) var arrivalPoster: String?
     @Published var currentIndex = 0
     /// Reactions on their way up the screen (yours after acknowledgement, others from the poll).
     @Published private(set) var floating: [FloatingReaction] = []
@@ -336,8 +392,9 @@ final class TunedInModel: ObservableObject {
         if let playing, let index = items.firstIndex(where: { $0.key == playing }) { currentIndex = index }
         else { currentIndex = min(currentIndex, max(0, items.count - 1)) }
         guard loadedOnce else { return }
-        if let saver = new.first?.savers.first(where: { !$0.isYou }) {
+        if let post = new.first, let saver = post.savers.first(where: { !$0.isYou }) {
             arrival = saver
+            arrivalPoster = post.posterUrl
             arrivalTask?.cancel()
             arrivalTask = Task { [weak self] in
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
@@ -401,6 +458,7 @@ struct TunedInScreen: View {
     @State private var sending = false
     @State private var retry: (say: LiveSay, post: PostRef)?
     @State private var reactionPost: PostRef?
+    @State private var pickerHeight: CGFloat = 126
     @FocusState private var typing: Bool
 
     init(moment: LiveMoment, server: URL) {
@@ -412,8 +470,10 @@ struct TunedInScreen: View {
         ZStack(alignment: .top) {
             if !model.items.isEmpty {
                 PlayerView(posts: model.items, server: server, clean: $clean, scrubbing: $scrubbing,
-                           extras: PlayerExtras(bottomInset: picking ? 116 : 0, toastTop: 120,
-                                                react: .init(isOpen: picking, toggle: togglePicker))) { index in
+                           extras: PlayerExtras(bottomInset: picking ? 146 : 0, toastTop: 120,
+                                                react: .init(isOpen: picking, toggle: togglePicker),
+                                                inMoment: model.moment.name, railSpacing: 8,
+                                                progressColour: Theme.accent)) { index in
                     model.currentIndex = index
                 }
             } else {
@@ -436,9 +496,9 @@ struct TunedInScreen: View {
                 .background(Theme.app.ignoresSafeArea())
             }
             FloatingReactions(reactions: model.floating, server: server)
-                .padding(.top, 170)
+                .padding(.top, 200)
                 .padding(.trailing, 80)
-                .frame(height: 470, alignment: .top)
+                .frame(height: 500, alignment: .top)
                 .allowsHitTesting(false)
             if !clean && !scrubbing {
                 topBar
@@ -464,9 +524,9 @@ struct TunedInScreen: View {
     }
 
     private var topBar: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                LiveBadge()
+                LiveBadge(height: 40, bordered: true)
                 watchersChip
                 Spacer(minLength: 0)
                 Button { dismiss() } label: {
@@ -474,13 +534,22 @@ struct TunedInScreen: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(.black.opacity(0.45)))
+                        .frosted(Circle(), dim: 0.45)
                 }
                 .accessibilityLabel("Leave live")
             }
             if let saver = model.arrival {
-                HStack(spacing: 10) {
-                    Face(saver: saver, server: server, size: 30, ring: .black)
+                // A card from the right: the save's poster with their face on its corner.
+                HStack(spacing: 11) {
+                    CoverImage(url: ADHXClient.resolve(model.arrivalPoster, against: server))
+                        .frame(width: 42, height: 42)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(alignment: .bottomTrailing) {
+                            Face(saver: saver, server: server, size: 20, ring: .clear)
+                                .padding(2)
+                                .background(GobShape().fill(Theme.surface))
+                                .offset(x: 6, y: 6)
+                        }
                     VStack(alignment: .leading, spacing: 1) {
                         Text("\(saver.displayName) just saved one")
                             .font(Theme.sans(14, .heavy))
@@ -489,12 +558,23 @@ struct TunedInScreen: View {
                             .font(Theme.sans(14))
                             .foregroundStyle(Theme.muted)
                     }
+                    .lineLimit(1)
+                    Spacer(minLength: 0)
                 }
-                .padding(.leading, 6)
+                .padding(.leading, 8)
                 .padding(.trailing, 14)
-                .frame(minHeight: 44)
-                .background(Capsule().fill(.black.opacity(0.55)))
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .padding(.vertical, 8)
+                .frame(width: 228)
+                .background {
+                    let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    shape.fill(.ultraThinMaterial).overlay(shape.fill(Theme.surface.opacity(0.85)))
+                }
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .strokeBorder(Face.colour(for: saver.username).opacity(0.5), lineWidth: 1))
+                .shadow(color: .black.opacity(0.45), radius: 17, y: 14)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .offset(x: 22)
+                .transition(.opacity.combined(with: .move(edge: .trailing)))
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.updatesFrequently)
             }
@@ -522,9 +602,9 @@ struct TunedInScreen: View {
         let others = model.others
         let names = SaverWords.names(SaverWords.ordered(others).map(\.displayName), upTo: 2)
         let unnamed = max(0, (model.moment.watching ?? 1) - 1 - others.count)
-        return HStack(spacing: 7) {
+        return HStack(spacing: 9) {
             if !others.isEmpty {
-                FaceStack(savers: others, server: server, size: 26, ring: .black)
+                FaceStack(savers: others, server: server, size: 26, ring: Color(hex: 0x5EE38A))
             }
             // The names when they fit; the faces say who when they don't.
             ViewThatFits(in: .horizontal) {
@@ -535,14 +615,15 @@ struct TunedInScreen: View {
                     Text("watching with you")
                 }
             }
-            .font(Theme.sans(13, .bold))
+            .font(Theme.sans(13, .semibold))
             .foregroundStyle(.white)
             .lineLimit(1)
         }
-        .padding(.leading, others.isEmpty ? 12 : 4)
-        .padding(.trailing, 12)
-        .frame(minHeight: 34)
-        .background(Capsule().fill(.black.opacity(0.55)))
+        .padding(.leading, others.isEmpty ? 14 : 6)
+        .padding(.trailing, 14)
+        .frame(height: 40)
+        .frosted(Capsule(), dim: 0.55)
+        .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 1))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(others.isEmpty ? (unnamed > 0 ? "\(unnamed) watching with you" : "Just you watching so far")
                             : SaverWords.names(others.map(\.displayName), upTo: 2) + (others.count == 1 ? " is" : " are") + " watching with you")
@@ -567,20 +648,22 @@ struct TunedInScreen: View {
       ScrollView {
         VStack(spacing: 10) {
             ScrollView(.horizontal, showsIndicators: false) {
-              HStack(spacing: 8) {
-                ForEach(LiveSay.quick, id: \.emoji) { quick in
+              HStack(spacing: 0) {
+                ForEach(Array(LiveSay.quick.enumerated()), id: \.element.emoji) { index, quick in
+                    if index > 0 { Spacer(minLength: 8) }
                     Button {
                         send(.emoji(quick.emoji))
                     } label: {
                         Text(quick.emoji)
                             .font(.system(size: 26))
                             .frame(width: 48, height: 48)
-                            .background(Circle().fill(Theme.raised))
+                            .background(Circle().fill(Theme.plate))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(quick.name)
                 }
               }
+              .containerRelativeFrame(.horizontal)
             }
             .disabled(sending)
             .accessibilityElement(children: .contain)
@@ -588,8 +671,8 @@ struct TunedInScreen: View {
             HStack(spacing: 8) {
                 TextField("", text: $words,
                           prompt: Text("Say something to everyone watching").foregroundColor(Theme.faint))
-                    .font(Theme.sans(15))
-                    .foregroundStyle(Theme.cream)
+                    .font(Theme.sans(15, .medium))
+                    .foregroundStyle(Theme.ink)
                     .focused($typing)
                     .submitLabel(.send)
                     .onSubmit(sendWords)
@@ -599,15 +682,13 @@ struct TunedInScreen: View {
                     .padding(.horizontal, 16)
                     .frame(height: 44)
                     .background(Capsule().fill(Theme.app))
-                    .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
+                    .overlay(Capsule().strokeBorder(Color(hex: 0x4A453E), lineWidth: 1))
                     .accessibilityLabel("Say something")
                     .accessibilityHint("Up to \(LiveSay.maxText) characters, to everyone watching")
                 Button(sending ? "Sending…" : (retry != nil ? "Retry" : "Send"), action: sendWords)
-                    .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false))
+                    .buttonStyle(PillButtonStyle(kind: .primary, height: 44, fullWidth: false, fontSize: 15))
                     .disabled(sending || words.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            Text("Live reactions disappear. These aren’t saved messages.")
-                .font(Theme.sans(12)).foregroundStyle(Theme.muted)
             if let note {
                 Text(note)
                     .font(Theme.sans(13, .bold))
@@ -617,13 +698,15 @@ struct TunedInScreen: View {
             }
         }
         .padding(12)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pickerHeight = $0 }
       }
-        .frame(maxHeight: 300)
+        // As tall as what's in it, scrolling only past 300 (very large text).
+        .frame(height: min(max(pickerHeight, 1), 300))
         .scrollBounceBehavior(.basedOnSize)
         .background {
             let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
             shape.fill(.ultraThinMaterial)
-                .overlay(shape.fill(Theme.surface.opacity(0.75)))
+                .overlay(shape.fill(Theme.surface.opacity(0.88)))
                 .overlay(shape.strokeBorder(.white.opacity(0.1), lineWidth: 1))
         }
         .accessibilityElement(children: .contain)

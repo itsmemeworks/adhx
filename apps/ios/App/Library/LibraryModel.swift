@@ -30,6 +30,8 @@ final class LibraryModel: ObservableObject {
     @Published private(set) var searched = false
     @Published private(set) var understood = true
     @Published private(set) var close = true
+    /// How many saves matched in all (the first page's `total`).
+    @Published private(set) var resultTotal = 0
     @Published private(set) var searchError: String?
     @Published private(set) var loadingMoreSearch = false
     @Published private(set) var searchMoreError: String?
@@ -133,6 +135,7 @@ final class LibraryModel: ObservableObject {
             let page = try await client.search(q, scope: scope)
             guard !Task.isCancelled else { return }
             results = page.items
+            resultTotal = page.total
             nextSearchOffset = page.nextOffset
             understood = page.understood
             close = page.close

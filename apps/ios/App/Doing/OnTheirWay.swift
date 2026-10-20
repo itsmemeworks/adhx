@@ -100,7 +100,7 @@ struct OnTheirWaySheet: View {
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 24)
+                .padding(.top, 29)
                 .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
@@ -132,7 +132,7 @@ struct DoingRow: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(item.needsYou ? (item.reason ?? item.title) : item.title)
                         .font(Theme.sans(14, .heavy))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.ink)
                         .lineLimit(1)
                     if !item.needsYou && !item.isReady {
                         ThinBar(fraction: fraction, colour: item.playable ? Theme.good : Theme.accent)
@@ -174,7 +174,7 @@ struct DoingRow: View {
             }
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.raised))
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.plate))
         .overlay {
             if item.needsYou {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -187,8 +187,10 @@ struct DoingRow: View {
     private var thumbnail: some View {
         let url = ADHXClient.resolve(item.thumbnail, against: server)
         Group {
-            if item.needsYou && url == nil {
-                Image(systemName: "exclamationmark.triangle")
+            if item.needsYou {
+                // What needs you shows why, not the picture (it often can't load).
+                Image(systemName: item.reason?.localizedCaseInsensitiveContains("private") == true
+                      ? "lock" : "exclamationmark.triangle")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Theme.live)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

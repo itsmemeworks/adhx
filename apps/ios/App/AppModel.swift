@@ -18,8 +18,16 @@ final class AppModel: ObservableObject {
     /// A post to open in the player (from "Open in ADHX" on the share card).
     @Published var openPost: PostRef?
     @Published private(set) var sending = false
+    /// Just paired: "Connected to …" shows once over Home.
+    @Published var welcome = false
 
     private var pollTask: Task<Void, Never>?
+
+    init() {
+        #if DEBUG
+        welcome = UserDefaults.standard.bool(forKey: "adhxWelcome")
+        #endif
+    }
 
     /// Re-reads what the Share Extension may have written.
     func reload() {
@@ -45,6 +53,7 @@ final class AppModel: ObservableObject {
             let client = ADHXClient(server: server, key: nil)
             let result = try await client.pair(code: code, name: UIDevice.current.model)
             Store.connect(server: server, result: result)
+            welcome = true
             connection = .connected
             reload()
             await refresh()

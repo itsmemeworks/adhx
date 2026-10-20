@@ -163,11 +163,24 @@ from `node_modules/simple-icons/icons/<name>.svg` into `NetworkPaths.swift`.
 ## Fonts
 
 The designs use Instrument Serif for headings and Hanken Grotesk for
-everything else. The app uses the system serif and system sans unless
-`InstrumentSerif-Regular` is installed. To use it, add
-`InstrumentSerif-Regular.ttf` (SIL Open Font License) to `Shared/`, and add it
-under `UIAppFonts` in both `Config/App-Info.plist` and
-`Config/ShareExtension-Info.plist`.
+everything else. Both are bundled in `Shared/Fonts/` (SIL Open Font License,
+licences beside them) and registered for the app and the Share Extension on
+first use (`BundledFonts` in `Shared/Theme.swift`). Hanken Grotesk is one
+variable `.woff2`; each weight is picked on its `wght` axis. Without them the
+app falls back to the system serif and sans.
+
+## Debug launch arguments
+
+Debug builds read a few launch arguments, for the simulator and design checks
+(`xcrun simctl launch <device> <bundle id> …`):
+
+- `-adhxServer <url> -adhxKey <phone key> [-adhxUser <name>]` connects
+  without pairing.
+- `-adhxDryRun YES` never tells the server what you've watched, so a shared
+  test server stays as it was.
+- `-adhxWelcome YES` shows the "Connected to …" screen that follows pairing.
+- `-adhxSharePreview saved|private` shows the share card's Saved state over
+  a post, without sharing anything.
 
 ## Before testing on a physical phone
 

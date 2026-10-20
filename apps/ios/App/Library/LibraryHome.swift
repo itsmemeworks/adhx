@@ -148,7 +148,7 @@ struct LibraryHome: View {
                 WhySheet(post: post, server: server, mode: feed.mode, choose: { mode in
                     Task { await feed.setMode(mode) }
                 }, filter: { filtering = true })
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.height(600), .large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.surface)
                 .presentationCornerRadius(28)
@@ -157,7 +157,7 @@ struct LibraryHome: View {
         .sheet(isPresented: $showingDoing) {
             if let server = model.server {
                 OnTheirWaySheet(doing: doing, server: server)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.height(520), .large])
                     .presentationDragIndicator(.visible)
                     .presentationBackground(Theme.surface)
                     .presentationCornerRadius(28)
@@ -167,7 +167,7 @@ struct LibraryHome: View {
             FeedFilterSheet(types: feed.types, mode: feed.mode, newCount: newBadge, hidden: feed.hidden,
                             setTypes: { types in Task { await feed.setTypes(types) } },
                             choose: { mode in Task { await feed.setMode(mode) } })
-                .presentationDetents([.height(660), .large])
+                .presentationDetents([.height(580), .large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Theme.surface)
                 .presentationCornerRadius(28)
@@ -206,7 +206,7 @@ struct LibraryHome: View {
                     .padding(.top, headerHeight)
                     .frame(maxHeight: .infinity, alignment: .top)
             } else if feed.items.isEmpty {
-                caughtUp(server, topInset: headerHeight + 12)
+                caughtUp(server, topInset: headerHeight + 40)
             } else {
                 PlayerView(posts: feed.items, server: server, clean: $clean, scrubbing: $scrubbing,
                            start: feed.currentKey,
@@ -225,13 +225,14 @@ struct LibraryHome: View {
                      watchAgain: { Task { await feed.setMode(.everyone) } },
                      topInset: topInset,
                      hidden: feed.hidden,
-                     showHidden: { Task { await feed.setTypes(feed.types.union(feed.hidden.keys)) } })
+                     showHidden: { Task { await feed.setTypes(feed.types.union(feed.hidden.keys)) } },
+                     covers: feed.items.compactMap { ADHXClient.resolve($0.posterUrl, against: server) })
     }
 
     /// The end page is full screen (under the status bar), so it clears that too.
     private var endPageTop: CGFloat {
         let window = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first
-        return headerHeight + (window?.safeAreaInsets.top ?? 59) + 12
+        return headerHeight + (window?.safeAreaInsets.top ?? 59) + 40
     }
 
     private func switchTab(_ to: HomeTab) {
@@ -259,7 +260,8 @@ struct LibraryHome: View {
             } else if !library.saves.isEmpty {
                 onTheirWay
             }
-        } else if !feed.items.isEmpty {
+        } else if !feed.items.isEmpty && feed.currentIndex < feed.items.count {
+            // Not over "You're all caught up": its Gob sits there.
             onTheirWay
         }
     }
@@ -314,7 +316,7 @@ struct LibraryHome: View {
     /// One row: Gob (Settings), the tabs, Search.
     private var header: some View {
         topBar
-        .padding(.top, 6)
+        .padding(.top, 4)
         .background {
             GeometryReader { box in
                 Color.clear.preference(key: HeaderHeight.self, value: box.size.height)
@@ -327,7 +329,8 @@ struct LibraryHome: View {
         .background(
             Group {
                 if tab == .new {
-                    LinearGradient(colors: [.black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
+                    // The post under it brings its own scrim (240 pt, like the boards).
+                    Color.clear
                 } else {
                     Theme.app
                 }
@@ -338,13 +341,15 @@ struct LibraryHome: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             NavigationLink {
                 SettingsView(library: library, feed: feed, doing: doing)
             } label: {
                 Gob(size: 30)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 30, height: 44)
+                    .padding(.horizontal, 7)
                     .contentShape(Rectangle())
+                    .padding(.horizontal, -7)
             }
             .accessibilityLabel("Settings")
             Spacer(minLength: 0)
@@ -364,7 +369,7 @@ struct LibraryHome: View {
                 .accessibilityLabel("Search everyone’s saves")
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
     }
 
     @ViewBuilder
@@ -411,9 +416,9 @@ private struct BarIcon: View {
     var body: some View {
         Image(systemName: name)
             .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Color(hex: 0xF4F1EA))
             .frame(width: 44, height: 44)
-            .background(Circle().fill(.black.opacity(0.45)))
+            .frosted(Circle(), dim: 0.45)
     }
 }
 
@@ -438,12 +443,12 @@ private struct TabPills: View {
                         }
                         Text(item.title)
                     }
-                    .font(Theme.sans(15, on ? .heavy : .bold))
-                    .foregroundStyle(on ? .black : Theme.cream)
+                    .font(Theme.sans(15, on ? .heavy : .semibold))
+                    .foregroundStyle(on ? .black : Color(hex: 0xF4F1EA))
                     .lineLimit(1)
                     .fixedSize()
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 40)
+                    .padding(.horizontal, on ? 16 : 14)
+                    .frame(height: 40)
                     .background(Capsule().fill(on ? Theme.cream : .clear))
                     .contentShape(Capsule())
                     // Over the corner, so the tab stays sized for its label.
@@ -458,8 +463,8 @@ private struct TabPills: View {
                                 .background(Capsule().fill(Theme.accent))
                                 .overlay(Capsule().strokeBorder(.black, lineWidth: 2))
                                 .fixedSize()
-                                .alignmentGuide(.top) { $0[.top] + 9 }
-                                .alignmentGuide(.trailing) { $0[.trailing] - 8 }
+                                // The boards' corner: 8 past the right, 9 above the top.
+                                .offset(x: 8, y: -9)
                                 .allowsHitTesting(false)
                         }
                     }
@@ -471,7 +476,13 @@ private struct TabPills: View {
             }
         }
         .padding(4)
-        .background(Capsule().fill(overMedia ? AnyShapeStyle(.black.opacity(0.5)) : AnyShapeStyle(Theme.surface)))
+        .background {
+            if overMedia {
+                Color.clear.frosted(Capsule(), dim: 0.5)
+            } else {
+                Capsule().fill(Theme.surface)
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Sections")
     }

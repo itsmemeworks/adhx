@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — iPhone app parity with the phone design boards
+
+- Ran the iOS app in the simulator against the seeded parity server as Pete and restyled it board by board: bundled Instrument Serif and Hanken Grotesk, the one-row header with its corner badge, full-bleed player with the boards' scrims, frosted 52 pt rail, thin progress line, why chip, why/filter/on-their-way sheets, caught up, channels, friend channel masonry, search tiles, Live cards and tuned in, settings, share card.
+- The rail is the boards': Save (bookmark: saves someone else's post to your ADHX; on yours it opens "In your saves" with Just for me and your note via `/api/app/note`), Share, Save to phone, More, plus React on Live. Sound, Repeat, the small window, Hide and the original moved into More. Faces use the boards' five colours (FNV-1a of the username, like the web).
+- Save notes: `Saver.note` decodes loosely (trimmed, 140 max) and shows as a speech bubble over the byline; the share card has "Add a note", sent when the card closes through `POST /api/app/note` once the save has landed, else as `note` on a repeat of the same save (same link and request id).
+- New "Connected to …" screen after pairing. Debug-only launch arguments connect, avoid sending seen, and preview the welcome and share card (`apps/ios/README.md`).
+- Deviations: system sheets float inset on iOS 26, the send-file sheet is still the system share sheet, a person's face colour comes from a hash (not the boards' hand-picked ones), no "Play the N new"/"See all"/"Invite" on channels.
+
 ## 2026-10-19 — Notes on saves
 
 - `bookmarks.note` / `phone_save_queue.note` (guarded ALTERs, `schema.ts`, test DDL). `cleanNote` (`src/lib/people/note-text.ts`): whitespace collapsed, control/bidi dropped, ≤140 graphemes, empty → null.

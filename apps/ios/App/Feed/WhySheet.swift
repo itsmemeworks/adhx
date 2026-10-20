@@ -13,7 +13,7 @@ struct WhySheet: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text("Why this one")
                         .font(Theme.serif(40))
@@ -38,18 +38,19 @@ struct WhySheet: View {
                     // After this sheet has gone, so the next one can come up.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { filter() }
                 } label: {
-                    Label("Filter", systemImage: "slider.horizontal.3")
+                    Label("What’s in your feed", systemImage: "slider.horizontal.3")
                 }
-                .buttonStyle(PillButtonStyle(kind: .outline, height: 48))
+                .buttonStyle(PillButtonStyle(kind: .raised, height: 48, fontSize: 14))
                 .accessibilityHint("Choose videos, photos, text posts and articles")
                 Text("No engagement bait. These are the only reasons.")
                     .font(Theme.sans(13))
                     .foregroundStyle(Theme.faint)
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
+                    .padding(.top, 2)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 20)
+            .padding(.top, 29)
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
@@ -62,7 +63,7 @@ struct WhySheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(post.article?.title ?? (post.text.isEmpty ? "@\(post.author.handle)" : post.text))
-                    .font(Theme.sans(14, .bold))
+                    .font(Theme.sans(14, .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(postLine)
@@ -125,12 +126,13 @@ struct WhySheet: View {
 extension WhySheet {
     /// An icon for each kind of reason the blend gives.
     static func icon(for kind: String?) -> String {
+        // The web's lucide icons (WHY_ICON): users, plus, bookmark, circle-play, clock.
         switch kind {
-        case "together": return "person.2.fill"
-        case "more", "close": return "heart.fill"
-        case "like": return "sparkles"
+        case "together": return "person.2"
+        case "more": return "plus"
+        case "like", "yours": return "bookmark"
+        case "close": return "play.circle"
         case "fresh": return "clock"
-        case "yours": return "bookmark.fill"
         default: return "sparkles"
         }
     }
@@ -155,8 +157,8 @@ struct WhoseSaves: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(caps ? "WHOSE SAVES" : "Whose saves")
-                .font(Theme.sans(13, caps ? .heavy : .bold))
-                .tracking(caps ? 0.8 : 0)
+                .font(Theme.sans(13, caps ? .heavy : .semibold))
+                .tracking(caps ? 0.78 : 0)
                 .foregroundStyle(caps ? Theme.faint : Theme.muted)
             HStack(spacing: 4) {
                 option("Everyone", on: mode == .new || mode == .everyone) {
@@ -166,7 +168,7 @@ struct WhoseSaves: View {
                 option("Mine", on: mode == .mine) { choose(.mine) }
             }
             .padding(4)
-            .background(Capsule().fill(caps ? Theme.raised : Theme.app))
+            .background(Capsule().fill(caps ? Theme.plate : Theme.app))
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Whose saves")
         }
@@ -175,12 +177,12 @@ struct WhoseSaves: View {
     private func option(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(Theme.sans(14, on ? .heavy : .bold))
-                .foregroundStyle(on ? .black : Theme.cream)
+                .font(Theme.sans(14, on ? .heavy : .semibold))
+                .foregroundStyle(on ? .black : Theme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .background(Capsule().fill(on ? Theme.cream : .clear))
+                .frame(maxWidth: .infinity, minHeight: caps ? 40 : 44)
+                .background(Capsule().fill(on ? Theme.ink : .clear))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -236,7 +238,7 @@ struct FeedFilterSheet: View {
                         }
                     }
                 }
-                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.raised))
+                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.plate))
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 WhoseSaves(mode: mode, caps: true) { choose($0) }
                 if let waiting = waitingLine {
@@ -250,7 +252,7 @@ struct FeedFilterSheet: View {
                     .buttonStyle(PillButtonStyle(kind: .primary))
             }
             .padding(.horizontal, 20)
-            .padding(.top, 24)
+            .padding(.top, 29)
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
@@ -284,22 +286,23 @@ struct FeedFilterSheet: View {
         })) {
             HStack(spacing: 14) {
                 Image(systemName: icon(type))
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 19, weight: .regular))
                     .foregroundStyle(on ? Theme.accent : Theme.muted)
                     .frame(width: 24)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title(type))
                         .font(Theme.sans(16, .heavy))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.ink)
                     Text(detail(type))
                         .font(Theme.sans(13))
                         .foregroundStyle(Theme.faint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             }
         }
-        .toggleStyle(.switch)
-        .tint(Theme.accent)
+        .toggleStyle(BoardSwitchStyle())
         .disabled(last)
         .padding(.horizontal, 16)
         .frame(minHeight: 64)
@@ -326,10 +329,10 @@ struct FeedFilterSheet: View {
 
     private func icon(_ type: FeedType) -> String {
         switch type {
-        case .video: return "play.rectangle.fill"
-        case .photo: return "photo.fill"
-        case .text: return "text.quote"
-        case .article: return "doc.richtext"
+        case .video: return "video"
+        case .photo: return "photo"
+        case .text: return "text.alignleft"
+        case .article: return "doc.text"
         }
     }
 }
@@ -349,13 +352,14 @@ private struct ReasonRow: View {
         HStack(spacing: 14) {
             Image(systemName: reason.icon)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(lead ? .black : Theme.cream)
+                .foregroundStyle(lead ? .black : Theme.ink)
                 .frame(width: 40, height: 40)
-                .background(Circle().fill(lead ? Theme.accent : Theme.raised))
+                .background(Circle().fill(lead ? Theme.accent : Theme.plate))
                 .accessibilityHidden(true)
             Text(reason.text)
-                .font(Theme.sans(16, .bold))
-                .foregroundStyle(.white)
+                .font(Theme.sans(16, .semibold))
+                .lineSpacing(2)
+                .foregroundStyle(Theme.ink)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             if !reason.savers.isEmpty {
@@ -380,6 +384,8 @@ struct CaughtUpView: View {
     /// What the filter left out ("4 text posts"), and a way to let it in.
     var hidden: [FeedType: Int] = [:]
     var showHidden: () -> Void = {}
+    /// Posters of what you just watched, fanned out on the summary.
+    var covers: [URL] = []
 
     /// Not a scroll view: it's a page in the player, and a swipe down must go
     /// back to the last post.
@@ -387,21 +393,22 @@ struct CaughtUpView: View {
         VStack(spacing: 0) {
             Spacer().frame(height: topInset)
             VStack(spacing: 0) {
-                Gob(size: 88)
+                Gob(size: 120)
+                    .frame(width: 96, height: 90)
                     .shadow(color: Theme.accent.opacity(0.18), radius: 20, y: 18)
                 Ellipse()
                     .fill(.black.opacity(0.6))
                     .frame(width: 70, height: 8)
-                    .padding(.top, 8)
+                    .padding(.top, 10)
                     .accessibilityHidden(true)
-                VStack(spacing: 0) {
+                VStack(spacing: -6) {
                     Text("You’re all caught up.")
                         .foregroundStyle(.white)
                     Text("Go touch grass.")
                         .foregroundStyle(Theme.accent)
                 }
-                .font(Theme.serif(42))
-                .minimumScaleFactor(0.8)
+                .font(Theme.serif(50))
+                .minimumScaleFactor(0.7)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 18)
@@ -409,6 +416,7 @@ struct CaughtUpView: View {
                 .accessibilityAddTraits(.isHeader)
                 Text("That’s everything your people saved since you last looked.")
                     .font(Theme.sans(16))
+                    .lineSpacing(4)
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 300)
@@ -440,13 +448,16 @@ struct CaughtUpView: View {
                                 Text("See what’s live")
                             }
                         }
-                        .buttonStyle(PillButtonStyle(kind: .outline, height: 48))
-                        Button("Watch it all again", action: watchAgain)
+                        .buttonStyle(PillButtonStyle(kind: .raised, height: 48))
+                        Button(action: watchAgain) {
+                            Label("Watch it all again", systemImage: "arrow.counterclockwise")
+                                .labelStyle(TightLabel())
+                        }
                         .buttonStyle(PillButtonStyle(kind: .outline, height: 48))
                         .accessibilityHint("Plays everyone’s saves, seen or not")
                     }
                 }
-                .padding(.top, 22)
+                .padding(.top, 18)
             }
             .padding(.horizontal, 20)
             Spacer(minLength: 24)
@@ -469,19 +480,52 @@ struct CaughtUpView: View {
         return SaverWords.names(parts, upTo: 4) + " waiting"
     }
 
-    /// "12 from Ana, Ben and Mum".
+    /// "12 from Ana, Ben and Mum today", with what you watched fanned out.
     private var summary: some View {
-        HStack(spacing: 14) {
-            FaceStack(savers: people, server: server, size: 26, ring: Theme.surface)
-            Text("\(watched) from \(SaverWords.names(people.map(\.displayName)))")
-                .font(Theme.sans(14, .bold))
-                .foregroundStyle(Theme.cream)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
+        Button(action: watchAgain) {
+            HStack(spacing: 14) {
+                if !covers.isEmpty {
+                    HStack(spacing: -10) {
+                        ForEach(Array(covers.prefix(4).enumerated()), id: \.offset) { index, url in
+                            CoverImage(url: url)
+                                .frame(width: 40, height: 58)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(Theme.surface, lineWidth: 2))
+                                .rotationEffect(.degrees([-5, -1, 3, 6][index]))
+                        }
+                    }
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    FaceStack(savers: people, server: server, size: 22, ring: Theme.surface)
+                    Text("\(watched) from \(SaverWords.names(people.map(\.displayName)))")
+                        .font(Theme.sans(14, .semibold))
+                        .foregroundStyle(Theme.ink)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.faint)
+            }
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.08)))
+            .contentShape(Rectangle())
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.08)))
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityHint("Plays everyone’s saves again")
+    }
+}
+
+/// An icon and words 8 apart, for pill buttons.
+struct TightLabel: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 8) {
+            configuration.icon.font(.system(size: 15, weight: .semibold))
+            configuration.title
+        }
     }
 }
