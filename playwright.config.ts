@@ -29,7 +29,9 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: '**/mobile-webkit.spec.ts',
+      // The design-parity captures run against their own seeded server
+      // (`pnpm parity:capture`), not the e2e one.
+      testIgnore: ['**/mobile-webkit.spec.ts', '**/parity/**'],
       use: { ...devices['Desktop Chrome'] },
     },
     {
