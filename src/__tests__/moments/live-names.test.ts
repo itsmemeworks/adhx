@@ -874,6 +874,9 @@ describe('how busy a moment is lately ("3 saves in 10 min")', () => {
       windowMinutes: 10,
     })
     expect(recentOf([[at(1, now)]], now)).toEqual({ recentSaves: 1, windowMinutes: 5 })
+    // Whole minutes, like the rows' "10 min ago".
+    expect(recentOf([[at(10.7, now)]], now)).toEqual({ recentSaves: 1, windowMinutes: 10 })
+    expect(recentOf([[at(11, now)]], now)).toEqual({ recentSaves: 1, windowMinutes: 15 })
     expect(recentOf([[at(12, now), at(2, now)]], now)).toEqual({
       recentSaves: 2,
       windowMinutes: 15,

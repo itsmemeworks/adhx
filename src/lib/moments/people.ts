@@ -101,7 +101,8 @@ function facesOf(saves: Saver[][]): Saver[] {
 
 /**
  * "3 saves in 10 min": the visible saves of the last hour, counted over the
- * smallest step (`RECENT_WINDOWS_MINUTES`) that holds the oldest of them.
+ * smallest step (`RECENT_WINDOWS_MINUTES`) that holds the oldest of them, in
+ * whole minutes like `timeAgo` (a save 10½ minutes ago is "in 10 min").
  */
 export function recentOf(saves: Saver[][], now = Date.now()): MomentRecent {
   const longest = RECENT_WINDOWS_MINUTES[RECENT_WINDOWS_MINUTES.length - 1]
@@ -111,7 +112,8 @@ export function recentOf(saves: Saver[][], now = Date.now()): MomentRecent {
     .map((s) => Date.parse(s.savedAt))
     .filter((t) => Number.isFinite(t) && t >= from && t <= now)
   if (times.length === 0) return { recentSaves: 0, windowMinutes: longest }
-  const age = (now - Math.min(...times)) / 60_000
+  // Whole minutes, as the rows say it ("Jo · 10 min ago" is inside "in 10 min").
+  const age = Math.floor((now - Math.min(...times)) / 60_000)
   const windowMinutes = RECENT_WINDOWS_MINUTES.find((m) => m >= age) ?? longest
   return { recentSaves: times.length, windowMinutes }
 }
