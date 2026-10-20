@@ -16,6 +16,8 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Regression tests cover allocation options, runtime fallback, timestamp validation, representative coverage, exact batch/reference frames and abort/EOF cleanup. Setup/architecture docs link measured results and reproduction steps.
 - No installed worker, server, queue, model cache, private credential or network setting changed. Release-matched rollout and real-library retrieval evaluation remain separate follow-ups.
 
+
+
 ## 2026-10-20 — Just for me privacy gaps closed
 
 - **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.
