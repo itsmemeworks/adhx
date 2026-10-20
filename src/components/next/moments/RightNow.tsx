@@ -178,6 +178,9 @@ function Glow({ flash, hue, radius }: { flash: Flash | undefined; hue: string; r
   )
 }
 
+/** Cards beside the lead moment on wide screens; the rest wrap below. */
+const SIDE_CARDS = 2
+
 function LeadMoment({
   moment,
   flash,
@@ -641,6 +644,26 @@ export function RightNow({
   const [lead, ...others] = moments
   const on = peopleOn(moments)
   const side = others.length + forming.length > 0
+  // Beside the lead go as many cards as fit its height (two, as on the
+  // boards); the rest wrap underneath instead of stretching the lead card.
+  const cards = [
+    ...others.map((m) => ({ key: m.slug, moment: m, forming: null })),
+    ...forming.map((f) => ({ key: f.id, moment: null, forming: f })),
+  ]
+  const beside = lead ? cards.slice(0, SIDE_CARDS) : cards
+  const below = lead ? cards.slice(SIDE_CARDS) : []
+  const card = (c: (typeof cards)[number]) =>
+    c.moment ? (
+      <OtherMoment
+        key={c.key}
+        moment={c.moment}
+        flash={flashes.get(c.moment.slug)}
+        popped={popped.has(c.moment.slug)}
+        Title={Title}
+      />
+    ) : (
+      <FormingCard key={c.key} forming={c.forming!} flash={flashes.get(c.key)} Title={Title} />
+    )
 
   return (
     <section aria-labelledby="nx-rightnow" className="flex flex-col gap-[22px]">
@@ -721,22 +744,14 @@ export function RightNow({
           )}
           {side && (
             <div className="flex min-w-0 flex-col gap-3 lg:gap-5">
-              {others.map((m) => (
-                <OtherMoment
-                  key={m.slug}
-                  moment={m}
-                  flash={flashes.get(m.slug)}
-                  popped={popped.has(m.slug)}
-                  Title={Title}
-                />
-              ))}
-              {forming.map((f) => (
-                <FormingCard key={f.id} forming={f} flash={flashes.get(f.id)} Title={Title} />
-              ))}
+              {beside.map(card)}
               {/* One card alone keeps the size it has beside a second, not the lead's full height. */}
-              {others.length + forming.length === 1 && (
-                <span aria-hidden className="hidden lg:block lg:flex-1" />
-              )}
+              {beside.length === 1 && <span aria-hidden className="hidden lg:block lg:flex-1" />}
+            </div>
+          )}
+          {below.length > 0 && (
+            <div className="grid min-w-0 grid-cols-1 gap-3 lg:col-span-2 lg:grid-cols-3 lg:gap-5">
+              {below.map(card)}
             </div>
           )}
         </div>
