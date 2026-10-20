@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Whole-system docs brought up to the friends feed
+
+- README: send to your people, notes, Show more / less, forming moments with "Tell me when it's live", Keep this channel, Getting it ready, `/doing`, invites with approval; phone app section matches the apps. Fixed stale setup lines (`ADMIN_USER_IDS` instead of `ADMIN_USERNAMES`, Android link default, PR wording, `INVITES` not passed by the Compose examples) and the garbled `KEEP_H264` comment in `.env.example`.
+- ARCHITECTURE.md rewritten around the current product: nine Mermaid diagrams (system context, save to watch, the New blend, live moments, who sees what, phone pairing and auth, plus the kept sign-in, understanding and search diagrams with quoted labels), every table by plane checked against `schema.ts`/`migrate.ts`, sections on New, sends, moments and bells, channels, invites and approval, the phone API. `TheaterShell`, Discover and the X-first flow removed or marked legacy.
+- PRIVACY.md and `/privacy` rewritten from the code: who sees what per data kind, notes, sends, viewing marks, weights, reactions, bells, invites, approvals, phone keys, avatars, kept files (unauthenticated, cached 7 days, existence visible), the Mac helper, Jev, analytics, admins, retention, clear vs delete.
+- CLAUDE.md top is now a ~25-line current overview with links; legacy sections are marked (history), the dead old-Header section is gone, test count is 3,558. AGENTS.md and `docs/remote-processing.md` overview lines corrected.
+- Privacy gaps found and documented, not fixed: the send sheet's `has` counts private saves; admin counts include private saves; kept files serve "Just for me" posts and reveal whether a post was saved; X sync and Keep this channel ignore Just for me by default; `GET /api/analytics` is public; Clear keeps `activity.user_id`; `auto_channels`, `post_embeddings` and `post_text_fts` outlive deletion.
+
 ## 2026-10-20 — Android: send to your people, forming alerts, like thumbnail, Keep this channel
 
 - Send sheet (j4-4): "Or straight to your people" from `GET /api/app/send`: 52dp faces, dimmed with "Jo already has it." when they have it, a tap posts `/api/app/send` and leaves a tick; a private save says "Just for you. Share it first to send it." The sheet expands once the row loads (M3 sheets don't grow on their own). New's `sent` reason is the why chip "Pete sent you this" with his face.

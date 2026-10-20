@@ -37,7 +37,28 @@ Use org `your-org` and project `your-project`.
 
 **Your friends have better taste than the algorithm.**
 
-A private feed of the best posts from every network, kept on a server you run for your friends and family. UI copy follows the Voice section of `brand/BRAND.md` (punch up at ad tech, edgy not mean, clear first and funny second) and only describes what ships today. A self-hosted keeper for the posts you and your friends love, built with Next.js 16. It saves posts from X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky. It downloads their media once in the best quality and serves it itself (see "Kept media and link networks" below). `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
+A self-hosted, private, curated feed across fourteen social networks (X, Instagram, TikTok, YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur, Bluesky) for one group of close friends and family per server. UI copy follows the Voice section of `brand/BRAND.md` (punch up at ad tech, edgy not mean, clear first and funny second) and only describes what ships today.
+
+**The system in one breath.** One Next.js 16 container (React 19, route handlers as the backend) with one SQLite file (Drizzle over `better-sqlite3`) and a media folder (`MEDIA_DIR`). Every save's media is downloaded once (FxTwitter for X, yt-dlp for the rest) and served by `/api/files/…` (`keptSrc()`); search by meaning runs in forked model child processes, never in the web process; an optional native Mac helper (`PROCESSING_MODE=remote`) takes the heavy processing over HTTPS. Native iOS and Android apps (`apps/`) use `/api/app/*` with a phone key. `site/` is the separate adhx.com product site and builds on its own.
+
+**The rule: named to friends, never to strangers.** A member is a signed-in, approved, non-banned account; everyone on a server is one group. Saves are shared with members by default and named (face, name, note); **Just for me** (`bookmarks.is_private`) hides a save from everyone else. Signed-out surfaces (previews, signed-out Right now, public channels, public JSON, OG images, sitemap) only ever count savers. Every query over other people's saves uses `visibleSave` / `visibleSaveFilter` (`src/lib/people/savers.ts`); names come only from `saversFor(keys, viewerId)`. Kept files are not behind sign-in.
+
+**Main surfaces** (nav in `src/components/next/PrimaryNav.tsx`; signed-in `/` → `/play?feed=new`):
+
+- **New** (`/play?feed=new`): the blended feed (`src/lib/feed/blend.ts`, `blend-db.ts`) of unseen posts your people saved, with why-reasons, Show more / less weights, sends first, then "caught up". Seen = `post_views`.
+- **Right now** (`/now`, `/moments/{slug}`, Tune in `/play?moment=`): live moments from the in-memory engine (`src/lib/moments/`), forming groups with "Tell me when it's live" bells (`moment_alert_subs` → `moment_alerts`), watchers and ephemeral reactions.
+- **Channels** (`/channels`): From everyone (`group_channels`), Your people (one per friend), Made for you (`auto_channels`), your own tags; Keep this channel (`src/lib/channels/`).
+- **My saves** (`/play?recent=1`) and **Search** (`/search`, by words, pictures, frames, speech and on-screen text).
+- Also: notes on saves, sends (`src/lib/sends/`, `post_sends`), Getting it ready (`processing/keep-status.ts`), `/doing` (`processing/doing.ts`), invites with optional approval (`src/lib/auth/invites.ts`, `approval.ts`), phone pairing (`auth/phone-pairing.ts`), Settings (picture, people, approvals). Everything plays in `TheaterV2` (`src/components/next/theater/`).
+
+**Where to read next:**
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md): system diagrams, every table by plane, the save-to-watch flow, the blend, moments, privacy boundary, phone auth.
+- Specs: [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md) (the contract for members, privacy, New, sends, channels, live, bells), [`docs/specs/phone-app.md`](docs/specs/phone-app.md) (`/api/app/*`), [`docs/remote-processing.md`](docs/remote-processing.md) (Mac helper and processing protocol), [`docs/specs/translation-safety.md`](docs/specs/translation-safety.md).
+- Setup: [`README.md`](README.md), [`deploy/nas/README.md`](deploy/nas/README.md), [`deploy/mac/README.md`](deploy/mac/README.md); release blockers in [`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md).
+- What users may know: [`PRIVACY.md`](PRIVACY.md) (keep `/privacy` in step).
+
+**History.** ADHX began as an X-first hosted bookmark app (library grid, `TheaterShell`, Discover at `/live`, `/trending`, `/leaderboard`). Those surfaces are removed and redirect (`next.config.js`). Sections below marked **(history)** describe them; keep them only for context on old data (`activity`, `collection_events`) and old URLs. `/shorts/{id}` still redirects home and stays a reserved route; YouTube posts live at `/s/youtube/{id}`.
 
 ## Agent Context Protocol
 
@@ -49,71 +70,6 @@ This repo carries its own cumulative context so any fresh session — new branch
 4. **Always commit, push, and open/update a PR** after substantive work. Do not wait to be asked. Use the GitHub account named in gitignored `CLAUDE.local.md`. PR titles use Conventional Commit syntax with a lowercase subject and are verified via `gh pr view --json title` before handoff. Never merge — the user merges manually. This overrides any global “don't push unless asked” preference.
 
 `AGENTS.md` at the repo root is the cross-tool entry point (for agents that don't read CLAUDE.md) and points here.
-
-## Current deployment reference
-
-Use [`README.md`](README.md) and [`deploy/nas/README.md`](deploy/nas/README.md)
-for current setup, and [`docs/rollout/self-hosted-release.md`](docs/rollout/self-hosted-release.md)
-for unresolved release blockers. The legacy diagram and route notes below still
-include the earlier X-first hosted application; they are historical context,
-not a complete description of the present fourteen-network product. Sign-in is
-by email; X is an optional connection. The current home is Right now, with the
-theater, search and channels alongside it. `site/` builds separately; editing
-it does not publish adhx.com.
-
-For the current phone-save, NAS-retention and native Mac processing flows, use
-[`docs/remote-processing.md`](docs/remote-processing.md). It links the installation
-and verification guides and maps the protocol to its implementation.
-
-## Architecture Overview (legacy X-first flow)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                  BROWSER                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Landing Page          Main Feed              URL Prefix Feature            │
-│  ┌─────────────┐      ┌─────────────┐        ┌─────────────────────┐       │
-│  │ /           │      │ / (auth'd)  │        │ /{user}/status/{id} │       │
-│  │ Marketing   │      │ FeedGrid    │        │ Quick-save tweet    │       │
-│  │ OAuth Start │      │ Lightbox    │        │ → Add & redirect    │       │
-│  └─────────────┘      │ FilterBar   │        └─────────────────────┘       │
-│                       └─────────────┘                                       │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              NEXT.JS API ROUTES                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Auth                    Data                      Media                     │
-│  ┌──────────────┐       ┌──────────────┐         ┌──────────────┐          │
-│  │ /auth/twitter│       │ /api/feed    │         │ /api/media/  │          │
-│  │ /auth/callback       │ /api/sync    │◄──SSE   │   video      │          │
-│  │ /auth/status │       │ /api/tweets/ │         └──────┬───────┘          │
-│  └──────┬───────┘       │   add        │                │                   │
-│         │               │ /api/bookmarks               │                   │
-│         │               └──────┬───────┘                │                   │
-│         │                      │                        │                   │
-└─────────┼──────────────────────┼────────────────────────┼───────────────────┘
-          │                      │                        │
-          ▼                      ▼                        ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────┐
-│   Twitter API   │    │  SQLite + Drizzle│    │    FxTwitter API    │
-│   (OAuth 2.0)   │    │                  │    │ (Media proxy/embed) │
-│                 │    │  bookmarks       │    │                     │
-│  • Auth tokens  │    │  bookmark_media  │    │  • Video URLs       │
-│  • User info    │    │  bookmark_tags   │    │  • Photo URLs       │
-│  • Bookmarks    │    │  read_status     │    │  • Tweet enrichment │
-│                 │    │  sync_logs       │    │                     │
-└─────────────────┘    └─────────────────┘    └─────────────────────┘
-```
-
-**Data Flow:**
-
-1. **Sync**: Twitter API → Process tweets → SQLite (via `/api/sync` SSE stream)
-2. **Add**: URL → FxTwitter enrichment → SQLite (via `/api/tweets/add`)
-3. **View**: SQLite → Feed API → React components
-4. **Media**: FxTwitter proxy → Video/Photo display (bypasses Twitter CORS)
 
 ## Quick Start
 
@@ -416,7 +372,7 @@ Users can also paste the **full** source URL after `adhx.com/` — `src/proxy.ts
 
 All work with or without protocol, browser path normalization (`//` → `/`), trailing path segments, and platform-specific subdomains (e.g. `vm.tiktok.com`, `m.tiktok.com`).
 
-All preview routes render the shared-mode theater (`SharedPostStatic` + `<TheaterShell mode="shared">` — see "Preview pages ARE the theater" under the Theater section). The per-platform media-resolution notes below still apply.
+All preview routes render `SharedPreviewPage`: crawler output (`generateMetadata`, JSON-LD, `SharedPostStatic`) plus `PreviewTheater` → `TheaterV2` (see "Preview pages now play in the new theater" below; the `TheaterShell` notes there are history). The per-platform media-resolution notes below still apply.
 
 **Tweet preview**:
 
@@ -444,7 +400,7 @@ All preview routes render the shared-mode theater (`SharedPostStatic` + `<Theate
 
 **Save-to-collection**: a signed-in new-open of a preview autosaves the lead (see Tweet preview above). The chrome Save button still POSTs `/api/bookmarks/add` and flips to Saved. Saved Instagram images/carousels, Reels, and TikToks land in the same feed as tweets, distinguished by the platform badge on the FeedCard.
 
-**AppShell** suppresses the global Header for these preview paths via the `isFullWidth` regex — see `src/components/AppShell.tsx`. Add new preview paths there to avoid the double-header issue.
+AppShell (`src/components/AppShell.tsx`) draws no header; preview pages render their own chrome. Private pages that should send signed-out visitors to `/start` are listed there.
 
 **OG Image Selection** (`getOgImage()` in `src/lib/utils/og-image.ts`):
 When generating Open Graph metadata for social unfurling, images are selected in priority order:
@@ -461,7 +417,9 @@ When generating Open Graph metadata for social unfurling, images are selected in
 - `summary_large_image` — tweets with rich media (photos, videos, article covers, external thumbnails)
 - `summary` — text-only tweets where OG image is the author's avatar (small square card fits avatars better than a stretched banner)
 
-### Trending & Activity Pulse (the SEO growth loop)
+### Trending & Activity Pulse (history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 `/trending` (`src/app/trending/page.tsx`) and the per-lens hubs `/trending/[filter]` (`popular` / `videos` / `photos` / `text` / `articles` — see `FILTER_SLUGS` in `src/lib/trending/filter.ts`) are public, **anonymous**, crawlable feeds of what the community is watching and sending right now — the SEO growth loop that turns user activity into indexable content. **`/discover` 308-redirects to `/trending`** (the old `/discover` page and the `LivePulse` marquee are gone). Each hub server-renders a real, crawlable `sr-only` item list (`src/components/trending/TrendingStaticList.tsx`) + `CollectionPage`/`ItemList` JSON-LD, then mounts the dark ranked list (`TrendingRankedList` — see the Theater section) seeded with the same items so there's no skeleton flash. The selected filter pill is reflected in the URL (tidy path, via `history.replaceState`) so a filtered view is shareable; loading `/trending/<filter>` seeds that filter server-side.
 
@@ -715,17 +673,6 @@ The find-by-meaning redesign (phases 0–7) is the only UI for signed-in people:
 - Legacy `localStorage.theme` values are never read, so old `light` / `system` preferences cannot affect rendering.
 - There are no theme controls in public navigation, account dropdowns, theater menus, or Settings. The former theme context, resolver, `ThemeToggle` component, and Matter-light token set were removed.
 
-### Mobile Header (overflow-safe)
-
-The authed `Header` (`src/components/Header.tsx`) packs many controls. On phones, keep the row from overflowing the viewport:
-
-- Secondary actions (theme toggle + sync) are hidden in the bar (`hidden sm:*`) and moved into the **avatar dropdown menu** (`sm:hidden` section there).
-- The Collection entry hides its streak segment below `sm`.
-- There is **no** separate mobile hamburger — the avatar menu already has Saved / Discover / Search / Channels / Leaderboard / Settings (Saved → `/play?recent=1`, Search → `/search`, Channels → `/channels`).
-- The old header has no search field any more (search is `/search`).
-
-When adding header controls, verify the cluster's minimum width still fits ~360px (macOS Chrome won't render below ~500px, so measure item widths in the DOM rather than trusting a visual check).
-
 ### UI Patterns
 
 **Mobile Input Zoom Prevention:**
@@ -766,7 +713,9 @@ useEffect(() => {
 
 This avoids prop drilling and keeps keyboard logic centralized while allowing distributed UI responses.
 
-### Home routing & the Theater (`/` is the theater, signed in or out)
+### Home routing & the old Theater (history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 **Terminology (owner decision):** a **playlist** is a single shared tag — the thing at `/t/{username}/{tag}`, the thing `/leaderboard` ranks, the thing you clone with **Save playlist**. A user's own pile of saved posts is **Saved** (the theater tab at `/saved`; `/collection` 308s there). The grid that browses it is the **Library**. Keep those three words straight in UI copy: playlist = one shared tag, Saved = your saves, library = the grid over them. APIs, DB columns (`collection_events`, `tag_shares`) and the `/api/collections/*` endpoints still say "collection" — they're indexed, in sitemaps, and public contracts.
 
@@ -815,7 +764,9 @@ The library grid (`AuthedHome`, `FeedGrid`, `FilterBar`, `FeedCard`) was removed
 
 - **No gamification.** The streak card, its API route and the flame badges were REMOVED (owner: "we don't want to gamify things — we've added that with the leaderboard"). Don't reintroduce a streak.
 
-### Quote Tweet Handling
+### Quote Tweet Handling (partly history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 Quote tweets display embedded content showing the quoted tweet. Two data sources:
 
@@ -873,7 +824,9 @@ sanitizeTag('AI/ML') // → 'ai-ml'
 
 **UI Preview**: The `TagInput` component shows a real-time preview of the sanitized tag as users type (e.g., "Test Tag!" → "→ test-tag").
 
-### Landing Page Optimization
+### Landing Page Optimization (history)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 Signed-out `/` now renders the theater (see "Home routing & the Theater" above); Unauthenticated visitors still trigger no authenticated API calls:
 
@@ -1023,7 +976,9 @@ Key files:
 
 ### Database (SQLite + Drizzle)
 
-Database location: `./data/adhdone.db`
+Every current table, grouped by plane (people, feed, sends, moments, phone, keep, understanding, channels, …), is in [`ARCHITECTURE.md` → Persistence planes](ARCHITECTURE.md#persistence-planes). The table below covers the core account and save tables.
+
+Database location: `./data/adhdone.db` locally (`DATABASE_PATH`, `/data/adhx.db` in Docker)
 
 **Multi-user schema with composite primary keys:**
 
@@ -1094,6 +1049,8 @@ export async function GET() {
 
 ## Key API Routes
 
+The friends-feed routes (`/api/feed/blend`, `/api/views`, `/api/posts/send`, `/api/moments/*`, `/api/channels/*`, `/api/invites`, `/api/people`, `/api/activity/processing*`) are listed in [`docs/specs/friends-feed.md`](docs/specs/friends-feed.md); the phone's `/api/app/*` in [`docs/specs/phone-app.md`](docs/specs/phone-app.md). The table below is the older core.
+
 | Route                                           | Method      | Auth | Description                                                                                                                                                                                                                                                            |
 | ----------------------------------------------- | ----------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/api/health`                                   | GET         | No   | Health check for monitoring                                                                                                                                                                                                                                            |
@@ -1141,7 +1098,9 @@ export async function GET() {
 | `/api/admin/activity/hide`                      | POST        | Yes  | Admin: hide/unhide a post from the pulse (same as POST `/api/admin/posts`)                                                                                                                                                                                             |
 | `/api/admin/collections/hide`                   | POST        | Yes  | Admin: hide/unhide a playlist from leaderboards (`{ username, tag, hidden? }`)                                                                                                                                                                                         |
 
-### Discovery leaderboards (`/leaderboard`)
+### Discovery leaderboards (history: `/leaderboard` now redirects to `/channels`)
+
+> **History.** This describes the retired X-first / `TheaterShell` product. Kept for context on old URLs and data; see the overview at the top and [`ARCHITECTURE.md`](ARCHITECTURE.md) for the current system.
 
 Public playlists (shared tags) are ranked on `/leaderboard` (+ `/leaderboard/{today|month|all-time}`;
 week is the default at the bare path) — the "podium" leaderboard per
@@ -1326,7 +1285,7 @@ The app will initialize a fresh SQLite database with the new schema. Users will 
 ## Testing
 
 ```bash
-pnpm test         # Run all 943 tests
+pnpm test         # Run all 3,558 tests
 pnpm test:watch   # Watch mode
 pnpm test:e2e     # Playwright against an isolated Next on :3002 (not `pnpm dev`)
 pnpm test:e2e:install  # download Chromium and WebKit once
