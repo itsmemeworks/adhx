@@ -321,6 +321,7 @@ private struct KeepChannelBar: View {
                     .padding(.horizontal, 12)
                     .frame(height: 34)
                     .frosted(Capsule(), dim: 0.45)
+                    .layoutPriority(-1)
                     .accessibilityLabel("Channel: \(group.name)")
                 Spacer(minLength: 0)
                 button
@@ -350,6 +351,8 @@ private struct KeepChannelBar: View {
                     Image(systemName: "checkmark").font(.system(size: 13, weight: .heavy))
                     Text("Kept · Open")
                 }
+                .lineLimit(1)
+                .fixedSize()
                 .font(Theme.sans(14, .heavy))
                 .foregroundStyle(Theme.ink)
                 .padding(.horizontal, 14)
@@ -373,6 +376,8 @@ private struct KeepChannelBar: View {
                     }
                     Text("Keep this channel")
                 }
+                .lineLimit(1)
+                .fixedSize()
                 .font(Theme.sans(14, .heavy))
                 .foregroundStyle(.black)
                 .padding(.horizontal, 14)

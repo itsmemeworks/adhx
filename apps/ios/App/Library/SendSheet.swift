@@ -363,7 +363,8 @@ struct SendSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(person.has || person.sent || busy)
+        // Not `.disabled`: that would dim a face that just got its tick.
+        .allowsHitTesting(!(person.has || person.sent || busy))
         .accessibilityLabel(person.displayName)
         .accessibilityValue(person.has ? "Already has it" : person.sent ? "Sent" : busy ? "Sending" : "")
         .accessibilityHint(person.has || person.sent ? "" : "Sends it to \(person.displayName)")

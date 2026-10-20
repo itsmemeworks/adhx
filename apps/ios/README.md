@@ -181,6 +181,8 @@ Debug builds read a few launch arguments, for the simulator and design checks
 - `-adhxWelcome YES` shows the "Connected to …" screen that follows pairing.
 - `-adhxSharePreview saved|private` shows the share card's Saved state over
   a post, without sharing anything.
+- `-adhxTuneIn <slug>` does what tapping a "… is live" notification does
+  (opens Live and tunes in to that moment).
 
 ## Before testing on a physical phone
 

@@ -12,6 +12,9 @@ struct ADHXShareApp: App {
         #endif
         _model = StateObject(wrappedValue: AppModel())
         AlertCenter.shared.install()
+        #if DEBUG
+        DebugLaunch.tuneInIfAsked()
+        #endif
     }
 
     var body: some Scene {
@@ -103,6 +106,12 @@ enum DebugLaunch {
         if Store.server == server, Store.key == key { return }
         Store.connect(server: server, result: PairResult(key: key, name: "Simulator",
                                                          username: args.string(forKey: "adhxUser")))
+    }
+
+    /// `-adhxTuneIn <slug>`: what tapping a "… is live" notification does.
+    @MainActor static func tuneInIfAsked() {
+        guard let slug = UserDefaults.standard.string(forKey: "adhxTuneIn"), !slug.isEmpty else { return }
+        AlertCenter.shared.tuneIn = LiveMoment(slug: slug, name: slug)
     }
 }
 #endif
