@@ -122,6 +122,7 @@ type KeepRow = {
   lastError: string | null
   updatedAt: string
   acceptedAt: string | null
+  progress: number | null
 }
 type QueueRow = { kind: string; attempts: number; nextAttemptAt: string; lastError: string | null }
 type ConversionRow = {
@@ -244,6 +245,7 @@ export async function processingActivity(
       lastError: keepJobs.lastError,
       updatedAt: keepJobs.updatedAt,
       acceptedAt: keepJobs.acceptedAt,
+      progress: keepJobs.progress,
     })
     .from(keepJobs)
     .where(inArray(keepJobs.postId, ids))
@@ -426,7 +428,11 @@ export async function processingActivity(
         reason = 'The disk is nearly full, so keeping is paused.'
       } else {
         status = 'working'
-        percent = job?.status === 'running' ? keepProgress(c.platform, c.id) : null
+        percent =
+          job?.status === 'running'
+            ? (keepProgress(c.platform, c.id) ??
+              (isKeepConverting(c.platform, c.id) ? null : job.progress))
+            : null
       }
     } else if (converting) {
       step = 3

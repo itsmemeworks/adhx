@@ -679,6 +679,15 @@ try {
 } catch {
   // Column already exists — nothing to do.
 }
+// keep_jobs.progress: the download percent the worker last wrote, for
+// "Getting it ready · 62%" in the theater. Nullable; guarded for re-runs.
+{
+  const columns = db.prepare('PRAGMA table_info(keep_jobs)').all() as { name: string }[]
+  if (!columns.some((c) => c.name === 'progress')) {
+    db.exec('ALTER TABLE keep_jobs ADD COLUMN progress integer')
+    console.log('[migrate] Added keep_jobs.progress')
+  }
+}
 db.exec(`
   CREATE TABLE IF NOT EXISTS server_settings (
     key TEXT PRIMARY KEY,

@@ -165,7 +165,9 @@ import { stage, useDwell, useStageTap, useVideoState } from './usePlayerState'
 import { PasteButton, usePasteToSave } from '../onboarding/usePasteToSave'
 import { channelTitle } from '../channels/ChannelParts'
 import { useBusyLogo } from '../logo-busy'
-import { POST_SAVED as NX_POST_SAVED } from '@/lib/theater/client-events'
+import { POST_KEPT, POST_SAVED as NX_POST_SAVED } from '@/lib/theater/client-events'
+import { GettingReadyStage, KeptChip, SharedWithChip } from './GettingReady'
+import { onItsWay, useKeepStatus } from './useKeepStatus'
 
 /** How long a reaction floats on screen. */
 const REACTION_MS = 4_400
@@ -629,6 +631,23 @@ export function TheaterV2({
     }
   }, [currentKey, caughtUp, markSeen])
   const member = !!me?.user
+  // Still being kept? "Getting it ready" covers the stage until the copy is here (j1-4).
+  const keep = useKeepStatus(
+    current && kind !== 'post' && kind !== 'article'
+      ? { platform: current.post.platform ?? 'twitter', id: current.post.id }
+      : null,
+    member && !source.shared,
+  )
+  const gettingReady = onItsWay(keep.status)
+  // The copy just arrived: play it (a load that failed while it waited starts again).
+  const wasGettingReady = useRef<{ key: string; on: boolean }>({ key: '', on: false })
+  useEffect(() => {
+    const was = wasGettingReady.current
+    wasGettingReady.current = { key: currentKey, on: gettingReady }
+    if (was.key === currentKey && was.on && !gettingReady) {
+      window.dispatchEvent(new CustomEvent(POST_KEPT, { detail: { key: currentKey } }))
+    }
+  }, [currentKey, gettingReady])
   const savers = useMemo<Saver[] | undefined>(() => {
     const mine = noteNow.get(currentKey)
     const list = current?.post.savers?.map((s) => (s.isYou ? withNote(s, mine) : s))
@@ -2109,8 +2128,11 @@ export function TheaterV2({
                       onEnded={() => void next()}
                       photoCaption={false}
                       repeat={repeat === 'one'}
-                      covered={overlay || caughtUp || (panel !== null && !isVideo)}
+                      covered={overlay || caughtUp || gettingReady || (panel !== null && !isVideo)}
                     />
+                    {gettingReady && keep.status && (
+                      <GettingReadyStage post={current.post} status={keep.status} wide={wide} />
+                    )}
                     {kind === 'post' && (
                       // Room on the right so the rail never sits on the words.
                       <div
@@ -2187,7 +2209,14 @@ export function TheaterV2({
                     )}
                     {layout === 'list' && !source.recent && !source.shared && backChip}
                     {!wide && layout === 'panel' && !source.moment && backChip}
-                    {wide && whyChip && <WhyChip post={current.post} onOpen={openWhy} />}
+                    {gettingReady && !isPrivate ? (
+                      <SharedWithChip people={keep.people} className="max-w-full" />
+                    ) : keep.justKept ? (
+                      <KeptChip />
+                    ) : null}
+                    {wide && whyChip && !gettingReady && (
+                      <WhyChip post={current.post} onOpen={openWhy} />
+                    )}
                     {overlay && (isPrivate || (savers && savers.length > 0)) && (
                       // Who saved it, by the chips: text and article stages have no byline scrim.
                       <span className="pointer-events-auto flex h-9 min-w-0 items-center gap-1.5">
@@ -2253,7 +2282,7 @@ export function TheaterV2({
                     )}
                     {viaNote}
                   </div>
-                  {muteOnFrame && muteButton}
+                  {muteOnFrame && !gettingReady && muteButton}
 
                   {source.moment && member && !wide && (
                     // Rising from just above the byline, clear of the rail.
@@ -2295,6 +2324,8 @@ export function TheaterV2({
                             <SaversButton
                               savers={savers}
                               placement="above"
+                              // "Getting it ready" fills the stage; the note shows once it plays.
+                              noteBubble={!gettingReady}
                               framed
                               faces={
                                 <FaceStack

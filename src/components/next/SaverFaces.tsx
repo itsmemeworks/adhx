@@ -181,6 +181,7 @@ export function SaversButton({
   facesClassName,
   faces,
   framed = false,
+  noteBubble = true,
 }: {
   savers: readonly Saver[]
   tone?: 'scrim' | 'plate'
@@ -192,6 +193,8 @@ export function SaversButton({
   faces?: ReactNode
   /** A frosted pill with a chevron, ringed in yellow while open. */
   framed?: boolean
+  /** Show the newest friend's note over the byline (off while the stage is busy). */
+  noteBubble?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [at, setAt] = useState<{ left: number; top?: number; bottom?: number } | null>(null)
@@ -237,7 +240,7 @@ export function SaversButton({
   if (savers.length === 0) return null
   const list = orderedSavers(savers)
   const others = list.filter((s) => !s.isYou).length
-  const noted = placement === 'above' ? bylineNote(savers) : undefined
+  const noted = placement === 'above' && noteBubble ? bylineNote(savers) : undefined
   const button = (
     <span ref={root} className={cn('pointer-events-auto relative flex min-w-0', className)}>
       <button

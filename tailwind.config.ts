@@ -213,6 +213,11 @@ const config: Config = {
           '0%': { transform: 'translateY(-16px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        // "Getting it ready": a light sweeping across the blurred poster.
+        'nx-sheen': {
+          '0%': { backgroundPosition: '100% 0' },
+          '100%': { backgroundPosition: '-50% 0' },
+        },
       },
       animation: {
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -236,6 +241,7 @@ const config: Config = {
         'nx-spin': 'spin 0.8s linear infinite',
         'nx-pop': 'nx-pop 0.4s ease-out',
         'nx-drop': 'nx-drop 0.3s ease-out',
+        'nx-sheen': 'nx-sheen 2.4s ease-in-out infinite',
       },
     },
   },

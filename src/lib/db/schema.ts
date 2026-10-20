@@ -355,6 +355,11 @@ export const keepJobs = sqliteTable(
     updatedAt: text('updated_at').notNull(),
     /** A saver chose "Keep the link only" for a job that gave up: it stops asking for them. */
     acceptedAt: text('accepted_at'),
+    /**
+     * Last download percent the worker wrote (0–99, in steps), so "Getting it
+     * ready · 62%" survives the in-memory progress. Cleared on each claim.
+     */
+    progress: integer('progress'),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.platform, table.postId] }),

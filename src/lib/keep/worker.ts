@@ -6,7 +6,12 @@ import { captureException } from '@/lib/sentry'
 import { noteSaved, PRIORITY } from '@/lib/semantic'
 import { keepBackfill, keepConcurrency, keepEnabled, keepMinFreeBytes, mediaDir } from './config'
 import { keepPost, NothingToKeep } from './download'
-import { clearKeepProgress, reportKeepConverting, reportKeepProgress } from './progress'
+import {
+  clearKeepProgress,
+  keepProgress,
+  reportKeepConverting,
+  reportKeepProgress,
+} from './progress'
 import { forgetPost, recordKept } from './store'
 import { YtdlpError } from './ytdlp'
 
@@ -85,7 +90,7 @@ export function claimNext(
   if (!next) return null
   const claimed = db
     .update(keepJobs)
-    .set({ status: 'running', updatedAt: iso })
+    .set({ status: 'running', progress: null, updatedAt: iso })
     .where(
       and(
         eq(keepJobs.platform, next.platform),
@@ -120,6 +125,35 @@ function fail(platform: string, postId: string, error: unknown): void {
     .run()
 }
 
+/** Persisted percents move in steps of this much (one write per step at most). */
+const PROGRESS_STEP = 5
+
+/**
+ * Write the download percent to `keep_jobs.progress` once per step, so the
+ * theater's "Getting it ready" ring (`keep-status.ts`) has it even when the
+ * in-memory progress is gone (a restart, another process).
+ */
+function persistKeepProgress(platform: string, postId: string): void {
+  const percent = keepProgress(platform, postId)
+  if (percent === null) return
+  const stepped = Math.floor(percent / PROGRESS_STEP) * PROGRESS_STEP
+  try {
+    db.update(keepJobs)
+      .set({ progress: stepped })
+      .where(
+        and(
+          eq(keepJobs.platform, platform),
+          eq(keepJobs.postId, postId),
+          eq(keepJobs.status, 'running'),
+          sql`COALESCE(${keepJobs.progress}, -1) < ${stepped}`,
+        ),
+      )
+      .run()
+  } catch (error) {
+    captureException(error, { endpoint: 'keep.progress' })
+  }
+}
+
 /** Download one post now. */
 export async function runJob(platform: string, postId: string): Promise<void> {
   const [saved] = db
@@ -138,7 +172,10 @@ export async function runJob(platform: string, postId: string): Promise<void> {
       postId,
       author: saved.author,
       category: saved.category,
-      onProgress: (percent) => reportKeepProgress(platform, postId, percent),
+      onProgress: (percent) => {
+        reportKeepProgress(platform, postId, percent)
+        persistKeepProgress(platform, postId)
+      },
       onConverting: () => reportKeepConverting(platform, postId),
     })
     await recordKept(platform, postId, files)

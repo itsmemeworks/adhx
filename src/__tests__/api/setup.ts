@@ -389,6 +389,7 @@ export const FULL_SCHEMA_SQL = `
       bytes INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL,
       accepted_at TEXT,
+      progress INTEGER,
       PRIMARY KEY (platform, post_id)
     );
     CREATE INDEX keep_jobs_status_idx ON keep_jobs(status, next_attempt_at);
