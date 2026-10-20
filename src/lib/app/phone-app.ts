@@ -58,12 +58,17 @@ export function firstLink(input: unknown): string | null {
   return /^https?:\/\//i.test(clean) ? clean : `https://${clean}`
 }
 
-/** A picture for the post: its kept poster, or the network's own thumbnail. */
+/**
+ * A picture for the post, always through `/api/files`: the kept poster once
+ * there is one, the network's own thumbnail until then (the route hands off).
+ * Null for a post with nothing to show (words only).
+ */
 function posterFor(row: Bookmark): string | null {
   const { platform, id, author, category } = row
   if (isLinkNetwork(platform)) return category === 'text' ? null : keptSrc(platform, id, 'poster')
-  if (platform === 'instagram') return `/api/media/instagram/thumbnail?id=${encodeURIComponent(id)}`
-  if (platform === 'tiktok') return keptSrc(platform, id, 'poster', author)
+  if (platform === 'instagram' || platform === 'tiktok') {
+    return keptSrc(platform, id, 'poster', author)
+  }
   const [media] = db
     .select({
       type: bookmarkMedia.mediaType,
@@ -80,8 +85,9 @@ function posterFor(row: Bookmark): string | null {
     )
     .limit(1)
     .all()
-  if (!media) return null
-  return media.preview || (media.type === 'photo' ? media.original : null)
+  // X: only a post with a picture or video has a poster to show.
+  if (!media || !(media.preview || media.type === 'photo')) return null
+  return keptSrc(platform, id, 'poster', author)
 }
 
 export function appPost(row: Bookmark, alreadySaved: boolean): AppPost {
