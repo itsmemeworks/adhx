@@ -32,7 +32,9 @@ export const GET = withAuth(async (_request, userId) => {
 
 /**
  * POST /api/invites { nameHint? } → { id, url, expiresAt }. Admins, or any
- * member with INVITES=members. The link is shown once: only its hash is kept.
+ * member when the server lets members invite (`inviteMode()`: the setting in
+ * Settings, else `INVITES` on first start). The link is shown once: only its
+ * hash is kept.
  */
 export const POST = withAuth(async (request: NextRequest, userId) => {
   if (!mayCreateInvites(userId)) {

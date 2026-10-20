@@ -15,3 +15,15 @@ export function usePostPlayback(item: TheaterItem) {
     pingAnalytic('post.play', { platform: item.platform, id: item.bookmarkId })
   }, [item.platform, item.bookmarkId])
 }
+
+/** Call from the video's `ended` event: the post was watched to its end (counted once per post). */
+export function usePostFinished(item: TheaterItem) {
+  const lastFinished = useRef<string | null>(null)
+  return useCallback(() => {
+    if (!item.bookmarkId) return
+    const key = `${item.platform}:${item.bookmarkId}`
+    if (lastFinished.current === key) return
+    lastFinished.current = key
+    pingAnalytic('post.finish', { platform: item.platform, id: item.bookmarkId })
+  }, [item.platform, item.bookmarkId])
+}

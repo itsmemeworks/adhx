@@ -32,11 +32,10 @@ Phone keys are rows in `access_keys` with `scope = 'phone'` (the Search from
 Claude keys are `scope = 'search'`). Same shape (`adhx_` + 43 URL-safe
 characters), only the SHA-256 is kept, up to 10 per account. A phone key is
 accepted by `/api/app/save`, `/api/app/private`, `/api/app/note`, `/api/app/status`,
-`/api/app/me`, `/api/app/saves`, `/api/app/search` and the friends feed
-endpoints below (`feed`, `seen`, `channels`, `live`) only; a search key is not accepted
 `/api/app/me`, `/api/app/saves`, `/api/app/search`, the friends feed
 endpoints below (`feed`, `seen`, `channels`, `live`), Settings' `people` and
-`doing`, and members' pictures (`/api/files/avatar/<hash>`) only; a search key is not accepted
+`doing`, members' pictures (`/api/files/avatar/<hash>`) and the owner's own
+Just for me files (`/api/files/...`) only; a search key is not accepted
 there, and a phone key is not accepted by `/api/agent/search`. A phone key
 acts only for its own account: it reads that account's saves, and everyone's
 saves only where a signed-in member could (`/api/app/search?scope=everyone`). Removing a phone in Settings deletes
@@ -238,7 +237,12 @@ width, height, durationMs }], article, savers, isPrivate }`
   kept, X, Instagram and TikTok play through their proxies; other networks wait
   for the download. A video that can't play answers 404 or 410 with
   `{ reason }` to show ("Nobody here has saved this yet", "This one couldn't
-  be downloaded. The original may still play.").
+  be downloaded. The original may still play."), to members only (a phone
+  key counts); anyone else gets a plain 404.
+- A post that is only Just for me has files only its owners can fetch. On the
+  owner's own `isPrivate` posts, the `/api/files` URLs in `media` (and the
+  Shared lately `posterUrl`) carry a `k=` file token, because a video player
+  can't send the phone key: keep the query string when resolving them.
 - `sourceUrl` is the post on its own network ("Open original").
 - `why` (feed items only): the feed's reason, shown as the why chip.
 
@@ -624,7 +628,8 @@ out so the server's own choice still applies.
   a 52dp face per member; one who has it is dimmed with "Jo already has it.",
   a tap sends it (`POST /api/app/send`) and leaves a tick. A private save
   says "Just for you. Share it first to send it." A server without the route
-  shows no row. Text posts still go straight to the share sheet.
+  shows no row. A text post or article gets the same sheet with "Sending the
+  words": Chat, Mail and More send its words, and the row sends the post.
 - New: a `sent` headline is the why chip "Pete sent you this" with Pete's
   face; Why this one gives it a send icon and his face. Unknown kinds show
   their words. A `like` reason shows its `post.posterUrl` as a 38dp Gob-shaped

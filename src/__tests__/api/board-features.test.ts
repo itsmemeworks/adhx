@@ -176,6 +176,17 @@ describe('send straight to your people', () => {
     expect(Object.keys(people[0]).sort()).toEqual(['avatarUrl', 'has', 'name', 'sent', 'username'])
   })
 
+  it('never reveals a Just for me save: a private holder is offered and can be sent it', async () => {
+    save(BEN, 'sauce', 1, { isPrivate: true })
+    viewer = PETE
+    const { body } = await targets('twitter', 'sauce')
+    expect(body.people.find((p: { username: string }) => p.username === 'ben')).toMatchObject({
+      has: false,
+    })
+    const sent = await send({ platform: 'twitter', id: 'sauce', to: ['ben'] })
+    expect(sent.body).toEqual({ sent: ['ben'], skipped: [] })
+  })
+
   it('sends, skips who has it, who already got it and who isn’t a member', async () => {
     viewer = PETE
     const first = await send({
@@ -610,6 +621,23 @@ describe('keep a From everyone channel', () => {
       params: Promise.resolve({ slug: 'food-x1' }),
     })
     expect((await other.json()).kept).toBeNull()
+  })
+
+  it("follows the keeper's Just for me by default for new copies", async () => {
+    testInstance.db
+      .insert(schema.userPreferences)
+      .values({ userId: PETE, key: 'save.privateDefault', value: 'true' })
+      .run()
+    viewer = PETE
+    const { POST } = await import('@/app/api/channels/group/[slug]/keep/route')
+    const res = await POST(json('/api/channels/group/food-x1/keep', 'POST'), {
+      params: Promise.resolve({ slug: 'food-x1' }),
+    })
+    expect(res.status).toBe(200)
+    const mine = testInstance.db.all<{ id: string; is_private: number }>(
+      sql`SELECT id, is_private FROM bookmarks WHERE user_id = ${PETE} AND source = 'channel_keep'`,
+    )
+    expect(mine).toEqual([{ id: 'steak', is_private: 1 }])
   })
 
   it('skips posts already at five tags, and 404s an unknown channel', async () => {

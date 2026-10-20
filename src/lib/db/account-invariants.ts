@@ -33,6 +33,8 @@ const ACCOUNT_GUARDS: AccountGuard[] = [
   },
   { table: 'moment_alert_subs', references: [{ column: 'user_id' }] },
   { table: 'moment_alerts', references: [{ column: 'user_id' }] },
+  { table: 'reaction_counts', references: [{ column: 'user_id' }] },
+  { table: 'auto_channels', references: [{ column: 'user_id' }] },
   {
     table: 'invites',
     references: [{ column: 'created_by' }, { column: 'used_by', nullable: true }],

@@ -5,6 +5,7 @@ import { getAutoChannel } from '@/lib/channels/auto'
 import { channelQueue, keysToHits } from '@/lib/channels/channels'
 import { friendChannelKeys, friendNote, type FriendNote } from '@/lib/channels/friends'
 import { groupChannelKeys } from '@/lib/channels/group'
+import { recordAnalytic } from '@/lib/analytics/record'
 import { keptGroupChannel, type KeptChannel } from '@/lib/channels/group-keep'
 import { newKeysFor } from '@/lib/feed/views'
 import { listMembers } from '@/lib/people/members'
@@ -27,6 +28,8 @@ async function keysFor(
   if (kind === 'group') {
     if (!SLUG.test(slug)) return null
     const channel = await groupChannelKeys(slug)
+    if (channel)
+      recordAnalytic({ name: 'channel.play', surface: 'group', bookmarkId: slug, userId })
     return channel ? { keys: channel.keys, name: channel.name } : null
   }
   if (kind === 'friend') {

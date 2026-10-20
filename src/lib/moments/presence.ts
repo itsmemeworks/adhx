@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events'
 import type { ReactionEmoji } from './reactions'
+import { noteTuneIn } from '@/lib/admin/counts'
 
 /**
  * Who is tuned in to which moment, by account, and the reactions they send.
@@ -64,10 +65,12 @@ export function joinWatch(slug: string, userId: string): () => void {
   const s = state()
   const room = s.rooms.get(slug) ?? new Map<string, Entry>()
   s.rooms.set(slug, room)
+  const joined = !room.has(userId)
   const entry = room.get(userId) ?? { count: 0, since: Date.now(), phones: new Map() }
   entry.phones ??= new Map()
   entry.count++
   room.set(userId, entry)
+  if (joined) noteTuneIn(slug, userId, room.size)
   let left = false
   return () => {
     if (left) return
@@ -93,6 +96,7 @@ export function renewWatch(slug: string, userId: string, keyId: string, session:
   entry.phones ??= new Map()
   entry.phones.set(`${keyId}:${session}`, { keyId, expires: Date.now() + WATCH_LEASE_MS })
   room.set(userId, entry)
+  if (!before.has(userId)) noteTuneIn(slug, userId, room.size)
   return before.size !== room.size || [...room.keys()].some((id) => !before.has(id))
 }
 

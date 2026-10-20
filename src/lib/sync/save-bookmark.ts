@@ -38,6 +38,8 @@ export async function saveBookmark(
   userId: string,
   insertedDuringSync: Set<string>,
   processedAt?: string,
+  /** Start the save Just for me (the owner's "Just for me by default"). */
+  isPrivate = false,
 ): Promise<SaveBookmarkResult> {
   const now = processedAt ?? new Date().toISOString()
   const authorUsername = tweet.author?.username || 'unknown'
@@ -436,6 +438,7 @@ export async function saveBookmark(
         isRetweet,
         retweetContext,
         rawJson: JSON.stringify(tweet),
+        isPrivate,
       })
       .onConflictDoNothing()
       .run()

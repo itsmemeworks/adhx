@@ -13,6 +13,7 @@ import { applyAdminRoleBootstrap, installAccountWriteGuards } from './account-in
 import { runSqlMigrations, SqlMigrationError, type SqlMigration } from './sql-migrations'
 import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
+import { ADMIN_COUNTS_DDL } from '../admin/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -374,6 +375,20 @@ try {
   process.exit(1)
 }
 
+// access_keys.platform: 'ios' | 'android' for a phone key, when its requests
+// say which (src/lib/people/last-seen.ts). Admins see it on People.
+try {
+  const keyColumns = db.prepare('PRAGMA table_info(access_keys)').all() as Array<{ name: string }>
+  if (!keyColumns.some((column) => column.name === 'platform')) {
+    db.exec('ALTER TABLE access_keys ADD COLUMN platform TEXT')
+    console.log('[migrate] Added access_keys.platform')
+  }
+} catch (error) {
+  console.log('[migrate] FAILED adding access_keys.platform', error)
+  db.close()
+  process.exit(1)
+}
+
 // Long-running syncs renew this durable lease every 10 seconds. Add it
 // idempotently for legacy databases, then seed old rows from started_at so the
 // stale reaper can use one COALESCE expression across old and new data.
@@ -641,6 +656,14 @@ try {
 try {
   db.exec('ALTER TABLE users ADD COLUMN approval_snoozed_until integer')
   console.log('[migrate] Added users.approval_snoozed_until')
+} catch {
+  // Column already exists — nothing to do.
+}
+// users.last_seen_at: when the person last used ADHX (a session or phone-key
+// request), written at most once every 5 minutes. Admins see it on People.
+try {
+  db.exec('ALTER TABLE users ADD COLUMN last_seen_at text')
+  console.log('[migrate] Added users.last_seen_at')
 } catch {
   // Column already exists — nothing to do.
 }
@@ -1189,6 +1212,18 @@ try {
   console.log('[migrate] Ensured post_sends / moment_alert_subs / moment_alerts tables')
 } catch (error) {
   console.log('[migrate] FAILED creating post_sends / moment alert tables', error)
+  db.close()
+  process.exit(1)
+}
+
+// Admin counts: reactions per member per day (counts only) and the live
+// moment log (no user ids). reaction_counts is user-linked, so it exists
+// before the account guards below are installed.
+try {
+  db.exec(ADMIN_COUNTS_DDL)
+  console.log('[migrate] Ensured reaction_counts / moment_log tables')
+} catch (error) {
+  console.log('[migrate] FAILED creating reaction_counts / moment_log tables', error)
   db.close()
   process.exit(1)
 }

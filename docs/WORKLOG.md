@@ -12,6 +12,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Fixed: words over the player and the search field fell back to Roboto (no `fontFamily`), now Hanken Grotesk; Instrument Serif headings set tighter than the font kept its full ascent/descent, so `serifLineBox` trims them to the CSS line box (share card title, caught-up title); the caught-up shadow is an ellipse, not a pill; Settings' Remove this phone / Decline are 36dp quiet buttons and the This phone card has the boards' padding and line heights; the share card's keep line and bar sit together at the poster's foot.
 - Left as is: the one-row player header, data-only differences (moment names, counts, order), system UI.
 
+## 2026-10-20 — Android: send text posts to your people
+
+- Share on a text post or article now opens the send sheet too ("Sending the words"): Chat, Mail and More send its words, and "Or straight to your people" sends the post, as for videos and photos. Before, words went straight to the system share sheet, so text posts couldn't be sent to a member from the phone (board j4-4 gap).
+
 ## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
 
 - In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.
@@ -21,6 +25,32 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Optional TypeSafe image smoke test sends generated colours only; experimental typed judgments are not search vectors. No private media uploaded.
 - Regression tests cover allocation options, runtime fallback, timestamp validation, representative coverage, exact batch/reference frames and abort/EOF cleanup. Setup/architecture docs link measured results and reproduction steps.
 - No installed worker, server, queue, model cache, private credential or network setting changed. Release-matched rollout and real-library retrieval evaluation remain separate follow-ups.
+
+## 2026-10-20 — Just for me privacy gaps closed
+
+- **Send sheet** `has` counts shared saves only (`holders()` in `src/lib/sends/sends.ts`), so a Just for me save is never revealed; that person can simply be sent the post.
+- **Just for me by default** now covers X sync (`saveBookmark(..., isPrivate)`, no pulse for private sync saves) and Keep this channel (`group-keep.ts`), like clones.
+- **Admin-only reads**: GET `/api/activity`, `/api/trending`, `/api/analytics` go through `adminOnlyResponse()` (`src/lib/admin/only.ts`); `public/llms.txt` rewritten for a private friends server.
+- **Kept files** (`src/lib/keep/file-access.ts`): a post whose only saves are Just for me is served only to an owner (session, phone key, or the post's HMAC `?k=` file token that `toPhonePost` and Shared lately add to the owner's own URLs, since AVPlayer/ExoPlayer send no headers), with `private, no-store`; anyone else gets the unsaved-post answer, and not-kept reasons are told to members only.
+- **Lifecycle**: clear data and account delete drop the account's "saved" pulses and `auto_channels` (now account-guarded, 56 triggers); removing one save drops its pulse; `AFTER DELETE ON bookmarks` triggers remove a post's vectors, queue and keyword rows with its last save.
+- PRIVACY.md, `/privacy`, ARCHITECTURE.md, CLAUDE.md and the NAS guide updated (on top of #567's rewrite, merged into this branch).
+
+## 2026-10-20 — Whole-system docs brought up to the friends feed
+
+- README: send to your people, notes, Show more / less, forming moments with "Tell me when it's live", Keep this channel, Getting it ready, `/doing`, invites with approval; phone app section matches the apps. Fixed stale setup lines (`ADMIN_USER_IDS` instead of `ADMIN_USERNAMES`, Android link default, PR wording, `INVITES` not passed by the Compose examples) and the garbled `KEEP_H264` comment in `.env.example`.
+- ARCHITECTURE.md rewritten around the current product: nine Mermaid diagrams (system context, save to watch, the New blend, live moments, who sees what, phone pairing and auth, plus the kept sign-in, understanding and search diagrams with quoted labels), every table by plane checked against `schema.ts`/`migrate.ts`, sections on New, sends, moments and bells, channels, invites and approval, the phone API. `TheaterShell`, Discover and the X-first flow removed or marked legacy.
+- PRIVACY.md and `/privacy` rewritten from the code: who sees what per data kind, notes, sends, viewing marks, weights, reactions, bells, invites, approvals, phone keys, avatars, kept files (unauthenticated, cached 7 days, existence visible), the Mac helper, Jev, analytics, admins, retention, clear vs delete.
+- CLAUDE.md top is now a ~25-line current overview with links; legacy sections are marked (history), the dead old-Header section is gone, test count is 3,558. AGENTS.md and `docs/remote-processing.md` overview lines corrected.
+- Privacy gaps found and documented, not fixed: the send sheet's `has` counts private saves; admin counts include private saves; kept files serve "Just for me" posts and reveal whether a post was saved; X sync and Keep this channel ignore Just for me by default; `GET /api/analytics` is public; Clear keeps `activity.user_id`; `auto_channels`, `post_embeddings` and `post_text_fts` outlive deletion.
+
+## 2026-10-20 — The admin area, to the "10 · Admin" boards
+
+- `/admin` is now nine sections plus a person page (`/admin/people/{username}`) in the new design (`components/next/admin/`, `AdminShell`: NxHeader + Admin chip, a section nav that's a chip row on phones). Server pages read `src/lib/admin/boards/*`; `GET /api/admin/boards/{board}` returns the same. The old Matter `AdminClient` is gone; every capability stayed (hide/show, ban/unban, clear notes, invites, sign-in links, playlist hide, the log). Spec: `docs/specs/admin.md`.
+- Privacy: Just for me saves are counts only (lists come from `postCards`/`sharedSavers`, shared saves only; the rest say "N Just for me"); never what anyone searched or watched; Made for you/private channels never in Top channels.
+- New data: `reaction_counts` (member/day/kind, never words/post/moment) from `react()`; `moment_log` (no user ids: formed, tune-ins once per member, peak, reactions, alerts sent/opened); `users.last_seen_at` (≤ 5 min, `/api/auth/me` + `phoneCaller`); `access_keys.platform`; events `app.open`, `search.found|none` (mode only), `post.finish`, `channel.play|keep`. `server_settings processing.paused` = Pause new work (keep worker, Mac helper claims, local understanding).
+- Actions: make/remove admin (audited; never the last admin), remove a phone, clear a member's notes, Retry failed / retry one / link only. Every `/api/admin/*` answer is `private, no-store` (`withAdmin`).
+- Parity: `seed-admin.ts` (Ana is an admin), captures `admin-1` … `admin-10`. Scores 1.5–5.3. Limits in `e2e/parity/README.md` (server name, filler save times and networks, sign-in links need `EMAIL_LINKS_TO_ADMIN`).
+- Follow-ups: PRIVACY.md got an admins-and-counts section on main's text; PR #567 rewrote PRIVACY.md, so merge by hand. The funnel's third row is reactions sent (reactions carry no post); phone saves aren't split iPhone/Android; no Mac helper Remove (its token is env).
 
 ## 2026-10-20 — Android: send to your people, forming alerts, like thumbnail, Keep this channel
 

@@ -30,7 +30,11 @@
  * its pictures or video frames). Keyed by post like `post_embeddings`; `model`
  * is the extractor version, `status` is `ok` (words kept), `none` (nothing
  * worth keeping: silence, music, no text) or `failed`. The words join the
- * post's text document and keyword row. Removed with the post's last save.
+ * post's text document and keyword row.
+ *
+ * Everything here that is about one post (its vectors, queue rows, keyword
+ * row and extracted words) is removed with the post's last save, by the
+ * triggers below, whichever way the save is deleted.
  */
 export const UNDERSTANDING_DDL = `
   CREATE TABLE IF NOT EXISTS post_embeddings (
@@ -114,6 +118,15 @@ export const UNDERSTANDING_DDL = `
   WHEN NOT EXISTS (SELECT 1 FROM bookmarks WHERE platform=OLD.platform AND id=OLD.id)
   BEGIN
     DELETE FROM post_extracted_text WHERE platform=OLD.platform AND post_id=OLD.id;
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS understanding_last_save_deleted
+  AFTER DELETE ON bookmarks
+  WHEN NOT EXISTS (SELECT 1 FROM bookmarks WHERE platform=OLD.platform AND id=OLD.id)
+  BEGIN
+    DELETE FROM post_embeddings WHERE platform=OLD.platform AND post_id=OLD.id;
+    DELETE FROM understanding_queue WHERE platform=OLD.platform AND post_id=OLD.id;
+    DELETE FROM post_text_fts WHERE platform=OLD.platform AND post_id=OLD.id;
   END;
 
   CREATE TABLE IF NOT EXISTS processing_leases (

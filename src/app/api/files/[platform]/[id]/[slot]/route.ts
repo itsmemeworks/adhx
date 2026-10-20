@@ -10,6 +10,9 @@ import { keepJobs } from '@/lib/db/schema'
 import { proxySrc } from '@/lib/keep/src'
 import { wakeKeep } from '@/lib/keep/worker'
 import { ensurePoster } from '@/lib/keep/poster'
+import { keptFileAccess, ownsSave, validFileToken } from '@/lib/keep/file-access'
+import { getCurrentUserId } from '@/lib/auth/session'
+import { phoneCaller } from '@/lib/api/phone-auth'
 
 const PLATFORM = /^[a-z]{1,16}$/
 const ID = /^[A-Za-z0-9._~:@-]{1,200}$/
@@ -137,6 +140,11 @@ function parseRange(header: string | null, size: number): { start: number; end: 
  * Until the file is downloaded, X, Instagram and TikTok hand off to their old
  * proxies (`?a=` carries the author they need); other networks wait for the
  * download.
+ *
+ * A post whose only saves are Just for me is served to its owners only (their
+ * session or phone key, or the post's `?k=` file token) and never cached. To
+ * anyone else it looks exactly like a post nobody saved, and why a file isn't
+ * here is only said to members (`src/lib/keep/file-access.ts`).
  */
 export async function GET(
   request: NextRequest,
@@ -147,17 +155,38 @@ export async function GET(
   const moderation = readPostModeration(platform, id)
   if (!moderation.ok || moderation.value) return notFound()
 
+  // Who's asking, read once and only when it matters.
+  let caller: string | null | undefined
+  const callerId = async (): Promise<string | null> => {
+    if (caller === undefined) {
+      caller = (await getCurrentUserId()) ?? (await phoneCaller(request))?.userId ?? null
+    }
+    return caller
+  }
+  const access = keptFileAccess(platform, id)
+  let privateToOwner = false
+  if (access === 'private') {
+    if (validFileToken(platform, id, request.nextUrl.searchParams.get('k'))) {
+      privateToOwner = true
+    } else {
+      const who = await callerId()
+      privateToOwner = !!who && ownsSave(who, platform, id)
+    }
+  }
+  // Someone else's Just for me save: answer as if nobody had saved it.
+  const hidden = access === 'private' && !privateToOwner
+
   // A picture post has no separate poster: its first picture is the poster.
   // A sound-only post (SoundCloud) plays its sound in the video slot.
-  let kept = findKept(platform, id, slot)
+  let kept = hidden ? null : findKept(platform, id, slot)
   // Networks with no proxy: a fresh save is usually seconds from kept. Wait
   // for it rather than failing the player.
-  if (!kept && !proxySrc(platform, id, slot, 'x') && downloading(platform, id)) {
+  if (!kept && !hidden && !proxySrc(platform, id, slot, 'x') && downloading(platform, id)) {
     wakeKeep()
     kept = await waitForKept(platform, id, slot, request.signal)
   }
   // A video kept before stills were taken on download: make its poster now.
-  if (!kept && slot === 'poster') kept = await ensurePoster(platform, id)
+  if (!kept && !hidden && slot === 'poster') kept = await ensurePoster(platform, id)
   if (kept) {
     let file: string
     let size: number
@@ -170,9 +199,11 @@ export async function GET(
     const headers: Record<string, string> = {
       'Content-Type': kept.mime,
       'Accept-Ranges': 'bytes',
-      'Cache-Control': conversionPending(platform, id, kept.slot)
-        ? 'no-store'
-        : 'public, max-age=604800',
+      'Cache-Control': privateToOwner
+        ? 'private, no-store'
+        : conversionPending(platform, id, kept.slot)
+          ? 'no-store'
+          : 'public, max-age=604800',
       'X-Content-Type-Options': 'nosniff',
     }
     if (request.nextUrl.searchParams.get('download') === '1') {
@@ -202,25 +233,30 @@ export async function GET(
   }
 
   // Not kept yet: make sure it's on its way, and use the proxy meanwhile.
-  wakeKeep()
+  if (!hidden) wakeKeep()
   const author = request.nextUrl.searchParams.get('a') ?? ''
   const download = request.nextUrl.searchParams.get('download') === '1'
   const fallback = proxySrc(platform, id, slot, AUTHOR.test(author) ? author : '', download)
   if (fallback) return handOff(fallback)
   if (slot === 'poster' && platform === 'twitter') {
-    const [row] = db
-      .select({ previewUrl: bookmarkMedia.previewUrl })
-      .from(bookmarkMedia)
-      .where(and(eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id)))
-      .limit(1)
-      .all()
+    // A saver's stored picture would say someone saved it: not for a hidden post.
+    const [row] = hidden
+      ? []
+      : db
+          .select({ previewUrl: bookmarkMedia.previewUrl })
+          .from(bookmarkMedia)
+          .where(and(eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id)))
+          .limit(1)
+          .all()
     if (row?.previewUrl && TWIMG.test(row.previewUrl)) {
       return handOff(row.previewUrl)
     }
     const photo = proxySrc(platform, id, 'photo-1', AUTHOR.test(author) ? author : '')
     if (photo) return handOff(photo)
   }
-  if (/^(video|audio)-/.test(slot)) {
+  // Why it isn't here is for members: to a stranger it would say whether
+  // anyone on this server saved the post.
+  if (!hidden && /^(video|audio)-/.test(slot) && (await callerId())) {
     const why = notKeptReason(platform, id)
     if (why) return NextResponse.json({ reason: why.reason }, { status: why.status })
   }
