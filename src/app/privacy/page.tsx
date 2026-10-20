@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           rows, on its own server.
         </p>
         <p className="m-0 text-[14px] text-white/55">
-          <span>Last updated 19 October 2026. The canonical copy is </span>
+          <span>Last updated 20 October 2026. The canonical copy is </span>
           <a
             href="https://github.com/itsmemeworks/adhx/blob/main/PRIVACY.md"
             className="text-white underline underline-offset-2"
@@ -100,6 +100,21 @@ export default function PrivacyPage() {
           never leave the server. Views and saves of a public channel may add an event for Top
           channels. Captions and thumbnails are resolved on the server; your browser cannot invent
           what appears there.
+        </Section>
+
+        <Section title="What admins can see">
+          Your server’s admins see each member’s name and picture, role, when they joined, who
+          invited them, when they were last seen (updated at most every 5 minutes) and how many
+          saves (and how many are “Just for me”), notes, sends, reactions, channels and phones they
+          have, with each phone’s kind and the last four characters of its key. They see posts with
+          a shared save and who saved them; a “Just for me” save is only ever a count, never the
+          post. Everything else is counts: opens and from which kind of device, plays and finishes,
+          searches (by meaning or by words, and whether they found something; what you searched for
+          is never stored), sends, shares, reactions per day and kind (never the words, the post or
+          the moment), and a log of live moments (tune-ins, the most watching, reactions and alerts,
+          no account ids). Admins can remove a phone, clear notes, keep someone out and make or
+          remove admins; each is logged. Your reaction counts go when you clear your data or delete
+          your account.
         </Section>
 
         <Section title="Third parties">

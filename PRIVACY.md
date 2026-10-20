@@ -2,7 +2,7 @@
 
 ADHX is made to be **self-hosted**, for you and the people you invite. Whoever runs an ADHX server is responsible for the data on it. This file is the honest description of what the software stores and sends on every ADHX server. The separate product website in `site/` runs no ADHX account service. Its hosting provider may process ordinary request logs; publishing it and moving the public domain are separate operational steps.
 
-Last updated: 19 October 2026.
+Last updated: 20 October 2026.
 
 ## Short version
 
@@ -52,7 +52,7 @@ A channel (a tag) stays private until you explicitly make it **public**, and you
 
 ### Community pulse, Right now and Top channels (public, anonymous)
 
-When someone previews, saves, or sends a post, we may record an `activity` event for anonymous counts (never for a Just for me save). **Right now** (`/now`) groups recent saves from everyone into moments by what they’re about; it counts the people who saved, and their account ids never leave the server. Signed-in members also see who is saving a moment and who is tuned in to it, and can send a reaction (an emoji or a few words) to the others watching; who is watching and reactions live only in the server's memory and are never stored. People who aren't signed in only ever see counts. When someone views or saves a public channel, we may record a `collection_events` row for Top channels.
+When someone previews, saves, or sends a post, we may record an `activity` event for anonymous counts (never for a Just for me save). **Right now** (`/now`) groups recent saves from everyone into moments by what they’re about; it counts the people who saved, and their account ids never leave the server. Signed-in members also see who is saving a moment and who is tuned in to it, and can send a reaction (an emoji or a few words) to the others watching; who is watching and what a reaction says live only in the server's memory and are never stored; reactions are counted (see What admins can see). People who aren't signed in only ever see counts. When someone views or saves a public channel, we may record a `collection_events` row for Top channels.
 
 Those logs may store:
 
@@ -64,6 +64,19 @@ Those logs may store:
 | curator username                       | channels and Top channels    | Yes — a public username, not an account id                    |
 
 Display text and images on the pulse are copied server-side from the post. Clients cannot invent what shows on the front page.
+
+### What admins can see (counts)
+
+Your server's admins (accounts with the admin role) have an admin area. It shows:
+
+- **People**: each member's username, display name and picture, role, when they joined, who invited them, when they were last seen, and how many saves (with how many are Just for me), notes, sends, reactions, channels and phones they have. "Last seen" (`users.last_seen_at`) is updated at most every 5 minutes when you use the web app or your phone app. Each phone shows its name, the last four characters of its key, whether it's an iPhone or Android (`access_keys.platform`, from the app's requests), and when it was paired and last used. Admins can remove a phone, clear a member's notes, keep someone out, and make or remove admins; every one of those goes in the admin log.
+- **Posts**: posts saved with at least one shared save, with who saved them (shared saves only) and their notes. **A Just for me save is only ever a count**: admins see "1 Just for me", never the post.
+- **Counts**, never contents: saves per day (shared and Just for me), opens of the app and from which kind of device (web, iPhone, Android), plays and how many were watched to the end, searches (whether by meaning or by words, and whether they found something; **what you searched for is never stored**), sends and shares, reactions, plays and keeps of shared channels, and how many posts each member watched in the last 30 days (never which).
+- **Reaction counts** (`reaction_counts`): how many reactions each member sent per day, by kind (which emoji, or "words"). The words, the post and the moment are never stored.
+- **The live-moment log** (`moment_log`): each moment's name, when it formed, how many members tuned in, the most watching at once, how many reactions it got, and how many "it's live" alerts it sent and were opened. No account ids.
+- What the server is doing: downloads, conversions and understanding, server-wide (Just for me posts are counted, not listed).
+
+Your reaction counts are deleted when you clear your data or delete your account; your last-seen time goes with your account.
 
 ### Cookies and device storage
 
@@ -112,7 +125,7 @@ Until you clear Saved or delete your account (Settings). Pulse and channel-view 
 - **Clear data** — deletes your bookmarks and related rows; keeps the account.
 - **Just for me by default** — Settings → You: new saves start private.
 - **Your picture** — Settings → You: change it, or remove it to use a face made from your username.
-- **Delete account** — removes the account, identities, tokens, access keys, your picture, and Saved.
+- **Delete account** — removes the account, identities, tokens, access keys, your picture, your reaction counts, and Saved.
 
 To ask a question about this policy, email [security@adhx.com](mailto:security@adhx.com).
 

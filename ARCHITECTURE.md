@@ -88,7 +88,7 @@ The visible timestamp answers a different question on each surface:
 | `/leaderboard`              | Public playlist leaderboard for this week.                                                                            |
 | `/leaderboard/{window}`     | `today`, `month`, or `all-time` playlist ranking.                                                                     |
 | `/settings`                 | Account, reading, appearance, X connection, install, and deletion settings.                                           |
-| `/admin`                    | Persisted-admin-only analytics and moderation console.                                                                |
+| `/admin/*`                  | Persisted-admin-only area: overview, people, posts, channels, live, analytics, processing, moderation, invites.       |
 | `/share`                    | PWA/extension/share-sheet URL router; it does not store content itself.                                               |
 | `/welcome`                  | One-shot, noindex username choice after a new email account is created.                                               |
 | `/t/{username}`             | Public curator hub containing that account's public playlists.                                                        |
@@ -322,6 +322,13 @@ plane than as one long list.
 | Private measurement | `analytics_events`                                                                 | Allowlisted product/growth events not suitable for the public pulse.                                 |
 | Playlist ranking    | `collection_events`, `collection_aggregates`                                       | Retained view/clone detail and viewer-free all-time totals.                                          |
 | Moderation          | `moderated_posts`, `user_bans`, `admin_audit`                                      | Post tombstones, account bans, and immutable-ID admin actions.                                       |
+| Admin counts        | `reaction_counts`, `moment_log`                                                    | Reactions per member/day/kind (counts only) and the live-moment log (no user ids).                   |
+
+`users.last_seen_at` (at most every 5 minutes, from sessions and phone keys)
+and `access_keys.platform` (`ios`/`android` when a phone's requests say) feed
+the admin People page. `reaction_counts` is account-guarded and cleared with
+the account; `moment_log` holds no user ids. See the
+[admin specification](docs/specs/admin.md).
 
 The main isolation key is `(userId, platform, sourceId)`. `bookmarks` uses
 `(userId, platform, id)`; media, tags, links, and archive rows carry the same
@@ -621,7 +628,11 @@ never writes one.
 send/copy/open/tag/archive, auth, sync, shortcut, theater, and playlist events.
 Free-form client display data is not accepted. Post events require a canonical
 platform and ID, and their content type is server-resolved. Public aggregate
-rollups never select `userId`; the admin console reads the same query layer.
+rollups never select `userId`; the admin area (`src/lib/admin/boards/*`)
+counts them without ever showing who. Admin-only events: `app.open` (after
+30 minutes away, with the client), `search.found`/`search.none` (mode only,
+never the words), `post.finish`, and `channel.play`/`channel.keep` for shared
+channels.
 Rows older than 90 days are pruned during startup migration. Writes are
 best-effort so measurement failure cannot fail the user action.
 
