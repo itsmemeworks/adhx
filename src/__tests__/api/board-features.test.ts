@@ -288,6 +288,23 @@ describe('send straight to your people', () => {
     expect((await newFeed()).map((i) => i.id)).not.toContain('old')
   })
 
+  it('shows a sent text post even to someone who only watches videos and photos', async () => {
+    save(BEN, 'words', 1)
+    save(JO, 'clip', 0.5, {
+      category: 'video',
+    })
+    viewer = PETE
+    await send({ platform: 'twitter', id: 'words', to: ['ana'] })
+
+    viewer = ANA
+    const { GET } = await import('@/app/api/feed/blend/route')
+    const res = await GET(
+      new NextRequest(`${BASE}/api/feed/blend?mode=new&limit=50&types=video,photo`),
+    )
+    const ids = ((await res.json()).items as Item[]).map((i) => i.id)
+    expect(ids[0]).toBe('words')
+  })
+
   it('reaches the phone the same way', async () => {
     save(BEN, 'fresh1', 0.1)
     const pete = createAccessKey(PETE, 'Phone', 'phone')!.key
