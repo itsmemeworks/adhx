@@ -8,6 +8,7 @@ import type {
   MomentsSnapshot,
   StreamItem,
 } from '@/lib/moments/engine'
+import { absolutePath, coverImage } from '@/lib/feed/cover'
 import { toPhonePost, type PhonePost } from './phone-post'
 
 /**
@@ -49,6 +50,10 @@ export interface PhoneForming {
   need: number
   unit: 'people' | 'saves'
   covers: string[]
+  /** Up to 4 members saving these, newest first (visible saves only). */
+  people: { username: string; name: string | null; avatarUrl: string | null }[]
+  /** You asked to be told when it goes live (`PUT /api/app/live/forming/{id}/alert`). */
+  alert: boolean
 }
 
 export interface PhoneStreamItem {
@@ -73,19 +78,7 @@ export interface PhoneMomentDetail {
   watchers: Saver[]
 }
 
-/** An address the app can resolve against its ADHX: a path from the root, or a full URL. */
-export function absolutePath(url: string): string {
-  if (/^https?:\/\//i.test(url) || url.startsWith('/')) return url
-  return `/${url}`
-}
-
-/** A post's cover picture: a link's preview image, a video's poster, a photo. */
-export function coverImage(post: FeedItem): string | null {
-  const article = post.category === 'article' || post.isXArticle
-  const media = post.media?.[0]
-  const src = (article ? post.articlePreview?.imageUrl : null) || media?.thumbnailUrl || media?.url
-  return src ? absolutePath(src) : null
-}
+export { absolutePath, coverImage }
 
 function covers(posts: FeedItem[]): string[] {
   return posts.map(coverImage).filter((c): c is string => !!c)
@@ -127,6 +120,8 @@ function phoneForming(f: FormingView): PhoneForming {
     need: f.need,
     unit: f.unit,
     covers: covers(f.covers),
+    people: f.people ?? [],
+    alert: f.alert ?? false,
   }
 }
 

@@ -202,6 +202,8 @@ type QueueResponse = SearchResponse & {
   waiting?: Partial<Record<FeedKind, number>>
   /** Members only: who else is tuned in. */
   watchers?: Saver[]
+  /** A From everyone channel you kept as one of yours ("Kept · Open"). */
+  kept?: { tag: string; url: string } | null
 }
 
 const FEED_TITLES: Record<BlendMode, string> = {
@@ -390,6 +392,8 @@ export function TheaterV2({
   useBusyLogo('theater', load.status === 'loading')
   /** A channel's name, once its queue loads. */
   const [title, setTitle] = useState<string | null>(null)
+  /** A From everyone channel you already kept: its tag and your channel's link. */
+  const [groupKept, setGroupKept] = useState<{ tag: string; url: string } | null>(null)
   const [items, setItems] = useState<SearchResultItem[]>([])
   const [index, setIndex] = useState(0)
   const preferenceContext = usePreferencesOptional()
@@ -536,6 +540,7 @@ export function TheaterV2({
           // Opened New with nothing left: straight to the end card.
           setCaughtUp(source.feed === 'new' && results.length === 0 && !response.nothingYet)
         }
+        if (source.groupChannel) setGroupKept(response.kept ?? null)
         if (response.moment) {
           setMomentHue(response.moment.hue)
           if (!watchingLive.current) {
@@ -1538,6 +1543,25 @@ export function TheaterV2({
   const [keeping, setKeeping] = useState(false)
   const [kept, setKept] = useState(false)
   const keepChannel = useCallback(async () => {
+    if (source.groupChannel) {
+      // From everyone: everything in it goes into one of your channels (saved for you first).
+      setKeeping(true)
+      try {
+        const res = await fetch(
+          `/api/channels/group/${encodeURIComponent(source.groupChannel)}/keep`,
+          { method: 'POST' },
+        )
+        if (!res.ok) throw new Error('keep')
+        const body = (await res.json()) as { tag: string; url: string; added: number }
+        setGroupKept({ tag: body.tag, url: body.url })
+        flash('It’s one of your channels now. Private until you share it.', 4000)
+      } catch {
+        flash('Couldn’t keep that channel. Try again.')
+      } finally {
+        setKeeping(false)
+      }
+      return
+    }
     if (!source.auto) return
     setKeeping(true)
     try {
@@ -1554,7 +1578,7 @@ export function TheaterV2({
     } finally {
       setKeeping(false)
     }
-  }, [source.auto, flash])
+  }, [source.auto, source.groupChannel, flash])
 
   const sayWord = useCallback(
     (text: string) => {
@@ -2912,6 +2936,27 @@ export function TheaterV2({
                   </span>
                 </div>
                 <div className="mt-1 flex gap-2.5">
+                  {source.groupChannel &&
+                    (groupKept ? (
+                      // Kept: one of your channels now; Open goes to it.
+                      <Link
+                        href={groupKept.url}
+                        className="flex h-[52px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-nx-accent/60 px-5 text-[15px] font-extrabold text-nx-accent"
+                      >
+                        <Check aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.6} />
+                        <span>Kept · Open</span>
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={keeping}
+                        onClick={() => void keepChannel()}
+                        className="flex h-[52px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-nx-accent px-5 text-[15px] font-extrabold text-black disabled:opacity-70"
+                      >
+                        <Plus aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.6} />
+                        <span>Keep this channel</span>
+                      </button>
+                    ))}
                   {source.auto && (
                     // Made for you: keep it as one of your own channels (private until shared).
                     <button
@@ -3066,6 +3111,9 @@ export function TheaterV2({
           <ShareSheet
             anchor={wide ? moreAnchor : null}
             url={publicUrl()}
+            post={
+              member ? { platform: current.post.platform ?? 'twitter', id: current.post.id } : null
+            }
             waiting={pausedForShare.current || timed}
             onClose={() => setPanel(null)}
           />
