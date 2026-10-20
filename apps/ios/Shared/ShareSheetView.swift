@@ -420,7 +420,7 @@ private struct SavedContent: View {
                     Wordmark(markSize: 20, textSize: 20)
                     Text(flow.justForMe ? "Saved, just for you" : "Saved for your people")
                         .font(Theme.serif(34))
-                        .lineSpacing(-3)
+                        .tightLines(34)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                     Text(flow.networkName)

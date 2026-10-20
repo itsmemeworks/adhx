@@ -568,6 +568,13 @@ private struct PostPage: View {
         }
     }
 
+    /// "24m": the live time when even "24 min ago" doesn't fit.
+    private var liveWhenShort: String? {
+        guard extras.inMoment != nil,
+              let newest = post.savers.compactMap({ Format.date($0.savedAt) }).max() else { return nil }
+        return Format.shortAgo(newest)
+    }
+
     /// "Ana and Ben saved this · 2h", with their faces. Tapping opens their channel.
     private var saversLine: some View {
         let line = SaverWords.line(post.savers)
@@ -586,15 +593,21 @@ private struct PostPage: View {
                     .font(Theme.sans(15, .bold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
+                    // The names stay whole; the time and network give way first.
+                    .layoutPriority(1)
                     .overMediaShadow(overMedia)
                 if let when = liveWhen {
-                    // Live: "· 4 min ago · Reddit" (the boards' tuned-in byline).
-                    Text("· \(when) · \(Network.name(post.platform))")
-                        .font(Theme.sans(14))
-                        .foregroundStyle(Theme.muted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                        .overMediaShadow(overMedia)
+                    // Live: "· 4 min ago · Reddit" (the boards' tuned-in byline);
+                    // the network goes first when the names leave no room.
+                    ViewThatFits(in: .horizontal) {
+                        Text("· \(when) · \(Network.name(post.platform))")
+                        Text("· \(when)")
+                        if let short = liveWhenShort { Text("· \(short)") }
+                    }
+                    .font(Theme.sans(14))
+                    .foregroundStyle(Theme.muted)
+                    .lineLimit(1)
+                    .overMediaShadow(overMedia)
                 } else if let when = SaverWords.when(post.savers) {
                     Text("· \(when)")
                         .font(Theme.sans(14))
@@ -1031,12 +1044,12 @@ struct NoteBubble: View {
             .padding(.vertical, 6)
             .frame(minHeight: 44)
             .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color(hex: 0xF4F1EA)))
-            // The tail tucks 2 pt into the bubble, so the two read as one shape.
+            // The tail tucks 1 pt into the bubble, so the two read as one shape.
             NoteTail()
                 .fill(Color(hex: 0xF4F1EA))
-                .frame(width: 16, height: 10)
-                .padding(.leading, 20)
-                .padding(.top, -2)
+                .frame(width: 20, height: 10)
+                .padding(.leading, 15)
+                .padding(.top, -1)
         }
         // One shadow for the bubble and its tail together.
         .compositingGroup()
@@ -1046,16 +1059,18 @@ struct NoteBubble: View {
     }
 }
 
-/// The note bubble's tail: a short triangle pointing down at the byline,
-/// with a softened tip.
+/// The note bubble's tail: the lower corner of the boards' 14 pt square turned
+/// 45° (a right angle pointing down at the byline), its tip softened.
 private struct NoteTail: Shape {
     func path(in rect: CGRect) -> Path {
+        // Sides at 45°: as tall as half its width.
+        let tip = CGPoint(x: rect.midX, y: rect.minY + rect.width / 2)
+        let soft: CGFloat = 1.5
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.midX + 2, y: rect.maxY - 1.5))
-        path.addQuadCurve(to: CGPoint(x: rect.midX - 2, y: rect.maxY - 1.5),
-                          control: CGPoint(x: rect.midX, y: rect.maxY + 0.5))
+        path.addLine(to: CGPoint(x: tip.x + soft, y: tip.y - soft))
+        path.addQuadCurve(to: CGPoint(x: tip.x - soft, y: tip.y - soft), control: tip)
         path.closeSubpath()
         return path
     }
