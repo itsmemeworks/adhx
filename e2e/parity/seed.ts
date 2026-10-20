@@ -22,6 +22,7 @@ import {
   keepSettings,
   postEmbeddings,
   postExtractedText,
+  postSends,
   postViews,
   serverSettings,
   understandingQueue,
@@ -58,6 +59,7 @@ import {
   PEOPLE,
   PETE_SEEN,
   POSTS,
+  SENT_TO_PETE,
   TOPIC_AXIS,
   d,
   person,
@@ -571,6 +573,23 @@ function seedViews() {
   }
 }
 
+// ——— Sent straight to Pete ———
+
+function seedSends() {
+  const w = post(SENT_TO_PETE.post)
+  db.insert(postSends)
+    .values({
+      fromUserId: idOf(SENT_TO_PETE.from),
+      toUserId: idOf('pete'),
+      platform: w.platform,
+      postId: w.id,
+      note: null,
+      createdAt: iso(SENT_TO_PETE.minutesAgo),
+      seenAt: null,
+    })
+    .run()
+}
+
 // ——— Credentials ———
 
 async function sessionFor(id: string, username: string): Promise<string> {
@@ -638,6 +657,7 @@ export async function seedParityDb(): Promise<void> {
   seedUnderstanding()
   seedChannels()
   seedViews()
+  seedSends()
   await writeCredentials(placeholders)
   const [{ n }] = db.all<{ n: number }>(sql`SELECT COUNT(*) AS n FROM bookmarks`)
   console.log(

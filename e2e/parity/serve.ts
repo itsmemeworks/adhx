@@ -21,7 +21,7 @@ import {
   PARITY_WORKER_TOKEN,
   parityProcessEnv,
 } from './env'
-import { DOING, POSTS } from './world'
+import { DOING, FORMING_SAVES, PEOPLE, POSTS } from './world'
 
 function portInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -70,6 +70,61 @@ async function pinKeeping(): Promise<void> {
   } finally {
     db.close()
   }
+}
+
+/**
+ * A forming group on Right now (boards j7-1, j7-3). The engine only builds
+ * forming groups from saves that land while it runs (older saves are its
+ * starting point), so: start it with one look at `/api/moments`, then have
+ * Ben and Jo save two synth posts (copies of an existing save's row, like any
+ * save of a post someone already has), and wait for the group to show.
+ */
+async function seedForming(): Promise<void> {
+  await fetch(`${PARITY_ORIGIN}/api/moments`).then((r) => r.body?.cancel())
+  const db = new Database(PARITY_DB_PATH)
+  try {
+    FORMING_SAVES.forEach(({ who, post: key }, i) => {
+      const w = POSTS.find((p) => p.key === key)
+      const userId = PEOPLE.find((p) => p.key === who)?.id
+      if (!w || !userId) return
+      const row = db
+        .prepare(`SELECT * FROM bookmarks WHERE platform = ? AND id = ? AND is_private = 0 LIMIT 1`)
+        .get(w.platform, w.id) as Record<string, unknown> | undefined
+      if (!row) return
+      // Newest last, a second apart, so Jo's face leads.
+      const at = new Date(Date.now() + i * 1_000).toISOString()
+      const copy = { ...row, user_id: userId, processed_at: at, note: null, source: 'sync' }
+      const cols = Object.keys(copy)
+      db.prepare(
+        `INSERT OR IGNORE INTO bookmarks (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+      ).run(...cols.map((c) => copy[c as keyof typeof copy]))
+      const media = db
+        .prepare(
+          `SELECT * FROM bookmark_media WHERE user_id = ? AND platform = ? AND bookmark_id = ?`,
+        )
+        .all(row.user_id, w.platform, w.id) as Record<string, unknown>[]
+      for (const m of media) {
+        const mc = { ...m, user_id: userId }
+        const mcols = Object.keys(mc)
+        db.prepare(
+          `INSERT OR IGNORE INTO bookmark_media (${mcols.join(', ')}) VALUES (${mcols.map(() => '?').join(', ')})`,
+        ).run(...mcols.map((c) => mc[c as keyof typeof mc]))
+      }
+    })
+  } finally {
+    db.close()
+  }
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 2_000))
+    const body = (await fetch(`${PARITY_ORIGIN}/api/moments`)
+      .then((r) => r.json())
+      .catch(() => null)) as { forming?: { title: string }[] } | null
+    if (body?.forming?.length) {
+      console.log(`[parity] forming: ${body.forming.map((f) => f.title).join(', ')}`)
+      return
+    }
+  }
+  console.error('[parity] no forming group showed up')
 }
 
 /**
@@ -132,6 +187,7 @@ async function main() {
   }
   next.on('exit', (code) => process.exit(code ?? 1))
   void pinKeeping()
+    .then(() => seedForming())
     .then(() => {
       const helper = keepHelperConnected()
       next.on('exit', () => clearInterval(helper))
