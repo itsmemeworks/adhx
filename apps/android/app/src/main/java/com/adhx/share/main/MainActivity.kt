@@ -181,14 +181,6 @@ private fun MainApp(
         ConnectedScreen(
             connection = current,
             people = people,
-            onSearch = {
-                Welcome.pending = false
-                library.open(Route.Search)
-            },
-            onSettings = {
-                Welcome.pending = false
-                library.open(Route.Settings)
-            },
             onStart = { Welcome.pending = false },
         )
         return

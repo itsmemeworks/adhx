@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Connected screen has no header on Android either
+
+- Android's just-paired screen (`main/ConnectedScreen.kt`) dropped its Gob + "adhx" + Search/Settings row, as iPhone and the updated j5-6 board have it: the welcome is its own moment and Start watching is the way in. The unused header Gob vector and the `onSearch`/`onSettings` parameters are gone.
+
 ## 2026-10-20 — Android: one-row header everywhere
 
 - Caught up, Channels, a friend's channel and Live used the old two-row header (Gob + "adhx", Search and Settings/sliders, then a tabs pill). They now share the player's one row, as on iPhone: Gob (Settings), New · Channels · Live with New's 99+ badge, Search. `HomeHeader(overMedia)` is the only header: see-through pill over the player, surface (#1a1814) pill and Search on solid pages. `PageHeader` is gone.
