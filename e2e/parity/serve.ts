@@ -18,6 +18,7 @@ import {
   PARITY_OUT,
   PARITY_PORT,
   PARITY_ROOT,
+  PARITY_WORKER_TOKEN,
   parityProcessEnv,
 } from './env'
 import { DOING, POSTS } from './world'
@@ -71,6 +72,33 @@ async function pinKeeping(): Promise<void> {
   }
 }
 
+/**
+ * Keep the Mac helper "connected" (board j8-3): a helper polls
+ * `/api/processing/jobs` with its token every few seconds, and the server
+ * reads the last authorised request as its heartbeat. This one only ever
+ * sends a heartbeat for a lease that doesn't exist, so it never claims,
+ * changes or finishes a job (the server answers 409 and notes it was seen).
+ */
+function keepHelperConnected(): NodeJS.Timeout {
+  const beat = () =>
+    fetch(`${PARITY_ORIGIN}/api/processing/jobs`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PARITY_WORKER_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'heartbeat',
+        id: 'parity-presence',
+        lease: 'parity-presence',
+      }),
+    })
+      .then((r) => r.body?.cancel())
+      .catch(() => {})
+  void beat()
+  return setInterval(beat, 30_000)
+}
+
 async function main() {
   if (await portInUse(PARITY_PORT)) {
     console.error(
@@ -103,7 +131,13 @@ async function main() {
     if (!next.killed) next.kill('SIGTERM')
   }
   next.on('exit', (code) => process.exit(code ?? 1))
-  void pinKeeping().catch((error) => console.error('[parity] pin keeping', error))
+  void pinKeeping()
+    .then(() => {
+      const helper = keepHelperConnected()
+      next.on('exit', () => clearInterval(helper))
+      console.log('[parity] Mac helper connected (heartbeat every 30 s)')
+    })
+    .catch((error) => console.error('[parity] pin keeping', error))
   process.on('SIGINT', shutdown)
   process.on('SIGTERM', shutdown)
 }

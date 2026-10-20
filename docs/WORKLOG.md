@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Web design parity, round two
+
+- **Friend channel** (j3-2): `Masonry rowFirst` lays tiles out row by row into the shortest column (`placeTiles`, measured heights, DOM stays in reading order), upright `shape="tall"` tiles, the note card in the last column under its first tile; "Play the N new" on phones. Tiles of titled networks show the title only (`postTitleLine`). Friend covers prefer kept posts.
+- **Theater**: a saver's note sits on its own line over the byline (it squeezed the faces in narrow stages); the arriving-save toast is one button sitting beside the stage; a moment's byline time is plain; the why panel says "Saved together" in full (`whyDetail`). Caught up on phones follows j2-4; Tonight skips a channel made of the live moment's posts; a lone side moment on Right now keeps its half height.
+- **Settings/doing**: Change picture frames the crop inside the photo (thirds, yellow slider, "From @x on X"), and previews your face on one of your shares; invites list newest first and say "Made by Ana"; /doing says "Instagram Reel".
+- **Harness**: remote processing with a heartbeat-only helper ("Mac helper connected"), j7-2's toast played into the page's stream, j8-2 picks the pub photo through the file input, j2-5 on phones plays the hamster, j7-1's phone line matched. Remaining limits listed in `e2e/parity/README.md`.
+
 ## 2026-10-20 — Design-parity gaps closed: getting ready, new marks, note card, phone weights, live span
 
 - **Getting it ready** (j1-4/j1-5): `GET /api/activity/processing/posts` (`processing/keep-status.ts`, `seenBy` only) says whether each post is `waiting | keeping | converting | kept | none` with step and percent; the theater (`useKeepStatus`, `GettingReadyStage`) covers the stage until the copy is kept, then plays (`POST_KEPT` reloads a failed load). Chips: "Shared with your people" (faces) while yours gets ready, "Kept on your ADHX" on a just-kept post. `keep_jobs.progress` (guarded ALTER) keeps the last written percent; `/doing` uses it too.

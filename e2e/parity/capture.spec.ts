@@ -17,7 +17,7 @@ import http from 'node:http'
 import path from 'node:path'
 import { test, type APIRequestContext, type Page } from '@playwright/test'
 import { PARITY_CREDENTIALS, PARITY_ORIGIN, PARITY_OUT } from './env'
-import type { PersonKey } from './world'
+import { POSTS, type PersonKey } from './world'
 
 interface Member {
   userId: string
@@ -54,6 +54,8 @@ interface Board {
   /** What the board shows, for the report. */
   shows: string
   path: string | ((ctx: Ctx) => Promise<string>)
+  /** Before the page loads (init scripts, routes). */
+  init?: (ctx: Ctx) => Promise<void>
   setup?: (ctx: Ctx) => Promise<void>
   /** Right before the screenshot, after media is settled (for things that fade, like reactions). */
   beforeShot?: (ctx: Ctx) => Promise<void>
@@ -287,6 +289,61 @@ async function babiesMoment(ctx: Ctx): Promise<MomentSummary | null> {
   return body.moments.find((m) => /bab/i.test(m.title)) ?? body.moments[0] ?? null
 }
 
+/** A seeded post's kept file (`.out/media/{platform}/{id}-…/{slot}`). */
+function keptFile(key: string, slot: string): Buffer {
+  const post = POSTS.find((p) => p.key === key)
+  if (!post) throw new Error(`no seeded post ${key}`)
+  const dir = path.join(PARITY_OUT, 'media', post.platform)
+  const folder = fs.readdirSync(dir).find((f) => f.startsWith(`${post.id}-`))
+  if (!folder) throw new Error(`no kept media for ${key}`)
+  return fs.readFileSync(path.join(dir, folder, slot))
+}
+
+/**
+ * In this browser only: remember every EventSource the page opens, so a
+ * capture can play a stream event into it (`streamEvent`). The server's
+ * stream is untouched.
+ */
+async function recordStreams(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as {
+      __parityStreams: EventSource[]
+      EventSource: typeof EventSource
+    }
+    w.__parityStreams = []
+    const Native = w.EventSource
+    w.EventSource = class extends Native {
+      constructor(url: string | URL, init?: EventSourceInit) {
+        super(url, init)
+        w.__parityStreams.push(this)
+      }
+    }
+  })
+}
+
+/** Play one event into the page's open streams whose address contains `match`. */
+async function streamEvent(
+  page: Page,
+  match: string,
+  type: string,
+  data: unknown,
+): Promise<number> {
+  return page.evaluate(
+    ({ match, type, json }) => {
+      const streams =
+        (window as unknown as { __parityStreams?: EventSource[] }).__parityStreams ?? []
+      let n = 0
+      for (const s of streams) {
+        if (s.readyState === EventSource.CLOSED || !s.url.includes(match)) continue
+        s.dispatchEvent(new MessageEvent(type, { data: json }))
+        n++
+      }
+      return n
+    },
+    { match, type, json: JSON.stringify(data) },
+  )
+}
+
 // ——— the boards ———
 
 const BOARDS: Board[] = [
@@ -342,7 +399,8 @@ const BOARDS: Board[] = [
     phone: 'j2-1-phone-new',
     setup: async (ctx) => {
       await attempt(ctx, 'theater ready', () => theaterReady(ctx.page))
-      await playItem(ctx, 'Me at the zoo')
+      // Phones are compared with j2-1, which plays an upright hamster video.
+      await playItem(ctx, ctx.mobile ? 'Same baby, same hamster' : 'Me at the zoo')
       await pausePlayback(ctx.page)
     },
   },
@@ -511,10 +569,11 @@ const BOARDS: Board[] = [
     setup: async (ctx) => {
       await attempt(ctx, 'LIVE · N saves in M min', () =>
         ctx.page
-          .getByText(/^\d+ saves? in \d+ min$/)
+          // Phones run the names on after it ("… · Ana, Ben and 3 others").
+          .getByText(/^\d+ saves? in \d+ min\b/)
           .locator('visible=true')
           .first()
-          .waitFor(),
+          .waitFor({ timeout: 15_000 }),
       )
       const moment = await babiesMoment(ctx)
       if (moment) {
@@ -540,11 +599,56 @@ const BOARDS: Board[] = [
       ctx.hit(`moment ${moment.slug}`)
       return `/play?moment=${encodeURIComponent(moment.slug)}`
     },
-    known: ['“Jo just saved one” toast needs a save landing during the capture.'],
+    init: (ctx) => recordStreams(ctx.page),
     setup: async (ctx) => {
       const { page } = ctx
       await attempt(ctx, 'theater ready', () => theaterReady(page))
       await pausePlayback(page)
+      // "Jo just saved one · playing next": Jo's save of Charlie lands in the
+      // moment, played into this page's stream (the server's stream is untouched).
+      const slug = new URL(page.url()).searchParams.get('moment')
+      if (!slug) return
+      await attempt(ctx, 'Jo just saved one (stream event in the browser)', async () => {
+        const detail = await ctx.request.get(`/api/moments/${encodeURIComponent(slug)}`, {
+          headers: { Cookie: ctx.creds.members.pete.cookie },
+        })
+        const body = (await detail.json()) as {
+          moment: { slug: string; title: string; hue: string }
+          items: Array<{
+            post: { platform?: string; id: string; text?: string }
+            savers?: Array<{ username: string }>
+          }>
+        }
+        const jo = body.items.flatMap((i) => i.savers ?? []).find((s) => s.username === 'jo')
+        const charlie = POSTS.find((p) => p.key === 'charlie')
+        const post =
+          body.items.find((i) => i.post.platform === charlie?.platform && i.post.id === charlie?.id)
+            ?.post ?? body.items[body.items.length - 1]?.post
+        if (!jo || !post) throw new Error('no Jo or post in the moment')
+        const at = new Date().toISOString()
+        const sent = await streamEvent(page, 'watch=', 'save', {
+          type: 'save',
+          item: {
+            id: `parity-${Date.now()}`,
+            key: `${post.platform ?? 'twitter'}:${post.id}`,
+            at,
+            post,
+            to: {
+              kind: 'moment',
+              slug: body.moment.slug,
+              title: body.moment.title,
+              hue: body.moment.hue,
+            },
+          },
+          saver: { ...jo, savedAt: at, isYou: false },
+        })
+        if (!sent) throw new Error('no open moment stream')
+        await page
+          .getByText(/just saved one/)
+          .locator('visible=true')
+          .first()
+          .waitFor({ timeout: 5_000 })
+      })
     },
     beforeShot: async (ctx) => {
       const { page } = ctx
@@ -591,9 +695,30 @@ const BOARDS: Board[] = [
     as: 'pete',
     shows: 'Settings, Change picture dialog',
     path: '/settings',
-    known: ['The dialog opens empty: the board shows an uploaded pub-night.jpg being cropped.'],
+    known: [
+      'Pete has no X connected here, so “Use your X picture” is left out (the board has it).',
+    ],
     setup: async (ctx) => {
-      await attempt(ctx, 'Change picture dialog', () => clickText(ctx.page, 'Change picture'))
+      const { page } = ctx
+      await attempt(ctx, 'Change picture dialog', () => clickText(page, 'Change picture'))
+      // The board crops pub-night.jpg: pick the seeded pub photo through the
+      // file input, in the browser only (nothing is saved).
+      await attempt(ctx, 'pub-night.jpg picked', async () => {
+        const buffer = keptFile('pub', 'photo-1.jpg')
+        await page
+          .locator('input[type="file"][aria-label="Upload a photo"]')
+          .setInputFiles({ name: 'pub-night.jpg', mimeType: 'image/jpeg', buffer })
+        await page.getByText('Drag to move. Slide to zoom.').waitFor({ timeout: 10_000 })
+      })
+      // Zoomed in a little, like the board's slider.
+      await attempt(ctx, 'zoomed', () =>
+        page.getByRole('slider', { name: 'Zoom' }).evaluate((el) => {
+          const input = el as HTMLInputElement
+          const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+          set?.call(input, '1.25')
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+        }),
+      )
     },
   },
   {
@@ -647,6 +772,7 @@ for (const board of BOARDS) {
     let url = '/'
     try {
       url = typeof board.path === 'string' ? board.path : await board.path(ctx)
+      if (board.init) await board.init(ctx)
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 })
       await page.waitForLoadState('load', { timeout: 60_000 }).catch(() => {})
       await page.waitForTimeout(1_500)

@@ -99,6 +99,13 @@ The parity server runs with `SEMANTIC_SEARCH=off` (search is keywords plus
 seeded speech and on-screen words), `AUTO_SYNC_EVERY_MINUTES=0`, and FxTwitter /
 Instagram / TikTok lookups pointed at a dead local port, so nothing goes online.
 
+It also runs with `PROCESSING_MODE=remote` and a local-only
+`PROCESSING_WORKER_TOKEN` (`env.ts`). Once Next is up, `parity:serve` posts a
+heartbeat to `/api/processing/jobs` every 30 s with that token, for a lease
+that doesn't exist: the server answers 409, never claims or changes a job, and
+notes the helper as seen, so /doing says "Mac helper connected" (j8-3). With
+semantic search off nothing is ever leased to it.
+
 ## Media
 
 `PARITY_MEDIA_SRC` is an ADHX `MEDIA_DIR` holding the boards' posts (folders
@@ -111,7 +118,18 @@ Without it (CI), every file is a generated ffmpeg placeholder and
 `/api/views`, `/api/app/seen` and `/api/understanding/prioritize` are answered
 in the browser, the new invite on board 5.1 is mocked, and j1-5's "kept" is a
 rewrite of `/api/activity/processing/posts` in the browser, so captures can run
-again and again. People using the web app by hand do change it: playing your
+again and again. Two more happen in the page only:
+
+- **j7-2**: an init script (`recordStreams`) remembers the page's EventSources;
+  `streamEvent` plays one `save` event (Jo saving Charlie into the moment) into
+  them, so "Jo just saved one · playing next" and the Up next row are the
+  theater's real handling of a save. The server's stream is untouched.
+- **j8-2**: the seeded pub photo (`.out/media/…/photo-1.jpg`) is picked through
+  the dialog's file input as `pub-night.jpg` and zoomed a little. Nothing is
+  saved.
+
+Phone comparisons play the phone board's post where it differs: j2-5 on a
+phone plays the upright hamster video (j2-1), not Me at the zoo. People using the web app by hand do change it: playing your
 own saves queues understanding work that nothing drains (the model is off), so
 `/doing` grows "learning" rows. Restart `parity:serve` to reset.
 
@@ -121,3 +139,14 @@ Add an entry to `BOARDS` in `capture.spec.ts`: the member, the URL, a `setup`
 that puts the screen into the board's state (wrap each step in `attempt` so a
 miss is recorded rather than failing the run), `seek` for a stable video frame,
 `phone` for the closest phone board, and `known` for states the data can't show.
+
+## Known limits (left as they are)
+
+- **Moment names**: "Baby", "Dark" rather than "Babies vs objects" (see Right now above). Don't add the boards' names to `MOMENT_TOPICS`.
+- **j3-2**: the grid is the board's (row-first masonry: newest along the top, then the shortest column; the note card in the last column under its first tile; upright tiles). The tiles aren't the board's eight: Ana's channel also holds the zoo, the second hamster, the bird and the synth patch, which other boards need her to have saved, and the board's own time labels ("2h ago", "5h ago", "3 days ago") contradict its order, so no newest-first seed reproduces it. Hence "8 you haven't seen", not 4.
+- **j4-1 / j4-2**: without the model the lead is the best keyword match. "the baby that bites his brother’s finger" has no words in Charlie's speech (the real transcript has none of them), so "Same baby, same hamster" leads; dark chocolate's on-screen words repeat its caption, so the match is credited to the caption ("In the words"), not "On screen". Changing the caption would break j1-4/j1-5.
+- **j5-5**: the server is on 127.0.0.1, so the page rightly warns that a phone can't reach it.
+- **j8-2**: Pete has no X connected, so "Use your X picture" isn't offered.
+- **j8-3**: "Needs you" sorts first on purpose (it must survive the 60-row cut), and Pete can't retry Mum's post (only people who saved it can).
+- **j7-1**: the lead reads RISING or LIVE from real save times, and a forming group (Kitchen synths) can't exist with `MOMENT_MIN_SAVERS=1`.
+- Phone boards include native chrome (two-row header, no web tab bar, store buttons) that mobile web doesn't copy.
