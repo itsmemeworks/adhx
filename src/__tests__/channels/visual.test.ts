@@ -69,7 +69,7 @@ async function seed(privateIndex = -1) {
       .values({
         platform: 'twitter',
         postId: String(i),
-        slot: 'poster',
+        slot: 'photo-1',
         path: 'poster.jpg',
         mime: 'image/jpeg',
         bytes: image.length,
@@ -101,7 +101,7 @@ afterEach(async () => {
 
 describe('visual channel policy', () => {
   it('changes only known names, true borderline members and confident decisions', () => {
-    const samples = sampleMembers(view().keys)
+    const samples = sampleMembers(view().keys).map((sample) => ({ ...sample, canExclude: true }))
     const result = interpretVisualAnswers(samples, ['Cats', 'Cute animals'], {
       name: { choice: 'n1', confidence: 0.9 },
       fit_p0: { choice: 'off_topic', confidence: 1 },
@@ -303,6 +303,38 @@ describe('durable optional image work', () => {
     expect(ask).toHaveBeenCalledOnce()
     expect(row().status).toBe('ready')
   })
+
+  it.each(['poster', 'photo-with-video'])(
+    'never excludes a whole video based on one still (%s)',
+    async (kind) => {
+      await seed()
+      if (kind === 'poster')
+        instance.db.run(sql`UPDATE kept_files SET slot = 'poster' WHERE post_id = '7'`)
+      else
+        instance.db
+          .insert(schema.keptFiles)
+          .values({
+            platform: 'twitter',
+            postId: '7',
+            slot: 'video-1',
+            path: 'unused.mp4',
+            mime: 'video/mp4',
+            bytes: 4,
+            createdAt: '2026-10-20',
+          })
+          .run()
+      visualChannel(view(), USER_A)
+      await processVisualChannel({
+        prepare: async () => new Uint8Array([1]),
+        ask: async (_posts, questions) => {
+          expect(questions.fit_p7).toBeUndefined()
+          return { fit_p7: { choice: 'off_topic', confidence: 1 } }
+        },
+      })
+      expect(visualChannel(view(), USER_A).keys).toContain('twitter:7')
+      expect(JSON.parse(row().result!).excluded).toEqual([])
+    },
+  )
   it('recovers a stale running claim and discards stale results after a channel revision', async () => {
     await seed()
     visualChannel(view(), USER_A)

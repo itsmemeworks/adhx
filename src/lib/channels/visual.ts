@@ -28,7 +28,14 @@ import {
 
 const WEEK = 7 * 24 * 60 * 60_000
 const MAX_JOBS = 256
-type Source = { key: string; text: string; file: string; bytes: number; changed: string }
+type Source = {
+  key: string
+  text: string
+  file: string
+  bytes: number
+  changed: string
+  canExclude: boolean
+}
 type Payload = { channel: VisualChannel }
 type Job = {
   scope: string
@@ -78,8 +85,12 @@ function sourcesFor(channel: VisualChannel, userId: string | null): Source[] {
     bytes: number
     created_at: string
     slot: string
+    moving: number
   }>(sql`
-    SELECT platform, post_id, path, bytes, created_at, slot FROM kept_files
+    SELECT platform, post_id, path, bytes, created_at, slot,
+      EXISTS(SELECT 1 FROM kept_files v WHERE v.platform = kept_files.platform AND v.post_id = kept_files.post_id
+        AND (v.slot LIKE 'video-%' OR v.slot LIKE 'audio-%')) AS moving
+    FROM kept_files
     WHERE post_id IN (${sql.join(
       ids.map((id) => sql`${id}`),
       sql`, `,
@@ -97,6 +108,7 @@ function sourcesFor(channel: VisualChannel, userId: string | null): Source[] {
         file: file.path,
         bytes: file.bytes,
         changed: file.created_at,
+        canExclude: file.slot.startsWith('photo-') && !file.moving,
       })
   }
   return channel.keys.map((key) => found.get(key)).filter((s): s is Source => !!s)
@@ -290,7 +302,7 @@ async function tick(deps: VisualDeps) {
       if (!source) continue
       const jpeg = await (deps.prepare ?? prepareChannelImage)(source)
       if (!jpeg) continue
-      samples.push(sample)
+      samples.push({ ...sample, canExclude: source.canExclude })
       posts.push({ id: sample.id, words: source.text, jpeg })
     }
     if (posts.length < 2) throw new Error('Channel images temporarily unavailable')

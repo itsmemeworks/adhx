@@ -13,7 +13,9 @@ import {
 import { CHANNEL_NAMES } from '../src/lib/channels/names'
 
 async function main() {
-  const samples = sampleMembers(Array.from({ length: 8 }, (_, i) => `synthetic:${i}`))
+  const samples = sampleMembers(Array.from({ length: 8 }, (_, i) => `synthetic:${i}`)).map(
+    (sample) => ({ ...sample, canExclude: true }),
+  )
   const posts = []
   for (const sample of samples) {
     const food = sample.id === 'p7'

@@ -94,7 +94,9 @@ existing shares keep their slug. Display-name collisions retain baseline names.
 
 Names require confidence ≥0.8; exclusion and repeat judgments require ≥0.95.
 Only sampled borderline members can be excluded, with at least two central
-samples as evidence, and never if fewer than four posts would remain. Repeated
+samples as evidence, and never if fewer than four posts would remain. Poster-only
+video/audio samples cannot cause a membership exclusion, regardless of provider
+confidence: one still cannot establish the contents of the whole clip. Repeated
 posts are spread out when alternatives exist and still play eventually. Covers
 prefer a mean quality score ≥2.5/4 with confidence ≥0.35, allowing uncertainty
 between adjacent good/excellent levels. These are conservative starting rules,

@@ -8,7 +8,7 @@ export type VisualChannel = {
   size: number
   coverKeys?: string[]
 }
-export type VisualSample = { key: string; id: string; borderline: boolean }
+export type VisualSample = { key: string; id: string; borderline: boolean; canExclude?: boolean }
 export type VisualResult = {
   name?: string
   excluded: string[]
@@ -48,7 +48,11 @@ export function visualQuestions(
       instructions: `How well would ${sample.id} represent a channel about ${current}? Prefer clear, relevant imagery; avoid blank frames, logos, title cards, promotional overlays and unreadable crops.`,
       criteria: ['unusable', 'poor', 'usable', 'good', 'excellent'],
     }
-    if (sample.borderline && samples.filter((s) => !s.borderline).length >= 2)
+    if (
+      sample.borderline &&
+      sample.canExclude === true &&
+      samples.filter((s) => !s.borderline).length >= 2
+    )
       questions[`fit_${sample.id}`] = {
         type: 'choice',
         instructions: `Does ${sample.id} clearly belong with the central posts in this ${current} channel? Judge the common topic and purpose of the central posts, not merely visual style or the channel's provisional name. Only choose off_topic for positive evidence of a different subject. A single poster cannot establish what a whole video contains; use uncertain if unsure.`,
@@ -97,6 +101,7 @@ export function interpretVisualAnswers(
     const fit = answers[`fit_${sample.id}`]
     if (
       sample.borderline &&
+      sample.canExclude === true &&
       samples.filter((s) => !s.borderline).length >= 2 &&
       fit?.choice === 'off_topic' &&
       certain(fit)
