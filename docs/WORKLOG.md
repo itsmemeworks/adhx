@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — iPhone: sound and fit remembered, people row, 720p
+
+- Sound: the player's sound button now sets "Sound on by default" (`Playback.setSound`), so turning sound on keeps it on for every video, every feed and after a restart, until it's turned off. Open players follow the change (`Playback.choicesChanged`), and so does Settings' toggle.
+- Fit video: a new More toggle beside Sound. Off (the default) fills the screen like the boards; on shows each video whole at its own shape. Remembered in `Prefs.fitVideo`; the poster follows it too. Checked in the simulator: both choices carried to the next video and were saved.
+- Channels → Your people: fewer than five sit together from the left (a lone face and Invite drifted apart before); five spread across the row as on the board; more scroll.
+- The More sheet names video quality by the short side (720×1280 is 720p, not 1280p), as Android and the send sheet already do.
+
 ## 2026-10-20 — Right now: the lead card keeps its size on a busy server
 
 - With many moments, every one stacked beside the lead, so the lead card stretched to their height and left a huge empty card (seen on real data: AI music beside six moments). Now two sit beside the lead, as on the board, and the rest wrap into a three-column row below (`SIDE_CARDS` in `RightNow.tsx`). Component test covers six moments.
