@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-20 — Android: send text posts to your people
+
+- Share on a text post or article now opens the send sheet too ("Sending the words"): Chat, Mail and More send its words, and "Or straight to your people" sends the post, as for videos and photos. Before, words went straight to the system share sheet, so text posts couldn't be sent to a member from the phone (board j4-4 gap).
+
 ## 2026-10-20 — Mac allocation tuning and isolated throughput experiments
 
 - In flight: opt-in `SEMANTIC_MEMORY_PROFILE=compact` disables ONNX CPU arenas/patterns without changing the pinned model, precision, inputs or index version; standard remains the application default.

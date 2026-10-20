@@ -287,8 +287,8 @@ rather than a link: a video, sound or photos open the send sheet, which fetches
 the file (`?download=1`, with how far along) and hands it to Chat, Mail, Files,
 Save to phone or the share sheet, or sends the post straight to one of your
 people (a face each, from `GET /api/app/send`; a tap is `POST /api/app/send`
-and leaves a tick; someone who has it is dimmed); a text post's words go straight to the share
-sheet. A post whose copy is still being kept says so instead. Share downloads use separate private
+and leaves a tick; someone who has it is dimmed); a text post or article gets the same sheet, sending
+its words through Chat, Mail or More, or the post straight to your people. A post whose copy is still being kept says so instead. Share downloads use separate private
 cache batches, so starting another share keeps earlier recipients' files usable.
 Failed batches are removed immediately; batches older than 24 hours are removed
 on later exports, excluding downloads still active in the app. Share downloads check

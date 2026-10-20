@@ -461,18 +461,8 @@ fun PlayerScreen(
                     }
                 },
                 onShare = {
-                    // Videos, sounds and photos go through the send sheet; words straight to the share sheet.
-                    if (ShareKept.files(post, server).isNotEmpty()) {
-                        sendingPost = post
-                    } else if (sharing == null) {
-                        sharing = post.key
-                        shareProgress = null
-                        scope.launch {
-                            val problem = ShareKept.share(context, server, post) { shareProgress = it }
-                            sharing = null
-                            problem?.let { notice = Notice(it) }
-                        }
-                    }
+                    // Every post goes through the send sheet: files or words, and straight to your people.
+                    sendingPost = post
                 },
                 onSeek = { ms -> player?.seekTo(ms) },
             )
