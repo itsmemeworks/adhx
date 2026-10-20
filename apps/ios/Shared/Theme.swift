@@ -105,11 +105,11 @@ extension View {
     /// The boards' serif headings that wrap (`line-height: 0.95`): lines that
     /// nearly touch. Text can only tighten its leading from iOS 26; earlier it
     /// keeps the font's own.
-    /// The API is in the iOS 26 SDK (Swift 6.2, Xcode 26); an older Xcode
-    /// builds the fallback.
+    /// The API only exists in newer SDKs, so older Xcodes (CI's `macos-15`
+    /// image) build without it and keep the font's own leading.
     @ViewBuilder
     func tightLines(_ size: CGFloat, factor: CGFloat = 0.95) -> some View {
-        #if compiler(>=6.2)
+        #if compiler(>=6.4)
         if #available(iOS 26.0, *) {
             // An exact line height keeps the font's full ascent above the first
             // line, where CSS splits the cut between top and bottom: move the
