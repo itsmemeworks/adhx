@@ -21,6 +21,20 @@ class BoardFeaturesTest {
     // 1. Send straight to your people
 
     @Test
+    fun aPostSentToYouIsToldApartForNewsKindFilter() {
+        val sent = json.decodeFromString(
+            PhonePost.serializer(),
+            """{"platform":"x","id":"1","kind":"text","whyReasons":[{"kind":"sent","text":"Ana sent you this","username":"ana"}]}""",
+        )
+        val plain = json.decodeFromString(
+            PhonePost.serializer(),
+            """{"platform":"x","id":"2","kind":"text","whyReasons":[{"kind":"together","text":"Ana and Ben saved this"}]}""",
+        )
+        assertTrue(sent.sentToYou)
+        assertFalse(plain.sentToYou)
+    }
+
+    @Test
     fun sendTargetsReadLooselyAndSayWhoHasIt() {
         val body = json.decodeFromString(
             SendTargets.serializer(),

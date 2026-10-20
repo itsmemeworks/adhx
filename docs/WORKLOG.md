@@ -10,6 +10,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 - In New, swiping up on a one-photo post didn't move to the next save: the photo sat in a paging `TabView`, which swallowed the vertical swipe. A single photo is now drawn without the pager (albums keep it). Checked in the simulator: the same 500 pt swipe from the middle of the photo stays put on `main` and moves on with the fix.
 
+## 2026-10-20 — Phones keep sent posts past their own kind filter
+
+- Both apps re-filter New by kind on the phone (for servers that ignore `types`), which dropped a sent text post #576 lets through on the server. `PhonePost.sentToYou` (a `sent` reason) now passes that filter on iOS (`FeedModel.load`) and Android (`FeedViewModel`), found by the Android parity re-check on final main.
+
 ## 2026-10-20 — Channel curation reconciled with current main
 
 - Integrated the latest privacy, admin and phone updates without replacing their schema or documentation. Both admin counters and image-curation tables install together; account-reference regression expectations include both sets of guards.

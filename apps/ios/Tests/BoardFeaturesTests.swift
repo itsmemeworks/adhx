@@ -41,6 +41,11 @@ struct BoardFeaturesTests {
         check(!justYou.sendable && justYou.people.isEmpty, "a private save isn't sendable")
         check(try decode(SendTargets.self, #"{"people":[]}"#).sendable, "sendable defaults on")
 
+        // A post sent to you passes New's kind filter (sentToYou), others don't.
+        let sentText = try decode(PhonePost.self, #"{"platform":"x","id":"1","kind":"text","author":{"handle":"ana"},"whyReasons":[{"kind":"sent","text":"Ana sent you this","username":"ana"}]}"#)
+        let plainText = try decode(PhonePost.self, #"{"platform":"x","id":"2","kind":"text","author":{"handle":"ben"},"whyReasons":[{"kind":"together","text":"Ana and Ben saved this"}]}"#)
+        check(sentText.sentToYou && !plainText.sentToYou, "a send is told apart")
+
         let result = try decode(SendResult.self, """
         {"sent":["ana"],"skipped":[{"username":"ben","reason":"has"},{"username":"zed","reason":"unknown"},{"x":1}]}
         """)

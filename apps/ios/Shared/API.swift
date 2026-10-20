@@ -191,6 +191,11 @@ struct ReasonPost: Decodable, Hashable {
 }
 
 /// A post ready to play. Addresses are relative to the server.
+extension PhonePost {
+    /// Someone sent it to you and you haven't seen it yet ("Pete sent you this").
+    var sentToYou: Bool { whyReasons.contains { $0.kind == "sent" } }
+}
+
 struct PhonePost: Decodable, Hashable {
     let platform: String
     let postId: String
