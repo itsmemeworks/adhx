@@ -154,6 +154,8 @@ struct Gob: View {
 
     var size: CGFloat = 30
     var mood: Mood = .idle
+    /// Its body colour (the Gob faces you can pick for your picture).
+    var colour: Color = Theme.accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bobUp = false
 
@@ -169,10 +171,10 @@ struct Gob: View {
             context.rotate(-4, around: CGPoint(x: 48, y: 50))
 
             context.fill(Path(roundedRect: CGRect(x: 10, y: 14, width: 76, height: 72), cornerRadius: 28),
-                         with: .color(Theme.accent))
+                         with: .color(colour))
             context.fill(Path(ellipseIn: Self.circle(36, 46, 7)), with: .color(Self.ink))
             context.fill(Path(ellipseIn: Self.circle(63, 42, 11)), with: .color(Self.ink))
-            context.fill(Path(ellipseIn: Self.circle(66, 39, 3.5)), with: .color(Theme.accent))
+            context.fill(Path(ellipseIn: Self.circle(66, 39, 3.5)), with: .color(colour))
 
             if mood == .busy {
                 context.fill(Path(ellipseIn: Self.circle(49, 69, 5)), with: .color(Self.ink))

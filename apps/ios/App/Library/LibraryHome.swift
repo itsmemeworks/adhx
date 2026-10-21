@@ -27,7 +27,6 @@ struct LibraryHome: View {
     /// A tapped "… is live" notification.
     @ObservedObject private var alerts = AlertCenter.shared
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tab: HomeTab = .new
     @State private var clean = false
@@ -429,10 +428,6 @@ struct LibraryHome: View {
                 EmptyShares()
             }
             Spacer(minLength: 0)
-            Button("Open my ADHX") {
-                if let server = model.server { openURL(server) }
-            }
-            .buttonStyle(PillButtonStyle(kind: .primary))
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 12)

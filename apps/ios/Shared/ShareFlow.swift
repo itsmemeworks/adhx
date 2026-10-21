@@ -83,11 +83,10 @@ final class ShareFlow: ObservableObject {
         return ADHXClient.resolve(result?.posterUrl, against: server)
     }
 
-    /// The app, on this post; the website only when there's no post yet.
+    /// The app, on this post when there is one; never the website.
     var openURL: URL? {
         if let r = result, let url = Links.post(platform: r.platform, id: r.id) { return url }
-        guard let server else { return nil }
-        return ADHXClient.resolve(result?.openPath, against: server) ?? server
+        return Links.app
     }
 
     var networkName: String { result?.network ?? Network.name(platform) }

@@ -126,14 +126,80 @@ struct GobShape: InsettableShape {
     }
 }
 
+/// Your own picture, wherever "you" is drawn (`/api/app/me`). Refreshed when
+/// the app comes back and after you change it, so every face of yours changes
+/// at once: your reactions in Live and on posts, savers rows, your people and
+/// Settings.
+@MainActor
+final class YourFace: ObservableObject {
+    static let shared = YourFace()
+
+    @Published private(set) var username: String?
+    @Published private(set) var avatarUrl: String?
+    /// upload · gob · x · generated, once a newer server has said.
+    @Published private(set) var source: String?
+
+    private init() {
+        username = Store.username
+        avatarUrl = Store.avatarUrl
+        source = Store.avatarSource
+    }
+
+    /// Re-reads what's stored (the Share Extension or a new connection).
+    func reload() {
+        username = Store.username
+        avatarUrl = Store.avatarUrl
+        source = Store.avatarSource
+    }
+
+    /// `/api/app/me` answered.
+    func update(_ me: MeResult) {
+        if let name = me.username { Store.username = name }
+        Store.avatarUrl = me.avatarUrl?.isEmpty == false ? me.avatarUrl : nil
+        if let source = me.avatarSource { Store.avatarSource = source }
+        reload()
+    }
+
+    /// Your picture changed on this phone.
+    func update(avatarUrl: String?, source: String) {
+        Store.avatarUrl = avatarUrl?.isEmpty == false ? avatarUrl : nil
+        Store.avatarSource = source
+        reload()
+    }
+
+    /// Whether this saver is you (marked so, or by your username).
+    func isYou(_ saver: Saver) -> Bool {
+        if saver.isYou { return true }
+        guard let username, !username.isEmpty else { return false }
+        return YourPicture.sameName(saver.username, username)
+    }
+
+    /// The picture to draw for a saver: yours as this phone knows it when
+    /// it's you (a letter only when you really have none), theirs otherwise.
+    func picture(for saver: Saver) -> String? {
+        guard isYou(saver) else { return saver.avatarUrl }
+        return YourPicture.choose(stored: avatarUrl, source: source, sent: saver.avatarUrl)
+    }
+
+    /// You, as a saver with your picture (for your own reactions).
+    func you(from known: Saver? = nil) -> Saver {
+        let name = known?.username ?? username ?? "you"
+        let picture = picture(for: Saver(username: name, avatarUrl: known?.avatarUrl, isYou: true))
+        return Saver(username: name, name: known?.name, avatarUrl: picture, savedAt: known?.savedAt,
+                     isYou: true, note: known?.note)
+    }
+}
+
 /// One person's face, Gob shaped: their photo (`AuthImage`), or their
 /// initial on a colour of their own. Decorative: whoever shows it says the names.
+/// Your own face is always your current picture (`YourFace`).
 struct Face: View {
     let saver: Saver
     var server: URL?
     var size: CGFloat = 30
     /// The ring that separates overlapping faces (the colour behind them).
     var ring: Color = .black
+    @ObservedObject private var yours = YourFace.shared
 
     /// The boards' five face colours, in the web's `FACE_COLOURS` order
     /// (`src/components/next/faces.ts`), so a person has one colour everywhere.
@@ -161,7 +227,7 @@ struct Face: View {
     var body: some View {
         ZStack {
             initial
-            if let server, let url = ADHXClient.resolve(saver.avatarUrl, against: server) {
+            if let server, let url = ADHXClient.resolve(yours.picture(for: saver), against: server) {
                 // Faces are for members only: loaded with the phone key.
                 AuthImage(url: url) { Color.clear }
             }
