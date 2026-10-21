@@ -27,6 +27,7 @@ import com.adhx.share.net.PhonePost
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.SerifFamily
+import com.adhx.share.ui.rememberLinked
 
 /**
  * All of a long text post or article, as a normal scrolling page: the title
@@ -67,7 +68,8 @@ fun Reader(post: PhonePost, onClose: () -> Unit) {
                 Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (post.text.isNotBlank()) {
-                Text(post.text, fontFamily = SerifFamily, fontSize = 22.sp, lineHeight = 32.sp, color = AdhxColors.Cream)
+                // Links in the words open in the browser.
+                Text(rememberLinked(post.text), fontFamily = SerifFamily, fontSize = 22.sp, lineHeight = 32.sp, color = AdhxColors.Cream)
             }
         }
         val read = if (scroll.maxValue > 0) scroll.value.toFloat() / scroll.maxValue else 1f

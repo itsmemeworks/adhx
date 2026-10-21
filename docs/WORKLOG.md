@@ -6,6 +6,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Reactions kept on every post, and replayed
+
+- Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.
+- Visibility follows the post (`seenBy`): a Just for me–only post keeps its reactions to its owner; banned reactors never shown; hidden posts return none; nothing signed out. Live reactions are now stored too, with the id the room saw.
+- Web: the React button is on every post in `TheaterV2` (signed out → `/start`); yours floats at once; `useReactionReplay` floats the newest 12 when a post settles (600 ms, 350 ms apart, once per post per page load). PRIVACY.md and /privacy updated.
+- Follow-ups: the iOS and Android players against the same contract (separate work).
+
+## 2026-10-21 — Android: fit and dock, logo bylines, tappable links, hold to hide, photo timer
+
+- Player (`PlayerScreen.kt`): Sound and Fit video are remembered in `SettingsPrefs` (`soundOn`, new `fitVideo`), as on iPhone. Videos now fill the screen by default (the old upright-fills/wide-fits rule is gone); Fit shows them whole. More's picture-in-picture row is now "Dock".
+- Byline: the network's mark before who posted it (`bylineName`: name, else the network's name, else the handle) instead of "YouTube · name".
+- Links in captions, the words card and the reader are shortened to site/path and open in the browser (`Links.spans`/`Links.short`, `ui/LinkedText.kt`).
+- Hold the stage to hide the chrome; a tap brings it back, the next tap pauses/plays. Photos show 10s each (`PhotoTimer`, `afterPhoto`): next album photo, then the next save; tap pauses; Repeat loops the post; held while a sheet/picker is open. Progress uses the video line.
+- Search words tiles: serif words on a surface card below the pills (no more clipped first line), author and savers at the bottom. Channels → Your people: fewer than five sit left with a 14dp gap. Send sheet: "Send via" with WhatsApp (falls back to the share sheet), Copy (the ADHX link) and More.
+- Unit tests in `PlayerPolishTest`. Checked on the emulator against a parity server: mark bylines, hold/tap/tap on a video and a photo, album advance and pause, Fit and Sound kept in prefs, Dock row, send sheet (Copy, WhatsApp falls back to the share sheet), search words tiles, five people spread. Not seen there: links in post words (no linked posts in the seed) and fewer than five people.
+
 ## 2026-10-21 — Landscape for watching; full articles, words and tiles on phones
 
 - Landscape is only for watching (iOS `App/Orientation.swift`): the plist allows landscape, `AppDelegate` answers from `OrientationGate`, where each player says "may turn" while it's showing (`mayTurnToWatch()`) and anything over it says "upright" while it's up (`uprightWhile`: board sheets, More, the reader, the send sheet, a friend's channel). Newest wins; losing landscape turns the phone back. Turned sideways the player hides its chrome, fits the media whole and taps only pause; turning back restores the chrome. Debug: `-adhxTurn landscape -adhxTurnAfter 6`.

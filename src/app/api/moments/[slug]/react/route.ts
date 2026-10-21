@@ -6,8 +6,9 @@ import { react } from '@/lib/moments/react'
  * POST /api/moments/{slug}/react `{ emoji | text, platform, id }` — a reaction
  * while tuned in: one of 😂 🔥 😭 👀 💀 ❤️, or a few words (≤40 characters,
  * control characters dropped, shown as text only). Signed in only,
- * rate-limited per person, never stored: it goes out as a `reaction` event to
- * the members watching this moment. → `{ id, at }`.
+ * rate-limited per person: it goes out as a `reaction` event to the members
+ * watching this moment, and is kept on the post (`post_reactions`, same id) so
+ * it replays later for members who can see the post. → `{ id, at }`.
  */
 export const dynamic = 'force-dynamic'
 
