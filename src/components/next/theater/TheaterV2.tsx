@@ -4,7 +4,7 @@ import { networkLabel } from '@/lib/platform/networks'
 import { NetworkIcon } from '../NetworkIcon'
 
 import { composeArticleCopy, fetchArticleMarkdown } from '@/lib/theater/article-body'
-import { RichText, postBody } from '../rich-text'
+import { postBody } from '../rich-text'
 import { ArticleReader } from '../stages/ArticleReader'
 import { timeAgo, useMomentStream } from '../moments/live'
 import {
@@ -68,8 +68,7 @@ import { useTheaterSoundPreference } from '@/components/theater/useTheaterSoundP
 import { usePreferencesOptional } from '@/lib/preferences-context'
 import { useMobileSwipeNavigation } from '@/components/theater/useMobileSwipeNavigation'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
-import { articleHeadline, mediaAspect, postAuthor, postCoverSrc } from '../post'
-import { NxAvatar } from '../primitives'
+import { articleHeadline, hasFullArticle, mediaAspect, postAuthor, postCoverSrc } from '../post'
 import { PrivateLock, SaversButton } from '../SaverFaces'
 import { bylineNote, SaverNote } from '../SaverNote'
 import type { Saver } from '@/lib/people/types'
@@ -149,7 +148,6 @@ import {
   postWords,
   queueSavers,
   savedAgo,
-  sourceLine,
   useWide,
 } from './TheaterLayout'
 import { SEEN_AFTER_MS, useSeenPosts } from './useSeenPosts'
@@ -168,27 +166,22 @@ import { channelTitle } from '../channels/ChannelParts'
 import { useBusyLogo } from '../logo-busy'
 import { POST_KEPT, POST_SAVED as NX_POST_SAVED } from '@/lib/theater/client-events'
 import { GettingReadyStage, KeptChip, SharedWithChip } from './GettingReady'
+import { OriginalSheet } from './OriginalSheet'
 import { onItsWay, useKeepStatus } from './useKeepStatus'
 import { useReactionReplay } from './useReactionReplay'
 
 /** How long a reaction floats on screen. */
 const REACTION_MS = 4_400
+/** How long a short player message (“Link copied”) stays up, as on the phones. */
+export const PLAYER_TOAST_MS = 3_000
 /** At most this many float at once (a replay sends up to 12). */
 const MAX_FLOATS = 12
-
-/** X articles carry their whole body; other links only have a preview. */
-function hasFullArticle(post: FeedItem): boolean {
-  if ((post.platform ?? 'twitter') !== 'twitter') return false
-  if (post.articleContent?.blocks?.length) return true
-  const url = post.articlePreview?.url ?? ''
-  return /^https:\/\/(x|twitter)\.com\/[^/]+\/article\//.test(url)
-}
 
 type Load =
   | { status: 'loading' }
   | { status: 'error'; missing?: boolean; busy?: boolean }
   | { status: 'ready' }
-type Panel = null | 'queue' | 'more' | 'save' | 'share' | 'why'
+type Panel = null | 'queue' | 'more' | 'save' | 'share' | 'why' | 'original'
 
 type QueueResponse = SearchResponse & {
   name?: string
@@ -431,8 +424,6 @@ export function TheaterV2({
   const [created, setCreated] = useState<{ tag: string; shareUrl: string | null } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
-  /** The caption over a video or photo is open in full. */
-  const [captionOpen, setCaptionOpen] = useState(false)
   /** How far through the article on stage (0–1); the bottom bar shows and moves it. */
   const [articleProgress, setArticleProgress] = useState(0)
   /** The post on stage is taller than the screen. */
@@ -717,10 +708,22 @@ export function TheaterV2({
     [savers],
   )
 
-  const flash = useCallback((message: string, ms = 2200) => {
+  // A short message (“Link copied”) for 3 s, in the top pill's place; a new one replaces it.
+  const toastTimer = useRef<number | null>(null)
+  const flash = useCallback((message: string) => {
+    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current)
     setToast(message)
-    window.setTimeout(() => setToast((t) => (t === message ? null : t)), ms)
+    toastTimer.current = window.setTimeout(() => {
+      toastTimer.current = null
+      setToast(null)
+    }, PLAYER_TOAST_MS)
   }, [])
+  useEffect(
+    () => () => {
+      if (toastTimer.current !== null) window.clearTimeout(toastTimer.current)
+    },
+    [],
+  )
 
   /** What this session plays, in words: “goat”, a channel's name, "your saves". */
   const sourceName = source.shared
@@ -751,7 +754,6 @@ export function TheaterV2({
       // Moving on before 2s is skipping it, which counts as seen too.
       markSeen(currentKeyRef.current)
       setCaughtUp(false)
-      setCaptionOpen(false)
       setArticleProgress(0)
       setLongPost(false)
       setEnded(false)
@@ -1042,7 +1044,6 @@ export function TheaterV2({
         source.shared
           ? 'Now: more like this, from everyone’s saves'
           : `That’s everything from ${sourceName}. Now: more like the last one`,
-        5000,
       )
       return goTo(after)
     }
@@ -1126,7 +1127,7 @@ export function TheaterV2({
   // A long post is read like an article: no timer, the bar shows how far down you are.
   const timed = !!current && !isVideo && kind !== 'article' && !longPost
   const dwell = useDwell({
-    active: timed && !ended && !caughtUp && panel === null && !captionOpen,
+    active: timed && !ended && !caughtUp && panel === null,
     seconds: current ? dwellSeconds(current) : 6,
     paused: timedPaused,
     resetKey: currentKey,
@@ -1435,6 +1436,7 @@ export function TheaterV2({
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true) // the copy icon turns into a tick for a moment
+      flash(kind === 'article' ? 'Article copied' : 'Words copied')
     } catch {
       flash('Couldn’t copy the text')
     }
@@ -1625,7 +1627,7 @@ export function TheaterV2({
         if (!res.ok) throw new Error('keep')
         const body = (await res.json()) as { tag: string; url: string; added: number }
         setGroupKept({ tag: body.tag, url: body.url })
-        flash('It’s one of your channels now. Private until you share it.', 4000)
+        flash('It’s one of your channels now. Private until you share it.')
       } catch {
         flash('Couldn’t keep that channel. Try again.')
       } finally {
@@ -1643,7 +1645,7 @@ export function TheaterV2({
       })
       if (!res.ok) throw new Error('keep')
       setKept(true)
-      flash('It’s one of your channels now. Private until you share it.', 4000)
+      flash('It’s one of your channels now. Private until you share it.')
     } catch {
       flash('Couldn’t keep that channel. Try again.')
     } finally {
@@ -1777,7 +1779,6 @@ export function TheaterV2({
     !((whyFirst === 'fresh' || whyFirst === 'yours') && savers && savers.length > 0)
   const author = postAuthor(current.post)
   const words = postWords(current.post)
-  const caption = words.rest || words.title
   const overlay = kind === 'post' || kind === 'article'
   const textOnly = !send.supported
 
@@ -2001,6 +2002,16 @@ export function TheaterV2({
     </button>
   )
 
+  const toastPill = toast ? (
+    <span
+      role="status"
+      data-player-toast
+      className="flex min-h-10 max-w-full items-center rounded-full bg-nx-cream px-4 py-2 text-center text-sm font-extrabold text-black shadow-nx-toast animate-nx-drop-in"
+    >
+      {toast}
+    </span>
+  ) : null
+
   const railStyle = (on = false, ring = false) =>
     cn(
       'pointer-events-auto flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full transition-colors',
@@ -2146,7 +2157,7 @@ export function TheaterV2({
               {member && (
                 <ReactionStack reactions={floats} className="absolute bottom-24 left-6 z-10" />
               )}
-              {arrival && (arrival.now || arrivals === 1) && (
+              {!toast && arrival && (arrival.now || arrivals === 1) && (
                 <ArrivalToast
                   saver={arrival.saver}
                   post={arrival.post}
@@ -2300,10 +2311,23 @@ export function TheaterV2({
                   </div>
 
                   {/* What's playing, at the stage's top-left. */}
+                  {toast && !caughtUp && (
+                    // A short message takes the top pills' place for 3 s, never stacked under them.
+                    <div
+                      className={cn(
+                        'pointer-events-none absolute inset-x-3 z-30 flex justify-center',
+                        wide ? 'top-4' : 'top-[max(68px,calc(env(safe-area-inset-top)+60px))]',
+                      )}
+                    >
+                      {toastPill}
+                    </div>
+                  )}
                   <div
                     ref={chipsRef}
+                    aria-hidden={toast ? true : undefined}
                     className={cn(
                       'pointer-events-none absolute z-10 flex flex-wrap items-start gap-2',
+                      toast && 'invisible',
                       wide
                         ? 'inset-x-4 top-4 pr-14'
                         : 'inset-x-3 top-[max(68px,calc(env(safe-area-inset-top)+60px))] pr-14',
@@ -2448,123 +2472,60 @@ export function TheaterV2({
                             className="self-start [text-shadow:none]"
                           />
                         )}
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          {savers && savers.length > 0 ? (
-                            <SaversButton
-                              savers={savers}
-                              placement="above"
-                              noteBubble={false}
-                              framed
-                              faces={
-                                <FaceStack
-                                  savers={savers}
-                                  size={wide && layout !== 'panel' ? 30 : 28}
-                                />
-                              }
-                            />
-                          ) : (
-                            <NxAvatar
-                              author={author}
-                              size={28}
-                              style={{ boxShadow: '0 0 0 2px #000' }}
-                            />
-                          )}
-                          <span
-                            className={cn(
-                              'min-w-0 truncate font-bold',
-                              wide && layout === 'feed' ? 'text-[15px]' : 'text-sm',
-                              layout === 'panel' && 'font-extrabold',
+                        {/* Who saved it: faces and "You and Mum saved this · 1h". The post's
+                            own author, network and words live in the original-post sheet. */}
+                        {((savers && savers.length > 0) || isPrivate || current.wander) && (
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            {savers && savers.length > 0 && (
+                              <SaversButton
+                                savers={savers}
+                                placement="above"
+                                noteBubble={false}
+                                framed
+                                faces={
+                                  <FaceStack
+                                    savers={savers}
+                                    size={wide && layout !== 'panel' ? 30 : 28}
+                                  />
+                                }
+                              />
                             )}
-                          >
-                            {savers && savers.length > 0
-                              ? bylineLine(savers)
-                              : author.handle || author.name}
-                          </span>
-                          {isPrivate && <PrivateLock tone="scrim" />}
-                          {(() => {
-                            const when = current.savedAt
-                              ? timeAgo(current.savedAt)
-                              : layout === 'panel'
-                                ? null
-                                : savedAgo(savers)
-                            const bits = [when, layout === 'panel' ? networkName : null].filter(
-                              Boolean,
-                            )
-                            return bits.length > 0 ? (
+                            {savers && savers.length > 0 && (
                               <span
                                 className={cn(
-                                  'shrink-0 whitespace-nowrap text-nx-soft',
-                                  wide && layout === 'feed' ? 'text-sm' : 'text-[13px]',
+                                  'min-w-0 truncate font-bold',
+                                  wide && layout === 'feed' ? 'text-[15px]' : 'text-sm',
+                                  layout === 'panel' && 'font-extrabold',
                                 )}
                               >
-                                {`· ${bits.join(' · ')}`}
+                                {bylineLine(savers)}
                               </span>
-                            ) : null
-                          })()}
-                          {current.wander && (
-                            <span className="nx-plate rounded-full px-2.5 py-0.5 text-xs font-bold">
-                              Wandering
-                            </span>
-                          )}
-                        </div>
-                        {layout !== 'panel' &&
-                          (originalUrl ? (
-                            <a
-                              href={originalUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title={`Open on ${networkName}`}
-                              data-network={current.post.platform ?? 'twitter'}
-                              className="pointer-events-auto self-start text-sm text-nx-soft hover:text-white hover:underline"
-                            >
-                              {sourceLine(current.post)}
-                            </a>
-                          ) : (
-                            <span className="text-sm text-nx-soft">{sourceLine(current.post)}</span>
-                          ))}
-                        {caption &&
-                          (captionOpen ? (
-                            <span className="pointer-events-auto block max-h-[42vh] overflow-y-auto pr-2 text-[15px] leading-[1.45] md:text-[17px]">
-                              <RichText
-                                text={postBody(current.post)}
-                                platform={current.post.platform ?? 'twitter'}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setCaptionOpen(false)}
-                                className="mt-1.5 text-[13px] font-bold text-white/80 underline underline-offset-2"
-                              >
-                                Show less
-                              </button>
-                            </span>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => setCaptionOpen(true)}
-                                aria-label="Show the full caption"
-                                className={cn(
-                                  'pointer-events-auto line-clamp-2 text-left leading-[1.4]',
-                                  wide && layout === 'feed' && !tallFrame
-                                    ? 'text-[17px]'
-                                    : wide && layout === 'panel'
-                                      ? 'text-[15px]'
-                                      : 'text-base',
-                                )}
-                              >
-                                {caption}
-                              </button>
-                              {caption.length > 110 && !wide && (
-                                <button
-                                  type="button"
-                                  onClick={() => setCaptionOpen(true)}
-                                  className="pointer-events-auto -mt-1 self-start text-[13px] font-bold text-white/85 underline underline-offset-2"
+                            )}
+                            {isPrivate && <PrivateLock tone="scrim" />}
+                            {(() => {
+                              const when = current.savedAt
+                                ? timeAgo(current.savedAt)
+                                : layout === 'panel'
+                                  ? null
+                                  : savedAgo(savers)
+                              return when && savers && savers.length > 0 ? (
+                                <span
+                                  className={cn(
+                                    'shrink-0 whitespace-nowrap text-nx-soft',
+                                    wide && layout === 'feed' ? 'text-sm' : 'text-[13px]',
+                                  )}
                                 >
-                                  More
-                                </button>
-                              )}
-                            </>
-                          ))}
+                                  {`· ${when}`}
+                                </span>
+                              ) : null
+                            })()}
+                            {current.wander && (
+                              <span className="nx-plate rounded-full px-2.5 py-0.5 text-xs font-bold">
+                                Wandering
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                     {fullTransport ? (
@@ -2835,11 +2796,6 @@ export function TheaterV2({
                   </button>,
                   saved ? 'Saved' : 'Save',
                 )}
-                {copied && (
-                  <span role="status" className="sr-only">
-                    {kind === 'article' ? 'Article copied' : 'Text copied'}
-                  </span>
-                )}
                 {railItem(
                   <button
                     type="button"
@@ -2889,6 +2845,21 @@ export function TheaterV2({
                     )}
                   </button>,
                   textOnly ? 'Copy' : 'Download',
+                )}
+                {railItem(
+                  // The network's own mark: who posted it and everything they wrote.
+                  <button
+                    type="button"
+                    aria-label={`The original post on ${networkName}`}
+                    title={`The original post on ${networkName}`}
+                    aria-haspopup="dialog"
+                    aria-expanded={panel === 'original'}
+                    onClick={() => setPanel(panel === 'original' ? null : 'original')}
+                    className={railStyle(false, panel === 'original')}
+                  >
+                    <NetworkIcon platform={current.post.platform} className="h-[22px] w-[22px]" />
+                  </button>,
+                  'Original',
                 )}
                 {railItem(
                   <button
@@ -3130,7 +3101,7 @@ export function TheaterV2({
           />
         )}
 
-        {!wide && source.moment && arrival && (arrival.now || arrivals === 1) && (
+        {!toast && !wide && source.moment && arrival && (arrival.now || arrivals === 1) && (
           <div
             className="absolute right-3 top-[max(116px,calc(env(safe-area-inset-top)+108px))] z-30 max-w-[calc(100%-24px)]"
             style={chipsBottom > 0 ? { top: `max(116px, ${chipsBottom + 8}px)` } : undefined}
@@ -3144,7 +3115,7 @@ export function TheaterV2({
             />
           </div>
         )}
-        {source.moment && arrivals > 0 && !(arrivals === 1 && arrival) && (
+        {!toast && source.moment && arrivals > 0 && !(arrivals === 1 && arrival) && (
           <div
             role="status"
             className="absolute left-1/2 top-[max(76px,calc(env(safe-area-inset-top)+64px))] z-30 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-[#1c1b19]/95 py-2 pl-4 pr-2 text-sm shadow-nx-toast animate-nx-slide-in md:top-4"
@@ -3235,6 +3206,21 @@ export function TheaterV2({
             onClose={() => setPanel(null)}
           />
         )}
+        {panel === 'original' && (
+          <OriginalSheet
+            post={current.post}
+            kind={kind}
+            url={originalUrl}
+            onCopy={(url) => {
+              setPanel(null)
+              void navigator.clipboard
+                ?.writeText(url)
+                .then(() => flash('Link copied'))
+                .catch(() => flash('Couldn’t copy the link'))
+            }}
+            onClose={() => setPanel(null)}
+          />
+        )}
         {panel === 'more' && (
           <MoreSheet
             anchor={wide ? moreAnchor : null}
@@ -3272,12 +3258,10 @@ export function TheaterV2({
           />
         )}
         {paste.toast}
-        {toast && (
-          <div
-            role="status"
-            className="nx-plate absolute left-1/2 top-20 z-30 -translate-x-1/2 rounded-full px-4 py-2 text-sm"
-          >
-            {toast}
+        {toast && caughtUp && (
+          // No stage to sit on: under the header instead.
+          <div className="pointer-events-none absolute inset-x-4 top-[max(68px,calc(env(safe-area-inset-top)+60px))] z-30 flex justify-center md:top-4">
+            {toastPill}
           </div>
         )}
       </div>
