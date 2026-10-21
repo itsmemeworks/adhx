@@ -14,6 +14,7 @@ import {
   momentAlertSubs,
   momentAlerts,
   reactionCounts,
+  postReactions,
   autoChannels,
   activity,
 } from '@/lib/db/schema'
@@ -56,6 +57,7 @@ export const POST = withAuth(async (_req, userId) => {
       db.delete(momentAlertSubs).where(eq(momentAlertSubs.userId, userId)).run()
       db.delete(momentAlerts).where(eq(momentAlerts.userId, userId)).run()
       db.delete(reactionCounts).where(eq(reactionCounts.userId, userId)).run()
+      db.delete(postReactions).where(eq(postReactions.userId, userId)).run()
       // Made for you is built from the saves that are now gone.
       db.delete(autoChannels).where(eq(autoChannels.userId, userId)).run()
       db.run(sql`DELETE FROM channel_visual_jobs WHERE user_id = ${userId}`)

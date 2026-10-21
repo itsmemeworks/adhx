@@ -23,7 +23,8 @@ Last updated: 20 October 2026.
 | A send                               | Only the person you sent it to (who, when, your note) | Never                                                               | Never                                            |
 | What you've watched (`post_views`)   | Never                                                 | Never                                                               | How many in 30 days, never which                 |
 | Show more / Show less                | Never                                                 | Never                                                               | Never                                            |
-| Watching a moment, reactions         | Yes, while it happens (only counts are kept)          | A watcher count only                                                | Same as members, plus reaction counts per person |
+| Watching a moment                    | Yes, while it happens                                 | A watcher count only                                                | Same as members                                  |
+| Your reactions on a post             | Yes, if they can see the post (name, face, reaction)  | Never, not even a count                                             | Counts per person; no admin page shows them      |
 | Bells and alerts                     | Never                                                 | Never                                                               | Never                                            |
 | Your picture (uploaded or made here) | Yes                                                   | No, unless you have a public channel (see below)                    | Yes                                              |
 | Kept media files of a shared post    | Yes                                                   | **Yes, to anyone who can reach the server and knows the post's ID** | Yes                                              |
@@ -71,10 +72,14 @@ Saves (`bookmarks`), their media and link rows, tags, archive state and preferen
 
 **Send straight to your people** stores who sent what to whom, with the optional note and when the recipient saw it (`post_sends`). Only the sender and the recipient see a send. While choosing, the sender sees which members already have a shared save of the post (never a Just for me one) and whom they already sent it to, never whether the recipient watched it. You can't send a post you only have as Just for me. Sends are kept until either person clears their data or deletes their account.
 
+### Reactions
+
+Members can react to any post: one of six emoji, or up to 40 characters ("Say something"). Each reaction is kept with the post (`post_reactions`: who, which post, the emoji or words, when). It is shown, with your name and face, only to signed-in members who can see the post: anyone's shared save of it, or their own save. So a post saved only as Just for me keeps its reactions to its owner. Signed-out visitors and public pages never see reactions or how many there are. A banned member's reactions are never shown, and a post an admin hid shows none. You can delete your own reactions; they are deleted when you clear your data or delete your account. The admin area shows only how many reactions each member sends per day, by kind (which emoji, or words), never the reactions themselves.
+
 ### Right now, watching together, bells
 
 - **Right now** (`/now`) groups recent saves into moments by what they're about. Moments live in the server's memory and are rebuilt every few minutes. Only shared saves count; a Just for me save is never counted or named, not even to you.
-- **Members** see who is saving a moment and who is watching it, and can react (one of six emoji, or up to 40 characters). Who is watching and reactions exist only in the server's memory, reach only members watching that moment, and are never stored. Only how many reactions each member sends per day, by kind (which emoji, or words), is counted, for admins (see Admins).
+- **Members** see who is saving a moment and who is watching it, and can react (see Reactions). Who is watching exists only in the server's memory and is never stored. A reaction sent while watching reaches the members watching that moment at once, and is also kept on its post like any other reaction.
 - **Signed-out visitors** see the same moments and posts with counts only: no names, faces, notes, watchers or reactions.
 - **"Tell me when it's live"** stores your bell on a forming moment, and an alert when it goes live, listed for 24 hours. They are only yours, and are deleted with Clear data or account deletion. In a browser, notifications use your browser's permission; on a phone, the app makes them from what it fetched from your server.
 
@@ -140,7 +145,7 @@ Admins (accounts with the admin role) have an admin area. They can make and revo
 - **People**: each member's username, display name and picture, role, when they joined, who invited them, when they were last seen (`users.last_seen_at`, updated at most every 5 minutes when you use the web or phone app), and how many saves (and how many of those are Just for me), notes, sends, reactions, channels and phones they have. Each phone shows its name, the last four characters of its key, whether it's an iPhone or Android (`access_keys.platform`, from the app's requests), and when it was paired and last used. Never an email address.
 - **Posts**: posts with at least one shared save, who saved them (shared saves only) and their notes. **A Just for me save is only ever a count**: admins see "1 Just for me", never the post.
 - **Counts, never contents**: saves per day (shared and Just for me), opens of the app and from which kind of device (web, iPhone, Android), plays and how many were watched to the end, searches (whether by meaning or by words, and whether they found something; **what you searched for is never stored**), sends and shares, reactions, plays and keeps of shared channels, and how many posts each member watched in the last 30 days (never which).
-- **Reaction counts** (`reaction_counts`): how many reactions each member sent per day, by kind (which emoji, or "words"). The words, the post and the moment are never stored.
+- **Reaction counts** (`reaction_counts`): how many reactions each member sent per day, by kind (which emoji, or "words"). The counts never hold the words, the post or the moment; the reactions themselves (`post_reactions`) are on no admin page.
 - **The live-moment log** (`moment_log`): each moment's name, when it formed, how many members tuned in, the most watching at once, how many reactions it got, and how many "it's live" alerts it sent and were opened. No account ids.
 - **Processing**: downloads, conversions and understanding, server-wide (Just for me posts are counted, not listed).
 
@@ -184,13 +189,13 @@ Viewing a preview does not require an account. Saving does.
 Until you remove it, clear your data or delete your account, except:
 
 - viewing marks: 180 days; pulse events: 30 days; analytics and channel-view detail: 90 days (pruned when the server starts)
-- alerts: listed for 24 hours; who's watching and what reactions say: never stored; reaction counts: until you clear your data or delete your account; the live-moment log (no account ids): kept
+- alerts: listed for 24 hours; who's watching: never stored; reactions and reaction counts: until you delete them (reactions), clear your data or delete your account; the live-moment log (no account ids): kept
 - phone share queue rows: 7 days after they finish; pairing codes: 10 minutes; sign-in links: 15 or 60 minutes
 - kept media: until nobody on the server has the post saved
 
 ## Clearing and deleting
 
-- **Clear data** (Settings) deletes your saves and their media rows, tags, links, archive state, preferences (including Show more / less and Just for me by default), viewing marks, sends to and from you, bells and alerts, reaction counts, X sync history and queued phone shares. It also deletes your Made for you channels and your "saved" pulse events; your other pulse events stay, without your account id. It keeps your account, sign-in methods, phone and access keys, invites and public channel settings (now empty).
+- **Clear data** (Settings) deletes your saves and their media rows, tags, links, archive state, preferences (including Show more / less and Just for me by default), viewing marks, sends to and from you, bells and alerts, your reactions and reaction counts, X sync history and queued phone shares. It also deletes your Made for you channels and your "saved" pulse events; your other pulse events stay, without your account id. It keeps your account, sign-in methods, phone and access keys, invites and public channel settings (now empty).
 - **Delete account** removes all of that plus your account, sign-in methods, X tokens, phone and access keys, pairing codes, invites you made or used, your picture files, your last-seen time, your public channels' statistics and any ban record. Your "saved" pulse events and Made for you channels are deleted; other pulse, analytics and channel-view events stay but no longer carry your account id. A few things remain: the admin audit log (and, if you were an admin, records of what you hid or banned) and other members' Show more / less entries for your username. Search data made from a post goes once nobody has it saved (above). Kept files go within the hour if nobody else saved the post.
 
 ## Your choices

@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Reactions kept on every post, and replayed
+
+- Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.
+- Visibility follows the post (`seenBy`): a Just for me–only post keeps its reactions to its owner; banned reactors never shown; hidden posts return none; nothing signed out. Live reactions are now stored too, with the id the room saw.
+- Web: the React button is on every post in `TheaterV2` (signed out → `/start`); yours floats at once; `useReactionReplay` floats the newest 12 when a post settles (600 ms, 350 ms apart, once per post per page load). PRIVACY.md and /privacy updated.
+- Follow-ups: the iOS and Android players against the same contract (separate work).
+
 ## 2026-10-21 — Android: fit and dock, logo bylines, tappable links, hold to hide, photo timer
 
 - Player (`PlayerScreen.kt`): Sound and Fit video are remembered in `SettingsPrefs` (`soundOn`, new `fitVideo`), as on iPhone. Videos now fill the screen by default (the old upright-fills/wide-fits rule is gone); Fit shows them whole. More's picture-in-picture row is now "Dock".

@@ -6,6 +6,7 @@ import { UNDERSTANDING_DDL } from '@/lib/semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '@/lib/sends/schema-sql'
 import { CHANNEL_VISUAL_DDL } from '@/lib/channels/visual-schema'
 import { ADMIN_COUNTS_DDL } from '@/lib/admin/schema-sql'
+import { POST_REACTIONS_DDL } from '@/lib/reactions/schema-sql'
 
 /**
  * Shared test database setup for API tests.
@@ -416,6 +417,7 @@ ${SAVE_VISIBILITY_DDL}
 ${BOARD_FEATURES_DDL}
 ${CHANNEL_VISUAL_DDL}
 ${ADMIN_COUNTS_DDL}
+${POST_REACTIONS_DDL}
 `
 
 export interface TestDbInstance {

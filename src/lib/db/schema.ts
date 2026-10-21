@@ -310,6 +310,28 @@ export const reactionCounts = sqliteTable(
   }),
 )
 
+// Reactions kept on posts (`post_reactions`): an emoji or a few words a
+// member left on a post, shown (with names) only to members who can see the
+// post, and replayed when they watch it. Live reactions are kept here too,
+// with the id the room saw. User-linked; rows go with the account.
+// DDL: `src/lib/reactions/schema-sql.ts`.
+export const postReactions = sqliteTable(
+  'post_reactions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    platform: text('platform').notNull(),
+    postId: text('post_id').notNull(),
+    emoji: text('emoji'),
+    text: text('text'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    postIdx: index('post_reactions_post_idx').on(table.platform, table.postId, table.createdAt),
+    userIdx: index('post_reactions_user_idx').on(table.userId),
+  }),
+)
+
 // One row per live moment that formed. No user ids.
 export const momentLog = sqliteTable(
   'moment_log',
