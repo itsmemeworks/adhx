@@ -101,7 +101,7 @@ struct ShareSheetScreen: View {
             MessageContent(
                 flow: flow,
                 title: "Connect the app first",
-                message: "Open ADHX Share and scan the code in Settings → Phone app on your ADHX.",
+                message: "Open ADHX Share and sign in with your email, or scan the code in Settings → Phone app on your ADHX.",
                 button: "OK",
                 showWordmark: true)
         case .problem(let title, let message):

@@ -217,15 +217,19 @@ final class PostReactionsModel: ObservableObject {
     static let firstDelay: UInt64 = 600_000_000
     static let gap: UInt64 = 350_000_000
 
-    /// A post settled on screen (nil: nothing to replay).
-    func arrive(_ post: PostRef?) {
+    /// A post settled on screen (nil: nothing to replay). `again` (the
+    /// reactions feed) replays it every time, asking the server afresh.
+    func arrive(_ post: PostRef?, again: Bool = false) {
         replay?.cancel()
-        guard let post, !Self.replayed.contains(post.key) else { return }
+        guard let post, again || !Self.replayed.contains(post.key) else { return }
         replay = Task { [weak self] in
             try? await Task.sleep(nanoseconds: Self.firstDelay)
             guard !Task.isCancelled else { return }
             let list: [LiveReactionEvent]
-            if let cached = Self.cache[post.key] {
+            if again, let client = Store.client(), let fetched = try? await client.reactions(to: post) {
+                Self.cache[post.key] = fetched
+                list = fetched
+            } else if let cached = Self.cache[post.key] {
                 list = cached
             } else {
                 guard let client = Store.client(), let fetched = try? await client.reactions(to: post) else { return }

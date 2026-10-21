@@ -126,6 +126,13 @@ enum Store {
         set { d.set(newValue, forKey: "avatarUrl") }
     }
 
+    /// Where your picture came from (upload · gob · x · generated), once a
+    /// newer server has said. nil: not known yet.
+    static var avatarSource: String? {
+        get { d.string(forKey: "avatarSource") }
+        set { d.set(newValue, forKey: "avatarSource") }
+    }
+
     static var phoneName: String? {
         get { d.string(forKey: "phoneName") }
         set { d.set(newValue, forKey: "phoneName") }
@@ -141,6 +148,8 @@ enum Store {
         lastServer = Links.displayHost(server)
         username = result.username
         phoneName = result.name
+        avatarUrl = nil
+        avatarSource = nil
     }
 
     /// Forgets the key, the list and anything waiting.
@@ -149,6 +158,7 @@ enum Store {
         server = nil
         username = nil
         avatarUrl = nil
+        avatarSource = nil
         phoneName = nil
         History.clear()
         OfflineQueue.clear()

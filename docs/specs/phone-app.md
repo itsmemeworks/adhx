@@ -606,16 +606,22 @@ freeBytes, processing, remoteConnected } }`. `thumbnail` (like Shared lately's
 Gob opens Settings, in this order:
 
 - **You**: your face (Gob shaped, ringed in your colour, with a pencil),
-  name, "@pete · 214 saves" and **Change picture**. There's no phone route
-  for pictures yet (`/api/account/avatar` takes a signed-in browser), so it
-  opens Settings on your ADHX in the browser (`/settings#you`).
+  name, "@pete · 214 saves" and **Change picture**: a sheet with **Choose a
+  photo**, **Take a selfie** (the front camera), four Gob faces, **Use my X
+  photo** (409 `no_x_picture` says to connect X first) and **Remove
+  picture**. A photo is cropped on the phone (a square, pan and pinch, round
+  preview) and sent as a square JPEG to `POST /api/app/me/avatar` with
+  `x=0.5, y=0.5, zoom=1`; Gobs and X send JSON; Remove is `DELETE`. Then
+  `/api/app/me` is read again and every face of yours changes at once.
 - **Waiting for you** (admins with someone waiting): "Ben wants in",
   "Invited by Jo · 10m ago", **Let Ben in**, **Not now** (hides it for a few
   days) and **Decline** (asks first: "Keep Ben out?").
 - Rows: **Your people** (faces and a count; the list has everyone with their
   saves, role and when they last saved, and opens a friend's channel),
-  **Invite someone** (when you may invite; no phone route makes invites yet,
-  so it opens `/settings#people` in the browser), **What's in your feed**
+  **Invite someone** (when you may invite: a sheet that makes a link with
+  `POST /api/app/invites` and opens the system share sheet, and lists your
+  links still waiting with Revoke; Channels' Invite opens the same sheet),
+  **What's in your feed**
   (the New filter sheet), **Just for me by default**, **Sound on by
   default** (videos start with sound), **What your ADHX is doing** ("3 on
   their way · 1 needs you", opening the full list).
