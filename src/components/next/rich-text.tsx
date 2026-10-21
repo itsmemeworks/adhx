@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import type { FeedItem } from '@/components/feed/types'
-import { decodeHtmlEntities, toBionicText } from '@/components/feed/text-rendering'
+import { toBionicText } from '@/components/feed/text-rendering'
 import { cn } from '@/lib/utils'
 import { NxImage } from './primitives'
 
@@ -12,27 +12,11 @@ import { NxImage } from './primitives'
  * linked page (picture, title, site) when the post links out.
  */
 
-const SHORT_LINK = /https?:\/\/t\.co\/\w+/g
 // A URL, an @mention or a #hashtag. URLs stop before trailing punctuation.
 const TOKEN =
   /(https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]]|@[A-Za-z0-9_]{1,15}\b|#[\p{L}\p{N}_]{2,60})/gu
 
-/**
- * The post's text with paragraph breaks kept (blank lines become one blank
- * line), short links swapped for where they go when known, else dropped.
- */
-export function postBody(item: FeedItem): string {
-  const expanded = new Map<string, string>()
-  for (const link of item.links ?? []) {
-    if (link.originalUrl && link.expandedUrl) expanded.set(link.originalUrl, link.expandedUrl)
-  }
-  return decodeHtmlEntities(item.text || '')
-    .replace(SHORT_LINK, (url) => expanded.get(url) ?? '')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/ *\n */g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
+export { postBody } from '@/lib/feed/post-body'
 
 /** First external (not X) link in the text, if any. */
 export function externalUrl(text: string): string | null {

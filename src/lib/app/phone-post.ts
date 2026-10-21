@@ -1,4 +1,5 @@
 import { and, count, desc, eq, sql } from 'drizzle-orm'
+import { postBody } from '@/lib/feed/post-body'
 import { db } from '@/lib/db'
 import { archivedPosts, bookmarks, phoneSaveQueue } from '@/lib/db/schema'
 import { previewPath, sourceUrl } from '@/lib/activity/preview-path'
@@ -84,7 +85,8 @@ export function toPhonePost(
       name: post.authorName,
       avatarUrl: post.authorProfileImageUrl,
     },
-    text: post.text ?? '',
+    // t.co links swapped for where they go, so the apps can make them tappable.
+    text: postBody(post),
     postedAt: post.createdAt,
     savedAt: post.processedAt || null,
     sourceUrl:
