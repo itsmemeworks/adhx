@@ -223,6 +223,8 @@ struct PlayerScreen: View {
     var position: ((Int) -> String)? = nil
     /// Closing when it wasn't presented by SwiftUI ("Open in ADHX").
     var onClose: (() -> Void)? = nil
+    /// Repeat on from the start ("Open in ADHX" on the share card).
+    var startRepeating = false
     @Environment(\.dismiss) private var dismiss
     @State private var clean = false
     @State private var scrubbing = false
@@ -230,7 +232,7 @@ struct PlayerScreen: View {
 
     var body: some View {
         PlayerView(posts: posts, server: server, clean: $clean, scrubbing: $scrubbing, start: start,
-                   extras: PlayerExtras(replayReactions: replayReactions), onShow: { shown in
+                   extras: PlayerExtras(replayReactions: replayReactions, startRepeating: startRepeating), onShow: { shown in
                        index = shown
                        onShow(shown)
                    })

@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — A post opened from the share card loops
+
+- Owner: viewing a post from the share card should loop it. Open in ADHX now starts the player with Repeat on (iOS `PlayerScreen(startRepeating:)` → `PlayerExtras.startRepeating`, applied once so returning from a friend's channel doesn't switch it back on; Android `PlayerScreen(startRepeating = true)` from `PostLinkScreen`). Like the web, where a shared preview starts on Repeat one.
+- Checked on the iPhone over Mirroring: shared an X GIF post from X, Open in ADHX played within ~1 s, still looping 10 s later with Repeat lit; the share card showed the GIF's still and @handle. Android compiles; not run on a device.
+
 ## 2026-10-21 — Repeat switched on after the end plays the post again
 
 - Owner: setting Repeat one on a video at the end of a 1-of-1 queue should start it looping. It didn't anywhere: iOS `Playback` and Android's `REPEAT_MODE_ONE` only loop if set before the end, and the web theater sat on "That's all".

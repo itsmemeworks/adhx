@@ -33,7 +33,8 @@ import kotlinx.coroutines.delay
 /**
  * One post opened by adhx://post?platform=…&id=… (the share card's Open in
  * ADHX). While its copy is still being kept it shows the shimmering card
- * with a progress ring; once kept (or if it never will be) the player.
+ * with a progress ring; once kept (or if it never will be) the player,
+ * looping: you came to watch this one.
  */
 @Composable
 fun PostLinkScreen(
@@ -93,6 +94,7 @@ fun PostLinkScreen(
                 startIndex = 0,
                 onPage = {},
                 topBar = { BackBar(onBack) },
+                startRepeating = true,
             )
         } else {
             Box(Modifier.fillMaxSize().background(AdhxColors.Background)) {

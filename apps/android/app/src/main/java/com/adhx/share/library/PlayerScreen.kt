@@ -234,6 +234,8 @@ fun PlayerScreen(
      * its "N on their way" pill, through [LocalPlayerToast] (New, My saves).
      */
     toastInTopBar: Boolean = false,
+    /** Repeat on from the start: a post opened from the share card loops. */
+    startRepeating: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -248,7 +250,7 @@ fun PlayerScreen(
     val prefs = SettingsPrefs.get(context)
     val muted = !prefs.soundOn
     val fit = prefs.fitVideo
-    var repeat by rememberSaveable { mutableStateOf(false) }
+    var repeat by rememberSaveable { mutableStateOf(startRepeating) }
     var hidden by rememberSaveable { mutableStateOf(false) }
     var notice by remember { mutableStateOf<Notice?>(null) }
     var saving by remember { mutableStateOf<String?>(null) }
