@@ -1189,7 +1189,8 @@ struct NoteBubble: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Face(saver: saver, server: server, size: 32, ring: .clear)
-                Text("“\(note)”")
+                // The bubble says it's said; no quote marks.
+                Text(note)
                     .font(Theme.sans(16, .semibold))
                     .foregroundStyle(Color(hex: 0x141414))
                     .lineLimit(2)
