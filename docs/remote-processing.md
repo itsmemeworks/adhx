@@ -130,6 +130,21 @@ library is still being understood.
 
 The machine credential authenticates requests; each claim supplies a short-lived
 job lease. The shared token cannot authorize an expired or replaced job result.
+An abandoned understanding lease consumes the same retry budget as an explicit
+worker failure: exponential backoff, then a failed result after three attempts.
+Successful video segment boundaries release normally and do not count as failures.
+Changing the source, model or understanding profile cancels the obsolete lease
+without charging the replacement job.
+
+Background repair of existing dark posters and on-demand missing-poster generation
+run only on a **local**, unpaused processing host. Remote mode defers that legacy
+maintenance rather than silently decoding videos on the Docker host; the current
+Mac protocol does not accept poster-repair jobs. Existing posters remain playable.
+Local maintenance resumes after the pause is lifted, checking controls between
+posts, and publishes a repair only while both source video and poster still match.
+New files use unique names; rejected work and replaced, unreferenced repair files
+are removed. A legacy downloaded poster stays in its post's folder until that
+post is cleaned up, because a concurrent downloader may still reuse its path.
 
 ```mermaid
 sequenceDiagram

@@ -44,7 +44,7 @@ object PostReactionsMemory {
     private val fetched = HashMap<String, List<LiveReaction>>()
     private val replayed = HashSet<String>()
 
-    fun key(server: String, username: String?, postKey: String): String = "$server|${username.orEmpty()}|$postKey"
+    fun key(server: String, account: String?, postKey: String): String = "$server|${account.orEmpty()}|$postKey"
 
     @Synchronized
     fun fetched(key: String): List<LiveReaction>? = fetched[key]
@@ -52,7 +52,7 @@ object PostReactionsMemory {
     @Synchronized
     fun remember(key: String, reactions: List<LiveReaction>) {
         // A few hundred posts' worth is plenty for one run.
-        if (fetched.size > 500) fetched.clear()
+        if (fetched.size >= 500 && key !in fetched) { fetched.clear(); replayed.clear() }
         fetched[key] = reactions
     }
 
@@ -61,7 +61,17 @@ object PostReactionsMemory {
 
     /** True the first time: this post's reactions are being replayed now. */
     @Synchronized
-    fun markReplayed(key: String): Boolean = replayed.add(key)
+    fun markReplayed(key: String): Boolean {
+        if (replayed.size >= 500 && key !in replayed) { fetched.clear(); replayed.clear() }
+        return replayed.add(key)
+    }
+
+    /** A dedicated reactions visit always reads the current server answer. */
+    @Synchronized
+    fun shouldReplay(key: String, fresh: Boolean): Boolean = fresh || key !in replayed
+
+    @Synchronized
+    fun cachedFor(key: String, fresh: Boolean): List<LiveReaction>? = if (fresh) null else fetched[key]
 
     @Synchronized
     internal fun forgetAll() {

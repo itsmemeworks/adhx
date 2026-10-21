@@ -1,13 +1,18 @@
+import { randomUUID } from 'node:crypto'
 import { execFile } from 'child_process'
 import sharp from 'sharp'
 import fs from 'fs/promises'
 import path from 'path'
 import { and, eq } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { keepSettings, keptFiles } from '@/lib/db/schema'
+import { db, runInTransaction } from '@/lib/db'
+import { bookmarks, keepSettings, keptFiles } from '@/lib/db/schema'
 import { ffmpegPath } from '@/lib/media/ffmpeg'
 import { probeMedia } from './probe'
 import { absolutePath, keptFile, type KeptFile } from './store'
+
+import { remoteProcessing } from '@/lib/processing/config'
+import { newWorkPaused } from '@/lib/processing/pause'
+import { readPostModeration } from '@/lib/admin/moderation'
 
 /** How bright a picture is, 0 (black) to 255 (white); null when it can't be read. */
 export async function brightness(file: string): Promise<number | null> {
@@ -88,16 +93,99 @@ export async function posterFrame(
   } catch {
     return null
   } finally {
-    await Promise.all(tried.map((t) => (t === best?.path ? null : fs.rm(t, { force: true }))))
+    await Promise.all(tried.map((t) => fs.rm(t, { force: true })))
+  }
+}
+
+type Snapshot = typeof keptFiles.$inferSelect
+function snapshot(platform: string, postId: string, slot: string): Snapshot | undefined {
+  return db
+    .select()
+    .from(keptFiles)
+    .where(
+      and(eq(keptFiles.platform, platform), eq(keptFiles.postId, postId), eq(keptFiles.slot, slot)),
+    )
+    .get()
+}
+
+function allowed(): boolean {
+  return !remoteProcessing() && !newWorkPaused()
+}
+
+/** Publish a unique file only if both retained generations still match. */
+async function publishPoster(
+  video: Snapshot,
+  poster: Snapshot | undefined,
+  relative: string,
+): Promise<boolean> {
+  const out = absolutePath(relative)
+  let published = false
+  try {
+    const probed = await probeMedia(out)
+    const bytes = (await fs.stat(/* turbopackIgnore: true */ out)).size
+    published = runInTransaction(() => {
+      const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+      const moderation = readPostModeration(video.platform, video.postId)
+      if (
+        !allowed() ||
+        !moderation.ok ||
+        moderation.value ||
+        !same(snapshot(video.platform, video.postId, 'video-1'), video) ||
+        !same(snapshot(video.platform, video.postId, 'poster'), poster) ||
+        !db
+          .select({ id: bookmarks.id })
+          .from(bookmarks)
+          .where(and(eq(bookmarks.platform, video.platform), eq(bookmarks.id, video.postId)))
+          .get()
+      )
+        return false
+      db.insert(keptFiles)
+        .values({
+          platform: video.platform,
+          postId: video.postId,
+          slot: 'poster',
+          path: relative,
+          mime: 'image/jpeg',
+          bytes,
+          width: probed.width,
+          height: probed.height,
+          durationMs: null,
+          createdAt: new Date().toISOString(),
+        })
+        .onConflictDoUpdate({
+          target: [keptFiles.platform, keptFiles.postId, keptFiles.slot],
+          set: {
+            path: relative,
+            mime: 'image/jpeg',
+            bytes,
+            width: probed.width,
+            height: probed.height,
+            durationMs: null,
+            createdAt: new Date().toISOString(),
+          },
+        })
+        .run()
+      return true
+    })
+    if (
+      published &&
+      poster &&
+      // Only our immutable repair names are safe to delete here. Downloads can
+      // reuse legacy canonical paths before recording their replacement row.
+      /^poster-[a-f0-9-]{36}\.jpg$/.test(path.basename(poster.path)) &&
+      !db.select().from(keptFiles).where(eq(keptFiles.path, poster.path)).get()
+    ) {
+      await fs.rm(absolutePath(poster.path), { force: true }).catch(() => {})
+    }
+    return published
+  } finally {
+    if (!published) await fs.rm(out, { force: true })
   }
 }
 
 const making = new Map<string, Promise<KeptFile | null>>()
 
-/**
- * The poster for a kept video that was downloaded without one (before stills
- * were taken on download): made once, the first time something asks.
- */
+/** Missing posters are generated only on local, unpaused processing hosts. */
 export function ensurePoster(platform: string, postId: string): Promise<KeptFile | null> {
   const key = `${platform}:${postId}`
   const pending = making.get(key)
@@ -105,83 +193,73 @@ export function ensurePoster(platform: string, postId: string): Promise<KeptFile
   const job = (async () => {
     const existing = keptFile(platform, postId, 'poster')
     if (existing) return existing
-    const video = keptFile(platform, postId, 'video-1')
+    if (!allowed()) return null
+    const video = snapshot(platform, postId, 'video-1')
     if (!video) return null
-    const videoFile = absolutePath(video.path)
-    const relative = path.join(path.dirname(video.path), 'poster.jpg')
-    const out = await posterFrame(videoFile, video.durationMs, absolutePath(relative))
-    if (!out) return null
-    const probed = await probeMedia(out)
-    const row = {
-      platform,
-      postId,
-      slot: 'poster',
-      path: relative,
-      mime: 'image/jpeg',
-      // A kept file under MEDIA_DIR; don't let the build trace the whole project for it.
-      bytes: (await fs.stat(/* turbopackIgnore: true */ out)).size,
-      width: probed.width,
-      height: probed.height,
-      durationMs: null,
-      createdAt: new Date().toISOString(),
+    const relative = path.join(path.dirname(video.path), `poster-${randomUUID()}.jpg`)
+    const out = absolutePath(relative)
+    let published = false
+    try {
+      if (!(await posterFrame(absolutePath(video.path), video.durationMs, out))) return null
+      published = await publishPoster(video, undefined, relative)
+      return keptFile(platform, postId, 'poster')
+    } finally {
+      if (!published) await fs.rm(out, { force: true })
     }
-    db.insert(keptFiles).values(row).onConflictDoNothing().run()
-    return keptFile(platform, postId, 'poster')
   })().finally(() => making.delete(key))
   making.set(key, job)
   return job
 }
 
 const REPAIR_KEY = 'poster_repair_v1'
+let repairing: Promise<number> | null = null
 
-/**
- * Once per server: posters that came out black (a network's own thumbnail of
- * a black first frame, or a grab inside a fade) are made again from the kept
- * video, when that finds a brighter frame. A channel made of such posts
- * otherwise shows four black tiles. Runs slowly in the background.
- */
-export async function repairDarkPosters({ pauseMs = 150 } = {}): Promise<number> {
+/** Resumable, single-flight maintenance; remote servers never launch local decoding. */
+export function repairDarkPosters({ pauseMs = 150 } = {}): Promise<number> {
+  if (repairing) return repairing
+  const job = repair(pauseMs).finally(() => {
+    repairing = null
+  })
+  repairing = job
+  return job
+}
+
+async function repair(pauseMs: number): Promise<number> {
+  if (!allowed()) return 0
   const done = db.select().from(keepSettings).where(eq(keepSettings.key, REPAIR_KEY)).get()
   if (done) return 0
   const posters = db.select().from(keptFiles).where(eq(keptFiles.slot, 'poster')).all()
   let fixed = 0
+  let complete = true
   for (const poster of posters) {
-    const video = keptFile(poster.platform, poster.postId, 'video-1')
+    if (!allowed()) return fixed // Do not mark an interrupted pass complete.
+    const video = snapshot(poster.platform, poster.postId, 'video-1')
     if (!video) continue
-    const posterPath = absolutePath(poster.path)
-    const light = await brightness(posterPath)
+    const light = await brightness(absolutePath(poster.path))
     if (light === null || light >= DARK_POSTER) continue
-    const tmp = `${posterPath}.repair.jpg`
-    const made = await posterFrame(absolutePath(video.path), video.durationMs, tmp)
-    if (!made) continue
-    const newLight = (await brightness(tmp)) ?? 0
-    if (newLight < light + 12) {
-      await fs.rm(tmp, { force: true })
-      continue
+    if (!allowed()) return fixed
+    const relative = path.join(path.dirname(poster.path), `poster-${randomUUID()}.jpg`)
+    const tmp = absolutePath(relative)
+    let published = false
+    try {
+      if (!(await posterFrame(absolutePath(video.path), video.durationMs, tmp))) {
+        complete = false
+        continue
+      }
+      const newLight = (await brightness(tmp)) ?? 0
+      if (newLight < light + 12) continue
+      published = await publishPoster(video, poster, relative)
+      if (published) fixed++
+      else complete = false
+    } finally {
+      if (!published) await fs.rm(tmp, { force: true })
     }
-    await fs.rename(tmp, posterPath)
-    const probed = await probeMedia(posterPath).catch(() => null)
-    db.update(keptFiles)
-      .set({
-        bytes: (await fs.stat(/* turbopackIgnore: true */ posterPath)).size,
-        width: probed?.width ?? poster.width,
-        height: probed?.height ?? poster.height,
-        createdAt: new Date().toISOString(),
-      })
-      .where(
-        and(
-          eq(keptFiles.platform, poster.platform),
-          eq(keptFiles.postId, poster.postId),
-          eq(keptFiles.slot, 'poster'),
-        ),
-      )
-      .run()
-    fixed++
     if (pauseMs) await new Promise((resolve) => setTimeout(resolve, pauseMs))
   }
-  db.insert(keepSettings)
-    .values({ key: REPAIR_KEY, value: new Date().toISOString() })
-    .onConflictDoNothing()
-    .run()
+  if (complete && allowed())
+    db.insert(keepSettings)
+      .values({ key: REPAIR_KEY, value: new Date().toISOString() })
+      .onConflictDoNothing()
+      .run()
   return fixed
 }

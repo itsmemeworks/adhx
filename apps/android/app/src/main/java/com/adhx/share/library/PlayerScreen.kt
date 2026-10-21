@@ -223,6 +223,8 @@ fun PlayerScreen(
     end: (@Composable () -> Unit)? = null,
     onReact: ((PhonePost) -> Unit)? = null,
     reacting: Boolean = false,
+    /** Reactions feed: refresh even if this post replayed in another player. */
+    replayReactions: Boolean = false,
     /** Live privacy/metadata refreshes keep the keyed page rather than jumping to New's top. */
     preservePlaybackOnRefresh: Boolean = false,
     /** [topBar] steps aside while the send sheet is up (home's row, as on iPhone). */
@@ -340,28 +342,34 @@ fun PlayerScreen(
     // A post that settles replays the reactions kept on it (once per post per run
     // of the app): the newest few, oldest first, each with the face of who sent
     // it. Moving on cancels the rest. Live has its own room and doesn't replay.
-    LaunchedEffect(current?.key, inPip) {
+    LaunchedEffect(current?.key, inPip, server, replayReactions) {
         floats.clear()
         val post = current ?: return@LaunchedEffect
         if (!ownReact || inPip) return@LaunchedEffect
         val settledAt = SystemClock.uptimeMillis()
         val connection = ConnectionStore.get(context).current() ?: return@LaunchedEffect
-        val key = PostReactionsMemory.key(connection.server, connection.username, post.key)
-        if (PostReactionsMemory.replayed(key)) return@LaunchedEffect
-        val kept = PostReactionsMemory.fetched(key)
+        val key = PostReactionsMemory.key(connection.server, connection.key, post.key)
+        if (!PostReactionsMemory.shouldReplay(key, replayReactions)) return@LaunchedEffect
+        val kept = PostReactionsMemory.cachedFor(key, replayReactions)
             ?: when (val got = AdhxApi(connection).postReactions(post.platform, post.id)) {
-                is ApiResult.Ok -> got.value.reactions.also { PostReactionsMemory.remember(key, it) }
+                is ApiResult.Ok -> {
+                    if (!connection.sameCredential(ConnectionStore.get(context).current())) return@LaunchedEffect
+                    got.value.reactions.also { PostReactionsMemory.remember(key, it) }
+                }
                 // Not visible to you (404) has nothing to replay; anything else can try again next time.
                 is ApiResult.Failed -> if (got.status == 404) emptyList<com.adhx.share.net.LiveReaction>().also { PostReactionsMemory.remember(key, it) } else return@LaunchedEffect
                 else -> return@LaunchedEffect
             }
+        if (!connection.sameCredential(ConnectionStore.get(context).current())) return@LaunchedEffect
         val plan = replayPlan(kept)
         if (plan.isEmpty()) {
             PostReactionsMemory.markReplayed(key)
             return@LaunchedEffect
         }
         delay(replayWait(SystemClock.uptimeMillis() - settledAt))
-        if (!PostReactionsMemory.markReplayed(key)) return@LaunchedEffect
+        if (!connection.sameCredential(ConnectionStore.get(context).current())) return@LaunchedEffect
+        val first = PostReactionsMemory.markReplayed(key)
+        if (!replayReactions && !first) return@LaunchedEffect
         plan.forEach { step -> floats.add(step.reaction.emoji, step.reaction.text, step.reaction.who, step.afterMs) }
     }
 

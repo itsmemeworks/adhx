@@ -544,9 +544,12 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   bubble), the network's mark and who posted it, and the first lines of text
   with links shortened and tappable; bottom right a column of round buttons:
   **React** (on every post; kept with `/api/app/reactions`, and a post's kept
-  reactions float up again when you land on it), Save (to your saves), Share,
+  reactions float up once per ordinary playback session), Save (to your saves), Share,
   Save to Photos / the phone (from `?download=1`), the **network's mark** and
-  **More**. The mark opens the frosted original-post sheet: the poster, their
+  **More**. The dedicated Reactions feed always refreshes the server answer,
+  including posts previously fetched with no reactions. Replay memory is bounded
+  and scoped to the connection; failed refreshes never fall back to older answers.
+  The mark opens the frosted original-post sheet: the poster, their
   words in full (or a kept X article), **Open on {network}** and **Copy
   link**. Sound, Fit video, Repeat, Dock and Hide live in More. Repeat is off
   by default: a video that ends plays the next save; on, it loops ("Repeating

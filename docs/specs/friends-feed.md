@@ -120,3 +120,13 @@ All of these require sign-in unless marked public.
 ## Copy
 
 Follow `brand/BRAND.md` → Voice. Buttons and errors stay plain; the grin goes in headlines, empty states and the end of the feed.
+
+### Reactions playback reliability
+
+The web Reactions player follows `nextOffset` until the source is exhausted,
+keeps the API's full total, coalesces page requests and rejects late pages from
+an earlier queue. A selected post beyond the first page still opens first.
+Temporary page failures retain the offset for retry before recommendations or
+an end card. Post start keys use the shared network ID rules (including
+SoundCloud's `~` IDs). Opening the original-post or Share sheet holds the current
+video; closing resumes only a video that was playing in the same queue and post.

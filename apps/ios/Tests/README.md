@@ -24,18 +24,19 @@ the output says which one.
 ## The suites
 
 CI (`.github/workflows/native.yml`) runs **Live reliability** and **Queued
-privacy** on every PR that touches the apps, then builds the app for the
+privacy**, plus **Reaction connections**, on every PR that touches the apps, then builds the app for the
 simulator. Run the rest by hand when you change what they cover.
 
-| Suite            | What it checks                                                                                                                           | Files to compile (all under `apps/ios/`), plus `Tests/<Suite>.swift`                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Live reliability | Compact saver and privacy updates, explicit removals, keeping the playing post, the 200-post cache bound, 40-code-point message clipping | `Shared/API.swift Shared/FriendsAPI.swift Shared/LiveQueue.swift`                                                                                        |
-| Queued privacy   | Restoring a queued privacy choice, intent versions, history written by app and extension at once, keeping unfinished entries             | `-D ADHX_HISTORY_TEST Shared/API.swift Shared/FriendsAPI.swift Shared/Network.swift Shared/NetworkPaths.swift Shared/SVGPath.swift Shared/Storage.swift` |
-| Friends parity   | Feed weights, a channel's new marks and notes, Live's busy line, forming groups                                                          | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                               |
-| Board features   | Sending straight to your people, the sent reason, forming faces and alerts, the like thumbnail, keeping a group channel                  | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                               |
-| Decouple         | Your picture's answers and the crop sums, invites, email sign-in codes, the reactions feed, the share card opening the app               | `Shared/API.swift Shared/FriendsAPI.swift Shared/AccountAPI.swift App/Settings/AvatarCrop.swift`                                                         |
-| Post reactions   | Reactions on any post (`GET /api/app/reactions`)                                                                                         | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                               |
-| Player polish    | The 10-second photo timer, and links in captions shown short and tappable                                                                | `App/Library/PhotoTimer.swift App/Library/LinkedText.swift`                                                                                              |
+| Suite                | What it checks                                                                                                                           | Files to compile (all under `apps/ios/`), plus `Tests/<Suite>.swift`                                                                                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Live reliability     | Compact saver and privacy updates, explicit removals, keeping the playing post, the 200-post cache bound, 40-code-point message clipping | `Shared/API.swift Shared/FriendsAPI.swift Shared/LiveQueue.swift`                                                                                        |
+| Queued privacy       | Restoring a queued privacy choice, intent versions, history written by app and extension at once, keeping unfinished entries             | `-D ADHX_HISTORY_TEST Shared/API.swift Shared/FriendsAPI.swift Shared/Network.swift Shared/NetworkPaths.swift Shared/SVGPath.swift Shared/Storage.swift` |
+| Friends parity       | Feed weights, a channel's new marks and notes, Live's busy line, forming groups                                                          | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                               |
+| Board features       | Sending straight to your people, the sent reason, forming faces and alerts, the like thumbnail, keeping a group channel                  | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                               |
+| Decouple             | Your picture's answers and the crop sums, invites, email sign-in codes, the reactions feed, the share card opening the app               | `Shared/API.swift Shared/FriendsAPI.swift Shared/AccountAPI.swift App/Settings/AvatarCrop.swift`                                                         |
+| Post reactions       | Reactions on any post (`GET /api/app/reactions`)                                                                                         | `Shared/API.swift Shared/FriendsAPI.swift`                                                                                                               |
+| Reaction connections | Production replay model: server/credential changes, failed refresh, late old responses and reconnect invalidation                        | `App/Library/PostReactionsModel.swift`                                                                                                                   |
+| Player polish        | The 10-second photo timer, and links in captions shown short and tappable                                                                | `App/Library/PhotoTimer.swift App/Library/LinkedText.swift`                                                                                              |
 
 For example, the queued privacy suite:
 
@@ -58,6 +59,7 @@ t parity   $I/Shared/API.swift $I/Shared/FriendsAPI.swift $I/Tests/FriendsParity
 t board    $I/Shared/API.swift $I/Shared/FriendsAPI.swift $I/Tests/BoardFeaturesTests.swift
 t decouple $I/Shared/API.swift $I/Shared/FriendsAPI.swift $I/Shared/AccountAPI.swift \
            $I/App/Settings/AvatarCrop.swift $I/Tests/DecoupleTests.swift
+t connections $I/App/Library/PostReactionsModel.swift $I/Tests/ReactionConnectionTests.swift
 t reactions $I/Shared/API.swift $I/Shared/FriendsAPI.swift $I/Tests/PostReactionsTests.swift
 t polish   $I/App/Library/PhotoTimer.swift $I/App/Library/LinkedText.swift $I/Tests/PlayerPolishTests.swift
 ```

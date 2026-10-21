@@ -14,6 +14,7 @@ import {
 } from '../search/model'
 
 import { searchHref } from '../search/model'
+import { ALL_PLATFORMS, POST_ID_PATTERN } from '@/lib/platform/networks'
 
 export { playHref, searchHref } from '../search/model'
 import { nextPostKind, postText } from '../post'
@@ -79,7 +80,14 @@ const SIGNALS: readonly MatchSignal[] = [
   'speech',
   'screen',
 ]
-const KEY = /^[a-z]{1,16}:[A-Za-z0-9_-]{1,64}$/
+function validStart(key: string): boolean {
+  const colon = key.indexOf(':')
+  return (
+    colon > 0 &&
+    ALL_PLATFORMS.some((platform) => platform === key.slice(0, colon)) &&
+    POST_ID_PATTERN.test(key.slice(colon + 1))
+  )
+}
 const CHANNEL = /^([A-Za-z0-9_]{1,40})\/([a-z0-9-]{1,64})$/
 const SLUG = /^[a-z0-9-]{1,64}$/
 const USERNAME = /^[A-Za-z0-9_]{1,40}$/
@@ -214,7 +222,7 @@ export function sourceFromParams(
       friend: null,
       recent: false,
       moment: null,
-      start: start && KEY.test(start) ? start : null,
+      start: start && validStart(start) ? start : null,
       feed,
       feedTypes: parseFeedTypes(get('types')),
     }
@@ -243,7 +251,7 @@ export function sourceFromParams(
     recent: !named && get('recent') === '1',
     moment: !named && moment && SLUG.test(moment) ? moment : null,
     ...(reacted ? { reacted: true } : {}),
-    start: start && KEY.test(start) ? start : null,
+    start: start && validStart(start) ? start : null,
   }
 }
 
@@ -300,7 +308,15 @@ export function appendUnique(
   more: SearchResultItem[],
 ): SearchResultItem[] {
   const seen = new Set(items.map(resultKey))
-  return [...items, ...more.filter((m) => !seen.has(resultKey(m)))]
+  return [
+    ...items,
+    ...more.filter((m) => {
+      const key = resultKey(m)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    }),
+  ]
 }
 
 /**
