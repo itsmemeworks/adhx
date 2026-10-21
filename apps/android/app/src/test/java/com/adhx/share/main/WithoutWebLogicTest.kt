@@ -124,6 +124,13 @@ class WithoutWebLogicTest {
         assertEquals(EmailSignIn.OLD_SERVER, EmailSignIn.sendError(404, null, null, "https://a.example"))
         assertEquals(EmailSignIn.BUSY, EmailSignIn.sendError(429, "busy", null, "https://a.example"))
         assertEquals(EmailSignIn.SEND_FAILED, EmailSignIn.sendError(500, null, null, "https://a.example"))
+        assertEquals(EmailSignIn.NO_EMAIL, EmailSignIn.sendError(503, "no_email", "x", "https://a.example"))
+        assertEquals(EmailSignIn.EMAIL_FAILED, EmailSignIn.sendError(503, "send_failed", "x", "https://a.example"))
+        assertEquals(EmailSignIn.TOO_SOON, EmailSignIn.sendError(429, "too_soon", "x", "https://a.example"))
+        assertTrue(EmailSignIn.codeAlreadySent("too_soon"))
+        assertEquals("You can connect 10 phones.", EmailSignIn.verifyError(409, "too_many", "You can connect 10 phones.", "https://a.example"))
+        assertEquals(EmailSignIn.TOO_MANY, EmailSignIn.verifyError(409, "too_many", null, "https://a.example"))
+        assertEquals("Enter a valid email address.", EmailSignIn.verifyError(400, "bad_email", "Enter a valid email address.", "https://a.example"))
     }
 
     // Your face
@@ -159,6 +166,11 @@ class WithoutWebLogicTest {
             InviteCopy.line(Invite("b", createdAt = "2026-10-21T12:00:00Z", expiresAt = "2026-10-21T17:00:00Z", uses = 1), now))
         assertEquals("", InviteCopy.line(Invite("c"), now))
         assertEquals("Only the admin can make invites here.", InviteCopy.createError(403, null))
+        assertEquals(InviteCopy.TOO_MANY, InviteCopy.createError(409, null, "too_many"))
+        assertEquals(InviteCopy.BUSY, InviteCopy.createError(429, "", "busy"))
+        assertEquals("For Mum", InviteCopy.title(Invite("a", code = "ABCD-EFGH", nameHint = "Mum")))
+        assertEquals("Invite ABCD-EFGH", InviteCopy.title(Invite("a", code = "ABCD-EFGH")))
+        assertEquals("Invite link", InviteCopy.title(Invite("a")))
         assertEquals("Come and join my ADHX: https://a/invite/x", InviteCopy.shareText("https://a/invite/x"))
     }
 
@@ -167,6 +179,9 @@ class WithoutWebLogicTest {
         assertEquals("12 posts with reactions", ReactionsCopy.count(12, more = false))
         assertEquals("30+ posts with reactions", ReactionsCopy.count(30, more = true))
         assertEquals("1 post with reactions", ReactionsCopy.count(1, more = false))
+        // The server's total wins over what's loaded.
+        val ui = com.adhx.share.feed.ReactedUi(items = List(30) { PhonePost(platform = "x", id = "$it") }, nextOffset = 30, total = 42)
+        assertEquals("42 posts with reactions", ReactionsCopy.count(ui.count, ui.more))
         val post = PhonePost(
             platform = "x",
             id = "1",

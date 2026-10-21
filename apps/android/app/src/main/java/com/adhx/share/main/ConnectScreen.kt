@@ -365,6 +365,13 @@ private fun CodeForm(vm: MainViewModel, ui: EmailSignInUi) {
     }
     val focus = remember { FocusRequester() }
     LaunchedEffect(ui.sentAt) { runCatching { focus.requestFocus() } }
+    // A wrong code: clear it and keep the keyboard up for the next try.
+    LaunchedEffect(ui.error, ui.busy) {
+        if (ui.error != null && !ui.busy) {
+            code = ""
+            runCatching { focus.requestFocus() }
+        }
+    }
     val submit = { if (!ui.busy && EmailSignIn.codeReady(code)) vm.verifyEmailCode(code) }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(EmailSignIn.CHECK, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.ExtraBold, color = AdhxColors.White)
@@ -378,7 +385,8 @@ private fun CodeForm(vm: MainViewModel, ui: EmailSignInUi) {
             label = { Text("6-digit code") },
             placeholder = { Text("123456") },
             singleLine = true,
-            enabled = !ui.busy,
+            // Read-only rather than disabled while checking, so the field keeps the keyboard.
+            readOnly = ui.busy,
             shape = RoundedCornerShape(16.dp),
             colors = fieldColors(),
             textStyle = LocalTextStyle.current.copy(fontSize = 24.sp, letterSpacing = 6.sp),

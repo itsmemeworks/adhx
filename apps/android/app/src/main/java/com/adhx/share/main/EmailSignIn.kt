@@ -37,6 +37,10 @@ object EmailSignIn {
     const val BUSY = "That’s a lot of tries. Wait a minute, then try again."
     const val OLD_SERVER = "This ADHX can’t send sign-in codes yet. Use the code in Settings → Phone app on it instead."
     const val SEND_FAILED = "Couldn’t send a code just now. Try again."
+    const val NO_EMAIL = "This ADHX can’t send email. Use a pairing code instead: Settings → Phone app on your ADHX."
+    const val EMAIL_FAILED = "Couldn’t send the email. Try again shortly."
+    const val TOO_SOON = "A code went to that address in the last minute. Use it, or wait a minute for a new one."
+    const val TOO_MANY = "This account has as many phones as it can. Remove one first, in Settings → Phone app on your ADHX."
     const val VERIFY_FAILED = "Couldn’t sign in just now. Try again."
 
     private val EMAIL = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
@@ -64,6 +68,9 @@ object EmailSignIn {
     /** What to say when asking for a code failed ([status] 0 with [offline]: no answer). */
     fun sendError(status: Int, code: String?, message: String?, server: String?, offline: Boolean = false): String = when {
         offline -> unreachable(server)
+        code == "no_email" -> NO_EMAIL
+        code == "send_failed" -> EMAIL_FAILED
+        code == "too_soon" -> TOO_SOON
         status == 404 || status == 405 -> OLD_SERVER
         status == 429 || code == "busy" -> BUSY
         else -> message?.takeIf { it.isNotBlank() } ?: SEND_FAILED
@@ -75,10 +82,14 @@ object EmailSignIn {
         code == "bad_code" -> BAD_CODE
         code == "expired" || status == 410 -> EXPIRED
         code == "busy" || status == 429 -> BUSY
+        code == "too_many" || status == 409 -> message?.takeIf { it.isNotBlank() } ?: TOO_MANY
         status == 404 || status == 405 -> OLD_SERVER
-        status == 400 -> BAD_CODE
+        status == 400 && code != "bad_email" -> BAD_CODE
         else -> message?.takeIf { it.isNotBlank() } ?: VERIFY_FAILED
     }
+
+    /** `too_soon`: a code already went out in the last minute, so go on to typing it. */
+    fun codeAlreadySent(code: String?): Boolean = code == "too_soon"
 
     private fun unreachable(server: String?): String =
         if (server == null) "Can’t reach your ADHX. Check the address and that your phone is online."

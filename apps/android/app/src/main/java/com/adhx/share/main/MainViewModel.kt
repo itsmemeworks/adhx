@@ -178,7 +178,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             if (now.server != server || now.email != address) return@launch
             _email.value = when (result) {
                 is ApiResult.Ok -> now.copy(step = SignInStep.Code, busy = false, sentAt = System.currentTimeMillis())
-                is ApiResult.Failed -> now.copy(busy = false, error = EmailSignIn.sendError(result.status, result.code, result.message, server))
+                // A code already went to this address in the last minute: type that one.
+                is ApiResult.Failed -> if (EmailSignIn.codeAlreadySent(result.code)) {
+                    now.copy(step = SignInStep.Code, busy = false, sentAt = if (now.step == SignInStep.Code) now.sentAt else System.currentTimeMillis(),
+                        error = EmailSignIn.sendError(result.status, result.code, result.message, server))
+                } else {
+                    now.copy(busy = false, error = EmailSignIn.sendError(result.status, result.code, result.message, server))
+                }
                 ApiResult.Offline -> now.copy(busy = false, error = EmailSignIn.sendError(0, null, null, server, offline = true))
             }
         }

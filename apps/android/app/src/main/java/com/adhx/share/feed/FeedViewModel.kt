@@ -73,10 +73,14 @@ data class ReactedUi(
     val loadedOnce: Boolean = false,
     /** This server has no reactions feed yet: the row stays away. */
     val unavailable: Boolean = false,
+    /** How many posts have reactions in all, when the server says. */
+    val total: Int? = null,
 ) {
-    /** Posts with reactions so far ("12 posts with reactions"): all of them once every page is in. */
-    val count: Int get() = items.size
-    val more: Boolean get() = nextOffset != null
+    /** "12 posts with reactions": the server's total, else what's loaded so far. */
+    val count: Int get() = total ?: items.size
+
+    /** Only a count of what's loaded so far, with more to come ("30+"). */
+    val more: Boolean get() = total == null && nextOffset != null
 }
 
 data class ChannelsUi(
@@ -461,7 +465,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                 is ApiResult.Ok -> {
                     val page = result.value.items.filter { it.platform.isNotBlank() && it.id.isNotBlank() }
                     if (offset == 0) {
-                        ReactedUi(items = page.distinctBy { it.key }, nextOffset = result.value.nextOffset, loadedOnce = true)
+                        ReactedUi(items = page.distinctBy { it.key }, nextOffset = result.value.nextOffset, loadedOnce = true, total = result.value.total)
                     } else {
                         val had = current.items.mapTo(HashSet()) { it.key }
                         current.copy(
@@ -469,6 +473,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
                             nextOffset = result.value.nextOffset,
                             loading = false,
                             loadedOnce = true,
+                            total = result.value.total ?: current.total,
                         )
                     }
                 }

@@ -49,6 +49,10 @@ data class Invite(
     val id: String = "",
     /** The link itself, when the server can still say it (it may keep only a hash). */
     val url: String? = null,
+    /** The invite's short code ("ABCD-EFGH"), to tell links apart. */
+    val code: String? = null,
+    /** Who it's for, when the maker said ("Mum"). */
+    val nameHint: String? = null,
     @Serializable(with = LooseTimeSerializer::class)
     val createdAt: String? = null,
     @Serializable(with = LooseTimeSerializer::class)
@@ -75,11 +79,12 @@ data class SignInRequest(val email: String, val name: String? = null)
 @Serializable
 data class SignInVerifyRequest(val email: String, val code: String, val name: String? = null)
 
-/** `GET /api/app/reacted`: posts with reactions, newest reaction first. */
+/** `GET /api/app/reacted`: posts with reactions, newest reaction first, and how many in all. */
 @Serializable
 data class ReactedResponse(
     val items: List<PhonePost> = emptyList(),
     val nextOffset: Int? = null,
+    val total: Int? = null,
 )
 
 /** A post's reactions on `/api/app/reacted`: how many, and the newest. */

@@ -58,7 +58,8 @@ class AdhxApi(private val server: String, private val key: String?) {
         val url = url("api/app/signin") ?: return badAddress
         val body = json.encodeToString(SignInRequest.serializer(), SignInRequest(email, name))
         val request = Request.Builder().url(url).header("Accept", "application/json").post(body.toRequestBody(JSON)).build()
-        return send(request) { _, _ -> }
+        // 503 here is an answer (`no_email`, `send_failed`), not "offline".
+        return send(request, codedUnavailable = true) { _, _ -> }
     }
 
     /**
@@ -113,6 +114,16 @@ class AdhxApi(private val server: String, private val key: String?) {
     /** A new invite link to share. 403 when only the admin may invite, 409 with too many waiting. */
     suspend fun createInvite(): ApiResult<CreatedInvite> {
         val url = url("api/app/invites") ?: return badAddress
+        return send(authed(url).post("{}".toRequestBody(JSON)).build(), CreatedInvite.serializer())
+    }
+
+    /**
+     * A fresh link for one of your invites that still works ("Share again"):
+     * the link sent before stops working. 404 `not_found` when it's gone.
+     */
+    suspend fun renewInvite(id: String): ApiResult<CreatedInvite> {
+        val base = url("api/app/invites") ?: return badAddress
+        val url = base.newBuilder().addPathSegment(id).addPathSegment("link").build()
         return send(authed(url).post("{}".toRequestBody(JSON)).build(), CreatedInvite.serializer())
     }
 
@@ -499,15 +510,22 @@ class AdhxApi(private val server: String, private val key: String?) {
     private suspend fun <T> send(request: Request, serializer: KSerializer<T>, using: OkHttpClient = client): ApiResult<T> =
         send(request, using) { _, text -> json.decodeFromString(serializer, text) }
 
+    /**
+     * [codedUnavailable]: a 503 whose body says a `code` is the server's
+     * answer (sign-in's `no_email`), not a sign it's offline.
+     */
     private suspend fun <T> send(
         request: Request,
         using: OkHttpClient = client,
+        codedUnavailable: Boolean = false,
         decode: (code: Int, text: String) -> T,
     ): ApiResult<T> = withContext(Dispatchers.IO) {
         try {
             using.newCall(request).await().use { response ->
                 val text = response.body?.string().orEmpty()
+                val coded = if (codedUnavailable && response.code == 503) errorBody(text)?.takeIf { !it.code.isNullOrBlank() } else null
                 when {
+                    coded != null -> ApiResult.Failed(503, coded.code, coded.error)
                     response.code in 502..504 -> ApiResult.Offline
                     response.isSuccessful -> try {
                         ApiResult.Ok(decode(response.code, text), response.code)
@@ -527,6 +545,12 @@ class AdhxApi(private val server: String, private val key: String?) {
         } catch (e: IOException) {
             ApiResult.Offline
         }
+    }
+
+    private fun errorBody(text: String): ErrorBody? = try {
+        json.decodeFromString(ErrorBody.serializer(), text)
+    } catch (e: IllegalArgumentException) {
+        null
     }
 
     companion object {

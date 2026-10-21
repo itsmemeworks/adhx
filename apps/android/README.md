@@ -145,9 +145,12 @@ development without `RESEND_API_KEY` it's logged like magic links). Type it,
 or let the keyboard fill it in from the email (the field is marked as a
 one-time code), and `POST /api/app/signin/verify { email, code, name }`
 answers exactly like pairing (`{ key, username, name }`). Wrong codes say so
-(`bad_code`), a spent or burned code says to send a new one (`expired`), and
-too many tries say to wait (`busy`); a new code can be sent once a minute.
-An ADHX without these routes (404) says to use the pairing code instead.
+(`bad_code`), a spent or burned code says to send a new one (`expired`),
+too many tries say to wait (`busy`), and a full set of phones says so
+(`too_many`). A new code can be sent once a minute (`too_soon` goes straight
+to typing the one already sent). An ADHX that can't send email (503
+`no_email`) or doesn't have these routes (404) says to use the pairing code
+instead. In development the code is in the server log as `[sign-in-code] …`.
 
 The other way in is a pairing code:
 
@@ -254,7 +257,8 @@ behaviour and the endpoints are in
   ends on "You're all caught up. Go touch grass."
 - **Reactions** tops Channels when there are any (`GET /api/app/reacted`,
   paged): the newest posts your people reacted to, each its poster with the
-  last reaction's face and emoji (or words), "12 posts with reactions" and
+  last reaction's face and emoji (or words), "12 posts with reactions" (the
+  server's `total`) and
   **Play all**. A tap plays them in the player, where their reactions float
   again and React works.
 - **Channels** (`GET /api/app/channels`): From everyone, Your people (a face
@@ -314,9 +318,12 @@ Sound on by default, What your ADHX is doing (with its count), then
 - **Invite someone** opens a sheet: "Anyone with this link can ask to join.
   Nobody gets in until you say yes." **Make a link and share it**
   (`POST /api/app/invites`) hands the link to the system share sheet; your
-  links that still work (`GET /api/app/invites`) are listed with when they
-  were made and run out, each with Share (when the server can still say the
-  link) and **Revoke** (`DELETE /api/app/invites/{id}`).
+  links that still work (`GET /api/app/invites`) are listed by who they're
+  for or their code, with when they were made and run out. The server keeps
+  only a link's hash, so **Share again** makes a fresh link
+  (`POST /api/app/invites/{id}/link`; the one sent before stops working), and
+  **Revoke** is `DELETE /api/app/invites/{id}`. Without `canInvite` the sheet
+  says only the admin can make invites.
 - **Just for me by default** and **Sound on by default** are kept on the
   phone. Until the first is touched here, saves leave `private` out and the
   account's own default on the server applies. On sends `private: true`;

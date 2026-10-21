@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.adhx.share.data.Connection
 import com.adhx.share.feed.SheetHandle
-import com.adhx.share.links.Links
 import com.adhx.share.net.AdhxApi
 import com.adhx.share.net.ApiResult
 import com.adhx.share.net.Invite
@@ -68,7 +67,8 @@ object InviteCopy {
     const val MAKE = "Make a link and share it"
     const val YOUR_LINKS = "YOUR INVITE LINKS"
     const val NONE = "No invite links waiting."
-    const val SHARE = "Share"
+    const val SHARE = "Share again"
+    const val SHARE_NOTE = "Share again makes a fresh link; the one you sent before stops working."
     const val REVOKE = "Revoke"
     const val CANT_LOAD = "Your invite links didn’t load."
     const val FAILED = "Couldn’t make a link just now. Try again."
@@ -80,11 +80,23 @@ object InviteCopy {
     /** What goes in the share sheet with the link. */
     fun shareText(url: String): String = "Come and join my ADHX: $url"
 
-    fun createError(status: Int, message: String?): String = when (status) {
-        403 -> message?.takeIf { it.isNotBlank() } ?: ADMIN_ONLY
-        404, 405 -> OLD_SERVER
+    const val TOO_MANY = "You have as many invites waiting as you can. Revoke one first."
+    const val BUSY = "That’s a lot of invites. Try again in a bit."
+    const val GONE = "That invite doesn’t work any more."
+
+    fun createError(status: Int, message: String?, code: String? = null): String = when {
+        code == "not_allowed" || status == 403 -> message?.takeIf { it.isNotBlank() } ?: ADMIN_ONLY
+        code == "too_many" || status == 409 -> message?.takeIf { it.isNotBlank() } ?: TOO_MANY
+        code == "busy" || status == 429 -> message?.takeIf { it.isNotBlank() } ?: BUSY
+        status == 404 || status == 405 -> OLD_SERVER
         else -> message?.takeIf { it.isNotBlank() } ?: FAILED
     }
+
+    /** What a link row is called: who it's for, else its code. */
+    fun title(invite: Invite): String =
+        invite.nameHint?.trim()?.takeIf { it.isNotEmpty() }?.let { "For $it" }
+            ?: invite.code?.trim()?.takeIf { it.isNotEmpty() }?.let { "Invite $it" }
+            ?: "Invite link"
 
     /** "Made 2 h ago · ends in 6 days · used once". */
     fun line(invite: Invite, now: Instant): String = listOfNotNull(
@@ -157,6 +169,7 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
     var revoking by remember { mutableStateOf<Set<String>>(emptySet()) }
     var error by remember { mutableStateOf<String?>(null) }
     var listError by remember { mutableStateOf<String?>(null) }
+    var canInvite by remember { mutableStateOf(true) }
     val api = remember(connection) { AdhxApi(connection) }
 
     suspend fun reload() {
@@ -165,6 +178,7 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                 invites.clear()
                 invites.addAll(result.value.invites)
                 listError = null
+                canInvite = result.value.canInvite != false
             }
             is ApiResult.Failed -> listError = if (result.status == 404 || result.status == 405) null else result.message ?: InviteCopy.CANT_LOAD
             ApiResult.Offline -> listError = InviteCopy.OFFLINE
@@ -196,31 +210,37 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                 modifier = Modifier.semantics { heading() },
             )
             Text(InviteCopy.NOTE, fontSize = 15.sp, lineHeight = 21.sp, color = AdhxColors.Muted)
-            PrimaryButton(
-                if (making) "Making a link…" else InviteCopy.MAKE,
-                enabled = !making,
-                onClick = {
-                    making = true
-                    error = null
-                    scope.launch {
-                        when (val result = api.createInvite()) {
-                            is ApiResult.Ok -> {
-                                val made = result.value
-                                if (made.url.isNotBlank()) shareInvite(context, made.url)
-                                reload()
-                                // A server that lists without links still knows this one's.
-                                val i = invites.indexOfFirst { it.id == made.id }
-                                if (i >= 0 && invites[i].url.isNullOrBlank()) invites[i] = invites[i].copy(url = made.url)
-                                else if (i < 0) invites.add(0, Invite(id = made.id, url = made.url, createdAt = Instant.now().toString(), expiresAt = made.expiresAt))
+            if (canInvite) {
+                PrimaryButton(
+                    if (making) "Making a link…" else InviteCopy.MAKE,
+                    enabled = !making,
+                    onClick = {
+                        making = true
+                        error = null
+                        scope.launch {
+                            when (val result = api.createInvite()) {
+                                is ApiResult.Ok -> {
+                                    val made = result.value
+                                    if (made.url.isNotBlank()) shareInvite(context, made.url)
+                                    reload()
+                                    if (invites.none { it.id == made.id }) {
+                                        invites.add(0, Invite(id = made.id, createdAt = Instant.now().toString(), expiresAt = made.expiresAt))
+                                    }
+                                }
+                                is ApiResult.Failed -> {
+                                    if (result.code == "not_allowed") canInvite = false
+                                    error = InviteCopy.createError(result.status, result.message, result.code)
+                                }
+                                ApiResult.Offline -> error = InviteCopy.OFFLINE
                             }
-                            is ApiResult.Failed -> error = InviteCopy.createError(result.status, result.message)
-                            ApiResult.Offline -> error = InviteCopy.OFFLINE
+                            making = false
                         }
-                        making = false
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Text(InviteCopy.ADMIN_ONLY, fontSize = 14.sp, lineHeight = 19.sp, color = AdhxColors.Faint)
+            }
             error?.let { Text(it, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AdhxColors.Warn) }
 
             Text(
@@ -247,7 +267,28 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                             invite = invite,
                             line = InviteCopy.line(invite, now),
                             busy = invite.id in revoking,
-                            onShare = invite.url?.takeIf { it.isNotBlank() }?.let { url -> { shareInvite(context, url) } },
+                            onShare = {
+                                // The list never has the links (only their hashes are kept): make a fresh one.
+                                revoking = revoking + invite.id
+                                error = null
+                                scope.launch {
+                                    when (val result = api.renewInvite(invite.id)) {
+                                        is ApiResult.Ok -> {
+                                            if (result.value.url.isNotBlank()) shareInvite(context, result.value.url)
+                                            val i = invites.indexOfFirst { it.id == invite.id }
+                                            if (i >= 0) invites[i] = invites[i].copy(expiresAt = result.value.expiresAt ?: invites[i].expiresAt)
+                                        }
+                                        is ApiResult.Failed -> if (result.status == 404) {
+                                            invites.removeAll { it.id == invite.id }
+                                            error = InviteCopy.GONE
+                                        } else {
+                                            error = InviteCopy.createError(result.status, result.message, result.code)
+                                        }
+                                        ApiResult.Offline -> error = InviteCopy.OFFLINE
+                                    }
+                                    revoking = revoking - invite.id
+                                }
+                            },
                             onRevoke = {
                                 revoking = revoking + invite.id
                                 error = null
@@ -268,12 +309,13 @@ fun InviteSheet(connection: Connection, onClose: () -> Unit) {
                     }
                 }
             }
+            if (invites.isNotEmpty()) Text(InviteCopy.SHARE_NOTE, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.Faint)
         }
     }
 }
 
 @Composable
-private fun InviteRow(invite: Invite, line: String, busy: Boolean, onShare: (() -> Unit)?, onRevoke: () -> Unit) {
+private fun InviteRow(invite: Invite, line: String, busy: Boolean, onShare: () -> Unit, onRevoke: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -285,20 +327,20 @@ private fun InviteRow(invite: Invite, line: String, busy: Boolean, onShare: (() 
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                invite.url?.let { Links.host(it) + "/…" } ?: "Invite link",
+                InviteCopy.title(invite),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = AdhxColors.Cream,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (line.isNotEmpty()) Text(line, fontSize = 12.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (line.isNotEmpty()) Text(line, fontSize = 12.sp, lineHeight = 16.sp, color = AdhxColors.Faint, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         if (busy) {
             Spinner(size = 18.dp)
             Spacer(Modifier.width(12.dp))
         } else {
-            if (onShare != null) SmallAction(InviteCopy.SHARE, AdhxColors.Accent, onShare)
+            SmallAction(InviteCopy.SHARE, AdhxColors.Accent, onShare)
             SmallAction(InviteCopy.REVOKE, AdhxColors.Warn, onRevoke)
         }
     }

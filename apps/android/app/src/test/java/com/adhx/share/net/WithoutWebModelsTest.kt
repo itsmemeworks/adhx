@@ -162,6 +162,46 @@ class WithoutWebModelsTest {
     }
 
     @Test
+    fun theServersInviteListHasNoLinks() {
+        val list = json.decodeFromString(
+            InvitesResponse.serializer(),
+            """{"canInvite":false,"invites":[{"id":"a1","url":null,"code":"ABCD-EFGH","nameHint":"Mum","createdAt":"2026-10-20T10:00:00.000Z","expiresAt":"2026-10-27T10:00:00.000Z","uses":0}]}""",
+        )
+        assertEquals(false, list.canInvite)
+        assertNull(list.invites.single().url)
+        assertEquals("ABCD-EFGH", list.invites.single().code)
+        assertEquals("Mum", list.invites.single().nameHint)
+    }
+
+    @Test
+    fun shareAgainMakesAFreshLink() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("""{"id":"a1","url":"https://a/invite/new","expiresAt":"2026-10-27T10:00:00.000Z"}"""))
+            val result = AdhxApi(server.url("/").toString(), "k").renewInvite("a1")
+            assertEquals("https://a/invite/new", (result as ApiResult.Ok).value.url)
+            assertEquals("POST /api/app/invites/a1/link", server.takeRequest().let { "${it.method} ${it.path}" })
+        }
+    }
+
+    @Test
+    fun signInsNoEmailIsAnAnswerNotOffline() = runBlocking {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setResponseCode(503).setBody("""{"error":"No email here.","code":"no_email"}"""))
+            server.enqueue(MockResponse().setResponseCode(503).setBody("<html>Service Unavailable</html>"))
+            val api = AdhxApi(server.url("/").toString(), null)
+            assertEquals("no_email", (api.signIn("ana@example.com", null) as ApiResult.Failed).code)
+            // A 503 that isn't the server's answer still reads as offline.
+            assertEquals(ApiResult.Offline, api.signIn("ana@example.com", null))
+        }
+    }
+
+    @Test
+    fun theReactedFeedSaysItsTotal() {
+        val page = json.decodeFromString(ReactedResponse.serializer(), """{"items":[],"nextOffset":30,"total":42}""")
+        assertEquals(42, page.total)
+    }
+
+    @Test
     fun aPostWithoutReactionsHasNone() {
         val post = json.decodeFromString(PhonePost.serializer(), """{"platform":"x","id":"1"}""")
         assertNull(post.reactions)
