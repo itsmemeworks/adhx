@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.5.0](https://github.com/itsmemeworks/adhx/compare/v2.4.0...v2.5.0) (2026-10-21)
+
+
+### Features
+
+* new on the phones plays the lineup, with up next in three parts ([#618](https://github.com/itsmemeworks/adhx/issues/618)) ([2d986b0](https://github.com/itsmemeworks/adhx/commit/2d986b02da0aacd72ee1ef07b437af237b492560))
+
+
+### Bug Fixes
+
+* isolate reactions and harden media queues and playback ([#613](https://github.com/itsmemeworks/adhx/issues/613)) ([289c213](https://github.com/itsmemeworks/adhx/commit/289c213a7b8e8969ca9f19e6296a5b34262afddd))
+* loop a post opened from the share card ([#617](https://github.com/itsmemeworks/adhx/issues/617)) ([9839867](https://github.com/itsmemeworks/adhx/commit/9839867d33923d63531956e9ace9b3e5f1d02851))
+* repeat switched on after a video ends plays it again ([#616](https://github.com/itsmemeworks/adhx/issues/616)) ([60f5495](https://github.com/itsmemeworks/adhx/commit/60f549561a86fa6ea4ff858f87e6d4ce818ed885))
+* show the post on the share card and play it at once from open in adhx ([#615](https://github.com/itsmemeworks/adhx/issues/615)) ([7ac463a](https://github.com/itsmemeworks/adhx/commit/7ac463ab15632834778803107e7914e1e717d596))
+
 ## [2.4.0](https://github.com/itsmemeworks/adhx/compare/v2.3.0...v2.4.0) (2026-10-21)
 
 
