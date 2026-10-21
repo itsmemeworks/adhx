@@ -1,5 +1,6 @@
 package com.adhx.share.feed
 
+import com.adhx.share.ui.KeepUpright
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -88,6 +89,7 @@ fun ReactPicker(
     /** The field's prompt: Live says who hears it; a post just says "Say something". */
     prompt: String = Copy.SAY_SOMETHING,
 ) {
+    KeepUpright()
     BackHandler(onBack = onDismiss)
     Box(
         Modifier

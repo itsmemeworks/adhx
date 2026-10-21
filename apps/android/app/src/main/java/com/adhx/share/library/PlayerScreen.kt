@@ -3,6 +3,16 @@ package com.adhx.share.library
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
+import android.content.res.Configuration
+import android.app.Activity
+import android.content.ContextWrapper
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.adhx.share.ui.MayTurn
+import com.adhx.share.ui.KeepUpright
 import android.view.LayoutInflater
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -134,6 +144,7 @@ import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Faces
+import com.adhx.share.ui.facesWidth
 import com.adhx.share.ui.PrivateLock
 import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.NetworkMark
@@ -256,6 +267,29 @@ fun PlayerScreen(
     val chrome by animateFloatAsState(if (scrub == null) 1f else 0f, label = "chrome")
     val pip = LocalPip.current
     val inPip = pip?.inPip == true
+    // Turned sideways on playing media: the media alone, whole, with no bars (see [MayTurn] below).
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE && !inPip
+    val view = LocalView.current
+    DisposableEffect(landscape) {
+        val window = view.context.findActivity()?.window
+        val bars = window?.let { WindowCompat.getInsetsController(it, view) }
+        fun place() {
+            if (landscape) {
+                bars?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                bars?.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                bars?.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        place()
+        // A sheet that was closing when the phone turned still had the focus: hide them again once it's gone.
+        val focus = android.view.ViewTreeObserver.OnWindowFocusChangeListener { focused -> if (focused) place() }
+        view.viewTreeObserver.addOnWindowFocusChangeListener(focus)
+        onDispose {
+            view.viewTreeObserver.removeOnWindowFocusChangeListener(focus)
+            bars?.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
 
     // While the app can be seen (full screen or as a small window): the
     // decoder is let go once it can't.
@@ -280,6 +314,9 @@ fun PlayerScreen(
 
     val settled = pager.settledPage
     val current = posts.getOrNull(settled)
+    // Only playing media turns sideways: a video, a sound or photos, with nothing over them
+    // (sheets, the picker and the reader keep the phone upright). Words and the end page stay upright.
+    MayTurn(current != null && (PostKind.plays(current.kind) || current.kind == PostKind.PHOTO))
     val mediaUrl = current?.takeIf { PostKind.plays(it.kind) }?.media?.firstOrNull()?.url
         ?.let { AdhxApi.resolve(server, it)?.toString() }
 
@@ -499,13 +536,16 @@ fun PlayerScreen(
                 onScreen = page == settled,
                 player = player,
                 playback = playback,
-                fit = fit,
+                // Sideways, the whole video, whatever Fit video says.
+                fit = fit || landscape,
+                landscape = landscape,
                 repeat = repeat,
                 // A photo's timer waits while a sheet or picker is up, in the small window and while the app is away.
                 held = more != null || sendingPost != null || reading != null || reactingNow || inPip || player == null,
                 onPhotosDone = { following()?.let { scope.launch { goTo(it) } } },
                 onHide = { hidden = true },
-                hidden = hidden,
+                // Sideways hides everything, without touching what upright had.
+                hidden = hidden || landscape,
                 saving = saving == post.key,
                 sharing = sharing == post.key,
                 shareProgress = shareProgress,
@@ -515,6 +555,8 @@ fun PlayerScreen(
                 onScrub = { scrub = it },
                 onTap = {
                     when {
+                        // Sideways, a tap only pauses or plays.
+                        landscape -> if (PostKind.plays(post.kind)) togglePlay()
                         hidden -> hidden = false
                         PostKind.plays(post.kind) -> togglePlay()
                     }
@@ -562,10 +604,10 @@ fun PlayerScreen(
                 onSeek = { ms -> player?.seekTo(ms) },
             )
         }
-        if (!hidden && !inPip && !(hideTopBarWhileSending && sendingPost != null)) {
+        if (!hidden && !landscape && !inPip && !(hideTopBarWhileSending && sendingPost != null)) {
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) { topBar() }
         }
-        if (newOnTop > 0 && !hidden && !inPip && scrub == null) {
+        if (newOnTop > 0 && !hidden && !landscape && !inPip && scrub == null) {
             NewSavesPill(
                 count = newOnTop,
                 onClick = { scope.launch { goTo(0) } },
@@ -583,7 +625,7 @@ fun PlayerScreen(
                     .padding(start = 16.dp, end = 84.dp, top = 170.dp, bottom = 300.dp),
             )
         }
-        if (!inPip) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (!inPip && !landscape) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
         if (!inPip) {
             picking?.let { post ->
                 ReactPicker(
@@ -706,6 +748,7 @@ private fun PostPage(
     player: ExoPlayer?,
     playback: Playback,
     fit: Boolean,
+    landscape: Boolean,
     repeat: Boolean,
     held: Boolean,
     onPhotosDone: () -> Unit,
@@ -797,11 +840,11 @@ private fun PostPage(
                 },
                 onLongClickLabel = if (hidden) null else "Hide controls",
                 onLongClick = { if (!hidden && !pip) onHide() },
-                onClick = { if (!hidden && timed && onScreen) timer = timer.toggled() else onTap() },
+                onClick = { if ((!hidden || landscape) && timed && onScreen) timer = timer.toggled() else onTap() },
             ),
     ) {
         when {
-            plays -> MediaPage(post, server, onScreen, player, playback, pip, fit)
+            plays -> MediaPage(post, server, onScreen, player, playback, pip, fit, whole = landscape)
             timed -> Album(photos, album, hidden || pip)
             else -> WordsCard(post, onRead)
         }
@@ -918,12 +961,14 @@ private fun MediaPage(
     playback: Playback,
     pip: Boolean,
     fit: Boolean,
+    /** Sideways: everything shows whole, a sound's cover too. */
+    whole: Boolean = false,
 ) {
     val media = post.media.firstOrNull()
     val poster = media?.posterUrl?.let { AdhxApi.resolve(server, it)?.toString() }
     // Full bleed, as on the boards (the picture covers the screen), or the whole
     // video at its own shape with Fit video on. A sound's cover always fills.
-    val fills = post.kind == PostKind.AUDIO || !fit
+    val fills = !whole && (post.kind == PostKind.AUDIO || !fit)
     // The page's own size, clipped: a sound's cover fills it (cropped) and never pushes past it.
     Box(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
         if (poster != null) {
@@ -1095,7 +1140,9 @@ private fun Dots(count: Int, current: Int) {
 private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
     val article = post.article
     val title = article?.title?.takeIf { it.isNotBlank() }
-    val short = (title.orEmpty().length + post.text.length) < SHORT_WORDS
+    // A kept X article has its whole body: shown instead of the post's own words (usually just its link) and the summary.
+    val body = remember(article?.body) { ArticleBody.parse(article?.body) }
+    val short = body.isEmpty() && (title.orEmpty().length + post.text.length) < SHORT_WORDS
     val type = if (short) 38.sp else 28.sp
     val line = if (short) 44.sp else 34.sp
     val scroll = rememberScrollState()
@@ -1136,17 +1183,21 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
             article?.url?.takeIf { it.isNotBlank() }?.let {
                 Text(Links.display(it), fontSize = 13.sp, color = AdhxColors.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (post.text.isNotBlank()) {
-                Text(
-                    rememberLinked(post.text),
-                    fontFamily = SerifFamily,
-                    fontSize = if (title != null) 22.sp else type,
-                    lineHeight = if (title != null) 30.sp else line,
-                    color = if (title != null) AdhxColors.Cream else AdhxColors.White,
-                )
-            }
-            article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
-                Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+            if (body.isNotEmpty()) {
+                ArticleBodyText(body, size = 20.sp, lineHeight = 29.sp)
+            } else {
+                if (post.text.isNotBlank()) {
+                    Text(
+                        rememberLinked(post.text),
+                        fontFamily = SerifFamily,
+                        fontSize = if (title != null) 22.sp else type,
+                        lineHeight = if (title != null) 30.sp else line,
+                        color = if (title != null) AdhxColors.Cream else AdhxColors.White,
+                    )
+                }
+                article?.description?.takeIf { it.isNotBlank() && it != post.text }?.let {
+                    Text(it, fontSize = 16.sp, lineHeight = 24.sp, color = AdhxColors.Muted)
+                }
             }
         }
         // Too long to show: the whole of it is a button away (taps on the words don't open it).
@@ -1201,11 +1252,11 @@ private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Un
                 Faces(
                     savers = post.savers,
                     server = server,
-                    size = 30.dp,
+                    size = BYLINE_FACE,
                     description = line,
                     onTap = onSaver,
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(BYLINE_GAP))
                 Text(
                     line,
                     style = OverMedia,
@@ -1231,8 +1282,19 @@ private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Un
                 Spacer(Modifier.width(6.dp))
             }
             // The network's mark, then who posted it: [YouTube] Saturday Night Live.
-            NetworkMark(post.platform, size = 15.dp, tint = if (line != null) AdhxColors.Muted else AdhxColors.White)
-            if (source.isNotEmpty()) Spacer(Modifier.width(7.dp))
+            if (line != null) {
+                // Under the faces: the mark centred under the first face, the name
+                // starting where "You saved this" starts.
+                Box(Modifier.width(facesWidth(post.savers.size.coerceAtMost(3), BYLINE_FACE)), contentAlignment = Alignment.CenterStart) {
+                    Box(Modifier.width(BYLINE_FACE), contentAlignment = Alignment.Center) {
+                        NetworkMark(post.platform, size = 15.dp, tint = AdhxColors.Muted)
+                    }
+                }
+                if (source.isNotEmpty()) Spacer(Modifier.width(BYLINE_GAP))
+            } else {
+                NetworkMark(post.platform, size = 15.dp, tint = AdhxColors.White)
+                if (source.isNotEmpty()) Spacer(Modifier.width(7.dp))
+            }
             if (source.isNotEmpty()) Text(
                 source,
                 style = OverMedia,
@@ -1257,6 +1319,10 @@ private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Un
         }
     }
 }
+
+/** The faces on the savers line, and the gap after them (the mark under them lines up with both). */
+private val BYLINE_FACE = 30.dp
+private val BYLINE_GAP = 10.dp
 
 /** The note bubble's tail: a triangle pointing down, with a softened tip. */
 private val NoteTailShape = GenericShape { size, _ ->
@@ -1636,3 +1702,10 @@ fun BarButton(painter: Painter, label: String, onClick: () -> Unit, background: 
 @Composable
 fun BarButton(icon: ImageVector, label: String, onClick: () -> Unit, background: Color = Color.Black.copy(alpha = 0.45f)) =
     BarButton(rememberVectorPainter(icon), label, onClick, background)
+
+/** The activity behind a [Context], unwrapping themes and the like. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}

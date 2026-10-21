@@ -1,5 +1,6 @@
 package com.adhx.share.library
 
+import com.adhx.share.ui.KeepUpright
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
@@ -97,6 +98,7 @@ fun MoreSheet(
     onDismiss: () -> Unit,
     controls: PlayerControls? = null,
 ) {
+    KeepUpright()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)

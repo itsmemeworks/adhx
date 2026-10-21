@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Android: landscape for watching, full articles and aligned bylines
+
+- The app is portrait everywhere (`android:screenOrientation="portrait"`); `OrientationHost` (`ui/Orientation.kt`) is a stack like iOS's: a player on a video, sound or photo says `MayTurn(true)`, every sheet, the React picker and the reader say `KeepUpright()`, newest wins (`SCREEN_ORIENTATION_USER`: sideways, never upside down, keeps the phone's rotation lock). Words posts and the end page stay upright.
+- Sideways the player hides all chrome and the system bars (re-hidden when a closing sheet gives the focus back), shows the media whole whatever Fit video says, and taps only pause/play; swiping still moves between posts; turning back restores the chrome as it was.
+- Kept X articles: `PhoneArticle.body` (optional) is parsed by `ArticleBody` (headings, lists, quotes, rules, bold/italic, links; pictures left out) and replaces the description and the post's own text in the words card and the reader.
+- Byline: under the savers line the network mark is centred under the first face in a column as wide as the faces, so the poster's name starts where "You saved this" starts. HTML entities in post words and article titles are decoded on the phone (`Entities`) for servers before #588.
+- Tests in `LandscapeArticlesTest`. Checked on the emulator: rotation on a video (bars gone, letterboxed, tap pauses, back to portrait with chrome), Search stays upright, a More sheet holds portrait until closed, the aligned byline. Not checked: an article body on screen (the test server doesn't send one yet).
+
 ## 2026-10-21 — Android: React on every post, replayed when you watch it
 
 - The player has its own React (smiley at the top of the rail) on every post outside Live, with Live's `ReactPicker` (prompt "Say something"). Yours floats at once with your picture (`Connection.avatarUrl`), posts to `POST /api/app/reactions`, and is taken back with "Couldn’t send that. Try again." in the picker on failure (`PostFloats`).
