@@ -6,6 +6,9 @@ import React from 'react'
 import { Download } from 'lucide-react'
 import type { ArticleContentBlock, ArticleEntityMap, MediaEntitiesMap } from './types'
 import { handleDownloadMedia } from './media-actions'
+import { decodeHtmlEntities } from '@/lib/feed/post-body'
+
+export { decodeHtmlEntities }
 
 /**
  * Render media with share/download overlay buttons
@@ -181,41 +184,6 @@ export function renderBionicTextWithLinks(text: string, className?: string): Rea
 export function stripMediaUrls(text: string, hasMedia: boolean): string {
   if (!hasMedia) return text
   return text.replace(/\s*https:\/\/t\.co\/\w+$/g, '').trim()
-}
-
-/**
- * Decode HTML entities in text (named and numeric/hex)
- */
-export function decodeHtmlEntities(text: string): string {
-  const namedEntities: Record<string, string> = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&apos;': "'",
-    '&nbsp;': ' ',
-  }
-
-  // First handle named entities
-  let result = text.replace(
-    /&(?:amp|lt|gt|quot|#39|apos|nbsp);/g,
-    (match) => namedEntities[match] || match,
-  )
-
-  // Handle decimal numeric entities (&#12345;)
-  result = result.replace(/&#(\d+);/g, (_, dec) => {
-    const codePoint = parseInt(dec, 10)
-    return String.fromCodePoint(codePoint)
-  })
-
-  // Handle hexadecimal numeric entities (&#x1F600; or &#X1F600;)
-  result = result.replace(/&#[xX]([0-9a-fA-F]+);/g, (_, hex) => {
-    const codePoint = parseInt(hex, 16)
-    return String.fromCodePoint(codePoint)
-  })
-
-  return result
 }
 
 /**
