@@ -817,6 +817,27 @@ describe('TheaterV2', () => {
       ),
     ).toBe(true)
   })
+
+  it('plays the last post again when Repeat is switched on after it ran out', async () => {
+    const resume = vi.fn()
+    window.addEventListener('theater-resume', resume)
+    try {
+      render(<TheaterV2 source={{ ...source, start: 'twitter:3' }} />)
+      await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('3'))
+      await act(async () => {
+        stageProps.mock.calls.at(-1)?.[0].onEnded?.()
+      })
+      await waitFor(() => expect(screen.getByText('That’s all 3')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+      fireEvent.click(screen.getByRole('menuitem', { name: /Repeat/ }))
+      await waitFor(() => expect(screen.queryByText('That’s all 3')).toBeNull())
+      expect(screen.getByTestId('stage')).toHaveTextContent('3')
+      expect(resume).toHaveBeenCalled()
+      expect(stageProps.mock.calls.at(-1)?.[0].repeat).toBe(false) // All: goes round from here
+    } finally {
+      window.removeEventListener('theater-resume', resume)
+    }
+  })
 })
 
 describe('channels in the theater', () => {

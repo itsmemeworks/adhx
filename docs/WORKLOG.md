@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Repeat switched on after the end plays the post again
+
+- Owner: setting Repeat one on a video at the end of a 1-of-1 queue should start it looping. It didn't anywhere: iOS `Playback` and Android's `REPEAT_MODE_ONE` only loop if set before the end, and the web theater sat on "That's all".
+- iOS: `Playback.repeatOne` replays when the video already ran out (a tap at the end replays too); the photo timer reruns on Repeat and a one-photo post on repeat keeps going round (its key never changed, so it stopped after one pass).
+- Android: turning Repeat on in `STATE_ENDED` seeks to 0 and plays.
+- Web: Repeat (All or One) chosen at "That's all" replays the current post; All then goes round the queue (the menu steps Off → All → One, so All mustn't jump away). Component test added.
+- Checked: iOS simulator (Me at the zoo ran out, Repeat on → plays and keeps looping), web component test, Android compiles.
+
 ## 2026-10-21 — Align the killed-runner rehearsal with bounded lease retries
 
 - The large-queue CI rehearsal still required immediate reclamation of an expired job, contradicting the new retry policy. It now verifies one charged attempt, a future retry deadline, completion of another due post, then safe reclamation after advancing only the fixture deadline.

@@ -421,7 +421,13 @@ fun PlayerScreen(
     }
 
     LaunchedEffect(player, repeat) {
-        player?.repeatMode = if (repeat) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        val p = player ?: return@LaunchedEffect
+        p.repeatMode = if (repeat) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        // Switched on after the video ran out (the last post): play it again.
+        if (repeat && p.playbackState == Player.STATE_ENDED) {
+            p.seekTo(0)
+            p.play()
+        }
     }
 
     LaunchedEffect(notice) {
