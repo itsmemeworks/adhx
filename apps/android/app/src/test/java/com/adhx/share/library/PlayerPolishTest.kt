@@ -15,8 +15,9 @@ class PlayerPolishTest {
     fun bylineIsWhoPostedItElseTheNetwork() {
         // The mark sits before it, so the network's name isn't repeated.
         assertEquals("Saturday Night Live", bylineName(PhonePost(platform = "youtube", author = PhoneAuthor(name = " Saturday Night Live ", handle = "snl"))))
-        assertEquals("YouTube", bylineName(PhonePost(platform = "youtube", author = PhoneAuthor(handle = "snl"))))
-        assertEquals("X", bylineName(PhonePost(platform = "twitter")))
+        assertEquals("@snl", bylineName(PhonePost(platform = "youtube", author = PhoneAuthor(handle = "snl"))))
+        assertEquals("", bylineName(PhonePost(platform = "twitter")))
+        assertEquals("", bylineName(PhonePost(platform = "youtube", author = PhoneAuthor(name = "YouTube"))))
         assertEquals("@someone", bylineName(PhonePost(platform = "web", author = PhoneAuthor(handle = "someone"))))
         assertEquals("", bylineName(PhonePost(platform = "web")))
     }

@@ -1074,11 +1074,14 @@ private const val SHORT_WORDS = 140
  * Who posted it, for the byline after the network's mark: their name, else
  * the network's ("YouTube"), else their handle.
  */
-internal fun bylineName(post: PhonePost): String =
-    post.author.name?.trim()?.takeIf { it.isNotEmpty() }
-        ?: Networks.name(post.platform)
+/** Who posted it, beside the network's mark; "" (just the mark) when no one's named, like iOS. */
+internal fun bylineName(post: PhonePost): String {
+    val who = post.author.name?.trim()?.takeIf { it.isNotEmpty() }
         ?: Copy.handle(post.author.handle)
-        ?: ""
+        ?: return ""
+    val network = Networks.name(post.platform)
+    return if (who.length <= 1 || (network != null && who.equals(network, ignoreCase = true))) "" else who
+}
 
 /**
  * Bottom left, over the post: who of your people saved it (faces and "Ana and
@@ -1129,8 +1132,8 @@ private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Un
             }
             // The network's mark, then who posted it: [YouTube] Saturday Night Live.
             NetworkMark(post.platform, size = 15.dp, tint = if (line != null) AdhxColors.Muted else AdhxColors.White)
-            Spacer(Modifier.width(7.dp))
-            Text(
+            if (source.isNotEmpty()) Spacer(Modifier.width(7.dp))
+            if (source.isNotEmpty()) Text(
                 source,
                 style = OverMedia,
                 fontSize = 14.sp,
