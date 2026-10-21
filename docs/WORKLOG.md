@@ -6,6 +6,16 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — iPhone without the web: your picture, invites, email sign-in, the reactions feed
+
+- Owner: "the app shouldnt have to rely on the web app any more". iOS side of the decouple contract (server routes built in parallel, coded against their shapes): `Shared/AccountAPI.swift` (avatar, invites, `/api/app/signin`, `/api/app/reacted`, multipart bodies via a new `send(…data:contentType:)`).
+- Change picture is native (`App/Settings/PictureSheet.swift`): Choose a photo (PhotosPicker), Take a selfie (front camera; camera copy now covers both), a square crop with pan/pinch and a round preview (`AvatarCrop.swift`, sent as a pre-cropped JPEG, x=y=0.5, zoom=1), four Gob faces, Use my X photo (409 explained), Remove picture.
+- Your face everywhere: `YourFace` (People.swift) holds `/api/app/me`'s avatarUrl/avatarSource, refreshed on activation and after a change; `Face` draws it for any saver that is you (isYou or your username), so Live's own reactions, savers, people and Settings all agree. Letter only when there's no picture (`generated`).
+- Invites: Settings, Your people and Channels' Invite open `InviteSheet` (make a link → system share sheet; your live links with Revoke). Connect gains Sign in with email (address → email → 6-digit code, `.oneTimeCode`; bad_code/expired/busy in plain words); pairing stays.
+- Reactions row at the top of Channels (`App/Feed/ReactedFeed.swift`); it plays the paged queue, replaying each post's reactions every time (`PlayerExtras.replayReactions`).
+- No web hops left: More's Open in my ADHX, Shared lately's and My saves' Open my ADHX, Shared lately rows (player only), the share extension's Open (`adhx://open` or the post). Share an ADHX link stays.
+- Checked: simulator build, `Tests/DecoupleTests.swift` (60 checks) and the existing suites. Not checked: against a live server (routes not on a branch yet) or on screen.
+
 ## 2026-10-21 — Reactions kept on every post, and replayed
 
 - Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.

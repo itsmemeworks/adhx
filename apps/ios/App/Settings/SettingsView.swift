@@ -11,8 +11,10 @@ struct SettingsView: View {
     /// For "What your ADHX is doing".
     var doing: DoingModel?
     @EnvironmentObject private var model: AppModel
-    @Environment(\.openURL) private var openURL
     @StateObject private var settings = SettingsModel()
+    @ObservedObject private var yours = YourFace.shared
+    @State private var changingPicture = false
+    @State private var inviting = false
     @State private var confirmRemove = false
     @State private var declining: JoinRequest?
     @State private var filtering = false
@@ -93,6 +95,10 @@ struct SettingsView: View {
         } message: { _ in
             Text("They won’t get in with this invite.")
         }
+        .pictureChanger(isPresented: $changingPicture, server: model.server,
+                        onChanged: { Task { await settings.load() } },
+                        onBadKey: { model.disconnect() })
+        .inviteSheet(isPresented: $inviting, onBadKey: { model.disconnect() })
         .boardSheet(isPresented: $filtering, height: 590) {
             if let feed {
                 FeedFilterSheet(types: feed.types, mode: feed.mode, newCount: nil, hidden: feed.hidden,
@@ -111,7 +117,8 @@ struct SettingsView: View {
 
     private var youCard: some View {
         let username = settings.me?.username ?? model.username ?? ""
-        let face = settings.me?.face ?? Saver(username: username.isEmpty ? "you" : username)
+        // Your current picture (YourFace), not the people list's copy.
+        let face = yours.you(from: settings.me?.asSaver ?? Saver(username: username.isEmpty ? "you" : username))
         return HStack(spacing: 14) {
             Button(action: changePicture) {
                 Face(saver: face, server: model.server, size: 64, ring: Face.colour(for: face.username))
@@ -127,7 +134,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Your picture")
-            .accessibilityHint("Change it on your ADHX, in the browser")
+            .accessibilityHint("Choose a photo, take a selfie or pick a Gob")
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(settings.me?.shownName ?? (username.isEmpty ? "You" : username))
@@ -153,7 +160,6 @@ struct SettingsView: View {
                 .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
                 .contentShape(Capsule())
                 .buttonStyle(.plain)
-                .accessibilityHint("Opens Settings on your ADHX in the browser")
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.surface))
@@ -166,8 +172,7 @@ struct SettingsView: View {
         return parts.joined(separator: " · ")
     }
 
-    /// No phone route takes a picture yet: change it on the web.
-    private func changePicture() { openWeb("/settings#you") }
+    private func changePicture() { changingPicture = true }
 
     // MARK: Waiting for you
 
@@ -275,7 +280,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             if let server = model.server {
                 NavigationLink {
-                    PeopleListView(settings: settings, server: server, invite: invite)
+                    PeopleListView(settings: settings, server: server)
                 } label: {
                     SettingsRow(title: "Your people") {
                         let others = settings.members.filter { !$0.isYou }
@@ -295,12 +300,11 @@ struct SettingsView: View {
             }
             if settings.people?.canInvite ?? true {
                 Button(action: invite) {
-                    SettingsRow(title: "Invite someone", external: true) {
+                    SettingsRow(title: "Invite someone", subtitle: "Make a link and send it") {
                         EmptyView()
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint("Makes a link on your ADHX, in the browser")
                 divider
             }
             if let feed, !feed.unsupported {
@@ -332,8 +336,7 @@ struct SettingsView: View {
         Rectangle().fill(.white.opacity(0.06)).frame(height: 1)
     }
 
-    /// No phone route makes invites yet: Settings → Your people on the web does.
-    private func invite() { openWeb("/settings#people") }
+    private func invite() { inviting = true }
 
     // MARK: This phone
 
@@ -426,11 +429,6 @@ struct SettingsView: View {
 
     // MARK: Helpers
 
-    private func openWeb(_ path: String) {
-        guard let server = model.server, let url = ADHXClient.resolve(path, against: server) else { return }
-        openURL(url)
-    }
-
     /// Which release this build is: "2.2.0", or "2.2.0 +3 · abc1234" when
     /// it's built from commits after that tag (written by Config/stamp-version.sh).
     static let version: String = {
@@ -446,11 +444,10 @@ struct SettingsView: View {
 // MARK: - Rows
 
 /// A row in Settings: a title (and a line under it), whatever the screen puts
-/// on the right, and a chevron (or an arrow for what opens in the browser).
+/// on the right, and a chevron.
 struct SettingsRow<Trailing: View>: View {
     let title: String
     var subtitle: String?
-    var external = false
     @ViewBuilder var trailing: () -> Trailing
 
     var body: some View {
@@ -468,7 +465,7 @@ struct SettingsRow<Trailing: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             trailing()
-            Image(systemName: external ? "arrow.up.right" : "chevron.right")
+            Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(Theme.faint)
                 .accessibilityHidden(true)

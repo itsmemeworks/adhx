@@ -29,6 +29,17 @@ swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift \
 /tmp/adhx-board-features-tests
 ```
 
+The decouple suite (your picture's answers and the crop sums, invites,
+email sign-in codes, the reactions feed, and the share sheet opening the app
+rather than the website) runs the same way:
+
+```sh
+swiftc apps/ios/Shared/API.swift apps/ios/Shared/FriendsAPI.swift \
+  apps/ios/Shared/AccountAPI.swift apps/ios/App/Settings/AvatarCrop.swift \
+  apps/ios/Tests/DecoupleTests.swift -o /tmp/adhx-decouple-tests
+/tmp/adhx-decouple-tests
+```
+
 The live suite checks compact saver/privacy updates, explicit removals, preserving the playing
 post and older cached posts, the 200-post cache bound, compatible decoding, and
 40-code-point message clipping without splitting emoji.
