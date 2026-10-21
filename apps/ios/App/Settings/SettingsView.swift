@@ -66,7 +66,10 @@ struct SettingsView: View {
             _ = await (people, busy)
         }
         .onChange(of: justForMe) { _, on in Prefs.justForMeByDefault = on }
-        .onChange(of: soundOn) { _, on in Prefs.soundOn = on }
+        .onChange(of: soundOn) { _, on in
+            Prefs.soundOn = on
+            NotificationCenter.default.post(name: Playback.choicesChanged, object: nil)
+        }
         .confirmationDialog("Remove this phone?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remove this phone", role: .destructive) { model.disconnect() }
             Button("Cancel", role: .cancel) {}

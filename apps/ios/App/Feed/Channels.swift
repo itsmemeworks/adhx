@@ -193,9 +193,17 @@ struct ChannelsView: View {
                     .padding(.trailing, 8)
                     .accessibilityHint("Everyone on your ADHX")
             }
-            // Spread across the row while they fit (the boards'), else a scroll.
+            // Five spread across the row (the boards'); fewer sit together from
+            // the left, so a lone face and Invite don't drift apart; more scroll.
             let count = model.index.friends.count + (model.canInvite ? 1 : 0)
-            if count <= 5 {
+            if count < 5 {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(model.index.friends) { personButton($0) }
+                    if model.canInvite { InviteButton(action: invite) }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+            } else if count == 5 {
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(Array(model.index.friends.enumerated()), id: \.element.id) { index, person in
                         if index > 0 { Spacer(minLength: 4) }
@@ -205,7 +213,6 @@ struct ChannelsView: View {
                         Spacer(minLength: 4)
                         InviteButton(action: invite)
                     }
-                    if count < 5 { Spacer(minLength: 0) }
                 }
                 .padding(.horizontal, 16)
             } else {
