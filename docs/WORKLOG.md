@@ -15,6 +15,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - The showreel uses the same posts and `adhx-reel.mp4`/`.jpg` were re-recorded (Playwright + Chrome, 1.3 MB). Publishing is still the manual Site workflow.
 - Follow-ups: nearly every post is from X because that's what the public snapshot held; swap in other networks' saves when Right now has them.
 
+## 2026-10-21 — Run CI and local development on Node 26 like the image
+
+- The container moved to Node 26 while `.nvmrc` and every workflow `node-version` stayed on 24, so tests ran on a different major than what ships.
+- `.nvmrc`, `ci.yml` (all seven jobs) and `site.yml` now use 26; README and CONTRIBUTING recommend 26. The engines range is unchanged, so 22.22.1+ and 24 still work locally.
+- Workflows install pnpm with `pnpm/action-setup`, so Node 26 shipping without Corepack does not affect CI.
+- Follow-up: the Mac worker docs still say ARM64 Node 24 (any version the engines allow works); bump them once the worker has been measured on 26.
+
+## 2026-10-21 — Posters that aren't black (the History channel's black covers)
+
+- The owner's History channel showed four near-black cover tiles over bright canyon and forest videos. Covers are each post's kept poster, and those posters came out black: a network's own thumbnail of a black first frame, or our grab one second in, inside a fade. (Sampled the public moments snapshot: 2 of 29 posters dark, both genuinely dark screen recordings, so it's specific posts, not every poster.)
+- `posterFrame` (`src/lib/keep/poster.ts`) now tries a few moments (10% in, at least 1 s and at most 20 s, then 25%, 50%, then 1 s) and keeps the first that isn't dark (`brightness()` via sharp, ≥ 45/255), else the brightest; candidates are cleaned up.
+- `repairDarkPosters()` runs once per server in the background when keeping starts (`keep_settings.poster_repair_v1`): every kept poster under 30/255 whose post has a kept `video-1` is remade, and replaced only when the new one is clearly brighter.
+- Kept posters are now `max-age=3600` with an ETag (size + mtime → 304) instead of 7 days, so a remade poster reaches phones within the hour. Other kept files are unchanged.
+
 ## 2026-10-21 — Review the complete dependency upgrade set
 
 - Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.
