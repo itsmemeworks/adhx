@@ -1,28 +1,31 @@
-name: '🐛 Bug Report'
-description: "Something's broken and it's not just your attention span"
-title: '[Bug]: '
-labels: ['bug', 'needs-triage']
+name: Bug report
+description: Something in ADHX is broken, wrong or confusing.
+title: 'bug: '
+labels: ['bug']
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report this! We know you probably have 50 other tabs open, so we'll keep this quick.
+        Thanks for reporting this. A few details help us fix it fast.
+
+        **Security problem?** Don't file it here. Report it privately: see [SECURITY.md](https://github.com/itsmemeworks/adhx/blob/main/SECURITY.md).
+
+        Please remove anything private before you post: email addresses, server addresses you'd rather keep to yourself, keys, tokens, and other people's names or saves.
 
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
-      description: Tell us what went wrong. We promise not to judge if you forgot what you were doing mid-report.
-      placeholder: 'I clicked the thing and then... wait, what was I doing?'
+      description: Describe what went wrong. Error messages are gold.
+      placeholder: I shared a TikTok to ADHX and the player said "Getting it ready" forever.
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: What should have happened?
-      description: In a perfect world (where we actually read our bookmarks), what would have occurred?
-      placeholder: 'It should have saved my tweet so I can ignore it properly later'
+      label: What did you expect?
+      placeholder: The video plays once it's kept, usually within a minute.
     validations:
       required: true
 
@@ -30,43 +33,71 @@ body:
     id: reproduce
     attributes:
       label: Steps to reproduce
-      description: Help us recreate the chaos
+      description: The smallest set of steps that shows the problem. Include an example post link if a public one shows it.
       placeholder: |
-        1. Open ADHX
-        2. Click on...
-        3. Watch it break
-        4. Question your life choices
+        1. Share a TikTok to ADHX from the iPhone app
+        2. Open New
+        3. Tap the post
     validations:
       required: true
 
   - type: dropdown
-    id: browsers
+    id: where
     attributes:
-      label: What browser are you using?
-      description: (We know you have Chrome with 200 tabs, but which one specifically?)
+      label: Where did it happen?
+      multiple: true
       options:
-        - Chrome (like everyone else)
-        - Firefox (respect)
-        - Safari (you brave soul)
-        - Edge (no judgment... okay, a little)
-        - Arc (fancy!)
-        - Other (please specify below)
+        - Web, desktop browser
+        - Web, phone browser
+        - iPhone app or share extension
+        - Android app
+        - Mac helper
+        - Desktop extension
+        - Server setup (Docker, NAS, upgrade)
+        - Not sure
     validations:
       required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: ADHX version
+      description: The version in `/api/health` on your server, or the commit you're running.
+      placeholder: 2.4.0
+    validations:
+      required: false
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, phone or host
+      description: For example "Safari 26 on macOS", "Pixel 9, Android 16", or "Docker on a Synology NAS".
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant server or console output. This is shown as code, so no need for backticks. Remove secrets first.
+      render: shell
+    validations:
+      required: false
 
   - type: textarea
     id: context
     attributes:
       label: Anything else?
-      description: Screenshots, error messages, your bookmark count (we won't judge)
-      placeholder: 'I have 1,247 unread bookmarks and zero regrets'
+      description: Screenshots or recordings help. Please describe what they show, for anyone who can't see them.
+    validations:
+      required: false
 
   - type: checkboxes
-    id: terms
+    id: checks
     attributes:
       label: Checklist
       options:
-        - label: I've searched existing issues and this isn't a duplicate
+        - label: I searched existing issues and this isn't a duplicate.
           required: true
-        - label: I've tried turning it off and on again
-          required: false
+        - label: I removed secrets and other people's personal data from this report.
+          required: true

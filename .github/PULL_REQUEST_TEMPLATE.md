@@ -1,56 +1,33 @@
-## What does this PR do?
+## What changed
 
-<!-- Describe your changes. We promise to actually read this (unlike our bookmarks). -->
+<!-- One or two sentences. What can people do now, or what stopped being broken? -->
 
-## Why?
+## Why
 
-<!-- What problem does this solve? Link to an issue if there is one. -->
+<!-- The problem this solves. Link the issue if there is one. -->
 
 Closes #
 
-## Type of change
+## How I checked it
 
-<!-- Check all that apply -->
+<!-- Commands you ran and what you looked at. Say what you did NOT check, too
+(for example "not tried on a real iPhone"). -->
 
-- [ ] 🐛 Bug fix (something was broken, now it's less broken)
-- [ ] ✨ New feature (something shiny and new)
-- [ ] 💄 UI/UX improvement (making things prettier)
-- [ ] 📝 Documentation (words about code > no words about code)
-- [ ] 🧹 Refactor (same behavior, better code)
-- [ ] ⚡ Performance (zoom zoom)
-- [ ] 🧪 Tests (proving things work)
-- [ ] 🔧 Config/CI (the unsexy but necessary stuff)
-
-## How to test
-
-<!-- Help reviewers verify your changes -->
-
-1.
-2.
-3.
+- [ ] `pnpm typecheck && pnpm test`
+- [ ] `pnpm lint && pnpm format:check`
+- [ ] `pnpm test:e2e` (if pages or flows changed)
+- [ ] Looked at it at desktop and phone widths, with a keyboard (if the UI changed)
 
 ## Screenshots
 
-<!-- If applicable. We're visual creatures who save too many images. -->
+<!-- For UI changes: before and after. Add a short description of each so
+people using a screen reader know what changed. -->
 
 ## Checklist
 
-<!-- Complete these before requesting review -->
-
-- [ ] My PR title follows [conventional commits](https://www.conventionalcommits.org/) format
-- [ ] I've tested my changes locally
-- [ ] I've updated documentation if needed
-- [ ] My code doesn't introduce new warnings
-- [ ] I've added tests for new functionality (if applicable)
-- [ ] I haven't mass-deleted anyone's bookmarks (please don't)
-
-## Anything else?
-
-<!--
-Fun facts, concerns, questions, your current bookmark count...
-We're all friends here.
--->
-
----
-
-_Thanks for contributing! You're helping fellow bookmark hoarders everywhere._ 🙏
+- [ ] The title is a Conventional Commit with a lowercase subject (`fix: keep the queue when a video is gone`)
+- [ ] Tests cover the change
+- [ ] Docs that this makes wrong are updated (`README.md`, `ARCHITECTURE.md`, `CLAUDE.md`, a spec)
+- [ ] A `docs/WORKLOG.md` entry, if the change is substantive
+- [ ] Nothing visible to signed-out visitors names who saved a post
+- [ ] No secrets, `.env` files or personal data

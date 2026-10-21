@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: '🔒 Security vulnerability'
+  - name: Report a security vulnerability
     url: https://github.com/itsmemeworks/adhx/security/advisories/new
-    about: 'Report privately — do not open a public issue. See SECURITY.md.'
-  - name: '💬 Discussions'
+    about: Report privately. Please don't open a public issue. See SECURITY.md.
+  - name: Ask a question
     url: https://github.com/itsmemeworks/adhx/discussions
-    about: 'Have a question? Want to share your bookmark hoarding stories? Join the discussion!'
-  - name: '📖 Documentation'
+    about: Setup help, how something works, or an idea you want to talk through.
+  - name: Read the docs
     url: https://github.com/itsmemeworks/adhx#readme
-    about: 'Check the README first - we know, we know, reading docs is the last thing any of us want to do'
+    about: Setup, features and the self-hosting guides.

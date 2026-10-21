@@ -1,59 +1,60 @@
 # Code of Conduct
 
-## The Golden Rule
+## The short version
 
-Be cool. We're all just trying to organize our chaotic bookmark collections here.
+Be kind. ADHX exists so friends can share the good stuff without an algorithm
+shouting at them. This project should feel the same.
 
-## The Slightly Longer Version
+## Who's welcome
 
-### We Welcome Everyone
+Everyone, whatever your experience, background, identity, or number of open
+browser tabs. First-time contributors especially: there's no such thing as a
+question too basic to ask here.
 
-ADHX is for anyone who:
+## What we expect
 
-- Has 847 unread bookmarks (and counting)
-- Saves tweets "to read later" (we both know you won't)
-- Gets distracted mid-sentence and forgets what they were—oh look, a squirrel!
+- **Be kind.** Someone's "obvious" question is their first day.
+- **Be patient.** People reply when they can. Some of us are watching one more
+  video first.
+- **Be constructive.** "This could be clearer because…" beats "this is bad".
+- **Give credit.** If someone's idea or code helped you, say so.
+- **Assume good faith**, and ask before you assume anything else.
+- **Stay on topic.** Save the hot takes for the networks ADHX saves posts from.
 
-Seriously though, we welcome contributors regardless of experience level, background, identity, or how many browser tabs you currently have open (no judgment on that 200+ count).
+## What's not OK
 
-### Expected Behavior
+- Harassment, discrimination, or personal attacks.
+- Trolling, or deliberately derailing a conversation.
+- Sharing anyone's private information, including what they saved or watched
+  on their own ADHX.
+- Sexual content or violent language aimed at anyone.
+- Anything else that makes people feel unwelcome or unsafe.
 
-- **Be kind** – We're all learning, and someone's "obvious" question might be their breakthrough moment
-- **Be patient** – Not everyone replies instantly (they might be down a Wikipedia rabbit hole)
-- **Be constructive** – "This could be better because..." beats "This is bad"
-- **Give credit** – If someone's idea helped you, say so!
-- **Stay on topic** – Save the hot takes for Twitter (and then bookmark them here, obviously)
+## What happens if someone breaks it
 
-### Not Cool
+1. A private heads-up from a maintainer.
+2. If it continues, a temporary break from the project's spaces.
+3. For serious or repeated harm, a permanent ban.
 
-- Harassment, discrimination, or being a jerk
-- Trolling or deliberately derailing conversations
-- Sharing others' private info
-- Any behavior that makes others feel unwelcome
+Maintainers may skip straight to step 3 for serious harm. We'd rather never
+need any of this.
 
-### Enforcement
+## Reporting
 
-If someone's being uncool:
+- **Conduct or harassment:** email [security@adhx.com](mailto:security@adhx.com)
+  with "Code of Conduct" in the subject, or contact a maintainer privately on
+  GitHub. Reports are handled discreetly, and we won't tolerate retaliation
+  against anyone who reports in good faith.
+- **Security vulnerabilities:** don't post them in public; follow
+  [`SECURITY.md`](SECURITY.md).
 
-1. They'll get a friendly heads-up
-2. Continued issues = temporary timeout
-3. Serious violations = permanent ban
+## Where this applies
 
-We'd rather not do any of that, so let's all just be decent humans.
-
-## Reporting Issues
-
-See something? Say something.
-
-- **Conduct / harassment:** email [security@adhx.com](mailto:security@adhx.com) with the subject “Code of Conduct”, or contact a maintainer privately on GitHub.
-- **Security vulnerability:** do **not** file a public issue — see [SECURITY.md](SECURITY.md).
-
-We take reports seriously and will handle them with discretion.
-
-## TL;DR
-
-Don't be a jerk. Help each other out. Save more bookmarks than you'll ever read.
+Issues, pull requests, discussions, reviews, and anywhere else you represent
+the project.
 
 ---
 
-_This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/), but with more personality._
+This Code of Conduct is adapted from the
+[Contributor Covenant](https://www.contributor-covenant.org/), with fewer
+words and more personality.
