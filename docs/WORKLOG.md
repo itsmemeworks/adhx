@@ -6,6 +6,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — No quote marks inside speech bubbles
+
+- Owner: a friend's note "shouldn't be in quotes — that's implied by the fact it's in a speech bubble". The player's note bubble on iOS (`NoteBubble`) and Android, and Android's Reactions-tile words chip, now show the words bare. The web bubble already did. Quote marks stay where words aren't in a bubble (a friend's note card in a channel, the why sheet's "Pete sent you this: …" line) and in Android's screen-reader description, where they say the words were said.
+
 ## 2026-10-21 — Run CI and local development on Node 26 like the image
 
 - The container moved to Node 26 while `.nvmrc` and every workflow `node-version` stayed on 24, so tests ran on a different major than what ships.
