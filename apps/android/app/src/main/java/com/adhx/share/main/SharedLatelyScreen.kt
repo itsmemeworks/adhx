@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,14 +48,11 @@ import com.adhx.share.ui.AdhxBrand
 import com.adhx.share.ui.AdhxColors
 import com.adhx.share.ui.Copy
 import com.adhx.share.ui.NetworkMark
-import com.adhx.share.ui.PrimaryButton
-import com.adhx.share.ui.openInAdhx
 import kotlinx.coroutines.delay
 
 /** "Shared lately" (Home.dc.html): what this phone shared. A row opens the post in the player. */
 @Composable
 fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> Unit, onOpen: (HistoryItem) -> Unit) {
-    val context = LocalContext.current
     val items by vm.items.collectAsStateWithLifecycle()
     val reach by vm.reach.collectAsStateWithLifecycle()
 
@@ -139,12 +135,6 @@ fun SharedLatelyScreen(vm: MainViewModel, connection: Connection, onBack: () -> 
                 }
             }
         }
-
-        PrimaryButton(
-            "Open my ADHX",
-            onClick = { openInAdhx(context, connection.server) },
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 

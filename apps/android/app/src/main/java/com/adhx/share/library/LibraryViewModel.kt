@@ -47,6 +47,9 @@ sealed interface Route {
     /** The open channel from [start]; [onlyNew] plays just the ones marked New ("Play the 4 new"). */
     data class ChannelPlayer(val start: Int, val onlyNew: Boolean = false) : Route
 
+    /** Posts with reactions (Channels → Reactions) in the player, from [start]. */
+    data class ReactedPlayer(val start: Int) : Route
+
     /** Tuned in to a moment on Live. */
     data class TunedIn(val slug: String) : Route
 

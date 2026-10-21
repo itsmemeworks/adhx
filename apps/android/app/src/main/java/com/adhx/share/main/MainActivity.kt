@@ -20,6 +20,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -54,8 +57,8 @@ import com.adhx.share.library.SavesHome
 import com.adhx.share.library.SearchScreen
 import com.adhx.share.net.ApiResult
 import com.adhx.share.ui.AdhxTheme
-import com.adhx.share.ui.SettingsCopy
-import com.adhx.share.ui.openInAdhx
+import com.adhx.share.ui.LocalMe
+import com.adhx.share.ui.Me
 import com.adhx.share.ui.openUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -148,9 +151,7 @@ private fun MainApp(
     people: PeopleViewModel,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val connection by vm.connection.collectAsStateWithLifecycle()
-    val reach by vm.reach.collectAsStateWithLifecycle()
     val storageError by vm.storageError.collectAsStateWithLifecycle()
     LaunchedEffect(storageError) {
         storageError?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
@@ -173,11 +174,35 @@ private fun MainApp(
         }
     }
 
+    val avatarSource by vm.avatarSource.collectAsStateWithLifecycle()
     val current = connection
     if (current == null) {
         ConnectScreen(vm)
         return
     }
+    // Your own face everywhere: the picture /api/app/me last gave (refreshed on resume and after a change).
+    val me = remember(current.username, current.avatarUrl, avatarSource) {
+        Me.of(current.username, current.avatarUrl, avatarSource)
+    }
+    CompositionLocalProvider(LocalMe provides me) {
+        ConnectedApp(vm, library, feed, doing, people, current)
+    }
+}
+
+@Composable
+private fun ConnectedApp(
+    vm: MainViewModel,
+    library: LibraryViewModel,
+    feed: FeedViewModel,
+    doing: DoingViewModel,
+    people: PeopleViewModel,
+    current: Connection,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val reach by vm.reach.collectAsStateWithLifecycle()
+    var inviting by rememberSaveable { mutableStateOf(false) }
+    if (inviting) InviteSheet(connection = current, onClose = { inviting = false })
 
     val peopleUi by people.ui.collectAsStateWithLifecycle()
     if (Welcome.pending) {
@@ -217,10 +242,7 @@ private fun MainApp(
                     onDoing = { library.open(Route.Doing) },
                     onPeople = { library.open(Route.People) },
                     onInvite = if (peopleUi.people?.canInvite != false) {
-                        {
-                            Toast.makeText(context, SettingsCopy.INVITE_NOTE, Toast.LENGTH_SHORT).show()
-                            openInAdhx(context, current.server, "/settings#invite")
-                        }
+                        { inviting = true }
                     } else {
                         null
                     },
@@ -276,6 +298,21 @@ private fun MainApp(
                     )
                 }
             }
+            is Route.ReactedPlayer -> {
+                val reacted by feed.reacted.collectAsStateWithLifecycle()
+                if (reacted.items.isEmpty()) {
+                    LaunchedEffect(Unit) { library.back() }
+                } else {
+                    PlayerScreen(
+                        posts = reacted.items,
+                        server = current.server,
+                        startIndex = route.start,
+                        onPage = feed::onReactedPage,
+                        topBar = { BackBar(back) },
+                        onSaver = openPerson,
+                    )
+                }
+            }
             is Route.TunedIn -> TunedInScreen(
                 feed = feed,
                 slug = route.slug,
@@ -308,7 +345,7 @@ private fun MainApp(
                 vm = vm,
                 connection = current,
                 onBack = back,
-                onOpen = { item -> openShared(context, scope, library, current, item) },
+                onOpen = { item -> openShared(context, scope, library, item) },
             )
             is Route.PostLink -> PostLinkScreen(
                 library = library,
@@ -349,12 +386,15 @@ private fun MainApp(
     }
 }
 
-/** A row of Shared lately: the post in the player once it's saved, else the link itself. */
+/**
+ * A row of Shared lately: the post in the app's player once it's saved,
+ * never your ADHX's web page; until then (or when the post can't be had),
+ * the link you shared, on its own network.
+ */
 private fun openShared(
     context: Context,
     scope: CoroutineScope,
     library: LibraryViewModel,
-    connection: Connection,
     item: HistoryItem,
 ) {
     val platform = item.platform
@@ -368,7 +408,7 @@ private fun openShared(
             is ApiResult.Ok -> library.open(Route.Post(result.value))
             is ApiResult.Failed -> when {
                 result.status == 401 -> Unit
-                item.openPath != null -> openInAdhx(context, connection.server, item.openPath)
+                // Gone from your saves (archived away, or removed): the original is the next best thing.
                 else -> openUrl(context, item.link)
             }
             ApiResult.Offline ->

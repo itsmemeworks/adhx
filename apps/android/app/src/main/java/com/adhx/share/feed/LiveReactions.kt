@@ -276,6 +276,7 @@ private fun RingedFace(who: Saver?, server: String, size: Dp) {
             avatarUrl = who?.avatarUrl,
             server = server,
             size = size,
+            isYou = who?.isYou == true,
         )
     }
 }

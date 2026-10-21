@@ -70,14 +70,18 @@ import com.adhx.share.ui.SerifFamily
 import com.adhx.share.ui.Spinner
 
 /**
- * Channels: "From everyone" (channels made from the whole group's saves),
+ * Channels: Reactions (posts people reacted to, newest first), "From everyone" (channels made from the whole group's saves),
  * "Your people" (one round face per friend, with how many of theirs you
  * haven't seen), then "Made for you": My saves and your own channels.
  */
 @Composable
 fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, header: @Composable () -> Unit) {
     val ui by feed.channels.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { feed.loadChannels(force = ui.loadedOnce) }
+    val reacted by feed.reacted.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) {
+        feed.loadChannels(force = ui.loadedOnce)
+        feed.loadReacted(force = true)
+    }
     val channels = ui.channels
 
     LazyColumn(
@@ -85,6 +89,12 @@ fun ChannelsTab(feed: FeedViewModel, server: String, actions: HomeActions, heade
         contentPadding = PaddingValues(bottom = 32.dp),
     ) {
         item(key = "header") { header() }
+        // Reactions first: what people said lately, ready to play.
+        if (reacted.items.isNotEmpty()) {
+            item(key = "reacted") {
+                ReactionsRow(reacted, server) { start -> actions.open(Route.ReactedPlayer(start)) }
+            }
+        }
         when {
             !ui.loadedOnce || (ui.loading && channels.group.isEmpty() && channels.friends.isEmpty()) -> item(key = "loading") {
                 Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
