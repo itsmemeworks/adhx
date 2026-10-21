@@ -4,7 +4,9 @@
 FROM node:26-trixie-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@10.34.7 --activate
+# Node 25+ no longer bundles Corepack. Bootstrap only the pinned package
+# manager with npm; application dependencies still use the frozen pnpm lockfile.
+RUN npm install --global --ignore-scripts pnpm@10.34.7
 
 # Install dependencies separately so source-only changes reuse this layer.
 FROM base AS deps
