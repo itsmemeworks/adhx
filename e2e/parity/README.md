@@ -6,6 +6,11 @@ channels, moments, invites, processing rows), with the real kept media. The web
 capture screenshots every web board's screen from it, and the iPhone and
 Android apps can pair against the same server with the phone keys it writes.
 
+You need the repository's dependencies (`pnpm install`), Playwright's browsers
+(`pnpm test:e2e:install`, once) and FFmpeg (the bundled `ffmpeg-static`, or
+`FFMPEG_PATH`). `parity:compare` also needs the exported design boards as PNGs
+in `PARITY_REF_DIR`. Nothing here touches your real database or `:3001`.
+
 ```bash
 # 1. Fresh DB + media, then Next on http://127.0.0.1:3600 (leave it running)
 PARITY_MEDIA_SRC=/path/to/adhx/data/media pnpm parity:serve
@@ -71,8 +76,11 @@ curl -H "Authorization: Bearer $KEY" "http://127.0.0.1:3600/api/app/feed?mode=ne
 ```
 
 A simulator reaches the server at `http://127.0.0.1:3600`; an Android emulator at
-`http://10.0.2.2:3600`. Store the key the way the app stores a paired key, or
-pair for real: Settings → Phone app on the web as that member makes a code.
+`http://10.0.2.2:3600` (or `127.0.0.1` after `adb reverse tcp:3600 tcp:3600`).
+Hand the key to a debug build without pairing: on iPhone with the
+`-adhxServer … -adhxKey …` launch arguments ([iPhone README](../../apps/ios/README.md#debug-launch-arguments)),
+on Android with `DebugConnectActivity` ([Android README](../../apps/android/README.md#connect-a-debug-build-without-signing-in)).
+Or pair for real: Settings → Phone app on the web as that member makes a code.
 
 ## The world (`world.ts`, `seed.ts`)
 

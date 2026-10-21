@@ -1,5 +1,7 @@
 # ADHX Share — the phone app
 
+**Status: living spec.** The apps shipped in 2.0.0; this describes them as of 2.4.0 (email sign-in by code, change picture, invites, reactions on every post and the Reactions feed, the original-post sheet, landscape while watching, Remove this phone revoking its key). Build and release steps are in [`apps/ios`](../../apps/ios/README.md), [`apps/android`](../../apps/android/README.md) and [releasing](../releasing.md).
+
 The companion app for sharing posts to your own ADHX from any app's share menu.
 Native on both platforms: `apps/ios` (SwiftUI app + Share Extension) and
 `apps/android` (Kotlin + Compose). The phone sends links in, and plays and
@@ -538,19 +540,28 @@ reactions?: [{ id, saver, emoji?, text?, at }] }`, polled every 5 s while
   buttons hidden, to bring them back. Pages of 20 load as you near the end.
   Videos start muted. Photo albums swipe sideways. Text and articles fill the
   page like a video: short ones centred, long ones fading above the caption.
-- **Over the post**: bottom left the @handle and the first lines of text;
-  bottom right a column of round buttons: Sound and Repeat (video and sound),
-  Save (to Photos / the gallery, from `?download=1`), Share, and **Original**,
-  which is the network's own logo. Repeat is off by default: a video that ends
-  plays the next save; on (yellow), it loops. A short note says which
-  ("Repeating this one" / "Plays the next save when this ends"). Along the
-  bottom: the time, a line to drag through the video, and Hide, which leaves
-  only the picture and a thin progress line. Shadows only on words over media.
+- **Over the post**: bottom left who saved it (a friend's note in a speech
+  bubble), the network's mark and who posted it, and the first lines of text
+  with links shortened and tappable; bottom right a column of round buttons:
+  **React** (on every post; kept with `/api/app/reactions`, and a post's kept
+  reactions float up again when you land on it), Save (to your saves), Share,
+  Save to Photos / the phone (from `?download=1`), the **network's mark** and
+  **More**. The mark opens the frosted original-post sheet: the poster, their
+  words in full (or a kept X article), **Open on {network}** and **Copy
+  link**. Sound, Fit video, Repeat, Dock and Hide live in More. Repeat is off
+  by default: a video that ends plays the next save; on, it loops ("Repeating
+  this one" / "Plays the next save when this ends"). Holding the stage hides
+  the buttons; photos show for 10 seconds each. Along the bottom: the time and
+  a line to drag through the video. Shadows only on words over media. Short
+  messages take the top pill's place for 3 s instead of stacking under it.
+- **Landscape**: the app turns sideways only while the player (media full
+  screen) is the top screen; any sheet, the React picker or the reader over
+  it keeps it upright, and leaving the player turns it back.
 - **Reading**: words never scroll in the feed, so a swipe always changes save.
   A post that doesn't fit fades out with **Read all**, which opens the reader:
   the whole post on a scrolling page, a thin yellow line at the top for how far
   you've read, and a down arrow (or swipe down) back to the same save.
-- **Small window**: videos have a picture-in-picture button next to Hide, and
+- **Small window**: videos have **Dock** (picture in picture) in More, and
   the small window also starts by itself when you leave the app mid-video.
   Sound carries on. On Android the window has Previous and Next save. Photos
   and words don't get one. (The iPhone Simulator has no small window; check
@@ -845,8 +856,10 @@ out so the server's own choice still applies.
   a 52dp face per member; one who has it is dimmed with "Jo already has it.",
   a tap sends it (`POST /api/app/send`) and leaves a tick. A private save
   says "Just for you. Share it first to send it." A server without the route
-  shows no row. A text post or article gets the same sheet with "Sending the
-  words": Chat, Mail and More send its words, and the row sends the post.
+  shows no row. Send via is WhatsApp, Copy, Files, Save to phone and More. A
+  text post or article gets the same sheet with "Sending the words" (or "the
+  article"): WhatsApp and More send its words, Copy its ADHX link, and the row
+  sends the post.
 - New: a `sent` headline is the why chip "Pete sent you this" with Pete's
   face; Why this one gives it a send icon and his face. Unknown kinds show
   their words. A `like` reason shows its `post.posterUrl` as a 38dp Gob-shaped
@@ -869,7 +882,7 @@ out so the server's own choice still applies.
   from the left edge, to go back) with New on unseen tiles, **Play the N
   new** and their note as a paper card third in the grid (opens that post).
   Your people has **See all** (the people list) and **Invite** (when
-  `canInvite`; it opens Settings → Your people on the web).
+  `canInvite`; the in-app invite sheet, as in Settings).
 - Live: the first moment is the big card ("3 saves in 10 min · …" from
   `recentSaves`/`windowMinutes`, else "4 saves"); the rest are rows labelled
   with the window ("Right now", "Last few days") or "Live · 1 save in 5 min";
@@ -885,9 +898,8 @@ out so the server's own choice still applies.
   notification permission they're left unseen. Tapping one opens Live and
   tunes in to that slug.
 - Share on the player opens **Sending the video itself**: the kept file
-  downloads with a progress line, then goes out through Messages, Mail,
-  Files, Photos or the system share sheet (Messages/Mail fall back to it when
-  the phone can't send them). Below, **Or straight to your people**
+  downloads with a progress line, then goes out through **Send via**:
+  WhatsApp, Copy, Files, Save to Photos or More (the system share sheet). Below, **Or straight to your people**
   (`GET /api/app/send`): a 52 pt face per member; tapping one sends it
   (`POST /api/app/send`) and puts a yellow tick on the face. Someone who
   already has it is dimmed, with "Jo already has it." beside the faces (under
@@ -924,8 +936,8 @@ out so the server's own choice still applies.
    share that." **OK**.
 6. **Offline**: "Saved for later" / "Your ADHX can't be reached right now. This
    goes as soon as it can." **Done**.
-7. **Not connected**: "Connect the app first" / "Open ADHX Share and scan the
-   code in Settings → Phone app on your ADHX."
+7. **Not connected**: "Connect the app first" / "Open ADHX Share and sign in
+   with your email, or scan the code in Settings → Phone app on your ADHX."
 
 **Just for me** (Saving, Saved and Already saved): off (the default) shows
 "Ana, Ben, Mum and Jo will see it" with their faces (the people the app last

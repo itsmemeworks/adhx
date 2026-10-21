@@ -1,24 +1,52 @@
 # Native Apple Silicon worker
 
-This optional companion processes ADHX's queued text, images and video segments
-and browser-compatible H.264 copies on a Mac. Your NAS owns the database, media,
-queue and search permissions. The worker needs no database or NAS filesystem
-mount, inbound listener or public port.
+An optional helper that lets a Mac do ADHX's heavy lifting. Your NAS keeps the
+database, media, queue and search permissions; the Mac pulls queued jobs over
+HTTPS, does the expensive part (understanding text, pictures and video,
+transcribing speech, reading on-screen text, and making browser-friendly
+H.264 copies), sends the results back and tidies up after itself. It needs no
+database or NAS filesystem mount, no inbound listener and no public port.
 
-Use a native Apple Silicon Mac, macOS and ARM64 Node.js 24 (or another version
-allowed by `package.json`; Node 22 must be at least 22.22.1). A Docker
-container cannot use macOS CoreML or VideoToolbox. Install this repository's
-dependencies with `pnpm install --frozen-lockfile` in a stable checkout. Install
-a maintained FFmpeg (`brew install ffmpeg` with Homebrew, or your trusted package
-manager), then set its absolute path in `FFMPEG_PATH` when needed; do not
-delete or move that checkout while the service is installed.
+```mermaid
+flowchart LR
+  subgraph NAS["NAS (owns everything)"]
+    Web["ADHX web app"] <--> DB[("SQLite queue and leases")]
+    Web <--> Media[("Kept media")]
+  end
+  Worker["Mac worker (launchd)"] -->|"1. claim a job"| Web
+  Worker -->|"2. download the file it was leased"| Web
+  Worker -->|"3. send back words, vectors or an MP4"| Web
+  Worker <--> Scratch[("Bounded scratch, cleaned after each job")]
+```
 
-Follow the [rollout verification checklist](VERIFY.md) to match the released
-server image and worker source, test the complete processing path and tune host
-resources before importing a large library. This worker runs directly on macOS;
-neither Docker nor Apple Container is required on the Mac. For diagrams and the
-reasons behind the settings, read
-[How NAS and Mac processing work](../../docs/remote-processing.md).
+In words: the Mac only ever calls the NAS, with a dedicated machine token, and
+nothing on the NAS is shared with or mounted on the Mac. The full protocol is
+in [How NAS and Mac processing work](../../docs/remote-processing.md).
+
+## Quick start
+
+You need a native Apple Silicon Mac, ARM64 Node.js 26 (what the container and
+CI use; `package.json` also allows `^22.22.1` and `^24`), pnpm 10, a maintained
+FFmpeg (`brew install ffmpeg`), and an ADHX server on a matching release.
+
+1. On the NAS, set `PROCESSING_MODE=remote` and a new
+   `PROCESSING_WORKER_TOKEN` (`openssl rand -hex 32`), then recreate ADHX
+   ([details](#connect-the-nas-and-mac)).
+2. On the Mac, clone the repository at the server release's commit and run
+   `pnpm install --frozen-lockfile`.
+3. Copy [`worker.env.example`](worker.env.example) to
+   `~/Library/Application Support/ADHX-worker/worker.env`, `chmod 600` it, and
+   set `ADHX_SERVER_URL`, `ADHX_WORKER_TOKEN` (the same token) and
+   `FFMPEG_PATH`.
+4. Check and try it in the foreground, then install the login service:
+   `deploy/mac/install.sh <worker.env> --check`, the `node … mac-runner.ts`
+   command below, then `sh deploy/mac/install.sh <worker.env>`.
+5. Work through the [verification checklist](VERIFY.md) before importing a
+   large library. Your NAS fans will thank you.
+
+A Docker container can't use macOS CoreML or VideoToolbox, so this runs
+directly on macOS; neither Docker nor Apple Container is needed on the Mac.
+Keep the checkout in a stable place: the service runs from it.
 
 ## Connect the NAS and Mac
 
@@ -44,8 +72,8 @@ the original codecs. On a shared NAS, start with `SEMANTIC_THREADS=1` for its qu
 model and `KEEP_CONCURRENCY=1` for downloads, then measure responsiveness. No
 existing-library reset is required.
 
-On the Mac, install native ARM64 Node.js 24 or another supported version and the pnpm version named
-by the repository's `packageManager`. Create a separate, stable worker checkout.
+On the Mac, install native ARM64 Node.js 26 (or another version `package.json`
+allows) and the pnpm version named by the repository's `packageManager`. Create a separate, stable worker checkout.
 Replace `RELEASE_SOURCE_COMMIT` below with the full source commit of the server
 release you verified, rather than the latest development commit:
 
@@ -247,3 +275,17 @@ scratch ceiling, plus `KEEP_MIN_FREE_GB`. Worker uploads time out after ten minu
 A proxy's 413/timeout response can occur before the app sees a request; inspect
 its configuration as well as worker logs. Do not expose a new public port or
 relax the worker's machine-token and lease checks to solve an upload problem.
+
+## Troubleshooting
+
+| Symptom                                                  | Likely cause and fix                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install.sh` says "Use native ARM64 Node.js 22 or newer" | The shell found an Intel (Rosetta) or old Node. Install the ARM64 build and rerun `--check`.                                                                                                                                                                                          |
+| The worker gets 401 responses                            | `ADHX_WORKER_TOKEN` on the Mac doesn't equal `PROCESSING_WORKER_TOKEN` on the NAS, the NAS isn't in `PROCESSING_MODE=remote`, or the token isn't 32–256 URL-safe characters (`openssl rand -base64` adds `+`, `/` and `=`; use `-hex 32`). Fix it, recreate ADHX, restart the worker. |
+| It connects but never claims anything                    | Nothing is queued, `SEMANTIC_SEARCH=off` or `KEEP_MEDIA=off` on the NAS, or the worker and server are on different releases. Match the release commit.                                                                                                                                |
+| Certificate errors                                       | `ADHX_SERVER_URL` must be the same trusted HTTPS origin your browsers use, reachable from the Mac over your LAN or VPN.                                                                                                                                                               |
+| `ffmpeg: not found` under launchd                        | launchd's PATH has no Homebrew. Set `FFMPEG_PATH=/opt/homebrew/bin/ffmpeg` in `worker.env` and reinstall.                                                                                                                                                                             |
+| Conversion uploads fail with 413 or time out             | The proxy limits upload size or time. See [proxy upload hooks](#proxy-upload-hooks).                                                                                                                                                                                                  |
+| The service is much slower than the foreground run       | An older install still has launchd's `Background` type. Rerun `deploy/mac/install.sh` with the same env file.                                                                                                                                                                         |
+| Edited `worker.env` but nothing changed                  | A running service doesn't reread it. Restart the service; reinstall if you moved the checkout or Node.                                                                                                                                                                                |
+| The Mac is busy and hot                                  | Lower `SEMANTIC_THREADS`, keep `SEMANTIC_MEMORY_PROFILE=compact`, or set `SEMANTIC_SPEECH=off` / `SEMANTIC_SCREEN_TEXT=off`. Queued work waits; nothing is lost.                                                                                                                      |

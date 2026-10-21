@@ -1,5 +1,7 @@
 # Launch UX
 
+**Status: historical.** Shipped in 1.72.0 (2026-09-13). Superseded by the find-by-meaning redesign, which retired Discover and Saved on 2026-10-17; the signed-in home is now Right now (`/now`), with Channels, My saves and Search beside it.
+
 The first useful experience is: paste a social link, watch it in ADHX, and send
 the video to a friend. Discovery gives new visitors something to watch immediately;
 Saved makes their own posts easy to find again.

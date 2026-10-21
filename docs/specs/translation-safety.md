@@ -1,5 +1,7 @@
 # Translation safety
 
+**Status: current rule.** It applies to every page that renders text; check it before adding a component.
+
 **Browser page-translation is a supported feature of ADHX, not a hazard to switch off.** A Spanish tweet
 read in English is exactly the kind of thing a bookmark theater should let you do, so `<html>` carries no
 `translate="no"` and there is no `notranslate` meta. The cost is a real constraint on how we render text,

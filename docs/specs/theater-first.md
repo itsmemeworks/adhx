@@ -1,6 +1,6 @@
 # Theater-First — Implementation Spec
 
-**Status:** approved direction, not yet built · **Date:** 2026-08-18
+**Status: historical.** Built as `TheaterShell` in 1.51.0 (2026-08-19). Superseded on 2026-10-17 by Theater v2 (`src/components/next/theater/`), which still borrows this spec's media `Stage`. adhx.com is now the product site, not an ADHX. · **Date:** 2026-08-18
 **Design canvas:** https://claude.ai/code/artifact/12681f33-b4d1-4a92-a841-c8714376eebb (page "Round 3 — Theater-first"; rounds 1–2 kept for reference)
 **Decision record:** three design rounds against early-user feedback — mosaic wall → Digg-style ranked list → theater-first. Users said the live community stream is the most compelling feature, mosaics felt overwhelming, seen/unseen must be explicit, and the x.com video-theater full-bleed pattern is the look. Dark is the default.
 

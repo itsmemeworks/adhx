@@ -1,5 +1,7 @@
 # The friends feed
 
+**Status: shipped in 2.2.0** ([#562](https://github.com/itsmemeworks/adhx/pull/562)) and extended since (reactions, sends, the reactions feed). This is the living contract; read it before changing who sees what.
+
 ADHX is a private feed of the best of every social network, picked by your closest friends and family. Each server is one group of people. This spec is the shared contract for the work that turns a pile of personal saves into that group's feed. Read it before changing anything below.
 
 ## The rule: named to friends, never to strangers

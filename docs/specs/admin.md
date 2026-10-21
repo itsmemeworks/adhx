@@ -1,5 +1,7 @@
 # The admin area
 
+**Status: shipped in 2.2.0** ([#571](https://github.com/itsmemeworks/adhx/pull/571)). This is the living spec for `/admin/*`.
+
 `/admin/*` is where the people who run an ADHX look after it: who's on it,
 what's been saved, how it's used, what the server is doing, and moderation.
 It follows the "10 · Admin" design boards (ten 1280×800 boards; parity

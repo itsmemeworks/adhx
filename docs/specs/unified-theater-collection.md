@@ -1,6 +1,8 @@
 # Unified theater: Saved, nav simplification, tags-first
 
-**Status: building (2026-08-20).** From live user review after the accounts launch: the theater
+**Status: historical.** Shipped in 1.52.0 (2026-08-21). Superseded by the find-by-meaning redesign (2026-10-17): Library, Tags and Leaderboard are gone, and old URLs redirect (see `src/lib/next-ui/routes.ts`).
+
+Original summary, from live user review after the accounts launch: the theater
 (filmstrip dock + stage) is THE interaction model. Every other browsing UX is a competing
 mental model and must fold into it. Nav shrinks to what a signed-in person actually does:
 their Collection, the Live pulse, and their tags.

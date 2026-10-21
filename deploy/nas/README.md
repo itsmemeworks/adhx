@@ -1,9 +1,44 @@
 # Docker and NAS deployment
 
-ADHX runs as one Linux container on a Docker host or NAS. Use your existing
-HTTPS reverse proxy and access method. No particular NAS brand, DNS provider,
-VPN or public tunnel is required. Internal HTTP between the proxy and ADHX is
-intentional; people open the external HTTPS address.
+This guide runs ADHX as one Linux container on a Docker host or NAS, behind
+the HTTPS reverse proxy you already use. No particular NAS brand, DNS
+provider, VPN or public tunnel is required. Internal HTTP between the proxy
+and ADHX is intentional; people open the external HTTPS address.
+
+```mermaid
+flowchart LR
+  People["Browsers and phone apps"] -->|"HTTPS"| Proxy["Your reverse proxy"]
+  Proxy -->|"HTTP :3000"| ADHX["ADHX container"]
+  ADHX <--> Data[("/data: SQLite, kept media, model cache")]
+  ADHX -->|"Downloads and previews"| Networks["Source networks"]
+  Mac["Optional Mac helper"] -.->|"HTTPS, machine token"| Proxy
+```
+
+In words: people reach ADHX through your proxy over HTTPS, the container keeps
+everything in one `/data` folder, and an optional Mac can take the heavy
+processing over the same HTTPS address.
+
+## Quick start
+
+You need Docker with Compose v2, an HTTPS reverse proxy (or just a loopback
+port to try it), and a few GB of disk to start.
+
+1. Pick a layout: the repository-root [`docker-compose.yml`](../../docker-compose.yml)
+   for a proxy on the host, or [this directory's](docker-compose.yml) for a
+   proxy running in Docker (see [Choose how your proxy reaches the app](#choose-how-your-proxy-reaches-the-app)).
+2. Copy [`.env.example`](.env.example) to `.env` beside the Compose file and
+   set at least `ADHX_IMAGE`, `NEXT_PUBLIC_APP_URL`, `SESSION_SECRET`
+   (`openssl rand -base64 32`) and `ALLOWED_EMAILS`. The container-proxy
+   layout also needs `ADHX_DATA_DIR` and `ADHX_PROXY_NETWORK`.
+3. `docker compose config --quiet && docker compose up -d`
+4. Open your HTTPS address and ask for a sign-in link with your email. Read
+   it from `docker compose logs adhx`, open it and press **Sign in**. You're
+   the first admin.
+5. Save a video, watch it play, and search for something in it. Then read
+   [Resource and storage controls](#resource-and-storage-controls) before
+   pointing a 10,000-bookmark X import at a small NAS.
+
+UGREEN owners can follow the [UGOS Pro walkthrough](ugreen.md) instead.
 
 ## Deployment contract
 
@@ -48,7 +83,7 @@ by vendor; the container contract above stays the same.
 
 UGREEN owners can follow the optional [UGOS Pro walkthrough](ugreen.md) for
 project creation, storage initialization and the first sign-in. The examples
-in this main guide remain portable across Docker hosts and NAS vendors.
+in this main guide stay portable across Docker hosts and NAS vendors.
 
 ## Prepare the configuration
 
@@ -145,7 +180,7 @@ adhx`, then open it and press **Sign in** to become the first admin. Later invit
 on the admin page for you to hand over. These links last 60 minutes; recipients
 open them and press **Sign in** in their normal browser. The one-minute resend
 countdown does not expire a link. To deliver links by email, configure
-SMTP or Resend instead; see the main README.
+SMTP or Resend instead; see [Sign-in links](../../docs/self-hosting.md#sign-in-links).
 
 Check the final HTTPS URL and database health, owner sign-in and an invited
 account, a saved video and seek operation, a picture album and search by
@@ -165,7 +200,7 @@ Start with the local features, then add the services you want:
 | Feature                                            | Additional credentials                           | Setup                                                                                                                                                                                 |
 | -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Kept media and local text/picture/video search     | None beyond the instance's sign-in configuration | Keep `/data` persistent and permit the initial model download.                                                                                                                        |
-| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../README.md#the-search-model).                                                                     |
+| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../docs/self-hosting.md#the-search-model).                                                          |
 | Experimental image-aware generated channels        | `TYPESAFE_CHANNEL_IMAGES=on` plus the Jev key    | Separate opt-in uploads selected public-post thumbnails for naming, borderline membership, repeat spacing and covers. See [limits and privacy](../../docs/channel-image-curation.md). |
 | X bookmark import                                  | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`     | Create an OAuth 2.0 confidential Web App, register the exact callback below, then connect the intended X account in ADHX Settings. X API credits are separate.                        |
 
@@ -317,7 +352,8 @@ Check the runtime's effective limits after recreation; a saved YAML document
 alone does not prove they took effect. Watch available RAM, CPU, disk activity,
 container/process restarts and OOM events where the host exposes them. Avoid
 treating low free-only RAM as pressure without accounting for reclaimable
-cache. Check that Settings' learning counts keep advancing with no failures,
+cache. Check that the learning progress on **What your ADHX is doing**
+(`/doing`) keeps advancing with no failures,
 and try semantic search, video seeking and another service at the same time.
 A healthy database endpoint alone cannot detect a repeatedly killed model
 worker. Keep a private copy of the previous configuration for rollback.
@@ -366,6 +402,22 @@ working VPN/proxy management path; an ADHX backup does not require stopping a
 shared VPN, gateway or the NAS. If an infrastructure update would interrupt
 your only remote connection, arrange independent access and recovery first.
 
-Networks change their extractors often. See the main README for updating the
-image's yt-dlp package; runtime-only package changes disappear when the
+Networks change their extractors often. See [Keeping downloads working](../../docs/self-hosting.md#keeping-downloads-working)
+for updating the image's yt-dlp package; runtime-only package changes disappear when the
 container is recreated.
+
+## Troubleshooting
+
+| Symptom                                                   | Likely cause and fix                                                                                                                                                          |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docker compose up` stops with "Set SESSION_SECRET…"      | A required value is missing from `.env`. The message names it.                                                                                                                |
+| The container restarts with `EACCES` or `SQLITE_CANTOPEN` | The data folder isn't writable by UID 1001. Fix its ownership with your host's tools, or use the [one-shot initializer](ugreen.md#choose-storage-and-initialize-permissions). |
+| The proxy shows 502 Bad Gateway                           | The proxy can't reach the container. A proxy in Docker must share `ADHX_PROXY_NETWORK` and use `http://adhx:3000`; `127.0.0.1` inside a proxy container is the proxy itself.  |
+| Sign-in links point at `localhost`                        | `NEXT_PUBLIC_APP_URL` isn't the final HTTPS address. Fix it and recreate the container.                                                                                       |
+| Everyone got signed out after an update                   | `SESSION_SECRET` changed. Keep it stable across recreations.                                                                                                                  |
+| Videos play but won't seek                                | The proxy drops `Range` requests. Pass them through unchanged.                                                                                                                |
+| Right now never updates live                              | The proxy buffers event streams. Turn buffering off for `/api/moments/stream` and allow long reads.                                                                           |
+| A network stopped downloading                             | Its extractor changed. Update yt-dlp ([how](../../docs/self-hosting.md#keeping-downloads-working)) or wait for the next release.                                              |
+| Search only matches exact words                           | The model is still downloading (about 400 MB, once), `SEMANTIC_SEARCH=off` is set, or the worker keeps getting killed. Check the logs and the memory limit.                   |
+| Mac helper uploads fail with 413 or time out              | The proxy rejects large bodies. See [proxy upload hooks](../mac/README.md#proxy-upload-hooks).                                                                                |
+| `/api/health` is healthy but nothing gets processed       | Health checks the web app and database only. Look at **What your ADHX is doing** (`/doing`), `/api/understanding/status` and the container logs.                              |
