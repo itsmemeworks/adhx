@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Upload the iPhone app to TestFlight on release
+
+- Add `.github/workflows/ios-testflight.yml` (workflow_dispatch + workflow_call, input `version`), called from Release Please next to the Android APK.
+- macos-26 runner, newest stable Xcode; archives the `ADHX Share` scheme at `v<version>` and exports with `destination: upload` using automatic signing + an App Store Connect API key (no fastlane, no profiles). Version = release, build = `github.run_id`; `stamp-version.sh` still reads the clean tag.
+- Skips with a notice until seven secrets exist; `docs/releasing.md` lists them plus the one-time Apple portal steps (App IDs, App Group, one App Store Connect record).
+- Validation: actionlint, shell syntax of every step, export-options plist lint, and a local Release build proving the command-line version/build reach both Info.plists. Never run against Apple (no secrets): signing and upload are unverified.
+
 ## 2026-10-21 — Review the complete dependency upgrade set
 
 - Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.

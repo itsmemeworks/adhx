@@ -209,6 +209,14 @@ build is not evidence that they passed.
 
 ## TestFlight
 
+Releases upload themselves: `.github/workflows/ios-testflight.yml` archives the
+release tag and sends it to TestFlight once the repository has the App Store
+Connect key and signing secrets. Setup, secrets and the one-time App Store
+Connect steps are in
+[`docs/releasing.md`](../../docs/releasing.md#iphone-app-on-testflight).
+
+By hand, from Xcode:
+
 1. Set `ADHX_BUNDLE_PREFIX` and `DEVELOPMENT_TEAM` as above.
 2. On developer.apple.com, make sure the two ids
    (`<prefix>`, `<prefix>.ShareExtension`) and the App Group
