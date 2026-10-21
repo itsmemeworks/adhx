@@ -1,5 +1,7 @@
 # Launch content shortlist
 
+**Status: historical.** A launch shortlist from when adhx.com was itself an ADHX. Since 2026-10-18 adhx.com is the product site, so these links no longer open posts there.
+
 Verified against public adhx.com on 13 September 2026. These are launch candidates,
 not newly published collections. The live community feed can change; a direct demo
 link gives Reddit visitors a predictable first experience.

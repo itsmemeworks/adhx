@@ -7,7 +7,7 @@ metadata:
 
 # ADHX
 
-ADHX keeps the posts a person saves from X, Instagram, TikTok, YouTube, Reddit, Facebook, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky (X bookmarks sync about every hour), and understands them: what they say, what is in their pictures, and what happens in their videos. This skill does two things:
+ADHX keeps the posts a person saves from X, Instagram, TikTok, YouTube, Reddit, Facebook, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky (X bookmarks can sync automatically, about every hour), and understands them: what they say, what is in their pictures, what happens in their videos, what is said aloud and what text appears on screen. This skill does two things:
 
 1. **Search the user's own saves** by meaning, with their access key.
 2. **Read any X post** as structured JSON, no key needed.
@@ -44,7 +44,7 @@ curl -s -G "$ADHX_URL/api/agent/search" \
 
 ### Turning a request into `q` and `type`
 
-Search matches meaning across words, pictures and video frames, so `q` should describe **what is in the post**. Move the kind of post into `type` and drop filler like "find", "my", "saved", "that one":
+Search matches meaning across words, pictures, video frames, speech and on-screen text, so `q` should describe **what is in the post**. Move the kind of post into `type` and drop filler like "find", "my", "saved", "that one":
 
 | User says                                            | `q`                                 | `type`     |
 | ---------------------------------------------------- | ----------------------------------- | ---------- |
@@ -86,7 +86,7 @@ If nothing comes back close, try once more with a broader or differently worded 
 }
 ```
 
-- Results are best first. `match.strength` is `strong` (it's the thing), `good` (very likely) or `related` (close in meaning, not exactly it). `match.on` says what matched: `video`, `picture`, `words` or `keywords`.
+- Results are best first. `match.strength` is `strong` (it's the thing), `good` (very likely) or `related` (close in meaning, not exactly it). `match.on` says what matched: `video`, `picture`, `words`, `keywords`, `speech` (something said in a video or sound) or `screen` (text shown in a picture or video).
 - `closest` appears when nothing matched closely: say so, and offer the nearest results as maybes.
 - `note` appears when search fell back to exact words, or when a post's picture or video isn't understood yet.
 - `kind` is one of `video`, `photo`, `text`, `article` (a SoundCloud track is a `video` with sound only). `platform` is `twitter`, `instagram`, `tiktok`, `youtube`, `facebook`, `reddit`, `linkedin`, `vimeo`, `soundcloud`, `pinterest`, `twitch`, `threads`, `imgur` or `bluesky`.
@@ -105,6 +105,8 @@ List the matches with their strength, the author, a one-line description from `t
 | 401    | Key missing, mistyped or removed: ask the user to check or make a new one |
 | 400    | `q` empty or `type` not one of the values above                           |
 | 429    | Too many searches; wait for `Retry-After` seconds                         |
+
+If the request can't connect at all, `ADHX_URL` is probably wrong (it must be the user's own ADHX, with `https://` and no path) or the server is only reachable from their home network or VPN. Ask rather than guessing another address.
 
 ## 2. Read any X post
 

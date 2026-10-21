@@ -1,7 +1,10 @@
 # How NAS and Mac processing work
 
 ADHX can keep the web app, library and searches on a small Docker host while a
-native Apple Silicon Mac processes the expensive background work. The NAS owns
+native Apple Silicon Mac does the expensive background work: understanding
+words, pictures and video, transcribing speech, reading on-screen text and
+making H.264 copies. Think of the NAS as the librarian and the Mac as the
+reading room. The NAS owns
 the durable state. The Mac pulls leased jobs over HTTPS, returns results and
 cleans up its temporary files.
 
@@ -42,6 +45,8 @@ flowchart LR
 
   Runner -->|"HTTPS: claim / media / result"| Web
 ```
+
+In words: browsers and phones only talk to the NAS, which also does the downloading; the Mac reaches the NAS over HTTPS and keeps nothing but a bounded scratch cache.
 
 | Responsibility           | NAS / Docker host                                                 | Mac worker                                                                                |
 | ------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -100,6 +105,8 @@ sequenceDiagram
   Note over Q,M: Understanding continues independently of playback
 ```
 
+In words: the phone gets a receipt straight away, the NAS saves and downloads in the background, and a Mac conversion (when needed) happens before the post counts as kept.
+
 The account-owned `phone_save_queue` tracks waiting, working, saved or failed
 URLs. New native shares use `deferPublish` to stage saves privately until their
 chosen privacy is acknowledged by `PATCH /api/app/save`. The monotonic
@@ -155,6 +162,8 @@ sequenceDiagram
   A-->>R: Acknowledge, indicate whether whole video is done
   R->>R: Remove frames, remove downloaded original when done
 ```
+
+In words: the Mac claims a job with a lease, keeps the lease alive while it computes, and the NAS accepts the result only if that lease is still current.
 
 Claims use two-minute leases renewed by heartbeats. Results are checked against
 the current lease, pinned model, content generation and video profile. Stale
@@ -268,6 +277,8 @@ flowchart TD
   Retry --> Temp["Remove temporary conversion output after attempt"]
   Local --> Temp
 ```
+
+In words: a converted copy replaces the NAS original only after it passes every check; any failure keeps the original and retries.
 
 Unless `KEEP_H264=off`, non-H.264 slots queue for conversion before inference; all
 required video slots must finish before the post counts as kept (the keep job
