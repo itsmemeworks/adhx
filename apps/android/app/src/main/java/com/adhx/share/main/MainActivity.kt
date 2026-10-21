@@ -44,6 +44,8 @@ import com.adhx.share.net.Saver
 import com.adhx.share.library.BackBar
 import com.adhx.share.library.LibraryViewModel
 import com.adhx.share.library.LocalPip
+import com.adhx.share.ui.LocalOrientation
+import com.adhx.share.ui.OrientationHost
 import com.adhx.share.library.PipHost
 import com.adhx.share.library.PlayerScreen
 import com.adhx.share.library.PostLinkScreen
@@ -71,6 +73,8 @@ class MainActivity : ComponentActivity() {
     private val doing: DoingViewModel by viewModels()
     private val people: PeopleViewModel by viewModels()
     private val pip by lazy { PipHost(this) }
+    // Upright, except while a player with nothing over it says it may turn.
+    private val orientation by lazy { OrientationHost { requestedOrientation = it } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -83,7 +87,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AdhxTheme {
-                CompositionLocalProvider(LocalPip provides pip) {
+                CompositionLocalProvider(LocalPip provides pip, LocalOrientation provides orientation) {
                     MainApp(vm, library, feed, doing, people)
                 }
             }

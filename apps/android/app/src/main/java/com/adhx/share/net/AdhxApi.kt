@@ -275,6 +275,27 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
     }
 
+    /**
+     * The reactions kept on a post (`GET /api/app/reactions`), oldest first,
+     * for replaying when it comes on screen. 404 `not_found` when you can't see it.
+     */
+    suspend fun postReactions(platform: String, id: String): ApiResult<PostReactionsResponse> {
+        val base = url("api/app/reactions") ?: return badAddress
+        val url = base.newBuilder().addQueryParameter("platform", platform).addQueryParameter("id", id).build()
+        return send(authed(url).get().build(), PostReactionsResponse.serializer())
+    }
+
+    /**
+     * React to any post (`POST /api/app/reactions`): one [Reaction.emoji], or a
+     * few words (at most [Reaction.MAX_TEXT]). It's kept on the post. 429 `busy` when sending too fast.
+     */
+    suspend fun reactToPost(platform: String, id: String, emoji: String? = null, text: String? = null): ApiResult<Unit> {
+        val url = url("api/app/reactions") ?: return badAddress
+        val request = ReactRequest(emoji = emoji, text = text?.trim()?.let(Reaction::clip), platform = platform, id = id)
+        val body = json.encodeToString(ReactRequest.serializer(), request)
+        return send(authed(url).post(body.toRequestBody(JSON)).build()) { _, _ -> }
+    }
+
     /** Ask to be told when a forming group goes live ([on]), or stop. 404 `forming_gone` when it's gone. */
     suspend fun setFormingAlert(id: String, on: Boolean): ApiResult<AlertState> {
         val base = url("api/app/live/forming") ?: return badAddress
