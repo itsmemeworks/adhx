@@ -12,7 +12,7 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Reflected 2.3–2.4: email sign-in by 6-digit code, change picture, invites, Remove this phone (`DELETE /api/app/me`), reactions on every post and the Reactions feed, the original-post sheet, landscape only while watching, the Settings version line, the per-release APK and TestFlight upload.
 - Mermaid diagrams (with a one-line text summary) for phone sign-in/pairing, NAS topology, the Mac worker and the release fan-out; summaries added under the existing remote-processing diagrams.
 - Specs and rollout docs got a status line (shipped / living / historical — superseded by …) instead of being deleted; stale phone-spec lines (send targets, invites on the web, rail order) fixed; acceptance checklist gained P15–P22 for the new phone features.
-- Follow-up: the READMEs reference `docs/images/phone-*.png` screenshots from the parallel docs PR; check they render once both land.
+- Follow-up: the READMEs reference `docs/images/phone-*.jpg` screenshots from the parallel docs PR; check they render once both land.
 
 ## 2026-10-21 — Upload the iPhone app to TestFlight on release
 

@@ -11,9 +11,9 @@ media and streams it back. The phone sends links and plays what comes back.
 It only ever talks to your own ADHX, and it never opens the ADHX website.
 
 <p>
-  <img src="../../docs/images/phone-new.png" width="240" alt="The New tab playing a friend's video full screen, with who saved it along the bottom and round buttons down the right">
-  <img src="../../docs/images/phone-react.png" width="240" alt="Reactions floating up over a post: each person's face with an emoji or a few words in a speech bubble">
-  <img src="../../docs/images/phone-original.png" width="240" alt="The original-post sheet: the poster, everything they wrote, and buttons to open it on its network or copy the link">
+  <img src="../../docs/images/phone-new.jpg" width="240" alt="New playing a friend's video full screen: a speech bubble with Ben's note, Ben and Ana saved this, and round buttons down the right">
+  <img src="../../docs/images/phone-react.jpg" width="240" alt="The React picker over a post: six emoji, a Say something field and a Send button">
+  <img src="../../docs/images/phone-send.jpg" width="240" alt="The send sheet: Sending the video itself, Send via WhatsApp, Copy, Files, Save to Photos or More, and faces to send it straight to your people">
 </p>
 
 > **Just want the app?** If someone sent you here from their ADHX's Settings,
@@ -83,6 +83,11 @@ in the same full-screen player.
 - Sheets over the player are frosted, and short messages appear in the top
   pill's place for a few seconds instead of stacking up.
 
+<p>
+  <img src="../../docs/images/phone-more.jpg" width="240" alt="The More sheet: Sound, Fit video, Repeat and Hide, then Why this one, Share an ADHX link, Open the original, Copy link and Copy the words">
+  <img src="../../docs/images/phone-channels.jpg" width="240" alt="The Channels tab: From everyone rabbit holes, a face for each of your people with unseen counts and Invite, and Made for you">
+</p>
+
 ### Settings
 
 Gob (top left) opens Settings: your face and name, **Change picture**,
@@ -91,11 +96,6 @@ default, Sound on by default, what your ADHX is doing, Shared lately, and
 **Remove this phone**. The bottom line says which build you're running, for
 example `ADHX Share 2.4.0` on a release, or `2.4.0 +3 · abc1234` three
 commits after it (written by `Config/stamp-version.sh` at build time).
-
-<p>
-  <img src="../../docs/images/phone-picture.png" width="240" alt="Change picture: choose a photo or take a selfie, then crop it square under a round preview">
-  <img src="../../docs/images/phone-channels.png" width="240" alt="The Channels tab: Reactions on top, then From everyone, a face for each of your people, and Made for you">
-</p>
 
 - **Change picture**: choose a photo or take a selfie, crop it square with pan
   and pinch under a round preview, or pick a Gob face, your X photo or none

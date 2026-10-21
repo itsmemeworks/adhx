@@ -15,8 +15,8 @@ Coil for pictures. Runs on Android 8.0 (API 26) and up, and doesn't need
 Google services (the QR scanner is ZXing, not ML Kit).
 
 <p>
-  <img src="../../docs/images/phone-channels.png" width="240" alt="The Channels tab: Reactions on top, then From everyone, a face for each of your people, and Made for you">
-  <img src="../../docs/images/phone-landscape.png" width="400" alt="A video playing sideways, filling a phone turned to landscape">
+  <img src="../../docs/images/phone-channels.jpg" width="240" alt="The Channels tab: From everyone rabbit holes, a face for each of your people with unseen counts and Invite, and Made for you">
+  <img src="../../docs/images/phone-landscape.jpg" width="400" alt="A video playing sideways, filling a phone turned to landscape">
 </p>
 
 > **Just want the app?** Every release has a signed `adhx-<version>.apk`
