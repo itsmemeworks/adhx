@@ -15,8 +15,6 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var pairing = false
     @Published var pairError: String?
-    /// A post to open in the player (from "Open in ADHX" on the share card).
-    @Published var openPost: PostRef?
     @Published private(set) var sending = false
     /// Just paired: "Connected to …" shows once over Home.
     @Published var welcome = false
@@ -125,10 +123,17 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Plays one of your saves over whatever is showing ("Open in ADHX" on
+    /// the share card, a post picked from Why).
+    func open(_ post: PostRef) {
+        guard isConnected, let server else { return }
+        OpenPostPresenter.present(post, server: server, model: self)
+    }
+
     /// `adhx://pair?server=…&code=…` from the system camera or a scanned code.
     func handle(url: URL) {
         if let post = Links.postRef(from: url) {
-            openPost = post
+            open(post)
             return
         }
         guard let (server, code) = Links.pairing(from: url) else { return }

@@ -33,8 +33,6 @@ struct LibraryHome: View {
     @State private var scrubbing = false
     @State private var jumpTo: String?
     @State private var onFirst = true
-    /// A post opened from "Open in ADHX" on the share card.
-    @State private var opened: OpenedPost?
     /// The post whose "Why this one" sheet is up.
     @State private var why: PhonePost?
     /// "What's in your feed" is up.
@@ -144,24 +142,9 @@ struct LibraryHome: View {
         .onChange(of: alerts.tuneIn, initial: true) { _, moment in
             guard let moment else { return }
             alerts.tuneIn = nil
-            opened = nil
             why = nil
             live.tuneIn = moment
             switchTab(.live)
-        }
-        .onChange(of: model.openPost, initial: true) { _, ref in
-            guard let ref else { return }
-            model.openPost = nil
-            Task {
-                if let post = await library.post(platform: ref.platform, id: ref.id) {
-                    opened = OpenedPost(post: post)
-                }
-            }
-        }
-        .fullScreenCover(item: $opened) { item in
-            if let server = model.server {
-                PlayerScreen(posts: [item.post], server: server, start: item.post.key)
-            }
         }
         .boardSheet(item: $why, height: 600) { post in
             if let server = model.server {
@@ -170,7 +153,7 @@ struct LibraryHome: View {
                 }, filter: { filtering = true },
                    weights: feed.weights, weighing: feed.weighing, weightError: feed.weightError,
                    setWeight: { username, weight in Task { await feed.setWeight(username, weight) } },
-                   openPost: { ref in model.openPost = ref })
+                   openPost: { ref in model.open(ref) })
                 .task { await feed.loadWeights() }
             }
         }
@@ -524,8 +507,3 @@ private struct HeaderHeight: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
-/// A post to show on its own in the player.
-private struct OpenedPost: Identifiable {
-    let post: PhonePost
-    var id: String { post.key }
-}

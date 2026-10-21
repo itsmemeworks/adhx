@@ -20,6 +20,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Gate legacy poster maintenance and lazy generation to local, unpaused hosts; remote mode defers this maintenance (no poster job in the current Mac protocol). Publish unique repaired files with video/poster generation checks and clean rejected and replaced repair-owned files. Legacy download paths remain until post cleanup.
 - Add route, component, queue, real-FFmpeg/JPEG, Android and production iOS-model regressions; wire the connection suite into native CI. PR work only; no deployment.
 
+## 2026-10-21 — Share card shows the post; Open in ADHX plays at once
+
+- Owner report from an X share: the Saved card's poster stayed blank and it said only "X"; Open in ADHX didn't play.
+- Poster: `/api/files/…/poster` for a fresh X save waited up to 25 s for the download before handing over X's own still. `standIn()` now works out the proxy or stored picture first and only waits when there's nothing to hand over. The card's poster (`PosterImage`) loads with the phone key, asks again a few times and when the copy is kept, and shows the network's mark until it arrives.
+- Card: network mark + who posted it (name, else @handle; VoiceOver hears "X, Lydia Kauppi") and up to three lines of the post's words, poster or not.
+- Open: SwiftUI couldn't present a second full-screen player over one already up, and a screen under a player hears no `onChange`. `AppModel.open(_:)` → `OpenPostPresenter` presents the player from the top screen (retrying while a cold start comes up); players under it pause and stay paused on return.
+- Checked in the simulator: card for X and YouTube, open from Home, open over an open player, cold start. Not yet checked on the iPhone.
+
 ## 2026-10-21 — Refresh the app, deploy and processing guides
 
 - Rewrote the iPhone, Android and extension READMEs and the NAS/UGREEN/Mac guides to open with what it is and a 3–5 step quick start, then details and a troubleshooting table; checked commands, paths, env vars and routes against the code (Gradle 9.8.1, Node 26, pnpm 10, all seven iOS `swiftc` suites run and pass).

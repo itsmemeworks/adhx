@@ -91,6 +91,31 @@ final class ShareFlow: ObservableObject {
 
     var networkName: String { result?.network ?? Network.name(platform) }
 
+    /// Who posted it, beside the network's mark ("Lydia Kauppi"), or the
+    /// network's name when nobody is known.
+    var byline: String { postedBy ?? networkName }
+
+    /// "X, Lydia Kauppi": the same for VoiceOver, which can't see the mark.
+    var bylineLabel: String { postedBy.map { "\(networkName), \($0)" } ?? networkName }
+
+    private var postedBy: String? {
+        guard let r = result else { return nil }
+        let handle = r.author.flatMap { $0.isEmpty ? nil : ($0.hasPrefix("@") ? $0 : "@" + $0) }
+        return r.authorName.flatMap { $0.isEmpty ? nil : $0 } ?? handle
+    }
+
+    /// The post's own words on the card, on one run of lines: a video's title
+    /// on YouTube or Reddit, what was written on X or Instagram.
+    var cardWords: String? {
+        guard let r = result, let text = r.text else { return nil }
+        if Network.titleIsWords(r.platform) { return Format.firstLine(text) }
+        let words = text.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return words.isEmpty ? nil : words
+    }
+
     // MARK: Flow
 
     func start(link: String?) {

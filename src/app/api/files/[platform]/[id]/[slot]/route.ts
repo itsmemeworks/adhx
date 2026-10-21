@@ -117,6 +117,35 @@ async function waitForKept(
   return null
 }
 
+/**
+ * Where a file that isn't kept yet can be had meanwhile: the network's proxy,
+ * or for an X poster the picture X made for it (a video's still) or its first
+ * photo. Null when there's nothing but waiting for the download.
+ * Proxies answer anyone, so a hidden post still gets one.
+ */
+function standIn(
+  platform: string,
+  id: string,
+  slot: Slot,
+  rawAuthor: string,
+  download: boolean,
+  hidden: boolean,
+): string | null {
+  const author = AUTHOR.test(rawAuthor) ? rawAuthor : ''
+  const proxy = proxySrc(platform, id, slot, author, download)
+  if (proxy) return proxy
+  // A saver's stored picture would say someone saved it: not for a hidden post.
+  if (hidden || slot !== 'poster' || platform !== 'twitter') return null
+  const [row] = db
+    .select({ previewUrl: bookmarkMedia.previewUrl })
+    .from(bookmarkMedia)
+    .where(and(eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id)))
+    .limit(1)
+    .all()
+  if (row?.previewUrl && TWIMG.test(row.previewUrl)) return row.previewUrl
+  return proxySrc(platform, id, 'photo-1', author)
+}
+
 /** Parse a single `bytes=a-b` range against a file size. */
 function parseRange(header: string | null, size: number): { start: number; end: number } | null {
   const m = header?.match(/^bytes=(\d*)-(\d*)$/)
@@ -179,9 +208,13 @@ export async function GET(
   // A picture post has no separate poster: its first picture is the poster.
   // A sound-only post (SoundCloud) plays its sound in the video slot.
   let kept = hidden ? null : findKept(platform, id, slot)
-  // Networks with no proxy: a fresh save is usually seconds from kept. Wait
-  // for it rather than failing the player.
-  if (!kept && !hidden && !proxySrc(platform, id, slot, 'x') && downloading(platform, id)) {
+  const author = request.nextUrl.searchParams.get('a') ?? ''
+  const download = request.nextUrl.searchParams.get('download') === '1'
+  // Where to send it meanwhile, worked out only when it isn't kept.
+  const meanwhile = kept ? null : standIn(platform, id, slot, author, download, hidden)
+  // Nothing to hand over (no proxy, no stored picture): a fresh save is
+  // usually seconds from kept. Wait for it rather than failing the player.
+  if (!kept && !hidden && !meanwhile && downloading(platform, id)) {
     wakeKeep()
     kept = await waitForKept(platform, id, slot, request.signal)
   }
@@ -246,28 +279,9 @@ export async function GET(
     })
   }
 
-  // Not kept yet: make sure it's on its way, and use the proxy meanwhile.
+  // Not kept yet: make sure it's on its way, and use the stand-in meanwhile.
   if (!hidden) wakeKeep()
-  const author = request.nextUrl.searchParams.get('a') ?? ''
-  const download = request.nextUrl.searchParams.get('download') === '1'
-  const fallback = proxySrc(platform, id, slot, AUTHOR.test(author) ? author : '', download)
-  if (fallback) return handOff(fallback)
-  if (slot === 'poster' && platform === 'twitter') {
-    // A saver's stored picture would say someone saved it: not for a hidden post.
-    const [row] = hidden
-      ? []
-      : db
-          .select({ previewUrl: bookmarkMedia.previewUrl })
-          .from(bookmarkMedia)
-          .where(and(eq(bookmarkMedia.platform, platform), eq(bookmarkMedia.bookmarkId, id)))
-          .limit(1)
-          .all()
-    if (row?.previewUrl && TWIMG.test(row.previewUrl)) {
-      return handOff(row.previewUrl)
-    }
-    const photo = proxySrc(platform, id, 'photo-1', AUTHOR.test(author) ? author : '')
-    if (photo) return handOff(photo)
-  }
+  if (meanwhile) return handOff(meanwhile)
   // Why it isn't here is for members: to a stranger it would say whether
   // anyone on this server saved the post.
   if (!hidden && /^(video|audio)-/.test(slot) && (await callerId())) {
