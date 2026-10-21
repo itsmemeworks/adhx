@@ -149,6 +149,15 @@ class AdhxApi(private val server: String, private val key: String?) {
         return send(authed(url).get().build(), MeResponse.serializer())
     }
 
+    /**
+     * Remove this phone (`DELETE /api/app/me`): the server revokes this key,
+     * and only this key. A 401 means it was already gone.
+     */
+    suspend fun removeThisPhone(): ApiResult<Unit> {
+        val url = url("api/app/me") ?: return badAddress
+        return send(authed(url).delete().build()) { _, _ -> }
+    }
+
     suspend fun save(link: String, justForMe: Boolean = false): ApiResult<SaveResponse> {
         val url = url("api/app/save") ?: return badAddress
         val body = json.encodeToString(SaveRequest.serializer(), saveRequest(link, justForMe))
