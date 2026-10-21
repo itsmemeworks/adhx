@@ -43,15 +43,6 @@ export const viewport: Viewport = { themeColor: '#000000' }
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>
-      <head>
-        {/* Meme captions: Impact where installed, else Anton (globals.css, --font-meme). */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@700&display=swap"
-        />
-      </head>
       <body>{children}</body>
     </html>
   )

@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react'
-import { Art, type ArtId } from './art'
 import { cn } from './cn'
 import { Gob } from './Gob'
-import { Meme } from './Meme'
 import { Face, Faces, PEOPLE, type PersonId } from './People'
+import { Credit, PostMedia, post as postOf, type PostId } from './Post'
 import { Ring, Toggle } from './frames'
 import {
   Bookmark,
@@ -17,14 +16,15 @@ import {
   Send,
   Together,
   Upload,
-  Wave,
+  Video,
 } from './icons'
 
 /**
- * The product site's feature mockups, drawn with the site's own illustrations
- * (art.tsx) instead of anyone's real posts. Each is a figure: the drawing is
- * hidden from screen readers and described by a visually hidden caption.
- * Below `md` they follow the phone board (compact); from `md` the desktop one.
+ * The product site's feature mockups, with real posts saved on an ADHX server
+ * (components/Post.tsx), each credited with its network's mark and its
+ * author's handle. Each is a figure: the drawing is hidden from screen
+ * readers and described by a visually hidden caption. Below `md` they follow
+ * the phone board (compact); from `md` the desktop one.
  */
 
 export function Mock({
@@ -45,19 +45,27 @@ export function Mock({
 }
 
 function Tile({
-  art,
+  post,
+  still,
+  credit,
   className,
   children,
 }: {
-  art: ArtId
+  post: PostId
+  still?: boolean
+  credit?: 'tl' | 'tr' | 'bl' | 'br'
   className?: string
   children?: ReactNode
 }) {
   return (
-    <span className={cn('relative block overflow-hidden bg-nx-surface', className)}>
-      <Art id={art} className="absolute inset-0 h-full w-full" />
+    <PostMedia
+      id={post}
+      still={still}
+      credit={credit}
+      className={cn('relative block overflow-hidden bg-nx-surface', className)}
+    >
       {children}
-    </span>
+    </PostMedia>
   )
 }
 
@@ -66,14 +74,14 @@ const card = 'border border-white/10 bg-nx-surface'
 /* ——— New ——— */
 
 function WhyRow({
-  art,
+  post,
   title,
   why,
   icon,
   active = false,
   className,
 }: {
-  art: ArtId
+  post: PostId
   title: string
   why: string
   icon: ReactNode
@@ -89,10 +97,11 @@ function WhyRow({
       )}
     >
       <Tile
-        art={art}
+        post={post}
+        still
         className="h-[46px] w-[34px] shrink-0 rounded-[8px] md:h-[60px] md:w-[44px] md:rounded-[10px]"
       />
-      <span className="flex min-w-0 flex-col gap-[3px] md:gap-[5px]">
+      <span className="flex min-w-0 flex-col gap-[2px] md:gap-[3px]">
         <span
           className={cn(
             'truncate text-[12px] md:text-[14px]',
@@ -105,6 +114,7 @@ function WhyRow({
           <span className="shrink-0 text-nx-accent">{icon}</span>
           <span className="truncate">{why}</span>
         </span>
+        <Credit id={post} className="text-[10px] text-nx-muted md:text-[11px]" />
       </span>
     </span>
   )
@@ -139,7 +149,7 @@ function KindChips({ className }: { className?: string }) {
 
 export function NewMock() {
   return (
-    <Mock label="The New list, showing videos and photos, with why each post is next: saved together, close to you, like the birds you kept. It ends on Gob: You're all caught up. Go touch grass.">
+    <Mock label="The New list, showing videos and photos, with why each post is next: the pixel-art music game Offbeat by @nexindie, saved together; stills from the film Sorcerer by @CinemaTweets1, close to you, from Mum; the RC808 drum synth by @XWAVEart, like the synths you kept. It ends on Gob: You're all caught up. Go touch grass.">
       <div
         className={cn(
           card,
@@ -158,22 +168,22 @@ export function NewMock() {
             <KindChips className="hidden md:flex" />
             <div className="flex flex-col gap-1.5 md:gap-1">
               <WhyRow
-                art="frog"
-                title="The frog won’t move"
+                post="offbeat"
+                title="Pixel-art music tycoon game ‘Offbeat’"
                 why="Saved together"
                 icon={<Together size={12} />}
                 active
               />
               <WhyRow
-                art="steak"
-                title="All about the sauce"
+                post="sorcerer"
+                title="Sorcerer might be one of the best films I’ve ever seen"
                 why="Close to you · Mum"
                 icon={<Heart size={12} />}
               />
               <WhyRow
-                art="bird"
-                title="A cormorant with opinions"
-                why="Like the birds you kept"
+                post="rc808"
+                title="The lost RC808 drum synthesis software"
+                why="Like the synths you kept"
                 icon={<Bookmark size={12} />}
                 className="hidden md:flex"
               />
@@ -210,18 +220,12 @@ export function NewMock() {
 
 export function FacesMock() {
   return (
-    <Mock label="A TikTok of a cormorant with a meme caption, Me when an app says suggested for you, saved by Ana and Ben. Next to it the save card: shared with your people, with a Just for me switch.">
+    <Mock label="A video of pink and violet waves rippling across an audio plugin, posted on X by @sudara, saved by Ana and Ben. Next to it the save card: shared with your people, with a Just for me switch.">
       <div className="flex items-stretch gap-3 md:items-center md:gap-5">
         <Tile
-          art="bird"
+          post="sudara"
           className="h-[200px] w-[46%] shrink-0 rounded-[20px] md:h-[380px] md:w-[44%] md:rounded-[24px]"
         >
-          <Meme
-            top="Me when an app says"
-            bottom="Suggested for you"
-            size={10}
-            inset={{ bottom: 64 }}
-          />
           <span className="nx-scrim absolute inset-x-0 bottom-0 flex flex-col gap-1.5 px-2.5 pb-2.5 pt-8 md:gap-2 md:px-3.5 md:pb-4">
             <span className="flex flex-col items-start gap-1.5 md:flex-row md:items-center md:gap-2">
               <Faces who={['ana', 'ben']} size={24} />
@@ -229,7 +233,7 @@ export function FacesMock() {
                 Ana and Ben saved this
               </span>
             </span>
-            <span className="hidden text-[13px] text-nx-soft md:block">TikTok</span>
+            <Credit id="sudara" className="text-[11px] text-nx-soft md:text-[13px]" />
           </span>
         </Tile>
         <span
@@ -248,10 +252,12 @@ export function FacesMock() {
             </span>
           </span>
           <span className="hidden items-center gap-3 rounded-[16px] bg-black p-2 md:flex">
-            <Tile art="bird" className="h-11 w-11 shrink-0 rounded-[10px]" />
+            <Tile post="sudara" still className="h-11 w-11 shrink-0 rounded-[10px]" />
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-[14px] font-extrabold">A cormorant with opinions</span>
-              <span className="text-[12px] text-nx-muted">TikTok</span>
+              <span className="truncate text-[14px] font-extrabold">
+                working on “additive saturation” for v28
+              </span>
+              <Credit id="sudara" className="text-[12px] text-nx-muted" />
             </span>
           </span>
           <span className="hidden h-px bg-white/10 md:block" />
@@ -287,13 +293,13 @@ export function FacesMock() {
 /* ——— The meme vault ——— */
 
 function FileRow({
-  art,
+  post,
   name,
   detail,
   compactDetail,
   className,
 }: {
-  art: ArtId
+  post: PostId
   name: string
   detail: string
   compactDetail?: string
@@ -307,14 +313,17 @@ function FileRow({
       )}
     >
       <Tile
-        art={art}
+        post={post}
+        still
         className="h-[38px] w-[38px] shrink-0 rounded-[9px] md:h-10 md:w-10 md:rounded-[10px]"
       />
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate font-mono text-[12px] md:text-[13px]">{name}</span>
-        <span className="truncate text-[11px] text-nx-muted md:text-[12px]">
-          <span className={cn(compactDetail && 'hidden md:inline')}>{detail}</span>
-          {compactDetail && <span className="md:hidden">{compactDetail}</span>}
+        <span className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[11px] text-nx-muted md:text-[12px]">
+          <span className={cn('shrink-0', compactDetail && 'hidden md:inline')}>{detail}</span>
+          {compactDetail && <span className="shrink-0 md:hidden">{compactDetail}</span>}
+          <span className="shrink-0">·</span>
+          <Credit id={post} />
         </span>
       </span>
     </span>
@@ -323,16 +332,10 @@ function FileRow({
 
 export function VaultMock() {
   return (
-    <Mock label="An Instagram Reel of a cat with a meme caption, Deleted the original? Cute. We kept a copy. It's gone from Instagram and still plays from your ADHX. Next to it, the kept files on your server and a Send the video button.">
+    <Mock label="A video kept on your ADHX: one website trying on colour palette after colour palette, posted on X by @AdhamDannaway. It plays from your own box, whatever happens on X. Next to it, the kept files on your server: that video, the four full-size Sorcerer photos by @CinemaTweets1, a 4K video by @davidhaz and a 2160p one by @dharmaone, and a Send the video button.">
       <div className="flex gap-3 md:gap-5">
         <span className="flex w-[46%] shrink-0 flex-col overflow-hidden rounded-[20px] bg-nx-surface md:w-[40%] md:rounded-[24px]">
-          <Tile art="cat" className="h-[150px] md:h-[300px]">
-            <Meme
-              top="Deleted the original?"
-              bottom="Cute. We kept a copy."
-              size={10}
-              inset={{ top: 30 }}
-            />
+          <Tile post="palettes" className="h-[150px] md:h-[300px]">
             <span className="absolute left-2 top-2 inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full bg-nx-accent px-2 text-[11px] font-extrabold text-black shadow-[0_4px_12px_rgba(0,0,0,0.35)] md:left-2.5 md:top-2.5 md:h-7 md:gap-1.5 md:px-2.5 md:text-[12px]">
               <Check size={12} />
               <span>Kept on your ADHX</span>
@@ -340,14 +343,15 @@ export function VaultMock() {
           </Tile>
           <span className="flex flex-col gap-1 px-2.5 py-2.5 md:gap-1.5 md:px-3.5 md:py-3">
             <span className="flex items-center gap-1.5">
-              <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[#ff5a3c]" />
+              <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-[#5ee38a]" />
               <span className="truncate text-[12px] font-extrabold md:text-[13px]">
-                <span className="md:hidden">Original deleted</span>
-                <span className="hidden md:inline">Gone from Instagram</span>
+                <span className="md:hidden">Yours to keep</span>
+                <span className="hidden md:inline">Plays from your box</span>
               </span>
             </span>
-            <span className="hidden truncate text-[12px] text-nx-soft md:block">
-              Still playing here · Instagram Reel
+            <span className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[11px] text-nx-soft md:text-[12px]">
+              <Credit id="palettes" />
+              <span className="hidden md:inline">· whatever X does</span>
             </span>
           </span>
         </span>
@@ -363,27 +367,27 @@ export function VaultMock() {
             </span>
           </span>
           <FileRow
-            art="cat"
+            post="palettes"
             name="video-1.mp4"
-            detail="1080 × 1920 · Instagram Reel"
-            compactDetail="1080 × 1920"
+            detail="1380 × 1080 video"
+            compactDetail="1380 × 1080"
           />
           <FileRow
-            art="peaks"
-            name="photo-1.jpg, photo-2.jpg"
-            detail="Full-size album · X"
+            post="sorcerer"
+            name="photo-1.jpg … photo-4.jpg"
+            detail="Full-size album"
             className="hidden md:flex"
           />
           <FileRow
-            art="synth"
-            name="audio-1.m4a"
-            detail="Track and artwork · SoundCloud"
-            compactDetail="SoundCloud"
+            post="soundlab"
+            name="video-1.mp4"
+            detail="3840 × 2160 video"
+            compactDetail="4K"
           />
           <FileRow
-            art="wave"
+            post="modular"
             name="video-1.mp4"
-            detail="1920 × 1080 · Facebook"
+            detail="3344 × 2160 video"
             className="hidden md:flex"
           />
           <span className="flex-1" />
@@ -440,6 +444,16 @@ function MatchOver({
   )
 }
 
+/** The post's own words, when the match isn't in them. */
+function Words({ text, note }: { text: string; note: string }) {
+  return (
+    <span className="flex flex-col text-[12px] font-semibold leading-snug md:text-[15px]">
+      <span className="truncate">{text}</span>
+      <span className="text-[11px] font-bold text-nx-accent md:text-[12px]">{note}</span>
+    </span>
+  )
+}
+
 function Hit({ before, hit, after }: { before: string; hit: string; after: string }) {
   return (
     <span className="text-[12px] font-semibold leading-snug md:text-[15px]">
@@ -452,47 +466,38 @@ function Hit({ before, hit, after }: { before: string; hit: string; after: strin
 
 export function SearchMock() {
   return (
-    <Mock label="Two searches. it bit me finds a hamster video, with the meme caption Nobody remembers the caption, everybody remembers the bite, by what's said in it: Ouch! It bit me! all about the sauce finds a steak video by the words on screen.">
+    <Mock label="Two searches. piano cat finds Offbeat, a pixel-art music game posted on X by @nexindie, by what's in the video: its words never mention a cat. audio to midi finds a video by @MireloAI by the words on screen: Audio-to-MIDI.">
       <div className="grid grid-cols-2 gap-3 md:gap-4 md:rounded-[28px] md:border md:border-white/10 md:bg-nx-surface md:p-5">
         <span className="flex min-w-0 flex-col gap-2 md:gap-2.5">
-          <Query text="it bit me" caret />
+          <Query text="piano cat" caret />
           <Tile
-            art="hamster"
+            post="offbeat"
             className="h-[160px] rounded-[16px] ring-2 ring-nx-accent md:h-[230px] md:rounded-[18px] md:ring-[3px]"
           >
-            <Meme
-              top="Nobody remembers the caption"
-              bottom="Everybody remembers the bite"
-              size={9}
-              inset={{ top: 30, bottom: 30 }}
-            />
-            <MatchOver icon={<Wave size={12} />} label="Said in the video">
-              <Hit before="“Ouch! It " hit="bit me" after="!”" />
+            <MatchOver icon={<Video size={12} />} label="In the video">
+              <Words text="“Pixel-art music tycoon game…”" note="No cat in the words" />
             </MatchOver>
           </Tile>
-          <span className="hidden min-w-0 items-center gap-2 md:flex">
-            <Face who="ben" size={20} />
-            <span className="truncate text-[12px] text-nx-muted">
-              Ben saved this · Reddit video
+          <span className="flex min-w-0 items-center gap-2">
+            <Face who="ben" size={20} className="hidden md:inline-flex" />
+            <span className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[11px] text-nx-muted md:text-[12px]">
+              <span className="hidden md:inline">Ben saved this ·</span>
+              <Credit id="offbeat" />
             </span>
           </span>
         </span>
         <span className="flex min-w-0 flex-col gap-2 md:gap-2.5">
-          <Query text="all about the sauce" />
-          <Tile art="steak" className="h-[160px] rounded-[16px] md:h-[230px] md:rounded-[18px]">
-            <span className="absolute inset-x-2 top-[30%] text-center md:top-[26%]">
-              <span className="inline-block rounded-[6px] bg-black/70 px-2 py-0.5 text-[12px] font-extrabold leading-tight text-white md:text-[15px]">
-                it’s all about the sauce
-              </span>
-            </span>
+          <Query text="audio to midi" />
+          <Tile post="midi" className="h-[160px] rounded-[16px] md:h-[230px] md:rounded-[18px]">
             <MatchOver icon={<Screen size={12} />} label="On screen">
-              <Hit before="“it’s " hit="all about the sauce" after="”" />
+              <Hit before="“" hit="Audio-to-MIDI" after="”" />
             </MatchOver>
           </Tile>
-          <span className="hidden min-w-0 items-center gap-2 md:flex">
-            <Face who="mum" size={20} />
-            <span className="truncate text-[12px] text-nx-muted">
-              Mum saved this · Pinterest video
+          <span className="flex min-w-0 items-center gap-2">
+            <Face who="mum" size={20} className="hidden md:inline-flex" />
+            <span className="flex min-w-0 items-center gap-1 whitespace-nowrap text-[11px] text-nx-muted md:text-[12px]">
+              <span className="hidden md:inline">Mum saved this ·</span>
+              <Credit id="midi" />
             </span>
           </span>
         </span>
@@ -505,24 +510,27 @@ export function SearchMock() {
 
 function ChannelCard({
   name,
-  arts,
+  posts,
   savers,
   count,
 }: {
   name: string
-  arts: ArtId[]
+  posts: PostId[]
   savers: PersonId[]
   count: string
 }) {
   return (
     <span className="flex min-w-0 flex-col gap-1.5 md:rounded-[24px] md:border md:border-white/10 md:bg-nx-surface md:p-3">
       <span className="grid h-[82px] grid-cols-2 grid-rows-2 gap-[3px] overflow-hidden rounded-[12px] md:h-[190px] md:gap-1.5">
-        {arts.map((a, i) => (
-          <Tile key={i} art={a} className="md:rounded-[6px]" />
+        {posts.map((p) => (
+          <Tile key={p} post={p} still className="md:rounded-[6px]" />
         ))}
       </span>
       <span className="truncate text-[13px] font-extrabold md:mt-1.5 md:px-1 md:text-[16px]">
         {name}
+      </span>
+      <span className="truncate text-[10px] text-nx-muted md:px-1 md:text-[11px]">
+        {posts.map((p) => `@${postOf(p).author}`).join(' · ')}
       </span>
       <span className="hidden min-w-0 items-center gap-2 px-1 md:flex">
         <Faces who={savers} size={20} ring="#1a1814" />
@@ -540,18 +548,18 @@ export function ChannelsMock() {
     { who: 'jo', n: 2 },
   ]
   return (
-    <Mock label="Two channels made from everyone's saves, Animals with opinions and Go outside (on video), and a channel for each friend with how many are new to you: Ana 6, Ben 3, Mum 12, Jo 2.">
+    <Mock label="Two channels made from everyone's saves: Synths with too many cables, with posts on X by @dharmaone, @XWAVEart, @joecroskey and @itsCP666, and Websites that show off, with posts by @VanhDesign, @AdhamDannaway, @cabralorenzo and @nutlope. Then a channel for each friend with how many are new to you: Ana 6, Ben 3, Mum 12, Jo 2.">
       <div className="flex flex-col gap-2.5 md:gap-4">
         <span className="grid grid-cols-2 gap-3 md:gap-4">
           <ChannelCard
-            name="Animals with opinions"
-            arts={['bird', 'hamster', 'cat', 'frog']}
+            name="Synths with too many cables"
+            posts={['modular', 'rc808', 'aurora', 'okinstruments']}
             savers={['jo', 'ana', 'ben']}
             count="14 posts · 2 new"
           />
           <ChannelCard
-            name="Go outside (on video)"
-            arts={['wave', 'peaks', 'skate', 'frogRain']}
+            name="Websites that show off"
+            posts={['wallow', 'palettes', 'bencho', 'hallmark']}
             savers={['you', 'ben', 'mum']}
             count="23 posts · 5 new"
           />
@@ -633,27 +641,20 @@ function Reaction({
 
 export function LiveMock() {
   return (
-    <Mock label="Live: you, Ana and Jo watching a frog video Ben saved, with the meme caption Ben: trust me, this one's good. It was not a good one. Reactions float up: who sent this, again, ha. Mum's save slides in as playing next.">
+    <Mock label="Live: you, Ana and Jo watching a video Ben saved, a modular synth with patch cables everywhere, posted on X by @dharmaone. Reactions float up: who sent this, again, ha. Mum's save, the Sorcerer stills by @CinemaTweets1, slides in as playing next.">
       <div className="relative overflow-hidden rounded-[22px] border border-white/10 bg-nx-ink md:rounded-[28px]">
-        <Art
-          id="frog"
+        <PostMedia
+          id="modular"
+          still
           className="absolute -inset-10 h-[calc(100%+80px)] w-[calc(100%+80px)]"
           style={{ filter: 'blur(36px) brightness(0.32)' }}
         />
         <div className="relative flex gap-3 p-2.5 md:gap-4 md:p-4">
           {/* The video */}
           <Tile
-            art="frog"
+            post="modular"
             className="h-[156px] w-[90px] shrink-0 rounded-[14px] shadow-[0_0_0_2px_rgba(127,209,174,0.5)] md:order-2 md:h-[348px] md:w-[34%] md:rounded-[20px]"
           >
-            <span className="hidden md:block">
-              <Meme
-                top="Ben: trust me, this one’s good"
-                bottom="It was not a good one"
-                size={10.5}
-                inset={{ bottom: 58 }}
-              />
-            </span>
             <span className="absolute inset-x-0 bottom-0 nx-scrim flex flex-col gap-1 px-1.5 pb-1.5 pt-4 md:gap-1.5 md:px-3 md:pb-3.5 md:pt-6">
               <span className="hidden min-w-0 items-center gap-1.5 md:flex">
                 <Face who="ben" size={20} ring="#000" />
@@ -661,6 +662,7 @@ export function LiveMock() {
                   Ben saved this
                 </span>
               </span>
+              <Credit id="modular" className="text-[9px] text-nx-soft md:text-[11px]" />
               <span className="h-[3px] rounded bg-white/25">
                 <span className="block h-full w-[62%] rounded bg-nx-accent" />
               </span>
@@ -707,7 +709,7 @@ export function LiveMock() {
           </div>
           {/* Up next, on phones */}
           <span className="absolute bottom-3 right-2.5 hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#ffb35c]/45 bg-nx-surface/90 pl-1 pr-3 text-[12px] min-[360px]:flex md:!hidden">
-            <Tile art="steak" className="h-7 w-7 rounded-full" />
+            <Tile post="sorcerer" still className="h-7 w-7 rounded-full" />
             <span>
               <span className="font-extrabold">Mum’s</span>
               <span className="text-nx-soft"> is next</span>
@@ -717,7 +719,7 @@ export function LiveMock() {
           <div className="hidden min-w-0 flex-1 flex-col justify-between gap-3 md:order-3 md:flex">
             <span className="flex items-center gap-2.5 rounded-[18px] border border-[#ffb35c]/45 bg-nx-surface/90 p-2 pr-3 shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
               <span className="relative shrink-0">
-                <Tile art="steak" className="h-10 w-10 rounded-[11px]" />
+                <Tile post="sorcerer" still className="h-10 w-10 rounded-[11px]" />
                 <Face
                   who="mum"
                   size={20}
@@ -728,6 +730,7 @@ export function LiveMock() {
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-[13px] font-extrabold">Mum saved one</span>
                 <span className="truncate text-[12px] text-nx-soft">playing next</span>
+                <Credit id="sorcerer" className="text-[11px] text-nx-muted" />
               </span>
             </span>
             <span className="flex flex-col gap-2">
@@ -887,7 +890,7 @@ export function InvitesMock() {
 export function StepShare({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
-      <Tile art="neon" className="h-[100px] w-20 shrink-0 rounded-[16px]">
+      <Tile post="palettes" still className="h-[100px] w-20 shrink-0 rounded-[16px]">
         <span className="absolute inset-0 bg-black/40" />
         <span className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[13px] bg-nx-ink shadow-[0_0_0_2px_rgb(var(--nx-accent))]">
           <Gob size={26} />
@@ -896,13 +899,7 @@ export function StepShare({ compact = false }: { compact?: boolean }) {
     )
   }
   return (
-    <Tile art="neon" className="h-[250px]">
-      <Meme
-        top="The algorithm, explaining"
-        bottom="Why you need this"
-        size={8}
-        inset={{ bottom: 150 }}
-      />
+    <Tile post="palettes" still credit="tr" className="h-[250px]">
       <span className="absolute inset-x-4 bottom-4 flex flex-col gap-3 rounded-[20px] border border-white/10 bg-nx-surface/90 px-4 pb-3 pt-3.5 backdrop-blur-lg">
         <span className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-nx-muted">
           Share
@@ -939,7 +936,12 @@ export function StepShare({ compact = false }: { compact?: boolean }) {
 /** Step 2: the server keeping a copy, 40% done. */
 export function StepKeep({ compact = false }: { compact?: boolean }) {
   return (
-    <Tile art="steak" className={compact ? 'h-[100px] w-20 shrink-0 rounded-[16px]' : 'h-[250px]'}>
+    <Tile
+      post="modular"
+      still
+      credit={compact ? undefined : 'tr'}
+      className={compact ? 'h-[100px] w-20 shrink-0 rounded-[16px]' : 'h-[250px]'}
+    >
       <span className="absolute inset-0 bg-black/50" />
       <span className="absolute inset-0 flex flex-col items-center justify-center gap-3">
         <Ring
@@ -953,7 +955,7 @@ export function StepKeep({ compact = false }: { compact?: boolean }) {
         {!compact && (
           <span className="flex h-[34px] items-center gap-2 whitespace-nowrap rounded-full border border-white/15 bg-black/55 px-3.5 text-[13px] font-extrabold backdrop-blur-md">
             <span>Keeping a copy</span>
-            <span className="font-semibold text-nx-soft">· 1080p · Pinterest</span>
+            <span className="font-semibold text-nx-soft">· 2160p · X</span>
           </span>
         )}
       </span>
@@ -965,14 +967,14 @@ export function StepKeep({ compact = false }: { compact?: boolean }) {
 export function StepFeed({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
-      <Tile art="skate" className="h-[100px] w-20 shrink-0 rounded-[16px]">
+      <Tile post="offbeat-room" still className="h-[100px] w-20 shrink-0 rounded-[16px]">
         <span className="nx-scrim absolute inset-x-0 bottom-0 h-11" />
         <Face who="ben" size={22} ring="#000" className="absolute bottom-2 left-2" />
       </Tile>
     )
   }
   return (
-    <Tile art="skate" className="h-[250px]">
+    <Tile post="offbeat-room" still className="h-[250px]">
       <span className="absolute left-3.5 top-3.5 flex h-9 items-center gap-2 whitespace-nowrap rounded-full border border-white/15 bg-black/50 pl-2 pr-3.5 backdrop-blur-md">
         <Faces who={['ana', 'ben', 'mum', 'jo', 'you']} size={22} ring="#111" />
         <span className="text-[13px] font-extrabold">Your people</span>
@@ -983,7 +985,7 @@ export function StepFeed({ compact = false }: { compact?: boolean }) {
           <span className="whitespace-nowrap text-[14px] font-extrabold">Ben saved this</span>
           <span className="whitespace-nowrap text-[13px] text-nx-soft">· 20m</span>
         </span>
-        <span className="text-[13px] text-nx-soft">YouTube</span>
+        <Credit id="offbeat-room" className="text-[13px] text-nx-soft" />
       </span>
     </Tile>
   )

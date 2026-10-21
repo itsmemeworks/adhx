@@ -13,6 +13,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Skips with a notice until seven secrets exist; `docs/releasing.md` lists them plus the one-time Apple portal steps (App IDs, App Group, one App Store Connect record).
 - Validation: actionlint, shell syntax of every step, export-options plist lint, and a local Release build proving the command-line version/build reach both Info.plists. Never run against Apple (no secrets): signing and upload are unverified.
 
+## 2026-10-21 — adhx.com shows real posts from the owner's ADHX
+
+- Owner ask: the product site uses real images and video from their own server instead of its illustrations (reverses the earlier "no one else's posts" rule).
+- Sourced only from the owner's server's public, anonymous Right now data (`/api/moments`, `/api/moments/{slug}`) and the kept files they link; no sign-in, key or cookie. The pool is mostly music tools, design and film; anything with innuendo, politics, health claims or private faces was left out.
+- `site/public/media/`: 6 muted H.264 loops (3–6 s, ≤ 0.6 MB) with posters plus stills, 2.7 MB in all; `credits.json` lists each post's network, author, link and excerpt. `Post.tsx` (`PostMedia`, `Credit`) replaces `art.tsx`; `LoopVideo` plays only on screen and keeps the poster under reduced motion. Meme captions and the meme font were removed.
+- Every post shows its network mark and @handle; the footer links all of them. Mock copy that described illustrations (titles, searches, file details, the vault's "gone from Instagram") now describes the real posts truthfully.
+- The showreel uses the same posts and `adhx-reel.mp4`/`.jpg` were re-recorded (Playwright + Chrome, 1.3 MB). Publishing is still the manual Site workflow.
+- Follow-ups: nearly every post is from X because that's what the public snapshot held; swap in other networks' saves when Right now has them.
+
 ## 2026-10-21 — Remove this phone works without the web
 
 - Add `DELETE /api/app/me` (phone key): revokes only the calling key with the same `deleteAccessKey` as Settings → Phone app; afterwards that key is `401 bad_key`, other phones untouched.
