@@ -95,6 +95,23 @@ export function caption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).first()
 }
 
+/**
+ * The post's own words now live in the original-post sheet (the rail's
+ * network button), not over the media: open it, check them, close it.
+ */
+export async function expectOriginalWords(page: Page, text: string): Promise<void> {
+  await page
+    .getByRole('button', { name: /^The original post on / })
+    .locator('visible=true')
+    .first()
+    .click()
+  const sheet = page.getByRole('dialog', { name: /^The original post on / })
+  await expect(sheet).toBeVisible()
+  await expect(sheet).toContainText(text)
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+}
+
 /** Same copy as {@link caption}, but skip the CSS-hidden mobile queue. */
 export function visibleCaption(page: Page, text: string) {
   return page.getByText(text, { exact: true }).locator('visible=true').first()

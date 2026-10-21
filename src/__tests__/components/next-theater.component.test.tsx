@@ -454,12 +454,97 @@ describe('TheaterV2', () => {
     await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('post 2'))
     // The copy button turns into a tick, then back after 2 seconds.
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
-    expect(screen.getByText('Text copied')).toBeInTheDocument()
+    // And says so in the player's message, as on the phones.
+    expect(screen.getByRole('status')).toHaveTextContent('Words copied')
     await waitFor(
       () => expect(screen.getByRole('button', { name: 'Copy the text' })).toBeInTheDocument(),
       { timeout: 3000 },
     )
     expect(screen.queryByRole('button', { name: 'Send' })).toBeNull()
+  })
+
+  it('keeps only who saved it over the media, and opens the original from the rail', async () => {
+    const writeText = vi.fn(async () => {})
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const saved = {
+      ...v1,
+      post: {
+        ...v1.post,
+        text: 'Never gonna give you up https://example.com/rick',
+        createdAt: '2026-10-18T12:00:00.000Z',
+        authorProfileImageUrl: 'https://pbs.twimg.com/profile_images/1/a.jpg',
+        savers: [
+          {
+            username: 'mum',
+            name: 'Mum',
+            avatarUrl: null,
+            savedAt: new Date(Date.now() - 3_600_000).toISOString(),
+            isYou: false,
+          },
+        ],
+      },
+    }
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.startsWith('/api/search') && !url.startsWith('/api/search/similar')) {
+        return new Response(
+          JSON.stringify({ items: [saved, p2], total: 2, understood: true, refined: true }),
+        )
+      }
+      return new Response('{}')
+    })
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('1'))
+    const playing = screen.getByRole('region', { name: 'Now playing' })
+    // Who saved it, and when; no network/author line, no caption.
+    expect(within(playing).getByText('Mum saved this')).toBeInTheDocument()
+    expect(within(playing).getByText('· 1h')).toBeInTheDocument()
+    // (Screen readers still get the post's heading.)
+    expect(
+      within(playing)
+        .queryAllByText(/Never gonna give you up/)
+        .filter((el) => !el.classList.contains('sr-only')),
+    ).toEqual([])
+    expect(within(playing).queryByText('@author1')).toBeNull()
+    expect(within(playing).queryByRole('button', { name: 'Show the full caption' })).toBeNull()
+
+    // The rail, in the phones' order: React, Save, Send, Download, the network, More.
+    const rail = screen.getByRole('navigation', { name: 'Post actions' })
+    expect(
+      within(rail)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual([
+      'React',
+      'Saved. Add to a channel',
+      'Share',
+      'Copy the text',
+      'The original post on X',
+      'More options',
+    ])
+
+    fireEvent.click(within(rail).getByRole('button', { name: 'The original post on X' }))
+    const sheet = screen.getByRole('dialog', { name: 'The original post on X' })
+    expect(within(sheet).getByText('Author 1')).toBeInTheDocument()
+    expect(within(sheet).getByText('@author1 · Posted 18 Oct 2026')).toBeInTheDocument()
+    expect(within(sheet).getByText(/Never gonna give you up/)).toBeInTheDocument()
+    expect(within(sheet).getByRole('link', { name: 'example.com/rick' })).toHaveAttribute(
+      'href',
+      'https://example.com/rick',
+    )
+    expect(within(sheet).getByRole('link', { name: 'Open on X' })).toHaveAttribute(
+      'href',
+      'https://x.com/author1/status/1',
+    )
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Copy link' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://x.com/author1/status/1'))
+    expect(screen.queryByRole('dialog', { name: 'The original post on X' })).toBeNull()
+    expect(await screen.findByRole('status')).toHaveTextContent('Link copied')
+
+    // Escape closes it too.
+    fireEvent.click(within(rail).getByRole('button', { name: 'The original post on X' }))
+    expect(screen.getByRole('dialog', { name: 'The original post on X' })).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'The original post on X' })).toBeNull()
   })
 
   it('still shows the link to copy by hand when the browser blocks copying', async () => {
@@ -532,6 +617,8 @@ describe('TheaterV2', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'That’s everything from “frogs”. Now: more like the last one',
     )
+    // The message has the top row's place for 3 s; then the note says why.
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull(), { timeout: 4000 })
     expect(screen.getByRole('note')).toHaveTextContent('More like @author3’s video')
     expect(screen.getByRole('note')).toHaveTextContent(
       'Your search finished, so similar posts play next · 1 of 1',

@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { PREVIEW_IG, PREVIEW_IG_PHOTO, PREVIEW_TT } from './constants'
-import { caption, expectPreviewReady } from './helpers'
+import { expectOriginalWords, expectPreviewReady } from './helpers'
 
 test.describe('preview pages for every platform', () => {
   test('Instagram reel preview mounts the theater', async ({ page }) => {
     test.setTimeout(90_000)
     await page.goto(`/reels/${PREVIEW_IG.id}`)
     await expectPreviewReady(page)
-    await expect(caption(page, PREVIEW_IG.text)).toBeVisible()
+    await expectOriginalWords(page, PREVIEW_IG.text)
   })
 
   test('Instagram image carousel mounts every ordered slide without a video player', async ({
@@ -22,7 +22,7 @@ test.describe('preview pages for every platform', () => {
 
     await page.goto(`/p/${PREVIEW_IG_PHOTO.id}`)
     await expectPreviewReady(page)
-    await expect(caption(page, PREVIEW_IG_PHOTO.text)).toBeVisible()
+    await expectOriginalWords(page, PREVIEW_IG_PHOTO.text)
 
     const slides = page
       .getByRole('region', { name: `Photos, ${PREVIEW_IG_PHOTO.imageCount}` })
@@ -43,7 +43,7 @@ test.describe('preview pages for every platform', () => {
     test.setTimeout(90_000)
     await page.goto(`/@${PREVIEW_TT.author}/video/${PREVIEW_TT.id}`)
     await expectPreviewReady(page)
-    await expect(caption(page, PREVIEW_TT.text)).toBeVisible()
+    await expectOriginalWords(page, PREVIEW_TT.text)
   })
 })
 

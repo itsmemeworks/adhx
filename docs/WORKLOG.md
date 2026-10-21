@@ -15,6 +15,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - The showreel uses the same posts and `adhx-reel.mp4`/`.jpg` were re-recorded (Playwright + Chrome, 1.3 MB). Publishing is still the manual Site workflow.
 - Follow-ups: nearly every post is from X because that's what the public snapshot held; swap in other networks' saves when Right now has them.
 
+## 2026-10-21 — Web theater matches the phones: original-post sheet, a quieter overlay, toasts in the pill's place
+
+- Owner ask: the website should match the phone apps (iOS #592/#594, Android #596). Over a video or photo the overlay keeps only the why chip, a friend's note and who saved it ("You and Mum saved this · 1h"); the author/network line and the caption are gone. Text and article stages still show their words.
+- Rail order is the phones': React, Save, Share, Download, the network's own mark (`NetworkIcon`), More. The mark opens `OriginalSheet` (`components/next/theater/OriginalSheet.tsx`): poster's picture else the mark in a round tile, name else handle else network (one letter or the network's own name counts as none), "@handle · Posted 18 Oct 2026" with the small mark only when the picture leads, all their words (links clickable) or a kept X article in full (`articleBlocks`, now exported from ArticleReader), Open on {network} and Copy link ("Link copied"). Frosted, rounded, focus-trapped, Esc closes; a bottom sheet on phones, centred on desktop.
+- Player messages (`flash`) last 3 s, replace each other, and take the stage's top row: the pills there ("Shared with your people", "Kept on your ADHX", the via note, a moment's arrivals) step aside while one is up. Copy the text now also says "Words copied". `hasFullArticle` moved to `post.ts`.
+- Tests: `theater-original-sheet.component.test.tsx` (name/handle/day rules, mark once incl. a broken picture, article, focus trap), the overlay/rail/sheet path in `next-theater`, the toast/pill swap in `feed-theater`; e2e previews read the words from the sheet. Checked on a parity server at 1280×800 and 390×844. Not seen live: a poster with a picture (the parity world has none) and an article in the sheet; the browser pane blocks the clipboard, so "Link copied" was checked with a stubbed clipboard.
+
 ## 2026-10-21 — Run CI and local development on Node 26 like the image
 
 - The container moved to Node 26 while `.nvmrc` and every workflow `node-version` stayed on 24, so tests ran on a different major than what ships.
