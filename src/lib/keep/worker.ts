@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import { repairDarkPosters } from './poster'
 import { newWorkPaused } from '@/lib/processing/pause'
 import { and, eq, sql } from 'drizzle-orm'
 import { db, runInTransaction } from '@/lib/db'
@@ -314,4 +315,10 @@ export function startKeeping(): void {
   s.timer = setInterval(() => void tick(), TICK_MS)
   s.timer.unref?.()
   void tick()
+  // Once per server, in the background: remake posters that came out black.
+  void repairDarkPosters()
+    .then((fixed) => {
+      if (fixed) console.log(`[keep] remade ${fixed} dark poster${fixed === 1 ? '' : 's'}`)
+    })
+    .catch((error) => console.warn('[keep] poster repair failed:', error))
 }

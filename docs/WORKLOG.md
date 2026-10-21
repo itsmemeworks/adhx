@@ -13,6 +13,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Skips with a notice until seven secrets exist; `docs/releasing.md` lists them plus the one-time Apple portal steps (App IDs, App Group, one App Store Connect record).
 - Validation: actionlint, shell syntax of every step, export-options plist lint, and a local Release build proving the command-line version/build reach both Info.plists. Never run against Apple (no secrets): signing and upload are unverified.
 
+## 2026-10-21 — Posters that aren't black (the History channel's black covers)
+
+- The owner's History channel showed four near-black cover tiles over bright canyon and forest videos. Covers are each post's kept poster, and those posters came out black: a network's own thumbnail of a black first frame, or our grab one second in, inside a fade. (Sampled the public moments snapshot: 2 of 29 posters dark, both genuinely dark screen recordings, so it's specific posts, not every poster.)
+- `posterFrame` (`src/lib/keep/poster.ts`) now tries a few moments (10% in, at least 1 s and at most 20 s, then 25%, 50%, then 1 s) and keeps the first that isn't dark (`brightness()` via sharp, ≥ 45/255), else the brightest; candidates are cleaned up.
+- `repairDarkPosters()` runs once per server in the background when keeping starts (`keep_settings.poster_repair_v1`): every kept poster under 30/255 whose post has a kept `video-1` is remade, and replaced only when the new one is clearly brighter.
+- Kept posters are now `max-age=3600` with an ETag (size + mtime → 304) instead of 7 days, so a remade poster reaches phones within the hour. Other kept files are unchanged.
+
 ## 2026-10-21 — Review the complete dependency upgrade set
 
 - Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.
