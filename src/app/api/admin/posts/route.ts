@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAdmin } from '@/lib/admin/guard'
-import { hidePost } from '@/lib/admin/moderation'
+import { hidePost, writeAudit } from '@/lib/admin/moderation'
+import { clearPostNotes } from '@/lib/bookmarks/note'
 import { parseAdminPostRef } from '@/lib/admin/parse-post'
-import { inspectPost } from '@/lib/admin/query'
+import { lookUpPost } from '@/lib/admin/boards/posts'
 import { parseAnalyticsWindow } from '@/lib/analytics/query'
 import { handleRouteError } from '@/lib/api/response'
 
@@ -36,7 +37,7 @@ export const GET = withAdmin(async (request: NextRequest, actor) => {
       return NextResponse.json({ error: 'url or platform+id is required' }, { status: 400 })
     }
     const window = parseAnalyticsWindow(request.nextUrl.searchParams.get('window'))
-    return NextResponse.json(inspectPost(ref.platform, ref.id, window, ref.contentType), {
+    return NextResponse.json(lookUpPost(ref.platform, ref.id, window, ref.contentType), {
       headers: { 'Cache-Control': 'private, no-store' },
     })
   } catch (error) {
@@ -53,6 +54,7 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
       hidden?: unknown
       reason?: unknown
       contentType?: unknown
+      clearNotes?: unknown
     }
     try {
       body = await request.json()
@@ -72,6 +74,29 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
 
     if (!platform || !bookmarkId) {
       return NextResponse.json({ error: 'platform and id (or url) are required' }, { status: 400 })
+    }
+
+    // Clear notes on the post instead of hiding it: `true` for everyone's, or
+    // one member's username.
+    if (body.clearNotes !== undefined) {
+      const username =
+        typeof body.clearNotes === 'string' && body.clearNotes.trim()
+          ? body.clearNotes.trim()
+          : undefined
+      if (body.clearNotes !== true && !username) {
+        return NextResponse.json(
+          { error: 'clearNotes is true (every note) or a username' },
+          { status: 400 },
+        )
+      }
+      const notesCleared = clearPostNotes(platform, bookmarkId, username)
+      writeAudit(actor.userId, 'clear_note', {
+        platform,
+        bookmarkId,
+        ...(username ? { username } : {}),
+        notesCleared,
+      })
+      return NextResponse.json({ platform, id: bookmarkId, notesCleared })
     }
 
     const result = hidePost({

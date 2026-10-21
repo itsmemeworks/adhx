@@ -11,14 +11,10 @@ let mockCurrentUserId: string | null = null
  * private → quiet no-index page with zero item content, ok → rendered page +
  * rich metadata) without touching a real database.
  *
- * The `ok` + non-empty branch mounts `<TheaterShell mode="collection">` (the
- * tag-collections-as-theater feature) instead of a server-rendered card grid
- * — that component is a heavy client component (localStorage/matchMedia/
- * fetch-backed hooks) with no business being exercised via
- * `renderToStaticMarkup` in a DOM-less test, so it's mocked here the same way
- * `url-prefix-route.test.ts` mocks it for the tweet-preview route. This test
- * asserts the SEO-critical bits this page still owns directly: the sr-only
- * crawlable link list and the props handed to the theater.
+ * The `ok` branch mounts `<ChannelPage>`, a client component that loads its
+ * own posts, so it's mocked here. This test asserts the SEO-critical bits
+ * this page still owns directly: the sr-only crawlable link list and the
+ * props handed to the channel page.
  */
 
 vi.mock('@/lib/auth/session', () => ({
@@ -68,10 +64,10 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
-const theaterShellSpy = vi.fn()
-vi.mock('@/components/theater/TheaterShell', () => ({
-  TheaterShell: (props: unknown) => {
-    theaterShellSpy(props)
+const channelPageSpy = vi.fn()
+vi.mock('@/components/next/channels/ChannelPage', () => ({
+  ChannelPage: (props: unknown) => {
+    channelPageSpy(props)
     return null
   },
 }))
@@ -131,7 +127,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
         params: Promise.resolve({ username: 'nobody', tag: 'some-tag' }),
       })
 
-      expect(metadata.title).toBe('ADHX playlist')
+      expect(metadata.title).toBe('ADHX channel')
       expect(JSON.stringify(metadata)).toContain('/api/og/playlist/brand/card?generic=1')
       expect(JSON.stringify(metadata)).not.toContain('nobody')
       expect(JSON.stringify(metadata)).not.toContain('some-tag')
@@ -146,7 +142,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
         params: Promise.resolve({ username: 'curator', tag: 'secret-tag' }),
       })
 
-      expect(metadata.title).toBe('Private playlist — ADHX')
+      expect(metadata.title).toBe('Private channel — ADHX')
       expect(metadata.robots).toEqual({ index: false, follow: false })
       expect(JSON.stringify(metadata)).toContain('/api/og/playlist/brand/card?generic=1')
       expect(JSON.stringify(metadata)).not.toContain('curator')
@@ -163,7 +159,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
         params: Promise.resolve({ username: 'curator', tag: 'cool-stuff' }),
       })
 
-      expect(metadata.title).toBe("#cool-stuff — @curator's playlist on ADHX")
+      expect(metadata.title).toBe("#cool-stuff — @curator's channel on ADHX")
       expect(metadata.description).toContain('2 bookmarks curated by @curator')
       expect(metadata.alternates?.canonical).toContain('/t/curator/cool-stuff')
       expect(JSON.stringify(metadata)).toContain('/api/og/playlist/curator/cool-stuff')
@@ -194,11 +190,31 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
 
       expect(result).not.toBeNull()
       const html = renderToStaticMarkup(result as React.ReactElement)
-      expect(html).toContain('Private playlist')
+      expect(html).toContain('Private channel')
       expect(html).not.toContain('someauthor')
     })
 
-    it('renders the sr-only crawlable list + mounts the theater for a public tag', async () => {
+    it('shows a private channel only to its owner', async () => {
+      const { getPublicTagCollection } = await import('@/lib/tags/query')
+      vi.mocked(getPublicTagCollection).mockResolvedValue({ status: 'private' })
+      const SharedTagPage = (await import('@/app/t/[username]/[tag]/page')).default
+      const render = async () =>
+        renderToStaticMarkup(
+          (await SharedTagPage({
+            params: Promise.resolve({ username: 'curator', tag: 'secret-tag' }),
+          })) as React.ReactElement,
+        )
+
+      mockCurrentUserId = 'someone-else'
+      expect(await render()).toContain('Private channel')
+      expect(channelPageSpy).not.toHaveBeenCalled()
+
+      mockCurrentUserId = 'owner-id'
+      await render()
+      expect(channelPageSpy).toHaveBeenCalledWith(expect.objectContaining({ mine: true }))
+    })
+
+    it('renders the sr-only crawlable list + mounts the channel page for a public tag', async () => {
       const { getPublicTagCollection } = await import('@/lib/tags/query')
       vi.mocked(getPublicTagCollection).mockResolvedValue(SAMPLE_COLLECTION)
 
@@ -217,20 +233,14 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       expect(html).toContain('Hello world')
       expect(html).toContain('A video post')
 
-      // The interactive surface is `TheaterShell` (mocked above) — assert
-      // it's mounted in collection mode with the right identity + seed.
-      expect(theaterShellSpy).toHaveBeenCalledTimes(1)
-      const props = theaterShellSpy.mock.calls[0][0] as {
-        mode: string
-        authed: boolean
-        playlist: { tag: string; curator: string; count: number }
-        seed: { items: Array<{ platform: string; bookmarkId: string | null }> }
-      }
-      expect(props.mode).toBe('playlist')
-      expect(props.authed).toBe(false)
-      expect(props.playlist).toEqual({ tag: 'cool-stuff', curator: 'curator', count: 2 })
-      expect(props.seed.items).toHaveLength(2)
-      expect(props.seed.items.map((i) => i.bookmarkId)).toEqual(['1', '2'])
+      expect(html).toContain('application/ld+json')
+      expect(channelPageSpy).toHaveBeenCalledWith({
+        username: 'curator',
+        tag: 'cool-stuff',
+        count: 2,
+        mine: false,
+        signedIn: false,
+      })
     })
 
     it('treats a rejected stale session as anonymous chrome and analytics', async () => {
@@ -246,7 +256,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
 
       const { getCurrentUserId } = await import('@/lib/auth/session')
       expect(getCurrentUserId).toHaveBeenCalledTimes(1)
-      expect(theaterShellSpy).toHaveBeenCalledWith(expect.objectContaining({ authed: false }))
+      expect(channelPageSpy).toHaveBeenCalledWith(expect.objectContaining({ signedIn: false }))
       expect(recordCollectionEventSpy).toHaveBeenCalledWith(
         expect.objectContaining({ viewerId: null }),
       )
@@ -264,7 +274,7 @@ describe('Shared tag route: /t/[username]/[tag]', () => {
       })
       renderToStaticMarkup(result as React.ReactElement)
 
-      expect(theaterShellSpy).toHaveBeenCalledWith(expect.objectContaining({ authed: true }))
+      expect(channelPageSpy).toHaveBeenCalledWith(expect.objectContaining({ signedIn: true }))
       expect(recordCollectionEventSpy).toHaveBeenCalledWith(
         expect.objectContaining({ viewerId: 'viewer-id' }),
       )

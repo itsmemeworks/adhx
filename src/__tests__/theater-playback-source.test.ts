@@ -4,7 +4,7 @@ import type { TrendingItem } from '@/lib/trending/query'
 
 /**
  * Per-platform playback resolution matrix (spec §6, PR-1 scope). Twitter/TikTok
- * video → MP4 via the video-src SSOT; Instagram/YouTube → poster-only for now
+ * video → MP4 via the video-src SSOT; Instagram → poster-only for now
  * (their real stages land in PR 2); everything else → no media pipeline.
  *
  * The Instagram case is a deliberate regression test: Instagram must NOT fall
@@ -29,11 +29,11 @@ describe('resolvePlaybackSource', () => {
     expect(resolvePlaybackSource(null)).toEqual({ kind: 'none', src: null, poster: null })
   })
 
-  it('twitter video → the FxTwitter MP4 proxy', () => {
+  it('twitter video → the twitter kept-file video route', () => {
     const result = resolvePlaybackSource(item({ platform: 'twitter', contentType: 'video' }))
     expect(result).toEqual({
       kind: 'video',
-      src: '/api/media/video?author=jack&tweetId=123&quality=hd',
+      src: '/api/files/twitter/123/video-1?a=jack',
       poster: 'https://pbs.twimg.com/thumb.jpg',
     })
   })
@@ -50,12 +50,12 @@ describe('resolvePlaybackSource', () => {
     )
   })
 
-  it('tiktok → the TikTok MP4 proxy, regardless of recorded contentType', () => {
+  it('tiktok → the tiktok kept-file video route, regardless of recorded contentType', () => {
     const result = resolvePlaybackSource(
       item({ platform: 'tiktok', author: 'bob', bookmarkId: '7', contentType: undefined }),
     )
     expect(result.kind).toBe('video')
-    expect(result.src).toBe('/api/media/tiktok/video?username=bob&id=7')
+    expect(result.src).toBe('/api/files/tiktok/7/video-1?a=bob')
   })
 
   it('instagram → poster only here (StageInstagram owns the probe-gated <video>), never the Twitter proxy', () => {
@@ -65,17 +65,6 @@ describe('resolvePlaybackSource', () => {
     expect(result.kind).toBe('poster')
     // No MP4 src is resolved at all — in particular, never the Twitter proxy.
     expect(result.src).toBe(null)
-  })
-
-  it('youtube → poster only (no MP4 exists; official iframe only)', () => {
-    const result = resolvePlaybackSource(
-      item({ platform: 'youtube', bookmarkId: 'Y9aytLYBajw', contentType: 'video' }),
-    )
-    expect(result).toEqual({
-      kind: 'poster',
-      src: null,
-      poster: 'https://pbs.twimg.com/thumb.jpg',
-    })
   })
 
   it('unknown platforms/types → none, but poster still carries the thumbnail', () => {
@@ -92,12 +81,12 @@ describe('resolvePlaybackSource', () => {
 })
 
 describe('instagramWarmSrc', () => {
-  it('resolves the mirror proxy URL for an instagram item', () => {
+  it('resolves the instagram kept-file video URL for an instagram item', () => {
     expect(
       instagramWarmSrc(
         item({ platform: 'instagram', contentType: 'video', bookmarkId: 'DXVsqQ7CSXw' }),
       ),
-    ).toBe('/api/media/instagram/video?id=DXVsqQ7CSXw')
+    ).toBe('/api/files/instagram/DXVsqQ7CSXw/video-1')
   })
 
   it('does not warm the Reel video mirror for an Instagram image post', () => {
@@ -111,7 +100,6 @@ describe('instagramWarmSrc', () => {
   it('returns null for non-instagram platforms', () => {
     expect(instagramWarmSrc(item({ platform: 'twitter', bookmarkId: '123' }))).toBe(null)
     expect(instagramWarmSrc(item({ platform: 'tiktok', bookmarkId: '123' }))).toBe(null)
-    expect(instagramWarmSrc(item({ platform: 'youtube', bookmarkId: '123' }))).toBe(null)
   })
 
   it('returns null when there is no source id, or no item at all', () => {

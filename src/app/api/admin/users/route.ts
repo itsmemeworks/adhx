@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAdmin } from '@/lib/admin/guard'
 import { setUserBanned } from '@/lib/admin/moderation'
 import { inspectUser } from '@/lib/admin/query'
+import { clearMemberNotes } from '@/lib/admin/boards/people'
 import { handleRouteError } from '@/lib/api/response'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +23,7 @@ export const GET = withAdmin(async (request: NextRequest, actor) => {
 
 export const POST = withAdmin(async (request: NextRequest, actor) => {
   try {
-    let body: { username?: unknown; banned?: unknown; reason?: unknown }
+    let body: { username?: unknown; banned?: unknown; reason?: unknown; clearNotes?: unknown }
     try {
       body = await request.json()
     } catch {
@@ -34,6 +35,15 @@ export const POST = withAdmin(async (request: NextRequest, actor) => {
     const reason = typeof body.reason === 'string' ? body.reason : null
     if (!username) {
       return NextResponse.json({ error: 'username is required' }, { status: 400 })
+    }
+
+    // Clear every note this person left (audited), instead of keeping them out.
+    if (body.clearNotes === true) {
+      const cleared = clearMemberNotes(actor.userId, username)
+      if (!cleared.ok) {
+        return NextResponse.json({ error: cleared.error }, { status: cleared.status })
+      }
+      return NextResponse.json({ username, notesCleared: cleared.notesCleared })
     }
 
     const result = await setUserBanned({

@@ -1,3 +1,4 @@
+import { privateByDefault } from '@/lib/bookmarks/privacy'
 import { db, runInTransaction } from '@/lib/db'
 import { tagShares, bookmarkTags, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { eq, and, inArray } from 'drizzle-orm'
@@ -5,6 +6,7 @@ import { readModeratedPostKeys, readUserBan } from '@/lib/admin/moderation'
 import { addedAtForIndex } from '@/lib/sync/added-at'
 import { recordCollectionEvent } from '@/lib/discovery/record'
 import { resolveMediaUrl, getShareableUrl, getThumbnailUrl } from '@/lib/media/fxembed'
+import { noteSaved, PRIORITY } from '@/lib/semantic'
 
 export const MAX_CLONE_SIZE = 100
 
@@ -18,6 +20,22 @@ function readPublicTagModeration(ownerId: string): ReadonlySet<string> | null {
 
 export function pairKey(platform: string, bookmarkId: string): string {
   return `${platform}:${bookmarkId}`
+}
+
+/** The owner's private saves among these tagged posts (never public, never cloned). */
+async function privateTaggedKeys(
+  ownerId: string,
+  rows: { platform: string; bookmarkId: string }[],
+): Promise<Set<string>> {
+  if (rows.length === 0) return new Set()
+  const ids = [...new Set(rows.map((r) => r.bookmarkId))]
+  const found = await db
+    .select({ platform: bookmarks.platform, id: bookmarks.id })
+    .from(bookmarks)
+    .where(
+      and(eq(bookmarks.userId, ownerId), eq(bookmarks.isPrivate, true), inArray(bookmarks.id, ids)),
+    )
+  return new Set(found.map((b) => pairKey(b.platform, b.id)))
 }
 
 export type CloneTagOk = {
@@ -75,8 +93,12 @@ export async function cloneTagToUser(opts: {
     .from(bookmarkTags)
     .where(and(eq(bookmarkTags.userId, sourceUserId), eq(bookmarkTags.tag, tagName)))
 
+  // Private wins: posts the owner kept just for themself are never copied.
+  const privateKeys = await privateTaggedKeys(sourceUserId, sourceTaggedRows)
   const sourceTaggedBookmarks = sourceTaggedRows.filter(
-    (row) => !moderated.has(pairKey(row.platform, row.bookmarkId)),
+    (row) =>
+      !moderated.has(pairKey(row.platform, row.bookmarkId)) &&
+      !privateKeys.has(pairKey(row.platform, row.bookmarkId)),
   )
 
   if (sourceTaggedBookmarks.length === 0) {
@@ -179,6 +201,7 @@ export async function cloneTagToUser(opts: {
     (b.processedAt ?? '').localeCompare(a.processedAt ?? ''),
   )
 
+  const isPrivate = privateByDefault(currentUserId)
   runInTransaction(() => {
     if (orderedNewBookmarks.length > 0) {
       db.insert(bookmarks)
@@ -187,6 +210,9 @@ export async function cloneTagToUser(opts: {
             ...b,
             userId: currentUserId,
             source: 'clone' as const,
+            isPrivate,
+            // A note is its writer's own words, never copied to someone else's save.
+            note: null,
             processedAt: addedAtForIndex(clonedAtMs, i),
           })),
         )
@@ -232,6 +258,11 @@ export async function cloneTagToUser(opts: {
       .onConflictDoNothing()
       .run()
   })
+
+  noteSaved(
+    newBookmarks.map((b) => ({ platform: b.platform, postId: b.id })),
+    PRIORITY.sync,
+  )
 
   recordCollectionEvent({
     action: 'clone',
@@ -322,7 +353,12 @@ export async function listTaggedBookmarks(ownerId: string, tagName: string) {
     .from(bookmarkTags)
     .where(and(eq(bookmarkTags.userId, ownerId), eq(bookmarkTags.tag, tagName)))
 
-  const tagged = taggedRows.filter((row) => !moderated.has(pairKey(row.platform, row.bookmarkId)))
+  const privateKeys = await privateTaggedKeys(ownerId, taggedRows)
+  const tagged = taggedRows.filter(
+    (row) =>
+      !moderated.has(pairKey(row.platform, row.bookmarkId)) &&
+      !privateKeys.has(pairKey(row.platform, row.bookmarkId)),
+  )
 
   if (tagged.length === 0)
     return { bookmarks: [], media: [] as (typeof bookmarkMedia.$inferSelect)[] }

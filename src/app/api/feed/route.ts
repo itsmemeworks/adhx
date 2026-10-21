@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { goneKeys } from '@/lib/semantic/gone'
 import { db } from '@/lib/db'
 import {
   bookmarks,
@@ -13,6 +14,7 @@ import { metrics } from '@/lib/sentry'
 import { withAuth } from '@/lib/api/with-auth'
 import { handleRouteError } from '@/lib/api/response'
 import { buildFeedItem, type FeedItemResponse } from '@/lib/feed/build-item'
+import { withSavers } from '@/lib/people/savers'
 
 export type FilterType = 'all' | 'photos' | 'videos' | 'text' | 'articles'
 export type PlatformFilter = 'all' | 'twitter' | 'instagram' | 'tiktok'
@@ -558,8 +560,15 @@ export const GET = withAuth(async (request: NextRequest, userId) => {
     }
     metrics.trackUser(userId)
 
+    // Posts deleted upstream have nothing left to show.
+    const gone = await goneKeys(items.map((i) => `${i.platform ?? 'twitter'}:${i.id}`))
+    const shown = gone.size
+      ? items.filter((i) => !gone.has(`${i.platform ?? 'twitter'}:${i.id}`))
+      : items
+
     return NextResponse.json({
-      items,
+      // Members who saved each post, by name (signed in: this route needs a session).
+      items: withSavers(shown, userId),
       pagination: {
         page,
         limit,

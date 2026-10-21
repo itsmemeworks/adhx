@@ -1,22 +1,18 @@
-import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
-import { getCurrentUserId } from '@/lib/auth/session'
-import { requireAdmin } from '@/lib/admin/guard'
-import { AdminClient } from './AdminClient'
+import { overviewBoard } from '@/lib/admin/boards/overview'
+import { serverInfo } from '@/lib/admin/boards/overview'
+import { parseAdminRange } from '@/lib/admin/shared'
+import { adminPageActor, rangeParam, type AdminSearchParams } from '@/lib/admin/page-gate'
+import { OverviewView } from '@/components/next/admin/OverviewView'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'Admin — ADHX',
-  robots: { index: false, follow: false },
-}
-
-export default async function AdminPage() {
-  const userId = await getCurrentUserId()
-  if (!userId) redirect('/')
-
-  const gate = await requireAdmin(userId)
-  if (!gate.ok) redirect('/settings')
-
-  return <AdminClient />
+/** /admin: the Overview (board 10.1). */
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams?: AdminSearchParams
+}) {
+  await adminPageActor()
+  const range = parseAdminRange(await rangeParam(searchParams), 'week')
+  return <OverviewView data={await overviewBoard(range)} server={serverInfo().name} />
 }

@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+
+// These reads are admin-only; the gate is covered in api/admin-only-reads.test.ts.
+vi.mock('@/lib/admin/only', () => ({ adminOnlyResponse: async () => null }))
 import { NextRequest } from 'next/server'
 import { createTestBookmark, createTestDb, type TestDbInstance } from './setup'
 import {

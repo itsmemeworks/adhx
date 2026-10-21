@@ -1,0 +1,340 @@
+'use client'
+
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
+import { createPortal } from 'react-dom'
+import Link from 'next/link'
+import { ChevronRight, ChevronUp, Lock } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { Saver } from '@/lib/people/types'
+import { timeAgo } from './moments/live'
+import { NxAvatar } from './primitives'
+import { orderedSavers, saverHref, saverName, saversLine, savesOf } from './savers'
+import { bylineNote, SaverNote } from './SaverNote'
+
+/**
+ * Who saved this, for members: up to three overlapping faces and a short line
+ * ("Ana and Ben saved this", "You and 2 others"). Never rendered for
+ * strangers — the server only sends `savers` to signed-in members.
+ *
+ * `tone`: `scrim` (white words over media), `plate` (a dark chip over a
+ * stage or tile), `cream` (ink words on a cream card).
+ *
+ * `linked`: tapping a face opens that friend's channel (yours: My saves).
+ * Safe inside another link (a search tile): the faces are `role="link"`
+ * spans that stop the tile's own click.
+ */
+export function SaverFaces({
+  savers,
+  tone = 'scrim',
+  size = 22,
+  compact = false,
+  linked = false,
+  line: lineOverride,
+  className,
+}: {
+  savers: readonly Saver[]
+  tone?: 'scrim' | 'plate' | 'cream'
+  size?: number
+  /** Faces only; the line is still spoken. */
+  compact?: boolean
+  /** Each face opens that person's channel. */
+  linked?: boolean
+  /** Words in place of the usual line ("You and Ben saved this too"). */
+  line?: string
+  className?: string
+}) {
+  if (savers.length === 0) return null
+  const line = lineOverride ?? saversLine(savers)
+  const faces = orderedSavers(savers).slice(0, 3)
+  const ring =
+    tone === 'cream' ? 'border-nx-cream' : tone === 'plate' ? 'border-[#1c1b19]' : 'border-black/60'
+  return (
+    <span
+      title={line}
+      className={cn(
+        'flex min-w-0 items-center gap-1.5',
+        tone === 'plate' && 'nx-plate h-7 rounded-full pl-1 pr-2.5 text-white',
+        tone === 'scrim' && 'text-white',
+        tone === 'cream' && 'text-nx-ink',
+        compact && tone === 'plate' && 'pr-1',
+        className,
+      )}
+    >
+      <span aria-hidden={linked ? undefined : true} className="flex shrink-0">
+        {faces.map((s, i) => {
+          // The ring sits on the Gob-shaped face itself, so it follows the corners.
+          const face = (
+            <NxAvatar
+              author={{ avatarUrl: s.avatarUrl, handle: s.username, name: saverName(s) }}
+              size={size + 4}
+              className={cn('border-2', ring)}
+            />
+          )
+          const frame = cn('block', i > 0 && '-ml-2')
+          return linked ? (
+            <FaceLink
+              key={s.username}
+              saver={s}
+              className={cn(frame, 'pointer-events-auto cursor-pointer')}
+              style={{ zIndex: faces.length - i }}
+            >
+              {face}
+            </FaceLink>
+          ) : (
+            <span key={s.username} className={frame} style={{ zIndex: faces.length - i }}>
+              {face}
+            </span>
+          )
+        })}
+      </span>
+      <span className={cn('truncate text-[12px] font-bold', compact && 'sr-only')}>{line}</span>
+    </span>
+  )
+}
+
+/** The small lock on a post kept just for you. */
+export function PrivateLock({
+  className,
+  tone = 'plate',
+}: {
+  className?: string
+  tone?: 'plate' | 'scrim' | 'cream'
+}) {
+  return (
+    <span
+      role="img"
+      aria-label="Just for me"
+      title="Just for me"
+      className={cn(
+        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+        tone === 'plate' && 'nx-plate text-white',
+        tone === 'scrim' && 'bg-black/35 text-white',
+        tone === 'cream' && 'bg-nx-ink/10 text-nx-ink',
+        className,
+      )}
+    >
+      <Lock aria-hidden className="h-3 w-3" strokeWidth={2.6} />
+    </span>
+  )
+}
+
+/**
+ * A face that opens that person's channel. A span with `role="link"`, so it
+ * can sit inside a tile that is itself a link; it stops the tile's click.
+ */
+function FaceLink({
+  saver,
+  className,
+  style,
+  children,
+}: {
+  saver: Saver
+  className?: string
+  style?: React.CSSProperties
+  children: React.ReactNode
+}) {
+  const go = (e: MouseEvent | KeyboardEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    window.location.assign(saverHref(saver))
+  }
+  return (
+    <span
+      role="link"
+      tabIndex={0}
+      aria-label={savesOf(saver)}
+      title={savesOf(saver)}
+      onClick={go}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') go(e)
+      }}
+      className={cn(
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-nx-accent',
+        className,
+      )}
+      style={style}
+    >
+      {children}
+    </span>
+  )
+}
+
+/**
+ * The faces as a button that opens "Who saved it": each saver, when they
+ * saved it, their note, and a link to their channel (yours: My saves). For
+ * the theater. `placement`: open above the faces (a byline at the bottom,
+ * which also shows the newest friend's note as a speech bubble) or below
+ * (chips at the top).
+ */
+export function SaversButton({
+  savers,
+  tone = 'scrim',
+  placement = 'above',
+  className,
+  facesClassName,
+  faces,
+  framed = false,
+  noteBubble = true,
+}: {
+  savers: readonly Saver[]
+  tone?: 'scrim' | 'plate'
+  placement?: 'above' | 'below'
+  className?: string
+  /** Passed to the faces themselves. */
+  facesClassName?: string
+  /** Draw the faces yourself (the theater byline's bigger stack). */
+  faces?: ReactNode
+  /** A frosted pill with a chevron, ringed in yellow while open. */
+  framed?: boolean
+  /** Show the newest friend's note over the byline (off while the stage is busy). */
+  noteBubble?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [at, setAt] = useState<{ left: number; top?: number; bottom?: number } | null>(null)
+  const root = useRef<HTMLSpanElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+
+  // The popover lives on <body> (chip rows clip, blurred headers trap fixed
+  // children), placed against the faces when it opens.
+  const place = () => {
+    const rect = root.current?.getBoundingClientRect()
+    if (!rect) return
+    const left = Math.max(12, Math.min(rect.left - (framed ? 8 : 0), window.innerWidth - 348))
+    setAt(
+      placement === 'above'
+        ? { left, bottom: window.innerHeight - rect.top + 12 }
+        : { left, top: rect.bottom + 12 },
+    )
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as Node
+      if (!root.current?.contains(target) && !panel.current?.contains(target)) setOpen(false)
+    }
+    const onMove = () => setOpen(false)
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey, true)
+    window.addEventListener('resize', onMove)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('resize', onMove)
+    }
+  }, [open])
+
+  if (savers.length === 0) return null
+  const list = orderedSavers(savers)
+  const others = list.filter((s) => !s.isYou).length
+  const noted = placement === 'above' && noteBubble ? bylineNote(savers) : undefined
+  const button = (
+    <span ref={root} className={cn('pointer-events-auto relative flex min-w-0', className)}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => {
+          if (!open) place()
+          setOpen((o) => !o)
+        }}
+        aria-label={faces ? `Who saved it: ${saversLine(savers)}` : undefined}
+        className={cn(
+          'flex min-w-0 rounded-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-nx-accent',
+          framed && 'h-10 shrink-0 items-center gap-1 py-[3px]',
+          framed &&
+            open &&
+            '-ml-[3px] bg-white/[0.16] pl-[3px] pr-2.5 outline outline-2 outline-offset-1 outline-nx-accent backdrop-blur-md',
+        )}
+      >
+        {faces ?? (
+          <SaverFaces savers={savers} tone={tone} className={cn('max-w-full', facesClassName)} />
+        )}
+        {framed && open && <ChevronUp aria-hidden className="h-4 w-4 shrink-0 text-white" />}
+      </button>
+      {open &&
+        at &&
+        createPortal(
+          <div
+            ref={panel}
+            role="dialog"
+            aria-label="Who saved it"
+            style={at}
+            className="fixed z-[60] flex w-[min(336px,calc(100vw-24px))] flex-col gap-0.5 rounded-[22px] border border-white/[0.08] bg-nx-surface p-2 font-nx-sans text-nx-cream shadow-[0_24px_60px_rgba(0,0,0,0.65)] [text-shadow:none]"
+          >
+            {framed && placement === 'above' && (
+              <span
+                aria-hidden
+                className="absolute -bottom-2 left-[34px] block h-3.5 w-3.5 rotate-45 border-b border-r border-white/[0.08] bg-nx-surface"
+              />
+            )}
+            <span className="px-3 pb-1.5 pt-2.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/55">
+              Who saved it
+            </span>
+            <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+              {list.map((s, i) => (
+                <li
+                  key={s.username}
+                  className={cn('flex gap-3 rounded-[14px] px-3 py-2.5', i === 0 && 'bg-[#262320]')}
+                >
+                  <NxAvatar
+                    author={{ avatarUrl: s.avatarUrl, handle: s.username, name: saverName(s) }}
+                    size={40}
+                  />
+                  <span className="flex min-w-0 flex-col gap-1.5">
+                    <span className="flex items-baseline gap-2">
+                      <span className="truncate text-[15px] font-extrabold">{saverName(s)}</span>
+                      <span className="shrink-0 text-[13px] text-white/55">
+                        {timeAgo(s.savedAt)}
+                      </span>
+                    </span>
+                    <SaverNote saver={s} variant="quote" />
+                    <Link
+                      href={saverHref(s)}
+                      className="flex items-center gap-1 text-[13px] font-semibold text-nx-accent hover:underline"
+                    >
+                      <span>{s.isYou ? 'See your saves' : `See ${savesOf(s)}`}</span>
+                      <ChevronRight aria-hidden className="h-3.5 w-3.5" />
+                    </Link>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {others > 0 && list.length > 1 && (
+              <span className="mt-1 flex items-center gap-2.5 border-t border-white/[0.08] px-3 pb-2 pt-3 text-sm font-semibold text-nx-soft">
+                <SaverFaces
+                  savers={savers}
+                  tone="plate"
+                  size={18}
+                  compact
+                  className="!h-auto !bg-transparent !p-0"
+                />
+                <span>{`Saved by ${list.length} of your people`}</span>
+              </span>
+            )}
+          </div>,
+          document.body,
+        )}
+    </span>
+  )
+  if (!noted) return button
+  return (
+    <span className="flex min-w-0 flex-col items-start gap-2">
+      <SaverNote saver={noted} />
+      {button}
+    </span>
+  )
+}

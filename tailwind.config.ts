@@ -25,6 +25,9 @@ const config: Config = {
         serif: ['var(--font-newsreader)', 'Georgia', 'serif'],
         newsreader: ['var(--font-newsreader)', 'Georgia', 'serif'],
         mono: ['var(--font-roboto-mono)', 'ui-monospace', 'monospace'],
+        // next_ui redesign type system (alongside Matter, not replacing it)
+        'nx-serif': ['var(--font-instrument-serif)', 'Georgia', 'serif'],
+        'nx-sans': ['var(--font-hanken-grotesk)', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -48,6 +51,20 @@ const config: Config = {
         flame: 'var(--m-flame)',
         live: 'var(--m-live)',
         done: 'var(--m-done)',
+        // ——— next_ui palette (RGB channel vars so `/alpha` modifiers work) ———
+        nx: {
+          ink: 'rgb(var(--nx-ink) / <alpha-value>)', // warm black page
+          stage: 'rgb(var(--nx-stage) / <alpha-value>)', // pure black stage
+          surface: 'rgb(var(--nx-surface) / <alpha-value>)', // raised card on ink
+          cream: 'rgb(var(--nx-cream) / <alpha-value>)',
+          soft: 'rgb(var(--nx-soft) / <alpha-value>)', // secondary text on dark
+          muted: 'rgb(var(--nx-muted) / <alpha-value>)',
+          hairline: 'rgb(var(--nx-hairline) / <alpha-value>)',
+          accent: 'rgb(var(--nx-accent) / <alpha-value>)', // yellow
+          'on-cream': 'rgb(var(--nx-on-cream) / <alpha-value>)', // secondary text on cream
+          bone: 'rgb(var(--nx-bone) / <alpha-value>)', // outlines on cream
+          skeleton: 'rgb(var(--nx-skeleton) / <alpha-value>)',
+        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
@@ -78,6 +95,8 @@ const config: Config = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
         card: '12px', // Matter --rcard
+        'nx-tile': '16px',
+        'nx-stage': '20px',
       },
       boxShadow: {
         'm-xs': 'var(--m-sh-xs)',
@@ -85,6 +104,9 @@ const config: Config = {
         'm-md': 'var(--m-sh-md)',
         'm-lg': 'var(--m-sh-lg)',
         glow: 'var(--m-glow)',
+        // Backplate under controls that sit on media.
+        'nx-plate': '0 2px 10px rgba(0,0,0,.35)',
+        'nx-toast': '0 10px 30px rgba(0,0,0,.5)',
       },
       backgroundImage: {
         'clay-grad': 'var(--m-grad)',
@@ -151,6 +173,51 @@ const config: Config = {
           '0%': { opacity: '1', transform: 'scale(1)', maxWidth: '10rem' },
           '100%': { opacity: '0', transform: 'scale(0.84)', maxWidth: '0' },
         },
+        // ——— next_ui loader (AdhxFace, Shimmer, PasteToast) ———
+        // Bounce with squash on landing; the shadow shrinks while airborne.
+        'nx-bounce': {
+          '0%, 100%': { transform: 'translateY(0) scale(1, 1)' },
+          '35%': { transform: 'translateY(-22%) scale(0.95, 1.05)' },
+          '55%': { transform: 'translateY(0) scale(1.1, 0.9)' },
+          '70%': { transform: 'translateY(-5%) scale(0.98, 1.02)' },
+        },
+        'nx-shadow': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.55' },
+          '35%': { transform: 'scale(0.6)', opacity: '0.25' },
+          '55%': { transform: 'scale(1.1)', opacity: '0.6' },
+        },
+        'nx-look': {
+          '0%, 25%': { transform: 'translateX(0)' },
+          '35%, 55%': { transform: 'translateX(var(--nx-look, 5px))' },
+          '65%, 85%': { transform: 'translateX(calc(var(--nx-look, 5px) * -1))' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        'nx-blink': {
+          '0%, 90%, 100%': { transform: 'scaleY(1)' },
+          '94%': { transform: 'scaleY(0.1)' },
+        },
+        'nx-dot': {
+          '0%, 80%, 100%': { opacity: '0.25' },
+          '40%': { opacity: '1' },
+        },
+        'nx-shimmer': {
+          '0%': { backgroundPosition: '-400px 0' },
+          '100%': { backgroundPosition: '400px 0' },
+        },
+        'nx-pop': {
+          '0%': { transform: 'scale(0.6)', opacity: '0' },
+          '60%': { transform: 'scale(1.08)', opacity: '1' },
+          '100%': { transform: 'scale(1)' },
+        },
+        'nx-drop': {
+          '0%': { transform: 'translateY(-16px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        // "Getting it ready": a light sweeping across the blurred poster.
+        'nx-sheen': {
+          '0%': { backgroundPosition: '100% 0' },
+          '100%': { backgroundPosition: '-50% 0' },
+        },
       },
       animation: {
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
@@ -165,6 +232,16 @@ const config: Config = {
         'save-pop': 'save-pop 0.38s cubic-bezier(0.34, 1.3, 0.64, 1)',
         'tag-in': 'tag-in 0.22s ease-out',
         'save-slot-out': 'save-slot-out 0.28s ease-in forwards',
+        'nx-bounce': 'nx-bounce 1.15s ease-in-out infinite',
+        'nx-shadow': 'nx-shadow 1.15s ease-in-out infinite',
+        'nx-look': 'nx-look 2.6s ease-in-out infinite',
+        'nx-blink': 'nx-blink 3.2s infinite',
+        'nx-dot': 'nx-dot 1.2s infinite',
+        'nx-shimmer': 'nx-shimmer 1.6s linear infinite',
+        'nx-spin': 'spin 0.8s linear infinite',
+        'nx-pop': 'nx-pop 0.4s ease-out',
+        'nx-drop': 'nx-drop 0.3s ease-out',
+        'nx-sheen': 'nx-sheen 2.4s ease-in-out infinite',
       },
     },
   },

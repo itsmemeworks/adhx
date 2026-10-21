@@ -36,16 +36,18 @@ describe('isSavedPath', () => {
 })
 
 describe('/collection redirect stub', () => {
-  it('308s to /saved', async () => {
+  it('308s to the theater on your newest saves', async () => {
     const Redirect = (await import('@/app/collection/page')).default
-    await expect(Redirect({ searchParams: Promise.resolve({}) })).rejects.toThrow('REDIRECT:/saved')
+    await expect(Redirect({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      'REDIRECT:/play?recent=1',
+    )
   })
 
   it('preserves open + platform on the new URL', async () => {
     const Redirect = (await import('@/app/collection/page')).default
     await expect(
       Redirect({ searchParams: Promise.resolve({ open: '123', platform: 'tiktok' }) }),
-    ).rejects.toThrow('REDIRECT:/saved?open=123&platform=tiktok')
+    ).rejects.toThrow('REDIRECT:/play?recent=1&start=tiktok%3A123')
   })
 })
 

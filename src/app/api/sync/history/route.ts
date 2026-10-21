@@ -18,6 +18,7 @@ export const GET = withAuth(async (_request, userId) => {
         status: syncLogs.status,
         newBookmarks: syncLogs.newBookmarks,
         totalFetched: syncLogs.totalFetched,
+        triggerType: syncLogs.triggerType,
       })
       .from(syncLogs)
       .where(and(eq(syncLogs.userId, userId), eq(syncLogs.status, 'completed')))

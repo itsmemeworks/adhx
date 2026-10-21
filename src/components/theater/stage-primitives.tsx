@@ -145,8 +145,7 @@ export function StageIconButton({
 
 /**
  * Stage headline — was repeated identically in Stage.tsx (StagePoster's
- * title), StageWaiting.tsx ("You're all caught up"), StageYouTube.tsx (the
- * no-videoId fallback's title), and CollectionAllClear.tsx (the done-state
+ * title), StageWaiting.tsx ("You're all caught up"), and CollectionAllClear.tsx (the done-state
  * title). Always an `<h2>` with this exact class string.
  */
 export function StageHeadline({ children }: { children: ReactNode }) {
@@ -155,8 +154,7 @@ export function StageHeadline({ children }: { children: ReactNode }) {
 
 /**
  * "Open preview" clay-grad CTA pill — was repeated identically in Stage.tsx
- * (StagePoster), StageArticle.tsx (fetch-failure fallback), and
- * StageYouTube.tsx (the no-videoId fallback). All three call sites use the
+ * (StagePoster) and StageArticle.tsx (fetch-failure fallback). Both call sites use the
  * same "Open preview" label + trailing ArrowRight, so both are baked in
  * here rather than passed as children.
  *
@@ -179,7 +177,7 @@ export function StageCTA({ href }: { href: string }) {
  * Stage background wrapper — was repeated identically in Stage.tsx
  * (StagePoster), StageInstagram.tsx (the probing-phase branch, NOT the
  * `failed` branch — that one is missing `overflow-hidden` and is left
- * unextracted), and StageYouTube.tsx (the no-videoId fallback).
+ * unextracted).
  */
 export function StageFrame({ children }: { children: ReactNode }) {
   return (

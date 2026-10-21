@@ -1,3 +1,4 @@
+import { NETWORK_LABELS } from '@/lib/platform/networks'
 import type { TrendingItem } from '@/lib/trending/query'
 
 export type { TextLinkRef, TheaterQuoteRef, TheaterLinkPreview } from '@/lib/trending/query'
@@ -212,12 +213,7 @@ export interface TheaterPersonalChrome {
 }
 
 /** Human platform label for "Open on {platform}" titles — shared by both chromes. */
-export const PLATFORM_LABEL: Record<string, string> = {
-  twitter: 'X',
-  tiktok: 'TikTok',
-  instagram: 'Instagram',
-  youtube: 'YouTube',
-}
+export const PLATFORM_LABEL: Record<string, string> = NETWORK_LABELS
 
 /** Server-rendered seed for the shell — same items as the crawlable list. */
 export interface TheaterFeedSeed {

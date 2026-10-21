@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
           style={{ objectFit: 'contain' }}
         />
         <span style={{ fontSize: 18, color: '#6B7280', marginLeft: 16 }}>
-          Save it. Lose it. Find it.
+          Your friends have better taste than the algorithm.
         </span>
       </div>
 

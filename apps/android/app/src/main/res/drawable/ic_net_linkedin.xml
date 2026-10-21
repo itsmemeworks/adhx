@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LinkedIn asked Simple Icons not to carry its logo, so this spells the
+     start of the name in a rounded square, like the web app does. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M5.5 1.5H18.5A4 4 0 0 1 22.5 5.5V18.5A4 4 0 0 1 18.5 22.5H5.5A4 4 0 0 1 1.5 18.5V5.5A4 4 0 0 1 5.5 1.5Z M5.5 7A1.7 1.7 0 1 0 8.9 7A1.7 1.7 0 1 0 5.5 7Z M5.7 9.8H8.7V18.5H5.7Z M10.7 9.8H13.5V11C14 10.1 15.1 9.6 16.3 9.6C18.7 9.6 19.3 11.2 19.3 13.4V18.5H16.4V14C16.4 12.9 16.1 12.1 15.1 12.1C14 12.1 13.6 12.9 13.6 14V18.5H10.7Z" />
+</vector>

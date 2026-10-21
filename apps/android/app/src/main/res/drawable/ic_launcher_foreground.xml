@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon foreground: Gob (see ic_gob.xml) scaled to 66dp across and
+     centred in the 108dp canvas, inside the safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.6875"
+        android:scaleY="0.6875"
+        android:translateX="21"
+        android:translateY="21">
+        <group
+            android:pivotX="48"
+            android:pivotY="50"
+            android:rotation="-4">
+            <path
+                android:fillColor="#FFFFD23F"
+                android:pathData="M38 14H58A28 28 0 0 1 86 42V58A28 28 0 0 1 58 86H38A28 28 0 0 1 10 58V42A28 28 0 0 1 38 14Z" />
+            <path
+                android:fillColor="#FF141414"
+                android:pathData="M29 46A7 7 0 1 0 43 46A7 7 0 1 0 29 46Z" />
+            <path
+                android:fillColor="#FF141414"
+                android:pathData="M52 42A11 11 0 1 0 74 42A11 11 0 1 0 52 42Z" />
+            <path
+                android:fillColor="#FFFFD23F"
+                android:pathData="M62.5 39A3.5 3.5 0 1 0 69.5 39A3.5 3.5 0 1 0 62.5 39Z" />
+            <group
+                android:pivotX="49"
+                android:pivotY="67.5"
+                android:rotation="-7">
+                <path
+                    android:fillColor="#FF141414"
+                    android:pathData="M39.5 64H58.5A3.5 3.5 0 0 1 58.5 71H39.5A3.5 3.5 0 0 1 39.5 64Z" />
+            </group>
+        </group>
+    </group>
+</vector>

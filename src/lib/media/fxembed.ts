@@ -10,6 +10,7 @@
  * - Embed:  https://fxtwitter.com/{author}/status/{tweetId}
  */
 
+import { keptSrc } from '@/lib/keep/src'
 import { normalizeEntityMap } from '@/lib/utils/article-text'
 import { isValidTweetAuthor, isValidTweetId } from '@/lib/media/proxy'
 
@@ -38,7 +39,7 @@ export function getPhotoUrl(author: string, tweetId: string, index: number = 1):
 
 /** Same-origin photo proxy — Twitter's CDN often 403s hotlinks from localhost / Safari. */
 export function proxiedPhotoSrc(author: string, tweetId: string, index: number = 1): string {
-  return `/api/media/image?author=${encodeURIComponent(author)}&tweetId=${encodeURIComponent(tweetId)}&index=${index}`
+  return keptSrc('twitter', tweetId, `photo-${index}`, author)
 }
 
 /**
@@ -349,6 +350,25 @@ export async function fetchTweetData(
   tweetId: string,
   opts: { timeoutMs?: number } = {},
 ): Promise<FxTwitterResponse | null> {
+  const result = await fetchTweetResult(author, tweetId, opts)
+  return result.ok ? result.data : null
+}
+
+/**
+ * What FxTwitter said about a tweet. `gone` is true when it answered that the
+ * tweet doesn't exist or can't be read (deleted, private, suspended: 404/401),
+ * and false when it couldn't be asked (timeout, network, 5xx), so a save can
+ * say "unavailable" for the first and "try again" for the second.
+ */
+export type TweetFetchResult = { ok: true; data: FxTwitterResponse } | { ok: false; gone: boolean }
+
+const isGoneCode = (code: number | undefined) => code === 404 || code === 401
+
+export async function fetchTweetResult(
+  author: string,
+  tweetId: string,
+  opts: { timeoutMs?: number } = {},
+): Promise<TweetFetchResult> {
   // Callers pass author/tweetId straight from route params in several places
   // (preview pages, /api/share/tweet, /api/og/tweet) without validating them
   // first — reject anything outside the expected charset before it can reach
@@ -357,7 +377,7 @@ export async function fetchTweetData(
   // the caller-supplied strings.
   if (!isValidTweetAuthor(author) || !isValidTweetId(tweetId)) {
     console.error(`Invalid tweet author/id for FxTwitter fetch: ${author}/${tweetId}`)
-    return null
+    return { ok: false, gone: false }
   }
 
   // Keep the deadline active through response parsing. `fetch()` resolves once
@@ -385,11 +405,12 @@ export async function fetchTweetData(
     if (!response.ok) {
       await response.body?.cancel()
       console.error(`FxTwitter API error: ${response.status}`)
-      return null
+      return { ok: false, gone: isGoneCode(response.status) }
     }
 
     const data = (await response.json()) as FxTwitterResponse
-    return data
+    if (!data.tweet && isGoneCode(data.code)) return { ok: false, gone: true }
+    return { ok: true, data }
   } catch (error) {
     // AbortError means timeout - log differently for clarity
     if (error instanceof Error && error.name === 'AbortError') {
@@ -397,7 +418,7 @@ export async function fetchTweetData(
     } else {
       console.error('Failed to fetch tweet data from FxTwitter:', error)
     }
-    return null
+    return { ok: false, gone: false }
   } finally {
     clearTimeout(timeoutId)
   }

@@ -1,3 +1,5 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
+import { visibleSaveFilter } from '@/lib/people/savers'
 import { db } from '@/lib/db'
 import { activity, bookmarks, bookmarkMedia, bookmarkLinks } from '@/lib/db/schema'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
@@ -20,7 +22,7 @@ import { TtlLruCache } from '@/lib/cache/ttl-lru'
  * lookup across ALL of an author's public history: every `activity` row
  * recorded for them (preview/save events) UNIONed with every `bookmarks` row
  * any user has saved for them (aggregated so multiple savers of the same post
- * collapse into one row + a save count). X/Twitter only — IG/TikTok/YouTube
+ * collapse into one row + a save count). X/Twitter only — IG/TikTok
  * have no author-only URL in this app, and `/{username}` is specifically
  * catching X handle-name search queries.
  */
@@ -62,7 +64,7 @@ const ACTIVITY_FETCH_CAP = 500
 
 const CACHE_TTL_MS = 30_000
 const CACHE_MAX_ENTRIES = 128
-type AuthorCache = TtlLruCache<string, AuthorProfile>
+type AuthorCache = TtlLruCache<string, { profile: AuthorProfile; privacyKey: string }>
 const cachesByDb = new WeakMap<object, AuthorCache>()
 
 function getCache(): AuthorCache {
@@ -86,12 +88,13 @@ export async function getAuthorProfile(handleParam: string): Promise<AuthorProfi
   const cache = getCache()
   const key = handle.toLowerCase()
   const hit = cache.get(key)
-  if (hit) return hit
+  const privacyKey = savePrivacyFingerprint()
+  if (hit?.privacyKey === privacyKey) return hit.profile
 
   const value = await fetchAuthorProfile(handle)
   // Misses are cheap and attacker-controlled handles have a huge key space.
   // Avoid retaining 404s so newly-observed authors are visible immediately.
-  if (value) cache.set(key, value)
+  if (value) cache.set(key, { profile: value, privacyKey })
   return value
 }
 
@@ -155,7 +158,12 @@ async function fetchAuthorProfile(handle: string): Promise<AuthorProfile | null>
     })
     .from(bookmarks)
     .where(
-      and(eq(bookmarks.platform, 'twitter'), sql`lower(${bookmarks.author}) = lower(${handle})`),
+      and(
+        eq(bookmarks.platform, 'twitter'),
+        sql`lower(${bookmarks.author}) = lower(${handle})`,
+        // Visible saves only: private, quoted and banned saves never surface or count.
+        visibleSaveFilter,
+      ),
     )
     .groupBy(bookmarks.id)
     .all()

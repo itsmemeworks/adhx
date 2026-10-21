@@ -26,7 +26,7 @@ describe('pingAnalytic', () => {
 
   it('sends a canonical supported post identity', () => {
     pingAnalytic('post.open', {
-      platform: 'youtube',
+      platform: 'tiktok',
       id: '  short-id  ',
       surface: 'shared',
     })
@@ -36,7 +36,7 @@ describe('pingAnalytic', () => {
     expect(url).toBe('/api/analytics')
     expect(JSON.parse(String(init.body))).toMatchObject({
       name: 'post.open',
-      platform: 'youtube',
+      platform: 'tiktok',
       id: 'short-id',
       surface: 'shared',
     })

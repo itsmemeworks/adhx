@@ -20,7 +20,6 @@ import {
   instagramToTheaterItem,
   tiktokToTheaterItem,
   tweetToTheaterItem,
-  youtubeToTheaterItem,
 } from '@/lib/theater/shared-seed'
 import { recordHumanPreview } from '@/lib/theater/record-human-preview'
 import { getSavedPreviewDisplay } from '@/lib/theater/saved-preview'
@@ -32,7 +31,6 @@ import { PUBLIC_BASE_URL } from '@/lib/routes/base-url'
 import { getInstagramMetadataStatus } from '@/lib/media/instafix'
 import { resolveInstagramVideo } from '@/lib/media/mirrors'
 import { getTikTokMetadataStatus } from '@/lib/media/tnktok'
-import { getYouTubeMetadataStatus, youtubeEmbedUrl, youtubeThumbnail } from '@/lib/media/youtube'
 import type { TextLinkRef } from '@/components/theater/types'
 import type { SharedResolveResult } from '@/lib/theater/shared-resolve'
 
@@ -425,66 +423,6 @@ export async function resolveTikTokShared(
       platform: 'tiktok',
       bookmarkId: id,
       authorHandle: author || handle,
-      contentType: 'video',
-    },
-  }
-}
-
-export async function resolveYouTubeShared(id: string): Promise<SharedResolveResult> {
-  const saved = getSavedPreviewDisplay('youtube', id)
-  const metadataStatus = saved ? null : await getYouTubeMetadataStatus(id)
-  const meta = metadataStatus?.kind === 'resolved' ? metadataStatus.metadata : null
-
-  const author = saved?.author || meta?.author || null
-  const authorName = saved?.authorName || meta?.authorName || null
-  const title = saved?.text || meta?.title || null
-  const seoEligible = Boolean(saved || meta)
-  const previewAuthor = author?.replace(/^@/, '') || authorName || 'youtube'
-
-  await recordHumanPreview(seoEligible, {
-    platform: 'youtube',
-    bookmarkId: id,
-    author: previewAuthor,
-    authorName: authorName,
-    text: title,
-    thumbnailUrl: youtubeThumbnail(id),
-    url: previewPath('youtube', previewAuthor, id),
-  })
-
-  const item = youtubeToTheaterItem({
-    id,
-    author: previewAuthor,
-    authorName,
-    text: title,
-  })
-
-  if (!seoEligible) {
-    return { ok: true, item, seoEligible: false, related: null }
-  }
-
-  const ldAuthorName = authorName || author
-  return {
-    ok: true,
-    item,
-    seoEligible: true,
-    jsonLd: buildVideoObjectLd({
-      name: title || 'YouTube Short',
-      thumbnailUrl: youtubeThumbnail(id),
-      embedUrl: youtubeEmbedUrl(id),
-      author: ldAuthorName ? { name: ldAuthorName } : undefined,
-    }),
-    staticPost: {
-      kind: 'youtube-short',
-      authorName,
-      handle: author,
-      text: title,
-      sourceUrl: `https://www.youtube.com/shorts/${id}`,
-      label: 'YouTube Short',
-    },
-    related: {
-      platform: 'youtube',
-      bookmarkId: id,
-      authorHandle: previewAuthor,
       contentType: 'video',
     },
   }

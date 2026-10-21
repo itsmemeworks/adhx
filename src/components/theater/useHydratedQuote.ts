@@ -1,5 +1,6 @@
 'use client'
 
+import { keptSrc } from '@/lib/keep/src'
 import { useEffect, useState } from 'react'
 import { proxiedPhotoSrc } from '@/lib/media/fxembed'
 import { quoteRefFromSource } from '@/lib/theater/quote-ref'
@@ -99,18 +100,15 @@ export function seedParentPhotos(item: TheaterItem): string[] {
     if (item.thumbnailUrl) return [proxiedPhotoSrc(author, id, 1)]
     return []
   }
-  if (item.platform === 'instagram' && item.bookmarkId) {
+  if (item.platform && item.platform !== 'twitter' && item.bookmarkId) {
+    // Instagram and the link networks: ADHX's own kept pictures.
+    const platform = item.platform
+    const id = item.bookmarkId
     if (albumCount) {
-      return Array.from(
-        { length: albumCount },
-        (_, i) =>
-          `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId || '')}&index=${i + 1}`,
-      )
+      return Array.from({ length: albumCount }, (_, i) => keptSrc(platform, id, `photo-${i + 1}`))
     }
-    if (item.contentType === 'photo') {
-      return [`/api/media/instagram/thumbnail?id=${encodeURIComponent(item.bookmarkId)}&index=1`]
-    }
-    return []
+    if (item.contentType === 'photo') return [keptSrc(platform, id, 'photo-1')]
+    if (item.platform === 'instagram') return []
   }
   if (item.contentType === 'video') return []
   return item.thumbnailUrl ? [item.thumbnailUrl] : []

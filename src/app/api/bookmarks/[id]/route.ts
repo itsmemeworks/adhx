@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, runInTransaction } from '@/lib/db'
 import {
+  activity,
   bookmarks,
   bookmarkLinks,
   bookmarkTags,
@@ -14,7 +15,7 @@ import { captureException, metrics } from '@/lib/sentry'
 import { recordPostAnalytic } from '@/lib/analytics/record'
 import { withAuth } from '@/lib/api/with-auth'
 
-// GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok|youtube - Get single bookmark
+// GET /api/bookmarks/[id]?platform=twitter|instagram|tiktok - Get single bookmark
 export const GET = withAuth(
   async (request: NextRequest, userId, { params }: { params: Promise<{ id: string }> }) => {
     try {
@@ -239,6 +240,16 @@ export const DELETE = withAuth(
               eq(bookmarks.userId, userId),
               eq(bookmarks.platform, platform),
               eq(bookmarks.id, id),
+            ),
+          )
+          .run() // The public "saved" pulse for a save that no longer exists.
+        db.delete(activity)
+          .where(
+            and(
+              eq(activity.userId, userId),
+              eq(activity.action, 'save'),
+              eq(activity.platform, platform),
+              eq(activity.bookmarkId, id),
             ),
           )
           .run()

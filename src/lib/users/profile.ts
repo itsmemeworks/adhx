@@ -1,3 +1,5 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
+import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
   tagShares,
@@ -10,7 +12,6 @@ import {
 } from '@/lib/db/schema'
 import { eq, and, inArray, desc } from 'drizzle-orm'
 import { getUserIdForUsername } from '@/lib/users/lookup'
-import { getThumbnailUrl } from '@/lib/media/fxembed'
 import { getOwnerCollectionStats } from '@/lib/discovery/rank'
 import {
   moderationStateFingerprint,
@@ -118,7 +119,7 @@ export async function getPublicProfile(username: string): Promise<PublicProfileR
   const ban = readUserBan(userId)
   const moderated = readModeratedPostKeys()
   if (!ban.ok || ban.value || !moderated.ok) return { status: 'not_found' }
-  const moderationKey = moderationStateFingerprint(moderated.value)
+  const moderationKey = `${moderationStateFingerprint(moderated.value)}:${savePrivacyFingerprint()}`
 
   const cache = getCache()
   const key = username.toLowerCase()
@@ -139,24 +140,9 @@ function resolveThumbnail(
   articleCover: string | undefined,
 ): string | undefined {
   if (articleCover) return articleCover
-  if (item.platform === 'tiktok') {
-    return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(item.author)}&id=${encodeURIComponent(item.id)}`
-  }
-  if (item.platform === 'instagram') {
-    return `/api/media/instagram/thumbnail?id=${encodeURIComponent(item.id)}`
-  }
-  if (item.platform === 'youtube') {
-    return `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`
-  }
-  if (!firstMedia) return undefined
-  const mediaType = firstMedia.mediaType as 'photo' | 'video' | 'animated_gif'
-  return getThumbnailUrl({
-    tweetId: item.id,
-    author: item.author,
-    mediaType,
-    mediaIndex: 1,
-    previewUrl: firstMedia.previewUrl || undefined,
-  })
+  // ADHX's own kept poster (an X post with no media has none).
+  if (item.platform === 'twitter' && !firstMedia) return undefined
+  return keptSrc(item.platform, item.id, 'poster', item.author)
 }
 
 async function fetchPublicProfile(
@@ -270,6 +256,8 @@ async function fetchPublicProfile(
     .orderBy(desc(bookmarks.processedAt))
     .all()
     .filter((b) => !moderated.has(`${b.platform}:${b.id}`))
+    // Private wins: kept-just-for-me posts never count or show here.
+    .filter((b) => !b.isPrivate)
   const bookmarkByKey = new Map(bookmarkResults.map((b) => [`${b.platform}:${b.id}`, b]))
 
   // Group matched bookmarks by tag, preserving the processedAt-desc order

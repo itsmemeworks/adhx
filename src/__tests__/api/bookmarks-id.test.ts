@@ -75,6 +75,8 @@ function createTestDatabase() {
       retweet_context TEXT,
       summary TEXT,
       source TEXT DEFAULT 'sync',
+      is_private INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
       raw_json TEXT,
       PRIMARY KEY (user_id, platform, id)
     );
@@ -130,6 +132,25 @@ function createTestDatabase() {
       bookmark_id TEXT NOT NULL,
       archived_at TEXT NOT NULL,
       PRIMARY KEY (user_id, platform, bookmark_id)
+    );
+
+    CREATE TABLE activity (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      platform TEXT NOT NULL DEFAULT 'twitter',
+      bookmark_id TEXT NOT NULL,
+      author TEXT NOT NULL,
+      author_name TEXT,
+      author_avatar_url TEXT,
+      text TEXT,
+      thumbnail_url TEXT,
+      content_type TEXT,
+      text_links TEXT,
+      quote_json TEXT,
+      url TEXT NOT NULL,
+      user_id TEXT,
+      created_at TEXT NOT NULL,
+      hidden INTEGER NOT NULL DEFAULT 0
     );
   `)
 

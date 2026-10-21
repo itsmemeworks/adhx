@@ -1,3 +1,6 @@
+import { savePrivacyFingerprint } from '@/lib/bookmarks/privacy'
+import { visibleSaveFilter } from '@/lib/people/savers'
+import { keptSrc } from '@/lib/keep/src'
 import { db } from '@/lib/db'
 import {
   activity,
@@ -308,7 +311,7 @@ export async function getTrendingItems(opts: GetTrendingOptions = {}): Promise<T
   if (!bannedUsers.ok) throw bannedUsers.error
   const moderatedPosts = readModeratedPostKeys()
   if (!moderatedPosts.ok) throw moderatedPosts.error
-  const moderationKey = moderationStateFingerprint(bannedUsers.value, moderatedPosts.value)
+  const moderationKey = `${moderationStateFingerprint(bannedUsers.value, moderatedPosts.value)}:${savePrivacyFingerprint()}`
 
   const cache = getCache()
   const key = cacheKey(opts)
@@ -435,7 +438,8 @@ async function fetchTrendingWindow(
       .select({
         platform: bookmarks.platform,
         id: bookmarks.id,
-        saveCount: sql<number>`count(distinct ${bookmarks.userId})`,
+        // Visible saves only: private and quoted copies are never counted.
+        saveCount: sql<number>`count(distinct CASE WHEN ${visibleSaveFilter} THEN ${bookmarks.userId} END)`,
         // `/p/` rows were historically stored as video. If any saver has a
         // repaired photo classification, prefer it over that legacy value.
         category: sql<string | null>`CASE
@@ -454,7 +458,9 @@ async function fetchTrendingWindow(
         // Earliest save time across all savers — one half of `addedAt`
         // (display), never ordering. Public timing metadata, no user
         // identity.
-        earliestSavedAt: sql<string | null>`min(${bookmarks.processedAt})`,
+        earliestSavedAt: sql<
+          string | null
+        >`min(CASE WHEN ${visibleSaveFilter} THEN ${bookmarks.processedAt} END)`,
       })
       .from(bookmarks)
       .leftJoin(userBans, eq(userBans.userId, bookmarks.userId))
@@ -655,13 +661,15 @@ async function fetchTrendingWindow(
     key: string,
     type: ContentType | undefined,
   ): string | null => {
-    if (i.platform === 'instagram' && i.bookmarkId) {
-      return `/api/media/instagram/thumbnail?id=${encodeURIComponent(i.bookmarkId)}`
-    }
-    if (i.platform === 'tiktok' && i.author && i.bookmarkId) {
-      return `/api/media/tiktok/thumbnail?username=${encodeURIComponent(i.author)}&id=${encodeURIComponent(i.bookmarkId)}`
-    }
     if (type === 'article') return articleCovers.get(key) ?? i.thumbnailUrl ?? null
+    // Saved posts (and Instagram/TikTok, whose proxies re-resolve) use ADHX's
+    // own kept poster.
+    if (
+      i.bookmarkId &&
+      (i.platform === 'instagram' || i.platform === 'tiktok' || (counts.get(key) ?? 0) > 0)
+    ) {
+      return keptSrc(i.platform || 'twitter', i.bookmarkId, 'poster', i.author)
+    }
     return i.thumbnailUrl ?? null
   }
 
@@ -714,8 +722,8 @@ async function fetchTrendingWindow(
       textLinks: textLinksByPost.get(key) ?? safeParse<TextLinkRef[]>(i.textLinks),
       // Quoted-post reference. Precedence: the recorded `activity.quote_json`
       // (server-resolved at preview time) → for saved twitter posts, derived
-      // from the bookmark's legacy `quoteContext` JSON → absent. IG/TikTok/
-      // YouTube have no quote concept, so this only ever applies to twitter.
+      // from the bookmark's legacy `quoteContext` JSON → absent. IG/TikTok
+      // have no quote concept, so this only ever applies to twitter.
       quote:
         safeParse<TheaterQuoteRef>(i.quoteJson) ??
         (i.platform === 'twitter' ? quoteFromBookmarkContext(quoteContexts.get(key)) : undefined),

@@ -1,0 +1,259 @@
+/* The feature reel: a 1280×720 stage, scaled to fit, one scene at a time. */
+
+.frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #000;
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 63, 0.18),
+    0 40px 120px rgba(0, 0, 0, 0.6);
+}
+
+.bare {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  transform-origin: 0 0;
+  color: #fff;
+  font-family: var(--font-hanken-grotesk), system-ui, sans-serif;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  animation: sceneIn 420ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.serif {
+  font-family: var(--font-instrument-serif), Georgia, serif;
+  font-weight: 400;
+}
+
+.pop {
+  animation: pop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.rise {
+  animation: rise 560ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.slideL {
+  animation: slideL 620ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.slideR {
+  animation: slideR 620ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.slam {
+  animation: slam 520ms cubic-bezier(0.2, 1.2, 0.3, 1) both;
+}
+.fade {
+  animation: fade 400ms ease both;
+}
+.char {
+  display: inline-block;
+  white-space: pre;
+  animation: fade 1ms linear both;
+}
+.caret {
+  display: inline-block;
+  width: 3px;
+  height: 1em;
+  margin-left: 4px;
+  vertical-align: -0.12em;
+  background: #ffd23f;
+  animation: blink 0.9s steps(1) infinite;
+}
+.pulse {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.live {
+  animation: live 1.1s ease-in-out infinite;
+}
+.scan {
+  animation: scan 1.6s linear infinite;
+}
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+.fill {
+  animation: fill linear both;
+}
+.dropIn {
+  animation: dropIn 700ms cubic-bezier(0.3, 1.3, 0.4, 1) both;
+}
+.grabbing {
+  animation:
+    pop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) 1750ms both,
+    out 320ms ease 2650ms forwards;
+}
+.flash {
+  animation: flash 700ms ease-out both;
+}
+
+.progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background: #ffd23f;
+  animation: fill linear both;
+}
+
+@keyframes sceneIn {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-6deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(60px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slideL {
+  from {
+    opacity: 0;
+    transform: translateX(-120px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slideR {
+  from {
+    opacity: 0;
+    transform: translateX(120px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slam {
+  from {
+    opacity: 0;
+    transform: scale(2.2);
+    letter-spacing: 0.2em;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+@keyframes live {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+@keyframes scan {
+  from {
+    transform: translateX(-20px);
+  }
+  to {
+    transform: translateX(700px);
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-200px) rotate(-8deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes out {
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+@keyframes flash {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage * {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * Component tests for the Settings Username card (`UsernameRow` in
- * `SettingsClient.tsx`) and the shared `UsernameChooser` it mounts inline.
+ * Component tests for the Settings Username row (`UsernameRow` in
+ * `src/components/next/settings/AccountCard.tsx`) and the shared `UsernameChooser` it mounts inline.
  * Covers: the free-first-claim ("Choose") state, live availability feedback,
  * a successful claim flipping the row to read-only without a reload, the
  * "N changes left" state once a username has been chosen, and the fully
@@ -108,8 +108,8 @@ describe('SettingsClient — Username row', () => {
     render(<SettingsClient />)
 
     await waitFor(() => expect(screen.getByText('@auto123')).toBeInTheDocument())
-    expect(screen.getByText('Your public handle on shared playlists')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Choose' })).toBeInTheDocument()
+    expect(screen.getByText('Your name on channels you share')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Choose username' })).toBeInTheDocument()
   })
 
   it('shows live availability feedback in the inline chooser', async () => {
@@ -118,13 +118,13 @@ describe('SettingsClient — Username row', () => {
 
     render(<SettingsClient />)
     await waitFor(() => expect(screen.getByText('@auto123')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'Choose' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Choose username' }))
 
     const input = screen.getByLabelText('Username')
     fireEvent.change(input, { target: { value: 'popular' } })
 
     await waitFor(
-      () => expect(screen.getByText('Taken — try another')).toBeInTheDocument(),
+      () => expect(screen.getByText('Taken. Try another.')).toBeInTheDocument(),
       DEBOUNCE_WAIT,
     )
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
@@ -139,7 +139,7 @@ describe('SettingsClient — Username row', () => {
 
     render(<SettingsClient />)
     await waitFor(() => expect(screen.getByText('@auto123')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'Choose' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Choose username' }))
 
     const input = screen.getByLabelText('Username')
     fireEvent.change(input, { target: { value: 'chosen' } })
@@ -151,7 +151,7 @@ describe('SettingsClient — Username row', () => {
     // The chooser form is gone — the row collapsed back to read display.
     expect(screen.queryByLabelText('Username')).not.toBeInTheDocument()
     expect(screen.getByText('2 changes left')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change username' })).toBeInTheDocument()
   })
 
   it('shows the remaining-changes count and a "Change" affordance for a chosen account', async () => {
@@ -161,11 +161,13 @@ describe('SettingsClient — Username row', () => {
     render(<SettingsClient />)
     await waitFor(() => expect(screen.getByText('@current')).toBeInTheDocument())
     expect(screen.getByText('1 change left')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Change username' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Change username' }))
     expect(screen.queryByText(/keep redirecting/i)).not.toBeInTheDocument()
-    expect(screen.queryByText('1 change left')).not.toBeInTheDocument()
+    // The count stays in view while editing; the Change button gives way to the form.
+    expect(screen.getByText('1 change left')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Change username' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Username')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
@@ -178,7 +180,7 @@ describe('SettingsClient — Username row', () => {
     render(<SettingsClient />)
     await waitFor(() => expect(screen.getByText('@current')).toBeInTheDocument())
     expect(screen.getByText('No changes left')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Choose' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Change username' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Choose username' })).not.toBeInTheDocument()
   })
 })

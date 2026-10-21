@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createLoginToken, hasRecentLoginToken, invalidateLoginToken } from '@/lib/auth/account'
-import { sendMagicLinkEmail } from '@/lib/email/magic-link'
+import { sendMagicLinkEmail, signInDelivery } from '@/lib/email/magic-link'
 import { isValidEmail } from '@/lib/utils/email'
+import { hasAdmin, mayGetHeldLink, mayUseEmail } from '@/lib/auth/allowlist'
 import { isSafeReturnUrl } from '@/lib/auth/return-url'
 import { recordAnalytic } from '@/lib/analytics/record'
+import { loginTokenTtlMs } from '@/lib/auth/login-token-policy'
 
 // POST /api/auth/email/request - kick off an email sign-in.
 // Always returns { ok: true } for a well-formed email (even when sending
@@ -22,6 +24,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
   }
 
+  // Held links follow mayGetHeldLink, which also lets the owner in before
+  // there's an admin, even when their own email isn't on ALLOWED_EMAILS.
+  if (signInDelivery() === 'admin' ? !mayGetHeldLink(email) : !mayUseEmail(email)) {
+    return NextResponse.json(
+      { error: 'This ADHX is for invited people. Ask whoever runs it to add your email.' },
+      { status: 403 },
+    )
+  }
+
   const returnTo =
     typeof body.returnTo === 'string' && isSafeReturnUrl(body.returnTo) ? body.returnTo : undefined
 
@@ -32,7 +43,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const token = await createLoginToken({ email, intent: 'signin', returnTo })
+  // Nobody runs this ADHX yet: the link goes to the server log, and whoever
+  // opens it becomes the admin.
+  const setup = signInDelivery() === 'admin' && !hasAdmin()
+  const token = await createLoginToken({
+    email,
+    intent: 'signin',
+    returnTo,
+    ttlMs: loginTokenTtlMs(signInDelivery()),
+  })
   const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const url = new URL('/api/auth/email/callback', base)
   url.searchParams.set('token', token)
@@ -49,5 +68,10 @@ export async function POST(request: NextRequest) {
   }
 
   recordAnalytic({ name: 'auth.start', source: 'email' })
-  return NextResponse.json({ ok: true })
+  // `admin`: the link waits for whoever runs this ADHX to hand it over.
+  return NextResponse.json({
+    ok: true,
+    delivery: result.delivery ?? 'email',
+    ...(setup ? { setup: true } : {}),
+  })
 }

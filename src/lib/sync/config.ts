@@ -6,15 +6,16 @@
  */
 
 /**
- * Default cooldown between syncs in milliseconds (1 hour)
+ * Default cooldown between syncs by hand in milliseconds (1 minute): enough
+ * to stop a double tap, short enough to try again straight after.
  */
-const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000
+const DEFAULT_COOLDOWN_MS = 60 * 1000
 
 /**
  * Get the sync cooldown duration in milliseconds.
  *
  * Can be configured via SYNC_COOLDOWN_MINUTES environment variable.
- * Defaults to 60 minutes if not set.
+ * Defaults to 1 minute if not set.
  *
  * @example
  * // In .env.local

@@ -1,3 +1,10 @@
+import {
+  isLinkNetwork,
+  networkAuthorUrl,
+  networkPreviewPath,
+  networkSourceUrl,
+} from '@/lib/platform/networks'
+
 /**
  * Canonical on-ADHX preview path for a piece of content.
  *
@@ -15,9 +22,9 @@ export function previewPath(
   // TikTok handles are stored with their leading "@", so strip any leading
   // "@" before re-prefixing — otherwise the path doubles up (/@@handle/...).
   const handle = author.replace(/^@+/, '')
+  if (isLinkNetwork(platform)) return networkPreviewPath(platform, id, handle)
   if (platform === 'instagram') return contentType === 'photo' ? `/p/${id}` : `/reels/${id}`
   if (platform === 'tiktok') return `/@${handle}/video/${id}`
-  if (platform === 'youtube') return `/shorts/${id}`
   return `/${handle}/status/${id}`
 }
 
@@ -33,13 +40,13 @@ export function sourceUrl(
   contentType?: string | null,
 ): string | null {
   if (!id) return null
+  if (isLinkNetwork(platform)) return networkSourceUrl(platform, id, author)
   const handle = author.replace(/^@+/, '')
   if (platform === 'instagram') {
     const path = contentType === 'photo' ? 'p' : 'reel'
     return `https://www.instagram.com/${path}/${id}/`
   }
   if (platform === 'tiktok') return `https://www.tiktok.com/@${handle}/video/${id}`
-  if (platform === 'youtube') return `https://www.youtube.com/shorts/${id}`
   // X accepts any handle (and `i` when unknown) and redirects to the canonical URL.
   return `https://x.com/${handle || 'i'}/status/${id}`
 }
@@ -53,8 +60,8 @@ export function sourceUrl(
 export function authorProfileUrl(platform: string, author: string): string | null {
   const handle = (author || '').replace(/^@+/, '').trim()
   if (!handle) return null
+  if (isLinkNetwork(platform)) return networkAuthorUrl(platform, handle)
   if (platform === 'instagram') return `https://www.instagram.com/${handle}/`
   if (platform === 'tiktok') return `https://www.tiktok.com/@${handle}`
-  if (platform === 'youtube') return `https://www.youtube.com/@${handle}`
   return `https://x.com/${handle}`
 }

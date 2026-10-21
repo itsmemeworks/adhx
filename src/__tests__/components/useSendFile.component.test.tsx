@@ -104,7 +104,7 @@ describe('useSendFile', () => {
     expect(rendered2.result.current.ready).toBe(true)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/media/video'),
+      '/api/files/twitter/1/video-1?a=alice',
       expect.objectContaining({ signal: expect.anything() }),
     )
   })

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { detectNetworkPost, isNetworkShortLink } from '@/lib/platform/networks'
 
 /**
  * Proxy to handle pasted social URLs.
@@ -12,13 +13,11 @@ import type { NextRequest } from 'next/server'
  *   adhx.com/instagram.com/p/DXVsqQ7CSXw/
  *   adhx.com/https://www.tiktok.com/@user/video/7619017281691045134
  *   adhx.com/tiktok.com/@user/video/123
- *   adhx.com/https://youtube.com/shorts/Y9aytLYBajw
  *
  * Extracted IDs are redirected to the clean route format:
  *   - X / Twitter  →  /{username}/status/{id}
  *   - Instagram    →  /reels/{id} for Reels, /p/{id} for feed posts
  *   - TikTok       →  /@{username}/video/{id}
- *   - YouTube      →  /shorts/{id}
  */
 
 // Browsers normalize `//` → `/` in paths, so `https://x.com` becomes `https:/x.com`.
@@ -36,10 +35,6 @@ const TIKTOK_URL_PATTERN =
 // them to /api/tiktok/resolve which resolves and redirects to the preview.
 const TIKTOK_SHORTLINK_PATTERN =
   /^\/(?:https?:\/?\/?)?(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|(?:www\.)?tiktok\.com\/t\/[A-Za-z0-9]+)/i
-
-// YouTube Shorts only — watch / youtu.be / embed / live are regular videos.
-const YOUTUBE_SHORTS_PATTERN =
-  /^\/(?:https?:\/?\/?)?(?:www\.|m\.)?youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/i
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -78,14 +73,34 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(resolveUrl, { status: 307 })
   }
 
-  const ytShortsMatch = pathname.match(YOUTUBE_SHORTS_PATTERN)
-  if (ytShortsMatch) {
-    return NextResponse.redirect(new URL(`/shorts/${ytShortsMatch[1]}`, request.url), {
-      status: 307,
-    })
+  // The other networks (YouTube, Reddit, Vimeo …): rebuild the pasted URL
+  // and use the shared detector.
+  const pasted = pastedUrl(pathname, request.nextUrl.search)
+  if (pasted) {
+    const post = detectNetworkPost(pasted)
+    if (post) {
+      return NextResponse.redirect(new URL(post.previewPath, request.url), { status: 307 })
+    }
+    if (isNetworkShortLink(pasted.toString())) {
+      const resolveUrl = new URL('/api/links/resolve', request.url)
+      resolveUrl.searchParams.set('url', pasted.toString())
+      return NextResponse.redirect(resolveUrl, { status: 307 })
+    }
   }
 
   return NextResponse.next()
+}
+
+/** `/https:/www.youtube.com/watch?v=…` or `/youtu.be/…` back into a URL. */
+function pastedUrl(pathname: string, search: string): URL | null {
+  const stripped = pathname.replace(/^\/(?:https?:\/?\/?)?/i, '')
+  const host = stripped.split('/')[0]
+  if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/i.test(host)) return null
+  try {
+    return new URL(`https://${stripped}${search}`)
+  } catch {
+    return null
+  }
 }
 
 // Run proxy on paths that might be pasted URLs

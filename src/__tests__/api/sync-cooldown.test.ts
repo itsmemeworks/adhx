@@ -21,7 +21,8 @@ vi.mock('@/lib/auth/session', () => ({
   getCurrentUserId: vi.fn(() => Promise.resolve(mockUserId)),
 }))
 
-// Default cooldown is 1 hour (matches lib/sync/config.ts)
+// These cases use a one-hour cooldown (SYNC_COOLDOWN_MINUTES=60); the
+// default of one minute has its own test below.
 const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000
 
 describe('API: /api/sync/cooldown', () => {
@@ -29,9 +30,11 @@ describe('API: /api/sync/cooldown', () => {
     testInstance = createTestDb()
     mockUserId = 'user-123'
     vi.clearAllMocks()
+    vi.stubEnv('SYNC_COOLDOWN_MINUTES', '60')
   })
 
   afterEach(() => {
+    vi.unstubAllEnvs()
     testInstance.close()
   })
 
@@ -238,6 +241,30 @@ describe('API: /api/sync/cooldown', () => {
       // Should use the most recent sync (5 minutes ago) for cooldown
       expect(data.canSync).toBe(false)
       expect(data.lastSyncAt).toBe(fiveMinutesAgo)
+    })
+  })
+
+  describe('Default cooldown', () => {
+    it('lets you sync again a minute after the last sync', async () => {
+      vi.stubEnv('SYNC_COOLDOWN_MINUTES', '')
+      const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString()
+      await testInstance.db.insert(schema.syncLogs).values({
+        id: 'sync-1',
+        userId: 'user-123',
+        startedAt: thirtySecondsAgo,
+        completedAt: thirtySecondsAgo,
+        status: 'completed',
+      })
+      const { GET } = await import('@/app/api/sync/cooldown/route')
+      const soon = await (await GET()).json()
+      expect(soon.canSync).toBe(false)
+      expect(soon.cooldownRemaining).toBeLessThanOrEqual(30 * 1000)
+
+      const ninetySecondsAgo = new Date(Date.now() - 90 * 1000).toISOString()
+      await testInstance.db
+        .update(schema.syncLogs)
+        .set({ startedAt: ninetySecondsAgo, completedAt: ninetySecondsAgo })
+      expect((await (await GET()).json()).canSync).toBe(true)
     })
   })
 

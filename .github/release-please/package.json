@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "description": "Offline compatibility tests for the pinned release automation",
+  "scripts": {
+    "test": "node --test release-compatibility.test.cjs"
+  },
+  "devDependencies": {
+    "release-please": "17.6.0"
+  },
+  "packageManager": "pnpm@10.34.7",
+  "pnpm": {
+    "allowBuilds": {}
+  }
+}
