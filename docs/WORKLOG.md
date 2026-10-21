@@ -6,6 +6,22 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — adhx.com shows real posts from the owner's ADHX
+
+- Owner ask: the product site uses real images and video from their own server instead of its illustrations (reverses the earlier "no one else's posts" rule).
+- Sourced only from the owner's server's public, anonymous Right now data (`/api/moments`, `/api/moments/{slug}`) and the kept files they link; no sign-in, key or cookie. The pool is mostly music tools, design and film; anything with innuendo, politics, health claims or private faces was left out.
+- `site/public/media/`: 6 muted H.264 loops (3–6 s, ≤ 0.6 MB) with posters plus stills, 2.7 MB in all; `credits.json` lists each post's network, author, link and excerpt. `Post.tsx` (`PostMedia`, `Credit`) replaces `art.tsx`; `LoopVideo` plays only on screen and keeps the poster under reduced motion. Meme captions and the meme font were removed.
+- Every post shows its network mark and @handle; the footer links all of them. Mock copy that described illustrations (titles, searches, file details, the vault's "gone from Instagram") now describes the real posts truthfully.
+- The showreel uses the same posts and `adhx-reel.mp4`/`.jpg` were re-recorded (Playwright + Chrome, 1.3 MB). Publishing is still the manual Site workflow.
+- Follow-ups: nearly every post is from X because that's what the public snapshot held; swap in other networks' saves when Right now has them.
+
+## 2026-10-21 — Remove this phone works without the web
+
+- Add `DELETE /api/app/me` (phone key): revokes only the calling key with the same `deleteAccessKey` as Settings → Phone app; afterwards that key is `401 bad_key`, other phones untouched.
+- iOS and Android Remove this phone call it, then forget the key whatever the answer; a 401 counts as already removed. If the server can't be reached (offline, timeout, older ADHX), Connect says plainly the phone may still show in Settings → Phone app there.
+- The "remove it on the web as well" dialog copy is gone. Spec and both app READMEs updated.
+- Validation: phone-app API tests (own key only, repeat answers 401, other phones and accounts unaffected), Android unit tests + debug APK, iOS simulator build. Not exercised on a device.
+
 ## 2026-10-21 — Web theater matches the phones: original-post sheet, a quieter overlay, toasts in the pill's place
 
 - Owner ask: the website should match the phone apps (iOS #592/#594, Android #596). Over a video or photo the overlay keeps only the why chip, a friend's note and who saved it ("You and Mum saved this · 1h"); the author/network line and the caption are gone. Text and article stages still show their words.

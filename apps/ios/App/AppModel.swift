@@ -20,6 +20,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var sending = false
     /// Just paired: "Connected to …" shows once over Home.
     @Published var welcome = false
+    /// Remove this phone is asking the server to drop the key.
+    @Published private(set) var removing = false
+    /// Shown on Connect after Remove this phone couldn't reach the server.
+    @Published var removedNote: String?
 
     private var pollTask: Task<Void, Never>?
 
@@ -65,6 +69,7 @@ final class AppModel: ObservableObject {
     /// Stores the key (pairing and email sign-in alike) and says hello.
     private func connected(server: URL, result: PairResult) async {
         Store.connect(server: server, result: result)
+        removedNote = nil
         YourFace.shared.reload()
         welcome = true
         connection = .connected
@@ -195,6 +200,35 @@ final class AppModel: ObservableObject {
     func stopPolling() {
         pollTask?.cancel()
         pollTask = nil
+    }
+
+    /// Remove this phone: asks the server to revoke this key, then forgets
+    /// it here whatever the answer. A 401 means the server had already
+    /// dropped it. When the server can't be reached, it says so plainly: the
+    /// phone may still be listed on the web.
+    func removeThisPhone() async {
+        guard !removing else { return }
+        let host = server.map(Links.displayHost)
+        removing = true
+        defer { removing = false }
+        var reached = true
+        if let client = Store.client() {
+            do {
+                try await client.removeThisPhone()
+            } catch APIError.badKey {
+                // Already removed on the server.
+            } catch {
+                // Offline, slow, or an older ADHX without this: still forget it here.
+                reached = false
+            }
+        }
+        removedNote = reached ? nil : Self.couldNotReach(host)
+        disconnect()
+    }
+
+    static func couldNotReach(_ host: String?) -> String {
+        let place = host ?? "your ADHX"
+        return "This phone forgot its key, but it couldn’t reach \(place). It may still show in Settings → Phone app there; remove it there too."
     }
 
     func disconnect() {

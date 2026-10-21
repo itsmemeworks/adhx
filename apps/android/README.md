@@ -182,10 +182,11 @@ account-scoped actions. Server-side role and privacy checks apply to each reques
 Plain `http://` addresses are allowed, for an ADHX on your home network. Use
 `https://` for anything on the internet.
 
-**Remove this phone** in the app's Settings forgets the key, the list and any waiting
-links on the phone. To cancel the key on the server too, remove the phone in
-Settings → Phone app on your ADHX (there's no phone-key route for that). If you remove it there first, the app
-notices next time it opens and goes back to Connect.
+**Remove this phone** in the app's Settings cancels the key on your ADHX
+(`DELETE /api/app/me`), then forgets the key, the list and any waiting links on the
+phone. If your ADHX can't be reached it still forgets them here, and Connect says the
+phone may still show in Settings → Phone app there. If you remove it there first, the
+app notices next time it opens and goes back to Connect.
 
 ## Sharing, and the offline queue
 

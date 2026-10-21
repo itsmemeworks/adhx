@@ -1,9 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { Art, type ArtId } from './art'
 import { cn } from './cn'
 import { Gob } from './Gob'
 import { Face, Faces, type PersonId } from './People'
-import { Meme } from './Meme'
+import { Credit, PostMedia, type PostId } from './Post'
 import { Bookmark, Check, Close, Dots, Download, Lock, Search, Video } from './icons'
 
 /**
@@ -129,36 +128,37 @@ function PhoneRail({ saved }: { saved: boolean }) {
   )
 }
 
-/** The phone app's player: a full-bleed post with faces, why and the rail. */
+/**
+ * The phone app's player: a post with faces, why and the rail. A wide video
+ * sits letterboxed over a blurred copy of itself, as in the app.
+ */
 export function PlayerScreen({
-  art,
+  post,
   savers,
   savedLine,
   ago,
-  network,
+  kind,
   caption,
   newCount,
   saved = false,
   progress = 0.4,
   why,
-  meme,
 }: {
-  art: ArtId
+  post: PostId
   savers: PersonId[]
   savedLine: string
   ago?: string
-  network: string
+  /** What it is, after the credit: "Video", "4 photos". */
+  kind: string
   caption?: string
   newCount: number
   saved?: boolean
   progress?: number
   why?: ReactNode
-  meme?: { top: string; bottom: string }
 }) {
   return (
     <div className="absolute inset-0 text-white" style={{ fontSize: u(15) }}>
-      <Art id={art} className="absolute inset-0 h-full w-full" />
-      {meme && <Meme top={meme.top} bottom={meme.bottom} size={9} inset={{ top: 0, bottom: 0 }} />}
+      <PostMedia id={post} fit="contain" className="absolute inset-0 h-full w-full" />
       <div
         className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent"
         style={{ height: u(220) }}
@@ -199,8 +199,12 @@ export function PlayerScreen({
             </span>
           )}
         </div>
-        <span className="text-nx-soft" style={{ fontSize: u(14) }}>
-          {network}
+        <span
+          className="flex min-w-0 items-center whitespace-nowrap text-nx-soft"
+          style={{ fontSize: u(14), gap: u(5) }}
+        >
+          <Credit id={post} className="font-bold text-nx-cream" />
+          <span>{`· ${kind}`}</span>
         </span>
         {caption && (
           <p className="m-0" style={{ fontSize: u(16), lineHeight: 1.4 }}>
@@ -299,8 +303,8 @@ export function Toggle({ width, height }: { width: number | string; height: numb
 export function ShareCardScreen() {
   return (
     <div className="absolute inset-0 text-nx-cream" style={{ fontSize: u(17) }}>
-      <Art
-        id="city"
+      <PostMedia
+        id="sorcerer"
         className="absolute h-[110%] w-[110%]"
         style={{ left: '-5%', top: '-5%', filter: 'blur(14px) brightness(0.45)' }}
       />
@@ -341,14 +345,12 @@ export function ShareCardScreen() {
             className="relative shrink-0 overflow-hidden"
             style={{ width: u(64), height: u(64), borderRadius: u(14) }}
           >
-            <Art id="city" className="absolute inset-0 h-full w-full" />
+            <PostMedia id="sorcerer" className="absolute inset-0 h-full w-full" />
           </span>
-          <span className="flex flex-1 flex-col" style={{ gap: u(3) }}>
-            <span className="whitespace-nowrap font-extrabold" style={{ fontSize: u(16) }}>
-              X photo
-            </span>
+          <span className="flex min-w-0 flex-1 flex-col" style={{ gap: u(3) }}>
+            <Credit id="sorcerer" className="font-extrabold" style={{ fontSize: u(16) }} />
             <span className="whitespace-nowrap text-nx-muted" style={{ fontSize: u(14) }}>
-              1 photo · full size
+              4 photos · full size
             </span>
           </span>
           <Ring size={u(52)} value={0.4} label="40%" labelSize={u(13)} />
@@ -447,13 +449,7 @@ export function WebFrame({ className }: { className?: string }) {
             </div>
             {/* The theater */}
             <div className="relative flex-1">
-              <Art id="elephant" className="absolute inset-0 h-full w-full" />
-              <Meme
-                top="First video ever uploaded"
-                bottom="Still better than your For You page"
-                size={6.4}
-                className="!bottom-[22%] !right-[20%]"
-              />
+              <PostMedia id="offbeat" className="absolute inset-0 h-full w-full" />
               <div
                 className="absolute inset-x-0 bottom-0 flex flex-col bg-gradient-to-b from-transparent to-black/90"
                 style={{ padding: `${u(40)} ${u(16)} ${u(14)}`, gap: u(5) }}
@@ -471,7 +467,8 @@ export function WebFrame({ className }: { className?: string }) {
                   className="flex items-center whitespace-nowrap text-nx-soft"
                   style={{ fontSize: u(11), gap: u(6) }}
                 >
-                  <span>YouTube ·</span>
+                  <Credit id="offbeat" className="font-bold text-nx-cream" />
+                  <span>·</span>
                   <span
                     className="flex items-center font-bold text-nx-accent"
                     style={{ gap: u(4) }}
@@ -482,13 +479,13 @@ export function WebFrame({ className }: { className?: string }) {
                 </span>
                 <div className="flex items-center" style={{ gap: u(8), marginTop: u(4) }}>
                   <span className="font-semibold" style={{ fontSize: u(10) }}>
-                    0:07
+                    0:13
                   </span>
                   <span className="relative flex-1 rounded bg-white/25" style={{ height: u(3) }}>
-                    <span className="block h-full w-[37%] rounded bg-nx-accent" />
+                    <span className="block h-full w-[17%] rounded bg-nx-accent" />
                   </span>
                   <span className="font-semibold text-nx-soft" style={{ fontSize: u(10) }}>
-                    0:19
+                    1:15
                   </span>
                 </div>
               </div>

@@ -6,7 +6,7 @@ import { Gob } from './Gob'
 import { NetworkIcon } from './NetworkIcon'
 import { ALL_PLATFORMS } from './networks'
 import { cn } from './cn'
-import { Art, type ArtId } from './art'
+import { Credit, PostMedia, mediaSrc, post as postOf, type PostId } from './Post'
 import s from './reel.module.css'
 
 /**
@@ -35,12 +35,14 @@ function Typed({ text, start, step = 55 }: { text: string; start: number; step?:
 }
 
 function Tile({
-  art,
+  post,
+  still = true,
   className,
   style,
   children,
 }: {
-  art: ArtId
+  post: PostId
+  still?: boolean
   className?: string
   style?: CSSProperties
   children?: ReactNode
@@ -50,10 +52,15 @@ function Tile({
       className={cn('relative overflow-hidden rounded-[18px] bg-[#1a1814]', className)}
       style={style}
     >
-      <Art id={art} className="absolute inset-0 h-full w-full" />
+      <PostMedia id={post} still={still} className="absolute inset-0 h-full w-full" />
       {children}
     </div>
   )
+}
+
+/** The post's credit, sized for the 1280-wide stage. */
+function ReelCredit({ post, className }: { post: PostId; className?: string }) {
+  return <Credit id={post} chip className={cn('absolute !px-3 !py-1.5 !text-[14px]', className)} />
 }
 
 function Caption({ kicker, title, sub }: { kicker: string; title: ReactNode; sub?: string }) {
@@ -126,7 +133,7 @@ function Save() {
         >
           <span className="font-extrabold text-[#ffd23f]">Paste</span>
           <span className="text-[#c9bfab]">
-            <Typed text="youtube.com/shorts/frog-in-the-rain" start={350} step={38} />
+            <Typed text="x.com/nexindie/status/2081300993816310095" start={350} step={34} />
           </span>
         </div>
       </div>
@@ -135,14 +142,12 @@ function Save() {
         <span className={cn(s.serif, 'text-[54px]')}>Grabbing it…</span>
       </div>
       <Tile
-        art="frogRain"
-        className={cn(s.dropIn, 'absolute right-[150px] top-[230px] h-[400px] w-[300px]')}
+        post="offbeat"
+        still={false}
+        className={cn(s.dropIn, 'absolute right-[110px] top-[250px] h-[300px] w-[420px]')}
         style={at(2350)}
       >
-        <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-[14px] font-bold">
-          <NetworkIcon platform="youtube" className="h-4 w-4" />
-          <span>YouTube</span>
-        </div>
+        <ReelCredit post="offbeat" className="left-3 top-3" />
       </Tile>
       <div
         className={cn(
@@ -168,7 +173,7 @@ function Save() {
         </span>
         <span className="flex flex-col">
           <span className="text-[30px] font-extrabold">Saved</span>
-          <span className="text-[18px] text-[#c9bfab]">Keeping your own copy · 4K</span>
+          <span className="text-[18px] text-[#c9bfab]">Keeping your own copy · 720p</span>
         </span>
       </div>
     </>
@@ -177,9 +182,9 @@ function Save() {
 
 function Keep() {
   const files = [
-    { name: 'video-1.mp4', meta: '3840 × 2160 · from X', art: 'city' as ArtId },
-    { name: 'photo-1.jpg', meta: 'Full size · from Instagram', art: 'peaks' as ArtId },
-    { name: 'audio-1.m4a', meta: 'The track · from SoundCloud', art: 'synth' as ArtId },
+    { name: 'video-1.mp4', meta: '3840 × 2160 ·', post: 'soundlab' as PostId },
+    { name: 'photo-1.jpg', meta: '2400 × 1500 ·', post: 'rc808' as PostId },
+    { name: 'photo-1.jpg … photo-4.jpg', meta: 'The album ·', post: 'sorcerer' as PostId },
   ]
   return (
     <>
@@ -195,17 +200,20 @@ function Keep() {
       <div className="absolute left-[64px] top-[380px] flex flex-col gap-3">
         {files.map((f, i) => (
           <div
-            key={f.name}
+            key={f.post}
             className={cn(
               s.slideL,
               'flex w-[560px] items-center gap-4 rounded-[18px] bg-[#1a1814] p-3',
             )}
             style={at(600 + i * 260)}
           >
-            <Tile art={f.art} className="h-[64px] w-[64px] rounded-[12px]" />
+            <Tile post={f.post} className="h-[64px] w-[64px] rounded-[12px]" />
             <span className="flex flex-col">
               <span className="font-mono text-[20px]">{f.name}</span>
-              <span className="text-[16px] text-[#c9bfab]">{f.meta}</span>
+              <span className="flex items-center gap-1.5 text-[16px] text-[#c9bfab]">
+                <span>{f.meta}</span>
+                <Credit id={f.post} />
+              </span>
             </span>
           </div>
         ))}
@@ -227,12 +235,12 @@ function Keep() {
 }
 
 function Search() {
-  const results: Array<{ art: ArtId; chip?: string }> = [
-    { art: 'frog', chip: 'Strong · in the video' },
-    { art: 'frogRain', chip: 'Strong · in the picture' },
-    { art: 'wave' },
-    { art: 'peaks' },
-    { art: 'cat' },
+  const results: Array<{ post: PostId; chip?: string }> = [
+    { post: 'offbeat', chip: 'Strong · in the video' },
+    { post: 'okinstruments', chip: 'Good · in the picture' },
+    { post: 'muscriptor' },
+    { post: 'rc808' },
+    { post: 'aurora' },
   ]
   return (
     <>
@@ -256,17 +264,18 @@ function Search() {
             <circle cx="11" cy="11" r="7" />
             <path d="M20 20l-4-4" />
           </svg>
-          <Typed text="a frog in a pond" start={250} step={60} />
+          <Typed text="a cat made of piano keys" start={250} step={45} />
         </div>
       </div>
       <div className="absolute left-[64px] right-[64px] top-[170px] grid grid-cols-5 gap-4">
         {results.map((r, i) => (
           <Tile
-            key={r.art}
-            art={r.art}
+            key={r.post}
+            post={r.post}
             className={cn(s.pop, 'h-[300px]', i === 0 && 'ring-4 ring-[#ffd23f]')}
             style={at(1400 + i * 120)}
           >
+            <ReelCredit post={r.post} className="left-3 top-3" />
             {r.chip && (
               <span className="absolute bottom-3 left-3 right-3 rounded-full bg-[#ffd23f] px-3 py-1.5 text-center text-[14px] font-extrabold text-black">
                 {r.chip}
@@ -283,8 +292,13 @@ function Search() {
           A frame every 2 seconds
         </span>
         <div className="relative flex gap-2 overflow-hidden rounded-[12px]">
-          {(['frog', 'frog', 'frogRain', 'frog', 'frogRain', 'frog'] as ArtId[]).map((a, i) => (
-            <Tile key={i} art={a} className="h-[86px] w-[96px] rounded-[10px]" />
+          {(postOf('offbeat-room').frames ?? []).map((f) => (
+            <img
+              key={f}
+              src={mediaSrc(f)}
+              alt=""
+              className="h-[86px] w-[96px] rounded-[10px] object-cover"
+            />
           ))}
           <span
             className={cn(
@@ -304,10 +318,10 @@ function Search() {
 }
 
 function RightNow() {
-  const moments: Array<{ art: ArtId; name: string; n: number }> = [
-    { art: 'frogRain', name: 'Frogs in the rain', n: 4 },
-    { art: 'synth', name: 'Synth jams', n: 3 },
-    { art: 'skate', name: 'Skate tricks', n: 2 },
+  const moments: Array<{ post: PostId; name: string; n: number }> = [
+    { post: 'aurora', name: 'AI music', n: 4 },
+    { post: 'palettes', name: 'Design and UI', n: 3 },
+    { post: 'sorcerer', name: 'Movies', n: 2 },
   ]
   return (
     <>
@@ -318,7 +332,8 @@ function RightNow() {
       <div className="absolute left-[64px] right-[64px] top-[210px] grid grid-cols-3 gap-6">
         {moments.map((m, i) => (
           <div key={m.name} className={cn(s.rise, 'flex flex-col gap-3')} style={at(350 + i * 200)}>
-            <Tile art={m.art} className={cn('h-[300px]', i === 0 && s.pulse)}>
+            <Tile post={m.post} still={i !== 0} className={cn('h-[300px]', i === 0 && s.pulse)}>
+              <ReelCredit post={m.post} className="bottom-3 left-3" />
               <span className="absolute left-3 top-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-[15px] font-bold">
                 <span className={cn(s.live, 'h-2.5 w-2.5 rounded-full bg-[#ff5c39]')} />
                 <span>{`${m.n} people saving`}</span>
@@ -352,10 +367,10 @@ function RightNow() {
 }
 
 function Channels() {
-  const channels: Array<{ name: string; arts: ArtId[] }> = [
-    { name: 'Frogs in the rain', arts: ['frog', 'frogRain', 'wave', 'frog'] },
-    { name: 'Synth jams', arts: ['synth', 'neon', 'city', 'synth'] },
-    { name: 'Food you’ll cook one day', arts: ['steak', 'peaks', 'steak', 'cat'] },
+  const channels: Array<{ name: string; posts: PostId[] }> = [
+    { name: 'Synths with too many cables', posts: ['modular', 'rc808', 'aurora', 'okinstruments'] },
+    { name: 'Websites that show off', posts: ['wallow', 'palettes', 'bencho', 'hallmark'] },
+    { name: 'Sounds you can see', posts: ['sudara', 'muscriptor', 'midi', 'soundlab'] },
   ]
   return (
     <>
@@ -376,10 +391,10 @@ function Channels() {
         {channels.map((c, ci) => (
           <div key={c.name} className="flex flex-col gap-3">
             <div className="grid h-[320px] grid-cols-2 gap-2">
-              {c.arts.map((a, i) => (
+              {c.posts.map((p, i) => (
                 <Tile
-                  key={i}
-                  art={a}
+                  key={p}
+                  post={p}
                   className={cn(s.pop, 'rounded-[14px]')}
                   style={at(300 + ci * 220 + i * 90)}
                 />
@@ -388,6 +403,12 @@ function Channels() {
             <span className={cn(s.rise, 'text-[24px] font-extrabold')} style={at(900 + ci * 200)}>
               {c.name}
             </span>
+            <span
+              className={cn(s.rise, 'truncate text-[15px] text-[#a89f8d]')}
+              style={at(1000 + ci * 200)}
+            >
+              {c.posts.map((p) => `@${postOf(p).author}`).join(' · ')}
+            </span>
           </div>
         ))}
       </div>
@@ -395,19 +416,7 @@ function Channels() {
   )
 }
 
-function Phone({
-  net,
-  art,
-  label,
-  delay,
-  className,
-}: {
-  net: string
-  art: ArtId
-  label: string
-  delay: number
-  className?: string
-}) {
+function Phone({ post, delay, className }: { post: PostId; delay: number; className?: string }) {
   return (
     <div
       className={cn(
@@ -417,7 +426,7 @@ function Phone({
       )}
       style={at(delay)}
     >
-      <Art id={art} className="absolute inset-0 h-full w-full opacity-40" />
+      <PostMedia id={post} still className="absolute inset-0 h-full w-full opacity-40" />
       <div
         className={cn(
           s.rise,
@@ -430,10 +439,7 @@ function Phone({
           <Gob size={26} />
           <span className={cn(s.serif, 'text-[24px] leading-none')}>adhx</span>
         </span>
-        <span className="flex items-center gap-2 text-[14px] font-bold text-[#c9bfab]">
-          <NetworkIcon platform={net} className="h-4 w-4 text-white" />
-          <span>{label}</span>
-        </span>
+        <Credit id={post} className="text-[14px] font-bold text-[#c9bfab]" />
         <span className="flex items-center gap-2 rounded-[14px] bg-black px-3 py-3 text-[16px] font-extrabold">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#ffd23f] text-black">
             <svg
@@ -476,17 +482,9 @@ function Phones() {
           The companion apps put ADHX in your share menu. One tap and it’s yours.
         </span>
       </div>
+      <Phone post="sudara" delay={300} className="absolute right-[360px] top-[80px]" />
       <Phone
-        net="tiktok"
-        art="skate"
-        label="TikTok"
-        delay={300}
-        className="absolute right-[360px] top-[80px]"
-      />
-      <Phone
-        net="instagram"
-        art="cat"
-        label="Instagram"
+        post="offbeat"
         delay={650}
         className="absolute right-[64px] top-[110px] rotate-[4deg]"
       />

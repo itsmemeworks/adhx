@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { userPreferences, users } from '@/lib/db/schema'
 import { badKey, withPhoneKey } from '@/lib/api/phone-auth'
+import { deleteAccessKey } from '@/lib/auth/access-keys'
 import { memberAvatar } from '@/lib/people/savers'
 import { avatarSourceOf } from '@/lib/preferences/server'
 
@@ -39,4 +40,16 @@ export const GET = withPhoneKey(async (_request, caller) => {
     },
     { headers: { 'Cache-Control': 'no-store' } },
   )
+})
+
+/**
+ * DELETE /api/app/me — Remove this phone, from the phone itself. Revokes only
+ * the calling key (the same as Settings → Phone app → Remove on the web);
+ * every other phone keeps working. From then on the key gets 401 `bad_key`,
+ * so a repeat (say, after a lost response) is answered 401 and the app
+ * forgets the key either way.
+ */
+export const DELETE = withPhoneKey((_request, caller) => {
+  deleteAccessKey(caller.userId, caller.keyId, 'phone')
+  return NextResponse.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
 })
