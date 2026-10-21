@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Review lint-staged 17 and its toolchain requirements
+
+- Resolve the old dependency branch against current main without replacing newer application dependencies; update lint-staged to 17.6.0.
+- Declare its Node 22.22.1 minimum and document Git 2.32 plus the recommended Node 24 baseline in contributor and Mac setup guides.
+- Keep the existing package.json task configuration; the optional YAML loader is unnecessary here. Full checks and a real pre-commit run gate the upgrade.
+
 ## 2026-10-21 — Make the Node 26 container upgrade buildable
 
 - Bootstrap the exact reviewed pnpm version explicitly: Node 25+ no longer bundles Corepack. Disable bootstrap lifecycle scripts and retain frozen application installs.
