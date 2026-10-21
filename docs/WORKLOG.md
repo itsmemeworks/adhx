@@ -6,6 +6,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Review the complete dependency upgrade set
+
+- Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.
+- Preserve current application versions and security overrides when resolving older dependency branches; frozen installs and type checks guard each combined lockfile.
+- Fix the Node 26 package-manager bootstrap, verify official Gradle checksums and document the stricter local toolchain requirements.
+- Require fresh CI after each merge under the existing strict branch protection; the final combination also requests pinned-model inference on both Linux architectures.
+- These source upgrades do not update a running deployment; a separately verified release image remains the installation boundary.
+
 ## 2026-10-21 — Upgrade Vitest and its coverage provider together
 
 - Resolve the old dependency branch without replacing current application packages; lock Vitest and coverage-v8 to matching 5.0.5 releases.
@@ -13,6 +21,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - Retain Vitest 5's defaults and document supported Node majors in the package engine range; no test is disabled or assertion weakened.
 - Validation: all 3,705 tests pass in CI mode, type-checking passes and the matching V8 provider covers the real formatting utility (40 tests).
 - The 10,000-post rehearsal passes worker termination/lease recovery, scratch cleanup and 1080p H.264 conversion; constant vectors isolate queue behavior.
+
+## 2026-10-21 — Review lint-staged 17 and its toolchain requirements
+
+- Resolve the old dependency branch against current main without replacing newer application dependencies; update lint-staged to 17.6.0.
+- Declare its Node 22.22.1 minimum and document Git 2.32 plus the recommended Node 24 baseline in contributor and Mac setup guides.
+- Keep the existing package.json task configuration; the optional YAML loader is unnecessary here. Full checks and a real pre-commit run gate the upgrade.
 
 ## 2026-10-21 — Make the Node 26 container upgrade buildable
 

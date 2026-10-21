@@ -5,7 +5,8 @@ and browser-compatible H.264 copies on a Mac. Your NAS owns the database, media,
 queue and search permissions. The worker needs no database or NAS filesystem
 mount, inbound listener or public port.
 
-Use a native Apple Silicon Mac, macOS and ARM64 Node.js 22 or newer. A Docker
+Use a native Apple Silicon Mac, macOS and ARM64 Node.js 24 (or another version
+allowed by `package.json`; Node 22 must be at least 22.22.1). A Docker
 container cannot use macOS CoreML or VideoToolbox. Install this repository's
 dependencies with `pnpm install --frozen-lockfile` in a stable checkout. Install
 a maintained FFmpeg (`brew install ffmpeg` with Homebrew, or your trusted package
@@ -43,7 +44,7 @@ the original codecs. On a shared NAS, start with `SEMANTIC_THREADS=1` for its qu
 model and `KEEP_CONCURRENCY=1` for downloads, then measure responsiveness. No
 existing-library reset is required.
 
-On the Mac, install native ARM64 Node.js 22 or newer and the pnpm version named
+On the Mac, install native ARM64 Node.js 24 or another supported version and the pnpm version named
 by the repository's `packageManager`. Create a separate, stable worker checkout.
 Replace `RELEASE_SOURCE_COMMIT` below with the full source commit of the server
 release you verified, rather than the latest development commit:
