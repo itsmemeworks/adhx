@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test'
-import { authedTest, caption, expectPreviewReady } from './helpers'
+import { authedTest, expectOriginalWords, expectPreviewReady } from './helpers'
 
 const reelUrl = 'https://www.instagram.com/reel/Dc5ATuiiS0V/?igsi=dm9jdTR5cTN0dDg4'
 
@@ -36,7 +36,7 @@ for (const mobile of [false, true]) {
       await page.getByRole('button', { name: 'Watch it anyway' }).click()
       await expect(page).toHaveURL(/\/reels\/Dc5ATuiiS0V$/)
       await expectPreviewReady(page)
-      await expect(caption(page, 'E2E reel Dc5ATuiiS0V')).toBeVisible()
+      await expectOriginalWords(page, 'E2E reel Dc5ATuiiS0V')
     },
   )
 }

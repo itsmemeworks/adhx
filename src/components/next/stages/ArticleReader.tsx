@@ -59,7 +59,8 @@ function inline(nodes: InlineNode[], key: string, bionic: boolean, styled = fals
   })
 }
 
-function blocks(list: ArticleMdBlock[], bionic: boolean): ReactNode[] {
+/** An article's body blocks, as the reader draws them (also the original-post sheet). */
+export function articleBlocks(list: ArticleMdBlock[], bionic: boolean): ReactNode[] {
   return list.map((block, i) => {
     const key = `b-${i}`
     const label = bionic && 'inline' in block ? inlinePlainText(block.inline) : undefined
@@ -269,7 +270,7 @@ export function ArticleReader({
               ))}
             </div>
           ) : body.length ? (
-            <div className="mt-4">{blocks(body, reading.bionic)}</div>
+            <div className="mt-4">{articleBlocks(body, reading.bionic)}</div>
           ) : (
             <>
               <p className="mt-8">

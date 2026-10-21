@@ -36,7 +36,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
           cache-dependency-path: .github/release-please/pnpm-lock.yaml
       - name: Install the pinned release compatibility tools
@@ -96,7 +96,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
           cache-dependency-path: extension/pnpm-lock.yaml
 
@@ -194,7 +194,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       # Validation only: Pages publishing remains a separate manual workflow.
@@ -212,7 +212,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Install extension dependency metadata
@@ -239,7 +239,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -264,7 +264,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -309,7 +309,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '26'
           cache: 'pnpm'
 
       - name: Install dependencies

@@ -6,6 +6,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Web theater matches the phones: original-post sheet, a quieter overlay, toasts in the pill's place
+
+- Owner ask: the website should match the phone apps (iOS #592/#594, Android #596). Over a video or photo the overlay keeps only the why chip, a friend's note and who saved it ("You and Mum saved this · 1h"); the author/network line and the caption are gone. Text and article stages still show their words.
+- Rail order is the phones': React, Save, Share, Download, the network's own mark (`NetworkIcon`), More. The mark opens `OriginalSheet` (`components/next/theater/OriginalSheet.tsx`): poster's picture else the mark in a round tile, name else handle else network (one letter or the network's own name counts as none), "@handle · Posted 18 Oct 2026" with the small mark only when the picture leads, all their words (links clickable) or a kept X article in full (`articleBlocks`, now exported from ArticleReader), Open on {network} and Copy link ("Link copied"). Frosted, rounded, focus-trapped, Esc closes; a bottom sheet on phones, centred on desktop.
+- Player messages (`flash`) last 3 s, replace each other, and take the stage's top row: the pills there ("Shared with your people", "Kept on your ADHX", the via note, a moment's arrivals) step aside while one is up. Copy the text now also says "Words copied". `hasFullArticle` moved to `post.ts`.
+- Tests: `theater-original-sheet.component.test.tsx` (name/handle/day rules, mark once incl. a broken picture, article, focus trap), the overlay/rail/sheet path in `next-theater`, the toast/pill swap in `feed-theater`; e2e previews read the words from the sheet. Checked on a parity server at 1280×800 and 390×844. Not seen live: a poster with a picture (the parity world has none) and an article in the sheet; the browser pane blocks the clipboard, so "Link copied" was checked with a stubbed clipboard.
+
+## 2026-10-21 — Run CI and local development on Node 26 like the image
+
+- The container moved to Node 26 while `.nvmrc` and every workflow `node-version` stayed on 24, so tests ran on a different major than what ships.
+- `.nvmrc`, `ci.yml` (all seven jobs) and `site.yml` now use 26; README and CONTRIBUTING recommend 26. The engines range is unchanged, so 22.22.1+ and 24 still work locally.
+- Workflows install pnpm with `pnpm/action-setup`, so Node 26 shipping without Corepack does not affect CI.
+- Follow-up: the Mac worker docs still say ARM64 Node 24 (any version the engines allow works); bump them once the worker has been measured on 26.
+
 ## 2026-10-21 — iPhone matches boards 11.1 and 11.4
 
 - Compared the built screens on the owner's iPhone (via iPhone Mirroring, against their 2.3.0 server) with design pages 11 and 12. Two board details were missing on iOS and are now in: the React picker's footnote "Kept on the post. Your people see it when they watch." (11.1; Android already had it) and the reactions queue's "Reactions · 1 of 12" pill beside Close (11.4; `PlayerScreen.position`, using the server's `total` from `/api/app/reacted`, which `ReactedPage` now decodes; Channels' count line uses it too). The other differences (Play all as a text link, the invite sheet sharing straight away) were judged better as built; the boards were updated to match instead.

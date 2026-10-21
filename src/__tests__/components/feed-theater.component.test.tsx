@@ -403,6 +403,72 @@ describe('New in the theater', () => {
     }
   })
 
+  it('a short message takes the top pill’s place for 3 seconds', async () => {
+    const writeText = vi.fn(async () => {})
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const video: FeedItem = {
+      ...post('v', 'Ana saved this · 1h'),
+      media: [
+        {
+          id: 'm1',
+          mediaType: 'video',
+          width: 720,
+          height: 1280,
+          durationMs: 9_000,
+          url: '/api/media/video?a=1',
+          thumbnailUrl: 'https://pbs.twimg.com/t.jpg',
+          shareUrl: '',
+        },
+      ],
+    }
+    pages.first = { items: [video], nextCursor: null, caughtUp: false, nothingYet: false, total: 1 }
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.startsWith('/api/activity/processing/posts')) {
+        // Still on its way: "Shared with your people" sits at the top.
+        return new Response(
+          JSON.stringify({
+            posts: [
+              {
+                platform: 'twitter',
+                id: 'v',
+                state: 'keeping',
+                step: 1,
+                percent: 20,
+                keptAt: null,
+              },
+            ],
+            people: [],
+          }),
+        )
+      }
+      return base(url, init)
+    })
+    render(<TheaterV2 source={source} />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('v'))
+    // The top pills are notes; a row stepped aside for a message is hidden from them.
+    const sharedPill = () =>
+      screen.queryAllByRole('note').filter((n) => n.textContent === 'Shared with your people')
+    await waitFor(() => expect(sharedPill()).toHaveLength(1))
+
+    const started = Date.now()
+    fireEvent.click(screen.getByRole('button', { name: 'Copy the text' }))
+    expect(await screen.findByText('Words copied')).toBeInTheDocument()
+    // In its place, not stacked under it.
+    expect(sharedPill()).toEqual([])
+    expect(screen.getByText('Shared with your people').closest('[aria-hidden="true"]')).toHaveClass(
+      'invisible',
+    )
+    expect(
+      screen.getAllByRole('status').filter((el) => el.textContent === 'Words copied'),
+    ).toHaveLength(1)
+
+    // After 3 s the message goes and the pill is back.
+    await waitFor(() => expect(screen.queryByText('Words copied')).toBeNull(), { timeout: 4000 })
+    expect(Date.now() - started).toBeGreaterThanOrEqual(2900)
+    expect(sharedPill()).toHaveLength(1)
+  })
+
   it('opens Why this one from the More menu', async () => {
     render(<TheaterV2 source={source} />)
     await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('a'))
