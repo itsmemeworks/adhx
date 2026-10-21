@@ -103,7 +103,9 @@ struct PlayerView: View {
                 ForEach(posts, id: \.key) { post in
                     PostPage(post: post, server: server, onScreen: post.key == current,
                              playback: playback, clean: $clean, extras: extras, say: say,
-                             openFriend: { friend = $0 }, send: { sending = $0 })
+                             openFriend: { friend = $0 }, send: { sending = $0 },
+                             advance: { next() },
+                             held: sending != nil || extras.react?.isOpen == true)
                         .containerRelativeFrame([.horizontal, .vertical])
                         .id(post.key)
                 }
@@ -160,7 +162,7 @@ struct PlayerView: View {
         playback.show(post.plays ? ADHXClient.resolve(post.media.first?.url, against: server) : nil)
     }
 
-    /// A video ended with Repeat off: on to the next save.
+    /// A video ended with Repeat off (or a photo's time ran out): on to the next save.
     private func next() {
         guard let current, let index = posts.firstIndex(where: { $0.key == current }) else { return }
         let next = index + 1 < posts.count ? posts[index + 1].key : extras.endPage != nil ? Self.endKey : nil
@@ -192,6 +194,10 @@ private struct PostPage: View {
     var openFriend: (Saver) -> Void = { _ in }
     /// Opens the send sheet for this post's file.
     var send: (PhonePost) -> Void = { _ in }
+    /// A photo's time ran out: on to the next post.
+    var advance: () -> Void = {}
+    /// Something over the player (the send sheet, Live's picker): photos wait.
+    var held = false
     @Environment(\.openURL) private var openURL
     @ObservedObject private var privacy = PrivacyStore.shared
     @State private var choosingFriend = false
@@ -206,6 +212,10 @@ private struct PostPage: View {
     @State private var keeping = false
     /// "In your saves": Just for me and your note, from the bookmark.
     @State private var savedSheet = false
+    /// How long the photo on screen has shown, of `PhotoTimer.seconds`.
+    @State private var photoTime: Double = 0
+    /// Tapped to stay on this photo (like pausing a video).
+    @State private var photoPaused = false
 
     /// Words over a picture get a soft shadow; nothing else does.
     private var overMedia: Bool { post.kind != "text" && post.kind != "article" }
@@ -248,8 +258,9 @@ private struct PostPage: View {
                 }
                 bottomRow
                     .padding(.bottom, 16)
-            } else if post.kind == "video" && onScreen {
-                ProgressLine(fraction: playback.duration > 0 ? playback.time / playback.duration : 0,
+            } else if (post.kind == "video" || post.kind == "photo") && onScreen {
+                ProgressLine(fraction: post.kind == "photo" ? photoFraction
+                                : playback.duration > 0 ? playback.time / playback.duration : 0,
                              colour: extras.progressColour)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
@@ -304,18 +315,78 @@ private struct PostPage: View {
                 }
             }
             .contentShape(Rectangle())
-            .onTapGesture { if clean { clean = false } else { playback.togglePause() } }
+            .tapOrHold(tap: { if clean { clean = false } else { playback.togglePause() } }, hold: hideChrome)
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(clean ? "Show buttons and caption" : playback.paused ? "Play" : "Pause")
+            .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
         case "photo":
-            Album(urls: post.media.compactMap { ADHXClient.resolve($0.url, against: server) }, page: $photo)
-                .onTapGesture { if clean { clean = false } }
+            ZStack {
+                Album(urls: post.media.compactMap { ADHXClient.resolve($0.url, against: server) }, page: $photo)
+                if photoPaused && onScreen {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.white)
+                        .frame(width: 76, height: 76)
+                        .background(Circle().fill(.black.opacity(0.5)))
+                        .allowsHitTesting(false)
+                }
+            }
+            .tapOrHold(tap: { if clean { clean = false } else { photoPaused.toggle() } }, hold: hideChrome)
+            .accessibilityAction(named: photoPaused ? "Play" : "Pause") { photoPaused.toggle() }
+            .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
+            .task(id: photoTimerKey) { await runPhotoTimer() }
+            .onChange(of: photo) { _, _ in photoTime = 0 }
+            .onChange(of: onScreen) { _, now in
+                if !now {
+                    photoTime = 0
+                    photoPaused = false
+                }
+            }
         default:
             WordsCard(post: post) { reading = true }
                 .contentShape(Rectangle())
-                .onTapGesture { if clean { clean = false } }
+                .tapOrHold(tap: { if clean { clean = false } }, hold: hideChrome)
+                .accessibilityAction(named: "Hide buttons and caption") { hideChrome() }
                 .sheet(isPresented: $reading) { ReaderView(post: post) }
         }
+    }
+
+    /// Hold the picture: everything but the media goes; a tap brings it back.
+    private func hideChrome() {
+        guard !clean else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        clean = true
+    }
+
+    /// The photo timer runs while this photo is on screen and nothing is over it.
+    private var photoTimerKey: String {
+        let running = onScreen && !photoPaused && !held && !more && !savedSheet && sharing == nil
+        return "\(running)-\(photo)"
+    }
+
+    /// Photos move on by themselves, `PhotoTimer.seconds` each: the next photo
+    /// in an album, then the next post.
+    private func runPhotoTimer() async {
+        guard onScreen, !photoPaused, !held, !more, !savedSheet, sharing == nil else { return }
+        let step = 0.1
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: UInt64(step * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            photoTime += step
+            guard photoTime >= PhotoTimer.seconds else { continue }
+            photoTime = 0
+            switch PhotoTimer.next(page: photo, count: post.media.count, repeatOne: playback.repeatOne) {
+            case .page(let page): withAnimation(.easeInOut(duration: 0.3)) { photo = page }
+            case .post: advance()
+            }
+            return
+        }
+    }
+
+    /// How far through the post's photos the timer is, for the line at the bottom.
+    private var photoFraction: Double {
+        let count = max(post.media.count, 1)
+        return min((Double(photo) + photoTime / PhotoTimer.seconds) / Double(count), 1)
     }
 
     /// The More sheet grows with what it offers.
@@ -330,7 +401,7 @@ private struct PostPage: View {
 
     /// Left (the boards' byline): why the feed picked it, a friend's note,
     /// who saved it, where it's from and the first lines. Right: the rail of
-    /// round frosted buttons. Sound, Repeat, the small window, Hide and the
+    /// round frosted buttons. Sound, Repeat, Dock, Hide and the
     /// original are in More.
     private var caption: some View {
         HStack(alignment: .bottom, spacing: 0) {
@@ -364,10 +435,10 @@ private struct PostPage: View {
                     } else if privacy.isPrivate(post) {
                         PrivateLock()
                     }
-                    // Live puts the network on the savers' line instead.
-                    if extras.inMoment == nil || post.savers.isEmpty { sourceLine }
+                    sourceLine
                     if overMedia, !post.text.isEmpty {
-                        Text(post.text)
+                        Text(LinkedText.attributed(post.text))
+                            .tint(Theme.cream)
                             .font(Theme.sans(16))
                             .foregroundStyle(Color(hex: 0xF4F1EA))
                             .lineSpacing(5)
@@ -387,32 +458,42 @@ private struct PostPage: View {
         .padding(.trailing, 12)
     }
 
-    /// "YouTube · Rick Astley": the network and who posted it. Opens the original.
+    /// The network's mark, then who posted it ("[YouTube] Rick Astley"). Opens the original.
     private var sourceLine: some View {
-        let line = Text(sourceWords)
-            .font(Theme.sans(14))
-            .foregroundStyle(Theme.muted)
-            .lineLimit(1)
-            .overMediaShadow(overMedia)
+        let line = HStack(spacing: 7) {
+            NetworkMark(platform: post.platform, size: 16)
+                .overMediaShadow(overMedia)
+            if let who = sourceWho {
+                Text(who)
+                    .font(Theme.sans(14))
+                    .foregroundStyle(Theme.muted)
+                    .lineLimit(1)
+                    .overMediaShadow(overMedia)
+            }
+        }
+        let spoken = sourceWho.map { "\(Network.name(post.platform)), \($0)" } ?? Network.name(post.platform)
         return Group {
             if let source = post.sourceUrl.flatMap(URL.init(string:)) {
                 Button { openURL(source) } label: { line }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(sourceWords). Open the original on \(Network.name(post.platform))")
+                    .accessibilityLabel("\(spoken). Open the original on \(Network.name(post.platform))")
             } else {
                 line
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(spoken)
             }
         }
     }
 
-    private var sourceWords: String {
+    /// Who posted it; nil when there's no one to name (the mark says the network).
+    private var sourceWho: String? {
         let network = Network.name(post.platform)
         let name = post.author.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let who = name.isEmpty ? post.author.handle : name
         if who.isEmpty || who.caseInsensitiveCompare(network) == .orderedSame || who.count <= 1 {
-            return network
+            return nil
         }
-        return "\(network) · \(who)"
+        return who
     }
 
     /// Round frosted buttons, 52 across, 14 apart: React (Live), Share, Save, More.
@@ -487,6 +568,9 @@ private struct PostPage: View {
         } else if post.plays {
             // The track is there before the video is: no jump when it starts.
             ProgressLine(fraction: 0, colour: extras.progressColour).padding(.horizontal, 16)
+        } else if post.kind == "photo" {
+            ProgressLine(fraction: onScreen ? photoFraction : 0, colour: extras.progressColour)
+                .padding(.horizontal, 16)
         }
     }
 
@@ -598,10 +682,8 @@ private struct PostPage: View {
                     .layoutPriority(1)
                     .overMediaShadow(overMedia)
                 if let when = liveWhen {
-                    // Live: "· 4 min ago · Reddit" (the boards' tuned-in byline);
-                    // the network goes first when the names leave no room.
+                    // Live: "· 4 min ago"; the network's mark is on the line below.
                     ViewThatFits(in: .horizontal) {
-                        Text("· \(when) · \(Network.name(post.platform))")
                         Text("· \(when)")
                         if let short = liveWhenShort { Text("· \(short)") }
                     }
@@ -648,7 +730,7 @@ private struct MoreSheet: View {
     let say: (String) -> Void
     /// "Why this one" (the feed): opens the why sheet.
     var onWhy: (() -> Void)?
-    /// The video or sound on screen: Sound, Repeat and the small window.
+    /// The video or sound on screen: Sound, Fit, Repeat and Dock.
     var playback: Playback?
     /// Hides the buttons and caption.
     var hide: () -> Void = {}
@@ -917,7 +999,7 @@ private struct SavedSheet: View {
     }
 }
 
-/// Sound, Repeat, the small window and Hide, for the video on screen (More).
+/// Sound, Fit, Repeat, Dock and Hide, for the video on screen (More).
 private struct PlayingControls: View {
     @ObservedObject var playback: Playback
     let say: (String) -> Void
@@ -942,12 +1024,12 @@ private struct PlayingControls: View {
                 say(playback.repeatOne ? "Repeating this one" : "Plays the next save when this ends")
             }
             if playback.pipSupported {
-                toggle("Small window", icon: "pip.enter", on: false,
-                       accessibility: "Keep playing in a small window") {
+                toggle("Dock", icon: "pip.enter", on: false,
+                       accessibility: "Dock the video and keep it playing") {
                     if playback.pipPossible {
                         playback.startSmallWindow()
                     } else {
-                        say("The small window isn’t ready yet. Try again in a moment.")
+                        say("The dock isn’t ready yet. Try again in a moment.")
                     }
                 }
             }
@@ -1358,8 +1440,9 @@ private struct Words: View {
                 }
             }
             if !post.text.isEmpty {
-                Text(post.text)
+                Text(LinkedText.attributed(post.text))
                     .font(font)
+                    .tint(Theme.accent)
                     .foregroundStyle(Theme.cream)
                     .lineSpacing(post.article == nil && !reading ? 2 : 5)
             }
@@ -1436,3 +1519,14 @@ struct ReaderView: View {
     }
 }
 
+
+extension View {
+    /// A tap, or a hold (a hold never also counts as a tap).
+    func tapOrHold(tap: @escaping () -> Void, hold: @escaping () -> Void) -> some View {
+        gesture(
+            LongPressGesture(minimumDuration: 0.35)
+                .onEnded { _ in hold() }
+                .exclusively(before: TapGesture().onEnded { tap() })
+        )
+    }
+}

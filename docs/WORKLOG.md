@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — iPhone player polish from on-device testing
+
+- Hold the stage to hide everything but the media; a tap brings it back; a tap with the chrome showing pauses (`tapOrHold`: the hold never also counts as a tap). Photos move on by themselves after 10 s each (`PhotoTimer`: next photo in an album, then the next post; Repeat loops), with the bottom progress line, paused while a sheet or Live's picker is open or after a tap.
+- The byline is the network's mark then who posted it (just the mark when no one's named); Live's savers line no longer ends with the network's name. "Small window" is now "Dock".
+- Links in post words are tappable and shown short (`LinkedText`). `toPhonePost` now sends `postBody()` (t.co swapped for where it goes, entities decoded), which moved to the plain `src/lib/feed/post-body.ts` so server code can use it.
+- Search/channel tiles with no picture are the web's cream words card (chip and meter above the words, never on them).
+- Send via (was "Send with"): WhatsApp (its own `net.whatsapp.*` open-in route; an album or no WhatsApp falls back to the share sheet), Copy (the file itself on the clipboard), Files, Save to Photos, More. Messages/Mail composers removed.
+- Not checked on screen: search tiles (the parity server runs without the query process) and WhatsApp (not on the simulator).
+
 ## 2026-10-21 — Phones: no why chip repeating the byline; your face on your reactions
 
 - iOS and Android hide the why chip when its only reason is `fresh`/`yours` ("Ana saved this · 1d") and the post has savers, since the byline under it already says that. This matches the web's rule in `TheaterV2`.
