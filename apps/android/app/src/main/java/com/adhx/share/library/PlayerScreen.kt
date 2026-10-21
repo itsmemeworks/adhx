@@ -1325,8 +1325,9 @@ private fun NoteBubble(saver: Saver, note: String, server: String, modifier: Mod
         ) {
             Avatar(saver, server, size = 32.dp)
             Spacer(Modifier.width(8.dp))
+            // The bubble says it's said; no quote marks.
             Text(
-                "“$note”",
+                note,
                 fontSize = 16.sp,
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.SemiBold,

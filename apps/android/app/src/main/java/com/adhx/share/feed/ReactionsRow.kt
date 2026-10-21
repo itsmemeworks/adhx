@@ -57,15 +57,16 @@ object ReactionsCopy {
         return if (count == 1 && !more) "1 post with reactions" else "$n posts with reactions"
     }
 
-    /** What the tile's face says: the emoji, else the words in quotes. */
+    /** What the tile's face says: the emoji, else the words (their bubble says they're said). */
     fun said(last: LastReaction?): String? =
-        last?.emoji?.takeIf { it.isNotBlank() } ?: last?.text?.takeIf { it.isNotBlank() }?.let { "“$it”" }
+        last?.emoji?.takeIf { it.isNotBlank() } ?: last?.text?.takeIf { it.isNotBlank() }
 
     /** For a screen reader: who reacted how, and to what. */
     fun describe(post: PhonePost): String {
         val last = post.reactions?.last
         val who = last?.saver?.let { if (it.isYou) "You" else it.label }
-        val what = said(last)
+        // Read aloud, words are quoted so they're heard as said.
+        val what = last?.emoji?.takeIf { it.isNotBlank() } ?: last?.text?.takeIf { it.isNotBlank() }?.let { "“$it”" }
         val title = (post.article?.title?.takeIf { it.isNotBlank() } ?: post.text).trim().lineSequence().firstOrNull()?.trim().orEmpty()
         val reaction = when {
             who != null && what != null -> "$who reacted $what"
