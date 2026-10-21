@@ -639,7 +639,7 @@ class FeedViewModel(app: Application) : AndroidViewModel(app) {
         val slug = _tuned.value.slug.takeIf { it.isNotBlank() } ?: return false
         val words = text?.trim()?.let(com.adhx.share.net.Reaction::clip)?.takeIf { it.isNotEmpty() }
         if (emoji == null && words == null) return false
-        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, isYou = true)
+        val me = Saver(username = connection.username ?: "you", name = Copy.YOU, avatarUrl = connection.avatarUrl, isYou = true)
         val sent = AdhxApi(connection).react(slug, post.platform, post.id, emoji = emoji, text = words) is ApiResult.Ok
         if (sent) float(emoji, words, me)
         return sent

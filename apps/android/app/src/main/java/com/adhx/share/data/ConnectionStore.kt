@@ -39,8 +39,8 @@ class ConnectionStore private constructor(context: Context) {
     }
 
     @Synchronized
-    fun updateIdentity(expected: Connection, username: String?, phoneName: String?) {
-        val next = vault.record.identityUpdated(expected, username, phoneName)
+    fun updateIdentity(expected: Connection, username: String?, phoneName: String?, avatarUrl: String?) {
+        val next = vault.record.identityUpdated(expected, username, phoneName, avatarUrl)
         if (next != vault.record) persist(next)
     }
 

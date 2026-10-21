@@ -147,7 +147,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             when (result) {
                 is ApiResult.Ok -> {
                     _reach.value = Reach.Connected
-                    store.updateIdentity(connection, result.value.username, result.value.name)
+                    store.updateIdentity(connection, result.value.username, result.value.name, result.value.avatarUrl)
                 }
                 is ApiResult.Failed -> {
                     if (result.status == 401 || result.code == "bad_key") {

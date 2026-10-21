@@ -90,6 +90,7 @@ final class AppModel: ObservableObject {
             let me = try await client.me()
             if let name = me.username { Store.username = name }
             if let phone = me.name { Store.phoneName = phone }
+            Store.avatarUrl = me.avatarUrl
             connection = .connected
             reload()
         } catch APIError.badKey {

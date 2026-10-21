@@ -19,6 +19,8 @@ data class PairResponse(
 data class MeResponse(
     val username: String? = null,
     val name: String? = null,
+    /** Your picture; older servers don't send it. */
+    val avatarUrl: String? = null,
 )
 
 @Serializable

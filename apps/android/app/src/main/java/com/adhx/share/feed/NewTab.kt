@@ -281,6 +281,8 @@ private fun WhyChip(post: PhonePost, server: String, onClick: () -> Unit) {
 /** The chip's short words: "Saved together", "Close to you", else the headline itself. */
 internal fun whyChipLabel(post: PhonePost): String? {
     val headline = post.headline ?: return null
+    // "Ana saved this · 1d" alone is already the byline under it (the web's rule).
+    if ((post.whyKind == "fresh" || post.whyKind == "yours") && post.savers.isNotEmpty()) return null
     return when (post.whyKind) {
         "together" -> Copy.WHY_TOGETHER
         "close" -> Copy.WHY_CLOSE

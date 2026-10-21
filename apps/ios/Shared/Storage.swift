@@ -120,6 +120,12 @@ enum Store {
         set { d.set(newValue, forKey: "username") }
     }
 
+    /// Your picture (from `/api/app/me`), for your own reactions. nil: your initial.
+    static var avatarUrl: String? {
+        get { d.string(forKey: "avatarUrl") }
+        set { d.set(newValue, forKey: "avatarUrl") }
+    }
+
     static var phoneName: String? {
         get { d.string(forKey: "phoneName") }
         set { d.set(newValue, forKey: "phoneName") }
@@ -142,6 +148,7 @@ enum Store {
         Keychain.delete()
         server = nil
         username = nil
+        avatarUrl = nil
         phoneName = nil
         History.clear()
         OfflineQueue.clear()
