@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react'
-import { Art } from './art'
 import { cn } from './cn'
 import { CopyCommand } from './CopyCommand'
 import { Gob } from './Gob'
-import { Meme } from './Meme'
 import { NetworkIcon } from './NetworkIcon'
 import { ALL_PLATFORMS, networkLabel } from './networks'
 import { Face, type PersonId } from './People'
 import { PhoneFrame, PlayerScreen, ShareCardScreen, WebFrame, u } from './frames'
 import { Arrow, Check, Chat, GitHubMark, Heart, Menu } from './icons'
 import { NavMenu } from './NavMenu'
+import { Credit, PostMedia, creditedPosts } from './Post'
 import {
   ChannelsMock,
   FacesMock,
@@ -26,8 +25,8 @@ import {
 
 /**
  * adhx.com: the product site (static, on GitHub Pages). What ADHX does, shown
- * in its own design with illustrated posts (never anyone's real ones), and how
- * to run your own. Fluid from 320px up: below `md` it follows the phone board,
+ * in its own design with real posts saved on an ADHX server (each credited to
+ * its author; see components/Post.tsx), and how to run your own. Fluid from 320px up: below `md` it follows the phone board,
  * from `lg` the desktop one.
  */
 
@@ -181,7 +180,7 @@ function Header() {
 function HeroComposition() {
   return (
     <Mock
-      label="ADHX on a laptop, playing an elephant video you, Ana and two others saved, with the meme caption: First video ever uploaded. Still better than your For You page. Next to it, ADHX on a phone playing a Reel Ana and Ben saved, of someone screaming at their first bite of dark chocolate, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved one."
+      label="ADHX on a laptop, playing a video you, Ana and two others saved: a pixel-art cat whose belly is a toy piano, from the game Offbeat, posted on X by @nexindie. Next to it, ADHX on a phone playing a video Ana and Ben saved, a copper ribbon of sound twisting in 3D from Aurora, posted on X by @joecroskey, with reactions floating up from Jo, Ben and Ana, and a note that Mum just saved the RC808 drum synth photos by @XWAVEart."
       className="mx-auto w-full max-w-[740px]"
     >
       <div className="relative aspect-[358/300] md:aspect-[740/488]">
@@ -189,12 +188,12 @@ function HeroComposition() {
         <WebFrame className="absolute left-0 top-[6.7%] w-[67%] md:top-[7.4%] md:w-[83.8%]" />
         <PhoneFrame className="absolute left-[64%] top-0 w-[36%] md:left-[68.6%] md:w-[31.4%]">
           <PlayerScreen
-            art="chocolate"
+            post="aurora"
             savers={['ana', 'ben']}
             savedLine="Ana and Ben saved this"
             ago="2h"
-            network="Instagram Reel"
-            caption="Trying dark chocolate for the first time. It did not go well."
+            kind="Video"
+            caption="I built Aurora, a free, open-source audio plugin that lets you design how you see sound."
             newCount={12}
             saved
           />
@@ -207,7 +206,7 @@ function HeroComposition() {
         <div className="absolute left-0 top-[80%] flex h-[52px] items-center gap-2.5 rounded-[16px] border border-[#ffb35c]/45 bg-[#262320]/95 py-1.5 pl-1.5 pr-3.5 shadow-[0_18px_40px_rgba(0,0,0,0.55)] backdrop-blur-md md:left-[3.8%] md:top-[82.4%] md:h-[60px] md:gap-3 md:rounded-[18px] md:pl-2 md:pr-[18px]">
           <span className="relative shrink-0">
             <span className="relative block h-[38px] w-[38px] overflow-hidden rounded-[10px] md:h-11 md:w-11 md:rounded-[12px]">
-              <Art id="steak" className="absolute inset-0 h-full w-full" />
+              <PostMedia id="rc808" className="absolute inset-0 h-full w-full" />
             </span>
             <Face who="mum" size={18} ring="#262320" className="absolute -bottom-1 -right-1" />
           </span>
@@ -215,8 +214,9 @@ function HeroComposition() {
             <span className="whitespace-nowrap text-[13px] font-extrabold md:text-[14px]">
               Mum saved one
             </span>
-            <span className="whitespace-nowrap text-[11px] text-nx-soft md:text-[12px]">
-              Pinterest video · just now
+            <span className="flex items-center gap-1 whitespace-nowrap text-[11px] text-nx-soft md:text-[12px]">
+              <Credit id="rc808" />
+              <span>· just now</span>
             </span>
           </span>
         </div>
@@ -751,7 +751,7 @@ function Apps() {
           </p>
         </div>
         <Mock
-          label="Two phones: the ADHX share card keeping a copy of an X photo, 40 percent done, shared with your people with Just for me off; and New playing a steak video Mum saved, close to you."
+          label="Two phones: the ADHX share card keeping a copy of four X photos from the film Sorcerer, posted by @CinemaTweets1, 40 percent done, shared with your people with Just for me off; and New playing a video Mum saved, close to you: a colourful piano roll transcribed by MuScriptor, posted on X by @kyutai_labs."
           className="mx-auto w-full max-w-[620px]"
         >
           <div className="flex items-center justify-center gap-3.5 py-2 md:gap-10 md:py-6">
@@ -760,11 +760,11 @@ function Apps() {
             </PhoneFrame>
             <PhoneFrame className="w-[42%] max-w-[246px] md:translate-y-3.5">
               <PlayerScreen
-                art="steak"
+                post="muscriptor"
                 savers={['mum']}
                 savedLine="Mum saved this"
                 ago="1h"
-                network="Pinterest video"
+                kind="Video"
                 newCount={8}
                 progress={0.28}
                 why={
@@ -788,11 +788,13 @@ function Band() {
   return (
     <section aria-labelledby="band-title" className="relative overflow-hidden bg-black">
       <div className="absolute inset-0 md:relative md:inset-auto md:h-[300px] lg:absolute lg:inset-y-0 lg:left-[34%] lg:right-0 lg:h-auto">
-        <Art id="elephant" className="absolute inset-0 h-full w-full" />
+        <PostMedia id="offbeat-room" className="absolute inset-0 h-full w-full" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.1)_0%,rgba(0,0,0,0.6)_42%,#000_90%)] md:bg-[linear-gradient(180deg,transparent_0%,transparent_50%,#000_100%)] lg:bg-[linear-gradient(90deg,#000_0%,rgba(0,0,0,0.82)_26%,rgba(0,0,0,0.1)_52%,rgba(0,0,0,0.3)_100%)]" />
-        <span className="absolute inset-x-[18%] bottom-[22%] top-0 hidden md:block lg:bottom-0 lg:left-auto lg:right-0 lg:w-[50%]">
-          <Meme top="Zero ads were shown" bottom="During this elephant" size={7.5} />
-        </span>
+        <Credit
+          id="offbeat-room"
+          chip
+          className="absolute left-4 top-4 md:left-auto md:right-4 lg:bottom-4 lg:top-auto"
+        />
       </div>
       <span
         aria-hidden
@@ -967,6 +969,27 @@ export function ProductSite() {
               </a>
             ))}
           </nav>
+        </div>
+        <div className={cn(WRAP, 'pb-6 md:pb-7')}>
+          <p className="m-0 border-t border-white/10 pt-4 text-[12px] leading-[1.7] text-nx-muted md:text-[13px]">
+            <span>The posts shown are real saves, each from its original poster: </span>
+            {creditedPosts().map((p, i, all) => (
+              <span key={p.url}>
+                <span className="whitespace-nowrap">
+                  <a
+                    href={p.url}
+                    className="inline-flex min-h-[24px] items-center gap-1 font-semibold text-nx-soft underline-offset-2 hover:text-white hover:underline"
+                  >
+                    <NetworkIcon platform={p.network} className="h-3 w-3" />
+                    <span>{`@${p.author}`}</span>
+                    <span className="sr-only">{` on ${networkLabel(p.network)}`}</span>
+                  </a>
+                  <span>{i < all.length - 1 ? ',' : '.'}</span>
+                </span>
+                {i < all.length - 1 && <span> </span>}
+              </span>
+            ))}
+          </p>
         </div>
       </footer>
     </div>
