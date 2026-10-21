@@ -11,6 +11,8 @@ struct PairResult: Decodable {
 struct MeResult: Decodable {
     let username: String?
     let name: String?
+    /// Your picture; older servers don't send it.
+    let avatarUrl: String?
 }
 
 struct KeptCounts: Codable, Equatable {

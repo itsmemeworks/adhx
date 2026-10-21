@@ -6,6 +6,11 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Phones: no why chip repeating the byline; your face on your reactions
+
+- iOS and Android hide the why chip when its only reason is `fresh`/`yours` ("Ana saved this · 1d") and the post has savers, since the byline under it already says that. This matches the web's rule in `TheaterV2`.
+- `GET /api/app/me` now returns `avatarUrl` (`memberAvatar`, so it's null for the generated icon). The apps store it (iOS `Store.avatarUrl`; Android `Connection.avatarUrl`, encrypted with the rest) and use it for your own reactions' faces in Tune in. Live's `watchers` leaves you out, so those faces had always fallen back to your initial. A server without this change still shows the initial.
+
 ## 2026-10-20 — A signed Android APK on every release
 
 - `.github/workflows/android-release.yml` builds the release tag's app with `assembleRelease`, signs it with the owner's key from four repository secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, optional `ANDROID_KEY_PASSWORD`), checks it with apksigner and attaches `adhx-<version>.apk` + `.sha256` to the GitHub release. Version code = major×10000 + minor×100 + patch.

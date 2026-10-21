@@ -833,7 +833,7 @@ struct TunedInScreen: View {
     /// You, for your own reactions' faces.
     private var you: Saver {
         model.watchers.first(where: \.isYou)
-            ?? Saver(username: Store.username ?? "you", name: nil, isYou: true)
+            ?? Saver(username: Store.username ?? "you", name: nil, avatarUrl: Store.avatarUrl, isYou: true)
     }
 
     /// Six quick emoji, and a few words to everyone watching.

@@ -15,6 +15,8 @@ data class Connection(
     val key: String,
     val username: String? = null,
     val phoneName: String? = null,
+    /** Your picture (from `/api/app/me`), for your own reactions. null: your initial. */
+    val avatarUrl: String? = null,
 ) {
     internal fun sameCredential(other: Connection?): Boolean =
         other != null && server == other.server && key == other.key
@@ -30,10 +32,15 @@ internal data class ConnectionRecord(
     fun pairedWith(next: Connection) = ConnectionRecord(next, next.server,
         allowLegacyHistory = allowLegacyHistory && !changesAccount(next))
 
-    fun identityUpdated(expected: Connection, username: String?, phoneName: String?): ConnectionRecord {
+    fun identityUpdated(expected: Connection, username: String?, phoneName: String?): ConnectionRecord =
+        identityUpdated(expected, username, phoneName, connection?.avatarUrl)
+
+    /** As above, with your picture; null means the generated icon (or an older server). */
+    fun identityUpdated(expected: Connection, username: String?, phoneName: String?, avatarUrl: String?): ConnectionRecord {
         val now = connection ?: return this
         if (!now.sameCredential(expected)) return this
-        return copy(connection = now.copy(username = username ?: now.username, phoneName = phoneName ?: now.phoneName))
+        return copy(connection = now.copy(username = username ?: now.username, phoneName = phoneName ?: now.phoneName,
+            avatarUrl = avatarUrl))
     }
 
     fun changesAccount(next: Connection): Boolean {

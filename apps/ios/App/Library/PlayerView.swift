@@ -348,7 +348,7 @@ private struct PostPage: View {
                     .padding(.bottom, 8)
                     .accessibilityElement(children: .combine)
                 }
-                if let why = post.why, let onWhy = extras.onWhy {
+                if let why = post.why, let onWhy = extras.onWhy, !WhyChip.repeatsByline(post) {
                     WhyChip(text: WhyChip.label(post, why: why), kind: post.whyReasons.first?.kind,
                             face: WhyChip.face(post), server: server) { onWhy(post) }
                         .padding(.bottom, 12)
@@ -982,6 +982,12 @@ private struct WhyChip: View {
     /// "Saved together" when it's saved together, else the why line (the web's `whyLabel`).
     static func label(_ post: PhonePost, why: String) -> String {
         post.whyReasons.first?.kind == "together" ? "Saved together" : why
+    }
+
+    /// "Ana saved this · 1d" alone is already the byline under it (the web's rule).
+    static func repeatsByline(_ post: PhonePost) -> Bool {
+        guard let kind = post.whyReasons.first?.kind else { return false }
+        return (kind == "fresh" || kind == "yours") && !post.savers.isEmpty
     }
 
     /// Who sent it, when that's why it's here.
