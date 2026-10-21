@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/api/with-auth'
 import { isAdminUserId } from '@/lib/admin/guard'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { renewInviteLink } from '@/lib/auth/invites'
+import { inviteUrl, renewInviteLink } from '@/lib/auth/invites'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,9 +30,8 @@ export const POST = withAuth(async (_request, userId, ctx: { params: Promise<{ i
       { status: 404, headers: NO_STORE },
     )
   }
-  const base = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '')
   return NextResponse.json(
-    { id: renewed.id, url: `${base}/invite/${renewed.token}`, expiresAt: renewed.expiresAt },
+    { id: renewed.id, url: inviteUrl(renewed.token), expiresAt: renewed.expiresAt },
     { headers: NO_STORE },
   )
 })

@@ -49,3 +49,21 @@ describe('MagicLinkEmail', () => {
     expect(text).toContain('15 minutes')
   })
 })
+
+describe('SignInCodeEmail', () => {
+  it('shows the phone code in the same dark card, with no link to open', async () => {
+    const { SignInCodeEmail } = await import('@/emails/sign-in-code')
+    const html = await render(
+      SignInCodeEmail({ code: '482913', origin: 'https://adhx.home.example' }),
+    )
+    expect(html).toContain('Your sign-in code')
+    expect(html).toContain('482913')
+    expect(html).toContain('https://adhx.home.example/logo-dark.png')
+    expect(html).toContain('#201b16')
+    expect(html).not.toContain('<script')
+    expect(html).not.toContain('/api/auth/email/callback')
+    const text = toPlainText(html)
+    expect(text).toContain('482913')
+    expect(text).toContain('15 minutes')
+  })
+})

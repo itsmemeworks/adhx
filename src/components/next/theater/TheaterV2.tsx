@@ -253,6 +253,13 @@ function emptyState(
       action: 'Channels',
       href: '/channels',
     }
+  if (source.reacted && !(load.status === 'error' && !missing))
+    return {
+      title: 'No reactions yet',
+      body: 'React to a post in the player and it plays here, with everyone else’s.',
+      action: 'Channels',
+      href: '/channels',
+    }
   if (isChannelSource(source) && missing)
     return {
       title: 'This channel isn’t here',
@@ -1883,11 +1890,13 @@ export function TheaterV2({
   const cover = postCoverSrc(current.post)
   const channelKind = source.groupChannel
     ? 'From everyone'
-    : source.auto
-      ? 'Made for you'
-      : source.friend
-        ? 'Your people'
-        : 'Channel'
+    : source.reacted
+      ? 'Your people'
+      : source.auto
+        ? 'Made for you'
+        : source.friend
+          ? 'Your people'
+          : 'Channel'
   const inQueue = queueSavers(items)
 
   const muteButton = (
@@ -2091,7 +2100,13 @@ export function TheaterV2({
               <div className="absolute left-6 top-5 max-w-[calc(50%-24px)]">
                 <ChannelChip
                   href={back}
-                  label={source.groupChannel || source.auto || source.channel ? 'Channel' : 'Saves'}
+                  label={
+                    source.groupChannel || source.auto || source.channel
+                      ? 'Channel'
+                      : source.reacted
+                        ? 'Your people'
+                        : 'Saves'
+                  }
                   name={title ?? 'Channel'}
                   position={`${position.n} of ${Math.max(position.of, feedTotal)}`}
                   covers={items}
@@ -3026,7 +3041,7 @@ export function TheaterV2({
                   )}
                   <span>
                     {[
-                      `${Math.max(position.of, feedTotal)} saves`,
+                      `${Math.max(position.of, feedTotal)} ${source.reacted ? 'posts with reactions' : 'saves'}`,
                       inQueue.length > 0 ? bylineLine(inQueue, false) : null,
                     ]
                       .filter(Boolean)
@@ -3082,7 +3097,7 @@ export function TheaterV2({
                     className="flex h-[52px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/[0.22] px-[18px] text-[15px] font-extrabold text-nx-cream"
                   >
                     <Share aria-hidden className="h-[18px] w-[18px]" />
-                    <span>Share channel</span>
+                    <span>{source.reacted ? 'Copy link' : 'Share channel'}</span>
                   </button>
                 </div>
                 <PanelDivider />

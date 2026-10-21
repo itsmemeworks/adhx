@@ -46,6 +46,11 @@ export interface PlaySource {
   recent: boolean
   /** A live "Right now" moment (`moment=slug`): Tune in. */
   moment: string | null
+  /**
+   * Posts with reactions (`reacted=1`), newest reaction first, from
+   * `/api/posts/reacted`: the Reactions row on /channels. Members only.
+   */
+  reacted?: boolean
   /** `platform:id` of the post to start on. */
   start: string | null
   /**
@@ -136,9 +141,16 @@ export function friendPlayHref(
   return `/play?${params}`
 }
 
+/** Play every post with reactions, newest reaction first. */
+export function reactedPlayHref(start?: string | null): string {
+  const params = new URLSearchParams({ reacted: '1' })
+  if (start) params.set('start', start)
+  return `/play?${params}`
+}
+
 /** A channel made of other people's saves (named, not searched): plays in its own order. */
 export function isChannelSource(source: PlaySource): boolean {
-  return !!(source.channel || source.auto || source.groupChannel || source.friend)
+  return !!(source.channel || source.auto || source.groupChannel || source.friend || source.reacted)
 }
 
 export function autoPlayHref(slug: string, start?: string | null): string {
@@ -163,6 +175,7 @@ export function queueUrl(source: PlaySource, searchUrl: () => string): string {
     return `/api/channels/friend/${encodeURIComponent(username)}${onlyNew ? '?new=1' : ''}`
   }
   if (source.moment) return `/api/moments/${encodeURIComponent(source.moment)}?limit=100`
+  if (source.reacted) return '/api/posts/reacted?limit=50'
   if (source.recent) return '/api/feed?limit=100&hideArchived=true'
   return searchUrl()
 }
@@ -172,7 +185,7 @@ export function backHref(source: PlaySource): string {
   if (source.shared) return '/now'
   if (source.feed) return '/channels'
   if (source.channel) return `/t/${source.channel.username}/${source.channel.tag}`
-  if (source.auto || source.groupChannel) return '/channels'
+  if (source.auto || source.groupChannel || source.reacted) return '/channels'
   if (source.friend) return `/channels/friend/${encodeURIComponent(source.friend.username)}`
   if (source.moment) return `/moments/${source.moment}`
   if (source.recent) return '/now'
@@ -214,10 +227,14 @@ export function sourceFromParams(
     !channel && !auto && !groupChannel && friend && USERNAME.test(friend)
       ? { username: friend, onlyNew: get('new') === '1' }
       : null
-  const named = !!(channel || auto || groupChannel || friendSource)
+  const reacted = !channel && !auto && !groupChannel && !friendSource && get('reacted') === '1'
+  const named = !!(channel || auto || groupChannel || friendSource || reacted)
   return {
     // A channel's "more like this" looks across everyone's saves.
-    search: channel || groupChannel || friendSource ? { ...search, scope: 'everyone' } : search,
+    search:
+      channel || groupChannel || friendSource || reacted
+        ? { ...search, scope: 'everyone' }
+        : search,
     group: signal,
     channel: channel ? { username: channel[1], tag: channel[2] } : null,
     auto: !channel && auto && SLUG.test(auto) ? auto : null,
@@ -225,6 +242,7 @@ export function sourceFromParams(
     friend: friendSource,
     recent: !named && get('recent') === '1',
     moment: !named && moment && SLUG.test(moment) ? moment : null,
+    ...(reacted ? { reacted: true } : {}),
     start: start && KEY.test(start) ? start : null,
   }
 }

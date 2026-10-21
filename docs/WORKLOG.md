@@ -48,6 +48,14 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - No web hops left: More's Open in my ADHX, Shared lately's and My saves' Open my ADHX, Shared lately rows (player only), the share extension's Open (`adhx://open` or the post). Share an ADHX link stays.
 - Checked: simulator build, `Tests/DecoupleTests.swift` (60 checks) and the existing suites. Not checked: against a live server (routes not on a branch yet) or on screen.
 
+## 2026-10-21 — The phone apps without the web: picture, invites, email code sign-in, a reactions feed
+
+- Owner: the apps shouldn't rely on the web any more. Server/web side of the shared contract (iOS/Android built in parallel): `POST|DELETE /api/app/me/avatar` (one handler with `/api/account/avatar`, `src/lib/avatar/handler.ts`), `GET /api/app/me` + `avatarSource`, `/api/app/invites` (+ `/{id}`, `/{id}/link`; own only; list `url` is null, links are shown once).
+- Sign in on the phone: `POST /api/app/signin` emails a 6-digit code (`login_tokens` intent `phone`, new `attempts` column via guarded ALTER, HMAC-stored, 15 min, 5 wrong tries burn it, a stand-in code for unknown/banned/waiting addresses so nothing enumerates); `/verify` returns `pair`'s `{ key, name, username }`. Servers that only hold links for an admin answer `503 no_email` (pairing code stays the way in).
+- Reactions feed: `reactedPosts()` (`src/lib/reactions/reacted.ts`) → `GET /api/app/reacted` and `GET /api/posts/reacted`; web plays it at `/play?reacted=1` from a new Reactions row on `/channels`.
+- Faces audit: every saver/reactor/watcher path already used `memberAvatar`; added a test covering Live reaction events, post reactions, savers, members and the feed. Uploaded/Gob pictures are members-only `/api/files/avatar/<hash>`: phones must send the key when loading them, or they fall back to the letter.
+- Docs: phone-app.md (API), PRIVACY.md + /privacy (code sign-in, the Reactions row), CLAUDE.md. Not pushed. Follow-ups: the apps' side (§6 of the contract); HEIC isn't decoded (phones send JPEG).
+
 ## 2026-10-21 — Reactions kept on every post, and replayed
 
 - Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.

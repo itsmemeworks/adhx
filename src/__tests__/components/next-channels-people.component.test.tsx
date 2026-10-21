@@ -14,6 +14,7 @@ vi.mock('@/components/auth', () => ({
 
 import { FromEveryoneRow, YourPeopleRow, whoSavedInto } from '@/components/next/channels/PeopleRows'
 import { FriendChannelPage } from '@/components/next/channels/FriendChannelPage'
+import { ReactionsRow } from '@/components/next/channels/ReactionsRow'
 import { placeTiles } from '@/components/next/search/ResultViews'
 import { SaverFaces, SaversButton } from '@/components/next/SaverFaces'
 import { sourceFromParams, queueUrl, backHref } from '@/components/next/theater/queue'
@@ -267,6 +268,81 @@ describe('theater sources', () => {
     expect(queueUrl(friend, () => '/s')).toBe('/api/channels/friend/ana?new=1')
     expect(backHref(friend)).toBe('/channels/friend/ana')
     expect(friend.search.scope).toBe('everyone')
+  })
+})
+
+describe('Reactions row', () => {
+  const reacted = (id: string, last: Record<string, unknown>, count = 1) => ({
+    ...post(id),
+    saved: false,
+    matched: [],
+    reactions: { count, last: { emoji: null, text: null, at: new Date().toISOString(), ...last } },
+  })
+
+  it('shows the newest reacted posts with the last face and emoji, and Play all', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        name: 'Reactions',
+        total: 12,
+        nextOffset: 8,
+        items: [
+          reacted(
+            '1',
+            {
+              emoji: '🔥',
+              saver: {
+                username: 'ana',
+                name: 'Ana',
+                avatarUrl: '/api/files/avatar/abc',
+                isYou: false,
+              },
+            },
+            3,
+          ),
+          reacted('2', {
+            text: 'so good',
+            saver: { username: 'me', name: null, avatarUrl: null, isYou: true },
+          }),
+        ],
+      }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<ReactionsRow />)
+    expect(await screen.findByRole('heading', { name: 'Reactions' })).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith('/api/posts/reacted?limit=8', expect.anything())
+    expect(screen.getByText('12 posts with reactions')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Play all 12 posts with reactions' })).toHaveAttribute(
+      'href',
+      '/play?reacted=1',
+    )
+    const first = screen.getByRole('link', { name: /Ana reacted 🔥, 3 reactions/ })
+    expect(first).toHaveAttribute('href', '/play?reacted=1&start=twitter%3A1')
+    expect(within(first).getByText('🔥')).toBeInTheDocument()
+    expect(within(first).getByText('+2')).toBeInTheDocument()
+    // Ana's own picture, not a letter.
+    expect(first.querySelector('img[src="/api/files/avatar/abc"]')).not.toBeNull()
+    expect(screen.getByRole('link', { name: /You reacted “so good”/ })).toBeInTheDocument()
+  })
+
+  it('stays out of the way when there are none', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, json: async () => ({ items: [], total: 0 }) })),
+    )
+    const { container } = render(<ReactionsRow />)
+    await new Promise((r) => setTimeout(r, 0))
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('plays as its own source, back to Channels', () => {
+    const source = sourceFromParams(new URLSearchParams('reacted=1&start=twitter:1'))
+    expect(source).toMatchObject({ reacted: true, recent: false, start: 'twitter:1' })
+    expect(source.search.scope).toBe('everyone')
+    expect(queueUrl(source, () => '/s')).toBe('/api/posts/reacted?limit=50')
+    expect(backHref(source)).toBe('/channels')
+    // A named channel wins.
+    expect(sourceFromParams(new URLSearchParams('group=cats&reacted=1')).reacted).toBeUndefined()
   })
 })
 

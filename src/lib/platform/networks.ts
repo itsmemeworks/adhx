@@ -62,6 +62,13 @@ const hostIs = (host: string, ...domains: string[]) =>
 
 const SAFE_ID = /^[A-Za-z0-9._~-]{1,120}$/
 
+/**
+ * Any post id ADHX stores, on any network: X/TikTok/Instagram ids plus the
+ * link networks' ids (`[A-Za-z0-9._~-]`, e.g. SoundCloud's `user~track`).
+ * Use it wherever a route takes a post id, so link posts aren't refused.
+ */
+export const POST_ID_PATTERN = /^[A-Za-z0-9._~-]{1,128}$/
+
 function post(platform: LinkNetwork, id: string, author?: string): NetworkPost | null {
   if (!SAFE_ID.test(id)) return null
   return { platform, id, author, previewPath: networkPreviewPath(platform, id, author) }
