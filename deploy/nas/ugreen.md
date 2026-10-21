@@ -6,12 +6,24 @@ same. Menu wording varies by UGOS version; UGREEN documents
 **Docker → Project → Create** in its
 [Compose project example](https://support.ugnas.com/detail/article/en-US/507).
 
+## At a glance
+
+1. Make a dedicated folder for the project, and an empty `data` folder in it.
+2. Make that `data` folder writable by UID 1001, the user ADHX runs as
+   ([how](#choose-storage-and-initialize-permissions)).
+3. Create a Docker project from the [generic Compose file](docker-compose.yml)
+   with your private values ([how](#create-and-start-the-project)).
+4. Point your HTTPS proxy at it and sign in as the first admin
+   ([how](#first-sign-in-and-verification)).
+
+Most of the waiting is the first model download (about 400 MB). Good time for tea.
+
 ## Prepare the project
 
 Use a published ADHX image for the NAS architecture and record its version or
 digest. No source checkout or local build is needed for a published image.
 Prepare the final HTTPS address, a stable random `SESSION_SECRET`, invited
-emails and a [sign-in delivery method](../../README.md#sign-in-links).
+emails and a [sign-in delivery method](../../docs/self-hosting.md#sign-in-links).
 
 In File Manager, create a dedicated folder under an existing Docker shared
 folder. An example host path is `/volume1/docker/adhx`; use the actual volume

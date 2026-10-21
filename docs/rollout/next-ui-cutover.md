@@ -1,5 +1,7 @@
 # Rollout: the find-by-meaning redesign
 
+**Status: shipped.** The redesign is the only UI; this records how the cutover was planned and checked.
+
 The redesign is the only signed-in UI: the previous look and its `next_ui`
 flag were removed, so there is **no runtime kill switch** any more. A deploy
 switches everyone at once; rolling back means redeploying the previous

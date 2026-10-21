@@ -19,10 +19,18 @@ Lines that work: "Deleted on X. Still here." · "Nobody remembers captions." · 
 
 ## Palette
 
+These are the mark's and the marketing assets' colours. The product UI uses
+its own tokens (`--nx-*` in `src/app/globals.css`: warm black #0f0e0c, accent
+#ffd23f, cream #f2ead9), shared by the web app, the phone apps and `site/`.
+
 - Backgrounds (only these): theater #08070a · warm dark #322b23 · paper #e4dac8
 - Accents: taxi #FFD426 · ink #141414 · cream #F4F1EA
 
 ## Type
+
+For the brand mark and assets below. The product UI sets headings in
+Instrument Serif and everything else in Hanken Grotesk (bundled in
+`src/app/fonts/` and the phone apps).
 
 - Indie Flower (Google Fonts) — wordmark, tags, brand voice
 - ui-monospace — urls, labels, metadata

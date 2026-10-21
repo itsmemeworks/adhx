@@ -4,6 +4,20 @@ Use this checklist with the [Mac setup guide](README.md) before importing a larg
 library. It describes checks an operator must perform; a successful build or
 installation does not establish that a particular deployment passed them.
 
+The short version, in order:
+
+1. [Match the server and worker](#match-the-server-and-worker) to one release
+   commit, and take a verified backup.
+2. [Check the operating conditions](#check-the-operating-conditions): token,
+   address, proxy, storage.
+3. [Prove the processing path](#prove-the-processing-path-with-a-small-batch)
+   with a handful of test saves, in the foreground first.
+4. [Tune for responsiveness](#tune-for-responsiveness) on the Mac that will
+   run the service.
+5. [Increase load](#migrate-existing-work-and-increase-load) gradually.
+
+Write down what you actually saw at each step. "It started" is not a result.
+
 ## Match the server and worker
 
 Choose a published release, then record its version, full source commit, image
@@ -57,7 +71,7 @@ actually ran or finished successfully.
 
 | Setting or dependency    | Check before starting                                                                                                                                                           |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Native runtime           | macOS on Apple Silicon with ARM64 Node.js 22 or newer; no Docker or Apple Container requirement.                                                                                |
+| Native runtime           | macOS on Apple Silicon with ARM64 Node.js 26 (or another version `package.json` allows); no Docker or Apple Container requirement.                                              |
 | Server role              | `PROCESSING_MODE=remote`, `SEMANTIC_SEARCH=on` and `KEEP_MEDIA=on` for the complete inference test.                                                                             |
 | Machine authentication   | Dedicated random `PROCESSING_WORKER_TOKEN` on the server equals `ADHX_WORKER_TOKEN` in the private Mac environment file.                                                        |
 | Server address           | `ADHX_SERVER_URL` is the reachable HTTPS origin; ordinary certificate validation succeeds over the intended LAN/VPN connection.                                                 |

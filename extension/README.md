@@ -1,25 +1,43 @@
 # Save to ADHX (desktop extension)
 
-Desktop analog of the iOS Share → ADHX shortcut. Toolbar click, right-click, or `⌘⇧A` / `Ctrl+Shift+A` on a supported social post from any of the app’s fourteen networks opens `/share?url=…` on ADHX. Signed-in autosave and the theater do the rest — this package does **not** talk to the API, store tokens, or inject scripts into the page.
+The desktop twin of the phone's share menu. Click the toolbar button,
+right-click a link, or press `⌘⇧A` / `Ctrl+Shift+A` on a post from any of
+ADHX's fourteen networks, and the tab opens `/share?url=…` on your ADHX. If
+you're signed in there, the post is saved and starts playing. That's it: this
+package doesn't talk to the API, store tokens or inject scripts into pages.
 
-When you invoke it, the extension transmits the selected or active source post URL to the
-configured ADHX origin by navigating the tab. Firefox therefore declares the required
-`browsingActivity` data collection category. There is no passive browsing collection.
+When you use it, the extension sends the selected or current post's URL to your
+configured ADHX by navigating the tab. Firefox therefore declares the
+`browsingActivity` data collection category. Nothing is collected passively.
 
-Not on the Chrome Web Store yet. Load it unpacked. The bookmarklet in the main app stays the no-install fallback.
+It isn't on the Chrome Web Store or Firefox Add-ons yet, so you load it
+unpacked. No install at all? The bookmarklet in the main app still works.
 
 | Permission     | Why                                              |
 | -------------- | ------------------------------------------------ |
-| `activeTab`    | Read the current tab URL when you click / press  |
+| `activeTab`    | Read the current tab URL when you click or press |
 | `contextMenus` | Right-click → **Save to ADHX** on a page or link |
 
 No `tabs`, no `<all_urls>`, no content scripts.
+
+## Quick start
+
+From the repository root, with pnpm 10 and a Chromium browser:
+
+1. `cp extension/.env.example extension/.env` and set
+   `EXTENSION_PUBLIC_APP_ORIGIN` to your ADHX (for example
+   `https://adhx.example.com`, or `http://localhost:3001` for `pnpm dev`).
+2. `pnpm --dir extension install && pnpm --dir extension build`
+3. Open `chrome://extensions`, turn on **Developer mode**, click **Load
+   unpacked** and pick `extension/dist/chromium`.
+4. Sign in on your ADHX in that browser, open a post on X (or TikTok, or…)
+   and click **Save to ADHX**.
 
 ---
 
 ## Prerequisites
 
-- [pnpm](https://pnpm.io) 9 (same as the app — see the repo root `packageManager`)
+- [pnpm](https://pnpm.io) 10 (the version in this package's and the repository's `packageManager`)
 - Chromium-based browser (Chrome, Edge, Brave, Arc) or Firefox 140+
 - For **local** saves: ADHX running at [http://localhost:3001](http://localhost:3001) (`pnpm dev` from the repo root; do not use port 3000)
 
@@ -106,9 +124,9 @@ Supported URLs (same set `/share` already routes):
 - TikTok videos and short links (`vm.` / `vt.` / `tiktok.com/t/`)
 - YouTube, Facebook, Reddit, LinkedIn, Vimeo, SoundCloud, Pinterest, Twitch, Threads, Imgur and Bluesky (the server validates individual posts)
 
-**Signed in** on that ADHX origin: a new open of the preview autosaves the lead (Save pill → Saved → Tag). Refresh / back / in-app hops do not.
+**Signed in** on that ADHX origin: a fresh open from the extension saves the post and plays it in the theater. Refreshing, going back or moving around inside ADHX doesn't save again.
 
-**Signed out**: the preview still plays; Save opens the sign-in modal.
+**Signed out**: the post still plays; pressing Save sends you to sign in (`/start`) and saves it when you come back.
 
 **Unsupported page** (e.g. `x.com/home`, a random site): the toolbar click stays put and flashes a short **×** badge. Right-click a real post link on that page still works.
 

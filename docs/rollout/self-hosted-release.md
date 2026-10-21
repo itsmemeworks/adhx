@@ -1,5 +1,13 @@
 # Self-hosted release readiness
 
+**Status: record of the 2.0 readiness review (19 October 2026).** Since then,
+each release attaches a signed Android APK when the signing secrets exist
+(`android-release.yml`), uploads the iPhone app to TestFlight when the Apple
+secrets exist (`ios-testflight.yml`), and the product site at adhx.com has
+been published separately. CI and local development moved to Node 26 to match
+the image. The physical-device checks below are still open; track them in
+[phone acceptance checks](phone-device-acceptance.md).
+
 Updated 19 October 2026. Merge validation, a private server trial and public
 product distribution have different requirements. Nothing in this record means
 a service has been installed or the public website has been replaced.

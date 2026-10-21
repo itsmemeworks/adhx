@@ -6,6 +6,30 @@ changes. Ordinary main pushes do not publish images. Documentation-only commits
 do not initiate a release. Publishing an image does not update an installed
 service or publish the website.
 
+```mermaid
+flowchart LR
+  PR["Feature or fix PR"] -->|"CI: tests, builds, AMD64 + ARM64 image smoke"| Main["main"]
+  Main -->|"Release Please"| RPR["chore: release main PR"]
+  RPR -->|"owner merges"| Rel["Tag vX.Y.Z + GitHub release"]
+  Rel --> Image["image-publish.yml: ghcr.io/itsmemeworks/adhx"]
+  Rel --> APK["android-release.yml: signed adhx-X.Y.Z.apk on the release"]
+  Rel --> TF["ios-testflight.yml: upload to TestFlight"]
+  Image -.->|"an operator pulls and recreates"| NAS["Your installed ADHX"]
+```
+
+In words: merged PRs pile up on `main` until the owner merges the release PR;
+that one merge tags the release and fans out to the container image, the
+Android APK and the TestFlight upload. Nothing updates a running server by
+itself.
+
+**Handy commands** (each takes an existing release version):
+
+```sh
+gh workflow run image-publish.yml -f version=2.4.0      # republish a release's image
+gh workflow run android-release.yml -f version=2.4.0    # (re)attach the signed APK
+gh workflow run ios-testflight.yml -f version=2.4.0     # upload that release to TestFlight
+```
+
 | Stage               | Work                                                                                                                                                                                                                                                                                                                                                                              |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Application PR      | Tests, lint/types/format, production audit, extension/site builds, browser tests and native AMD64/ARM64 runner-image smoke checks. The required `build` check depends on both native image builds; it does not compile the app again.                                                                                                                                             |

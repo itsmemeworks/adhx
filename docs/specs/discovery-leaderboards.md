@@ -1,6 +1,6 @@
 # Discovery: collection view stats + leaderboards (and rank-mode plumbing)
 
-**Status: shipped; bounded all-time aggregation added 2026-08-26.** Public tagged collections become discoverable
+**Status: historical.** Shipped, with bounded all-time aggregation added 2026-08-26. The `/leaderboard` and `/collections` pages were retired on 2026-10-17 and redirect to `/channels`; `src/lib/discovery/rank.ts` and `/api/collections/trending` still power Top channels there. Public tagged collections become discoverable
 and competitive: we track views on collections, rank them on leaderboards by day / week /
 month / all-time, and give curators a reason to make collections public and share them. This
 also lays the plumbing for future Reddit-style theater sorts (hot / rising / new) — the ranking
