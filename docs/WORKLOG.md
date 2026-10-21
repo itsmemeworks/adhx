@@ -6,6 +6,15 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Contributor, agent and architecture docs rewritten for the community
+
+- Owner ask: a full docs review, usable by open-source contributors and agents, accessible, lightly funny.
+- `CLAUDE.md` went from ~1,400 lines to ~530: rules first (privacy, access, X tokens, security, data, models, rendering, product words), a "where things live" map, short subsystem notes, commands, env, testing, CI. Retired-product detail (TheaterShell, `/trending`, leaderboards, library grid) is condensed into a History section; the long form stays in git history and older worklog entries.
+- `AGENTS.md` is a crisp onboarding (read order, setup, verify, non-negotiables, what not to do) consistent with `CLAUDE.md`; the merge rule now says "don't merge on your own initiative: the owner merges or asks you to arm auto-merge; never the Release Please PR".
+- `ARCHITECTURE.md`: a glossary, an "In words:" summary under all nine Mermaid diagrams, phone email-code sign-in added to the pairing sequence, the Android APK and TestFlight release jobs, and a fixed contradiction (Just for me-only kept files are owner-only, per `keep/file-access.ts`).
+- `CONTRIBUTING.md` (prerequisites incl. FFmpeg, five-step setup, tests/e2e/parity, commitlint rules, hooks), `SECURITY.md` (current scope and hosting advice), `CODE_OF_CONDUCT.md`, the PR template and issue forms (no emoji names, existing labels only, a "where" dropdown) refreshed.
+- Not done here: README, docs index, images, specs and deploy guides (handled in parallel PRs).
+
 ## 2026-10-21 — Upload the iPhone app to TestFlight on release
 
 - Add `.github/workflows/ios-testflight.yml` (workflow_dispatch + workflow_call, input `version`), called from Release Please next to the Android APK.
