@@ -180,7 +180,7 @@ adhx`, then open it and press **Sign in** to become the first admin. Later invit
 on the admin page for you to hand over. These links last 60 minutes; recipients
 open them and press **Sign in** in their normal browser. The one-minute resend
 countdown does not expire a link. To deliver links by email, configure
-SMTP or Resend instead; see the main README.
+SMTP or Resend instead; see [Sign-in links](../../docs/self-hosting.md#sign-in-links).
 
 Check the final HTTPS URL and database health, owner sign-in and an invited
 account, a saved video and seek operation, a picture album and search by
@@ -200,7 +200,7 @@ Start with the local features, then add the services you want:
 | Feature                                            | Additional credentials                           | Setup                                                                                                                                                                                 |
 | -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Kept media and local text/picture/video search     | None beyond the instance's sign-in configuration | Keep `/data` persistent and permit the initial model download.                                                                                                                        |
-| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../README.md#the-search-model).                                                                     |
+| Jev refinement and automatic channel/moment naming | `TYPESAFE_API_KEY`                               | Use a dedicated key for this instance. See the [payload and fallback behavior](../../docs/self-hosting.md#the-search-model).                                                          |
 | Experimental image-aware generated channels        | `TYPESAFE_CHANNEL_IMAGES=on` plus the Jev key    | Separate opt-in uploads selected public-post thumbnails for naming, borderline membership, repeat spacing and covers. See [limits and privacy](../../docs/channel-image-curation.md). |
 | X bookmark import                                  | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET`     | Create an OAuth 2.0 confidential Web App, register the exact callback below, then connect the intended X account in ADHX Settings. X API credits are separate.                        |
 
@@ -402,8 +402,8 @@ working VPN/proxy management path; an ADHX backup does not require stopping a
 shared VPN, gateway or the NAS. If an infrastructure update would interrupt
 your only remote connection, arrange independent access and recovery first.
 
-Networks change their extractors often. See the main README for updating the
-image's yt-dlp package; runtime-only package changes disappear when the
+Networks change their extractors often. See [Keeping downloads working](../../docs/self-hosting.md#keeping-downloads-working)
+for updating the image's yt-dlp package; runtime-only package changes disappear when the
 container is recreated.
 
 ## Troubleshooting
@@ -417,7 +417,7 @@ container is recreated.
 | Everyone got signed out after an update                   | `SESSION_SECRET` changed. Keep it stable across recreations.                                                                                                                  |
 | Videos play but won't seek                                | The proxy drops `Range` requests. Pass them through unchanged.                                                                                                                |
 | Right now never updates live                              | The proxy buffers event streams. Turn buffering off for `/api/moments/stream` and allow long reads.                                                                           |
-| A network stopped downloading                             | Its extractor changed. Update yt-dlp (see the main README) or wait for the next release.                                                                                      |
+| A network stopped downloading                             | Its extractor changed. Update yt-dlp ([how](../../docs/self-hosting.md#keeping-downloads-working)) or wait for the next release.                                              |
 | Search only matches exact words                           | The model is still downloading (about 400 MB, once), `SEMANTIC_SEARCH=off` is set, or the worker keeps getting killed. Check the logs and the memory limit.                   |
 | Mac helper uploads fail with 413 or time out              | The proxy rejects large bodies. See [proxy upload hooks](../mac/README.md#proxy-upload-hooks).                                                                                |
 | `/api/health` is healthy but nothing gets processed       | Health checks the web app and database only. Look at **What your ADHX is doing** (`/doing`), `/api/understanding/status` and the container logs.                              |

@@ -23,7 +23,7 @@ Most of the waiting is the first model download (about 400 MB). Good time for te
 Use a published ADHX image for the NAS architecture and record its version or
 digest. No source checkout or local build is needed for a published image.
 Prepare the final HTTPS address, a stable random `SESSION_SECRET`, invited
-emails and a [sign-in delivery method](../../README.md#sign-in-links).
+emails and a [sign-in delivery method](../../docs/self-hosting.md#sign-in-links).
 
 In File Manager, create a dedicated folder under an existing Docker shared
 folder. An example host path is `/volume1/docker/adhx`; use the actual volume
