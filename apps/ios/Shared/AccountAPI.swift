@@ -275,18 +275,22 @@ struct ReactedPost: Decodable, Hashable, Identifiable {
 struct ReactedPage: Decodable {
     let items: [ReactedPost]
     let nextOffset: Int?
+    /// Every post with reactions (newer servers); nil on older ones.
+    var total: Int? = nil
 
-    private enum Keys: String, CodingKey { case items, nextOffset }
+    private enum Keys: String, CodingKey { case items, nextOffset, total }
 
-    init(items: [ReactedPost], nextOffset: Int?) {
+    init(items: [ReactedPost], nextOffset: Int?, total: Int? = nil) {
         self.items = items
         self.nextOffset = nextOffset
+        self.total = total
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: Keys.self)
         items = (try? c.decodeIfPresent(Lossy<ReactedPost>.self, forKey: .items))?.items ?? []
         nextOffset = c.softInt(.nextOffset)
+        total = c.softInt(.total)
     }
 
     /// "12 posts with reactions", "50+ posts with reactions".

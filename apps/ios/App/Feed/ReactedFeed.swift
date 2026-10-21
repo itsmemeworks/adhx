@@ -7,6 +7,8 @@ import SwiftUI
 final class ReactedModel: ObservableObject {
     @Published private(set) var items: [ReactedPost] = []
     @Published private(set) var nextOffset: Int?
+    /// The server's count of every post with reactions, when it says.
+    @Published private(set) var total: Int?
     @Published private(set) var loadedOnce = false
     /// This ADHX has no reactions feed yet: the row just doesn't show.
     @Published private(set) var unsupported = false
@@ -22,6 +24,7 @@ final class ReactedModel: ObservableObject {
             let page = try await client.reacted(offset: 0, limit: Self.pageSize)
             items = Self.unique(page.items)
             nextOffset = page.nextOffset
+            total = page.total
             unsupported = false
         } catch let error as APIError where error.isMissing {
             unsupported = true
@@ -46,7 +49,16 @@ final class ReactedModel: ObservableObject {
     }
 
     /// "12 posts with reactions".
-    var countLine: String { ReactedPage.countLine(items.count, more: nextOffset != nil) }
+    var countLine: String {
+        if let total { return ReactedPage.countLine(total, more: false) }
+        return ReactedPage.countLine(items.count, more: nextOffset != nil)
+    }
+
+    /// "Reactions · 1 of 12" (board 11.4): where you are in the queue.
+    func position(_ index: Int) -> String {
+        let of = total.map(String.init) ?? (nextOffset != nil ? "\(items.count)+" : "\(items.count)")
+        return "Reactions · \(index + 1) of \(of)"
+    }
 
     private static func unique(_ list: [ReactedPost]) -> [ReactedPost] {
         var seen = Set<String>()
@@ -187,6 +199,7 @@ struct ReactedPlayer: View {
 
     var body: some View {
         PlayerScreen(posts: model.posts, server: server, start: start,
-                     onShow: { index in model.loadMoreIfNeeded(at: index) }, replayReactions: true)
+                     onShow: { index in model.loadMoreIfNeeded(at: index) }, replayReactions: true,
+                     position: { model.position($0) })
     }
 }
