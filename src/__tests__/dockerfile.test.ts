@@ -21,8 +21,10 @@ describe('production container dependencies', () => {
     const [, minor, patch] = packageJson.packageManager!.match(/^pnpm@10\.(\d+)\.(\d+)$/)!
     expect(Number(minor) > 34 || (Number(minor) === 34 && Number(patch) >= 5)).toBe(true)
     expect(dockerfile).toContain('ENV PNPM_HOME="/pnpm"')
-    expect(dockerfile).toContain('corepack enable')
-    expect(dockerfile).toContain(`corepack prepare ${packageJson.packageManager} --activate`)
+    expect(dockerfile).toContain(
+      `npm install --global --ignore-scripts ${packageJson.packageManager}`,
+    )
+    expect(dockerfile).not.toContain('corepack enable')
     expect(dockerfile).toContain('COPY package.json pnpm-lock.yaml .npmrc ./')
     expect(readFileSync(join(root, '.npmrc'), 'utf8')).toContain('strict-dep-builds=true')
     expect(dockerfile).toContain('pnpm install --frozen-lockfile')
@@ -37,15 +39,17 @@ describe('production container dependencies', () => {
     expect(dockerfile).toContain('./node_modules/.bin/tsx src/lib/db/migrate.ts')
   })
 
-  it('does not install dependencies with npm or install a global tsx', () => {
-    expect(dockerfile).not.toMatch(/\bnpm\s+(?:ci|install)\b/)
+  it('does not install application dependencies with npm or install a global tsx', () => {
+    expect(dockerfile).not.toMatch(/\bnpm\s+(?:ci|install)\b(?!\s+--global\b)/)
     expect(dockerfile).not.toMatch(/\b(?:npm|pnpm)\b[^\n]*(?:-g|--global)[^\n]*\btsx\b/)
   })
 
   it('starts the runner from a fresh Node image and excludes package-manager toolchains', () => {
     const runner = dockerfile.match(/^FROM (\S+) AS runner\n([\s\S]*)$/m)
     expect(runner).not.toBeNull()
-    expect(runner![1]).toMatch(/^node:24-/)
+    expect(runner![1]).toMatch(/^node:26-/)
+    // Native SQLite dependencies must be built for the same runtime as the server.
+    expect(dockerfile.match(/^FROM (\S+) AS base$/m)?.[1]).toBe(runner![1])
     expect(runner![2]).not.toMatch(/(?:corepack prepare|pnpm install|COPY --from=base)/)
     expect(runner![2]).toContain('/usr/local/lib/node_modules/npm')
     expect(runner![2]).toContain('/usr/local/lib/node_modules/corepack')
