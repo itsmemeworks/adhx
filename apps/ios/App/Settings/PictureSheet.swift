@@ -295,6 +295,14 @@ private struct PictureSheet: View {
 
 /// Move and pinch your photo inside the circle, then Use.
 struct AvatarCropScreen: View {
+    /// The key window's top safe area (status bar, Dynamic Island).
+    @MainActor static var windowTopInset: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?.safeAreaInsets.top ?? 59
+    }
+
     let image: UIImage
     @ObservedObject var model: PictureModel
     let done: () -> Void
@@ -309,8 +317,9 @@ struct AvatarCropScreen: View {
             let side = max(120, min(geo.size.width - 40, geo.size.height - 240, 420))
             let centre = CGPoint(x: geo.size.width / 2, y: geo.size.height * 0.44)
             let shown = AvatarCrop.displaySize(imageSize: image.size, side: side, zoom: zoom)
+            // Inside the safe area (the black behind it is the screen's
+            // background), so the title clears the Dynamic Island.
             ZStack {
-                Color.black.ignoresSafeArea()
                 Image(uiImage: image)
                     .resizable()
                     .frame(width: shown.width, height: shown.height)
@@ -344,7 +353,10 @@ struct AvatarCropScreen: View {
                         .font(Theme.sans(14))
                         .foregroundStyle(Theme.muted)
                 }
-                .padding(.top, 12)
+                // Clear of the status bar and Dynamic Island however this
+                // screen is presented: the window's own top inset, less where
+                // this view already starts.
+                .padding(.top, max(12, Self.windowTopInset - geo.frame(in: .global).minY + 8))
                 .frame(maxHeight: .infinity, alignment: .top)
                 .allowsHitTesting(false)
 

@@ -58,6 +58,10 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 - `repairDarkPosters()` runs once per server in the background when keeping starts (`keep_settings.poster_repair_v1`): every kept poster under 30/255 whose post has a kept `video-1` is remade, and replaced only when the new one is clearly brighter.
 - Kept posters are now `max-age=3600` with an ETag (size + mtime → 304) instead of 7 days, so a remade poster reaches phones within the hour. Other kept files are unchanged.
 
+## 2026-10-21 — iPhone crop title under the Dynamic Island
+
+- Tested on the owner's iPhone (iPhone Mirroring): the picture crop screen's title "Move and pinch" sat under the Dynamic Island (only "M … h" visible). The full-screen cover lays the crop out from the very top, and hiding the status bar drops the top safe area there. The title is now padded by the key window's own top inset, less where the view starts, so it clears the island however it's presented. Pan and pinch, the round mask and Cancel checked on the device.
+
 ## 2026-10-21 — Review the complete dependency upgrade set
 
 - Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.
