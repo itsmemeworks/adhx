@@ -305,6 +305,7 @@ private fun ConnectedApp(
                 } else {
                     PlayerScreen(
                         posts = reacted.items,
+                        replayReactions = true,
                         server = current.server,
                         startIndex = route.start,
                         onPage = feed::onReactedPage,

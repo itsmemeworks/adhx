@@ -28,7 +28,7 @@ export type StoredReaction = {
   saver: { username: string; name: string | null; avatarUrl: string | null; isYou: boolean }
 }
 
-type Memory = { fetched: Map<string, StoredReaction[]>; replayed: Set<string> }
+type Memory = { scope?: string; fetched: Map<string, StoredReaction[]>; replayed: Set<string> }
 
 const g = globalThis as unknown as { __adhxReactionReplay?: Memory }
 
@@ -61,6 +61,8 @@ export function replayPlan(
 
 export function useReactionReplay({
   enabled,
+  fresh = false,
+  scope = 'session',
   platform,
   id,
   isShown,
@@ -69,6 +71,10 @@ export function useReactionReplay({
 }: {
   /** A signed-in member, with the post on screen. */
   enabled: boolean
+  /** Reactions feed: always ask again, including after an empty earlier answer. */
+  fresh?: boolean
+  /** Signed-in account identity; never a credential. */
+  scope?: string
   platform: string | null
   id: string | null
   /** Already floated this visit (a Live arrival, or yours). */
@@ -81,10 +87,15 @@ export function useReactionReplay({
   callbacks.current = { isShown, onFloat, onCancel }
 
   useEffect(() => {
+    const mem = memory()
+    if (mem.scope !== scope) {
+      mem.scope = scope
+      mem.fetched.clear()
+      mem.replayed.clear()
+    }
     if (!enabled || !platform || !id) return
     const key = `${platform}:${id}`
-    const mem = memory()
-    if (mem.replayed.has(key)) return
+    if (!fresh && mem.replayed.has(key)) return
     const settledAt = Date.now()
     const controller = new AbortController()
     const timers: ReturnType<typeof setTimeout>[] = []
@@ -112,7 +123,7 @@ export function useReactionReplay({
       })
     }
 
-    const cached = mem.fetched.get(key)
+    const cached = fresh ? undefined : mem.fetched.get(key)
     if (cached) {
       play(cached)
     } else {
@@ -127,6 +138,11 @@ export function useReactionReplay({
             reactions?: StoredReaction[]
           } | null
           const list = Array.isArray(data?.reactions) ? data.reactions : []
+          if (controller.signal.aborted || mem.scope !== scope) return
+          if (mem.fetched.size >= 500 && !mem.fetched.has(key)) {
+            mem.fetched.clear()
+            mem.replayed.clear()
+          }
           mem.fetched.set(key, list)
           play(list)
         })
@@ -138,5 +154,5 @@ export function useReactionReplay({
       for (const t of timers) clearTimeout(t)
       if (floated.length) callbacks.current.onCancel([...floated])
     }
-  }, [enabled, platform, id])
+  }, [enabled, platform, id, fresh, scope])
 }

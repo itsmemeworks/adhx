@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as schema from '@/lib/db/schema'
-import { createTestDb, type TestDbInstance } from '../api/setup'
+import { createTestDb, createTestBookmark, USER_A, type TestDbInstance } from '../api/setup'
 
 let testInstance: TestDbInstance
 vi.mock('@/lib/db', () => ({
@@ -95,6 +95,10 @@ describe('repairDarkPosters', () => {
       path.join(dir, 'twitter/fine.jpg'),
     ])
     fs.copyFileSync(path.join(dir, 'twitter/dark.mp4'), path.join(dir, 'twitter/fine.mp4'))
+    testInstance.db
+      .insert(schema.bookmarks)
+      .values(['dark', 'fine'].map((id) => createTestBookmark(USER_A, id)))
+      .run()
     keep('dark', 'video-1', 'twitter/dark.mp4', 6000)
     keep('dark', 'poster', 'twitter/dark.jpg', null)
     keep('fine', 'video-1', 'twitter/fine.mp4', 6000)
@@ -103,13 +107,14 @@ describe('repairDarkPosters', () => {
 
     expect(await brightness(path.join(dir, 'twitter/dark.jpg'))).toBeLessThan(DARK_POSTER)
     expect(await repairDarkPosters({ pauseMs: 0 })).toBe(1)
-    expect(await brightness(path.join(dir, 'twitter/dark.jpg'))).toBeGreaterThan(DARK_POSTER)
     expect(fs.readFileSync(path.join(dir, 'twitter/fine.jpg')).equals(fineBefore)).toBe(true)
     const row = testInstance.db
       .select()
       .from(schema.keptFiles)
       .all()
       .find((r) => r.postId === 'dark' && r.slot === 'poster')
+    expect(await brightness(path.join(dir, row!.path))).toBeGreaterThan(DARK_POSTER)
+    expect(await brightness(path.join(dir, 'twitter/dark.jpg'))).toBeLessThan(DARK_POSTER)
     expect(row?.createdAt).not.toBe('2026-10-01T00:00:00.000Z')
 
     // Once per server.

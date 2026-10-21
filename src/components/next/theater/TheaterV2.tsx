@@ -188,6 +188,8 @@ type QueueResponse = SearchResponse & {
   channel?: { tag: string }
   /** A moment's detail (Tune in): its items carry when they were saved. */
   moment?: { title: string; hue: string; watching: number }
+  /** Reactions feed offset; distinct from the blended feed's opaque cursor. */
+  nextOffset?: number | null
   /** The blended feed (`/api/feed/blend`): paging and the end of New. */
   nextCursor?: string | null
   caughtUp?: boolean
@@ -441,6 +443,8 @@ export function TheaterV2({
   const waitingRef = useRef(false)
   waitingRef.current = waiting
   // The blended feed (`feed=`): the next page, how many in all, the end of New.
+  const pageEpoch = useRef(0)
+  const reactedOffset = useRef<number | null>(null)
   const feedCursor = useRef<string | null>(null)
   const feedLoading = useRef<Promise<boolean> | null>(null)
   const [feedTotal, setFeedTotal] = useState(0)
@@ -498,6 +502,11 @@ export function TheaterV2({
 
   // ——— Load the queue from the search this session came from ———
   useEffect(() => {
+    const epoch = ++pageEpoch.current
+    setPanel(null)
+    feedCursor.current = null
+    reactedOffset.current = null
+    feedLoading.current = null
     if (source.shared) {
       // The page resolved the post already; posts like it follow (Stick to this vibe).
       if (lead) {
@@ -509,11 +518,10 @@ export function TheaterV2({
       return
     }
     const controller = new AbortController()
+    setFeedTotal(0)
     setLoad({ status: 'loading' })
     setCaughtUp(false)
     watchingLive.current = false
-    feedCursor.current = null
-    feedLoading.current = null
     const types = typesKey ? (typesKey.split(',') as FeedKind[]) : null
     fetchQueue(
       source.feed
@@ -521,7 +529,30 @@ export function TheaterV2({
         : queueUrl(source, () => searchUrl({ ...source.search, view: 'bento' }, { refine: true })),
       controller.signal,
     )
-      .then((response) => {
+      .then(async (response) => {
+        if (controller.signal.aborted || epoch !== pageEpoch.current) return
+        // A card can open a post beyond the first page. Keep the API's order.
+        if (source.reacted && source.start) {
+          while (
+            !response.items.some((item) => resultKey(item) === source.start) &&
+            typeof response.nextOffset === 'number'
+          ) {
+            const offset = response.nextOffset
+            const more = await fetchQueue(
+              `/api/posts/reacted?limit=50&offset=${offset}`,
+              controller.signal,
+            )
+            if (controller.signal.aborted || epoch !== pageEpoch.current) return
+            response = {
+              ...more,
+              items: appendUnique(response.items, more.items),
+              nextOffset:
+                typeof more.nextOffset === 'number' && more.nextOffset > offset
+                  ? more.nextOffset
+                  : null,
+            }
+          }
+        }
         // The recent queue is the feed: plain posts, all the viewer's own.
         const results = source.feed
           ? feedResults(response.items as unknown as FeedItem[])
@@ -548,6 +579,10 @@ export function TheaterV2({
               : isChannelSource(source)
                 ? response.items
                 : orderByStrength(response.items)
+        if (source.reacted) {
+          reactedOffset.current = response.nextOffset ?? null
+          setFeedTotal(response.total ?? results.length)
+        }
         if (source.feed) {
           feedCursor.current = response.nextCursor ?? null
           feedTypesUsed.current = response.types ?? types
@@ -612,7 +647,10 @@ export function TheaterV2({
           busy: message === 'queue 429',
         })
       })
-    return () => controller.abort()
+    return () => {
+      controller.abort()
+      pageEpoch.current++
+    }
   }, [source, lead, typesKey])
 
   const current = items[index] ?? null
@@ -657,6 +695,8 @@ export function TheaterV2({
   // What people left on this post floats up once it settles (members only, once per visit).
   useReactionReplay({
     enabled: member && !caughtUp && !!current,
+    fresh: !!source.reacted,
+    scope: me?.user?.id ?? 'signed-out',
     platform: current ? (current.post.platform ?? 'twitter') : null,
     id: current?.post.id ?? null,
     isShown: (id) => shownReactions.current.has(id),
@@ -776,37 +816,51 @@ export function TheaterV2({
     setItems(list)
   }, [])
 
-  /** The blended feed's next page, appended. True when it brought anything new. */
+  /** Paginated source queues share a single in-flight request per visit. */
   const loadMoreFeed = useCallback((): Promise<boolean> => {
     const cursor = feedCursor.current
-    if (!source.feed || !cursor) return Promise.resolve(false)
+    const offset = reactedOffset.current
+    if (source.reacted ? offset === null : !source.feed || !cursor) return Promise.resolve(false)
     if (feedLoading.current) return feedLoading.current
-    const task = fetchQueue(feedUrl(source.feed, cursor, 20, feedTypesUsed.current))
+    const epoch = pageEpoch.current
+    const url = source.reacted
+      ? `/api/posts/reacted?limit=50&offset=${offset}`
+      : feedUrl(source.feed!, cursor, 20, feedTypesUsed.current)
+    const task = fetchQueue(url)
       .then((response) => {
-        if (feedCursor.current !== cursor) return false // reloaded meanwhile
-        feedCursor.current = response.nextCursor ?? null
+        if (epoch !== pageEpoch.current) return false
+        if (source.reacted) {
+          reactedOffset.current =
+            typeof response.nextOffset === 'number' && response.nextOffset > offset!
+              ? response.nextOffset
+              : null
+        } else feedCursor.current = response.nextCursor ?? null
         if (typeof response.total === 'number') setFeedTotal(response.total)
         const before = itemsRef.current.length
         const list = appendUnique(
           itemsRef.current,
-          feedResults(response.items as unknown as FeedItem[]),
+          source.reacted ? response.items : feedResults(response.items as unknown as FeedItem[]),
         )
         if (list.length === before) return false
         replaceItems(list)
         return true
       })
-      .catch(() => false)
+      .catch(() => false) // Retain the cursor so Next can retry after a connection failure.
       .finally(() => {
-        feedLoading.current = null
+        if (feedLoading.current === task) feedLoading.current = null
       })
     feedLoading.current = task
     return task
-  }, [source.feed, replaceItems])
+  }, [source.feed, source.reacted, replaceItems])
 
-  // A few posts from the end of what's loaded, fetch the next page.
   useEffect(() => {
-    if (source.feed && feedCursor.current && index >= items.length - 4) void loadMoreFeed()
-  }, [source.feed, index, items.length, loadMoreFeed])
+    if (
+      load.status === 'ready' &&
+      ((source.feed && feedCursor.current) || (source.reacted && reactedOffset.current !== null)) &&
+      index >= items.length - 4
+    )
+      void loadMoreFeed()
+  }, [source, load.status, index, items.length, loadMoreFeed])
 
   // A video turned out to be deleted upstream: drop it and play what's next.
   useEffect(() => {
@@ -1010,13 +1064,29 @@ export function TheaterV2({
     [source, videosOnly, replaceItems],
   )
 
+  const blockingPanel = useRef(false)
+  blockingPanel.current = panel === 'share' || panel === 'original'
   const next = useCallback(async () => {
-    if (source.feed && nextIndex(items, index, { repeat: 'off', videosOnly }) === null) {
+    if (blockingPanel.current) return
+    const epoch = pageEpoch.current
+    if (
+      (source.feed || source.reacted) &&
+      nextIndex(items, index, { repeat: 'off', videosOnly }) === null
+    ) {
       // The feed pages in: fetch more before wrapping or ending.
-      for (let tries = 0; tries < 3 && feedCursor.current; tries++) {
+      for (
+        let tries = 0;
+        tries < 3 && (feedCursor.current || reactedOffset.current !== null);
+        tries++
+      ) {
         await loadMoreFeed()
+        if (epoch !== pageEpoch.current || blockingPanel.current) return
         const after = nextIndex(itemsRef.current, index, { repeat: 'off', videosOnly })
         if (after !== null) return goTo(after)
+      }
+      if (feedCursor.current || reactedOffset.current !== null) {
+        flash('More posts are still loading. Try Next again in a moment.')
+        return
       }
       if (source.feed === 'new') {
         // Everything your people saved has been on stage.
@@ -1037,6 +1107,7 @@ export function TheaterV2({
       return
     }
     const extended = stick && current ? await extendWithVibe(current) : null
+    if (epoch !== pageEpoch.current || blockingPanel.current) return
     const after = extended ? nextIndex(extended, index, { repeat: 'off', videosOnly }) : null
     if (after !== null) {
       // Say so: otherwise "4 of 4" quietly becomes "5 of 24".
@@ -1062,6 +1133,7 @@ export function TheaterV2({
     source.moment,
     source.shared,
     source.feed,
+    source.reacted,
     wander,
     addWander,
     loadMoreFeed,
@@ -1192,19 +1264,30 @@ export function TheaterV2({
     return () => window.clearTimeout(t)
   }, [source.moment])
 
-  // While the share sheet is up the video waits, so it can't end mid-send.
+  // Reading or sharing holds the same video. Resume only our own pause,
+  // and only if the same post in the same queue is still on stage.
   const pausedForShare = useRef(false)
+  const modalPause = useRef<{ key: string; source: PlaySource; resume: boolean } | null>(null)
   useEffect(() => {
-    if (panel === 'share') {
-      if (isVideo && playingRef.current) {
-        stage.pause()
-        pausedForShare.current = true
+    const blocked = panel === 'share' || panel === 'original'
+    if (blocked) {
+      if (
+        !modalPause.current ||
+        modalPause.current.key !== currentKey ||
+        modalPause.current.source !== source
+      ) {
+        modalPause.current = { key: currentKey, source, resume: isVideo && playingRef.current }
+        if (modalPause.current.resume) stage.pause()
       }
-    } else if (pausedForShare.current) {
+      pausedForShare.current = modalPause.current.resume
+    } else {
+      const held = modalPause.current
+      modalPause.current = null
       pausedForShare.current = false
-      stage.resume()
+      if (held?.resume && held.key === currentKey && held.source === source && isVideo)
+        stage.resume()
     }
-  }, [panel, isVideo])
+  }, [panel, isVideo, currentKey, source])
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
@@ -2251,7 +2334,9 @@ export function TheaterV2({
                       item={theaterItem}
                       muted={muted}
                       onRequestUnmute={() => setMuted(false)}
-                      onEnded={() => void next()}
+                      onEnded={() => {
+                        if (!blockingPanel.current) void next()
+                      }}
                       photoCaption={false}
                       repeat={repeat === 'one'}
                       covered={overlay || caughtUp || gettingReady || (panel !== null && !isVideo)}

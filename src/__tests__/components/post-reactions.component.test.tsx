@@ -325,3 +325,89 @@ describe('reactions in the theater', () => {
     }
   })
 })
+
+describe('reaction refresh boundaries', () => {
+  it('refreshes an empty ordinary-player answer in the Reactions feed', async () => {
+    vi.useFakeTimers()
+    let list: StoredReaction[] = []
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ reactions: list })))
+    const floated: string[] = []
+    const base = {
+      enabled: true,
+      platform: 'twitter',
+      id: '1',
+      scope: 'account-a',
+      isShown: () => false,
+      onFloat: (f: { id: string }) => floated.push(f.id),
+      onCancel: () => {},
+    }
+    const first = renderHook(() => useReactionReplay(base))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPLAY_START_MS)
+    })
+    first.unmount()
+    list = [stored(9)]
+    renderHook(() => useReactionReplay({ ...base, fresh: true }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPLAY_START_MS)
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(floated).toEqual(['r9'])
+  })
+  it('never falls back to old reactions on a failed fresh request', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ reactions: [stored(1)] })))
+    const floated: string[] = []
+    const base = {
+      enabled: true,
+      platform: 'twitter',
+      id: '1',
+      isShown: () => false,
+      onFloat: (f: { id: string }) => floated.push(f.id),
+      onCancel: () => {},
+    }
+    const first = renderHook(() => useReactionReplay(base))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPLAY_START_MS)
+    })
+    first.unmount()
+    floated.length = 0
+    fetchMock.mockRejectedValueOnce(new Error('offline'))
+    renderHook(() => useReactionReplay({ ...base, fresh: true }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REPLAY_START_MS)
+    })
+    expect(floated).toEqual([])
+  })
+  it('ignores a late response after switching accounts even when fetch ignores cancellation', async () => {
+    vi.useFakeTimers()
+    let finish!: (r: Response) => void
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve
+        }),
+    )
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ reactions: [stored(2)] })))
+    const floated: string[] = []
+    const { rerender } = renderHook(
+      ({ scope }) =>
+        useReactionReplay({
+          enabled: true,
+          platform: 'twitter',
+          id: '1',
+          scope,
+          isShown: () => false,
+          onFloat: (f) => floated.push(f.id),
+          onCancel: () => {},
+        }),
+      { initialProps: { scope: 'a' } },
+    )
+    rerender({ scope: 'b' })
+    await act(async () => {
+      finish(new Response(JSON.stringify({ reactions: [stored(1)] })))
+      await vi.advanceTimersByTimeAsync(REPLAY_START_MS)
+    })
+    expect(floated).toEqual(['r2'])
+  })
+})

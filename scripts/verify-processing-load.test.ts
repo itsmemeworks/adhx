@@ -421,6 +421,35 @@ it('keeps a large queue responsive, recovers a killed runner, bounds scratch and
   instance.sqlite
     .prepare('UPDATE processing_leases SET expires_at=? WHERE id=?')
     .run(Date.now() - 1, first.id)
+  // An abandoned job enters backoff instead of monopolising the large queue.
+  const nextDue = await claim()
+  expect(nextDue.status).toBe(200)
+  const progressed = instance.sqlite
+    .prepare('SELECT post_id FROM processing_leases WHERE id=?')
+    .get(nextDue.body.job.id) as { post_id: string }
+  expect(progressed.post_id).not.toBe(first.post_id)
+  const delayed = instance.sqlite
+    .prepare(
+      "SELECT attempts,next_attempt_at FROM understanding_queue WHERE post_id=? AND kind='text'",
+    )
+    .get(first.post_id) as { attempts: number; next_attempt_at: string }
+  expect(delayed.attempts).toBe(1)
+  expect(Date.parse(delayed.next_attempt_at)).toBeGreaterThan(Date.now())
+  expect(
+    (
+      await post({
+        action: 'complete',
+        id: nextDue.body.job.id,
+        lease: nextDue.body.job.lease,
+        vector,
+      })
+    ).status,
+  ).toBe(200)
+  // Advance only this fixture job's retry deadline, preserving the real backoff
+  // assertion above and avoiding a wall-clock wait in CI.
+  instance.sqlite
+    .prepare("UPDATE understanding_queue SET next_attempt_at=? WHERE post_id=? AND kind='text'")
+    .run(new Date().toISOString(), first.post_id)
   const reclaimed = await claim()
   expect(reclaimed.status).toBe(200)
   expect(reclaimed.body.job.id).not.toBe(first.id)
@@ -447,6 +476,9 @@ it('keeps a large queue responsive, recovers a killed runner, bounds scratch and
   report.terminationRecovery = {
     signal,
     oldBackfillSelected: true,
+    backoffObserved: true,
+    otherPostProgress: true,
+    attemptsAfterExpiry: delayed.attempts,
     freshLease: true,
     oldLeaseRejected: true,
     checkpointCompleted: true,

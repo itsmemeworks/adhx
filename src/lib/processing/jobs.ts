@@ -356,6 +356,7 @@ export async function claimProcessingJob(
     throw new ProcessingInputError('Invalid worker name')
   if (advertised !== undefined && !Array.isArray(advertised))
     throw new ProcessingInputError('Invalid worker kinds')
+  reapExpiredLeases()
   if (Date.now() - lastBackfill > 60_000) {
     // Work switched off here (SEMANTIC_SPEECH / SEMANTIC_SCREEN_TEXT) leaves the queue.
     for (const kind of EXTRACT_KINDS)
@@ -383,7 +384,7 @@ export async function claimProcessingJob(
           AND q.kind IN ${kinds}
           AND NOT EXISTS (SELECT 1 FROM moderated_posts m WHERE m.platform=q.platform AND m.bookmark_id=q.post_id AND m.hidden=1)
           AND (q.kind NOT IN ('video','speech','screen') OR NOT EXISTS (SELECT 1 FROM media_conversions c WHERE c.platform=q.platform AND c.post_id=q.post_id AND c.status IN ('pending','running')))
-          AND NOT EXISTS (SELECT 1 FROM processing_leases l WHERE l.platform=q.platform AND l.post_id=q.post_id AND l.kind=q.kind AND l.expires_at>${now})
+          AND NOT EXISTS (SELECT 1 FROM processing_leases l WHERE l.platform=q.platform AND l.post_id=q.post_id AND l.kind=q.kind)
         ORDER BY (q.priority + max(0, CAST((julianday(${new Date(now).toISOString()})-julianday(q.enqueued_at))*1440 AS INTEGER))) DESC,
           CASE WHEN q.enqueued_at < ${new Date(now - 15 * 60_000).toISOString()} THEN q.enqueued_at END,
           ${kindOrderSql(sql.raw('q.kind'))},q.enqueued_at LIMIT 1`)
@@ -652,6 +653,67 @@ export async function completeVideoSegment(
   })
 }
 
+/** Shared retry budget for explicit failures and abandoned leases. Caller owns a transaction. */
+function recordFailure(
+  row: Lease,
+  code: 'retry' | 'none',
+  error: string,
+  now = Date.now(),
+): boolean {
+  let changed = false
+  const [job] = db.all<{ attempts: number }>(
+    sql`SELECT attempts FROM understanding_queue WHERE ${leaseWhere(row)}`,
+  )
+  if (job) {
+    const attempts = job.attempts + 1
+    if ((code === 'none' || attempts >= MAX_ATTEMPTS) && isExtractKind(row.kind)) {
+      if (code === 'none') changed = noneExtracted(row, row.content_hash)
+      else
+        saveExtracted({
+          platform: row.platform,
+          postId: row.post_id,
+          kind: row.kind,
+          contentHash: row.content_hash,
+          status: 'failed',
+          error: error.slice(0, 300),
+        })
+      db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(row)}`)
+    } else if (code === 'none' || attempts >= MAX_ATTEMPTS) {
+      db.run(sql`INSERT INTO post_embeddings(platform,post_id,kind,model,content_hash,dims,status,error,created_at)
+          VALUES(${row.platform},${row.post_id},${row.kind},${row.model},${row.content_hash},0,${code === 'none' ? 'none' : 'failed'},${code === 'none' ? null : error.slice(0, 300)},${new Date().toISOString()})
+          ON CONFLICT(platform,post_id,kind) DO UPDATE SET model=excluded.model,content_hash=excluded.content_hash,dims=0,vector=NULL,status=excluded.status,error=excluded.error,created_at=excluded.created_at`)
+      db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(row)}`)
+    } else {
+      const backoff = Math.min(60 * 60_000, 30_000 * 2 ** attempts)
+      db.run(
+        sql`UPDATE understanding_queue SET attempts=${attempts},last_error=${error.slice(0, 300)},next_attempt_at=${new Date(now + backoff).toISOString()} WHERE ${leaseWhere(row)}`,
+      )
+    }
+  }
+  return changed
+}
+
+/** Charge each expired lease exactly once; source changes are cancellations, not failures. */
+function reapExpiredLeases(): void {
+  const now = Date.now()
+  runInTransaction(() => {
+    const expired = db.all<Lease>(
+      sql`SELECT * FROM processing_leases WHERE expires_at<=${now} LIMIT 100`,
+    )
+    for (const row of expired) {
+      if (
+        row.model === SEMANTIC_MODEL_VERSION &&
+        row.profile === indexingLevel() &&
+        row.generation_hash === generation(row) &&
+        row.content_hash
+      ) {
+        recordFailure(row, 'retry', 'Worker lease expired before completion', now)
+      }
+      release(row)
+    }
+  })
+}
+
 export async function failProcessingJob(
   id: string,
   token: string,
@@ -663,35 +725,7 @@ export async function failProcessingJob(
   runInTransaction(() => {
     checkedLease(id, token)
     requireSaved(row)
-    const [job] = db.all<{ attempts: number }>(
-      sql`SELECT attempts FROM understanding_queue WHERE ${leaseWhere(row)}`,
-    )
-    if (job) {
-      const attempts = job.attempts + 1
-      if ((code === 'none' || attempts >= MAX_ATTEMPTS) && isExtractKind(row.kind)) {
-        if (code === 'none') changed = noneExtracted(row, row.content_hash)
-        else
-          saveExtracted({
-            platform: row.platform,
-            postId: row.post_id,
-            kind: row.kind,
-            contentHash: row.content_hash,
-            status: 'failed',
-            error: error.slice(0, 300),
-          })
-        db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(row)}`)
-      } else if (code === 'none' || attempts >= MAX_ATTEMPTS) {
-        db.run(sql`INSERT INTO post_embeddings(platform,post_id,kind,model,content_hash,dims,status,error,created_at)
-          VALUES(${row.platform},${row.post_id},${row.kind},${row.model},${row.content_hash},0,${code === 'none' ? 'none' : 'failed'},${code === 'none' ? null : error.slice(0, 300)},${new Date().toISOString()})
-          ON CONFLICT(platform,post_id,kind) DO UPDATE SET model=excluded.model,content_hash=excluded.content_hash,dims=0,vector=NULL,status=excluded.status,error=excluded.error,created_at=excluded.created_at`)
-        db.run(sql`DELETE FROM understanding_queue WHERE ${leaseWhere(row)}`)
-      } else {
-        const backoff = Math.min(60 * 60_000, 30_000 * 2 ** attempts)
-        db.run(
-          sql`UPDATE understanding_queue SET attempts=${attempts},last_error=${error.slice(0, 300)},next_attempt_at=${new Date(Date.now() + backoff).toISOString()} WHERE ${leaseWhere(row)}`,
-        )
-      }
-    }
+    changed = recordFailure(row, code, error)
     release(row)
   })
   if (changed) await reindexWords(row)

@@ -281,6 +281,7 @@ describe('kept media', () => {
     })
 
     it('makes a poster for a video kept without one, once', async () => {
+      save('reddit', 'clip')
       const { execFile } = await import('child_process')
       const { ffmpegPath } = await import('@/lib/media/ffmpeg')
       const bin = await ffmpegPath()
@@ -318,7 +319,9 @@ describe('kept media', () => {
       const row = testInstance.sqlite
         .prepare(`SELECT path FROM kept_files WHERE post_id = 'clip' AND slot = 'poster'`)
         .get() as { path: string }
-      expect(row.path).toBe(path.join('reddit', 'clip', 'poster.jpg'))
+      expect(path.dirname(row.path)).toBe(path.join('reddit', 'clip'))
+      expect(path.basename(row.path)).toMatch(/^poster-[a-f0-9-]+\.jpg$/)
+      expect(fs.existsSync(path.join(mediaRoot, row.path))).toBe(true)
       // Nothing to make one from: still a plain 404.
       expect((await get('/api/files/reddit/none/poster')).status).toBe(404)
     }, 30_000)

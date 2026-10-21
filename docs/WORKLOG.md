@@ -6,6 +6,20 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Align the killed-runner rehearsal with bounded lease retries
+
+- The large-queue CI rehearsal still required immediate reclamation of an expired job, contradicting the new retry policy. It now verifies one charged attempt, a future retry deadline, completion of another due post, then safe reclamation after advancing only the fixture deadline.
+- Preserve the old-token rejection, fresh-lease completion, queue responsiveness, scratch cleanup and long-video coverage checks. No production settings or deployment changes.
+
+## 2026-10-21 — Fix nine feature-complete review findings
+
+- Isolate and bound iOS reaction memory by connection; invalidate in-flight responses at reconnect. Web and Android Reactions visits fetch fresh answers, while ordinary playback keeps its once-per-session behavior.
+- Count abandoned understanding leases against the existing three-attempt retry budget; retain successful video checkpoints and cancel obsolete generations without penalizing new work.
+- Safely decode invalid numeric entities, accept every supported post ID in player start links, and page the web Reactions queue beyond 50 with retry, deduplication and stale-request guards.
+- Pause the same video beneath Original/Share; resume only previously playing, unchanged posts. Keep the StageVideo instance intact.
+- Gate legacy poster maintenance and lazy generation to local, unpaused hosts; remote mode defers this maintenance (no poster job in the current Mac protocol). Publish unique repaired files with video/poster generation checks and clean rejected and replaced repair-owned files. Legacy download paths remain until post cleanup.
+- Add route, component, queue, real-FFmpeg/JPEG, Android and production iOS-model regressions; wire the connection suite into native CI. PR work only; no deployment.
+
 ## 2026-10-21 — Share card shows the post; Open in ADHX plays at once
 
 - Owner report from an X share: the Saved card's poster stayed blank and it said only "X"; Open in ADHX didn't play.

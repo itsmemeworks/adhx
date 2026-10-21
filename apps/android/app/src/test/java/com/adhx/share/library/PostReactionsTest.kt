@@ -79,6 +79,37 @@ class PostReactionsTest {
     }
 
     @Test
+    fun reactionsFeedAlwaysRefreshesButOrdinaryPlaybackStaysOncePerVisit() {
+        PostReactionsMemory.forgetAll()
+        val key = PostReactionsMemory.key("https://adhx.test", "account-key", "twitter:1")
+        PostReactionsMemory.remember(key, emptyList())
+        PostReactionsMemory.markReplayed(key)
+        assertFalse(PostReactionsMemory.shouldReplay(key, fresh = false))
+        assertTrue(PostReactionsMemory.shouldReplay(key, fresh = true))
+        assertEquals(emptyList<LiveReaction>(), PostReactionsMemory.cachedFor(key, fresh = false))
+        assertNull(PostReactionsMemory.cachedFor(key, fresh = true))
+        PostReactionsMemory.remember(key, listOf(reaction(9)))
+        assertEquals("r9", PostReactionsMemory.cachedFor(key, fresh = false)?.single()?.key)
+        val other = PostReactionsMemory.key("https://adhx.test", "replacement-key", "twitter:1")
+        assertTrue(PostReactionsMemory.shouldReplay(other, fresh = false))
+        assertNull(PostReactionsMemory.cachedFor(other, fresh = false))
+    }
+
+    @Test
+    fun bothReactionCachesStayBounded() {
+        PostReactionsMemory.forgetAll()
+        repeat(501) {
+            PostReactionsMemory.remember("post-$it", listOf(reaction(1)))
+            PostReactionsMemory.markReplayed("post-$it")
+        }
+        assertNull(PostReactionsMemory.fetched("post-0"))
+        assertFalse(PostReactionsMemory.replayed("post-0"))
+        PostReactionsMemory.forgetAll()
+        repeat(501) { PostReactionsMemory.markReplayed("post-$it") }
+        assertFalse(PostReactionsMemory.replayed("post-0"))
+    }
+
+    @Test
     fun yoursIsTakenBackWhenItDoesNotSend() {
         val floats = PostFloats()
         val replayed = floats.add("😂", null, Saver(username = "ana"), delayMs = 350)

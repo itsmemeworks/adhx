@@ -37,6 +37,7 @@ interface State {
   owner: symbol | null
   running: number
   lastScan: number
+  lastPosterRepair?: number
   lastClean: number
   /** With KEEP_BACKFILL=off: only saves made after this. */
   since: string | null
@@ -228,6 +229,13 @@ async function tick(): Promise<void> {
           s.running--
         })
     }
+    if (s.running === 0 && now - (s.lastPosterRepair ?? 0) >= 5 * 60_000) {
+      s.lastPosterRepair = now
+      // Revisited after resume; the repair helper enforces local mode and pause.
+      void repairDarkPosters().catch((error) =>
+        captureException(error, { endpoint: 'keep.posterRepair' }),
+      )
+    }
   } catch (error) {
     captureException(error, { endpoint: 'keep.tick' })
   }
@@ -315,10 +323,4 @@ export function startKeeping(): void {
   s.timer = setInterval(() => void tick(), TICK_MS)
   s.timer.unref?.()
   void tick()
-  // Once per server, in the background: remake posters that came out black.
-  void repairDarkPosters()
-    .then((fixed) => {
-      if (fixed) console.log(`[keep] remade ${fixed} dark poster${fixed === 1 ? '' : 's'}`)
-    })
-    .catch((error) => console.warn('[keep] poster repair failed:', error))
 }
