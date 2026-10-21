@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Run CI and local development on Node 26 like the image
+
+- The container moved to Node 26 while `.nvmrc` and every workflow `node-version` stayed on 24, so tests ran on a different major than what ships.
+- `.nvmrc`, `ci.yml` (all seven jobs) and `site.yml` now use 26; README and CONTRIBUTING recommend 26. The engines range is unchanged, so 22.22.1+ and 24 still work locally.
+- Workflows install pnpm with `pnpm/action-setup`, so Node 26 shipping without Corepack does not affect CI.
+- Follow-up: the Mac worker docs still say ARM64 Node 24 (any version the engines allow works); bump them once the worker has been measured on 26.
+
 ## 2026-10-21 — Review the complete dependency upgrade set
 
 - Review six dependency PRs together: Actions, the Gradle wrapper, the Node container, Node typings, lint-staged and Vitest with its coverage provider.

@@ -356,7 +356,7 @@ Also set `ADHX_URL` to your server's address, e.g. `https://adhx.example.com`. T
 
 ## Develop locally
 
-Use Node.js 24 (or a version allowed by `package.json`), Git 2.32 or newer,
+Use Node.js 26 (or a version allowed by `package.json`), Git 2.32 or newer,
 and the pnpm version pinned in `packageManager`. The development tools require
 at least Node.js 22.22.1.
 
