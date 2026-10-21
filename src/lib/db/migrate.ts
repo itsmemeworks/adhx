@@ -15,6 +15,7 @@ import { UNDERSTANDING_DDL } from '../semantic/schema-sql'
 import { BOARD_FEATURES_DDL } from '../sends/schema-sql'
 import { CHANNEL_VISUAL_DDL } from '../channels/visual-schema'
 import { ADMIN_COUNTS_DDL } from '../admin/schema-sql'
+import { POST_REACTIONS_DDL } from '../reactions/schema-sql'
 
 const DB_PATH = process.env.DATABASE_PATH || './data/adhdone.db'
 const MIGRATIONS_PATH = process.env.MIGRATIONS_PATH || './drizzle'
@@ -1219,13 +1220,18 @@ try {
 }
 
 // Admin counts: reactions per member per day (counts only) and the live
-// moment log (no user ids). reaction_counts is user-linked, so it exists
-// before the account guards below are installed.
+// moment log (no user ids), and the reactions kept on posts. reaction_counts
+// and post_reactions are user-linked, so they exist before the account guards
+// below are installed.
 try {
   db.exec(ADMIN_COUNTS_DDL)
-  console.log('[migrate] Ensured reaction_counts / moment_log tables')
+  db.exec(POST_REACTIONS_DDL)
+  console.log('[migrate] Ensured reaction_counts / moment_log / post_reactions tables')
 } catch (error) {
-  console.log('[migrate] FAILED creating reaction_counts / moment_log tables', error)
+  console.log(
+    '[migrate] FAILED creating reaction_counts / moment_log / post_reactions tables',
+    error,
+  )
   db.close()
   process.exit(1)
 }

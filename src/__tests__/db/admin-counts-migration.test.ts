@@ -30,7 +30,7 @@ function migrate(databasePath: string) {
 }
 
 describe('admin counts migration', () => {
-  it('adds last seen, phone platforms, reaction counts and the moment log, idempotently', () => {
+  it('adds last seen, phone platforms, reaction counts, kept reactions and the moment log, idempotently', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'adhx-admin-migration-'))
     dirs.push(dir)
     const databasePath = path.join(dir, 'admin.db')
@@ -62,6 +62,23 @@ describe('admin counts migration', () => {
       db
         .prepare(
           `INSERT INTO reaction_counts (day, user_id, kind, count) VALUES ('2026-10-20', 'ghost', 'fire', 1)`,
+        )
+        .run(),
+    ).toThrow(/account reference does not exist/)
+    // Reactions kept on posts: one emoji or a few words, from a live account.
+    expect(cols('post_reactions')).toEqual([
+      'id',
+      'user_id',
+      'platform',
+      'post_id',
+      'emoji',
+      'text',
+      'created_at',
+    ])
+    expect(() =>
+      db
+        .prepare(
+          `INSERT INTO post_reactions (id, user_id, platform, post_id, emoji, created_at) VALUES ('r1', 'ghost', 'twitter', '1', '😂', '2026-10-21')`,
         )
         .run(),
     ).toThrow(/account reference does not exist/)

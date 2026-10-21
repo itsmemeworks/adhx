@@ -6,6 +6,13 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Reactions kept on every post, and replayed
+
+- Owner ask: react on any post, not just Live, and see them again when you watch it. New `post_reactions` table (account-guarded, gone with Clear data / account delete) and `src/lib/reactions/` (parse shared with Live, one rate budget). Web `GET|POST /api/posts/reactions`, phone `/api/app/reactions`, `DELETE …/{id}` own only; shapes in `docs/specs/phone-app.md` → Reactions on any post.
+- Visibility follows the post (`seenBy`): a Just for me–only post keeps its reactions to its owner; banned reactors never shown; hidden posts return none; nothing signed out. Live reactions are now stored too, with the id the room saw.
+- Web: the React button is on every post in `TheaterV2` (signed out → `/start`); yours floats at once; `useReactionReplay` floats the newest 12 when a post settles (600 ms, 350 ms apart, once per post per page load). PRIVACY.md and /privacy updated.
+- Follow-ups: the iOS and Android players against the same contract (separate work).
+
 ## 2026-10-21 — Phones: no why chip repeating the byline; your face on your reactions
 
 - iOS and Android hide the why chip when its only reason is `fresh`/`yours` ("Ana saved this · 1d") and the post has savers, since the byline under it already says that. This matches the web's rule in `TheaterV2`.
