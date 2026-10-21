@@ -69,7 +69,8 @@ final class OpenedPostHost: UIHostingController<AnyView> {
 }
 
 /// Black with a spinner for the moment it takes to fetch the post, then the
-/// player on it. A save that has only just landed may need a second ask.
+/// player on it, looping (you came to watch this one). A save that has only
+/// just landed may need a second ask.
 private struct OpeningPlayer: View {
     let ref: PostRef
     let server: URL
@@ -79,7 +80,7 @@ private struct OpeningPlayer: View {
 
     var body: some View {
         if let post {
-            PlayerScreen(posts: [post], server: server, start: post.key, onClose: close)
+            PlayerScreen(posts: [post], server: server, start: post.key, onClose: close, startRepeating: true)
         } else {
             ZStack(alignment: .topLeading) {
                 Color.black.ignoresSafeArea()

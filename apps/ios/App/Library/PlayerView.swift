@@ -21,6 +21,8 @@ struct PlayerExtras {
     /// The reactions feed: every post floats its reactions (fresh from the
     /// server) each time it lands, even ones already replayed this run.
     var replayReactions = false
+    /// Opened from the share card: Repeat starts on, so the post loops.
+    var startRepeating = false
 
     struct ReactButton {
         var isOpen: Bool
@@ -70,6 +72,8 @@ struct PlayerView: View {
     @State private var cleanBeforeTurning = false
     /// A post opened with "Open in ADHX" is playing over this one.
     @State private var covered = false
+    /// `extras.startRepeating` has been applied.
+    @State private var startedRepeating = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(posts: [PhonePost], server: URL, clean: Binding<Bool>,
@@ -210,6 +214,12 @@ struct PlayerView: View {
         }
         .onAppear {
             playback.onEnded = { next() }
+        }
+        .onAppear {
+            // Once: coming back from a friend's channel mustn't switch it on again.
+            guard extras.startRepeating, !startedRepeating else { return }
+            startedRepeating = true
+            playback.repeatOne = true
         }
         .onChange(of: playback.scrubTime != nil) { _, now in scrubbing = now }
         .onChange(of: jumpTo) { _, key in
