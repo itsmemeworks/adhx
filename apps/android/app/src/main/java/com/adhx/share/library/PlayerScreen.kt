@@ -67,6 +67,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -103,6 +105,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -144,7 +147,6 @@ import com.adhx.share.ui.Copy
 import com.adhx.share.ui.Glyphs
 import com.adhx.share.ui.Avatar
 import com.adhx.share.ui.Faces
-import com.adhx.share.ui.facesWidth
 import com.adhx.share.ui.PrivateLock
 import com.adhx.share.ui.rememberReducedMotion
 import com.adhx.share.ui.NetworkMark
@@ -225,6 +227,11 @@ fun PlayerScreen(
     preservePlaybackOnRefresh: Boolean = false,
     /** [topBar] steps aside while the send sheet is up (home's row, as on iPhone). */
     hideTopBarWhileSending: Boolean = false,
+    /**
+     * [topBar] shows the short messages ("Link copied") itself, in place of
+     * its "N on their way" pill, through [LocalPlayerToast] (New, My saves).
+     */
+    toastInTopBar: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -253,6 +260,8 @@ fun PlayerScreen(
     val playback = remember { Playback() }
     var reading by remember { mutableStateOf<PhonePost?>(null) }
     var more by remember { mutableStateOf<PhonePost?>(null) }
+    // The original post's sheet (the rail's network button).
+    var original by remember { mutableStateOf<PhonePost?>(null) }
     var sendingPost by remember { mutableStateOf<PhonePost?>(null) }
     // Outside Live, the player has its own React: the post whose picker is open, what's typed, and how sending went.
     val ownReact = onReact == null
@@ -409,7 +418,7 @@ fun PlayerScreen(
 
     LaunchedEffect(notice) {
         if (notice != null) {
-            delay(2_200)
+            delay(TOAST_MS)
             notice = null
         }
     }
@@ -541,7 +550,7 @@ fun PlayerScreen(
                 landscape = landscape,
                 repeat = repeat,
                 // A photo's timer waits while a sheet or picker is up, in the small window and while the app is away.
-                held = more != null || sendingPost != null || reading != null || reactingNow || inPip || player == null,
+                held = more != null || original != null || sendingPost != null || reading != null || reactingNow || inPip || player == null,
                 onPhotosDone = { following()?.let { scope.launch { goTo(it) } } },
                 onHide = { hidden = true },
                 // Sideways hides everything, without touching what upright had.
@@ -563,6 +572,7 @@ fun PlayerScreen(
                 },
                 onRead = { reading = post },
                 onMore = { more = post },
+                onOriginal = { original = post },
                 onSaver = onSaver,
                 aboveCaption = aboveCaption,
                 belowCaption = belowCaption,
@@ -604,8 +614,11 @@ fun PlayerScreen(
                 onSeek = { ms -> player?.seekTo(ms) },
             )
         }
-        if (!hidden && !landscape && !inPip && !(hideTopBarWhileSending && sendingPost != null)) {
-            Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) { topBar() }
+        val topBarShown = !hidden && !landscape && !inPip && !(hideTopBarWhileSending && sendingPost != null)
+        if (topBarShown) {
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = chrome }) {
+                CompositionLocalProvider(LocalPlayerToast provides notice?.text) { topBar() }
+            }
         }
         if (newOnTop > 0 && !hidden && !landscape && !inPip && scrub == null) {
             NewSavesPill(
@@ -625,7 +638,7 @@ fun PlayerScreen(
                     .padding(start = 16.dp, end = 84.dp, top = 170.dp, bottom = 300.dp),
             )
         }
-        if (!inPip && !landscape) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
+        if (!inPip && !landscape && !(toastInTopBar && topBarShown)) notice?.let { NoticePill(it.text, Modifier.align(Alignment.TopCenter)) }
         if (!inPip) {
             picking?.let { post ->
                 ReactPicker(
@@ -643,6 +656,9 @@ fun PlayerScreen(
         reading?.let { Reader(it, onClose = { reading = null }) }
         if (!inPip) {
             sendingPost?.let { post -> SendSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { sendingPost = null }) }
+        }
+        if (!inPip) {
+            original?.let { post -> OriginalSheet(post, server, onNotice = { text -> notice = Notice(text) }, onDismiss = { original = null }) }
         }
         if (!inPip) {
             more?.let { post ->
@@ -724,7 +740,22 @@ private fun NewSavesPill(count: Int, onClick: () -> Unit, modifier: Modifier = M
 }
 
 @Composable
-private fun NoticePill(text: String, modifier: Modifier = Modifier) {
+private fun NoticePill(text: String, modifier: Modifier = Modifier) =
+    ToastPill(text, modifier.statusBarsPadding().padding(top = 64.dp, start = 24.dp, end = 24.dp))
+
+/** How long a short message ("Link copied") stays up. */
+private const val TOAST_MS = 3_000L
+
+/**
+ * The player's short message while one is up ("Words copied", "Link copied"),
+ * for a [PlayerScreen] top bar that shows it in place of its pill
+ * (`toastInTopBar`); null otherwise.
+ */
+val LocalPlayerToast = compositionLocalOf<String?> { null }
+
+/** A short message: dark words on a cream pill. */
+@Composable
+fun ToastPill(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         fontSize = 14.sp,
@@ -732,11 +763,10 @@ private fun NoticePill(text: String, modifier: Modifier = Modifier) {
         color = AdhxColors.Black,
         textAlign = TextAlign.Center,
         modifier = modifier
-            .statusBarsPadding()
-            .padding(top = 64.dp, start = 24.dp, end = 24.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(AdhxColors.Cream)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite },
     )
 }
 
@@ -764,6 +794,7 @@ private fun PostPage(
     onTap: () -> Unit,
     onRead: () -> Unit,
     onMore: () -> Unit,
+    onOriginal: () -> Unit,
     onSaver: ((Saver) -> Unit)?,
     aboveCaption: (@Composable (PhonePost) -> Unit)?,
     belowCaption: (@Composable (PhonePost) -> Unit)?,
@@ -918,6 +949,7 @@ private fun PostPage(
                 onSave = if (canSave) onSave else null,
                 onShare = onShare,
                 onMore = onMore,
+                onOriginal = onOriginal,
                 onReact = onReact,
                 reacting = reacting,
                 modifier = Modifier
@@ -1222,107 +1254,47 @@ private fun WordsCard(post: PhonePost, onRead: () -> Unit) {
 private const val SHORT_WORDS = 140
 
 /**
- * Who posted it, for the byline after the network's mark: their name, else
- * the network's ("YouTube"), else their handle.
- */
-/** Who posted it, beside the network's mark; "" (just the mark) when no one's named, like iOS. */
-internal fun bylineName(post: PhonePost): String {
-    val who = post.author.name?.trim()?.takeIf { it.isNotEmpty() }
-        ?: Copy.handle(post.author.handle)
-        ?: return ""
-    val network = Networks.name(post.platform)
-    return if (who.length <= 1 || (network != null && who.equals(network, ignoreCase = true))) "" else who
-}
-
-/**
  * Bottom left, over the post: who of your people saved it (faces and "Ana and
- * Ben saved this · 2h", a lock when it's just for you), where it's from (the
- * network's mark and who posted it: [YouTube] Rick Astley) and the first
- * lines of text (words posts show them in the page).
+ * Ben saved this · 2h", a lock when it's just for you), or just the lock. Who
+ * posted it and their words are behind the network's button on the rail
+ * ([OriginalSheet]).
  */
 @Composable
 private fun CaptionText(post: PhonePost, server: String, onSaver: ((Saver) -> Unit)?, modifier: Modifier = Modifier) {
-    val words = post.kind == PostKind.TEXT || post.kind == PostKind.ARTICLE
-    val source = bylineName(post)
     val justYou = Privacy.isPrivate(post)
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val line = Copy.saversLine(post.savers)
-        if (line != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Faces(
-                    savers = post.savers,
-                    server = server,
-                    size = BYLINE_FACE,
-                    description = line,
-                    onTap = onSaver,
-                )
-                Spacer(Modifier.width(BYLINE_GAP))
-                Text(
-                    line,
-                    style = OverMedia,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AdhxColors.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt)?.let {
-                    Text(" · $it", style = OverMedia, fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1, softWrap = false)
-                }
-                if (justYou) {
-                    Spacer(Modifier.width(8.dp))
-                    PrivateLock(size = 15.dp)
-                }
-            }
+    val line = Copy.saversLine(post.savers)
+    if (line == null) {
+        if (justYou) PrivateLock(size = 15.dp, modifier = modifier)
+        return
+    }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Faces(
+            savers = post.savers,
+            server = server,
+            size = 30.dp,
+            description = line,
+            onTap = onSaver,
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            line,
+            style = OverMedia,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = AdhxColors.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Copy.shortAgoIso(post.savers.firstOrNull()?.savedAt)?.let {
+            Text(" · $it", style = OverMedia, fontSize = 14.sp, color = AdhxColors.Muted, maxLines = 1, softWrap = false)
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (justYou && line == null) {
-                PrivateLock(size = 14.dp)
-                Spacer(Modifier.width(6.dp))
-            }
-            // The network's mark, then who posted it: [YouTube] Saturday Night Live.
-            if (line != null) {
-                // Under the faces: the mark centred under the first face, the name
-                // starting where "You saved this" starts.
-                Box(Modifier.width(facesWidth(post.savers.size.coerceAtMost(3), BYLINE_FACE)), contentAlignment = Alignment.CenterStart) {
-                    Box(Modifier.width(BYLINE_FACE), contentAlignment = Alignment.Center) {
-                        NetworkMark(post.platform, size = 15.dp, tint = AdhxColors.Muted)
-                    }
-                }
-                if (source.isNotEmpty()) Spacer(Modifier.width(BYLINE_GAP))
-            } else {
-                NetworkMark(post.platform, size = 15.dp, tint = AdhxColors.White)
-                if (source.isNotEmpty()) Spacer(Modifier.width(7.dp))
-            }
-            if (source.isNotEmpty()) Text(
-                source,
-                style = OverMedia,
-                fontSize = 14.sp,
-                fontWeight = if (line != null) FontWeight.Normal else FontWeight.Bold,
-                color = if (line != null) AdhxColors.Muted else AdhxColors.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (!words && post.text.isNotBlank()) {
-            Text(
-                // One run of words: paragraph breaks would leave the second line empty. Links open in the browser.
-                rememberLinked(Copy.oneLine(post.text)),
-                style = OverMedia,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                color = AdhxColors.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        if (justYou) {
+            Spacer(Modifier.width(8.dp))
+            PrivateLock(size = 15.dp)
         }
     }
 }
-
-/** The faces on the savers line, and the gap after them (the mark under them lines up with both). */
-private val BYLINE_FACE = 30.dp
-private val BYLINE_GAP = 10.dp
 
 /** The note bubble's tail: a triangle pointing down, with a softened tip. */
 private val NoteTailShape = GenericShape { size, _ ->
@@ -1392,13 +1364,14 @@ private fun ActionColumn(
     onSave: (() -> Unit)?,
     onShare: () -> Unit,
     onMore: () -> Unit,
+    onOriginal: () -> Unit,
     onReact: (() -> Unit)?,
     reacting: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier.width(52.dp),
-        // Live's extra React button tightens the column, as on the boards.
+        // Six buttons at most (React, Save, Share, Save to phone, the network, More): tight, as on Live's board.
         verticalArrangement = Arrangement.spacedBy(if (onReact != null) 8.dp else 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -1463,6 +1436,10 @@ private fun ActionColumn(
             ) {
                 if (saving) Spinner(size = 20.dp, stroke = 2.dp) else ActionIcon(rememberVectorPainter(Glyphs.Download))
             }
+        }
+        // The network's own mark: who posted it, all their words, and the way to the original.
+        ActionButton(description = "The original post on ${Networks.name(post.platform) ?: "the web"}", onClick = onOriginal) {
+            NetworkMark(post.platform, size = 22.dp, tint = AdhxColors.Cream)
         }
         ActionButton(description = "More options", onClick = onMore) {
             ActionIcon(rememberVectorPainter(Glyphs.More))

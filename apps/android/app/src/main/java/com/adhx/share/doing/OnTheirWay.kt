@@ -94,11 +94,12 @@ fun PollDoing(doing: DoingViewModel) {
  * full list ([onSeeAll]).
  */
 @Composable
-fun DoingPillHost(doing: DoingViewModel, server: String, onSeeAll: () -> Unit, modifier: Modifier = Modifier) {
+fun DoingPillHost(doing: DoingViewModel, server: String, onSeeAll: () -> Unit, modifier: Modifier = Modifier, hidePill: Boolean = false) {
     PollDoing(doing)
     val ui by doing.ui.collectAsStateWithLifecycle()
     var open by rememberSaveable { mutableStateOf(false) }
-    AnimatedVisibility(visible = ui.onTheirWay > 0, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
+    // [hidePill]: a short message from the player is in its place for now.
+    AnimatedVisibility(visible = ui.onTheirWay > 0 && !hidePill, enter = fadeIn(), exit = fadeOut(), modifier = modifier) {
         DoingPill(ui.onTheirWay, ui.needsYou, onClick = { open = true })
     }
     if (open) {

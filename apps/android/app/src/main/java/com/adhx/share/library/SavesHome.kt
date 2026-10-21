@@ -96,13 +96,18 @@ fun SavesHome(
                 .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 20.dp),
         ) {
             bar()
-            // Only over the player: the empty page shows the whole card.
-            AnimatedVisibility(
-                visible = ui.preparing > 0 && ui.items.isNotEmpty(),
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically(),
-            ) {
-                OnTheirWayPill(ui.preparing.coerceAtLeast(1), Modifier.padding(top = 6.dp))
+            // Only over the player: the empty page shows the whole card. A short message
+            // from the player ("Link copied") takes the pill's place while it's up.
+            val toast = LocalPlayerToast.current
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                AnimatedVisibility(
+                    visible = ui.preparing > 0 && ui.items.isNotEmpty() && toast == null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    OnTheirWayPill(ui.preparing.coerceAtLeast(1), Modifier.padding(top = 6.dp))
+                }
+                if (toast != null) ToastPill(toast, Modifier.padding(top = 6.dp, start = 24.dp, end = 24.dp))
             }
         }
     }
@@ -117,6 +122,7 @@ fun SavesHome(
             newOnTop = ui.newOnTop,
             onTop = vm::seenTop,
             onSaver = onSaver,
+            toastInTopBar = true,
         )
         return
     }

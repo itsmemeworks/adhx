@@ -6,6 +6,12 @@ Append-only context log for agents and contributors. **Newest entries first.** A
 
 ---
 
+## 2026-10-21 — Android: the network button opens the original post; toasts take the pill's place
+
+- The player overlay no longer shows the network/author line or the caption; it keeps the why chip, a friend's note and the savers line (or the lock). A rail button with the network's own mark (above More) opens `OriginalSheet`: the poster's picture (else the mark in a round tile), their name (else handle, else the network), "@handle · Posted 18 Oct 2026" with the small mark only when their picture leads, all their words (a kept article in full, selectable, links tappable) or "No words with this one, just the video.", then Open on {network} and Copy link. It keeps the phone upright and holds the photo timer.
+- On New and My saves the player's short messages show in place of the "N on their way" pill (`toastInTopBar`, `LocalPlayerToast`, `ToastPill`); everywhere else they stay where they were. Toasts last 3 s.
+- Tests in `OriginalSheetTest` (name/handle/line rules, the mark once, the posted day). Checked on the emulator against a parity server: the overlay, the rail button, the sheet for a SoundCloud post without a picture, and "Link copied" replacing the pill for 3 s. Not checked: a poster with a picture, an article in the sheet.
+
 ## 2026-10-21 — Android: landscape for watching, full articles and aligned bylines
 
 - The app is portrait everywhere (`android:screenOrientation="portrait"`); `OrientationHost` (`ui/Orientation.kt`) is a stack like iOS's: a player on a video, sound or photo says `MayTurn(true)`, every sheet, the React picker and the reader say `KeepUpright()`, newest wins (`SCREEN_ORIENTATION_USER`: sideways, never upside down, keeps the phone's rotation lock). Words posts and the end page stay upright.

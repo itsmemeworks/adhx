@@ -201,6 +201,7 @@ fun NewTab(
             },
             topBar = { header(badge, page >= ui.items.size) },
             hideTopBarWhileSending = true,
+            toastInTopBar = true,
             onSaver = actions.openPerson,
             aboveCaption = { post -> WhyChip(post, server) { why = post } },
             end = if (ui.ended) end else null,
